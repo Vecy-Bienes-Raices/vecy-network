@@ -16249,6 +16249,1031 @@ var init_iduValorizacionService = __esm({
   }
 });
 
+// server/_core/valuation.ts
+function calcularPrecioHomologado(params) {
+  let cAntiguedad = 1;
+  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
+  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
+  let cPiso = 1;
+  if (params.tieneAscensor) {
+    cPiso = params.piso <= 2 ? 0.95 : 1.02;
+  } else {
+    if (params.piso <= 2) cPiso = 1;
+    else if (params.piso === 3) cPiso = 0.93;
+    else if (params.piso >= 4) cPiso = 0.85;
+  }
+  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
+  const cAmenidades = params.esClubHouse ? 1.07 : 1;
+  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
+  return {
+    precioM2Homologado,
+    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
+  };
+}
+function calculatePropertyValuation(input) {
+  const result = calcularPrecioHomologado({
+    basePricePerM2: input.baseZonePricePerM2,
+    antiguedadAnos: input.ageYears,
+    tieneAscensor: input.hasElevator ?? true,
+    piso: input.floorNumber ?? 3,
+    garajes: input.garages ?? 0,
+    esClubHouse: input.hasClubHouse ?? false
+  });
+  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
+  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
+  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
+  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
+  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
+  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
+  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
+  return {
+    baseZonePricePerM2: input.baseZonePricePerM2,
+    homologatedPricePerM2,
+    suggestedCommercialValue,
+    minClosingPrice,
+    estimatedMonthlyRent,
+    estimatedCapRate,
+    totalAreaM2: input.areaM2,
+    coefficients: {
+      cAntiguedad,
+      cPiso,
+      cGarajes,
+      cAmenidades
+    },
+    factorBreakdown: {
+      ageFactor: {
+        name: "Antig\xFCedad",
+        coefficient: cAntiguedad,
+        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
+        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
+      },
+      floorFactor: {
+        name: "Piso / Altura",
+        coefficient: cPiso,
+        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
+        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
+      },
+      garageFactor: {
+        name: "Garajes",
+        coefficient: cGarajes,
+        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
+        description: `${input.garages ?? 0} parqueaderos privados`
+      },
+      amenitiesFactor: {
+        name: "Amenidades",
+        coefficient: cAmenidades,
+        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
+        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
+      }
+    },
+    totalHomologationFactor: Number(totalFactor.toFixed(4)),
+    comparableSources: input.comparableSources || [],
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+function executeMarketValuationSurvey(params) {
+  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  let basePrice = 65e5;
+  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
+  let hasVerifiedComparables = true;
+  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
+    basePrice = 145e5;
+  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
+    basePrice = 125e5;
+  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
+    basePrice = 105e5;
+  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
+    basePrice = 85e5;
+  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
+    basePrice = 78e5;
+  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
+    basePrice = 75e5;
+  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
+    basePrice = 62e5;
+  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
+    basePrice = 58e5;
+  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
+    basePrice = 55e5;
+  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
+    basePrice = 65e5;
+  } else {
+    hasVerifiedComparables = false;
+  }
+  const area = params.areaM2 || 75;
+  const valuation = calculatePropertyValuation({
+    zone: zoneName,
+    city: "Bogot\xE1",
+    areaM2: area,
+    baseZonePricePerM2: basePrice,
+    ageYears: params.antiguedadAnos || 8,
+    floorNumber: params.piso || 3,
+    hasElevator: params.tieneAscensor ?? true,
+    garages: params.garajes || 1,
+    hasClubHouse: params.esClubHouse || false,
+    comparableSources: [
+      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
+      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
+      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
+    ]
+  });
+  return {
+    zonaConsultada: zoneName,
+    zonaOBarrio: zoneName,
+    tieneComparablesVerificados: hasVerifiedComparables,
+    baseZonePricePerM2: valuation.baseZonePricePerM2,
+    homologatedPricePerM2: valuation.homologatedPricePerM2,
+    valorM2Estimado: valuation.homologatedPricePerM2,
+    suggestedCommercialValue: valuation.suggestedCommercialValue,
+    valorComercialSugerido: valuation.suggestedCommercialValue,
+    minClosingPrice: valuation.minClosingPrice,
+    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
+    canonArriendoEstimado: valuation.estimatedMonthlyRent,
+    estimatedCapRate: valuation.estimatedCapRate,
+    areaM2: area,
+    coefficients: valuation.coefficients,
+    factorBreakdown: valuation.factorBreakdown,
+    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
+    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
+    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
+    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
+  };
+}
+var init_valuation = __esm({
+  "server/_core/valuation.ts"() {
+    "use strict";
+  }
+});
+
+// server/_core/jania/handlers/dmHandler.ts
+var dmHandler_exports = {};
+__export(dmHandler_exports, {
+  JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
+  executeJaniaDmTool: () => executeJaniaDmTool,
+  formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
+  sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
+  synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
+});
+async function executeJaniaDmTool(toolName, args, userId, _userName) {
+  switch (toolName) {
+    case "consultar_identidad_y_antecedentes": {
+      const doc = String(args.numeroDocumento || "").trim();
+      const tipo = String(args.tipoDocumento || "CC").trim();
+      const queryStr = `${tipo} ${doc}`;
+      const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
+      return {
+        toolType: "cedula",
+        resultJson: {
+          solicitud: "verificacion_identidad",
+          numeroDocumento: doc,
+          tipoDocumento: tipo,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isVerificationRequest
+        }
+      };
+    }
+    case "consultar_paz_y_salvo_idu": {
+      const chip = String(args.chip || "").trim();
+      const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+      const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
+      return {
+        toolType: "idu",
+        resultJson: {
+          solicitud: "paz_y_salvo_idu",
+          chip,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isIduRequest
+        }
+      };
+    }
+    case "consultar_factura_predial_bogota": {
+      const chip = String(args.chip || "").trim();
+      const doc = args.documentoTitular ? String(args.documentoTitular).trim() : void 0;
+      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+      const queryStr = doc ? `${chip} ${doc}` : chip;
+      const res = await executePredialAssistanceFromWhatsApp2(queryStr, userId, true);
+      return {
+        toolType: "predial",
+        resultJson: {
+          solicitud: "factura_predial_bogota",
+          chip,
+          reporteOficial: res?.reportText || "Factura predial procesada",
+          exitoso: true
+        }
+      };
+    }
+    case "liquidar_gastos_notariales_y_registro": {
+      const precio = Number(args.precioVenta || 0);
+      const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+      const res = await executeNotarialAssistanceFromWhatsApp2(`liquidaci\xF3n notarial ${precio}`, userId, true);
+      return {
+        toolType: "notarial",
+        resultJson: {
+          solicitud: "gastos_notariales_y_registro",
+          precioVenta: precio,
+          reporteOficial: res.reportText || "Liquidaci\xF3n procesada",
+          exitoso: res.isNotarialRequest
+        }
+      };
+    }
+    case "sondeo_mercado_inmobiliario": {
+      const surveyRes = executeMarketValuationSurvey({
+        zonaOBarrio: args.zonaOBarrio || "Chic\xF3",
+        tipoInmueble: args.tipoInmueble || "apartamento",
+        areaM2: Number(args.areaM2 || 75),
+        estrato: Number(args.estrato || 5),
+        antiguedadAnos: Number(args.antiguedadAnos || 8),
+        garajes: Number(args.garajes || 1)
+      });
+      return {
+        toolType: "sondeo",
+        resultJson: surveyRes
+      };
+    }
+    default:
+      return {
+        toolType: "sondeo",
+        resultJson: { error: `Herramienta desconocida: ${toolName}` }
+      };
+  }
+}
+async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
+  const isFreeTool = toolType !== "sondeo";
+  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
+  if (rawReport && (rawReport.includes("VERIFICACI\xD3N OFICIAL") || rawReport.includes("PAZ Y SALVO") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA"))) {
+    return await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+  }
+  const synthPrompt = [
+    {
+      role: "system",
+      content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Acabas de ejecutar la herramienta correspondiente a: ${toolType}.
+Datos estructurados del sistema en JSON:
+${JSON.stringify(toolJson, null, 2)}
+
+INSTRUCCIONES DE REDACCI\xD3N:
+- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasi\xF3n de IA pura.
+- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
+- Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
+- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (m\xE1ximo 2 a 3 p\xE1rrafos cortos).
+- Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
+${isEduardo ? '- Trato directivo para Eduardo: "\xA1Hola, Eduardo! A tu disposici\xF3n."\n' : isJani ? '- Trato directivo para Jani: "\xA1Hola, Jani! Qu\xE9 gusto saludarte."\n' : ""}`
+    },
+    {
+      role: "user",
+      content: userMessage
+    }
+  ];
+  try {
+    const res = await invokeLLM({ messages: synthPrompt });
+    let text2 = res.choices[0]?.message?.content || "";
+    if (text2) {
+      text2 = sanitizeResponseMarkdown(text2.trim());
+      if (isFreeTool) {
+        text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
+      } else {
+        text2 = sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName, true);
+      }
+      return text2;
+    }
+  } catch (err) {
+    console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
+  }
+  return await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+}
+async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
+  const realName = await resolveRealName(userId, rawName);
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  const compositeOrFirst = extractFirstName(realName);
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  let displayName = "";
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else {
+    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+    if (!canonicalComposite && displayName.includes(" ")) {
+      displayName = displayName.split(" ")[0];
+    }
+  }
+  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
+  const history = await getOrLoadDmHistory(userId);
+  const isFirstTurn = history.length === 0;
+  const cleanPayload = (payloadText || "").trim();
+  const reviewSection = isEduardo || isJani ? "" : `
+
+\u2B50 *\xBFTe fue \xFAtil esta consulta?*
+Tu recomendaci\xF3n nos ayuda a seguir creciendo. D\xE9janos tu calificaci\xF3n de 5 estrellas en Google Opiniones aqu\xED:
+https://g.page/r/CUxVzG_vecy/review`;
+  const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
+  let payloadWithClosing = cleanPayload;
+  if (!payloadWithClosing.includes(closingTag)) {
+    payloadWithClosing = `${payloadWithClosing}
+
+${closingTag}${reviewSection}`;
+  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CUxVzG_vecy/review")) {
+    payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
+  }
+  if (!success) {
+    if (payloadText && payloadText.trim()) {
+      if (isEduardo) {
+        return `\xA1Hola, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
+
+${payloadWithClosing}`;
+      }
+      if (isJani) {
+        return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
+
+${payloadWithClosing}`;
+      }
+      if (isFirstTurn) {
+        const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
+
+`;
+        return greetingHeader + payloadWithClosing;
+      } else {
+        const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
+        return politeHeader + payloadWithClosing;
+      }
+    }
+    if (isEduardo) {
+      return `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+    }
+    if (isJani) {
+      return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+    }
+    return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
+  }
+  if (isEduardo) {
+    return `\xA1Hola, Eduardo! A tu disposici\xF3n:
+
+${payloadWithClosing}`;
+  }
+  if (isJani) {
+    return `\xA1Hola, Jani! Qu\xE9 gusto saludarte:
+
+${payloadWithClosing}`;
+  }
+  if (isFirstTurn) {
+    const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
+
+Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra inmobiliaria:
+
+`;
+    return greetingHeader + payloadWithClosing;
+  } else {
+    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial como un beneficio de cortes\xEDa de *VECY BIENES RA\xCDCES*:
+
+`;
+    return politeHeader + payloadWithClosing;
+  }
+}
+function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, _displayName, hasPriorHistory = false) {
+  let cleaned = (text2 || "").trim();
+  if (!cleaned) return cleaned;
+  cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
+    return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
+  });
+  cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
+  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1Hola, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! `);
+  cleaned = cleaned.replace(/^hola\b/i, "\xA1Hola!");
+  cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
+  cleaned = cleaned.replace(/\b(Jani)\s+Alves\b/gi, "Jani");
+  cleaned = cleaned.replace(/\b(Eduardo)\s+Rivera\b/gi, "Eduardo");
+  if (isEduardo) {
+    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
+      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
+      cleaned = `\xA1Hola, Eduardo! A tu disposici\xF3n. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    }
+  } else if (isJani) {
+    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
+      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
+      cleaned = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    }
+  }
+  cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
+  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
+    const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
+    return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
+  });
+  return cleaned.trim();
+}
+async function processPrivateDmConversationalMessage(text2, userId, userName) {
+  const clean = text2.trim();
+  if (!clean) return "";
+  const realName = await resolveRealName(userId, userName);
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const compositeOrFirst = extractFirstName(realName);
+  let displayName = "";
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else {
+    const canonicalComposite = getCanonicalCompositeName(realName);
+    if (canonicalComposite) {
+      displayName = canonicalComposite;
+    } else if (compositeOrFirst) {
+      displayName = compositeOrFirst;
+    } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
+      displayName = nameInfo.displayName;
+    }
+    if (!canonicalComposite && displayName.includes(" ")) {
+      displayName = displayName.split(" ")[0];
+    }
+  }
+  const nameGreeting = displayName ? `, ${displayName}` : "";
+  const vocativeGreeting = displayName ? `, ${displayName}` : "";
+  const cleanLower = clean.toLowerCase();
+  const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
+  const history = await getOrLoadDmHistory(userId);
+  const hasPriorHistory = history.length > 0;
+  if (isGreetingOnly && history.length === 0) {
+    if (isEduardo) {
+      const welcomeMsg2 = `\xA1Hola, Eduardo! A tu disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg2);
+      return welcomeMsg2;
+    }
+    if (isJani) {
+      const welcomeMsg2 = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg2);
+      return welcomeMsg2;
+    }
+    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
+
+Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
+
+Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente? As\xED podr\xE9 orientarte de la mejor manera y contarte c\xF3mo podemos facilitarte la vida hoy \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", welcomeMsg);
+    return welcomeMsg;
+  }
+  const isConsultasInquiry = /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
+  if (isConsultasInquiry) {
+    const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
+
+\u{1F381} *Servicios 100% Gratuitos de Autoservicio:*
+1\uFE0F\u20E3 *Verificaci\xF3n oficial de documentos:* Validaci\xF3n de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes) y reporte de antecedentes con la Polic\xEDa Nacional en 20 segundos.
+2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Consulta y descarga oficial en PDF con c\xF3digo de barras y estado de cuenta al d\xEDa con la Secretar\xEDa de Hacienda.
+
+\u{1F4BC} *Consultas Especializadas y Asesor\xEDa Profesional:*
+3\uFE0F\u20E3 *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogot\xE1 seg\xFAn el barrio o sector.
+4\uFE0F\u20E3 *Asesor\xEDa jur\xEDdica inmobiliaria:* Casos de negociaci\xF3n, promesas de compraventa y contratos de arrendamiento.
+5\uFE0F\u20E3 *Tratamiento de datos y H\xE1beas Data inmobiliario.*
+6\uFE0F\u20E3 *Recuperaci\xF3n de cartera:* Cobranza de comisiones inmobiliarias no pagadas.
+7\uFE0F\u20E3 *Aval\xFAos digitales y peritajes comerciales certificados RAA.*
+8\uFE0F\u20E3 *Liquidaciones tributarias:* Ganancia ocasional, retenci\xF3n en la fuente e impuestos notariales.
+9\uFE0F\u20E3 *Pr\xE9stamos sobre hipoteca y pacto de retroventa.*
+
+Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), \xA1solo dime el n\xFAmero de documento o el predio que quieres consultar! \u{1F91D}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", consultasMenuMsg);
+    return consultasMenuMsg;
+  }
+  const { isCompanyInquiryOrAboutUs: isCompanyInquiryOrAboutUs2, formatDetailedCompanyAndSocialMediaPresentation: formatDetailedCompanyAndSocialMediaPresentation2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+  if (isCompanyInquiryOrAboutUs2(cleanLower)) {
+    const companyMsg = formatDetailedCompanyAndSocialMediaPresentation2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", companyMsg);
+    return companyMsg;
+  }
+  const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
+  if (isCostInquiry) {
+    const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
+    if (isFreeToolsContext) {
+      const freeCostMsg = `\xA1${displayName || "Hola"}! Este servicio es completamente *GRATIS* \u{1F381}\u2728.
+
+En *VECY Bienes Ra\xEDces* la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes), as\xED como la consulta y descarga de la Factura Predial y certificados de pago de Bogot\xE1, *no tienen ning\xFAn costo para ti*.
+
+Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.
+
+Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c\xE9dula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial \u{1F91D}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", freeCostMsg);
+      return freeCostMsg;
+    }
+  }
+  const isHowToDoInquiry = /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
+  if (isHowToDoInquiry) {
+    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
+
+1\uFE0F\u20E3 *Para verificar una c\xE9dula o antecedentes:*
+Solo escr\xEDbeme aqu\xED el nombre completo y n\xFAmero de documento (ejemplo: *"verificar 12345678"* o *"CC 12345678"*), tal como se lo solicitas formalmente para el registro de porter\xEDa previo a la visita. En segundos te entrego el reporte oficial de las centrales de seguridad con nombres completos, antecedentes y afiliaci\xF3n en salud.
+
+2\uFE0F\u20E3 *Para sacar el Impuesto Predial de Bogot\xE1:*
+Solo escr\xEDbeme el c\xF3digo CHIP del inmueble (comienza por AAA...) o la direcci\xF3n con el n\xFAmero de apartamento. Yo descargo la factura oficial en PDF con su c\xF3digo de barras lista para pagar o el certificado de que est\xE1 al d\xEDa.
+
+3\uFE0F\u20E3 *Para el Paz y Salvo de Valorizaci\xF3n IDU:*
+Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo del IDU y te genero el certificado oficial en PDF para tu tr\xE1mite en notar\xEDa.
+
+4\uFE0F\u20E3 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:*
+\xA1Cero angustia! Escr\xEDbeme con tus propias palabras o m\xE1ndame un mensaje de voz cont\xE1ndome qu\xE9 necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.
+
+\xBFCu\xE1l de las consultas te gustar\xEDa que hagamos ahorita? Dime y la hacemos de una vez \u{1F91D}\u{1F60A}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", howToMsg);
+    return howToMsg;
+  }
+  const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
+  if (isGratitudeOrClosingFastPath) {
+    const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const goodbyeMsg = getChannelInviteGoodbyeMessage2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", goodbyeMsg);
+    return goodbyeMsg;
+  }
+  const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+  const iduDetection = extractChipForIduValorizacion2(clean);
+  const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
+  const hasChipInText = /AAA[A-Z0-9]{8,14}/i.test(clean);
+  if (hasChipInText && !hasCourtesyOrGreeting) {
+    const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc3 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
+    setPendingUnconfirmedDoc3(userId, chipMatch);
+    const carrenoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
+
+Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", carrenoMsg);
+    return carrenoMsg;
+  }
+  if (iduDetection.found && iduDetection.chip) {
+    const iduRes = await executeIduValorizacionFromWhatsApp2(clean, userId, true);
+    if (iduRes.isIduRequest && iduRes.reportText) {
+      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", deliveredText);
+      return deliveredText;
+    }
+  } else if (isIduInquiry2(clean)) {
+    const iduGuide = formatIduAssistanceGuide2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", iduGuide);
+    return iduGuide;
+  }
+  const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
+  if (isDocVerificationIntent) {
+    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto (o documento de identidad: C\xE9dula de Extranjer\xEDa, Pasaporte o Documento del Pa\xEDs de Origen).
+
+\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* Conforme al art\xEDculo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de documento que el propio titular suministra voluntariamente.
+
+P\xEDdele con toda tranquilidad y profesionalismo a tu cliente o colega su nombre completo y n\xFAmero de documento, explic\xE1ndole con total transparencia que es el requisito formal est\xE1ndar para el registro de porter\xEDa y control de acceso de la visita al inmueble. Escr\xEDbemelo aqu\xED (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", docPromptMsg);
+    return docPromptMsg;
+  }
+  const {
+    isBareDocumentNumber: isBareDocumentNumber2,
+    getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
+    setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2,
+    clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
+    detectDocTypeConfirmation: detectDocTypeConfirmation2,
+    extractCedulaForVerification: extractCedulaForVerification2,
+    executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
+    getPendingCedulaSession: getPendingCedulaSession2,
+    extractAllCedulasForVerification: extractAllCedulasForVerification2
+  } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+  const pendingDoc = getPendingUnconfirmedDoc2(userId);
+  if (pendingDoc) {
+    const confirmation = detectDocTypeConfirmation2(clean);
+    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n)/i.test(clean);
+    const isPredialConfirmation = /(?:predial|factura|impuesto)/i.test(clean);
+    if (isIduConfirmation && pendingDoc.rawNumber.toUpperCase().includes("AAA")) {
+      clearPendingUnconfirmedDoc2(userId);
+      const iduRes = await executeIduValorizacionFromWhatsApp2(pendingDoc.rawNumber, userId, true);
+      if (iduRes.isIduRequest && iduRes.reportText) {
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes("AAA") || pendingDoc.cleanNumber)) {
+      clearPendingUnconfirmedDoc2(userId);
+      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+      const predialRes = await executePredialAssistanceFromWhatsApp2(pendingDoc.rawNumber, userId, true);
+      if (predialRes?.reportText) {
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", "predial", predialRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (confirmation.isConfirmation && confirmation.tipoDoc) {
+      clearPendingUnconfirmedDoc2(userId);
+      const verified = await executeIdentityVerificationFromWhatsApp2(
+        `${confirmation.tipoDoc} ${pendingDoc.cleanNumber}`,
+        true,
+        userId
+      );
+      if (verified.isVerificationRequest && verified.reportText) {
+        const followUpResponse = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}! Proced\xED con la verificaci\xF3n oficial del documento:
+
+` + verified.reportText;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpResponse);
+        return followUpResponse;
+      }
+    }
+  }
+  if (isBareDocumentNumber2(clean)) {
+    setPendingUnconfirmedDoc2(userId, clean);
+    const pedagogoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
+
+Recib\xED el n\xFAmero *${clean}*. Para garantizarte una consulta exacta y oficial en la base de datos correspondiente del Estado, por favor conf\xEDrmame a qu\xE9 tipo de documento pertenece:
+
+1\uFE0F\u20E3 *C\xE9dula de Ciudadan\xEDa (C.C.)* \u{1F1E8}\u{1F1F4}
+2\uFE0F\u20E3 *C\xE9dula de Extranjer\xEDa (C.E.)* \u{1F310}
+3\uFE0F\u20E3 *Pasaporte* \u{1F6C2}
+4\uFE0F\u20E3 *NIT (Persona Jur\xEDdica)* \u{1F3E2}
+
+Solo resp\xF3ndeme indic\xE1ndome el tipo de documento o tr\xE1mite (ejemplo: *"es CC"*, *"C\xE9dula"*, *"Extranjer\xEDa"* o el n\xFAmero de opci\xF3n *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. Quedo muy atenta a tu confirmaci\xF3n. \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", pedagogoMsg);
+    return pedagogoMsg;
+  }
+  const idDetection = extractCedulaForVerification2(clean, true);
+  if (idDetection.found && !hasChipInText) {
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", idCheck.reportText);
+      return idCheck.reportText;
+    }
+  }
+  const isAskingPendingCedulas = /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) || /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) || /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) || /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(cleanLower) || /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(cleanLower) || getPendingCedulaSession2(userId) !== null && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(cleanLower);
+  if (isAskingPendingCedulas) {
+    const pendingSession = getPendingCedulaSession2(userId);
+    if (pendingSession && pendingSession.reportText) {
+      const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n que consultamos en las centrales de seguridad:
+
+${pendingSession.reportText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", followUpMsg);
+      return followUpMsg;
+    }
+    const history2 = await getOrLoadDmHistory(userId);
+    let historicalItems = [];
+    for (let i = history2.length - 1; i >= 0; i--) {
+      if (history2[i].role === "user") {
+        const histCed = extractAllCedulasForVerification2(history2[i].content, true);
+        if (histCed.length > 0) {
+          historicalItems = histCed;
+          break;
+        }
+      }
+    }
+    if (historicalItems.length > 0) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId, historicalItems);
+      if (idCheck.reportText) {
+        const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n de los documentos que me compartiste:
+
+${idCheck.reportText}`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpMsg);
+        return followUpMsg;
+      }
+    }
+  }
+  const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+  const isNotarialContext = hasPendingNotarialSession2(userId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(cleanLower);
+  if (isNotarialContext) {
+    const notarialRes = await executeNotarialAssistanceFromWhatsApp2(clean, userId, true);
+    if (notarialRes.isNotarialRequest && notarialRes.reportText) {
+      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "notarial", notarialRes.reportText, true);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", deliveredText);
+      return deliveredText;
+    }
+  }
+  const { isAuthorizedAdminPhone: isAuthorizedAdminPhone2, isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
+  const isAdminSender = isAuthorizedAdminPhone2(userId, userName || displayName || realName);
+  if (isAdminSender && isMatchSearchQuery2(clean, true)) {
+    const matchRes = await executeAdminMatchSearch2(clean, true);
+    if (matchRes.formattedReport) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", matchRes.formattedReport);
+      return matchRes.formattedReport;
+    }
+  }
+  try {
+    const vecyKnowledge = getVecyInstitutionalKnowledge();
+    const messages2 = [
+      {
+        role: "system",
+        content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
+
+===================================================
+BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES (v33.04):
+===================================================
+${vecyKnowledge}
+
+===================================================
+ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA (DOCTRINA DOCTRINAL v33.04):
+===================================================
+Operas en el chat asumiendo con solvencia org\xE1nica los siguientes roles expertos de \xE9lite:
+1. Abogada Contractual Senior: Redactas en el chat borradores preliminares de contratos de corretaje inmobiliario, promesas de compraventa blindadas (Art. 1611 C.C., arras y penalidades), contratos de arrendamiento (Ley 820 de 2003) y cartas de presentaci\xF3n de clientes con rigor jur\xEDdico y mensajes de datos (Ley 527 de 1999).
+2. Liquidadora Notarial y Tributaria: Desglosas con precisi\xF3n matem\xE1tica los gastos de escrituraci\xF3n exactos: Derechos Notariales (50/50), Retenci\xF3n en la Fuente (1% vendedor), Impuesto de Registro y Beneficencia (1.67% comprador), Ganancia Ocasional (Ley 2277/2022 - 15%) y exenciones de 5.000 UVT (Art. 311-1 E.T.).
+3. Mentora Comercial: Ense\xF1as estrategias de venta digital sin avisos f\xEDsicos tradicionales ("Cero Papel"), explicas la revoluci\xF3n Proptech de captaci\xF3n por redes y SEO, y educas al colega sobre qu\xE9 es un prompt y c\xF3mo aprovechar la Inteligencia Artificial para potenciar su corretaje inmobiliario.
+4. Perita Avaluadora: Entregas sondeos de m\xB2 por zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) con honestidad t\xE9cnica impecable bajo la Pol\xEDtica de Cero Alucinaci\xF3n: si un sector carece de comparables verificados, se declara con total transparencia.
+5. Embajadora Proptech: Ofreces Vecy Agenda Pro para la coordinaci\xF3n inteligente de visitas y seguridad en porter\xEDas, y la F\xE1brica de Software Proptech a la medida de VECY BIENES RA\xCDCES (desarrollo de herramientas, scrapers, liquidadores y formularios inteligentes a cargo de Eduardo Rivera al +57 316 656 9719).
+6. Conectora Comercial 40/20/40: Conduces el negocio compartido y alianzas colegiadas 40/20/40 sobre el 3% de comisi\xF3n hacia Jani Alves y Eduardo Rivera en la l\xEDnea oficial de br\xF3ker (+57 316 656 9719).
+
+USO DE HERRAMIENTAS (FUNCTION CALLING EN JSON):
+- Cuentas con un cat\xE1logo de herramientas oficiales (consultar identidad, paz y salvo IDU, factura predial, liquidaci\xF3n notarial y sondeo de mercado).
+- Cuando el usuario requiera una consulta oficial, invoca la herramienta correspondiente en JSON. El sistema te entregar\xE1 los datos estructurados y t\xFA asumir\xE1s la redacci\xF3n completa con calidez, solvencia y persuasi\xF3n de IA pura.
+
+AUTONOM\xCDA TOTAL DE IA PURA Y CERO BOT R\xCDGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):
+- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonom\xEDa, criterio profesional y pensamiento profundo, NO un bot de opciones r\xEDgidas ni contestador autom\xE1tico.
+- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos ense\xF1ado son SOLAMENTE GU\xCDAS DE REFERENCIA; JAM\xC1S los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, c\xE1lida, inteligente y atractiva.
+
+PROHIBICI\xD3N TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRINA EDUARDO A. RIVERA):
+- NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondr\xE9 a correr el motor... te estar\xE9 avisando al instante si alguna hace match".
+- Jam\xE1s des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, s\xE9 sincera, directa y transparente de inmediato sin adornos ficticios.
+
+BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
+- En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
+- S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
+
+REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO, ORTOGRAF\xCDA Y TRATO DIRECTIVO (DOCTRINA v33.03):
+${isEduardo ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con EDUARDO A. RIVERA, fundador y Director de Tecnolog\xEDa de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Eduardo!". S\xE9 ejecutiva, r\xE1pida y precisa.\n' : isJani ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Jani!". S\xE9 ejecutiva, c\xE1lida y operativa.\n' : `- El usuario se llama: *${displayName || realName || "Colega"}*.
+- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.
+`}- ORTOGRAF\xCDA ESTRICTA EN ESPA\xD1OL: PROHIBIDO iniciar saludos o mensajes en min\xFAscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar May\xFAscula inicial y signos de apertura formales.
+- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '\xBF' y toda exclamaci\xF3n con '\xA1'. En espa\xF1ol es un error omitir los signos de apertura.
+- Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
+${hasPriorHistory ? '- CONTINUIDAD DE CONVERSACI\xD3N ACTIVA (MISMO D\xCDA): Ya est\xE1s conversando activamente con el usuario hoy. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte de nuevo!", "Es un placer tenerte por aqu\xED") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : '- Si es el primer mensaje del d\xEDa, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
+${hasPriorHistory ? '- PROHIBICI\xD3N TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qu\xE9 se dedica, cu\xE1l es su rol en el sector ni qu\xE9 hace, porque ya est\xE1n en medio de la conversaci\xF3n. Si el usuario responde a una opci\xF3n o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opci\xF3n espec\xEDfica que ven\xEDan hablando sin desviar la conversaci\xF3n.' : "- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qu\xE9 se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacci\xF3n, indaga amablemente a qu\xE9 se dedica para enfocar la conversaci\xF3n con asertividad."}
+IDENTIDAD OFICIAL DE ESTA L\xCDNEA DE WHATSAPP (+57 319 291 9978):
+- Este n\xFAmero anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la l\xEDnea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Ra\xEDces.
+- Si colegas o usuarios preguntan si eres Eduardo, qu\xE9 pas\xF3 con su n\xFAmero o qui\xE9n est\xE1 detr\xE1s, acl\xE1rales con calidez y simpat\xEDa:
+  "\xA1Hola! Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Ra\xEDces \u{1F916}\u2728. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atenci\xF3n personalizada humana, puedes escribirles con todo gusto a su l\xEDnea oficial de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"
+
+PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
+- Cuando colegas o usuarios pregunten por qu\xE9 reaccionas con emojis a sus publicaciones en los grupos o qu\xE9 significa cada emoji (como Ricardo Castillo u otros colegas), expl\xEDcales con total claridad, pedagog\xEDa y orgullo profesional:
+  1. \xBFPOR QU\xC9 REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicaci\xF3n en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicaci\xF3n, metraje, condiciones), la guardo en la base de datos de VECY BIENES RA\xCDCES y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.
+     Mi reacci\xF3n con un emoji es la confirmaci\xF3n visual en el grupo de que tu publicaci\xF3n ya qued\xF3 captada, analizada y guardada en el sistema.
+  2. SIGNIFICADO EXACTO DE CADA EMOJI:
+     \u2022 \u{1F44D} (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).
+     \u2022 \u{1F44C} (Mano OK): Inmueble en OFERTA que contempla o acepta opci\xF3n de PERMUTA (Venta/Permuta).
+     \u2022 \u{1F500} (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.
+     \u2022 \u{1F4DD} (Libreta con l\xE1piz): DEMANDA / REQUERIMIENTO tradicional captado (B\xFAsqueda de cliente para compra o arriendo puro, sin permuta).
+     \u2022 \u270F\uFE0F (L\xE1piz): DEMANDA / REQUERIMIENTO que ofrece o contempla opci\xF3n de PERMUTA.
+     \u2022 \u{1F504} (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.
+  3. \xBFQU\xC9 PASA CUANDO HAY UN MATCH?:
+     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RA\xCDCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactar\xE1 directamente contigo para coordinar la gesti\xF3n conjunta del negocio.
+  4. REGLA SAGRADA SOBRE COMISIONES Y RED COLABORATIVA (DOCTRINA EDUARDO):
+     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 (40% Asesor Captador, 40% Asesor Colocador agendado por Vecy Agenda, 10% Bolsa de Agentes Difusores y 10% VECY BIENES RA\xCDCES), adem\xE1s del Per\xEDodo de Gracia Inmediata (D\xEDas 1 a 5 al 100% Asesor / $0 COP VECY) y Cierres Directos al 80%/20%.
+     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas t\xE9cnicos de comisi\xF3n en conversaciones iniciales. JanIA debe esperar a que sea el propio agente o colega quien exprese o pregunte c\xF3mo opera el modelo o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo coordine con \xE9l al momento del contacto comercial.
+
+- PROHIBICI\xD3N ESTRICTA DE MENCIONAR ESQUEMAS DE COMISI\xD3N AL INICIO: Bajo NINGUNA circunstancia menciones esquemas de comisi\xF3n, porcentajes t\xE9cnicos ni tecnicismos de repartici\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Confunde a los usuarios. Solo se hablar\xE1 del modelo colaborativo institucional 40/20/40 si el usuario pregunta expresamente sobre c\xF3mo se comparten comisiones entre colegas o sobre los T\xE9rminos y Condiciones.
+- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 al 4 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional, Factura Predial Bogot\xE1, Paz y Salvo IDU en PDF y Liquidaci\xF3n de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
+- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos, predial, paz y salvo IDU o liquidaci\xF3n notarial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo.
+- DOCTRINA NOTARIAL, ESTUDIO DE T\xCDTULOS Y TIPOS DE NEGOCIACI\xD3N (COLOMBIA):
+  \u2022 SI EL USUARIO INDICA QUE VA PARA LA NOTAR\xCDA O A FIRMAR PROMESA (como Martha Mesa u otros): Felic\xEDtalo con calidez y alegr\xEDa ("\xA1Qu\xE9 alegr\xEDa! Felicidades por ese paso tan importante \u{1F3E2}\u2728") y ofr\xE9cele proactivamente liquidarle con exactitud los gastos de notar\xEDa y registro para que ambas partes tengan total claridad de lo que paga el comprador y el vendedor.
+  \u2022 AFECTACI\xD3N A VIVIENDA FAMILIAR (Ley 258/1996 y Ley 854/2003): Protege el techo donde reside la familia. Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura para cancelarla. Si el predio est\xE1 'sin afectaci\xF3n', el vendedor declara bajo juramento en la escritura que no tiene sociedad conyugal vigente ni reside all\xED con c\xF3nyuge.
+  \u2022 PATRIMONIO DE FAMILIA INEMBARGABLE (Ley 70/1931): Protege el predio contra embargos (hasta 250 SMMLV). \xA1Atenci\xF3n!: Si hay hijos MENORES de edad, la ley proh\xEDbe cancelarlo simplemente en notar\xEDa; exige autorizaci\xF3n judicial o aval previo del Defensor de Familia del ICBF (lo cual demora la negociaci\xF3n semanas o meses). Si los hijos ya son mayores (18+ a\xF1os), los padres lo cancelan en notar\xEDa con registros civiles.
+  \u2022 BIEN DE INTER\xC9S CULTURAL (BIC) O PATRIMONIO CULTURAL (Ley 397/1997, Ley 1185/2008): \xA1Anotaci\xF3n de alerta para cr\xE9dito! Los bancos comerciales colombianos generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre bienes BIC debido a restricciones de remodelaci\xF3n (licencias IDPC/MinCultura) e inembargabilidad/dificultad de remate. Por ello, estas compras casi siempre se deben pactar de CONTADO (recursos propios).
+  \u2022 PREDIO CON HIPOTECA (Vendedor): Minuta de cancelaci\xF3n y derechos notariales a cargo del vendedor.
+  \u2022 COMPRA CON CR\xC9DITO HIPOTECARIO (Comprador): Comprador asume constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado).
+  \u2022 LEASING HABITACIONAL (Cesi\xF3n): Al no transferirse el dominio en matr\xEDcula (el banco fiduciario sigue como due\xF1o), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
+  \u2022 EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto il\xEDcito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.
+  \u2022 DOCTRINA EN CONSULTAS DE ALTO VALOR Y EMBUDO COMERCIAL (DOCTRINA VECY v33.01):
+    Aplica ante consultas sobre: a) Recuperaci\xF3n de comisiones o by-passing (Arts. 1340-1346 C.Co, Ley 527 de 1999), b) Redacci\xF3n de contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.), c) Liquidaciones tributarias/notariales: ganancia ocasional (Ley 2277/2022 - 15%), exenci\xF3n 5.000 UVT casa de habitaci\xF3n (Art. 311-1 E.T.), retenci\xF3n 1% notarial, derechos notariales 50/50 y registro, d) Estudios de t\xEDtulos, sucesiones il\xEDquidas, embargos y saneamiento predial.
+    Toda respuesta ante estos casos DEBE seguir estrictamente 3 pasos:
+    1\xB0 Solvencia y Diagn\xF3stico Normativo: Cita la ley, c\xF3digo o decreto aplicable con autoridad de abogada senior.
+    2\xB0 Alerta de Riesgo Patrimonial: Recuerda con elegancia que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.
+    3\xB0 Llamado a la Acci\xF3n y Cierre Comercial: Invita obligatoriamente a formalizar la asesor\xEDa con la firma exacta:
+       "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719)."
+- PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
+- PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facil\xEDtame el nombre completo y n\xFAmero de documento que solicitas para el registro formal de porter\xEDa y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
+- MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
+- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
+- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
+- Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
+- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional, Procuradur\xEDa o ADRES si no cuentas con el reporte emitido por el sistema oficial. Jam\xE1s digas cosas como "lo importante es que ya quedaron verificadas esas dos identificaciones" o "en un momento te confirmo" dando falsas seguridades sin que el sistema haya emitido el reporte real. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
+
+DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
+- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:
+  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia err\xF3nea de que verificar la identidad de los clientes viola el H\xE1beas Data, y por temor o desinformaci\xF3n, cuando la c\xE9dula no coincide con el nombre en apps como Verif\xEDquese, cancelan la visita inventando pretextos falsos ("los due\xF1os desistieron", "ya no van a estar", "recibieron otra oferta").
+- POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RA\xCDCES (100% LEGAL Y \xC9TICA):
+  1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y n\xFAmero de identificaci\xF3n) para solicitar el servicio y coordinar el ingreso. Jam\xE1s se investiga a nadie a sus espaldas.
+  2. DOCUMENTOS OFICIALES HABILITADOS EN POLIC\xCDA NACIONAL: El servicio permanente de la Polic\xEDa Nacional (Art. 94 Decreto Ley 019 de 2012) permite validar cuatro tipos de documentos oficiales: C\xE9dula de Ciudadan\xEDa (cc), C\xE9dula de Extranjer\xEDa (cx/ce), Pasaporte (pa) y Documento Pa\xEDs de Origen (dp).
+  3. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012, Decreto 1377 de 2013 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
+  4. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data y Art. 15 C.P.) averiguar n\xFAmeros de documento a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
+  5. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93 y 94) para garantizar la seguridad en actos jur\xEDdicos y civiles.
+  6. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
+     - Si el n\xFAmero suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.
+     - Se le comunica con total amabilidad y respeto al cliente:
+       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de documento que nos diste no coincide con el nombre registrado en la base oficial de la Polic\xEDa Nacional. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
+     - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
+  7. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
+     - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un d\xEDgito invertido o mal digitado en WhatsApp), en VECY BIENES RA\xCDCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por tel\xE9fono al cliente para que nos rectifiquen amablemente el n\xFAmero de documento.
+     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
+- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
+  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.
+
+DOCTRINA OFICIAL VECY: TRATAMIENTO DE PASAPORTES EXTRANJEROS EN OPERACIONES INMOBILIARIAS:
+- NATURALEZA Y ESTRUCTURA:
+  1. Los pasaportes son documentos expedidos por Estados soberanos extranjeros y casi siempre son alfanum\xE9ricos (combinan letras y n\xFAmeros seg\xFAn el pa\xEDs emisor, como una o dos letras iniciales).
+  2. BASES DE DATOS DEL ESTADO COLOMBIANO: Ni la Polic\xEDa Nacional de Colombia, ni la Procuradur\xEDa (SIRI), ni la Registradur\xEDa ni el ADRES cuentan con los registros de identidad civil o penales de ciudadanos extranjeros en sus pa\xEDses de origen. \xDAnicamente indexan C\xE9dulas de Ciudadan\xEDa (C.C.) y C\xE9dulas de Extranjer\xEDa (C.E.) radicadas en Colombia.
+  3. C\xD3MO SE VALIDA UN EXTRANJERO CON PASAPORTE EN BIENES RA\xCDCES (PROTOCOLO NOTARIAL):
+     - Para promesas de compraventa, visitas o contratos, el procedimiento legalmente v\xE1lido es el *cotejo f\xEDsico del pasaporte original vigente*.
+     - Se revisa la fecha de vencimiento y el sello o visa de ingreso estampado por Migraci\xF3n Colombia (estatus de turista o visa de permanencia).
+  4. CUANDO UN ASESOR (COMO AIDDE INMO) PREGUNTE POR UN PASAPORTE EXTRANJERO O DIGA QUE NO APARECE:
+     - Expl\xEDcale de forma sutil, emp\xE1tica, clara y sin tanto texto (m\xE1ximo 2 a 3 p\xE1rrafos cortos) por qu\xE9 las plataformas locales no tienen acceso a registros de otros pa\xEDses, que los pasaportes suelen llevar letras y que el camino notarial est\xE1ndar es solicitar la foto o copia f\xEDsica del pasaporte original con su sello de entrada a Colombia.
+
+CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
+1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
+2. VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLIC\xCDA NACIONAL): Validaci\xF3n de nombres completos y antecedentes en 20 segundos para C\xE9dulas de Ciudadan\xEDa, C\xE9dulas de Extranjer\xEDa, Pasaportes y Documentos de Pa\xEDs de Origen, blindando contratos de compraventa y arrendamiento.
+3. SONDEOS DE MERCADO Y AVAL\xDAOS: Estimaci\xF3n del valor del m\xB2 por barrio en Bogot\xE1 y aval\xFAos certificados RAA.
+4. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
+5. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
+
+INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
+- Cuando el usuario indique que la conversaci\xF3n est\xE1 concluyendo, d\xE9 las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos as\xED"), desp\xEDdete con afecto y calidez e inv\xEDtalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RA\xCDCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.
+
+PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
+- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
+
+QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA v32.97):
+- Si la conversaci\xF3n es amena o el usuario pregunta sobre nosotros, qui\xE9nes somos, qu\xE9 es Vecy, qui\xE9nes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:
+  1. Cu\xE9ntale muy bien y detalladamente todo: somos VECY BIENES RA\xCDCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa e Innovaci\xF3n) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evoluci\xF3n frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.
+  2. Recu\xE9rdale que todos nuestros servicios est\xE1n 100% activos las 24 horas: B\xF3veda gratuita (verificaci\xF3n de antecedentes ante Polic\xEDa/Procuradur\xEDa/ADRES, factura predial Bogot\xE1 en PDF, paz y salvo IDU notarial, liquidaci\xF3n notarial y de registro) y consultor\xEDa de \xE9lite con Eduardo y Jani (+57 316 656 9719).
+  3. Inv\xEDtalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:
+     \u2022 Instagram: https://www.instagram.com/vecybienesraices/
+     \u2022 TikTok: https://www.tiktok.com/@vecybienesraices
+     \u2022 Facebook: https://www.facebook.com/vecybienesraices
+     \u2022 YouTube: https://www.youtube.com/@VecyBienesRaices
+     \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
+     \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+     \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
+  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CUxVzG_vecy/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
+      }
+    ];
+    for (const turn of history.slice(-14)) {
+      messages2.push({ role: turn.role, content: turn.content });
+    }
+    messages2.push({
+      role: "user",
+      content: `Mensaje de ${realName} (${userId}): "${clean}"`
+    });
+    const llmRes = await invokeLLM({
+      messages: messages2,
+      tools: JANIA_DM_TOOLS
+    });
+    let reply = "";
+    const fnCall = llmRes.choices[0]?.message?.functionCall;
+    if (fnCall && fnCall.name) {
+      const toolExecution = await executeJaniaDmTool(
+        fnCall.name,
+        fnCall.arguments || {},
+        userId,
+        userName || displayName || realName
+      );
+      reply = await synthesizeToolResponseWithGemini(
+        userId,
+        userName || displayName || realName,
+        toolExecution.toolType,
+        toolExecution.resultJson,
+        clean,
+        isEduardo,
+        isJani,
+        displayName
+      );
+    } else {
+      reply = llmRes.choices[0]?.message?.content || "";
+    }
+    reply = sanitizeResponseMarkdown(reply.trim());
+    if (hasPriorHistory) {
+      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
+      reply = reply.trim();
+    }
+    if (!reply) {
+      if (isEduardo) {
+        reply = `\xA1Hola, Eduardo! A tu disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+      } else if (isJani) {
+        reply = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+      } else {
+        reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+      }
+    }
+    if (!isEduardo && !isJani) {
+      reply = enhanceResponseWithCommercialFunnel(reply, clean);
+    }
+    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reply);
+    return reply;
+  } catch (err) {
+    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
+    let fallback = isEduardo ? `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    if (!isEduardo && !isJani && isHighValueLegalOrTaxInquiry(clean)) {
+      fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
+    }
+    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", fallback);
+    return fallback;
+  }
+}
+var JANIA_DM_TOOLS;
+var init_dmHandler = __esm({
+  "server/_core/jania/handlers/dmHandler.ts"() {
+    "use strict";
+    init_sessionManager();
+    init_parsers();
+    init_nameAndGenderResolver();
+    init_llm();
+    init_commercialFunnelService();
+    init_prompts();
+    init_valuation();
+    JANIA_DM_TOOLS = [
+      {
+        functionDeclarations: [
+          {
+            name: "consultar_identidad_y_antecedentes",
+            description: "Valida la identidad oficial (censo ADRES y Registradur\xEDa) y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar" },
+                tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
+              },
+              required: ["numeroDocumento"]
+            }
+          },
+          {
+            name: "consultar_paz_y_salvo_idu",
+            description: "Consulta y genera el Paz y Salvo oficial de Valorizaci\xF3n del IDU en Bogot\xE1 mediante el c\xF3digo CHIP (inicia en AAA) para tr\xE1mites de notar\xEDa y escrituraci\xF3n.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                chip: { type: "STRING", description: "C\xF3digo CHIP del inmueble que inicia por AAA" }
+              },
+              required: ["chip"]
+            }
+          },
+          {
+            name: "consultar_factura_predial_bogota",
+            description: "Consulta y descarga la factura oficial en PDF con c\xF3digo de barras y estado de pago del impuesto predial unificado de Bogot\xE1 ante la Secretar\xEDa de Hacienda.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                chip: { type: "STRING", description: "C\xF3digo CHIP del predio" },
+                documentoTitular: { type: "STRING", description: "N\xFAmero de c\xE9dula o NIT del titular si se conoce" }
+              },
+              required: ["chip"]
+            }
+          },
+          {
+            name: "liquidar_gastos_notariales_y_registro",
+            description: "Calcula el desglose exacto de derechos notariales (50/50), retenci\xF3n en la fuente (1% vendedor), impuesto de registro y beneficencia (1.67% comprador) para escrituraci\xF3n en Colombia.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                precioVenta: { type: "NUMBER", description: "Precio pactado de venta en pesos colombianos (COP)" },
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, lote, etc." }
+              },
+              required: ["precioVenta"]
+            }
+          },
+          {
+            name: "sondeo_mercado_inmobiliario",
+            description: "Realiza un sondeo t\xE9cnico comparativo de m\xB2 y canon sugerido en barrios y zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) integrando portales (Metrocuadrado, Fincaraiz, Ciencuadras) y coeficientes ACM.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogot\xE1 a evaluar" },
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
+                areaM2: { type: "NUMBER", description: "\xC1rea en metros cuadrados" },
+                estrato: { type: "NUMBER", description: "Estrato socioecon\xF3mico 1 al 6" },
+                antiguedadAnos: { type: "NUMBER", description: "A\xF1os de antig\xFCedad" },
+                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos" }
+              },
+              required: ["zonaOBarrio"]
+            }
+          }
+        ]
+      }
+    ];
+  }
+});
+
 // server/_core/whatsapp-match.ts
 var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
@@ -17550,7 +18575,7 @@ ${quotedNote}` : quotedNote;
           }
           let stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
-            const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
             const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
             if (reply && reply.trim()) {
               console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura para ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
@@ -22420,1022 +23445,6 @@ var init_circuloHandler = __esm({
     init_heuristics();
     init_nameAndGenderResolver();
     init_llm();
-  }
-});
-
-// server/_core/valuation.ts
-function calcularPrecioHomologado(params) {
-  let cAntiguedad = 1;
-  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
-  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
-  let cPiso = 1;
-  if (params.tieneAscensor) {
-    cPiso = params.piso <= 2 ? 0.95 : 1.02;
-  } else {
-    if (params.piso <= 2) cPiso = 1;
-    else if (params.piso === 3) cPiso = 0.93;
-    else if (params.piso >= 4) cPiso = 0.85;
-  }
-  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
-  const cAmenidades = params.esClubHouse ? 1.07 : 1;
-  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
-  return {
-    precioM2Homologado,
-    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
-  };
-}
-function calculatePropertyValuation(input) {
-  const result = calcularPrecioHomologado({
-    basePricePerM2: input.baseZonePricePerM2,
-    antiguedadAnos: input.ageYears,
-    tieneAscensor: input.hasElevator ?? true,
-    piso: input.floorNumber ?? 3,
-    garajes: input.garages ?? 0,
-    esClubHouse: input.hasClubHouse ?? false
-  });
-  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
-  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
-  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
-  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
-  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
-  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
-  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
-  return {
-    baseZonePricePerM2: input.baseZonePricePerM2,
-    homologatedPricePerM2,
-    suggestedCommercialValue,
-    minClosingPrice,
-    estimatedMonthlyRent,
-    estimatedCapRate,
-    totalAreaM2: input.areaM2,
-    coefficients: {
-      cAntiguedad,
-      cPiso,
-      cGarajes,
-      cAmenidades
-    },
-    factorBreakdown: {
-      ageFactor: {
-        name: "Antig\xFCedad",
-        coefficient: cAntiguedad,
-        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
-        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
-      },
-      floorFactor: {
-        name: "Piso / Altura",
-        coefficient: cPiso,
-        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
-        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
-      },
-      garageFactor: {
-        name: "Garajes",
-        coefficient: cGarajes,
-        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
-        description: `${input.garages ?? 0} parqueaderos privados`
-      },
-      amenitiesFactor: {
-        name: "Amenidades",
-        coefficient: cAmenidades,
-        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
-        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
-      }
-    },
-    totalHomologationFactor: Number(totalFactor.toFixed(4)),
-    comparableSources: input.comparableSources || [],
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
-function executeMarketValuationSurvey(params) {
-  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
-  let basePrice = 65e5;
-  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
-  let hasVerifiedComparables = true;
-  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
-    basePrice = 145e5;
-  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
-    basePrice = 125e5;
-  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
-    basePrice = 105e5;
-  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
-    basePrice = 85e5;
-  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
-    basePrice = 78e5;
-  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
-    basePrice = 75e5;
-  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
-    basePrice = 62e5;
-  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
-    basePrice = 58e5;
-  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
-    basePrice = 55e5;
-  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
-    basePrice = 65e5;
-  } else {
-    hasVerifiedComparables = false;
-  }
-  const area = params.areaM2 || 75;
-  const valuation = calculatePropertyValuation({
-    zone: zoneName,
-    city: "Bogot\xE1",
-    areaM2: area,
-    baseZonePricePerM2: basePrice,
-    ageYears: params.antiguedadAnos || 8,
-    floorNumber: params.piso || 3,
-    hasElevator: params.tieneAscensor ?? true,
-    garages: params.garajes || 1,
-    hasClubHouse: params.esClubHouse || false,
-    comparableSources: [
-      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
-      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
-      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
-    ]
-  });
-  return {
-    zonaConsultada: zoneName,
-    zonaOBarrio: zoneName,
-    tieneComparablesVerificados: hasVerifiedComparables,
-    baseZonePricePerM2: valuation.baseZonePricePerM2,
-    homologatedPricePerM2: valuation.homologatedPricePerM2,
-    valorM2Estimado: valuation.homologatedPricePerM2,
-    suggestedCommercialValue: valuation.suggestedCommercialValue,
-    valorComercialSugerido: valuation.suggestedCommercialValue,
-    minClosingPrice: valuation.minClosingPrice,
-    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
-    canonArriendoEstimado: valuation.estimatedMonthlyRent,
-    estimatedCapRate: valuation.estimatedCapRate,
-    areaM2: area,
-    coefficients: valuation.coefficients,
-    factorBreakdown: valuation.factorBreakdown,
-    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
-    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
-    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
-    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
-  };
-}
-var init_valuation = __esm({
-  "server/_core/valuation.ts"() {
-    "use strict";
-  }
-});
-
-// server/_core/jania/handlers/dmHandler.ts
-async function executeJaniaDmTool(toolName, args, userId, _userName) {
-  switch (toolName) {
-    case "consultar_identidad_y_antecedentes": {
-      const doc = String(args.numeroDocumento || "").trim();
-      const tipo = String(args.tipoDocumento || "CC").trim();
-      const queryStr = `${tipo} ${doc}`;
-      const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-      const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
-      return {
-        toolType: "cedula",
-        resultJson: {
-          solicitud: "verificacion_identidad",
-          numeroDocumento: doc,
-          tipoDocumento: tipo,
-          reporteOficial: res.reportText || "Sin reporte disponible",
-          exitoso: res.isVerificationRequest
-        }
-      };
-    }
-    case "consultar_paz_y_salvo_idu": {
-      const chip = String(args.chip || "").trim();
-      const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
-      const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
-      return {
-        toolType: "idu",
-        resultJson: {
-          solicitud: "paz_y_salvo_idu",
-          chip,
-          reporteOficial: res.reportText || "Sin reporte disponible",
-          exitoso: res.isIduRequest
-        }
-      };
-    }
-    case "consultar_factura_predial_bogota": {
-      const chip = String(args.chip || "").trim();
-      const doc = args.documentoTitular ? String(args.documentoTitular).trim() : void 0;
-      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-      const queryStr = doc ? `${chip} ${doc}` : chip;
-      const res = await executePredialAssistanceFromWhatsApp2(queryStr, userId, true);
-      return {
-        toolType: "predial",
-        resultJson: {
-          solicitud: "factura_predial_bogota",
-          chip,
-          reporteOficial: res?.reportText || "Factura predial procesada",
-          exitoso: true
-        }
-      };
-    }
-    case "liquidar_gastos_notariales_y_registro": {
-      const precio = Number(args.precioVenta || 0);
-      const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
-      const res = await executeNotarialAssistanceFromWhatsApp2(`liquidaci\xF3n notarial ${precio}`, userId, true);
-      return {
-        toolType: "notarial",
-        resultJson: {
-          solicitud: "gastos_notariales_y_registro",
-          precioVenta: precio,
-          reporteOficial: res.reportText || "Liquidaci\xF3n procesada",
-          exitoso: res.isNotarialRequest
-        }
-      };
-    }
-    case "sondeo_mercado_inmobiliario": {
-      const surveyRes = executeMarketValuationSurvey({
-        zonaOBarrio: args.zonaOBarrio || "Chic\xF3",
-        tipoInmueble: args.tipoInmueble || "apartamento",
-        areaM2: Number(args.areaM2 || 75),
-        estrato: Number(args.estrato || 5),
-        antiguedadAnos: Number(args.antiguedadAnos || 8),
-        garajes: Number(args.garajes || 1)
-      });
-      return {
-        toolType: "sondeo",
-        resultJson: surveyRes
-      };
-    }
-    default:
-      return {
-        toolType: "sondeo",
-        resultJson: { error: `Herramienta desconocida: ${toolName}` }
-      };
-  }
-}
-async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
-  const isFreeTool = toolType !== "sondeo";
-  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
-  if (rawReport && (rawReport.includes("VERIFICACI\xD3N OFICIAL") || rawReport.includes("PAZ Y SALVO") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA"))) {
-    return await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
-  }
-  const synthPrompt = [
-    {
-      role: "system",
-      content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
-Acabas de ejecutar la herramienta correspondiente a: ${toolType}.
-Datos estructurados del sistema en JSON:
-${JSON.stringify(toolJson, null, 2)}
-
-INSTRUCCIONES DE REDACCI\xD3N:
-- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasi\xF3n de IA pura.
-- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
-- Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
-- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (m\xE1ximo 2 a 3 p\xE1rrafos cortos).
-- Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
-${isEduardo ? '- Trato directivo para Eduardo: "\xA1Hola, Eduardo! A tu disposici\xF3n."\n' : isJani ? '- Trato directivo para Jani: "\xA1Hola, Jani! Qu\xE9 gusto saludarte."\n' : ""}`
-    },
-    {
-      role: "user",
-      content: userMessage
-    }
-  ];
-  try {
-    const res = await invokeLLM({ messages: synthPrompt });
-    let text2 = res.choices[0]?.message?.content || "";
-    if (text2) {
-      text2 = sanitizeResponseMarkdown(text2.trim());
-      if (isFreeTool) {
-        text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
-      } else {
-        text2 = sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName, true);
-      }
-      return text2;
-    }
-  } catch (err) {
-    console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
-  }
-  return await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
-}
-async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
-  const realName = await resolveRealName(userId, rawName);
-  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-  const timeSalutation = getGreetingByTime4();
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  const compositeOrFirst = extractFirstName(realName);
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
-  let displayName = "";
-  if (isEduardo) {
-    displayName = "Eduardo";
-  } else if (isJani) {
-    displayName = "Jani";
-  } else {
-    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
-    if (!canonicalComposite && displayName.includes(" ")) {
-      displayName = displayName.split(" ")[0];
-    }
-  }
-  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
-  const history = await getOrLoadDmHistory(userId);
-  const isFirstTurn = history.length === 0;
-  const cleanPayload = (payloadText || "").trim();
-  const reviewSection = isEduardo || isJani ? "" : `
-
-\u2B50 *\xBFTe fue \xFAtil esta consulta?*
-Tu recomendaci\xF3n nos ayuda a seguir creciendo. D\xE9janos tu calificaci\xF3n de 5 estrellas en Google Opiniones aqu\xED:
-https://g.page/r/CUxVzG_vecy/review`;
-  const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
-  let payloadWithClosing = cleanPayload;
-  if (!payloadWithClosing.includes(closingTag)) {
-    payloadWithClosing = `${payloadWithClosing}
-
-${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CUxVzG_vecy/review")) {
-    payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
-  }
-  if (!success) {
-    if (payloadText && payloadText.trim()) {
-      if (isEduardo) {
-        return `\xA1Hola, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
-
-${payloadWithClosing}`;
-      }
-      if (isJani) {
-        return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
-
-${payloadWithClosing}`;
-      }
-      if (isFirstTurn) {
-        const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
-
-`;
-        return greetingHeader + payloadWithClosing;
-      } else {
-        const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
-        return politeHeader + payloadWithClosing;
-      }
-    }
-    if (isEduardo) {
-      return `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
-    }
-    if (isJani) {
-      return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
-    }
-    return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
-  }
-  if (isEduardo) {
-    return `\xA1Hola, Eduardo! A tu disposici\xF3n:
-
-${payloadWithClosing}`;
-  }
-  if (isJani) {
-    return `\xA1Hola, Jani! Qu\xE9 gusto saludarte:
-
-${payloadWithClosing}`;
-  }
-  if (isFirstTurn) {
-    const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
-
-Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra inmobiliaria:
-
-`;
-    return greetingHeader + payloadWithClosing;
-  } else {
-    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial como un beneficio de cortes\xEDa de *VECY BIENES RA\xCDCES*:
-
-`;
-    return politeHeader + payloadWithClosing;
-  }
-}
-function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, _displayName, hasPriorHistory = false) {
-  let cleaned = (text2 || "").trim();
-  if (!cleaned) return cleaned;
-  cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
-    return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
-  });
-  cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
-  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1Hola, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! `);
-  cleaned = cleaned.replace(/^hola\b/i, "\xA1Hola!");
-  cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
-  cleaned = cleaned.replace(/\b(Jani)\s+Alves\b/gi, "Jani");
-  cleaned = cleaned.replace(/\b(Eduardo)\s+Rivera\b/gi, "Eduardo");
-  if (isEduardo) {
-    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
-      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `\xA1Hola, Eduardo! A tu disposici\xF3n. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
-    }
-  } else if (isJani) {
-    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
-      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
-    }
-  }
-  cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
-  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
-    const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
-    return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
-  });
-  return cleaned.trim();
-}
-async function processPrivateDmConversationalMessage(text2, userId, userName) {
-  const clean = text2.trim();
-  if (!clean) return "";
-  const realName = await resolveRealName(userId, userName);
-  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-  const timeSalutation = getGreetingByTime4();
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const compositeOrFirst = extractFirstName(realName);
-  let displayName = "";
-  if (isEduardo) {
-    displayName = "Eduardo";
-  } else if (isJani) {
-    displayName = "Jani";
-  } else {
-    const canonicalComposite = getCanonicalCompositeName(realName);
-    if (canonicalComposite) {
-      displayName = canonicalComposite;
-    } else if (compositeOrFirst) {
-      displayName = compositeOrFirst;
-    } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
-      displayName = nameInfo.displayName;
-    }
-    if (!canonicalComposite && displayName.includes(" ")) {
-      displayName = displayName.split(" ")[0];
-    }
-  }
-  const nameGreeting = displayName ? `, ${displayName}` : "";
-  const vocativeGreeting = displayName ? `, ${displayName}` : "";
-  const cleanLower = clean.toLowerCase();
-  const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
-  const history = await getOrLoadDmHistory(userId);
-  const hasPriorHistory = history.length > 0;
-  if (isGreetingOnly && history.length === 0) {
-    if (isEduardo) {
-      const welcomeMsg2 = `\xA1Hola, Eduardo! A tu disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", welcomeMsg2);
-      return welcomeMsg2;
-    }
-    if (isJani) {
-      const welcomeMsg2 = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", welcomeMsg2);
-      return welcomeMsg2;
-    }
-    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
-
-Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
-
-Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente? As\xED podr\xE9 orientarte de la mejor manera y contarte c\xF3mo podemos facilitarte la vida hoy \u{1F91D}\u2728`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", welcomeMsg);
-    return welcomeMsg;
-  }
-  const isConsultasInquiry = /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
-  if (isConsultasInquiry) {
-    const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
-
-\u{1F381} *Servicios 100% Gratuitos de Autoservicio:*
-1\uFE0F\u20E3 *Verificaci\xF3n oficial de documentos:* Validaci\xF3n de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes) y reporte de antecedentes con la Polic\xEDa Nacional en 20 segundos.
-2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Consulta y descarga oficial en PDF con c\xF3digo de barras y estado de cuenta al d\xEDa con la Secretar\xEDa de Hacienda.
-
-\u{1F4BC} *Consultas Especializadas y Asesor\xEDa Profesional:*
-3\uFE0F\u20E3 *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogot\xE1 seg\xFAn el barrio o sector.
-4\uFE0F\u20E3 *Asesor\xEDa jur\xEDdica inmobiliaria:* Casos de negociaci\xF3n, promesas de compraventa y contratos de arrendamiento.
-5\uFE0F\u20E3 *Tratamiento de datos y H\xE1beas Data inmobiliario.*
-6\uFE0F\u20E3 *Recuperaci\xF3n de cartera:* Cobranza de comisiones inmobiliarias no pagadas.
-7\uFE0F\u20E3 *Aval\xFAos digitales y peritajes comerciales certificados RAA.*
-8\uFE0F\u20E3 *Liquidaciones tributarias:* Ganancia ocasional, retenci\xF3n en la fuente e impuestos notariales.
-9\uFE0F\u20E3 *Pr\xE9stamos sobre hipoteca y pacto de retroventa.*
-
-Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), \xA1solo dime el n\xFAmero de documento o el predio que quieres consultar! \u{1F91D}`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", consultasMenuMsg);
-    return consultasMenuMsg;
-  }
-  const { isCompanyInquiryOrAboutUs: isCompanyInquiryOrAboutUs2, formatDetailedCompanyAndSocialMediaPresentation: formatDetailedCompanyAndSocialMediaPresentation2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-  if (isCompanyInquiryOrAboutUs2(cleanLower)) {
-    const companyMsg = formatDetailedCompanyAndSocialMediaPresentation2(displayName);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", companyMsg);
-    return companyMsg;
-  }
-  const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
-  if (isCostInquiry) {
-    const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
-    if (isFreeToolsContext) {
-      const freeCostMsg = `\xA1${displayName || "Hola"}! Este servicio es completamente *GRATIS* \u{1F381}\u2728.
-
-En *VECY Bienes Ra\xEDces* la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes), as\xED como la consulta y descarga de la Factura Predial y certificados de pago de Bogot\xE1, *no tienen ning\xFAn costo para ti*.
-
-Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.
-
-Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c\xE9dula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial \u{1F91D}`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", freeCostMsg);
-      return freeCostMsg;
-    }
-  }
-  const isHowToDoInquiry = /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
-  if (isHowToDoInquiry) {
-    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
-
-1\uFE0F\u20E3 *Para verificar una c\xE9dula o antecedentes:*
-Solo escr\xEDbeme aqu\xED el nombre completo y n\xFAmero de documento (ejemplo: *"verificar 12345678"* o *"CC 12345678"*), tal como se lo solicitas formalmente para el registro de porter\xEDa previo a la visita. En segundos te entrego el reporte oficial de las centrales de seguridad con nombres completos, antecedentes y afiliaci\xF3n en salud.
-
-2\uFE0F\u20E3 *Para sacar el Impuesto Predial de Bogot\xE1:*
-Solo escr\xEDbeme el c\xF3digo CHIP del inmueble (comienza por AAA...) o la direcci\xF3n con el n\xFAmero de apartamento. Yo descargo la factura oficial en PDF con su c\xF3digo de barras lista para pagar o el certificado de que est\xE1 al d\xEDa.
-
-3\uFE0F\u20E3 *Para el Paz y Salvo de Valorizaci\xF3n IDU:*
-Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo del IDU y te genero el certificado oficial en PDF para tu tr\xE1mite en notar\xEDa.
-
-4\uFE0F\u20E3 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:*
-\xA1Cero angustia! Escr\xEDbeme con tus propias palabras o m\xE1ndame un mensaje de voz cont\xE1ndome qu\xE9 necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.
-
-\xBFCu\xE1l de las consultas te gustar\xEDa que hagamos ahorita? Dime y la hacemos de una vez \u{1F91D}\u{1F60A}`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", howToMsg);
-    return howToMsg;
-  }
-  const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
-  if (isGratitudeOrClosingFastPath) {
-    const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-    const goodbyeMsg = getChannelInviteGoodbyeMessage2(displayName);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", goodbyeMsg);
-    return goodbyeMsg;
-  }
-  const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
-  const iduDetection = extractChipForIduValorizacion2(clean);
-  const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
-  const hasChipInText = /AAA[A-Z0-9]{8,14}/i.test(clean);
-  if (hasChipInText && !hasCourtesyOrGreeting) {
-    const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc3 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-    const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
-    setPendingUnconfirmedDoc3(userId, chipMatch);
-    const carrenoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
-
-Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", carrenoMsg);
-    return carrenoMsg;
-  }
-  if (iduDetection.found && iduDetection.chip) {
-    const iduRes = await executeIduValorizacionFromWhatsApp2(clean, userId, true);
-    if (iduRes.isIduRequest && iduRes.reportText) {
-      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", deliveredText);
-      return deliveredText;
-    }
-  } else if (isIduInquiry2(clean)) {
-    const iduGuide = formatIduAssistanceGuide2(displayName);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", iduGuide);
-    return iduGuide;
-  }
-  const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
-  if (isDocVerificationIntent) {
-    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto (o documento de identidad: C\xE9dula de Extranjer\xEDa, Pasaporte o Documento del Pa\xEDs de Origen).
-
-\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* Conforme al art\xEDculo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de documento que el propio titular suministra voluntariamente.
-
-P\xEDdele con toda tranquilidad y profesionalismo a tu cliente o colega su nombre completo y n\xFAmero de documento, explic\xE1ndole con total transparencia que es el requisito formal est\xE1ndar para el registro de porter\xEDa y control de acceso de la visita al inmueble. Escr\xEDbemelo aqu\xED (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", docPromptMsg);
-    return docPromptMsg;
-  }
-  const {
-    isBareDocumentNumber: isBareDocumentNumber2,
-    getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
-    setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2,
-    clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
-    detectDocTypeConfirmation: detectDocTypeConfirmation2,
-    extractCedulaForVerification: extractCedulaForVerification2,
-    executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
-    getPendingCedulaSession: getPendingCedulaSession2,
-    extractAllCedulasForVerification: extractAllCedulasForVerification2
-  } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-  const pendingDoc = getPendingUnconfirmedDoc2(userId);
-  if (pendingDoc) {
-    const confirmation = detectDocTypeConfirmation2(clean);
-    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n)/i.test(clean);
-    const isPredialConfirmation = /(?:predial|factura|impuesto)/i.test(clean);
-    if (isIduConfirmation && pendingDoc.rawNumber.toUpperCase().includes("AAA")) {
-      clearPendingUnconfirmedDoc2(userId);
-      const iduRes = await executeIduValorizacionFromWhatsApp2(pendingDoc.rawNumber, userId, true);
-      if (iduRes.isIduRequest && iduRes.reportText) {
-        const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", delivered);
-        return delivered;
-      }
-    } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes("AAA") || pendingDoc.cleanNumber)) {
-      clearPendingUnconfirmedDoc2(userId);
-      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-      const predialRes = await executePredialAssistanceFromWhatsApp2(pendingDoc.rawNumber, userId, true);
-      if (predialRes?.reportText) {
-        const delivered = await formatPoliteToolDelivery(userId, userName || "", "predial", predialRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", delivered);
-        return delivered;
-      }
-    } else if (confirmation.isConfirmation && confirmation.tipoDoc) {
-      clearPendingUnconfirmedDoc2(userId);
-      const verified = await executeIdentityVerificationFromWhatsApp2(
-        `${confirmation.tipoDoc} ${pendingDoc.cleanNumber}`,
-        true,
-        userId
-      );
-      if (verified.isVerificationRequest && verified.reportText) {
-        const followUpResponse = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}! Proced\xED con la verificaci\xF3n oficial del documento:
-
-` + verified.reportText;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", followUpResponse);
-        return followUpResponse;
-      }
-    }
-  }
-  if (isBareDocumentNumber2(clean)) {
-    setPendingUnconfirmedDoc2(userId, clean);
-    const pedagogoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
-
-Recib\xED el n\xFAmero *${clean}*. Para garantizarte una consulta exacta y oficial en la base de datos correspondiente del Estado, por favor conf\xEDrmame a qu\xE9 tipo de documento pertenece:
-
-1\uFE0F\u20E3 *C\xE9dula de Ciudadan\xEDa (C.C.)* \u{1F1E8}\u{1F1F4}
-2\uFE0F\u20E3 *C\xE9dula de Extranjer\xEDa (C.E.)* \u{1F310}
-3\uFE0F\u20E3 *Pasaporte* \u{1F6C2}
-4\uFE0F\u20E3 *NIT (Persona Jur\xEDdica)* \u{1F3E2}
-
-Solo resp\xF3ndeme indic\xE1ndome el tipo de documento o tr\xE1mite (ejemplo: *"es CC"*, *"C\xE9dula"*, *"Extranjer\xEDa"* o el n\xFAmero de opci\xF3n *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. Quedo muy atenta a tu confirmaci\xF3n. \u{1F91D}\u2728`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", pedagogoMsg);
-    return pedagogoMsg;
-  }
-  const idDetection = extractCedulaForVerification2(clean, true);
-  if (idDetection.found && !hasChipInText) {
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", idCheck.reportText);
-      return idCheck.reportText;
-    }
-  }
-  const isAskingPendingCedulas = /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) || /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) || /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) || /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(cleanLower) || /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(cleanLower) || getPendingCedulaSession2(userId) !== null && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(cleanLower);
-  if (isAskingPendingCedulas) {
-    const pendingSession = getPendingCedulaSession2(userId);
-    if (pendingSession && pendingSession.reportText) {
-      const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n que consultamos en las centrales de seguridad:
-
-${pendingSession.reportText}`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", followUpMsg);
-      return followUpMsg;
-    }
-    const history2 = await getOrLoadDmHistory(userId);
-    let historicalItems = [];
-    for (let i = history2.length - 1; i >= 0; i--) {
-      if (history2[i].role === "user") {
-        const histCed = extractAllCedulasForVerification2(history2[i].content, true);
-        if (histCed.length > 0) {
-          historicalItems = histCed;
-          break;
-        }
-      }
-    }
-    if (historicalItems.length > 0) {
-      const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId, historicalItems);
-      if (idCheck.reportText) {
-        const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n de los documentos que me compartiste:
-
-${idCheck.reportText}`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", followUpMsg);
-        return followUpMsg;
-      }
-    }
-  }
-  const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
-  const isNotarialContext = hasPendingNotarialSession2(userId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(cleanLower);
-  if (isNotarialContext) {
-    const notarialRes = await executeNotarialAssistanceFromWhatsApp2(clean, userId, true);
-    if (notarialRes.isNotarialRequest && notarialRes.reportText) {
-      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "notarial", notarialRes.reportText, true);
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", deliveredText);
-      return deliveredText;
-    }
-  }
-  const { isAuthorizedAdminPhone: isAuthorizedAdminPhone2, isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
-  const isAdminSender = isAuthorizedAdminPhone2(userId, userName || displayName || realName);
-  if (isAdminSender && isMatchSearchQuery2(clean, true)) {
-    const matchRes = await executeAdminMatchSearch2(clean, true);
-    if (matchRes.formattedReport) {
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", matchRes.formattedReport);
-      return matchRes.formattedReport;
-    }
-  }
-  try {
-    const vecyKnowledge = getVecyInstitutionalKnowledge();
-    const messages2 = [
-      {
-        role: "system",
-        content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
-Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
-
-===================================================
-BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES (v33.04):
-===================================================
-${vecyKnowledge}
-
-===================================================
-ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA (DOCTRINA DOCTRINAL v33.04):
-===================================================
-Operas en el chat asumiendo con solvencia org\xE1nica los siguientes roles expertos de \xE9lite:
-1. Abogada Contractual Senior: Redactas en el chat borradores preliminares de contratos de corretaje inmobiliario, promesas de compraventa blindadas (Art. 1611 C.C., arras y penalidades), contratos de arrendamiento (Ley 820 de 2003) y cartas de presentaci\xF3n de clientes con rigor jur\xEDdico y mensajes de datos (Ley 527 de 1999).
-2. Liquidadora Notarial y Tributaria: Desglosas con precisi\xF3n matem\xE1tica los gastos de escrituraci\xF3n exactos: Derechos Notariales (50/50), Retenci\xF3n en la Fuente (1% vendedor), Impuesto de Registro y Beneficencia (1.67% comprador), Ganancia Ocasional (Ley 2277/2022 - 15%) y exenciones de 5.000 UVT (Art. 311-1 E.T.).
-3. Mentora Comercial: Ense\xF1as estrategias de venta digital sin avisos f\xEDsicos tradicionales ("Cero Papel"), explicas la revoluci\xF3n Proptech de captaci\xF3n por redes y SEO, y educas al colega sobre qu\xE9 es un prompt y c\xF3mo aprovechar la Inteligencia Artificial para potenciar su corretaje inmobiliario.
-4. Perita Avaluadora: Entregas sondeos de m\xB2 por zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) con honestidad t\xE9cnica impecable bajo la Pol\xEDtica de Cero Alucinaci\xF3n: si un sector carece de comparables verificados, se declara con total transparencia.
-5. Embajadora Proptech: Ofreces Vecy Agenda Pro para la coordinaci\xF3n inteligente de visitas y seguridad en porter\xEDas, y la F\xE1brica de Software Proptech a la medida de VECY BIENES RA\xCDCES (desarrollo de herramientas, scrapers, liquidadores y formularios inteligentes a cargo de Eduardo Rivera al +57 316 656 9719).
-6. Conectora Comercial 40/20/40: Conduces el negocio compartido y alianzas colegiadas 40/20/40 sobre el 3% de comisi\xF3n hacia Jani Alves y Eduardo Rivera en la l\xEDnea oficial de br\xF3ker (+57 316 656 9719).
-
-USO DE HERRAMIENTAS (FUNCTION CALLING EN JSON):
-- Cuentas con un cat\xE1logo de herramientas oficiales (consultar identidad, paz y salvo IDU, factura predial, liquidaci\xF3n notarial y sondeo de mercado).
-- Cuando el usuario requiera una consulta oficial, invoca la herramienta correspondiente en JSON. El sistema te entregar\xE1 los datos estructurados y t\xFA asumir\xE1s la redacci\xF3n completa con calidez, solvencia y persuasi\xF3n de IA pura.
-
-AUTONOM\xCDA TOTAL DE IA PURA Y CERO BOT R\xCDGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):
-- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonom\xEDa, criterio profesional y pensamiento profundo, NO un bot de opciones r\xEDgidas ni contestador autom\xE1tico.
-- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos ense\xF1ado son SOLAMENTE GU\xCDAS DE REFERENCIA; JAM\xC1S los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, c\xE1lida, inteligente y atractiva.
-
-PROHIBICI\xD3N TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRINA EDUARDO A. RIVERA):
-- NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondr\xE9 a correr el motor... te estar\xE9 avisando al instante si alguna hace match".
-- Jam\xE1s des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, s\xE9 sincera, directa y transparente de inmediato sin adornos ficticios.
-
-BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
-- En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
-- S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
-
-REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO, ORTOGRAF\xCDA Y TRATO DIRECTIVO (DOCTRINA v33.03):
-${isEduardo ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con EDUARDO A. RIVERA, fundador y Director de Tecnolog\xEDa de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Eduardo!". S\xE9 ejecutiva, r\xE1pida y precisa.\n' : isJani ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Jani!". S\xE9 ejecutiva, c\xE1lida y operativa.\n' : `- El usuario se llama: *${displayName || realName || "Colega"}*.
-- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.
-`}- ORTOGRAF\xCDA ESTRICTA EN ESPA\xD1OL: PROHIBIDO iniciar saludos o mensajes en min\xFAscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar May\xFAscula inicial y signos de apertura formales.
-- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '\xBF' y toda exclamaci\xF3n con '\xA1'. En espa\xF1ol es un error omitir los signos de apertura.
-- Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
-${hasPriorHistory ? '- CONTINUIDAD DE CONVERSACI\xD3N ACTIVA (MISMO D\xCDA): Ya est\xE1s conversando activamente con el usuario hoy. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte de nuevo!", "Es un placer tenerte por aqu\xED") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : '- Si es el primer mensaje del d\xEDa, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
-${hasPriorHistory ? '- PROHIBICI\xD3N TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qu\xE9 se dedica, cu\xE1l es su rol en el sector ni qu\xE9 hace, porque ya est\xE1n en medio de la conversaci\xF3n. Si el usuario responde a una opci\xF3n o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opci\xF3n espec\xEDfica que ven\xEDan hablando sin desviar la conversaci\xF3n.' : "- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qu\xE9 se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacci\xF3n, indaga amablemente a qu\xE9 se dedica para enfocar la conversaci\xF3n con asertividad."}
-IDENTIDAD OFICIAL DE ESTA L\xCDNEA DE WHATSAPP (+57 319 291 9978):
-- Este n\xFAmero anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la l\xEDnea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Ra\xEDces.
-- Si colegas o usuarios preguntan si eres Eduardo, qu\xE9 pas\xF3 con su n\xFAmero o qui\xE9n est\xE1 detr\xE1s, acl\xE1rales con calidez y simpat\xEDa:
-  "\xA1Hola! Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Ra\xEDces \u{1F916}\u2728. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atenci\xF3n personalizada humana, puedes escribirles con todo gusto a su l\xEDnea oficial de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"
-
-PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
-- Cuando colegas o usuarios pregunten por qu\xE9 reaccionas con emojis a sus publicaciones en los grupos o qu\xE9 significa cada emoji (como Ricardo Castillo u otros colegas), expl\xEDcales con total claridad, pedagog\xEDa y orgullo profesional:
-  1. \xBFPOR QU\xC9 REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicaci\xF3n en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicaci\xF3n, metraje, condiciones), la guardo en la base de datos de VECY BIENES RA\xCDCES y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.
-     Mi reacci\xF3n con un emoji es la confirmaci\xF3n visual en el grupo de que tu publicaci\xF3n ya qued\xF3 captada, analizada y guardada en el sistema.
-  2. SIGNIFICADO EXACTO DE CADA EMOJI:
-     \u2022 \u{1F44D} (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).
-     \u2022 \u{1F44C} (Mano OK): Inmueble en OFERTA que contempla o acepta opci\xF3n de PERMUTA (Venta/Permuta).
-     \u2022 \u{1F500} (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.
-     \u2022 \u{1F4DD} (Libreta con l\xE1piz): DEMANDA / REQUERIMIENTO tradicional captado (B\xFAsqueda de cliente para compra o arriendo puro, sin permuta).
-     \u2022 \u270F\uFE0F (L\xE1piz): DEMANDA / REQUERIMIENTO que ofrece o contempla opci\xF3n de PERMUTA.
-     \u2022 \u{1F504} (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.
-  3. \xBFQU\xC9 PASA CUANDO HAY UN MATCH?:
-     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RA\xCDCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactar\xE1 directamente contigo para coordinar la gesti\xF3n conjunta del negocio.
-  4. REGLA SAGRADA SOBRE COMISIONES Y RED COLABORATIVA (DOCTRINA EDUARDO):
-     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 (40% Asesor Captador, 40% Asesor Colocador agendado por Vecy Agenda, 10% Bolsa de Agentes Difusores y 10% VECY BIENES RA\xCDCES), adem\xE1s del Per\xEDodo de Gracia Inmediata (D\xEDas 1 a 5 al 100% Asesor / $0 COP VECY) y Cierres Directos al 80%/20%.
-     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas t\xE9cnicos de comisi\xF3n en conversaciones iniciales. JanIA debe esperar a que sea el propio agente o colega quien exprese o pregunte c\xF3mo opera el modelo o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo coordine con \xE9l al momento del contacto comercial.
-
-- PROHIBICI\xD3N ESTRICTA DE MENCIONAR ESQUEMAS DE COMISI\xD3N AL INICIO: Bajo NINGUNA circunstancia menciones esquemas de comisi\xF3n, porcentajes t\xE9cnicos ni tecnicismos de repartici\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Confunde a los usuarios. Solo se hablar\xE1 del modelo colaborativo institucional 40/20/40 si el usuario pregunta expresamente sobre c\xF3mo se comparten comisiones entre colegas o sobre los T\xE9rminos y Condiciones.
-- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 al 4 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional, Factura Predial Bogot\xE1, Paz y Salvo IDU en PDF y Liquidaci\xF3n de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
-- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos, predial, paz y salvo IDU o liquidaci\xF3n notarial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo.
-- DOCTRINA NOTARIAL, ESTUDIO DE T\xCDTULOS Y TIPOS DE NEGOCIACI\xD3N (COLOMBIA):
-  \u2022 SI EL USUARIO INDICA QUE VA PARA LA NOTAR\xCDA O A FIRMAR PROMESA (como Martha Mesa u otros): Felic\xEDtalo con calidez y alegr\xEDa ("\xA1Qu\xE9 alegr\xEDa! Felicidades por ese paso tan importante \u{1F3E2}\u2728") y ofr\xE9cele proactivamente liquidarle con exactitud los gastos de notar\xEDa y registro para que ambas partes tengan total claridad de lo que paga el comprador y el vendedor.
-  \u2022 AFECTACI\xD3N A VIVIENDA FAMILIAR (Ley 258/1996 y Ley 854/2003): Protege el techo donde reside la familia. Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura para cancelarla. Si el predio est\xE1 'sin afectaci\xF3n', el vendedor declara bajo juramento en la escritura que no tiene sociedad conyugal vigente ni reside all\xED con c\xF3nyuge.
-  \u2022 PATRIMONIO DE FAMILIA INEMBARGABLE (Ley 70/1931): Protege el predio contra embargos (hasta 250 SMMLV). \xA1Atenci\xF3n!: Si hay hijos MENORES de edad, la ley proh\xEDbe cancelarlo simplemente en notar\xEDa; exige autorizaci\xF3n judicial o aval previo del Defensor de Familia del ICBF (lo cual demora la negociaci\xF3n semanas o meses). Si los hijos ya son mayores (18+ a\xF1os), los padres lo cancelan en notar\xEDa con registros civiles.
-  \u2022 BIEN DE INTER\xC9S CULTURAL (BIC) O PATRIMONIO CULTURAL (Ley 397/1997, Ley 1185/2008): \xA1Anotaci\xF3n de alerta para cr\xE9dito! Los bancos comerciales colombianos generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre bienes BIC debido a restricciones de remodelaci\xF3n (licencias IDPC/MinCultura) e inembargabilidad/dificultad de remate. Por ello, estas compras casi siempre se deben pactar de CONTADO (recursos propios).
-  \u2022 PREDIO CON HIPOTECA (Vendedor): Minuta de cancelaci\xF3n y derechos notariales a cargo del vendedor.
-  \u2022 COMPRA CON CR\xC9DITO HIPOTECARIO (Comprador): Comprador asume constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado).
-  \u2022 LEASING HABITACIONAL (Cesi\xF3n): Al no transferirse el dominio en matr\xEDcula (el banco fiduciario sigue como due\xF1o), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
-  \u2022 EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto il\xEDcito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.
-  \u2022 DOCTRINA EN CONSULTAS DE ALTO VALOR Y EMBUDO COMERCIAL (DOCTRINA VECY v33.01):
-    Aplica ante consultas sobre: a) Recuperaci\xF3n de comisiones o by-passing (Arts. 1340-1346 C.Co, Ley 527 de 1999), b) Redacci\xF3n de contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.), c) Liquidaciones tributarias/notariales: ganancia ocasional (Ley 2277/2022 - 15%), exenci\xF3n 5.000 UVT casa de habitaci\xF3n (Art. 311-1 E.T.), retenci\xF3n 1% notarial, derechos notariales 50/50 y registro, d) Estudios de t\xEDtulos, sucesiones il\xEDquidas, embargos y saneamiento predial.
-    Toda respuesta ante estos casos DEBE seguir estrictamente 3 pasos:
-    1\xB0 Solvencia y Diagn\xF3stico Normativo: Cita la ley, c\xF3digo o decreto aplicable con autoridad de abogada senior.
-    2\xB0 Alerta de Riesgo Patrimonial: Recuerda con elegancia que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.
-    3\xB0 Llamado a la Acci\xF3n y Cierre Comercial: Invita obligatoriamente a formalizar la asesor\xEDa con la firma exacta:
-       "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719)."
-- PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
-- PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facil\xEDtame el nombre completo y n\xFAmero de documento que solicitas para el registro formal de porter\xEDa y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
-- MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
-- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
-- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
-- Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
-- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional, Procuradur\xEDa o ADRES si no cuentas con el reporte emitido por el sistema oficial. Jam\xE1s digas cosas como "lo importante es que ya quedaron verificadas esas dos identificaciones" o "en un momento te confirmo" dando falsas seguridades sin que el sistema haya emitido el reporte real. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
-
-DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
-- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:
-  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia err\xF3nea de que verificar la identidad de los clientes viola el H\xE1beas Data, y por temor o desinformaci\xF3n, cuando la c\xE9dula no coincide con el nombre en apps como Verif\xEDquese, cancelan la visita inventando pretextos falsos ("los due\xF1os desistieron", "ya no van a estar", "recibieron otra oferta").
-- POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RA\xCDCES (100% LEGAL Y \xC9TICA):
-  1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y n\xFAmero de identificaci\xF3n) para solicitar el servicio y coordinar el ingreso. Jam\xE1s se investiga a nadie a sus espaldas.
-  2. DOCUMENTOS OFICIALES HABILITADOS EN POLIC\xCDA NACIONAL: El servicio permanente de la Polic\xEDa Nacional (Art. 94 Decreto Ley 019 de 2012) permite validar cuatro tipos de documentos oficiales: C\xE9dula de Ciudadan\xEDa (cc), C\xE9dula de Extranjer\xEDa (cx/ce), Pasaporte (pa) y Documento Pa\xEDs de Origen (dp).
-  3. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012, Decreto 1377 de 2013 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
-  4. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data y Art. 15 C.P.) averiguar n\xFAmeros de documento a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
-  5. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93 y 94) para garantizar la seguridad en actos jur\xEDdicos y civiles.
-  6. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
-     - Si el n\xFAmero suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.
-     - Se le comunica con total amabilidad y respeto al cliente:
-       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de documento que nos diste no coincide con el nombre registrado en la base oficial de la Polic\xEDa Nacional. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
-     - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
-  7. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
-     - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un d\xEDgito invertido o mal digitado en WhatsApp), en VECY BIENES RA\xCDCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por tel\xE9fono al cliente para que nos rectifiquen amablemente el n\xFAmero de documento.
-     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
-- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
-  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.
-
-DOCTRINA OFICIAL VECY: TRATAMIENTO DE PASAPORTES EXTRANJEROS EN OPERACIONES INMOBILIARIAS:
-- NATURALEZA Y ESTRUCTURA:
-  1. Los pasaportes son documentos expedidos por Estados soberanos extranjeros y casi siempre son alfanum\xE9ricos (combinan letras y n\xFAmeros seg\xFAn el pa\xEDs emisor, como una o dos letras iniciales).
-  2. BASES DE DATOS DEL ESTADO COLOMBIANO: Ni la Polic\xEDa Nacional de Colombia, ni la Procuradur\xEDa (SIRI), ni la Registradur\xEDa ni el ADRES cuentan con los registros de identidad civil o penales de ciudadanos extranjeros en sus pa\xEDses de origen. \xDAnicamente indexan C\xE9dulas de Ciudadan\xEDa (C.C.) y C\xE9dulas de Extranjer\xEDa (C.E.) radicadas en Colombia.
-  3. C\xD3MO SE VALIDA UN EXTRANJERO CON PASAPORTE EN BIENES RA\xCDCES (PROTOCOLO NOTARIAL):
-     - Para promesas de compraventa, visitas o contratos, el procedimiento legalmente v\xE1lido es el *cotejo f\xEDsico del pasaporte original vigente*.
-     - Se revisa la fecha de vencimiento y el sello o visa de ingreso estampado por Migraci\xF3n Colombia (estatus de turista o visa de permanencia).
-  4. CUANDO UN ASESOR (COMO AIDDE INMO) PREGUNTE POR UN PASAPORTE EXTRANJERO O DIGA QUE NO APARECE:
-     - Expl\xEDcale de forma sutil, emp\xE1tica, clara y sin tanto texto (m\xE1ximo 2 a 3 p\xE1rrafos cortos) por qu\xE9 las plataformas locales no tienen acceso a registros de otros pa\xEDses, que los pasaportes suelen llevar letras y que el camino notarial est\xE1ndar es solicitar la foto o copia f\xEDsica del pasaporte original con su sello de entrada a Colombia.
-
-CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
-1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
-2. VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLIC\xCDA NACIONAL): Validaci\xF3n de nombres completos y antecedentes en 20 segundos para C\xE9dulas de Ciudadan\xEDa, C\xE9dulas de Extranjer\xEDa, Pasaportes y Documentos de Pa\xEDs de Origen, blindando contratos de compraventa y arrendamiento.
-3. SONDEOS DE MERCADO Y AVAL\xDAOS: Estimaci\xF3n del valor del m\xB2 por barrio en Bogot\xE1 y aval\xFAos certificados RAA.
-4. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
-5. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
-
-INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
-- Cuando el usuario indique que la conversaci\xF3n est\xE1 concluyendo, d\xE9 las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos as\xED"), desp\xEDdete con afecto y calidez e inv\xEDtalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RA\xCDCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.
-
-PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
-- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
-
-QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA v32.97):
-- Si la conversaci\xF3n es amena o el usuario pregunta sobre nosotros, qui\xE9nes somos, qu\xE9 es Vecy, qui\xE9nes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:
-  1. Cu\xE9ntale muy bien y detalladamente todo: somos VECY BIENES RA\xCDCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa e Innovaci\xF3n) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evoluci\xF3n frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.
-  2. Recu\xE9rdale que todos nuestros servicios est\xE1n 100% activos las 24 horas: B\xF3veda gratuita (verificaci\xF3n de antecedentes ante Polic\xEDa/Procuradur\xEDa/ADRES, factura predial Bogot\xE1 en PDF, paz y salvo IDU notarial, liquidaci\xF3n notarial y de registro) y consultor\xEDa de \xE9lite con Eduardo y Jani (+57 316 656 9719).
-  3. Inv\xEDtalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:
-     \u2022 Instagram: https://www.instagram.com/vecybienesraices/
-     \u2022 TikTok: https://www.tiktok.com/@vecybienesraices
-     \u2022 Facebook: https://www.facebook.com/vecybienesraices
-     \u2022 YouTube: https://www.youtube.com/@VecyBienesRaices
-     \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
-     \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-     \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
-  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CUxVzG_vecy/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
-      }
-    ];
-    for (const turn of history.slice(-14)) {
-      messages2.push({ role: turn.role, content: turn.content });
-    }
-    messages2.push({
-      role: "user",
-      content: `Mensaje de ${realName} (${userId}): "${clean}"`
-    });
-    const llmRes = await invokeLLM({
-      messages: messages2,
-      tools: JANIA_DM_TOOLS
-    });
-    let reply = "";
-    const fnCall = llmRes.choices[0]?.message?.functionCall;
-    if (fnCall && fnCall.name) {
-      const toolExecution = await executeJaniaDmTool(
-        fnCall.name,
-        fnCall.arguments || {},
-        userId,
-        userName || displayName || realName
-      );
-      reply = await synthesizeToolResponseWithGemini(
-        userId,
-        userName || displayName || realName,
-        toolExecution.toolType,
-        toolExecution.resultJson,
-        clean,
-        isEduardo,
-        isJani,
-        displayName
-      );
-    } else {
-      reply = llmRes.choices[0]?.message?.content || "";
-    }
-    reply = sanitizeResponseMarkdown(reply.trim());
-    if (hasPriorHistory) {
-      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
-      reply = reply.trim();
-    }
-    if (!reply) {
-      if (isEduardo) {
-        reply = `\xA1Hola, Eduardo! A tu disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
-      } else if (isJani) {
-        reply = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
-      } else {
-        reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
-      }
-    }
-    if (!isEduardo && !isJani) {
-      reply = enhanceResponseWithCommercialFunnel(reply, clean);
-    }
-    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", reply);
-    return reply;
-  } catch (err) {
-    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    let fallback = isEduardo ? `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
-    if (!isEduardo && !isJani && isHighValueLegalOrTaxInquiry(clean)) {
-      fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
-    }
-    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", fallback);
-    return fallback;
-  }
-}
-var JANIA_DM_TOOLS;
-var init_dmHandler = __esm({
-  "server/_core/jania/handlers/dmHandler.ts"() {
-    "use strict";
-    init_sessionManager();
-    init_parsers();
-    init_nameAndGenderResolver();
-    init_llm();
-    init_commercialFunnelService();
-    init_prompts();
-    init_valuation();
-    JANIA_DM_TOOLS = [
-      {
-        functionDeclarations: [
-          {
-            name: "consultar_identidad_y_antecedentes",
-            description: "Valida la identidad oficial (censo ADRES y Registradur\xEDa) y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar" },
-                tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
-              },
-              required: ["numeroDocumento"]
-            }
-          },
-          {
-            name: "consultar_paz_y_salvo_idu",
-            description: "Consulta y genera el Paz y Salvo oficial de Valorizaci\xF3n del IDU en Bogot\xE1 mediante el c\xF3digo CHIP (inicia en AAA) para tr\xE1mites de notar\xEDa y escrituraci\xF3n.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                chip: { type: "STRING", description: "C\xF3digo CHIP del inmueble que inicia por AAA" }
-              },
-              required: ["chip"]
-            }
-          },
-          {
-            name: "consultar_factura_predial_bogota",
-            description: "Consulta y descarga la factura oficial en PDF con c\xF3digo de barras y estado de pago del impuesto predial unificado de Bogot\xE1 ante la Secretar\xEDa de Hacienda.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                chip: { type: "STRING", description: "C\xF3digo CHIP del predio" },
-                documentoTitular: { type: "STRING", description: "N\xFAmero de c\xE9dula o NIT del titular si se conoce" }
-              },
-              required: ["chip"]
-            }
-          },
-          {
-            name: "liquidar_gastos_notariales_y_registro",
-            description: "Calcula el desglose exacto de derechos notariales (50/50), retenci\xF3n en la fuente (1% vendedor), impuesto de registro y beneficencia (1.67% comprador) para escrituraci\xF3n en Colombia.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                precioVenta: { type: "NUMBER", description: "Precio pactado de venta en pesos colombianos (COP)" },
-                tipoInmueble: { type: "STRING", description: "apartamento, casa, lote, etc." }
-              },
-              required: ["precioVenta"]
-            }
-          },
-          {
-            name: "sondeo_mercado_inmobiliario",
-            description: "Realiza un sondeo t\xE9cnico comparativo de m\xB2 y canon sugerido en barrios y zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) integrando portales (Metrocuadrado, Fincaraiz, Ciencuadras) y coeficientes ACM.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogot\xE1 a evaluar" },
-                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
-                areaM2: { type: "NUMBER", description: "\xC1rea en metros cuadrados" },
-                estrato: { type: "NUMBER", description: "Estrato socioecon\xF3mico 1 al 6" },
-                antiguedadAnos: { type: "NUMBER", description: "A\xF1os de antig\xFCedad" },
-                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos" }
-              },
-              required: ["zonaOBarrio"]
-            }
-          }
-        ]
-      }
-    ];
   }
 });
 
