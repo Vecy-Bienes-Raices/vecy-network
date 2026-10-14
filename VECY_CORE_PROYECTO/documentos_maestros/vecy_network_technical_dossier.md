@@ -333,6 +333,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ### 🔖 v33.04 — Octubre 2026
 
+#### [v33.4.0] — 2026-10-14: Refactorización UX Identidad, Hábeas Data Capa 3 y Estabilidad DM
+- **Security & Compliance:** Implementación de Capa 3 de Hábeas Data previa a consultas estatales en `dmHandler.ts` (Art. 15 C.P., Ley 1581/2012 y Ley 527/1999). Reemplazo de simbología institucional en `identityVerificationService.ts` (`🏛️` Procuraduría SIRI).
+- **UX & Anti-Truncamiento:** Reporte de antecedentes optimizado para una sola pantalla de chat; ADRES reubicada en bloque terminal debido a fallas de disponibilidad del WAF estatal.
+- **Session State Management:** Resolución de pérdida de contexto en solicitudes de paz y salvo IDU; consumo automático de CHIP persistido en sesión. Enlace directo configurado a `generateCert.xhtml`.
+- **Anti-Ban Architecture:** Descarte de secuencias push no solicitadas; conversión de reputación orientada exclusivamente a post-atención reactiva.
+- **Infraestructura:** Compilado exitoso con Vite/esbuild; recarga en caliente verificada en Contabo VPS bajo PM2 cluster (`jania-server`).
+
 #### 📌 RESTAURACIÓN COGNITIVA PURA, BASE DOCTRINAL DE VECY BIENES RAÍCES Y SOMBREROS EXPERTOS DE JanIA
 
 **Requerimiento y Objetivos:**

@@ -1,3 +1,11 @@
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.4.0 — 2026-10-14)
+- **JanIA Server:** `v33.4.0` online en Contabo VPS (`13.140.149.144`).
+- **Verificación de Identidad (Reporte Compacto):** Reporte resumido sin truncamiento en WhatsApp. Jerarquía: Identidad ➡️ Policía ➡️ Procuraduría (SIRI con emoji 🏛️) ➡️ Contraloría (SIRECI) ➡️ ADRES (BDUA) de última como nota informativa por intermitencias del portal oficial.
+- **Hábeas Data (Capa 3 Previa):** Advertencia legal obligatoria emitida en el saludo de Carreño y en el mensaje didáctico de selección de documento (CC, CE, Pasaporte, NIT) antes de cualquier consulta en bases de datos del Estado (Leyes 1581/12, 527/99 y Dec. 019/12).
+- **IDU Valorización:** Enlace de respaldo directo terminal a `generateCert.xhtml`. Memoria de sesión activa para no duplicar solicitud de CHIP en el Turno 2.
+- **Detector de Salida (Fast-path):** `isGratitudeOrClosingFastPath` condicionado con `!isAskingService` para que palabras de agradecimiento en solicitudes activas no disparen el cierre comercial prematuro.
+- **Política Meta Anti-Ban:** Prohibidas secuencias diferidas automáticas (drip marketing). La solicitud de calificación de Google Reviews solo se emite ante agradecimientos genuinos del usuario.
+
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
 ## 1. Conciencia Y Razonamiento Profundo (Deep Reasoning First)

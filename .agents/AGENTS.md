@@ -5283,3 +5283,15 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Capa A: Matriz de Cotejo Dinámica y Elástica**: Inserción adaptativa en vivo de filas para Cocina *(Cerrada/Abierta/Isla)*, Cuarto y Baño de Servicio *(CBS)*, Acabado de Pisos *(Madera/Laminado/Mármol)*, Asoleación *(Sol de mañana/tarde/exterior)*, Planta Eléctrica *(Total/Parcial)* y Parqueadero de Visitantes.
 - **Capa B: Memoria y Diccionario Semántico Evolutivo (`inmobiliario_lexicon`)**: JanIA auto-aprende a diario la jerga y modismos inmobiliarios colombianos (*"cbs"*, *"pelo a pelo"*, *"star de tv"*, *"cuarto de empleada"*), normalizándolos a conceptos canónicos en Supabase.
 - **Capa C: Bucle de Retroalimentación de Brokers (`match_feedback`)**: Botones 👍 *"🤝 Trato en Curso"* y 👎 *"⛔ Descartar Match"* con modal de motivos para entrenar y calibrar continuamente las decisiones de la IA.
+
+#### 🤖 Actualización de Comportamiento JanIA (v33.4.0)
+- **Flujo de Antecedentes e Identidad:**
+  - Emite aviso previo de consentimiento informado (Capa 3) antes de consultar antecedentes.
+  - Genera reporte compacto de máxima legibilidad móvil con ADRES / BDUA en posición final.
+  - Utiliza simbología institucional estricta (`🏛️` para Procuraduría General).
+- **Flujo de Valorización IDU y Memoria de Sesión:**
+  - Si el usuario envió previamente un CHIP durante la Urbanidad de Carreño, JanIA rescata el código desde la memoria de sesión (`getPendingUnconfirmedDoc`) en el Turno 2 sin volver a solicitarlo.
+  - Los enlaces de contingencia apuntan a la generación notarial directa (`generateCert.xhtml`).
+- **Cierre y Conversión:**
+  - No interpreta cortesías («gracias», «por favor») como cierre de sesión si acompañan una solicitud operativa.
+  - Solicitud de Google Reviews restringida a respuestas reactivas de cierre formal para salvaguardar la reputación del número ante WhatsApp.
