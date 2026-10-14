@@ -11772,3 +11772,60 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Ajuste:** Corrección de Urbanidad de Carreño ante consultas combinadas de CHIP y Cédula (hasChipInText).
 - **Seguridad:** Blindaje contra falsos positivos en verificación policial y balanceo de llaves de control.
 - **Estado:** Desplegado a producción en VPS Contabo (online).
+
+### 📅 [2026-10-14] — Refactorización de Verificación de Identidad, Blindaje Hábeas Data (Capa 3), UX Directa IDU y Estabilidad de Sesión DM
+
+**Versión Desplegada:** `jania-server v33.4.0` (PM2 Online en VPS Contabo `13.140.149.144`)
+**Archivos Afectados:**
+- `server/_core/identityVerificationService.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/iduValorizacionService.ts`
+- `server/_core/whatsapp-match.ts`
+
+---
+
+#### 1. Contexto y Objetivos Técnicos
+1. **Optimización del Reporte de Identidad:** Reducir la extensión del reporte oficial de antecedentes para eliminar el truncamiento con botón «Leer más» en WhatsApp móvil, reposicionando la consulta de la ADRES (BDUA) al final debido a su alta tasa de intermitencia por firewalls gubernamentales (WAF/Cloudflare) frente a servidores en la nube.
+2. **Blindaje Jurídico Integral (Hábeas Data — Capa 3):** Incorporar la notificación previa de tratamiento de datos personales conforme a la Ley 1581 de 2012, Decreto 1377 de 2013 y Art. 15 C.P., certificando que el solicitante cuenta con el suministro voluntario del titular para debida diligencia negocial e inmobiliaria, respaldado por la inmutabilidad pericial de logs en PostgreSQL (Ley 527 de 1999) y el carácter público de las consultas (Arts. 93 y 94 del Decreto Ley 019 de 2012).
+3. **Persistencia de Contexto Conversacional (Memoria de Sesión):** Evitar que JanIA repita la solicitud del código CHIP en el Turno 2 tras la activación de la Urbanidad de Carreño en el Turno 1.
+4. **Protección contra Salida Prematura por Agradecimiento:** Ajustar el detector `isGratitudeOrClosingFastPath` para que palabras de cortesía como «gracias» o «por favor» no disparen el cierre comercial si el mensaje contiene una solicitud operativa activa («requiero», «paz y salvo», «predial»).
+5. **Navegación Directa IDU:** Actualizar el enlace de contingencia del portal del IDU hacia la vista terminal de generación notarial (`generateCert.xhtml`), eliminando las fricciones de landing pages intermedias (`index.xhtml`).
+
+---
+
+#### 2. Modificaciones Implementadas en el Código
+
+##### A. `server/_core/identityVerificationService.ts`
+- **Reestructuración de Plantillas:** Se actualizaron tanto la función de reporte consolidado (`buildConsolidatedReportText`) como la individual (`executeIdentityVerificationFromWhatsApp`).
+- **Encabezado y Cláusula Compacta:**
+  - Inclusión de la cláusula concisa de Hábeas Data al inicio del informe.
+  - Corrección semántica y visual de emojis: se sustituyó el emoji religioso por el institucional `🏛️` para la Procuraduría General (SIRI).
+  - Jerarquización lógica de antecedentes: Identidad ➡️ Policía Nacional ➡️ Procuraduría SIRI ➡️ Contraloría SIRECI ➡️ ADRES (BDUA) como nota informativa final.
+
+##### B. `server/_core/jania/handlers/dmHandler.ts`
+- **Blindaje Previo (Capa 3):**
+  - **Línea ~571 (`carrenoMsg`):** Notificación legal integrada en el saludo de Urbanidad de Carreño al recibir documentos en frío.
+  - **Línea ~698 (`pedagogoMsg`):** Notificación legal adjunta al menú didáctico de selección de documento (CC, CE, Pasaporte, NIT) previa consulta a fuentes estatales.
+- **Filtro de Intención Operativa:**
+  - Se introdujo `isAskingService = /(?:requiero|necesito|paz\s*y\s*salvo|idu|predial|factura|certificado|tr[aá]mite)/i`.
+  - Se condicionó el fast-path de agradecimiento: `isGratitudeOrClosingFastPath && !isAskingService`.
+- **Recuperación de Memoria de CHIP:**
+  - En la rama `isIduInquiry(clean)`, se implementó la recuperación activa de `getPendingUnconfirmedDoc(userId)`. Si existe un CHIP guardado de turnos anteriores, se procesa automáticamente vía `executeIduValorizacionFromWhatsApp` sin repreguntar al usuario.
+
+##### C. `server/_core/iduValorizacionService.ts`
+- Sustitución del enlace de respaldo por la URL terminal directa:  
+  `https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml`
+
+---
+
+#### 3. Dictamen de Seguridad Operativa y Políticas de Meta (Anti-Ban)
+- **Riesgo de Secuencias en Cascada (Drip Sequences):** Se descartó la emisión diferida automática de mensajes (2 min para Google Reviews + 1 min para servicios + 2 min para redes) debido a la alta probabilidad de bloqueo de línea por los algoritmos antispam de Meta (Baileys) ante reportes de usuarios («Bloquear y Reportar»).
+- **Estrategia Comercial Aprobada:** Conversión reactiva y contextual únicamente al momento en que el usuario expresa un agradecimiento genuino de cierre de trámite.
+- **Trazabilidad de Reseñas de Google:** Análisis de viabilidad de integración con Google Business Profile API (`locations.reviews.list`) con validación probabilística por cruce difuso de nombres (*fuzzy name matching*).
+
+---
+
+#### 4. Verificación de Despliegue
+- **Compilación:** `npm run build` ejecutado sin errores de tipado en TypeScript.
+- **Despliegue VPS:** Ejecución de `npm run deploy:vps` y recarga en caliente de PM2 (`pm2 reload / pm2 status`).
+- **Estado en Producción:** Proceso `jania-server` online, estable y consumiendo ~162.7 MB de memoria con 0 caídas.
