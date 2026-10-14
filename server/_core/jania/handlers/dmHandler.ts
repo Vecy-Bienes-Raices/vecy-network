@@ -538,14 +538,17 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // Fast-path: Despedidas y agradecimientos (Doctrina v32.40 - Mensaje 1 Canal Oficial)
+  // Si el mensaje incluye palabras de trámite (requiero, paz y salvo, etc.), NO es una despedida
+  const isAskingService = /(?:requiero|necesito|paz\s*y\s*salvo|idu|predial|factura|certificado|tr[aá]mite)/i.test(cleanLower);
+
   const isGratitudeOrClosingFastPath =
-    /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
-    (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
+    (/(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
+      (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower))) &&
+    !isAskingService;
 
   if (isGratitudeOrClosingFastPath) {
     const { getChannelInviteGoodbyeMessage } = await import('../../predialService');
     const goodbyeMsg = getChannelInviteGoodbyeMessage(displayName);
-
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", goodbyeMsg);
     return goodbyeMsg;
@@ -580,6 +583,23 @@ export async function processPrivateDmConversationalMessage(
       return deliveredText;
     }
   } else if (isIduInquiry(clean)) {
+    // 🧠 MEMORIA ACTIVA: Si el usuario ya envió el CHIP en el turno 1, lo rescatamos de memoria sin volverlo a pedir
+    const { getPendingUnconfirmedDoc, clearPendingUnconfirmedDoc } = await import('../../identityVerificationService');
+    const pending = getPendingUnconfirmedDoc(userId);
+    const savedChip = pending ? (pending.rawNumber?.match(/AAA[A-Z0-9]{8,14}/i)?.[0] || pending.cleanNumber || pending.rawNumber) : null;
+
+    if (savedChip && /AAA/i.test(savedChip)) {
+      clearPendingUnconfirmedDoc(userId);
+      const iduRes = await executeIduValorizacionFromWhatsApp(savedChip, userId, true);
+      if (iduRes.reportText) {
+        const deliveredText = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", deliveredText);
+        return deliveredText;
+      }
+    }
+
+    // Si de verdad NO había ningún CHIP previo, entonces sí entrega la guía
     const iduGuide = formatIduAssistanceGuide(displayName);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", iduGuide);

@@ -99,7 +99,7 @@ export function formatIduAssistanceGuide(displayName?: string): string {
     `Se consulta fácilmente con el *código CHIP* del predio (inicia por AAA, visible en la parte superior de tu factura predial) o con el número de *Matrícula Inmobiliaria* de la Oficina de Registro (ORIP).\n\n` +
     `🌐 *Trámite oficial en línea ($0 COP):*\n` +
     `Puedes expedir tu certificado oficial en PDF en el portal web institucional del IDU:\n` +
-    `👉 https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml\n\n` +
+    `👉 https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml` +
     `💬 *Canal de Contingencia (Chat de Valorización):*\n` +
     `Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone del Chat de Valorización directo:\n` +
     `👉 https://webidu.idu.gov.co/chat_valorizacion/chat\n` +
@@ -151,7 +151,7 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
 
   try {
     fs.mkdirSync(downloadDir, { recursive: true });
-  } catch (_) {}
+  } catch (_) { }
 
   let browser: any = null;
   try {
@@ -194,7 +194,7 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
 
     // 4. Hacer clic en "Validar"
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }).catch(() => {}),
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }).catch(() => { }),
       page.click('[id="validtaPin_form:pinNumberButton"]')
     ]);
 
@@ -206,9 +206,9 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
       return msgs;
     });
 
-    const hasNotFoundError = (portalMessages as string[]).some((m: string) => 
-      m.toLowerCase().includes('no se encuentra registrado') || 
-      m.toLowerCase().includes('invalido') || 
+    const hasNotFoundError = (portalMessages as string[]).some((m: string) =>
+      m.toLowerCase().includes('no se encuentra registrado') ||
+      m.toLowerCase().includes('invalido') ||
       m.toLowerCase().includes('inválido')
     );
 
@@ -285,14 +285,14 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
     if (browser) {
       try {
         await browser.close();
-      } catch (_) {}
+      } catch (_) { }
     }
     // Limpieza de carpeta temporal
     try {
       if (fs.existsSync(downloadDir)) {
         fs.rmSync(downloadDir, { recursive: true, force: true });
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 

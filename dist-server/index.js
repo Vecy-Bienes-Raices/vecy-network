@@ -15973,9 +15973,7 @@ Se consulta f\xE1cilmente con el *c\xF3digo CHIP* del predio (inicia por AAA, vi
 
 \u{1F310} *Tr\xE1mite oficial en l\xEDnea ($0 COP):*
 Puedes expedir tu certificado oficial en PDF en el portal web institucional del IDU:
-\u{1F449} https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml
-
-\u{1F4AC} *Canal de Contingencia (Chat de Valorizaci\xF3n):*
+\u{1F449} https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml\u{1F4AC} *Canal de Contingencia (Chat de Valorizaci\xF3n):*
 Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone del Chat de Valorizaci\xF3n directo:
 \u{1F449} https://webidu.idu.gov.co/chat_valorizacion/chat
 \u23F0 *Horario de atenci\xF3n distrital:* Lunes a Viernes de 7:00 a.m. a 4:30 p.m. _(no disponible fines de semana ni festivos)_.
@@ -16790,7 +16788,8 @@ Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo 
     appendDmHistory(userId, "assistant", howToMsg);
     return howToMsg;
   }
-  const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
+  const isAskingService = /(?:requiero|necesito|paz\s*y\s*salvo|idu|predial|factura|certificado|tr[aá]mite)/i.test(cleanLower);
+  const isGratitudeOrClosingFastPath = (/(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower)) && !isAskingService;
   if (isGratitudeOrClosingFastPath) {
     const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
     const goodbyeMsg = getChannelInviteGoodbyeMessage2(displayName);
@@ -16822,6 +16821,19 @@ Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amabl
       return deliveredText;
     }
   } else if (isIduInquiry2(clean)) {
+    const { getPendingUnconfirmedDoc: getPendingUnconfirmedDoc3, clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc3 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const pending = getPendingUnconfirmedDoc3(userId);
+    const savedChip = pending ? pending.rawNumber?.match(/AAA[A-Z0-9]{8,14}/i)?.[0] || pending.cleanNumber || pending.rawNumber : null;
+    if (savedChip && /AAA/i.test(savedChip)) {
+      clearPendingUnconfirmedDoc3(userId);
+      const iduRes = await executeIduValorizacionFromWhatsApp2(savedChip, userId, true);
+      if (iduRes.reportText) {
+        const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", deliveredText);
+        return deliveredText;
+      }
+    }
     const iduGuide = formatIduAssistanceGuide2(displayName);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", iduGuide);
