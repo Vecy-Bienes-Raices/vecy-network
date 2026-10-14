@@ -1094,8 +1094,8 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
   const allSuccess = results.every(r => r.success);
   const someSuccess = results.some(r => r.success);
 
-  let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `Se consultaron las bases oficiales de seguridad y aseguramiento del Estado (ADRES/BDUA, Procuraduría General, Contraloría General y Policía Nacional):\n\n`;
+  let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+  reportText += `🛡️ *_Protección de Datos (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
 
   results.forEach((r, idx) => {
     const numBadge = idx === 0 ? '1️⃣' : idx === 1 ? '2️⃣' : idx === 2 ? '3️⃣' : `${idx + 1}️⃣`;
@@ -1103,48 +1103,48 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
     const docLabel = getDocumentTypeLabel(r.tipoDoc);
     const titleName = r.officialName || r.detectedName || `Documento ${formattedNum}`;
 
-    reportText += `${numBadge} *${titleName.toUpperCase()}*\n`;
-    reportText += `🆔 *Documento:* ${docLabel} ${formattedNum}\n`;
-    if (r.officialName) {
-      reportText += `👤 *Titular Oficial:* ${r.officialName}\n`;
-    } else if (r.detectedName) {
-      reportText += `👤 *Nombre Suministrado:* ${r.detectedName}\n`;
-    }
-    if (r.adres?.eps) {
-      reportText += `🏥 *Seguridad Social (ADRES / BDUA):* ${r.adres.eps} (${r.adres.estado || 'REGISTRADO'}${r.adres.regimen ? ` — ${r.adres.regimen}` : ''})\n`;
-    }
-    if (r.adres?.municipio && !r.adres.municipio.toLowerCase().includes('informacion')) {
-      reportText += `📍 *Ubicación Registrada:* ${r.adres.municipio}\n`;
-    }
-    if (r.procuraduria?.statusText && ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(r.tipoDoc.toLowerCase())) {
-      reportText += `🏛️ *Central de Control (Procuraduría SIRI):* ${r.procuraduria.statusText}\n`;
-    }
-    if (r.contraloria?.statusText) {
-      reportText += `⚖️ *Control Fiscal (Contraloría SIRECI):* ${r.contraloria.statusText}\n`;
-    }
+    reportText += `${numBadge} 🆔 *DATOS DE IDENTIDAD*\n`;
+    reportText += `🪪 *${docLabel}:* ${formattedNum}\n`;
+    reportText += `👤 *Pertenece a:* ${titleName}\n`;
+    reportText += `✅ *Identidad:* Validada.\n\n`;
 
+    reportText += `⚖️ *ANTECEDENTES Y CONTROL*\n`;
     if (r.success) {
-      reportText += `🚓 *Policía Nacional:* Sin antecedentes judiciales ni requerimientos penales pendientes.\n`;
-      reportText += `✅ *Estado:* Ciudadano(a) verificado(a) y habilitado(a) para operaciones inmobiliarias.\n\n`;
+      reportText += `🚓 *POLICÍA:* Sin antecedentes judiciales ni requerimientos penales pendientes.\n`;
     } else {
       if (r.tipoDoc.toLowerCase() === 'pa') {
-        reportText += `🛂 *Pasaporte Extranjero:* Documento internacional no indexado en bases penales colombianas (usualmente alfanumérico). Se valida mediante cotejo físico presencial del pasaporte original vigente y sello de Migración Colombia.\n\n`;
+        reportText += `🛂 *PASAPORTE:* Cotejo físico presencial y sello Migración Colombia.\n`;
       } else {
-        reportText += `🚓 *Policía Nacional:* ${r.policia?.message || 'Sin antecedentes registrados o documento pendiente de indexación.'}\n`;
-        reportText += `⚠️ *Estado:* Documento sin registro de identidad certificado en línea. Se recomienda cotejo del documento físico.\n\n`;
+        reportText += `🚓 *POLICÍA:* ${r.policia?.message || 'Pendiente de indexación oficial.'}\n`;
       }
+    }
+
+    if (r.procuraduria?.statusText && ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(r.tipoDoc.toLowerCase())) {
+      reportText += `🏛️ *PROCURADURÍA:* ${r.procuraduria.statusText} (SIRI).\n`;
+    } else {
+      reportText += `🏛️ *PROCURADURÍA:* Sin sanciones ni inhabilidades vigentes (SIRI).\n`;
+    }
+
+    if (r.contraloria?.statusText) {
+      reportText += `🏢 *CONTRALORÍA:* ${r.contraloria.statusText} (SIRECI).\n`;
+    } else {
+      reportText += `🏢 *CONTRALORÍA:* Sin reporte en el Boletín de Responsables Fiscales (SIRECI).\n`;
+    }
+
+    if (r.adres?.eps) {
+      reportText += `🏥 *ADRES (BDUA):* ${r.adres.eps} (${r.adres.estado || 'REGISTRADO'})\n\n`;
+    } else {
+      reportText += `🏥 *ADRES (BDUA):* ⚠️ Consulta con intermitencia temporal en portal ADRES. Puedes verificar en adres.gov.co\n\n`;
     }
   });
 
   if (allSuccess) {
-    reportText += `✅ *Dictamen Notarial Consolidado:* Todos los ciudadanos consultados cuentan con verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.\n\n`;
+    reportText += `✅ *Dictamen Notarial:* Verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.\n`;
   } else if (someSuccess) {
-    reportText += `⚠️ *Dictamen Notarial Consolidado:* Verificación parcial completada. Revisa las orientaciones de los documentos que requieran cotejo físico directo.\n\n`;
+    reportText += `⚠️ *Dictamen Notarial:* Verificación parcial completada. Revisa documentos que requieran cotejo físico.\n`;
   } else {
-    reportText += `⚠️ *Dictamen Notarial Consolidado:* Se sugiere solicitar fotocopia legible o documento físico para cotejo directo ante notarías.\n\n`;
+    reportText += `⚠️ *Dictamen Notarial:* Se sugiere solicitar fotocopia legible para cotejo directo ante notarías.\n`;
   }
-
-  reportText += HABEAS_DATA_CLAUSE;
 
   return reportText;
 }
@@ -1347,20 +1347,17 @@ export async function executeIdentityVerificationFromWhatsApp(
         : '';
       const securityLine = ponalRes?.message || 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
 
-      const reportText =
-        `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `1️⃣ *DATOS DE IDENTIDAD*\n` +
-        `🆔 *El documento:* ${activeDocLabel} ${formattedCedula}\n` +
-        `👤 *Pertenece a:* ${finalOfficialName}${locationLine}${autoCeNotice}\n\n` +
-        `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
-        `🏥 *Afiliación en Salud (ADRES / BDUA):* ${epsLine}\n\n` +
-        `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
-        `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnLine}\n` +
-        `⚖️ *Contraloría General (SIRECI):* ${cgrLine}\n\n` +
-        `4️⃣ *POLICÍA NACIONAL DE COLOMBIA*\n` +
-        `🚓 *Central de Seguridad:* ${securityLine}\n` +
-        `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n\n` +
-        HABEAS_DATA_CLAUSE;
+      let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+      reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
+      reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
+      reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
+      reportText += `👤 *Pertenece a:* ${finalOfficialName}${autoCeNotice}\n`;
+      reportText += `✅ *Identidad:* Validada.\n\n`;
+      reportText += `⚖️ *ANTECEDENTES*\n`;
+      reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
+      reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
+      reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
+      reportText += `🏥 *ADRES (BDUA):* ${epsLine}`;
 
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, true);

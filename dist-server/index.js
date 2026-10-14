@@ -16807,7 +16807,9 @@ Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo 
     setPendingUnconfirmedDoc3(userId, chipMatch);
     const carrenoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
 
-Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.`;
+Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.
+
+_\u2696\uFE0F Al interactuar con este servicio de cortes\xEDa, aceptas nuestra Pol\xEDtica de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines leg\xEDtimos de seguridad inmobiliaria._`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", carrenoMsg);
     return carrenoMsg;
@@ -16910,10 +16912,12 @@ Recib\xED el n\xFAmero *${clean}*. Para garantizarte una consulta exacta y ofici
 
 1\uFE0F\u20E3 *C\xE9dula de Ciudadan\xEDa (C.C.)* \u{1F1E8}\u{1F1F4}
 2\uFE0F\u20E3 *C\xE9dula de Extranjer\xEDa (C.E.)* \u{1F310}
-3\uFE0F\u20E3 *Pasaporte* \u{1F6C2}
+3\uFE0F\u20E3 *Pasaporte* \u2708\uFE0F
 4\uFE0F\u20E3 *NIT (Persona Jur\xEDdica)* \u{1F3E2}
 
-Solo resp\xF3ndeme indic\xE1ndome el tipo de documento o tr\xE1mite (ejemplo: *"es CC"*, *"C\xE9dula"*, *"Extranjer\xEDa"* o el n\xFAmero de opci\xF3n *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. Quedo muy atenta a tu confirmaci\xF3n. \u{1F91D}\u2728`;
+Solo resp\xF3ndeme indic\xE1ndome el tipo de documento o tr\xE1mite (ejemplo: *"es CC"*, *"C\xE9dula"*, *"Extranjer\xEDa"* o el n\xFAmero de opci\xF3n *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial gratuito.
+
+_\u2696\uFE0F La consulta en fuentes p\xFAblicas se realiza conforme a la Ley 1581/12 y el Art. 15 C.P., bajo la certificaci\xF3n del solicitante de contar con el suministro voluntario del titular para debida diligencia negocial._`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", pedagogoMsg);
     return pedagogoMsg;
@@ -22628,10 +22632,10 @@ async function verifySingleDocumentInternal(item) {
 function buildConsolidatedReportText(results) {
   const allSuccess = results.every((r) => r.success);
   const someSuccess = results.some((r) => r.success);
-  let reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+  let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
-  reportText += `Se consultaron las bases oficiales de seguridad y aseguramiento del Estado (ADRES/BDUA, Procuradur\xEDa General, Contralor\xEDa General y Polic\xEDa Nacional):
+  reportText += `\u{1F6E1}\uFE0F *_Protecci\xF3n de Datos (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
 
 `;
   results.forEach((r, idx) => {
@@ -22639,67 +22643,63 @@ function buildConsolidatedReportText(results) {
     const formattedNum = formatCedulaNumber(r.cedula, r.tipoDoc);
     const docLabel = getDocumentTypeLabel(r.tipoDoc);
     const titleName = r.officialName || r.detectedName || `Documento ${formattedNum}`;
-    reportText += `${numBadge} *${titleName.toUpperCase()}*
+    reportText += `${numBadge} \u{1F194} *DATOS DE IDENTIDAD*
 `;
-    reportText += `\u{1F194} *Documento:* ${docLabel} ${formattedNum}
+    reportText += `\u{1FAAA} *${docLabel}:* ${formattedNum}
 `;
-    if (r.officialName) {
-      reportText += `\u{1F464} *Titular Oficial:* ${r.officialName}
+    reportText += `\u{1F464} *Pertenece a:* ${titleName}
 `;
-    } else if (r.detectedName) {
-      reportText += `\u{1F464} *Nombre Suministrado:* ${r.detectedName}
-`;
-    }
-    if (r.adres?.eps) {
-      reportText += `\u{1F3E5} *Seguridad Social (ADRES / BDUA):* ${r.adres.eps} (${r.adres.estado || "REGISTRADO"}${r.adres.regimen ? ` \u2014 ${r.adres.regimen}` : ""})
-`;
-    }
-    if (r.adres?.municipio && !r.adres.municipio.toLowerCase().includes("informacion")) {
-      reportText += `\u{1F4CD} *Ubicaci\xF3n Registrada:* ${r.adres.municipio}
-`;
-    }
-    if (r.procuraduria?.statusText && ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(r.tipoDoc.toLowerCase())) {
-      reportText += `\u{1F3DB}\uFE0F *Central de Control (Procuradur\xEDa SIRI):* ${r.procuraduria.statusText}
-`;
-    }
-    if (r.contraloria?.statusText) {
-      reportText += `\u2696\uFE0F *Control Fiscal (Contralor\xEDa SIRECI):* ${r.contraloria.statusText}
-`;
-    }
-    if (r.success) {
-      reportText += `\u{1F693} *Polic\xEDa Nacional:* Sin antecedentes judiciales ni requerimientos penales pendientes.
-`;
-      reportText += `\u2705 *Estado:* Ciudadano(a) verificado(a) y habilitado(a) para operaciones inmobiliarias.
+    reportText += `\u2705 *Identidad:* Validada.
 
+`;
+    reportText += `\u2696\uFE0F *ANTECEDENTES Y CONTROL*
+`;
+    if (r.success) {
+      reportText += `\u{1F693} *POLIC\xCDA:* Sin antecedentes judiciales ni requerimientos penales pendientes.
 `;
     } else {
       if (r.tipoDoc.toLowerCase() === "pa") {
-        reportText += `\u{1F6C2} *Pasaporte Extranjero:* Documento internacional no indexado en bases penales colombianas (usualmente alfanum\xE9rico). Se valida mediante cotejo f\xEDsico presencial del pasaporte original vigente y sello de Migraci\xF3n Colombia.
-
+        reportText += `\u{1F6C2} *PASAPORTE:* Cotejo f\xEDsico presencial y sello Migraci\xF3n Colombia.
 `;
       } else {
-        reportText += `\u{1F693} *Polic\xEDa Nacional:* ${r.policia?.message || "Sin antecedentes registrados o documento pendiente de indexaci\xF3n."}
-`;
-        reportText += `\u26A0\uFE0F *Estado:* Documento sin registro de identidad certificado en l\xEDnea. Se recomienda cotejo del documento f\xEDsico.
-
+        reportText += `\u{1F693} *POLIC\xCDA:* ${r.policia?.message || "Pendiente de indexaci\xF3n oficial."}
 `;
       }
     }
+    if (r.procuraduria?.statusText && ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(r.tipoDoc.toLowerCase())) {
+      reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${r.procuraduria.statusText} (SIRI).
+`;
+    } else {
+      reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* Sin sanciones ni inhabilidades vigentes (SIRI).
+`;
+    }
+    if (r.contraloria?.statusText) {
+      reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${r.contraloria.statusText} (SIRECI).
+`;
+    } else {
+      reportText += `\u{1F3E2} *CONTRALOR\xCDA:* Sin reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI).
+`;
+    }
+    if (r.adres?.eps) {
+      reportText += `\u{1F3E5} *ADRES (BDUA):* ${r.adres.eps} (${r.adres.estado || "REGISTRADO"})
+
+`;
+    } else {
+      reportText += `\u{1F3E5} *ADRES (BDUA):* \u26A0\uFE0F Consulta con intermitencia temporal en portal ADRES. Puedes verificar en adres.gov.co
+
+`;
+    }
   });
   if (allSuccess) {
-    reportText += `\u2705 *Dictamen Notarial Consolidado:* Todos los ciudadanos consultados cuentan con verificaci\xF3n oficial favorable sin alertas restrictivas para operaciones inmobiliarias.
-
+    reportText += `\u2705 *Dictamen Notarial:* Verificaci\xF3n oficial favorable sin alertas restrictivas para operaciones inmobiliarias.
 `;
   } else if (someSuccess) {
-    reportText += `\u26A0\uFE0F *Dictamen Notarial Consolidado:* Verificaci\xF3n parcial completada. Revisa las orientaciones de los documentos que requieran cotejo f\xEDsico directo.
-
+    reportText += `\u26A0\uFE0F *Dictamen Notarial:* Verificaci\xF3n parcial completada. Revisa documentos que requieran cotejo f\xEDsico.
 `;
   } else {
-    reportText += `\u26A0\uFE0F *Dictamen Notarial Consolidado:* Se sugiere solicitar fotocopia legible o documento f\xEDsico para cotejo directo ante notar\xEDas.
-
+    reportText += `\u26A0\uFE0F *Dictamen Notarial:* Se sugiere solicitar fotocopia legible para cotejo directo ante notar\xEDas.
 `;
   }
-  reportText += HABEAS_DATA_CLAUSE;
   return reportText;
 }
 async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false, userId, explicitItems) {
@@ -22836,24 +22836,30 @@ ${policeTitle}
       const locationLine = adresRes?.municipio && !adresRes.municipio.toLowerCase().includes("informacion") ? `
 \u{1F4CD} *Ubicaci\xF3n Registrada:* ${adresRes.municipio}${adresRes.departamento ? `, ${adresRes.departamento}` : ""}` : "";
       const securityLine = ponalRes?.message || "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
-      const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+      let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-1\uFE0F\u20E3 *DATOS DE IDENTIDAD*
-\u{1F194} *El documento:* ${activeDocLabel} ${formattedCedula}
-\u{1F464} *Pertenece a:* ${finalOfficialName}${locationLine}${autoCeNotice}
+`;
+      reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
 
-2\uFE0F\u20E3 *SEGURIDAD SOCIAL (EPS / R\xC9GIMEN)*
-\u{1F3E5} *Afiliaci\xF3n en Salud (ADRES / BDUA):* ${epsLine}
+`;
+      reportText += `\u{1F194} *DATOS DE IDENTIDAD*
+`;
+      reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
+`;
+      reportText += `\u{1F464} *Pertenece a:* ${finalOfficialName}${autoCeNotice}
+`;
+      reportText += `\u2705 *Identidad:* Validada.
 
-3\uFE0F\u20E3 *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*
-\u{1F3DB}\uFE0F *Central de Control Notarial (Procuradur\xEDa SIRI):* ${pgnLine}
-\u2696\uFE0F *Contralor\xEDa General (SIRECI):* ${cgrLine}
-
-4\uFE0F\u20E3 *POLIC\xCDA NACIONAL DE COLOMBIA*
-\u{1F693} *Central de Seguridad:* ${securityLine}
-\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.
-
-` + HABEAS_DATA_CLAUSE;
+`;
+      reportText += `\u2696\uFE0F *ANTECEDENTES*
+`;
+      reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
+`;
+      reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
+`;
+      reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
+`;
+      reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, true);
       }

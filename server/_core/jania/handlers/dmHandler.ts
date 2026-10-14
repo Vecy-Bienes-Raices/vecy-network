@@ -567,7 +567,8 @@ export async function processPrivateDmConversationalMessage(
     setPendingUnconfirmedDoc(userId, chipMatch);
     const carrenoMsg =
       `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-      `Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.`;
+      `Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.\n\n` +
+      `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", carrenoMsg);
@@ -691,9 +692,10 @@ export async function processPrivateDmConversationalMessage(
       `Recibí el número *${clean}*. Para garantizarte una consulta exacta y oficial en la base de datos correspondiente del Estado, por favor confírmame a qué tipo de documento pertenece:\n\n` +
       `1️⃣ *Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
       `2️⃣ *Cédula de Extranjería (C.E.)* 🌐\n` +
-      `3️⃣ *Pasaporte* 🛂\n` +
+      `3️⃣ *Pasaporte* ✈️\n` +
       `4️⃣ *NIT (Persona Jurídica)* 🏢\n\n` +
-      `Solo respóndeme indicándome el tipo de documento o trámite (ejemplo: *"es CC"*, *"Cédula"*, *"Extranjería"* o el número de opción *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. Quedo muy atenta a tu confirmación. 🤝✨`;
+      `Solo respóndeme indicándome el tipo de documento o trámite (ejemplo: *"es CC"*, *"Cédula"*, *"Extranjería"* o el número de opción *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial gratuito.\n\n` +
+      `_⚖️ La consulta en fuentes públicas se realiza conforme a la Ley 1581/12 y el Art. 15 C.P., bajo la certificación del solicitante de contar con el suministro voluntario del titular para debida diligencia negocial._`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", pedagogoMsg);
