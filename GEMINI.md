@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.4.0 — 2026-10-14)
-- **JanIA Server:** `v33.4.0` online en Contabo VPS (`13.140.149.144`).
-- **Verificación de Identidad (Reporte Compacto):** Reporte resumido sin truncamiento en WhatsApp. Jerarquía: Identidad ➡️ Policía ➡️ Procuraduría (SIRI con emoji 🏛️) ➡️ Contraloría (SIRECI) ➡️ ADRES (BDUA) de última como nota informativa por intermitencias del portal oficial.
-- **Hábeas Data (Capa 3 Previa):** Advertencia legal obligatoria emitida en el saludo de Carreño y en el mensaje didáctico de selección de documento (CC, CE, Pasaporte, NIT) antes de cualquier consulta en bases de datos del Estado (Leyes 1581/12, 527/99 y Dec. 019/12).
-- **IDU Valorización:** Enlace de respaldo directo terminal a `generateCert.xhtml`. Memoria de sesión activa para no duplicar solicitud de CHIP en el Turno 2.
-- **Detector de Salida (Fast-path):** `isGratitudeOrClosingFastPath` condicionado con `!isAskingService` para que palabras de agradecimiento en solicitudes activas no disparen el cierre comercial prematuro.
-- **Política Meta Anti-Ban:** Prohibidas secuencias diferidas automáticas (drip marketing). La solicitud de calificación de Google Reviews solo se emite ante agradecimientos genuinos del usuario.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.5.0 — 2026-10-15)
+- **JanIA Server:** `v33.05` (`33.5.0`) online en Contabo VPS (`13.140.149.144`).
+- **Embudo de Recepción Unificado y Urbanidad de Carreño:** En `whatsapp-match.ts` y `dmHandler.ts` se unificó la recepción de todo dato inicial (CHIP, cédula suelta, sigla CC o nombre+número). JanIA guarda el dato en sesión (`setPendingUnconfirmedDoc`), saluda con franja horaria de Bogotá, ofrece el menú de 3 trámites + 4 tipos de documento y emite el aviso legal de Hábeas Data Capa 3 (Ley 1581/12).
+- **Filtro Anti-Iniciales y Saludo Horario Obligatorio:** En `extractFirstName` los nombres `<= 3` caracteres sin vocales retornan `""`. Si el usuario envía un saludo explícito, JanIA responde SIEMPRE con el saludo horario, aun con historial previo hoy.
+- **Candado al Embudo Jurídico:** Prohibido activar advertencias de riesgo patrimonial si el mensaje tiene `< 5` palabras o trata de trámites de documentos/predial/IDU.
+- **Plantilla Oficial Google Reviews 15 Segundos:** Copy unificado de micro-esfuerzo de 15 segundos y 100% gratuito con URL oficial: `https://g.page/r/CctNbwU6UpX5EBM/review`.
+- **Alineación Doctrinal:** Trato directivo sin supresión de apellidos en público ("Eduardo Rivera" y "Jani Alves"), comisiones 40/20/40 en cruce directo y 40/10+10/40 en portal web, emojis v23.0 y memoria conversacional de círculo.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

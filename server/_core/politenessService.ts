@@ -18,7 +18,8 @@ export function formatImmediatePoliteReviewMessage(userName?: string): string {
   const cleanName = extractFirstName(userName || 'Colega') || 'Colega';
   return (
     `¡Con el mayor de los gustos, ${cleanName}! 🙏😊 Me alegra muchísimo haberte sido de gran ayuda.\n\n` +
-    `⭐ ¿Podrías regalarnos tu opinión y calificar nuestro servicio? Tu reseña nos ayuda enormemente a que siga siendo *100% GRATUITO* para todos:\n` +
+    `⭐ *¿Me regalas 15 segunditos?*\n` +
+    `Tu opinión y calificación de 5 estrellas ⭐⭐⭐⭐⭐ nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma más de 15 segundos, te lo aseguro):\n` +
     `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
     `👍 ¡Muchas gracias por tu generosidad y apoyo!`
   );

@@ -7127,4 +7127,41 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 5. **Chat Web 24/7 con JanIA**: Consultas especializadas y redacción inmediata de promesas de compraventa y correos formales.
 6. **Estudio de Títulos y Trámites Gratuitos en Línea**: Asesoría documental, revisión de certificados de tradición y trámite sin costo de paz y salvos de Predial e IDU.
 
+---
+
+### Versión v33.05 — Octubre 2026: Refactorización Quirúrgica Backend JanIA, Embudo de Recepción Unificado, Urbanidad de Carreño, Filtro Anti-Iniciales, Candado Jurídico y Plantilla Reviews 15s
+
+#### 1. UNIFICACIÓN DEL EMBUDO DE RECEPCIÓN Y URBANIDAD DE CARREÑO EN DMs
+- **Cero Ejecución en Frío sin Sesión Activa**:
+  * En `server/_core/whatsapp-match.ts` se suprimió la ejecución directa e impaciente de consultas de IDU, predial o verificación de cédulas cuando el usuario no tiene una sesión pendiente (`hasPendingPredialSession`, `hasPendingIduSession`, `getPendingUnconfirmedDoc`).
+  * Todo dato inicial se delega a `processPrivateDmConversationalMessage` en `server/_core/jania/handlers/dmHandler.ts`.
+- **Protocolo de Recepción Unificada en Turno 1**:
+  * JanIA detecta cualquier dato inicial (código CHIP `AAA...`, número suelto `1941411`, documento con sigla `CC 1941411` o nombre con número `Héctor Orjuela 9536229`), lo guarda en memoria de sesión con `setPendingUnconfirmedDoc(userId, datoDetectado)` y emite una respuesta unificada:
+    1. Saludo cordial con franja horaria oficial de Bogotá (`¡Buenos días / Buenas tardes / Buenas noches, [Nombre]!`).
+    2. Menú de 3 trámites principales (Verificación integral de identidad/EPS, Factura Predial Bogotá, Paz y Salvo IDU).
+    3. Solicitud didáctica de confirmación de tipo de documento (1. CC, 2. CE, 3. Pasaporte, 4. NIT) ante números de identificación.
+    4. Aviso legal de Hábeas Data Capa 3 (Ley 1581 de 2012 y suministro voluntario del titular).
+- **Despacho Directo en Turno 2**:
+  * Al recibir la confirmación didáctica del usuario (ej. *"es CC"*, *"1"*, *"predial"* o *"IDU"*), JanIA procesa y entrega el reporte oficial sin re-saludar por hora ni generar fricciones.
+
+#### 2. FILTRO ANTI-INICIALES EN NOMBRES Y SALUDO HORARIO OBLIGATORIO
+- **Filtro Anti-Iniciales**:
+  * En `server/_core/whatsapp-utils.ts` y `server/_core/jania/parsers.ts` (`extractFirstName`), si el nombre extraído tiene `<= 3` caracteres y no pertenece a `COMMON_FIRST_NAMES` ni `NICKNAMES_MAP` o carece de vocales normales (ej. "Atb", "Jmr", "Xyz"), retorna string vacío `""` para que el sistema use el vocativo neutro o "Colega".
+- **Saludo Horario Obligatorio ante Saludo Explícito**:
+  * En `dmHandler.ts`, si el usuario envía un saludo explícito ("hola", "buenos días", "buenas tardes", "buenas noches"), JanIA responde SIEMPRE incluyendo el saludo horario (`¡Buenos días / Buenas tardes / Buenas noches!`), incluso cuando `hasPriorHistory` es `true`.
+
+#### 3. CANDADO AL EMBUDO JURÍDICO Y PREVENCIÓN DE ALARMISMO
+- En `server/_core/commercialFunnelService.ts` (`isHighValueLegalOrTaxInquiry` y `enhanceResponseWithCommercialFunnel`), se bloquea terminantemente la inyección de advertencias patrimoniales si el mensaje tiene menos de 5 palabras o si la consulta versa sobre trámites de documentos, antecedentes, predial o paz y salvo IDU.
+
+#### 4. PLANTILLA UNIFICADA DE GOOGLE REVIEWS DE 15 SEGUNDOS
+- En `dmHandler.ts` y `politenessService.ts`, se unificó el copy oficial de 15 segundos y 100% gratuito hacia el nuevo enlace oficial:
+  `👉 https://g.page/r/CctNbwU6UpX5EBM/review`
+
+#### 5. ALINEACIÓN DOCTRINAL Y COMISIONES 40/20/40
+- **Trato Directivo**: Se nombra en público a los fundadores como "Eduardo Rivera" y "Jani Alves" sin mutilación de apellidos. En privado se mantiene trato cariñoso y de respeto ("Eddu" / "Eduardo", "Mi niña" / "Jani").
+- **Comisiones**: Erradicación absoluta de la fórmula histórica `35/35/15/15`, adoptando el modelo oficial `40/20/40` en cruce directo por Match (80%-100%) y `40/10+10/40` en portal web.
+- **Emojis**: Alineación formal con la Matriz v23.0 (`👍` Oferta Venta, `👌` Oferta Arriendo, `🔀` Oferta Permuta, `📝` Demanda Venta, `✏️` Demanda Arriendo, `🔄` Demanda Permuta).
+- **Memoria de Círculo Inmobiliario**: Creadas `getCirculoHistory` y `appendCirculoHistory` en `sessionManager.ts` y conectadas a `circuloHandler.ts`.
+
+
 

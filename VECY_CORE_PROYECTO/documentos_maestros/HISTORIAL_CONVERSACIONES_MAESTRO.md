@@ -7,6 +7,54 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Refactorización Quirúrgica Backend JanIA (v33.05 - 33.5.0): Embudo de Recepción Unificado, Urbanidad de Carreño, Filtro Anti-Iniciales, Candado Jurídico, Plantilla Reviews 15s y Alineación Doctrinal
+
+**Versión:** `v33.05` (`33.5.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-match.ts`
+- `server/_core/whatsapp-utils.ts`
+- `server/_core/commercialFunnelService.ts`
+- `server/_core/politenessService.ts`
+- `server/_core/cronService.ts`
+- `server/_core/jania/parsers.ts`
+- `server/_core/jania/sessionManager.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/jania/handlers/circuloHandler.ts`
+- `server/_core/jania/handlers/consultingHandler.ts`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts`
+- `package.json`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+1. **Unificación del Embudo de Recepción y Urbanidad de Carreño en DMs:**
+   - En `whatsapp-match.ts`: Supresión de la ejecución en frío directa de IDU, predial o verificación de cédulas sin sesión previa activa (`hasPendingPredialSession`, `hasPendingIduSession`, `getPendingUnconfirmedDoc`), delegando limpiamente todo dato inicial a `processPrivateDmConversationalMessage` en `dmHandler.ts`.
+   - En `dmHandler.ts`: Unificación de la recepción de cualquier dato inicial (CHIP `AAA...`, número suelto `1941411`, documento con sigla `CC 1941411` o nombre con número `Héctor Orjuela 9536229`) cuando no se haya confirmado trámite ni tipo de documento:
+     a) Guardado en `setPendingUnconfirmedDoc(userId, datoDetectado)`.
+     b) Saludo horario de Bogotá (`¡Buenos días / Buenas tardes / Buenas noches, [Nombre]!`).
+     c) Pregunta cálida y concisa de trámite (¿verificación de identidad, confirmar EPS, factura predial o paz y salvo IDU?) y solicitud didáctica de confirmar tipo de documento (1. CC, 2. CE, 3. Pasaporte, 4. NIT).
+     d) Cláusula legal obligatoria de Hábeas Data Capa 3 (Ley 1581/12 y entrega voluntaria del titular).
+2. **Filtro Anti-Iniciales en Nombres y Saludo Horario Obligatorio:**
+   - En `extractFirstName` (`whatsapp-utils.ts` y `parsers.ts`): Si el nombre extraído tiene `<= 3` caracteres y no está en `COMMON_FIRST_NAMES` ni `NICKNAMES_MAP` o carece de vocales normales (ej. "Atb", "Jmr", "Xyz"), retorna `""` para usar el vocativo neutro o "Colega".
+   - En `dmHandler.ts`: Si el usuario envía un saludo explícito ("hola", "buenos días", "buenas tardes", "buenas noches"), JanIA responde SIEMPRE incluyendo el saludo horario (`¡Buenos días / Buenas tardes / Buenas noches!`), incluso cuando `hasPriorHistory` es `true`.
+3. **Candado al Embudo Jurídico:**
+   - En `commercialFunnelService.ts`: Prohibido activar el bloque de "Marco Normativo / Alerta de Riesgo Patrimonial" si el mensaje tiene `< 5` palabras (ej. "Un documento", "Cédula") o trata sobre verificación de documentos, antecedentes, predial o IDU.
+4. **Plantilla Unificada de Google Reviews de 15 Segundos:**
+   - En `dmHandler.ts` y `politenessService.ts`: Reemplazo de la URL anterior por la oficial `https://g.page/r/CctNbwU6UpX5EBM/review` con el copy de 15 segundos:
+     `\n\n⭐ *¿Me regalas 15 segunditos?*\nTu opinión y calificación de 5 estrellas ⭐⭐⭐⭐⭐ nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma más de 15 segundos, te lo aseguro):\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`
+5. **Alineación Doctrinal con `conocimiento_vecy.md`:**
+   - Trato directivo: En público nombrar a los fundadores como "Eduardo Rivera" y "Jani Alves" (eliminado el `.replace` que borraba apellidos en `sanitizeDmOrthographyAndGreeting`).
+   - Comisiones: Erradicación de cualquier mención a `35/35/15/15`, consagrando el modelo oficial `40/20/40` en contacto directo por Match (80%-100%) y `40/10+10/40` en portal web (10% VECY + 10% Bolsa Colaborativa por viralización).
+   - Emojis en `dmHandler.ts` alineados con la Matriz v23.0 (`👍` Oferta Venta, `👌` Oferta Arriendo, `🔀` Oferta Permuta, `📝` Demanda Venta, `✏️` Demanda Arriendo, `🔄` Demanda Permuta).
+   - Memoria conversacional agregada para círculo inmobiliario (`getCirculoHistory` / `appendCirculoHistory`) en `sessionManager.ts` y conectada en `circuloHandler.ts`.
+6. **Validación y Blindaje de Costos:**
+   - Tipado estricto con `npm run check` (0 errores).
+   - Pruebas automatizadas en Vitest (`npm test`): 222/222 tests aprobados en verde sin invocar claves de pago ($0 COP).
+   - Compilación de producción con `npm run build` limpia (cliente Vite y bundle esbuild en 18.95s).
+
+---
+
 ### 📅 [2026-10-14] — Refactorización de Verificación de Identidad, Blindaje Hábeas Data (Capa 3), UX Directa IDU y Estabilidad de Sesión DM
 
 **Versión Desplegada:** `jania-server v33.4.0` (PM2 Online en VPS Contabo `13.140.149.144`)  

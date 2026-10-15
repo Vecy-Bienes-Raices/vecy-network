@@ -172,11 +172,23 @@ export function extractFirstName(fullName: string): string {
 
   // Caso 2: Verificar palabra única (o primera palabra limpia) contra mapa de apodos
   const firstWordLower = nameWords[0].toLowerCase();
-  if (NICKNAMES_MAP[firstWordLower]) {
-    return NICKNAMES_MAP[firstWordLower];
+  const candidate = NICKNAMES_MAP[firstWordLower] ? NICKNAMES_MAP[firstWordLower] : cap(nameWords[0]);
+
+  // Filtro anti-iniciales en nombres (Regla Doctrinal v33.4.1):
+  // Si el nombre extraído tiene <= 3 caracteres y NO está en COMMON_FIRST_NAMES ni en NICKNAMES_MAP
+  // o carece de vocales normales (ej. "Atb", "Jmr", "Xyz"), retorna "" para vocativo neutro.
+  if (candidate.length <= 3) {
+    const candLower = candidate.toLowerCase();
+    const isCommon = COMMON_FIRST_NAMES.has(candLower);
+    const isNicknameKey = !!NICKNAMES_MAP[candLower];
+    const isNicknameVal = Object.values(NICKNAMES_MAP).some(v => v.toLowerCase() === candLower);
+    const hasVowels = /[aeiouáéíóú]/i.test(candidate);
+    if ((!isCommon && !isNicknameKey && !isNicknameVal) || !hasVowels) {
+      return "";
+    }
   }
 
-  return cap(nameWords[0]);
+  return candidate;
 }
 
 /**

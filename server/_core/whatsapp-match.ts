@@ -1489,37 +1489,6 @@ export class JaniaMatchBot {
       }
     }
 
-    // 🏛️ INTERCEPTOR PRIORITARIO DM: PAZ Y SALVO IDU / VALORIZACIÓN (va antes de predial si menciona IDU)
-    const isIduContext = body.toLowerCase().includes('idu') || body.toLowerCase().includes('valorizacion') || body.toLowerCase().includes('valorización');
-    if (isIduContext) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const iduCheck = await executeIduAssistanceFromWhatsApp(body, senderId, true);
-        if (iduCheck.isIduRequest && iduCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Asistencia de Paz y Salvo IDU atendida para ${senderId} (CHIP ${iduCheck.chip || 'Pendiente'})`);
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'idu', iduCheck.reportText, true);
-          if (iduCheck.pdfBuffer) {
-            await this.queuedSend(senderId, {
-              document: iduCheck.pdfBuffer,
-              mimetype: 'application/pdf',
-              fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
-              caption: deliveredText
-            }, { quoted: mainMsg, allowDirectMessage: true });
-          } else {
-            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          }
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.onFreeToolServiceDelivered(senderId, userName);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
     // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
     const { hasPendingPredialSession, executePredialAssistanceFromWhatsApp } = await import('./predialService');
     if (senderId && hasPendingPredialSession(senderId)) {
@@ -1551,61 +1520,8 @@ export class JaniaMatchBot {
       }
     }
 
-    // 🏛️ INTERCEPTOR PRIORITARIO DM: PREDIAL (va ANTES que cédula — si el texto menciona predial/chip, no debe caer en verificación de identidad)
-    const isPredialContext = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
-    if (isPredialContext) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
-        if (predialCheck.isPredialRequest && predialCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'predial', predialCheck.reportText, true);
-          if (predialCheck.pdfBuffer) {
-            await this.queuedSend(senderId, {
-              document: predialCheck.pdfBuffer,
-              mimetype: 'application/pdf',
-              fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
-              caption: deliveredText
-            }, { quoted: mainMsg, allowDirectMessage: true });
-          } else {
-            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          }
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
-    // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp, extractCedulaForVerification, getPendingCedulaSession } = await import('./identityVerificationService');
-    const idDetection = extractCedulaForVerification(body, true);
-    if (idDetection.found) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const idCheck = await executeIdentityVerificationFromWhatsApp(body, true, senderId);
-        if (idCheck.isVerificationRequest && idCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'cedula', idCheck.reportText, !!idCheck.success);
-          await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
     // 🛡️ INTERCEPTOR DE CONSULTA SOBRE CÉDULAS PENDIENTES EN SESIÓN DM
+    const { getPendingCedulaSession, executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
     const isAskingPendingCedulas =
       /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(body.trim().toLowerCase()) ||
       /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(body.trim().toLowerCase()) ||

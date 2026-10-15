@@ -263,19 +263,17 @@ export async function formatPoliteToolDelivery(
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
 
-  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.03)
+  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.4.1)
   const cleanPayload = (payloadText || "").trim();
   const reviewSection = (isEduardo || isJani)
     ? ""
-    : `\n\n⭐ *¿Te fue útil esta consulta?*\n` +
-    `Tu recomendación nos ayuda a seguir creciendo. Déjanos tu calificación de 5 estrellas en Google Opiniones aquí:\n` +
-    `https://g.page/r/CUxVzG_vecy/review`;
+    : `\n\n⭐ *¿Me regalas 15 segunditos?*\nTu opinión y calificación de 5 estrellas ⭐⭐⭐⭐⭐ nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma más de 15 segundos, te lo aseguro):\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
 
   const closingTag = "Un servicio de cortesía de VECY BIENES RAÍCES 🤝.";
   let payloadWithClosing = cleanPayload;
   if (!payloadWithClosing.includes(closingTag)) {
     payloadWithClosing = `${payloadWithClosing}\n\n${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CUxVzG_vecy/review")) {
+  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
     payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
   }
 
@@ -322,7 +320,7 @@ export async function formatPoliteToolDelivery(
 
 /**
  * Sanitiza ortografía estricta en español (apertura de signos ¡, ¿, mayúscula inicial)
- * y garantiza trato directivo para Eduardo y Jani (Doctrina v33.03).
+ * y garantiza trato directivo para Eduardo y Jani (Doctrina v33.4.1).
  */
 export function sanitizeDmOrthographyAndGreeting(
   text: string,
@@ -342,10 +340,6 @@ export function sanitizeDmOrthographyAndGreeting(
   cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `¡Hola, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! `);
   cleaned = cleaned.replace(/^hola\b/i, "¡Hola!");
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `¡${m.charAt(0).toUpperCase() + m.slice(1)}!`);
-
-  // Usar primer nombre de pila (ej. "Jani", no "Jani Alves"; "Eduardo", no "Eduardo Rivera")
-  cleaned = cleaned.replace(/\b(Jani)\s+Alves\b/gi, "Jani");
-  cleaned = cleaned.replace(/\b(Eduardo)\s+Rivera\b/gi, "Eduardo");
 
   // 2. Trato directivo para directores VIP
   if (isEduardo) {
@@ -433,6 +427,7 @@ export async function processPrivateDmConversationalMessage(
 
   const history = await getOrLoadDmHistory(userId);
   const hasPriorHistory = history.length > 0;
+  const userSentExplicitGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|buenas)\b/i.test(cleanLower);
 
   // Si es un saludo inicial y no hay historial previo reciente:
   if (isGreetingOnly && history.length === 0) {
@@ -554,76 +549,9 @@ export async function processPrivateDmConversationalMessage(
     return goodbyeMsg;
   }
 
-  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU / PREDIAL BOGOTÁ
+  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU / GUÍA CUANDO NO HAY DATO
   const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
-  const iduDetection = extractChipForIduValorizacion(clean);
-  const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
-  const hasChipInText = /AAA[A-Z0-9]{8,14}/i.test(clean);
-
-  // Si envían un CHIP (solo o con cédula) SIN saludar, activa Urbanidad de Carreño obligatoria
-  if (hasChipInText && !hasCourtesyOrGreeting) {
-    const { setPendingUnconfirmedDoc } = await import('../../identityVerificationService');
-    const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
-    setPendingUnconfirmedDoc(userId, chipMatch);
-    const carrenoMsg =
-      `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-      `Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.\n\n` +
-      `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`;
-
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", carrenoMsg);
-    return carrenoMsg;
-  }
-
-  if (iduDetection.found && iduDetection.chip) {
-    const iduRes = await executeIduValorizacionFromWhatsApp(clean, userId, true);
-    if (iduRes.isIduRequest && iduRes.reportText) {
-      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", deliveredText);
-      return deliveredText;
-    }
-  } else if (isIduInquiry(clean)) {
-    // 🧠 MEMORIA ACTIVA: Si el usuario ya envió el CHIP en el turno 1, lo rescatamos de memoria sin volverlo a pedir
-    const { getPendingUnconfirmedDoc, clearPendingUnconfirmedDoc } = await import('../../identityVerificationService');
-    const pending = getPendingUnconfirmedDoc(userId);
-    const savedChip = pending ? (pending.rawNumber?.match(/AAA[A-Z0-9]{8,14}/i)?.[0] || pending.cleanNumber || pending.rawNumber) : null;
-
-    if (savedChip && /AAA/i.test(savedChip)) {
-      clearPendingUnconfirmedDoc(userId);
-      const iduRes = await executeIduValorizacionFromWhatsApp(savedChip, userId, true);
-      if (iduRes.reportText) {
-        const deliveredText = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", deliveredText);
-        return deliveredText;
-      }
-    }
-
-    // Si de verdad NO había ningún CHIP previo, entonces sí entrega la guía
-    const iduGuide = formatIduAssistanceGuide(displayName);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", iduGuide);
-    return iduGuide;
-  }
-
-  // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
-  // Soporta errores tipográficos habituales en celular (ej: "quieto rrvisar sus antecedentes")
-  const isDocVerificationIntent =
-    /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
-    !/\b\d{6,11}\b/.test(clean);
-
-  if (isDocVerificationIntent) {
-    const docPromptMsg =
-      `¡Claro que sí${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto (o documento de identidad: Cédula de Extranjería, Pasaporte o Documento del País de Origen).\n\n` +
-      `📌 *Nota legal de seguridad y Hábeas Data (Ley 1581 de 2012):* Conforme al artículo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registraduría Nacional no permiten buscar números de documento usando únicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del número de documento que el propio titular suministra voluntariamente.\n\n` +
-      `Pídele con toda tranquilidad y profesionalismo a tu cliente o colega su nombre completo y número de documento, explicándole con total transparencia que es el requisito formal estándar para el registro de portería y control de acceso de la visita al inmueble. Escríbemelo aquí (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en segundos te entrego el reporte oficial de validación 🤝.`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", docPromptMsg);
-    return docPromptMsg;
-  }
-
-  // 🛡️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CONFIRMACIÓN DIDÁCTICA (v32.99 / v33.04)
+  const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
   const {
     isBareDocumentNumber,
     getPendingUnconfirmedDoc,
@@ -636,14 +564,23 @@ export async function processPrivateDmConversationalMessage(
     extractAllCedulasForVerification
   } = await import('../../identityVerificationService');
 
-  // CASO 1: El usuario tenía un dato pendiente y en este turno confirma el tipo de documento o trámite
+  // Guía pedagógica oficial de Paz y Salvo IDU cuando el usuario consulta sin aportar código CHIP
+  if (isIduInquiry(clean) && !clean.match(/AAA[A-Z0-9]{8,14}/i)) {
+    const guideMsg = formatIduAssistanceGuide(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", guideMsg);
+    return guideMsg;
+  }
+
+  // CASO 1: El usuario tenía un dato pendiente y en este turno confirma el trámite o tipo de documento
   const pendingDoc = getPendingUnconfirmedDoc(userId);
   if (pendingDoc) {
     const confirmation = detectDocTypeConfirmation(clean);
-    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n)/i.test(clean);
-    const isPredialConfirmation = /(?:predial|factura|impuesto)/i.test(clean);
+    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean);
+    const isPredialConfirmation = /(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean);
+    const isIdentityConfirmation = confirmation.isConfirmation || /(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$)/i.test(clean);
 
-    if (isIduConfirmation && pendingDoc.rawNumber.toUpperCase().includes('AAA')) {
+    if (isIduConfirmation && (pendingDoc.rawNumber.toUpperCase().includes('AAA') || pendingDoc.cleanNumber)) {
       clearPendingUnconfirmedDoc(userId);
       const iduRes = await executeIduValorizacionFromWhatsApp(pendingDoc.rawNumber, userId, true);
       if (iduRes.isIduRequest && iduRes.reportText) {
@@ -654,7 +591,6 @@ export async function processPrivateDmConversationalMessage(
       }
     } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes('AAA') || pendingDoc.cleanNumber)) {
       clearPendingUnconfirmedDoc(userId);
-      const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
       const predialRes = await executePredialAssistanceFromWhatsApp(pendingDoc.rawNumber, userId, true);
       if (predialRes?.reportText) {
         const delivered = await formatPoliteToolDelivery(userId, userName || "", 'predial', predialRes.reportText, true);
@@ -662,13 +598,11 @@ export async function processPrivateDmConversationalMessage(
         appendDmHistory(userId, "assistant", delivered);
         return delivered;
       }
-    } else if (confirmation.isConfirmation && confirmation.tipoDoc) {
+    } else if (isIdentityConfirmation) {
       clearPendingUnconfirmedDoc(userId);
-      const verified = await executeIdentityVerificationFromWhatsApp(
-        `${confirmation.tipoDoc} ${pendingDoc.cleanNumber}`,
-        true,
-        userId
-      );
+      const targetDocType = confirmation.tipoDoc || 'cc';
+      const targetQuery = `${targetDocType} ${pendingDoc.cleanNumber || pendingDoc.rawNumber}`;
+      const verified = await executeIdentityVerificationFromWhatsApp(targetQuery, true, userId);
       if (verified.isVerificationRequest && verified.reportText) {
         // En el segundo turno se entrega directamente SIN repetir saludos horarios
         const followUpResponse =
@@ -681,37 +615,85 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
-  // CASO 2: El usuario envía únicamente un número suelto sin tipo de documento ni prefijo de consulta
-  if (isBareDocumentNumber(clean)) {
-    // Guardar número en memoria de sesión
-    setPendingUnconfirmedDoc(userId, clean);
+  // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
+  const isDocVerificationIntent =
+    /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
+    !/\b\d{5,11}\b/.test(clean);
 
-    // Saludar cordialmente con saludo horario y nombre resuelto, y responder pedagógicamente
-    const pedagogoMsg =
-      `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-      `Recibí el número *${clean}*. Para garantizarte una consulta exacta y oficial en la base de datos correspondiente del Estado, por favor confírmame a qué tipo de documento pertenece:\n\n` +
-      `1️⃣ *Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
-      `2️⃣ *Cédula de Extranjería (C.E.)* 🌐\n` +
-      `3️⃣ *Pasaporte* ✈️\n` +
-      `4️⃣ *NIT (Persona Jurídica)* 🏢\n\n` +
-      `Solo respóndeme indicándome el tipo de documento o trámite (ejemplo: *"es CC"*, *"Cédula"*, *"Extranjería"* o el número de opción *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial gratuito.\n\n` +
-      `_⚖️ La consulta en fuentes públicas se realiza conforme a la Ley 1581/12 y el Art. 15 C.P., bajo la certificación del solicitante de contar con el suministro voluntario del titular para debida diligencia negocial._`;
-
+  if (isDocVerificationIntent) {
+    const docPromptMsg =
+      `¡Claro que sí${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto (o documento de identidad: Cédula de Extranjería, Pasaporte o Documento del País de Origen).\n\n` +
+      `📌 *Nota legal de seguridad y Hábeas Data (Ley 1581 de 2012):* Conforme al artículo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registraduría Nacional no permiten buscar números de documento usando únicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del número de documento que el propio titular suministra voluntariamente.\n\n` +
+      `Pídele con toda tranquilidad y profesionalismo a tu cliente o colega su nombre completo y número de documento, explicándole con total transparencia que es el requisito formal estándar para el registro de portería y control de acceso de la visita al inmueble. Escríbemelo aquí (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en segundos te entrego el reporte oficial de validación 🤝.`;
     appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", pedagogoMsg);
-    return pedagogoMsg;
+    appendDmHistory(userId, "assistant", docPromptMsg);
+    return docPromptMsg;
   }
 
-  // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA
-  // Solo se ejecuta si NO hay un CHIP presente en el mensaje
+  // CASO 2: Recepción unificada de cualquier dato inicial sin confirmación previa
+  // (CHIP AAA..., número suelto 1941411, documento con sigla CC 1941411, nombre con número Héctor Orjuela 9536229)
+  const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
   const idDetection = extractCedulaForVerification(clean, true);
-  if (idDetection.found && !hasChipInText) {
-    const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", idCheck.reportText);
-      return idCheck.reportText;
+  const isBareNumber = isBareDocumentNumber(clean);
+  const genericNumberMatch = clean.match(/\b(?:\d{1,3}(?:\.\d{3}){1,3}|\d{5,11})\b/)?.[0];
+  const hasInitialData = !!chipMatch || idDetection.found || isBareNumber || !!genericNumberMatch;
+
+  if (hasInitialData && !isHowToDoInquiry && !isConsultasInquiry && !isCostInquiry) {
+    if (isEduardo) {
+      if (chipMatch) {
+        const iduRes = await executeIduValorizacionFromWhatsApp(chipMatch, userId, true);
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText || "Reporte IDU", true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      } else {
+        const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId);
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'cedula', idCheck.reportText || "Reporte Cédula", !!idCheck.success);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (isJani) {
+      if (chipMatch) {
+        const iduRes = await executeIduValorizacionFromWhatsApp(chipMatch, userId, true);
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText || "Reporte IDU", true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      } else {
+        const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId);
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'cedula', idCheck.reportText || "Reporte Cédula", !!idCheck.success);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
     }
+
+    // Usuario externo / colega: protocolo unificado de Urbanidad de Carreño y Capa 3
+    const datoDetectado = chipMatch || (idDetection.items && idDetection.items.length > 0 ? (idDetection.items[0].detectedName ? `${idDetection.items[0].detectedName} ${idDetection.items[0].cedula}` : idDetection.items[0].cedula) : (genericNumberMatch || clean));
+    setPendingUnconfirmedDoc(userId, datoDetectado);
+
+    const isChipOnly = !!chipMatch && !idDetection.found && !isBareNumber;
+    const receptionMsg = isChipOnly
+      ? `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
+        `Recibí el código CHIP *${chipMatch}*. Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres exactamente? ¿La factura del impuesto predial de Bogotá, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.\n\n` +
+        `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`
+      : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
+        `Recibí el dato *${datoDetectado}*. Para orientarte con total precisión y emitirte el reporte oficial correspondiente, por favor confírmame qué trámite necesitas exactamente:\n\n` +
+        `1️⃣ *Verificación integral de identidad y antecedentes* (Policía Nacional, Procuraduría SIRI, Contraloría SIRECI y confirmar EPS en ADRES)\n` +
+        `2️⃣ *Factura del Impuesto Predial Bogotá* o certificado oficial de pago al día\n` +
+        `3️⃣ *Paz y Salvo de Valorización IDU* para escrituración notarial\n\n` +
+        `Si se trata de un número de identificación para verificación de identidad, por favor confírmame a qué tipo de documento corresponde:\n` +
+        `• *1. Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
+        `• *2. Cédula de Extranjería (C.E.)* 🌐\n` +
+        `• *3. Pasaporte* ✈️\n` +
+        `• *4. NIT (Persona Jurídica)* 🏢\n\n` +
+        `Solo respóndeme indicándome el trámite o tipo de documento (ejemplo: *"es CC"*, *"1"*, *"antecedentes"*, *"predial"* o *"IDU"*) y de inmediato te entrego tu reporte oficial gratuito.\n\n` +
+        `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", receptionMsg);
+    return receptionMsg;
   }
 
   // 🛡️ INTERCEPTOR DE SEGUIMIENTO: CONSULTA SOBRE CÉDULAS / ANTECEDENTES PENDIENTES EN LA SESIÓN
@@ -832,9 +814,9 @@ export async function processPrivateDmConversationalMessage(
           `- ORTOGRAFÍA ESTRICTA EN ESPAÑOL: PROHIBIDO iniciar saludos o mensajes en minúscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar Mayúscula inicial y signos de apertura formales.\n` +
           `- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '¿' y toda exclamación con '¡'. En español es un error omitir los signos de apertura.\n` +
           `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
-          `${hasPriorHistory ?
+          `${hasPriorHistory && !userSentExplicitGreeting ?
             '- CONTINUIDAD DE CONVERSACIÓN ACTIVA (MISMO DÍA): Ya estás conversando activamente con el usuario hoy. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte de nuevo!", "Es un placer tenerte por aquí") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' :
-            '- Si es el primer mensaje del día, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
+            '- El usuario saludó o es un nuevo contacto: Saluda SIEMPRE de manera formal y educada con "' + timeSalutation + nameGreeting + '".'}\n` +
           `${hasPriorHistory ?
             '- PROHIBICIÓN TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qué se dedica, cuál es su rol en el sector ni qué hace, porque ya están en medio de la conversación. Si el usuario responde a una opción o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opción específica que venían hablando sin desviar la conversación.' :
             '- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qué se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacción, indaga amablemente a qué se dedica para enfocar la conversación con asertividad.'}\n` +
@@ -843,20 +825,20 @@ export async function processPrivateDmConversationalMessage(
           `- Si colegas o usuarios preguntan si eres Eduardo, qué pasó con su número o quién está detrás, aclárales con calidez y simpatía:\n` +
           `  "¡Hola! Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Raíces 🤖✨. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atención personalizada humana, puedes escribirles con todo gusto a su línea oficial de bróker al +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"\n\n` +
           `PEDAGOGÍA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:\n` +
-          `- Cuando colegas o usuarios pregunten por qué reaccionas con emojis a sus publicaciones en los grupos o qué significa cada emoji (como Ricardo Castillo u otros colegas), explícales con total claridad, pedagogía y orgullo profesional:\n` +
+          `- Cuando colegas o usuarios pregunten por qué reaccionas con emojis a sus publicaciones en los grupos o qué significa cada emoji (como Ricardo Castillo u otros colegas), explícales con total claridad, pedagogía y orgullo profesional según la Matriz v23.0:\n` +
           `  1. ¿POR QUÉ REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicación en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicación, metraje, condiciones), la guardo en la base de datos de VECY BIENES RAÍCES y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.\n` +
           `     Mi reacción con un emoji es la confirmación visual en el grupo de que tu publicación ya quedó captada, analizada y guardada en el sistema.\n` +
-          `  2. SIGNIFICADO EXACTO DE CADA EMOJI:\n` +
-          `     • 👍 (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).\n` +
-          `     • 👌 (Mano OK): Inmueble en OFERTA que contempla o acepta opción de PERMUTA (Venta/Permuta).\n` +
-          `     • 🔀 (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.\n` +
-          `     • 📝 (Libreta con lápiz): DEMANDA / REQUERIMIENTO tradicional captado (Búsqueda de cliente para compra o arriendo puro, sin permuta).\n` +
-          `     • ✏️ (Lápiz): DEMANDA / REQUERIMIENTO que ofrece o contempla opción de PERMUTA.\n` +
-          `     • 🔄 (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.\n` +
+          `  2. SIGNIFICADO EXACTO DE CADA EMOJI (MATRIZ V23.0):\n` +
+          `     • 👍 (Pulgar arriba): Inmueble en OFERTA en VENTA captado.\n` +
+          `     • 👌 (Mano OK): Inmueble en OFERTA en ARRIENDO captado.\n` +
+          `     • 🔀 (Flechas cruzadas): Inmueble en OFERTA en PERMUTA captado.\n` +
+          `     • 📝 (Libreta con lápiz): DEMANDA / REQUERIMIENTO en VENTA captado.\n` +
+          `     • ✏️ (Lápiz): DEMANDA / REQUERIMIENTO en ARRIENDO captado.\n` +
+          `     • 🔄 (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA captado.\n` +
           `  3. ¿QUÉ PASA CUANDO HAY UN MATCH?:\n` +
           `     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RAÍCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactará directamente contigo para coordinar la gestión conjunta del negocio.\n` +
           `  4. REGLA SAGRADA SOBRE COMISIONES Y RED COLABORATIVA (DOCTRINA EDUARDO):\n` +
-          `     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 (40% Asesor Captador, 40% Asesor Colocador agendado por Vecy Agenda, 10% Bolsa de Agentes Difusores y 10% VECY BIENES RAÍCES), además del Período de Gracia Inmediata (Días 1 a 5 al 100% Asesor / $0 COP VECY) y Cierres Directos al 80%/20%.\n` +
+          `     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% Asesor Captador, 40% Asesor Colocador agendado, y 20% VECY BIENES RAÍCES), y 40/10+10/40 en el portal web (40% Captador, 40% Colocador, 10% VECY y 10% Bolsa Colaborativa por viralización).\n` +
           `     ⚠️ REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas técnicos de comisión en conversaciones iniciales. JanIA debe esperar a que sea el propio agente o colega quien exprese o pregunte cómo opera el modelo o permitir que sea el asesor humano de Vecy Bienes Raíces quien lo coordine con él al momento del contacto comercial.\n\n` +
           `- PROHIBICIÓN ESTRICTA DE MENCIONAR ESQUEMAS DE COMISIÓN AL INICIO: Bajo NINGUNA circunstancia menciones esquemas de comisión, porcentajes técnicos ni tecnicismos de repartición al inicio de la conversación o cuando pregunten por consultas. Confunde a los usuarios. Solo se hablará del modelo colaborativo institucional 40/20/40 si el usuario pregunta expresamente sobre cómo se comparten comisiones entre colegas o sobre los Términos y Condiciones.\n` +
           `- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("¿Cómo es lo de las consultas?", etc.): NO sueltes un monólogo solo de la Policía. Pregúntale amablemente qué clase de consulta desea realizar y dale el menú organizado: 1 al 4 Gratuitas (Verificación de documentos ante Policía Nacional, Factura Predial Bogotá, Paz y Salvo IDU en PDF y Liquidación de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m², Asesoría jurídica en compraventa/arriendos, Hábeas Data, Cobranza de comisiones no pagadas, Avalúos digitales RAA, Liquidaciones tributarias y Préstamos hipotecarios).\n` +
@@ -934,7 +916,7 @@ export async function processPrivateDmConversationalMessage(
           `     • LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices\n` +
           `     • Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
           `     • Web Oficial: https://vecy-bienes-raices.vercel.app\n` +
-          `  4. LA ESTOCADA FINAL CON OPINIÓN Y COMENTARIOS: Remata siempre con calidez humana y picardía elegante invitándolo a dejarnos su opinión y calificación de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: 👉 https://g.page/r/CUxVzG_vecy/review ⭐⭐⭐⭐⭐.`
+          `  4. LA ESTOCADA FINAL CON OPINIÓN Y COMENTARIOS: Remata siempre con calidez humana y picardía elegante invitándolo a dejarnos su opinión y calificación de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐.`
       }
     ];
 
@@ -977,10 +959,15 @@ export async function processPrivateDmConversationalMessage(
     }
     reply = sanitizeResponseMarkdown(reply.trim());
 
-    // Si ya hay historial previo hoy, limpiar cualquier saludo redundante o frase de entrada que el LLM genere por inercia
-    if (hasPriorHistory) {
+    // Si ya hay historial previo hoy y el usuario NO envió un saludo explícito, limpiar cualquier saludo redundante
+    if (hasPriorHistory && !userSentExplicitGreeting) {
       reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
       reply = reply.trim();
+    } else if (userSentExplicitGreeting && !isEduardo && !isJani) {
+      // Regla 2: Si el usuario envió un saludo explícito, responde SIEMPRE incluyendo el saludo horario
+      if (!/¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(reply)) {
+        reply = `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! ${reply}`.trim();
+      }
     }
 
     if (!reply) {
@@ -989,7 +976,7 @@ export async function processPrivateDmConversationalMessage(
       } else if (isJani) {
         reply = `¡Hola, Jani! Qué gusto saludarte. Cuéntame en qué te colaboro hoy.`;
       } else {
-        reply = hasPriorHistory
+        reply = (hasPriorHistory && !userSentExplicitGreeting)
           ? `Con mucho gusto. En *VECY BIENES RAÍCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnología y asesoría especializada. Cuéntame en detalle qué necesitas o qué duda tienes y te oriento de inmediato.`
           : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
       }

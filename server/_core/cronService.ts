@@ -646,16 +646,15 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `📞 *Línea Comercial Bróker:* WhatsApp +57 316 656 9719`
     },
     {
-      topicTitle: 'Bolsa Colaborativa VECY y Comisiones Transparentes (35/35/15/15)',
+      topicTitle: 'Bolsa Colaborativa VECY y Comisiones Transparentes (40/20/40 y 40/10+10/40)',
       themeKey: 'soporte',
-      voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Bienes Raíces estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el treinta y cinco por ciento, el asesor colocador con el treinta y cinco por ciento, y destina el resto a la bolsa colaborativa y a la plataforma que los respalda. Los invito a sumar a colegas éticos para crecer juntos. ¡Feliz día!`,
-      captionText: `🤝 *BOLSA COLABORATIVA & COMISIONES JUSTAS (35/35/15/15) — VECY BIENES RAÍCES* 🏛️\n\n` +
+      voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Bienes Raíces estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el cuarenta por ciento, el asesor colocador con el cuarenta por ciento, y destina el veinte por ciento restante a la plataforma y a la bolsa colaborativa que los respalda. Los invito a sumar a colegas éticos para crecer juntos. ¡Feliz día!`,
+      captionText: `🤝 *BOLSA COLABORATIVA & COMISIONES JUSTAS (40/20/40 y 40/10+10/40) — VECY BIENES RAÍCES* 🏛️\n\n` +
         `¡Feliz domingo para todos los visionarios del sector!\n\n` +
         `🎯 *El Nuevo Estándar del Corretaje Inmobiliario en Colombia:*\n` +
-        `• **35% Asesor Captador:** Quien consigue la propiedad exclusiva o disponible.\n` +
-        `• **35% Asesor Colocador:** Quien aporta al cliente comprador calificado.\n` +
-        `• **15% Fondo de Bolsa Colaborativa:** Para los agentes que colaboran difundiendo y viralizando.\n` +
-        `• **15% Plataforma y Tecnología VECY:** Para mantener la IA, servidores, soporte legal y peritajes.\n\n` +
+        `• **40% Asesor Captador:** Quien aporta el inventario verificado.\n` +
+        `• **40% Asesor Colocador:** Quien aporta al cliente comprador o arrendatario calificado.\n` +
+        `• **20% Operación / Bolsa Colaborativa:** 40/20/40 en cruce directo por Match (80%-100%), o 40/10+10/40 en portal web (10% Plataforma VECY + 10% Bolsa Colaborativa por viralización).\n\n` +
         `💡 *Cero canibalismo, máxima transparencia y cierres compartidos.*\n\n` +
         `📲 *Únete a la Red:* https://vecy-bienes-raices.vercel.app/`
     }
@@ -1284,7 +1283,7 @@ Estilo podcast / café inmobiliario, cercano, reflexivo y motivador:
     domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultoría 24/7 & Visión VECY Bienes Raíces (${fechaBogota}).
 Mensaje cálido dominical recordando el respaldo continuo:
 - Consultorio integral 24/7: contratos, promesas, impuestos y asesoría permanente en WhatsApp y web.
-- La Primera Bolsa Inmobiliaria Colaborativa y Fintech de Colombia: tecnología abierta y comisiones transparentes (35/35/15/15).
+- La Primera Bolsa Inmobiliaria Colaborativa y Fintech de Colombia: tecnología abierta y comisiones transparentes (40/20/40 y 40/10+10/40).
 - Próximamente al Aire: preparativos y herramientas de élite para el lanzamiento oficial de VECY Bienes Raíces.
 - Cero canibalismo comercial: complementariedad y profesionalismo en la red nacional.`,
 
@@ -1295,7 +1294,7 @@ Motivar la publicación de inmuebles y requerimientos con datos completos para a
 Inspirar a la comunidad destacando:
 1. Quiénes nos crearon: JanIA habla en primera persona como JanIA explicando quiénes son sus creadores y líderes: Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones).
 2. Qué es JanIA: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching y respaldar al asesor 24/7.
-3. Qué estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con comisiones justas (35/35/15/15).
+3. Qué estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con comisiones justas (40/20/40 y 40/10+10/40).
 4. Próximamente al aire: invitar a debatir y sugerir funciones antes del lanzamiento oficial.`
   };
 

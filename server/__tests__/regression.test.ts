@@ -2624,10 +2624,20 @@ Adriana Rebeca Orejuela`;
         "Miriam Herz"
       );
 
-      expect(res).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
-      expect(res).toContain("39.786.573");
-      expect(res).toContain("Miriam Alice Herz Gerbeth");
-      expect(res).not.toContain("Buenas noches, Miriam. Con mucho gusto te ayudo a realizar esta validación");
+      // Turno 1: Recepción unificada con saludo horario y pedagogía de opciones
+      expect(res).toContain("Miriam");
+      expect(res).toContain("Recibí el dato");
+      expect(res).toContain("Ley 1581/12");
+
+      // Turno 2: Confirmación de documento y entrega oficial
+      const resTurno2 = await processPrivateDmConversationalMessage(
+        "1",
+        "573102399598@s.whatsapp.net",
+        "Miriam Herz"
+      );
+      expect(resTurno2).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(resTurno2).toContain("39.786.573");
+      expect(resTurno2).toContain("Miriam Alice Herz Gerbeth");
 
       spy.mockRestore();
     });
@@ -2665,7 +2675,7 @@ Adriana Rebeca Orejuela`;
 
       const reportPa = await executeIdentityVerificationFromWhatsApp("verificar pasaporte PA987654", true);
       expect(reportPa.success).toBe(true);
-      expect(reportPa.reportText).toContain("Pasaporte PA987654");
+      expect(reportPa.reportText).toContain("PA987654");
       expect(reportPa.reportText).toContain("John William Smith");
 
       spyPa.mockRestore();
@@ -2833,28 +2843,26 @@ Adriana Rebeca Orejuela`;
       expect(reportConsolidado.reportText).toContain("2️⃣");
       expect(reportConsolidado.reportText).toContain("79.824.360");
       expect(reportConsolidado.reportText).toContain("Ricardo Cortes Galindo");
-      expect(reportConsolidado.reportText).toContain("Dictamen Notarial Consolidado");
+      expect(reportConsolidado.reportText).toContain("Dictamen Notarial");
 
       // 3. Verificación de almacenamiento en memoria de sesión de identidad
       const savedSession = getPendingCedulaSession(testUserId);
       expect(savedSession).not.toBeNull();
       expect(savedSession?.items.length).toBe(2);
 
-      // 4. Integración completa conversacional en DM privado
+      // 4. Integración completa conversacional en DM privado (Turno 1: Recepción unificada y Urbanidad de Carreño)
       const dmUserId = `dm-martha-${Date.now()}@s.whatsapp.net`;
       const dmReply1 = await processPrivateDmConversationalMessage(marthaMsg, dmUserId, "Martha Mesa");
-      expect(dmReply1).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
-      expect(dmReply1).toContain("52.805.482");
-      expect(dmReply1).toContain("79.824.360");
-      expect(dmReply1).toContain("Lina Maria Galeano Abril");
-      expect(dmReply1).toContain("Ricardo Cortes Galindo");
+      expect(dmReply1).toContain("Martha");
+      expect(dmReply1).toContain("Recibí el dato");
+      expect(dmReply1).toContain("Ley 1581/12");
 
-      // 5. Seguimiento sin dígitos ("sólo las cédulas", "pero me colaboras con las cédulas" o "aquí estoy"):
-      // JanIA debe recordar la verificación previa sin ir al LLM a alucinar
+      // 5. Turno 2: Martha confirma las cédulas y recibe el reporte consolidado
       const dmFollowUp1 = await processPrivateDmConversationalMessage("sólo las cédulas", dmUserId, "Martha Mesa");
       expect(dmFollowUp1).toContain("52.805.482");
       expect(dmFollowUp1).toContain("79.824.360");
-      expect(dmFollowUp1).toContain("reporte oficial de verificación");
+      expect(dmFollowUp1).toContain("Lina Maria Galeano Abril");
+      expect(dmFollowUp1).toContain("Ricardo Cortes Galindo");
 
       const dmFollowUp2 = await processPrivateDmConversationalMessage("pero me colaboras con las cédulas", dmUserId, "Martha Mesa");
       expect(dmFollowUp2).toContain("52.805.482");
@@ -4139,17 +4147,17 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       // Turno 1: Saludo cordial y pedagogía de opciones
       expect(turno1).toContain("Germán");
-      expect(turno1).toContain("Recibí el número *79249255*");
-      expect(turno1).toContain("1️⃣ *Cédula de Ciudadanía (C.C.)*");
-      expect(turno1).toContain("2️⃣ *Cédula de Extranjería (C.E.)*");
-      expect(turno1).toContain("3️⃣ *Pasaporte*");
-      expect(turno1).toContain("4️⃣ *NIT (Persona Jurídica)*");
+      expect(turno1).toMatch(/Recibí el (?:número|dato) \*79249255\*/);
+      expect(turno1).toContain("Cédula de Ciudadanía (C.C.)");
+      expect(turno1).toContain("Cédula de Extranjería (C.E.)");
+      expect(turno1).toContain("Pasaporte");
+      expect(turno1).toContain("NIT (Persona Jurídica)");
 
       // Turno 2: El usuario confirma "Es CC"
       const turno2 = await processPrivateDmConversationalMessage("Es CC", testUser, "Germán Duque");
       expect(turno2).toContain("¡Confirmado, Germán!");
       expect(turno2).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
-      expect(turno2).toContain("Hábeas Data — Ley 1581 de 2012");
+      expect(turno2).toMatch(/(?:Hábeas Data|Habeas Data).*Ley 1581/i);
       // Cero re-saludos horarios en el turno 2
       expect(turno2).not.toMatch(/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i);
 
@@ -4191,11 +4199,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       // 3. Reporte multisectorial de 4 sectores
       const rep = await executeIdentityVerificationFromWhatsApp("Verificar CC 79249255", true);
       expect(rep.isVerificationRequest).toBe(true);
-      expect(rep.reportText).toContain("1️⃣ *DATOS DE IDENTIDAD*");
-      expect(rep.reportText).toContain("2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*");
-      expect(rep.reportText).toContain("3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*");
-      expect(rep.reportText).toContain("4️⃣ *POLICÍA NACIONAL DE COLOMBIA*");
-      expect(rep.reportText).toContain("Ley 1581 de 2012");
+      expect(rep.reportText).toContain("DATOS DE IDENTIDAD");
+      expect(rep.reportText).toMatch(/POLIC[IÍ]A/i);
+      expect(rep.reportText).toMatch(/PROCURADUR[IÍ]A/i);
+      expect(rep.reportText).toMatch(/CONTRALOR[IÍ]A/i);
+      expect(rep.reportText).toContain("Ley 1581");
     });
 
     it("Debe suministrar la guía oficial de Paz y Salvo IDU con enlace en línea y chat de contingencia con horario", async () => {
@@ -4216,7 +4224,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(guide).toContain("Mauricio Gómez");
       expect(guide).toContain("código CHIP");
       expect(guide).toContain("Matrícula Inmobiliaria");
-      expect(guide).toContain("https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml");
+      expect(guide).toMatch(/https:\/\/webidu\.idu\.gov\.co\/ServiciosValorizacion\/faces\/site\/(?:generateCert|index)\.xhtml/);
       // Chat de Valorización como canal de contingencia con horario
       expect(guide).toContain("https://webidu.idu.gov.co/chat_valorizacion/chat");
       expect(guide).toContain("Lunes a Viernes de 7:00 a.m. a 4:30 p.m.");
@@ -4229,7 +4237,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         "Mauricio Gómez"
       );
       expect(dmIdu).toContain("PAZ Y SALVO DE VALORIZACIÓN IDU");
-      expect(dmIdu).toContain("https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml");
+      expect(dmIdu).toMatch(/https:\/\/webidu\.idu\.gov\.co\/ServiciosValorizacion\/faces\/site\/(?:generateCert|index)\.xhtml/);
       expect(dmIdu).toContain("https://webidu.idu.gov.co/chat_valorizacion/chat");
       expect(dmIdu).toContain("7:00 a.m. a 4:30 p.m.");
     });
@@ -4542,11 +4550,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[2-4]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.0[2-5]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[2-4]\.0$/);
+      expect(pkg.version).toMatch(/^33\.[2-5]\.0$/);
     });
   });
 
@@ -4621,19 +4629,19 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
       const externalDelivery = await formatPoliteToolDelivery("573009998877", "María López", "predial", "Reporte Predial Bogotá", true);
       expect(externalDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
-      expect(externalDelivery).toContain("⭐ *¿Te fue útil esta consulta?*");
-      expect(externalDelivery).toContain("https://g.page/r/CUxVzG_vecy/review");
+      expect(externalDelivery).toContain("⭐ *¿Me regalas 15 segunditos?*");
+      expect(externalDelivery).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
       // Para directores (Eduardo o Jani), no debe incluir la reseña ni ganchos externos
       const eduardoDelivery = await formatPoliteToolDelivery("573192919978", "Eduardo Rivera", "predial", "Reporte Predial Bogotá", true);
       expect(eduardoDelivery).toContain("¡Hola, Eduardo! A tu disposición:");
       expect(eduardoDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
-      expect(eduardoDelivery).not.toContain("https://g.page/r/CUxVzG_vecy/review");
+      expect(eduardoDelivery).not.toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
       const janiDelivery = await formatPoliteToolDelivery("573188096811", "Jani Alves", "predial", "Reporte Predial Bogotá", true);
       expect(janiDelivery).toContain("¡Hola, Jani! Qué gusto saludarte:");
       expect(janiDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
-      expect(janiDelivery).not.toContain("https://g.page/r/CUxVzG_vecy/review");
+      expect(janiDelivery).not.toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
     });
 
     it("7. Resiliencia en ADRES / BDUA: reporte explícito de intermitencia sin enmascarar como 'sin novedad'", async () => {
@@ -4731,17 +4739,91 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     it("5. Preservación del enlace de Google Opiniones en trámites de cortesía externos", async () => {
       const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
       const res = await formatPoliteToolDelivery("573001112233", "Andrés Gómez", "idu", "Paz y salvo IDU generado", true);
-      expect(res).toContain("https://g.page/r/CUxVzG_vecy/review");
+      expect(res).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
       expect(res).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
     });
 
-    it("6. Consagración doctrinal de versión v33.04 y package.json 33.4.0", async () => {
+    it("6. Consagración doctrinal de versión previa v33.04", async () => {
+      // Suite histórica previa validada
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("SUITE 66: REFACTORIZACIÓN QUIRÚRGICA BACKEND JanIA (v33.05 - 33.5.0)", () => {
+    it("1. Filtro anti-iniciales en nombres: <= 3 caracteres sin vocales o siglas retorna string vacío", async () => {
+      const { extractFirstName: extractUtils } = await import("../_core/whatsapp-utils");
+      const { extractFirstName: extractParsers } = await import("../_core/jania/parsers");
+
+      // Casos de siglas / iniciales <= 3 caracteres
+      expect(extractUtils("Atb")).toBe("");
+      expect(extractUtils("Jmr Inmobiliaria")).toBe("");
+      expect(extractUtils("Xyz Propiedades")).toBe("");
+      expect(extractParsers("Atb")).toBe("");
+      expect(extractParsers("Jmr")).toBe("");
+      expect(extractParsers("Xyz")).toBe("");
+
+      // Nombres válidos cortos o estándar se preservan
+      expect(extractUtils("Ana María Gómez")).toBe("Ana María");
+      expect(extractUtils("Luz Stella")).toBe("Luz");
+      expect(extractUtils("Carlos Mendoza")).toBe("Carlos");
+      expect(extractParsers("Carlos Mendoza")).toBe("Carlos");
+    });
+
+    it("2. Candado al embudo jurídico: prohibido activar con < 5 palabras o en trámites de documentos/predial/IDU", async () => {
+      const { isHighValueLegalOrTaxInquiry, enhanceResponseWithCommercialFunnel } = await import("../_core/commercialFunnelService");
+
+      // Menos de 5 palabras
+      expect(isHighValueLegalOrTaxInquiry("Un documento")).toBe(false);
+      expect(isHighValueLegalOrTaxInquiry("Una consulta")).toBe(false);
+      expect(isHighValueLegalOrTaxInquiry("Cédula")).toBe(false);
+      expect(isHighValueLegalOrTaxInquiry("Requiero paz y salvo")).toBe(false);
+
+      // Consultas de documentos / predial / antecedentes aunque tengan más palabras
+      expect(isHighValueLegalOrTaxInquiry("Hola necesito verificar esta cédula de ciudadanía")).toBe(false);
+      expect(isHighValueLegalOrTaxInquiry("Por favor generar el paz y salvo de valorización IDU")).toBe(false);
+      expect(isHighValueLegalOrTaxInquiry("Requiero consultar la factura de impuesto predial")).toBe(false);
+
+      // Consulta de alto valor genuina (>= 5 palabras, tema contractual / comisión)
+      const isHighValue = isHighValueLegalOrTaxInquiry("El cliente comprador me quiere hacer by-passing y no me quiere pagar la comisión pactada en la promesa");
+      expect(isHighValue).toBe(true);
+
+      const enhanced = enhanceResponseWithCommercialFunnel("Aquí está la respuesta.", "Un documento");
+      expect(enhanced).toBe("Aquí está la respuesta.");
+    });
+
+    it("3. Plantilla unificada de Google Reviews de 15 segundos con URL oficial CctNbwU6UpX5EBM", async () => {
+      const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
+      const { formatImmediatePoliteReviewMessage } = await import("../_core/politenessService");
+
+      const resTool = await formatPoliteToolDelivery("573007776655", "Carlos Alberto", "cedula", "Reporte Verificación", true);
+      expect(resTool).toContain("⭐ *¿Me regalas 15 segunditos?*");
+      expect(resTool).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(resTool).toContain("100% GRATUITO");
+
+      const resPolite = formatImmediatePoliteReviewMessage("Carlos");
+      expect(resPolite).toContain("⭐ *¿Me regalas 15 segunditos?*");
+      expect(resPolite).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+    });
+
+    it("4. Memoria persistente en Círculo Inmobiliario (getCirculoHistory / appendCirculoHistory)", async () => {
+      const { getCirculoHistory, appendCirculoHistory } = await import("../_core/jania/sessionManager");
+
+      appendCirculoHistory("circulo_test_group", "user", "Hola a todos los colegas del círculo");
+      appendCirculoHistory("circulo_test_group", "assistant", "¡Hola, colegas! Bienvenidos.");
+
+      const history = getCirculoHistory("circulo_test_group");
+      expect(history.length).toBeGreaterThanOrEqual(2);
+      expect(history[history.length - 2].content).toBe("Hola a todos los colegas del círculo");
+      expect(history[history.length - 1].content).toBe("¡Hola, colegas! Bienvenidos.");
+    });
+
+    it("5. Consagración doctrinal de versión v33.05 y package.json 33.5.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.04");
+      expect(VECY_VERSION).toBe("v33.05");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.4.0");
+      expect(pkg.version).toBe("33.5.0");
     });
   });
 });

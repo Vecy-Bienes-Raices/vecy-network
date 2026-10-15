@@ -418,3 +418,21 @@ export function appendDmHistory(userId: string, role: "user" | "assistant", cont
   if (history.length > 24) history.shift();
   dmConversationHistory.set(userId, history);
 }
+
+// ─── Memoria Conversacional Grupo Proyecto VECY / Círculo (Singleton v33.4.1) ─
+export const circuloConversationHistory = new Map<string, ConsultingTurn[]>();
+
+export function getCirculoHistory(userId: string): ConsultingTurn[] {
+  const history = circuloConversationHistory.get(userId) || [];
+  const now = Date.now();
+  // Conservar mensajes de las últimas 12 horas
+  return history.filter(h => now - h.ts < 12 * 3600 * 1000);
+}
+
+export function appendCirculoHistory(userId: string, role: "user" | "assistant", content: string) {
+  const history = getCirculoHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 20) history.shift();
+  circuloConversationHistory.set(userId, history);
+}
+

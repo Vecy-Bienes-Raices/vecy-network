@@ -1,5 +1,5 @@
 import { JanIAResult } from "../types";
-import { resolveRealName, checkAlreadyGreeted } from "../sessionManager";
+import { resolveRealName, checkAlreadyGreeted, getCirculoHistory, appendCirculoHistory } from "../sessionManager";
 import {
   extractFirstName,
   parseSafeJSON,
@@ -134,13 +134,22 @@ export async function processCirculoMessage(
   * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RAÍCES. JAMÁS uses plantillas rígidas ni suenes como un contestador automático.
   * Dirígete a la persona por su nombre ("${targetName}") de forma fluida, cálida y natural.
   * Si el interlocutor saluda, salúdalo con estilo propio y dinamismo.
-  * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro (35/35/15/15, bolsa colaborativa, gratuidad por lanzamiento, matching en tiempo real).
+  * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditoría), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralización en redes), matching en tiempo real y tecnología Cero Papel.
   * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.`;
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nPregunta: ${text}${greetingInstruction}` }
+    const circuloHistory = getCirculoHistory(userId);
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: systemPrompt }
     ];
+
+    for (const h of circuloHistory.slice(-6)) {
+      messages.push({ role: h.role, content: h.content });
+    }
+
+    messages.push({
+      role: "user",
+      content: `Usuario: @${rawPhone} (${realName})\nPregunta: ${text}${greetingInstruction}`
+    });
 
     const llmRes = await invokeLLM({
       messages,
@@ -150,16 +159,22 @@ export async function processCirculoMessage(
 
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+      const cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      appendCirculoHistory(userId, "user", text);
+      appendCirculoHistory(userId, "assistant", cleanResponse);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(parsed.response || ""),
+        response: cleanResponse,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡")
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
+      const cleanResponse = sanitizeResponseMarkdown(replyContent);
+      appendCirculoHistory(userId, "user", text);
+      appendCirculoHistory(userId, "assistant", cleanResponse);
       return {
         classification: "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(replyContent),
+        response: cleanResponse,
         reactionEmoji: "💡"
       };
     }

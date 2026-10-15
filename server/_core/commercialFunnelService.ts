@@ -43,10 +43,20 @@ export const HIGH_VALUE_PATTERNS = {
 
 /**
  * Evalúa si un texto corresponde a una Consulta de Alto Valor
+ * Candado doctrinal (v33.4.1): Prohibido activar si el mensaje tiene menos de 5 palabras
+ * o si trata sobre verificación de documentos, antecedentes, predial o paz y salvo IDU.
  */
 export function isHighValueLegalOrTaxInquiry(text: string): boolean {
   if (!text || typeof text !== "string") return false;
   const clean = text.trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length < 5) return false;
+
+  // Prohibición estricta si es verificación de documentos, antecedentes, predial o paz y salvo IDU
+  if (/(?:c[eé]dula|documento|antecedente|polic[ií]a|adres|verificaci[oó]n|predial|hacienda|factura|chip|idu|valorizaci[oó]n|paz\s*y\s*salvo)/i.test(clean)) {
+    return false;
+  }
+
   return (
     HIGH_VALUE_PATTERNS.commissions.test(clean) ||
     HIGH_VALUE_PATTERNS.contracts.test(clean) ||
@@ -109,7 +119,26 @@ export function enhanceResponseWithCommercialFunnel(
     return responseText;
   }
 
-  const isHighValue = isHighValueLegalOrTaxInquiry(userQuery) || isHighValueLegalOrTaxInquiry(responseText);
+  // Candado al embudo jurídico (Doctrina v33.4.1):
+  // Prohibido activar si el mensaje del usuario tiene menos de 5 palabras o si trata sobre
+  // verificación de documentos, antecedentes, predial o paz y salvo IDU.
+  if (userQuery) {
+    const qClean = userQuery.trim();
+    const qWords = qClean.split(/\s+/).filter(Boolean);
+    if (qWords.length < 5) {
+      return responseText;
+    }
+    if (/(?:c[eé]dula|documento|antecedente|polic[ií]a|adres|verificaci[oó]n|predial|hacienda|factura|chip|idu|valorizaci[oó]n|paz\s*y\s*salvo)/i.test(qClean)) {
+      return responseText;
+    }
+  }
+
+  // Tampoco activar si el responseText en sí mismo es un reporte oficial de herramientas gratuitas
+  if (/(?:VERIFICACIÓN OFICIAL|PAZ Y SALVO|FACTURA PREDIAL|SECRETARÍA DE HACIENDA|POLICÍA NACIONAL)/i.test(responseText)) {
+    return responseText;
+  }
+
+  const isHighValue = isHighValueLegalOrTaxInquiry(userQuery);
   if (!isHighValue) {
     return responseText;
   }

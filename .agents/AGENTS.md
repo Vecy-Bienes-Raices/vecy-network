@@ -182,7 +182,20 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.04 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.05 — Octubre 2026
+
+### Novedades v33.05 (Refactorización Quirúrgica Backend JanIA: Embudo de Recepción Unificado, Urbanidad de Carreño, Filtro Anti-Iniciales, Candado Jurídico, Plantilla Reviews 15s y Alineación Doctrinal):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Principal Engineer de VECY BIENES RAÍCES. Ejecuta una refactorización quirúrgica sobre el backend de JanIA siguiendo 6 reglas estrictas sin romper ninguna importación existente."*
+  2. Unificar embudo de recepción y Urbanidad de Carreño en DMs (`whatsapp-match.ts` y `dmHandler.ts`): No ejecutar en frío sin sesión activa en `whatsapp-match.ts`. En `dmHandler.ts`, unificar la recepción de CHIP, número suelto, documento con sigla o nombre+número con `setPendingUnconfirmedDoc`, saludo horario Bogotá, pregunta cálida y concisa de trámite + confirmación de CC, CE, PA, NIT, y aviso legal de Hábeas Data Capa 3 (Ley 1581/12).
+  3. Filtro anti-iniciales en nombres (`whatsapp-utils.ts` y `parsers.ts`): Si el nombre tiene `<= 3` caracteres y no está en listas comunes o carece de vocales, retornar `""` para vocativo neutro. En `dmHandler.ts`, si el usuario saluda explícitamente, responder SIEMPRE incluyendo el saludo horario (`¡Buenos días / Buenas tardes / Buenas noches!`), incluso con `hasPriorHistory: true`.
+  4. Candado al embudo jurídico (`commercialFunnelService.ts`): Prohibido activar bloque "Marco Normativo / Alerta de Riesgo Patrimonial" si el mensaje tiene `< 5` palabras o trata sobre verificación de documentos, predial o IDU.
+  5. Plantilla unificada de Google Reviews de 15 segundos (`dmHandler.ts` y `politenessService.ts`): URL oficial `https://g.page/r/CctNbwU6UpX5EBM/review` con copy de 15 segundos y 100% GRATUITO.
+  6. Alineación doctrinal con `conocimiento_vecy.md`: Trato directivo sin mutilar apellidos de fundadores ("Eduardo Rivera" y "Jani Alves"), erradicación de `35/35/15/15` adoptando modelo `40/20/40` en contacto directo y `40/10+10/40` en portal web, emojis v23.0 (`👍` Oferta Venta, `👌` Oferta Arriendo, `🔀` Oferta Permuta, `📝` Demanda Venta, `✏️` Demanda Arriendo, `🔄` Demanda Permuta), y memoria conversacional de círculo (`getCirculoHistory` / `appendCirculoHistory`).
+  7. Validación: `npm run check` (0 errores) ✅ | `npm test` 222/222 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 18.95s ✅
+- `shared/const.ts` (`v33.05`) y `package.json` (`33.5.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.04 — Octubre 2026
 
 ### Novedades v33.04 (Restauración Cognitiva Pura, Base Doctrinal de VECY BIENES RAÍCES y Sombreros Expertos de JanIA):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

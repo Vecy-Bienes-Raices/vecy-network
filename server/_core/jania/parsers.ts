@@ -120,7 +120,21 @@ export function extractFirstName(fullName: string): string {
     }
   }
 
-  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+  const candidate = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+
+  // Filtro anti-iniciales en nombres (Regla Doctrinal v33.4.1):
+  // Si el nombre extraído tiene <= 3 caracteres y NO está en COMMON_FIRST_NAMES
+  // o carece de vocales normales (ej. "Atb", "Jmr", "Xyz"), retorna "" para vocativo neutro.
+  if (candidate.length <= 3) {
+    const candLower = candidate.toLowerCase();
+    const isCommon = COMMON_FIRST_NAMES.has(candLower);
+    const hasVowels = /[aeiouáéíóú]/i.test(candidate);
+    if (!isCommon || !hasVowels) {
+      return "";
+    }
+  }
+
+  return candidate;
 }
 
 export function getColombiaHour(): number {
