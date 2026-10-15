@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Unificación de Memoria Turno 1 y 2 (Cero Bucles) y Reporte Compacto Único Oficial (v33.12 - 33.12.0)
+
+**Versión:** `v33.12` (`33.12.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/identityVerificationService.ts` (Implementación de `detectTramiteConfirmation` con soporte natural de "CC", "1", "cédula", "antecedentes", "predial", "idu", "NIT", "pasaporte", "CE"; estandarización del reporte compacto oficial con ADRES al final y sin bloques numéricos largos)
+- `server/_core/jania/handlers/dmHandler.ts` (Unificación de memoria entre Turno 1 y Turno 2: intercepción inmediata de confirmaciones, erradicando bucles donde JanIA preguntaba nuevamente el trámite; supresión de bloques repetidos)
+- `server/__tests__/regression.test.ts` (SUITE 73 con 4 pruebas automatizadas aprobadas, alcanzando 254/254 tests pasando al 100% en verde a $0 COP)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó:
+1. *"Actúa como Principal Engineer de VECY BIENES RAÍCES. Resuelve de raíz el bucle conversacional en DMs donde JanIA recibe un número o dato en frío (Turno 1) y cuando el usuario confirma en el segundo turno ('CC', '1', 'cédula', 'antecedentes', etc.), JanIA volvía a preguntar el trámite en lugar de ejecutar la consulta."*
+2. *"REPORTE COMPACTO ÚNICO Y LIMPIO: Asegúrate de que el resultado de `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp` devuelva SIEMPRE el formato compacto unificado (con ADRES al final y sin bloques numéricos largos) para evitar el botón 'Leer más'."*
+3. *"Mantén el blindaje estricto de $0 COP en pruebas (`NODE_ENV=test`), ejecuta `npm run check`, `npm test` y `npm run build`, y documenta en las tres bitácoras maestras."*
+
+#### 2. Hallazgos y Causa Raíz Identificada
+- En `identityVerificationService.ts`, la función `detectDocTypeConfirmation` requería palabras de confirmación explícita ("sí", "claro", "por favor") o identificadores muy rígidos. Si el usuario respondía únicamente con "CC", "cédula", "1", "antecedentes", "predial", "2", "idu" o "3", la intención no era captada como confirmación de trámite, provocando que la sesión pendiente no se liberara y JanIA cayera en respuestas genéricas o de intermitencia.
+- En `dmHandler.ts`, el procesamiento de `pendingDoc` residía después de los fast-paths de consultas pedagógicas y análisis gramatical, corriendo el riesgo de que mensajes de confirmación de 1 o 2 palabras fueran interceptados como preguntas informativas o que se produjeran dobles saludos horarios en turnos sucesivos.
+- En `executeIdentityVerificationFromWhatsApp`, existían variaciones entre los formatos retornados cuando un documento provenía de caché o de búsqueda en vivo, manteniendo en algunos casos los bloques antiguos `1️⃣ *DATOS...*`, `2️⃣ *SEGURIDAD SOCIAL...*` que superaban la altura estándar de visualización de WhatsApp y activaban el botón "Leer más".
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Parser Cognitivo de Trámites y Confirmaciones Naturales (`detectTramiteConfirmation`):**
+   - Creada en `identityVerificationService.ts` la función `detectTramiteConfirmation(text)` con soporte exhaustivo para Cédula/Antecedentes ("cc", "cédula", "antecedentes", "identidad", "1"), Predial Bogotá ("predial", "factura", "impuesto", "2") e IDU Valorización ("idu", "paz y salvo", "valorización", "3"), así como tipos especiales ("nit", "pasaporte", "ce").
+2. **Unificación de Memoria y Cero Bucles en DMs (`dmHandler.ts`):**
+   - Intercepción de `getPendingUnconfirmedDoc(userId)` al inicio de `processPrivateDmConversationalMessage`. Si el usuario tiene una sesión pendiente, JanIA evalúa inmediatamente la confirmación, despacha la consulta oficial con cortesía, borra la sesión pendiente y entrega el reporte oficial sin reiniciar el flujo ni solicitar datos repetidos.
+   - En el Turno 2, la respuesta se entrega de forma directa y ejecutiva con `¡Confirmado, [Nombre]! Procedí con la verificación oficial del documento:` sin concatenar saludos horarios duplicados.
+3. **Estandarización del Reporte Compacto Oficial con ADRES al Final:**
+   - Unificación de `formatCompactIdentityVerificationReport` en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`.
+   - Estructura indivisible: Encabezado institucional -> Habeas Data (Ley 1581/12) -> Datos de Identidad (Cédula, Pertenece a, Estado) -> Antecedentes (Policía -> Procuraduría -> Contraloría -> ADRES BDUA al final). Erradicados los bloques numéricos largos `1️⃣`, `2️⃣`, `3️⃣`, `4️⃣`.
+4. **SUITE 73 de Pruebas Automatizadas y Blindaje ($0 COP):**
+   - Diseñadas y aprobadas 4 pruebas unitarias en `regression.test.ts`: ciclo seguro de memoria de sesiones pendientes, transición fluida Turno 1 -> Turno 2 (con "CC", "1", "cédula", "antecedentes"), flujo con código CHIP (Turno 1 -> Turno 2 "IDU"), y consistencia del reporte compacto único oficial en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`.
+
+#### 4. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Unitarios y de Regresión:** `npm test` — **254/254 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` en 39.36s (Vite) + 500ms (esbuild).
+
+---
+
 ### 📅 [2026-10-15] — Filtro Anti-Publicidad Meta, PDFs Comerciales y Ventana Estricta 15 Días (v33.12 - 33.12.0)
 
 **Versión:** `v33.12` (`33.12.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

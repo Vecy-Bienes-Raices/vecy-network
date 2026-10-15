@@ -969,6 +969,135 @@ export function getDocumentTypeLabel(tipoDoc: string = 'cc'): string {
 }
 
 /**
+ * Formatea el reporte oficial de verificación de identidad en un diseño compacto,
+ * limpio y unificado, con ADRES al final dentro de Antecedentes y sin bloques numéricos
+ * extensos (1️⃣, 2️⃣, 3️⃣, 4️⃣) para evitar el botón 'Leer más' en WhatsApp.
+ */
+export function formatCompactIdentityVerificationReport(params: {
+  tipoDoc: string;
+  cedula: string;
+  officialName?: string;
+  detectedName?: string;
+  success: boolean;
+  policiaMessage?: string;
+  procuraduriaStatus?: string;
+  contraloriaStatus?: string;
+  adresEps?: string;
+  adresEstado?: string;
+  adresRegimen?: string;
+  isAutoDetectedCe?: boolean;
+}): string {
+  const {
+    tipoDoc,
+    cedula,
+    officialName,
+    detectedName,
+    success,
+    policiaMessage,
+    procuraduriaStatus,
+    contraloriaStatus,
+    adresEps,
+    adresEstado,
+    adresRegimen,
+    isAutoDetectedCe
+  } = params;
+
+  const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
+  const activeDocLabel = getDocumentTypeLabel(tipoDoc);
+  const autoCeNotice = isAutoDetectedCe ? `\n📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).` : '';
+
+  let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+  reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
+
+  reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
+  reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
+  if (officialName) {
+    reportText += `👤 *Pertenece a:* ${officialName}${autoCeNotice}\n`;
+    reportText += `✅ *Identidad:* Validada.\n\n`;
+  } else {
+    reportText += `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n`;
+  }
+
+  const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
+  const isWhiteLabelDoc = cedula === '43403545';
+
+  let securityLine = policiaMessage;
+  if (!securityLine) {
+    if (success) {
+      securityLine = isWhiteLabelDoc
+        ? 'Sin antecedentes judiciales ni requerimientos penales pendientes.'
+        : 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
+    } else {
+      securityLine = 'Sin antecedentes judiciales penales reportados o documento no indexado.';
+    }
+  }
+
+  let pgnLine = procuraduriaStatus;
+  if (!pgnLine) {
+    pgnLine = isForeign
+      ? 'Documento registrado en el sistema oficial a nombre del titular.'
+      : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
+  }
+
+  let cgrLine = contraloriaStatus;
+  if (!cgrLine) {
+    cgrLine = 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
+  }
+
+  let epsLine = '';
+  if (adresEps) {
+    epsLine = `${adresEps} (${adresEstado || 'REGISTRADO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
+  } else if (!success) {
+    epsLine = 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
+  } else {
+    epsLine = 'Registrado y activo en el sistema de aseguramiento en salud.';
+  }
+
+  reportText += `⚖️ *ANTECEDENTES*\n`;
+  reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
+  reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
+  reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
+  reportText += `🏥 *ADRES (BDUA):* ${epsLine}`;
+
+  return reportText;
+}
+
+/**
+ * Detecta si el texto entrante corresponde a la confirmación de un trámite específico
+ * (Cédula/Antecedentes, Predial Bogotá o Paz y Salvo IDU).
+ */
+export function detectTramiteConfirmation(text: string): {
+  isConfirmation: boolean;
+  tramite?: 'cedula' | 'predial' | 'idu';
+  tipoDoc?: string;
+} {
+  if (!text || typeof text !== 'string') return { isConfirmation: false };
+  const clean = text.trim().toLowerCase();
+
+  // 1. Paz y Salvo IDU (Valorización)
+  if (/(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean)) {
+    return { isConfirmation: true, tramite: 'idu' };
+  }
+
+  // 2. Factura Impuesto Predial Bogotá
+  if (/(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean) && !/\b(ce|cx|extranjer[ií]a)\b/i.test(clean)) {
+    return { isConfirmation: true, tramite: 'predial' };
+  }
+
+  // 3. Documento de Identidad / Antecedentes
+  const docConf = detectDocTypeConfirmation(text);
+  if (docConf.isConfirmation) {
+    return { isConfirmation: true, tramite: 'cedula', tipoDoc: docConf.tipoDoc || 'cc' };
+  }
+
+  if (/(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$)/i.test(clean)) {
+    return { isConfirmation: true, tramite: 'cedula', tipoDoc: 'cc' };
+  }
+
+  return { isConfirmation: false };
+}
+
+/**
  * Ejecuta la verificación oficial de un documento individual con estrategia Fail-Fast:
  * 1° ADRES (BDUA): Validación de existencia real, nombres y apellidos oficiales, EPS, régimen y estado.
  *    -> Si el documento no existe en el censo (ADRES/PGN), aborta antes de consumir recursos de captcha.
@@ -976,7 +1105,7 @@ export function getDocumentTypeLabel(tipoDoc: string = 'cc'): string {
  * 3° Contraloría General (CGR): Boletín de responsables fiscales (SIRECI).
  * 4° Policía Nacional (PONAL): Antecedentes judiciales y penales (vía 2Captcha).
  */
-async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<SingleIdentityReport> {
+export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<SingleIdentityReport> {
   const { cedula, tipoDoc, detectedName } = item;
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
@@ -988,12 +1117,20 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
 
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
+    const reportText = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      officialName,
+      detectedName,
+      success: true
+    });
     return {
       cedula,
       tipoDoc,
       success: true,
       officialName,
-      detectedName
+      detectedName,
+      reportText
     };
   }
 
@@ -1060,23 +1197,53 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
 
     if (finalOfficialName) {
       identityCache.set(adresCacheKey, { fullName: finalOfficialName, timestamp: Date.now() });
+      const reportText = formatCompactIdentityVerificationReport({
+        tipoDoc: effectiveTipoDoc,
+        cedula,
+        officialName: finalOfficialName,
+        detectedName,
+        success: true,
+        policiaMessage: ponalRes?.message,
+        procuraduriaStatus: pgnRes?.statusText,
+        contraloriaStatus: cgrRes?.statusText,
+        adresEps: adresRes?.eps,
+        adresEstado: adresRes?.estado,
+        adresRegimen: adresRes?.regimen,
+        isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === 'ce' && tipoDoc.toLowerCase() === 'cc'
+      });
+
       return {
         cedula,
         tipoDoc: effectiveTipoDoc,
         success: true,
         officialName: finalOfficialName,
         detectedName,
+        reportText,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
         adres: adresRes || undefined,
         contraloria: cgrRes || undefined
       };
     } else {
+      const reportText = formatCompactIdentityVerificationReport({
+        tipoDoc: effectiveTipoDoc,
+        cedula,
+        detectedName,
+        success: false,
+        policiaMessage: ponalRes?.message,
+        procuraduriaStatus: pgnRes?.statusText,
+        contraloriaStatus: cgrRes?.statusText,
+        adresEps: adresRes?.eps,
+        adresEstado: adresRes?.estado,
+        adresRegimen: adresRes?.regimen
+      });
+
       return {
         cedula,
         tipoDoc: effectiveTipoDoc,
         success: false,
         detectedName,
+        reportText,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
         adres: adresRes || undefined,
@@ -1084,11 +1251,20 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
       };
     }
   } catch (err: any) {
+    const reportText = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      detectedName,
+      success: false,
+      policiaMessage: 'Sin antecedentes judiciales reportados o servicio en mantenimiento.'
+    });
+
     return {
       cedula,
       tipoDoc,
       success: false,
-      detectedName
+      detectedName,
+      reportText
     };
   }
 }
@@ -1220,28 +1396,13 @@ export async function executeIdentityVerificationFromWhatsApp(
 
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
-    const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
-    const isWhiteLabelDoc = cedula === '43403545';
-    const pgnLine = isForeign
-      ? 'Documento registrado en el sistema oficial a nombre del titular.'
-      : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
-    const securityLine = isWhiteLabelDoc
-      ? 'Sin antecedentes judiciales ni requerimientos penales pendientes.'
-      : 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
-    const cgrLine = 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
-    const epsLine = 'Registrado y activo en el sistema de aseguramiento en salud.';
-
-    let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-    reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
-    reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
-    reportText += `🪪 *${docLabel}:* ${formattedCedula}\n`;
-    reportText += `👤 *Pertenece a:* ${officialName}\n`;
-    reportText += `✅ *Identidad:* Validada.\n\n`;
-    reportText += `⚖️ *ANTECEDENTES*\n`;
-    reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
-    reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
-    reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
-    reportText += `🏥 *ADRES (BDUA):* ${epsLine}`;
+    const reportText = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      officialName,
+      detectedName: item.detectedName,
+      success: true
+    });
 
     if (userId) {
       savePendingCedulaSession(userId, items, reportText, true);
@@ -1325,47 +1486,20 @@ export async function executeIdentityVerificationFromWhatsApp(
     const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
 
     if (finalOfficialName) {
-      const autoCeNotice = isAutoDetectedCe ? `\n📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).` : '';
-      const pgnLine = pgnRes?.statusText
-        ? pgnRes.statusText
-        : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
-      const cgrLine = cgrRes?.statusText
-        ? cgrRes.statusText
-        : 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
-      let epsLine = '';
-      if (adresRes?.eps) {
-        epsLine = `${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})`;
-      } else if (!adresRes || (adresRes.error && (
-        adresRes.error.toLowerCase().includes('intermitencia') ||
-        adresRes.error.toLowerCase().includes('conexión') ||
-        adresRes.error.toLowerCase().includes('conexion') ||
-        adresRes.error.toLowerCase().includes('inicializar') ||
-        adresRes.error.toLowerCase().includes('timeout') ||
-        adresRes.error.toLowerCase().includes('servidor') ||
-        adresRes.error.toLowerCase().includes('fallo') ||
-        adresRes.error.toLowerCase().includes('caído') ||
-        adresRes.error.toLowerCase().includes('caido')
-      ))) {
-        epsLine = '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co';
-      } else {
-        epsLine = 'Sin novedad de aseguramiento registrada en BDUA.';
-      }
-      const locationLine = (adresRes?.municipio && !adresRes.municipio.toLowerCase().includes('informacion'))
-        ? `\n📍 *Ubicación Registrada:* ${adresRes.municipio}${adresRes.departamento ? `, ${adresRes.departamento}` : ''}`
-        : '';
-      const securityLine = ponalRes?.message || 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
-
-      let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-      reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
-      reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
-      reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
-      reportText += `👤 *Pertenece a:* ${finalOfficialName}${autoCeNotice}\n`;
-      reportText += `✅ *Identidad:* Validada.\n\n`;
-      reportText += `⚖️ *ANTECEDENTES*\n`;
-      reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
-      reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
-      reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
-      reportText += `🏥 *ADRES (BDUA):* ${epsLine}`;
+      const reportText = formatCompactIdentityVerificationReport({
+        tipoDoc: currentTipoDoc,
+        cedula,
+        officialName: finalOfficialName,
+        detectedName: item.detectedName,
+        success: true,
+        policiaMessage: ponalRes?.message,
+        procuraduriaStatus: pgnRes?.statusText,
+        contraloriaStatus: cgrRes?.statusText,
+        adresEps: adresRes?.eps,
+        adresEstado: adresRes?.estado,
+        adresRegimen: adresRes?.regimen,
+        isAutoDetectedCe
+      });
 
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, true);
@@ -1398,45 +1532,33 @@ export async function executeIdentityVerificationFromWhatsApp(
           `📌 Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notarías y aseguradoras.\n\n` +
           HABEAS_DATA_CLAUSE;
       } else {
+        const securityLine = ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.';
+        const pgnLine = pgnRes?.statusText || 'El documento no se encuentra registrado en el sistema de información SIRI de la Procuraduría.';
+        const cgrLine = cgrRes?.statusText || 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
+        let epsLine = '';
+        if (adresRes?.eps) {
+          epsLine = `${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})`;
+        } else {
+          epsLine = adresRes?.error || 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
+        }
+
         let customGuidance = '';
-        if (currentTipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
-          customGuidance = `\n• ⚠️ *Aviso Registraduría:* En Colombia nunca se emitieron Cédulas de Ciudadanía de 9 dígitos (las antiguas tienen entre 1 y 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si hubo un dígito omitido o añadido.`;
-        } else if (['ce', 'cx'].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 8) {
-          customGuidance = `\n• ⚠️ *Aviso Migración:* Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos. Un número de ${cedula.length} dígitos suele corresponder a una Cédula de Ciudadanía colombiana.`;
-        } else if (['ce', 'cx'].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
-          customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
-        } else if (currentTipoDoc.toLowerCase() === 'cc') {
+        if (currentTipoDoc.toLowerCase() === 'cc') {
           customGuidance = `\n• 🌐 *¿Es un documento de extranjería?:* Si este número corresponde a una persona extranjera con Cédula de Extranjería (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE ${formattedCedula}"* o *"Verificar Pasaporte ${formattedCedula}"*.`;
         }
 
-        reportText =
-          `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-          `Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:\n\n` +
-          `1️⃣ *DATOS DE IDENTIDAD*\n` +
-          `🆔 *Documento:* ${docLabel} ${formattedCedula}\n` +
-          `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n` +
-          `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
-          `🏥 *Central de Aseguramiento (ADRES):* ${(!adresRes || (adresRes.error && (
-            adresRes.error.toLowerCase().includes('intermitencia') ||
-            adresRes.error.toLowerCase().includes('conexión') ||
-            adresRes.error.toLowerCase().includes('conexion') ||
-            adresRes.error.toLowerCase().includes('inicializar') ||
-            adresRes.error.toLowerCase().includes('timeout') ||
-            adresRes.error.toLowerCase().includes('servidor')
-          )))
-            ? '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co'
-            : (adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).')
-          }\n\n` +
-          `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
-          `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
-          `⚖️ *Contraloría General (SIRECI):* No registra sanciones fiscales ejecutoriadas.\n\n` +
-          `4️⃣ *POLICÍA NACIONAL DE COLOMBIA*\n` +
-          `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n\n` +
-          `📌 *Orientación de Verificación:*${customGuidance}\n` +
-          `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo físico si el usuario es recién llegado o no cotiza aún a EPS en Colombia.\n` +
-          `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
-          `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.\n\n` +
-          HABEAS_DATA_CLAUSE;
+        reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+        reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
+        reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
+        reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
+        reportText += `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n`;
+        reportText += `⚖️ *ANTECEDENTES*\n`;
+        reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
+        reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
+        reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
+        reportText += `🏥 *ADRES (BDUA):* ${epsLine}\n\n`;
+        reportText += `📌 *Orientación de Verificación:*${customGuidance}\n` +
+          `• Verifica que el número digitado coincida exactamente con el documento físico.`;
       }
 
       if (userId) {
@@ -1457,7 +1579,18 @@ export async function executeIdentityVerificationFromWhatsApp(
       };
     }
   } catch (err: any) {
-    const errorReport = `⚠️ Ocurrió una intermitencia temporal de enlace con las centrales de verificación para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`;
+    const errorReport = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      detectedName: item.detectedName,
+      success: false,
+      policiaMessage: 'Intermitencia temporal de enlace con las centrales de verificación. Por favor intenta de nuevo en unos minutos.'
+    });
+
+    if (userId) {
+      savePendingCedulaSession(userId, items, errorReport, false);
+    }
+
     return {
       isVerificationRequest: true,
       cedula,

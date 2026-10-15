@@ -693,6 +693,97 @@ export async function processPrivateDmConversationalMessage(
     return welcomeMsg;
   }
 
+  // 🏛️ Herramientas de asistencia técnica notarial, catastral y de identidad
+  const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
+  const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
+  const {
+    isBareDocumentNumber,
+    getPendingUnconfirmedDoc,
+    setPendingUnconfirmedDoc,
+    clearPendingUnconfirmedDoc,
+    detectDocTypeConfirmation,
+    detectTramiteConfirmation,
+    extractCedulaForVerification,
+    executeIdentityVerificationFromWhatsApp,
+    getPendingCedulaSession,
+    extractAllCedulasForVerification
+  } = await import('../../identityVerificationService');
+
+  // 🛡️ UNIFICACIÓN DE MEMORIA DE TURNO 1 Y TURNO 2 (CERO BUCLES)
+  // Cuando un usuario tenía un dato pendiente (número o CHIP) y en este turno confirma el trámite o tipo de documento
+  const pendingDoc = getPendingUnconfirmedDoc(userId);
+  if (pendingDoc) {
+    const confirmation = detectDocTypeConfirmation(clean);
+    const tramiteConf = detectTramiteConfirmation(clean);
+    const isIduConfirmation = tramiteConf.tramite === 'idu' || /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean);
+    const isPredialConfirmation = tramiteConf.tramite === 'predial' || (/(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean) && !confirmation.tipoDoc);
+    const isIdentityConfirmation =
+      confirmation.isConfirmation ||
+      tramiteConf.tramite === 'cedula' ||
+      /(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$|^cc$|^ce$|^nit$|^pasaporte$|^pa$|^c[eé]dula)/i.test(clean);
+
+    const isPendingChip = pendingDoc.rawNumber.toUpperCase().includes('AAA');
+
+    if (isIduConfirmation) {
+      clearPendingUnconfirmedDoc(userId);
+      if (isPendingChip) {
+        const iduRes = await executeIduValorizacionFromWhatsApp(pendingDoc.rawNumber, userId, true);
+        if (iduRes.isIduRequest && iduRes.reportText) {
+          const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", delivered);
+          return delivered;
+        }
+      } else {
+        const iduPrompt =
+          `¡Confirmado${displayName ? `, ${displayName}` : ""}! Para generar el Paz y Salvo de Valorización IDU en Bogotá, es indispensable el código CHIP del predio (inicia por AAA, visible en cualquier recibo catastral).\n\n` +
+          `Compárteme el código CHIP y de inmediato te emito el Paz y Salvo oficial gratuito 🤝.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", iduPrompt);
+        return iduPrompt;
+      }
+    } else if (isPredialConfirmation) {
+      clearPendingUnconfirmedDoc(userId);
+      if (isPendingChip) {
+        const predialRes = await executePredialAssistanceFromWhatsApp(pendingDoc.rawNumber, userId, true);
+        if (predialRes?.reportText) {
+          const delivered = await formatPoliteToolDelivery(userId, userName || "", 'predial', predialRes.reportText, true);
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", delivered);
+          return delivered;
+        }
+      } else {
+        const predialPrompt =
+          `¡Confirmado${displayName ? `, ${displayName}` : ""}! Para consultar y descargar la Factura del Impuesto Predial Bogotá con tu documento *${pendingDoc.cleanNumber || pendingDoc.rawNumber}*, compárteme el código CHIP del inmueble (inicia por AAA).\n\n` +
+          `Apenas me lo envíes te genero la liquidación oficial en PDF al instante 🤝.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", predialPrompt);
+        return predialPrompt;
+      }
+    } else if (isIdentityConfirmation) {
+      clearPendingUnconfirmedDoc(userId);
+      const targetDocType = confirmation.tipoDoc || tramiteConf.tipoDoc || 'cc';
+      const cleanDocNumber = pendingDoc.cleanNumber || pendingDoc.rawNumber.replace(/\D/g, '') || pendingDoc.rawNumber;
+      const targetQuery = `${targetDocType} ${cleanDocNumber}`;
+
+      const explicitItems = [{
+        cedula: cleanDocNumber,
+        tipoDoc: targetDocType,
+        rawNumber: cleanDocNumber
+      }];
+
+      const verified = await executeIdentityVerificationFromWhatsApp(targetQuery, true, userId, explicitItems);
+      if (verified.isVerificationRequest && verified.reportText) {
+        const followUpResponse =
+          `¡Confirmado${displayName ? `, ${displayName}` : ""}! Procedí con la verificación oficial del documento:\n\n` +
+          verified.reportText;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpResponse);
+        return followUpResponse;
+      }
+    }
+  }
+
   const isShortQuery = clean.trim().split(/\s+/).length <= 12;
 
   // Fast-path: Preguntas sobre el portafolio de consultas ("¿Cómo es lo de las consultas?", etc.)
@@ -783,70 +874,12 @@ export async function processPrivateDmConversationalMessage(
     return goodbyeMsg;
   }
 
-  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU / GUÍA CUANDO NO HAY DATO
-  const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
-  const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
-  const {
-    isBareDocumentNumber,
-    getPendingUnconfirmedDoc,
-    setPendingUnconfirmedDoc,
-    clearPendingUnconfirmedDoc,
-    detectDocTypeConfirmation,
-    extractCedulaForVerification,
-    executeIdentityVerificationFromWhatsApp,
-    getPendingCedulaSession,
-    extractAllCedulasForVerification
-  } = await import('../../identityVerificationService');
-
   // Guía pedagógica oficial de Paz y Salvo IDU cuando el usuario consulta sin aportar código CHIP
   if (isIduInquiry(clean) && !clean.match(/AAA[A-Z0-9]{8,14}/i)) {
     const guideMsg = formatIduAssistanceGuide(displayName);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", guideMsg);
     return guideMsg;
-  }
-
-  // CASO 1: El usuario tenía un dato pendiente y en este turno confirma el trámite o tipo de documento
-  const pendingDoc = getPendingUnconfirmedDoc(userId);
-  if (pendingDoc) {
-    const confirmation = detectDocTypeConfirmation(clean);
-    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean);
-    const isPredialConfirmation = /(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean);
-    const isIdentityConfirmation = confirmation.isConfirmation || /(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$)/i.test(clean);
-
-    if (isIduConfirmation && (pendingDoc.rawNumber.toUpperCase().includes('AAA') || pendingDoc.cleanNumber)) {
-      clearPendingUnconfirmedDoc(userId);
-      const iduRes = await executeIduValorizacionFromWhatsApp(pendingDoc.rawNumber, userId, true);
-      if (iduRes.isIduRequest && iduRes.reportText) {
-        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", delivered);
-        return delivered;
-      }
-    } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes('AAA') || pendingDoc.cleanNumber)) {
-      clearPendingUnconfirmedDoc(userId);
-      const predialRes = await executePredialAssistanceFromWhatsApp(pendingDoc.rawNumber, userId, true);
-      if (predialRes?.reportText) {
-        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'predial', predialRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", delivered);
-        return delivered;
-      }
-    } else if (isIdentityConfirmation) {
-      clearPendingUnconfirmedDoc(userId);
-      const targetDocType = confirmation.tipoDoc || 'cc';
-      const targetQuery = `${targetDocType} ${pendingDoc.cleanNumber || pendingDoc.rawNumber}`;
-      const verified = await executeIdentityVerificationFromWhatsApp(targetQuery, true, userId);
-      if (verified.isVerificationRequest && verified.reportText) {
-        // En el segundo turno se entrega directamente SIN repetir saludos horarios
-        const followUpResponse =
-          `¡Confirmado${displayName ? `, ${displayName}` : ""}! Procedí con la verificación oficial del documento:\n\n` +
-          verified.reportText;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", followUpResponse);
-        return followUpResponse;
-      }
-    }
   }
 
   // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número

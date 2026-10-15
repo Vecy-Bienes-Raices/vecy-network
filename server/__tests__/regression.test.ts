@@ -5412,6 +5412,113 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(pkg.version).toBe("33.12.0");
     });
   });
+
+  describe("SUITE 73: UNIFICACIÓN DE MEMORIA TURNO 1/2 (CERO BUCLES) Y REPORTE COMPACTO ÚNICO (v33.12 - 33.12.0)", () => {
+    it("1. Manejo seguro de memoria de sesiones pendientes (set/get/clear)", async () => {
+      const {
+        setPendingUnconfirmedDoc,
+        getPendingUnconfirmedDoc,
+        clearPendingUnconfirmedDoc
+      } = await import("../_core/identityVerificationService");
+
+      const testUser = "573199990001@s.whatsapp.net";
+      setPendingUnconfirmedDoc(testUser, "1941411");
+      const session = getPendingUnconfirmedDoc(testUser);
+      expect(session).toBeDefined();
+      expect(session?.cleanNumber).toBe("1941411");
+      expect(session?.rawNumber).toBe("1941411");
+
+      clearPendingUnconfirmedDoc(testUser);
+      expect(getPendingUnconfirmedDoc(testUser)).toBeNull();
+    });
+
+    it("2. Turno 1 con número suelto y Turno 2 con confirmaciones 'CC', '1', 'cédula', 'antecedentes'", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+      const { identityCache, getPendingUnconfirmedDoc } = await import("../_core/identityVerificationService");
+
+      identityCache.set("POLICIA:cc:79249255", {
+        fullName: "JHON GERBIS HERRERA CAMACHO",
+        timestamp: Date.now()
+      });
+
+      const userA = "573199990002@s.whatsapp.net";
+      // Turno 1: Envía número suelto
+      const t1 = await processPrivateDmConversationalMessage("79249255", userA, "Carlos Ronderos");
+      expect(t1).toContain("Recibí el dato *79249255*");
+      expect(t1).toContain("Cédula de Ciudadanía (C.C.)");
+      expect(getPendingUnconfirmedDoc(userA)).not.toBeNull();
+
+      // Turno 2: Confirma "CC" -> de una vez entrega reporte y borra la sesión
+      const t2 = await processPrivateDmConversationalMessage("CC", userA, "Carlos Ronderos");
+      expect(t2).toContain("¡Confirmado, Carlos!");
+      expect(t2).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(t2).toContain("79.249.255");
+      expect(t2).toContain("Jhon Gerbis Herrera Camacho");
+      expect(t2).toContain("ADRES (BDUA)");
+      expect(getPendingUnconfirmedDoc(userA)).toBeNull();
+    });
+
+    it("3. Turno 1 con CHIP y Turno 2 con confirmaciones 'IDU', '3', 'predial', '2'", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+      const { getPendingUnconfirmedDoc } = await import("../_core/identityVerificationService");
+      const iduService = await import("../_core/iduValorizacionService");
+
+      const spyIdu = vi.spyOn(iduService, "executeIduValorizacionFromWhatsApp").mockResolvedValue({
+        isIduRequest: true,
+        chip: "AAA0123WXYZ",
+        reportText: "🏛️ *PAZ Y SALVO DE VALORIZACIÓN IDU BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\nEl predio CHIP AAA0123WXYZ se encuentra a paz y salvo."
+      });
+
+      const userB = "573199990003@s.whatsapp.net";
+      // Turno 1: Envía código CHIP
+      const t1 = await processPrivateDmConversationalMessage("AAA0123WXYZ", userB, "Esperanza Gómez");
+      expect(t1).toContain("AAA0123WXYZ");
+      expect(getPendingUnconfirmedDoc(userB)).not.toBeNull();
+
+      // Turno 2: Confirma "IDU"
+      const t2 = await processPrivateDmConversationalMessage("IDU", userB, "Esperanza Gómez");
+      expect(t2).toContain("PAZ Y SALVO DE VALORIZACIÓN IDU");
+      expect(t2).toContain("AAA0123WXYZ");
+      expect(getPendingUnconfirmedDoc(userB)).toBeNull();
+
+      spyIdu.mockRestore();
+    });
+
+    it("4. Reporte compacto único en verifySingleDocumentInternal y executeIdentityVerificationFromWhatsApp", async () => {
+      const {
+        verifySingleDocumentInternal,
+        executeIdentityVerificationFromWhatsApp,
+        identityCache
+      } = await import("../_core/identityVerificationService");
+
+      identityCache.set("POLICIA:cc:1023456789", {
+        fullName: "LILIANA PATRICIA RIVERA",
+        timestamp: Date.now()
+      });
+
+      // Validar verifySingleDocumentInternal
+      const singleRep = await verifySingleDocumentInternal({
+        cedula: "1023456789",
+        tipoDoc: "cc",
+        rawNumber: "1023456789"
+      });
+
+      expect(singleRep.success).toBe(true);
+      expect(singleRep.reportText).toBeDefined();
+      expect(singleRep.reportText).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(singleRep.reportText).toContain("Liliana Patricia Rivera");
+      expect(singleRep.reportText).toContain("ADRES (BDUA)");
+      expect(singleRep.reportText).not.toContain("1️⃣ *DATOS DE IDENTIDAD*");
+
+      // Validar executeIdentityVerificationFromWhatsApp
+      const execRep = await executeIdentityVerificationFromWhatsApp("cc 1023456789", true, "test-user-compact");
+      expect(execRep.success).toBe(true);
+      expect(execRep.reportText).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(execRep.reportText).toContain("Liliana Patricia Rivera");
+      expect(execRep.reportText).toContain("ADRES (BDUA)");
+      expect(execRep.reportText).not.toContain("1️⃣ *DATOS DE IDENTIDAD*");
+    });
+  });
 });
 
 

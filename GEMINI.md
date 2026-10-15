@@ -1,9 +1,11 @@
 ### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.12.0 — 2026-10-15)
 - **JanIA Server:** `v33.12` (`33.12.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Filtro Anti-Publicidad de Marketing/Meta Ads:** Bloqueo impermeable con 🚫 para campañas en Meta, pauta digital, agencias de marketing y venta de software/cursos no inmobiliarios (Caso Caro Rodríguez).
-- **Ingesta de PDFs Comerciales:** Inmunidad contra falsos descartes por texto hueco en ofertas o requerimientos comerciales adjuntos en PDF (Caso Juan Alberto Duque).
+- **Unificación de Memoria Turno 1/2 (Cero Bucles):** Intercepción inmediata en DMs de confirmaciones de trámite ("CC", "1", "cédula", "antecedentes", "predial", "idu") tras números sueltos o CHIP en frío, erradicando bucles y preguntas redundantes.
+- **Reporte Compacto Único Oficial:** Formato estándar institucional con ADRES al final y sin bloques numéricos largos para evitar "Leer más".
+- **Filtro Anti-Publicidad de Marketing/Meta Ads:** Bloqueo impermeable con 🚫 para campañas en Meta, pauta digital, agencias de marketing y venta de software/cursos no inmobiliarios.
+- **Ingesta de PDFs Comerciales:** Inmunidad contra falsos descartes por texto hueco en ofertas o requerimientos comerciales adjuntos en PDF.
 - **Ventana Estricta de 15 Días:** Confinamiento estricto a 15 días en base de datos, purgas y cruces ad-hoc, erradicando fallbacks residuales a 45 días.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 250/250 passing ($0 COP) | Build `npm run build` en 32s (Vite) + 250ms (esbuild).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 254/254 passing ($0 COP) | Build `npm run build` en 39s (Vite) + 500ms (esbuild).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

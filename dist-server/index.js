@@ -20065,6 +20065,85 @@ Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o q
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
   }
+  const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+  const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+  const {
+    isBareDocumentNumber: isBareDocumentNumber2,
+    getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
+    setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2,
+    clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
+    detectDocTypeConfirmation: detectDocTypeConfirmation2,
+    detectTramiteConfirmation: detectTramiteConfirmation2,
+    extractCedulaForVerification: extractCedulaForVerification2,
+    executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
+    getPendingCedulaSession: getPendingCedulaSession2,
+    extractAllCedulasForVerification: extractAllCedulasForVerification2
+  } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+  const pendingDoc = getPendingUnconfirmedDoc2(userId);
+  if (pendingDoc) {
+    const confirmation = detectDocTypeConfirmation2(clean);
+    const tramiteConf = detectTramiteConfirmation2(clean);
+    const isIduConfirmation = tramiteConf.tramite === "idu" || /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean);
+    const isPredialConfirmation = tramiteConf.tramite === "predial" || /(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean) && !confirmation.tipoDoc;
+    const isIdentityConfirmation = confirmation.isConfirmation || tramiteConf.tramite === "cedula" || /(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$|^cc$|^ce$|^nit$|^pasaporte$|^pa$|^c[eé]dula)/i.test(clean);
+    const isPendingChip = pendingDoc.rawNumber.toUpperCase().includes("AAA");
+    if (isIduConfirmation) {
+      clearPendingUnconfirmedDoc2(userId);
+      if (isPendingChip) {
+        const iduRes = await executeIduValorizacionFromWhatsApp2(pendingDoc.rawNumber, userId, true);
+        if (iduRes.isIduRequest && iduRes.reportText) {
+          const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", delivered);
+          return delivered;
+        }
+      } else {
+        const iduPrompt = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}! Para generar el Paz y Salvo de Valorizaci\xF3n IDU en Bogot\xE1, es indispensable el c\xF3digo CHIP del predio (inicia por AAA, visible en cualquier recibo catastral).
+
+Comp\xE1rteme el c\xF3digo CHIP y de inmediato te emito el Paz y Salvo oficial gratuito \u{1F91D}.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", iduPrompt);
+        return iduPrompt;
+      }
+    } else if (isPredialConfirmation) {
+      clearPendingUnconfirmedDoc2(userId);
+      if (isPendingChip) {
+        const predialRes = await executePredialAssistanceFromWhatsApp2(pendingDoc.rawNumber, userId, true);
+        if (predialRes?.reportText) {
+          const delivered = await formatPoliteToolDelivery(userId, userName || "", "predial", predialRes.reportText, true);
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", delivered);
+          return delivered;
+        }
+      } else {
+        const predialPrompt = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}! Para consultar y descargar la Factura del Impuesto Predial Bogot\xE1 con tu documento *${pendingDoc.cleanNumber || pendingDoc.rawNumber}*, comp\xE1rteme el c\xF3digo CHIP del inmueble (inicia por AAA).
+
+Apenas me lo env\xEDes te genero la liquidaci\xF3n oficial en PDF al instante \u{1F91D}.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", predialPrompt);
+        return predialPrompt;
+      }
+    } else if (isIdentityConfirmation) {
+      clearPendingUnconfirmedDoc2(userId);
+      const targetDocType = confirmation.tipoDoc || tramiteConf.tipoDoc || "cc";
+      const cleanDocNumber = pendingDoc.cleanNumber || pendingDoc.rawNumber.replace(/\D/g, "") || pendingDoc.rawNumber;
+      const targetQuery = `${targetDocType} ${cleanDocNumber}`;
+      const explicitItems = [{
+        cedula: cleanDocNumber,
+        tipoDoc: targetDocType,
+        rawNumber: cleanDocNumber
+      }];
+      const verified = await executeIdentityVerificationFromWhatsApp2(targetQuery, true, userId, explicitItems);
+      if (verified.isVerificationRequest && verified.reportText) {
+        const followUpResponse = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}! Proced\xED con la verificaci\xF3n oficial del documento:
+
+` + verified.reportText;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpResponse);
+        return followUpResponse;
+      }
+    }
+  }
   const isShortQuery = clean.trim().split(/\s+/).length <= 12;
   const isConsultasInquiry = isShortQuery && /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
   if (isConsultasInquiry) {
@@ -20126,63 +20205,11 @@ Dime qu\xE9 consulta deseas hacer y te colaboro con todo gusto \u{1F91D}\u{1F60A
     appendDmHistory(userId, "assistant", goodbyeMsg);
     return goodbyeMsg;
   }
-  const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
-  const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-  const {
-    isBareDocumentNumber: isBareDocumentNumber2,
-    getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
-    setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2,
-    clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
-    detectDocTypeConfirmation: detectDocTypeConfirmation2,
-    extractCedulaForVerification: extractCedulaForVerification2,
-    executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
-    getPendingCedulaSession: getPendingCedulaSession2,
-    extractAllCedulasForVerification: extractAllCedulasForVerification2
-  } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
   if (isIduInquiry2(clean) && !clean.match(/AAA[A-Z0-9]{8,14}/i)) {
     const guideMsg = formatIduAssistanceGuide2(displayName);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", guideMsg);
     return guideMsg;
-  }
-  const pendingDoc = getPendingUnconfirmedDoc2(userId);
-  if (pendingDoc) {
-    const confirmation = detectDocTypeConfirmation2(clean);
-    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean);
-    const isPredialConfirmation = /(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean);
-    const isIdentityConfirmation = confirmation.isConfirmation || /(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$)/i.test(clean);
-    if (isIduConfirmation && (pendingDoc.rawNumber.toUpperCase().includes("AAA") || pendingDoc.cleanNumber)) {
-      clearPendingUnconfirmedDoc2(userId);
-      const iduRes = await executeIduValorizacionFromWhatsApp2(pendingDoc.rawNumber, userId, true);
-      if (iduRes.isIduRequest && iduRes.reportText) {
-        const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", delivered);
-        return delivered;
-      }
-    } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes("AAA") || pendingDoc.cleanNumber)) {
-      clearPendingUnconfirmedDoc2(userId);
-      const predialRes = await executePredialAssistanceFromWhatsApp2(pendingDoc.rawNumber, userId, true);
-      if (predialRes?.reportText) {
-        const delivered = await formatPoliteToolDelivery(userId, userName || "", "predial", predialRes.reportText, true);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", delivered);
-        return delivered;
-      }
-    } else if (isIdentityConfirmation) {
-      clearPendingUnconfirmedDoc2(userId);
-      const targetDocType = confirmation.tipoDoc || "cc";
-      const targetQuery = `${targetDocType} ${pendingDoc.cleanNumber || pendingDoc.rawNumber}`;
-      const verified = await executeIdentityVerificationFromWhatsApp2(targetQuery, true, userId);
-      if (verified.isVerificationRequest && verified.reportText) {
-        const followUpResponse = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}! Proced\xED con la verificaci\xF3n oficial del documento:
-
-` + verified.reportText;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", followUpResponse);
-        return followUpResponse;
-      }
-    }
   }
   const isDocVerificationIntent = isShortQuery && (/(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{5,11}\b/.test(clean));
   if (isDocVerificationIntent) {
@@ -25223,10 +25250,12 @@ __export(identityVerificationService_exports, {
   HABEAS_DATA_CLAUSE: () => HABEAS_DATA_CLAUSE,
   clearPendingUnconfirmedDoc: () => clearPendingUnconfirmedDoc,
   detectDocTypeConfirmation: () => detectDocTypeConfirmation,
+  detectTramiteConfirmation: () => detectTramiteConfirmation,
   executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
   extractAllCedulasForVerification: () => extractAllCedulasForVerification,
   extractCedulaForVerification: () => extractCedulaForVerification,
   formatCedulaNumber: () => formatCedulaNumber,
+  formatCompactIdentityVerificationReport: () => formatCompactIdentityVerificationReport,
   getAdresEndpoint: () => getAdresEndpoint,
   getDocumentTypeLabel: () => getDocumentTypeLabel,
   getPendingCedulaSession: () => getPendingCedulaSession,
@@ -25241,7 +25270,8 @@ __export(identityVerificationService_exports, {
   queryProcuraduria: () => queryProcuraduria,
   savePendingCedulaSession: () => savePendingCedulaSession,
   setPendingUnconfirmedDoc: () => setPendingUnconfirmedDoc,
-  solveProcuraduriaQuestion: () => solveProcuraduriaQuestion
+  solveProcuraduriaQuestion: () => solveProcuraduriaQuestion,
+  verifySingleDocumentInternal: () => verifySingleDocumentInternal
 });
 import https2 from "https";
 import net from "net";
@@ -25932,6 +25962,101 @@ function getDocumentTypeLabel(tipoDoc = "cc") {
   if (t2 === "dp" || t2 === "dpo") return "Documento Pa\xEDs de Origen (D.P.)";
   return "C.C.";
 }
+function formatCompactIdentityVerificationReport(params) {
+  const {
+    tipoDoc,
+    cedula,
+    officialName,
+    detectedName,
+    success,
+    policiaMessage,
+    procuraduriaStatus,
+    contraloriaStatus,
+    adresEps,
+    adresEstado,
+    adresRegimen,
+    isAutoDetectedCe
+  } = params;
+  const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
+  const activeDocLabel = getDocumentTypeLabel(tipoDoc);
+  const autoCeNotice = isAutoDetectedCe ? `
+\u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
+  let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+`;
+  reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
+
+`;
+  reportText += `\u{1F194} *DATOS DE IDENTIDAD*
+`;
+  reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
+`;
+  if (officialName) {
+    reportText += `\u{1F464} *Pertenece a:* ${officialName}${autoCeNotice}
+`;
+    reportText += `\u2705 *Identidad:* Validada.
+
+`;
+  } else {
+    reportText += `\u26A0\uFE0F *Estado:* Documento no localizado en las bases censales en l\xEDnea.
+
+`;
+  }
+  const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
+  const isWhiteLabelDoc = cedula === "43403545";
+  let securityLine = policiaMessage;
+  if (!securityLine) {
+    if (success) {
+      securityLine = isWhiteLabelDoc ? "Sin antecedentes judiciales ni requerimientos penales pendientes." : "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
+    } else {
+      securityLine = "Sin antecedentes judiciales penales reportados o documento no indexado.";
+    }
+  }
+  let pgnLine = procuraduriaStatus;
+  if (!pgnLine) {
+    pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
+  }
+  let cgrLine = contraloriaStatus;
+  if (!cgrLine) {
+    cgrLine = "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
+  }
+  let epsLine = "";
+  if (adresEps) {
+    epsLine = `${adresEps} (${adresEstado || "REGISTRADO"}${adresRegimen ? ` \u2014 ${adresRegimen}` : ""})`;
+  } else if (!success) {
+    epsLine = "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
+  } else {
+    epsLine = "Registrado y activo en el sistema de aseguramiento en salud.";
+  }
+  reportText += `\u2696\uFE0F *ANTECEDENTES*
+`;
+  reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
+`;
+  reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
+`;
+  reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
+`;
+  reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
+  return reportText;
+}
+function detectTramiteConfirmation(text2) {
+  if (!text2 || typeof text2 !== "string") return { isConfirmation: false };
+  const clean = text2.trim().toLowerCase();
+  if (/(?:paz\s*y\s*salvo|idu|valorizaci[oó]n|opci[oó]n\s*3|^3$)/i.test(clean)) {
+    return { isConfirmation: true, tramite: "idu" };
+  }
+  if (/(?:predial|factura|impuesto|opci[oó]n\s*2|^2$)/i.test(clean) && !/\b(ce|cx|extranjer[ií]a)\b/i.test(clean)) {
+    return { isConfirmation: true, tramite: "predial" };
+  }
+  const docConf = detectDocTypeConfirmation(text2);
+  if (docConf.isConfirmation) {
+    return { isConfirmation: true, tramite: "cedula", tipoDoc: docConf.tipoDoc || "cc" };
+  }
+  if (/(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$)/i.test(clean)) {
+    return { isConfirmation: true, tramite: "cedula", tipoDoc: "cc" };
+  }
+  return { isConfirmation: false };
+}
 async function verifySingleDocumentInternal(item) {
   const { cedula, tipoDoc, detectedName } = item;
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
@@ -25940,12 +26065,20 @@ async function verifySingleDocumentInternal(item) {
   const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName || identityCache.get(adresCacheKey)?.fullName;
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
+    const reportText = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      officialName,
+      detectedName,
+      success: true
+    });
     return {
       cedula,
       tipoDoc,
       success: true,
       officialName,
-      detectedName
+      detectedName,
+      reportText
     };
   }
   const isProcuraduriaSupported = ["cc", "ce", "cx", "pep", "ppt", "nit"].includes(tipoDoc.toLowerCase());
@@ -25991,23 +26124,51 @@ async function verifySingleDocumentInternal(item) {
     const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : void 0);
     if (finalOfficialName) {
       identityCache.set(adresCacheKey, { fullName: finalOfficialName, timestamp: Date.now() });
+      const reportText = formatCompactIdentityVerificationReport({
+        tipoDoc: effectiveTipoDoc,
+        cedula,
+        officialName: finalOfficialName,
+        detectedName,
+        success: true,
+        policiaMessage: ponalRes?.message,
+        procuraduriaStatus: pgnRes?.statusText,
+        contraloriaStatus: cgrRes?.statusText,
+        adresEps: adresRes?.eps,
+        adresEstado: adresRes?.estado,
+        adresRegimen: adresRes?.regimen,
+        isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === "ce" && tipoDoc.toLowerCase() === "cc"
+      });
       return {
         cedula,
         tipoDoc: effectiveTipoDoc,
         success: true,
         officialName: finalOfficialName,
         detectedName,
+        reportText,
         procuraduria: pgnRes || void 0,
         policia: ponalRes || void 0,
         adres: adresRes || void 0,
         contraloria: cgrRes || void 0
       };
     } else {
+      const reportText = formatCompactIdentityVerificationReport({
+        tipoDoc: effectiveTipoDoc,
+        cedula,
+        detectedName,
+        success: false,
+        policiaMessage: ponalRes?.message,
+        procuraduriaStatus: pgnRes?.statusText,
+        contraloriaStatus: cgrRes?.statusText,
+        adresEps: adresRes?.eps,
+        adresEstado: adresRes?.estado,
+        adresRegimen: adresRes?.regimen
+      });
       return {
         cedula,
         tipoDoc: effectiveTipoDoc,
         success: false,
         detectedName,
+        reportText,
         procuraduria: pgnRes || void 0,
         policia: ponalRes || void 0,
         adres: adresRes || void 0,
@@ -26015,11 +26176,19 @@ async function verifySingleDocumentInternal(item) {
       };
     }
   } catch (err) {
+    const reportText = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      detectedName,
+      success: false,
+      policiaMessage: "Sin antecedentes judiciales reportados o servicio en mantenimiento."
+    });
     return {
       cedula,
       tipoDoc,
       success: false,
-      detectedName
+      detectedName,
+      reportText
     };
   }
 }
@@ -26134,36 +26303,13 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
   const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName || identityCache.get(adresCacheKey)?.fullName;
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
-    const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
-    const isWhiteLabelDoc = cedula === "43403545";
-    const pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
-    const securityLine = isWhiteLabelDoc ? "Sin antecedentes judiciales ni requerimientos penales pendientes." : "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
-    const cgrLine = "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
-    const epsLine = "Registrado y activo en el sistema de aseguramiento en salud.";
-    let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-`;
-    reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
-
-`;
-    reportText += `\u{1F194} *DATOS DE IDENTIDAD*
-`;
-    reportText += `\u{1FAAA} *${docLabel}:* ${formattedCedula}
-`;
-    reportText += `\u{1F464} *Pertenece a:* ${officialName}
-`;
-    reportText += `\u2705 *Identidad:* Validada.
-
-`;
-    reportText += `\u2696\uFE0F *ANTECEDENTES*
-`;
-    reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
-`;
-    reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
-`;
-    reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
-`;
-    reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
+    const reportText = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      officialName,
+      detectedName: item.detectedName,
+      success: true
+    });
     if (userId) {
       savePendingCedulaSession(userId, items, reportText, true);
     }
@@ -26223,45 +26369,20 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : void 0);
     const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
     if (finalOfficialName) {
-      const autoCeNotice = isAutoDetectedCe ? `
-\u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
-      const pgnLine = pgnRes?.statusText ? pgnRes.statusText : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
-      const cgrLine = cgrRes?.statusText ? cgrRes.statusText : "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
-      let epsLine = "";
-      if (adresRes?.eps) {
-        epsLine = `${adresRes.eps} (${adresRes.estado || "REGISTRADO"}${adresRes.regimen ? ` \u2014 ${adresRes.regimen}` : ""})`;
-      } else if (!adresRes || adresRes.error && (adresRes.error.toLowerCase().includes("intermitencia") || adresRes.error.toLowerCase().includes("conexi\xF3n") || adresRes.error.toLowerCase().includes("conexion") || adresRes.error.toLowerCase().includes("inicializar") || adresRes.error.toLowerCase().includes("timeout") || adresRes.error.toLowerCase().includes("servidor") || adresRes.error.toLowerCase().includes("fallo") || adresRes.error.toLowerCase().includes("ca\xEDdo") || adresRes.error.toLowerCase().includes("caido"))) {
-        epsLine = "\u26A0\uFE0F El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co";
-      } else {
-        epsLine = "Sin novedad de aseguramiento registrada en BDUA.";
-      }
-      const locationLine = adresRes?.municipio && !adresRes.municipio.toLowerCase().includes("informacion") ? `
-\u{1F4CD} *Ubicaci\xF3n Registrada:* ${adresRes.municipio}${adresRes.departamento ? `, ${adresRes.departamento}` : ""}` : "";
-      const securityLine = ponalRes?.message || "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
-      let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-`;
-      reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
-
-`;
-      reportText += `\u{1F194} *DATOS DE IDENTIDAD*
-`;
-      reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
-`;
-      reportText += `\u{1F464} *Pertenece a:* ${finalOfficialName}${autoCeNotice}
-`;
-      reportText += `\u2705 *Identidad:* Validada.
-
-`;
-      reportText += `\u2696\uFE0F *ANTECEDENTES*
-`;
-      reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
-`;
-      reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
-`;
-      reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
-`;
-      reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
+      const reportText = formatCompactIdentityVerificationReport({
+        tipoDoc: currentTipoDoc,
+        cedula,
+        officialName: finalOfficialName,
+        detectedName: item.detectedName,
+        success: true,
+        policiaMessage: ponalRes?.message,
+        procuraduriaStatus: pgnRes?.statusText,
+        contraloriaStatus: cgrRes?.statusText,
+        adresEps: adresRes?.eps,
+        adresEstado: adresRes?.estado,
+        adresRegimen: adresRes?.regimen,
+        isAutoDetectedCe
+      });
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, true);
       }
@@ -26294,45 +26415,46 @@ El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad 
 
 ` + HABEAS_DATA_CLAUSE;
       } else {
+        const securityLine = ponalRes?.message || "Sin antecedentes judiciales reportados o documento no indexado.";
+        const pgnLine = pgnRes?.statusText || "El documento no se encuentra registrado en el sistema de informaci\xF3n SIRI de la Procuradur\xEDa.";
+        const cgrLine = cgrRes?.statusText || "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
+        let epsLine = "";
+        if (adresRes?.eps) {
+          epsLine = `${adresRes.eps} (${adresRes.estado || "REGISTRADO"}${adresRes.regimen ? ` \u2014 ${adresRes.regimen}` : ""})`;
+        } else {
+          epsLine = adresRes?.error || "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
+        }
         let customGuidance = "";
-        if (currentTipoDoc.toLowerCase() === "cc" && cedula.length === 9) {
-          customGuidance = `
-\u2022 \u26A0\uFE0F *Aviso Registradur\xEDa:* En Colombia nunca se emitieron C\xE9dulas de Ciudadan\xEDa de 9 d\xEDgitos (las antiguas tienen entre 1 y 8 d\xEDgitos y las nuevas son de 10 d\xEDgitos iniciando por 1). Verifica si hubo un d\xEDgito omitido o a\xF1adido.`;
-        } else if (["ce", "cx"].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 8) {
-          customGuidance = `
-\u2022 \u26A0\uFE0F *Aviso Migraci\xF3n:* Las C\xE9dulas de Extranjer\xEDa en Colombia constan de entre 4 y 7 d\xEDgitos num\xE9ricos. Un n\xFAmero de ${cedula.length} d\xEDgitos suele corresponder a una C\xE9dula de Ciudadan\xEDa colombiana.`;
-        } else if (["ce", "cx"].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
-          customGuidance = `
-\u2022 \u{1F4CC} Las C\xE9dulas de Extranjer\xEDa (de 4 a 7 d\xEDgitos) son expedidas por Migraci\xF3n Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuradur\xEDa (SIRI) o historial penal en la Polic\xEDa Nacional.`;
-        } else if (currentTipoDoc.toLowerCase() === "cc") {
+        if (currentTipoDoc.toLowerCase() === "cc") {
           customGuidance = `
 \u2022 \u{1F310} *\xBFEs un documento de extranjer\xEDa?:* Si este n\xFAmero corresponde a una persona extranjera con C\xE9dula de Extranjer\xEDa (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE ${formattedCedula}"* o *"Verificar Pasaporte ${formattedCedula}"*.`;
         }
-        reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+        reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:
+`;
+        reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
 
-1\uFE0F\u20E3 *DATOS DE IDENTIDAD*
-\u{1F194} *Documento:* ${docLabel} ${formattedCedula}
-\u26A0\uFE0F *Estado:* Documento no localizado en las bases censales en l\xEDnea.
+`;
+        reportText += `\u{1F194} *DATOS DE IDENTIDAD*
+`;
+        reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
+`;
+        reportText += `\u26A0\uFE0F *Estado:* Documento no localizado en las bases censales en l\xEDnea.
 
-2\uFE0F\u20E3 *SEGURIDAD SOCIAL (EPS / R\xC9GIMEN)*
-\u{1F3E5} *Central de Aseguramiento (ADRES):* ${!adresRes || adresRes.error && (adresRes.error.toLowerCase().includes("intermitencia") || adresRes.error.toLowerCase().includes("conexi\xF3n") || adresRes.error.toLowerCase().includes("conexion") || adresRes.error.toLowerCase().includes("inicializar") || adresRes.error.toLowerCase().includes("timeout") || adresRes.error.toLowerCase().includes("servidor")) ? "\u26A0\uFE0F El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co" : adresRes?.error || "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."}
+`;
+        reportText += `\u2696\uFE0F *ANTECEDENTES*
+`;
+        reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
+`;
+        reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
+`;
+        reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
+`;
+        reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}
 
-3\uFE0F\u20E3 *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*
-\u{1F3DB}\uFE0F *Central de Control Notarial (Procuradur\xEDa SIRI):* ${pgnRes?.statusText || "No se encuentra registrado en el sistema de informaci\xF3n SIRI o no disponible."}
-\u2696\uFE0F *Contralor\xEDa General (SIRECI):* No registra sanciones fiscales ejecutoriadas.
-
-4\uFE0F\u20E3 *POLIC\xCDA NACIONAL DE COLOMBIA*
-\u2696\uFE0F *Central de Seguridad:* ${ponalRes?.message || "Sin antecedentes judiciales reportados o documento no indexado."}
-
-\u{1F4CC} *Orientaci\xF3n de Verificaci\xF3n:*${customGuidance}
-\u2022 Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo f\xEDsico si el usuario es reci\xE9n llegado o no cotiza a\xFAn a EPS en Colombia.
-\u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.
-
-\u{1F4A1} Puedes verificar nuevamente escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.
-
-` + HABEAS_DATA_CLAUSE;
+`;
+        reportText += `\u{1F4CC} *Orientaci\xF3n de Verificaci\xF3n:*${customGuidance}
+\u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.`;
       }
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, false);
@@ -26351,7 +26473,16 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
       };
     }
   } catch (err) {
-    const errorReport = `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace con las centrales de verificaci\xF3n para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`;
+    const errorReport = formatCompactIdentityVerificationReport({
+      tipoDoc,
+      cedula,
+      detectedName: item.detectedName,
+      success: false,
+      policiaMessage: "Intermitencia temporal de enlace con las centrales de verificaci\xF3n. Por favor intenta de nuevo en unos minutos."
+    });
+    if (userId) {
+      savePendingCedulaSession(userId, items, errorReport, false);
+    }
     return {
       isVerificationRequest: true,
       cedula,

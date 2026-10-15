@@ -333,11 +333,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ### 🔖 v33.12 — Octubre 2026
 
-#### [v33.12.0] — 2026-10-15: Filtro Anti-Publicidad de Marketing/Meta Ads, Ingesta Robusta de PDFs Comerciales y Ventana Estricta de 15 Días
+#### [v33.12.0] — 2026-10-15: Unificación de Memoria Turno 1 y 2 (Cero Bucles), Reporte Compacto Oficial, Filtro Anti-Publicidad de Marketing/Meta Ads y Ventana Estricta de 15 Días
+- **Unificación de Memoria Turno 1 y 2 en DMs (`identityVerificationService.ts`, `dmHandler.ts`):** Erradicado el bucle conversacional donde JanIA recibía un número suelto o código CHIP en frío (Turno 1) y al recibir la confirmación natural ("CC", "1", "cédula", "antecedentes", "predial", "idu") en el segundo turno, volvía a preguntar el trámite en lugar de despacharlo. Implementación de `detectTramiteConfirmation` e intercepción prioritaria al inicio de DMs con confirmación ágil y supresión de saludos horarios duplicados.
+- **Estandarización del Reporte Compacto Único Oficial (`identityVerificationService.ts`):** Unificación del formato devuelto en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`. Estructura limpia y compacta: Encabezado institucional -> Habeas Data Ley 1581/12 -> Datos de Identidad -> Antecedentes (Policía -> Procuraduría -> Contraloría -> ADRES BDUA al final). Erradicados los bloques numéricos largos `1️⃣`, `2️⃣`, `3️⃣`, `4️⃣` para garantizar visibilidad directa sin activar el botón "Leer más".
 - **Filtro Anti-Publicidad y Pauta Digital (`janIA.ts`, Caso Caro Rodríguez):** Detección e intercepción temprana de mensajes de agencias de marketing, pauta en Meta/Facebook/Instagram, embudos de conversión, venta de bots o software ajeno al corretaje inmobiliario. JanIA reacciona con emoji `🚫`, emite log descriptivo y aborta de inmediato la inserción en base de datos.
 - **Ingesta Robusta de Ofertas y Requerimientos en PDF (`whatsapp-match.ts`, Caso Juan Alberto Duque):** Blindaje contra falsos descartes por texto hueco o comentarios escuetos ("Buenas tardes adjunto documento") cuando el mensaje incluye un archivo PDF comercial (título o contenido de inmueble/requerimiento). JanIA analiza el contenido y nombre del PDF, abstrayendo las características del inmueble y garantizando su inserción en PostgreSQL.
 - **Ventana Operativa Estricta de 15 Días (`janIA.ts`, `database.ts`, `matching.ts`):** Erradicados todos los residuos de 30 o 45 días en el motor de coincidencias y purgas nocturnas. La vigencia activa de inmuebles y requerimientos queda rígidamente fijada en 15 días calendario en todo el sistema.
-- **Validación Limpia & Costos $0 COP:** Typecheck `npm run check` (0 errores), pruebas automatizadas `npm test` (250/250 passing al 100% en verde con $0 COP), compilación `npm run build` en 32.22s (Vite) + 250ms (esbuild).
+- **Validación Limpia & Costos $0 COP:** Typecheck `npm run check` (0 errores), pruebas automatizadas `npm test` (254/254 passing al 100% en verde con $0 COP), compilación `npm run build` en 39.36s (Vite) + 500ms (esbuild).
 
 ### 🔖 v33.11 — Octubre 2026
 

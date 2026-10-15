@@ -184,13 +184,16 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ## 🔖 VERSIÓN ACTUAL: v33.12 — Octubre 2026
 
-### Novedades v33.12 (Filtro Anti-Publicidad Meta, PDFs Comerciales y Ventana Estricta 15 Días):
+### Novedades v33.12 (Unificación de Memoria Turno 1/2, Reporte Compacto Oficial, Filtro Anti-Publicidad Meta y PDFs Comerciales):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
-  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Aplica estas 3 correcciones urgentes en el backend de JanIA (`v33.12` / `33.12.0`):"*
-  2. **Filtro Anti-Publicidad / Spam (Caso Caro Rodríguez)**: Bloqueo inmediato con 🚫 y cero persistencia en BD para ofertas de campañas en Meta/Facebook/Instagram, pauta digital, agencias de marketing, embudos o venta de software/cursos no inmobiliarios.
-  3. **Lectura de Documentos PDF Comerciales (Caso Juan Alberto Duque)**: Protección de ofertas y requerimientos compartidos en PDF (ej. "ESTOY BUSCANDO BODEGA EN COTA.pdf") para evitar descartes por texto hueco o comentarios cortos, garantizando su extracción y guardado en BD.
-  4. **Ventana Estricta de 15 Días (Cero 45 Días Residuales)**: Confinamiento estricto a 15 días en consultas de base de datos, purgas automáticas y cruces ad-hoc, erradicando fallbacks de 30 o 45 días.
-  5. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 250/250 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio (Vite 32.22s + esbuild 250ms) ✅
+  1. *"Actúa como Principal Engineer de VECY BIENES RAÍCES. Resuelve de raíz el bucle conversacional en DMs donde JanIA recibe un número o dato en frío (Turno 1) y cuando el usuario confirma en el segundo turno ('CC', '1', 'cédula', 'antecedentes', etc.), JanIA volvía a preguntar el trámite en lugar de ejecutar la consulta."*
+  2. *"REPORTE COMPACTO ÚNICO Y LIMPIO: Asegúrate de que el resultado de `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp` devuelva SIEMPRE el formato compacto unificado (con ADRES al final y sin bloques numéricos largos) para evitar el botón 'Leer más'."*
+  3. **Unificación de Memoria Turno 1/2 y Cero Bucles**: Detección cognitiva de confirmaciones naturales en `detectTramiteConfirmation` ("CC", "1", "cédula", "antecedentes", "predial", "idu", "NIT", "pasaporte", "CE") con intercepción al inicio de DMs, suprimiendo saludos repetidos y ejecutando la consulta inmediatamente.
+  4. **Reporte Compacto Único Oficial**: Encabezado institucional -> Habeas Data -> Datos de Identidad -> Antecedentes Oficiales (Policía, Procuraduría, Contraloría, ADRES BDUA al final). Erradicados los bloques numéricos largos `1️⃣`, `2️⃣`, `3️⃣`.
+  5. **Filtro Anti-Publicidad / Spam (Caso Caro Rodríguez)**: Bloqueo inmediato con 🚫 y cero persistencia en BD para ofertas de campañas en Meta/Facebook/Instagram, pauta digital, agencias de marketing, embudos o venta de software/cursos no inmobiliarios.
+  6. **Lectura de Documentos PDF Comerciales (Caso Juan Alberto Duque)**: Protección de ofertas y requerimientos compartidos en PDF (ej. "ESTOY BUSCANDO BODEGA EN COTA.pdf") para evitar descartes por texto hueco o comentarios cortos, garantizando su extracción y guardado en BD.
+  7. **Ventana Estricta de 15 Días (Cero 45 Días Residuales)**: Confinamiento estricto a 15 días en consultas de base de datos, purgas automáticas y cruces ad-hoc, erradicando fallbacks de 30 o 45 días.
+  8. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 254/254 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio (Vite 39.36s + esbuild 500ms) ✅
 - `shared/const.ts` (`v33.12`) y `package.json` (`33.12.0`).
 
 ## 🔖 VERSIÓN ANTERIOR: v33.11 — Octubre 2026
