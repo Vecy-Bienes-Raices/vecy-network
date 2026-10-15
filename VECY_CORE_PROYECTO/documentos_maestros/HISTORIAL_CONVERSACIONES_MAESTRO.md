@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Agenda Familiar Blindada, Natillita, Cero Confusión Cognitiva y Escudo Defensivo Anti-Cobranzas/Spam (v33.10 - 33.10.0)
+
+**Versión:** `v33.10` (`33.10.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/trustedContacts.ts` (Refactorizado con `TRUSTED_FAMILY_AND_FRIENDS` y mensajes dedicados de cariño)
+- `server/_core/jania/handlers/dmHandler.ts` (Alineación de interceptores y directivas de system prompt para Círculo Familiar)
+- `server/__tests__/regression.test.ts` (SUITE 70 actualizada para v33.10 y 240/240 tests passing)
+- `shared/const.ts` (`v33.10`)
+- `package.json` (`33.10.0`)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó:
+1. *"No te confíes de estos prompts, revisa a profundidad cada cambio que hemos hecho y si detectas errores por favor corrige y alinea todo correctamente para que nuestra IA PURA no falle y actúe como es debido."*
+2. *"Aplica la versión `v33.10` (`33.10.0`) integrando la Agenda Familiar y de Confianza corregida (Adiós 'Minitas', bienvenida 'Natillita'), asegurando que la IA mantenga un comportamiento impecable y enfocado estrictamente en bienes raíces."*
+
+#### 2. Hallazgos y Causa Raíz Identificada
+- En `trustedContacts.ts`, el mapa de contactos carecía de mensajes dedicados por contacto y existía riesgo de desvío con apodos truncados.
+- En `dmHandler.ts`, si un familiar escribía un mensaje de saludo informal en un segundo turno o preguntaba algo general, existía el riesgo de que el interceptor comercial o de minutas jurídicas intentara venderle servicios o pedirle una reseña de Google Reviews.
+- Se requería que JanIA tuviera claro en sus system prompts que a la familia de Eduardo se le trata con afecto, jamás se le pide una reseña de Google ni se le ofrecen promesas de compraventa ni servicios pagados a menos que soliciten explícitamente una asesoría inmobiliaria formal.
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Agenda Familiar Dedicada (`trustedContacts.ts`):** Exportación de `TRUSTED_FAMILY_AND_FRIENDS` con `customMessage` personalizado, afectuoso y cálido para cada uno de los 17 miembros (Madre Carmenza, tíos Olanda, Tulita, Marina, Luis; hijos Daniel/Pollotote y Natalia/Natillita/Mi Natis; esposa Jani; primos Monik, Lili, Marcelita, Cayaco, Jaton; amigos Gus, Lucho, Chalo y Jonathan).
+2. **Corrección de Apodos Familiares:** Para la hija Natalia: apodos oficiales `["Natillita", "Mi Natis", "Monacha Remolacha", "Corazón de Melocotón"]`. Erradicación definitiva de cualquier término no autorizado.
+3. **Alineación Cognitiva de Interceptores (`dmHandler.ts`):** 
+   - Exclusión de Google Reviews para el círculo de confianza (`isFamilyOrTrusted`).
+   - Respuestas de agradecimiento o bendiciones atendidas con afecto natural sin desviar al embudo comercial.
+   - Recados para Eduardo capturados de inmediato y confirmados al familiar.
+   - System prompt de Gemini enriquecido con directivas de trato con inmenso amor y respeto para familiares.
+4. **Escudo Defensivo Anti-Cobranzas / Spam:** Protección inquebrantable de los datos personales y nuevo número de Eduardo ante despachos de cobro y bancos hostiles.
+
+#### 4. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Automatizados:** `npm test` — **240/240 tests pasando al 100% en verde** a **$0 COP** (cero consumo de claves de pago).
+- **Build de Producción:** `npm run build` limpio en 12.98s (Vite) + 80ms (esbuild).
+
+---
+
 ### 📅 [2026-10-15] — Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam (v33.08 - 33.8.0)
 
 **Versión:** `v33.08` (`33.8.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

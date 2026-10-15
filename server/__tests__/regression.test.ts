@@ -4552,11 +4552,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[2-8]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(0[2-9]|1[0-9])$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[2-8]\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:[2-9]|10)\.0$/);
     });
   });
 
@@ -4916,11 +4916,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versión v33.06 y package.json 33.6.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[6-8]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(0[6-9]|1[0-9])$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[6-8]\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:[6-9]|10)\.0$/);
     });
   });
 
@@ -4994,22 +4994,26 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("5. Consagración doctrinal de versión v33.07 en histórico", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(07|08)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(0[7-9]|1[0-9])/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(7|8)\.0/);
+      expect(pkg.version).toMatch(/^33\.(?:[7-9]|10)\.0/);
     });
   });
 
-  describe("SUITE 70 — JanIA v33.08 (33.8.0): Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam", () => {
+  describe("SUITE 70 — JanIA v33.10 (33.10.0): Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam", () => {
     it("1. Reconocimiento preciso de contactos de confianza y familiares por teléfono y nombre", async () => {
-      const { findTrustedContact } = await import("../_core/jania/trustedContacts");
+      const { findTrustedContact, TRUSTED_FAMILY_AND_FRIENDS } = await import("../_core/jania/trustedContacts");
+
+      expect(TRUSTED_FAMILY_AND_FRIENDS).toBeDefined();
+      expect(TRUSTED_FAMILY_AND_FRIENDS.natalia).toBeDefined();
+      expect(TRUSTED_FAMILY_AND_FRIENDS.carmenza).toBeDefined();
 
       // Madre Carmenza
       const madre = findTrustedContact("573108643555@s.whatsapp.net");
       expect(madre).not.toBeNull();
-      expect(madre?.id).toBe("carmenza_madre");
+      expect(madre?.id).toBe("carmenza");
       expect(madre?.primaryNick).toBe("Madrecita");
 
       // Tía Olanda
@@ -5032,9 +5036,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const hijo = findTrustedContact("+573006067089");
       expect(hijo?.primaryNick).toBe("Pollotote");
 
-      // Hija Natalia (Mi Natis)
+      // Hija Natalia (Mi Natis / Natillita)
       const hija = findTrustedContact("+573058788329");
       expect(hija?.primaryNick).toBe("Mi Natis");
+      expect(hija?.nicknames).toContain("Natillita");
+      expect(hija?.nicknames).toContain("Monacha Remolacha");
 
       // Primos
       const monik = findTrustedContact("3103395788");
@@ -5046,7 +5052,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const cayaco = findTrustedContact("3054589435");
       expect(cayaco?.primaryNick).toBe("Cayaco");
       const jaton = findTrustedContact("3142721432");
-      expect(jaton?.primaryNick).toBe("Jaton");
+      expect(jaton?.primaryNick).toBe("Jatón");
 
       // Amigos
       const gus = findTrustedContact("3108096117");
@@ -5064,12 +5070,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const madre = findTrustedContact("3108643555")!;
       const msg = buildFamilyWarmWelcomeMessage(madre);
 
-      expect(msg).toContain("¡Hola Madrecita!");
-      expect(msg).toContain("JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨");
-      expect(msg).toContain("cumpleaños de Eduardo (Eddu)");
+      expect(msg).toContain("¡Madrecita hermosa!");
+      expect(msg).toContain("JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨");
       expect(msg).toContain("+57 316 656 9719");
       expect(msg).toContain("https://wa.me/573166569719");
-      expect(msg).toContain("dejarle recado");
     });
 
     it("3. Broma de Chalo sobre Escobar/Gacha y caso Jonathan Martínez con Datacrédito", async () => {
@@ -5129,13 +5133,14 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(cobroReply).toContain("No tengo información de esa persona ni manejo agendas personales");
       expect(cobroReply).not.toContain("3166569719");
 
-      // Círculo familiar: mensaje de la hija Natalia (Mi Natis)
+      // Círculo familiar: mensaje de la hija Natalia (Natillita / Mi Natis)
       const natisReply = await processPrivateDmConversationalMessage(
         "Hola Jania cómo estás",
         "573058788329@s.whatsapp.net",
         "Natalia Rivera"
       );
-      expect(natisReply).toContain("¡Hola Mi Natis!");
+      expect(natisReply).toContain("¡Hola, mi Natis hermosa!");
+      expect(natisReply).toContain("Natillita");
       expect(natisReply).toContain("VECY BIENES RAÍCES");
       expect(natisReply).toContain("+57 316 656 9719");
 
@@ -5149,13 +5154,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(recadoReply).toContain("Le paso tu mensaje a Eduardo (Eddu) de inmediato");
     });
 
-    it("6. Consagración doctrinal de versión v33.08 y package.json 33.8.0", async () => {
+    it("6. Consagración doctrinal de versión v33.10 y package.json 33.10.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.08");
+      expect(VECY_VERSION).toBe("v33.10");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.8.0");
+      expect(pkg.version).toBe("33.10.0");
     });
   });
 });

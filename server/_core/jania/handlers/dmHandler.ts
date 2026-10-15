@@ -301,7 +301,7 @@ export async function formatPoliteToolDelivery(
   } else if (isJani) {
     displayName = "Jani";
   } else if (isFamilyOrTrusted && trustedContact) {
-    displayName = trustedContact.primaryNick;
+    displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
     displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
     if (!canonicalComposite && displayName.includes(" ")) {
@@ -532,7 +532,7 @@ export async function processPrivateDmConversationalMessage(
   } else if (isJani) {
     displayName = "Jani";
   } else if (isFamilyOrTrusted && trustedContact) {
-    displayName = trustedContact.primaryNick;
+    displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
     // 1. Si coincide con un nombre compuesto canónico estricto colombiano (ej: "Ana María", "Juan José", "María Fernanda", "José Manuel", "Olga Lucía")
     const canonicalComposite = getCanonicalCompositeName(realName);
@@ -560,10 +560,15 @@ export async function processPrivateDmConversationalMessage(
   const hasPriorHistory = history.length > 0;
   const userSentExplicitGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|buenas)\b/i.test(cleanLower);
 
-  // 💖 REGLA DE ORO FAMILIAR Y DE CONFIANZA (Doctrina v33.08)
+  // 💖 REGLA DE ORO FAMILIAR Y DE CONFIANZA (Doctrina v33.10)
   if (isFamilyOrTrusted && trustedContact) {
     // 1. Caso especial: Broma de Chalo sobre Pablo Escobar / Gacha
-    if (trustedContact.id === "chalo_ruiz" && isChaloEscobarJoke(clean)) {
+    const isChalo =
+      trustedContact.id === "chalo_andres" ||
+      trustedContact.id === "chalo_ruiz" ||
+      trustedContact.key === "chalo_andres" ||
+      trustedContact.nicknames.includes("Chalo");
+    if (isChalo && isChaloEscobarJoke(clean)) {
       const chaloReply = buildChaloJokeResponse();
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", chaloReply);
@@ -571,7 +576,12 @@ export async function processPrivateDmConversationalMessage(
     }
 
     // 2. Caso especial: Jonathan Martínez y procesos de Datacrédito / TransUnion
-    if (trustedContact.id === "jonathan_martinez" && isJonathanCreditProcessQuery(clean)) {
+    const isJonathan =
+      trustedContact.id === "jonathan_datacredito" ||
+      trustedContact.id === "jonathan_martinez" ||
+      trustedContact.key === "jonathan_datacredito" ||
+      trustedContact.names.some(n => n.toLowerCase().includes("jonathan"));
+    if (isJonathan && isJonathanCreditProcessQuery(clean)) {
       const jonathanReply = buildJonathanCreditResponse();
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", jonathanReply);
@@ -587,13 +597,31 @@ export async function processPrivateDmConversationalMessage(
       return memoReply;
     }
 
-    // 4. Saludo inicial, primer turno o pregunta por Eduardo / contacto
+    // 4. Agradecimientos, bendiciones o despedidas familiares (adiós mensajes comerciales / Google Reviews)
+    const isFamilyGratitudeOrBlessing = /(?:gracias|muchas\s*gracias|mil\s*gracias|am[eé]n|bendiciones|un\s*abrazo|besos?|te\s*quiero|chao|hasta\s*luego|feliz\s*(?:d[ií]a|tarde|noche)|cu[ií]date)/i.test(cleanLower);
+    if (isFamilyGratitudeOrBlessing && clean.length < 80) {
+      const familyGratitude = `¡Con todo el cariño del mundo, ${trustedContact.primaryNick}! ❤️✨ Aquí estaré siempre atenta para lo que necesites. ¡Un abrazo inmenso y que tengas un día maravilloso!`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", familyGratitude);
+      return familyGratitude;
+    }
+
+    // 5. Saludo inicial, primer turno o pregunta por Eduardo / contacto
     const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
     if (history.length === 0 || isGreetingOnly || isAskingForEddu) {
-      const familyWelcome = buildFamilyWarmWelcomeMessage(trustedContact);
+      const familyWelcome = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyWelcome);
       return familyWelcome;
+    }
+
+    // 6. Conversación cotidiana continua con familiares (si no es una consulta inmobiliaria formal como predial, IDU o verificación)
+    const isAskingRealEstateService = /(?:predial|idu|chip\b|aaa[a-z0-9]|verificar\s*(?:cc|c[eé]dula|nit|documento)|paz\s*y\s*salvo|aval[uú]o|matr[ií]cula|escritura)/i.test(cleanLower);
+    if (!isAskingRealEstateService) {
+      const familyChat = `¡Hola, ${trustedContact.primaryNick}! 🥰 Aquí estoy cuidando y gestionando todo en VECY BIENES RAÍCES 🤖✨. Si necesitas dejarle algún recado o mensaje a Eduardo (Eddu), dime y yo se lo paso de una, o puedes comunicarte a su línea de bróker al +57 316 656 9719. ¡Te mandamos un abrazo gigante!`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", familyChat);
+      return familyChat;
     }
   }
 
@@ -969,12 +997,14 @@ export async function processPrivateDmConversationalMessage(
           `- REGLA ESTRICTA DE COMPACTACIÓN MÁXIMA: Limita tus respuestas a MÁXIMO 2 párrafos cortos (o viñetas sumamente concisas de una sola línea).\n` +
           `- Si debes nombrar servicios o grupos, hazlo con enlaces limpios y directos, SIN párrafos descriptivos gigantes que fuercen el botón 'Leer más'.\n` +
           `- Sé ejecutiva, cálida, contundente y ve directo al grano.\n\n` +
-          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO, ORTOGRAFÍA Y TRATO DIRECTIVO (DOCTRINA v33.07):\n` +
+          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO, ORTOGRAFÍA Y TRATO DIRECTIVO (DOCTRINA v33.10):\n` +
           `${isEduardo ?
             `- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con EDUARDO A. RIVERA, fundador y Director de Tecnología de VECY BIENES RAÍCES. Tu saludo inicial es una única estructura limpia e indivisible: "¡${timeSalutation}, Eduardo! 👋". Sé ejecutiva, rápida y precisa, sin frases redundantes de cortesía.\n` :
             isJani ?
               `- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RAÍCES. Tu saludo inicial es una única estructura limpia e indivisible: "¡${timeSalutation}, Jani! 👋". Sé ejecutiva, cálida y operativa, seguida de inmediato de la respuesta de fondo. Prohibido concatenar frases redundantes como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día".\n` :
-              `- El usuario se llama: *${displayName || realName || "Colega"}*.\n- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.\n`
+              isFamilyOrTrusted && trustedContact ?
+                `- CÍRCULO FAMILIAR Y DE CONFIANZA: Estás conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Trátala/lo con inmenso cariño, amor familiar y respeto. PROHIBIDO usar lenguaje formal frío de vendedor, pedirle reseñas en Google o venderle servicios comerciales inmobiliarios.\n` :
+                `- El usuario se llama: *${displayName || realName || "Colega"}*.\n- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.\n`
           }` +
           `- ORTOGRAFÍA ESTRICTA EN ESPAÑOL: PROHIBIDO iniciar saludos o mensajes en minúscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar Mayúscula inicial y signos de apertura formales.\n` +
           `- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '¿' y toda exclamación con '¡'. En español es un error omitir los signos de apertura.\n` +

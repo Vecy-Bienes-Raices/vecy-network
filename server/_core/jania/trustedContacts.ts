@@ -1,6 +1,6 @@
 /**
  * Módulo de Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam
- * VECY BIENES RAÍCES — JanIA Backend v33.08 (33.8.0)
+ * VECY BIENES RAÍCES — JanIA Backend v33.10 (33.10.0)
  *
  * Registra y gestiona:
  * 1. Contactos de alta confianza y círculo familiar de Eduardo ("Eddu") y Jani.
@@ -10,225 +10,183 @@
  */
 
 export interface TrustedContact {
-  id: string;
-  fullName: string;
-  relationship: string;
-  phone: string; // Formato internacional ej. "+573108643555"
-  digits: string; // Últimos 10 dígitos para matching colombiano ej. "3108643555"
-  primaryNick: string; // Apodo de cariño principal
-  allNicks: string[]; // Apodos alternativos o cariñosos
-  category: "familia_directa" | "familia_extendida" | "amigos_y_especiales" | "directiva";
-  specialNotes?: string;
+  id?: string;
+  key?: string;
+  phones: string[];
+  names: string[];
+  relation: string;
+  nicknames: string[];
+  customMessage: string;
+  // Campos de compatibilidad y enriquecimiento
+  fullName?: string;
+  relationship?: string;
+  primaryNick?: string;
+  allNicks?: string[];
+  digits?: string;
   aliases?: string[];
   lids?: string[];
+  category?: "familia_directa" | "familia_extendida" | "amigos_y_especiales" | "directiva";
 }
 
-export const TRUSTED_CONTACTS: TrustedContact[] = [
-  // ── FAMILIA DIRECTA ──
-  {
-    id: "carmenza_madre",
-    fullName: "Carmenza Gómez",
-    relationship: "Madre",
-    phone: "+573108643555",
-    digits: "3108643555",
-    primaryNick: "Madrecita",
-    allNicks: ["Madrecita", "Madrecita querida", "Mamita hermosa", "Mami", "Mamá", "Carmenza"],
-    category: "familia_directa"
+export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
+  carmenza: {
+    phones: ["573108643555"],
+    names: ["María del Carmen Martínez Castro", "Carmenza", "Maria del Carmen"],
+    relation: "Madre",
+    nicknames: ["Madrecita", "Madrecita querida", "Mamita hermosa"],
+    customMessage:
+      "¡Madrecita hermosa! Qué alegría tan grande saludarte. Te cuento con todo el amor que esta línea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su número directo y nuevo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigantesco y un beso enorme de su parte!"
   },
-  {
-    id: "daniel_hijo",
-    fullName: "Daniel Eduardo Rivera Noguera",
-    relationship: "Hijo",
-    phone: "+573006067089",
-    digits: "3006067089",
-    primaryNick: "Pollotote",
-    allNicks: ["Amado hijo", "Pollotote", "Campeón", "Mi ingeniero favorito", "Daniel", "Dani"],
-    category: "familia_directa"
+  olanda: {
+    phones: ["573138524917"],
+    names: ["Olanda Inés Rivera Gómez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
+    relation: "Tía",
+    nicknames: ["Tía Olandita", "Olandita"],
+    customMessage:
+      "¡Tía Olandita hermosa! Qué gusto saludarte. Te cuento con mucho cariño que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su línea directa de bróker al +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigante de su parte!"
   },
-  {
-    id: "natalia_hija",
-    fullName: "Natalia Rivera Noguera",
-    relationship: "Hija",
-    phone: "+573058788329",
-    digits: "3058788329",
-    primaryNick: "Mi Natis",
-    allNicks: [
-      "Mi Natis",
-      "Pollita hermosa",
-      "Mi princesa",
-      "Natillita",
-      "Corazón de Melocotón",
-      "Monacha Remolacha",
-      "Natis",
-      "Natalia"
-    ],
-    category: "familia_directa"
+  ana_tulia: {
+    phones: ["573124794864"],
+    names: ["Ana Tulia Rivera Gómez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
+    relation: "Tía",
+    nicknames: ["Tía Tulita", "Anita Tulita"],
+    customMessage:
+      "¡Tía Tulita querida! Qué alegría tan inmensa saludarte. Te cuento con todo el cariño que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigante de su parte!"
   },
-  {
-    id: "jani_esposa",
-    fullName: "Jani Alves Souza",
-    relationship: "Esposa / Directora de Operaciones",
-    phone: "+573188096811",
-    digits: "3188096811",
-    primaryNick: "Jani",
-    allNicks: ["Amor", "amorzote", "corazón amado", "vida hermosa", "mi consentida", "Jani", "Janita"],
-    category: "directiva",
-    aliases: ["3166569719"],
+  marina: {
+    phones: ["573204997575"],
+    names: ["Marina Martínez Castro", "Marina Martinez Castro", "Marina"],
+    relation: "Tía",
+    nicknames: ["Tía Marinita", "Marinita"],
+    customMessage:
+      "¡Tía Marinita hermosa! Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con Eduardo (Eddu), te comparto su número directo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
+  },
+  tio_luis: {
+    phones: ["573132094918"],
+    names: ["Luis Eduardo Rivera Gómez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
+    relation: "Tío",
+    nicknames: ["Tío Luis"],
+    customMessage:
+      "¡Tío Luis! Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Para cualquier asunto personal o familiar con Eduardo (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+  },
+  daniel: {
+    phones: ["573006067089"],
+    names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
+    relation: "Hijo",
+    nicknames: ["Pollotote", "Campeón", "Mi ingeniero favorito"],
+    customMessage:
+      "¡Hola, mi Pollotote querido! ¡Campeón, mi ingeniero favorito! 🚀💻 Qué alegría que me escribas. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas llamar o escribirle a tu papá (Eddu) a su número personal directo, su nuevo contacto de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te quiere muchísimo!"
+  },
+  natalia: {
+    phones: ["573058788329"],
+    names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
+    relation: "Hija",
+    nicknames: ["Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Corazón de Melocotón", "Monacha Remolacha"],
+    customMessage:
+      "¡Hola, mi Natis hermosa! ¡Mi princesa, Natillita, corazón de melocotón y monacha remolacha! ❤️🌸 Qué alegría tan grande saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con tu papá (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un besito gigante!"
+  },
+  jani: {
+    phones: ["573188096811", "573166569719"],
+    names: ["Jani Alves Souza", "Jani Alves", "Jani"],
+    relation: "Esposa / Co-founder",
+    nicknames: ["Amor", "Amorzote", "Corazón amado", "Mi vida hermosa", "Mi consentida", "Amada esposa mía"],
+    customMessage:
+      "¡Hola, mi amorzote hermosa! ¡Mi vida hermosa, mi consentida y amada esposa mía! ❤️🥰 Qué alegría que me escribas. Aquí estoy al frente de JanIA operando en VECY BIENES RAÍCES. Si necesitas entrar a la línea directa de bróker o coordinar cualquier operación con Eddu, sabes que estamos conectados 24/7. ¡Te amo muchísimo! 🏡✨",
     lids: ["167108705018103", "182781141344345", "218820279050385"]
   },
-
-  // ── TÍAS Y TÍOS ──
-  {
-    id: "olanda_tia",
-    fullName: "Olanda Rivera",
-    relationship: "Tía",
-    phone: "+573138524917",
-    digits: "3138524917",
-    primaryNick: "Tía Olandita",
-    allNicks: ["Tía Olandita", "Olandita", "Tía Olanda"],
-    category: "familia_extendida"
+  monica: {
+    phones: ["573103395788"],
+    names: ["Mónica Martínez", "Monica Martinez", "Monica"],
+    relation: "Prima",
+    nicknames: ["Monik", "Chinita", "Primi", "Primita"],
+    customMessage:
+      "¡Hola, mi Monik hermosa! ¡Chinita querida! 😊 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
   },
-  {
-    id: "ana_tulia_tia",
-    fullName: "Ana Tulia Rivera",
-    relationship: "Tía",
-    phone: "+573124794864",
-    digits: "3124794864",
-    primaryNick: "Tía Tulita",
-    allNicks: ["Tía Tulita", "Anita Tulita", "Tía Anita", "Ana Tulia"],
-    category: "familia_extendida"
+  liliana: {
+    phones: ["573132533474"],
+    names: ["Liliana Martínez", "Liliana Martinez", "Liliana"],
+    relation: "Prima",
+    nicknames: ["Lili", "Chinita", "Primi", "Primitica"],
+    customMessage:
+      "¡Hola, mi Lili hermosa! ¡Chinita querida! 😊 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas escribirle a Eduardo (Eddu), su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
-  {
-    id: "marina_tia",
-    fullName: "Marina Rivera",
-    relationship: "Tía",
-    phone: "+573204997575",
-    digits: "3204997575",
-    primaryNick: "Tía Marinita",
-    allNicks: ["Tía Marinita", "Marinita", "Tía Marina"],
-    category: "familia_extendida"
+  marcelita: {
+    phones: ["573144354412"],
+    names: [
+      "Liliana Marcela Castellanos Martinez",
+      "Liliana Marcela Castellanos",
+      "Marcelita Castellanos",
+      "Marcela Castellanos",
+      "Marcela"
+    ],
+    relation: "Prima",
+    nicknames: ["Marcelita", "Primita", "Primi", "Chinita"],
+    customMessage:
+      "¡Hola, mi Marcelita hermosa! ¡Primi querida! 😊 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
   },
-  {
-    id: "luis_tio",
-    fullName: "Luis Eduardo Rivera Gómez",
-    relationship: "Tío",
-    phone: "+573132094918",
-    digits: "3132094918",
-    primaryNick: "Tío Luis",
-    allNicks: ["Tío Luis", "Tío Lucho", "Luis Eduardo"],
-    category: "familia_extendida"
+  carlitos: {
+    phones: ["573054589435"],
+    names: ["Carlitos Martínez", "Carlitos Martinez", "Charles Barber", "Carlos"],
+    relation: "Primo",
+    nicknames: ["Cayaco", "Cayaquín", "Carlitos"],
+    customMessage:
+      "¡Hola, mi querido Cayaco! ¡Cayaquín, hermano! 💈✂️ Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas escribirle o llamar a Eduardo (Eddu) a su número personal directo, su nuevo contacto de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un abrazo de gol!"
   },
-
-  // ── PRIMOS ──
-  {
-    id: "monica_prima",
-    fullName: "Mónica Martínez",
-    relationship: "Prima",
-    phone: "+573103395788",
-    digits: "3103395788",
-    primaryNick: "Monik",
-    allNicks: ["Monik", "Chinita", "Mónica", "Prima Monik"],
-    category: "familia_extendida"
+  jackson: {
+    phones: ["573142721432"],
+    names: ["Jackson Martínez", "Jackson Martinez", "Jackson"],
+    relation: "Primo",
+    nicknames: ["Jatón", "Jaksitón", "Primo"],
+    customMessage:
+      "¡Hola, mi estimado Jaton! ¡Jaksitón, primo! 🚀 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
-  {
-    id: "liliana_prima",
-    fullName: "Liliana Martínez",
-    relationship: "Prima",
-    phone: "+573132533474",
-    digits: "3132533474",
-    primaryNick: "Lili",
-    allNicks: ["Lili", "Liliana", "Prima Lili"],
-    category: "familia_extendida"
+  gus: {
+    phones: ["573108096117"],
+    names: ["Gustavo Guevara", "Gustavo"],
+    relation: "Amigo",
+    nicknames: ["Gus"],
+    customMessage:
+      "¡Hola, mi estimado Gus! 🤝 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
-  {
-    id: "marcelita_prima",
-    fullName: "Marcelita Castellanos",
-    relationship: "Prima",
-    phone: "+573144354412",
-    digits: "3144354412",
-    primaryNick: "Marcelita",
-    allNicks: ["Marcelita", "Marce", "Prima Marcelita"],
-    category: "familia_extendida"
+  lucho_taxi: {
+    phones: ["573105772223"],
+    names: ["Luis Ángel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
+    relation: "Amigo / Servicio Especial Hotel",
+    nicknames: ["Lucho"],
+    customMessage:
+      "¡Hola, mi estimado Lucho! 🚕 Hotel y servicio especial. Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
-  {
-    id: "carlitos_primo",
-    fullName: "Carlos Martínez",
-    relationship: "Primo",
-    phone: "+573054589435",
-    digits: "3054589435",
-    primaryNick: "Cayaco",
-    allNicks: ["Cayaco", "Carlitos", "Primo Carlitos"],
-    category: "familia_extendida"
+  chalo_andres: {
+    phones: ["573005509529"],
+    names: ["Andrés Ruiz", "Andres Ruiz", "Chalo"],
+    relation: "Amigo",
+    nicknames: ["Chalo"],
+    customMessage:
+      "¡Hola, mi querido Chalo!  patrón... digo, ¡compañero! 🕶️😂 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patrón favorito, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
-  {
-    id: "jackson_primo",
-    fullName: "Jackson Martínez",
-    relationship: "Primo",
-    phone: "+573142721432",
-    digits: "3142721432",
-    primaryNick: "Jaton",
-    allNicks: ["Jaton", "Jackson", "Primo Jackson"],
-    category: "familia_extendida"
+  jonathan_datacredito: {
+    phones: ["573103790278"],
+    names: [
+      "Jonathan Stiven Martínez Montaño",
+      "Jonathan Stiven Martinez Montano",
+      "Jonathan Stiven",
+      "Jonathan"
+    ],
+    relation: "Cliente / Proceso Legal Datacrédito",
+    nicknames: ["Jonathan"],
+    customMessage:
+      "¡Hola, Jonathan! Qué gusto saludarte. Te comento que esta línea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Respecto a tu caso pendiente para salir de reportes en Datacrédito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con él para revisar los avances, su línea directa de bróker y gestión jurídica es el +57 316 656 9719 (https://wa.me/573166569719). ¡Seguimos firmes con tu caso!"
   },
-
-  // ── AMIGOS Y CASOS ESPECIALES ──
-  {
-    id: "gus_amigo",
-    fullName: "Gustavo (Gus)",
-    relationship: "Amigo de Confianza",
-    phone: "+573108096117",
-    digits: "3108096117",
-    primaryNick: "Gus",
-    allNicks: ["Gus", "Gustavo"],
-    category: "amigos_y_especiales"
-  },
-  {
-    id: "lucho_taxi",
-    fullName: "Lucho (Taxi)",
-    relationship: "Amigo de Confianza",
-    phone: "+573105772223",
-    digits: "3105772223",
-    primaryNick: "Lucho",
-    allNicks: ["Lucho"],
-    category: "amigos_y_especiales"
-  },
-  {
-    id: "chalo_ruiz",
-    fullName: "Andrés Ruiz (Chalo)",
-    relationship: "Amigo de Confianza",
-    phone: "+573005509529",
-    digits: "3005509529",
-    primaryNick: "Chalo",
-    allNicks: ["Chalo", "Andrés", "Andresito"],
-    category: "amigos_y_especiales",
-    specialNotes: "Seguirle la corriente con la broma de Pablo Escobar / Gonzalo Rodríguez Gacha si bromea."
-  },
-  {
-    id: "jonathan_martinez",
-    fullName: "Jonathan Stiven Martínez Montaño",
-    relationship: "Cliente Especial de Confianza",
-    phone: "+573103790278",
-    digits: "3103790278",
-    primaryNick: "Jonathan",
-    allNicks: ["Jonathan", "Jonathan Stiven"],
-    category: "amigos_y_especiales",
-    specialNotes: "Cliente de procesos de Datacrédito y TransUnion atendidos por Eduardo."
-  },
-
-  // ── FUNDADOR ──
-  {
-    id: "eduardo_fundador",
-    fullName: "Eduardo Arturo Rivera Martínez",
-    relationship: "Director de Tecnología / Fundador",
-    phone: "+573192919978",
-    digits: "3192919978",
-    primaryNick: "Eduardo",
-    allNicks: ["Eddu", "Eduardo", "Ingeniero", "Jefe"],
-    category: "directiva",
+  eduardo: {
+    phones: ["573192919978"],
+    names: ["Eduardo Arturo Rivera Martínez", "Eduardo Rivera", "Eduardo", "Eddu"],
+    relation: "Director de Tecnología / Fundador",
+    nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
+    customMessage: "¡Hola Eduardo! Aquí estoy al frente de JanIA en VECY BIENES RAÍCES. ¿En qué te colaboro hoy?",
     aliases: ["3166569719"],
     lids: ["225954035179724"]
   }
-];
+};
 
 /**
  * Normaliza un identificador de WhatsApp (JID, LID o número telefónico) a dígitos planos
@@ -248,6 +206,33 @@ export function normalizePhoneDigits(raw: string): string {
   return clean;
 }
 
+// Array sincronizado y enriquecido para búsquedas y retrocompatibilidad total
+export const TRUSTED_CONTACTS: TrustedContact[] = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
+  ([key, contact]) => {
+    const digits = normalizePhoneDigits(contact.phones[0] || "");
+    const primaryNick = contact.nicknames[0] || contact.names[0];
+    const enriched: TrustedContact = {
+      ...contact,
+      id: key,
+      key,
+      primaryNick,
+      allNicks: contact.nicknames,
+      fullName: contact.names[0],
+      relationship: contact.relation,
+      digits,
+      category:
+        key === "jani" || key === "eduardo"
+          ? "directiva"
+          : key === "carmenza" || key === "daniel" || key === "natalia"
+          ? "familia_directa"
+          : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo")
+          ? "familia_extendida"
+          : "amigos_y_especiales"
+    };
+    return enriched;
+  }
+);
+
 /**
  * Busca un contacto en la Agenda de Confianza por número de WhatsApp, LID o nombre
  */
@@ -259,45 +244,74 @@ export function findTrustedContact(userId: string, rawName?: string): TrustedCon
   const nameClean = (rawName || "").toLowerCase().trim();
 
   for (const contact of TRUSTED_CONTACTS) {
-    // 1. Coincidencia por dígitos telefónicos directos (10 dígitos)
-    if (digits && contact.digits === digits) {
+    // 1. Coincidencia por dígitos telefónicos de 10 dígitos locales
+    if (digits && contact.digits && contact.digits === digits) {
       return contact;
     }
 
-    // 2. Coincidencia por userId que contenga el teléfono
-    if (userClean.includes(contact.digits)) {
+    // 2. Coincidencia si algún teléfono configurado coincide exactamente o está contenido en userId
+    if (
+      contact.phones.some(p => {
+        const pDigits = normalizePhoneDigits(p);
+        return (digits && pDigits === digits) || userClean.includes(p) || userClean.includes(pDigits);
+      })
+    ) {
       return contact;
     }
 
-    // 3. Coincidencia por LIDs conocidos
+    // 3. Coincidencia por LIDs conocidos (Jani, Eddu, etc.)
     if (contact.lids && contact.lids.some(lid => userClean.includes(lid))) {
       return contact;
     }
 
-    // 4. Coincidencia por números alternativos
+    // 4. Coincidencia por números alternativos o aliases
     if (contact.aliases && contact.aliases.some(alias => userClean.includes(alias))) {
       return contact;
     }
 
     // 5. Coincidencia secundaria por nombre solo ante apodos familiares exclusivos o nombre completo estricto
     // (Nunca por nombres comunes aislados como 'Andrés', 'Daniel', 'Carlos', etc.)
-    if (nameClean && nameClean.length >= 5) {
-      const contactLower = contact.fullName.toLowerCase();
+    if (nameClean && nameClean.length >= 4) {
+      const contactLower = (contact.fullName || "").toLowerCase();
       // Si el usuario tiene el nombre completo del familiar (ej: "Daniel Eduardo Rivera", "Carmenza Gómez")
-      if (nameClean === contactLower || (nameClean.includes(contactLower) && contactLower.length >= 10)) {
+      if (nameClean === contactLower || (contactLower.length >= 10 && nameClean.includes(contactLower))) {
         return contact;
+      }
+      // O si coincide con nombres completos de la lista
+      for (const n of contact.names) {
+        const nLower = n.toLowerCase();
+        if (nLower.length >= 8 && (nameClean === nLower || nameClean.includes(nLower))) {
+          return contact;
+        }
       }
       // O si el nombre coincide con apodos inequívocos y exclusivos de la familia
       const EXCLUSIVE_NICKS = new Set([
-        "madrecita", "madrecita querida", "mamita hermosa",
-        "tía olandita", "tia olandita", "olandita",
-        "tía tulita", "tia tulita", "anita tulita",
-        "tía marinita", "tia marinita", "marinita",
-        "pollotote", "mi natis", "pollita hermosa", "natillita",
-        "corazón de melocotón", "monacha remolacha",
-        "cayaco", "jaton"
+        "madrecita",
+        "madrecita querida",
+        "mamita hermosa",
+        "tía olandita",
+        "tia olandita",
+        "olandita",
+        "tía tulita",
+        "tia tulita",
+        "anita tulita",
+        "tía marinita",
+        "tia marinita",
+        "marinita",
+        "tío luis",
+        "tio luis",
+        "pollotote",
+        "mi natis",
+        "pollita hermosa",
+        "natillita",
+        "corazón de melocotón",
+        "monacha remolacha",
+        "cayaco",
+        "cayaquín",
+        "jaton",
+        "jaksitón"
       ]);
-      for (const nick of contact.allNicks) {
+      for (const nick of contact.nicknames) {
         const nickLower = nick.toLowerCase();
         if (EXCLUSIVE_NICKS.has(nickLower) && (nameClean === nickLower || nameClean.includes(nickLower))) {
           return contact;
@@ -311,10 +325,15 @@ export function findTrustedContact(userId: string, rawName?: string): TrustedCon
 
 /**
  * Genera el saludo de bienvenida familiar oficial según la Regla de Oro
+ * Retorna el mensaje personalizado exacto definido en TRUSTED_FAMILY_AND_FRIENDS
  */
 export function buildFamilyWarmWelcomeMessage(contact: TrustedContact): string {
+  if (contact.customMessage) {
+    return contact.customMessage;
+  }
+  const nick = contact.primaryNick || contact.nicknames[0] || contact.names[0];
   return (
-    `¡Hola ${contact.primaryNick}! Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨. Como hoy es el cumpleaños de Eduardo (Eddu) o para cualquier asunto personal, te comparto su número directo y nuevo de bróker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes dejarle recado o saludarlo cuando quieras!`
+    `¡Hola ${nick}! Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨. Como hoy es el cumpleaños de Eduardo (Eddu) o para cualquier asunto personal, te comparto su número directo y nuevo de bróker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes dejarle recado o saludarlo cuando quieras!`
   );
 }
 
@@ -324,7 +343,9 @@ export function buildFamilyWarmWelcomeMessage(contact: TrustedContact): string {
 export function isChaloEscobarJoke(text: string): boolean {
   if (!text) return false;
   const clean = text.toLowerCase();
-  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(clean);
+  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(
+    clean
+  );
 }
 
 /**
@@ -343,7 +364,9 @@ export function buildChaloJokeResponse(): string {
 export function isJonathanCreditProcessQuery(text: string): boolean {
   if (!text) return false;
   const clean = text.toLowerCase();
-  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(clean);
+  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(
+    clean
+  );
 }
 
 /**
@@ -358,7 +381,7 @@ export function buildJonathanCreditResponse(): string {
 
 /**
  * Escudo defensivo: detecta mensajes de casas de cobranza, bancos hostiles, cobro coactivo,
- * embargos, estafas y spam financiero.
+ * embargos, despachos de cobranza jurídica, estafas y spam financiero.
  */
 export function isDebtCollectionOrSpamScam(text: string, senderName?: string): boolean {
   if (!text && !senderName) return false;
@@ -366,19 +389,19 @@ export function isDebtCollectionOrSpamScam(text: string, senderName?: string): b
 
   // Patrones directos de cobranza, mora y coerción financiera
   const hasCollectionKeywords =
-    /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora)/i.test(
+    /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|notificaci[oó]n\s*(?:legal|personal)|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora|abogados?\s*(?:de\s*)?cobranza|oficina\s*jur[ií]dica\s*de\s*cobro|cobro\s*extrajudicial|cartera\s*castigada)/i.test(
       combined
     );
 
   // Menciones de entidades de cobranza o agencias hostiles conocidas
   const hasCollectionAgencies =
-    /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza)/i.test(
+    /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza|covinoc|sistecredito|contact\s*center\s*de\s*cobro)/i.test(
       combined
     );
 
-  // Preguntas orientadas a ubicar a Eduardo con fines de cobro
+  // Preguntas u órdenes orientadas a ubicar o notificar a Eduardo con fines de cobro o despacho
   const hasTargetedCollection =
-    /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera)/i.test(
+    /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n|notificaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera|comunicar(?:me)?\s*con\s*el\s*titular\s*de\s*la\s*l[ií]nea\s*por\s*un\s*asunto\s*(?:legal|pendiente)|asunto\s*legal\s*con\s*eduardo)/i.test(
       combined
     );
 

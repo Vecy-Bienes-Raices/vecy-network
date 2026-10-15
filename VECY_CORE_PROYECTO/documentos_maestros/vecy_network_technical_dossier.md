@@ -331,6 +331,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.10 — Octubre 2026
+
+#### [v33.10.0] — 2026-10-15: Agenda Familiar Blindada, Natillita, Cero Confusión Cognitiva y Escudo Defensivo Anti-Cobranzas/Spam
+- **Agenda Familiar y Amigos Corregida (`trustedContacts.ts`):** Estructuración de `TRUSTED_FAMILY_AND_FRIENDS` con `customMessage` personalizado para 17 contactos clave (Madre Carmenza, tíos Olanda, Tulita, Marina, Luis; hijos Daniel/Pollotote y Natalia/Natillita/Mi Natis; esposa Jani; primos Monik, Lili, Marcelita, Cayaco, Jaton; y amigos Gus, Lucho, Chalo y Jonathan). Erradicación definitiva de cualquier confusión con apodos ("Natillita", "Mi Natis", "Monacha Remolacha").
+- **Alineación Cognitiva de Interceptores y Prompts (`dmHandler.ts`):** Eliminado el conflicto cognitivo en el que respuestas cotidianas de familiares o saludos en turnos subsecuentes se desviaban hacia el embudo inmobiliario, minutas o solicitud de Google Reviews. JanIA responde a los familiares con amor y afecto natural, confirma recados para Eduardo, atiende agradecimientos con calidez y mantiene la exclusión total de Google Reviews.
+- **Escudo Defensivo Anti-Cobranzas / Spam Reforzado:** Detección de despachos jurídicos de cobro, mandamientos de pago, prejurídicos, embargos y búsquedas hostiles de Eduardo con fines financieros, respondiendo con neutralidad corporativa y despiste estricto.
+- **Validación Limpia & Costos $0 COP:** `npm run check` (0 errores), `npm test` (240/240 passing al 100% en verde con $0 COP), `npm run build` en 12.98s.
+
 ### 🔖 v33.08 — Octubre 2026
 
 #### [v33.8.0] — 2026-10-15: Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam

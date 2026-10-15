@@ -1,8 +1,8 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.8.0 — 2026-10-15)
-- **JanIA Server:** `v33.08` (`33.8.0`) online en Contabo VPS (`13.140.149.144`).
-- **Agenda de Confianza y Círculo Familiar:** Mapeo telefónico (+57, 10 dígitos y LIDs) para familiares (Madre Carmenza, tíos, hijos Pollotote y Mi Natis, directores Eduardo y Jani, primos y amigos de confianza). Saludo con apodo de cariño, canal oficial de JanIA como IA, número directo bróker de Eduardo (`+57 316 656 9719`) para cumpleaños o asuntos personales, recepción de recados y exclusión de Google Reviews/embudo comercial.
-- **Escudo Defensivo Anti-Cobranzas/Spam:** Bloqueo absoluto de entrega de datos personales ante casas de cobranza, cobro coactivo, embargos o bancos hostiles; respuesta estricta y neutral de despiste corporativo.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 240/240 passing ($0 COP) | Build `npm run build` en 19s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.10.0 — 2026-10-15)
+- **JanIA Server:** `v33.10` (`33.10.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Agenda de Confianza y Círculo Familiar:** Mapeo telefónico y mensajes personalizados dedicados (`TRUSTED_FAMILY_AND_FRIENDS`) para 17 familiares y amigos (Madre Carmenza, tíos Olanda, Tulita, Marina, Luis; hijos Daniel/Pollotote y Natalia/Natillita/Mi Natis; esposa Jani; primos Monik, Lili, Marcelita, Cayaco, Jaton; amigos Gus, Lucho, Chalo y Jonathan Martínez). Cero confusión cognitiva, exclusión total de Google Reviews y de embudos comerciales de minutas a familiares.
+- **Escudo Defensivo Anti-Cobranzas/Spam:** Bloqueo absoluto de entrega de datos personales ante casas de cobranza, mandamientos de pago, prejurídicos, embargos o bancos hostiles; respuesta estricta y neutral de despiste corporativo.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 240/240 passing ($0 COP) | Build `npm run build` en 13s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

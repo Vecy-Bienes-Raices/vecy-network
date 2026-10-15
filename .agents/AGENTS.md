@@ -182,7 +182,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.08 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.10 — Octubre 2026
+
+### Novedades v33.10 (Agenda Familiar Blindada, Natillita, Cero Confusión Cognitiva y Escudo Defensivo Anti-Cobranzas/Spam):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"No te confíes de estos prompts, revisa a profundidad cada cambio que hemos hecho y si detectas errores por favor corrige y alinea todo correctamente para que nuestra IA PURA no falle y actúe como es debido."*
+  2. *"Ejecuta la actualización `v33.10` (`33.10.0`) integrando la Agenda Familiar y de Confianza corregida (Adiós 'Minitas', bienvenida 'Natillita'), asegurando que la IA mantenga un comportamiento impecable y enfocado estrictamente en bienes raíces."*
+  3. **Agenda Familiar Corregida y Mensajes Personalizados (`trustedContacts.ts`)**: Exportación de `TRUSTED_FAMILY_AND_FRIENDS` con `customMessage` personalizado, amoroso y exacto para cada uno de los 17 contactos clave de Eduardo (Madre Carmenza, tíos Olanda, Tulita, Marina, Luis; hijos Daniel/Pollotote y Natalia/Natillita/Mi Natis; esposa Jani; primos Monik, Lili, Marcelita, Cayaco, Jaton; y amigos Gus, Lucho, Chalo y Jonathan). Erradicación total de cualquier confusión en apodos.
+  4. **Alineación de Prompts e Interceptores en DMs (`dmHandler.ts`)**: Erradicado el conflicto cognitivo en el que mensajes cotidianos o de segundo turno de familiares caían en el embudo comercial, minutas notariales o solicitud de Google Reviews. JanIA responde a los familiares con afecto y cercanía natural, confirmando recados para Eduardo a su línea de bróker (`+57 316 656 9719`), respondiendo a agradecimientos y bendiciones con cariño, y canalizando consultas inmobiliarias formales sin pedir reviews.
+  5. **Escudo Defensivo Anti-Cobranzas / Spam**: Refuerzo de detección ante despachos jurídicos de cobro, mandamientos de pago, prejurídicos, embargos y búsquedas de Eduardo con fines financieros, manteniendo la respuesta corporativa neutral y de despiste.
+  6. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 240/240 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio (Vite 12.98s + esbuild 80ms) ✅
+- `shared/const.ts` (`v33.10`) y `package.json` (`33.10.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.08 — Octubre 2026
 
 ### Novedades v33.08 (Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
