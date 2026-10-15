@@ -4552,11 +4552,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[2-7]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.0[2-8]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[2-7]\.0$/);
+      expect(pkg.version).toMatch(/^33\.[2-8]\.0$/);
     });
   });
 
@@ -4916,11 +4916,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versión v33.06 y package.json 33.6.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[67]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.0[6-8]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[67]\.0$/);
+      expect(pkg.version).toMatch(/^33\.[6-8]\.0$/);
     });
   });
 
@@ -4992,13 +4992,170 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(presentation.length).toBeLessThan(1000);
     });
 
-    it("5. Consagración doctrinal de versión v33.07 y package.json 33.7.0", async () => {
+    it("5. Consagración doctrinal de versión v33.07 en histórico", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.07");
+      expect(VECY_VERSION).toMatch(/^v33\.(07|08)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.7.0");
+      expect(pkg.version).toMatch(/^33\.(7|8)\.0/);
+    });
+  });
+
+  describe("SUITE 70 — JanIA v33.08 (33.8.0): Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam", () => {
+    it("1. Reconocimiento preciso de contactos de confianza y familiares por teléfono y nombre", async () => {
+      const { findTrustedContact } = await import("../_core/jania/trustedContacts");
+
+      // Madre Carmenza
+      const madre = findTrustedContact("573108643555@s.whatsapp.net");
+      expect(madre).not.toBeNull();
+      expect(madre?.id).toBe("carmenza_madre");
+      expect(madre?.primaryNick).toBe("Madrecita");
+
+      // Tía Olanda
+      const tiaOlanda = findTrustedContact("3138524917");
+      expect(tiaOlanda?.primaryNick).toBe("Tía Olandita");
+
+      // Tía Ana Tulia
+      const tiaTulita = findTrustedContact("+573124794864");
+      expect(tiaTulita?.primaryNick).toBe("Tía Tulita");
+
+      // Tía Marina
+      const tiaMarina = findTrustedContact("573204997575@s.whatsapp.net");
+      expect(tiaMarina?.primaryNick).toBe("Tía Marinita");
+
+      // Tío Luis
+      const tioLuis = findTrustedContact("3132094918");
+      expect(tioLuis?.primaryNick).toBe("Tío Luis");
+
+      // Hijo Daniel (Pollotote)
+      const hijo = findTrustedContact("+573006067089");
+      expect(hijo?.primaryNick).toBe("Pollotote");
+
+      // Hija Natalia (Mi Natis)
+      const hija = findTrustedContact("+573058788329");
+      expect(hija?.primaryNick).toBe("Mi Natis");
+
+      // Primos
+      const monik = findTrustedContact("3103395788");
+      expect(monik?.primaryNick).toBe("Monik");
+      const lili = findTrustedContact("3132533474");
+      expect(lili?.primaryNick).toBe("Lili");
+      const marcelita = findTrustedContact("3144354412");
+      expect(marcelita?.primaryNick).toBe("Marcelita");
+      const cayaco = findTrustedContact("3054589435");
+      expect(cayaco?.primaryNick).toBe("Cayaco");
+      const jaton = findTrustedContact("3142721432");
+      expect(jaton?.primaryNick).toBe("Jaton");
+
+      // Amigos
+      const gus = findTrustedContact("3108096117");
+      expect(gus?.primaryNick).toBe("Gus");
+      const lucho = findTrustedContact("3105772223");
+      expect(lucho?.primaryNick).toBe("Lucho");
+      const chalo = findTrustedContact("3005509529");
+      expect(chalo?.primaryNick).toBe("Chalo");
+      const jonathan = findTrustedContact("3103790278");
+      expect(jonathan?.primaryNick).toBe("Jonathan");
+    });
+
+    it("2. Regla de Oro familiar: saludo cálido con apodo, canal de JanIA y número bróker de Eduardo", async () => {
+      const { findTrustedContact, buildFamilyWarmWelcomeMessage } = await import("../_core/jania/trustedContacts");
+      const madre = findTrustedContact("3108643555")!;
+      const msg = buildFamilyWarmWelcomeMessage(madre);
+
+      expect(msg).toContain("¡Hola Madrecita!");
+      expect(msg).toContain("JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨");
+      expect(msg).toContain("cumpleaños de Eduardo (Eddu)");
+      expect(msg).toContain("+57 316 656 9719");
+      expect(msg).toContain("https://wa.me/573166569719");
+      expect(msg).toContain("dejarle recado");
+    });
+
+    it("3. Broma de Chalo sobre Escobar/Gacha y caso Jonathan Martínez con Datacrédito", async () => {
+      const { isChaloEscobarJoke, buildChaloJokeResponse, isJonathanCreditProcessQuery, buildJonathanCreditResponse } = await import("../_core/jania/trustedContacts");
+
+      // Broma de Chalo
+      expect(isChaloEscobarJoke("Quiubo pues patron pablo escobar")).toBe(true);
+      expect(isChaloEscobarJoke("A la orden del cartel")).toBe(true);
+      expect(isChaloEscobarJoke("Hola cómo estás")).toBe(false);
+      const chaloReply = buildChaloJokeResponse();
+      expect(chaloReply).toContain("¡Hola Chalo!");
+      expect(chaloReply).toContain("cartel, pero de los bienes raíces");
+      expect(chaloReply).toContain("+57 316 656 9719");
+
+      // Caso Jonathan Martínez
+      expect(isJonathanCreditProcessQuery("Hola cómo va mi proceso de datacrédito y transunion")).toBe(true);
+      expect(isJonathanCreditProcessQuery("Cómo va lo mío del historial crediticio")).toBe(true);
+      const jonathanReply = buildJonathanCreditResponse();
+      expect(jonathanReply).toContain("¡Hola Jonathan!");
+      expect(jonathanReply).toContain("Datacrédito y TransUnion");
+      expect(jonathanReply).toContain("+57 316 656 9719");
+    });
+
+    it("4. Escudo Defensivo Anti-Cobranzas / Spam: detección y neutralidad corporativa sin entregar el número de Eduardo", async () => {
+      const { isDebtCollectionOrSpamScam, getDebtCollectionDefenseResponse } = await import("../_core/jania/trustedContacts");
+
+      // Detección de cobranzas y bancos hostiles
+      expect(isDebtCollectionOrSpamScam("Somos de la casa de cobranza Serlefin por su crédito en mora")).toBe(true);
+      expect(isDebtCollectionOrSpamScam("Notificación de mandamiento de pago y cobro prejurídico urgente")).toBe(true);
+      expect(isDebtCollectionOrSpamScam("Urgente evite el embargo de sus cuentas por saldo pendiente")).toBe(true);
+      expect(isDebtCollectionOrSpamScam("Necesito ubicar a Eduardo Arturo Rivera por una deuda pendiente")).toBe(true);
+
+      // No debe dispararse ante consultas inmobiliarias normales
+      expect(isDebtCollectionOrSpamScam("Hola, necesito un avalúo para un apartamento en Cedritos")).toBe(false);
+      expect(isDebtCollectionOrSpamScam("Me interesa saber los costos de la verificación")).toBe(false);
+
+      // Respuesta de neutralidad
+      const defense = getDebtCollectionDefenseResponse();
+      expect(defense).toContain("No tengo información de esa persona ni manejo agendas personales");
+      expect(defense).toContain("soy JanIA");
+      expect(defense).toContain("VECY BIENES RAÍCES");
+      expect(defense).toContain("no insistas por este canal");
+      // PROHIBIDO dar el nuevo número de Eduardo
+      expect(defense).not.toContain("3166569719");
+      expect(defense).not.toContain("316 656 9719");
+    });
+
+    it("5. Integración en processPrivateDmConversationalMessage: escudo defensivo y regla de oro familiar", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      // Escudo defensivo ante cobranza
+      const cobroReply = await processPrivateDmConversationalMessage(
+        "Aviso de cobro prejurídico y embargo por deuda pendiente con Serlefin",
+        "573119998877@s.whatsapp.net",
+        "Cobranzas Jurídicas"
+      );
+      expect(cobroReply).toContain("No tengo información de esa persona ni manejo agendas personales");
+      expect(cobroReply).not.toContain("3166569719");
+
+      // Círculo familiar: mensaje de la hija Natalia (Mi Natis)
+      const natisReply = await processPrivateDmConversationalMessage(
+        "Hola Jania cómo estás",
+        "573058788329@s.whatsapp.net",
+        "Natalia Rivera"
+      );
+      expect(natisReply).toContain("¡Hola Mi Natis!");
+      expect(natisReply).toContain("VECY BIENES RAÍCES");
+      expect(natisReply).toContain("+57 316 656 9719");
+
+      // Recado para Eddu dejado por familiar
+      const recadoReply = await processPrivateDmConversationalMessage(
+        "Por favor dile a eddu que me llame apenas se desocupe",
+        "573006067089@s.whatsapp.net",
+        "Daniel Rivera"
+      );
+      expect(recadoReply).toContain("¡Anotadísimo, Pollotote!");
+      expect(recadoReply).toContain("Le paso tu mensaje a Eduardo (Eddu) de inmediato");
+    });
+
+    it("6. Consagración doctrinal de versión v33.08 y package.json 33.8.0", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.08");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.8.0");
     });
   });
 });

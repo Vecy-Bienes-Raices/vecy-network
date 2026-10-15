@@ -1579,6 +1579,18 @@ export class JaniaMatchBot {
     const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
 
     if (shouldEngageConversational && body.trim()) {
+      // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
+      const { isDebtCollectionOrSpamScam, getDebtCollectionDefenseResponse } = await import('./jania/trustedContacts');
+      if (isDebtCollectionOrSpamScam(body, userName)) {
+        const defenseMsg = getDebtCollectionDefenseResponse();
+        await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
+        const { appendDmHistory } = await import('./janIA');
+        appendDmHistory(senderId, 'user', body);
+        appendDmHistory(senderId, 'assistant', defenseMsg);
+        await this.logToDb(senderId, 'janIA', `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
+        return;
+      }
+
       // 📇 INTERCEPTOR DIRECTO: SOLICITUD DE CONTACTO EN DM PRIVADO (v32.60)
       const isContactReq = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(cleanLower);
       if (isContactReq) {

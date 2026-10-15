@@ -331,6 +331,15 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.08 — Octubre 2026
+
+#### [v33.8.0] — 2026-10-15: Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam
+- **Agenda de Confianza y Círculo Familiar (`trustedContacts.ts`):** Creación del catálogo unificado y funciones de normalización y búsqueda por teléfono (+57, 10 dígitos y LIDs) de los contactos clave de Eduardo A. Rivera (Madre Carmenza, tíos Olanda, Tulita, Marina, Luis; hijos Daniel/Pollotote y Natalia/Mi Natis; directores Eduardo y Jani; primos Monik, Lili, Marcelita, Cayaco, Jaton; y amigos Gus, Lucho, Chalo y Jonathan Martínez).
+- **Regla de Oro Familiar/Amigos:** Saludo cálido con apodo de cariño; comunicación transparente y natural indicando que la línea es ahora el canal oficial de JanIA como IA de VECY BIENES RAÍCES; entrega del número directo de bróker de Eduardo (`+57 316 656 9719` / `https://wa.me/573166569719`) para temas personales o de cumpleaños; y canalización de recados con confirmación inmediata.
+- **Escudo Defensivo Anti-Cobranzas / Spam / Bancos Hostiles:** Bloqueo terminante de entrega de números o datos personales ante patrones de cobranza, cobro coactivo, embargos o spam financiero; respuesta uniforme de neutralidad corporativa y despiste estricto ("No tengo información de esa persona ni manejo agendas personales; soy JanIA...").
+- **Integración Conversacional & Blindaje de Embudo (`dmHandler.ts`, `whatsapp-match.ts`):** Prioridad defensiva cero antes de cualquier despacho; atención personalizada a contactos de confianza sin inserción de Google Reviews ni embudo agresivo de venta de minutas.
+- **Validación Limpia & Costos $0 COP:** `npm run check` (0 errores), `npm test` (240/240 passing al 100% en verde sin consumo de claves de pago), `npm run build` en 19.53s.
+
 ### 🔖 v33.07 — Octubre 2026
 
 #### [v33.7.0] — 2026-10-15: Eliminación de Redundancia en Saludos y Compactación Máxima en DMs (Cero "Leer más")

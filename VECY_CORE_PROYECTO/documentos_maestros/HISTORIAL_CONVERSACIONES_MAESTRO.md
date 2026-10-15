@@ -7,6 +7,70 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam (v33.08 - 33.8.0)
+
+**Versión:** `v33.08` (`33.8.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/trustedContacts.ts` (NUEVO)
+- `server/_core/jania/index.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/whatsapp-match.ts`
+- `server/__tests__/regression.test.ts` (SUITE 70 agregada)
+- `shared/const.ts`
+- `package.json`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó ejecutar la actualización definitiva a la versión `v33.08` (`33.8.0`) en el backend de JanIA, manteniendo el blindaje de $0 COP en pruebas (`NODE_ENV=test`), integrando la Agenda Familiar y de Confianza y aplicando reglas defensivas anti-cobranzas/spam:
+1. **Agenda de Confianza y Círculo Familiar**:
+   - Mapeo y reconocimiento por teléfono (+57 E.164, 10 dígitos colombianos y LIDs) de relaciones y apodos de cariño:
+     * Madre Carmenza (`+573108643555` — Madrecita, Madrecita querida, Mamita hermosa).
+     * Tía Olanda (`+573138524917` — Tía Olandita).
+     * Tía Ana Tulia (`+573124794864` — Tía Tulita, Anita Tulita).
+     * Tía Marina (`+573204997575` — Tía Marinita).
+     * Tío Luis (`+573132094918` — Tío Luis).
+     * Hijo Daniel Eduardo Rivera Noguera (`+573006067089` — Amado hijo, Pollotote, Campeón, Mi ingeniero favorito).
+     * Hija Natalia Rivera Noguera (`+573058788329` — Mi Natis, Pollita hermosa, Mi princesa, Natillita, Corazón de Melocotón, Monacha Remolacha).
+     * Esposa Jani Alves Souza (`+573188096811` o líneas directivas `+573166569719` — Amor, amorzote, corazón amado, vida hermosa, mi consentida, Jani).
+     * Primos: Mónica Martínez (`+573103395788` — Monik, Chinita), Liliana Martínez (`+573132533474` — Lili), Marcelita Castellanos (`+573144354412` — Marcelita), Carlitos Martínez (`+573054589435` — Cayaco), Jackson Martínez (`+573142721432` — Jaton).
+     * Amigos y Casos Especiales: Gus (`+573108096117`), Lucho (`+573105772223`), Chalo / Andrés Ruiz (`+573005509529` — seguirle la corriente con la broma de Pablo Escobar/Gonzalo Rodríguez Gacha si bromea), Jonathan Stiven Martínez Montaño (`+573103790278` — cliente de procesos de Datacrédito y TransUnion que atiende Eduardo).
+   - **Regla de Oro Familiar/Amigos**: Si escriben a la línea de JanIA (`+573192919978`), saludarlos con su apodo de cariño y comunicar con total naturalidad:
+     `"¡Hola [Apodo/Nombre]! Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨. Como hoy es el cumpleaños de Eduardo (Eddu) o para cualquier asunto personal, te comparto su número directo y nuevo de bróker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes dejarle recado o saludarlo cuando quieras!"`
+2. **Escudo Defensivo Anti-Cobranzas, Bancos Hostiles y Spam/Scam**:
+   - Si un número desconocido o de dudosa procedencia contacta a JanIA y se detecta pertenencia a casas de cobranza, cobro coactivo, embargos, bancos hostiles o spam financiero:
+     * **PROHIBIDO** dar el número personal/bróker de Eduardo (`+57 316 656 9719`).
+     * JanIA adopta postura de estricta neutralidad corporativa y despiste:
+       `"Hola. No tengo información de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca raíz y bienes raíces en VECY BIENES RAÍCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal."`
+3. **Consolidación de IA Soberana y Autónoma (Cero Saludo Doble)**:
+   - Mantener la desinercia limpia de saludos y continuidad conversacional sin redundancias.
+4. **Validación Exhaustiva**:
+   - Versionar a `v33.08` (`33.8.0`), validar con `npm run check` (0 errores), `npm test` ($0 COP en pruebas) y `npm run build`.
+
+---
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Creación del Módulo Especializado `server/_core/jania/trustedContacts.ts`**:
+   - Definición del modelo `TrustedContact` e inicialización exhaustiva del catálogo `TRUSTED_CONTACTS`.
+   - `normalizePhoneDigits(raw: string)` para normalización de JIDs de WhatsApp (`573108643555@s.whatsapp.net` a `3108643555`).
+   - `findTrustedContact(userId, rawName)` con prioridad telefónica estricta (10 dígitos colombianos, LIDs y alias) y matching secundario restringido exclusivamente a nombres completos o apodos familiares exclusivos (evitando falsos positivos en clientes homónimos como "Andrés" o "Carlos").
+   - Implementación de `buildFamilyWarmWelcomeMessage`, `isChaloEscobarJoke`, `buildChaloJokeResponse`, `isJonathanCreditProcessQuery`, `buildJonathanCreditResponse`, `isDebtCollectionOrSpamScam` y `getDebtCollectionDefenseResponse`.
+2. **Integración en `server/_core/jania/handlers/dmHandler.ts`**:
+   - **Paso 0**: Escudo defensivo de primer orden ante patrones de cobranza o bancos hostiles, cortando la entrega de datos personales y devolviendo el mensaje oficial de neutralidad.
+   - **Paso 1**: Reconocimiento de contactos de confianza, saludo con apodo de cariño, respuesta con humor al chiste de Chalo, confirmación del trámite crediticio a Jonathan Martínez, recepción de recados para Eddu y saludo oficial de la Regla de Oro.
+   - **formatPoliteToolDelivery**: Tratamiento familiar cálido y exclusión de la solicitud de Google Reviews (`reviewSection = ""`) para contactos de confianza, tratándolos con el mismo respeto y cercanía que a los directores VIP.
+   - **Blindaje del Embudo Comercial**: Exclusión de inserción de copys de venta legal o minutas a familiares y amigos de confianza (`!isFamilyOrTrusted`).
+3. **Interceptor Defensivo en `server/_core/whatsapp-match.ts`**:
+   - Blindaje previo al interceptor de solicitudes de contacto de la línea 1583 para neutralizar de entrada a cualquier cobrador o entidad hostil antes de enviar tarjetas de contacto de Eduardo.
+4. **Creación de la SUITE 70 en `server/__tests__/regression.test.ts`**:
+   - 6 nuevas pruebas automatizadas que verifican: reconocimiento telefónico/LID de familiares, Regla de Oro familiar, respuesta a broma de Chalo, trámite crediticio de Jonathan, detección y neutralidad del escudo defensivo anti-cobranzas, e integración en el flujo conversacional de DM.
+5. **Verificación y Compilación**:
+   - `npm run check`: 0 errores de tipado TypeScript.
+   - `npm test`: 240/240 tests pasando al 100% en verde ($0 COP consumidos).
+   - `npm run build`: compilación de producción en Vite y esbuild exitosa en 19.53s.
+
+---
+
 ### 📅 [2026-10-15] — Eliminación de Redundancia en Saludos y Compactación Máxima en DMs (v33.07 - 33.7.0)
 
 **Versión:** `v33.07` (`33.7.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

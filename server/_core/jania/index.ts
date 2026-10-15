@@ -21,6 +21,7 @@ export * from "./handlers/consultingHandler";
 export * from "./handlers/circuloHandler";
 export * from "./handlers/dmHandler";
 export * from "./handlers/propertiesHandler";
+export * from "./trustedContacts";
 
 // Re-exportar directorio permanente de asesores para compatibilidad total con consumidores previos
 export {

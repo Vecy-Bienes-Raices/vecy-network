@@ -6,6 +6,17 @@ import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMM
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { executeMarketValuationSurvey } from "../../valuation";
 import { getGreetingByTime } from "../../whatsapp-utils";
+import {
+  findTrustedContact,
+  buildFamilyWarmWelcomeMessage,
+  isChaloEscobarJoke,
+  buildChaloJokeResponse,
+  isJonathanCreditProcessQuery,
+  buildJonathanCreditResponse,
+  isDebtCollectionOrSpamScam,
+  getDebtCollectionDefenseResponse,
+  TrustedContact
+} from "../trustedContacts";
 
 export const JANIA_DM_TOOLS = [
   {
@@ -278,15 +289,19 @@ export async function formatPoliteToolDelivery(
   const canonicalComposite = getCanonicalCompositeName(realName);
   const compositeOrFirst = extractFirstName(realName);
 
-  // Detección directiva de Eduardo y Jani
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  // Detección directiva de Eduardo, Jani y Agenda de Confianza / Familiar
+  const trustedContact = findTrustedContact(userId, rawName || realName);
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
 
   let displayName = "";
   if (isEduardo) {
     displayName = "Eduardo";
   } else if (isJani) {
     displayName = "Jani";
+  } else if (isFamilyOrTrusted && trustedContact) {
+    displayName = trustedContact.primaryNick;
   } else {
     displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
     if (!canonicalComposite && displayName.includes(" ")) {
@@ -301,7 +316,7 @@ export async function formatPoliteToolDelivery(
   // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.06)
   const cleanPayload = (payloadText || "").trim();
   const { buildWinningGoogleReviewMessage } = await import('../../politenessService');
-  const reviewSection = (isEduardo || isJani)
+  const reviewSection = (isEduardo || isJani || isFamilyOrTrusted)
     ? ""
     : `\n\n${buildWinningGoogleReviewMessage(displayName)}`;
 
@@ -309,7 +324,7 @@ export async function formatPoliteToolDelivery(
   let payloadWithClosing = cleanPayload;
   if (!payloadWithClosing.includes(closingTag)) {
     payloadWithClosing = `${payloadWithClosing}\n\n${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
+  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
     payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
   }
 
@@ -320,6 +335,9 @@ export async function formatPoliteToolDelivery(
       }
       if (isJani) {
         return `¡Hola, Jani! Qué gusto saludarte. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+      }
+      if (isFamilyOrTrusted) {
+        return `¡Hola, ${displayName}! Con todo gusto. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
       }
       if (isFirstTurn) {
         const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\n`;
@@ -335,6 +353,9 @@ export async function formatPoliteToolDelivery(
     if (isJani) {
       return `¡Hola, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
+    if (isFamilyOrTrusted) {
+      return `¡Hola, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+    }
     return `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝`;
   }
 
@@ -343,6 +364,9 @@ export async function formatPoliteToolDelivery(
   }
   if (isJani) {
     return `¡Hola, Jani! Qué gusto saludarte:\n\n${payloadWithClosing}`;
+  }
+  if (isFamilyOrTrusted) {
+    return `¡Hola, ${displayName}! Con todo gusto. Aquí tienes el reporte solicitado:\n\n${payloadWithClosing}`;
   }
 
   if (isFirstTurn) {
@@ -480,13 +504,23 @@ export async function processPrivateDmConversationalMessage(
   const clean = text.trim();
   if (!clean) return "";
 
+  // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
+  if (isDebtCollectionOrSpamScam(clean, userName)) {
+    const defenseMsg = getDebtCollectionDefenseResponse();
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", defenseMsg);
+    return defenseMsg;
+  }
+
   const realName = await resolveRealName(userId, userName);
   const { getGreetingByTime } = await import('../../whatsapp-utils');
   const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
 
-  // Detección directiva de Eduardo y Jani
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  // Detección directiva de Eduardo, Jani y Agenda de Confianza / Familiar
+  const trustedContact = findTrustedContact(userId, userName || realName);
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
 
   // 🧑‍💼 Resolución inteligente de nombres compuestos, género gramatical y cortesía (v32.35)
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
@@ -497,6 +531,8 @@ export async function processPrivateDmConversationalMessage(
     displayName = "Eduardo";
   } else if (isJani) {
     displayName = "Jani";
+  } else if (isFamilyOrTrusted && trustedContact) {
+    displayName = trustedContact.primaryNick;
   } else {
     // 1. Si coincide con un nombre compuesto canónico estricto colombiano (ej: "Ana María", "Juan José", "María Fernanda", "José Manuel", "Olga Lucía")
     const canonicalComposite = getCanonicalCompositeName(realName);
@@ -523,6 +559,43 @@ export async function processPrivateDmConversationalMessage(
   const history = await getOrLoadDmHistory(userId);
   const hasPriorHistory = history.length > 0;
   const userSentExplicitGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|buenas)\b/i.test(cleanLower);
+
+  // 💖 REGLA DE ORO FAMILIAR Y DE CONFIANZA (Doctrina v33.08)
+  if (isFamilyOrTrusted && trustedContact) {
+    // 1. Caso especial: Broma de Chalo sobre Pablo Escobar / Gacha
+    if (trustedContact.id === "chalo_ruiz" && isChaloEscobarJoke(clean)) {
+      const chaloReply = buildChaloJokeResponse();
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", chaloReply);
+      return chaloReply;
+    }
+
+    // 2. Caso especial: Jonathan Martínez y procesos de Datacrédito / TransUnion
+    if (trustedContact.id === "jonathan_martinez" && isJonathanCreditProcessQuery(clean)) {
+      const jonathanReply = buildJonathanCreditResponse();
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", jonathanReply);
+      return jonathanReply;
+    }
+
+    // 3. Recados o mensajes para Eduardo ("dile a eddu", "avísale a eduardo", "déjale dicho", etc.)
+    const isLeavingMessageForEddu = /(?:dile\s+a\s+eddu|d[ií]gale\s+a\s+eddu|av[ií]sale\s+a\s+eddu|av[ií]sele\s+a\s+eddu|dile\s+a\s+eduardo|d[ií]gale\s+a\s+eduardo|av[ií]sale\s+a\s+eduardo|av[ií]sele\s+a\s+eduardo|d[eé]jale\s+dicho|recado|raz[oó]n\s+para\s+eddu|p[aá]sale\s+el\s+recado|felic[ií]talo|un\s+abrazo\s+a\s+eddu)/i.test(cleanLower);
+    if (isLeavingMessageForEddu) {
+      const memoReply = `¡Anotadísimo, ${trustedContact.primaryNick}! 📝 Le paso tu mensaje a Eduardo (Eddu) de inmediato. Recuerda que también puedes escribirle directamente a su nuevo número de bróker: +57 316 656 9719 (https://wa.me/573166569719) 🤝💖`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", memoReply);
+      return memoReply;
+    }
+
+    // 4. Saludo inicial, primer turno o pregunta por Eduardo / contacto
+    const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
+    if (history.length === 0 || isGreetingOnly || isAskingForEddu) {
+      const familyWelcome = buildFamilyWarmWelcomeMessage(trustedContact);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", familyWelcome);
+      return familyWelcome;
+    }
+  }
 
   // Si es un saludo inicial y no hay historial previo reciente:
   if (isGreetingOnly && history.length === 0) {
@@ -1071,7 +1144,7 @@ export async function processPrivateDmConversationalMessage(
     }
 
     // Inyección del embudo comercial si la consulta es de alto valor (Doctrina v33.01) - SOLO para usuarios externos
-    if (!isEduardo && !isJani) {
+    if (!isEduardo && !isJani && !isFamilyOrTrusted) {
       reply = enhanceResponseWithCommercialFunnel(reply, clean);
     }
 
@@ -1087,8 +1160,10 @@ export async function processPrivateDmConversationalMessage(
       ? `¡Hola, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
       : isJani
         ? `¡Hola, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
-        : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
-    if (!isEduardo && !isJani && isHighValueLegalOrTaxInquiry(clean)) {
+        : isFamilyOrTrusted
+          ? `¡Hola, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
+          : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+    if (!isEduardo && !isJani && !isFamilyOrTrusted && isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
     fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);

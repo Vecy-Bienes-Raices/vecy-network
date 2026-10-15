@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.07";
+    VECY_VERSION = "v33.08";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16489,6 +16489,336 @@ var init_iduValorizacionService = __esm({
   }
 });
 
+// server/_core/jania/trustedContacts.ts
+var trustedContacts_exports = {};
+__export(trustedContacts_exports, {
+  TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
+  buildChaloJokeResponse: () => buildChaloJokeResponse,
+  buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
+  buildJonathanCreditResponse: () => buildJonathanCreditResponse,
+  findTrustedContact: () => findTrustedContact,
+  getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
+  isChaloEscobarJoke: () => isChaloEscobarJoke,
+  isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
+  isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
+  normalizePhoneDigits: () => normalizePhoneDigits
+});
+function normalizePhoneDigits(raw) {
+  if (!raw) return "";
+  const clean = raw.split("@")[0].replace(/\D/g, "");
+  if (clean.startsWith("57") && clean.length === 12) {
+    return clean.substring(2);
+  }
+  if (clean.length > 10) {
+    const last10 = clean.slice(-10);
+    if (last10.startsWith("3")) return last10;
+  }
+  return clean;
+}
+function findTrustedContact(userId, rawName) {
+  if (!userId && !rawName) return null;
+  const userClean = (userId || "").toLowerCase();
+  const digits = normalizePhoneDigits(userId);
+  const nameClean = (rawName || "").toLowerCase().trim();
+  for (const contact of TRUSTED_CONTACTS) {
+    if (digits && contact.digits === digits) {
+      return contact;
+    }
+    if (userClean.includes(contact.digits)) {
+      return contact;
+    }
+    if (contact.lids && contact.lids.some((lid) => userClean.includes(lid))) {
+      return contact;
+    }
+    if (contact.aliases && contact.aliases.some((alias) => userClean.includes(alias))) {
+      return contact;
+    }
+    if (nameClean && nameClean.length >= 5) {
+      const contactLower = contact.fullName.toLowerCase();
+      if (nameClean === contactLower || nameClean.includes(contactLower) && contactLower.length >= 10) {
+        return contact;
+      }
+      const EXCLUSIVE_NICKS = /* @__PURE__ */ new Set([
+        "madrecita",
+        "madrecita querida",
+        "mamita hermosa",
+        "t\xEDa olandita",
+        "tia olandita",
+        "olandita",
+        "t\xEDa tulita",
+        "tia tulita",
+        "anita tulita",
+        "t\xEDa marinita",
+        "tia marinita",
+        "marinita",
+        "pollotote",
+        "mi natis",
+        "pollita hermosa",
+        "natillita",
+        "coraz\xF3n de melocot\xF3n",
+        "monacha remolacha",
+        "cayaco",
+        "jaton"
+      ]);
+      for (const nick of contact.allNicks) {
+        const nickLower = nick.toLowerCase();
+        if (EXCLUSIVE_NICKS.has(nickLower) && (nameClean === nickLower || nameClean.includes(nickLower))) {
+          return contact;
+        }
+      }
+    }
+  }
+  return null;
+}
+function buildFamilyWarmWelcomeMessage(contact) {
+  return `\xA1Hola ${contact.primaryNick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Como hoy es el cumplea\xF1os de Eduardo (Eddu) o para cualquier asunto personal, te comparto su n\xFAmero directo y nuevo de br\xF3ker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
+}
+function isChaloEscobarJoke(text2) {
+  if (!text2) return false;
+  const clean = text2.toLowerCase();
+  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(clean);
+}
+function buildChaloJokeResponse() {
+  return `\xA1Hola Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
+
+Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA en VECY BIENES RA\xCDCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su n\xFAmero nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1O d\xE9jame tu raz\xF3n por ac\xE1 y yo se la entrego intacta!`;
+}
+function isJonathanCreditProcessQuery(text2) {
+  if (!text2) return false;
+  const clean = text2.toLowerCase();
+  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(clean);
+}
+function buildJonathanCreditResponse() {
+  return `\xA1Hola Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
+
+Como esta l\xEDnea ahora es mi canal exclusivo como JanIA en VECY BIENES RA\xCDCES, comun\xEDcate con \xE9l directamente a su l\xEDnea de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719). \xA1O si deseas, d\xE9jame tu mensaje y yo se lo pongo de presente!`;
+}
+function isDebtCollectionOrSpamScam(text2, senderName) {
+  if (!text2 && !senderName) return false;
+  const combined = `${text2 || ""} ${senderName || ""}`.toLowerCase();
+  const hasCollectionKeywords = /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora)/i.test(
+    combined
+  );
+  const hasCollectionAgencies = /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza)/i.test(
+    combined
+  );
+  const hasTargetedCollection = /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera)/i.test(
+    combined
+  );
+  return hasCollectionKeywords || hasCollectionAgencies || hasTargetedCollection;
+}
+function getDebtCollectionDefenseResponse() {
+  return "Hola. No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.";
+}
+var TRUSTED_CONTACTS;
+var init_trustedContacts = __esm({
+  "server/_core/jania/trustedContacts.ts"() {
+    "use strict";
+    TRUSTED_CONTACTS = [
+      // ── FAMILIA DIRECTA ──
+      {
+        id: "carmenza_madre",
+        fullName: "Carmenza G\xF3mez",
+        relationship: "Madre",
+        phone: "+573108643555",
+        digits: "3108643555",
+        primaryNick: "Madrecita",
+        allNicks: ["Madrecita", "Madrecita querida", "Mamita hermosa", "Mami", "Mam\xE1", "Carmenza"],
+        category: "familia_directa"
+      },
+      {
+        id: "daniel_hijo",
+        fullName: "Daniel Eduardo Rivera Noguera",
+        relationship: "Hijo",
+        phone: "+573006067089",
+        digits: "3006067089",
+        primaryNick: "Pollotote",
+        allNicks: ["Amado hijo", "Pollotote", "Campe\xF3n", "Mi ingeniero favorito", "Daniel", "Dani"],
+        category: "familia_directa"
+      },
+      {
+        id: "natalia_hija",
+        fullName: "Natalia Rivera Noguera",
+        relationship: "Hija",
+        phone: "+573058788329",
+        digits: "3058788329",
+        primaryNick: "Mi Natis",
+        allNicks: [
+          "Mi Natis",
+          "Pollita hermosa",
+          "Mi princesa",
+          "Natillita",
+          "Coraz\xF3n de Melocot\xF3n",
+          "Monacha Remolacha",
+          "Natis",
+          "Natalia"
+        ],
+        category: "familia_directa"
+      },
+      {
+        id: "jani_esposa",
+        fullName: "Jani Alves Souza",
+        relationship: "Esposa / Directora de Operaciones",
+        phone: "+573188096811",
+        digits: "3188096811",
+        primaryNick: "Jani",
+        allNicks: ["Amor", "amorzote", "coraz\xF3n amado", "vida hermosa", "mi consentida", "Jani", "Janita"],
+        category: "directiva",
+        aliases: ["3166569719"],
+        lids: ["167108705018103", "182781141344345", "218820279050385"]
+      },
+      // ── TÍAS Y TÍOS ──
+      {
+        id: "olanda_tia",
+        fullName: "Olanda Rivera",
+        relationship: "T\xEDa",
+        phone: "+573138524917",
+        digits: "3138524917",
+        primaryNick: "T\xEDa Olandita",
+        allNicks: ["T\xEDa Olandita", "Olandita", "T\xEDa Olanda"],
+        category: "familia_extendida"
+      },
+      {
+        id: "ana_tulia_tia",
+        fullName: "Ana Tulia Rivera",
+        relationship: "T\xEDa",
+        phone: "+573124794864",
+        digits: "3124794864",
+        primaryNick: "T\xEDa Tulita",
+        allNicks: ["T\xEDa Tulita", "Anita Tulita", "T\xEDa Anita", "Ana Tulia"],
+        category: "familia_extendida"
+      },
+      {
+        id: "marina_tia",
+        fullName: "Marina Rivera",
+        relationship: "T\xEDa",
+        phone: "+573204997575",
+        digits: "3204997575",
+        primaryNick: "T\xEDa Marinita",
+        allNicks: ["T\xEDa Marinita", "Marinita", "T\xEDa Marina"],
+        category: "familia_extendida"
+      },
+      {
+        id: "luis_tio",
+        fullName: "Luis Eduardo Rivera G\xF3mez",
+        relationship: "T\xEDo",
+        phone: "+573132094918",
+        digits: "3132094918",
+        primaryNick: "T\xEDo Luis",
+        allNicks: ["T\xEDo Luis", "T\xEDo Lucho", "Luis Eduardo"],
+        category: "familia_extendida"
+      },
+      // ── PRIMOS ──
+      {
+        id: "monica_prima",
+        fullName: "M\xF3nica Mart\xEDnez",
+        relationship: "Prima",
+        phone: "+573103395788",
+        digits: "3103395788",
+        primaryNick: "Monik",
+        allNicks: ["Monik", "Chinita", "M\xF3nica", "Prima Monik"],
+        category: "familia_extendida"
+      },
+      {
+        id: "liliana_prima",
+        fullName: "Liliana Mart\xEDnez",
+        relationship: "Prima",
+        phone: "+573132533474",
+        digits: "3132533474",
+        primaryNick: "Lili",
+        allNicks: ["Lili", "Liliana", "Prima Lili"],
+        category: "familia_extendida"
+      },
+      {
+        id: "marcelita_prima",
+        fullName: "Marcelita Castellanos",
+        relationship: "Prima",
+        phone: "+573144354412",
+        digits: "3144354412",
+        primaryNick: "Marcelita",
+        allNicks: ["Marcelita", "Marce", "Prima Marcelita"],
+        category: "familia_extendida"
+      },
+      {
+        id: "carlitos_primo",
+        fullName: "Carlos Mart\xEDnez",
+        relationship: "Primo",
+        phone: "+573054589435",
+        digits: "3054589435",
+        primaryNick: "Cayaco",
+        allNicks: ["Cayaco", "Carlitos", "Primo Carlitos"],
+        category: "familia_extendida"
+      },
+      {
+        id: "jackson_primo",
+        fullName: "Jackson Mart\xEDnez",
+        relationship: "Primo",
+        phone: "+573142721432",
+        digits: "3142721432",
+        primaryNick: "Jaton",
+        allNicks: ["Jaton", "Jackson", "Primo Jackson"],
+        category: "familia_extendida"
+      },
+      // ── AMIGOS Y CASOS ESPECIALES ──
+      {
+        id: "gus_amigo",
+        fullName: "Gustavo (Gus)",
+        relationship: "Amigo de Confianza",
+        phone: "+573108096117",
+        digits: "3108096117",
+        primaryNick: "Gus",
+        allNicks: ["Gus", "Gustavo"],
+        category: "amigos_y_especiales"
+      },
+      {
+        id: "lucho_taxi",
+        fullName: "Lucho (Taxi)",
+        relationship: "Amigo de Confianza",
+        phone: "+573105772223",
+        digits: "3105772223",
+        primaryNick: "Lucho",
+        allNicks: ["Lucho"],
+        category: "amigos_y_especiales"
+      },
+      {
+        id: "chalo_ruiz",
+        fullName: "Andr\xE9s Ruiz (Chalo)",
+        relationship: "Amigo de Confianza",
+        phone: "+573005509529",
+        digits: "3005509529",
+        primaryNick: "Chalo",
+        allNicks: ["Chalo", "Andr\xE9s", "Andresito"],
+        category: "amigos_y_especiales",
+        specialNotes: "Seguirle la corriente con la broma de Pablo Escobar / Gonzalo Rodr\xEDguez Gacha si bromea."
+      },
+      {
+        id: "jonathan_martinez",
+        fullName: "Jonathan Stiven Mart\xEDnez Monta\xF1o",
+        relationship: "Cliente Especial de Confianza",
+        phone: "+573103790278",
+        digits: "3103790278",
+        primaryNick: "Jonathan",
+        allNicks: ["Jonathan", "Jonathan Stiven"],
+        category: "amigos_y_especiales",
+        specialNotes: "Cliente de procesos de Datacr\xE9dito y TransUnion atendidos por Eduardo."
+      },
+      // ── FUNDADOR ──
+      {
+        id: "eduardo_fundador",
+        fullName: "Eduardo Arturo Rivera Mart\xEDnez",
+        relationship: "Director de Tecnolog\xEDa / Fundador",
+        phone: "+573192919978",
+        digits: "3192919978",
+        primaryNick: "Eduardo",
+        allNicks: ["Eddu", "Eduardo", "Ingeniero", "Jefe"],
+        category: "directiva",
+        aliases: ["3166569719"],
+        lids: ["225954035179724"]
+      }
+    ];
+  }
+});
+
 // server/_core/valuation.ts
 function calcularPrecioHomologado(params) {
   let cAntiguedad = 1;
@@ -19327,13 +19657,17 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const canonicalComposite = getCanonicalCompositeName(realName);
   const compositeOrFirst = extractFirstName(realName);
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  const trustedContact = findTrustedContact(userId, rawName || realName);
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
   let displayName = "";
   if (isEduardo) {
     displayName = "Eduardo";
   } else if (isJani) {
     displayName = "Jani";
+  } else if (isFamilyOrTrusted && trustedContact) {
+    displayName = trustedContact.primaryNick;
   } else {
     displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
     if (!canonicalComposite && displayName.includes(" ")) {
@@ -19345,7 +19679,7 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const isFirstTurn = history.length === 0;
   const cleanPayload = (payloadText || "").trim();
   const { buildWinningGoogleReviewMessage: buildWinningGoogleReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-  const reviewSection = isEduardo || isJani ? "" : `
+  const reviewSection = isEduardo || isJani || isFamilyOrTrusted ? "" : `
 
 ${buildWinningGoogleReviewMessage2(displayName)}`;
   const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
@@ -19354,7 +19688,7 @@ ${buildWinningGoogleReviewMessage2(displayName)}`;
     payloadWithClosing = `${payloadWithClosing}
 
 ${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
+  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
     payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
   }
   if (!success) {
@@ -19366,6 +19700,11 @@ ${payloadWithClosing}`;
       }
       if (isJani) {
         return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
+
+${payloadWithClosing}`;
+      }
+      if (isFamilyOrTrusted) {
+        return `\xA1Hola, ${displayName}! Con todo gusto. Aqu\xED tienes el detalle del reporte solicitado:
 
 ${payloadWithClosing}`;
       }
@@ -19385,6 +19724,9 @@ ${payloadWithClosing}`;
     if (isJani) {
       return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
+    if (isFamilyOrTrusted) {
+      return `\xA1Hola, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+    }
     return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
   }
   if (isEduardo) {
@@ -19394,6 +19736,11 @@ ${payloadWithClosing}`;
   }
   if (isJani) {
     return `\xA1Hola, Jani! Qu\xE9 gusto saludarte:
+
+${payloadWithClosing}`;
+  }
+  if (isFamilyOrTrusted) {
+    return `\xA1Hola, ${displayName}! Con todo gusto. Aqu\xED tienes el reporte solicitado:
 
 ${payloadWithClosing}`;
   }
@@ -19482,11 +19829,19 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName,
 async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const clean = text2.trim();
   if (!clean) return "";
+  if (isDebtCollectionOrSpamScam(clean, userName)) {
+    const defenseMsg = getDebtCollectionDefenseResponse();
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", defenseMsg);
+    return defenseMsg;
+  }
   const realName = await resolveRealName(userId, userName);
   const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
   const timeSalutation = getGreetingByTime4();
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  const trustedContact = findTrustedContact(userId, userName || realName);
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const compositeOrFirst = extractFirstName(realName);
   let displayName = "";
@@ -19494,6 +19849,8 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
     displayName = "Eduardo";
   } else if (isJani) {
     displayName = "Jani";
+  } else if (isFamilyOrTrusted && trustedContact) {
+    displayName = trustedContact.primaryNick;
   } else {
     const canonicalComposite = getCanonicalCompositeName(realName);
     if (canonicalComposite) {
@@ -19514,6 +19871,34 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const history = await getOrLoadDmHistory(userId);
   const hasPriorHistory = history.length > 0;
   const userSentExplicitGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|buenas)\b/i.test(cleanLower);
+  if (isFamilyOrTrusted && trustedContact) {
+    if (trustedContact.id === "chalo_ruiz" && isChaloEscobarJoke(clean)) {
+      const chaloReply = buildChaloJokeResponse();
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", chaloReply);
+      return chaloReply;
+    }
+    if (trustedContact.id === "jonathan_martinez" && isJonathanCreditProcessQuery(clean)) {
+      const jonathanReply = buildJonathanCreditResponse();
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", jonathanReply);
+      return jonathanReply;
+    }
+    const isLeavingMessageForEddu = /(?:dile\s+a\s+eddu|d[ií]gale\s+a\s+eddu|av[ií]sale\s+a\s+eddu|av[ií]sele\s+a\s+eddu|dile\s+a\s+eduardo|d[ií]gale\s+a\s+eduardo|av[ií]sale\s+a\s+eduardo|av[ií]sele\s+a\s+eduardo|d[eé]jale\s+dicho|recado|raz[oó]n\s+para\s+eddu|p[aá]sale\s+el\s+recado|felic[ií]talo|un\s+abrazo\s+a\s+eddu)/i.test(cleanLower);
+    if (isLeavingMessageForEddu) {
+      const memoReply = `\xA1Anotad\xEDsimo, ${trustedContact.primaryNick}! \u{1F4DD} Le paso tu mensaje a Eduardo (Eddu) de inmediato. Recuerda que tambi\xE9n puedes escribirle directamente a su nuevo n\xFAmero de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719) \u{1F91D}\u{1F496}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", memoReply);
+      return memoReply;
+    }
+    const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
+    if (history.length === 0 || isGreetingOnly || isAskingForEddu) {
+      const familyWelcome = buildFamilyWarmWelcomeMessage(trustedContact);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", familyWelcome);
+      return familyWelcome;
+    }
+  }
   if (isGreetingOnly && history.length === 0) {
     if (isEduardo) {
       const welcomeMsg2 = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
@@ -19989,7 +20374,7 @@ QUI\xC9NES SOMOS, REDES SOCIALES Y SERVICIOS (M\xC1XIMO 2 P\xC1RRAFOS CORTOS):
         reply = hasPriorHistory && !userSentExplicitGreeting ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* te apoyamos en tus gestiones y negocios inmobiliarios. Cu\xE9ntame qu\xE9 necesitas y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* estamos a tu servicio para facilitarte tus gestiones inmobiliarias. Cu\xE9ntame en qu\xE9 te podemos colaborar hoy.`;
       }
     }
-    if (!isEduardo && !isJani) {
+    if (!isEduardo && !isJani && !isFamilyOrTrusted) {
       reply = enhanceResponseWithCommercialFunnel(reply, clean);
     }
     reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory, timeSalutation);
@@ -19998,8 +20383,8 @@ QUI\xC9NES SOMOS, REDES SOCIALES Y SERVICIOS (M\xC1XIMO 2 P\xC1RRAFOS CORTOS):
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    let fallback = isEduardo ? `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
-    if (!isEduardo && !isJani && isHighValueLegalOrTaxInquiry(clean)) {
+    let fallback = isEduardo ? `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isFamilyOrTrusted ? `\xA1Hola, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    if (!isEduardo && !isJani && !isFamilyOrTrusted && isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
     fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
@@ -20020,6 +20405,7 @@ var init_dmHandler = __esm({
     init_prompts();
     init_valuation();
     init_whatsapp_utils();
+    init_trustedContacts();
     JANIA_DM_TOOLS = [
       {
         functionDeclarations: [
@@ -21311,6 +21697,16 @@ ${quotedNote}` : quotedNote;
         const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
         const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
         if (shouldEngageConversational && body.trim()) {
+          const { isDebtCollectionOrSpamScam: isDebtCollectionOrSpamScam2, getDebtCollectionDefenseResponse: getDebtCollectionDefenseResponse2 } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
+          if (isDebtCollectionOrSpamScam2(body, userName)) {
+            const defenseMsg = getDebtCollectionDefenseResponse2();
+            await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
+            const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            appendDmHistory2(senderId, "user", body);
+            appendDmHistory2(senderId, "assistant", defenseMsg);
+            await this.logToDb(senderId, "janIA", `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
+            return;
+          }
           const isContactReq = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(cleanLower);
           if (isContactReq) {
             const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
@@ -26245,6 +26641,7 @@ var init_jania = __esm({
     init_circuloHandler();
     init_dmHandler();
     init_propertiesHandler();
+    init_trustedContacts();
     init_advisors();
   }
 });
@@ -26270,14 +26667,18 @@ __export(janIA_exports, {
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   PROTOCOLO_URBANIDAD_CARRENO_PROMPT: () => PROTOCOLO_URBANIDAD_CARRENO_PROMPT,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
+  TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
   analyzeSender: () => analyzeSender,
   appendCirculoHistory: () => appendCirculoHistory,
   appendConsultingHistory: () => appendConsultingHistory,
   appendDmHistory: () => appendDmHistory,
   brokerDirectoryCache: () => brokerDirectoryCache,
+  buildChaloJokeResponse: () => buildChaloJokeResponse,
+  buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
   buildFlyerBreakdownText: () => buildFlyerBreakdownText,
   buildGroupIncompleteMessage: () => buildGroupIncompleteMessage,
   buildIncompleteDataMessage: () => buildIncompleteDataMessage,
+  buildJonathanCreditResponse: () => buildJonathanCreditResponse,
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   capitalize: () => capitalize,
@@ -26299,6 +26700,7 @@ __export(janIA_exports, {
   extractFirstName: () => extractFirstName,
   extractFlyerVision: () => extractFlyerVision,
   fallbackDataCache: () => fallbackDataCache,
+  findTrustedContact: () => findTrustedContact,
   formatColombiaDateTime: () => formatColombiaDateTime,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   generarHashMensaje: () => generarHashMensaje,
@@ -26307,6 +26709,7 @@ __export(janIA_exports, {
   getColombiaHour: () => getColombiaHour,
   getColombiaNow: () => getColombiaNow,
   getConsultingHistory: () => getConsultingHistory,
+  getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
   getDmHistory: () => getDmHistory,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getGreetingByTime: () => getGreetingByTime,
@@ -26323,7 +26726,10 @@ __export(janIA_exports, {
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
   initAdvisorsDirectory: () => initAdvisorsDirectory,
   initBrokerDirectory: () => initBrokerDirectory,
+  isChaloEscobarJoke: () => isChaloEscobarJoke,
+  isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
   isGenericName: () => isGenericName,
+  isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
   isLidIdentifier: () => isLidIdentifier,
   isOutsideWorkingHours: () => isOutsideWorkingHours,
   isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
@@ -26333,6 +26739,7 @@ __export(janIA_exports, {
   lookupAdvisorSync: () => lookupAdvisorSync,
   muteSession: () => muteSession,
   normalizeAdvisorPhone: () => normalizeAdvisorPhone,
+  normalizePhoneDigits: () => normalizePhoneDigits,
   normalizePhoneNumber: () => normalizePhoneNumber,
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,

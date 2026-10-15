@@ -182,7 +182,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.07 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.08 — Octubre 2026
+
+### Novedades v33.08 (Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Aplica en el backend de JanIA (`v33.08` / `33.8.0`) la Agenda de Confianza, el Círculo Familiar y el Escudo Defensivo Anti-Cobranzas/Spam manteniendo el blindaje estricto de $0 COP en pruebas (`NODE_ENV=test`)."*
+  2. **Agenda de Confianza y Círculo Familiar**: Mapeo telefónico (+57, 10 dígitos y LIDs) para Madre Carmenza (`3108643555`), Tía Olanda (`3138524917`), Tía Tulita (`3124794864`), Tía Marina (`3204997575`), Tío Luis (`3132094918`), Hijo Daniel/Pollotote (`3006067089`), Hija Natalia/Mi Natis (`3058788329`), Jani Alves (`3188096811` / `3166569719`), Primos (Monik, Lili, Marcelita, Cayaco, Jaton) y Amigos (Gus, Lucho, Chalo broma Escobar/Gacha, Jonathan Martínez proceso Datacrédito).
+  3. **Regla de Oro Familiar/Amigos**: Saludo con apodo de cariño, canal oficial de JanIA como IA, número directo bróker de Eduardo (`+57 316 656 9719` / `https://wa.me/573166569719`) para cumpleaños o temas personales, y opción de dejar recados con confirmación inmediata.
+  4. **Escudo Defensivo Anti-Cobranzas / Spam**: Bloqueo absoluto de entrega de datos de Eduardo ante casas de cobranza, bancos hostiles, cobro coactivo, embargos o spam financiero; respuesta con postura corporativa neutral y despiste estricto.
+  5. **Integración Conversacional**: Inyección en `dmHandler.ts` (paso 0 defensivo, paso 1 familiar, exclusión de Google Reviews y embudo comercial a familiares) y en interceptor de `whatsapp-match.ts`.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 240/240 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 19.53s ✅
+- `shared/const.ts` (`v33.08`) y `package.json` (`33.8.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.07 — Octubre 2026
 
 ### Novedades v33.07 (Eliminación de Redundancia en Saludos y Compactación Máxima en DMs — Cero "Leer más"):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

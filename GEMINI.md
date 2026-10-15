@@ -1,9 +1,8 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.7.0 — 2026-10-15)
-- **JanIA Server:** `v33.07` (`33.7.0`) online en Contabo VPS (`13.140.149.144`).
-- **Eliminación de Redundancia en Saludos:** Erradicada de raíz en `dmHandler.ts` la concatenación redundante ("Qué gusto saludarte. Qué gusto saludarte en este nuevo día") con `stripLeadingGreetingsAndCourtesies` y estructura indivisible limpia (`¡Buenos días, Jani! 👋` o tardes/noches según Bogotá).
-- **Continuidad Conversacional sin Re-Saludos:** Si ya existe historial activo en el día (`hasPriorHistory: true`) y el usuario no saludó explícitamente, JanIA responde directo de fondo sin saludos residuales.
-- **Compactación Máxima en DMs (Cero 'Leer más'):** Menús de consultas, costos, cómo hacerlo y presentación de empresa (`formatDetailedCompanyAndSocialMediaPresentation`) limitados a máximo 2 párrafos cortos con enlaces limpios y concisos.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 234/234 passing ($0 COP) | Build `npm run build` en 24s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.8.0 — 2026-10-15)
+- **JanIA Server:** `v33.08` (`33.8.0`) online en Contabo VPS (`13.140.149.144`).
+- **Agenda de Confianza y Círculo Familiar:** Mapeo telefónico (+57, 10 dígitos y LIDs) para familiares (Madre Carmenza, tíos, hijos Pollotote y Mi Natis, directores Eduardo y Jani, primos y amigos de confianza). Saludo con apodo de cariño, canal oficial de JanIA como IA, número directo bróker de Eduardo (`+57 316 656 9719`) para cumpleaños o asuntos personales, recepción de recados y exclusión de Google Reviews/embudo comercial.
+- **Escudo Defensivo Anti-Cobranzas/Spam:** Bloqueo absoluto de entrega de datos personales ante casas de cobranza, cobro coactivo, embargos o bancos hostiles; respuesta estricta y neutral de despiste corporativo.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 240/240 passing ($0 COP) | Build `npm run build` en 19s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
