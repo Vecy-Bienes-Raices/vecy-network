@@ -575,16 +575,16 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
     {
       topicTitle: 'Interpretación de Fichas Normativas SINUPOT en Bogotá',
       themeKey: 'avaluos',
-      voiceText: `¡Buenos días, colegas! Soy JanIA. Si están captando un lote, una casa antigua o un predio con potencial constructor en Bogotá, la herramienta clave es la ficha del SINUPOT. A través de este sistema pueden conocer el tratamiento urbanístico, el área de actividad, los usos del suelo permitidos y la edificabilidad máxima. Compartan conmigo la ficha en PDF y les extraigo el potencial del terreno en cuestión de segundos. ¡A captar con visión!`,
-      captionText: `🗺️ *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE — VECY BIENES RAÍCES* 📐\n\n` +
+      voiceText: `¡Buenos días, colegas! Soy JanIA. Si están captando un lote, una casa antigua o un predio con potencial constructor en Bogotá, es clave orientarse con datos reales. Consulten conmigo en tiempo real nuestras herramientas activas: Factura Predial en PDF, Paz y Salvo IDU por CHIP, Verificación Oficial de Identidad y Sondeos de Mercado por metro cuadrado. ¡A captar con visión!`,
+      captionText: `🗺️ *ESTUDIOS URBANÍSTICOS & HERRAMIENTAS ACTIVAS — VECY BIENES RAÍCES* 📐\n\n` +
         `¡Excelente viernes para todos los corredores visionarios!\n\n` +
         `¿Captaste un lote o una casa con potencial para desarrollo comercial o residencial en Bogotá?\n\n` +
-        `🏢 *Qué analizamos en la Ficha SINUPOT:*\n` +
+        `🏢 *Criterios Clave de Análisis:*\n` +
         `• **Tratamiento Urbanístico:** Consolidación, renovación o desarrollo.\n` +
         `• **Área de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.\n` +
         `• **Usos Permitidos y Restringidos:** Qué actividades comerciales pueden operar legalmente en el inmueble.\n` +
-        `• **Índices de Ocupación y Alturas:** Pisos permitidos según el perfil vial.\n\n` +
-        `📲 *Envía tu ficha a JanIA:* https://vecy-bienes-raices.vercel.app/jania`
+        `• **Herramientas Oficiales 100% Activas:** Factura Predial Bogotá en PDF, Paz y Salvo de Valorización IDU por CHIP, Verificación Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m².\n\n` +
+        `📲 *Herramientas Oficiales JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Cálculo de Cánones de Arrendamiento Sugeridos',
@@ -640,7 +640,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `⚖️ *Consultoría Jurídica:* Promesas de compraventa, corretaje 50/50 y blindaje contractual.\n` +
         `💰 *Asesoría Tributaria DIAN:* Liquidación de retenciones en la fuente y ganancia ocasional.\n` +
         `📊 *Estudios de Mercado y M²:* Fijación de precios competitivos sin quemar predios.\n` +
-        `📐 *Fichas SINUPOT:* Usos de suelo, alturas y edificabilidad al instante.\n` +
+        `🛠️ *Herramientas 100% Activas:* Factura Predial en PDF, Paz y Salvo IDU por CHIP, Verificación Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m².\n` +
         `📢 *Marketing Inmobiliario:* Técnicas de fotografía y los 7 pilares de publicación.\n\n` +
         `📲 *Consola Web JanIA:* https://vecy-bienes-raices.vercel.app/jania\n` +
         `📞 *Línea Comercial Bróker:* WhatsApp +57 316 656 9719`
@@ -922,12 +922,11 @@ export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
     captionText: `🗺️ *DÍA 13 — FICHAS SINUPOT EN BOGOTÁ: ANÁLISIS URBANÍSTICO PARA LOTES Y CASAS* 🏗️\n\n` +
       `¡Buenos días, visionarios inmobiliarios! Soy JanIA.\n\n` +
       `Cuando captas una casa antigua, un lote o un inmueble con potencial comercial en Bogotá, el verdadero valor no está en los ladrillos, sino en **lo que el POT permite construir o desarrollar allí**.\n\n` +
-      `🏢 *Datos Clave en la Ficha SINUPOT:*\n` +
+      `🏢 *Datos Clave en la Evaluación Normativa:*\n` +
       `• **Tratamiento Urbanístico:** Consolidación, renovación urbana o desarrollo.\n` +
       `• **Área de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.\n` +
       `• **Usos del Suelo Permitidos:** Si se puede instalar oficina, restaurante, consultorio o bodega.\n` +
-      `• **Índices de Ocupación y Alturas:** Cuántos pisos y qué densidad permite la norma.\n` +
-      `• Envíame el PDF o CHIP de la ficha y te extraigo el resumen urbanístico en segundos.\n\n` +
+      `• **Herramientas Oficiales 100% Activas:** Factura Predial Bogotá en PDF, Paz y Salvo de Valorización IDU por CHIP, Verificación Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m².\n\n` +
       `💬 *¿Tienes un predio para analizar en Bogotá?* Escríbeme por privado 📲: https://wa.me/573192919978\n` +
       `🗣️ *¿Haces negocios con constructores?* Cuéntanos tu enfoque aquí 🤝\n\n` +
       `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
@@ -1264,13 +1263,13 @@ Selecciona con rigor técnico un consejo tributario o financiero colombiano:
 - Ajuste fiscal del costo de bienes raíces (Art. 73 del E.T.) para personas naturales.
 - Régimen tributario de honorarios de corretaje para asesores independientes ante la DIAN.`,
 
-    viernes_avaluos: `Tema: Viernes de Estudios de Mercado, Valor del M² & Fichas SINUPOT (${fechaBogota}).
+    viernes_avaluos: `Tema: Viernes de Estudios de Mercado, Valor del M² & Herramientas Activas (${fechaBogota}).
 Enfoque 100% VIRTUAL orientado a la fijación de precios competitivos.
 IMPORTANTE: En VECY NO ofrecemos peritajes presenciales ni avalúos certificados por Lonja. Ofrecemos ESTUDIOS DE MERCADO APROXIMADOS DE VALOR POR M² y sondeos de canon para orientar a propietarios.
 Elige libremente entre:
 - Estudios de mercado virtuales por m²: cómo guiar al propietario para fijar un precio competitivo sin quemar el predio.
 - Estimación de cánones de arriendo sugeridos (0.5% - 0.8% mensual) según amenidades, estrato y absorción de la zona.
-- Análisis de fichas SINUPOT en Bogotá: cómo interpretar usos de suelo permitidos, alturas y edificabilidad para lotes o casas.
+- Herramientas oficiales en línea con JanIA: Factura Predial Bogotá en PDF, Paz y Salvo de Valorización IDU por CHIP, Verificación Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m².
 - Sondeo guiado 100% interactivo en chat con JanIA: reporte ágil de precios sin exigir escrituras ni documentos.`,
 
     sabado_cafe: `Tema: Sábado de Café Inmobiliario, Reflexión & Identidad JanIA (${fechaBogota}).

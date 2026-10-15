@@ -3,7 +3,7 @@ import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
-import { getVecyInstitutionalKnowledge } from "../prompts";
+import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { executeMarketValuationSurvey } from "../../valuation";
 
 export const JANIA_DM_TOOLS = [
@@ -71,6 +71,18 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["zonaOBarrio"]
         }
+      },
+      {
+        name: "registrar_inmueble_o_requerimiento",
+        description: "Registra en la base de datos de VECY BIENES RAÍCES una oferta inmobiliaria (venta, arriendo, permuta) o un requerimiento/búsqueda de cliente enviado por chat privado y ejecuta el motor de coincidencias (Match).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            textoCompletoPublicacion: { type: "STRING", description: "Texto completo del inmueble ofrecido o demandado" },
+            tipoOperacion: { type: "STRING", description: "OFERTA o DEMANDA" }
+          },
+          required: ["textoCompletoPublicacion"]
+        }
       }
     ]
   }
@@ -83,6 +95,28 @@ export async function executeJaniaDmTool(
   _userName?: string
 ): Promise<{ resultJson: Record<string, any>; toolType: "cedula" | "predial" | "idu" | "notarial" | "sondeo" }> {
   switch (toolName) {
+    case "registrar_inmueble_o_requerimiento": {
+      const { processWhatsAppMessage } = await import("./propertiesHandler");
+      const res = await processWhatsAppMessage(
+        String(args.textoCompletoPublicacion || ""),
+        userId,
+        _userName,
+        false,
+        [],
+        undefined,
+        undefined,
+        false
+      );
+      return {
+        toolType: "sondeo",
+        resultJson: {
+          solicitud: "registro_inmueble_o_requerimiento",
+          clasificacion: res.classification,
+          insertado: res.inserted,
+          detalle: "Procesado en el motor de VECY BIENES RAÍCES"
+        }
+      };
+    }
     case "consultar_identidad_y_antecedentes": {
       const doc = String(args.numeroDocumento || "").trim();
       const tipo = String(args.tipoDocumento || "CC").trim();
@@ -263,11 +297,12 @@ export async function formatPoliteToolDelivery(
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
 
-  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.4.1)
+  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.06)
   const cleanPayload = (payloadText || "").trim();
+  const { buildWinningGoogleReviewMessage } = await import('../../politenessService');
   const reviewSection = (isEduardo || isJani)
     ? ""
-    : `\n\n⭐ *¿Me regalas 15 segunditos?*\nTu opinión y calificación de 5 estrellas ⭐⭐⭐⭐⭐ nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma más de 15 segundos, te lo aseguro):\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
+    : `\n\n${buildWinningGoogleReviewMessage(displayName)}`;
 
   const closingTag = "Un servicio de cortesía de VECY BIENES RAÍCES 🤝.";
   let payloadWithClosing = cleanPayload;
@@ -453,8 +488,11 @@ export async function processPrivateDmConversationalMessage(
     return welcomeMsg;
   }
 
+  const isShortQuery = clean.trim().split(/\s+/).length <= 12;
+
   // Fast-path: Preguntas sobre el portafolio de consultas ("¿Cómo es lo de las consultas?", etc.)
   const isConsultasInquiry =
+    isShortQuery &&
     /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
 
   if (isConsultasInquiry) {
@@ -489,8 +527,9 @@ export async function processPrivateDmConversationalMessage(
 
   // Fast-path: Preguntas sobre costos de las herramientas ("Los costos ?", "¿cuánto vale?", "¿cuánto cuesta?", etc.)
   const isCostInquiry =
-    /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) ||
-    /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
+    isShortQuery &&
+    (/^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) ||
+    /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower));
 
   if (isCostInquiry) {
     const isFreeToolsContext =
@@ -512,6 +551,7 @@ export async function processPrivateDmConversationalMessage(
 
   // Fast-path: Explicación didáctica y amorosa paso a paso ("¿Cómo se hace?", "¿Cómo lo hago?", "explícame cómo", etc.)
   const isHowToDoInquiry =
+    isShortQuery &&
     /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
 
   if (isHowToDoInquiry) {
@@ -617,8 +657,9 @@ export async function processPrivateDmConversationalMessage(
 
   // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
   const isDocVerificationIntent =
-    /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
-    !/\b\d{5,11}\b/.test(clean);
+    isShortQuery &&
+    (/(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
+    !/\b\d{5,11}\b/.test(clean));
 
   if (isDocVerificationIntent) {
     const docPromptMsg =
@@ -776,6 +817,7 @@ export async function processPrivateDmConversationalMessage(
       {
         role: "system",
         content:
+          `${JANIA_ARGON_COGNITIVE_CORE}\n\n` +
           `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
           `Estás conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.\n\n` +
           `===================================================\n` +

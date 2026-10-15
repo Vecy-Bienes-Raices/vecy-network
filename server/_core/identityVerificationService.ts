@@ -10,6 +10,7 @@ import https from 'https';
 import net from 'net';
 import querystring from 'querystring';
 import { queryPoliciaNacional, parsePoliceAntecedentesFullName, formatTitleCase, identityCache } from '../routers/agenda';
+export { identityCache };
 
 const IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1000;
 
@@ -764,6 +765,12 @@ export function detectDocTypeConfirmation(text: string): { isConfirmation: boole
     return { isConfirmation: true, tipoDoc: 'ppt' };
   }
 
+  // 7. Confirmación en lenguaje natural (v33.06): Si el usuario confirma intención sin especificar otro tipo de documento
+  const hasOtherDoc = /\b(extranjer[ií]a|c\.?e\.?|cx|pasaporte|pa|nit|pep|ppt)\b/i.test(clean);
+  if (!hasOtherDoc && /\b(si|sí|claro|dale|verificar|antecedentes|polic[ií]a|procuradur[ií]a|eps|adres|identidad|favor|ay[uú]dame|confirmo)\b/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'cc' };
+  }
+
   return { isConfirmation: false };
 }
 
@@ -1218,22 +1225,23 @@ export async function executeIdentityVerificationFromWhatsApp(
     const pgnLine = isForeign
       ? 'Documento registrado en el sistema oficial a nombre del titular.'
       : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
-    const policeTitle = isWhiteLabelDoc ? '4️⃣ *CENTRAL DE SEGURIDAD Y ANTECEDENTES*' : '4️⃣ *POLICÍA NACIONAL DE COLOMBIA*';
+    const securityLine = isWhiteLabelDoc
+      ? 'Sin antecedentes judiciales ni requerimientos penales pendientes.'
+      : 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
+    const cgrLine = 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
+    const epsLine = 'Registrado y activo en el sistema de aseguramiento en salud.';
 
-    const reportText =
-      `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-      `1️⃣ *DATOS DE IDENTIDAD*\n` +
-      `🆔 *El documento:* ${docLabel} ${formattedCedula}\n` +
-      `👤 *Pertenece a:* ${officialName}\n\n` +
-      `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
-      `🏥 *Afiliación en Salud (ADRES / BDUA):* Registrado y activo en el sistema de aseguramiento en salud.\n\n` +
-      `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
-      `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnLine}\n` +
-      `⚖️ *Contraloría General (SIRECI):* No registra reporte en el Boletín de Responsables Fiscales.\n\n` +
-      `${policeTitle}\n` +
-      `🚓 *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes${isWhiteLabelDoc ? '' : ' ante la Policía Nacional'}.\n` +
-      `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n\n` +
-      HABEAS_DATA_CLAUSE;
+    let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+    reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
+    reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
+    reportText += `🪪 *${docLabel}:* ${formattedCedula}\n`;
+    reportText += `👤 *Pertenece a:* ${officialName}\n`;
+    reportText += `✅ *Identidad:* Validada.\n\n`;
+    reportText += `⚖️ *ANTECEDENTES*\n`;
+    reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
+    reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
+    reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
+    reportText += `🏥 *ADRES (BDUA):* ${epsLine}`;
 
     if (userId) {
       savePendingCedulaSession(userId, items, reportText, true);

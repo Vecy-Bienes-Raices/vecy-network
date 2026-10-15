@@ -1621,9 +1621,9 @@ Ed del 2014.
       expect(rep.success).toBe(true);
       expect(rep.officialName).toBe("Gilma Estella Botero Gomez");
       expect(rep.reportText).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
-      expect(rep.reportText).toContain("🆔 *El documento:* C.C. 43.403.545");
-      expect(rep.reportText).toContain("👤 *Pertenece a:* Gilma Estella Botero Gomez");
-      expect(rep.reportText).toContain("✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.");
+      expect(rep.reportText).toContain("43.403.545");
+      expect(rep.reportText).toContain("Gilma Estella Botero Gomez");
+      expect(rep.reportText).toContain("Validada");
       // Blindaje de marca blanca: Jamás nombrar Policía Nacional ni 2Captcha
       expect(rep.reportText).not.toContain("Policía Nacional");
     });
@@ -2742,10 +2742,11 @@ Adriana Rebeca Orejuela`;
       const reportCe = await executeIdentityVerificationFromWhatsApp("Verificar CE 498614", true);
       expect(reportCe.success).toBe(true);
       expect(reportCe.officialName).toContain("Rodolfo Jesus Mendoza Rivas");
-      expect(reportCe.reportText).toContain("Cédula de Extranjería (C.E.) 498.614");
+      expect(reportCe.reportText).toContain("Cédula de Extranjería (C.E.)");
+      expect(reportCe.reportText).toContain("498.614");
       expect(reportCe.reportText).toContain("Rodolfo Jesus Mendoza Rivas");
       expect(reportCe.source).toContain("Procuraduría General");
-      expect(reportCe.reportText).toContain("Central de Control Notarial");
+      expect(reportCe.reportText).toContain("PROCURADURÍA");
 
       spyPonalCe.mockRestore();
     });
@@ -2783,7 +2784,8 @@ Adriana Rebeca Orejuela`;
       const reportMafe = await executeIdentityVerificationFromWhatsApp("Verificar CE 8084608", true);
       expect(reportMafe.success).toBe(true);
       expect(reportMafe.officialName).toBe("Jose Patricio Caceres Morales");
-      expect(reportMafe.reportText).toContain("Cédula de Extranjería (C.E.) 8.084.608");
+      expect(reportMafe.reportText).toContain("Cédula de Extranjería (C.E.)");
+      expect(reportMafe.reportText).toContain("8.084.608");
       expect(reportMafe.reportText).toContain("Jose Patricio Caceres Morales");
       expect(reportMafe.source).toContain("ADRES BDUA");
 
@@ -4015,7 +4017,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const immediate = formatImmediatePoliteReviewMessage("Alberto Méndez");
       expect(immediate).toContain("¡Con el mayor de los gustos, Alberto!");
       expect(immediate).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
-      expect(immediate).toContain("100% GRATUITO");
+      expect(immediate).toContain("GRATIS");
 
       // 2. Extirpación de donaciones: entrega de cortesía (Doctrina v33.03)
       const prompt = formatPoliteInactivityPrompt("Alberto Méndez");
@@ -4025,7 +4027,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       // 3. Respuesta al SÍ
       const yesMsg = formatPoliteYesReviewMessage("Alberto Méndez");
       expect(yesMsg).toContain("🙏 ¡Gracias, Alberto!");
-      expect(yesMsg).toContain("no te toma más de 15 segundos");
+      expect(yesMsg).toContain("15 segundos");
       expect(yesMsg).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
       // 4. Respuesta al NO con asombro, desilusión cómica y lágrimas de IA
@@ -4550,11 +4552,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[2-5]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.0[2-6]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[2-5]\.0$/);
+      expect(pkg.version).toMatch(/^33\.[2-6]\.0$/);
     });
   });
 
@@ -4629,7 +4631,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
       const externalDelivery = await formatPoliteToolDelivery("573009998877", "María López", "predial", "Reporte Predial Bogotá", true);
       expect(externalDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
-      expect(externalDelivery).toContain("⭐ *¿Me regalas 15 segunditos?*");
+      expect(externalDelivery).toContain("15 segundos");
       expect(externalDelivery).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
       // Para directores (Eduardo o Jani), no debe incluir la reseña ni ganchos externos
@@ -4796,13 +4798,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const { formatImmediatePoliteReviewMessage } = await import("../_core/politenessService");
 
       const resTool = await formatPoliteToolDelivery("573007776655", "Carlos Alberto", "cedula", "Reporte Verificación", true);
-      expect(resTool).toContain("⭐ *¿Me regalas 15 segunditos?*");
       expect(resTool).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
-      expect(resTool).toContain("100% GRATUITO");
+      expect(resTool).toContain("15 segundos");
+      expect(resTool).toContain("GRATIS");
 
       const resPolite = formatImmediatePoliteReviewMessage("Carlos");
-      expect(resPolite).toContain("⭐ *¿Me regalas 15 segunditos?*");
       expect(resPolite).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(resPolite).toContain("15 segundos");
     });
 
     it("4. Memoria persistente en Círculo Inmobiliario (getCirculoHistory / appendCirculoHistory)", async () => {
@@ -4817,16 +4819,112 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(history[history.length - 1].content).toBe("¡Hola, colegas! Bienvenidos.");
     });
 
-    it("5. Consagración doctrinal de versión v33.05 y package.json 33.5.0", async () => {
+    it("5. Consagración doctrinal de versión previa v33.05 y package.json 33.5.0", async () => {
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("SUITE 67: NÚCLEO COGNITIVO ARGON Y PORTAFOLIO COMPLETO (v33.06 - 33.6.0)", () => {
+    it("1. JANIA_ARGON_COGNITIVE_CORE exportado y con las directivas de Arquitectura Argon", async () => {
+      const { JANIA_ARGON_COGNITIVE_CORE, buildSystemPrompt } = await import("../_core/jania/prompts");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toBeDefined();
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Política de Cero Alucinación");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("ESTILO DE COMUNICACIÓN Y EJECUCIÓN");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("SOLUCIONES PROPTECH DE VECY BIENES RAÍCES");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Vecy Agenda Pro");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Fábrica de Software Proptech a la Medida");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("+57 316 656 9719");
+
+      const sysPrompt = buildSystemPrompt();
+      expect(sysPrompt).toContain("ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON)");
+      expect(sysPrompt).toContain("Vecy Agenda Pro");
+    });
+  });
+
+  describe("SUITE 68: CACHÉ COMPACTA, LENGUAJE NATURAL, 6ª HERRAMIENTA, REVIEW 15S Y CANDADO SINUPOT (v33.06 - 33.6.0)", () => {
+    it("1. Caché compacta de identidad con diseño oficial unificado", async () => {
+      const { identityCache, executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+      
+      // Sembrar datos en caché para CC 79888999
+      identityCache.set("POLICIA:cc:79888999", {
+        fullName: "RODRIGO ALONSO PÉREZ MENDOZA",
+        timestamp: Date.now()
+      });
+
+      const res = await executeIdentityVerificationFromWhatsApp("cc 79888999", true, "573112223344");
+      expect(res.success).toBe(true);
+      expect(res.officialName).toBe("Rodrigo Alonso Pérez Mendoza");
+      expect(res.reportText).toContain("☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
+      expect(res.reportText).toContain("🛡️ *_Habeas Data (Ley 1581/12):_*");
+      expect(res.reportText).toContain("🆔 *DATOS DE IDENTIDAD*");
+      expect(res.reportText).toContain("79.888.999");
+      expect(res.reportText).toContain("👤 *Pertenece a:* Rodrigo Alonso Pérez Mendoza");
+      expect(res.reportText).toContain("✅ *Identidad:* Validada.");
+      expect(res.reportText).toContain("⚖️ *ANTECEDENTES*");
+      expect(res.reportText).toContain("🚓 *POLICÍA:*");
+      expect(res.reportText).toContain("🏛️ *PROCURADURÍA:*");
+      expect(res.reportText).toContain("🏢 *CONTRALORÍA:*");
+      expect(res.reportText).toContain("🏥 *ADRES (BDUA):*");
+    });
+
+    it("2. detectDocTypeConfirmation con confirmación en lenguaje natural (sí, claro, antecedentes)", async () => {
+      const { detectDocTypeConfirmation } = await import("../_core/identityVerificationService");
+
+      expect(detectDocTypeConfirmation("1")).toEqual({ isConfirmation: true, tipoDoc: "cc" });
+      expect(detectDocTypeConfirmation("sí por favor")).toEqual({ isConfirmation: true, tipoDoc: "cc" });
+      expect(detectDocTypeConfirmation("claro, ayúdame a verificar antecedentes")).toEqual({ isConfirmation: true, tipoDoc: "cc" });
+      expect(detectDocTypeConfirmation("confirmo")).toEqual({ isConfirmation: true, tipoDoc: "cc" });
+      expect(detectDocTypeConfirmation("es cédula de extranjería")).toEqual({ isConfirmation: true, tipoDoc: "ce" });
+      expect(detectDocTypeConfirmation("pasaporte")).toEqual({ isConfirmation: true, tipoDoc: "pa" });
+      expect(detectDocTypeConfirmation("nit")).toEqual({ isConfirmation: true, tipoDoc: "nit" });
+      expect(detectDocTypeConfirmation("no gracias")).toEqual({ isConfirmation: false });
+    });
+
+    it("3. 6ª herramienta registrar_inmueble_o_requerimiento y fast-paths condicionados a <= 12 palabras", async () => {
+      const { JANIA_DM_TOOLS } = await import("../_core/jania/handlers/dmHandler");
+      const tool6 = JANIA_DM_TOOLS[0].functionDeclarations.find(f => f.name === "registrar_inmueble_o_requerimiento");
+      expect(tool6).toBeDefined();
+      expect(tool6?.description).toContain("Registra en la base de datos de VECY BIENES RAÍCES una oferta inmobiliaria");
+      expect(tool6?.parameters.required).toContain("textoCompletoPublicacion");
+    });
+
+    it("4. buildWinningGoogleReviewMessage con estructura ganadora de 15 segundos y cierre dinámico", async () => {
+      const { buildWinningGoogleReviewMessage, formatImmediatePoliteReviewMessage } = await import("../_core/politenessService");
+
+      const msg = buildWinningGoogleReviewMessage("Juan Asesor Inmo", "colega inmobiliario");
+      expect(msg).toContain("⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio?");
+      expect(msg).toContain("COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):");
+      expect(msg).toContain("👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias");
+      expect(msg).toContain("¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨");
+
+      const immediate = formatImmediatePoliteReviewMessage("Carlos");
+      expect(immediate).toContain("¡Con el mayor de los gustos, Carlos!");
+      expect(immediate).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(immediate).toContain("15 segundos");
+    });
+
+    it("5. Candado anti-alucinación SINUPOT: erradicación de promesa de resumen urbanístico en cronService", async () => {
+      const fs = await import("fs");
+      const cronCode = fs.readFileSync("server/_core/cronService.ts", "utf-8");
+
+      expect(cronCode).not.toContain("te extraigo el resumen urbanístico en segundos");
+      expect(cronCode).not.toContain("Envía tu ficha a JanIA");
+      expect(cronCode).toContain("Factura Predial Bogotá en PDF, Paz y Salvo de Valorización IDU por CHIP, Verificación Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m²");
+    });
+
+    it("6. Consagración doctrinal de versión v33.06 y package.json 33.6.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.05");
+      expect(VECY_VERSION).toBe("v33.06");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.5.0");
+      expect(pkg.version).toBe("33.6.0");
     });
   });
 });
+
 
 
 

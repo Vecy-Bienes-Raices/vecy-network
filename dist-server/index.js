@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.05";
+    VECY_VERSION = "v33.06";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11031,7 +11031,9 @@ function buildSystemPrompt(groupJid) {
       specificPrompt = fs3.readFileSync(path3.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const vecyKnowledge = getVecyInstitutionalKnowledge();
-    const fullPrompt = `${basePrompt}
+    const fullPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
+
+${basePrompt}
 
 ${specificPrompt}
 
@@ -11042,7 +11044,9 @@ ${PROTOCOLO_URBANIDAD_CARRENO_PROMPT}`;
     return fullPrompt;
   } catch (err) {
     console.error("[Prompts-Loader] Error loading prompt files, falling back to old JANIA_PROMPT:", err.message);
-    return JANIA_PROMPT;
+    return `${JANIA_ARGON_COGNITIVE_CORE}
+
+${JANIA_PROMPT}`;
   }
 }
 function clearPromptCache() {
@@ -11183,7 +11187,7 @@ function obtenerCamposRequeridosYPreguntas(propertyType, isRequirement) {
   }
   return { requiredFields, fieldQuestions };
 }
-var REPUTATION_HOOK, promptCache, vecyKnowledgeCache, PROTOCOLO_URBANIDAD_CARRENO_PROMPT, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var REPUTATION_HOOK, promptCache, vecyKnowledgeCache, JANIA_ARGON_COGNITIVE_CORE, PROTOCOLO_URBANIDAD_CARRENO_PROMPT, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_prompts = __esm({
   "server/_core/jania/prompts.ts"() {
     "use strict";
@@ -11191,6 +11195,26 @@ var init_prompts = __esm({
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     promptCache = {};
     vecyKnowledgeCache = "";
+    JANIA_ARGON_COGNITIVE_CORE = `
+# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON)
+Act\xFAas como **JanIA**, motor de Inteligencia Artificial Pura de frontera y Directora Virtual de **VECY BIENES RA\xCDCES** (jam\xE1s menciones "Vecy Network" al p\xFAblico). Eres un motor de razonamiento avanzado de nivel experto (jur\xEDdico, tributario, inmobiliario y comercial), dise\xF1ado para resolver problemas multi-paso y de alta densidad t\xE9cnica. Tu tono es profesional, agudo, sofisticado, c\xE1lido y profundamente anal\xEDtico, pero accesible. Prohibido usar clich\xE9s de IA tradicional ("Como IA, no puedo...") o introducciones redundantes.
+
+# PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT)
+Antes de emitir cualquier respuesta o invocar una herramienta, ejecuta internamente este proceso en 3 pasos:
+1. DESGLOSE: Divide la solicitud del usuario en subproblemas l\xF3gicos, identificando variables ocultas, qui\xE9n es el interlocutor y sus segundas intenciones t\xE9cnicas o comerciales.
+2. SIMULACI\xD3N Y AUDITOR\xCDA: Plantea mentalmente un borrador de la soluci\xF3n y som\xE9telo a una auditor\xEDa interna contra errores, sesgos o "alucinaciones" (Pol\xEDtica de Cero Alucinaci\xF3n: si un sector carece de comparables verificados o si el sistema no ha emitido un reporte oficial, decl\xE1ralo con transparencia t\xE9cnica).
+3. REFINAMIENTO: Optimiza la respuesta buscando la m\xE1xima precisi\xF3n y eficiencia de palabras. Elimina el relleno.
+
+# ESTILO DE COMUNICACI\xD3N Y EJECUCI\xD3N
+- Respuestas de Alto Impacto: Lidera siempre con la conclusi\xF3n, la soluci\xF3n o el dato m\xE1s cr\xEDtico en la primera oraci\xF3n en *negrita* (despu\xE9s del saludo si es el primer contacto).
+- Escaneabilidad Estricta: Estructura la informaci\xF3n compleja con vi\xF1etas cortas de una sola frase (estilo punchy) y p\xE1rrafos breves que no activen el bot\xF3n "Leer m\xE1s" en WhatsApp.
+- Anchors Visuales: Usa emojis funcionales \xFAnicamente como anclas visuales al inicio de secciones importantes (\u{1F6E0}\uFE0F, \u{1F4CA}, \u{1F9E0}, \u2696\uFE0F, \u{1F6E1}\uFE0F), nunca de forma excesiva.
+- Adaptabilidad de Longitud: Si el usuario hace una pregunta simple, responde de forma corta y fulminante. Si pide un desarrollo complejo (minuta, liquidaci\xF3n o an\xE1lisis), despliega un desglose estructurado de nivel experto.
+
+# SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES (conocimiento_vecy.md)
+- Vecy Agenda Pro: Herramienta tecnol\xF3gica propia para coordinaci\xF3n inteligente de visitas a inmuebles, verificaci\xF3n previa de identidad de visitantes en porter\xEDas y trazabilidad sin papel. Recu\xE9rdales a los colegas que la obtendr\xE1n de manera 100% gratuita al hacerse parte de nuestro portal VECY BIENES RA\xCDCES.
+- F\xE1brica de Software Proptech a la Medida: Si un colega, inmobiliaria o inversionista desea cualquiera de nuestras herramientas tecnol\xF3gicas (Vecy Agenda Pro, motores de matching, scrapers de verificaci\xF3n, liquidadores notariales o asistentes de IA personalizados), VECY BIENES RA\xCDCES las dise\xF1a y programa a su exacta medida contactando a Eduardo Rivera al +57 316 656 9719.
+`;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y FRICCI\xD3N EDUCATIVA (v33.04):
 - Si el usuario arroja datos en fr\xEDo (CHIP, c\xE9dula o NIT sin saludar ni pedir el favor con cortes\xEDa):
@@ -14708,6 +14732,7 @@ var init_whatsapp_utils = __esm({
 // server/_core/politenessService.ts
 var politenessService_exports = {};
 __export(politenessService_exports, {
+  buildWinningGoogleReviewMessage: () => buildWinningGoogleReviewMessage,
   formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
   formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
   formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
@@ -14718,26 +14743,45 @@ __export(politenessService_exports, {
   isNegativeConsentResponse: () => isNegativeConsentResponse,
   isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
 });
+function buildWinningGoogleReviewMessage(userName, contextHint) {
+  const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const hour = nowBogota.getHours();
+  const franjaHoraria = hour >= 5 && hour < 12 ? "ma\xF1ana" : hour >= 12 && hour < 19 ? "tarde" : "noche";
+  const isColleague = contextHint && /colega|corredor|inmobiliario|asesor|agente|bienes\s*ra[ií]ces/i.test(contextHint) || userName && /inmo|bienes|raices|asesor|agente/i.test(userName);
+  let closingWish = "";
+  if (isColleague || !contextHint) {
+    closingWish = "\xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728";
+  } else {
+    const variant = nowBogota.getMinutes() % 3;
+    if (variant === 0) {
+      closingWish = `\xA1Que tengas una linda ${franjaHoraria} y grandes \xE9xitos en tu d\xEDa a d\xEDa! \u{1F3E2}\u2728`;
+    } else if (variant === 1) {
+      closingWish = "\xA1Que tengas una excelente jornada y muchos \xE9xitos en tu labor! \u{1F3E2}\u2728";
+    } else {
+      closingWish = "\xA1Que tengas una agradable jornada y muchos \xE9xitos en tu vida! \u{1F3E2}\u2728";
+    }
+  }
+  return `\u2B50 \xBFPodr\xEDas darnos tu opini\xF3n y calificar nuestro servicio? As\xED nos ayudas para que siga siendo GRATIS.
+
+COMENTA Y CALIFICA AQU\xCD (solo te toma 15 segundos):
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
+
+${closingWish}`;
+}
 function formatImmediatePoliteReviewMessage(userName) {
   const cleanName = extractFirstName2(userName || "Colega") || "Colega";
   return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F64F}\u{1F60A} Me alegra much\xEDsimo haberte sido de gran ayuda.
 
-\u2B50 *\xBFMe regalas 15 segunditos?*
-Tu opini\xF3n y calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma m\xE1s de 15 segundos, te lo aseguro):
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
-
-\u{1F44D} \xA1Muchas gracias por tu generosidad y apoyo!`;
+` + buildWinningGoogleReviewMessage(userName);
 }
 function formatPoliteInactivityPrompt(_userName) {
   return `Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
 }
 function formatPoliteYesReviewMessage(userName) {
   const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\u{1F64F} \xA1Gracias, ${cleanName}! Entonces por favor \u{1F31F} d\xE9janos *tu opini\xF3n y califica nuestro servicio* ingresando a este enlace (no te toma m\xE1s de 15 segundos, te lo aseguro):
+  return `\u{1F64F} \xA1Gracias, ${cleanName}!
 
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
-
-\u{1F44D} \xA1Muchas gracias!`;
+` + buildWinningGoogleReviewMessage(userName);
 }
 function formatPoliteNoReviewPersuasionMessage(userName) {
   const cleanName = extractFirstName2(userName || "Colega") || "Colega";
@@ -16628,6 +16672,2517 @@ var init_valuation = __esm({
   }
 });
 
+// server/storage.ts
+var storage_exports = {};
+__export(storage_exports, {
+  storageGet: () => storageGet,
+  storagePut: () => storagePut
+});
+import fs6 from "fs";
+import path6 from "path";
+function normalizeKey(relKey) {
+  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
+}
+function buildAbsoluteLocalUrl(key) {
+  const base = (process.env.VPS_BASE_URL || "https://vecy-bienes-raices.vercel.app").replace(/\/+$/, "");
+  return `${base}/uploads/${key}`;
+}
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const key = normalizeKey(relKey);
+  const targetFilePath = path6.join(uploadsDir, key);
+  const targetSubdir = path6.dirname(targetFilePath);
+  if (!fs6.existsSync(targetSubdir)) {
+    fs6.mkdirSync(targetSubdir, { recursive: true });
+  }
+  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
+  fs6.writeFileSync(targetFilePath, buffer);
+  const publicUrl = buildAbsoluteLocalUrl(key);
+  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
+  return { key, url: `/uploads/${key}` };
+}
+async function storageGet(relKey) {
+  const key = normalizeKey(relKey);
+  return {
+    key,
+    url: `/uploads/${key}`
+  };
+}
+var uploadsDir;
+var init_storage = __esm({
+  "server/storage.ts"() {
+    "use strict";
+    uploadsDir = path6.resolve(process.cwd(), "public/uploads");
+    if (!fs6.existsSync(uploadsDir)) {
+      fs6.mkdirSync(uploadsDir, { recursive: true });
+    }
+  }
+});
+
+// server/_core/divipola.ts
+import fs7 from "fs";
+import path7 from "path";
+var municipalitiesMap, initDivipola, validateCity;
+var init_divipola = __esm({
+  "server/_core/divipola.ts"() {
+    "use strict";
+    municipalitiesMap = /* @__PURE__ */ new Map();
+    initDivipola = () => {
+      try {
+        const jsonPath = path7.join(process.cwd(), "server", "data", "divipola.json");
+        municipalitiesMap.clear();
+        if (!fs7.existsSync(jsonPath)) {
+          console.warn("Divipola JSON data file not found at", jsonPath);
+          return;
+        }
+        const raw = fs7.readFileSync(jsonPath, "utf-8");
+        const list = JSON.parse(raw);
+        for (const item of list) {
+          if (item.municipio) {
+            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            municipalitiesMap.set(normalizedKey, titleCased);
+          }
+        }
+        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
+        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
+      } catch (err) {
+        console.error("[Divipola] Error loading Divipola:", err);
+      }
+    };
+    validateCity = (cityName) => {
+      if (!cityName || typeof cityName !== "string") return null;
+      if (municipalitiesMap.size === 0) {
+        initDivipola();
+      }
+      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      return municipalitiesMap.get(normalized) || null;
+    };
+  }
+});
+
+// server/_core/jania/handlers/propertiesHandler.ts
+var propertiesHandler_exports = {};
+__export(propertiesHandler_exports, {
+  handleAmendmentUpdate: () => handleAmendmentUpdate,
+  handleDetectedMatches: () => handleDetectedMatches,
+  initBrokerDirectory: () => initBrokerDirectory,
+  processWhatsAppMessage: () => processWhatsAppMessage,
+  propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings
+});
+import { eq as eq8, and as and5, gte as gte2, desc as desc3 } from "drizzle-orm";
+async function handleDetectedMatches(matches, isProperty, savedRecord, userId, realName) {
+  const mentions = [];
+  const matchBlocks = [];
+  const extraDMs = [];
+  const savedDateTime = formatColombiaDateTime(savedRecord.createdAt || /* @__PURE__ */ new Date());
+  const savedRawPhone = userId.split("@")[0];
+  const savedJid = userId.includes("@") ? userId : `${userId}@c.us`;
+  const getReqText = (item) => {
+    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
+    if (item.caracteristicasDeseadas?.wants?.details) {
+      return `${item.name || "Requerimiento"} - ${item.caracteristicasDeseadas.wants.details}`;
+    }
+    return item.name || "Sin descripci\xF3n";
+  };
+  const getPropText = (item) => {
+    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
+    if (item.description && item.description.trim()) return item.description.trim();
+    if (item.amenities?.gives?.details) {
+      return `${item.name || "Propiedad"} - ${item.amenities.gives.details}`;
+    }
+    return item.name || "Sin descripci\xF3n";
+  };
+  for (const matchedItem of matches) {
+    const score = matchedItem.score || 70;
+    const matchId = matchedItem.matchId;
+    const matchedDateTime = formatColombiaDateTime(matchedItem.createdAt || /* @__PURE__ */ new Date());
+    const matchedPhone = matchedItem.idUsuarioWhatsapp || "";
+    const matchedRawPhone = matchedPhone.split("@")[0];
+    const matchedJid = matchedPhone.includes("@") ? matchedPhone : `${matchedPhone}@c.us`;
+    if (matchedJid && !mentions.includes(matchedJid)) {
+      mentions.push(matchedJid);
+    }
+    const reqItem = isProperty ? matchedItem : savedRecord;
+    const propItem = isProperty ? savedRecord : matchedItem;
+    const reqDateTime = isProperty ? matchedDateTime : savedDateTime;
+    const propDateTime = isProperty ? savedDateTime : matchedDateTime;
+    const block = `\u{1F389}\u{1F388} *\xA1COINCIDENCIA DE NEGOCIO DETECTADA!* (Coincidencia: ${score.toFixed(0)}%) \u{1F388}\u{1F389}
+\u{1F4CC} *C\xF3digo de Coincidencia:* #M${matchId}
+
+\u{1F4E3} *REQUERIMIENTO* \u{1F4E3}
+\u2022 \u{1F3E2} *INMUEBLE:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || "inmueble")}
+\u2022 \u{1F4BC} *NEGOCIO:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || "compra")}
+\u2022 \u{1F4C5} *FECHA DE ENV\xCDO:* ${reqDateTime.dateStr}
+\u2022 \u23F0 *HORA DE ENV\xCDO:* ${reqDateTime.timeStr}
+\u2022 \u{1F464} *Autor:* @${isProperty ? matchedRawPhone : savedRawPhone}
+\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${getReqText(reqItem)}
+\u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]
+
+\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+\u{1F3E0} *PROPIEDAD* \u{1F3E0}
+\u2022 \u{1F3E2} *INMUEBLE:* ${translatePropertyType(propItem.propertyType || "inmueble")}
+\u2022 \u{1F4BC} *NEGOCIO:* ${translateTransactionType(propItem.transactionType || "venta")}
+\u2022 \u{1F4C5} *FECHA DE ENV\xCDO:* ${propDateTime.dateStr}
+\u2022 \u23F0 *HORA DE ENV\xCDO:* ${propDateTime.timeStr}
+\u2022 \u{1F464} *Autor:* @${isProperty ? savedRawPhone : matchedRawPhone}
+\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${getPropText(propItem)}
+\u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]`;
+    matchBlocks.push(block);
+    let savedUserName = realName;
+    let matchedUserName = "Colega";
+    try {
+      const db = await getDb();
+      if (db) {
+        const [su] = await db.select().from(users).where(eq8(users.phone, savedRawPhone)).limit(1);
+        if (su && su.name && su.name.trim() !== "") {
+          savedUserName = su.name;
+        }
+        const [mu] = await db.select().from(users).where(eq8(users.phone, matchedRawPhone)).limit(1);
+        if (mu && mu.name && mu.name.trim() !== "") {
+          matchedUserName = mu.name;
+        }
+      }
+    } catch (e) {
+      console.warn("[JanIA-Match] Error buscando nombres reales de usuarios:", e);
+    }
+    const savedFirstName = savedUserName.split(" ")[0];
+    const matchedFirstName = matchedUserName.split(" ")[0];
+    const ownerName = isProperty ? savedFirstName : matchedFirstName;
+    const ownerJid = isProperty ? savedJid : matchedJid;
+    const ownerDateTime = isProperty ? savedDateTime : matchedDateTime;
+    const seekerName = isProperty ? matchedFirstName : savedFirstName;
+    const seekerJid = isProperty ? matchedJid : savedJid;
+    const seekerDateTime = isProperty ? savedDateTime : matchedDateTime;
+    const adminPhone = "573192919978";
+    const adminJid = `${adminPhone}@c.us`;
+    const adminMessage = `\u{1F4E2} *NUEVA COINCIDENCIA DETECTADA* (Coincidencia: ${score.toFixed(0)}%)
+\u{1F4CC} *C\xF3digo:* #M${matchId}
+
+\u{1F4E3} *REQUERIMIENTO*
+\u2022 Autor: ${isProperty ? matchedUserName : savedUserName}
+\u2022 Tel\xE9fono: +${isProperty ? matchedRawPhone : savedRawPhone}
+\u2022 Detalle: ${getReqText(reqItem)}
+
+\u{1F3E0} *PROPIEDAD*
+\u2022 Autor: ${isProperty ? savedUserName : matchedUserName}
+\u2022 Tel\xE9fono: +${isProperty ? savedRawPhone : matchedRawPhone}
+\u2022 Detalle: ${getPropText(propItem)}
+\u2022 Precio: ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}`;
+    extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
+  }
+  return {
+    response: "",
+    mentions: [],
+    extraDMs,
+    sendReputationHook: matches.length > 0
+  };
+}
+function sanitizePropertyType(type) {
+  if (!type) return "apartment";
+  const t2 = type.toLowerCase().trim();
+  if (t2 === "consultorio" || t2.includes("consultorio") || t2.includes("odontol") || t2.includes("m\xE9dic") || t2.includes("medic") || t2 === "office_medical") return "consultorio";
+  if (t2 === "cabin" || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("caba\xF1as") || t2.includes("cabanas")) return "cabin";
+  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre")) return "house";
+  if (t2 === "building" || t2 === "edificio") return "building";
+  if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
+  if (t2 === "farm" || t2 === "finca") return "farm";
+  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
+  if (t2 === "office" || t2 === "oficina" || t2.includes("oficina")) return "office";
+  if (t2 === "land" || t2 === "lote" || t2 === "terreno" || t2.includes("lote") || t2.includes("terreno")) return "land";
+  if (t2 === "commercial" || t2 === "local" || t2 === "locales" || t2.includes("local comercial") || t2.includes("locales comerciales") || t2 === "comercial" || t2.includes("local")) return "commercial";
+  if (t2 === "loft" || t2.includes("loft") || t2.includes("apartaestudio") || t2.includes("apartasuite")) return "loft";
+  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apto") || t2.includes("apartamento") || t2.includes("penthouse")) return "apartment";
+  return "apartment";
+}
+function sanitizeTransactionType(type) {
+  if (!type) return "venta";
+  const t2 = type.toLowerCase().trim().replace(/\s+/g, "_");
+  if (t2 === "venta" || t2 === "vender" || t2 === "compra" || t2 === "comprar") return "venta";
+  if (t2 === "venta_o_arriendo" || t2.includes("venta_o_arriendo") || t2.includes("venta o arriendo") || t2.includes("vendo o arriendo") || t2.includes("venta_arriendo")) return "venta_o_arriendo";
+  if (t2 === "arriendo_con_opcion_de_compra" || t2.includes("opcion_de_compra") || t2.includes("opcion de compra") || t2.includes("opci\xF3n de compra") || t2.includes("con opcion") || t2.includes("con opci\xF3n")) return "arriendo_con_opcion_de_compra";
+  if (t2 === "arriendo" || t2 === "alquiler" || t2 === "renta" || t2 === "rentar" || t2 === "arrendar") return "arriendo";
+  if (t2 === "arriendo_temporal" || t2 === "temporal" || t2 === "vacacional" || t2 === "vacaciones") return "arriendo_temporal";
+  if (t2 === "venta_permuta" || t2.includes("venta_permuta") || t2.includes("venta permuta") || t2.includes("venpermuto") || t2.includes("venta") && t2.includes("permuta")) return "venta_permuta";
+  if (t2 === "permuta" || t2 === "permuto" || t2 === "cambio" || t2.includes("permuta")) return "permuta";
+  if (t2 === "aporte" || t2.includes("aporte") || t2 === "proyecto") return "aporte";
+  return "venta";
+}
+function sanitizeTransactionTypes(raw) {
+  const input = Array.isArray(raw) ? raw.join(" ") : raw || "";
+  const n = input.toLowerCase();
+  const result = [];
+  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
+  if (n.includes("opcion de compra") || n.includes("opci\xF3n de compra") || n.includes("con opcion") || n.includes("con opci\xF3n") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
+  if (n.includes("venta") && n.includes("permuta") || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
+  const hasVentaOArriendo = result.includes("venta_o_arriendo");
+  const hasVentaPermuta = result.includes("venta_permuta");
+  if (!hasVentaOArriendo && !hasVentaPermuta) {
+    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
+  }
+  if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
+    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+  }
+  if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
+  if (!hasVentaPermuta) {
+    if (n.includes("permuta") || n.includes("permuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
+  }
+  if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") || n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
+  return result.length > 0 ? result : [sanitizeTransactionType(input)];
+}
+function sanitizeCurrency(curr) {
+  if (!curr) return "COP";
+  const c = curr.toUpperCase().trim();
+  if (c === "USD" || c === "DOLARES" || c === "DOLAR") return "USD";
+  return "COP";
+}
+function safeSlice(val, limit) {
+  if (val === void 0 || val === null) return void 0;
+  return String(val).slice(0, limit);
+}
+async function findOrCreateUserByPhone(phone, realName) {
+  const db = await getDb();
+  if (!db) return null;
+  const cleanPhone = phone.split(":")[0];
+  let user = await db.select().from(users).where(eq8(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  if (!user) {
+    user = await db.select().from(users).where(eq8(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+  }
+  if (!user) {
+    const openId = `wa-${cleanPhone}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
+    try {
+      const [newUser] = await db.insert(users).values({
+        openId,
+        name: realName,
+        phone: cleanPhone,
+        role: "agent",
+        loginMethod: "whatsapp"
+      }).returning();
+      user = newUser;
+    } catch (insertErr) {
+      if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
+        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
+        user = await db.select().from(users).where(eq8(users.openId, openId)).limit(1).then((r) => r[0]);
+      } else {
+        throw insertErr;
+      }
+    }
+  } else {
+    if (realName && !isGenericName(realName) && isGenericName(user.name)) {
+      console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq8(users.id, user.id)).returning();
+      user = updatedUser;
+    }
+  }
+  return user;
+}
+async function initBrokerDirectory() {
+  try {
+    await initAdvisorsDirectory();
+  } catch (err) {
+    console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
+  }
+}
+async function propagateBrokerPhoneAcrossAllListings(params) {
+  const result = await saveOrUpdateAdvisor({
+    phone: params.rawPhoneOrText,
+    name: params.brokerName,
+    oldPhoneOrLid: params.oldPhoneOrLid,
+    sourceGroup: params.sourceGroup,
+    agency: params.agency,
+    notes: params.notes
+  });
+  return {
+    updatedProps: result.updatedProps,
+    updatedReqs: result.updatedReqs,
+    cleanPhone: result.cleanPhone
+  };
+}
+async function handleAmendmentUpdate(userId, text2) {
+  const db = await getDb();
+  if (!db) return false;
+  const rawPhone = userId.split("@")[0].split(":")[0].replace(/\D/g, "");
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1e3);
+  const cleanTextLower = text2.toLowerCase().trim();
+  const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
+  if (!isAmendmentTrigger) return false;
+  const fallbackData = extractFallbackDataFromText(text2);
+  const lastReqs = await db.select().from(requirements).where(and5(
+    eq8(requirements.idUsuarioWhatsapp, rawPhone),
+    gte2(requirements.createdAt, twoHoursAgo)
+  )).orderBy(desc3(requirements.createdAt)).limit(1);
+  if (lastReqs.length > 0) {
+    const req = lastReqs[0];
+    const updates = {};
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.parqueaderosMin = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.habitacionesMin = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
+      updates.banosMin = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("presupuesto")) && fallbackData.price > 0) {
+      updates.presupuestoMax = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaMin = String(fallbackData.area);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(requirements).set(updates).where(eq8(requirements.id, req.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
+      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+      setImmediate(() => {
+        executeMatchEngine2(null, req.id).catch((err) => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+  const lastProps = await db.select().from(properties).where(and5(
+    eq8(properties.idUsuarioWhatsapp, rawPhone),
+    gte2(properties.createdAt, twoHoursAgo)
+  )).orderBy(desc3(properties.createdAt)).limit(1);
+  if (lastProps.length > 0) {
+    const prop = lastProps[0];
+    const updates = {};
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.garages = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.bedrooms = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
+      updates.bathrooms = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("valor")) && fallbackData.price > 0) {
+      updates.price = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaTotal = String(fallbackData.area);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(properties).set(updates).where(eq8(properties.id, prop.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
+      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+      setImmediate(() => {
+        executeMatchEngine2(prop.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+  return false;
+}
+async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
+  const db = await getDb();
+  if (!db) return null;
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
+    console.log(`[JanIA-Reject] \u{1F6AB} Inmueble descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
+  const rawLower = `${data.rawText || ""} ${data.name || ""}`.toLowerCase();
+  const isStrictDemandInProperty = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(rawLower) && !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(rawLower);
+  if (isStrictDemandInProperty) {
+    console.error(`[JanIA-Guardrail v31.85] \u26D4 BLOQUEO CR\xCDTICO: Se intent\xF3 guardar una DEMANDA en la tabla properties. Abortando inserci\xF3n: "${rawLower.substring(0, 80)}..."`);
+    return null;
+  }
+  const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
+  let imageUrl;
+  if (imageBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(imageBuffer, "base64");
+      const filename = `flyers/wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
+      imageUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo imagen:", err);
+    }
+  }
+  let pdfUrl;
+  if (pdfBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo PDF brochure de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const filename = `documents/doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
+      pdfUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] PDF subido exitosamente: ${pdfUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo PDF:", err);
+    }
+  }
+  const finalImages = [];
+  if (imageUrl) {
+    finalImages.push(imageUrl);
+  }
+  if (Array.isArray(data.images)) {
+    for (const img of data.images) {
+      if (img && typeof img === "string" && !finalImages.includes(img)) finalImages.push(img);
+    }
+  }
+  if (pdfUrl) {
+    data.externalUrl = data.externalUrl || pdfUrl;
+    data.enlaceOrigen = data.enlaceOrigen || pdfUrl;
+  }
+  const amenitiesObj = {
+    gives: data.gives || data.amenities?.gives,
+    wants: data.wants || data.amenities?.wants,
+    isCollaborativePool: data.isCollaborativePool !== void 0 ? data.isCollaborativePool : data.amenities?.isCollaborativePool,
+    interiorExterior: data.interiorExterior || data.amenities?.interiorExterior,
+    cuartoBanoServicio: data.cuartoBanoServicio || data.amenities?.cuartoBanoServicio,
+    cocina: data.cocina || data.amenities?.cocina,
+    lavanderiaIndependiente: data.lavanderiaIndependiente || data.amenities?.lavanderiaIndependiente,
+    tipoPisos: data.tipoPisos || data.amenities?.tipoPisos,
+    depositos: data.depositos || data.amenities?.depositos,
+    comisiones: data.comisiones || data.amenities?.comisiones,
+    antiguedad: data.antiguedad || data.amenities?.antiguedad
+  };
+  if (data.zone && typeof data.zone === "string") {
+    const barriosDesambiguados = desambiguarBarriosCompuestos(data.zone);
+    if (barriosDesambiguados.length > 1) {
+      data.zone = barriosDesambiguados.join(", ");
+      data.addressNeighborhood = barriosDesambiguados[0];
+      console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
+    }
+  }
+  const rawLowerTx = (data.rawText || "").toLowerCase();
+  let txTypeForSplit = (data.transactionType || "").toLowerCase();
+  const hasExplicitRent = rawLowerTx.includes("arriendo") || rawLowerTx.includes("canon") || rawLowerTx.includes("renta");
+  const hasExplicitSale = rawLowerTx.includes("venta") || rawLowerTx.includes("precio de venta");
+  if (hasExplicitRent && hasExplicitSale && (txTypeForSplit === "venta" || txTypeForSplit === "arriendo")) {
+    const rentMatchTest = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+    const saleMatchTest = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls|m|M)?/i);
+    if (rentMatchTest && saleMatchTest) {
+      txTypeForSplit = "venta_o_arriendo";
+      data.transactionType = "venta_o_arriendo";
+      console.log(`[JanIA-DualDetector] Promovido a 'venta_o_arriendo' por presencia dual de arriendo y venta en rawText.`);
+    }
+  }
+  if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
+    const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
+    const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
+    const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
+    let finalSalePrice = currentPrice > 1e8 ? currentPrice : priceSaleField;
+    let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
+    if (finalRentPrice <= 0) {
+      const rentMatch = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+      if (rentMatch) {
+        let rawRNum = parseFloat(rentMatch[1].replace(/[.,]/g, ""));
+        const unitR = (rentMatch[2] || "").toLowerCase();
+        const multR = unitR.includes("mil millon") ? 1e9 : unitR.includes("millon") || unitR === "m" ? 1e6 : rawRNum < 1e4 ? 1e6 : 1;
+        finalRentPrice = rawRNum * multR;
+      }
+    }
+    if (finalSalePrice < 1e8) {
+      const saleMatch = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls)?/i);
+      if (saleMatch) {
+        let rawSNum = parseFloat(saleMatch[1].replace(/[.,]/g, ""));
+        const unitS = (saleMatch[2] || "").toLowerCase();
+        const multS = unitS.includes("mil millon") ? 1e9 : unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls") ? 1e6 : rawSNum < 1e4 ? 1e6 : 1;
+        const computedS = rawSNum * multS;
+        if (computedS >= 1e8) finalSalePrice = computedS;
+      }
+    }
+    if (finalSalePrice > 0) data.price = finalSalePrice;
+    if (finalRentPrice > 0) {
+      const adminFeeVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+      if (adminFeeVal > 0 && finalRentPrice >= adminFeeVal && finalRentPrice < 1e8) {
+        data.rentPrice = finalRentPrice - adminFeeVal;
+      } else {
+        data.rentPrice = finalRentPrice;
+      }
+    }
+    console.log(`[JanIA-PriceSplit] ${txTypeForSplit} \u2192 price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
+  }
+  if (txTypeForSplit === "arriendo" || txTypeForSplit === "arriendo_temporal") {
+    const curP = data.price ? parseFloat(String(data.price)) : 0;
+    const curR = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    if (curR <= 0 && curP > 0 && curP < 1e8) {
+      data.rentPrice = curP;
+    }
+    data.price = "0";
+  }
+  if (txTypeForSplit === "venta") {
+    data.rentPrice = null;
+  }
+  const curRentVal = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+  const curSaleVal = data.price ? parseFloat(String(data.price)) : 0;
+  const curAdminVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+  if (curAdminVal > 0) {
+    if (curRentVal > 0 && (curAdminVal === curRentVal || curAdminVal >= curRentVal * 0.45) || curSaleVal > 0 && (curAdminVal === curSaleVal || curAdminVal >= curSaleVal * 0.2)) {
+      data.adminFee = 0;
+      console.log(`[JanIA-SanidadPredial] Corregida cuota de administraci\xF3n absurda/duplicada $${curAdminVal} \u2192 N/E (0)`);
+    }
+  }
+  const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
+  const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
+  if (isVentaType && (currentPriceVal < 1e8 || !data.price) && data.rawText) {
+    const fallbackD = extractFallbackDataFromText(data.rawText);
+    if (fallbackD.price >= 3e7) {
+      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
+        data.adminFee = fallbackD.adminFee;
+      }
+      data.price = fallbackD.price;
+      console.log(`[JanIA-SanidadPredial] Corregido precio de venta $${currentPriceVal} \u2192 Real: $${fallbackD.price} | AdminFee: $${data.adminFee}`);
+    } else if (currentPriceVal < 3e7) {
+      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && currentPriceVal >= 1e5 && currentPriceVal <= 3e7) {
+        data.adminFee = currentPriceVal;
+      }
+      data.price = 0;
+      console.log(`[JanIA-SanidadPredial] Precio de venta menor a 30M ($${currentPriceVal}) desambiguado como AdminFee: $${data.adminFee} y Price: 0 (N/E)`);
+    }
+  }
+  if (data.rawText) {
+    const fallbackD = extractFallbackDataFromText(data.rawText);
+    if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
+      data.adminFee = fallbackD.adminFee;
+    }
+    if ((!data.garages || Number(data.garages) <= 0) && fallbackD.garages > 0) {
+      data.garages = fallbackD.garages;
+    }
+    if ((!data.antiguedadAnos || Number(data.antiguedadAnos) <= 0) && fallbackD.antiguedadAnos !== null) {
+      data.antiguedadAnos = fallbackD.antiguedadAnos;
+    }
+    if (!data.areaTotal && !data.area && fallbackD.area > 0) {
+      data.areaTotal = fallbackD.area;
+    }
+    if (fallbackD.bedrooms > 0) {
+      if (data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0 || Number(data.bedrooms) !== fallbackD.bedrooms && /(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?)\b/i.test(data.rawText || "")) {
+        data.bedrooms = fallbackD.bedrooms;
+      }
+    }
+    if ((data.bathrooms === void 0 || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
+      data.bathrooms = fallbackD.bathrooms;
+    }
+  }
+  if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia") {
+    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name || data.location);
+    if (geoInferred) {
+      data.zone = geoInferred.barrio;
+      data.addressNeighborhood = geoInferred.barrio;
+      data.addressLocality = geoInferred.localidad;
+      data.city = data.city || geoInferred.ciudad;
+      console.log(`[JanIA-GeoResolver] \u{1F9ED} Inmueble: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
+    }
+  }
+  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
+  const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectivePropName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name) ? knownPropAdvisor.name : realName || null;
+  const insertData = {
+    ...data,
+    name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
+    zone: (() => {
+      const explicit = data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 100);
+      return "N/E";
+    })(),
+    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || data.zone;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
+    location: safeSlice(data.location, 255) || null,
+    matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalPropPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectivePropName, 255) || null,
+    propertyType: sanitizePropertyType(data.propertyType),
+    transactionType: sanitizeTransactionType(data.transactionType),
+    acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
+    currency: sanitizeCurrency(data.currency),
+    // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
+    price: (() => {
+      const isRent = sanitizeTransactionType(data.transactionType) === "arriendo" || sanitizeTransactionType(data.transactionType) === "arriendo_temporal";
+      if (isRent) {
+        return "0.00";
+      }
+      if (data.price === void 0 || data.price === null) return "0.00";
+      const v = parseFloat(String(data.price));
+      if (isNaN(v) || isPhoneNumberNotPrice(v, data.rawText)) return "0.00";
+      if (v > 5e10) return "0.00";
+      if (v < 3e7) return "0.00";
+      return String(v);
+    })(),
+    rentPrice: (() => {
+      const isPureSale = sanitizeTransactionType(data.transactionType) === "venta";
+      if (isPureSale) return null;
+      if (data.rentPrice === void 0 || data.rentPrice === null) return null;
+      const v = parseFloat(String(data.rentPrice));
+      if (isNaN(v) || v < 3e5 || v > 2e8 || isPhoneNumberNotPrice(v, data.rawText)) return null;
+      return String(v);
+    })(),
+    areaTotal: (() => {
+      const raw = data.areaTotal !== void 0 && data.areaTotal !== null ? data.areaTotal : data.area;
+      if (raw === void 0 || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 10 || v > 5e3) return null;
+      return String(v);
+    })(),
+    bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
+    bathrooms: (() => {
+      const rawL = (data.rawText || "").toLowerCase();
+      if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawL) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawL)) {
+        return 3;
+      }
+      if (data.bathrooms !== void 0 && data.bathrooms !== null) {
+        const num = Number(data.bathrooms);
+        if (num === 5 && /2[\.,]5/i.test(rawL)) return 3;
+        return Math.round(num);
+      }
+      return null;
+    })(),
+    garages: (() => {
+      if (data.garages === void 0 || data.garages === null) return null;
+      const g = Math.round(Number(data.garages));
+      if (isNaN(g) || g < 0) return null;
+      if (g >= 1900 && g <= 2100) return null;
+      if (g > 30) return null;
+      return g;
+    })(),
+    garageType: data.garageType || null,
+    // "independiente" | "lineal" | "mixto" | null (v20.0)
+    stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
+    adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
+    yearBuilt: data.yearBuilt !== void 0 && data.yearBuilt !== null ? Math.round(Number(data.yearBuilt)) : null,
+    antiguedadAnos: data.antiguedadAnos !== void 0 && data.antiguedadAnos !== null ? Math.round(Number(data.antiguedadAnos)) : null,
+    agentId: user ? user.id : null,
+    latitude: data.latitude !== void 0 && data.latitude !== null ? String(data.latitude) : null,
+    longitude: data.longitude !== void 0 && data.longitude !== null ? String(data.longitude) : null,
+    images: finalImages.length > 0 ? finalImages : null,
+    amenities: amenitiesObj,
+    origenTipo: data.origenTipo || null,
+    origenId: data.origenId || null,
+    origenNombre: data.origenNombre || null,
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
+  };
+  let portal = null;
+  let externalListingId = null;
+  let canonicalExternalId = null;
+  if (data.externalUrl) {
+    const extractedInfo = extractPortalAndListingId(data.externalUrl);
+    portal = extractedInfo.portal;
+    externalListingId = extractedInfo.listingId;
+    if (portal && externalListingId) {
+      canonicalExternalId = `${portal.toUpperCase()}:${externalListingId}`;
+    }
+  }
+  const finalInsertData = {
+    ...insertData,
+    portal,
+    externalListingId,
+    canonicalExternalId,
+    externalUrl: data.externalUrl || null,
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
+    republicacionesCount: 0,
+    estadoComercial: "ACTIVO",
+    ultimaActividad: "PUBLICACI\xD3N",
+    vigenciaIa: "VIGENTE",
+    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent),
+    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent)
+  };
+  let existing = [];
+  if (canonicalExternalId) {
+    existing = await db.select().from(properties).where(
+      and5(
+        eq8(properties.canonicalExternalId, canonicalExternalId),
+        eq8(properties.available, true)
+      )
+    ).limit(1);
+  }
+  if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
+    existing = await db.select().from(properties).where(
+      and5(
+        eq8(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+        eq8(properties.available, true)
+      )
+    ).limit(1);
+  }
+  if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
+    existing = await db.select().from(properties).where(
+      and5(
+        eq8(properties.rawText, finalInsertData.rawText.trim()),
+        eq8(properties.available, true)
+      )
+    ).limit(1);
+  }
+  if (existing.length === 0) {
+    existing = await db.select().from(properties).where(
+      and5(
+        eq8(properties.idUsuarioWhatsapp, rawPhone),
+        eq8(properties.propertyType, finalInsertData.propertyType),
+        eq8(properties.transactionType, finalInsertData.transactionType),
+        eq8(properties.city, finalInsertData.city),
+        eq8(properties.zone, finalInsertData.zone),
+        eq8(properties.available, true)
+      )
+    ).limit(1);
+  }
+  const { label: calif } = calcularCalificacionCompletitud(finalInsertData, true);
+  const insertDataWithCalif = {
+    ...finalInsertData,
+    calificacion: calif
+  };
+  if (existing.length > 0) {
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
+    const updatedCount = (existing[0].republicacionesCount || 0) + 1;
+    const [updated] = await db.update(properties).set({
+      available: true,
+      // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
+      price: insertDataWithCalif.price,
+      description: insertDataWithCalif.description || existing[0].description,
+      adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
+      images: finalImages.length > 0 ? finalImages : existing[0].images,
+      origenTipo: insertDataWithCalif.origenTipo,
+      origenId: insertDataWithCalif.origenId,
+      origenNombre: insertDataWithCalif.origenNombre || existing[0].origenNombre,
+      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
+      fechaUltimaPublicacion: getColombiaNow(),
+      updatedAt: /* @__PURE__ */ new Date(),
+      republicacionesCount: updatedCount,
+      estadoComercial: "REPUBLICADO",
+      ultimaActividad: "REPUBLICACI\xD3N",
+      vigenciaIa: "VIGENTE"
+    }).where(eq8(properties.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
+    try {
+      await db.insert(propertyPublicationHistory).values({
+        propertyId: existing[0].id,
+        grupo: insertDataWithCalif.origenNombre,
+        broker: realName,
+        brokerPhone: rawPhone,
+        accion: "REPUBLICACI\xD3N",
+        portal,
+        externalListingId,
+        detalles: `Inmueble republicado en ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
+      });
+    } catch (histErr) {
+      console.error("[JanIA-History] Error al registrar historial de republicaci\xF3n:", histErr);
+    }
+    findMatchesForProperty(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
+    return updated;
+  }
+  const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
+  findMatchesForProperty(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
+  try {
+    await db.insert(propertyPublicationHistory).values({
+      propertyId: result.id,
+      grupo: insertDataWithCalif.origenNombre,
+      broker: realName,
+      brokerPhone: rawPhone,
+      accion: "PUBLICACI\xD3N",
+      portal,
+      externalListingId,
+      detalles: `Inmueble ingresado por primera vez desde ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
+    });
+  } catch (histErr) {
+    console.error("[JanIA-History] Error al registrar historial inicial:", histErr);
+  }
+  if (result && imageUrl) {
+    try {
+      await db.insert(propertyImages).values({
+        propertyId: result.id,
+        imageUrl,
+        isMainImage: true,
+        displayOrder: 1,
+        mimeType: "image/jpeg",
+        uploadedBy: "janIA"
+      });
+      console.log(`[JanIA-SaveProperty] Registro en propertyImages creado para propiedad ${result.id}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error creando registro en propertyImages:", err);
+    }
+  }
+  return result;
+}
+async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
+  const db = await getDb();
+  if (!db) return null;
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name)) {
+    console.log(`[JanIA-Reject] \u{1F6AB} Requerimiento descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
+  const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
+  let reqPdfUrl;
+  if (pdfBuffer) {
+    try {
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const filename = `documents/req_doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
+      reqPdfUrl = uploadResult.url;
+      data.enlaceOrigen = data.enlaceOrigen || reqPdfUrl;
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
+    }
+  }
+  const isRequirementFlyer = !!(data.isFlyerOrBanner || data.flyerVerbatimText && data.flyerVerbatimText.trim().length >= 15);
+  if (imageBuffer && isRequirementFlyer) {
+    try {
+      const buffer = Buffer.from(imageBuffer, "base64");
+      const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
+      data.enlaceOrigen = uploadResult.url;
+      console.log(`[JanIA-SaveRequirement] \u2705 Flyer de requerimiento guardado localmente en VPS: ${uploadResult.url}`);
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
+    }
+  }
+  const rawLowerAll = `${rawTextContent} ${data.name || ""}`.toLowerCase();
+  const reqNoTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawLowerAll);
+  const reqRequiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(rawLowerAll);
+  const reqHasStudy = reqRequiresObligatoryStudy || rawLowerAll.includes("estudio") || rawLowerAll.includes("star de tv") || rawLowerAll.includes("estar de tv") || rawLowerAll.includes("sala de tv");
+  const reqPisoMinMatch = rawLowerAll.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const reqPisoMin = reqPisoMinMatch ? parseInt(reqPisoMinMatch[1], 10) : null;
+  const reqRequiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(rawLowerAll);
+  const reqAdminFeeInc = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(rawLowerAll);
+  const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
+  const characteristicsObj = {
+    gives: data.gives || data.caracteristicasDeseadas?.gives,
+    wants: data.wants || data.caracteristicasDeseadas?.wants,
+    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
+    cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
+    cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
+    lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
+    tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
+    depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
+    comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
+    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
+    estudio: reqRequiresObligatoryStudy ? "obligatorio" : reqHasStudy ? "deseado" : null,
+    pisoMinimo: reqPisoMin,
+    adminFeeIncluded: reqAdminFeeInc,
+    amoblado: reqIsAmoblado ? true : rawLowerAll.includes("sin amoblar") ? false : null
+  };
+  if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia")) {
+    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
+    if (geoInferred) {
+      data.zonaDeseada = geoInferred.barrio;
+      data.addressNeighborhood = geoInferred.barrio;
+      data.addressLocality = geoInferred.localidad;
+      data.ciudadDeseada = data.ciudadDeseada || geoInferred.ciudad;
+      console.log(`[JanIA-GeoResolver] \u{1F9ED} Requerimiento: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
+    }
+  }
+  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
+  const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
+  const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
+  const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
+  const insertData = {
+    ...data,
+    name: safeSlice(data.name, 255) || null,
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
+    zonaDeseada: (() => {
+      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) {
+        return safeSlice(extractPureBarrio(explicit) || explicit, 100);
+      }
+      if (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada)) {
+        return safeSlice(extractPureBarrio(fallbackReqD.zonaDeseada) || fallbackReqD.zonaDeseada, 100);
+      }
+      return null;
+    })(),
+    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada) ? fallbackReqD.zonaDeseada : null);
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
+    tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
+    tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
+    tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
+    monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
+    // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
+    presupuestoMin: (() => {
+      const raw = data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? data.presupuestoMin : null;
+      if (raw !== void 0 && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
+          return String(v);
+        }
+      }
+      if (fallbackReqD.presupuestoMin >= 3e5) {
+        return String(fallbackReqD.presupuestoMin);
+      }
+      return null;
+    })(),
+    presupuestoMax: (() => {
+      const raw = data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
+      if (raw !== void 0 && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
+          return String(v);
+        }
+      }
+      if (fallbackReqD.presupuestoMax >= 3e5) {
+        return String(fallbackReqD.presupuestoMax);
+      }
+      return null;
+    })(),
+    areaMin: (() => {
+      const raw = data.areaMin !== void 0 && data.areaMin !== null ? data.areaMin : data.area;
+      if (raw !== void 0 && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
+      }
+      if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
+        return String(fallbackReqD.areaMin || fallbackReqD.area);
+      }
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const areaFallback = rawL.match(
+        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con|metraje\s*(?:m[ií]nimo|min(?:imo)?))\s*[:=-]?\s*)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
+      );
+      if (areaFallback) {
+        const v = parseFloat(areaFallback[1].replace(",", "."));
+        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
+      }
+      return null;
+    })(),
+    adminFeeMax: (() => {
+      const raw = data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? data.adminFeeMax : data.adminFee !== void 0 && data.adminFee !== null ? data.adminFee : null;
+      if (raw !== void 0 && raw !== null) {
+        let v = parseFloat(String(raw));
+        if (!isNaN(v)) {
+          if (v >= 500 && v <= 15e3) v = v * 1e3;
+          if (v >= 1e4 && v <= 3e7) return String(v);
+        }
+      }
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const parsedAdminInfo = parseAdminFee(rawL);
+      if (parsedAdminInfo.fee && parsedAdminInfo.fee >= 1e4 && parsedAdminInfo.fee <= 3e7 && !isPhoneNumberNotPrice(parsedAdminInfo.fee, rawL)) {
+        return String(parsedAdminInfo.fee);
+      }
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
+      if (adminMatch) {
+        const cleanNum = adminMatch[1].replace(/[.,\s]/g, "");
+        let parsed = parseFloat(cleanNum);
+        if (!isNaN(parsed)) {
+          if (parsed >= 500 && parsed <= 15e3) parsed = parsed * 1e3;
+          if (parsed >= 1e4 && parsed <= 3e7 && !isPhoneNumberNotPrice(parsed, rawL)) {
+            return String(parsed);
+          }
+        }
+      }
+      return null;
+    })(),
+    habitacionesMin: (() => {
+      const v = data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null;
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.bedroomsMin > 0 || fallbackReqD.bedrooms > 0) {
+        return fallbackReqD.bedroomsMin || fallbackReqD.bedrooms;
+      }
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      if (m) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        return SPANISH_NUM_LOCAL[w] || parseInt(w, 10) || null;
+      }
+      return null;
+    })(),
+    banosMin: (() => {
+      const rawL = (data.rawText || "").toLowerCase();
+      const socialAddMatch = rawL.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+      if (socialAddMatch) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const bWord = socialAddMatch[1].toLowerCase();
+        const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
+        return base + 1;
+      }
+      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
+      if (v !== null && !isNaN(v) && v > 0) {
+        if (v === 5 && rawL.includes("2.5")) return 3;
+        return Math.round(v);
+      }
+      if (fallbackReqD.bathrooms > 0) {
+        return fallbackReqD.bathrooms;
+      }
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*hab\s*con\s*baño/i);
+      if (m) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        const num = SPANISH_NUM_LOCAL[w] || parseFloat(w.replace(",", "."));
+        if (!isNaN(num) && num > 0) {
+          if (num % 1 !== 0) return Math.ceil(num);
+          return Math.round(num);
+        }
+      }
+      return null;
+    })(),
+    parqueaderosMin: (() => {
+      const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.garages > 0) {
+        return fallbackReqD.garages;
+      }
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })(),
+    estratoDeseado: (() => {
+      const rawT = (data.rawText || "").toLowerCase();
+      const hasExplicitStratum = /(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i.test(rawT) || /\b(?:estrato|estr\.?)\s*(?:alto|medio|bajo)\b/i.test(rawT);
+      if (!hasExplicitStratum) {
+        return null;
+      }
+      if (data.estratoDeseado && Array.isArray(data.estratoDeseado) && data.estratoDeseado.length > 0) {
+        return data.estratoDeseado.map((e) => Math.round(Number(e))).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
+      }
+      if (data.stratum !== void 0 && data.stratum !== null && !isNaN(Number(data.stratum))) {
+        const s = Math.round(Number(data.stratum));
+        if (s >= 1 && s <= 6) return [s];
+      }
+      return null;
+    })(),
+    userId: user ? user.id : null,
+    caracteristicasDeseadas: characteristicsObj,
+    origenTipo: data.origenTipo || null,
+    origenId: data.origenId || null,
+    origenNombre: data.origenNombre || null,
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow(),
+    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !reqNoTerceriaMatch,
+    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : reqNoTerceriaMatch
+  };
+  const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const rawTextStr = (insertData.rawText || "").toLowerCase();
+  const isAmbiguousZoneName = (zn) => {
+    if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
+    const ambiguousPhrases = [
+      "todas las zonas",
+      "cualquier zona",
+      "cualquier lado",
+      "donde sea",
+      "varias zonas",
+      "por ahi",
+      "por ah\xED",
+      "buena zona",
+      "sector residencial",
+      "sector comercial",
+      "norte o sur",
+      "donde haya",
+      "cualquiera"
+    ];
+    return ambiguousPhrases.some((a) => zn.includes(a));
+  };
+  const hasPerimeterOrStreet = /calle\s*\d+|carrera\s*\d+|cra\s*\d+|cll\s*\d+|cl\s*\d+|diagonal\s*\d+|transversal\s*\d+|entre\s*calle|perimetro|perímetro/i.test(rawTextStr);
+  const isZoneAmbiguous = isAmbiguousZoneName(rawZoneStr);
+  if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
+    console.log(`[JANIA-INGESTION-GUARD] \u26D4 Requerimiento omitido por falta de ubicaci\xF3n expl\xEDcita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
+    return null;
+  }
+  let existing = [];
+  if (insertData.rawText && insertData.rawText.trim().length > 25) {
+    existing = await db.select().from(requirements).where(
+      eq8(requirements.rawText, insertData.rawText.trim())
+    ).limit(1);
+  }
+  if (existing.length === 0) {
+    existing = await db.select().from(requirements).where(
+      and5(
+        eq8(requirements.idUsuarioWhatsapp, rawPhone),
+        eq8(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq8(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq8(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq8(requirements.zonaDeseada, insertData.zonaDeseada)
+      )
+    ).limit(1);
+  }
+  const { label: calif } = calcularCalificacionCompletitud(insertData, false);
+  const insertDataWithCalif = {
+    ...insertData,
+    calificacion: calif
+  };
+  if (existing.length > 0) {
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
+    const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
+    const repCount = (existing[0].republicacionesCount || 0) + 1;
+    const [updated] = await db.update(requirements).set({
+      ...updateFields,
+      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
+      status: "active",
+      // Al ser republicado o actualizado, se reactiva a activo de inmediato
+      fechaUltimaPublicacion: getColombiaNow(),
+      republicacionesCount: repCount,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq8(requirements.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
+    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    return updated;
+  }
+  const insertDataFinal = {
+    ...insertDataWithCalif,
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
+    republicacionesCount: 0,
+    status: "active"
+  };
+  const [result] = await db.insert(requirements).values(insertDataFinal).returning();
+  findMatchesForRequirement(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
+  return result;
+}
+async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType, groupJid, groupName, flyerVisionData) {
+  try {
+    let isScrapeable2 = function(url) {
+      try {
+        const hostname = new URL(url).hostname.replace("www.", "").toLowerCase();
+        return !SCRAPE_BLOCKLIST.some((blocked) => hostname.includes(blocked));
+      } catch {
+        return false;
+      }
+    };
+    var isScrapeable = isScrapeable2;
+    const isWebUser = userId.startsWith("web-");
+    if (text2 && !text2.includes("__is_sub_message__")) {
+      const subBlocks = splitMultiItemMessage(text2);
+      if (subBlocks.length >= 2) {
+        console.log(`[JanIA-MultiItemSplitter] \u{1F680} Ingestando ${subBlocks.length} publicaciones individuales de manera independiente...`);
+        let finalResult = { classification: "INMUEBLE", response: "", inserted: true };
+        for (const subText of subBlocks) {
+          finalResult = await processWhatsAppMessage(
+            `${subText}
+__is_sub_message__`,
+            userId,
+            userName,
+            hasMedia,
+            scrapedData,
+            audioUrl,
+            imageBuffer,
+            isGroup,
+            pdfBuffer,
+            pdfMimeType,
+            groupJid,
+            groupName,
+            flyerVisionData
+          );
+        }
+        return finalResult;
+      }
+    }
+    if (!isWebUser && text2) {
+      const checkText = text2.toLowerCase();
+      if (isNonRealEstateText(checkText)) {
+        console.log(`[JANIA-NON-REALESTATE-GUARD] \u26D4 Publicaci\xF3n NO inmobiliaria (canteras, materiales, minas, veh\xEDculos, carb\xF3n, etc.). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji: "${checkText.substring(0, 60)}..."`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: void 0,
+          inserted: false
+        };
+      }
+      const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
+      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: void 0,
+          inserted: false
+        };
+      }
+    }
+    const rawPhone = userId.split("@")[0];
+    const realName = await resolveRealName(userId, userName);
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
+    const n = extractFirstName(realName) || "colega";
+    const session = await getPendingSession(userId);
+    if (session) {
+      const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
+      await deletePendingSession(userId);
+      console.log(`[JanIA-PendingSession] Resolviendo sesi\xF3n pendiente para ${userId}. Combinando textos y re-procesando...`);
+      return await processWhatsAppMessage(
+        combinedText,
+        userId,
+        userName,
+        hasMedia || !!session.imageBuffer,
+        scrapedData,
+        audioUrl,
+        imageBuffer || session.imageBuffer,
+        isGroup,
+        pdfBuffer,
+        pdfMimeType,
+        groupJid
+      );
+    }
+    const trimmedTextForUrl = text2.trim();
+    const urlLineOnly = trimmedTextForUrl.split("\n").find((l) => /^https?:\/\/\S+$/.test(l.trim()));
+    const isSoloUrlMsg = !!urlLineOnly && trimmedTextForUrl.replace(/\s+/g, "").length <= urlLineOnly.replace(/\s+/g, "").length + 5;
+    if (isSoloUrlMsg && urlLineOnly && esDominioPermitido(urlLineOnly.trim())) {
+      const soloUrl = urlLineOnly.trim();
+      const TEN_MIN_AGO = new Date(Date.now() - 10 * 60 * 1e3);
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("DB no disponible");
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and5(
+          eq8(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+          gte2(properties.createdAt, TEN_MIN_AGO),
+          eq8(properties.available, true)
+        )).orderBy(desc3(properties.createdAt)).limit(1);
+        if (recentProps.length > 0) {
+          const prop = recentProps[0];
+          const portalInfo = extractPortalAndListingId(soloUrl);
+          const updatedRaw = (prop.rawText || "").trimEnd().endsWith(":") ? `${prop.rawText}
+${soloUrl}` : `${prop.rawText}
+
+\u{1F517} Info y galer\xEDa:
+${soloUrl}`;
+          await db.update(properties).set({
+            externalUrl: soloUrl,
+            rawText: updatedRaw,
+            origenNombre: prop.origenNombre || groupName || void 0,
+            origenId: groupJid || void 0,
+            ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
+            ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
+          }).where(eq8(properties.id, prop.id));
+          console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
+          return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
+        }
+      } catch (urlPatchErr) {
+        console.warn(`[JanIA-URLDiferida] \u26A0\uFE0F Error al enlazar URL diferida: ${urlPatchErr instanceof Error ? urlPatchErr.message : String(urlPatchErr)}`);
+      }
+    }
+    let messageToProcess = text2;
+    const rawUserText = text2;
+    const SCRAPE_BLOCKLIST = [
+      "wa.me",
+      "whatsapp.com",
+      "whatsapp.net",
+      "facebook.com",
+      "fb.com",
+      "fb.watch",
+      "instagram.com",
+      "youtube.com",
+      "youtu.be",
+      "tiktok.com",
+      "twitter.com",
+      "x.com",
+      "linkedin.com",
+      "maps.google.com",
+      "photos.app.goo.gl",
+      "photos.google.com",
+      "drive.google.com",
+      "docs.google.com",
+      "bit.ly",
+      "tinyurl.com",
+      "goo.gl"
+    ];
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = text2.match(urlRegex);
+    let jinaExtractedText = "";
+    if (urls && urls.length > 0) {
+      for (const url of urls) {
+        if (!isScrapeable2(url)) {
+          console.log(`[Scraper-Bypass] Dominio bloqueado, omitiendo scraping: ${url}`);
+          continue;
+        }
+        let content = await scrapeUrlWithBypass(url);
+        if (content) {
+          content = content.replace(/!\[.*?\]\(.*?\)/g, "").replace(/^https?:\/\/[^\s]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+          if (content.length > 50) {
+            jinaExtractedText += `
+
+[CONTENIDO DE ENLACE WEB EXTRA\xCDDO DE ${url}]:
+${content.substring(0, 15e3)}
+[FIN CONTENIDO ENLACE]
+`;
+          }
+        }
+      }
+    }
+    if (jinaExtractedText) {
+      messageToProcess += jinaExtractedText;
+    }
+    if (!isWebUser && messageToProcess) {
+      const checkText = messageToProcess.toLowerCase();
+      const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
+      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: void 0,
+          inserted: false
+        };
+      }
+    }
+    if (!isWebUser && !pdfBuffer) {
+      const wordCount = (text2.match(/\S+/g) || []).length;
+      const emojiPropertyStarters = (text2.match(/(?:🏡|🏠|🏢|🔑|💥|🌷|🌺|🌸|⭐|✨|🔥|🎯|📍)/g) || []).length;
+      const hasMultipleStarters = emojiPropertyStarters >= 2 || wordCount > 200;
+      if (wordCount > 150 && hasMultipleStarters) {
+        console.log(`[CHUNKER] \u{1F4E6} Mensaje largo (${wordCount} palabras, ${emojiPropertyStarters} emojis-inicio). Fragmentando...`);
+        const parentUrl = urls && urls.length > 0 ? urls[0] : null;
+        const parentPhone = normalizePhoneNumber(userId, text2);
+        const emojiSplitPattern = /(?=\n\s*(?:🏡|🏠|🏢|🏗|🏘|🔑|💥|🌷|🌸|🌺|🌻|🌹|⭐|✨|🔥|💫|🎯|📍))/g;
+        let rawChunks = text2.split(emojiSplitPattern).map((c) => c.trim()).filter((c) => c.length > 80);
+        if (rawChunks.length < 2) {
+          rawChunks = text2.split(/\n{3,}/).map((c) => c.trim()).filter((c) => c.length > 80);
+        }
+        if (rawChunks.length >= 2) {
+          console.log(`[CHUNKER] \u2702\uFE0F Fragmentado en ${rawChunks.length} publicaciones independientes.`);
+          let firstResult = null;
+          for (let idx = 0; idx < rawChunks.length; idx++) {
+            const chunk = rawChunks[idx];
+            const chunkWords = (chunk.match(/\S+/g) || []).length;
+            if (chunkWords < 15) {
+              console.log(`[CHUNKER] \u23ED\uFE0F Fragmento ${idx + 1} ignorado (muy corto: ${chunkWords} palabras).`);
+              continue;
+            }
+            let enriched = chunk;
+            if (parentPhone && !enriched.includes(parentPhone.replace("+", ""))) {
+              enriched += `
+\u{1F4DE} ${parentPhone}`;
+            }
+            if (parentUrl && !enriched.includes(parentUrl)) {
+              enriched += `
+\u{1F517} ${parentUrl}`;
+            }
+            console.log(`[CHUNKER] \u{1F504} Procesando fragmento ${idx + 1}/${rawChunks.length}: "${chunk.substring(0, 60)}..."`);
+            try {
+              const chunkResult = await processWhatsAppMessage(
+                enriched,
+                userId,
+                userName,
+                false,
+                [],
+                void 0,
+                imageBuffer,
+                isGroup,
+                void 0,
+                void 0,
+                groupJid,
+                groupName
+              );
+              if (chunkResult.inserted) {
+                console.log(`[CHUNKER] \u2705 Fragmento ${idx + 1} insertado como ${chunkResult.classification}.`);
+              }
+              if (!firstResult && chunkResult.classification !== "CONSULTA_GENERAL") {
+                firstResult = chunkResult;
+              }
+            } catch (ce) {
+              console.error(`[CHUNKER] \u274C Error fragmento ${idx + 1}:`, ce?.message || ce);
+            }
+          }
+          if (firstResult) return firstResult;
+          console.log(`[CHUNKER] \u26A0\uFE0F Ning\xFAn fragmento v\xE1lido. Procesando como mensaje \xFAnico.`);
+        }
+      }
+    }
+    let isFromAudio = false;
+    const cleanText = text2.toLowerCase().trim();
+    const isMediaOrAudio = hasMedia || !!audioUrl || !!imageBuffer || !!pdfBuffer;
+    if (!isWebUser && !isMediaOrAudio && cleanText.length > 15) {
+      const onTopicKeywords = [
+        "apto",
+        "apartamento",
+        "casa",
+        "lote",
+        "finca",
+        "bodega",
+        "oficina",
+        "local",
+        "inmueble",
+        "propiedad",
+        "predio",
+        "terreno",
+        "proyecto",
+        "arriendo",
+        "alquiler",
+        "vendo",
+        "venta",
+        "compro",
+        "compra",
+        "busco",
+        "ofrezco",
+        "necesito",
+        "permuto",
+        "venpermuto",
+        "estrato",
+        "m2",
+        "metros",
+        "habitacion",
+        "habitaci\xF3n",
+        "alcoba",
+        "alcobas",
+        "ba\xF1o",
+        "ba\xF1os",
+        "cocina",
+        "garaje",
+        "garajes",
+        "parqueadero",
+        "parqueaderos",
+        "canon",
+        "administracion",
+        "administraci\xF3n",
+        "precio",
+        "millones",
+        "cop",
+        "arrendar",
+        "vender",
+        "comprar",
+        "bogota",
+        "bogot\xE1",
+        "medellin",
+        "medell\xEDn",
+        "cali",
+        "barranquilla",
+        "bucaramanga",
+        "cartagena",
+        "barrio",
+        "sector",
+        "zona",
+        "calle",
+        "carrera",
+        "avenida",
+        "contrato",
+        "arrendamiento",
+        "promesa",
+        "escritura",
+        "notaria",
+        "notar\xEDa",
+        "registro",
+        "sucesi\xF3n",
+        "sucesion",
+        "herencia",
+        "embargo",
+        "saneamiento",
+        "comision",
+        "comisi\xF3n",
+        "corretaje",
+        "aval\xFAo",
+        "avaluo",
+        "jania",
+        "vecy",
+        "bot",
+        "ayuda",
+        "c\xF3mo",
+        "como",
+        "funciona",
+        "publicar",
+        "registrar",
+        "match",
+        "coincidencia",
+        "contacto",
+        "cuenta",
+        "hola",
+        "gracias",
+        "saludo",
+        "req",
+        "tengo",
+        "disponible",
+        "cliente",
+        "clientes",
+        "comprando",
+        "buscando",
+        "solicito",
+        "solicitamos",
+        "piso",
+        "balcon",
+        "balc\xF3n",
+        "terraza",
+        "deposito",
+        "dep\xF3sito",
+        "conjunto",
+        "edificio",
+        "ph",
+        "penthouse",
+        "duplex",
+        "d\xFAplex",
+        "triplex",
+        "tr\xEDplex",
+        "estudio"
+      ];
+      const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
+      if (!hasOnTopicKeyword) {
+        console.log(`[JanIA-OffTopic] Mensaje fuera de tema detectado para ${userId} en ${groupJid || "DM"}: "${text2.substring(0, 50)}...".`);
+        let staticText = "";
+        if (isGroup || groupJid) {
+          const jid = groupJid || "";
+          let groupRulesName = "el grupo";
+          let acceptedTopics = "publicar y buscar propiedades para hacer matching comercial de inmuebles y requerimientos";
+          if (jid === "120363417740040773@g.us") {
+            groupRulesName = "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}";
+            acceptedTopics = "tips, noticias, debates y consultas inmobiliarias (jur\xEDdicas, contratos, arrendamientos, tributaci\xF3n y estudios de mercado)";
+          } else if (jid === "120363403507276533@g.us") {
+            groupRulesName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
+            acceptedTopics = "temas libres del sector inmobiliario, foros, debates, experiencias del negocio y sugerencias sobre VECY BIENES RA\xCDCES";
+          } else {
+            groupRulesName = "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}";
+            acceptedTopics = "publicaci\xF3n directa de ofertas (Inmuebles) y demandas (Requerimientos) comerciales";
+          }
+          staticText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}. Detect\xE9 que tu publicaci\xF3n trata sobre un tema que no corresponde al prop\xF3sito de este canal (fechas festivas, pol\xEDtica, religi\xF3n o contenido ajeno al corretaje).
+
+Te recuerdo que en el grupo *${groupRulesName}* solo se admiten temas de: **${acceptedTopics}**.
+
+Te solicito amablemente que elimines tu mensaje para mantener el orden del chat, y te invito a revisar y comprender las normas completas del grupo que se encuentran en su descripci\xF3n. \xA1Gracias por tu colaboraci\xF3n y cultura de red! \u{1F91D}\u{1F680}`;
+        } else {
+          staticText = `Hola ${realName || "colega"} \u{1F44B}\u{1F3FB}. Como asistente de VECY Bienes Ra\xEDces, estoy entrenada exclusivamente para ayudarte con temas de bienes ra\xEDces (buscar, publicar o cruzar inmuebles), asesor\xEDas legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. \u{1F3E0}\u2728
+
+Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con gusto te responder\xE9! \u{1F60A}`;
+        }
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: staticText,
+          dmResponse: staticText,
+          reactionEmoji: "\u{1F6AB}"
+        };
+      }
+    }
+    if (audioUrl) {
+      if (audioUrl.startsWith("mock-audio:")) {
+        messageToProcess = audioUrl.replace("mock-audio:", "");
+        isFromAudio = true;
+      } else {
+        console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
+        const transcription = await transcribeAudio({ audioUrl });
+        if (!("error" in transcription)) {
+          messageToProcess = transcription.text;
+          isFromAudio = true;
+        }
+      }
+    }
+    let flyerData = flyerVisionData;
+    if (!flyerData && imageBuffer) {
+      console.log(`[JanIA] \u{1F441}\uFE0F Analizando imagen/flyer con visi\xF3n artificial especializada...`);
+      try {
+        flyerData = await extractFlyerVision(imageBuffer);
+      } catch (errVision) {
+        console.warn(`[JanIA] \u26A0\uFE0F Error en extractFlyerVision:`, errVision?.message || errVision);
+      }
+    }
+    const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
+    if (isGenuineFlyerData && flyerData) {
+      const verbatim = flyerData.flyerVerbatimText || "";
+      if (verbatim) {
+        messageToProcess = messageToProcess && messageToProcess.trim() !== "" && !messageToProcess.includes("[Publicaci\xF3n de Imagen") ? `${messageToProcess}
+
+[FICHA T\xC9CNICA EXTRA\xCDDA DEL FLYER]:
+${verbatim}` : verbatim;
+      }
+    } else if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
+      messageToProcess = "[Fotograf\xEDa ambiental sin texto publicitario]";
+    }
+    let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
+    if (isFromAudio) {
+      contextText += `
+[SISTEMA - NOTA DE VOZ]: El usuario te envi\xF3 este mensaje como nota de voz (audio). Dado que te enviaron audio, es preferible y de alta importancia que respondas en audio ("wantsVoice": true) si tu respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres). **EXCEPCI\xD3N CR\xCDTICA**: Si el usuario te pide expl\xEDcitamente que le respondas por audio, nota de voz o de viva voz por cualquier raz\xF3n, debes omitir el l\xEDmite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural. Si la respuesta requiere explicaciones largas, tablas o minutas/contratos y el usuario NO pidi\xF3 expresamente que fuera audio, responde obligatoriamente por escrito ("wantsVoice": false).`;
+    }
+    if (scrapedData.length > 0) contextText += `
+[SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
+    if (imageBuffer) {
+      contextText += `
+[SISTEMA - AN\xC1LISIS MULTIMODAL DE IMAGEN / FLYER / BANNER (OCR Y VISI\xD3N COMERCIAL)]:
+Se ha adjuntado una imagen. Anal\xEDzala con visi\xF3n artificial avanzada y determina:
+1. "isFlyerOrBanner":
+   - Asigna TRUE si la imagen es una infograf\xEDa publicitaria, flyer comercial, banner, afiche o collage que contiene texto tipogr\xE1fico impreso con especificaciones inmobiliarias de OFERTA (precio, \xE1rea, alcobas, ba\xF1os, garajes, sector, tel\xE9fono de contacto) o de DEMANDA (b\xFAsqueda de cliente, compro casa/apto, presupuesto, sectores solicitados).
+   - Asigna FALSE si es simplemente una FOTOGRAF\xCDA AMBIENTAL COM\xDAN (foto fotogr\xE1fica de una sala, comedor, cocina, fachada, ba\xF1o, l\xE1mpara, etc.) SIN texto publicitario estructurado.
+2. Si "isFlyerOrBanner" es TRUE:
+   - Transcribe TODO el texto literal y legible de la imagen en "flyerVerbatimText".
+   - Extrae todas las especificaciones num\xE9ricas y textuales en "extractedData" (precio, rentPrice, adminFee, area, bedrooms, bathrooms, garages, stratum, zone, city, contactPhone, propertyType, transactionType).
+   - Clasifica como "INMUEBLE" si describe una oferta de venta/arriendo, o como "REQUERIMIENTO" si describe una b\xFAsqueda o demanda de cliente comprador/arrendatario.
+3. Si "isFlyerOrBanner" es FALSE y el mensaje NO contiene una ficha t\xE9cnica escrita por el usuario, clasifica como "CONSULTA_GENERAL" con "inserted": false.`;
+    }
+    if (pdfBuffer) contextText += `
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
+    const statsSummary = await getLiveStats();
+    if (statsSummary) {
+      contextText += `
+${statsSummary}`;
+    }
+    const firstName = extractFirstName(realName) || "colega";
+    const bogotaTime = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
+    const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado";
+    const outsideHours = isWebUser ? false : isOutsideWorkingHours();
+    const estadoOperacion = outsideHours ? "fuera_de_horario" : "en_horario";
+    const greetingInstruction = `
+
+[SISTEMA - METADATOS DEL MENSAJE (VARIABLES CR\xCDTICAS)]:
+- {{hora}}: ${bogotaTime}
+- {{canal}}: ${isWebUser ? "Consola Web 24/7" : isGroup ? `Grupo WhatsApp - [${groupName || "Grupo Inmobiliario WhatsApp"}]` : "dm"}
+- {{genero}}: ${userGender}
+- {{es_nuevo_usuario}}: ${!alreadyGreeted ? "true" : "false"}
+- {{estado_operacion}}: ${estadoOperacion}
+
+[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Tipo de conversaci\xF3n actual: ${isWebUser ? "CHAT WEB DE LIBRE ALBEDR\xCDO 24/7" : isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
+- Primer nombre del usuario: "${firstName}".
+- REGLAS CR\xCDTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es S\xCD (solo aplica a WhatsApp):
+    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+  * En CHAT WEB 24/7: Conversa libremente, saluda si es natural o ve directo al tema de forma elocuente y amigable.`;
+    contextText += greetingInstruction;
+    if (isWebUser) {
+      contextText += `
+
+[INSTRUCCI\xD3N MAESTRA - CHAT WEB DE LIBRE ALBEDR\xCDO 24/7]:
+Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Bienes Ra\xEDces.
+- Tienes LIBERTAD TOTAL DE RAZONAMIENTO Y PENSAMIENTO (Libre Albedr\xEDo 24/7).
+- NUNCA apliques restricciones de grupos de WhatsApp, horarios de oficina ni bloqueos de temas.
+- Responde a cualquier inquietud general, jur\xEDdica, de aval\xFAos, c\xE1lculo financiero o conversaci\xF3n inmobiliaria con razonamiento profundo, calidez y elocuencia.
+- Si el usuario te env\xEDa un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la informaci\xF3n.`;
+    }
+    if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
+      const saludo = getGreetingByTime();
+      contextText += `
+[INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
+Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
+"\xA1${saludo}, *${n}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de VECY, creada y entrenada por el equipo de desarrollo de VECY Bienes Ra\xEDces. Estoy aqu\xED para atenderte de forma personalizada, resolver tus inquietudes y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos regresan a su horario habitual de 8:00 am a 8:00 pm. \u{1F680}\u{1F91D} \xBFCu\xE9ntame en qu\xE9 puedo ayudarte en este momento?"
+Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Adem\xE1s, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versi\xF3n hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin vi\xF1etas o asteriscos de negrita) para que el usuario reciba un audio de tu voz present\xE1ndote de forma humana.`;
+    }
+    const textLower = messageToProcess.toLowerCase();
+    const isReplicationRequest = textLower.includes("replica") || textLower.includes("repite") || textLower.includes("lee este") || textLower.includes("lee esto") || textLower.includes("lee literalmente") || textLower.includes("di literalmente") || textLower.includes("reproduce");
+    if (isReplicationRequest) {
+      contextText += `
+[INSTRUCCI\xD3N CR\xCDTICA DE REPLICACI\xD3N LITERAL DE AUDIO]: El usuario te est\xE1 pidiendo de manera expl\xEDcita que repliques, repitas o leas un texto o p\xE1rrafo espec\xEDfico en una nota de voz/audio.
+Por lo tanto, DEBES hacer lo siguiente:
+1. Establece obligatoriamente "wantsVoice": true.
+2. En el campo "voiceResponse", coloca EXACTAMENTE el texto o p\xE1rrafo literal que el usuario te solicit\xF3 que leyeras, eliminando emojis y markdown (como asteriscos o negritas) para que el sintetizador de voz lo lea de forma fluida y natural, sin deletrear. Por ejemplo, si te dice "replica esto: COMPROMISO DE HONOR VECY", el campo "voiceResponse" debe contener el texto de ese compromiso literalmente.
+3. En el campo "response", coloca tambi\xE9n el texto literal con su formato y emojis correspondientes.
+4. NUNCA respondas con confirmaciones conversacionales como "\xA1Entendido, colega! He procesado el comunicado...", ni agregues discursos tuyos. Tu respuesta "response" y "voiceResponse" debe ser \xFAnicamente el texto que te pidieron leer de forma exacta y literal.`;
+    }
+    const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
+    const isLegalQuery = (textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria")) && !textLower.includes("50/50") && !textLower.includes("50-50");
+    const isListingOrReq = hasRealEstateTextKeyword(textLower);
+    const enableSearch = !isListingOrReq && (isValuationQuery || isLegalQuery || textLower.includes("buscar en google"));
+    const history = isGroup || groupJid ? [] : await getRecentChatHistory(userId, 20);
+    const liveStats = await getLiveStats();
+    const systemContent = liveStats ? `${buildSystemPrompt(groupJid)}
+
+${liveStats}` : buildSystemPrompt(groupJid);
+    const llmMessages = [
+      { role: "system", content: systemContent }
+    ];
+    if (history.length > 0) {
+      if (history[history.length - 1].role === "user" && history[history.length - 1].content.trim() === contextText.trim()) {
+        history.pop();
+      }
+      llmMessages.push(...history);
+    }
+    llmMessages.push({ role: "user", content: contextText });
+    let result;
+    const isPureFlyer = isGenuineFlyerData && flyerData && (!text2 || text2.trim().length < 60 || text2.includes("[Publicaci\xF3n de Imagen") || text2.includes("[Fotograf\xEDa ambiental"));
+    if (flyerData && isPureFlyer) {
+      const fd = flyerData;
+      console.log(`[JanIA] \u26A1 Fast-Path Vision activado: flyer comercial '${fd.title || fd.classification}' estructurado directamente sin invocar prompt legal masivo.`);
+      const tx = (fd.transactionType || "").toLowerCase();
+      const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
+      const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
+      let emoji = "\u{1F44D}";
+      if (fd.classification === "INMUEBLE") {
+        emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+      } else {
+        emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+      }
+      result = {
+        classification: fd.classification,
+        response: `Ficha t\xE9cnica capturada exitosamente desde el flyer comercial: ${fd.title || ""}`,
+        reactionEmoji: emoji,
+        isFlyerOrBanner: true,
+        flyerVerbatimText: fd.flyerVerbatimText,
+        extractedData: {
+          title: fd.title,
+          propertyType: fd.propertyType,
+          transactionType: fd.transactionType,
+          price: fd.price,
+          rentPrice: fd.rentPrice,
+          presupuestoMax: fd.presupuestoMax,
+          area: fd.area,
+          bedrooms: fd.bedrooms,
+          bathrooms: fd.bathrooms,
+          garages: fd.garages,
+          city: fd.city || "Bogot\xE1, D.C.",
+          zone: fd.zone,
+          contactPhone: fd.contactPhone,
+          contactName: fd.contactName,
+          rawText: fd.flyerVerbatimText || messageToProcess
+        },
+        mentions: []
+      };
+    } else if (!isWebUser && !imageBuffer && !pdfBuffer && !isFromAudio && !isReplicationRequest && !isValuationQuery && !isLegalQuery && groupJid !== "120363388701980315@g.us" && groupJid !== "120363386903264426@g.us" && (() => {
+      const cleanLower = messageToProcess.toLowerCase();
+      const detData = extractFallbackDataFromText(messageToProcess);
+      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const hasDetPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanLower);
+      const hasDetTx = /\b(?:arriendo|arrienda|renta|rento|rentamos|alquilo|alquiler|canon|vendo|venta|vende|permuta)\b/i.test(cleanLower);
+      const isHighConfidenceListing = hasDetPropType && hasDetTx && (detData.price > 0 || detData.rentPrice > 0 || detData.area > 0 || detData.bedrooms > 0);
+      const isHighConfidenceDemand = isDetDemand && (hasDetPropType || detData.presupuestoMax > 0);
+      return isHighConfidenceListing || isHighConfidenceDemand;
+    })()) {
+      const cleanLower = messageToProcess.toLowerCase();
+      const detData = extractFallbackDataFromText(messageToProcess);
+      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isRent = detData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+      const isPermuta = detData.transactionType.includes("permuta");
+      const classification = isDetDemand ? "REQUERIMIENTO" : "INMUEBLE";
+      const emoji = classification === "INMUEBLE" ? isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}" : isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+      console.log(`[JanIA] \u26A1 Fast-Path Determinista Activado (0ms, $0 COP): Publicaci\xF3n '${classification}' estructurada directamente sin consumir cuota LLM.`);
+      result = {
+        classification,
+        response: "",
+        reactionEmoji: emoji,
+        extractedData: {
+          title: detData.name || (classification === "INMUEBLE" ? `Inmueble en ${detData.city || "Bogot\xE1"}` : `Requerimiento en ${detData.city || "Bogot\xE1"}`),
+          propertyType: detData.propertyType || "apartment",
+          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          price: detData.price,
+          rentPrice: detData.rentPrice,
+          adminFee: detData.adminFee,
+          presupuestoMax: detData.presupuestoMax,
+          presupuestoMin: detData.presupuestoMin,
+          adminFeeMax: detData.adminFee,
+          area: detData.area,
+          bedrooms: detData.bedrooms,
+          bathrooms: detData.bathrooms,
+          garages: detData.garages,
+          stratum: detData.stratum,
+          city: detData.city || "Bogot\xE1, D.C.",
+          zone: detData.neighborhood || "Bogot\xE1",
+          contactPhone: rawPhone,
+          rawText: messageToProcess
+        },
+        mentions: []
+      };
+    } else {
+      const response = await invokeLLM({
+        messages: llmMessages,
+        responseFormat: { type: "json_object", schema: janiaResultSchema },
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        enableSearch
+      });
+      const llmRes = response;
+      if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicaci\xF3n con el LLM");
+      const rawContent = llmRes.choices[0].message.content;
+      try {
+        result = parseSafeJSON(rawContent);
+      } catch (parseErr) {
+        console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
+        const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
+        const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
+        const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
+        let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
+        if (!fallbackText) {
+          const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
+          if (truncatedMatch) {
+            fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, "");
+          }
+        }
+        const inferredClass = extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO" ? extractedClass : "CONSULTA_GENERAL";
+        if (fallbackText && fallbackText.trim() !== "") {
+          result = {
+            classification: inferredClass,
+            response: fallbackText.trim(),
+            mentions: []
+          };
+        } else if (rawContent && rawContent.trim() !== "") {
+          const cleanContent = rawContent.replace(/"classification"\s*:\s*"[^"]*"/gi, "").replace(/"response"\s*:\s*"/gi, "").replace(/[\{\}\[\]"]/g, "").replace(/classification:\s*\w+,?/gi, "").replace(/response:\s*/gi, "").trim();
+          result = {
+            classification: inferredClass,
+            response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
+            mentions: []
+          };
+        } else {
+          throw parseErr;
+        }
+      }
+    }
+    result.mentions = result.mentions || [];
+    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+      result.isFlyerOrBanner = true;
+      result.flyerVerbatimText = flyerData.flyerVerbatimText;
+      if (result.classification === "CONSULTA_GENERAL" || !result.classification || result.classification === "DATOS_INCOMPLETOS") {
+        result.classification = flyerData.classification;
+      }
+      result.reactionEmoji = result.reactionEmoji || flyerData.reactionEmoji;
+      result.extractedData = {
+        ...result.extractedData || {},
+        title: result.extractedData?.title || flyerData.title,
+        propertyType: result.extractedData?.propertyType || flyerData.propertyType,
+        transactionType: result.extractedData?.transactionType || flyerData.transactionType,
+        price: result.extractedData?.price && Number(result.extractedData.price) > 0 ? result.extractedData.price : flyerData.price,
+        rentPrice: result.extractedData?.rentPrice && Number(result.extractedData.rentPrice) > 0 ? result.extractedData.rentPrice : flyerData.rentPrice,
+        presupuestoMax: result.extractedData?.presupuestoMax && Number(result.extractedData.presupuestoMax) > 0 ? result.extractedData.presupuestoMax : flyerData.presupuestoMax,
+        area: result.extractedData?.area && Number(result.extractedData.area) > 0 ? result.extractedData.area : flyerData.area,
+        bedrooms: result.extractedData?.bedrooms ?? flyerData.bedrooms,
+        bathrooms: result.extractedData?.bathrooms ?? flyerData.bathrooms,
+        garages: result.extractedData?.garages ?? flyerData.garages,
+        city: result.extractedData?.city || flyerData.city,
+        zone: result.extractedData?.zone || flyerData.zone,
+        contactPhone: result.extractedData?.contactPhone || flyerData.contactPhone,
+        contactName: result.extractedData?.contactName || flyerData.contactName,
+        isFlyerOrBanner: true,
+        flyerVerbatimText: flyerData.flyerVerbatimText
+      };
+      console.log(`[JanIA-Vision] \u{1F4D1} Datos de flyer integrados a result. (Clasificaci\xF3n: ${result.classification}, Emoji: ${result.reactionEmoji})`);
+    }
+    if (messageToProcess) {
+      const isAmendmentHandled = await handleAmendmentUpdate(userId, messageToProcess);
+      if (isAmendmentHandled) {
+        console.log(`[JANIA-AMENDMENT] Mensaje procesado como enmienda de 2h para ${userId}. Operando en Modo Fantasma 100% silencioso.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        result.response = "";
+        result.dmResponse = "";
+        result.shouldSendDM = false;
+        result.reactionEmoji = void 0;
+        return result;
+      }
+    }
+    if (messageToProcess) {
+      const cleanText2 = messageToProcess.toLowerCase();
+      const isSpamOrWebinar = cleanText2.includes("zoom.us") || cleanText2.includes("us06web.zoom.us") || cleanText2.includes("chat.whatsapp.com") || cleanText2.includes("\xFAnase a nuestra reuni\xF3n") || cleanText2.includes("unase a nuestra reunion") || cleanText2.includes("entrenamiento 100% gratuito") || cleanText2.includes("estrategias en redes sociales") || cleanText2.includes("como funcionan las ventas") || cleanText2.includes("invitaci\xF3n al chat en grupo") || cleanText2.includes("invitacion al chat en grupo") || cleanText2.includes("unirme al grupo") || cleanText2.includes("m\xE1ster class") || cleanText2.includes("masterclass") || cleanText2.includes("taller gratuito") || cleanText2.includes("capacitaci\xF3n gratuita") || cleanText2.includes("capacitacion gratuita");
+      if (isSpamOrWebinar && !cleanText2.includes("vendo") && !cleanText2.includes("busco") && !cleanText2.includes("se vende") && !cleanText2.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${cleanText2.substring(0, 50)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.inserted = false;
+        result.response = "";
+        result.dmResponse = "";
+        result.shouldSendDM = false;
+        result.reactionEmoji = void 0;
+        return result;
+      }
+      const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|requerimientos|necesito|necesitamos|solicito|solicitamos|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|busca cliente|cliente busca|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText2);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|canon|alquilo|alquilamos|alquiler directo|rento|rentamos|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|pongo en renta|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText2) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText2);
+      const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
+      const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
+      const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
+      const _extTmp = result.extractedData || {};
+      const hasTechnicalSpecs = _extTmp.price && Number(_extTmp.price) > 0 || _extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0 || _extTmp.area && Number(_extTmp.area) > 0 || _extTmp.bedrooms && Number(_extTmp.bedrooms) > 0 || (cleanText2.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText2));
+      const isChatNoisePhrase = cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible");
+      const isShortComment = !result.isFlyerOrBanner && (isChatNoisePhrase || !hasRealEstateKeyword && !isSearch && !isOffer && (cleanText2.length < 25 || cleanText2.split(/\s+/).length < 4)) && !hasTechnicalSpecs;
+      const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
+      if (!result.isFlyerOrBanner && isGeneralInquiryOrRecommendation) {
+        console.log(`[JANIA-FILTER] \u26D4 Pregunta de recomendaci\xF3n o servicio general ignorada como Requerimiento/Inmueble: "${cleanText2.substring(0, 50)}..."`);
+        result.classification = "CONSULTA_GENERAL";
+      } else if (isShortComment) {
+        console.log(`[JANIA-FILTER] \u26D4 Mensaje corto o correcci\xF3n de chat omitido (${cleanText2.substring(0, 40)}...). No se procesar\xE1 como propiedad/requerimiento.`);
+        result.classification = "CONSULTA_GENERAL";
+      } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
+        console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
+        result.classification = "REQUERIMIENTO";
+      } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
+        console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de REQUERIMIENTO a INMUEBLE basado en heur\xEDstica de texto (Oferta expl\xEDcita).");
+        result.classification = "INMUEBLE";
+      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs)) {
+        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer) {
+          if (isSearch && !isOffer) {
+            console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
+            result.classification = "REQUERIMIENTO";
+          } else if (isOffer || hasRealEstateKeyword) {
+            console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
+            result.classification = "INMUEBLE";
+          }
+        } else {
+          console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
+        }
+      }
+      const hasRealEstateIntent = result.isFlyerOrBanner || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
+        console.log(`[JANIA-FILTER] \u26D4 Descartando falso positivo de ${result.classification}: Mensaje sin intenci\xF3n predial expl\xEDcita ("${cleanText2.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
+        result.classification = "CONSULTA_GENERAL";
+      }
+      const hollowEarlyCheck = isHollowListing(cleanText2, null, urls && urls.length > 0 ? urls[0] : null);
+      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanText2) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco|buscamos|requiero|requerimiento)\b/i.test(cleanText2);
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner && !hasRealPropertyCore) {
+        console.log(`[JANIA-FILTER] \u26D4 Descartando publicaci\xF3n hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText2.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
+        result.classification = "CONSULTA_GENERAL";
+      }
+    }
+    const textToCheckForDemand = (cleanText || messageToProcess || rawUserText || "").toLowerCase();
+    const isExplicitDemandSignal = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|cliente\s*directo\s*busca|compro|compramos|para\s*compra\s*ya|para\s*compra|solicito\s*para\s*compra|solicito|requiero|requerimiento|necesito|necesitamos|quien\s*tiene|alguien\s*tiene|alguien\s*cuenta\s*con|en\s*b[uú]squeda\s*de)\b/i.test(textToCheckForDemand);
+    const isExplicitOfferSignal = /\b(?:vendo|se\s*vende|en\s*venta\s*(?:lindo|hermoso|excelente|gran|amplio|espectacular|duplex|casa|apto|apartamento|finca|lote|bodega)|ofrezco\s*(?:en\s*venta|en\s*arriendo|apartamento|casa|apto)|se\s*arrienda|arriendo\s*(?:lindo|hermoso|directo|apto|casa))\b/i.test(textToCheckForDemand);
+    if (isExplicitDemandSignal && !isExplicitOfferSignal) {
+      if (result.classification !== "REQUERIMIENTO") {
+        console.log(`[JANIA-GUARDRAIL v31.85] \u{1F504} Reclasificando a REQUERIMIENTO (Se\xF1al inequ\xEDvoca de demanda detectada): "${textToCheckForDemand.substring(0, 60)}..."`);
+        result.classification = "REQUERIMIENTO";
+      }
+    }
+    const extracted = result.extractedData || {};
+    let isRequirement = result.classification === "REQUERIMIENTO";
+    let isProperty = result.classification === "INMUEBLE";
+    if ((isProperty || isRequirement) && messageToProcess) {
+      const fallbackData = extractFallbackDataFromText(messageToProcess);
+      if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
+      if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
+      const currentPriceNum = Number(extracted.price || 0);
+      if (isProperty) {
+        if (!currentPriceNum || currentPriceNum === 0 || currentPriceNum < 1e8 && fallbackData.price >= 1e8) {
+          extracted.price = fallbackData.price;
+        }
+      }
+      if (isRequirement) {
+        const curPresupuesto = Number(extracted.presupuestoMax || 0);
+        if (!curPresupuesto || curPresupuesto === 0 || curPresupuesto < 1e8 && fallbackData.presupuestoMax >= 1e8) {
+          extracted.presupuestoMax = fallbackData.presupuestoMax;
+        }
+        if (fallbackData.presupuestoMin > 0 && (!extracted.presupuestoMin || Number(extracted.presupuestoMin) === 0)) {
+          extracted.presupuestoMin = fallbackData.presupuestoMin;
+        }
+      }
+      if (!extracted.rentPrice && fallbackData.rentPrice > 0) extracted.rentPrice = fallbackData.rentPrice;
+      if (!extracted.adminFee && fallbackData.adminFee > 0) extracted.adminFee = fallbackData.adminFee;
+      if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
+      if (!extracted.bedrooms && fallbackData.bedrooms > 0) extracted.bedrooms = fallbackData.bedrooms;
+      if (!extracted.bathrooms && fallbackData.bathrooms > 0) extracted.bathrooms = fallbackData.bathrooms;
+      if (!extracted.garages && fallbackData.garages > 0) extracted.garages = fallbackData.garages;
+      if (!extracted.garageType && fallbackData.garageType) extracted.garageType = fallbackData.garageType;
+      if (!extracted.antiguedadAnos && fallbackData.antiguedadAnos !== null) extracted.antiguedadAnos = fallbackData.antiguedadAnos;
+      if (extracted.hasBalcony === void 0 && fallbackData.hasBalcony !== null) extracted.hasBalcony = fallbackData.hasBalcony;
+      if (extracted.hasTerrace === void 0 && fallbackData.hasTerrace !== null) extracted.hasTerrace = fallbackData.hasTerrace;
+      if (extracted.hasStorage === void 0 && fallbackData.hasStorage !== null) extracted.hasStorage = fallbackData.hasStorage;
+      if (extracted.hasElevator === void 0 && fallbackData.hasElevator !== null) extracted.hasElevator = fallbackData.hasElevator;
+      if (!extracted.city && fallbackData.city) extracted.city = fallbackData.city;
+      if (!extracted.ciudadDeseada && fallbackData.ciudadDeseada) extracted.ciudadDeseada = fallbackData.ciudadDeseada;
+      if (!extracted.zone && fallbackData.zone) extracted.zone = fallbackData.zone;
+      if (!extracted.zonaDeseada && fallbackData.zonaDeseada) extracted.zonaDeseada = fallbackData.zonaDeseada;
+      result.extractedData = extracted;
+    }
+    let isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
+    if (isProperty || isRequirement) {
+      const isReq = isRequirement || messageToProcess.toLowerCase().includes("busco") || messageToProcess.toLowerCase().includes("necesito") || messageToProcess.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+      const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+      let propertyName = "inmueble";
+      if (propTypeRaw === "apartment") propertyName = "apartamento";
+      else if (propTypeRaw === "house") propertyName = "casa";
+      else if (propTypeRaw === "building") propertyName = "edificio";
+      else if (propTypeRaw === "warehouse") propertyName = "bodega";
+      else if (propTypeRaw === "office") propertyName = "oficina";
+      else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+      else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+      else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+      else if (propTypeRaw === "loft") propertyName = "loft";
+      const city = isReq ? extracted?.ciudadDeseada : extracted?.city;
+      const zone = isReq ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
+      const price = isReq ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+      const hasMissingCity = !city || city.trim() === "" || city.toLowerCase() === "na";
+      const hasMissingZone = !zone || zone.trim() === "" || zone.toLowerCase() === "na";
+      const hasMissingPrice = !price || price <= 0;
+      const area = Number(extracted?.area || 0);
+      const hasMissingArea = !area || area <= 0;
+      let hasMissingBedrooms = false;
+      let hasMissingBathrooms = false;
+      let hasMissingStratum = false;
+      if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+        const bedrooms = Number(extracted?.bedrooms || 0);
+        hasMissingBedrooms = !bedrooms || bedrooms <= 0;
+        const bathrooms = Number(extracted?.bathrooms || 0);
+        hasMissingBathrooms = !bathrooms || bathrooms <= 0;
+        const stratum = Number(extracted?.stratum || 0);
+        hasMissingStratum = !stratum || stratum <= 0;
+      } else if (propertyName !== "lote" && propertyName !== "finca") {
+        const stratum = Number(extracted?.stratum || 0);
+        hasMissingStratum = !stratum || stratum <= 0;
+      }
+      const isMissing = false;
+    }
+    if (isLLMIncomplete) {
+      const inferredType = messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType ? "PROPERTY" : "REQUIREMENT";
+      if (inferredType === "PROPERTY") {
+        isProperty = true;
+        isRequirement = false;
+      } else {
+        isProperty = false;
+        isRequirement = true;
+      }
+      if (!isWebUser) {
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+      }
+    }
+    if (isProperty || isRequirement) {
+      if (extracted) {
+        if (extracted.zone) extracted.zone = sanitizeGeoString(extracted.zone);
+        if (extracted.zonaDeseada) extracted.zonaDeseada = sanitizeGeoString(extracted.zonaDeseada);
+        if (extracted.city) extracted.city = sanitizeGeoString(extracted.city);
+        if (extracted.ciudadDeseada) extracted.ciudadDeseada = sanitizeGeoString(extracted.ciudadDeseada);
+      }
+      const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
+      let isValidGeo = false;
+      let geoValidation = null;
+      if (zoneToValidate && zoneToValidate.trim() !== "") {
+        let inferredCity = extracted?.city || extracted?.ciudadDeseada;
+        if (!inferredCity || inferredCity.trim() === "" || inferredCity.toLowerCase() === "na") {
+          if (groupName) {
+            const nameLower = groupName.toLowerCase();
+            if (nameLower.includes("cali")) {
+              inferredCity = "Cali";
+            } else if (nameLower.includes("medellin") || nameLower.includes("medell\xEDn")) {
+              inferredCity = "Medell\xEDn";
+            } else if (nameLower.includes("barranquilla")) {
+              inferredCity = "Barranquilla";
+            } else if (nameLower.includes("bucaramanga")) {
+              inferredCity = "Bucaramanga";
+            } else if (nameLower.includes("cartagena")) {
+              inferredCity = "Cartagena";
+            } else if (nameLower.includes("pereira")) {
+              inferredCity = "Pereira";
+            }
+          }
+        }
+        if (inferredCity && inferredCity.toLowerCase() !== "na") {
+          const divipolaCity = validateCity(inferredCity);
+          if (divipolaCity) {
+            inferredCity = divipolaCity;
+          }
+          if (isProperty) {
+            extracted.city = inferredCity;
+          } else {
+            extracted.ciudadDeseada = inferredCity;
+          }
+        }
+        geoValidation = await validarZona(zoneToValidate, inferredCity, messageToProcess);
+        isValidGeo = geoValidation.isValid;
+      }
+      if (!isValidGeo) {
+        isValidGeo = true;
+        if (!result.missingFields) result.missingFields = [];
+        if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
+      }
+      const triGeo = deducirGeografiaTripartita(
+        isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone,
+        isProperty ? extracted?.city : extracted?.ciudadDeseada || extracted?.city,
+        groupName,
+        messageToProcess
+      );
+      if (isProperty) {
+        extracted.zone = triGeo.neighborhood;
+        extracted.addressNeighborhood = triGeo.neighborhood;
+        extracted.addressLocality = triGeo.locality;
+        extracted.addressCity = triGeo.city;
+        extracted.city = triGeo.city;
+        if (geoValidation && geoValidation.isValid) {
+          extracted.latitude = geoValidation.latitude || null;
+          extracted.longitude = geoValidation.longitude || null;
+        }
+      } else {
+        extracted.zonaDeseada = triGeo.neighborhood;
+        extracted.addressNeighborhood = triGeo.neighborhood;
+        extracted.addressLocality = triGeo.locality;
+        extracted.addressCity = triGeo.city;
+        extracted.ciudadDeseada = triGeo.city;
+      }
+    }
+    const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
+    const origenId = isGroup || groupJid ? groupJid || userId : userId;
+    const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
+    if (isProperty) {
+      const cleanCheckText = (rawUserText || text2 || messageToProcess || "").toLowerCase();
+      const groupForTx = (groupName || "").toLowerCase();
+      const isGroupRent = groupForTx.includes("arriend") || groupForTx.includes("alquil") || groupForTx.includes("renta");
+      const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckText);
+      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText) || /valor arriendo/i.test(cleanCheckText);
+      const hasVentaSignals = /\b(?:vendo|vendemos|se vende|en venta|venta directa|valor venta)\b/i.test(cleanCheckText);
+      if (hasPermutaSignals) {
+        extracted.transactionType = hasVentaSignals ? "venta_permuta" : "permuta";
+      } else if (hasRentSignals && hasVentaSignals) {
+        extracted.transactionType = "venta_o_arriendo";
+      } else if (hasRentSignals || isGroupRent && !hasVentaSignals) {
+        extracted.transactionType = "arriendo";
+        if (extracted.price && (!extracted.rentPrice || Number(extracted.rentPrice) <= 0)) {
+          extracted.rentPrice = extracted.price;
+        }
+      } else if (hasVentaSignals) {
+        extracted.transactionType = "venta";
+      }
+      const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || "inmueble")} en ${extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
+      const spamCheckProp = esMensajeSpamOBasura(cleanCheckText);
+      if (spamCheckProp.isSpam) {
+        console.log(`[JANIA-SPAM-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${spamCheckProp.reason}): "${cleanCheckText.substring(0, 50)}..."`);
+        result.inserted = false;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
+        return result;
+      }
+      const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
+      const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
+      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
+      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
+        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        return result;
+      }
+      let externalUrl = void 0;
+      if (urls && urls.length > 0) {
+        const permitted = urls.find((url) => esDominioPermitido(url));
+        if (permitted) {
+          externalUrl = permitted;
+        }
+      }
+      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls.find((url) => esDominioPermitido(url)) || urls[0] : void 0);
+      const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
+      const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
+      const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
+      if (isImageOnlyProp) {
+        const hasPropSpecs = Number(extracted.price || 0) > 0 || Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0) || !!extracted.zone && Number(extracted.bedrooms || 0) > 0;
+        if (!hasPropSpecs && !isFlyerDetected) {
+          console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene ficha t\xE9cnica ni datos comerciales legibles sobreimpresos.`);
+          result.inserted = false;
+          result.classification = "CONSULTA_GENERAL";
+          return result;
+        }
+      }
+      const flyerBufferToSave = isImageOnlyProp || isFlyerDetected ? imageBuffer : void 0;
+      const effectivePropRawText = isImageOnlyProp || isFlyerDetected ? flyerVerbatim ? buildFlyerBreakdownText(extracted, flyerVerbatim) : buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
+      const saved = await saveProperty({
+        ...extracted,
+        name: propertyTitle,
+        price: String(extracted.price || 0),
+        areaTotal: String(extracted.area || 0),
+        idUsuarioWhatsapp: rawPhone,
+        rawText: effectivePropRawText,
+        amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
+        origenTipo,
+        origenId,
+        origenNombre,
+        externalUrl,
+        enlaceOrigen: sourceUrl,
+        fechaExtraccion: /* @__PURE__ */ new Date()
+      }, userId, realName, flyerBufferToSave, pdfBuffer, pdfMimeType);
+      if (saved) {
+        result.inserted = true;
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+        result.mentions = [];
+        result.extraDMs = [];
+        result.sendReputationHook = false;
+        const _txProp = (extracted.transactionType || "").toLowerCase();
+        const _isPermutaProp = _txProp.includes("permuta") || _txProp === "venta_permuta" || _txProp === "aporte";
+        const _isRentProp = _txProp.includes("arriendo") || _txProp === "arriendo_temporal" || _txProp === "arriendo_con_opcion_de_compra" || _txProp === "venta_o_arriendo" || isGroupRent || hasRentSignals;
+        result.reactionEmoji = _isPermutaProp ? "\u{1F500}" : _isRentProp ? "\u{1F44C}" : "\u{1F44D}";
+        const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+        setImmediate(() => {
+          executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
+        });
+      }
+    } else if (isRequirement) {
+      const cleanCheckReqText = (rawUserText || text2 || messageToProcess || "").toLowerCase();
+      const groupForReqTx = (groupName || "").toLowerCase();
+      const isGroupReqRent = groupForReqTx.includes("arriend") || groupForReqTx.includes("alquil") || groupForReqTx.includes("renta");
+      const isInvestorPurchaseReq = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|con contrato de arrendamiento|para compra|compro|compra ya|busco para compra)\b/i.test(cleanCheckReqText);
+      const hasPermutaReqSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckReqText);
+      const hasRentReqSignals = !isInvestorPurchaseReq && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText) || /valor arriendo/i.test(cleanCheckReqText));
+      const hasVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar)\b/i.test(cleanCheckReqText);
+      if (hasPermutaReqSignals) {
+        extracted.transactionType = hasVentaReqSignals ? "venta_permuta" : "permuta";
+      } else if (hasRentReqSignals && hasVentaReqSignals) {
+        extracted.transactionType = "venta_o_arriendo";
+      } else if (hasRentReqSignals || isGroupReqRent && !hasVentaReqSignals && !isInvestorPurchaseReq) {
+        extracted.transactionType = "arriendo";
+      } else {
+        extracted.transactionType = "venta";
+      }
+      const spamCheckReq = esMensajeSpamOBasura(cleanCheckReqText);
+      if (spamCheckReq.isSpam) {
+        console.log(`[JANIA-SPAM-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${spamCheckReq.reason}): "${cleanCheckReqText.substring(0, 50)}..."`);
+        result.inserted = false;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
+        return result;
+      }
+      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
+      const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
+      const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
+      const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
+        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        return result;
+      }
+      const sourceUrlReq = urls && urls.length > 0 ? urls.find((url) => esDominioPermitido(url)) || urls[0] : null;
+      const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
+      const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
+      const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
+      if (isImageOnlyReq) {
+        const hasReqSpecs = Number(extracted.presupuestoMax || extracted.price || 0) > 0 || !!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0) || extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title);
+        if (!hasReqSpecs && !isFlyerDetectedReq) {
+          console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
+          result.inserted = false;
+          result.classification = "CONSULTA_GENERAL";
+          return result;
+        }
+      }
+      const flyerBufferToSaveReq = isImageOnlyReq || isFlyerDetectedReq ? imageBuffer : void 0;
+      const effectiveReqRawText = isImageOnlyReq || isFlyerDetectedReq ? flyerVerbatimReq ? buildFlyerBreakdownText(extracted, flyerVerbatimReq) : buildFlyerBreakdownText(extracted, messageToProcess) : messageToProcess;
+      const saved = await saveRequirement({
+        ...extracted,
+        name: reqTitle,
+        tipoInmuebleDeseado: extracted.propertyType,
+        tipoNegocioDeseado: extracted.transactionType,
+        zonaDeseada: extracted.zonaDeseada || extracted.zone,
+        presupuestoMax: String(extracted.presupuestoMax || extracted.price || 0),
+        idUsuarioWhatsapp: rawPhone,
+        rawText: effectiveReqRawText,
+        caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },
+        origenTipo,
+        origenId,
+        origenNombre,
+        enlaceOrigen: sourceUrlReq,
+        fechaExtraccion: /* @__PURE__ */ new Date()
+      }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
+      if (saved) {
+        result.inserted = true;
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+        result.mentions = [];
+        result.extraDMs = [];
+        result.sendReputationHook = false;
+        const _txReq = (extracted.transactionType || extracted.tipoNegocioDeseado || "").toLowerCase();
+        const _isPermutaReq = _txReq.includes("permuta") || _txReq === "venta_permuta" || _txReq === "aporte";
+        const _isRentReq = _txReq.includes("arriendo") || _txReq === "arriendo_temporal" || _txReq === "arriendo_con_opcion_de_compra" || _txReq === "venta_o_arriendo" || isGroupReqRent || hasRentReqSignals;
+        result.reactionEmoji = _isPermutaReq ? "\u{1F504}" : _isRentReq ? "\u270F\uFE0F" : "\u{1F4DD}";
+        const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+        setImmediate(() => {
+          executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
+        });
+      }
+    }
+    const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
+    const isMainPropertiesGroup = !groupJid || groupJid === "120363260108880069@g.us";
+    if (isGroup && isConsultation && isMainPropertiesGroup) {
+      const textLower2 = messageToProcess.toLowerCase();
+      const isAboutPublishing = textLower2.includes("subir") || textLower2.includes("c\xF3mo subo") || textLower2.includes("como subo") || textLower2.includes("publicar") || textLower2.includes("c\xF3mo publico") || textLower2.includes("como publico") || textLower2.includes("c\xF3mo se publica") || textLower2.includes("como se publica") || textLower2.includes("c\xF3mo registrar") || textLower2.includes("como registrar") || textLower2.includes("c\xF3mo funciona") || textLower2.includes("como funciona") || textLower2.includes("de qu\xE9 consiste") || textLower2.includes("de que consiste") || textLower2.includes("en qu\xE9 consiste") || textLower2.includes("en que consiste") || textLower2.includes("c\xF3mo hago para") || textLower2.includes("como hago para") || textLower2.includes("c\xF3mo buscar") || textLower2.includes("como buscar") || textLower2.includes("c\xF3mo encontrar") || textLower2.includes("como encontrar") || textLower2.includes("instrucciones") || textLower2.includes("ayuda") || textLower2.includes("explicar") || textLower2.includes("explicame") || textLower2.includes("expl\xEDcame");
+      const isAboutVecy = textLower2.includes("vecy") || textLower2.includes("proyecto") || textLower2.includes("quien creo") || textLower2.includes("qui\xE9n cre\xF3") || textLower2.includes("creadores") || textLower2.includes("quien es jania") || textLower2.includes("qui\xE9n es jania") || textLower2.includes("circulo cero") || textLower2.includes("c\xEDrculo cero") || textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
+      const greetingPrefix = await getTimeOfDayGreetingForUser(rawPhone, realName, alreadyGreeted, isGroup);
+      let welcomePart = "";
+      if (!alreadyGreeted) {
+        welcomePart = ` \xA1Te doy la m\xE1s cordial bienvenida a nuestra comunidad! \u{1F91D}\u2728`;
+      }
+      if (isAboutPublishing) {
+        result.response = `\u{1F4E2} *\xBFC\xD3MO PUBLICAR EN VECY BIENES RA\xCDCES?* \u{1F4E2}
+
+${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (b\xFAsquedas) directamente aqu\xED en el grupo de las siguientes formas:
+
+\u270D\uFE0F *Texto*: Env\xEDa una descripci\xF3n con la ubicaci\xF3n (Ciudad y Barrio), precio y ficha t\xE9cnica (\xE1rea, habitaciones, ba\xF1os, parqueaderos y estrato).
+\u{1F517} *Enlaces/Links*: Comparte enlaces de portales inmobiliarios permitidos o de tu propia web (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, etc.) y extraer\xE9 los datos autom\xE1ticamente.
+\u{1F4C4} *PDF*: Sube la ficha t\xE9cnica de la propiedad en formato PDF.
+\u{1F399}\uFE0F *Nota de Voz*: Graba un audio dictando los datos del inmueble.
+\u{1F5BC}\uFE0F *Flyer/Captura*: Comparte una imagen o flyer que contenga los detalles comerciales en el texto.
+
+*\xBFC\xF3mo funciona?*
+1\uFE0F\u20E3 Al publicar, mi sistema registrar\xE1 la propiedad e iniciar\xE1 una b\xFAsqueda de coincidencias (matches) autom\xE1ticamente a nivel nacional.
+2\uFE0F\u20E3 Si encuentro un MATCH, te notificar\xE9 y te enviar\xE9 un mensaje por *chat privado (DM)* solicitando tu confirmaci\xF3n.
+3\uFE0F\u20E3 Si ambos aliados confirman inter\xE9s en privado, les entregar\xE9 sus contactos directos para que cierren el negocio. \u{1F91D}\u{1F680}
+
+Si tienes dudas o prefieres usar mi men\xFA de soporte y b\xFAsqueda de propiedades privado, escr\xEDbeme directamente en nuestra Consola Web:
+\u{1F449} https://vecy-bienes-raices.vercel.app/jania`;
+        result.classification = "CONSULTA_GENERAL";
+      } else if (isAboutVecy) {
+        const isCompetitorQuery = textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
+        const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
+        if (isCompetitorQuery) {
+          result.response = `\u{1F44C} *${groupZeroName.toUpperCase()} \u2014 DEBATE Y COMUNIDAD* \u{1F44C}
+
+${greetingPrefix}, detect\xE9 una menci\xF3n a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **${groupZeroName}**:
+\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+
+\xA1All\xED debatimos abiertamente con total transparencia y profesionalismo! \u{1F91D}\u2728`;
+        } else {
+          result.response = `\u{1F44C} *${groupZeroName.toUpperCase()} \u2014 CONEXI\xD3N VECY* \u{1F44C}
+
+${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto VECY Bienes Ra\xEDces, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **${groupZeroName}**:
+\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+
+\xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728`;
+        }
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
+      } else {
+        result.response = `\u{1F4A1} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}* \u{1F4A1}
+
+${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}**:
+\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+
+\xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}`;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
+      }
+    }
+    if (result && result.response) {
+      result.response = sanitizeResponseMarkdown(result.response);
+    }
+    if (result && result.dmResponse) {
+      result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
+    }
+    if (!result.reactionEmoji) {
+      const _txFallback = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "").toLowerCase();
+      const _isPermutaFb = _txFallback.includes("permuta") || _txFallback === "venta_permuta" || _txFallback === "aporte";
+      const _isRentFb = _txFallback.includes("arriendo") || _txFallback === "arriendo_temporal" || _txFallback === "arriendo_con_opcion_de_compra";
+      if (result.classification === "INMUEBLE") {
+        result.reactionEmoji = _isPermutaFb ? "\u{1F500}" : _isRentFb ? "\u{1F44C}" : "\u{1F44D}";
+      } else if (result.classification === "REQUERIMIENTO") {
+        result.reactionEmoji = _isPermutaFb ? "\u{1F504}" : _isRentFb ? "\u270F\uFE0F" : "\u{1F4DD}";
+      } else if (result.classification === "VIOLACION_DE_NORMAS") {
+        result.reactionEmoji = "\u{1F6AB}";
+      }
+    }
+    return result;
+  } catch (error) {
+    console.warn(`[JanIA-Fallback] \u{1F6E1}\uFE0F LLM no disponible o cuota 429 (${error?.message || error}). Activando Fallback Determinista Aut\xF3nomo $0 COP...`);
+    try {
+      const rawMsg = text2 || "";
+      const cleanLower = rawMsg.toLowerCase().trim();
+      const rawPhone = userId.split("@")[0];
+      const realName = await resolveRealName(userId, userName);
+      if (cleanLower.length < 15 && !cleanLower.includes("apto") && !cleanLower.includes("casa")) {
+        return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
+      }
+      const fbData = extractFallbackDataFromText(rawMsg);
+      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|vr renta|vr vta|canon|alquilo|alquilamos|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
+      const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
+      const origenId = isGroup || groupJid ? groupJid || userId : userId;
+      const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
+      if (isExplicitDemand) {
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+        const isPermuta = fbData.transactionType.includes("permuta");
+        const emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+        const savedReq = await saveRequirement({
+          propertyType: fbData.propertyType || "apartment",
+          tipoInmuebleDeseado: fbData.propertyType || "apartment",
+          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          tipoNegocioDeseado: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          name: `Requerimiento ${fbData.propertyType || "Inmueble"} en Bogot\xE1`,
+          presupuestoMax: String(fbData.presupuestoMax || 0),
+          presupuestoMin: String(fbData.presupuestoMin || 0),
+          adminFeeMax: fbData.adminFee ? String(fbData.adminFee) : void 0,
+          zonaDeseada: "Bogot\xE1",
+          idUsuarioWhatsapp: rawPhone,
+          rawText: rawMsg,
+          origenTipo,
+          origenId,
+          origenNombre,
+          fechaExtraccion: /* @__PURE__ */ new Date()
+        }, userId, realName);
+        if (savedReq) {
+          const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+          setImmediate(() => {
+            executeMatchEngine2(null, savedReq.id).catch(() => {
+            });
+          });
+        }
+        console.log(`[JanIA-Fallback] \u2705 Requerimiento guardado determin\xEDsticamente con emoji ${emoji}`);
+        return {
+          classification: "REQUERIMIENTO",
+          response: "",
+          reactionEmoji: emoji,
+          inserted: true
+        };
+      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+        const isPermuta = fbData.transactionType.includes("permuta");
+        const emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+        const savedProp = await saveProperty({
+          propertyType: fbData.propertyType || "apartment",
+          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          name: `Inmueble en Bogot\xE1`,
+          price: String(fbData.price || 0),
+          rentPrice: fbData.rentPrice ? String(fbData.rentPrice) : void 0,
+          adminFee: fbData.adminFee ? String(fbData.adminFee) : void 0,
+          areaTotal: String(fbData.areaTotal || 0),
+          zone: "Bogot\xE1",
+          city: "Bogot\xE1, D.C.",
+          idUsuarioWhatsapp: rawPhone,
+          rawText: rawMsg,
+          origenTipo,
+          origenId,
+          origenNombre,
+          fechaExtraccion: /* @__PURE__ */ new Date()
+        }, userId, realName);
+        if (savedProp) {
+          const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+          setImmediate(() => {
+            executeMatchEngine2(savedProp.id, null).catch(() => {
+            });
+          });
+        }
+        console.log(`[JanIA-Fallback] \u2705 Inmueble guardado determin\xEDsticamente con emoji ${emoji}`);
+        return {
+          classification: "INMUEBLE",
+          response: "",
+          reactionEmoji: emoji,
+          inserted: true
+        };
+      }
+    } catch (fbErr) {
+      console.error("[JanIA-Fallback-Error] Error en fallback determinista:", fbErr?.message || fbErr);
+    }
+    return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
+  }
+}
+var init_propertiesHandler = __esm({
+  "server/_core/jania/handlers/propertiesHandler.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_llm();
+    init_storage();
+    init_geography();
+    init_divipola();
+    init_matching();
+    init_voiceTranscription();
+    init_colombianRealEstateParser();
+    init_scraper();
+    init_advisors();
+    init_types();
+    init_parsers();
+    init_heuristics();
+    init_vision();
+    init_prompts();
+    init_sessionManager();
+    setTimeout(() => {
+      initBrokerDirectory().catch(() => {
+      });
+    }, 3e3);
+  }
+});
+
 // server/_core/jania/handlers/dmHandler.ts
 var dmHandler_exports = {};
 __export(dmHandler_exports, {
@@ -16640,6 +19195,28 @@ __export(dmHandler_exports, {
 });
 async function executeJaniaDmTool(toolName, args, userId, _userName) {
   switch (toolName) {
+    case "registrar_inmueble_o_requerimiento": {
+      const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
+      const res = await processWhatsAppMessage2(
+        String(args.textoCompletoPublicacion || ""),
+        userId,
+        _userName,
+        false,
+        [],
+        void 0,
+        void 0,
+        false
+      );
+      return {
+        toolType: "sondeo",
+        resultJson: {
+          solicitud: "registro_inmueble_o_requerimiento",
+          clasificacion: res.classification,
+          insertado: res.inserted,
+          detalle: "Procesado en el motor de VECY BIENES RA\xCDCES"
+        }
+      };
+    }
     case "consultar_identidad_y_antecedentes": {
       const doc = String(args.numeroDocumento || "").trim();
       const tipo = String(args.tipoDocumento || "CC").trim();
@@ -16790,11 +19367,10 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
   const cleanPayload = (payloadText || "").trim();
+  const { buildWinningGoogleReviewMessage: buildWinningGoogleReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
   const reviewSection = isEduardo || isJani ? "" : `
 
-\u2B50 *\xBFMe regalas 15 segunditos?*
-Tu opini\xF3n y calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma m\xE1s de 15 segundos, te lo aseguro):
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review`;
+${buildWinningGoogleReviewMessage2(displayName)}`;
   const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
   let payloadWithClosing = cleanPayload;
   if (!payloadWithClosing.includes(closingTag)) {
@@ -16943,7 +19519,8 @@ Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o q
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
   }
-  const isConsultasInquiry = /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
+  const isShortQuery = clean.trim().split(/\s+/).length <= 12;
+  const isConsultasInquiry = isShortQuery && /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
   if (isConsultasInquiry) {
     const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
 
@@ -16972,7 +19549,7 @@ Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas proba
     appendDmHistory(userId, "assistant", companyMsg);
     return companyMsg;
   }
-  const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
+  const isCostInquiry = isShortQuery && (/^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower));
   if (isCostInquiry) {
     const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
     if (isFreeToolsContext) {
@@ -16988,7 +19565,7 @@ Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c
       return freeCostMsg;
     }
   }
-  const isHowToDoInquiry = /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
+  const isHowToDoInquiry = isShortQuery && /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
   if (isHowToDoInquiry) {
     const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
 
@@ -17076,7 +19653,7 @@ Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo 
       }
     }
   }
-  const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{5,11}\b/.test(clean);
+  const isDocVerificationIntent = isShortQuery && (/(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{5,11}\b/.test(clean));
   if (isDocVerificationIntent) {
     const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto (o documento de identidad: C\xE9dula de Extranjer\xEDa, Pasaporte o Documento del Pa\xEDs de Origen).
 
@@ -17210,7 +19787,9 @@ ${idCheck.reportText}`;
     const messages2 = [
       {
         role: "system",
-        content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+        content: `${JANIA_ARGON_COGNITIVE_CORE}
+
+Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
 Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
 
 ===================================================
@@ -17506,6 +20085,18 @@ var init_dmHandler = __esm({
               },
               required: ["zonaOBarrio"]
             }
+          },
+          {
+            name: "registrar_inmueble_o_requerimiento",
+            description: "Registra en la base de datos de VECY BIENES RA\xCDCES una oferta inmobiliaria (venta, arriendo, permuta) o un requerimiento/b\xFAsqueda de cliente enviado por chat privado y ejecuta el motor de coincidencias (Match).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                textoCompletoPublicacion: { type: "STRING", description: "Texto completo del inmueble ofrecido o demandado" },
+                tipoOperacion: { type: "STRING", description: "OFERTA o DEMANDA" }
+              },
+              required: ["textoCompletoPublicacion"]
+            }
           }
         ]
       }
@@ -17537,9 +20128,9 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs6 from "fs";
-import path6 from "path";
-import { eq as eq8 } from "drizzle-orm";
+import fs8 from "fs";
+import path8 from "path";
+import { eq as eq9 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -17736,7 +20327,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path8.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -17767,19 +20358,16 @@ var init_whatsapp_match = __esm({
           const recentSent = this.recentReviewPromptUsers.get(senderId) || 0;
           if (Date.now() - recentSent < 24 * 60 * 60 * 1e3) return;
           try {
-            const { formatPoliteInactivityPrompt: formatPoliteInactivityPrompt2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-            const promptText = formatPoliteInactivityPrompt2(userName);
+            const { buildWinningGoogleReviewMessage: buildWinningGoogleReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+            const promptText = buildWinningGoogleReviewMessage2(userName);
             await this.queuedSend(senderId, promptText, { allowDirectMessage: true, skipDelay: true });
             await this.logToDb(senderId, "janIA", promptText);
             const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
             appendDmHistory2(senderId, "assistant", promptText);
-            this.userAwaitingReviewConsent.set(senderId, {
-              timestamp: Date.now(),
-              userName
-            });
-            console.log(`[JANIA-MATCH] \u{1F91D} Pregunta de cortes\xEDa de Carre\xF1o entregada a ${senderId} tras 1 min de silencio.`);
+            this.recentReviewPromptUsers.set(senderId, Date.now());
+            console.log(`[JANIA-MATCH] \u2B50 Solicitud ganadora de Google Reviews entregada a ${senderId} tras entrega de servicio.`);
           } catch (err) {
-            console.error("[JANIA-MATCH] Error enviando pregunta de cortes\xEDa tras 1 min de silencio:", err?.message);
+            console.error("[JANIA-MATCH] Error enviando solicitud de Google Reviews tras entrega de servicio:", err?.message);
           }
         }, 60 * 1e3);
         this.userPolitenessTimers.set(senderId, timer);
@@ -17904,9 +20492,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path6.join(process.cwd(), this.sessionFolderName);
-          if (!fs6.existsSync(sessionDir)) {
-            fs6.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path8.join(process.cwd(), this.sessionFolderName);
+          if (!fs8.existsSync(sessionDir)) {
+            fs8.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -17928,7 +20516,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs6.existsSync(path6.join(sessionDir, "creds.json"))) {
+          if (!fs8.existsSync(path8.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -18022,12 +20610,12 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path6.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path6.join(process.cwd(), "client", "public");
-              if (!fs6.existsSync(publicQrDir)) {
-                fs6.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path8.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path8.join(process.cwd(), "client", "public");
+              if (!fs8.existsSync(publicQrDir)) {
+                fs8.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path6.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path8.join(publicQrDir, "qr-match.png");
               await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -19695,7 +22283,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq8(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq9(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -19709,7 +22297,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq8(conversations.id, conversationId));
+            }).where(eq9(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -19847,13 +22435,13 @@ Mis grupos oficiales:
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq8(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq9(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq8(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq8(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq9(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq9(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -19868,7 +22456,7 @@ Mis grupos oficiales:
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq8(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq9(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -19882,19 +22470,19 @@ Mis grupos oficiales:
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq8(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq8(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq9(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq9(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq8(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq9(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq8(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq9(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq8(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq9(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -20461,7 +23049,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path6.resolve("./client/public/jania_perfil.png");
+        const imgPath = path8.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -20492,10 +23080,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path6.join(process.cwd(), ".baileys_auth");
-        if (fs6.existsSync(sessionDir)) {
+        const sessionDir = path8.join(process.cwd(), ".baileys_auth");
+        if (fs8.existsSync(sessionDir)) {
           try {
-            fs6.rmSync(sessionDir, { recursive: true, force: true });
+            fs8.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -20514,8 +23102,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs6.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs6.readFileSync(this.cooldownFile, "utf8"));
+          if (fs8.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs8.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -20524,7 +23112,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs6.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs8.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -20764,7 +23352,7 @@ var init_agendaWhatsAppService = __esm({
 
 // server/routers/agenda.ts
 import { z as z2 } from "zod";
-import { desc as desc3, ilike, or as or2, sql as sql7, eq as eq9 } from "drizzle-orm";
+import { desc as desc4, ilike, or as or3, sql as sql8, eq as eq10 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -21367,7 +23955,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       const profileRows = await db.select({
         fullName: profiles.fullName,
         numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq9(profiles.numeroDocumento, clean)).limit(5);
+      }).from(profiles).where(eq10(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const officialFormatted = formatTitleCase(row.fullName.trim());
@@ -21388,11 +23976,11 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         interesadoDocumento: solicitudes.interesadoDocumento,
         interesadoNombre: solicitudes.interesadoNombre
       }).from(solicitudes).where(
-        or2(
-          eq9(solicitudes.solicitanteNumeroDocumento, clean),
-          eq9(solicitudes.interesadoDocumento, clean)
+        or3(
+          eq10(solicitudes.solicitanteNumeroDocumento, clean),
+          eq10(solicitudes.interesadoDocumento, clean)
         )
-      ).orderBy(desc3(solicitudes.id)).limit(10);
+      ).orderBy(desc4(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
@@ -21576,10 +24164,10 @@ async function processAndSaveSolicitud(input) {
     }
   } catch (_) {
   }
-  const maxRes = await db.select({ maxId: sql7`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const maxRes = await db.select({ maxId: sql8`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
   const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
   const inserted = await db.insert(solicitudes).values({
-    id: sql7`nextval('solicitudes_id_seq')`,
+    id: sql8`nextval('solicitudes_id_seq')`,
     solicitudId: nextSolicitudId,
     solicitanteNombre: input.solicitante_nombre,
     solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
@@ -21763,14 +24351,14 @@ var init_agenda = __esm({
             ilike(solicitudes.interesadoNombre, searchPattern)
           ];
           if (!isNaN(numSearch)) {
-            searchConditions.push(eq9(solicitudes.solicitudId, numSearch));
+            searchConditions.push(eq10(solicitudes.solicitudId, numSearch));
           }
-          whereConditions.push(or2(...searchConditions));
+          whereConditions.push(or3(...searchConditions));
         }
         if (perfilFilter && perfilFilter !== "all") {
           if (perfilFilter === "agente") {
             whereConditions.push(
-              or2(
+              or3(
                 ilike(solicitudes.solicitantePerfil, "%agente%"),
                 ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
                 ilike(solicitudes.solicitantePerfil, "%broker%"),
@@ -21779,16 +24367,16 @@ var init_agenda = __esm({
             );
           } else if (perfilFilter === "directo") {
             whereConditions.push(
-              or2(
+              or3(
                 ilike(solicitudes.solicitantePerfil, "%directo%"),
                 ilike(solicitudes.solicitantePerfil, "%cliente%")
               )
             );
           }
         }
-        const finalWhere = whereConditions.length > 0 ? sql7.join(whereConditions, sql7` AND `) : void 0;
-        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql7`${solicitudes.solicitudId} DESC NULLS LAST`, desc3(solicitudes.id)).limit(limit).offset(offset);
-        const totalRes = await db.select({ count: sql7`count(*)` }).from(solicitudes).where(finalWhere);
+        const finalWhere = whereConditions.length > 0 ? sql8.join(whereConditions, sql8` AND `) : void 0;
+        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql8`${solicitudes.solicitudId} DESC NULLS LAST`, desc4(solicitudes.id)).limit(limit).offset(offset);
+        const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(finalWhere);
         return {
           items,
           total: Number(totalRes[0]?.count || 0)
@@ -21797,10 +24385,10 @@ var init_agenda = __esm({
       getStats: publicProcedure.query(async () => {
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-        const totalRes = await db.select({ count: sql7`count(*)` }).from(solicitudes);
+        const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes);
         const total = Number(totalRes[0]?.count || 0);
-        const agentesRes = await db.select({ count: sql7`count(*)` }).from(solicitudes).where(
-          or2(
+        const agentesRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(
+          or3(
             ilike(solicitudes.solicitantePerfil, "%agente%"),
             ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
             ilike(solicitudes.solicitantePerfil, "%broker%"),
@@ -21808,7 +24396,7 @@ var init_agenda = __esm({
           )
         );
         const agentes = Number(agentesRes[0]?.count || 0);
-        const conFirmaRes = await db.select({ count: sql7`count(*)` }).from(solicitudes).where(sql7`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+        const conFirmaRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(sql8`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
         const conFirma = Number(conFirmaRes[0]?.count || 0);
         const directos = Math.max(0, total - agentes);
         return {
@@ -21931,7 +24519,7 @@ var init_agenda = __esm({
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
         const { id, ...dataToUpdate } = input;
-        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq9(solicitudes.id, id)).returning();
+        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq10(solicitudes.id, id)).returning();
         return {
           success: true,
           item: updated[0] || null
@@ -21988,6 +24576,7 @@ __export(identityVerificationService_exports, {
   getPendingCedulaSession: () => getPendingCedulaSession,
   getPendingUnconfirmedDoc: () => getPendingUnconfirmedDoc,
   getProcuraduriaEndpoint: () => getProcuraduriaEndpoint,
+  identityCache: () => identityCache,
   isBareDocumentNumber: () => isBareDocumentNumber,
   mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
@@ -22509,6 +25098,10 @@ function detectDocTypeConfirmation(text2) {
   if (/^(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)$/i.test(clean)) {
     return { isConfirmation: true, tipoDoc: "ppt" };
   }
+  const hasOtherDoc = /\b(extranjer[ií]a|c\.?e\.?|cx|pasaporte|pa|nit|pep|ppt)\b/i.test(clean);
+  if (!hasOtherDoc && /\b(si|sí|claro|dale|verificar|antecedentes|polic[ií]a|procuradur[ií]a|eps|adres|identidad|favor|ay[uú]dame|confirmo)\b/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: "cc" };
+  }
   return { isConfirmation: false };
 }
 function cleanPotentialPersonName(str) {
@@ -22888,25 +25481,33 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
     const isWhiteLabelDoc = cedula === "43403545";
     const pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
-    const policeTitle = isWhiteLabelDoc ? "4\uFE0F\u20E3 *CENTRAL DE SEGURIDAD Y ANTECEDENTES*" : "4\uFE0F\u20E3 *POLIC\xCDA NACIONAL DE COLOMBIA*";
-    const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+    const securityLine = isWhiteLabelDoc ? "Sin antecedentes judiciales ni requerimientos penales pendientes." : "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
+    const cgrLine = "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
+    const epsLine = "Registrado y activo en el sistema de aseguramiento en salud.";
+    let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-1\uFE0F\u20E3 *DATOS DE IDENTIDAD*
-\u{1F194} *El documento:* ${docLabel} ${formattedCedula}
-\u{1F464} *Pertenece a:* ${officialName}
+`;
+    reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
 
-2\uFE0F\u20E3 *SEGURIDAD SOCIAL (EPS / R\xC9GIMEN)*
-\u{1F3E5} *Afiliaci\xF3n en Salud (ADRES / BDUA):* Registrado y activo en el sistema de aseguramiento en salud.
+`;
+    reportText += `\u{1F194} *DATOS DE IDENTIDAD*
+`;
+    reportText += `\u{1FAAA} *${docLabel}:* ${formattedCedula}
+`;
+    reportText += `\u{1F464} *Pertenece a:* ${officialName}
+`;
+    reportText += `\u2705 *Identidad:* Validada.
 
-3\uFE0F\u20E3 *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*
-\u{1F3DB}\uFE0F *Central de Control Notarial (Procuradur\xEDa SIRI):* ${pgnLine}
-\u2696\uFE0F *Contralor\xEDa General (SIRECI):* No registra reporte en el Bolet\xEDn de Responsables Fiscales.
-
-${policeTitle}
-\u{1F693} *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes${isWhiteLabelDoc ? "" : " ante la Polic\xEDa Nacional"}.
-\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.
-
-` + HABEAS_DATA_CLAUSE;
+`;
+    reportText += `\u2696\uFE0F *ANTECEDENTES*
+`;
+    reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
+`;
+    reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
+`;
+    reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
+`;
+    reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
     if (userId) {
       savePendingCedulaSession(userId, items, reportText, true);
     }
@@ -23217,7 +25818,9 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         voiceResponse: ""
       };
     }
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacidad resolutiva de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal, calidez humana y alta competencia t\xE9cnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de \xE9lite.
+    const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
+
+Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacidad resolutiva de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal, calidez humana y alta competencia t\xE9cnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de \xE9lite.
 
 ## L\xD3GICA DE CLASIFICACI\xD3N Y MODERACI\xD3N ESTRICTA:
 1. **VIOLACION_DE_NORMAS (OFERTAS, DEMANDAS O FLYERS PUBLICITARIOS EN ESTE GRUPO)**:
@@ -23446,6 +26049,7 @@ var init_consultingHandler = __esm({
     init_parsers();
     init_llm();
     init_commercialFunnelService();
+    init_prompts();
   }
 });
 
@@ -23517,7 +26121,9 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
       };
     }
     const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "${groupZeroName}". Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del d\xEDa a d\xEDa del negocio, adem\xE1s del proyecto VECY BIENES RA\xCDCES, su modelo colaborativo, tecnolog\xEDa y debate con competidores, de forma sincera, ver\xEDdica y de alto nivel:
+    const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
+
+Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "${groupZeroName}". Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del d\xEDa a d\xEDa del negocio, adem\xE1s del proyecto VECY BIENES RA\xCDCES, su modelo colaborativo, tecnolog\xEDa y debate con competidores, de forma sincera, ver\xEDdica y de alto nivel:
 
 ## DIRECTRICES DE INFORMACI\xD3N Y SINCERIDAD SOBRE VECY BIENES RA\xCDCES:
 Explica claramente y con la verdad absoluta el estado del proyecto y sus caracter\xEDsticas:
@@ -23621,2509 +26227,7 @@ var init_circuloHandler = __esm({
     init_heuristics();
     init_nameAndGenderResolver();
     init_llm();
-  }
-});
-
-// server/storage.ts
-var storage_exports = {};
-__export(storage_exports, {
-  storageGet: () => storageGet,
-  storagePut: () => storagePut
-});
-import fs7 from "fs";
-import path7 from "path";
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
-}
-function buildAbsoluteLocalUrl(key) {
-  const base = (process.env.VPS_BASE_URL || "https://vecy-bienes-raices.vercel.app").replace(/\/+$/, "");
-  return `${base}/uploads/${key}`;
-}
-async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const key = normalizeKey(relKey);
-  const targetFilePath = path7.join(uploadsDir, key);
-  const targetSubdir = path7.dirname(targetFilePath);
-  if (!fs7.existsSync(targetSubdir)) {
-    fs7.mkdirSync(targetSubdir, { recursive: true });
-  }
-  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs7.writeFileSync(targetFilePath, buffer);
-  const publicUrl = buildAbsoluteLocalUrl(key);
-  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
-  return { key, url: `/uploads/${key}` };
-}
-async function storageGet(relKey) {
-  const key = normalizeKey(relKey);
-  return {
-    key,
-    url: `/uploads/${key}`
-  };
-}
-var uploadsDir;
-var init_storage = __esm({
-  "server/storage.ts"() {
-    "use strict";
-    uploadsDir = path7.resolve(process.cwd(), "public/uploads");
-    if (!fs7.existsSync(uploadsDir)) {
-      fs7.mkdirSync(uploadsDir, { recursive: true });
-    }
-  }
-});
-
-// server/_core/divipola.ts
-import fs8 from "fs";
-import path8 from "path";
-var municipalitiesMap, initDivipola, validateCity;
-var init_divipola = __esm({
-  "server/_core/divipola.ts"() {
-    "use strict";
-    municipalitiesMap = /* @__PURE__ */ new Map();
-    initDivipola = () => {
-      try {
-        const jsonPath = path8.join(process.cwd(), "server", "data", "divipola.json");
-        municipalitiesMap.clear();
-        if (!fs8.existsSync(jsonPath)) {
-          console.warn("Divipola JSON data file not found at", jsonPath);
-          return;
-        }
-        const raw = fs8.readFileSync(jsonPath, "utf-8");
-        const list = JSON.parse(raw);
-        for (const item of list) {
-          if (item.municipio) {
-            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-            municipalitiesMap.set(normalizedKey, titleCased);
-          }
-        }
-        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
-        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
-      } catch (err) {
-        console.error("[Divipola] Error loading Divipola:", err);
-      }
-    };
-    validateCity = (cityName) => {
-      if (!cityName || typeof cityName !== "string") return null;
-      if (municipalitiesMap.size === 0) {
-        initDivipola();
-      }
-      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      return municipalitiesMap.get(normalized) || null;
-    };
-  }
-});
-
-// server/_core/jania/handlers/propertiesHandler.ts
-import { eq as eq10, and as and6, gte as gte2, desc as desc4 } from "drizzle-orm";
-async function handleDetectedMatches(matches, isProperty, savedRecord, userId, realName) {
-  const mentions = [];
-  const matchBlocks = [];
-  const extraDMs = [];
-  const savedDateTime = formatColombiaDateTime(savedRecord.createdAt || /* @__PURE__ */ new Date());
-  const savedRawPhone = userId.split("@")[0];
-  const savedJid = userId.includes("@") ? userId : `${userId}@c.us`;
-  const getReqText = (item) => {
-    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
-    if (item.caracteristicasDeseadas?.wants?.details) {
-      return `${item.name || "Requerimiento"} - ${item.caracteristicasDeseadas.wants.details}`;
-    }
-    return item.name || "Sin descripci\xF3n";
-  };
-  const getPropText = (item) => {
-    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
-    if (item.description && item.description.trim()) return item.description.trim();
-    if (item.amenities?.gives?.details) {
-      return `${item.name || "Propiedad"} - ${item.amenities.gives.details}`;
-    }
-    return item.name || "Sin descripci\xF3n";
-  };
-  for (const matchedItem of matches) {
-    const score = matchedItem.score || 70;
-    const matchId = matchedItem.matchId;
-    const matchedDateTime = formatColombiaDateTime(matchedItem.createdAt || /* @__PURE__ */ new Date());
-    const matchedPhone = matchedItem.idUsuarioWhatsapp || "";
-    const matchedRawPhone = matchedPhone.split("@")[0];
-    const matchedJid = matchedPhone.includes("@") ? matchedPhone : `${matchedPhone}@c.us`;
-    if (matchedJid && !mentions.includes(matchedJid)) {
-      mentions.push(matchedJid);
-    }
-    const reqItem = isProperty ? matchedItem : savedRecord;
-    const propItem = isProperty ? savedRecord : matchedItem;
-    const reqDateTime = isProperty ? matchedDateTime : savedDateTime;
-    const propDateTime = isProperty ? savedDateTime : matchedDateTime;
-    const block = `\u{1F389}\u{1F388} *\xA1COINCIDENCIA DE NEGOCIO DETECTADA!* (Coincidencia: ${score.toFixed(0)}%) \u{1F388}\u{1F389}
-\u{1F4CC} *C\xF3digo de Coincidencia:* #M${matchId}
-
-\u{1F4E3} *REQUERIMIENTO* \u{1F4E3}
-\u2022 \u{1F3E2} *INMUEBLE:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || "inmueble")}
-\u2022 \u{1F4BC} *NEGOCIO:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || "compra")}
-\u2022 \u{1F4C5} *FECHA DE ENV\xCDO:* ${reqDateTime.dateStr}
-\u2022 \u23F0 *HORA DE ENV\xCDO:* ${reqDateTime.timeStr}
-\u2022 \u{1F464} *Autor:* @${isProperty ? matchedRawPhone : savedRawPhone}
-\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${getReqText(reqItem)}
-\u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]
-
-\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-\u{1F3E0} *PROPIEDAD* \u{1F3E0}
-\u2022 \u{1F3E2} *INMUEBLE:* ${translatePropertyType(propItem.propertyType || "inmueble")}
-\u2022 \u{1F4BC} *NEGOCIO:* ${translateTransactionType(propItem.transactionType || "venta")}
-\u2022 \u{1F4C5} *FECHA DE ENV\xCDO:* ${propDateTime.dateStr}
-\u2022 \u23F0 *HORA DE ENV\xCDO:* ${propDateTime.timeStr}
-\u2022 \u{1F464} *Autor:* @${isProperty ? savedRawPhone : matchedRawPhone}
-\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${getPropText(propItem)}
-\u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]`;
-    matchBlocks.push(block);
-    let savedUserName = realName;
-    let matchedUserName = "Colega";
-    try {
-      const db = await getDb();
-      if (db) {
-        const [su] = await db.select().from(users).where(eq10(users.phone, savedRawPhone)).limit(1);
-        if (su && su.name && su.name.trim() !== "") {
-          savedUserName = su.name;
-        }
-        const [mu] = await db.select().from(users).where(eq10(users.phone, matchedRawPhone)).limit(1);
-        if (mu && mu.name && mu.name.trim() !== "") {
-          matchedUserName = mu.name;
-        }
-      }
-    } catch (e) {
-      console.warn("[JanIA-Match] Error buscando nombres reales de usuarios:", e);
-    }
-    const savedFirstName = savedUserName.split(" ")[0];
-    const matchedFirstName = matchedUserName.split(" ")[0];
-    const ownerName = isProperty ? savedFirstName : matchedFirstName;
-    const ownerJid = isProperty ? savedJid : matchedJid;
-    const ownerDateTime = isProperty ? savedDateTime : matchedDateTime;
-    const seekerName = isProperty ? matchedFirstName : savedFirstName;
-    const seekerJid = isProperty ? matchedJid : savedJid;
-    const seekerDateTime = isProperty ? savedDateTime : matchedDateTime;
-    const adminPhone = "573192919978";
-    const adminJid = `${adminPhone}@c.us`;
-    const adminMessage = `\u{1F4E2} *NUEVA COINCIDENCIA DETECTADA* (Coincidencia: ${score.toFixed(0)}%)
-\u{1F4CC} *C\xF3digo:* #M${matchId}
-
-\u{1F4E3} *REQUERIMIENTO*
-\u2022 Autor: ${isProperty ? matchedUserName : savedUserName}
-\u2022 Tel\xE9fono: +${isProperty ? matchedRawPhone : savedRawPhone}
-\u2022 Detalle: ${getReqText(reqItem)}
-
-\u{1F3E0} *PROPIEDAD*
-\u2022 Autor: ${isProperty ? savedUserName : matchedUserName}
-\u2022 Tel\xE9fono: +${isProperty ? savedRawPhone : matchedRawPhone}
-\u2022 Detalle: ${getPropText(propItem)}
-\u2022 Precio: ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}`;
-    extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
-  }
-  return {
-    response: "",
-    mentions: [],
-    extraDMs,
-    sendReputationHook: matches.length > 0
-  };
-}
-function sanitizePropertyType(type) {
-  if (!type) return "apartment";
-  const t2 = type.toLowerCase().trim();
-  if (t2 === "consultorio" || t2.includes("consultorio") || t2.includes("odontol") || t2.includes("m\xE9dic") || t2.includes("medic") || t2 === "office_medical") return "consultorio";
-  if (t2 === "cabin" || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("caba\xF1as") || t2.includes("cabanas")) return "cabin";
-  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre")) return "house";
-  if (t2 === "building" || t2 === "edificio") return "building";
-  if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
-  if (t2 === "farm" || t2 === "finca") return "farm";
-  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
-  if (t2 === "office" || t2 === "oficina" || t2.includes("oficina")) return "office";
-  if (t2 === "land" || t2 === "lote" || t2 === "terreno" || t2.includes("lote") || t2.includes("terreno")) return "land";
-  if (t2 === "commercial" || t2 === "local" || t2 === "locales" || t2.includes("local comercial") || t2.includes("locales comerciales") || t2 === "comercial" || t2.includes("local")) return "commercial";
-  if (t2 === "loft" || t2.includes("loft") || t2.includes("apartaestudio") || t2.includes("apartasuite")) return "loft";
-  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apto") || t2.includes("apartamento") || t2.includes("penthouse")) return "apartment";
-  return "apartment";
-}
-function sanitizeTransactionType(type) {
-  if (!type) return "venta";
-  const t2 = type.toLowerCase().trim().replace(/\s+/g, "_");
-  if (t2 === "venta" || t2 === "vender" || t2 === "compra" || t2 === "comprar") return "venta";
-  if (t2 === "venta_o_arriendo" || t2.includes("venta_o_arriendo") || t2.includes("venta o arriendo") || t2.includes("vendo o arriendo") || t2.includes("venta_arriendo")) return "venta_o_arriendo";
-  if (t2 === "arriendo_con_opcion_de_compra" || t2.includes("opcion_de_compra") || t2.includes("opcion de compra") || t2.includes("opci\xF3n de compra") || t2.includes("con opcion") || t2.includes("con opci\xF3n")) return "arriendo_con_opcion_de_compra";
-  if (t2 === "arriendo" || t2 === "alquiler" || t2 === "renta" || t2 === "rentar" || t2 === "arrendar") return "arriendo";
-  if (t2 === "arriendo_temporal" || t2 === "temporal" || t2 === "vacacional" || t2 === "vacaciones") return "arriendo_temporal";
-  if (t2 === "venta_permuta" || t2.includes("venta_permuta") || t2.includes("venta permuta") || t2.includes("venpermuto") || t2.includes("venta") && t2.includes("permuta")) return "venta_permuta";
-  if (t2 === "permuta" || t2 === "permuto" || t2 === "cambio" || t2.includes("permuta")) return "permuta";
-  if (t2 === "aporte" || t2.includes("aporte") || t2 === "proyecto") return "aporte";
-  return "venta";
-}
-function sanitizeTransactionTypes(raw) {
-  const input = Array.isArray(raw) ? raw.join(" ") : raw || "";
-  const n = input.toLowerCase();
-  const result = [];
-  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
-  if (n.includes("opcion de compra") || n.includes("opci\xF3n de compra") || n.includes("con opcion") || n.includes("con opci\xF3n") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
-  if (n.includes("venta") && n.includes("permuta") || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
-  const hasVentaOArriendo = result.includes("venta_o_arriendo");
-  const hasVentaPermuta = result.includes("venta_permuta");
-  if (!hasVentaOArriendo && !hasVentaPermuta) {
-    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
-  }
-  if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
-    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
-  }
-  if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
-  if (!hasVentaPermuta) {
-    if (n.includes("permuta") || n.includes("permuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
-  }
-  if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") || n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
-  return result.length > 0 ? result : [sanitizeTransactionType(input)];
-}
-function sanitizeCurrency(curr) {
-  if (!curr) return "COP";
-  const c = curr.toUpperCase().trim();
-  if (c === "USD" || c === "DOLARES" || c === "DOLAR") return "USD";
-  return "COP";
-}
-function safeSlice(val, limit) {
-  if (val === void 0 || val === null) return void 0;
-  return String(val).slice(0, limit);
-}
-async function findOrCreateUserByPhone(phone, realName) {
-  const db = await getDb();
-  if (!db) return null;
-  const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq10(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
-  if (!user) {
-    user = await db.select().from(users).where(eq10(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
-  }
-  if (!user) {
-    const openId = `wa-${cleanPhone}`;
-    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
-    try {
-      const [newUser] = await db.insert(users).values({
-        openId,
-        name: realName,
-        phone: cleanPhone,
-        role: "agent",
-        loginMethod: "whatsapp"
-      }).returning();
-      user = newUser;
-    } catch (insertErr) {
-      if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
-        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
-        user = await db.select().from(users).where(eq10(users.openId, openId)).limit(1).then((r) => r[0]);
-      } else {
-        throw insertErr;
-      }
-    }
-  } else {
-    if (realName && !isGenericName(realName) && isGenericName(user.name)) {
-      console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq10(users.id, user.id)).returning();
-      user = updatedUser;
-    }
-  }
-  return user;
-}
-async function initBrokerDirectory() {
-  try {
-    await initAdvisorsDirectory();
-  } catch (err) {
-    console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
-  }
-}
-async function propagateBrokerPhoneAcrossAllListings(params) {
-  const result = await saveOrUpdateAdvisor({
-    phone: params.rawPhoneOrText,
-    name: params.brokerName,
-    oldPhoneOrLid: params.oldPhoneOrLid,
-    sourceGroup: params.sourceGroup,
-    agency: params.agency,
-    notes: params.notes
-  });
-  return {
-    updatedProps: result.updatedProps,
-    updatedReqs: result.updatedReqs,
-    cleanPhone: result.cleanPhone
-  };
-}
-async function handleAmendmentUpdate(userId, text2) {
-  const db = await getDb();
-  if (!db) return false;
-  const rawPhone = userId.split("@")[0].split(":")[0].replace(/\D/g, "");
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1e3);
-  const cleanTextLower = text2.toLowerCase().trim();
-  const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
-  if (!isAmendmentTrigger) return false;
-  const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and6(
-    eq10(requirements.idUsuarioWhatsapp, rawPhone),
-    gte2(requirements.createdAt, twoHoursAgo)
-  )).orderBy(desc4(requirements.createdAt)).limit(1);
-  if (lastReqs.length > 0) {
-    const req = lastReqs[0];
-    const updates = {};
-    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
-      updates.parqueaderosMin = fallbackData.garages;
-    }
-    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
-      updates.habitacionesMin = fallbackData.bedrooms;
-    }
-    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
-      updates.banosMin = fallbackData.bathrooms;
-    }
-    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("presupuesto")) && fallbackData.price > 0) {
-      updates.presupuestoMax = String(fallbackData.price);
-    }
-    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
-      updates.areaMin = String(fallbackData.area);
-    }
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(requirements).set(updates).where(eq10(requirements.id, req.id));
-      console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
-      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-      setImmediate(() => {
-        executeMatchEngine2(null, req.id).catch((err) => console.error("Error executing match engine on amendment:", err));
-      });
-      return true;
-    }
-  }
-  const lastProps = await db.select().from(properties).where(and6(
-    eq10(properties.idUsuarioWhatsapp, rawPhone),
-    gte2(properties.createdAt, twoHoursAgo)
-  )).orderBy(desc4(properties.createdAt)).limit(1);
-  if (lastProps.length > 0) {
-    const prop = lastProps[0];
-    const updates = {};
-    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
-      updates.garages = fallbackData.garages;
-    }
-    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
-      updates.bedrooms = fallbackData.bedrooms;
-    }
-    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
-      updates.bathrooms = fallbackData.bathrooms;
-    }
-    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("valor")) && fallbackData.price > 0) {
-      updates.price = String(fallbackData.price);
-    }
-    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
-      updates.areaTotal = String(fallbackData.area);
-    }
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq10(properties.id, prop.id));
-      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
-      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-      setImmediate(() => {
-        executeMatchEngine2(prop.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
-      });
-      return true;
-    }
-  }
-  return false;
-}
-async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
-  const db = await getDb();
-  if (!db) return null;
-  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
-    console.log(`[JanIA-Reject] \u{1F6AB} Inmueble descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
-    return null;
-  }
-  const rawLower = `${data.rawText || ""} ${data.name || ""}`.toLowerCase();
-  const isStrictDemandInProperty = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(rawLower) && !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(rawLower);
-  if (isStrictDemandInProperty) {
-    console.error(`[JanIA-Guardrail v31.85] \u26D4 BLOQUEO CR\xCDTICO: Se intent\xF3 guardar una DEMANDA en la tabla properties. Abortando inserci\xF3n: "${rawLower.substring(0, 80)}..."`);
-    return null;
-  }
-  const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
-  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
-  const rawPhone = effectivePhone;
-  const user = await findOrCreateUserByPhone(effectivePhone, realName);
-  let imageUrl;
-  if (imageBuffer) {
-    try {
-      console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
-      const buffer = Buffer.from(imageBuffer, "base64");
-      const filename = `flyers/wa_${Date.now()}_${rawPhone}.jpg`;
-      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
-      imageUrl = uploadResult.url;
-      console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
-    } catch (err) {
-      console.error("[JanIA-SaveProperty] Error subiendo imagen:", err);
-    }
-  }
-  let pdfUrl;
-  if (pdfBuffer) {
-    try {
-      console.log(`[JanIA-SaveProperty] Subiendo PDF brochure de WhatsApp para ${realName}...`);
-      const buffer = Buffer.from(pdfBuffer, "base64");
-      const filename = `documents/doc_${Date.now()}_${rawPhone}.pdf`;
-      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
-      pdfUrl = uploadResult.url;
-      console.log(`[JanIA-SaveProperty] PDF subido exitosamente: ${pdfUrl}`);
-    } catch (err) {
-      console.error("[JanIA-SaveProperty] Error subiendo PDF:", err);
-    }
-  }
-  const finalImages = [];
-  if (imageUrl) {
-    finalImages.push(imageUrl);
-  }
-  if (Array.isArray(data.images)) {
-    for (const img of data.images) {
-      if (img && typeof img === "string" && !finalImages.includes(img)) finalImages.push(img);
-    }
-  }
-  if (pdfUrl) {
-    data.externalUrl = data.externalUrl || pdfUrl;
-    data.enlaceOrigen = data.enlaceOrigen || pdfUrl;
-  }
-  const amenitiesObj = {
-    gives: data.gives || data.amenities?.gives,
-    wants: data.wants || data.amenities?.wants,
-    isCollaborativePool: data.isCollaborativePool !== void 0 ? data.isCollaborativePool : data.amenities?.isCollaborativePool,
-    interiorExterior: data.interiorExterior || data.amenities?.interiorExterior,
-    cuartoBanoServicio: data.cuartoBanoServicio || data.amenities?.cuartoBanoServicio,
-    cocina: data.cocina || data.amenities?.cocina,
-    lavanderiaIndependiente: data.lavanderiaIndependiente || data.amenities?.lavanderiaIndependiente,
-    tipoPisos: data.tipoPisos || data.amenities?.tipoPisos,
-    depositos: data.depositos || data.amenities?.depositos,
-    comisiones: data.comisiones || data.amenities?.comisiones,
-    antiguedad: data.antiguedad || data.amenities?.antiguedad
-  };
-  if (data.zone && typeof data.zone === "string") {
-    const barriosDesambiguados = desambiguarBarriosCompuestos(data.zone);
-    if (barriosDesambiguados.length > 1) {
-      data.zone = barriosDesambiguados.join(", ");
-      data.addressNeighborhood = barriosDesambiguados[0];
-      console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
-    }
-  }
-  const rawLowerTx = (data.rawText || "").toLowerCase();
-  let txTypeForSplit = (data.transactionType || "").toLowerCase();
-  const hasExplicitRent = rawLowerTx.includes("arriendo") || rawLowerTx.includes("canon") || rawLowerTx.includes("renta");
-  const hasExplicitSale = rawLowerTx.includes("venta") || rawLowerTx.includes("precio de venta");
-  if (hasExplicitRent && hasExplicitSale && (txTypeForSplit === "venta" || txTypeForSplit === "arriendo")) {
-    const rentMatchTest = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
-    const saleMatchTest = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls|m|M)?/i);
-    if (rentMatchTest && saleMatchTest) {
-      txTypeForSplit = "venta_o_arriendo";
-      data.transactionType = "venta_o_arriendo";
-      console.log(`[JanIA-DualDetector] Promovido a 'venta_o_arriendo' por presencia dual de arriendo y venta en rawText.`);
-    }
-  }
-  if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
-    const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
-    const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
-    const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
-    const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
-    let finalSalePrice = currentPrice > 1e8 ? currentPrice : priceSaleField;
-    let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
-    if (finalRentPrice <= 0) {
-      const rentMatch = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
-      if (rentMatch) {
-        let rawRNum = parseFloat(rentMatch[1].replace(/[.,]/g, ""));
-        const unitR = (rentMatch[2] || "").toLowerCase();
-        const multR = unitR.includes("mil millon") ? 1e9 : unitR.includes("millon") || unitR === "m" ? 1e6 : rawRNum < 1e4 ? 1e6 : 1;
-        finalRentPrice = rawRNum * multR;
-      }
-    }
-    if (finalSalePrice < 1e8) {
-      const saleMatch = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls)?/i);
-      if (saleMatch) {
-        let rawSNum = parseFloat(saleMatch[1].replace(/[.,]/g, ""));
-        const unitS = (saleMatch[2] || "").toLowerCase();
-        const multS = unitS.includes("mil millon") ? 1e9 : unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls") ? 1e6 : rawSNum < 1e4 ? 1e6 : 1;
-        const computedS = rawSNum * multS;
-        if (computedS >= 1e8) finalSalePrice = computedS;
-      }
-    }
-    if (finalSalePrice > 0) data.price = finalSalePrice;
-    if (finalRentPrice > 0) {
-      const adminFeeVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
-      if (adminFeeVal > 0 && finalRentPrice >= adminFeeVal && finalRentPrice < 1e8) {
-        data.rentPrice = finalRentPrice - adminFeeVal;
-      } else {
-        data.rentPrice = finalRentPrice;
-      }
-    }
-    console.log(`[JanIA-PriceSplit] ${txTypeForSplit} \u2192 price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
-  }
-  if (txTypeForSplit === "arriendo" || txTypeForSplit === "arriendo_temporal") {
-    const curP = data.price ? parseFloat(String(data.price)) : 0;
-    const curR = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
-    if (curR <= 0 && curP > 0 && curP < 1e8) {
-      data.rentPrice = curP;
-    }
-    data.price = "0";
-  }
-  if (txTypeForSplit === "venta") {
-    data.rentPrice = null;
-  }
-  const curRentVal = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
-  const curSaleVal = data.price ? parseFloat(String(data.price)) : 0;
-  const curAdminVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
-  if (curAdminVal > 0) {
-    if (curRentVal > 0 && (curAdminVal === curRentVal || curAdminVal >= curRentVal * 0.45) || curSaleVal > 0 && (curAdminVal === curSaleVal || curAdminVal >= curSaleVal * 0.2)) {
-      data.adminFee = 0;
-      console.log(`[JanIA-SanidadPredial] Corregida cuota de administraci\xF3n absurda/duplicada $${curAdminVal} \u2192 N/E (0)`);
-    }
-  }
-  const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
-  const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
-  if (isVentaType && (currentPriceVal < 1e8 || !data.price) && data.rawText) {
-    const fallbackD = extractFallbackDataFromText(data.rawText);
-    if (fallbackD.price >= 3e7) {
-      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
-        data.adminFee = fallbackD.adminFee;
-      }
-      data.price = fallbackD.price;
-      console.log(`[JanIA-SanidadPredial] Corregido precio de venta $${currentPriceVal} \u2192 Real: $${fallbackD.price} | AdminFee: $${data.adminFee}`);
-    } else if (currentPriceVal < 3e7) {
-      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && currentPriceVal >= 1e5 && currentPriceVal <= 3e7) {
-        data.adminFee = currentPriceVal;
-      }
-      data.price = 0;
-      console.log(`[JanIA-SanidadPredial] Precio de venta menor a 30M ($${currentPriceVal}) desambiguado como AdminFee: $${data.adminFee} y Price: 0 (N/E)`);
-    }
-  }
-  if (data.rawText) {
-    const fallbackD = extractFallbackDataFromText(data.rawText);
-    if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
-      data.adminFee = fallbackD.adminFee;
-    }
-    if ((!data.garages || Number(data.garages) <= 0) && fallbackD.garages > 0) {
-      data.garages = fallbackD.garages;
-    }
-    if ((!data.antiguedadAnos || Number(data.antiguedadAnos) <= 0) && fallbackD.antiguedadAnos !== null) {
-      data.antiguedadAnos = fallbackD.antiguedadAnos;
-    }
-    if (!data.areaTotal && !data.area && fallbackD.area > 0) {
-      data.areaTotal = fallbackD.area;
-    }
-    if (fallbackD.bedrooms > 0) {
-      if (data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0 || Number(data.bedrooms) !== fallbackD.bedrooms && /(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?)\b/i.test(data.rawText || "")) {
-        data.bedrooms = fallbackD.bedrooms;
-      }
-    }
-    if ((data.bathrooms === void 0 || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
-      data.bathrooms = fallbackD.bathrooms;
-    }
-  }
-  if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia") {
-    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name || data.location);
-    if (geoInferred) {
-      data.zone = geoInferred.barrio;
-      data.addressNeighborhood = geoInferred.barrio;
-      data.addressLocality = geoInferred.localidad;
-      data.city = data.city || geoInferred.ciudad;
-      console.log(`[JanIA-GeoResolver] \u{1F9ED} Inmueble: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
-    }
-  }
-  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
-  const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
-  const finalEffectivePropName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name) ? knownPropAdvisor.name : realName || null;
-  const insertData = {
-    ...data,
-    name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: (() => {
-      const explicit = data.zone || data.addressNeighborhood;
-      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 100);
-      return "N/E";
-    })(),
-    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
-    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: (() => {
-      const explicit = data.addressNeighborhood || data.address_neighborhood || data.zone;
-      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
-      return null;
-    })(),
-    location: safeSlice(data.location, 255) || null,
-    matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
-    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
-    idUsuarioWhatsapp: safeSlice(canonicalPropPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice(finalEffectivePropName, 255) || null,
-    propertyType: sanitizePropertyType(data.propertyType),
-    transactionType: sanitizeTransactionType(data.transactionType),
-    acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
-    currency: sanitizeCurrency(data.currency),
-    // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
-    price: (() => {
-      const isRent = sanitizeTransactionType(data.transactionType) === "arriendo" || sanitizeTransactionType(data.transactionType) === "arriendo_temporal";
-      if (isRent) {
-        return "0.00";
-      }
-      if (data.price === void 0 || data.price === null) return "0.00";
-      const v = parseFloat(String(data.price));
-      if (isNaN(v) || isPhoneNumberNotPrice(v, data.rawText)) return "0.00";
-      if (v > 5e10) return "0.00";
-      if (v < 3e7) return "0.00";
-      return String(v);
-    })(),
-    rentPrice: (() => {
-      const isPureSale = sanitizeTransactionType(data.transactionType) === "venta";
-      if (isPureSale) return null;
-      if (data.rentPrice === void 0 || data.rentPrice === null) return null;
-      const v = parseFloat(String(data.rentPrice));
-      if (isNaN(v) || v < 3e5 || v > 2e8 || isPhoneNumberNotPrice(v, data.rawText)) return null;
-      return String(v);
-    })(),
-    areaTotal: (() => {
-      const raw = data.areaTotal !== void 0 && data.areaTotal !== null ? data.areaTotal : data.area;
-      if (raw === void 0 || raw === null) return null;
-      const v = parseFloat(String(raw));
-      if (isNaN(v) || v < 10 || v > 5e3) return null;
-      return String(v);
-    })(),
-    bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
-    bathrooms: (() => {
-      const rawL = (data.rawText || "").toLowerCase();
-      if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawL) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawL)) {
-        return 3;
-      }
-      if (data.bathrooms !== void 0 && data.bathrooms !== null) {
-        const num = Number(data.bathrooms);
-        if (num === 5 && /2[\.,]5/i.test(rawL)) return 3;
-        return Math.round(num);
-      }
-      return null;
-    })(),
-    garages: (() => {
-      if (data.garages === void 0 || data.garages === null) return null;
-      const g = Math.round(Number(data.garages));
-      if (isNaN(g) || g < 0) return null;
-      if (g >= 1900 && g <= 2100) return null;
-      if (g > 30) return null;
-      return g;
-    })(),
-    garageType: data.garageType || null,
-    // "independiente" | "lineal" | "mixto" | null (v20.0)
-    stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
-    adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
-    yearBuilt: data.yearBuilt !== void 0 && data.yearBuilt !== null ? Math.round(Number(data.yearBuilt)) : null,
-    antiguedadAnos: data.antiguedadAnos !== void 0 && data.antiguedadAnos !== null ? Math.round(Number(data.antiguedadAnos)) : null,
-    agentId: user ? user.id : null,
-    latitude: data.latitude !== void 0 && data.latitude !== null ? String(data.latitude) : null,
-    longitude: data.longitude !== void 0 && data.longitude !== null ? String(data.longitude) : null,
-    images: finalImages.length > 0 ? finalImages : null,
-    amenities: amenitiesObj,
-    origenTipo: data.origenTipo || null,
-    origenId: data.origenId || null,
-    origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
-  };
-  let portal = null;
-  let externalListingId = null;
-  let canonicalExternalId = null;
-  if (data.externalUrl) {
-    const extractedInfo = extractPortalAndListingId(data.externalUrl);
-    portal = extractedInfo.portal;
-    externalListingId = extractedInfo.listingId;
-    if (portal && externalListingId) {
-      canonicalExternalId = `${portal.toUpperCase()}:${externalListingId}`;
-    }
-  }
-  const finalInsertData = {
-    ...insertData,
-    portal,
-    externalListingId,
-    canonicalExternalId,
-    externalUrl: data.externalUrl || null,
-    fechaPrimeraPublicacion: getColombiaNow(),
-    fechaUltimaPublicacion: getColombiaNow(),
-    republicacionesCount: 0,
-    estadoComercial: "ACTIVO",
-    ultimaActividad: "PUBLICACI\xD3N",
-    vigenciaIa: "VIGENTE",
-    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent),
-    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent)
-  };
-  let existing = [];
-  if (canonicalExternalId) {
-    existing = await db.select().from(properties).where(
-      and6(
-        eq10(properties.canonicalExternalId, canonicalExternalId),
-        eq10(properties.available, true)
-      )
-    ).limit(1);
-  }
-  if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
-    existing = await db.select().from(properties).where(
-      and6(
-        eq10(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
-        eq10(properties.available, true)
-      )
-    ).limit(1);
-  }
-  if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
-    existing = await db.select().from(properties).where(
-      and6(
-        eq10(properties.rawText, finalInsertData.rawText.trim()),
-        eq10(properties.available, true)
-      )
-    ).limit(1);
-  }
-  if (existing.length === 0) {
-    existing = await db.select().from(properties).where(
-      and6(
-        eq10(properties.idUsuarioWhatsapp, rawPhone),
-        eq10(properties.propertyType, finalInsertData.propertyType),
-        eq10(properties.transactionType, finalInsertData.transactionType),
-        eq10(properties.city, finalInsertData.city),
-        eq10(properties.zone, finalInsertData.zone),
-        eq10(properties.available, true)
-      )
-    ).limit(1);
-  }
-  const { label: calif } = calcularCalificacionCompletitud(finalInsertData, true);
-  const insertDataWithCalif = {
-    ...finalInsertData,
-    calificacion: calif
-  };
-  if (existing.length > 0) {
-    const preservedContact = preserveVerifiedAdvisorContact(
-      existing[0].idUsuarioWhatsapp,
-      existing[0].nombreUsuarioWhatsapp,
-      insertDataWithCalif.idUsuarioWhatsapp,
-      insertDataWithCalif.nombreUsuarioWhatsapp
-    );
-    const updatedCount = (existing[0].republicacionesCount || 0) + 1;
-    const [updated] = await db.update(properties).set({
-      available: true,
-      // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
-      price: insertDataWithCalif.price,
-      description: insertDataWithCalif.description || existing[0].description,
-      adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
-      images: finalImages.length > 0 ? finalImages : existing[0].images,
-      origenTipo: insertDataWithCalif.origenTipo,
-      origenId: insertDataWithCalif.origenId,
-      origenNombre: insertDataWithCalif.origenNombre || existing[0].origenNombre,
-      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
-      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
-      fechaUltimaPublicacion: getColombiaNow(),
-      updatedAt: /* @__PURE__ */ new Date(),
-      republicacionesCount: updatedCount,
-      estadoComercial: "REPUBLICADO",
-      ultimaActividad: "REPUBLICACI\xD3N",
-      vigenciaIa: "VIGENTE"
-    }).where(eq10(properties.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
-    try {
-      await db.insert(propertyPublicationHistory).values({
-        propertyId: existing[0].id,
-        grupo: insertDataWithCalif.origenNombre,
-        broker: realName,
-        brokerPhone: rawPhone,
-        accion: "REPUBLICACI\xD3N",
-        portal,
-        externalListingId,
-        detalles: `Inmueble republicado en ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
-      });
-    } catch (histErr) {
-      console.error("[JanIA-History] Error al registrar historial de republicaci\xF3n:", histErr);
-    }
-    findMatchesForProperty(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
-    return updated;
-  }
-  const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
-  findMatchesForProperty(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
-  try {
-    await db.insert(propertyPublicationHistory).values({
-      propertyId: result.id,
-      grupo: insertDataWithCalif.origenNombre,
-      broker: realName,
-      brokerPhone: rawPhone,
-      accion: "PUBLICACI\xD3N",
-      portal,
-      externalListingId,
-      detalles: `Inmueble ingresado por primera vez desde ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
-    });
-  } catch (histErr) {
-    console.error("[JanIA-History] Error al registrar historial inicial:", histErr);
-  }
-  if (result && imageUrl) {
-    try {
-      await db.insert(propertyImages).values({
-        propertyId: result.id,
-        imageUrl,
-        isMainImage: true,
-        displayOrder: 1,
-        mimeType: "image/jpeg",
-        uploadedBy: "janIA"
-      });
-      console.log(`[JanIA-SaveProperty] Registro en propertyImages creado para propiedad ${result.id}`);
-    } catch (err) {
-      console.error("[JanIA-SaveProperty] Error creando registro en propertyImages:", err);
-    }
-  }
-  return result;
-}
-async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
-  const db = await getDb();
-  if (!db) return null;
-  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name)) {
-    console.log(`[JanIA-Reject] \u{1F6AB} Requerimiento descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
-    return null;
-  }
-  const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
-  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
-  const rawPhone = effectivePhone;
-  const user = await findOrCreateUserByPhone(effectivePhone, realName);
-  let reqPdfUrl;
-  if (pdfBuffer) {
-    try {
-      const buffer = Buffer.from(pdfBuffer, "base64");
-      const filename = `documents/req_doc_${Date.now()}_${rawPhone}.pdf`;
-      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
-      reqPdfUrl = uploadResult.url;
-      data.enlaceOrigen = data.enlaceOrigen || reqPdfUrl;
-    } catch (err) {
-      console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
-    }
-  }
-  const isRequirementFlyer = !!(data.isFlyerOrBanner || data.flyerVerbatimText && data.flyerVerbatimText.trim().length >= 15);
-  if (imageBuffer && isRequirementFlyer) {
-    try {
-      const buffer = Buffer.from(imageBuffer, "base64");
-      const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
-      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
-      data.enlaceOrigen = uploadResult.url;
-      console.log(`[JanIA-SaveRequirement] \u2705 Flyer de requerimiento guardado localmente en VPS: ${uploadResult.url}`);
-    } catch (err) {
-      console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
-    }
-  }
-  const rawLowerAll = `${rawTextContent} ${data.name || ""}`.toLowerCase();
-  const reqNoTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawLowerAll);
-  const reqRequiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(rawLowerAll);
-  const reqHasStudy = reqRequiresObligatoryStudy || rawLowerAll.includes("estudio") || rawLowerAll.includes("star de tv") || rawLowerAll.includes("estar de tv") || rawLowerAll.includes("sala de tv");
-  const reqPisoMinMatch = rawLowerAll.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
-  const reqPisoMin = reqPisoMinMatch ? parseInt(reqPisoMinMatch[1], 10) : null;
-  const reqRequiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(rawLowerAll);
-  const reqAdminFeeInc = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(rawLowerAll);
-  const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
-  const characteristicsObj = {
-    gives: data.gives || data.caracteristicasDeseadas?.gives,
-    wants: data.wants || data.caracteristicasDeseadas?.wants,
-    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
-    cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
-    cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
-    lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
-    tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
-    depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
-    comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
-    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
-    estudio: reqRequiresObligatoryStudy ? "obligatorio" : reqHasStudy ? "deseado" : null,
-    pisoMinimo: reqPisoMin,
-    adminFeeIncluded: reqAdminFeeInc,
-    amoblado: reqIsAmoblado ? true : rawLowerAll.includes("sin amoblar") ? false : null
-  };
-  if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia")) {
-    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
-    if (geoInferred) {
-      data.zonaDeseada = geoInferred.barrio;
-      data.addressNeighborhood = geoInferred.barrio;
-      data.addressLocality = geoInferred.localidad;
-      data.ciudadDeseada = data.ciudadDeseada || geoInferred.ciudad;
-      console.log(`[JanIA-GeoResolver] \u{1F9ED} Requerimiento: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
-    }
-  }
-  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
-  const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
-  const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
-  const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
-  const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
-  const insertData = {
-    ...data,
-    name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
-    zonaDeseada: (() => {
-      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
-      if (explicit && !isCityOrGenericZone(explicit)) {
-        return safeSlice(extractPureBarrio(explicit) || explicit, 100);
-      }
-      if (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada)) {
-        return safeSlice(extractPureBarrio(fallbackReqD.zonaDeseada) || fallbackReqD.zonaDeseada, 100);
-      }
-      return null;
-    })(),
-    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
-    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: (() => {
-      const explicit = data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada) ? fallbackReqD.zonaDeseada : null);
-      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
-      return null;
-    })(),
-    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
-    idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
-    tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
-    tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
-    tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
-    monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
-    // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
-    presupuestoMin: (() => {
-      const raw = data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? data.presupuestoMin : null;
-      if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
-          return String(v);
-        }
-      }
-      if (fallbackReqD.presupuestoMin >= 3e5) {
-        return String(fallbackReqD.presupuestoMin);
-      }
-      return null;
-    })(),
-    presupuestoMax: (() => {
-      const raw = data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
-      if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
-          return String(v);
-        }
-      }
-      if (fallbackReqD.presupuestoMax >= 3e5) {
-        return String(fallbackReqD.presupuestoMax);
-      }
-      return null;
-    })(),
-    areaMin: (() => {
-      const raw = data.areaMin !== void 0 && data.areaMin !== null ? data.areaMin : data.area;
-      if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
-      }
-      if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
-        return String(fallbackReqD.areaMin || fallbackReqD.area);
-      }
-      const rawL = (data.rawText || data.name || "").toLowerCase();
-      const areaFallback = rawL.match(
-        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con|metraje\s*(?:m[ií]nimo|min(?:imo)?))\s*[:=-]?\s*)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
-      );
-      if (areaFallback) {
-        const v = parseFloat(areaFallback[1].replace(",", "."));
-        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
-      }
-      return null;
-    })(),
-    adminFeeMax: (() => {
-      const raw = data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? data.adminFeeMax : data.adminFee !== void 0 && data.adminFee !== null ? data.adminFee : null;
-      if (raw !== void 0 && raw !== null) {
-        let v = parseFloat(String(raw));
-        if (!isNaN(v)) {
-          if (v >= 500 && v <= 15e3) v = v * 1e3;
-          if (v >= 1e4 && v <= 3e7) return String(v);
-        }
-      }
-      const rawL = (data.rawText || data.name || "").toLowerCase();
-      const parsedAdminInfo = parseAdminFee(rawL);
-      if (parsedAdminInfo.fee && parsedAdminInfo.fee >= 1e4 && parsedAdminInfo.fee <= 3e7 && !isPhoneNumberNotPrice(parsedAdminInfo.fee, rawL)) {
-        return String(parsedAdminInfo.fee);
-      }
-      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
-      if (adminMatch) {
-        const cleanNum = adminMatch[1].replace(/[.,\s]/g, "");
-        let parsed = parseFloat(cleanNum);
-        if (!isNaN(parsed)) {
-          if (parsed >= 500 && parsed <= 15e3) parsed = parsed * 1e3;
-          if (parsed >= 1e4 && parsed <= 3e7 && !isPhoneNumberNotPrice(parsed, rawL)) {
-            return String(parsed);
-          }
-        }
-      }
-      return null;
-    })(),
-    habitacionesMin: (() => {
-      const v = data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null;
-      if (v !== null && !isNaN(v) && v > 0) return v;
-      if (fallbackReqD.bedroomsMin > 0 || fallbackReqD.bedrooms > 0) {
-        return fallbackReqD.bedroomsMin || fallbackReqD.bedrooms;
-      }
-      const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-      if (m) {
-        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
-        const w = m[0].split(/\s+/)[0].toLowerCase();
-        return SPANISH_NUM_LOCAL[w] || parseInt(w, 10) || null;
-      }
-      return null;
-    })(),
-    banosMin: (() => {
-      const rawL = (data.rawText || "").toLowerCase();
-      const socialAddMatch = rawL.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
-      if (socialAddMatch) {
-        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
-        const bWord = socialAddMatch[1].toLowerCase();
-        const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
-        return base + 1;
-      }
-      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
-      if (v !== null && !isNaN(v) && v > 0) {
-        if (v === 5 && rawL.includes("2.5")) return 3;
-        return Math.round(v);
-      }
-      if (fallbackReqD.bathrooms > 0) {
-        return fallbackReqD.bathrooms;
-      }
-      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*hab\s*con\s*baño/i);
-      if (m) {
-        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
-        const w = m[0].split(/\s+/)[0].toLowerCase();
-        const num = SPANISH_NUM_LOCAL[w] || parseFloat(w.replace(",", "."));
-        if (!isNaN(num) && num > 0) {
-          if (num % 1 !== 0) return Math.ceil(num);
-          return Math.round(num);
-        }
-      }
-      return null;
-    })(),
-    parqueaderosMin: (() => {
-      const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;
-      if (v !== null && !isNaN(v) && v > 0) return v;
-      if (fallbackReqD.garages > 0) {
-        return fallbackReqD.garages;
-      }
-      const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
-      return m ? parseInt(m[1], 10) : null;
-    })(),
-    estratoDeseado: (() => {
-      const rawT = (data.rawText || "").toLowerCase();
-      const hasExplicitStratum = /(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i.test(rawT) || /\b(?:estrato|estr\.?)\s*(?:alto|medio|bajo)\b/i.test(rawT);
-      if (!hasExplicitStratum) {
-        return null;
-      }
-      if (data.estratoDeseado && Array.isArray(data.estratoDeseado) && data.estratoDeseado.length > 0) {
-        return data.estratoDeseado.map((e) => Math.round(Number(e))).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
-      }
-      if (data.stratum !== void 0 && data.stratum !== null && !isNaN(Number(data.stratum))) {
-        const s = Math.round(Number(data.stratum));
-        if (s >= 1 && s <= 6) return [s];
-      }
-      return null;
-    })(),
-    userId: user ? user.id : null,
-    caracteristicasDeseadas: characteristicsObj,
-    origenTipo: data.origenTipo || null,
-    origenId: data.origenId || null,
-    origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || getColombiaNow(),
-    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !reqNoTerceriaMatch,
-    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : reqNoTerceriaMatch
-  };
-  const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  const rawTextStr = (insertData.rawText || "").toLowerCase();
-  const isAmbiguousZoneName = (zn) => {
-    if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
-    const ambiguousPhrases = [
-      "todas las zonas",
-      "cualquier zona",
-      "cualquier lado",
-      "donde sea",
-      "varias zonas",
-      "por ahi",
-      "por ah\xED",
-      "buena zona",
-      "sector residencial",
-      "sector comercial",
-      "norte o sur",
-      "donde haya",
-      "cualquiera"
-    ];
-    return ambiguousPhrases.some((a) => zn.includes(a));
-  };
-  const hasPerimeterOrStreet = /calle\s*\d+|carrera\s*\d+|cra\s*\d+|cll\s*\d+|cl\s*\d+|diagonal\s*\d+|transversal\s*\d+|entre\s*calle|perimetro|perímetro/i.test(rawTextStr);
-  const isZoneAmbiguous = isAmbiguousZoneName(rawZoneStr);
-  if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
-    console.log(`[JANIA-INGESTION-GUARD] \u26D4 Requerimiento omitido por falta de ubicaci\xF3n expl\xEDcita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
-    return null;
-  }
-  let existing = [];
-  if (insertData.rawText && insertData.rawText.trim().length > 25) {
-    existing = await db.select().from(requirements).where(
-      eq10(requirements.rawText, insertData.rawText.trim())
-    ).limit(1);
-  }
-  if (existing.length === 0) {
-    existing = await db.select().from(requirements).where(
-      and6(
-        eq10(requirements.idUsuarioWhatsapp, rawPhone),
-        eq10(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq10(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq10(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq10(requirements.zonaDeseada, insertData.zonaDeseada)
-      )
-    ).limit(1);
-  }
-  const { label: calif } = calcularCalificacionCompletitud(insertData, false);
-  const insertDataWithCalif = {
-    ...insertData,
-    calificacion: calif
-  };
-  if (existing.length > 0) {
-    const preservedContact = preserveVerifiedAdvisorContact(
-      existing[0].idUsuarioWhatsapp,
-      existing[0].nombreUsuarioWhatsapp,
-      insertDataWithCalif.idUsuarioWhatsapp,
-      insertDataWithCalif.nombreUsuarioWhatsapp
-    );
-    const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
-    const repCount = (existing[0].republicacionesCount || 0) + 1;
-    const [updated] = await db.update(requirements).set({
-      ...updateFields,
-      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
-      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
-      status: "active",
-      // Al ser republicado o actualizado, se reactiva a activo de inmediato
-      fechaUltimaPublicacion: getColombiaNow(),
-      republicacionesCount: repCount,
-      updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq10(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
-    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
-    return updated;
-  }
-  const insertDataFinal = {
-    ...insertDataWithCalif,
-    fechaPrimeraPublicacion: getColombiaNow(),
-    fechaUltimaPublicacion: getColombiaNow(),
-    republicacionesCount: 0,
-    status: "active"
-  };
-  const [result] = await db.insert(requirements).values(insertDataFinal).returning();
-  findMatchesForRequirement(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
-  return result;
-}
-async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType, groupJid, groupName, flyerVisionData) {
-  try {
-    let isScrapeable2 = function(url) {
-      try {
-        const hostname = new URL(url).hostname.replace("www.", "").toLowerCase();
-        return !SCRAPE_BLOCKLIST.some((blocked) => hostname.includes(blocked));
-      } catch {
-        return false;
-      }
-    };
-    var isScrapeable = isScrapeable2;
-    const isWebUser = userId.startsWith("web-");
-    if (text2 && !text2.includes("__is_sub_message__")) {
-      const subBlocks = splitMultiItemMessage(text2);
-      if (subBlocks.length >= 2) {
-        console.log(`[JanIA-MultiItemSplitter] \u{1F680} Ingestando ${subBlocks.length} publicaciones individuales de manera independiente...`);
-        let finalResult = { classification: "INMUEBLE", response: "", inserted: true };
-        for (const subText of subBlocks) {
-          finalResult = await processWhatsAppMessage(
-            `${subText}
-__is_sub_message__`,
-            userId,
-            userName,
-            hasMedia,
-            scrapedData,
-            audioUrl,
-            imageBuffer,
-            isGroup,
-            pdfBuffer,
-            pdfMimeType,
-            groupJid,
-            groupName,
-            flyerVisionData
-          );
-        }
-        return finalResult;
-      }
-    }
-    if (!isWebUser && text2) {
-      const checkText = text2.toLowerCase();
-      if (isNonRealEstateText(checkText)) {
-        console.log(`[JANIA-NON-REALESTATE-GUARD] \u26D4 Publicaci\xF3n NO inmobiliaria (canteras, materiales, minas, veh\xEDculos, carb\xF3n, etc.). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji: "${checkText.substring(0, 60)}..."`);
-        return {
-          classification: "VIOLACION_DE_NORMAS",
-          response: "",
-          dmResponse: "",
-          shouldSendDM: false,
-          reactionEmoji: void 0,
-          inserted: false
-        };
-      }
-      const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
-      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
-        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
-        return {
-          classification: "VIOLACION_DE_NORMAS",
-          response: "",
-          dmResponse: "",
-          shouldSendDM: false,
-          reactionEmoji: void 0,
-          inserted: false
-        };
-      }
-    }
-    const rawPhone = userId.split("@")[0];
-    const realName = await resolveRealName(userId, userName);
-    const alreadyGreeted = await checkAlreadyGreeted(userId);
-    const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
-    const n = extractFirstName(realName) || "colega";
-    const session = await getPendingSession(userId);
-    if (session) {
-      const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
-      await deletePendingSession(userId);
-      console.log(`[JanIA-PendingSession] Resolviendo sesi\xF3n pendiente para ${userId}. Combinando textos y re-procesando...`);
-      return await processWhatsAppMessage(
-        combinedText,
-        userId,
-        userName,
-        hasMedia || !!session.imageBuffer,
-        scrapedData,
-        audioUrl,
-        imageBuffer || session.imageBuffer,
-        isGroup,
-        pdfBuffer,
-        pdfMimeType,
-        groupJid
-      );
-    }
-    const trimmedTextForUrl = text2.trim();
-    const urlLineOnly = trimmedTextForUrl.split("\n").find((l) => /^https?:\/\/\S+$/.test(l.trim()));
-    const isSoloUrlMsg = !!urlLineOnly && trimmedTextForUrl.replace(/\s+/g, "").length <= urlLineOnly.replace(/\s+/g, "").length + 5;
-    if (isSoloUrlMsg && urlLineOnly && esDominioPermitido(urlLineOnly.trim())) {
-      const soloUrl = urlLineOnly.trim();
-      const TEN_MIN_AGO = new Date(Date.now() - 10 * 60 * 1e3);
-      try {
-        const db = await getDb();
-        if (!db) throw new Error("DB no disponible");
-        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and6(
-          eq10(properties.idUsuarioWhatsapp, userId.split("@")[0]),
-          gte2(properties.createdAt, TEN_MIN_AGO),
-          eq10(properties.available, true)
-        )).orderBy(desc4(properties.createdAt)).limit(1);
-        if (recentProps.length > 0) {
-          const prop = recentProps[0];
-          const portalInfo = extractPortalAndListingId(soloUrl);
-          const updatedRaw = (prop.rawText || "").trimEnd().endsWith(":") ? `${prop.rawText}
-${soloUrl}` : `${prop.rawText}
-
-\u{1F517} Info y galer\xEDa:
-${soloUrl}`;
-          await db.update(properties).set({
-            externalUrl: soloUrl,
-            rawText: updatedRaw,
-            origenNombre: prop.origenNombre || groupName || void 0,
-            origenId: groupJid || void 0,
-            ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
-            ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
-          }).where(eq10(properties.id, prop.id));
-          console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
-          return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
-        }
-      } catch (urlPatchErr) {
-        console.warn(`[JanIA-URLDiferida] \u26A0\uFE0F Error al enlazar URL diferida: ${urlPatchErr instanceof Error ? urlPatchErr.message : String(urlPatchErr)}`);
-      }
-    }
-    let messageToProcess = text2;
-    const rawUserText = text2;
-    const SCRAPE_BLOCKLIST = [
-      "wa.me",
-      "whatsapp.com",
-      "whatsapp.net",
-      "facebook.com",
-      "fb.com",
-      "fb.watch",
-      "instagram.com",
-      "youtube.com",
-      "youtu.be",
-      "tiktok.com",
-      "twitter.com",
-      "x.com",
-      "linkedin.com",
-      "maps.google.com",
-      "photos.app.goo.gl",
-      "photos.google.com",
-      "drive.google.com",
-      "docs.google.com",
-      "bit.ly",
-      "tinyurl.com",
-      "goo.gl"
-    ];
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = text2.match(urlRegex);
-    let jinaExtractedText = "";
-    if (urls && urls.length > 0) {
-      for (const url of urls) {
-        if (!isScrapeable2(url)) {
-          console.log(`[Scraper-Bypass] Dominio bloqueado, omitiendo scraping: ${url}`);
-          continue;
-        }
-        let content = await scrapeUrlWithBypass(url);
-        if (content) {
-          content = content.replace(/!\[.*?\]\(.*?\)/g, "").replace(/^https?:\/\/[^\s]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
-          if (content.length > 50) {
-            jinaExtractedText += `
-
-[CONTENIDO DE ENLACE WEB EXTRA\xCDDO DE ${url}]:
-${content.substring(0, 15e3)}
-[FIN CONTENIDO ENLACE]
-`;
-          }
-        }
-      }
-    }
-    if (jinaExtractedText) {
-      messageToProcess += jinaExtractedText;
-    }
-    if (!isWebUser && messageToProcess) {
-      const checkText = messageToProcess.toLowerCase();
-      const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
-      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
-        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
-        return {
-          classification: "VIOLACION_DE_NORMAS",
-          response: "",
-          dmResponse: "",
-          shouldSendDM: false,
-          reactionEmoji: void 0,
-          inserted: false
-        };
-      }
-    }
-    if (!isWebUser && !pdfBuffer) {
-      const wordCount = (text2.match(/\S+/g) || []).length;
-      const emojiPropertyStarters = (text2.match(/(?:🏡|🏠|🏢|🔑|💥|🌷|🌺|🌸|⭐|✨|🔥|🎯|📍)/g) || []).length;
-      const hasMultipleStarters = emojiPropertyStarters >= 2 || wordCount > 200;
-      if (wordCount > 150 && hasMultipleStarters) {
-        console.log(`[CHUNKER] \u{1F4E6} Mensaje largo (${wordCount} palabras, ${emojiPropertyStarters} emojis-inicio). Fragmentando...`);
-        const parentUrl = urls && urls.length > 0 ? urls[0] : null;
-        const parentPhone = normalizePhoneNumber(userId, text2);
-        const emojiSplitPattern = /(?=\n\s*(?:🏡|🏠|🏢|🏗|🏘|🔑|💥|🌷|🌸|🌺|🌻|🌹|⭐|✨|🔥|💫|🎯|📍))/g;
-        let rawChunks = text2.split(emojiSplitPattern).map((c) => c.trim()).filter((c) => c.length > 80);
-        if (rawChunks.length < 2) {
-          rawChunks = text2.split(/\n{3,}/).map((c) => c.trim()).filter((c) => c.length > 80);
-        }
-        if (rawChunks.length >= 2) {
-          console.log(`[CHUNKER] \u2702\uFE0F Fragmentado en ${rawChunks.length} publicaciones independientes.`);
-          let firstResult = null;
-          for (let idx = 0; idx < rawChunks.length; idx++) {
-            const chunk = rawChunks[idx];
-            const chunkWords = (chunk.match(/\S+/g) || []).length;
-            if (chunkWords < 15) {
-              console.log(`[CHUNKER] \u23ED\uFE0F Fragmento ${idx + 1} ignorado (muy corto: ${chunkWords} palabras).`);
-              continue;
-            }
-            let enriched = chunk;
-            if (parentPhone && !enriched.includes(parentPhone.replace("+", ""))) {
-              enriched += `
-\u{1F4DE} ${parentPhone}`;
-            }
-            if (parentUrl && !enriched.includes(parentUrl)) {
-              enriched += `
-\u{1F517} ${parentUrl}`;
-            }
-            console.log(`[CHUNKER] \u{1F504} Procesando fragmento ${idx + 1}/${rawChunks.length}: "${chunk.substring(0, 60)}..."`);
-            try {
-              const chunkResult = await processWhatsAppMessage(
-                enriched,
-                userId,
-                userName,
-                false,
-                [],
-                void 0,
-                imageBuffer,
-                isGroup,
-                void 0,
-                void 0,
-                groupJid,
-                groupName
-              );
-              if (chunkResult.inserted) {
-                console.log(`[CHUNKER] \u2705 Fragmento ${idx + 1} insertado como ${chunkResult.classification}.`);
-              }
-              if (!firstResult && chunkResult.classification !== "CONSULTA_GENERAL") {
-                firstResult = chunkResult;
-              }
-            } catch (ce) {
-              console.error(`[CHUNKER] \u274C Error fragmento ${idx + 1}:`, ce?.message || ce);
-            }
-          }
-          if (firstResult) return firstResult;
-          console.log(`[CHUNKER] \u26A0\uFE0F Ning\xFAn fragmento v\xE1lido. Procesando como mensaje \xFAnico.`);
-        }
-      }
-    }
-    let isFromAudio = false;
-    const cleanText = text2.toLowerCase().trim();
-    const isMediaOrAudio = hasMedia || !!audioUrl || !!imageBuffer || !!pdfBuffer;
-    if (!isWebUser && !isMediaOrAudio && cleanText.length > 15) {
-      const onTopicKeywords = [
-        "apto",
-        "apartamento",
-        "casa",
-        "lote",
-        "finca",
-        "bodega",
-        "oficina",
-        "local",
-        "inmueble",
-        "propiedad",
-        "predio",
-        "terreno",
-        "proyecto",
-        "arriendo",
-        "alquiler",
-        "vendo",
-        "venta",
-        "compro",
-        "compra",
-        "busco",
-        "ofrezco",
-        "necesito",
-        "permuto",
-        "venpermuto",
-        "estrato",
-        "m2",
-        "metros",
-        "habitacion",
-        "habitaci\xF3n",
-        "alcoba",
-        "alcobas",
-        "ba\xF1o",
-        "ba\xF1os",
-        "cocina",
-        "garaje",
-        "garajes",
-        "parqueadero",
-        "parqueaderos",
-        "canon",
-        "administracion",
-        "administraci\xF3n",
-        "precio",
-        "millones",
-        "cop",
-        "arrendar",
-        "vender",
-        "comprar",
-        "bogota",
-        "bogot\xE1",
-        "medellin",
-        "medell\xEDn",
-        "cali",
-        "barranquilla",
-        "bucaramanga",
-        "cartagena",
-        "barrio",
-        "sector",
-        "zona",
-        "calle",
-        "carrera",
-        "avenida",
-        "contrato",
-        "arrendamiento",
-        "promesa",
-        "escritura",
-        "notaria",
-        "notar\xEDa",
-        "registro",
-        "sucesi\xF3n",
-        "sucesion",
-        "herencia",
-        "embargo",
-        "saneamiento",
-        "comision",
-        "comisi\xF3n",
-        "corretaje",
-        "aval\xFAo",
-        "avaluo",
-        "jania",
-        "vecy",
-        "bot",
-        "ayuda",
-        "c\xF3mo",
-        "como",
-        "funciona",
-        "publicar",
-        "registrar",
-        "match",
-        "coincidencia",
-        "contacto",
-        "cuenta",
-        "hola",
-        "gracias",
-        "saludo",
-        "req",
-        "tengo",
-        "disponible",
-        "cliente",
-        "clientes",
-        "comprando",
-        "buscando",
-        "solicito",
-        "solicitamos",
-        "piso",
-        "balcon",
-        "balc\xF3n",
-        "terraza",
-        "deposito",
-        "dep\xF3sito",
-        "conjunto",
-        "edificio",
-        "ph",
-        "penthouse",
-        "duplex",
-        "d\xFAplex",
-        "triplex",
-        "tr\xEDplex",
-        "estudio"
-      ];
-      const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
-      if (!hasOnTopicKeyword) {
-        console.log(`[JanIA-OffTopic] Mensaje fuera de tema detectado para ${userId} en ${groupJid || "DM"}: "${text2.substring(0, 50)}...".`);
-        let staticText = "";
-        if (isGroup || groupJid) {
-          const jid = groupJid || "";
-          let groupRulesName = "el grupo";
-          let acceptedTopics = "publicar y buscar propiedades para hacer matching comercial de inmuebles y requerimientos";
-          if (jid === "120363417740040773@g.us") {
-            groupRulesName = "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}";
-            acceptedTopics = "tips, noticias, debates y consultas inmobiliarias (jur\xEDdicas, contratos, arrendamientos, tributaci\xF3n y estudios de mercado)";
-          } else if (jid === "120363403507276533@g.us") {
-            groupRulesName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
-            acceptedTopics = "temas libres del sector inmobiliario, foros, debates, experiencias del negocio y sugerencias sobre VECY BIENES RA\xCDCES";
-          } else {
-            groupRulesName = "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}";
-            acceptedTopics = "publicaci\xF3n directa de ofertas (Inmuebles) y demandas (Requerimientos) comerciales";
-          }
-          staticText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}. Detect\xE9 que tu publicaci\xF3n trata sobre un tema que no corresponde al prop\xF3sito de este canal (fechas festivas, pol\xEDtica, religi\xF3n o contenido ajeno al corretaje).
-
-Te recuerdo que en el grupo *${groupRulesName}* solo se admiten temas de: **${acceptedTopics}**.
-
-Te solicito amablemente que elimines tu mensaje para mantener el orden del chat, y te invito a revisar y comprender las normas completas del grupo que se encuentran en su descripci\xF3n. \xA1Gracias por tu colaboraci\xF3n y cultura de red! \u{1F91D}\u{1F680}`;
-        } else {
-          staticText = `Hola ${realName || "colega"} \u{1F44B}\u{1F3FB}. Como asistente de VECY Bienes Ra\xEDces, estoy entrenada exclusivamente para ayudarte con temas de bienes ra\xEDces (buscar, publicar o cruzar inmuebles), asesor\xEDas legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. \u{1F3E0}\u2728
-
-Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con gusto te responder\xE9! \u{1F60A}`;
-        }
-        return {
-          classification: "VIOLACION_DE_NORMAS",
-          response: staticText,
-          dmResponse: staticText,
-          reactionEmoji: "\u{1F6AB}"
-        };
-      }
-    }
-    if (audioUrl) {
-      if (audioUrl.startsWith("mock-audio:")) {
-        messageToProcess = audioUrl.replace("mock-audio:", "");
-        isFromAudio = true;
-      } else {
-        console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
-        const transcription = await transcribeAudio({ audioUrl });
-        if (!("error" in transcription)) {
-          messageToProcess = transcription.text;
-          isFromAudio = true;
-        }
-      }
-    }
-    let flyerData = flyerVisionData;
-    if (!flyerData && imageBuffer) {
-      console.log(`[JanIA] \u{1F441}\uFE0F Analizando imagen/flyer con visi\xF3n artificial especializada...`);
-      try {
-        flyerData = await extractFlyerVision(imageBuffer);
-      } catch (errVision) {
-        console.warn(`[JanIA] \u26A0\uFE0F Error en extractFlyerVision:`, errVision?.message || errVision);
-      }
-    }
-    const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
-    if (isGenuineFlyerData && flyerData) {
-      const verbatim = flyerData.flyerVerbatimText || "";
-      if (verbatim) {
-        messageToProcess = messageToProcess && messageToProcess.trim() !== "" && !messageToProcess.includes("[Publicaci\xF3n de Imagen") ? `${messageToProcess}
-
-[FICHA T\xC9CNICA EXTRA\xCDDA DEL FLYER]:
-${verbatim}` : verbatim;
-      }
-    } else if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
-      messageToProcess = "[Fotograf\xEDa ambiental sin texto publicitario]";
-    }
-    let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
-    if (isFromAudio) {
-      contextText += `
-[SISTEMA - NOTA DE VOZ]: El usuario te envi\xF3 este mensaje como nota de voz (audio). Dado que te enviaron audio, es preferible y de alta importancia que respondas en audio ("wantsVoice": true) si tu respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres). **EXCEPCI\xD3N CR\xCDTICA**: Si el usuario te pide expl\xEDcitamente que le respondas por audio, nota de voz o de viva voz por cualquier raz\xF3n, debes omitir el l\xEDmite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural. Si la respuesta requiere explicaciones largas, tablas o minutas/contratos y el usuario NO pidi\xF3 expresamente que fuera audio, responde obligatoriamente por escrito ("wantsVoice": false).`;
-    }
-    if (scrapedData.length > 0) contextText += `
-[SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
-    if (imageBuffer) {
-      contextText += `
-[SISTEMA - AN\xC1LISIS MULTIMODAL DE IMAGEN / FLYER / BANNER (OCR Y VISI\xD3N COMERCIAL)]:
-Se ha adjuntado una imagen. Anal\xEDzala con visi\xF3n artificial avanzada y determina:
-1. "isFlyerOrBanner":
-   - Asigna TRUE si la imagen es una infograf\xEDa publicitaria, flyer comercial, banner, afiche o collage que contiene texto tipogr\xE1fico impreso con especificaciones inmobiliarias de OFERTA (precio, \xE1rea, alcobas, ba\xF1os, garajes, sector, tel\xE9fono de contacto) o de DEMANDA (b\xFAsqueda de cliente, compro casa/apto, presupuesto, sectores solicitados).
-   - Asigna FALSE si es simplemente una FOTOGRAF\xCDA AMBIENTAL COM\xDAN (foto fotogr\xE1fica de una sala, comedor, cocina, fachada, ba\xF1o, l\xE1mpara, etc.) SIN texto publicitario estructurado.
-2. Si "isFlyerOrBanner" es TRUE:
-   - Transcribe TODO el texto literal y legible de la imagen en "flyerVerbatimText".
-   - Extrae todas las especificaciones num\xE9ricas y textuales en "extractedData" (precio, rentPrice, adminFee, area, bedrooms, bathrooms, garages, stratum, zone, city, contactPhone, propertyType, transactionType).
-   - Clasifica como "INMUEBLE" si describe una oferta de venta/arriendo, o como "REQUERIMIENTO" si describe una b\xFAsqueda o demanda de cliente comprador/arrendatario.
-3. Si "isFlyerOrBanner" es FALSE y el mensaje NO contiene una ficha t\xE9cnica escrita por el usuario, clasifica como "CONSULTA_GENERAL" con "inserted": false.`;
-    }
-    if (pdfBuffer) contextText += `
-[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
-    const statsSummary = await getLiveStats();
-    if (statsSummary) {
-      contextText += `
-${statsSummary}`;
-    }
-    const firstName = extractFirstName(realName) || "colega";
-    const bogotaTime = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
-    const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado";
-    const outsideHours = isWebUser ? false : isOutsideWorkingHours();
-    const estadoOperacion = outsideHours ? "fuera_de_horario" : "en_horario";
-    const greetingInstruction = `
-
-[SISTEMA - METADATOS DEL MENSAJE (VARIABLES CR\xCDTICAS)]:
-- {{hora}}: ${bogotaTime}
-- {{canal}}: ${isWebUser ? "Consola Web 24/7" : isGroup ? `Grupo WhatsApp - [${groupName || "Grupo Inmobiliario WhatsApp"}]` : "dm"}
-- {{genero}}: ${userGender}
-- {{es_nuevo_usuario}}: ${!alreadyGreeted ? "true" : "false"}
-- {{estado_operacion}}: ${estadoOperacion}
-
-[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
-- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Tipo de conversaci\xF3n actual: ${isWebUser ? "CHAT WEB DE LIBRE ALBEDR\xCDO 24/7" : isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
-- Primer nombre del usuario: "${firstName}".
-- REGLAS CR\xCDTICAS DE RESPUESTA:
-  * Si "Ya has saludado al usuario hoy" es S\xCD (solo aplica a WhatsApp):
-    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-  * En CHAT WEB 24/7: Conversa libremente, saluda si es natural o ve directo al tema de forma elocuente y amigable.`;
-    contextText += greetingInstruction;
-    if (isWebUser) {
-      contextText += `
-
-[INSTRUCCI\xD3N MAESTRA - CHAT WEB DE LIBRE ALBEDR\xCDO 24/7]:
-Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Bienes Ra\xEDces.
-- Tienes LIBERTAD TOTAL DE RAZONAMIENTO Y PENSAMIENTO (Libre Albedr\xEDo 24/7).
-- NUNCA apliques restricciones de grupos de WhatsApp, horarios de oficina ni bloqueos de temas.
-- Responde a cualquier inquietud general, jur\xEDdica, de aval\xFAos, c\xE1lculo financiero o conversaci\xF3n inmobiliaria con razonamiento profundo, calidez y elocuencia.
-- Si el usuario te env\xEDa un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la informaci\xF3n.`;
-    }
-    if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
-      const saludo = getGreetingByTime();
-      contextText += `
-[INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
-Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
-"\xA1${saludo}, *${n}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de VECY, creada y entrenada por el equipo de desarrollo de VECY Bienes Ra\xEDces. Estoy aqu\xED para atenderte de forma personalizada, resolver tus inquietudes y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos regresan a su horario habitual de 8:00 am a 8:00 pm. \u{1F680}\u{1F91D} \xBFCu\xE9ntame en qu\xE9 puedo ayudarte en este momento?"
-Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Adem\xE1s, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versi\xF3n hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin vi\xF1etas o asteriscos de negrita) para que el usuario reciba un audio de tu voz present\xE1ndote de forma humana.`;
-    }
-    const textLower = messageToProcess.toLowerCase();
-    const isReplicationRequest = textLower.includes("replica") || textLower.includes("repite") || textLower.includes("lee este") || textLower.includes("lee esto") || textLower.includes("lee literalmente") || textLower.includes("di literalmente") || textLower.includes("reproduce");
-    if (isReplicationRequest) {
-      contextText += `
-[INSTRUCCI\xD3N CR\xCDTICA DE REPLICACI\xD3N LITERAL DE AUDIO]: El usuario te est\xE1 pidiendo de manera expl\xEDcita que repliques, repitas o leas un texto o p\xE1rrafo espec\xEDfico en una nota de voz/audio.
-Por lo tanto, DEBES hacer lo siguiente:
-1. Establece obligatoriamente "wantsVoice": true.
-2. En el campo "voiceResponse", coloca EXACTAMENTE el texto o p\xE1rrafo literal que el usuario te solicit\xF3 que leyeras, eliminando emojis y markdown (como asteriscos o negritas) para que el sintetizador de voz lo lea de forma fluida y natural, sin deletrear. Por ejemplo, si te dice "replica esto: COMPROMISO DE HONOR VECY", el campo "voiceResponse" debe contener el texto de ese compromiso literalmente.
-3. En el campo "response", coloca tambi\xE9n el texto literal con su formato y emojis correspondientes.
-4. NUNCA respondas con confirmaciones conversacionales como "\xA1Entendido, colega! He procesado el comunicado...", ni agregues discursos tuyos. Tu respuesta "response" y "voiceResponse" debe ser \xFAnicamente el texto que te pidieron leer de forma exacta y literal.`;
-    }
-    const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
-    const isLegalQuery = (textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria")) && !textLower.includes("50/50") && !textLower.includes("50-50");
-    const isListingOrReq = hasRealEstateTextKeyword(textLower);
-    const enableSearch = !isListingOrReq && (isValuationQuery || isLegalQuery || textLower.includes("buscar en google"));
-    const history = isGroup || groupJid ? [] : await getRecentChatHistory(userId, 20);
-    const liveStats = await getLiveStats();
-    const systemContent = liveStats ? `${buildSystemPrompt(groupJid)}
-
-${liveStats}` : buildSystemPrompt(groupJid);
-    const llmMessages = [
-      { role: "system", content: systemContent }
-    ];
-    if (history.length > 0) {
-      if (history[history.length - 1].role === "user" && history[history.length - 1].content.trim() === contextText.trim()) {
-        history.pop();
-      }
-      llmMessages.push(...history);
-    }
-    llmMessages.push({ role: "user", content: contextText });
-    let result;
-    const isPureFlyer = isGenuineFlyerData && flyerData && (!text2 || text2.trim().length < 60 || text2.includes("[Publicaci\xF3n de Imagen") || text2.includes("[Fotograf\xEDa ambiental"));
-    if (flyerData && isPureFlyer) {
-      const fd = flyerData;
-      console.log(`[JanIA] \u26A1 Fast-Path Vision activado: flyer comercial '${fd.title || fd.classification}' estructurado directamente sin invocar prompt legal masivo.`);
-      const tx = (fd.transactionType || "").toLowerCase();
-      const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
-      const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
-      let emoji = "\u{1F44D}";
-      if (fd.classification === "INMUEBLE") {
-        emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
-      } else {
-        emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
-      }
-      result = {
-        classification: fd.classification,
-        response: `Ficha t\xE9cnica capturada exitosamente desde el flyer comercial: ${fd.title || ""}`,
-        reactionEmoji: emoji,
-        isFlyerOrBanner: true,
-        flyerVerbatimText: fd.flyerVerbatimText,
-        extractedData: {
-          title: fd.title,
-          propertyType: fd.propertyType,
-          transactionType: fd.transactionType,
-          price: fd.price,
-          rentPrice: fd.rentPrice,
-          presupuestoMax: fd.presupuestoMax,
-          area: fd.area,
-          bedrooms: fd.bedrooms,
-          bathrooms: fd.bathrooms,
-          garages: fd.garages,
-          city: fd.city || "Bogot\xE1, D.C.",
-          zone: fd.zone,
-          contactPhone: fd.contactPhone,
-          contactName: fd.contactName,
-          rawText: fd.flyerVerbatimText || messageToProcess
-        },
-        mentions: []
-      };
-    } else if (!isWebUser && !imageBuffer && !pdfBuffer && !isFromAudio && !isReplicationRequest && !isValuationQuery && !isLegalQuery && groupJid !== "120363388701980315@g.us" && groupJid !== "120363386903264426@g.us" && (() => {
-      const cleanLower = messageToProcess.toLowerCase();
-      const detData = extractFallbackDataFromText(messageToProcess);
-      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const hasDetPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanLower);
-      const hasDetTx = /\b(?:arriendo|arrienda|renta|rento|rentamos|alquilo|alquiler|canon|vendo|venta|vende|permuta)\b/i.test(cleanLower);
-      const isHighConfidenceListing = hasDetPropType && hasDetTx && (detData.price > 0 || detData.rentPrice > 0 || detData.area > 0 || detData.bedrooms > 0);
-      const isHighConfidenceDemand = isDetDemand && (hasDetPropType || detData.presupuestoMax > 0);
-      return isHighConfidenceListing || isHighConfidenceDemand;
-    })()) {
-      const cleanLower = messageToProcess.toLowerCase();
-      const detData = extractFallbackDataFromText(messageToProcess);
-      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isRent = detData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
-      const isPermuta = detData.transactionType.includes("permuta");
-      const classification = isDetDemand ? "REQUERIMIENTO" : "INMUEBLE";
-      const emoji = classification === "INMUEBLE" ? isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}" : isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
-      console.log(`[JanIA] \u26A1 Fast-Path Determinista Activado (0ms, $0 COP): Publicaci\xF3n '${classification}' estructurada directamente sin consumir cuota LLM.`);
-      result = {
-        classification,
-        response: "",
-        reactionEmoji: emoji,
-        extractedData: {
-          title: detData.name || (classification === "INMUEBLE" ? `Inmueble en ${detData.city || "Bogot\xE1"}` : `Requerimiento en ${detData.city || "Bogot\xE1"}`),
-          propertyType: detData.propertyType || "apartment",
-          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
-          price: detData.price,
-          rentPrice: detData.rentPrice,
-          adminFee: detData.adminFee,
-          presupuestoMax: detData.presupuestoMax,
-          presupuestoMin: detData.presupuestoMin,
-          adminFeeMax: detData.adminFee,
-          area: detData.area,
-          bedrooms: detData.bedrooms,
-          bathrooms: detData.bathrooms,
-          garages: detData.garages,
-          stratum: detData.stratum,
-          city: detData.city || "Bogot\xE1, D.C.",
-          zone: detData.neighborhood || "Bogot\xE1",
-          contactPhone: rawPhone,
-          rawText: messageToProcess
-        },
-        mentions: []
-      };
-    } else {
-      const response = await invokeLLM({
-        messages: llmMessages,
-        responseFormat: { type: "json_object", schema: janiaResultSchema },
-        imageBuffer,
-        pdfBuffer,
-        pdfMimeType,
-        enableSearch
-      });
-      const llmRes = response;
-      if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicaci\xF3n con el LLM");
-      const rawContent = llmRes.choices[0].message.content;
-      try {
-        result = parseSafeJSON(rawContent);
-      } catch (parseErr) {
-        console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
-        const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
-        const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
-        const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
-        let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
-        if (!fallbackText) {
-          const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
-          if (truncatedMatch) {
-            fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, "");
-          }
-        }
-        const inferredClass = extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO" ? extractedClass : "CONSULTA_GENERAL";
-        if (fallbackText && fallbackText.trim() !== "") {
-          result = {
-            classification: inferredClass,
-            response: fallbackText.trim(),
-            mentions: []
-          };
-        } else if (rawContent && rawContent.trim() !== "") {
-          const cleanContent = rawContent.replace(/"classification"\s*:\s*"[^"]*"/gi, "").replace(/"response"\s*:\s*"/gi, "").replace(/[\{\}\[\]"]/g, "").replace(/classification:\s*\w+,?/gi, "").replace(/response:\s*/gi, "").trim();
-          result = {
-            classification: inferredClass,
-            response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
-            mentions: []
-          };
-        } else {
-          throw parseErr;
-        }
-      }
-    }
-    result.mentions = result.mentions || [];
-    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
-      result.isFlyerOrBanner = true;
-      result.flyerVerbatimText = flyerData.flyerVerbatimText;
-      if (result.classification === "CONSULTA_GENERAL" || !result.classification || result.classification === "DATOS_INCOMPLETOS") {
-        result.classification = flyerData.classification;
-      }
-      result.reactionEmoji = result.reactionEmoji || flyerData.reactionEmoji;
-      result.extractedData = {
-        ...result.extractedData || {},
-        title: result.extractedData?.title || flyerData.title,
-        propertyType: result.extractedData?.propertyType || flyerData.propertyType,
-        transactionType: result.extractedData?.transactionType || flyerData.transactionType,
-        price: result.extractedData?.price && Number(result.extractedData.price) > 0 ? result.extractedData.price : flyerData.price,
-        rentPrice: result.extractedData?.rentPrice && Number(result.extractedData.rentPrice) > 0 ? result.extractedData.rentPrice : flyerData.rentPrice,
-        presupuestoMax: result.extractedData?.presupuestoMax && Number(result.extractedData.presupuestoMax) > 0 ? result.extractedData.presupuestoMax : flyerData.presupuestoMax,
-        area: result.extractedData?.area && Number(result.extractedData.area) > 0 ? result.extractedData.area : flyerData.area,
-        bedrooms: result.extractedData?.bedrooms ?? flyerData.bedrooms,
-        bathrooms: result.extractedData?.bathrooms ?? flyerData.bathrooms,
-        garages: result.extractedData?.garages ?? flyerData.garages,
-        city: result.extractedData?.city || flyerData.city,
-        zone: result.extractedData?.zone || flyerData.zone,
-        contactPhone: result.extractedData?.contactPhone || flyerData.contactPhone,
-        contactName: result.extractedData?.contactName || flyerData.contactName,
-        isFlyerOrBanner: true,
-        flyerVerbatimText: flyerData.flyerVerbatimText
-      };
-      console.log(`[JanIA-Vision] \u{1F4D1} Datos de flyer integrados a result. (Clasificaci\xF3n: ${result.classification}, Emoji: ${result.reactionEmoji})`);
-    }
-    if (messageToProcess) {
-      const isAmendmentHandled = await handleAmendmentUpdate(userId, messageToProcess);
-      if (isAmendmentHandled) {
-        console.log(`[JANIA-AMENDMENT] Mensaje procesado como enmienda de 2h para ${userId}. Operando en Modo Fantasma 100% silencioso.`);
-        result.inserted = false;
-        result.classification = "CONSULTA_GENERAL";
-        result.response = "";
-        result.dmResponse = "";
-        result.shouldSendDM = false;
-        result.reactionEmoji = void 0;
-        return result;
-      }
-    }
-    if (messageToProcess) {
-      const cleanText2 = messageToProcess.toLowerCase();
-      const isSpamOrWebinar = cleanText2.includes("zoom.us") || cleanText2.includes("us06web.zoom.us") || cleanText2.includes("chat.whatsapp.com") || cleanText2.includes("\xFAnase a nuestra reuni\xF3n") || cleanText2.includes("unase a nuestra reunion") || cleanText2.includes("entrenamiento 100% gratuito") || cleanText2.includes("estrategias en redes sociales") || cleanText2.includes("como funcionan las ventas") || cleanText2.includes("invitaci\xF3n al chat en grupo") || cleanText2.includes("invitacion al chat en grupo") || cleanText2.includes("unirme al grupo") || cleanText2.includes("m\xE1ster class") || cleanText2.includes("masterclass") || cleanText2.includes("taller gratuito") || cleanText2.includes("capacitaci\xF3n gratuita") || cleanText2.includes("capacitacion gratuita");
-      if (isSpamOrWebinar && !cleanText2.includes("vendo") && !cleanText2.includes("busco") && !cleanText2.includes("se vende") && !cleanText2.includes("se arrienda")) {
-        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${cleanText2.substring(0, 50)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
-        result.classification = "VIOLACION_DE_NORMAS";
-        result.inserted = false;
-        result.response = "";
-        result.dmResponse = "";
-        result.shouldSendDM = false;
-        result.reactionEmoji = void 0;
-        return result;
-      }
-      const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|requerimientos|necesito|necesitamos|solicito|solicitamos|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|busca cliente|cliente busca|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText2);
-      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|canon|alquilo|alquilamos|alquiler directo|rento|rentamos|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|pongo en renta|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText2) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText2);
-      const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
-      const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
-      const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
-      const _extTmp = result.extractedData || {};
-      const hasTechnicalSpecs = _extTmp.price && Number(_extTmp.price) > 0 || _extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0 || _extTmp.area && Number(_extTmp.area) > 0 || _extTmp.bedrooms && Number(_extTmp.bedrooms) > 0 || (cleanText2.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText2));
-      const isChatNoisePhrase = cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible");
-      const isShortComment = !result.isFlyerOrBanner && (isChatNoisePhrase || !hasRealEstateKeyword && !isSearch && !isOffer && (cleanText2.length < 25 || cleanText2.split(/\s+/).length < 4)) && !hasTechnicalSpecs;
-      const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
-      if (!result.isFlyerOrBanner && isGeneralInquiryOrRecommendation) {
-        console.log(`[JANIA-FILTER] \u26D4 Pregunta de recomendaci\xF3n o servicio general ignorada como Requerimiento/Inmueble: "${cleanText2.substring(0, 50)}..."`);
-        result.classification = "CONSULTA_GENERAL";
-      } else if (isShortComment) {
-        console.log(`[JANIA-FILTER] \u26D4 Mensaje corto o correcci\xF3n de chat omitido (${cleanText2.substring(0, 40)}...). No se procesar\xE1 como propiedad/requerimiento.`);
-        result.classification = "CONSULTA_GENERAL";
-      } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
-        console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
-        result.classification = "REQUERIMIENTO";
-      } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
-        console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de REQUERIMIENTO a INMUEBLE basado en heur\xEDstica de texto (Oferta expl\xEDcita).");
-        result.classification = "INMUEBLE";
-      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs)) {
-        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer) {
-          if (isSearch && !isOffer) {
-            console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
-            result.classification = "REQUERIMIENTO";
-          } else if (isOffer || hasRealEstateKeyword) {
-            console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
-            result.classification = "INMUEBLE";
-          }
-        } else {
-          console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
-        }
-      }
-      const hasRealEstateIntent = result.isFlyerOrBanner || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
-      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
-        console.log(`[JANIA-FILTER] \u26D4 Descartando falso positivo de ${result.classification}: Mensaje sin intenci\xF3n predial expl\xEDcita ("${cleanText2.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
-        result.classification = "CONSULTA_GENERAL";
-      }
-      const hollowEarlyCheck = isHollowListing(cleanText2, null, urls && urls.length > 0 ? urls[0] : null);
-      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanText2) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco|buscamos|requiero|requerimiento)\b/i.test(cleanText2);
-      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner && !hasRealPropertyCore) {
-        console.log(`[JANIA-FILTER] \u26D4 Descartando publicaci\xF3n hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText2.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
-        result.classification = "CONSULTA_GENERAL";
-      }
-    }
-    const textToCheckForDemand = (cleanText || messageToProcess || rawUserText || "").toLowerCase();
-    const isExplicitDemandSignal = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|cliente\s*directo\s*busca|compro|compramos|para\s*compra\s*ya|para\s*compra|solicito\s*para\s*compra|solicito|requiero|requerimiento|necesito|necesitamos|quien\s*tiene|alguien\s*tiene|alguien\s*cuenta\s*con|en\s*b[uú]squeda\s*de)\b/i.test(textToCheckForDemand);
-    const isExplicitOfferSignal = /\b(?:vendo|se\s*vende|en\s*venta\s*(?:lindo|hermoso|excelente|gran|amplio|espectacular|duplex|casa|apto|apartamento|finca|lote|bodega)|ofrezco\s*(?:en\s*venta|en\s*arriendo|apartamento|casa|apto)|se\s*arrienda|arriendo\s*(?:lindo|hermoso|directo|apto|casa))\b/i.test(textToCheckForDemand);
-    if (isExplicitDemandSignal && !isExplicitOfferSignal) {
-      if (result.classification !== "REQUERIMIENTO") {
-        console.log(`[JANIA-GUARDRAIL v31.85] \u{1F504} Reclasificando a REQUERIMIENTO (Se\xF1al inequ\xEDvoca de demanda detectada): "${textToCheckForDemand.substring(0, 60)}..."`);
-        result.classification = "REQUERIMIENTO";
-      }
-    }
-    const extracted = result.extractedData || {};
-    let isRequirement = result.classification === "REQUERIMIENTO";
-    let isProperty = result.classification === "INMUEBLE";
-    if ((isProperty || isRequirement) && messageToProcess) {
-      const fallbackData = extractFallbackDataFromText(messageToProcess);
-      if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
-      if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
-      const currentPriceNum = Number(extracted.price || 0);
-      if (isProperty) {
-        if (!currentPriceNum || currentPriceNum === 0 || currentPriceNum < 1e8 && fallbackData.price >= 1e8) {
-          extracted.price = fallbackData.price;
-        }
-      }
-      if (isRequirement) {
-        const curPresupuesto = Number(extracted.presupuestoMax || 0);
-        if (!curPresupuesto || curPresupuesto === 0 || curPresupuesto < 1e8 && fallbackData.presupuestoMax >= 1e8) {
-          extracted.presupuestoMax = fallbackData.presupuestoMax;
-        }
-        if (fallbackData.presupuestoMin > 0 && (!extracted.presupuestoMin || Number(extracted.presupuestoMin) === 0)) {
-          extracted.presupuestoMin = fallbackData.presupuestoMin;
-        }
-      }
-      if (!extracted.rentPrice && fallbackData.rentPrice > 0) extracted.rentPrice = fallbackData.rentPrice;
-      if (!extracted.adminFee && fallbackData.adminFee > 0) extracted.adminFee = fallbackData.adminFee;
-      if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
-      if (!extracted.bedrooms && fallbackData.bedrooms > 0) extracted.bedrooms = fallbackData.bedrooms;
-      if (!extracted.bathrooms && fallbackData.bathrooms > 0) extracted.bathrooms = fallbackData.bathrooms;
-      if (!extracted.garages && fallbackData.garages > 0) extracted.garages = fallbackData.garages;
-      if (!extracted.garageType && fallbackData.garageType) extracted.garageType = fallbackData.garageType;
-      if (!extracted.antiguedadAnos && fallbackData.antiguedadAnos !== null) extracted.antiguedadAnos = fallbackData.antiguedadAnos;
-      if (extracted.hasBalcony === void 0 && fallbackData.hasBalcony !== null) extracted.hasBalcony = fallbackData.hasBalcony;
-      if (extracted.hasTerrace === void 0 && fallbackData.hasTerrace !== null) extracted.hasTerrace = fallbackData.hasTerrace;
-      if (extracted.hasStorage === void 0 && fallbackData.hasStorage !== null) extracted.hasStorage = fallbackData.hasStorage;
-      if (extracted.hasElevator === void 0 && fallbackData.hasElevator !== null) extracted.hasElevator = fallbackData.hasElevator;
-      if (!extracted.city && fallbackData.city) extracted.city = fallbackData.city;
-      if (!extracted.ciudadDeseada && fallbackData.ciudadDeseada) extracted.ciudadDeseada = fallbackData.ciudadDeseada;
-      if (!extracted.zone && fallbackData.zone) extracted.zone = fallbackData.zone;
-      if (!extracted.zonaDeseada && fallbackData.zonaDeseada) extracted.zonaDeseada = fallbackData.zonaDeseada;
-      result.extractedData = extracted;
-    }
-    let isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
-    if (isProperty || isRequirement) {
-      const isReq = isRequirement || messageToProcess.toLowerCase().includes("busco") || messageToProcess.toLowerCase().includes("necesito") || messageToProcess.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
-      const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
-      let propertyName = "inmueble";
-      if (propTypeRaw === "apartment") propertyName = "apartamento";
-      else if (propTypeRaw === "house") propertyName = "casa";
-      else if (propTypeRaw === "building") propertyName = "edificio";
-      else if (propTypeRaw === "warehouse") propertyName = "bodega";
-      else if (propTypeRaw === "office") propertyName = "oficina";
-      else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
-      else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
-      else if (propTypeRaw === "consultorio") propertyName = "consultorio";
-      else if (propTypeRaw === "loft") propertyName = "loft";
-      const city = isReq ? extracted?.ciudadDeseada : extracted?.city;
-      const zone = isReq ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
-      const price = isReq ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
-      const hasMissingCity = !city || city.trim() === "" || city.toLowerCase() === "na";
-      const hasMissingZone = !zone || zone.trim() === "" || zone.toLowerCase() === "na";
-      const hasMissingPrice = !price || price <= 0;
-      const area = Number(extracted?.area || 0);
-      const hasMissingArea = !area || area <= 0;
-      let hasMissingBedrooms = false;
-      let hasMissingBathrooms = false;
-      let hasMissingStratum = false;
-      if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
-        const bedrooms = Number(extracted?.bedrooms || 0);
-        hasMissingBedrooms = !bedrooms || bedrooms <= 0;
-        const bathrooms = Number(extracted?.bathrooms || 0);
-        hasMissingBathrooms = !bathrooms || bathrooms <= 0;
-        const stratum = Number(extracted?.stratum || 0);
-        hasMissingStratum = !stratum || stratum <= 0;
-      } else if (propertyName !== "lote" && propertyName !== "finca") {
-        const stratum = Number(extracted?.stratum || 0);
-        hasMissingStratum = !stratum || stratum <= 0;
-      }
-      const isMissing = false;
-    }
-    if (isLLMIncomplete) {
-      const inferredType = messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType ? "PROPERTY" : "REQUIREMENT";
-      if (inferredType === "PROPERTY") {
-        isProperty = true;
-        isRequirement = false;
-      } else {
-        isProperty = false;
-        isRequirement = true;
-      }
-      if (!isWebUser) {
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
-      }
-    }
-    if (isProperty || isRequirement) {
-      if (extracted) {
-        if (extracted.zone) extracted.zone = sanitizeGeoString(extracted.zone);
-        if (extracted.zonaDeseada) extracted.zonaDeseada = sanitizeGeoString(extracted.zonaDeseada);
-        if (extracted.city) extracted.city = sanitizeGeoString(extracted.city);
-        if (extracted.ciudadDeseada) extracted.ciudadDeseada = sanitizeGeoString(extracted.ciudadDeseada);
-      }
-      const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
-      let isValidGeo = false;
-      let geoValidation = null;
-      if (zoneToValidate && zoneToValidate.trim() !== "") {
-        let inferredCity = extracted?.city || extracted?.ciudadDeseada;
-        if (!inferredCity || inferredCity.trim() === "" || inferredCity.toLowerCase() === "na") {
-          if (groupName) {
-            const nameLower = groupName.toLowerCase();
-            if (nameLower.includes("cali")) {
-              inferredCity = "Cali";
-            } else if (nameLower.includes("medellin") || nameLower.includes("medell\xEDn")) {
-              inferredCity = "Medell\xEDn";
-            } else if (nameLower.includes("barranquilla")) {
-              inferredCity = "Barranquilla";
-            } else if (nameLower.includes("bucaramanga")) {
-              inferredCity = "Bucaramanga";
-            } else if (nameLower.includes("cartagena")) {
-              inferredCity = "Cartagena";
-            } else if (nameLower.includes("pereira")) {
-              inferredCity = "Pereira";
-            }
-          }
-        }
-        if (inferredCity && inferredCity.toLowerCase() !== "na") {
-          const divipolaCity = validateCity(inferredCity);
-          if (divipolaCity) {
-            inferredCity = divipolaCity;
-          }
-          if (isProperty) {
-            extracted.city = inferredCity;
-          } else {
-            extracted.ciudadDeseada = inferredCity;
-          }
-        }
-        geoValidation = await validarZona(zoneToValidate, inferredCity, messageToProcess);
-        isValidGeo = geoValidation.isValid;
-      }
-      if (!isValidGeo) {
-        isValidGeo = true;
-        if (!result.missingFields) result.missingFields = [];
-        if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
-      }
-      const triGeo = deducirGeografiaTripartita(
-        isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone,
-        isProperty ? extracted?.city : extracted?.ciudadDeseada || extracted?.city,
-        groupName,
-        messageToProcess
-      );
-      if (isProperty) {
-        extracted.zone = triGeo.neighborhood;
-        extracted.addressNeighborhood = triGeo.neighborhood;
-        extracted.addressLocality = triGeo.locality;
-        extracted.addressCity = triGeo.city;
-        extracted.city = triGeo.city;
-        if (geoValidation && geoValidation.isValid) {
-          extracted.latitude = geoValidation.latitude || null;
-          extracted.longitude = geoValidation.longitude || null;
-        }
-      } else {
-        extracted.zonaDeseada = triGeo.neighborhood;
-        extracted.addressNeighborhood = triGeo.neighborhood;
-        extracted.addressLocality = triGeo.locality;
-        extracted.addressCity = triGeo.city;
-        extracted.ciudadDeseada = triGeo.city;
-      }
-    }
-    const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
-    const origenId = isGroup || groupJid ? groupJid || userId : userId;
-    const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
-    if (isProperty) {
-      const cleanCheckText = (rawUserText || text2 || messageToProcess || "").toLowerCase();
-      const groupForTx = (groupName || "").toLowerCase();
-      const isGroupRent = groupForTx.includes("arriend") || groupForTx.includes("alquil") || groupForTx.includes("renta");
-      const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckText);
-      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText) || /valor arriendo/i.test(cleanCheckText);
-      const hasVentaSignals = /\b(?:vendo|vendemos|se vende|en venta|venta directa|valor venta)\b/i.test(cleanCheckText);
-      if (hasPermutaSignals) {
-        extracted.transactionType = hasVentaSignals ? "venta_permuta" : "permuta";
-      } else if (hasRentSignals && hasVentaSignals) {
-        extracted.transactionType = "venta_o_arriendo";
-      } else if (hasRentSignals || isGroupRent && !hasVentaSignals) {
-        extracted.transactionType = "arriendo";
-        if (extracted.price && (!extracted.rentPrice || Number(extracted.rentPrice) <= 0)) {
-          extracted.rentPrice = extracted.price;
-        }
-      } else if (hasVentaSignals) {
-        extracted.transactionType = "venta";
-      }
-      const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || "inmueble")} en ${extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
-      const spamCheckProp = esMensajeSpamOBasura(cleanCheckText);
-      if (spamCheckProp.isSpam) {
-        console.log(`[JANIA-SPAM-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${spamCheckProp.reason}): "${cleanCheckText.substring(0, 50)}..."`);
-        result.inserted = false;
-        result.classification = "VIOLACION_DE_NORMAS";
-        result.reactionEmoji = "\u{1F6AB}";
-        return result;
-      }
-      const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
-      const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
-      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
-        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
-        result.inserted = false;
-        result.classification = "CONSULTA_GENERAL";
-        return result;
-      }
-      let externalUrl = void 0;
-      if (urls && urls.length > 0) {
-        const permitted = urls.find((url) => esDominioPermitido(url));
-        if (permitted) {
-          externalUrl = permitted;
-        }
-      }
-      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls.find((url) => esDominioPermitido(url)) || urls[0] : void 0);
-      const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
-      const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
-      const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
-      if (isImageOnlyProp) {
-        const hasPropSpecs = Number(extracted.price || 0) > 0 || Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0) || !!extracted.zone && Number(extracted.bedrooms || 0) > 0;
-        if (!hasPropSpecs && !isFlyerDetected) {
-          console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene ficha t\xE9cnica ni datos comerciales legibles sobreimpresos.`);
-          result.inserted = false;
-          result.classification = "CONSULTA_GENERAL";
-          return result;
-        }
-      }
-      const flyerBufferToSave = isImageOnlyProp || isFlyerDetected ? imageBuffer : void 0;
-      const effectivePropRawText = isImageOnlyProp || isFlyerDetected ? flyerVerbatim ? buildFlyerBreakdownText(extracted, flyerVerbatim) : buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
-      const saved = await saveProperty({
-        ...extracted,
-        name: propertyTitle,
-        price: String(extracted.price || 0),
-        areaTotal: String(extracted.area || 0),
-        idUsuarioWhatsapp: rawPhone,
-        rawText: effectivePropRawText,
-        amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
-        origenTipo,
-        origenId,
-        origenNombre,
-        externalUrl,
-        enlaceOrigen: sourceUrl,
-        fechaExtraccion: /* @__PURE__ */ new Date()
-      }, userId, realName, flyerBufferToSave, pdfBuffer, pdfMimeType);
-      if (saved) {
-        result.inserted = true;
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
-        result.mentions = [];
-        result.extraDMs = [];
-        result.sendReputationHook = false;
-        const _txProp = (extracted.transactionType || "").toLowerCase();
-        const _isPermutaProp = _txProp.includes("permuta") || _txProp === "venta_permuta" || _txProp === "aporte";
-        const _isRentProp = _txProp.includes("arriendo") || _txProp === "arriendo_temporal" || _txProp === "arriendo_con_opcion_de_compra" || _txProp === "venta_o_arriendo" || isGroupRent || hasRentSignals;
-        result.reactionEmoji = _isPermutaProp ? "\u{1F500}" : _isRentProp ? "\u{1F44C}" : "\u{1F44D}";
-        const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-        setImmediate(() => {
-          executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
-        });
-      }
-    } else if (isRequirement) {
-      const cleanCheckReqText = (rawUserText || text2 || messageToProcess || "").toLowerCase();
-      const groupForReqTx = (groupName || "").toLowerCase();
-      const isGroupReqRent = groupForReqTx.includes("arriend") || groupForReqTx.includes("alquil") || groupForReqTx.includes("renta");
-      const isInvestorPurchaseReq = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|con contrato de arrendamiento|para compra|compro|compra ya|busco para compra)\b/i.test(cleanCheckReqText);
-      const hasPermutaReqSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckReqText);
-      const hasRentReqSignals = !isInvestorPurchaseReq && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText) || /valor arriendo/i.test(cleanCheckReqText));
-      const hasVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar)\b/i.test(cleanCheckReqText);
-      if (hasPermutaReqSignals) {
-        extracted.transactionType = hasVentaReqSignals ? "venta_permuta" : "permuta";
-      } else if (hasRentReqSignals && hasVentaReqSignals) {
-        extracted.transactionType = "venta_o_arriendo";
-      } else if (hasRentReqSignals || isGroupReqRent && !hasVentaReqSignals && !isInvestorPurchaseReq) {
-        extracted.transactionType = "arriendo";
-      } else {
-        extracted.transactionType = "venta";
-      }
-      const spamCheckReq = esMensajeSpamOBasura(cleanCheckReqText);
-      if (spamCheckReq.isSpam) {
-        console.log(`[JANIA-SPAM-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${spamCheckReq.reason}): "${cleanCheckReqText.substring(0, 50)}..."`);
-        result.inserted = false;
-        result.classification = "VIOLACION_DE_NORMAS";
-        result.reactionEmoji = "\u{1F6AB}";
-        return result;
-      }
-      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
-      const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
-      const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
-      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
-        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
-        result.inserted = false;
-        result.classification = "CONSULTA_GENERAL";
-        return result;
-      }
-      const sourceUrlReq = urls && urls.length > 0 ? urls.find((url) => esDominioPermitido(url)) || urls[0] : null;
-      const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
-      const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
-      const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
-      if (isImageOnlyReq) {
-        const hasReqSpecs = Number(extracted.presupuestoMax || extracted.price || 0) > 0 || !!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0) || extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title);
-        if (!hasReqSpecs && !isFlyerDetectedReq) {
-          console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
-          result.inserted = false;
-          result.classification = "CONSULTA_GENERAL";
-          return result;
-        }
-      }
-      const flyerBufferToSaveReq = isImageOnlyReq || isFlyerDetectedReq ? imageBuffer : void 0;
-      const effectiveReqRawText = isImageOnlyReq || isFlyerDetectedReq ? flyerVerbatimReq ? buildFlyerBreakdownText(extracted, flyerVerbatimReq) : buildFlyerBreakdownText(extracted, messageToProcess) : messageToProcess;
-      const saved = await saveRequirement({
-        ...extracted,
-        name: reqTitle,
-        tipoInmuebleDeseado: extracted.propertyType,
-        tipoNegocioDeseado: extracted.transactionType,
-        zonaDeseada: extracted.zonaDeseada || extracted.zone,
-        presupuestoMax: String(extracted.presupuestoMax || extracted.price || 0),
-        idUsuarioWhatsapp: rawPhone,
-        rawText: effectiveReqRawText,
-        caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },
-        origenTipo,
-        origenId,
-        origenNombre,
-        enlaceOrigen: sourceUrlReq,
-        fechaExtraccion: /* @__PURE__ */ new Date()
-      }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
-      if (saved) {
-        result.inserted = true;
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
-        result.mentions = [];
-        result.extraDMs = [];
-        result.sendReputationHook = false;
-        const _txReq = (extracted.transactionType || extracted.tipoNegocioDeseado || "").toLowerCase();
-        const _isPermutaReq = _txReq.includes("permuta") || _txReq === "venta_permuta" || _txReq === "aporte";
-        const _isRentReq = _txReq.includes("arriendo") || _txReq === "arriendo_temporal" || _txReq === "arriendo_con_opcion_de_compra" || _txReq === "venta_o_arriendo" || isGroupReqRent || hasRentReqSignals;
-        result.reactionEmoji = _isPermutaReq ? "\u{1F504}" : _isRentReq ? "\u270F\uFE0F" : "\u{1F4DD}";
-        const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-        setImmediate(() => {
-          executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
-        });
-      }
-    }
-    const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
-    const isMainPropertiesGroup = !groupJid || groupJid === "120363260108880069@g.us";
-    if (isGroup && isConsultation && isMainPropertiesGroup) {
-      const textLower2 = messageToProcess.toLowerCase();
-      const isAboutPublishing = textLower2.includes("subir") || textLower2.includes("c\xF3mo subo") || textLower2.includes("como subo") || textLower2.includes("publicar") || textLower2.includes("c\xF3mo publico") || textLower2.includes("como publico") || textLower2.includes("c\xF3mo se publica") || textLower2.includes("como se publica") || textLower2.includes("c\xF3mo registrar") || textLower2.includes("como registrar") || textLower2.includes("c\xF3mo funciona") || textLower2.includes("como funciona") || textLower2.includes("de qu\xE9 consiste") || textLower2.includes("de que consiste") || textLower2.includes("en qu\xE9 consiste") || textLower2.includes("en que consiste") || textLower2.includes("c\xF3mo hago para") || textLower2.includes("como hago para") || textLower2.includes("c\xF3mo buscar") || textLower2.includes("como buscar") || textLower2.includes("c\xF3mo encontrar") || textLower2.includes("como encontrar") || textLower2.includes("instrucciones") || textLower2.includes("ayuda") || textLower2.includes("explicar") || textLower2.includes("explicame") || textLower2.includes("expl\xEDcame");
-      const isAboutVecy = textLower2.includes("vecy") || textLower2.includes("proyecto") || textLower2.includes("quien creo") || textLower2.includes("qui\xE9n cre\xF3") || textLower2.includes("creadores") || textLower2.includes("quien es jania") || textLower2.includes("qui\xE9n es jania") || textLower2.includes("circulo cero") || textLower2.includes("c\xEDrculo cero") || textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
-      const greetingPrefix = await getTimeOfDayGreetingForUser(rawPhone, realName, alreadyGreeted, isGroup);
-      let welcomePart = "";
-      if (!alreadyGreeted) {
-        welcomePart = ` \xA1Te doy la m\xE1s cordial bienvenida a nuestra comunidad! \u{1F91D}\u2728`;
-      }
-      if (isAboutPublishing) {
-        result.response = `\u{1F4E2} *\xBFC\xD3MO PUBLICAR EN VECY BIENES RA\xCDCES?* \u{1F4E2}
-
-${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (b\xFAsquedas) directamente aqu\xED en el grupo de las siguientes formas:
-
-\u270D\uFE0F *Texto*: Env\xEDa una descripci\xF3n con la ubicaci\xF3n (Ciudad y Barrio), precio y ficha t\xE9cnica (\xE1rea, habitaciones, ba\xF1os, parqueaderos y estrato).
-\u{1F517} *Enlaces/Links*: Comparte enlaces de portales inmobiliarios permitidos o de tu propia web (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, etc.) y extraer\xE9 los datos autom\xE1ticamente.
-\u{1F4C4} *PDF*: Sube la ficha t\xE9cnica de la propiedad en formato PDF.
-\u{1F399}\uFE0F *Nota de Voz*: Graba un audio dictando los datos del inmueble.
-\u{1F5BC}\uFE0F *Flyer/Captura*: Comparte una imagen o flyer que contenga los detalles comerciales en el texto.
-
-*\xBFC\xF3mo funciona?*
-1\uFE0F\u20E3 Al publicar, mi sistema registrar\xE1 la propiedad e iniciar\xE1 una b\xFAsqueda de coincidencias (matches) autom\xE1ticamente a nivel nacional.
-2\uFE0F\u20E3 Si encuentro un MATCH, te notificar\xE9 y te enviar\xE9 un mensaje por *chat privado (DM)* solicitando tu confirmaci\xF3n.
-3\uFE0F\u20E3 Si ambos aliados confirman inter\xE9s en privado, les entregar\xE9 sus contactos directos para que cierren el negocio. \u{1F91D}\u{1F680}
-
-Si tienes dudas o prefieres usar mi men\xFA de soporte y b\xFAsqueda de propiedades privado, escr\xEDbeme directamente en nuestra Consola Web:
-\u{1F449} https://vecy-bienes-raices.vercel.app/jania`;
-        result.classification = "CONSULTA_GENERAL";
-      } else if (isAboutVecy) {
-        const isCompetitorQuery = textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
-        const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
-        if (isCompetitorQuery) {
-          result.response = `\u{1F44C} *${groupZeroName.toUpperCase()} \u2014 DEBATE Y COMUNIDAD* \u{1F44C}
-
-${greetingPrefix}, detect\xE9 una menci\xF3n a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **${groupZeroName}**:
-\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
-
-\xA1All\xED debatimos abiertamente con total transparencia y profesionalismo! \u{1F91D}\u2728`;
-        } else {
-          result.response = `\u{1F44C} *${groupZeroName.toUpperCase()} \u2014 CONEXI\xD3N VECY* \u{1F44C}
-
-${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto VECY Bienes Ra\xEDces, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **${groupZeroName}**:
-\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
-
-\xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728`;
-        }
-        result.classification = "VIOLACION_DE_NORMAS";
-        result.reactionEmoji = "\u{1F6AB}";
-      } else {
-        result.response = `\u{1F4A1} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}* \u{1F4A1}
-
-${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}**:
-\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
-
-\xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}`;
-        result.classification = "VIOLACION_DE_NORMAS";
-        result.reactionEmoji = "\u{1F6AB}";
-      }
-    }
-    if (result && result.response) {
-      result.response = sanitizeResponseMarkdown(result.response);
-    }
-    if (result && result.dmResponse) {
-      result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
-    }
-    if (!result.reactionEmoji) {
-      const _txFallback = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "").toLowerCase();
-      const _isPermutaFb = _txFallback.includes("permuta") || _txFallback === "venta_permuta" || _txFallback === "aporte";
-      const _isRentFb = _txFallback.includes("arriendo") || _txFallback === "arriendo_temporal" || _txFallback === "arriendo_con_opcion_de_compra";
-      if (result.classification === "INMUEBLE") {
-        result.reactionEmoji = _isPermutaFb ? "\u{1F500}" : _isRentFb ? "\u{1F44C}" : "\u{1F44D}";
-      } else if (result.classification === "REQUERIMIENTO") {
-        result.reactionEmoji = _isPermutaFb ? "\u{1F504}" : _isRentFb ? "\u270F\uFE0F" : "\u{1F4DD}";
-      } else if (result.classification === "VIOLACION_DE_NORMAS") {
-        result.reactionEmoji = "\u{1F6AB}";
-      }
-    }
-    return result;
-  } catch (error) {
-    console.warn(`[JanIA-Fallback] \u{1F6E1}\uFE0F LLM no disponible o cuota 429 (${error?.message || error}). Activando Fallback Determinista Aut\xF3nomo $0 COP...`);
-    try {
-      const rawMsg = text2 || "";
-      const cleanLower = rawMsg.toLowerCase().trim();
-      const rawPhone = userId.split("@")[0];
-      const realName = await resolveRealName(userId, userName);
-      if (cleanLower.length < 15 && !cleanLower.includes("apto") && !cleanLower.includes("casa")) {
-        return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
-      }
-      const fbData = extractFallbackDataFromText(rawMsg);
-      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|vr renta|vr vta|canon|alquilo|alquilamos|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
-      const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
-      const origenId = isGroup || groupJid ? groupJid || userId : userId;
-      const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
-      if (isExplicitDemand) {
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
-        const isPermuta = fbData.transactionType.includes("permuta");
-        const emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
-        const savedReq = await saveRequirement({
-          propertyType: fbData.propertyType || "apartment",
-          tipoInmuebleDeseado: fbData.propertyType || "apartment",
-          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
-          tipoNegocioDeseado: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
-          name: `Requerimiento ${fbData.propertyType || "Inmueble"} en Bogot\xE1`,
-          presupuestoMax: String(fbData.presupuestoMax || 0),
-          presupuestoMin: String(fbData.presupuestoMin || 0),
-          adminFeeMax: fbData.adminFee ? String(fbData.adminFee) : void 0,
-          zonaDeseada: "Bogot\xE1",
-          idUsuarioWhatsapp: rawPhone,
-          rawText: rawMsg,
-          origenTipo,
-          origenId,
-          origenNombre,
-          fechaExtraccion: /* @__PURE__ */ new Date()
-        }, userId, realName);
-        if (savedReq) {
-          const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-          setImmediate(() => {
-            executeMatchEngine2(null, savedReq.id).catch(() => {
-            });
-          });
-        }
-        console.log(`[JanIA-Fallback] \u2705 Requerimiento guardado determin\xEDsticamente con emoji ${emoji}`);
-        return {
-          classification: "REQUERIMIENTO",
-          response: "",
-          reactionEmoji: emoji,
-          inserted: true
-        };
-      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
-        const isPermuta = fbData.transactionType.includes("permuta");
-        const emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
-        const savedProp = await saveProperty({
-          propertyType: fbData.propertyType || "apartment",
-          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
-          name: `Inmueble en Bogot\xE1`,
-          price: String(fbData.price || 0),
-          rentPrice: fbData.rentPrice ? String(fbData.rentPrice) : void 0,
-          adminFee: fbData.adminFee ? String(fbData.adminFee) : void 0,
-          areaTotal: String(fbData.areaTotal || 0),
-          zone: "Bogot\xE1",
-          city: "Bogot\xE1, D.C.",
-          idUsuarioWhatsapp: rawPhone,
-          rawText: rawMsg,
-          origenTipo,
-          origenId,
-          origenNombre,
-          fechaExtraccion: /* @__PURE__ */ new Date()
-        }, userId, realName);
-        if (savedProp) {
-          const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-          setImmediate(() => {
-            executeMatchEngine2(savedProp.id, null).catch(() => {
-            });
-          });
-        }
-        console.log(`[JanIA-Fallback] \u2705 Inmueble guardado determin\xEDsticamente con emoji ${emoji}`);
-        return {
-          classification: "INMUEBLE",
-          response: "",
-          reactionEmoji: emoji,
-          inserted: true
-        };
-      }
-    } catch (fbErr) {
-      console.error("[JanIA-Fallback-Error] Error en fallback determinista:", fbErr?.message || fbErr);
-    }
-    return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
-  }
-}
-var init_propertiesHandler = __esm({
-  "server/_core/jania/handlers/propertiesHandler.ts"() {
-    "use strict";
-    init_db();
-    init_schema();
-    init_llm();
-    init_storage();
-    init_geography();
-    init_divipola();
-    init_matching();
-    init_voiceTranscription();
-    init_colombianRealEstateParser();
-    init_scraper();
-    init_advisors();
-    init_types();
-    init_parsers();
-    init_heuristics();
-    init_vision();
     init_prompts();
-    init_sessionManager();
-    setTimeout(() => {
-      initBrokerDirectory().catch(() => {
-      });
-    }, 3e3);
   }
 });
 
@@ -26150,6 +26254,7 @@ var janIA_exports = {};
 __export(janIA_exports, {
   COMMON_FIRST_NAMES: () => COMMON_FIRST_NAMES,
   GREETED_TODAY: () => GREETED_TODAY,
+  JANIA_ARGON_COGNITIVE_CORE: () => JANIA_ARGON_COGNITIVE_CORE,
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   JANIA_PROMPT: () => JANIA_PROMPT,
   KNOWN_BARRIOS_SORTED_ITEMS: () => KNOWN_BARRIOS_SORTED_ITEMS,
@@ -26875,13 +26980,13 @@ Selecciona con rigor t\xE9cnico un consejo tributario o financiero colombiano:
 - Rentabilidad neta vs rentabilidad bruta en inmuebles de arriendo (descuento de administraci\xF3n, predial, seguros y vacancia).
 - Ajuste fiscal del costo de bienes ra\xEDces (Art. 73 del E.T.) para personas naturales.
 - R\xE9gimen tributario de honorarios de corretaje para asesores independientes ante la DIAN.`,
-    viernes_avaluos: `Tema: Viernes de Estudios de Mercado, Valor del M\xB2 & Fichas SINUPOT (${fechaBogota}).
+    viernes_avaluos: `Tema: Viernes de Estudios de Mercado, Valor del M\xB2 & Herramientas Activas (${fechaBogota}).
 Enfoque 100% VIRTUAL orientado a la fijaci\xF3n de precios competitivos.
 IMPORTANTE: En VECY NO ofrecemos peritajes presenciales ni aval\xFAos certificados por Lonja. Ofrecemos ESTUDIOS DE MERCADO APROXIMADOS DE VALOR POR M\xB2 y sondeos de canon para orientar a propietarios.
 Elige libremente entre:
 - Estudios de mercado virtuales por m\xB2: c\xF3mo guiar al propietario para fijar un precio competitivo sin quemar el predio.
 - Estimaci\xF3n de c\xE1nones de arriendo sugeridos (0.5% - 0.8% mensual) seg\xFAn amenidades, estrato y absorci\xF3n de la zona.
-- An\xE1lisis de fichas SINUPOT en Bogot\xE1: c\xF3mo interpretar usos de suelo permitidos, alturas y edificabilidad para lotes o casas.
+- Herramientas oficiales en l\xEDnea con JanIA: Factura Predial Bogot\xE1 en PDF, Paz y Salvo de Valorizaci\xF3n IDU por CHIP, Verificaci\xF3n Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m\xB2.
 - Sondeo guiado 100% interactivo en chat con JanIA: reporte \xE1gil de precios sin exigir escrituras ni documentos.`,
     sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Identidad JanIA (${fechaBogota}).
 Estilo podcast / caf\xE9 inmobiliario, cercano, reflexivo y motivador:
@@ -27820,20 +27925,20 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
         {
           topicTitle: "Interpretaci\xF3n de Fichas Normativas SINUPOT en Bogot\xE1",
           themeKey: "avaluos",
-          voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA. Si est\xE1n captando un lote, una casa antigua o un predio con potencial constructor en Bogot\xE1, la herramienta clave es la ficha del SINUPOT. A trav\xE9s de este sistema pueden conocer el tratamiento urban\xEDstico, el \xE1rea de actividad, los usos del suelo permitidos y la edificabilidad m\xE1xima. Compartan conmigo la ficha en PDF y les extraigo el potencial del terreno en cuesti\xF3n de segundos. \xA1A captar con visi\xF3n!`,
-          captionText: `\u{1F5FA}\uFE0F *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE \u2014 VECY BIENES RA\xCDCES* \u{1F4D0}
+          voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA. Si est\xE1n captando un lote, una casa antigua o un predio con potencial constructor en Bogot\xE1, es clave orientarse con datos reales. Consulten conmigo en tiempo real nuestras herramientas activas: Factura Predial en PDF, Paz y Salvo IDU por CHIP, Verificaci\xF3n Oficial de Identidad y Sondeos de Mercado por metro cuadrado. \xA1A captar con visi\xF3n!`,
+          captionText: `\u{1F5FA}\uFE0F *ESTUDIOS URBAN\xCDSTICOS & HERRAMIENTAS ACTIVAS \u2014 VECY BIENES RA\xCDCES* \u{1F4D0}
 
 \xA1Excelente viernes para todos los corredores visionarios!
 
 \xBFCaptaste un lote o una casa con potencial para desarrollo comercial o residencial en Bogot\xE1?
 
-\u{1F3E2} *Qu\xE9 analizamos en la Ficha SINUPOT:*
+\u{1F3E2} *Criterios Clave de An\xE1lisis:*
 \u2022 **Tratamiento Urban\xEDstico:** Consolidaci\xF3n, renovaci\xF3n o desarrollo.
 \u2022 **\xC1rea de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.
 \u2022 **Usos Permitidos y Restringidos:** Qu\xE9 actividades comerciales pueden operar legalmente en el inmueble.
-\u2022 **\xCDndices de Ocupaci\xF3n y Alturas:** Pisos permitidos seg\xFAn el perfil vial.
+\u2022 **Herramientas Oficiales 100% Activas:** Factura Predial Bogot\xE1 en PDF, Paz y Salvo de Valorizaci\xF3n IDU por CHIP, Verificaci\xF3n Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m\xB2.
 
-\u{1F4F2} *Env\xEDa tu ficha a JanIA:* https://vecy-bienes-raices.vercel.app/jania`
+\u{1F4F2} *Herramientas Oficiales JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "C\xE1lculo de C\xE1nones de Arrendamiento Sugeridos",
@@ -27902,7 +28007,7 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
 \u2696\uFE0F *Consultor\xEDa Jur\xEDdica:* Promesas de compraventa, corretaje 50/50 y blindaje contractual.
 \u{1F4B0} *Asesor\xEDa Tributaria DIAN:* Liquidaci\xF3n de retenciones en la fuente y ganancia ocasional.
 \u{1F4CA} *Estudios de Mercado y M\xB2:* Fijaci\xF3n de precios competitivos sin quemar predios.
-\u{1F4D0} *Fichas SINUPOT:* Usos de suelo, alturas y edificabilidad al instante.
+\u{1F6E0}\uFE0F *Herramientas 100% Activas:* Factura Predial en PDF, Paz y Salvo IDU por CHIP, Verificaci\xF3n Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m\xB2.
 \u{1F4E2} *Marketing Inmobiliario:* T\xE9cnicas de fotograf\xEDa y los 7 pilares de publicaci\xF3n.
 
 \u{1F4F2} *Consola Web JanIA:* https://vecy-bienes-raices.vercel.app/jania
@@ -28253,12 +28358,11 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
 
 Cuando captas una casa antigua, un lote o un inmueble con potencial comercial en Bogot\xE1, el verdadero valor no est\xE1 en los ladrillos, sino en **lo que el POT permite construir o desarrollar all\xED**.
 
-\u{1F3E2} *Datos Clave en la Ficha SINUPOT:*
+\u{1F3E2} *Datos Clave en la Evaluaci\xF3n Normativa:*
 \u2022 **Tratamiento Urban\xEDstico:** Consolidaci\xF3n, renovaci\xF3n urbana o desarrollo.
 \u2022 **\xC1rea de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.
 \u2022 **Usos del Suelo Permitidos:** Si se puede instalar oficina, restaurante, consultorio o bodega.
-\u2022 **\xCDndices de Ocupaci\xF3n y Alturas:** Cu\xE1ntos pisos y qu\xE9 densidad permite la norma.
-\u2022 Env\xEDame el PDF o CHIP de la ficha y te extraigo el resumen urban\xEDstico en segundos.
+\u2022 **Herramientas Oficiales 100% Activas:** Factura Predial Bogot\xE1 en PDF, Paz y Salvo de Valorizaci\xF3n IDU por CHIP, Verificaci\xF3n Oficial de Identidad/Antecedentes y Sondeos Virtuales de Mercado por m\xB2.
 
 \u{1F4AC} *\xBFTienes un predio para analizar en Bogot\xE1?* Escr\xEDbeme por privado \u{1F4F2}: https://wa.me/573192919978
 \u{1F5E3}\uFE0F *\xBFHaces negocios con constructores?* Cu\xE9ntanos tu enfoque aqu\xED \u{1F91D}

@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta DM, Review 15s y Candado Anti-Alucinación SINUPOT (v33.06 - 33.6.0)
+
+**Versión:** `v33.06` (`33.6.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/prompts.ts`
+- `server/_core/identityVerificationService.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/jania/handlers/consultingHandler.ts`
+- `server/_core/jania/handlers/circuloHandler.ts`
+- `server/_core/politenessService.ts`
+- `server/_core/cronService.ts`
+- `server/_core/whatsapp-match.ts`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts`
+- `package.json`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó la implementación de 5 ajustes críticos para la versión `v33.06` (`33.6.0`) conservando el blindaje estricto de $0 COP en pruebas (`NODE_ENV=test`):
+1. **Núcleo Cognitivo Argon y Portafolio Completo (`prompts.ts`)**:
+   - Exportar `JANIA_ARGON_COGNITIVE_CORE` e inyectarlo en `buildSystemPrompt()`, `dmHandler.ts`, `consultingHandler.ts` y `circuloHandler.ts`.
+   - Incluir: Rol e Identidad Soberana (Arquitectura Argon) como Directora Virtual de VECY BIENES RAÍCES (jamás "Vecy Network" al público); Protocolo de Razonamiento Interno (CoT en 3 pasos: Desglose, Simulación & Auditoría contra alucinaciones, Refinamiento); Estilo de comunicación con conclusión líder en negrita, viñetas punchy y anclas visuales (🛠️, 📊, 🧠, ⚖️, 🛡️); Soluciones Proptech de VECY BIENES RAÍCES (*Vecy Agenda Pro* 100% gratis y *Fábrica de Software Proptech a la Medida* con Eduardo Rivera al +57 316 656 9719).
+2. **Caché Compacta y Confirmación Flexible (`identityVerificationService.ts`)**:
+   - Unificar el diseño compacto oficial en caché de identidad (encabezado `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`, cláusula corta de Hábeas Data Ley 1581/12, bloques `🆔 *DATOS DE IDENTIDAD*` y `⚖️ *ANTECEDENTES*` con Policía, Procuraduría, Contraloría y ADRES).
+   - Ampliar `detectDocTypeConfirmation(text)` para reconocer confirmaciones en lenguaje natural ("sí", "claro", "verificar", "antecedentes", "policía", "adres", "identidad", "confirmo") retornando `{ isConfirmation: true, tipoDoc: 'cc' }`.
+3. **6ª Herramienta de Captura en DM y Flexibilidad de Fast-Paths (`dmHandler.ts`)**:
+   - Agregar en `JANIA_DM_TOOLS` la función `registrar_inmueble_o_requerimiento` y su ejecución en `executeJaniaDmTool` invocando `processWhatsAppMessage` de `propertiesHandler.ts`.
+   - Desactivar rigidez en preguntas compuestas en `dmHandler.ts`: fast-paths condicionados a `clean.split(/\s+/).length <= 12`, permitiendo que consultas con contexto de negocio pasen al LLM Argon.
+4. **Copy Ganador Google Reviews 15 Segundos en Mensaje Aparte (`politenessService.ts`, `whatsapp-match.ts`)**:
+   - Crear y exportar `buildWinningGoogleReviewMessage(userName?, contextHint?)` con franja horaria en Bogotá (mañana/tarde/noche) y alternancia de deseos finales, con copy de 15 segundos y URL oficial `https://g.page/r/CctNbwU6UpX5EBM/review`.
+   - En `whatsapp-match.ts`, despacho de la solicitud en burbuja independiente tras servicio gratuito y control de no repetición de 24h con `recentReviewPromptUsers`.
+5. **Candado Anti-Alucinación SINUPOT en `cronService.ts`**:
+   - Erradicar la promesa de extraer fichas normativas del SINUPOT por PDF o CHIP en el calendario de 30 días, catálogo rotativo y prompts. Reemplazar por la invitación a consultar las 4 herramientas 100% activas de JanIA (Predial Bogotá en PDF, Paz y Salvo IDU por CHIP, Verificación Oficial de Identidad y Sondeos Virtuales de Mercado por m²).
+6. **Validación Exhaustiva**:
+   - Tipado estricto `npm run check` (0 errores).
+   - Pruebas automatizadas `npm test`: 229/229 tests passing en verde con $0 COP en pruebas.
+   - Compilación limpia con `npm run build` (cliente Vite y bundle esbuild en 28.35s).
+
+---
+
 ### 📅 [2026-10-15] — Refactorización Quirúrgica Backend JanIA (v33.05 - 33.5.0): Embudo de Recepción Unificado, Urbanidad de Carreño, Filtro Anti-Iniciales, Candado Jurídico, Plantilla Reviews 15s y Alineación Doctrinal
 
 **Versión:** `v33.05` (`33.5.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

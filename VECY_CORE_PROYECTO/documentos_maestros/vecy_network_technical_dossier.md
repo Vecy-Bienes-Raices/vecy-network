@@ -331,6 +331,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.06 — Octubre 2026
+
+#### [v33.6.0] — 2026-10-15: Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta DM, Review 15s y Candado Anti-Alucinación SINUPOT
+- **Núcleo Cognitivo Argon (`prompts.ts`):** Exportada e inyectada la constante `JANIA_ARGON_COGNITIVE_CORE` en `buildSystemPrompt()`, `dmHandler.ts`, `consultingHandler.ts` y `circuloHandler.ts`. Arquitectura de pensamiento CoT (Desglose, Simulación & Auditoría contra alucinaciones, Refinamiento), estilo de comunicación escaneable con anclas visuales y portafolio activo (*Vecy Agenda Pro* 100% gratuito y *Fábrica de Software Proptech a la Medida* con Eduardo Rivera al +57 316 656 9719).
+- **Caché Compacta de Identidad (`identityVerificationService.ts`):** Formato oficial compacto en memoria de caché unificando encabezado `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`, aviso de Hábeas Data Ley 1581/12, `🆔 *DATOS DE IDENTIDAD*` y `⚖️ *ANTECEDENTES*` (Policía, Procuraduría, Contraloría y ADRES).
+- **Confirmación Flexible de Intención:** `detectDocTypeConfirmation` ampliado con soporte de lenguaje natural afirmativo ("sí", "claro", "verificar", "antecedentes", "policía", "adres", "identidad", "confirmo") retornando `{ isConfirmation: true, tipoDoc: 'cc' }`.
+- **6ª Herramienta de Captura en DMs (`dmHandler.ts`):** Inclusión de `registrar_inmueble_o_requerimiento` en `JANIA_DM_TOOLS` invocando `processWhatsAppMessage` de `propertiesHandler.ts`, y flexibilización de fast-paths condicionados a `<= 12` palabras para permitir el paso de consultas complejas al razonamiento del LLM Argon.
+- **Copy Ganador Google Reviews 15 Segundos (`politenessService.ts`, `whatsapp-match.ts`):** Implementada la función `buildWinningGoogleReviewMessage` con cálculo horario en Bogotá y alternancia de deseos de éxito en cierres; despacho en mensaje/burbuja aparte tras entrega de servicio de cortesía con control anti-saturación de 24h.
+- **Candado Anti-Alucinación SINUPOT (`cronService.ts`):** Erradicada la promesa de extraer fichas urbanísticas por PDF/CHIP, canalizando la atención hacia las 4 herramientas funcionales de JanIA (Predial, IDU, Identidad/Antecedentes y Sondeos de Mercado).
+- **Validación & Costos:** `npm run check` (0 errores), `npm test` (229/229 tests passing en verde con $0 COP), `npm run build` limpio.
+
+### 🔖 v33.05 — Octubre 2026
+
+#### [v33.5.0] — 2026-10-15: Refactorización Quirúrgica Backend JanIA
+- **Embudo de Recepción Unificado (`whatsapp-match.ts`, `dmHandler.ts`):** Delegación de datos en frío a `processPrivateDmConversationalMessage` sin ejecución automática antes de confirmación; `setPendingUnconfirmedDoc` con saludo horario de Bogotá, menú de 3 trámites + 4 tipos de documento y Hábeas Data Capa 3.
+- **Filtro Anti-Iniciales & Saludo Horario:** Nombres `<= 3` caracteres sin vocales retornan `""`; saludo horario Bogotá obligatorio ante saludos explícitos del usuario.
+- **Candado Jurídico:** Supresión de alertas de riesgo patrimonial para mensajes con `< 5` palabras o trámites de documentos/predial/IDU.
+- **Alineación Doctrinal:** Trato directivo sin supresión de apellidos en público ("Eduardo Rivera" y "Jani Alves"), comisiones 40/20/40 en contacto directo y 40/10+10/40 en web, emojis v23.0 y memoria conversacional de círculo.
+
 ### 🔖 v33.04 — Octubre 2026
 
 #### [v33.4.0] — 2026-10-14: Refactorización UX Identidad, Hábeas Data Capa 3 y Estabilidad DM

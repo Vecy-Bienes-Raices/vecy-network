@@ -182,7 +182,20 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.05 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.06 — Octubre 2026
+
+### Novedades v33.06 (Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta de Captura en DM, Copy Ganador Google Reviews 15s y Candado Anti-Alucinación SINUPOT):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Partiendo del commit actual v33.05 (33.5.0), ejecuta la actualización v33.06 (33.6.0) aplicando exclusivamente estos 5 ajustes faltantes sin romper lo ya construido y manteniendo el blindaje estricto de $0 COP en pruebas (NODE_ENV=test)."*
+  2. **Ajuste 1: Núcleo Cognitivo Argon y Portafolio Completo (`prompts.ts`)**: Se exportó `JANIA_ARGON_COGNITIVE_CORE` e inyectó en `buildSystemPrompt()`, `dmHandler.ts`, `consultingHandler.ts` y `circuloHandler.ts` con CoT en 3 pasos, directivas de estilo con anclas visuales y conclusión líder, y portafolio de *Vecy Agenda Pro* y *Fábrica Proptech* (+57 316 656 9719).
+  3. **Ajuste 2: Caché Compacta y Confirmación Flexible (`identityVerificationService.ts`)**: Unificación del formato compacto oficial en caché (sin secciones numeradas antiguas) y soporte de confirmación de intención con lenguaje natural ("sí", "claro", "verificar", "antecedentes", etc.) retornando `{ isConfirmation: true, tipoDoc: 'cc' }`.
+  4. **Ajuste 3: 6ª Herramienta en DM y Flexibilidad de Fast-Paths (`dmHandler.ts`)**: Declaración y ejecución de `registrar_inmueble_o_requerimiento` en `JANIA_DM_TOOLS`, e inducción de `isShortQuery` (`<= 12` palabras) para que consultas compuestas pasen directamente al razonamiento del LLM Argon.
+  5. **Ajuste 4: Copy Ganador Google Reviews 15 Segundos en Burbuja Aparte (`politenessService.ts`, `whatsapp-match.ts`)**: `buildWinningGoogleReviewMessage` con cálculo dinámico de franja horaria en Bogotá y alternancia inteligente de deseos finales; despacho en burbuja aparte tras la entrega del servicio con control estricto de 24h en `recentReviewPromptUsers`.
+  6. **Ajuste 5: Candado Anti-Alucinación SINUPOT (`cronService.ts`)**: Erradicación de cualquier promesa de extracción de fichas urbanísticas por PDF/CHIP, canalizando a los usuarios hacia las 4 herramientas activas en tiempo real de JanIA.
+  7. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 229/229 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 28.35s ✅
+- `shared/const.ts` (`v33.06`) y `package.json` (`33.6.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.05 — Octubre 2026
 
 ### Novedades v33.05 (Refactorización Quirúrgica Backend JanIA: Embudo de Recepción Unificado, Urbanidad de Carreño, Filtro Anti-Iniciales, Candado Jurídico, Plantilla Reviews 15s y Alineación Doctrinal):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

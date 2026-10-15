@@ -12,16 +12,47 @@ import { extractFirstName } from './whatsapp-utils';
 import { VECY_ACTIVE_DOMAIN, VECY_SOCIAL_NETWORKS } from '../../shared/const';
 
 /**
+ * Generador ganador de mensaje de calificación de Google Reviews (15 segundos) con cierre dinámico (v33.06).
+ */
+export function buildWinningGoogleReviewMessage(userName?: string, contextHint?: string): string {
+  const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const hour = nowBogota.getHours();
+  const franjaHoraria = hour >= 5 && hour < 12 ? "mañana" : hour >= 12 && hour < 19 ? "tarde" : "noche";
+
+  const isColleague =
+    (contextHint && /colega|corredor|inmobiliario|asesor|agente|bienes\s*ra[ií]ces/i.test(contextHint)) ||
+    (userName && /inmo|bienes|raices|asesor|agente/i.test(userName));
+
+  let closingWish = "";
+  if (isColleague || !contextHint) {
+    closingWish = "¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨";
+  } else {
+    const variant = nowBogota.getMinutes() % 3;
+    if (variant === 0) {
+      closingWish = `¡Que tengas una linda ${franjaHoraria} y grandes éxitos en tu día a día! 🏢✨`;
+    } else if (variant === 1) {
+      closingWish = "¡Que tengas una excelente jornada y muchos éxitos en tu labor! 🏢✨";
+    } else {
+      closingWish = "¡Que tengas una agradable jornada y muchos éxitos en tu vida! 🏢✨";
+    }
+  }
+
+  return (
+    `⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo GRATIS.\n\n` +
+    `COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):\n` +
+    `👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias\n\n` +
+    `${closingWish}`
+  );
+}
+
+/**
  * 1. Mensaje de calificación personalizado e inmediato cuando el usuario agradece o se despide amablemente.
  */
 export function formatImmediatePoliteReviewMessage(userName?: string): string {
   const cleanName = extractFirstName(userName || 'Colega') || 'Colega';
   return (
     `¡Con el mayor de los gustos, ${cleanName}! 🙏😊 Me alegra muchísimo haberte sido de gran ayuda.\n\n` +
-    `⭐ *¿Me regalas 15 segunditos?*\n` +
-    `Tu opinión y calificación de 5 estrellas ⭐⭐⭐⭐⭐ nos ayuda enormemente a que este servicio siga siendo *100% GRATUITO* para todos (no te toma más de 15 segundos, te lo aseguro):\n` +
-    `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
-    `👍 ¡Muchas gracias por tu generosidad y apoyo!`
+    buildWinningGoogleReviewMessage(userName)
   );
 }
 
@@ -39,9 +70,8 @@ export function formatPoliteInactivityPrompt(_userName?: string): string {
 export function formatPoliteYesReviewMessage(userName?: string): string {
   const cleanName = extractFirstName(userName || 'Colega') || 'Colega';
   return (
-    `🙏 ¡Gracias, ${cleanName}! Entonces por favor 🌟 déjanos *tu opinión y califica nuestro servicio* ingresando a este enlace (no te toma más de 15 segundos, te lo aseguro):\n\n` +
-    `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
-    `👍 ¡Muchas gracias!`
+    `🙏 ¡Gracias, ${cleanName}!\n\n` +
+    buildWinningGoogleReviewMessage(userName)
   );
 }
 

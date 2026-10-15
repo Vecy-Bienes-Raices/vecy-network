@@ -317,20 +317,17 @@ export class JaniaMatchBot {
       if (Date.now() - recentSent < 24 * 60 * 60 * 1000) return;
 
       try {
-        const { formatPoliteInactivityPrompt } = await import('./politenessService');
-        const promptText = formatPoliteInactivityPrompt(userName);
+        const { buildWinningGoogleReviewMessage } = await import('./politenessService');
+        const promptText = buildWinningGoogleReviewMessage(userName);
         await this.queuedSend(senderId, promptText, { allowDirectMessage: true, skipDelay: true });
         await this.logToDb(senderId, 'janIA', promptText);
         const { appendDmHistory } = await import('./janIA');
         appendDmHistory(senderId, 'assistant', promptText);
 
-        this.userAwaitingReviewConsent.set(senderId, {
-          timestamp: Date.now(),
-          userName
-        });
-        console.log(`[JANIA-MATCH] 🤝 Pregunta de cortesía de Carreño entregada a ${senderId} tras 1 min de silencio.`);
+        this.recentReviewPromptUsers.set(senderId, Date.now());
+        console.log(`[JANIA-MATCH] ⭐ Solicitud ganadora de Google Reviews entregada a ${senderId} tras entrega de servicio.`);
       } catch (err: any) {
-        console.error('[JANIA-MATCH] Error enviando pregunta de cortesía tras 1 min de silencio:', err?.message);
+        console.error('[JANIA-MATCH] Error enviando solicitud de Google Reviews tras entrega de servicio:', err?.message);
       }
     }, 60 * 1000);
 

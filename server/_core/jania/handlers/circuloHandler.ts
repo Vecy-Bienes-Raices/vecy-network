@@ -9,6 +9,7 @@ import {
 import { checkStrictOffTopic } from "../heuristics";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
+import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 
 
 
@@ -92,6 +93,7 @@ export async function processCirculoMessage(
 
     const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
     const systemPrompt =
+      `${JANIA_ARGON_COGNITIVE_CORE}\n\n` +
       `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RAÍCES. Estás operando en el grupo "${groupZeroName}". ` +
       `Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del día a día del negocio, además del proyecto VECY BIENES RAÍCES, su modelo colaborativo, tecnología y debate con competidores, de forma sincera, verídica y de alto nivel:\n\n` +
       `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY BIENES RAÍCES:\n` +

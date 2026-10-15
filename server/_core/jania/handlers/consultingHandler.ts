@@ -10,6 +10,7 @@ import { getGreetingByTime, extractFirstName, sanitizeResponseMarkdown, parseSaf
 import { invokeLLM } from "../../llm";
 import { JanIAResult } from "../types";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
+import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 
 export async function processConsultingMessage(
   text: string,
@@ -130,6 +131,7 @@ export async function processConsultingMessage(
     }
 
     const systemPrompt =
+      `${JANIA_ARGON_COGNITIVE_CORE}\n\n` +
       `Eres JanIA, la Inteligencia Artificial viva, empática y de máxima capacidad resolutiva de VECY BIENES RAÍCES. ` +
       `Estás operando en el grupo "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠". Tu objetivo es responder con precisión quirúrgica, rigor legal, calidez humana y alta competencia técnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de élite.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y MODERACIÓN ESTRICTA:\n` +
