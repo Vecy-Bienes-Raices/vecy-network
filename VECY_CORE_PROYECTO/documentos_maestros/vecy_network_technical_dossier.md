@@ -331,6 +331,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.12 — Octubre 2026
+
+#### [v33.12.0] — 2026-10-15: Filtro Anti-Publicidad de Marketing/Meta Ads, Ingesta Robusta de PDFs Comerciales y Ventana Estricta de 15 Días
+- **Filtro Anti-Publicidad y Pauta Digital (`janIA.ts`, Caso Caro Rodríguez):** Detección e intercepción temprana de mensajes de agencias de marketing, pauta en Meta/Facebook/Instagram, embudos de conversión, venta de bots o software ajeno al corretaje inmobiliario. JanIA reacciona con emoji `🚫`, emite log descriptivo y aborta de inmediato la inserción en base de datos.
+- **Ingesta Robusta de Ofertas y Requerimientos en PDF (`whatsapp-match.ts`, Caso Juan Alberto Duque):** Blindaje contra falsos descartes por texto hueco o comentarios escuetos ("Buenas tardes adjunto documento") cuando el mensaje incluye un archivo PDF comercial (título o contenido de inmueble/requerimiento). JanIA analiza el contenido y nombre del PDF, abstrayendo las características del inmueble y garantizando su inserción en PostgreSQL.
+- **Ventana Operativa Estricta de 15 Días (`janIA.ts`, `database.ts`, `matching.ts`):** Erradicados todos los residuos de 30 o 45 días en el motor de coincidencias y purgas nocturnas. La vigencia activa de inmuebles y requerimientos queda rígidamente fijada en 15 días calendario en todo el sistema.
+- **Validación Limpia & Costos $0 COP:** Typecheck `npm run check` (0 errores), pruebas automatizadas `npm test` (250/250 passing al 100% en verde con $0 COP), compilación `npm run build` en 32.22s (Vite) + 250ms (esbuild).
+
 ### 🔖 v33.11 — Octubre 2026
 
 #### [v33.11.0] — 2026-10-15: Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas

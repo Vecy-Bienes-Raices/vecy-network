@@ -227,7 +227,11 @@ ${lateReplyNote}`;
     }
 
     if (pdfBuffer) {
-      messageToProcess += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
+      messageToProcess += `\n[SISTEMA: DOCUMENTO PDF DETECTADO - ANÁLISIS MULTIMODAL]:
+Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
+- Si es un REQUERIMIENTO o BÚSQUEDA de un cliente (ej. "ESTOY BUSCANDO BODEGA/APARTAMENTO..."), clasifícalo como "REQUERIMIENTO", extrae todas las especificaciones comerciales y confírmale al colega que su requerimiento queda ingresado para cruces con la red.
+- Si es una FICHA TÉCNICA u OFERTA de un inmueble (venta o arriendo), clasifícalo como "INMUEBLE", extrae los datos y confírmale el registro.
+- Si es una consulta jurídica, tributaria, predial o contractual, respóndela a profundidad.`;
     }
 
     if (isFromAudio) {
@@ -274,6 +278,26 @@ ${lateReplyNote}`;
 
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+
+      if (parsed.classification === "REQUERIMIENTO" || parsed.classification === "INMUEBLE") {
+        console.log(`[JanIA-Consulting] 🎯 Publicación comercial detectada en Grupo 2 (${parsed.classification}). Delegando a propertiesHandler para inserción en BD y matching...`);
+        const { processWhatsAppMessage } = await import("./propertiesHandler");
+        return await processWhatsAppMessage(
+          text,
+          userId,
+          userName,
+          !!imageBuffer || !!pdfBuffer,
+          [],
+          undefined,
+          imageBuffer,
+          true,
+          pdfBuffer,
+          pdfMimeType,
+          "120363417740040773@g.us",
+          "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠"
+        );
+      }
+
       const rawResp = parsed.response || "";
       const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
       const finalResp = sanitizeResponseMarkdown(enrichedResp);

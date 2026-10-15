@@ -34,9 +34,9 @@ export async function runNightlyRematch() {
   }
 
   try {
-    // Regla Doctrinal v31.86: Transición automática a 'expired' de requerimientos mayores a 10 días
-    await db.execute(sql`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
-    await db.execute(sql`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+    // Regla Doctrinal v32.58 / v33.12: Transición automática a 'expired' de requerimientos mayores a 15 días
+    await db.execute(sql`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days'`);
+    await db.execute(sql`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days')`);
 
     const [activeReqs, availProps] = await Promise.all([
       db.select().from(requirements).where(eq(requirements.status, "active")),
@@ -104,10 +104,13 @@ export async function runNightlyRematch() {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
 
-          // Regla Doctrinal (10 Días de Vigencia v31.84/v31.86): Omitir demandas u ofertas de más de 10 días
-          const reqEffectiveDate = req.createdAt || (req as any).fechaExtraccion;
+          // Regla Doctrinal (15 Días de Vigencia v32.58/v33.12): Omitir demandas u ofertas de más de 15 días
+          const reqRepCount = Number((req as any).republicacionesCount || 0);
+          const reqEffectiveDate = (reqRepCount > 0 && (req as any).fechaUltimaPublicacion)
+            ? (req as any).fechaUltimaPublicacion
+            : ((req as any).fechaUltimaPublicacion || req.createdAt || (req as any).fechaExtraccion);
           const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-          if (reqAgeDays > 10) {
+          if (reqAgeDays > 15) {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
@@ -125,7 +128,7 @@ export async function runNightlyRematch() {
             ? (prop as any).fechaUltimaPublicacion
             : ((prop as any).fechaUltimaPublicacion || prop.createdAt);
           const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-          if (propAgeDays > 10) {
+          if (propAgeDays > 15) {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(

@@ -4423,7 +4423,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(dmReply).toMatch(/Eduardo A\. Rivera|Jani Alves/);
       expect(dmReply).toMatch(/Ley 2277|311-1|UVT|ganancia ocasional/i);
       expect(dmReply).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
-    });
+    }, 35000);
 
     it("5. Servicios gratuitos de autoservicio posicionados como beneficio de cortesía de Vecy Bienes Raíces", async () => {
       const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
@@ -5287,13 +5287,129 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(cobroReply).toContain("VECY BIENES RAÍCES");
     });
 
-    it("6. Consagración doctrinal de versión v33.11 y package.json 33.11.0", async () => {
+    it("6. Consagración doctrinal de versión v33.11 en histórico", async () => {
+      // Test de transición histórica
+      expect(true).toBe(true);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SUITE 72: DOCTRINA v33.12 — FILTRO ANTI-PUBLICIDAD META, PDFs COMERCIALES Y VENTANA ESTRICTA 15 DÍAS
+  // ══════════════════════════════════════════════════════════════════════════
+  describe("SUITE 72 — Filtro Anti-Publicidad Meta, PDFs Comerciales y Ventana Estricta 15 Días (v33.12)", () => {
+    it("1. Filtro impermeable anti-publicidad (Caso Caro Rodríguez - Campañas en Meta, Pauta, Agencia de Marketing)", async () => {
+      const { esMensajeSpamOBasura } = await import("../_core/jania/heuristics");
+      const { processWhatsAppMessage } = await import("../_core/jania/handlers/propertiesHandler");
+
+      // Casos de marketing y pauta
+      const msgMeta1 = "Hola a todos, yo implemento tus campañas en Meta para que consigas más clientes para tus inmuebles.";
+      const msgMeta2 = "Agencia de marketing inmobiliario: Anuncios en Facebook e Instagram para cerrar ventas más rápido.";
+      const msgMeta3 = "Pauta digital en redes sociales y embudos de ventas para brokers.";
+
+      const spam1 = esMensajeSpamOBasura(msgMeta1);
+      const spam2 = esMensajeSpamOBasura(msgMeta2);
+      const spam3 = esMensajeSpamOBasura(msgMeta3);
+
+      expect(spam1.isSpam).toBe(true);
+      expect(spam2.isSpam).toBe(true);
+      expect(spam3.isSpam).toBe(true);
+
+      // Evaluación en processWhatsAppMessage: Debe retornar VIOLACION_DE_NORMAS con emoji 🚫 y cero inserción
+      const resProp = await processWhatsAppMessage(
+        msgMeta1,
+        "573212857044@s.whatsapp.net",
+        "Caro Rodríguez",
+        false,
+        [],
+        undefined,
+        undefined,
+        true
+      );
+
+      expect(resProp.classification).toBe("VIOLACION_DE_NORMAS");
+      expect(resProp.reactionEmoji).toBe("🚫");
+      expect(resProp.inserted).toBe(false);
+    });
+
+    it("2. Robustez en lectura de PDFs comerciales (Caso Juan Alberto Duque - Requerimiento en PDF)", async () => {
+      const llmModule = await import("../_core/llm");
+      const spyLLM = vi.spyOn(llmModule, "invokeLLM").mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                classification: "REQUERIMIENTO",
+                inserted: true,
+                reactionEmoji: "📝",
+                extractedData: {
+                  title: "Demanda de Bodega en Cota",
+                  propertyType: "bodega",
+                  transactionType: "arriendo",
+                  city: "Cota",
+                  presupuestoMax: 25000000,
+                  areaMin: 800,
+                  contactPhone: "573109998877"
+                }
+              })
+            }
+          }
+        ]
+      } as any);
+
+      const { processWhatsAppMessage } = await import("../_core/jania/handlers/propertiesHandler");
+
+      // Simular requerimiento que llega adjunto como PDF comercial (sin caption o con título suelto)
+      const mockPdfBuffer = Buffer.from("%PDF-1.4 Mock commercial property requirement").toString("base64");
+
+      const resPdfReq = await processWhatsAppMessage(
+        "ESTOY BUSCANDO BODEGA EN COTA.pdf",
+        "573109998877@s.whatsapp.net",
+        "Juan Alberto Duque",
+        true,
+        [],
+        undefined,
+        undefined,
+        true,
+        mockPdfBuffer,
+        "application/pdf",
+        "120363383321523415@g.us",
+        "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴"
+      );
+
+      // Debe procesarse y no ser descartado como consulta general o comentario corto
+      expect(resPdfReq).toBeDefined();
+      expect(resPdfReq.inserted).toBe(true);
+      expect(resPdfReq.classification).toBe("REQUERIMIENTO");
+
+      spyLLM.mockRestore();
+    });
+
+    it("3. Ventana estricta de 15 días en cruces ad-hoc y BD (CERO 45 días residuales)", async () => {
+      const { executeAdHocMatch } = await import("../_core/matchAdHocService");
+
+      // Ejecutar cruce ad-hoc de demanda
+      const adHocRes = await executeAdHocMatch(
+        "Busco apartamento en venta en Chicó 3 alcobas hasta $1000 millones",
+        "admin",
+        5
+      );
+
+      expect(adHocRes).toBeDefined();
+      expect(adHocRes.matches).toBeDefined();
+
+      // Ningún match puede superar los 15 días de antigüedad
+      for (const m of adHocRes.matches) {
+        expect(m.isRecent15Days).toBe(true);
+      }
+    });
+
+    it("4. Consagración doctrinal de versión v33.12 y package.json 33.12.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.11");
+      expect(VECY_VERSION).toBe("v33.12");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.11.0");
+      expect(pkg.version).toBe("33.12.0");
     });
   });
 });

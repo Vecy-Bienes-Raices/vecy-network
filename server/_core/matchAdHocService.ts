@@ -122,14 +122,20 @@ export async function executeAdHocMatch(
       availableProps = await db
         .select()
         .from(properties)
-        .where(eq(properties.available, true))
+        .where(and(
+          eq(properties.available, true),
+          gte(sql`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
+        ))
         .orderBy(desc(properties.createdAt))
         .limit(100);
     } else {
       activeReqs = await db
         .select()
         .from(requirements)
-        .where(eq(requirements.status, 'active'))
+        .where(and(
+          eq(requirements.status, 'active'),
+          gte(sql`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
+        ))
         .orderBy(desc(requirements.createdAt))
         .limit(100);
     }
@@ -320,16 +326,12 @@ export async function executeAdHocMatch(
   const highMatches = allScoredItems.filter(item => item.score >= eightyThreshold && item.isRecent15Days).slice(0, limit);
   const hasEightyMatch = highMatches.length > 0;
 
-  // 2. Fallback si no hay matches >= 80% en 15 días: Relajar a los últimos 45 días y score >= 50%
-  const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
-  let fallbackCandidates = allScoredItems.filter(item => {
-    const isRecent45 = item.createdAt ? new Date(item.createdAt) >= fortyFiveDaysAgo : true;
-    return item.score >= 50 && isRecent45;
-  }).slice(0, 3);
+  // 2. Fallback si no hay matches >= 80%: Confina estrictamente a los últimos 15 días (CERO 45 días)
+  let fallbackCandidates = allScoredItems.filter(item => item.score >= 50 && item.isRecent15Days).slice(0, 3);
 
-  // Si no hay candidatos con score >= 50% en 45 días, tomar los 3 más cercanos disponibles
+  // Si no hay candidatos con score >= 50% en 15 días, tomar los candidatos dentro de 15 días disponibles
   if (fallbackCandidates.length === 0) {
-    fallbackCandidates = allScoredItems.slice(0, 3);
+    fallbackCandidates = allScoredItems.filter(item => item.isRecent15Days).slice(0, 3);
   }
 
   const activeDisplayMatches = hasEightyMatch ? highMatches : fallbackCandidates;

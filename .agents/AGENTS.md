@@ -182,7 +182,18 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.11 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.12 — Octubre 2026
+
+### Novedades v33.12 (Filtro Anti-Publicidad Meta, PDFs Comerciales y Ventana Estricta 15 Días):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Aplica estas 3 correcciones urgentes en el backend de JanIA (`v33.12` / `33.12.0`):"*
+  2. **Filtro Anti-Publicidad / Spam (Caso Caro Rodríguez)**: Bloqueo inmediato con 🚫 y cero persistencia en BD para ofertas de campañas en Meta/Facebook/Instagram, pauta digital, agencias de marketing, embudos o venta de software/cursos no inmobiliarios.
+  3. **Lectura de Documentos PDF Comerciales (Caso Juan Alberto Duque)**: Protección de ofertas y requerimientos compartidos en PDF (ej. "ESTOY BUSCANDO BODEGA EN COTA.pdf") para evitar descartes por texto hueco o comentarios cortos, garantizando su extracción y guardado en BD.
+  4. **Ventana Estricta de 15 Días (Cero 45 Días Residuales)**: Confinamiento estricto a 15 días en consultas de base de datos, purgas automáticas y cruces ad-hoc, erradicando fallbacks de 30 o 45 días.
+  5. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 250/250 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio (Vite 32.22s + esbuild 250ms) ✅
+- `shared/const.ts` (`v33.12`) y `package.json` (`33.12.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.11 — Octubre 2026
 
 ### Novedades v33.11 (Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

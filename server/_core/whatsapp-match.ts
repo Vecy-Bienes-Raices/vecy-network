@@ -1136,7 +1136,7 @@ export class JaniaMatchBot {
             if (rawMsg?.conversation) body = rawMsg.conversation;
             else if (rawMsg?.extendedTextMessage) body = rawMsg.extendedTextMessage.text || '';
             else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
-            else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
+            else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
             else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
 
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
@@ -1252,7 +1252,7 @@ export class JaniaMatchBot {
       if (rawMsg?.conversation) body = rawMsg.conversation;
       else if (rawMsg?.extendedTextMessage) body = rawMsg.extendedTextMessage.text || '';
       else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
-      else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
+      else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
       else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
       else if (rawMsg?.audioMessage) {
         isAudioPTT = true;
@@ -2155,7 +2155,38 @@ export class JaniaMatchBot {
       "coaching inmobiliario",
       "mentoría inmobiliaria",
       "invierte en tu negocio",
-      "invierte en conocimiento"
+      "invierte en conocimiento",
+      "campaña en meta",
+      "campana en meta",
+      "campañas en meta",
+      "campanas en meta",
+      "yo implemento tus campañas",
+      "yo implemento tus campanas",
+      "implemento tus campañas",
+      "implemento tus campanas",
+      "implementamos tus campañas",
+      "anuncio en facebook",
+      "anuncios en facebook",
+      "anuncio en instagram",
+      "anuncios en instagram",
+      "anuncios en meta",
+      "pauta en facebook",
+      "pauta en instagram",
+      "pauta en redes",
+      "pauta en meta",
+      "pauta digital",
+      "agencia de marketing",
+      "agencia digital",
+      "marketing digital",
+      "servicio de marketing",
+      "servicios de marketing",
+      "generación de leads",
+      "generacion de leads",
+      "prospectos calificados",
+      "trafficker",
+      "media buyer",
+      "funnel de ventas",
+      "embudo de ventas"
     ];
 
     const hasPromoKeywords = promoPhrases.some(phrase => cleanLower.includes(phrase));
@@ -2573,9 +2604,9 @@ export class JaniaMatchBot {
 
     try {
       const distinctListings = buffer.messages.filter(m => {
-        // ✅ FIX: Mensajes solo-imagen O solo-PDF (sin caption/body) siempre pasan
-        // — JanIA los procesa visualmente con el modelo multimodal
-        if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === '')) return true;
+        // ✅ FIX: Mensajes con imagen O con PDF adjunto siempre pasan
+        // — JanIA los procesa con el extractor multimodal (visión / PDF parser)
+        if (m.imageBuffer || m.pdfBuffer) return true;
         if (!m.body) return false;
         const clean = m.body.toLowerCase();
         const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion") || clean.includes("local") || clean.includes("penthouse") || clean.includes("duplex") || clean.includes("dúplex") || clean.includes("alcoba") || clean.includes("alcobas") || clean.includes("hab") || clean.includes("habitacion") || clean.includes("habitación");

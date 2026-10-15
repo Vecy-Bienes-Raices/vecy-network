@@ -48,19 +48,66 @@ export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: s
     return { isSpam: true, reason: "Invitación a evento, Zoom, Meet, webinar o masterclass externa." };
   }
 
-  // 2. Publicidad de Terceros / Marketing No Predial / Software / Coaching
-  if (
-    n.includes("coaching") ||
-    n.includes("red de mercadeo") ||
-    n.includes("multinivel") ||
-    n.includes("gana dinero desde casa") ||
-    n.includes("servicio de marketing") ||
-    n.includes("agencia de publicidad") ||
-    n.includes("software inmobiliario") ||
-    n.includes("te regalo una guia") ||
-    n.includes("te regalo un ebook")
-  ) {
-    return { isSpam: true, reason: "Publicidad de terceros, marketing no predial o coaching." };
+  // 2. Publicidad de Terceros / Marketing No Predial / Pauta en Meta / Software / Cursos / Coaching
+  const marketingPatterns = [
+    "campaña en meta",
+    "campana en meta",
+    "campañas en meta",
+    "campanas en meta",
+    "yo implemento tus campañas",
+    "yo implemento tus campanas",
+    "implemento tus campañas",
+    "implemento tus campanas",
+    "implementamos tus campañas",
+    "implementamos tus campanas",
+    "anuncio en facebook",
+    "anuncios en facebook",
+    "anuncio en instagram",
+    "anuncios en instagram",
+    "anuncios en meta",
+    "pauta en facebook",
+    "pauta en instagram",
+    "pauta en redes",
+    "pauta en meta",
+    "pauta digital",
+    "agencia de marketing",
+    "agencia digital",
+    "agencia de publicidad",
+    "marketing inmobiliario",
+    "marketing digital",
+    "servicio de marketing",
+    "servicios de marketing",
+    "estrategias de marketing",
+    "estrategia digital",
+    "generar leads",
+    "generación de leads",
+    "generacion de leads",
+    "prospectos calificados",
+    "clientes potenciales para tus inmuebles",
+    "trafficker",
+    "media buyer",
+    "funnel de ventas",
+    "embudo de ventas",
+    "embudos de ventas",
+    "software inmobiliario",
+    "software crm",
+    "crm inmobiliario",
+    "venta de software",
+    "coaching",
+    "red de mercadeo",
+    "multinivel",
+    "gana dinero desde casa",
+    "te regalo una guia",
+    "te regalo una guía",
+    "te regalo un ebook",
+    "te enseño a vender",
+    "aprende a vender con pauta",
+    "aprende a pautar",
+    "curso de pauta"
+  ];
+
+  if (marketingPatterns.some(pat => n.includes(pat))) {
+    return { isSpam: true, reason: "Publicidad de marketing, pauta en redes, venta de software o coaching no inmobiliario." };
   }
 
   // 3. Política, Religión o Spam Ideológico

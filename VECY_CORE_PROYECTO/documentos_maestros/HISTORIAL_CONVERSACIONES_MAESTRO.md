@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Filtro Anti-Publicidad Meta, PDFs Comerciales y Ventana Estricta 15 Días (v33.12 - 33.12.0)
+
+**Versión:** `v33.12` (`33.12.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/heuristics.ts` (Filtro impermeable anti-publicidad de marketing, campañas en Meta, pauta digital, software y coaching no inmobiliario)
+- `server/_core/jania/handlers/propertiesHandler.ts` (Rechazo inmediato con 🚫 para publicidad ajena; protección en lectura de requerimientos e inmuebles comerciales en PDF sin descarte por hollow/texto corto)
+- `server/_core/jania/handlers/consultingHandler.ts` (Instrucción de análisis de PDFs comerciales y delegación directa a `propertiesHandler` para persistencia en BD y cruce)
+- `server/_core/matchAdHocService.ts` (Confinamiento estricto a ventana de 15 días en consultas de base de datos y fallback de matching, eliminando referencias residuales a 45 días)
+- `server/jobs/nightlyRematch.ts` (Transición a 'expired' y purga de matches mayores a 15 días exactos con soporte de republicaciones)
+- `server/__tests__/regression.test.ts` (SUITE 72 con 4 pruebas unitarias aprobadas, alcanzando 250/250 tests pasando al 100% en verde a $0 COP)
+- `shared/const.ts` (`v33.12`)
+- `package.json` (`33.12.0`)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó:
+1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Aplica estas 3 correcciones urgentes en el backend de JanIA (`v33.12` / `33.12.0`):"*
+2. *"FILTRO ANTI-PUBLICIDAD / SPAM (Caso Caro Rodríguez): JanIA dejó pasar una publicación de Caro Rodríguez ofreciendo 'campañas en Meta para que consigas más clientes para tus inmuebles'. Cualquier mensaje que ofrezca servicios de marketing digital, pauta en redes (Facebook/Instagram/Meta Ads), creación de páginas web, venta de software o capacitaciones que NO sea un inmueble en venta/arriendo o un requerimiento directo de compra/arriendo, DEBE ser catalogado como SPAM/PUBLICIDAD, rechazado con emoji 🚫 y JAMÁS insertarse en la BD."*
+3. *"LECTURA DE DOCUMENTOS PDF (Caso Juan Alberto Duque): Juan Alberto Duque compartió un requerimiento adjunto como archivo PDF ('ESTOY BUSCANDO BODEGA EN COTA.pdf'). Asegúrate de que JanIA lea e interprete el contenido de los PDFs adjuntos en los grupos, identifique si es una oferta o demanda, extraiga sus datos y los guarde en la BD para cruzarlos en el matching, sin descartarlos por falta de texto en el cuerpo del mensaje."*
+4. *"VENTANA ESTRICTA DE 15 DÍAS (CERO 45 DÍAS): Revisa en toda la lógica de matching y consultas de base de datos que la vigencia activa de ofertas y requerimientos se confine estrictamente a los últimos 15 días. Elimina cualquier referencia residual a 30 o 45 días."*
+5. *"Manten el blindaje estricto de $0 COP en pruebas (`NODE_ENV=test`), ejecuta `npm run check`, `npm test` y `npm run build`, y documenta en las tres bitácoras maestras."*
+
+#### 2. Hallazgos y Causa Raíz Identificada
+- En `heuristics.ts`, los patrones de detección de spam no cubrían explícitamente ofertas de servicios de marketing digital ("campañas en Meta", "pauta digital", "agencia de marketing", "anuncios en Facebook/Instagram", "embudos de ventas"). Al contener palabras como "clientes" o "inmuebles", el mensaje esquivaba el filtro de spam y llegaba a ser evaluado como consulta o contenido válido.
+- En `propertiesHandler.ts`, cuando un usuario adjuntaba un archivo PDF con un requerimiento u oferta comercial pero no escribía un texto largo explicativo en el mensaje (ej: solo el nombre del archivo `"ESTOY BUSCANDO BODEGA EN COTA.pdf"`), el guardarraíl de `isShortComment` o `isHollowListing` descartaba la publicación por falta de especificaciones técnicas textuales en el chat, ignorando que los datos se encontraban dentro del PDF adjunto.
+- En `matchAdHocService.ts`, el fallback de matching cuando no había candidatos con score >= 80% relajaba el filtro temporal a 45 días (`fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)`), lo que contravenía la doctrina estricta de 15 días de vigencia activa.
+- En `nightlyRematch.ts`, las consultas de actualización automática a `expired` utilizaban un intervalo de 10 días (`INTERVAL '10 days'`) y omitían el conteo de republicaciones activas.
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Filtro Impermeable Anti-Publicidad de Marketing y Pauta (`heuristics.ts`, `propertiesHandler.ts`):**
+   - Agregada la regla heurística defensiva `isDigitalMarketingOrAdvertising` en `esMensajeSpamOBasura`, capturando patrones de campañas en Meta/Facebook/Instagram Ads, pauta digital, agencias de marketing, embudos de ventas, diseño web ajeno, venta de CRM y software genérico.
+   - En `propertiesHandler.ts`, si el mensaje es clasificado como publicidad o spam, se marca inmediatamente con `result.classification = "VIOLACION_DE_NORMAS"`, `result.reactionEmoji = "🚫"`, `result.inserted = false` y se bloquea su persistencia.
+2. **Soporte y Blindaje de Ingesta para PDFs Comerciales (`propertiesHandler.ts`, `consultingHandler.ts`):**
+   - En `propertiesHandler.ts`, se ajustaron los guardarraíles `isShortComment`, `isGeneralInquiryOrRecommendation`, `hasRealEstateIntent` y las comprobaciones de calidad `hollowCheckProp` / `hollowCheckReq` para que cuando exista un archivo PDF adjunto (`!!pdfBuffer`), el sistema no lo descarte por brevedad del texto de WhatsApp, reconociendo la intención predial del documento.
+   - En `consultingHandler.ts`, se fortaleció la directiva de análisis de PDFs para requerimientos y fichas técnicas comerciales, delegando la ejecución a `propertiesHandler.ts` para su inserción en base de datos y cruce en caliente con el motor de matching.
+3. **Ventana Estricta de 15 Días — Cero 45 Días Residuales (`matchAdHocService.ts`, `nightlyRematch.ts`):**
+   - En `matchAdHocService.ts`, se reemplazó la consulta abierta de base de datos aplicando la condición `gte(sql'COALESCE(fecha_ultima_publicacion, createdAt)', fifteenDaysAgo)`. Se eliminó por completo el fallback a 45 días (`fortyFiveDaysAgo`), confinando los candidatos de afinidad estrictamente a la ventana de 15 días (`isRecent15Days`).
+   - En `nightlyRematch.ts`, se unificó el intervalo de expiración a 15 días exactos (`INTERVAL '15 days'`) tanto en requerimientos como en propiedades, respetando la fecha efectiva de republicación (`fechaUltimaPublicacion`).
+4. **SUITE 72 de Pruebas Unitarias y Regresión (`regression.test.ts`):**
+   - Implementadas 4 pruebas unitarias aprobadas: rechazo de publicidad Meta de Caro Rodríguez con 🚫, lectura e inserción de requerimiento comercial en PDF de Juan Alberto Duque, confinamiento estricto a 15 días en cruces ad-hoc y verificación de versión `v33.12`.
+   - Mockeo estricto a $0 COP de llamadas LLM en pruebas unitarias para no consumir cuota de pago ni incurrir en timeouts.
+
+#### 4. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Unitarios y de Regresión:** `npm test` — **250/250 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` en 32.22s (Vite) + 250ms (esbuild).
+
+---
+
 ### 📅 [2026-10-15] — Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas (v33.11 - 33.11.0)
 
 **Versión:** `v33.11` (`33.11.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

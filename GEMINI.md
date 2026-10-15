@@ -1,8 +1,9 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.11.0 — 2026-10-15)
-- **JanIA Server:** `v33.11` (`33.11.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Visión Universal y Autonomía Multimodal en DMs:** Procesamiento fluido y defensivo de fotos, flyers comerciales, memes, comprobantes y audios en chats privados sin bloqueos por ausencia de texto. Intercepción familiar universal para los 17 miembros de confianza de Eduardo (+57 316 656 9719) ante cualquier medio recibido.
-- **Robustez contra Caídas y Reintentos Adaptativos:** `extractFlyerVisionSafely` con timeouts extendidos (8s), lista jerárquica de modelos de alta disponibilidad y manejo de excepciones que previene caídas del socket o del servidor.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 246/246 passing ($0 COP) | Build `npm run build` en 18s (Vite) + 109ms (esbuild).
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.12.0 — 2026-10-15)
+- **JanIA Server:** `v33.12` (`33.12.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Filtro Anti-Publicidad de Marketing/Meta Ads:** Bloqueo impermeable con 🚫 para campañas en Meta, pauta digital, agencias de marketing y venta de software/cursos no inmobiliarios (Caso Caro Rodríguez).
+- **Ingesta de PDFs Comerciales:** Inmunidad contra falsos descartes por texto hueco en ofertas o requerimientos comerciales adjuntos en PDF (Caso Juan Alberto Duque).
+- **Ventana Estricta de 15 Días:** Confinamiento estricto a 15 días en base de datos, purgas y cruces ad-hoc, erradicando fallbacks residuales a 45 días.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 250/250 passing ($0 COP) | Build `npm run build` en 32s (Vite) + 250ms (esbuild).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

@@ -1524,13 +1524,27 @@ export async function processWhatsAppMessage(
     if (!isWebUser && text) {
       const checkText = text.toLowerCase();
       if (isNonRealEstateText(checkText)) {
-        console.log(`[JANIA-NON-REALESTATE-GUARD] ⛔ Publicación NO inmobiliaria (canteras, materiales, minas, vehículos, carbón, etc.). Operación silenciosa total, sin guardar en BD ni emoji: "${checkText.substring(0, 60)}..."`);
+        console.log(`[JANIA-NON-REALESTATE-GUARD] ⛔ Publicación NO inmobiliaria (canteras, materiales, minas, vehículos, carbón, etc.). Rechazando con 🚫: "${checkText.substring(0, 60)}..."`);
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: "",
           dmResponse: "",
           shouldSendDM: false,
-          reactionEmoji: undefined,
+          reactionEmoji: "🚫",
+          inserted: false
+        };
+      }
+
+      // Filtro Temprano Impermeable Anti-Publicidad (Campañas en Meta, Pauta, Cursos, Software, etc.)
+      const spamCheckEarly = esMensajeSpamOBasura(checkText);
+      if (spamCheckEarly.isSpam) {
+        console.log(`[JANIA-SPAM-GUARD] ⛔ Publicación detectada como SPAM/Publicidad (${spamCheckEarly.reason}): "${checkText.substring(0, 60)}...". Rechazando con 🚫.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: "🚫",
           inserted: false
         };
       }
@@ -1555,13 +1569,13 @@ export async function processWhatsAppMessage(
       );
 
       if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
-        console.log(`[JANIA-SPAM-GUARD] ⛔ Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operación silenciosa total, sin guardar en BD ni emoji.`);
+        console.log(`[JANIA-SPAM-GUARD] ⛔ Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Rechazando con 🚫.`);
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: "",
           dmResponse: "",
           shouldSendDM: false,
-          reactionEmoji: undefined,
+          reactionEmoji: "🚫",
           inserted: false
         };
       }
@@ -1933,7 +1947,19 @@ Se ha adjuntado una imagen. Analízala con visión artificial avanzada y determi
    - Clasifica como "INMUEBLE" si describe una oferta de venta/arriendo, o como "REQUERIMIENTO" si describe una búsqueda o demanda de cliente comprador/arrendatario.
 3. Si "isFlyerOrBanner" es FALSE y el mensaje NO contiene una ficha técnica escrita por el usuario, clasifica como "CONSULTA_GENERAL" con "inserted": false.`;
     }
-    if (pdfBuffer) contextText += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
+    if (pdfBuffer) {
+      contextText += `\n[SISTEMA: DOCUMENTO PDF DETECTADO - ANÁLISIS MULTIMODAL INMOBILIARIO]:
+Se ha adjuntado un documento PDF. Analízalo exhaustivamente con tus capacidades nativas de lectura de documentos:
+1. Si el documento PDF es un REQUERIMIENTO, DEMANDA O BÚSQUEDA DE UN CLIENTE (ej. "ESTOY BUSCANDO...", búsqueda de bodega, apartamento, casa, lote, oficina o local):
+   - Clasifícalo obligatoriamente como "REQUERIMIENTO".
+   - Establece "inserted": true.
+   - Extrae con precisión en "extractedData": title, propertyType, transactionType (arriendo, venta, etc.), presupuestoMax, presupuestoMin, area (o areaMin), bedrooms, bathrooms, garages, stratum, zone/neighborhood (o zonaDeseada), city, contactPhone, characteristics y detalles.
+2. Si el documento PDF es una FICHA TÉCNICA, PRESENTACIÓN COMERCIAL O BROCHURE DE UN INMUEBLE (oferta de venta o arriendo):
+   - Clasifícalo obligatoriamente como "INMUEBLE".
+   - Establece "inserted": true.
+   - Extrae con precisión en "extractedData": title, propertyType, transactionType, price (o rentPrice), adminFee, area, bedrooms, bathrooms, garages, stratum, zone, city, contactPhone, amenities y descripción.
+3. Si el documento PDF es un impuesto predial, certificado de tradición o contrato, extrae los datos correspondientes.`;
+    }
 
     const statsSummary = await getLiveStats();
     if (statsSummary) {
@@ -2337,7 +2363,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("aún disponible")
       );
 
-      const isShortComment = !result.isFlyerOrBanner && (isChatNoisePhrase || (!hasRealEstateKeyword && !isSearch && !isOffer && (cleanText.length < 25 || cleanText.split(/\s+/).length < 4))) && !hasTechnicalSpecs;
+      const isShortComment = !result.isFlyerOrBanner && !pdfBuffer && (isChatNoisePhrase || (!hasRealEstateKeyword && !isSearch && !isOffer && (cleanText.length < 25 || cleanText.split(/\s+/).length < 4))) && !hasTechnicalSpecs;
 
       // Detectar preguntas de recomendación, solicitudes de abogados/servicios legales, comprobantes o consultas no prediales
       const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (
@@ -2365,7 +2391,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("contacto de")
       ) && !cleanText.includes("busco apto") && !cleanText.includes("busco casa") && !cleanText.includes("busco bodega") && !cleanText.includes("presupuesto");
 
-      if (!result.isFlyerOrBanner && isGeneralInquiryOrRecommendation) {
+      if (!result.isFlyerOrBanner && !pdfBuffer && isGeneralInquiryOrRecommendation) {
         console.log(`[JANIA-FILTER] ⛔ Pregunta de recomendación o servicio general ignorada como Requerimiento/Inmueble: "${cleanText.substring(0, 50)}..."`);
         result.classification = "CONSULTA_GENERAL";
       } else if (isShortComment) {
@@ -2377,8 +2403,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de REQUERIMIENTO a INMUEBLE basado en heurística de texto (Oferta explícita).");
         result.classification = "INMUEBLE";
-      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs)) {
-        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer) {
+      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs || !!pdfBuffer)) {
+        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer || !!pdfBuffer) {
           if (isSearch && !isOffer) {
             console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos técnicos verificados.");
             result.classification = "REQUERIMIENTO";
@@ -2393,8 +2419,8 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       // ── BLINDAJE ESTRICTO CONTRA FALSOS POSITIVOS (MENSAJES SIN INTENCIÓN PREDIAL) ──
       // Si el LLM lo clasificó como INMUEBLE o REQUERIMIENTO pero el mensaje no contiene
-      // ninguna intención comercial real (no es búsqueda, no es oferta, no tiene tipología ni datos técnicos)
-      const hasRealEstateIntent = result.isFlyerOrBanner || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      // ninguna intención comercial real (no es búsqueda, no es oferta, no tiene tipología ni datos técnicos, ni viene PDF)
+      const hasRealEstateIntent = result.isFlyerOrBanner || !!pdfBuffer || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
       if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
         console.log(`[JANIA-FILTER] ⛔ Descartando falso positivo de ${result.classification}: Mensaje sin intención predial explícita ("${cleanText.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
@@ -2676,7 +2702,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, (urls && urls.length > 0 ? urls[0] : undefined));
       const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) &&
         /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
-      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
+      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore && !pdfBuffer) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -2794,7 +2820,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, (urls && urls.length > 0 ? urls[0] : undefined));
       const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) &&
         /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
-      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore && !pdfBuffer) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";

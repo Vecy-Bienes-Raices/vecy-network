@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.11";
+    VECY_VERSION = "v33.12";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10406,8 +10406,64 @@ function esMensajeSpamOBasura(text2) {
   if (n.includes("zoom.us") || n.includes("meet.google.com") || n.includes("teams.microsoft.com") || n.includes("webinar") || n.includes("masterclass") || n.includes("capacitacion") || n.includes("capacitaci\xF3n") || n.includes("seminario") || n.includes("taller de ventas") || n.includes("curso de") || n.includes("congreso de") || n.includes("evento inmobiliario") || n.includes("inmoverso")) {
     return { isSpam: true, reason: "Invitaci\xF3n a evento, Zoom, Meet, webinar o masterclass externa." };
   }
-  if (n.includes("coaching") || n.includes("red de mercadeo") || n.includes("multinivel") || n.includes("gana dinero desde casa") || n.includes("servicio de marketing") || n.includes("agencia de publicidad") || n.includes("software inmobiliario") || n.includes("te regalo una guia") || n.includes("te regalo un ebook")) {
-    return { isSpam: true, reason: "Publicidad de terceros, marketing no predial o coaching." };
+  const marketingPatterns = [
+    "campa\xF1a en meta",
+    "campana en meta",
+    "campa\xF1as en meta",
+    "campanas en meta",
+    "yo implemento tus campa\xF1as",
+    "yo implemento tus campanas",
+    "implemento tus campa\xF1as",
+    "implemento tus campanas",
+    "implementamos tus campa\xF1as",
+    "implementamos tus campanas",
+    "anuncio en facebook",
+    "anuncios en facebook",
+    "anuncio en instagram",
+    "anuncios en instagram",
+    "anuncios en meta",
+    "pauta en facebook",
+    "pauta en instagram",
+    "pauta en redes",
+    "pauta en meta",
+    "pauta digital",
+    "agencia de marketing",
+    "agencia digital",
+    "agencia de publicidad",
+    "marketing inmobiliario",
+    "marketing digital",
+    "servicio de marketing",
+    "servicios de marketing",
+    "estrategias de marketing",
+    "estrategia digital",
+    "generar leads",
+    "generaci\xF3n de leads",
+    "generacion de leads",
+    "prospectos calificados",
+    "clientes potenciales para tus inmuebles",
+    "trafficker",
+    "media buyer",
+    "funnel de ventas",
+    "embudo de ventas",
+    "embudos de ventas",
+    "software inmobiliario",
+    "software crm",
+    "crm inmobiliario",
+    "venta de software",
+    "coaching",
+    "red de mercadeo",
+    "multinivel",
+    "gana dinero desde casa",
+    "te regalo una guia",
+    "te regalo una gu\xEDa",
+    "te regalo un ebook",
+    "te ense\xF1o a vender",
+    "aprende a vender con pauta",
+    "aprende a pautar",
+    "curso de pauta"
+  ];
+  if (marketingPatterns.some((pat) => n.includes(pat))) {
+    return { isSpam: true, reason: "Publicidad de marketing, pauta en redes, venta de software o coaching no inmobiliario." };
   }
   if (n.includes("vota por") || n.includes("partido politico") || n.includes("partido pol\xEDtico") || n.includes("candidato") || n.includes("elecciones") || n.includes("cadena de oracion") || n.includes("cadena de oraci\xF3n") || n.includes("comparte esta cadena")) {
     return { isSpam: true, reason: "Contenido pol\xEDtico, ideol\xF3gico o cadenas de spam." };
@@ -18057,25 +18113,37 @@ __is_sub_message__`,
     if (!isWebUser && text2) {
       const checkText = text2.toLowerCase();
       if (isNonRealEstateText(checkText)) {
-        console.log(`[JANIA-NON-REALESTATE-GUARD] \u26D4 Publicaci\xF3n NO inmobiliaria (canteras, materiales, minas, veh\xEDculos, carb\xF3n, etc.). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji: "${checkText.substring(0, 60)}..."`);
+        console.log(`[JANIA-NON-REALESTATE-GUARD] \u26D4 Publicaci\xF3n NO inmobiliaria (canteras, materiales, minas, veh\xEDculos, carb\xF3n, etc.). Rechazando con \u{1F6AB}: "${checkText.substring(0, 60)}..."`);
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: "",
           dmResponse: "",
           shouldSendDM: false,
-          reactionEmoji: void 0,
+          reactionEmoji: "\u{1F6AB}",
+          inserted: false
+        };
+      }
+      const spamCheckEarly = esMensajeSpamOBasura(checkText);
+      if (spamCheckEarly.isSpam) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Publicaci\xF3n detectada como SPAM/Publicidad (${spamCheckEarly.reason}): "${checkText.substring(0, 60)}...". Rechazando con \u{1F6AB}.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: "\u{1F6AB}",
           inserted: false
         };
       }
       const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
       if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
-        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Rechazando con \u{1F6AB}.`);
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: "",
           dmResponse: "",
           shouldSendDM: false,
-          reactionEmoji: void 0,
+          reactionEmoji: "\u{1F6AB}",
           inserted: false
         };
       }
@@ -18490,8 +18558,20 @@ Se ha adjuntado una imagen. Anal\xEDzala con visi\xF3n artificial avanzada y det
    - Clasifica como "INMUEBLE" si describe una oferta de venta/arriendo, o como "REQUERIMIENTO" si describe una b\xFAsqueda o demanda de cliente comprador/arrendatario.
 3. Si "isFlyerOrBanner" es FALSE y el mensaje NO contiene una ficha t\xE9cnica escrita por el usuario, clasifica como "CONSULTA_GENERAL" con "inserted": false.`;
     }
-    if (pdfBuffer) contextText += `
-[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
+    if (pdfBuffer) {
+      contextText += `
+[SISTEMA: DOCUMENTO PDF DETECTADO - AN\xC1LISIS MULTIMODAL INMOBILIARIO]:
+Se ha adjuntado un documento PDF. Anal\xEDzalo exhaustivamente con tus capacidades nativas de lectura de documentos:
+1. Si el documento PDF es un REQUERIMIENTO, DEMANDA O B\xDASQUEDA DE UN CLIENTE (ej. "ESTOY BUSCANDO...", b\xFAsqueda de bodega, apartamento, casa, lote, oficina o local):
+   - Clasif\xEDcalo obligatoriamente como "REQUERIMIENTO".
+   - Establece "inserted": true.
+   - Extrae con precisi\xF3n en "extractedData": title, propertyType, transactionType (arriendo, venta, etc.), presupuestoMax, presupuestoMin, area (o areaMin), bedrooms, bathrooms, garages, stratum, zone/neighborhood (o zonaDeseada), city, contactPhone, characteristics y detalles.
+2. Si el documento PDF es una FICHA T\xC9CNICA, PRESENTACI\xD3N COMERCIAL O BROCHURE DE UN INMUEBLE (oferta de venta o arriendo):
+   - Clasif\xEDcalo obligatoriamente como "INMUEBLE".
+   - Establece "inserted": true.
+   - Extrae con precisi\xF3n en "extractedData": title, propertyType, transactionType, price (o rentPrice), adminFee, area, bedrooms, bathrooms, garages, stratum, zone, city, contactPhone, amenities y descripci\xF3n.
+3. Si el documento PDF es un impuesto predial, certificado de tradici\xF3n o contrato, extrae los datos correspondientes.`;
+    }
     const statsSummary = await getLiveStats();
     if (statsSummary) {
       contextText += `
@@ -18759,9 +18839,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const _extTmp = result.extractedData || {};
       const hasTechnicalSpecs = _extTmp.price && Number(_extTmp.price) > 0 || _extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0 || _extTmp.area && Number(_extTmp.area) > 0 || _extTmp.bedrooms && Number(_extTmp.bedrooms) > 0 || (cleanText2.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText2));
       const isChatNoisePhrase = cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible");
-      const isShortComment = !result.isFlyerOrBanner && (isChatNoisePhrase || !hasRealEstateKeyword && !isSearch && !isOffer && (cleanText2.length < 25 || cleanText2.split(/\s+/).length < 4)) && !hasTechnicalSpecs;
+      const isShortComment = !result.isFlyerOrBanner && !pdfBuffer && (isChatNoisePhrase || !hasRealEstateKeyword && !isSearch && !isOffer && (cleanText2.length < 25 || cleanText2.split(/\s+/).length < 4)) && !hasTechnicalSpecs;
       const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
-      if (!result.isFlyerOrBanner && isGeneralInquiryOrRecommendation) {
+      if (!result.isFlyerOrBanner && !pdfBuffer && isGeneralInquiryOrRecommendation) {
         console.log(`[JANIA-FILTER] \u26D4 Pregunta de recomendaci\xF3n o servicio general ignorada como Requerimiento/Inmueble: "${cleanText2.substring(0, 50)}..."`);
         result.classification = "CONSULTA_GENERAL";
       } else if (isShortComment) {
@@ -18773,8 +18853,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de REQUERIMIENTO a INMUEBLE basado en heur\xEDstica de texto (Oferta expl\xEDcita).");
         result.classification = "INMUEBLE";
-      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs)) {
-        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer) {
+      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs || !!pdfBuffer)) {
+        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer || !!pdfBuffer) {
           if (isSearch && !isOffer) {
             console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
             result.classification = "REQUERIMIENTO";
@@ -18786,7 +18866,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
         }
       }
-      const hasRealEstateIntent = result.isFlyerOrBanner || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      const hasRealEstateIntent = result.isFlyerOrBanner || !!pdfBuffer || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
       if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
         console.log(`[JANIA-FILTER] \u26D4 Descartando falso positivo de ${result.classification}: Mensaje sin intenci\xF3n predial expl\xEDcita ("${cleanText2.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
@@ -19007,7 +19087,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
       const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
-      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
+      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore && !pdfBuffer) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -19096,7 +19176,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
       const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
-      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore && !pdfBuffer) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -21407,7 +21487,7 @@ ${quotedNote}` : quotedNote;
                 if (rawMsg?.conversation) body = rawMsg.conversation;
                 else if (rawMsg?.extendedTextMessage) body = rawMsg.extendedTextMessage.text || "";
                 else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || "";
-                else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || "";
+                else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
                 else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
                 if (msg.key.fromMe) {
                   const msgId = msg.key.id || "";
@@ -21492,7 +21572,7 @@ ${quotedNote}` : quotedNote;
           if (rawMsg?.conversation) body2 = rawMsg.conversation;
           else if (rawMsg?.extendedTextMessage) body2 = rawMsg.extendedTextMessage.text || "";
           else if (rawMsg?.imageMessage) body2 = rawMsg.imageMessage.caption || "";
-          else if (rawMsg?.documentMessage) body2 = rawMsg.documentMessage.caption || "";
+          else if (rawMsg?.documentMessage) body2 = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
           else if (rawMsg?.videoMessage) body2 = rawMsg.videoMessage.caption || "";
           else if (rawMsg?.audioMessage) {
             isAudioPTT = true;
@@ -22266,7 +22346,38 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
           "coaching inmobiliario",
           "mentor\xEDa inmobiliaria",
           "invierte en tu negocio",
-          "invierte en conocimiento"
+          "invierte en conocimiento",
+          "campa\xF1a en meta",
+          "campana en meta",
+          "campa\xF1as en meta",
+          "campanas en meta",
+          "yo implemento tus campa\xF1as",
+          "yo implemento tus campanas",
+          "implemento tus campa\xF1as",
+          "implemento tus campanas",
+          "implementamos tus campa\xF1as",
+          "anuncio en facebook",
+          "anuncios en facebook",
+          "anuncio en instagram",
+          "anuncios en instagram",
+          "anuncios en meta",
+          "pauta en facebook",
+          "pauta en instagram",
+          "pauta en redes",
+          "pauta en meta",
+          "pauta digital",
+          "agencia de marketing",
+          "agencia digital",
+          "marketing digital",
+          "servicio de marketing",
+          "servicios de marketing",
+          "generaci\xF3n de leads",
+          "generacion de leads",
+          "prospectos calificados",
+          "trafficker",
+          "media buyer",
+          "funnel de ventas",
+          "embudo de ventas"
         ];
         const hasPromoKeywords = promoPhrases.some((phrase) => cleanLower.includes(phrase));
         if (hasPromoKeywords) return true;
@@ -22587,7 +22698,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         try {
           const distinctListings = buffer.messages.filter((m) => {
-            if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === "")) return true;
+            if (m.imageBuffer || m.pdfBuffer) return true;
             if (!m.body) return false;
             const clean = m.body.toLowerCase();
             const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion") || clean.includes("local") || clean.includes("penthouse") || clean.includes("duplex") || clean.includes("d\xFAplex") || clean.includes("alcoba") || clean.includes("alcobas") || clean.includes("hab") || clean.includes("habitacion") || clean.includes("habitaci\xF3n");
@@ -26464,7 +26575,11 @@ ${lateReplyNote}`;
     }
     if (pdfBuffer) {
       messageToProcess += `
-[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
+[SISTEMA: DOCUMENTO PDF DETECTADO - AN\xC1LISIS MULTIMODAL]:
+Se ha adjuntado un documento PDF. Anal\xEDzalo con tus capacidades nativas:
+- Si es un REQUERIMIENTO o B\xDASQUEDA de un cliente (ej. "ESTOY BUSCANDO BODEGA/APARTAMENTO..."), clasif\xEDcalo como "REQUERIMIENTO", extrae todas las especificaciones comerciales y conf\xEDrmale al colega que su requerimiento queda ingresado para cruces con la red.
+- Si es una FICHA T\xC9CNICA u OFERTA de un inmueble (venta o arriendo), clasif\xEDcalo como "INMUEBLE", extrae los datos y conf\xEDrmale el registro.
+- Si es una consulta jur\xEDdica, tributaria, predial o contractual, resp\xF3ndela a profundidad.`;
     }
     if (isFromAudio) {
       messageToProcess += `
@@ -26502,6 +26617,24 @@ Consulta: ${messageToProcess}`;
     });
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+      if (parsed.classification === "REQUERIMIENTO" || parsed.classification === "INMUEBLE") {
+        console.log(`[JanIA-Consulting] \u{1F3AF} Publicaci\xF3n comercial detectada en Grupo 2 (${parsed.classification}). Delegando a propertiesHandler para inserci\xF3n en BD y matching...`);
+        const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
+        return await processWhatsAppMessage2(
+          text2,
+          userId,
+          userName,
+          !!imageBuffer || !!pdfBuffer,
+          [],
+          void 0,
+          imageBuffer,
+          true,
+          pdfBuffer,
+          pdfMimeType,
+          "120363417740040773@g.us",
+          "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}"
+        );
+      }
       const rawResp = parsed.response || "";
       const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
       const finalResp = sanitizeResponseMarkdown(enrichedResp);
@@ -26946,8 +27079,8 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    await db.execute(sql10`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
-    await db.execute(sql10`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+    await db.execute(sql10`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days'`);
+    await db.execute(sql10`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days')`);
     const [activeReqs, availProps] = await Promise.all([
       db.select().from(requirements).where(eq12(requirements.status, "active")),
       db.select().from(properties).where(eq12(properties.available, true))
@@ -27003,9 +27136,10 @@ async function runNightlyRematch() {
         for (const prop of enrichedProps) {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
-          const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
+          const reqRepCount = Number(req.republicacionesCount || 0);
+          const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt || req.fechaExtraccion;
           const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-          if (reqAgeDays > 10) {
+          if (reqAgeDays > 15) {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
@@ -27021,7 +27155,7 @@ async function runNightlyRematch() {
           const repCount = Number(prop.republicacionesCount || 0);
           const propEffectiveDate = repCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
           const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-          if (propAgeDays > 10) {
+          if (propAgeDays > 15) {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
@@ -29835,7 +29969,7 @@ __export(matchAdHocService_exports, {
   detectInputListingType: () => detectInputListingType,
   executeAdHocMatch: () => executeAdHocMatch
 });
-import { eq as eq19, desc as desc9 } from "drizzle-orm";
+import { sql as sql14, eq as eq19, and as and12, desc as desc9, gte as gte5 } from "drizzle-orm";
 function formatAdHocCOP(val) {
   if (!val) return "N/E";
   const num = Number(val);
@@ -29886,9 +30020,15 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
   let activeReqs = [];
   if (db) {
     if (inputType === "demanda") {
-      availableProps = await db.select().from(properties).where(eq19(properties.available, true)).orderBy(desc9(properties.createdAt)).limit(100);
+      availableProps = await db.select().from(properties).where(and12(
+        eq19(properties.available, true),
+        gte5(sql14`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
+      )).orderBy(desc9(properties.createdAt)).limit(100);
     } else {
-      activeReqs = await db.select().from(requirements).where(eq19(requirements.status, "active")).orderBy(desc9(requirements.createdAt)).limit(100);
+      activeReqs = await db.select().from(requirements).where(and12(
+        eq19(requirements.status, "active"),
+        gte5(sql14`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
+      )).orderBy(desc9(requirements.createdAt)).limit(100);
     }
   } else {
     if (inputType === "demanda") {
@@ -30060,13 +30200,9 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
   const eightyThreshold = 80;
   const highMatches = allScoredItems.filter((item) => item.score >= eightyThreshold && item.isRecent15Days).slice(0, limit);
   const hasEightyMatch = highMatches.length > 0;
-  const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1e3);
-  let fallbackCandidates = allScoredItems.filter((item) => {
-    const isRecent45 = item.createdAt ? new Date(item.createdAt) >= fortyFiveDaysAgo : true;
-    return item.score >= 50 && isRecent45;
-  }).slice(0, 3);
+  let fallbackCandidates = allScoredItems.filter((item) => item.score >= 50 && item.isRecent15Days).slice(0, 3);
   if (fallbackCandidates.length === 0) {
-    fallbackCandidates = allScoredItems.slice(0, 3);
+    fallbackCandidates = allScoredItems.filter((item) => item.isRecent15Days).slice(0, 3);
   }
   const activeDisplayMatches = hasEightyMatch ? highMatches : fallbackCandidates;
   let closestCandidate = null;
