@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.06";
+    VECY_VERSION = "v33.07";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14809,39 +14809,15 @@ function isPoliteGratitudeOrClosing(text2) {
 }
 function formatDetailedCompanyAndSocialMediaPresentation(userName) {
   const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F3D8}\uFE0F\u2728 Te cuento detalladamente sobre nosotros:
+  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F3D8}\uFE0F\u2728 En *VECY BIENES RA\xCDCES* operamos 100% digital desde 2018 para dejar atr\xE1s a los "dinosaurios inmobiliarios", fundados por *Eduardo A. Rivera* (Tecnolog\xEDa) y *Jani Alves* (Operaciones).
 
-\u{1F3E2} *\xBFQui\xE9nes somos?*
-Somos *VECY BIENES RA\xCDCES*, el primer br\xF3ker virtual inmobiliario y red colaborativa para Colombia, operando 100% digital desde 2018. Nacimos con el prop\xF3sito de transformar de ra\xEDz el sector y dejar atr\xE1s la lentitud de los "dinosaurios inmobiliarios".
+Nuestros servicios activos 24/7 incluyen: verificaci\xF3n oficial de antecedentes (Polic\xEDa Nacional), Factura Predial Bogot\xE1 y Paz y Salvo IDU (*100% GRATIS*), m\xE1s aval\xFAos certificados y asesor\xEDa jur\xEDdica.
 
-\u{1F465} *Nuestros Fundadores:*
-\u2022 *Eduardo A. Rivera:* Director de Tecnolog\xEDa e Innovaci\xF3n.
-\u2022 *Jani Alves:* Directora de Operaciones Inmobiliarias.
+\u{1F310} *Web:* ${VECY_ACTIVE_DOMAIN}
+\u{1F4DE} *Br\xF3ker:* +57 316 656 9719 (https://wa.me/573166569719)
+\u{1F4F2} *Redes:* ${VECY_SOCIAL_NETWORKS.instagram} \u2022 ${VECY_SOCIAL_NETWORKS.tikTok} \u2022 ${VECY_SOCIAL_NETWORKS.facebookFanPage} \u2022 ${VECY_SOCIAL_NETWORKS.youtube} \u2022 ${VECY_SOCIAL_NETWORKS.linkedIn} \u2022 ${VECY_SOCIAL_NETWORKS.whatsappChannel}
 
-\u26A1 *Todos nuestros servicios est\xE1n 100% activos las 24 horas:*
-1\uFE0F\u20E3 *Verificaci\xF3n Oficial de Documentos y Antecedentes:* Consulta en tiempo real ante Polic\xEDa Nacional, Procuradur\xEDa y ADRES para blindar visitas y contratos (*100% GRATIS*).
-2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Descarga en PDF oficial con c\xF3digo de barras y constancia de estar al d\xEDa (*100% GRATIS*).
-3\uFE0F\u20E3 *Paz y Salvo IDU Notarial:* En PDF oficial obligatorio para escrituraci\xF3n en Bogot\xE1 (*$0 COP*).
-4\uFE0F\u20E3 *Liquidaci\xF3n Notarial y de Registro:* Desglose exacto de derechos notariales, beneficencia y retenci\xF3n en la fuente.
-5\uFE0F\u20E3 *Cruce Inteligente Oferta \u2194 Demanda (JanIA Match):* Algoritmo con IA pura que conecta compradores y vendedores en segundos.
-6\uFE0F\u20E3 *Red Colaborativa de Corretaje:* Alianzas 50/50 transparentes entre colegas sin intermediarios fantasmas ni avisos invasivos.
-7\uFE0F\u20E3 *Consultor\xEDa Especializada y Aval\xFAos RAA:* Acompa\xF1amiento legal, peritajes comerciales certificados y pr\xE9stamos hipotecarios con nuestros directores.
-
-\u{1F310} *Portal Web Oficial:* ${VECY_ACTIVE_DOMAIN}
-\u{1F4DE} *Atenci\xF3n Br\xF3ker (Eduardo y Jani):* +57 316 656 9719 (https://wa.me/573166569719)
-
-\u{1F4F2} *\xA1Te invito con alegr\xEDa a seguirnos en nuestras redes oficiales para estar al d\xEDa con tips, remates y novedades!*:
-\u2022 \u{1F4F8} *Instagram:* ${VECY_SOCIAL_NETWORKS.instagram}
-\u2022 \u{1F3B5} *TikTok:* ${VECY_SOCIAL_NETWORKS.tikTok}
-\u2022 \u{1F4D8} *Facebook:* ${VECY_SOCIAL_NETWORKS.facebookFanPage}
-\u2022 \u25B6\uFE0F *YouTube:* ${VECY_SOCIAL_NETWORKS.youtube}
-\u2022 \u{1F4BC} *LinkedIn:* ${VECY_SOCIAL_NETWORKS.linkedIn}
-\u2022 \u{1F4E2} *Canal Oficial de WhatsApp:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
-
-\u2B50 *Y como broche de oro \u{1F609}:* Como sabes que trabajamos con el coraz\xF3n para apoyar a nuestra comunidad y mantener estas herramientas 100% gratuitas para todos, \xBFnos regalar\xEDas tu opini\xF3n y calificaci\xF3n con 5 estrellas en Google? Nos ayudas un mundo para seguir creciendo juntos:
-\u{1F449} ${VECY_SOCIAL_NETWORKS.googleReview} \u2B50\u2B50\u2B50\u2B50\u2B50
-
-\xA1Much\xEDsimas gracias por acompa\xF1arnos en la evoluci\xF3n de los bienes ra\xEDces! \u{1F680}\u{1F91D}`;
+\u2B50 *\xBFNos regalas tu opini\xF3n de 5 estrellas en Google Reviews?* \u{1F449} ${VECY_SOCIAL_NETWORKS.googleReview} \u2B50\u2B50\u2B50\u2B50\u2B50`;
 }
 function isCompanyInquiryOrAboutUs(text2) {
   const clean = text2.trim().toLowerCase();
@@ -19191,6 +19167,7 @@ __export(dmHandler_exports, {
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
   sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
+  stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
 });
 async function executeJaniaDmTool(toolName, args, userId, _userName) {
@@ -19434,9 +19411,41 @@ Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra 
     return politeHeader + payloadWithClosing;
   }
 }
-function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, _displayName, hasPriorHistory = false) {
+function stripLeadingGreetingsAndCourtesies(text2) {
+  let cleaned = (text2 || "").trim();
+  if (!cleaned) return "";
+  cleaned = cleaned.replace(
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    ""
+  );
+  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?]*[!.\n?]?\s*/i;
+  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?]*))[!.\n?]?\s*/i;
+  const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 8) {
+    const before = cleaned;
+    cleaned = cleaned.replace(greetingPattern, "");
+    cleaned = cleaned.replace(courtesyPattern, "");
+    cleaned = cleaned.replace(emojiPattern, "");
+    cleaned = cleaned.trim();
+    changed = cleaned !== before;
+    iterations++;
+  }
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  return cleaned.trim();
+}
+function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName, hasPriorHistory = false, timeSalutation) {
   let cleaned = (text2 || "").trim();
   if (!cleaned) return cleaned;
+  const currentSalutation = timeSalutation || getGreetingByTime2();
+  cleaned = cleaned.replace(/buenas\s+d[ií]as/gi, "Buenos d\xEDas");
+  cleaned = cleaned.replace(
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    ""
+  );
   cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
     return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
   });
@@ -19445,14 +19454,22 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, _displayName
   cleaned = cleaned.replace(/^hola\b/i, "\xA1Hola!");
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
   if (isEduardo) {
-    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
-      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `\xA1Hola, Eduardo! A tu disposici\xF3n. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `\xA1${currentSalutation}, Eduardo! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
   } else if (isJani) {
-    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
-      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `\xA1${currentSalutation}, Jani! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
+  } else if (hasPriorHistory && !cleaned.includes("?")) {
+    if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
   }
   cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
@@ -19499,20 +19516,18 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const userSentExplicitGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|buenas)\b/i.test(cleanLower);
   if (isGreetingOnly && history.length === 0) {
     if (isEduardo) {
-      const welcomeMsg2 = `\xA1Hola, Eduardo! A tu disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      const welcomeMsg2 = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg2);
       return welcomeMsg2;
     }
     if (isJani) {
-      const welcomeMsg2 = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      const welcomeMsg2 = `\xA1${timeSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg2);
       return welcomeMsg2;
     }
-    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
-
-Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
+    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F.
 
 Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente? As\xED podr\xE9 orientarte de la mejor manera y contarte c\xF3mo podemos facilitarte la vida hoy \u{1F91D}\u2728`;
     appendDmHistory(userId, "user", clean);
@@ -19525,19 +19540,14 @@ Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o q
     const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
 
 \u{1F381} *Servicios 100% Gratuitos de Autoservicio:*
-1\uFE0F\u20E3 *Verificaci\xF3n oficial de documentos:* Validaci\xF3n de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes) y reporte de antecedentes con la Polic\xEDa Nacional en 20 segundos.
-2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Consulta y descarga oficial en PDF con c\xF3digo de barras y estado de cuenta al d\xEDa con la Secretar\xEDa de Hacienda.
+\u2022 *Verificaci\xF3n oficial de documentos:* Identidad y antecedentes Polic\xEDa Nacional.
+\u2022 *Factura Predial Bogot\xE1 y Certificados de Pago:* Descarga oficial en PDF.
 
 \u{1F4BC} *Consultas Especializadas y Asesor\xEDa Profesional:*
-3\uFE0F\u20E3 *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogot\xE1 seg\xFAn el barrio o sector.
-4\uFE0F\u20E3 *Asesor\xEDa jur\xEDdica inmobiliaria:* Casos de negociaci\xF3n, promesas de compraventa y contratos de arrendamiento.
-5\uFE0F\u20E3 *Tratamiento de datos y H\xE1beas Data inmobiliario.*
-6\uFE0F\u20E3 *Recuperaci\xF3n de cartera:* Cobranza de comisiones inmobiliarias no pagadas.
-7\uFE0F\u20E3 *Aval\xFAos digitales y peritajes comerciales certificados RAA.*
-8\uFE0F\u20E3 *Liquidaciones tributarias:* Ganancia ocasional, retenci\xF3n en la fuente e impuestos notariales.
-9\uFE0F\u20E3 *Pr\xE9stamos sobre hipoteca y pacto de retroventa.*
+\u2022 *Sondeos de mercado* | *Asesor\xEDa jur\xEDdica inmobiliaria* | *Recuperaci\xF3n de cartera*
+\u2022 *Aval\xFAos digitales* | *Liquidaciones tributarias* | *Pr\xE9stamos sobre hipoteca*
 
-Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), \xA1solo dime el n\xFAmero de documento o el predio que quieres consultar! \u{1F91D}`;
+Dime cu\xE1l de estos temas te interesa (o env\xEDa tu c\xE9dula/predio) y te colaboro de inmediato \u{1F91D}`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", consultasMenuMsg);
     return consultasMenuMsg;
@@ -19555,11 +19565,9 @@ Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas proba
     if (isFreeToolsContext) {
       const freeCostMsg = `\xA1${displayName || "Hola"}! Este servicio es completamente *GRATIS* \u{1F381}\u2728.
 
-En *VECY Bienes Ra\xEDces* la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes), as\xED como la consulta y descarga de la Factura Predial y certificados de pago de Bogot\xE1, *no tienen ning\xFAn costo para ti*.
+En *VECY BIENES RA\xCDCES*, la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional, la Factura Predial Bogot\xE1 y el Paz y Salvo IDU no tienen ning\xFAn costo para ti.
 
-Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.
-
-Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c\xE9dula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial \u{1F91D}`;
+Env\xEDame el n\xFAmero de c\xE9dula (o c\xF3digo CHIP) que deseas consultar y te entrego el reporte al instante \u{1F91D}`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", freeCostMsg);
       return freeCostMsg;
@@ -19567,21 +19575,13 @@ Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c
   }
   const isHowToDoInquiry = isShortQuery && /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
   if (isHowToDoInquiry) {
-    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
+    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED \u{1F970}\u2728:
 
-1\uFE0F\u20E3 *Para verificar una c\xE9dula o antecedentes:*
-Solo escr\xEDbeme aqu\xED el nombre completo y n\xFAmero de documento (ejemplo: *"verificar 12345678"* o *"CC 12345678"*), tal como se lo solicitas formalmente para el registro de porter\xEDa previo a la visita. En segundos te entrego el reporte oficial de las centrales de seguridad con nombres completos, antecedentes y afiliaci\xF3n en salud.
+\u2022 *Para verificar una c\xE9dula o antecedentes:* Escr\xEDbeme el n\xFAmero de documento (como se solicita para el registro de porter\xEDa previo a la visita).
+\u2022 *Para sacar el Impuesto Predial de Bogot\xE1:* Escr\xEDbeme el c\xF3digo CHIP del predio (empieza por AAA).
+\u2022 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:* \xA1Cero angustia! Yo tengo toda la paciencia del mundo para guiarte paso a paso.
 
-2\uFE0F\u20E3 *Para sacar el Impuesto Predial de Bogot\xE1:*
-Solo escr\xEDbeme el c\xF3digo CHIP del inmueble (comienza por AAA...) o la direcci\xF3n con el n\xFAmero de apartamento. Yo descargo la factura oficial en PDF con su c\xF3digo de barras lista para pagar o el certificado de que est\xE1 al d\xEDa.
-
-3\uFE0F\u20E3 *Para el Paz y Salvo de Valorizaci\xF3n IDU:*
-Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo del IDU y te genero el certificado oficial en PDF para tu tr\xE1mite en notar\xEDa.
-
-4\uFE0F\u20E3 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:*
-\xA1Cero angustia! Escr\xEDbeme con tus propias palabras o m\xE1ndame un mensaje de voz cont\xE1ndome qu\xE9 necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.
-
-\xBFCu\xE1l de las consultas te gustar\xEDa que hagamos ahorita? Dime y la hacemos de una vez \u{1F91D}\u{1F60A}`;
+Dime qu\xE9 consulta deseas hacer y te colaboro con todo gusto \u{1F91D}\u{1F60A}`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", howToMsg);
     return howToMsg;
@@ -19820,12 +19820,16 @@ PROHIBICI\xD3N TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRIN
 - NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondr\xE9 a correr el motor... te estar\xE9 avisando al instante si alguna hace match".
 - Jam\xE1s des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, s\xE9 sincera, directa y transparente de inmediato sin adornos ficticios.
 
-BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
+BREVEDAD Y COMPACTACI\xD3N M\xC1XIMA EN WHATSAPP (CERO "LEER M\xC1S" - M\xC1XIMO 2 P\xC1RRAFOS CORTOS):
 - En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
-- S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
+- REGLA ESTRICTA DE COMPACTACI\xD3N M\xC1XIMA: Limita tus respuestas a M\xC1XIMO 2 p\xE1rrafos cortos (o vi\xF1etas sumamente concisas de una sola l\xEDnea).
+- Si debes nombrar servicios o grupos, hazlo con enlaces limpios y directos, SIN p\xE1rrafos descriptivos gigantes que fuercen el bot\xF3n 'Leer m\xE1s'.
+- S\xE9 ejecutiva, c\xE1lida, contundente y ve directo al grano.
 
-REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO, ORTOGRAF\xCDA Y TRATO DIRECTIVO (DOCTRINA v33.03):
-${isEduardo ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con EDUARDO A. RIVERA, fundador y Director de Tecnolog\xEDa de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Eduardo!". S\xE9 ejecutiva, r\xE1pida y precisa.\n' : isJani ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Jani!". S\xE9 ejecutiva, c\xE1lida y operativa.\n' : `- El usuario se llama: *${displayName || realName || "Colega"}*.
+REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO, ORTOGRAF\xCDA Y TRATO DIRECTIVO (DOCTRINA v33.07):
+${isEduardo ? `- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con EDUARDO A. RIVERA, fundador y Director de Tecnolog\xEDa de VECY BIENES RA\xCDCES. Tu saludo inicial es una \xFAnica estructura limpia e indivisible: "\xA1${timeSalutation}, Eduardo! \u{1F44B}". S\xE9 ejecutiva, r\xE1pida y precisa, sin frases redundantes de cortes\xEDa.
+` : isJani ? `- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RA\xCDCES. Tu saludo inicial es una \xFAnica estructura limpia e indivisible: "\xA1${timeSalutation}, Jani! \u{1F44B}". S\xE9 ejecutiva, c\xE1lida y operativa, seguida de inmediato de la respuesta de fondo. Prohibido concatenar frases redundantes como "Qu\xE9 gusto saludarte. Qu\xE9 gusto saludarte en este nuevo d\xEDa".
+` : `- El usuario se llama: *${displayName || realName || "Colega"}*.
 - G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.
 `}- ORTOGRAF\xCDA ESTRICTA EN ESPA\xD1OL: PROHIBIDO iniciar saludos o mensajes en min\xFAscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar May\xFAscula inicial y signos de apertura formales.
 - SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '\xBF' y toda exclamaci\xF3n con '\xA1'. En espa\xF1ol es un error omitir los signos de apertura.
@@ -19924,19 +19928,14 @@ INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
 PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
 - Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
 
-QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA v32.97):
-- Si la conversaci\xF3n es amena o el usuario pregunta sobre nosotros, qui\xE9nes somos, qu\xE9 es Vecy, qui\xE9nes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:
-  1. Cu\xE9ntale muy bien y detalladamente todo: somos VECY BIENES RA\xCDCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa e Innovaci\xF3n) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evoluci\xF3n frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.
-  2. Recu\xE9rdale que todos nuestros servicios est\xE1n 100% activos las 24 horas: B\xF3veda gratuita (verificaci\xF3n de antecedentes ante Polic\xEDa/Procuradur\xEDa/ADRES, factura predial Bogot\xE1 en PDF, paz y salvo IDU notarial, liquidaci\xF3n notarial y de registro) y consultor\xEDa de \xE9lite con Eduardo y Jani (+57 316 656 9719).
-  3. Inv\xEDtalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:
-     \u2022 Instagram: https://www.instagram.com/vecybienesraices/
-     \u2022 TikTok: https://www.tiktok.com/@vecybienesraices
-     \u2022 Facebook: https://www.facebook.com/vecybienesraices
-     \u2022 YouTube: https://www.youtube.com/@VecyBienesRaices
-     \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
-     \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-     \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
-  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
+QUI\xC9NES SOMOS, REDES SOCIALES Y SERVICIOS (M\xC1XIMO 2 P\xC1RRAFOS CORTOS):
+- Si el usuario pregunta qui\xE9nes somos o sobre nuestros servicios y redes:
+  Resume en m\xE1ximo 2 p\xE1rrafos concisos: somos VECY BIENES RA\xCDCES, br\xF3ker virtual fundado por Eduardo A. Rivera y Jani Alves, operando 100% digital con IA pura y servicios activos 24/7 (predial, paz y salvo IDU, verificaci\xF3n de antecedentes y aval\xFAos).
+  Para redes y portal, entrega solo enlaces limpios y condensados sin descripciones gigantes que provoquen el bot\xF3n 'Leer m\xE1s':
+  \u2022 Web: https://vecy-bienes-raices.vercel.app
+  \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+  \u2022 Atenci\xF3n Br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719)
+  Remata de forma cordial y elegante con la invitaci\xF3n a Google Reviews: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
       }
     ];
     for (const turn of history.slice(-14)) {
@@ -19974,26 +19973,26 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
     }
     reply = sanitizeResponseMarkdown(reply.trim());
     if (hasPriorHistory && !userSentExplicitGreeting) {
-      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
-      reply = reply.trim();
-    } else if (userSentExplicitGreeting && !isEduardo && !isJani) {
-      if (!/¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(reply)) {
-        reply = `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! ${reply}`.trim();
-      }
+      reply = stripLeadingGreetingsAndCourtesies(reply);
+    } else if (!hasPriorHistory || userSentExplicitGreeting) {
+      const targetName = isEduardo ? "Eduardo" : isJani ? "Jani" : displayName || "";
+      const cleanGreeting = targetName ? `\xA1${timeSalutation}, ${targetName}! \u{1F44B}` : `\xA1${timeSalutation}! \u{1F44B}`;
+      const cleanBody = stripLeadingGreetingsAndCourtesies(reply);
+      reply = cleanBody ? `${cleanGreeting} ${cleanBody}` : `${cleanGreeting} \xBFEn qu\xE9 te colaboro hoy?`;
     }
     if (!reply) {
       if (isEduardo) {
-        reply = `\xA1Hola, Eduardo! A tu disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+        reply = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
       } else if (isJani) {
-        reply = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+        reply = `\xA1${timeSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
       } else {
-        reply = hasPriorHistory && !userSentExplicitGreeting ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+        reply = hasPriorHistory && !userSentExplicitGreeting ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* te apoyamos en tus gestiones y negocios inmobiliarios. Cu\xE9ntame qu\xE9 necesitas y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* estamos a tu servicio para facilitarte tus gestiones inmobiliarias. Cu\xE9ntame en qu\xE9 te podemos colaborar hoy.`;
       }
     }
     if (!isEduardo && !isJani) {
       reply = enhanceResponseWithCommercialFunnel(reply, clean);
     }
-    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
+    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory, timeSalutation);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
@@ -20020,6 +20019,7 @@ var init_dmHandler = __esm({
     init_commercialFunnelService();
     init_prompts();
     init_valuation();
+    init_whatsapp_utils();
     JANIA_DM_TOOLS = [
       {
         functionDeclarations: [
@@ -26355,6 +26355,7 @@ __export(janIA_exports, {
   setPendingSession: () => setPendingSession,
   splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
+  stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini,
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType

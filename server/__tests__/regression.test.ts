@@ -4552,11 +4552,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.0[2-6]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.0[2-7]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.[2-6]\.0$/);
+      expect(pkg.version).toMatch(/^33\.[2-7]\.0$/);
     });
   });
 
@@ -4585,10 +4585,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(janiDelivery).toContain("¡Hola, Jani!");
 
       const sanitizedEduardo = sanitizeDmOrthographyAndGreeting("estimado colega, reporte listo", true, false, "Eduardo");
-      expect(sanitizedEduardo).toContain("¡Hola, Eduardo!");
+      expect(sanitizedEduardo).toMatch(/¡(?:Hola|Buenos días|Buenas tardes|Buenas noches), Eduardo!/);
 
       const sanitizedJani = sanitizeDmOrthographyAndGreeting("estimada colega, reporte listo", false, true, "Jani");
-      expect(sanitizedJani).toContain("¡Hola, Jani!");
+      expect(sanitizedJani).toMatch(/¡(?:Hola|Buenos días|Buenas tardes|Buenas noches), Jani!/);
     });
 
     it("3. Ortografía estricta en español: corrección de minúsculas y apertura obligatoria de signos ¡ y ¿", async () => {
@@ -4916,11 +4916,89 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versión v33.06 y package.json 33.6.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.06");
+      expect(VECY_VERSION).toMatch(/^v33\.0[67]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.6.0");
+      expect(pkg.version).toMatch(/^33\.[67]\.0$/);
+    });
+  });
+
+  describe("SUITE 69: CORRECCIÓN DE RAÍZ DE REDUNDANCIA EN SALUDOS Y COMPACTACIÓN MÁXIMA EN DMs (v33.07 - 33.7.0)", () => {
+    it("1. stripLeadingGreetingsAndCourtesies erradica saludos y frases redundantes consecutivas", async () => {
+      const { stripLeadingGreetingsAndCourtesies } = await import("../_core/jania/handlers/dmHandler");
+
+      const redundant = "¡Buenas días, Jani! 👋 Qué gusto saludarte. Qué gusto saludarte en este nuevo día. Te comento que el reporte ya está listo.";
+      const cleaned = stripLeadingGreetingsAndCourtesies(redundant);
+      expect(cleaned).toBe("Te comento que el reporte ya está listo.");
+      expect(cleaned).not.toContain("Qué gusto saludarte");
+      expect(cleaned).not.toContain("Buenas días");
+    });
+
+    it("2. Estructura única e indivisible en primer saludo del día (Jani y Eduardo) sin redundancias", async () => {
+      const { sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
+
+      // Primer saludo para Jani en la mañana
+      const resJani = sanitizeDmOrthographyAndGreeting(
+        "¡Buenas días, Jani! 👋 Qué gusto saludarte. Qué gusto saludarte en este nuevo día. Aquí tienes el reporte.",
+        false,
+        true,
+        "Jani",
+        false,
+        "Buenos días"
+      );
+      expect(resJani).toBe("¡Buenos días, Jani! 👋 Aquí tienes el reporte.");
+      expect(resJani).not.toContain("Qué gusto saludarte");
+
+      // Primer saludo para Eduardo en la tarde
+      const resEduardo = sanitizeDmOrthographyAndGreeting(
+        "¡Buenas tardes, Eduardo! A tu disposición. A tu disposición en este día. Aquí tienes el consolidado.",
+        true,
+        false,
+        "Eduardo",
+        false,
+        "Buenas tardes"
+      );
+      expect(resEduardo).toBe("¡Buenas tardes, Eduardo! 👋 Aquí tienes el consolidado.");
+      expect(resEduardo).not.toContain("A tu disposición");
+    });
+
+    it("3. Continuidad sin saludo repetido cuando ya hay historial activo (hasPriorHistory: true)", async () => {
+      const { sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
+
+      const midConvo = sanitizeDmOrthographyAndGreeting(
+        "¡Buenos días, Jani! Con gusto, te confirmo que el apartamento en Chicó sigue disponible.",
+        false,
+        true,
+        "Jani",
+        true, // hasPriorHistory
+        "Buenos días"
+      );
+      expect(midConvo).toBe("Con gusto, te confirmo que el apartamento en Chicó sigue disponible.");
+      expect(midConvo).not.toContain("¡Buenos días, Jani!");
+    });
+
+    it("4. Compactación máxima en DMs: formatDetailedCompanyAndSocialMediaPresentation sin provocar 'Leer más'", async () => {
+      const { formatDetailedCompanyAndSocialMediaPresentation } = await import("../_core/politenessService");
+
+      const presentation = formatDetailedCompanyAndSocialMediaPresentation("Carlos");
+      // Debe contener la información institucional completa
+      expect(presentation).toContain("VECY BIENES RAÍCES");
+      expect(presentation).toContain("Eduardo A. Rivera");
+      expect(presentation).toContain("Jani Alves");
+      expect(presentation).toContain("100% GRATIS");
+      expect(presentation).toContain("https://vecy-bienes-raices.vercel.app");
+      // Debe estar condensado: longitud menor a 1000 caracteres (en lugar de 2200+)
+      expect(presentation.length).toBeLessThan(1000);
+    });
+
+    it("5. Consagración doctrinal de versión v33.07 y package.json 33.7.0", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.07");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.7.0");
     });
   });
 });

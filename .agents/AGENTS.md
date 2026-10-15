@@ -182,7 +182,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.06 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.07 — Octubre 2026
+
+### Novedades v33.07 (Eliminación de Redundancia en Saludos y Compactación Máxima en DMs — Cero "Leer más"):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Lead AI Architect de VECY BIENES RAÍCES. Corrige de raíz el bug de redundancia en los saludos de WhatsApp en `server/_core/jania/handlers/dmHandler.ts` aplicando esta regla estricta:*
+  2. *ELIMINAR DUPLICACIÓN DE SALUDOS: En `processPrivateDmConversationalMessage` (y en `sanitizeDmOrthographyAndGreeting`), asegúrate de que cuando JanIA salude por primera vez en el día, use una única estructura limpia e indivisible: `¡Buenas días, Jani! 👋` (o tardes/noches según la hora en Bogotá). Prohibido concatenar frases redundantes como 'Qué gusto saludarte. Qué gusto saludarte en este nuevo día'. El saludo debe ser una sola frase corta, cálida y elegante, seguida inmediatamente de la respuesta de fondo.*
+  3. *COMPACTACIÓN MÁXIMA EN DMs (CERO 'LEER MÁS'): Limita los bloques de texto en DMs a máximo 2 párrafos cortos. Si JanIA debe nombrar los grupos o servicios, hazlo con enlaces limpios y sin párrafos descriptivos gigantes que fuercen el botón 'Leer más'.*
+  4. *Valida con `npm run check`, `npm test` ($0 COP) y `npm run build`."*
+- **Acciones Técnicas Ejecutadas**:
+  - `server/_core/jania/handlers/dmHandler.ts`: Creación y exportación de `stripLeadingGreetingsAndCourtesies` para despojar cualquier preámbulo repetitivo o concatenación de frases redundantes ("Qué gusto saludarte. Qué gusto saludarte en este nuevo día"). Refactorización de `sanitizeDmOrthographyAndGreeting` para aplicar la estructura indivisible `¡${timeSalutation}, [Nombre]! 👋` y garantizar continuidad directa sin saludo cuando `hasPriorHistory: true`.
+  - Compactación en fast-paths de `dmHandler.ts`: menús de consultas (`isConsultasInquiry`), costos (`isCostInquiry`) y cómo hacerlo (`isHowToDoInquiry`) reestructurados en un máximo de 2 párrafos concisos con viñetas directas.
+  - `server/_core/politenessService.ts`: `formatDetailedCompanyAndSocialMediaPresentation` condensado a 2 párrafos cortos con enlaces limpios y enlace directo de Google Reviews, erradicando textos extensos que activen "Leer más".
+  - Inyección en el prompt de Gemini en `dmHandler.ts` de la regla doctrinal estricta de compactación máxima para evitar párrafos extensos en pantallas de celular.
+  - `server/__tests__/regression.test.ts`: Creación de la **SUITE 69** con 5 pruebas unitarias automatizadas aprobadas.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 234/234 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 23.97s ✅
+- `shared/const.ts` (`v33.07`) y `package.json` (`33.7.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.06 — Octubre 2026
 
 ### Novedades v33.06 (Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta de Captura en DM, Copy Ganador Google Reviews 15s y Candado Anti-Alucinación SINUPOT):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

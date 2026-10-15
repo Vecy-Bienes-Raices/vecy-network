@@ -331,6 +331,15 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.07 — Octubre 2026
+
+#### [v33.7.0] — 2026-10-15: Eliminación de Redundancia en Saludos y Compactación Máxima en DMs (Cero "Leer más")
+- **Eliminación de Concatenación Redundante (`dmHandler.ts`):** Erradicado de raíz el bug donde JanIA concatenaba preámbulos duplicados como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día". Se implementó y exportó `stripLeadingGreetingsAndCourtesies(text)` para despojar preámbulos y muletillas repetidas antes de componer la respuesta.
+- **Estructura Indivisible de Saludo Directivo:** Saludo matutino/vespertino/nocturno (`¡Buenos días, Jani! 👋` / `¡Buenos días, Eduardo! 👋`) como frase única e indivisible emitida exclusivamente en el primer turno del día (`hasPriorHistory: false`). Ante hilos activos en el día (`hasPriorHistory: true`), JanIA entra directo a la respuesta de fondo sin preámbulos repetitivos.
+- **Compactación Máxima en DMs:** Bloques de texto en DMs reducidos a máximo 2 párrafos cortos con viñetas concisas y enlaces directos, eliminando la activación del botón "Leer más" en WhatsApp móvil.
+- **Optimización de Presentación Corporativa (`politenessService.ts`):** `formatDetailedCompanyAndSocialMediaPresentation` reestructurado de 2.200 a < 1.000 caracteres, conservando los datos institucionales clave (Eduardo A. Rivera, Jani Alves, modelo digital 24/7, servicios gratuitos, enlaces oficiales y Google Reviews).
+- **Validación Limpia & Costos $0 COP:** `npm run check` (0 errores), `npm test` (234/234 passing al 100%), `npm run build` en 23.97s.
+
 ### 🔖 v33.06 — Octubre 2026
 
 #### [v33.6.0] — 2026-10-15: Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta DM, Review 15s y Candado Anti-Alucinación SINUPOT

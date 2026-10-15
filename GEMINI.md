@@ -1,10 +1,9 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.6.0 — 2026-10-15)
-- **JanIA Server:** `v33.06` (`33.6.0`) online en Contabo VPS (`13.140.149.144`).
-- **Núcleo Cognitivo Argon:** Exportado en `prompts.ts` e inyectado en `buildSystemPrompt()`, `dmHandler.ts`, `consultingHandler.ts` y `circuloHandler.ts` con CoT en 3 pasos, directivas de estilo, Vecy Agenda Pro y Fábrica Proptech a la Medida (+57 316 656 9719).
-- **Caché Compacta y Confirmación Flexible:** Formato oficial compacto en caché de identidad de `identityVerificationService.ts` y soporte de confirmación en lenguaje natural (ej. "sí", "claro", "antecedentes").
-- **6ª Herramienta en DM y Flexibilidad de Fast-Paths:** Herramienta `registrar_inmueble_o_requerimiento` en `JANIA_DM_TOOLS` y desahogo de fast-paths condicionados a `<= 12` palabras para que consultas complejas pasen al LLM Argon.
-- **Copy Ganador Google Reviews 15 Segundos:** `buildWinningGoogleReviewMessage` con cálculo horario en Bogotá, alternancia de deseos y despacho en burbuja aparte tras servicio gratuito en `whatsapp-match.ts`.
-- **Candado Anti-Alucinación SINUPOT:** Erradicada en `cronService.ts` la promesa de extraer fichas urbanísticas por PDF/CHIP, canalizando hacia las 4 herramientas activas en tiempo real.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.7.0 — 2026-10-15)
+- **JanIA Server:** `v33.07` (`33.7.0`) online en Contabo VPS (`13.140.149.144`).
+- **Eliminación de Redundancia en Saludos:** Erradicada de raíz en `dmHandler.ts` la concatenación redundante ("Qué gusto saludarte. Qué gusto saludarte en este nuevo día") con `stripLeadingGreetingsAndCourtesies` y estructura indivisible limpia (`¡Buenos días, Jani! 👋` o tardes/noches según Bogotá).
+- **Continuidad Conversacional sin Re-Saludos:** Si ya existe historial activo en el día (`hasPriorHistory: true`) y el usuario no saludó explícitamente, JanIA responde directo de fondo sin saludos residuales.
+- **Compactación Máxima en DMs (Cero 'Leer más'):** Menús de consultas, costos, cómo hacerlo y presentación de empresa (`formatDetailedCompanyAndSocialMediaPresentation`) limitados a máximo 2 párrafos cortos con enlaces limpios y concisos.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 234/234 passing ($0 COP) | Build `npm run build` en 24s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

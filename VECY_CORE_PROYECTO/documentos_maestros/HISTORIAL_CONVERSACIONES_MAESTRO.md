@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Eliminación de Redundancia en Saludos y Compactación Máxima en DMs (v33.07 - 33.7.0)
+
+**Versión:** `v33.07` (`33.7.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/politenessService.ts`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts`
+- `package.json`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó corregir de raíz la redundancia y concatenación en los saludos de WhatsApp en `server/_core/jania/handlers/dmHandler.ts` bajo directrices estrictas:
+1. **Eliminar Duplicación de Saludos**:
+   - Asegurar que cuando JanIA salude por primera vez en el día, use una única estructura limpia e indivisible: `¡Buenas días, Jani! 👋` (o tardes/noches según la hora en Bogotá).
+   - Prohibir terminantemente concatenar frases redundantes como *"Qué gusto saludarte. Qué gusto saludarte en este nuevo día"*. El saludo debe ser una sola frase corta, cálida y elegante, seguida inmediatamente de la respuesta de fondo.
+2. **Compactación Máxima en DMs (Cero 'Leer más')**:
+   - Limitar los bloques de texto en DMs a un máximo de 2 párrafos cortos. Si JanIA debe nombrar los grupos o servicios, hacerlo con enlaces limpios y sin párrafos descriptivos gigantes que fuercen el botón 'Leer más'.
+3. **Validación Exhaustiva**:
+   - Ejecutar `npm run check`, `npm test` garantizando $0 COP en pruebas (`NODE_ENV=test`) y `npm run build`.
+
+---
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Módulo de Despojo y Estructura Indivisible (`dmHandler.ts`)**:
+   - Se diseñó y exportó la función `stripLeadingGreetingsAndCourtesies(text: string): string` que erradica iterativamente saludos iniciales, vocativos, emojis y frases de cortesía repetidas (`/qué gusto saludarte/gi`, `a tu disposición`, `en este nuevo día`, etc.).
+   - Se refactorizó `sanitizeDmOrthographyAndGreeting` para aplicar la estructura única `¡${timeSalutation}, [Nombre]! 👋` únicamente en el primer saludo del día (`hasPriorHistory: false`) para directores VIP (Jani y Eduardo) y contactos nuevos, y garantizar que ante continuidad conversacional (`hasPriorHistory: true`) se responda de fondo sin emitir saludos repetitivos.
+2. **Compactación de Fast-Paths en DMs (`dmHandler.ts`)**:
+   - Fast-paths de `isConsultasInquiry`, `isCostInquiry`, `isHowToDoInquiry` y la bienvenida inicial condensados a máximo 2 bloques breves con viñetas concisas y directas.
+3. **Compactación de Presentación Corporativa (`politenessService.ts`)**:
+   - En `formatDetailedCompanyAndSocialMediaPresentation`, se redujo la longitud a menos de la mitad, presentando a los fundadores (Eduardo A. Rivera y Jani Alves), modelo 100% digital, servicios gratuitos 24/7 y enlaces de redes/web/Google Reviews sin provocar el botón 'Leer más' en pantallas móviles.
+4. **Directiva de Concisión en System Prompt (`dmHandler.ts`)**:
+   - Se actualizó el prompt inyectado a Gemini con la regla estricta de compactación máxima a 2 párrafos cortos y la prohibición de dobles saludos.
+5. **Suite de Pruebas Automatizadas (SUITE 69 en `regression.test.ts`)**:
+   - 5 nuevas pruebas unitarias cubriendo despojo de cortesías redundantes, estructura indivisible para Jani/Eduardo, continuidad sin saludo en historial activo, compactación de presentación (< 1000 caracteres) y consagración doctrinal de versión.
+6. **Validación Exhaustiva**:
+   - `npm run check`: 0 errores de tipado.
+   - `npm test`: 234/234 tests passing al 100% en verde ($0 COP).
+   - `npm run build`: compilación de Vite y esbuild en 23.97s.
+
+---
+
 ### 📅 [2026-10-15] — Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta DM, Review 15s y Candado Anti-Alucinación SINUPOT (v33.06 - 33.6.0)
 
 **Versión:** `v33.06` (`33.6.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

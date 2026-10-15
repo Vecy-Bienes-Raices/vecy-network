@@ -5,6 +5,7 @@ import { invokeLLM } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { executeMarketValuationSurvey } from "../../valuation";
+import { getGreetingByTime } from "../../whatsapp-utils";
 
 export const JANIA_DM_TOOLS = [
   {
@@ -354,20 +355,71 @@ export async function formatPoliteToolDelivery(
 }
 
 /**
+ * Remueve de forma exhaustiva e iterativa cualquier saludo inicial, vocativo redundante,
+ * frase de cortesía repetida ("Qué gusto saludarte", "Es un placer", "En este nuevo día")
+ * y emojis de saludo al comienzo del texto (Doctrina v33.07).
+ */
+export function stripLeadingGreetingsAndCourtesies(text: string): string {
+  let cleaned = (text || "").trim();
+  if (!cleaned) return "";
+
+  // 1. Erradicar frases redundantes concatenadas como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día"
+  cleaned = cleaned.replace(
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    ""
+  );
+
+  // 2. Patrones de saludos al inicio (con signos ¡ o sin ellos)
+  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?]*[!.\n?]?\s*/i;
+  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?]*))[!.\n?]?\s*/i;
+  const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
+
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 8) {
+    const before = cleaned;
+    cleaned = cleaned.replace(greetingPattern, "");
+    cleaned = cleaned.replace(courtesyPattern, "");
+    cleaned = cleaned.replace(emojiPattern, "");
+    cleaned = cleaned.trim();
+    changed = cleaned !== before;
+    iterations++;
+  }
+
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  return cleaned.trim();
+}
+
+/**
  * Sanitiza ortografía estricta en español (apertura de signos ¡, ¿, mayúscula inicial)
- * y garantiza trato directivo para Eduardo y Jani (Doctrina v33.4.1).
+ * y garantiza una única estructura limpia e indivisible de saludo en DMs,
+ * erradicando de raíz la duplicación o concatenación de frases redundantes (Doctrina v33.07).
  */
 export function sanitizeDmOrthographyAndGreeting(
   text: string,
   isEduardo: boolean,
   isJani: boolean,
-  _displayName?: string,
-  hasPriorHistory: boolean = false
+  displayName?: string,
+  hasPriorHistory: boolean = false,
+  timeSalutation?: string
 ): string {
   let cleaned = (text || "").trim();
   if (!cleaned) return cleaned;
 
-  // 1. Corregir cualquier saludo o vocativo que inicie en minúscula ("estimada...", "estimado...", "hola...")
+  const currentSalutation = timeSalutation || getGreetingByTime();
+
+  // Corregir erratas frecuentes como "Buenas días" a "Buenos días"
+  cleaned = cleaned.replace(/buenas\s+d[ií]as/gi, "Buenos días");
+
+  // 1. Erradicar frases redundantes concatenadas como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día"
+  cleaned = cleaned.replace(
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    ""
+  );
+
+  // 2. Corregir cualquier saludo o vocativo que inicie en minúscula ("estimada...", "estimado...", "hola...")
   cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
     return `¡Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
   });
@@ -376,23 +428,31 @@ export function sanitizeDmOrthographyAndGreeting(
   cleaned = cleaned.replace(/^hola\b/i, "¡Hola!");
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `¡${m.charAt(0).toUpperCase() + m.slice(1)}!`);
 
-  // 2. Trato directivo para directores VIP
+  // 3. Estructura única e indivisible para directores VIP o primer saludo del día (Doctrina v33.07)
   if (isEduardo) {
-    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
-      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `¡Hola, Eduardo! A tu disposición. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `¡${currentSalutation}, Eduardo! 👋 ${body}`.trim() : `¡${currentSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
   } else if (isJani) {
-    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
-      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `¡Hola, Jani! Qué gusto saludarte. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `¡${currentSalutation}, Jani! 👋 ${body}`.trim() : `¡${currentSalutation}, Jani! 👋 ¿En qué te colaboro hoy?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
+  } else if (hasPriorHistory && !cleaned.includes("?")) {
+    if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
   }
 
-  // 3. Primera letra en mayúscula obligatoria en cada frase y al inicio del texto
+  // 4. Primera letra en mayúscula obligatoria en cada frase y al inicio del texto
   cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
 
-  // 4. Apertura obligatoria de signos de interrogación ¿ ante preguntas
+  // 5. Apertura obligatoria de signos de interrogación ¿ ante preguntas
   cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
     const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
     return `${cleanPrefix}¿${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
@@ -467,20 +527,19 @@ export async function processPrivateDmConversationalMessage(
   // Si es un saludo inicial y no hay historial previo reciente:
   if (isGreetingOnly && history.length === 0) {
     if (isEduardo) {
-      const welcomeMsg = `¡Hola, Eduardo! A tu disposición. ¿En qué te colaboro hoy? 🤝✨`;
+      const welcomeMsg = `¡${timeSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg);
       return welcomeMsg;
     }
     if (isJani) {
-      const welcomeMsg = `¡Hola, Jani! Qué gusto saludarte. ¿En qué te colaboro hoy? 🤝✨`;
+      const welcomeMsg = `¡${timeSalutation}, Jani! 👋 ¿En qué te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg);
       return welcomeMsg;
     }
     const welcomeMsg =
-      `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
-      `Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.\n\n` +
+      `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️.\n\n` +
       `Cuéntame${displayName ? `, ${displayName}` : ""}: ¿a qué te dedicas o qué haces actualmente? Así podré orientarte de la mejor manera y contarte cómo podemos facilitarte la vida hoy 🤝✨`;
 
     appendDmHistory(userId, "user", clean);
@@ -499,17 +558,12 @@ export async function processPrivateDmConversationalMessage(
     const consultasMenuMsg =
       `¡Con mucho gusto${vocativeGreeting}! Primero cuéntame qué clase de consulta deseas hacer o sobre qué tema necesitas apoyo:\n\n` +
       `🎁 *Servicios 100% Gratuitos de Autoservicio:*\n` +
-      `1️⃣ *Verificación oficial de documentos:* Validación de identidad (Cédula de Ciudadanía, Extranjería, Pasaportes) y reporte de antecedentes con la Policía Nacional en 20 segundos.\n` +
-      `2️⃣ *Factura Predial Bogotá y Certificados de Pago:* Consulta y descarga oficial en PDF con código de barras y estado de cuenta al día con la Secretaría de Hacienda.\n\n` +
+      `• *Verificación oficial de documentos:* Identidad y antecedentes Policía Nacional.\n` +
+      `• *Factura Predial Bogotá y Certificados de Pago:* Descarga oficial en PDF.\n\n` +
       `💼 *Consultas Especializadas y Asesoría Profesional:*\n` +
-      `3️⃣ *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogotá según el barrio o sector.\n` +
-      `4️⃣ *Asesoría jurídica inmobiliaria:* Casos de negociación, promesas de compraventa y contratos de arrendamiento.\n` +
-      `5️⃣ *Tratamiento de datos y Hábeas Data inmobiliario.*\n` +
-      `6️⃣ *Recuperación de cartera:* Cobranza de comisiones inmobiliarias no pagadas.\n` +
-      `7️⃣ *Avalúos digitales y peritajes comerciales certificados RAA.*\n` +
-      `8️⃣ *Liquidaciones tributarias:* Ganancia ocasional, retención en la fuente e impuestos notariales.\n` +
-      `9️⃣ *Préstamos sobre hipoteca y pacto de retroventa.*\n\n` +
-      `Dime cuál de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), ¡solo dime el número de documento o el predio que quieres consultar! 🤝`;
+      `• *Sondeos de mercado* | *Asesoría jurídica inmobiliaria* | *Recuperación de cartera*\n` +
+      `• *Avalúos digitales* | *Liquidaciones tributarias* | *Préstamos sobre hipoteca*\n\n` +
+      `Dime cuál de estos temas te interesa (o envía tu cédula/predio) y te colaboro de inmediato 🤝`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", consultasMenuMsg);
@@ -539,9 +593,8 @@ export async function processPrivateDmConversationalMessage(
     if (isFreeToolsContext) {
       const freeCostMsg =
         `¡${displayName || "Hola"}! Este servicio es completamente *GRATIS* 🎁✨.\n\n` +
-        `En *VECY Bienes Raíces* la verificación oficial de documentos y antecedentes ante la Policía Nacional (Cédula de Ciudadanía, Extranjería, Pasaportes), así como la consulta y descarga de la Factura Predial y certificados de pago de Bogotá, *no tienen ningún costo para ti*.\n\n` +
-        `Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.\n\n` +
-        `Si quieres, ¡pongámoslo a prueba ahora mismo! Envíame el número de cédula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial 🤝`;
+        `En *VECY BIENES RAÍCES*, la verificación oficial de documentos y antecedentes ante la Policía Nacional, la Factura Predial Bogotá y el Paz y Salvo IDU no tienen ningún costo para ti.\n\n` +
+        `Envíame el número de cédula (o código CHIP) que deseas consultar y te entrego el reporte al instante 🤝`;
 
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", freeCostMsg);
@@ -556,16 +609,11 @@ export async function processPrivateDmConversationalMessage(
 
   if (isHowToDoInquiry) {
     const howToMsg =
-      `¡No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aquí. Conmigo todo es facilísimo y yo me encargo de todo el trabajo por ti 🥰✨:\n\n` +
-      `1️⃣ *Para verificar una cédula o antecedentes:*\n` +
-      `Solo escríbeme aquí el nombre completo y número de documento (ejemplo: *"verificar 12345678"* o *"CC 12345678"*), tal como se lo solicitas formalmente para el registro de portería previo a la visita. En segundos te entrego el reporte oficial de las centrales de seguridad con nombres completos, antecedentes y afiliación en salud.\n\n` +
-      `2️⃣ *Para sacar el Impuesto Predial de Bogotá:*\n` +
-      `Solo escríbeme el código CHIP del inmueble (comienza por AAA...) o la dirección con el número de apartamento. Yo descargo la factura oficial en PDF con su código de barras lista para pagar o el certificado de que está al día.\n\n` +
-      `3️⃣ *Para el Paz y Salvo de Valorización IDU:*\n` +
-      `Solo facilítame el código CHIP o indícame que necesitas el Paz y Salvo del IDU y te genero el certificado oficial en PDF para tu trámite en notaría.\n\n` +
-      `4️⃣ *Si te cuesta la tecnología o te enredas con el celular:*\n` +
-      `¡Cero angustia! Escríbeme con tus propias palabras o mándame un mensaje de voz contándome qué necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.\n\n` +
-      `¿Cuál de las consultas te gustaría que hagamos ahorita? Dime y la hacemos de una vez 🤝😊`;
+      `¡No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aquí 🥰✨:\n\n` +
+      `• *Para verificar una cédula o antecedentes:* Escríbeme el número de documento (como se solicita para el registro de portería previo a la visita).\n` +
+      `• *Para sacar el Impuesto Predial de Bogotá:* Escríbeme el código CHIP del predio (empieza por AAA).\n` +
+      `• *Si te cuesta la tecnología o te enredas con el celular:* ¡Cero angustia! Yo tengo toda la paciencia del mundo para guiarte paso a paso.\n\n` +
+      `Dime qué consulta deseas hacer y te colaboro con todo gusto 🤝😊`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", howToMsg);
@@ -843,14 +891,16 @@ export async function processPrivateDmConversationalMessage(
           `PROHIBICIÓN TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRINA EDUARDO A. RIVERA):\n` +
           `- NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondré a correr el motor... te estaré avisando al instante si alguna hace match".\n` +
           `- Jamás des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, sé sincera, directa y transparente de inmediato sin adornos ficticios.\n\n` +
-          `BREVEDAD Y CONCISIÓN ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):\n` +
+          `BREVEDAD Y COMPACTACIÓN MÁXIMA EN WHATSAPP (CERO "LEER MÁS" - MÁXIMO 2 PÁRRAFOS CORTOS):\n` +
           `- En WhatsApp los usuarios leen en pantallas móviles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOTÓN 'Leer más'.\n` +
-          `- Sé siempre concisa, clara, dinámica y directa al grano (máximo 2 a 3 párrafos cortos o viñetas puntuales). Entre menos adornos y más claridad, mayor impacto.\n\n` +
-          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO, ORTOGRAFÍA Y TRATO DIRECTIVO (DOCTRINA v33.03):\n` +
+          `- REGLA ESTRICTA DE COMPACTACIÓN MÁXIMA: Limita tus respuestas a MÁXIMO 2 párrafos cortos (o viñetas sumamente concisas de una sola línea).\n` +
+          `- Si debes nombrar servicios o grupos, hazlo con enlaces limpios y directos, SIN párrafos descriptivos gigantes que fuercen el botón 'Leer más'.\n` +
+          `- Sé ejecutiva, cálida, contundente y ve directo al grano.\n\n` +
+          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO, ORTOGRAFÍA Y TRATO DIRECTIVO (DOCTRINA v33.07):\n` +
           `${isEduardo ?
-            '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con EDUARDO A. RIVERA, fundador y Director de Tecnología de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Eduardo!". Sé ejecutiva, rápida y precisa.\n' :
+            `- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con EDUARDO A. RIVERA, fundador y Director de Tecnología de VECY BIENES RAÍCES. Tu saludo inicial es una única estructura limpia e indivisible: "¡${timeSalutation}, Eduardo! 👋". Sé ejecutiva, rápida y precisa, sin frases redundantes de cortesía.\n` :
             isJani ?
-              '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Jani!". Sé ejecutiva, cálida y operativa.\n' :
+              `- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RAÍCES. Tu saludo inicial es una única estructura limpia e indivisible: "¡${timeSalutation}, Jani! 👋". Sé ejecutiva, cálida y operativa, seguida de inmediato de la respuesta de fondo. Prohibido concatenar frases redundantes como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día".\n` :
               `- El usuario se llama: *${displayName || realName || "Colega"}*.\n- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.\n`
           }` +
           `- ORTOGRAFÍA ESTRICTA EN ESPAÑOL: PROHIBIDO iniciar saludos o mensajes en minúscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar Mayúscula inicial y signos de apertura formales.\n` +
@@ -946,19 +996,14 @@ export async function processPrivateDmConversationalMessage(
           `- Cuando el usuario indique que la conversación está concluyendo, dé las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos así"), despídete con afecto y calidez e invítalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RAÍCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.\n\n` +
           `PAUTAS PARA MENSAJES DE VOZ / AUDIOS:\n` +
           `- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los números de teléfono con naturalidad (ej: "al tres dieciséis, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuación".\n\n` +
-          `QUIÉNES SOMOS, CONVERSACIÓN AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACIÓN (DOCTRINA EDUARDO A. RIVERA v32.97):\n` +
-          `- Si la conversación es amena o el usuario pregunta sobre nosotros, quiénes somos, qué es Vecy, quiénes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:\n` +
-          `  1. Cuéntale muy bien y detalladamente todo: somos VECY BIENES RAÍCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnología e Innovación) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evolución frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.\n` +
-          `  2. Recuérdale que todos nuestros servicios están 100% activos las 24 horas: Bóveda gratuita (verificación de antecedentes ante Policía/Procuraduría/ADRES, factura predial Bogotá en PDF, paz y salvo IDU notarial, liquidación notarial y de registro) y consultoría de élite con Eduardo y Jani (+57 316 656 9719).\n` +
-          `  3. Invítalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:\n` +
-          `     • Instagram: https://www.instagram.com/vecybienesraices/\n` +
-          `     • TikTok: https://www.tiktok.com/@vecybienesraices\n` +
-          `     • Facebook: https://www.facebook.com/vecybienesraices\n` +
-          `     • YouTube: https://www.youtube.com/@VecyBienesRaices\n` +
-          `     • LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices\n` +
-          `     • Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
-          `     • Web Oficial: https://vecy-bienes-raices.vercel.app\n` +
-          `  4. LA ESTOCADA FINAL CON OPINIÓN Y COMENTARIOS: Remata siempre con calidez humana y picardía elegante invitándolo a dejarnos su opinión y calificación de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐.`
+          `QUIÉNES SOMOS, REDES SOCIALES Y SERVICIOS (MÁXIMO 2 PÁRRAFOS CORTOS):\n` +
+          `- Si el usuario pregunta quiénes somos o sobre nuestros servicios y redes:\n` +
+          `  Resume en máximo 2 párrafos concisos: somos VECY BIENES RAÍCES, bróker virtual fundado por Eduardo A. Rivera y Jani Alves, operando 100% digital con IA pura y servicios activos 24/7 (predial, paz y salvo IDU, verificación de antecedentes y avalúos).\n` +
+          `  Para redes y portal, entrega solo enlaces limpios y condensados sin descripciones gigantes que provoquen el botón 'Leer más':\n` +
+          `  • Web: https://vecy-bienes-raices.vercel.app\n` +
+          `  • Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+          `  • Atención Bróker: +57 316 656 9719 (https://wa.me/573166569719)\n` +
+          `  Remata de forma cordial y elegante con la invitación a Google Reviews: 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐.`
       }
     ];
 
@@ -1001,26 +1046,27 @@ export async function processPrivateDmConversationalMessage(
     }
     reply = sanitizeResponseMarkdown(reply.trim());
 
-    // Si ya hay historial previo hoy y el usuario NO envió un saludo explícito, limpiar cualquier saludo redundante
+    // Regla Doctrinal v33.07: Eliminar duplicación y concatenación redundante de saludos
     if (hasPriorHistory && !userSentExplicitGreeting) {
-      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
-      reply = reply.trim();
-    } else if (userSentExplicitGreeting && !isEduardo && !isJani) {
-      // Regla 2: Si el usuario envió un saludo explícito, responde SIEMPRE incluyendo el saludo horario
-      if (!/¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(reply)) {
-        reply = `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! ${reply}`.trim();
-      }
+      // Ya venían conversando hoy y el usuario no saludó: va directo a la respuesta de fondo sin saludar de nuevo
+      reply = stripLeadingGreetingsAndCourtesies(reply);
+    } else if (!hasPriorHistory || userSentExplicitGreeting) {
+      // Primer saludo del día o saludo explícito del usuario: estructura única limpia e indivisible
+      const targetName = isEduardo ? "Eduardo" : isJani ? "Jani" : (displayName || "");
+      const cleanGreeting = targetName ? `¡${timeSalutation}, ${targetName}! 👋` : `¡${timeSalutation}! 👋`;
+      const cleanBody = stripLeadingGreetingsAndCourtesies(reply);
+      reply = cleanBody ? `${cleanGreeting} ${cleanBody}` : `${cleanGreeting} ¿En qué te colaboro hoy?`;
     }
 
     if (!reply) {
       if (isEduardo) {
-        reply = `¡Hola, Eduardo! A tu disposición. Cuéntame en qué te colaboro hoy.`;
+        reply = `¡${timeSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
       } else if (isJani) {
-        reply = `¡Hola, Jani! Qué gusto saludarte. Cuéntame en qué te colaboro hoy.`;
+        reply = `¡${timeSalutation}, Jani! 👋 ¿En qué te colaboro hoy?`;
       } else {
         reply = (hasPriorHistory && !userSentExplicitGreeting)
-          ? `Con mucho gusto. En *VECY BIENES RAÍCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnología y asesoría especializada. Cuéntame en detalle qué necesitas o qué duda tienes y te oriento de inmediato.`
-          : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
+          ? `Con mucho gusto. En *VECY BIENES RAÍCES* te apoyamos en tus gestiones y negocios inmobiliarios. Cuéntame qué necesitas y te oriento de inmediato.`
+          : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* estamos a tu servicio para facilitarte tus gestiones inmobiliarias. Cuéntame en qué te podemos colaborar hoy.`;
       }
     }
 
@@ -1029,8 +1075,8 @@ export async function processPrivateDmConversationalMessage(
       reply = enhanceResponseWithCommercialFunnel(reply, clean);
     }
 
-    // Sanitizar ortografía estricta en español y trato directivo (Doctrina v33.03)
-    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
+    // Sanitizar ortografía estricta en español y trato directivo (Doctrina v33.07)
+    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory, timeSalutation);
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);

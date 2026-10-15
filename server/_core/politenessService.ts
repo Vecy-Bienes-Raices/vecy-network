@@ -138,32 +138,12 @@ export function isPoliteGratitudeOrClosing(text: string): boolean {
 export function formatDetailedCompanyAndSocialMediaPresentation(userName?: string): string {
   const cleanName = extractFirstName(userName || 'Colega') || 'Colega';
   return (
-    `¡Con el mayor de los gustos, ${cleanName}! 🏘️✨ Te cuento detalladamente sobre nosotros:\n\n` +
-    `🏢 *¿Quiénes somos?*\n` +
-    `Somos *VECY BIENES RAÍCES*, el primer bróker virtual inmobiliario y red colaborativa para Colombia, operando 100% digital desde 2018. Nacimos con el propósito de transformar de raíz el sector y dejar atrás la lentitud de los "dinosaurios inmobiliarios".\n\n` +
-    `👥 *Nuestros Fundadores:*\n` +
-    `• *Eduardo A. Rivera:* Director de Tecnología e Innovación.\n` +
-    `• *Jani Alves:* Directora de Operaciones Inmobiliarias.\n\n` +
-    `⚡ *Todos nuestros servicios están 100% activos las 24 horas:*\n` +
-    `1️⃣ *Verificación Oficial de Documentos y Antecedentes:* Consulta en tiempo real ante Policía Nacional, Procuraduría y ADRES para blindar visitas y contratos (*100% GRATIS*).\n` +
-    `2️⃣ *Factura Predial Bogotá y Certificados de Pago:* Descarga en PDF oficial con código de barras y constancia de estar al día (*100% GRATIS*).\n` +
-    `3️⃣ *Paz y Salvo IDU Notarial:* En PDF oficial obligatorio para escrituración en Bogotá (*$0 COP*).\n` +
-    `4️⃣ *Liquidación Notarial y de Registro:* Desglose exacto de derechos notariales, beneficencia y retención en la fuente.\n` +
-    `5️⃣ *Cruce Inteligente Oferta ↔ Demanda (JanIA Match):* Algoritmo con IA pura que conecta compradores y vendedores en segundos.\n` +
-    `6️⃣ *Red Colaborativa de Corretaje:* Alianzas 50/50 transparentes entre colegas sin intermediarios fantasmas ni avisos invasivos.\n` +
-    `7️⃣ *Consultoría Especializada y Avalúos RAA:* Acompañamiento legal, peritajes comerciales certificados y préstamos hipotecarios con nuestros directores.\n\n` +
-    `🌐 *Portal Web Oficial:* ${VECY_ACTIVE_DOMAIN}\n` +
-    `📞 *Atención Bróker (Eduardo y Jani):* +57 316 656 9719 (https://wa.me/573166569719)\n\n` +
-    `📲 *¡Te invito con alegría a seguirnos en nuestras redes oficiales para estar al día con tips, remates y novedades!*:\n` +
-    `• 📸 *Instagram:* ${VECY_SOCIAL_NETWORKS.instagram}\n` +
-    `• 🎵 *TikTok:* ${VECY_SOCIAL_NETWORKS.tikTok}\n` +
-    `• 📘 *Facebook:* ${VECY_SOCIAL_NETWORKS.facebookFanPage}\n` +
-    `• ▶️ *YouTube:* ${VECY_SOCIAL_NETWORKS.youtube}\n` +
-    `• 💼 *LinkedIn:* ${VECY_SOCIAL_NETWORKS.linkedIn}\n` +
-    `• 📢 *Canal Oficial de WhatsApp:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
-    `⭐ *Y como broche de oro 😉:* Como sabes que trabajamos con el corazón para apoyar a nuestra comunidad y mantener estas herramientas 100% gratuitas para todos, ¿nos regalarías tu opinión y calificación con 5 estrellas en Google? Nos ayudas un mundo para seguir creciendo juntos:\n` +
-    `👉 ${VECY_SOCIAL_NETWORKS.googleReview} ⭐⭐⭐⭐⭐\n\n` +
-    `¡Muchísimas gracias por acompañarnos en la evolución de los bienes raíces! 🚀🤝`
+    `¡Con el mayor de los gustos, ${cleanName}! 🏘️✨ En *VECY BIENES RAÍCES* operamos 100% digital desde 2018 para dejar atrás a los "dinosaurios inmobiliarios", fundados por *Eduardo A. Rivera* (Tecnología) y *Jani Alves* (Operaciones).\n\n` +
+    `Nuestros servicios activos 24/7 incluyen: verificación oficial de antecedentes (Policía Nacional), Factura Predial Bogotá y Paz y Salvo IDU (*100% GRATIS*), más avalúos certificados y asesoría jurídica.\n\n` +
+    `🌐 *Web:* ${VECY_ACTIVE_DOMAIN}\n` +
+    `📞 *Bróker:* +57 316 656 9719 (https://wa.me/573166569719)\n` +
+    `📲 *Redes:* ${VECY_SOCIAL_NETWORKS.instagram} • ${VECY_SOCIAL_NETWORKS.tikTok} • ${VECY_SOCIAL_NETWORKS.facebookFanPage} • ${VECY_SOCIAL_NETWORKS.youtube} • ${VECY_SOCIAL_NETWORKS.linkedIn} • ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+    `⭐ *¿Nos regalas tu opinión de 5 estrellas en Google Reviews?* 👉 ${VECY_SOCIAL_NETWORKS.googleReview} ⭐⭐⭐⭐⭐`
   );
 }
 
