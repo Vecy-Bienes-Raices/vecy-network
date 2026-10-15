@@ -6,6 +6,7 @@ import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMM
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { executeMarketValuationSurvey } from "../../valuation";
 import { getGreetingByTime } from "../../whatsapp-utils";
+import { FlyerVisionResult } from "../types";
 import {
   findTrustedContact,
   buildFamilyWarmWelcomeMessage,
@@ -17,6 +18,14 @@ import {
   getDebtCollectionDefenseResponse,
   TrustedContact
 } from "../trustedContacts";
+
+export interface DmMediaOptions {
+  imageBuffer?: string;
+  pdfBuffer?: string;
+  pdfMimeType?: string;
+  isAudio?: boolean;
+  flyerVisionData?: FlyerVisionResult | null;
+}
 
 export const JANIA_DM_TOOLS = [
   {
@@ -499,9 +508,19 @@ export function sanitizeDmOrthographyAndGreeting(
 export async function processPrivateDmConversationalMessage(
   text: string,
   userId: string,
-  userName?: string
+  userName?: string,
+  mediaOptions?: DmMediaOptions
 ): Promise<string> {
-  const clean = text.trim();
+  let clean = (text || "").trim();
+  const hasImage = !!mediaOptions?.imageBuffer;
+  const hasPdf = !!mediaOptions?.pdfBuffer;
+
+  if (!clean && hasImage) {
+    clean = "[Fotografía / Imagen adjunta]";
+  } else if (!clean && hasPdf) {
+    clean = "[Documento adjunto en PDF]";
+  }
+
   if (!clean) return "";
 
   // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
@@ -560,7 +579,7 @@ export async function processPrivateDmConversationalMessage(
   const hasPriorHistory = history.length > 0;
   const userSentExplicitGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|buenas)\b/i.test(cleanLower);
 
-  // 💖 REGLA DE ORO FAMILIAR Y DE CONFIANZA (Doctrina v33.10)
+  // 💖 REGLA DE ORO FAMILIAR Y DE CONFIANZA (Doctrina v33.11 - Universal)
   if (isFamilyOrTrusted && trustedContact) {
     // 1. Caso especial: Broma de Chalo sobre Pablo Escobar / Gacha
     const isChalo =
@@ -606,9 +625,10 @@ export async function processPrivateDmConversationalMessage(
       return familyGratitude;
     }
 
-    // 5. Saludo inicial, primer turno o pregunta por Eduardo / contacto
+    // 5. Saludo inicial, primer turno, foto familiar, meme o pregunta por Eduardo / contacto
     const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
-    if (history.length === 0 || isGreetingOnly || isAskingForEddu) {
+    const isMediaMessage = hasImage || hasPdf || clean.startsWith("[Fotografía") || clean.startsWith("[Documento");
+    if (history.length === 0 || isGreetingOnly || isAskingForEddu || isMediaMessage) {
       const familyWelcome = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyWelcome);
@@ -622,6 +642,31 @@ export async function processPrivateDmConversationalMessage(
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyChat);
       return familyChat;
+    }
+  }
+
+  // 📸 INTERCEPCIÓN MULTIMODAL PARA USUARIOS EXTERNOS / COLEGAS:
+  if (hasImage && !isEduardo && !isJani) {
+    const flyer = mediaOptions?.flyerVisionData;
+    if (flyer && flyer.isFlyerOrBanner && (flyer.classification === "INMUEBLE" || flyer.classification === "REQUERIMIENTO")) {
+      const isOffer = flyer.classification === "INMUEBLE";
+      const flyerTitle = flyer.title || (isOffer ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
+      const flyerAck =
+        `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 He analizado con visión artificial tu afiche comercial: *${flyerTitle}* 📸✨.\n\n` +
+        `Ha quedado captado en nuestro sistema de VECY BIENES RAÍCES. Si necesitas verificar la identidad de tu cliente (cédula), liquidar gastos notariales o descargar la factura predial en Bogotá, con gusto te colaboro 🤝.`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", flyerAck);
+      return flyerAck;
+    }
+
+    // Si es una foto ambiental, meme, o imagen común sin texto publicitario:
+    if (clean === "[Fotografía / Imagen adjunta]" || isGreetingOnly) {
+      const imageGreeting =
+        `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, tu asistente inmobiliaria con Inteligencia Artificial de *VECY BIENES RAÍCES* 🏘️.\n\n` +
+        `He recibido tu imagen 📸✨. Cuéntame${displayName ? `, ${displayName}` : ""}: ¿en qué trámite o consulta de finca raíz te podemos colaborar hoy? Con gusto te ayudo con la consulta oficial de antecedentes ante Policía Nacional, descarga de Factura Predial Bogotá en PDF, paz y salvo IDU o sondeo de mercado 🤝.`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", imageGreeting);
+      return imageGreeting;
     }
   }
 

@@ -4556,7 +4556,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:[2-9]|10)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:[2-9]|1[0-9])\.0$/);
     });
   });
 
@@ -4920,7 +4920,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:[6-9]|10)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:[6-9]|1[0-9])\.0$/);
     });
   });
 
@@ -4998,7 +4998,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:[7-9]|10)\.0/);
+      expect(pkg.version).toMatch(/^33\.(?:[7-9]|1[0-9])\.0/);
     });
   });
 
@@ -5154,13 +5154,146 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(recadoReply).toContain("Le paso tu mensaje a Eduardo (Eddu) de inmediato");
     });
 
-    it("6. Consagración doctrinal de versión v33.10 y package.json 33.10.0", async () => {
+    it("6. Consagración doctrinal de versión previa", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.10");
+      expect(VECY_VERSION).toBeDefined();
+    });
+  });
+
+  describe("SUITE 71 — JanIA v33.11 (33.11.0): Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas", () => {
+    it("1. Robustez contra caídas en visión: extractFlyerVisionSafely nunca arroja excepciones y devuelve estructura segura", async () => {
+      const { extractFlyerVisionSafely } = await import("../_core/jania/vision");
+
+      const emptyRes = await extractFlyerVisionSafely("");
+      expect(emptyRes).toBeDefined();
+      expect(emptyRes.isFlyerOrBanner).toBe(false);
+      expect(emptyRes.classification).toBe("CONSULTA_GENERAL");
+
+      const invalidBase64 = await extractFlyerVisionSafely("not-a-valid-base64-image-string");
+      expect(invalidBase64).toBeDefined();
+      expect(invalidBase64.isFlyerOrBanner).toBe(false);
+      expect(invalidBase64.classification).toBe("CONSULTA_GENERAL");
+    });
+
+    it("2. Intercepción familiar universal ante fotos familiares, memes o mensajes multimedia sin texto", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      // Tío Luis enviando foto familiar sin texto
+      const tioLuisReply = await processPrivateDmConversationalMessage(
+        "",
+        "573132094918@s.whatsapp.net",
+        "Luis Rivera",
+        {
+          imageBuffer: "mock_image_buffer_family_photo"
+        }
+      );
+      expect(tioLuisReply).toContain("¡Tío Luis!");
+      expect(tioLuisReply).toContain("JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨");
+      expect(tioLuisReply).toContain("+57 316 656 9719");
+      expect(tioLuisReply).toContain("https://wa.me/573166569719");
+
+      // Madrecita Carmenza enviando meme o foto
+      const madreReply = await processPrivateDmConversationalMessage(
+        "",
+        "573108643555@s.whatsapp.net",
+        "Carmenza",
+        {
+          imageBuffer: "mock_image_buffer_madrecita"
+        }
+      );
+      expect(madreReply).toContain("¡Madrecita hermosa!");
+      expect(madreReply).toContain("+57 316 656 9719");
+      expect(madreReply).not.toContain("review");
+      expect(madreReply).not.toContain("google");
+
+      // Hijo Daniel (Pollotote) enviando audio o imagen
+      const danielReply = await processPrivateDmConversationalMessage(
+        "",
+        "573006067089@s.whatsapp.net",
+        "Daniel Rivera",
+        {
+          imageBuffer: "mock_image_buffer_daniel"
+        }
+      );
+      expect(danielReply).toContain("¡Hola, mi Pollotote querido!");
+      expect(danielReply).toContain("+57 316 656 9719");
+    });
+
+    it("3. Visión universal en DMs: Flyer comercial recibido de cliente externo es identificado y confirmado", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      const flyerReply = await processPrivateDmConversationalMessage(
+        "",
+        "573115554433@s.whatsapp.net",
+        "Carlos Asesor",
+        {
+          imageBuffer: "mock_flyer_buffer",
+          flyerVisionData: {
+            isFlyerOrBanner: true,
+            classification: "INMUEBLE",
+            transactionType: "venta",
+            title: "Apartamento en Venta Chico 120m2",
+            flyerVerbatimText: "Vendo espectacular apartamento en Chico 120m2 3 alcobas 2 baños $850 millones",
+            reactionEmoji: "👍"
+          }
+        }
+      );
+
+      expect(flyerReply).toContain("Carlos");
+      expect(flyerReply).toContain("He analizado con visión artificial tu afiche comercial");
+      expect(flyerReply).toContain("Apartamento en Venta Chico 120m2");
+      expect(flyerReply).toContain("VECY BIENES RAÍCES");
+    });
+
+    it("4. Visión universal en DMs: Foto ambiental o meme recibido de cliente externo genera saludo horario e invitación a servicios", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      const photoReply = await processPrivateDmConversationalMessage(
+        "",
+        "573117778899@s.whatsapp.net",
+        "Andrés Pérez",
+        {
+          imageBuffer: "mock_random_photo_buffer",
+          flyerVisionData: {
+            isFlyerOrBanner: false,
+            classification: "CONSULTA_GENERAL",
+            transactionType: "venta",
+            flyerVerbatimText: ""
+          }
+        }
+      );
+
+      expect(photoReply).toContain("Andrés");
+      expect(photoReply).toContain("He recibido tu imagen");
+      expect(photoReply).toContain("VECY BIENES RAÍCES");
+      expect(photoReply).toContain("Factura Predial");
+      expect(photoReply).toContain("Policía Nacional");
+    });
+
+    it("5. Escudo defensivo ante cobranza o estafa recibido en DM con o sin imagen", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      const cobroReply = await processPrivateDmConversationalMessage(
+        "Último aviso de cobro coactivo y embargo a Eduardo Rivera por obligación vencida",
+        "573123456789@s.whatsapp.net",
+        "Cobranzas y Embargos",
+        {
+          imageBuffer: "mock_document_photo"
+        }
+      );
+
+      expect(cobroReply).toContain("No tengo información de esa persona ni manejo agendas personales");
+      expect(cobroReply).not.toContain("3166569719");
+      expect(cobroReply).toContain("VECY BIENES RAÍCES");
+    });
+
+    it("6. Consagración doctrinal de versión v33.11 y package.json 33.11.0", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.11");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.10.0");
+      expect(pkg.version).toBe("33.11.0");
     });
   });
 });

@@ -182,7 +182,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.10 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.11 — Octubre 2026
+
+### Novedades v33.11 (Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Ejecuta la actualización definitiva a la versión `v33.11` (`33.11.0`) en el backend de JanIA, manteniendo el blindaje estricto de $0 COP en pruebas (`NODE_ENV=test`), integrando la Agenda Familiar Universal y robusteciendo el motor multimodal contra caídas."*
+  2. **Visión Universal y Autonomía Multimodal en DMs**: Eliminación de bloqueos por ausencia de texto (`body.trim()`). Soporte completo de `DmMediaOptions` (`imageBuffer`, `pdfBuffer`, `pdfMimeType`, `isAudio`, `flyerVisionData`). Cualquier mensaje multimedia (foto familiar, meme, flyer comercial, audio o PDF) es procesado de forma nativa.
+  3. **Agenda Familiar Universal y Círculo de Confianza**: Intercepción prioritaria en el paso 0 para los 17 miembros de `TRUSTED_FAMILY_AND_FRIENDS` (como el tío Luis, madre Carmenza, Daniel/Pollotote, Natalia/Natillita, etc.) respondiendo de inmediato con cariño y el número de bróker de Eduardo (`+57 316 656 9719`), incluso si solo envían una foto o meme sin texto.
+  4. **Robustez y Resiliencia Multimodal 24/7**: Creación de `extractFlyerVisionSafely` con timeout de 8.000 ms, cascada jerárquica de modelos estables de Gemini y envoltorio a prueba de caídas de red que garantiza que el bot de WhatsApp y el servidor VPS nunca colapsen por errores no controlados.
+  5. **Escudo Defensivo Anti-Cobranzas/Spam y Saludos Visuales**: Despiste corporativo inmediato ante intentos de cobro coactivo o fraude recibidos con o sin imágenes; saludo horario y presentación corporativa orientando a servicios inmobiliarios ante fotos ambientales de usuarios externos.
+  6. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 246/246 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 18.41s (Vite) + 109ms (esbuild) ✅
+- `shared/const.ts` (`v33.11`) y `package.json` (`33.11.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.10 — Octubre 2026
 
 ### Novedades v33.10 (Agenda Familiar Blindada, Natillita, Cero Confusión Cognitiva y Escudo Defensivo Anti-Cobranzas/Spam):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

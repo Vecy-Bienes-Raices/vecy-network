@@ -331,6 +331,15 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.11 — Octubre 2026
+
+#### [v33.11.0] — 2026-10-15: Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas
+- **Visión Universal y Autonomía Multimodal en DMs (`dmHandler.ts`, `whatsapp-match.ts`):** Erradicado el bloqueo conversacional cuando los mensajes carecían de texto (`body.trim()`). Soporte unificado de `DmMediaOptions` (`imageBuffer`, `pdfBuffer`, `pdfMimeType`, `isAudio`, `flyerVisionData`). Reconocimiento nativo de fotos, flyers de captación, comprobantes, memes y mensajes de voz en chats privados.
+- **Intercepción Familiar Universal en Paso 0:** Cualquier contacto de la agenda familiar y de confianza (`TRUSTED_FAMILY_AND_FRIENDS`) que envíe una fotografía familiar, meme, audio o documento es interceptado de inmediato, recibiendo el saludo con su apodo de cariño, su mensaje personalizado y el número de atención comercial/bróker de Eduardo (`+57 316 656 9719`), con cero fricción y cero intentos de venta de minutas.
+- **Robustez y Resiliencia Multimodal 24/7 (`vision.ts`, `propertiesHandler.ts`):** Creación y exportación de `extractFlyerVisionSafely` con timeout preventivo de 8.000 ms, modelos de alta disponibilidad (`gemini-2.5-flash`, `gemini-flash-lite-latest`, `gemini-flash-latest`, `gemini-2.5-flash-lite`, `gemini-1.5-flash`) y manejo estructurado de caídas de red que evita caídas del proceso de Baileys o del servidor.
+- **Escudo Defensivo y Gestión de Medios Externos:** Mapeo de fotos ambientales y memes de usuarios externos con saludo horario Bogotá y presentación corporativa orientando a servicios inmobiliarios; escudo defensivo reforzado ante spam o intentos de cobranza.
+- **Validación Limpia & Costos $0 COP:** `npm run check` (0 errores), `npm test` (246/246 passing al 100% en verde con $0 COP), `npm run build` en 18.41s (Vite) + 109ms (esbuild).
+
 ### 🔖 v33.10 — Octubre 2026
 
 #### [v33.10.0] — 2026-10-15: Agenda Familiar Blindada, Natillita, Cero Confusión Cognitiva y Escudo Defensivo Anti-Cobranzas/Spam

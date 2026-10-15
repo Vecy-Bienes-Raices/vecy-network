@@ -1321,6 +1321,60 @@ export class JaniaMatchBot {
       }
     } catch (_) { }
 
+    // 💖 INTERCEPCIÓN UNIVERSAL: CONTACTOS DE CONFIANZA Y CÍRCULO FAMILIAR (Doctrina v33.11)
+    // Aplica para cualquier mensaje entrante (texto, foto familiar, meme, nota de voz, documento o comprobante)
+    const {
+      findTrustedContact,
+      buildFamilyWarmWelcomeMessage,
+      isDebtCollectionOrSpamScam,
+      getDebtCollectionDefenseResponse,
+      isChaloEscobarJoke,
+      buildChaloJokeResponse,
+      isJonathanCreditProcessQuery,
+      buildJonathanCreditResponse
+    } = await import('./jania/trustedContacts');
+
+    const trustedContact = findTrustedContact(senderId, userName || rawPhone);
+    const isEduardoFundador = isSelfChat || rawPhone === "573192919978" || rawPhone === "225954035179724";
+    const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
+    const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora;
+
+    if (isFamilyOrFriend && trustedContact) {
+      console.log(`[JANIA-MATCH] [DM] 💖 Intercepción familiar inmediata para ${trustedContact.primaryNick} (${senderId})`);
+      let familyReply = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
+
+      // Si es un recado explícito para Eduardo
+      const cleanLower = (body || "").trim().toLowerCase();
+      const isLeavingMessageForEddu = /(?:dile\s+a\s+eddu|d[ií]gale\s+a\s+eddu|av[ií]sale\s+a\s+eddu|av[ií]sele\s+a\s+eddu|dile\s+a\s+eduardo|d[ií]gale\s+a\s+eduardo|av[ií]sale\s+a\s+eduardo|av[ií]sele\s+a\s+eduardo|d[eé]jale\s+dicho|recado|raz[oó]n\s+para\s+eddu|p[aá]sale\s+el\s+recado|felic[ií]talo|un\s+abrazo\s+a\s+eddu)/i.test(cleanLower);
+      if (isLeavingMessageForEddu) {
+        familyReply = `¡Anotadísimo, ${trustedContact.primaryNick}! 📝 Le paso tu mensaje a Eduardo (Eddu) de inmediato. Recuerda que también puedes escribirle directamente a su nuevo número de bróker: +57 316 656 9719 (https://wa.me/573166569719) 🤝💖`;
+      } else if (/(?:gracias|muchas\s*gracias|mil\s*gracias|am[eé]n|bendiciones|un\s*abrazo|besos?|te\s*quiero)/i.test(cleanLower) && cleanLower.length < 80) {
+        familyReply = `¡Con todo el cariño del mundo, ${trustedContact.primaryNick}! ❤️✨ Aquí estaré siempre atenta para lo que necesites. ¡Un abrazo inmenso y que tengas un día maravilloso!`;
+      } else if (isChaloEscobarJoke(cleanLower)) {
+        familyReply = buildChaloJokeResponse();
+      } else if (isJonathanCreditProcessQuery(cleanLower)) {
+        familyReply = buildJonathanCreditResponse();
+      }
+
+      await this.queuedSend(senderId, familyReply, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', familyReply);
+      const { appendDmHistory } = await import('./janIA');
+      appendDmHistory(senderId, 'user', body || (imageBuffer ? '[Foto Familiar / Imagen]' : '[Audio / Mensaje]'));
+      appendDmHistory(senderId, 'assistant', familyReply);
+      return;
+    }
+
+    // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
+    if (isDebtCollectionOrSpamScam(body, userName)) {
+      const defenseMsg = getDebtCollectionDefenseResponse();
+      await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
+      const { appendDmHistory } = await import('./janIA');
+      appendDmHistory(senderId, 'user', body);
+      appendDmHistory(senderId, 'assistant', defenseMsg);
+      await this.logToDb(senderId, 'janIA', `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
+      return;
+    }
+
     // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123) para cualquier usuario (Double Opt-In)
     const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
     const matchConfirm = body.match(matchConfirmationRegex);
@@ -1578,17 +1632,50 @@ export class JaniaMatchBot {
     const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
     const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
 
-    if (shouldEngageConversational && body.trim()) {
-      // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
-      const { isDebtCollectionOrSpamScam, getDebtCollectionDefenseResponse } = await import('./jania/trustedContacts');
-      if (isDebtCollectionOrSpamScam(body, userName)) {
-        const defenseMsg = getDebtCollectionDefenseResponse();
-        await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
-        const { appendDmHistory } = await import('./janIA');
-        appendDmHistory(senderId, 'user', body);
-        appendDmHistory(senderId, 'assistant', defenseMsg);
-        await this.logToDb(senderId, 'janIA', `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
-        return;
+    if (shouldEngageConversational && (body.trim() || imageBuffer || pdfBuffer)) {
+      // 📸 Análisis de visión si el mensaje contiene imagen
+      let flyerVisionData: any = null;
+      if (imageBuffer) {
+        try {
+          const { extractFlyerVisionSafely } = await import('./jania/vision');
+          flyerVisionData = await extractFlyerVisionSafely(imageBuffer);
+        } catch (visErr: any) {
+          console.warn('[JANIA-MATCH] [DM] Error en análisis visual defensivo:', visErr?.message || visErr);
+        }
+      }
+
+      // Si es un afiche/flyer comercial legítimo (oferta o demanda)
+      if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
+        const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+        try {
+          const { processWhatsAppMessage } = await import('./jania/handlers/propertiesHandler');
+          await processWhatsAppMessage(
+            body || flyerVisionData.flyerVerbatimText || "Publicación de inmueble por flyer",
+            senderId,
+            userName,
+            true,
+            [],
+            undefined,
+            imageBuffer,
+            false,
+            pdfBuffer,
+            pdfMimeType,
+            undefined,
+            undefined,
+            flyerVisionData
+          );
+          const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
+          const flyerReply = `¡Excelente! He analizado tu afiche comercial con visión artificial: *${flyerTitle}* 📸✨.\n\n` +
+            `Ha quedado captado en nuestro sistema de VECY BIENES RAÍCES para cruzarlo con nuestra base de datos inmobiliaria 🏢✨. Si necesitas consultar el predial en Bogotá o verificar antecedentes de tu cliente, dime y te colaboro de inmediato 🤝.`;
+          await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
+          const { appendDmHistory } = await import('./janIA');
+          appendDmHistory(senderId, 'user', body || `[Flyer: ${flyerTitle}]`);
+          appendDmHistory(senderId, 'assistant', flyerReply);
+          await this.logToDb(senderId, 'janIA', flyerReply);
+          return;
+        } finally {
+          stopPresence();
+        }
       }
 
       // 📇 INTERCEPTOR DIRECTO: SOLICITUD DE CONTACTO EN DM PRIVADO (v32.60)
@@ -1610,7 +1697,13 @@ export class JaniaMatchBot {
       let stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const { processPrivateDmConversationalMessage } = await import('./jania/handlers/dmHandler');
-        const reply = await processPrivateDmConversationalMessage(body, senderId, userName);
+        const reply = await processPrivateDmConversationalMessage(body, senderId, userName, {
+          imageBuffer,
+          pdfBuffer,
+          pdfMimeType,
+          isAudio: isAudioPTT,
+          flyerVisionData
+        });
         if (reply && reply.trim()) {
           console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura para ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
 

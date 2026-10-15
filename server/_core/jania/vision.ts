@@ -1,6 +1,7 @@
 /**
  * JanIA Vision - VECY BIENES RAÍCES
  * Lógica de análisis de flyers y visión artificial multimodal ultraligera con Gemini.
+ * Versión v33.11 (33.11.0) — Robustez multimodal contra caídas y reintentos adaptativos.
  */
 import axios from "axios";
 import { FlyerVisionResult } from "./types";
@@ -10,9 +11,9 @@ import {
 } from "../geminiKeyManager";
 
 /**
- * Extractor visual especializado y ultraligero para Flyers y Afiches Inmobiliarios (v31.22).
- * Procesa afiches de Oferta o Demanda en < 2 segundos con Gemini 2.5 Flash / cascada multi-modelo
- * sin sobrecargar el prompt base de 25k tokens y evitando cuellos de botella.
+ * Extractor visual especializado y ultraligero para Flyers y Afiches Inmobiliarios.
+ * Procesa afiches de Oferta o Demanda con Gemini Flash / cascada multi-modelo
+ * con reintentos defensivos contra caídas, saturación de red o cuotas.
  */
 export async function extractFlyerVision(imageBufferBase64: string): Promise<FlyerVisionResult | null> {
   if (!imageBufferBase64 || imageBufferBase64.trim() === '') return null;
@@ -23,26 +24,32 @@ export async function extractFlyerVision(imageBufferBase64: string): Promise<Fly
 
   if (candidateKeys.length === 0) {
     console.warn("[JanIA-Vision] ⚠️ No hay claves de Gemini configuradas para análisis visual.");
-    return null;
+    return {
+      isFlyerOrBanner: false,
+      classification: "CONSULTA_GENERAL",
+      transactionType: "venta",
+      flyerVerbatimText: ""
+    };
   }
 
+  // Modelos estables y de alta disponibilidad ordenados por velocidad y cuota
   const models = [
+    "gemini-2.5-flash",
     "gemini-flash-lite-latest",
-    "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash"
+    "gemini-2.5-flash-lite",
+    "gemini-1.5-flash"
   ];
 
   const prompt = `Eres la IA experta en visión documental y extracción de flyers inmobiliarios de VECY Bienes Raíces en Colombia.
-Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
+Analiza la imagen enviada a un chat o grupo de WhatsApp.
 Determina si es:
 1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
 2. "REQUERIMIENTO" (Demanda o búsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansión CON TEXTO PUBLICITARIO IMPRESO).
-3. "CONSULTA_GENERAL" (Fotografía ambiental común sin texto publicitario sobreimpreso —fachadas, salas, comedores, cocinas, baños, piscinas, jardines, planos mudos—, comprobante bancario, meme o ajeno a bienes raíces).
+3. "CONSULTA_GENERAL" (Fotografía ambiental común sin texto publicitario sobreimpreso —fachadas, salas, comedores, cocinas, baños, piscinas, jardines, planos mudos—, comprobante bancario, foto familiar, meme o ajeno a bienes raíces).
 
 REGLAS CRÍTICAS DE CLASIFICACIÓN:
-- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGRÁFICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea) SIN texto publicitario tipográfico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
+- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGRÁFICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea, una persona, una mascota, un meme) SIN texto publicitario tipográfico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
 - Si el flyer contiene texto tipográfico con términos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSIÓN", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
 - Si el flyer contiene texto tipográfico con términos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble específico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
 
@@ -90,10 +97,17 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
 
       try {
         console.log(`[JanIA-Vision] 👁️ Analizando flyer con ${model} (Key #${i + 1})...`);
-        const response = await axios.post(apiUrl, payload, { timeout: 6000 });
+        const response = await axios.post(apiUrl, payload, { timeout: 8000 });
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
-          const parsed = JSON.parse(textCandidate) as FlyerVisionResult;
+          let parsed: FlyerVisionResult;
+          try {
+            parsed = JSON.parse(textCandidate) as FlyerVisionResult;
+          } catch (jsonErr) {
+            console.warn(`[JanIA-Vision] Error parseando respuesta JSON de ${model}:`, jsonErr);
+            continue;
+          }
+
           const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
           const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
 
@@ -110,7 +124,7 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
             console.log(`[JanIA-Vision] ✅ Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ''}"`);
             return parsed;
           } else {
-            console.log(`[JanIA-Vision] ℹ️ Imagen descartada: Es foto ambiental o sin texto comercial sobreimpreso (${parsed?.classification || 'CONSULTA_GENERAL'}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
+            console.log(`[JanIA-Vision] ℹ️ Imagen descartada como flyer: Es foto ambiental, meme o sin texto comercial sobreimpreso (${parsed?.classification || 'CONSULTA_GENERAL'}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
             if (parsed) {
               parsed.isFlyerOrBanner = false;
               parsed.classification = "CONSULTA_GENERAL";
@@ -121,13 +135,37 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
         }
       } catch (err: any) {
         const status = err.response?.status;
-        console.warn(`[JanIA-Vision] ⚠️ Intento con ${model} (Key #${i + 1}) falló (${status || err.message}).`);
-        // Si la clave falló por cuota, pago o timeout, pasar a la siguiente clave sin bloquear
+        console.warn(`[JanIA-Vision] ⚠️ Intento con ${model} (Key #${i + 1}) falló (${status || err.message}). Pasando a fallback.`);
+        // Si la clave falló por cuota, timeout o red, continuar al siguiente intento sin romper el servidor
         continue;
       }
     }
   }
 
-  console.error("[JanIA-Vision] ❌ No fue posible analizar el flyer con ningún modelo/clave de Gemini.");
-  return null;
+  console.warn("[JanIA-Vision] ℹ️ Cascada visual agotada o en modo fallback defensivo.");
+  return {
+    isFlyerOrBanner: false,
+    classification: "CONSULTA_GENERAL",
+    transactionType: "venta",
+    flyerVerbatimText: ""
+  };
 }
+
+/**
+ * Envoltorio defensivo universal que garantiza que NUNCA lance una excepción ni retorne null
+ */
+export async function extractFlyerVisionSafely(imageBufferBase64: string): Promise<FlyerVisionResult> {
+  try {
+    const res = await extractFlyerVision(imageBufferBase64);
+    if (res) return res;
+  } catch (err: any) {
+    console.error("[JanIA-Vision-Safe] Excepción capturada en visión segura:", err?.message || err);
+  }
+  return {
+    isFlyerOrBanner: false,
+    classification: "CONSULTA_GENERAL",
+    transactionType: "venta",
+    flyerVerbatimText: ""
+  };
+}
+

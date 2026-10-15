@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.10";
+    VECY_VERSION = "v33.11";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10672,6 +10672,11 @@ var init_heuristics = __esm({
 });
 
 // server/_core/jania/vision.ts
+var vision_exports = {};
+__export(vision_exports, {
+  extractFlyerVision: () => extractFlyerVision,
+  extractFlyerVisionSafely: () => extractFlyerVisionSafely
+});
 import axios6 from "axios";
 async function extractFlyerVision(imageBufferBase64) {
   if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
@@ -10680,24 +10685,29 @@ async function extractFlyerVision(imageBufferBase64) {
   const candidateKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;
   if (candidateKeys.length === 0) {
     console.warn("[JanIA-Vision] \u26A0\uFE0F No hay claves de Gemini configuradas para an\xE1lisis visual.");
-    return null;
+    return {
+      isFlyerOrBanner: false,
+      classification: "CONSULTA_GENERAL",
+      transactionType: "venta",
+      flyerVerbatimText: ""
+    };
   }
   const models = [
+    "gemini-2.5-flash",
     "gemini-flash-lite-latest",
-    "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash"
+    "gemini-2.5-flash-lite",
+    "gemini-1.5-flash"
   ];
   const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en Colombia.
-Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
+Analiza la imagen enviada a un chat o grupo de WhatsApp.
 Determina si es:
 1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
 2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n CON TEXTO PUBLICITARIO IMPRESO).
-3. "CONSULTA_GENERAL" (Fotograf\xEDa ambiental com\xFAn sin texto publicitario sobreimpreso \u2014fachadas, salas, comedores, cocinas, ba\xF1os, piscinas, jardines, planos mudos\u2014, comprobante bancario, meme o ajeno a bienes ra\xEDces).
+3. "CONSULTA_GENERAL" (Fotograf\xEDa ambiental com\xFAn sin texto publicitario sobreimpreso \u2014fachadas, salas, comedores, cocinas, ba\xF1os, piscinas, jardines, planos mudos\u2014, comprobante bancario, foto familiar, meme o ajeno a bienes ra\xEDces).
 
 REGLAS CR\xCDTICAS DE CLASIFICACI\xD3N:
-- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGR\xC1FICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea) SIN texto publicitario tipogr\xE1fico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
+- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGR\xC1FICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea, una persona, una mascota, un meme) SIN texto publicitario tipogr\xE1fico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
 - Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
 - Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
 
@@ -10742,10 +10752,16 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       try {
         console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
-        const response = await axios6.post(apiUrl, payload, { timeout: 6e3 });
+        const response = await axios6.post(apiUrl, payload, { timeout: 8e3 });
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
-          const parsed = JSON.parse(textCandidate);
+          let parsed;
+          try {
+            parsed = JSON.parse(textCandidate);
+          } catch (jsonErr) {
+            console.warn(`[JanIA-Vision] Error parseando respuesta JSON de ${model}:`, jsonErr);
+            continue;
+          }
           const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
           const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
           if (parsed && isGenuineFlyer) {
@@ -10760,7 +10776,7 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
             console.log(`[JanIA-Vision] \u2705 Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ""}"`);
             return parsed;
           } else {
-            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen descartada: Es foto ambiental o sin texto comercial sobreimpreso (${parsed?.classification || "CONSULTA_GENERAL"}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
+            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen descartada como flyer: Es foto ambiental, meme o sin texto comercial sobreimpreso (${parsed?.classification || "CONSULTA_GENERAL"}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
             if (parsed) {
               parsed.isFlyerOrBanner = false;
               parsed.classification = "CONSULTA_GENERAL";
@@ -10771,13 +10787,32 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
         }
       } catch (err) {
         const status = err.response?.status;
-        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}).`);
+        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}). Pasando a fallback.`);
         continue;
       }
     }
   }
-  console.error("[JanIA-Vision] \u274C No fue posible analizar el flyer con ning\xFAn modelo/clave de Gemini.");
-  return null;
+  console.warn("[JanIA-Vision] \u2139\uFE0F Cascada visual agotada o en modo fallback defensivo.");
+  return {
+    isFlyerOrBanner: false,
+    classification: "CONSULTA_GENERAL",
+    transactionType: "venta",
+    flyerVerbatimText: ""
+  };
+}
+async function extractFlyerVisionSafely(imageBufferBase64) {
+  try {
+    const res = await extractFlyerVision(imageBufferBase64);
+    if (res) return res;
+  } catch (err) {
+    console.error("[JanIA-Vision-Safe] Excepci\xF3n capturada en visi\xF3n segura:", err?.message || err);
+  }
+  return {
+    isFlyerOrBanner: false,
+    classification: "CONSULTA_GENERAL",
+    transactionType: "venta",
+    flyerVerbatimText: ""
+  };
 }
 var init_vision = __esm({
   "server/_core/jania/vision.ts"() {
@@ -15459,6 +15494,316 @@ var init_notarialExpenseService = __esm({
   }
 });
 
+// server/_core/jania/trustedContacts.ts
+var trustedContacts_exports = {};
+__export(trustedContacts_exports, {
+  TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
+  TRUSTED_FAMILY_AND_FRIENDS: () => TRUSTED_FAMILY_AND_FRIENDS,
+  buildChaloJokeResponse: () => buildChaloJokeResponse,
+  buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
+  buildJonathanCreditResponse: () => buildJonathanCreditResponse,
+  findTrustedContact: () => findTrustedContact,
+  getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
+  isChaloEscobarJoke: () => isChaloEscobarJoke,
+  isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
+  isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
+  normalizePhoneDigits: () => normalizePhoneDigits
+});
+function normalizePhoneDigits(raw) {
+  if (!raw) return "";
+  const clean = raw.split("@")[0].replace(/\D/g, "");
+  if (clean.startsWith("57") && clean.length === 12) {
+    return clean.substring(2);
+  }
+  if (clean.length > 10) {
+    const last10 = clean.slice(-10);
+    if (last10.startsWith("3")) return last10;
+  }
+  return clean;
+}
+function findTrustedContact(userId, rawName) {
+  if (!userId && !rawName) return null;
+  const userClean = (userId || "").toLowerCase();
+  const digits = normalizePhoneDigits(userId);
+  const nameClean = (rawName || "").toLowerCase().trim();
+  for (const contact of TRUSTED_CONTACTS) {
+    if (digits && contact.digits && contact.digits === digits) {
+      return contact;
+    }
+    if (contact.phones.some((p) => {
+      const pDigits = normalizePhoneDigits(p);
+      return digits && pDigits === digits || userClean.includes(p) || userClean.includes(pDigits);
+    })) {
+      return contact;
+    }
+    if (contact.lids && contact.lids.some((lid) => userClean.includes(lid))) {
+      return contact;
+    }
+    if (contact.aliases && contact.aliases.some((alias) => userClean.includes(alias))) {
+      return contact;
+    }
+    if (nameClean && nameClean.length >= 4) {
+      const contactLower = (contact.fullName || "").toLowerCase();
+      if (nameClean === contactLower || contactLower.length >= 10 && nameClean.includes(contactLower)) {
+        return contact;
+      }
+      for (const n of contact.names) {
+        const nLower = n.toLowerCase();
+        if (nLower.length >= 8 && (nameClean === nLower || nameClean.includes(nLower))) {
+          return contact;
+        }
+      }
+      const EXCLUSIVE_NICKS = /* @__PURE__ */ new Set([
+        "madrecita",
+        "madrecita querida",
+        "mamita hermosa",
+        "t\xEDa olandita",
+        "tia olandita",
+        "olandita",
+        "t\xEDa tulita",
+        "tia tulita",
+        "anita tulita",
+        "t\xEDa marinita",
+        "tia marinita",
+        "marinita",
+        "t\xEDo luis",
+        "tio luis",
+        "pollotote",
+        "mi natis",
+        "pollita hermosa",
+        "natillita",
+        "coraz\xF3n de melocot\xF3n",
+        "monacha remolacha",
+        "cayaco",
+        "cayaqu\xEDn",
+        "jaton",
+        "jaksit\xF3n"
+      ]);
+      for (const nick of contact.nicknames) {
+        const nickLower = nick.toLowerCase();
+        if (EXCLUSIVE_NICKS.has(nickLower) && (nameClean === nickLower || nameClean.includes(nickLower))) {
+          return contact;
+        }
+      }
+    }
+  }
+  return null;
+}
+function buildFamilyWarmWelcomeMessage(contact) {
+  if (contact.customMessage) {
+    return contact.customMessage;
+  }
+  const nick = contact.primaryNick || contact.nicknames[0] || contact.names[0];
+  return `\xA1Hola ${nick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Como hoy es el cumplea\xF1os de Eduardo (Eddu) o para cualquier asunto personal, te comparto su n\xFAmero directo y nuevo de br\xF3ker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
+}
+function isChaloEscobarJoke(text2) {
+  if (!text2) return false;
+  const clean = text2.toLowerCase();
+  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(
+    clean
+  );
+}
+function buildChaloJokeResponse() {
+  return `\xA1Hola Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
+
+Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA en VECY BIENES RA\xCDCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su n\xFAmero nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1O d\xE9jame tu raz\xF3n por ac\xE1 y yo se la entrego intacta!`;
+}
+function isJonathanCreditProcessQuery(text2) {
+  if (!text2) return false;
+  const clean = text2.toLowerCase();
+  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(
+    clean
+  );
+}
+function buildJonathanCreditResponse() {
+  return `\xA1Hola Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
+
+Como esta l\xEDnea ahora es mi canal exclusivo como JanIA en VECY BIENES RA\xCDCES, comun\xEDcate con \xE9l directamente a su l\xEDnea de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719). \xA1O si deseas, d\xE9jame tu mensaje y yo se lo pongo de presente!`;
+}
+function isDebtCollectionOrSpamScam(text2, senderName) {
+  if (!text2 && !senderName) return false;
+  const combined = `${text2 || ""} ${senderName || ""}`.toLowerCase();
+  const hasCollectionKeywords = /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|notificaci[oó]n\s*(?:legal|personal)|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora|abogados?\s*(?:de\s*)?cobranza|oficina\s*jur[ií]dica\s*de\s*cobro|cobro\s*extrajudicial|cartera\s*castigada)/i.test(
+    combined
+  );
+  const hasCollectionAgencies = /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza|covinoc|sistecredito|contact\s*center\s*de\s*cobro)/i.test(
+    combined
+  );
+  const hasTargetedCollection = /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n|notificaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera|comunicar(?:me)?\s*con\s*el\s*titular\s*de\s*la\s*l[ií]nea\s*por\s*un\s*asunto\s*(?:legal|pendiente)|asunto\s*legal\s*con\s*eduardo)/i.test(
+    combined
+  );
+  return hasCollectionKeywords || hasCollectionAgencies || hasTargetedCollection;
+}
+function getDebtCollectionDefenseResponse() {
+  return "Hola. No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.";
+}
+var TRUSTED_FAMILY_AND_FRIENDS, TRUSTED_CONTACTS;
+var init_trustedContacts = __esm({
+  "server/_core/jania/trustedContacts.ts"() {
+    "use strict";
+    TRUSTED_FAMILY_AND_FRIENDS = {
+      carmenza: {
+        phones: ["573108643555"],
+        names: ["Mar\xEDa del Carmen Mart\xEDnez Castro", "Carmenza", "Maria del Carmen"],
+        relation: "Madre",
+        nicknames: ["Madrecita", "Madrecita querida", "Mamita hermosa"],
+        customMessage: "\xA1Madrecita hermosa! Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento con todo el amor que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigantesco y un beso enorme de su parte!"
+      },
+      olanda: {
+        phones: ["573138524917"],
+        names: ["Olanda In\xE9s Rivera G\xF3mez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
+        relation: "T\xEDa",
+        nicknames: ["T\xEDa Olandita", "Olandita"],
+        customMessage: "\xA1T\xEDa Olandita hermosa! Qu\xE9 gusto saludarte. Te cuento con mucho cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su l\xEDnea directa de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
+      },
+      ana_tulia: {
+        phones: ["573124794864"],
+        names: ["Ana Tulia Rivera G\xF3mez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
+        relation: "T\xEDa",
+        nicknames: ["T\xEDa Tulita", "Anita Tulita"],
+        customMessage: "\xA1T\xEDa Tulita querida! Qu\xE9 alegr\xEDa tan inmensa saludarte. Te cuento con todo el cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
+      },
+      marina: {
+        phones: ["573204997575"],
+        names: ["Marina Mart\xEDnez Castro", "Marina Martinez Castro", "Marina"],
+        relation: "T\xEDa",
+        nicknames: ["T\xEDa Marinita", "Marinita"],
+        customMessage: "\xA1T\xEDa Marinita hermosa! Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con Eduardo (Eddu), te comparto su n\xFAmero directo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+      },
+      tio_luis: {
+        phones: ["573132094918"],
+        names: ["Luis Eduardo Rivera G\xF3mez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
+        relation: "T\xEDo",
+        nicknames: ["T\xEDo Luis"],
+        customMessage: "\xA1T\xEDo Luis! Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      daniel: {
+        phones: ["573006067089"],
+        names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
+        relation: "Hijo",
+        nicknames: ["Pollotote", "Campe\xF3n", "Mi ingeniero favorito"],
+        customMessage: "\xA1Hola, mi Pollotote querido! \xA1Campe\xF3n, mi ingeniero favorito! \u{1F680}\u{1F4BB} Qu\xE9 alegr\xEDa que me escribas. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas llamar o escribirle a tu pap\xE1 (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te quiere much\xEDsimo!"
+      },
+      natalia: {
+        phones: ["573058788329"],
+        names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
+        relation: "Hija",
+        nicknames: ["Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Coraz\xF3n de Melocot\xF3n", "Monacha Remolacha"],
+        customMessage: "\xA1Hola, mi Natis hermosa! \xA1Mi princesa, Natillita, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
+      },
+      jani: {
+        phones: ["573188096811", "573166569719"],
+        names: ["Jani Alves Souza", "Jani Alves", "Jani"],
+        relation: "Esposa / Co-founder",
+        nicknames: ["Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
+        customMessage: "\xA1Hola, mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
+        lids: ["167108705018103", "182781141344345", "218820279050385"]
+      },
+      monica: {
+        phones: ["573103395788"],
+        names: ["M\xF3nica Mart\xEDnez", "Monica Martinez", "Monica"],
+        relation: "Prima",
+        nicknames: ["Monik", "Chinita", "Primi", "Primita"],
+        customMessage: "\xA1Hola, mi Monik hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+      },
+      liliana: {
+        phones: ["573132533474"],
+        names: ["Liliana Mart\xEDnez", "Liliana Martinez", "Liliana"],
+        relation: "Prima",
+        nicknames: ["Lili", "Chinita", "Primi", "Primitica"],
+        customMessage: "\xA1Hola, mi Lili hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle a Eduardo (Eddu), su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      marcelita: {
+        phones: ["573144354412"],
+        names: [
+          "Liliana Marcela Castellanos Martinez",
+          "Liliana Marcela Castellanos",
+          "Marcelita Castellanos",
+          "Marcela Castellanos",
+          "Marcela"
+        ],
+        relation: "Prima",
+        nicknames: ["Marcelita", "Primita", "Primi", "Chinita"],
+        customMessage: "\xA1Hola, mi Marcelita hermosa! \xA1Primi querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+      },
+      carlitos: {
+        phones: ["573054589435"],
+        names: ["Carlitos Mart\xEDnez", "Carlitos Martinez", "Charles Barber", "Carlos"],
+        relation: "Primo",
+        nicknames: ["Cayaco", "Cayaqu\xEDn", "Carlitos"],
+        customMessage: "\xA1Hola, mi querido Cayaco! \xA1Cayaqu\xEDn, hermano! \u{1F488}\u2702\uFE0F Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle o llamar a Eduardo (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un abrazo de gol!"
+      },
+      jackson: {
+        phones: ["573142721432"],
+        names: ["Jackson Mart\xEDnez", "Jackson Martinez", "Jackson"],
+        relation: "Primo",
+        nicknames: ["Jat\xF3n", "Jaksit\xF3n", "Primo"],
+        customMessage: "\xA1Hola, mi estimado Jaton! \xA1Jaksit\xF3n, primo! \u{1F680} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      gus: {
+        phones: ["573108096117"],
+        names: ["Gustavo Guevara", "Gustavo"],
+        relation: "Amigo",
+        nicknames: ["Gus"],
+        customMessage: "\xA1Hola, mi estimado Gus! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      lucho_taxi: {
+        phones: ["573105772223"],
+        names: ["Luis \xC1ngel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
+        relation: "Amigo / Servicio Especial Hotel",
+        nicknames: ["Lucho"],
+        customMessage: "\xA1Hola, mi estimado Lucho! \u{1F695} Hotel y servicio especial. Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      chalo_andres: {
+        phones: ["573005509529"],
+        names: ["Andr\xE9s Ruiz", "Andres Ruiz", "Chalo"],
+        relation: "Amigo",
+        nicknames: ["Chalo"],
+        customMessage: "\xA1Hola, mi querido Chalo!  patr\xF3n... digo, \xA1compa\xF1ero! \u{1F576}\uFE0F\u{1F602} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patr\xF3n favorito, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      jonathan_datacredito: {
+        phones: ["573103790278"],
+        names: [
+          "Jonathan Stiven Mart\xEDnez Monta\xF1o",
+          "Jonathan Stiven Martinez Montano",
+          "Jonathan Stiven",
+          "Jonathan"
+        ],
+        relation: "Cliente / Proceso Legal Datacr\xE9dito",
+        nicknames: ["Jonathan"],
+        customMessage: "\xA1Hola, Jonathan! Qu\xE9 gusto saludarte. Te comento que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Respecto a tu caso pendiente para salir de reportes en Datacr\xE9dito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con \xE9l para revisar los avances, su l\xEDnea directa de br\xF3ker y gesti\xF3n jur\xEDdica es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Seguimos firmes con tu caso!"
+      },
+      eduardo: {
+        phones: ["573192919978"],
+        names: ["Eduardo Arturo Rivera Mart\xEDnez", "Eduardo Rivera", "Eduardo", "Eddu"],
+        relation: "Director de Tecnolog\xEDa / Fundador",
+        nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
+        customMessage: "\xA1Hola Eduardo! Aqu\xED estoy al frente de JanIA en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy?",
+        aliases: ["3166569719"],
+        lids: ["225954035179724"]
+      }
+    };
+    TRUSTED_CONTACTS = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
+      ([key, contact]) => {
+        const digits = normalizePhoneDigits(contact.phones[0] || "");
+        const primaryNick = contact.nicknames[0] || contact.names[0];
+        const enriched = {
+          ...contact,
+          id: key,
+          key,
+          primaryNick,
+          allNicks: contact.nicknames,
+          fullName: contact.names[0],
+          relationship: contact.relation,
+          digits,
+          category: key === "jani" || key === "eduardo" ? "directiva" : key === "carmenza" || key === "daniel" || key === "natalia" ? "familia_directa" : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo") ? "familia_extendida" : "amigos_y_especiales"
+        };
+        return enriched;
+      }
+    );
+  }
+});
+
 // server/_core/adminMatchAssistantService.ts
 var adminMatchAssistantService_exports = {};
 __export(adminMatchAssistantService_exports, {
@@ -16486,475 +16831,6 @@ var init_iduValorizacionService = __esm({
     pendingIduSessions = /* @__PURE__ */ new Map();
     IDU_SESSION_TTL_MS = 10 * 60 * 1e3;
     executeIduValorizacionFromWhatsApp = executeIduAssistanceFromWhatsApp;
-  }
-});
-
-// server/_core/jania/trustedContacts.ts
-var trustedContacts_exports = {};
-__export(trustedContacts_exports, {
-  TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
-  TRUSTED_FAMILY_AND_FRIENDS: () => TRUSTED_FAMILY_AND_FRIENDS,
-  buildChaloJokeResponse: () => buildChaloJokeResponse,
-  buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
-  buildJonathanCreditResponse: () => buildJonathanCreditResponse,
-  findTrustedContact: () => findTrustedContact,
-  getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
-  isChaloEscobarJoke: () => isChaloEscobarJoke,
-  isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
-  isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
-  normalizePhoneDigits: () => normalizePhoneDigits
-});
-function normalizePhoneDigits(raw) {
-  if (!raw) return "";
-  const clean = raw.split("@")[0].replace(/\D/g, "");
-  if (clean.startsWith("57") && clean.length === 12) {
-    return clean.substring(2);
-  }
-  if (clean.length > 10) {
-    const last10 = clean.slice(-10);
-    if (last10.startsWith("3")) return last10;
-  }
-  return clean;
-}
-function findTrustedContact(userId, rawName) {
-  if (!userId && !rawName) return null;
-  const userClean = (userId || "").toLowerCase();
-  const digits = normalizePhoneDigits(userId);
-  const nameClean = (rawName || "").toLowerCase().trim();
-  for (const contact of TRUSTED_CONTACTS) {
-    if (digits && contact.digits && contact.digits === digits) {
-      return contact;
-    }
-    if (contact.phones.some((p) => {
-      const pDigits = normalizePhoneDigits(p);
-      return digits && pDigits === digits || userClean.includes(p) || userClean.includes(pDigits);
-    })) {
-      return contact;
-    }
-    if (contact.lids && contact.lids.some((lid) => userClean.includes(lid))) {
-      return contact;
-    }
-    if (contact.aliases && contact.aliases.some((alias) => userClean.includes(alias))) {
-      return contact;
-    }
-    if (nameClean && nameClean.length >= 4) {
-      const contactLower = (contact.fullName || "").toLowerCase();
-      if (nameClean === contactLower || contactLower.length >= 10 && nameClean.includes(contactLower)) {
-        return contact;
-      }
-      for (const n of contact.names) {
-        const nLower = n.toLowerCase();
-        if (nLower.length >= 8 && (nameClean === nLower || nameClean.includes(nLower))) {
-          return contact;
-        }
-      }
-      const EXCLUSIVE_NICKS = /* @__PURE__ */ new Set([
-        "madrecita",
-        "madrecita querida",
-        "mamita hermosa",
-        "t\xEDa olandita",
-        "tia olandita",
-        "olandita",
-        "t\xEDa tulita",
-        "tia tulita",
-        "anita tulita",
-        "t\xEDa marinita",
-        "tia marinita",
-        "marinita",
-        "t\xEDo luis",
-        "tio luis",
-        "pollotote",
-        "mi natis",
-        "pollita hermosa",
-        "natillita",
-        "coraz\xF3n de melocot\xF3n",
-        "monacha remolacha",
-        "cayaco",
-        "cayaqu\xEDn",
-        "jaton",
-        "jaksit\xF3n"
-      ]);
-      for (const nick of contact.nicknames) {
-        const nickLower = nick.toLowerCase();
-        if (EXCLUSIVE_NICKS.has(nickLower) && (nameClean === nickLower || nameClean.includes(nickLower))) {
-          return contact;
-        }
-      }
-    }
-  }
-  return null;
-}
-function buildFamilyWarmWelcomeMessage(contact) {
-  if (contact.customMessage) {
-    return contact.customMessage;
-  }
-  const nick = contact.primaryNick || contact.nicknames[0] || contact.names[0];
-  return `\xA1Hola ${nick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Como hoy es el cumplea\xF1os de Eduardo (Eddu) o para cualquier asunto personal, te comparto su n\xFAmero directo y nuevo de br\xF3ker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
-}
-function isChaloEscobarJoke(text2) {
-  if (!text2) return false;
-  const clean = text2.toLowerCase();
-  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(
-    clean
-  );
-}
-function buildChaloJokeResponse() {
-  return `\xA1Hola Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
-
-Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA en VECY BIENES RA\xCDCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su n\xFAmero nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1O d\xE9jame tu raz\xF3n por ac\xE1 y yo se la entrego intacta!`;
-}
-function isJonathanCreditProcessQuery(text2) {
-  if (!text2) return false;
-  const clean = text2.toLowerCase();
-  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(
-    clean
-  );
-}
-function buildJonathanCreditResponse() {
-  return `\xA1Hola Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
-
-Como esta l\xEDnea ahora es mi canal exclusivo como JanIA en VECY BIENES RA\xCDCES, comun\xEDcate con \xE9l directamente a su l\xEDnea de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719). \xA1O si deseas, d\xE9jame tu mensaje y yo se lo pongo de presente!`;
-}
-function isDebtCollectionOrSpamScam(text2, senderName) {
-  if (!text2 && !senderName) return false;
-  const combined = `${text2 || ""} ${senderName || ""}`.toLowerCase();
-  const hasCollectionKeywords = /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|notificaci[oó]n\s*(?:legal|personal)|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora|abogados?\s*(?:de\s*)?cobranza|oficina\s*jur[ií]dica\s*de\s*cobro|cobro\s*extrajudicial|cartera\s*castigada)/i.test(
-    combined
-  );
-  const hasCollectionAgencies = /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza|covinoc|sistecredito|contact\s*center\s*de\s*cobro)/i.test(
-    combined
-  );
-  const hasTargetedCollection = /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n|notificaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera|comunicar(?:me)?\s*con\s*el\s*titular\s*de\s*la\s*l[ií]nea\s*por\s*un\s*asunto\s*(?:legal|pendiente)|asunto\s*legal\s*con\s*eduardo)/i.test(
-    combined
-  );
-  return hasCollectionKeywords || hasCollectionAgencies || hasTargetedCollection;
-}
-function getDebtCollectionDefenseResponse() {
-  return "Hola. No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.";
-}
-var TRUSTED_FAMILY_AND_FRIENDS, TRUSTED_CONTACTS;
-var init_trustedContacts = __esm({
-  "server/_core/jania/trustedContacts.ts"() {
-    "use strict";
-    TRUSTED_FAMILY_AND_FRIENDS = {
-      carmenza: {
-        phones: ["573108643555"],
-        names: ["Mar\xEDa del Carmen Mart\xEDnez Castro", "Carmenza", "Maria del Carmen"],
-        relation: "Madre",
-        nicknames: ["Madrecita", "Madrecita querida", "Mamita hermosa"],
-        customMessage: "\xA1Madrecita hermosa! Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento con todo el amor que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigantesco y un beso enorme de su parte!"
-      },
-      olanda: {
-        phones: ["573138524917"],
-        names: ["Olanda In\xE9s Rivera G\xF3mez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
-        relation: "T\xEDa",
-        nicknames: ["T\xEDa Olandita", "Olandita"],
-        customMessage: "\xA1T\xEDa Olandita hermosa! Qu\xE9 gusto saludarte. Te cuento con mucho cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su l\xEDnea directa de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
-      },
-      ana_tulia: {
-        phones: ["573124794864"],
-        names: ["Ana Tulia Rivera G\xF3mez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
-        relation: "T\xEDa",
-        nicknames: ["T\xEDa Tulita", "Anita Tulita"],
-        customMessage: "\xA1T\xEDa Tulita querida! Qu\xE9 alegr\xEDa tan inmensa saludarte. Te cuento con todo el cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
-      },
-      marina: {
-        phones: ["573204997575"],
-        names: ["Marina Mart\xEDnez Castro", "Marina Martinez Castro", "Marina"],
-        relation: "T\xEDa",
-        nicknames: ["T\xEDa Marinita", "Marinita"],
-        customMessage: "\xA1T\xEDa Marinita hermosa! Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con Eduardo (Eddu), te comparto su n\xFAmero directo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
-      },
-      tio_luis: {
-        phones: ["573132094918"],
-        names: ["Luis Eduardo Rivera G\xF3mez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
-        relation: "T\xEDo",
-        nicknames: ["T\xEDo Luis"],
-        customMessage: "\xA1T\xEDo Luis! Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      daniel: {
-        phones: ["573006067089"],
-        names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
-        relation: "Hijo",
-        nicknames: ["Pollotote", "Campe\xF3n", "Mi ingeniero favorito"],
-        customMessage: "\xA1Hola, mi Pollotote querido! \xA1Campe\xF3n, mi ingeniero favorito! \u{1F680}\u{1F4BB} Qu\xE9 alegr\xEDa que me escribas. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas llamar o escribirle a tu pap\xE1 (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te quiere much\xEDsimo!"
-      },
-      natalia: {
-        phones: ["573058788329"],
-        names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
-        relation: "Hija",
-        nicknames: ["Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Coraz\xF3n de Melocot\xF3n", "Monacha Remolacha"],
-        customMessage: "\xA1Hola, mi Natis hermosa! \xA1Mi princesa, Natillita, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
-      },
-      jani: {
-        phones: ["573188096811", "573166569719"],
-        names: ["Jani Alves Souza", "Jani Alves", "Jani"],
-        relation: "Esposa / Co-founder",
-        nicknames: ["Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
-        customMessage: "\xA1Hola, mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
-        lids: ["167108705018103", "182781141344345", "218820279050385"]
-      },
-      monica: {
-        phones: ["573103395788"],
-        names: ["M\xF3nica Mart\xEDnez", "Monica Martinez", "Monica"],
-        relation: "Prima",
-        nicknames: ["Monik", "Chinita", "Primi", "Primita"],
-        customMessage: "\xA1Hola, mi Monik hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
-      },
-      liliana: {
-        phones: ["573132533474"],
-        names: ["Liliana Mart\xEDnez", "Liliana Martinez", "Liliana"],
-        relation: "Prima",
-        nicknames: ["Lili", "Chinita", "Primi", "Primitica"],
-        customMessage: "\xA1Hola, mi Lili hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle a Eduardo (Eddu), su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      marcelita: {
-        phones: ["573144354412"],
-        names: [
-          "Liliana Marcela Castellanos Martinez",
-          "Liliana Marcela Castellanos",
-          "Marcelita Castellanos",
-          "Marcela Castellanos",
-          "Marcela"
-        ],
-        relation: "Prima",
-        nicknames: ["Marcelita", "Primita", "Primi", "Chinita"],
-        customMessage: "\xA1Hola, mi Marcelita hermosa! \xA1Primi querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
-      },
-      carlitos: {
-        phones: ["573054589435"],
-        names: ["Carlitos Mart\xEDnez", "Carlitos Martinez", "Charles Barber", "Carlos"],
-        relation: "Primo",
-        nicknames: ["Cayaco", "Cayaqu\xEDn", "Carlitos"],
-        customMessage: "\xA1Hola, mi querido Cayaco! \xA1Cayaqu\xEDn, hermano! \u{1F488}\u2702\uFE0F Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle o llamar a Eduardo (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un abrazo de gol!"
-      },
-      jackson: {
-        phones: ["573142721432"],
-        names: ["Jackson Mart\xEDnez", "Jackson Martinez", "Jackson"],
-        relation: "Primo",
-        nicknames: ["Jat\xF3n", "Jaksit\xF3n", "Primo"],
-        customMessage: "\xA1Hola, mi estimado Jaton! \xA1Jaksit\xF3n, primo! \u{1F680} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      gus: {
-        phones: ["573108096117"],
-        names: ["Gustavo Guevara", "Gustavo"],
-        relation: "Amigo",
-        nicknames: ["Gus"],
-        customMessage: "\xA1Hola, mi estimado Gus! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      lucho_taxi: {
-        phones: ["573105772223"],
-        names: ["Luis \xC1ngel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
-        relation: "Amigo / Servicio Especial Hotel",
-        nicknames: ["Lucho"],
-        customMessage: "\xA1Hola, mi estimado Lucho! \u{1F695} Hotel y servicio especial. Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      chalo_andres: {
-        phones: ["573005509529"],
-        names: ["Andr\xE9s Ruiz", "Andres Ruiz", "Chalo"],
-        relation: "Amigo",
-        nicknames: ["Chalo"],
-        customMessage: "\xA1Hola, mi querido Chalo!  patr\xF3n... digo, \xA1compa\xF1ero! \u{1F576}\uFE0F\u{1F602} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patr\xF3n favorito, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      jonathan_datacredito: {
-        phones: ["573103790278"],
-        names: [
-          "Jonathan Stiven Mart\xEDnez Monta\xF1o",
-          "Jonathan Stiven Martinez Montano",
-          "Jonathan Stiven",
-          "Jonathan"
-        ],
-        relation: "Cliente / Proceso Legal Datacr\xE9dito",
-        nicknames: ["Jonathan"],
-        customMessage: "\xA1Hola, Jonathan! Qu\xE9 gusto saludarte. Te comento que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Respecto a tu caso pendiente para salir de reportes en Datacr\xE9dito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con \xE9l para revisar los avances, su l\xEDnea directa de br\xF3ker y gesti\xF3n jur\xEDdica es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Seguimos firmes con tu caso!"
-      },
-      eduardo: {
-        phones: ["573192919978"],
-        names: ["Eduardo Arturo Rivera Mart\xEDnez", "Eduardo Rivera", "Eduardo", "Eddu"],
-        relation: "Director de Tecnolog\xEDa / Fundador",
-        nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
-        customMessage: "\xA1Hola Eduardo! Aqu\xED estoy al frente de JanIA en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy?",
-        aliases: ["3166569719"],
-        lids: ["225954035179724"]
-      }
-    };
-    TRUSTED_CONTACTS = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
-      ([key, contact]) => {
-        const digits = normalizePhoneDigits(contact.phones[0] || "");
-        const primaryNick = contact.nicknames[0] || contact.names[0];
-        const enriched = {
-          ...contact,
-          id: key,
-          key,
-          primaryNick,
-          allNicks: contact.nicknames,
-          fullName: contact.names[0],
-          relationship: contact.relation,
-          digits,
-          category: key === "jani" || key === "eduardo" ? "directiva" : key === "carmenza" || key === "daniel" || key === "natalia" ? "familia_directa" : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo") ? "familia_extendida" : "amigos_y_especiales"
-        };
-        return enriched;
-      }
-    );
-  }
-});
-
-// server/_core/valuation.ts
-function calcularPrecioHomologado(params) {
-  let cAntiguedad = 1;
-  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
-  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
-  let cPiso = 1;
-  if (params.tieneAscensor) {
-    cPiso = params.piso <= 2 ? 0.95 : 1.02;
-  } else {
-    if (params.piso <= 2) cPiso = 1;
-    else if (params.piso === 3) cPiso = 0.93;
-    else if (params.piso >= 4) cPiso = 0.85;
-  }
-  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
-  const cAmenidades = params.esClubHouse ? 1.07 : 1;
-  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
-  return {
-    precioM2Homologado,
-    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
-  };
-}
-function calculatePropertyValuation(input) {
-  const result = calcularPrecioHomologado({
-    basePricePerM2: input.baseZonePricePerM2,
-    antiguedadAnos: input.ageYears,
-    tieneAscensor: input.hasElevator ?? true,
-    piso: input.floorNumber ?? 3,
-    garajes: input.garages ?? 0,
-    esClubHouse: input.hasClubHouse ?? false
-  });
-  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
-  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
-  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
-  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
-  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
-  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
-  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
-  return {
-    baseZonePricePerM2: input.baseZonePricePerM2,
-    homologatedPricePerM2,
-    suggestedCommercialValue,
-    minClosingPrice,
-    estimatedMonthlyRent,
-    estimatedCapRate,
-    totalAreaM2: input.areaM2,
-    coefficients: {
-      cAntiguedad,
-      cPiso,
-      cGarajes,
-      cAmenidades
-    },
-    factorBreakdown: {
-      ageFactor: {
-        name: "Antig\xFCedad",
-        coefficient: cAntiguedad,
-        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
-        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
-      },
-      floorFactor: {
-        name: "Piso / Altura",
-        coefficient: cPiso,
-        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
-        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
-      },
-      garageFactor: {
-        name: "Garajes",
-        coefficient: cGarajes,
-        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
-        description: `${input.garages ?? 0} parqueaderos privados`
-      },
-      amenitiesFactor: {
-        name: "Amenidades",
-        coefficient: cAmenidades,
-        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
-        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
-      }
-    },
-    totalHomologationFactor: Number(totalFactor.toFixed(4)),
-    comparableSources: input.comparableSources || [],
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
-function executeMarketValuationSurvey(params) {
-  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
-  let basePrice = 65e5;
-  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
-  let hasVerifiedComparables = true;
-  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
-    basePrice = 145e5;
-  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
-    basePrice = 125e5;
-  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
-    basePrice = 105e5;
-  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
-    basePrice = 85e5;
-  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
-    basePrice = 78e5;
-  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
-    basePrice = 75e5;
-  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
-    basePrice = 62e5;
-  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
-    basePrice = 58e5;
-  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
-    basePrice = 55e5;
-  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
-    basePrice = 65e5;
-  } else {
-    hasVerifiedComparables = false;
-  }
-  const area = params.areaM2 || 75;
-  const valuation = calculatePropertyValuation({
-    zone: zoneName,
-    city: "Bogot\xE1",
-    areaM2: area,
-    baseZonePricePerM2: basePrice,
-    ageYears: params.antiguedadAnos || 8,
-    floorNumber: params.piso || 3,
-    hasElevator: params.tieneAscensor ?? true,
-    garages: params.garajes || 1,
-    hasClubHouse: params.esClubHouse || false,
-    comparableSources: [
-      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
-      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
-      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
-    ]
-  });
-  return {
-    zonaConsultada: zoneName,
-    zonaOBarrio: zoneName,
-    tieneComparablesVerificados: hasVerifiedComparables,
-    baseZonePricePerM2: valuation.baseZonePricePerM2,
-    homologatedPricePerM2: valuation.homologatedPricePerM2,
-    valorM2Estimado: valuation.homologatedPricePerM2,
-    suggestedCommercialValue: valuation.suggestedCommercialValue,
-    valorComercialSugerido: valuation.suggestedCommercialValue,
-    minClosingPrice: valuation.minClosingPrice,
-    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
-    canonArriendoEstimado: valuation.estimatedMonthlyRent,
-    estimatedCapRate: valuation.estimatedCapRate,
-    areaM2: area,
-    coefficients: valuation.coefficients,
-    factorBreakdown: valuation.factorBreakdown,
-    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
-    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
-    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
-    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
-  };
-}
-var init_valuation = __esm({
-  "server/_core/valuation.ts"() {
-    "use strict";
   }
 });
 
@@ -18571,9 +18447,15 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
     if (!flyerData && imageBuffer) {
       console.log(`[JanIA] \u{1F441}\uFE0F Analizando imagen/flyer con visi\xF3n artificial especializada...`);
       try {
-        flyerData = await extractFlyerVision(imageBuffer);
+        flyerData = await extractFlyerVisionSafely(imageBuffer);
       } catch (errVision) {
-        console.warn(`[JanIA] \u26A0\uFE0F Error en extractFlyerVision:`, errVision?.message || errVision);
+        console.warn(`[JanIA] \u26A0\uFE0F Error en extractFlyerVisionSafely:`, errVision?.message || errVision);
+        flyerData = {
+          isFlyerOrBanner: false,
+          classification: "CONSULTA_GENERAL",
+          transactionType: "venta",
+          flyerVerbatimText: ""
+        };
       }
     }
     const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
@@ -19469,6 +19351,165 @@ var init_propertiesHandler = __esm({
   }
 });
 
+// server/_core/valuation.ts
+function calcularPrecioHomologado(params) {
+  let cAntiguedad = 1;
+  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
+  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
+  let cPiso = 1;
+  if (params.tieneAscensor) {
+    cPiso = params.piso <= 2 ? 0.95 : 1.02;
+  } else {
+    if (params.piso <= 2) cPiso = 1;
+    else if (params.piso === 3) cPiso = 0.93;
+    else if (params.piso >= 4) cPiso = 0.85;
+  }
+  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
+  const cAmenidades = params.esClubHouse ? 1.07 : 1;
+  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
+  return {
+    precioM2Homologado,
+    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
+  };
+}
+function calculatePropertyValuation(input) {
+  const result = calcularPrecioHomologado({
+    basePricePerM2: input.baseZonePricePerM2,
+    antiguedadAnos: input.ageYears,
+    tieneAscensor: input.hasElevator ?? true,
+    piso: input.floorNumber ?? 3,
+    garajes: input.garages ?? 0,
+    esClubHouse: input.hasClubHouse ?? false
+  });
+  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
+  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
+  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
+  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
+  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
+  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
+  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
+  return {
+    baseZonePricePerM2: input.baseZonePricePerM2,
+    homologatedPricePerM2,
+    suggestedCommercialValue,
+    minClosingPrice,
+    estimatedMonthlyRent,
+    estimatedCapRate,
+    totalAreaM2: input.areaM2,
+    coefficients: {
+      cAntiguedad,
+      cPiso,
+      cGarajes,
+      cAmenidades
+    },
+    factorBreakdown: {
+      ageFactor: {
+        name: "Antig\xFCedad",
+        coefficient: cAntiguedad,
+        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
+        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
+      },
+      floorFactor: {
+        name: "Piso / Altura",
+        coefficient: cPiso,
+        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
+        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
+      },
+      garageFactor: {
+        name: "Garajes",
+        coefficient: cGarajes,
+        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
+        description: `${input.garages ?? 0} parqueaderos privados`
+      },
+      amenitiesFactor: {
+        name: "Amenidades",
+        coefficient: cAmenidades,
+        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
+        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
+      }
+    },
+    totalHomologationFactor: Number(totalFactor.toFixed(4)),
+    comparableSources: input.comparableSources || [],
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+function executeMarketValuationSurvey(params) {
+  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  let basePrice = 65e5;
+  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
+  let hasVerifiedComparables = true;
+  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
+    basePrice = 145e5;
+  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
+    basePrice = 125e5;
+  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
+    basePrice = 105e5;
+  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
+    basePrice = 85e5;
+  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
+    basePrice = 78e5;
+  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
+    basePrice = 75e5;
+  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
+    basePrice = 62e5;
+  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
+    basePrice = 58e5;
+  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
+    basePrice = 55e5;
+  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
+    basePrice = 65e5;
+  } else {
+    hasVerifiedComparables = false;
+  }
+  const area = params.areaM2 || 75;
+  const valuation = calculatePropertyValuation({
+    zone: zoneName,
+    city: "Bogot\xE1",
+    areaM2: area,
+    baseZonePricePerM2: basePrice,
+    ageYears: params.antiguedadAnos || 8,
+    floorNumber: params.piso || 3,
+    hasElevator: params.tieneAscensor ?? true,
+    garages: params.garajes || 1,
+    hasClubHouse: params.esClubHouse || false,
+    comparableSources: [
+      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
+      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
+      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
+    ]
+  });
+  return {
+    zonaConsultada: zoneName,
+    zonaOBarrio: zoneName,
+    tieneComparablesVerificados: hasVerifiedComparables,
+    baseZonePricePerM2: valuation.baseZonePricePerM2,
+    homologatedPricePerM2: valuation.homologatedPricePerM2,
+    valorM2Estimado: valuation.homologatedPricePerM2,
+    suggestedCommercialValue: valuation.suggestedCommercialValue,
+    valorComercialSugerido: valuation.suggestedCommercialValue,
+    minClosingPrice: valuation.minClosingPrice,
+    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
+    canonArriendoEstimado: valuation.estimatedMonthlyRent,
+    estimatedCapRate: valuation.estimatedCapRate,
+    areaM2: area,
+    coefficients: valuation.coefficients,
+    factorBreakdown: valuation.factorBreakdown,
+    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
+    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
+    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
+    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
+  };
+}
+var init_valuation = __esm({
+  "server/_core/valuation.ts"() {
+    "use strict";
+  }
+});
+
 // server/_core/jania/handlers/dmHandler.ts
 var dmHandler_exports = {};
 __export(dmHandler_exports, {
@@ -19806,8 +19847,15 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName,
   });
   return cleaned.trim();
 }
-async function processPrivateDmConversationalMessage(text2, userId, userName) {
-  const clean = text2.trim();
+async function processPrivateDmConversationalMessage(text2, userId, userName, mediaOptions) {
+  let clean = (text2 || "").trim();
+  const hasImage = !!mediaOptions?.imageBuffer;
+  const hasPdf = !!mediaOptions?.pdfBuffer;
+  if (!clean && hasImage) {
+    clean = "[Fotograf\xEDa / Imagen adjunta]";
+  } else if (!clean && hasPdf) {
+    clean = "[Documento adjunto en PDF]";
+  }
   if (!clean) return "";
   if (isDebtCollectionOrSpamScam(clean, userName)) {
     const defenseMsg = getDebtCollectionDefenseResponse();
@@ -19881,7 +19929,8 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
       return familyGratitude;
     }
     const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
-    if (history.length === 0 || isGreetingOnly || isAskingForEddu) {
+    const isMediaMessage = hasImage || hasPdf || clean.startsWith("[Fotograf\xEDa") || clean.startsWith("[Documento");
+    if (history.length === 0 || isGreetingOnly || isAskingForEddu || isMediaMessage) {
       const familyWelcome = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyWelcome);
@@ -19893,6 +19942,27 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyChat);
       return familyChat;
+    }
+  }
+  if (hasImage && !isEduardo && !isJani) {
+    const flyer = mediaOptions?.flyerVisionData;
+    if (flyer && flyer.isFlyerOrBanner && (flyer.classification === "INMUEBLE" || flyer.classification === "REQUERIMIENTO")) {
+      const isOffer = flyer.classification === "INMUEBLE";
+      const flyerTitle = flyer.title || (isOffer ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
+      const flyerAck = `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} He analizado con visi\xF3n artificial tu afiche comercial: *${flyerTitle}* \u{1F4F8}\u2728.
+
+Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES. Si necesitas verificar la identidad de tu cliente (c\xE9dula), liquidar gastos notariales o descargar la factura predial en Bogot\xE1, con gusto te colaboro \u{1F91D}.`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", flyerAck);
+      return flyerAck;
+    }
+    if (clean === "[Fotograf\xEDa / Imagen adjunta]" || isGreetingOnly) {
+      const imageGreeting = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F.
+
+He recibido tu imagen \u{1F4F8}\u2728. Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFen qu\xE9 tr\xE1mite o consulta de finca ra\xEDz te podemos colaborar hoy? Con gusto te ayudo con la consulta oficial de antecedentes ante Polic\xEDa Nacional, descarga de Factura Predial Bogot\xE1 en PDF, paz y salvo IDU o sondeo de mercado \u{1F91D}.`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", imageGreeting);
+      return imageGreeting;
     }
   }
   if (isGreetingOnly && history.length === 0) {
@@ -21483,6 +21553,50 @@ ${quotedNote}` : quotedNote;
           }
         } catch (_) {
         }
+        const {
+          findTrustedContact: findTrustedContact2,
+          buildFamilyWarmWelcomeMessage: buildFamilyWarmWelcomeMessage2,
+          isDebtCollectionOrSpamScam: isDebtCollectionOrSpamScam2,
+          getDebtCollectionDefenseResponse: getDebtCollectionDefenseResponse2,
+          isChaloEscobarJoke: isChaloEscobarJoke2,
+          buildChaloJokeResponse: buildChaloJokeResponse2,
+          isJonathanCreditProcessQuery: isJonathanCreditProcessQuery2,
+          buildJonathanCreditResponse: buildJonathanCreditResponse2
+        } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
+        const trustedContact = findTrustedContact2(senderId, userName || rawPhone);
+        const isEduardoFundador = isSelfChat || rawPhone === "573192919978" || rawPhone === "225954035179724";
+        const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
+        const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora;
+        if (isFamilyOrFriend && trustedContact) {
+          console.log(`[JANIA-MATCH] [DM] \u{1F496} Intercepci\xF3n familiar inmediata para ${trustedContact.primaryNick} (${senderId})`);
+          let familyReply = trustedContact.customMessage || buildFamilyWarmWelcomeMessage2(trustedContact);
+          const cleanLower2 = (body || "").trim().toLowerCase();
+          const isLeavingMessageForEddu = /(?:dile\s+a\s+eddu|d[ií]gale\s+a\s+eddu|av[ií]sale\s+a\s+eddu|av[ií]sele\s+a\s+eddu|dile\s+a\s+eduardo|d[ií]gale\s+a\s+eduardo|av[ií]sale\s+a\s+eduardo|av[ií]sele\s+a\s+eduardo|d[eé]jale\s+dicho|recado|raz[oó]n\s+para\s+eddu|p[aá]sale\s+el\s+recado|felic[ií]talo|un\s+abrazo\s+a\s+eddu)/i.test(cleanLower2);
+          if (isLeavingMessageForEddu) {
+            familyReply = `\xA1Anotad\xEDsimo, ${trustedContact.primaryNick}! \u{1F4DD} Le paso tu mensaje a Eduardo (Eddu) de inmediato. Recuerda que tambi\xE9n puedes escribirle directamente a su nuevo n\xFAmero de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719) \u{1F91D}\u{1F496}`;
+          } else if (/(?:gracias|muchas\s*gracias|mil\s*gracias|am[eé]n|bendiciones|un\s*abrazo|besos?|te\s*quiero)/i.test(cleanLower2) && cleanLower2.length < 80) {
+            familyReply = `\xA1Con todo el cari\xF1o del mundo, ${trustedContact.primaryNick}! \u2764\uFE0F\u2728 Aqu\xED estar\xE9 siempre atenta para lo que necesites. \xA1Un abrazo inmenso y que tengas un d\xEDa maravilloso!`;
+          } else if (isChaloEscobarJoke2(cleanLower2)) {
+            familyReply = buildChaloJokeResponse2();
+          } else if (isJonathanCreditProcessQuery2(cleanLower2)) {
+            familyReply = buildJonathanCreditResponse2();
+          }
+          await this.queuedSend(senderId, familyReply, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", familyReply);
+          const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          appendDmHistory2(senderId, "user", body || (imageBuffer ? "[Foto Familiar / Imagen]" : "[Audio / Mensaje]"));
+          appendDmHistory2(senderId, "assistant", familyReply);
+          return;
+        }
+        if (isDebtCollectionOrSpamScam2(body, userName)) {
+          const defenseMsg = getDebtCollectionDefenseResponse2();
+          await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
+          const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          appendDmHistory2(senderId, "user", body);
+          appendDmHistory2(senderId, "assistant", defenseMsg);
+          await this.logToDb(senderId, "janIA", `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
+          return;
+        }
         const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
         const matchConfirm = body.match(matchConfirmationRegex);
         if (matchConfirm) {
@@ -21693,16 +21807,48 @@ ${quotedNote}` : quotedNote;
         const cleanLower = body.trim().toLowerCase();
         const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
         const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
-        if (shouldEngageConversational && body.trim()) {
-          const { isDebtCollectionOrSpamScam: isDebtCollectionOrSpamScam2, getDebtCollectionDefenseResponse: getDebtCollectionDefenseResponse2 } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
-          if (isDebtCollectionOrSpamScam2(body, userName)) {
-            const defenseMsg = getDebtCollectionDefenseResponse2();
-            await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
-            const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-            appendDmHistory2(senderId, "user", body);
-            appendDmHistory2(senderId, "assistant", defenseMsg);
-            await this.logToDb(senderId, "janIA", `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
-            return;
+        if (shouldEngageConversational && (body.trim() || imageBuffer || pdfBuffer)) {
+          let flyerVisionData = null;
+          if (imageBuffer) {
+            try {
+              const { extractFlyerVisionSafely: extractFlyerVisionSafely2 } = await Promise.resolve().then(() => (init_vision(), vision_exports));
+              flyerVisionData = await extractFlyerVisionSafely2(imageBuffer);
+            } catch (visErr) {
+              console.warn("[JANIA-MATCH] [DM] Error en an\xE1lisis visual defensivo:", visErr?.message || visErr);
+            }
+          }
+          if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
+            const stopPresence2 = startContinuousPresence(this.sock, senderId, "composing");
+            try {
+              const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
+              await processWhatsAppMessage2(
+                body || flyerVisionData.flyerVerbatimText || "Publicaci\xF3n de inmueble por flyer",
+                senderId,
+                userName,
+                true,
+                [],
+                void 0,
+                imageBuffer,
+                false,
+                pdfBuffer,
+                pdfMimeType,
+                void 0,
+                void 0,
+                flyerVisionData
+              );
+              const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
+              const flyerReply = `\xA1Excelente! He analizado tu afiche comercial con visi\xF3n artificial: *${flyerTitle}* \u{1F4F8}\u2728.
+
+Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con nuestra base de datos inmobiliaria \u{1F3E2}\u2728. Si necesitas consultar el predial en Bogot\xE1 o verificar antecedentes de tu cliente, dime y te colaboro de inmediato \u{1F91D}.`;
+              await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
+              const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              appendDmHistory2(senderId, "user", body || `[Flyer: ${flyerTitle}]`);
+              appendDmHistory2(senderId, "assistant", flyerReply);
+              await this.logToDb(senderId, "janIA", flyerReply);
+              return;
+            } finally {
+              stopPresence2();
+            }
           }
           const isContactReq = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(cleanLower);
           if (isContactReq) {
@@ -21718,7 +21864,13 @@ ${quotedNote}` : quotedNote;
           let stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
-            const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
+            const reply = await processPrivateDmConversationalMessage2(body, senderId, userName, {
+              imageBuffer,
+              pdfBuffer,
+              pdfMimeType,
+              isAudio: isAudioPTT,
+              flyerVisionData
+            });
             if (reply && reply.trim()) {
               console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura para ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
               const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2, cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
@@ -22208,8 +22360,8 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           if (!fastEmoji && imageBufferImmediate) {
             try {
-              const { extractFlyerVision: extractFlyerVision2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-              flyerVisionData = await extractFlyerVision2(imageBufferImmediate);
+              const { extractFlyerVision: extractFlyerVision3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              flyerVisionData = await extractFlyerVision3(imageBufferImmediate);
               if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
                 fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
                 console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
@@ -26697,6 +26849,7 @@ __export(janIA_exports, {
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
   extractFlyerVision: () => extractFlyerVision,
+  extractFlyerVisionSafely: () => extractFlyerVisionSafely,
   fallbackDataCache: () => fallbackDataCache,
   findTrustedContact: () => findTrustedContact,
   formatColombiaDateTime: () => formatColombiaDateTime,

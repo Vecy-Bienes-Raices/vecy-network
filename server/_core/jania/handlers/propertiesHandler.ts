@@ -102,7 +102,7 @@ import {
   splitMultiPropertyMessage,
   checkStrictOffTopic,
 } from "../heuristics";
-import { extractFlyerVision } from "../vision";
+import { extractFlyerVision, extractFlyerVisionSafely } from "../vision";
 import {
   REPUTATION_HOOK,
   buildIncompleteDataMessage,
@@ -1890,9 +1890,15 @@ export async function processWhatsAppMessage(
     if (!flyerData && imageBuffer) {
       console.log(`[JanIA] 👁️ Analizando imagen/flyer con visión artificial especializada...`);
       try {
-        flyerData = await extractFlyerVision(imageBuffer);
+        flyerData = await extractFlyerVisionSafely(imageBuffer);
       } catch (errVision: any) {
-        console.warn(`[JanIA] ⚠️ Error en extractFlyerVision:`, errVision?.message || errVision);
+        console.warn(`[JanIA] ⚠️ Error en extractFlyerVisionSafely:`, errVision?.message || errVision);
+        flyerData = {
+          isFlyerOrBanner: false,
+          classification: "CONSULTA_GENERAL",
+          transactionType: "venta",
+          flyerVerbatimText: ""
+        };
       }
     }
 

@@ -7,6 +7,59 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas (v33.11 - 33.11.0)
+
+**Versión:** `v33.11` (`33.11.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/vision.ts` (Robustez de `extractFlyerVision` con modelos estables, timeouts adaptativos y `extractFlyerVisionSafely`)
+- `server/_core/jania/handlers/propertiesHandler.ts` (Integración de `extractFlyerVisionSafely` con manejo defensivo contra caídas de red)
+- `server/_core/jania/handlers/dmHandler.ts` (Soporte `DmMediaOptions`, intercepción universal familiar con fotos/multimedia y visión multimodal)
+- `server/_core/whatsapp-match.ts` (Paso 0 de intercepción familiar universal, visión multimodal defensiva en DMs y delegación completa)
+- `server/__tests__/regression.test.ts` (SUITE 71 con 6 pruebas de visión universal, robustez y $0 COP, alcanzando 246/246 tests passing)
+- `shared/const.ts` (`v33.11`)
+- `package.json` (`33.11.0`)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud de Eduardo A. Rivera
+Eduardo A. Rivera ordenó:
+1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES. Ejecuta la actualización definitiva a la versión `v33.11` (`33.11.0`) en el backend de JanIA, manteniendo el blindaje estricto de $0 COP en pruebas (`NODE_ENV=test`), integrando la Agenda Familiar Universal y robusteciendo el motor multimodal contra caídas."*
+2. *"VISIÓN UNIVERSAL Y AUTONOMÍA MULTIMODAL EN DMs: Elimina cualquier restricción rígida o bloqueo previo en chats privados (DMs). Haz que cualquier mensaje entrante (sea texto, una foto familiar, un meme, un comprobante, una nota de voz o un documento PDF) pase de forma fluida por el analizador multimodal (visión de Gemini / OCR / transcripción de audio). Si el remitente es un contacto de confianza de `TRUSTED_FAMILY_AND_FRIENDS` (como tu tío Luis, tu mamita, tus hijos Daniel y Natalia, etc.), JanIA intercepta el mensaje de inmediato y responde automáticamente con su `customMessage` de cariño y el número de bróker de Eduardo (+57 316 656 9719). Si el remitente es un desconocido, spam, cobranza hostil o envía una imagen aleatoria, JanIA la interpreta con su arquitectura Argon: si es un saludo, contesta con la franja horaria de Bogotá; si es un intento de estafa o spam, aplica el despiste corporativo (negando información personal y presentándose como IA de VECY BIENES RAÍCES); y si es una consulta de bienes raíces, la procesa por completo."*
+3. *"ROBUSTEZ Y CERO CAÍDAS EN EL SISTEMA MATCH Y VISIÓN: Audita y refuerza el pipeline de `extractFlyerVision` y `processWhatsAppMessage` para que ninguna imagen falle por timeouts o saturación de red. Añade reintentos automáticos de fallback con los modelos estables y manejo defensivo de excepciones (`try/catch` globales) para garantizar que el servidor nunca se caiga."*
+4. *"VALIDACIÓN, PRUEBAS Y DESPLIEGUE: Actualiza a `v33.11` / `33.11.0`, ejecuta `npm run check`, `npm test` ($0 COP) y `npm run build`, y despliega en Contabo VPS (`13.140.149.144`)."*
+
+#### 2. Hallazgos y Causa Raíz Identificada
+- En `whatsapp-match.ts`, la condición conversacional en DMs evaluaba `if (shouldEngageConversational && body.trim())`: cuando un usuario enviaba solo una imagen (sin caption de texto), `body.trim()` era vacío, lo que provocaba que fotos familiares, memes o imágenes quedaran sin respuesta.
+- Si un familiar enviaba una foto familiar o un meme sin texto, el mensaje no entraba de inmediato al interceptor cariñoso.
+- En `vision.ts`, los modelos y timeouts requerían reintentos adaptativos con modelos estables (`gemini-2.5-flash`, `gemini-flash-lite-latest`, etc.) y un envoltorio que nunca arrojara `unhandledRejection` ni devolviera `null` imprevisto ante cuotas agotadas o caídas de red.
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Visión Multimodal Universal y Cero Caídas (`vision.ts`):** 
+   - Refactorización de `extractFlyerVision` con timeout aumentado a 8.000 ms, lista jerárquica de modelos de alta disponibilidad (`gemini-2.5-flash`, `gemini-flash-lite-latest`, `gemini-flash-latest`, `gemini-2.5-flash-lite`, `gemini-1.5-flash`) y manejo selectivo de excepciones de red.
+   - Creación y exportación de `extractFlyerVisionSafely` que garantiza retorno estructurado seguro sin excepciones no controladas.
+2. **Robustez en Ingesta Inmobiliaria (`propertiesHandler.ts`):** 
+   - Uso de `extractFlyerVisionSafely` con `try/catch` defensivo de nivel superior en `processWhatsAppMessage` para garantizar resiliencia total 24/7.
+3. **Autonomía Multimodal en DMs (`dmHandler.ts`):**
+   - Declaración e inyección de `DmMediaOptions` (`imageBuffer`, `pdfBuffer`, `pdfMimeType`, `isAudio`, `flyerVisionData`).
+   - Soporte para mensajes de entrada basados en imágenes sin caption (`clean = "[Fotografía / Imagen adjunta]"`).
+   - Intercepción familiar universal: cualquier contacto de confianza de `TRUSTED_FAMILY_AND_FRIENDS` que envíe fotos familiares, memes, audios o textos recibe de inmediato su mensaje personalizado de cariño y el número de bróker de Eduardo (+57 316 656 9719).
+   - Manejo de fotos ambientales, memes o saludos con fotos de usuarios externos: saludo según franja horaria de Bogotá, presentación oficial de JanIA en VECY BIENES RAÍCES y orientación a servicios inmobiliarios.
+   - Si la imagen es un flyer comercial legítimo, se identifica y se confirma su análisis de captación.
+4. **Intercepción y Despacho en Baileys (`whatsapp-match.ts`):**
+   - Paso 0 en `processBufferedDmMessages`: interceptor prioritario familiar universal y escudo defensivo anti-cobranzas/spam.
+   - Apertura de la condición conversacional a `shouldEngageConversational && (body.trim() || imageBuffer || pdfBuffer)`.
+   - Delegación con `mediaOptions` hacia `processPrivateDmConversationalMessage`.
+5. **Creación de la SUITE 71 (`regression.test.ts`):**
+   - 6 pruebas unitarias automatizadas cubriendo visión segura, fotos familiares, flyers comerciales, fotos ambientales/memes, escudo defensivo y versionamiento.
+
+#### 4. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Automatizados:** `npm test` — **246/246 tests pasando al 100% en verde** a **$0 COP** (cero consumo de claves de pago).
+- **Build de Producción:** `npm run build` limpio en 18.41s (Vite) + 109ms (esbuild).
+
+---
+
 ### 📅 [2026-10-15] — Agenda Familiar Blindada, Natillita, Cero Confusión Cognitiva y Escudo Defensivo Anti-Cobranzas/Spam (v33.10 - 33.10.0)
 
 **Versión:** `v33.10` (`33.10.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
