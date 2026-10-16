@@ -1,11 +1,9 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.12.0 — 2026-10-15)
-- **JanIA Server:** `v33.12` (`33.12.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Unificación de Memoria Turno 1/2 (Cero Bucles):** Intercepción inmediata en DMs de confirmaciones de trámite ("CC", "1", "cédula", "antecedentes", "predial", "idu") tras números sueltos o CHIP en frío, erradicando bucles y preguntas redundantes.
-- **Reporte Compacto Único Oficial:** Formato estándar institucional con ADRES al final y sin bloques numéricos largos para evitar "Leer más".
-- **Filtro Anti-Publicidad de Marketing/Meta Ads:** Bloqueo impermeable con 🚫 para campañas en Meta, pauta digital, agencias de marketing y venta de software/cursos no inmobiliarios.
-- **Ingesta de PDFs Comerciales:** Inmunidad contra falsos descartes por texto hueco en ofertas o requerimientos comerciales adjuntos en PDF.
-- **Ventana Estricta de 15 Días:** Confinamiento estricto a 15 días en base de datos, purgas y cruces ad-hoc, erradicando fallbacks residuales a 45 días.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 255/255 passing ($0 COP) | Build `npm run build` en 17.73s (Vite) + 209ms (esbuild).
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.13.0 — 2026-10-15)
+- **JanIA Server:** `v33.13` (`33.13.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Saludo Horario Universal y Cero "Hola" Aislado:** Erradicación total de saludos informales o aislados en DMs; gobernanza institucional de saludos según franja horaria de Bogotá (UTC-5: "Buenos días", "Buenas tardes", "Buenas noches") con cortesía de Carreño indivisible `¡${saludo}, ${nombre}! 👋`.
+- **Apodos Familiares Oficiales y Círculo de Confianza:** Integración con saludo horario respetuoso y apodos afectuosos exactos (Madrecita, Tía Olandita, Tía Tulita, Tía Marinita, Tío Luis, Pollotote, Mi Natis, etc.).
+- **Unificación de Memoria Turno 1/2 y Reporte Compacto:** Intercepción inmediata de confirmaciones ("CC", "1", "cédula", "antecedentes", "predial", "idu") y reporte compacto oficial sin bloques extensos.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 260/260 passing ($0 COP) | Build `npm run build` limpio en 21.26s (Vite) + 164ms (esbuild).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

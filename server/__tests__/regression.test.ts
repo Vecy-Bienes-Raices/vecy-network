@@ -4396,34 +4396,70 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     });
 
     it("3. Enriquecimiento en consultingHandler: Respuestas a consultas de alto valor incluyen cierre hacia +57 316 656 9719", async () => {
-      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
-      
-      const res = await processConsultingMessage(
-        "Tengo un problema con una promesa de compraventa y cláusula penal de arras",
-        "573001234567@s.whatsapp.net",
-        "Carlos Mendoza"
-      );
+      const llmModule = await import("../_core/llm");
+      const spyLLM = vi.spyOn(llmModule, "invokeLLM").mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                classification: "CONSULTA_GENERAL",
+                response: "Para el caso de la promesa de compraventa, el Artículo 1611 del Código Civil y las arras regulan este aspecto.",
+                wantsVoice: false,
+                voiceResponse: "",
+                reactionEmoji: "⚖️"
+              })
+            }
+          }
+        ]
+      } as any);
 
-      expect(res.response).toContain("+57 316 656 9719");
-      expect(res.response).toMatch(/Eduardo A\. Rivera|Jani Alves/);
-      expect(res.response).toMatch(/Art[ií]culo 1611|arras|promesa/i);
-      expect(res.response).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
+      try {
+        const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+        
+        const res = await processConsultingMessage(
+          "Tengo un problema con una promesa de compraventa y cláusula penal de arras",
+          "573001234567@s.whatsapp.net",
+          "Carlos Mendoza"
+        );
+
+        expect(res.response).toContain("+57 316 656 9719");
+        expect(res.response).toMatch(/Eduardo A\. Rivera|Jani Alves/);
+        expect(res.response).toMatch(/Art[ií]culo 1611|arras|promesa/i);
+        expect(res.response).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
+      } finally {
+        spyLLM.mockRestore();
+      }
     });
 
     it("4. Enriquecimiento en dmHandler: Conversaciones privadas sobre impuestos/comisiones integran marco normativo y cierre", async () => {
-      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const llmModule = await import("../_core/llm");
+      const spyLLM = vi.spyOn(llmModule, "invokeLLM").mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: "La liquidación de la ganancia ocasional bajo la Ley 2277 y el artículo 311-1 del Estatuto Tributario contempla una exención de hasta 5000 UVT."
+            }
+          }
+        ]
+      } as any);
 
-      const dmReply = await processPrivateDmConversationalMessage(
-        "¿Cómo se liquida la ganancia ocasional con la exención de 5000 UVT por venta de casa de habitación?",
-        "573159876543@s.whatsapp.net",
-        "Beatriz Gómez"
-      );
+      try {
+        const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
 
-      expect(dmReply).toContain("+57 316 656 9719");
-      expect(dmReply).toMatch(/Eduardo A\. Rivera|Jani Alves/);
-      expect(dmReply).toMatch(/Ley 2277|311-1|UVT|ganancia ocasional/i);
-      expect(dmReply).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
-    }, 35000);
+        const dmReply = await processPrivateDmConversationalMessage(
+          "¿Cómo se liquida la ganancia ocasional con la exención de 5000 UVT por venta de casa de habitación?",
+          "573159876543@s.whatsapp.net",
+          "Beatriz Gómez"
+        );
+
+        expect(dmReply).toContain("+57 316 656 9719");
+        expect(dmReply).toMatch(/Eduardo A\. Rivera|Jani Alves/);
+        expect(dmReply).toMatch(/Ley 2277|311-1|UVT|ganancia ocasional/i);
+        expect(dmReply).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
+      } finally {
+        spyLLM.mockRestore();
+      }
+    });
 
     it("5. Servicios gratuitos de autoservicio posicionados como beneficio de cortesía de Vecy Bienes Raíces", async () => {
       const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
@@ -4579,10 +4615,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const { formatPoliteToolDelivery, sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
       
       const eduardoDelivery = await formatPoliteToolDelivery("573192919978", "Eduardo Rivera", "cedula", "Reporte de antecedentes", true);
-      expect(eduardoDelivery).toContain("¡Hola, Eduardo!");
+      expect(eduardoDelivery).toMatch(/¡(?:Buenos días|Buenas tardes|Buenas noches|Hola), Eduardo!/);
 
       const janiDelivery = await formatPoliteToolDelivery("573188096811", "Jani Alves", "cedula", "Reporte de antecedentes", true);
-      expect(janiDelivery).toContain("¡Hola, Jani!");
+      expect(janiDelivery).toMatch(/¡(?:Buenos días|Buenas tardes|Buenas noches|Hola), Jani!/);
 
       const sanitizedEduardo = sanitizeDmOrthographyAndGreeting("estimado colega, reporte listo", true, false, "Eduardo");
       expect(sanitizedEduardo).toMatch(/¡(?:Hola|Buenos días|Buenas tardes|Buenas noches), Eduardo!/);
@@ -4601,7 +4637,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(fixedQuestion).toContain("¿Cómo puedo consultar el predial?");
 
       const fixedGreeting = sanitizeDmOrthographyAndGreeting("hola pedro, cómo estás?", false, false, "Pedro");
-      expect(fixedGreeting).toMatch(/^¡Hola/);
+      expect(fixedGreeting).toMatch(/^¡(?:Buenos días|Buenas tardes|Buenas noches|Hola)/);
       expect(fixedGreeting).toContain("¿Cómo estás?");
     });
 
@@ -4636,12 +4672,12 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       // Para directores (Eduardo o Jani), no debe incluir la reseña ni ganchos externos
       const eduardoDelivery = await formatPoliteToolDelivery("573192919978", "Eduardo Rivera", "predial", "Reporte Predial Bogotá", true);
-      expect(eduardoDelivery).toContain("¡Hola, Eduardo! A tu disposición:");
+      expect(eduardoDelivery).toMatch(/¡(?:Buenos días|Buenas tardes|Buenas noches|Hola), Eduardo! A tu disposición:/);
       expect(eduardoDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
       expect(eduardoDelivery).not.toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
       const janiDelivery = await formatPoliteToolDelivery("573188096811", "Jani Alves", "predial", "Reporte Predial Bogotá", true);
-      expect(janiDelivery).toContain("¡Hola, Jani! Qué gusto saludarte:");
+      expect(janiDelivery).toMatch(/¡(?:Buenos días|Buenas tardes|Buenas noches|Hola), Jani! Qué gusto saludarte:/);
       expect(janiDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
       expect(janiDelivery).not.toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
     });
@@ -5070,7 +5106,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const madre = findTrustedContact("3108643555")!;
       const msg = buildFamilyWarmWelcomeMessage(madre);
 
-      expect(msg).toContain("¡Madrecita hermosa!");
+      expect(msg).toContain("madrecita hermosa!");
       expect(msg).toContain("JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨");
       expect(msg).toContain("+57 316 656 9719");
       expect(msg).toContain("https://wa.me/573166569719");
@@ -5084,7 +5120,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(isChaloEscobarJoke("A la orden del cartel")).toBe(true);
       expect(isChaloEscobarJoke("Hola cómo estás")).toBe(false);
       const chaloReply = buildChaloJokeResponse();
-      expect(chaloReply).toContain("¡Hola Chalo!");
+      expect(chaloReply).toMatch(/¡(Buenos días|Buenas tardes|Buenas noches), mi querido Chalo!/);
       expect(chaloReply).toContain("cartel, pero de los bienes raíces");
       expect(chaloReply).toContain("+57 316 656 9719");
 
@@ -5092,7 +5128,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(isJonathanCreditProcessQuery("Hola cómo va mi proceso de datacrédito y transunion")).toBe(true);
       expect(isJonathanCreditProcessQuery("Cómo va lo mío del historial crediticio")).toBe(true);
       const jonathanReply = buildJonathanCreditResponse();
-      expect(jonathanReply).toContain("¡Hola Jonathan!");
+      expect(jonathanReply).toMatch(/¡(Buenos días|Buenas tardes|Buenas noches), Jonathan!/);
       expect(jonathanReply).toContain("Datacrédito y TransUnion");
       expect(jonathanReply).toContain("+57 316 656 9719");
     });
@@ -5139,7 +5175,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         "573058788329@s.whatsapp.net",
         "Natalia Rivera"
       );
-      expect(natisReply).toContain("¡Hola, mi Natis hermosa!");
+      expect(natisReply).toMatch(/¡(Buenos días|Buenas tardes|Buenas noches), mi Natillita hermosa!/);
       expect(natisReply).toContain("Natillita");
       expect(natisReply).toContain("VECY BIENES RAÍCES");
       expect(natisReply).toContain("+57 316 656 9719");
@@ -5187,7 +5223,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
           imageBuffer: "mock_image_buffer_family_photo"
         }
       );
-      expect(tioLuisReply).toContain("¡Tío Luis!");
+      expect(tioLuisReply).toMatch(/¡(Buenos días|Buenas tardes|Buenas noches), tío Luis!/);
       expect(tioLuisReply).toContain("JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨");
       expect(tioLuisReply).toContain("+57 316 656 9719");
       expect(tioLuisReply).toContain("https://wa.me/573166569719");
@@ -5201,7 +5237,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
           imageBuffer: "mock_image_buffer_madrecita"
         }
       );
-      expect(madreReply).toContain("¡Madrecita hermosa!");
+      expect(madreReply).toContain("madrecita hermosa!");
       expect(madreReply).toContain("+57 316 656 9719");
       expect(madreReply).not.toContain("review");
       expect(madreReply).not.toContain("google");
@@ -5215,7 +5251,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
           imageBuffer: "mock_image_buffer_daniel"
         }
       );
-      expect(danielReply).toContain("¡Hola, mi Pollotote querido!");
+      expect(danielReply).toMatch(/¡(?:Buenos días|Buenas tardes|Buenas noches|Hola), mi Pollotote querido!/);
       expect(danielReply).toContain("+57 316 656 9719");
     });
 
@@ -5403,13 +5439,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       }
     });
 
-    it("4. Consagración doctrinal de versión v33.12 y package.json 33.12.0", async () => {
+    it("4. Consagración doctrinal de versión v33.12 y package.json 33.12.0 (o superior)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.12");
+      expect(VECY_VERSION).toMatch(/^v33\.1[2-9]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.12.0");
+      expect(pkg.version).toMatch(/^33\.1[2-9]\.0$/);
     });
   });
 
@@ -5550,6 +5586,74 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(popped?.pdfFileName).toBe("paz_y_salvo_idu.pdf");
       expect(popped?.pdfBuffer.length).toBe(dummyBuffer.length);
       expect(popLatestDmPdf("user-test-pdf")).toBeUndefined();
+    });
+  });
+
+  describe("SUITE 74: DOCTRINA DE SALUDO HORARIO UNIVERSAL, CERO 'HOLA' AISLADO Y CIERRE CORDIAL (v33.13 - 33.13.0)", () => {
+    it("1. getGreetingByTime y buildTimeSalutation devuelven el saludo horario oficial de Bogotá", async () => {
+      const { getGreetingByTime, buildTimeSalutation } = await import("../_core/whatsapp-utils");
+      
+      const greeting = getGreetingByTime();
+      expect(["Buenos días", "Buenas tardes", "Buenas noches"]).toContain(greeting);
+
+      const salutationWithName = buildTimeSalutation("Mauricio");
+      expect(salutationWithName).toMatch(/^¡(Buenos días|Buenas tardes|Buenas noches), Mauricio! 👋$/);
+
+      const salutationWithoutName = buildTimeSalutation();
+      expect(salutationWithoutName).toMatch(/^¡(Buenos días|Buenas tardes|Buenas noches)! 👋$/);
+    });
+
+    it("2. sanitizeDmOrthographyAndGreeting erradica '¡Hola' / 'Hola' aislado en primer turno y saluda con horario", async () => {
+      const { sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
+      const { getGreetingByTime } = await import("../_core/whatsapp-utils");
+
+      const timeGreeting = getGreetingByTime();
+
+      // Caso A: Mensaje que viene con '¡Hola Mauricio!' de Gemini o template
+      const inputA = "¡Hola Mauricio! Con gusto te colaboro con la información del predio.";
+      const sanitizedA = sanitizeDmOrthographyAndGreeting(inputA, false, false, "Mauricio", false);
+      expect(sanitizedA).toContain(`¡${timeGreeting}, Mauricio! 👋`);
+      expect(sanitizedA).not.toMatch(/^¡Hola\b/i);
+
+      // Caso B: Mensaje que empieza con 'Hola!' genérico
+      const inputB = "Hola! Aquí tienes la cotización solicitada.";
+      const sanitizedB = sanitizeDmOrthographyAndGreeting(inputB, false, false, "Diana", false);
+      expect(sanitizedB).toContain(`¡${timeGreeting}, Diana! 👋`);
+      expect(sanitizedB).not.toMatch(/^Hola!/i);
+
+      // Caso C: Segundo turno (hasPriorHistory: true) -> No repite saludo ni añade nuevo saludo
+      const inputC = "¡Buenos días, Diana! 👋 Claro que sí, el trámite está listo.";
+      const sanitizedC = sanitizeDmOrthographyAndGreeting(inputC, false, false, "Diana", true);
+      expect(sanitizedC).not.toMatch(/^¡(Buenos días|Buenas tardes|Buenas noches), Diana! 👋/);
+      expect(sanitizedC).toContain("Claro que sí, el trámite está listo.");
+    });
+
+    it("3. stripLeadingGreetingsAndCourtesies limpia preámbulos y '¡Hola' residuales", async () => {
+      const { stripLeadingGreetingsAndCourtesies } = await import("../_core/jania/handlers/dmHandler");
+
+      const input = "¡Hola! Qué gusto saludarte en este nuevo día. Con mucho gusto te ayudo.";
+      const stripped = stripLeadingGreetingsAndCourtesies(input);
+      expect(stripped).toBe("Con mucho gusto te ayudo.");
+    });
+
+    it("4. Interceptor de tarjeta de contacto en DM y grupos usa saludo horario en vez de '¡Hola'", async () => {
+      const fs = await import("fs");
+      const code = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+
+      // Verificar que en isContactReq e isContactRequest ya no exista ¡Hola ${firstName}! o ¡Hola ${realName}!
+      expect(code).not.toContain("`¡Hola ${firstName}! 👋 Claro que sí");
+      expect(code).not.toContain("`¡Hola ${realName}! 👋 Claro que sí");
+      expect(code).not.toContain("`¡Hola ${firstName}! 👋 Con mucho gusto");
+      expect(code).not.toContain("`¡Hola ${realName}! 👋 Con gusto");
+    });
+
+    it("5. Versión oficial v33.13 en shared/const.ts y 33.13.0 en package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.13");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.13.0");
     });
   });
 });

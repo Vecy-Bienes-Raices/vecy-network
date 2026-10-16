@@ -359,42 +359,42 @@ export async function formatPoliteToolDelivery(
   if (!success) {
     if (payloadText && payloadText.trim()) {
       if (isEduardo) {
-        return `¡Hola, Eduardo! A tu disposición. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+        return `¡${timeSalutation}, Eduardo! A tu disposición. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
       }
       if (isJani) {
-        return `¡Hola, Jani! Qué gusto saludarte. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+        return `¡${timeSalutation}, Jani! Qué gusto saludarte. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
       }
       if (isFamilyOrTrusted) {
-        return `¡Hola, ${displayName}! Con todo gusto. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+        return `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
       }
       if (isFirstTurn) {
         const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\n`;
         return greetingHeader + payloadWithClosing;
       } else {
-        const politeHeader = `¡Hola${displayName ? ` ${displayName}` : ""}! `;
+        const politeHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! `;
         return politeHeader + payloadWithClosing;
       }
     }
     if (isEduardo) {
-      return `¡Hola, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+      return `¡${timeSalutation}, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
     if (isJani) {
-      return `¡Hola, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+      return `¡${timeSalutation}, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
     if (isFamilyOrTrusted) {
-      return `¡Hola, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+      return `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
     return `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝`;
   }
 
   if (isEduardo) {
-    return `¡Hola, Eduardo! A tu disposición:\n\n${payloadWithClosing}`;
+    return `¡${timeSalutation}, Eduardo! A tu disposición:\n\n${payloadWithClosing}`;
   }
   if (isJani) {
-    return `¡Hola, Jani! Qué gusto saludarte:\n\n${payloadWithClosing}`;
+    return `¡${timeSalutation}, Jani! Qué gusto saludarte:\n\n${payloadWithClosing}`;
   }
   if (isFamilyOrTrusted) {
-    return `¡Hola, ${displayName}! Con todo gusto. Aquí tienes el reporte solicitado:\n\n${payloadWithClosing}`;
+    return `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el reporte solicitado:\n\n${payloadWithClosing}`;
   }
 
   if (isFirstTurn) {
@@ -471,16 +471,16 @@ export function sanitizeDmOrthographyAndGreeting(
     ""
   );
 
-  // 2. Corregir cualquier saludo o vocativo que inicie en minúscula ("estimada...", "estimado...", "hola...")
+  // 2. Corregir cualquier saludo o vocativo que inicie en minúscula o use el obsoleto "Hola"
   cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
     return `¡Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
   });
-  cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
-  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `¡Hola, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! `);
-  cleaned = cleaned.replace(/^hola\b/i, "¡Hola!");
+  const nameSalutation = displayName ? `¡${currentSalutation}, ${displayName}! 👋 ` : `¡${currentSalutation}! 👋 `;
+  cleaned = cleaned.replace(/^¡?hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `¡${currentSalutation}, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! 👋 `);
+  cleaned = cleaned.replace(/^¡?hola\b[!]?\s*/i, nameSalutation);
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `¡${m.charAt(0).toUpperCase() + m.slice(1)}!`);
 
-  // 3. Estructura única e indivisible para directores VIP o primer saludo del día (Doctrina v33.07)
+  // 3. Estructura única e indivisible para directores VIP, familiares o primer saludo del día (Doctrina v33.07 / v33.13)
   if (isEduardo) {
     if (!hasPriorHistory) {
       const body = stripLeadingGreetingsAndCourtesies(cleaned);
@@ -501,11 +501,11 @@ export function sanitizeDmOrthographyAndGreeting(
     }
   }
 
-  // 4. Primera letra en mayúscula obligatoria en cada frase y al inicio del texto
-  cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
+  // 4. Primera letra en mayúscula obligatoria en cada frase, al inicio del texto o tras un emoji
+  cleaned = cleaned.replace(/(^|[.!?]\s+|[👋🤝✨🏘️😊🤖]\s*)([a-záéíóúñ])/gu, (_m, prefix, letter) => prefix + letter.toUpperCase());
 
-  // 5. Apertura obligatoria de signos de interrogación ¿ ante preguntas
-  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
+  // 5. Apertura obligatoria de signos de interrogación ¿ ante preguntas (incluyendo tras emojis)
+  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*|[👋🤝✨🏘️😊🤖]\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/giu, (_match, prefix, qWord, rest) => {
     const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
     return `${cleanPrefix}¿${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
   });
@@ -542,17 +542,17 @@ export async function processPrivateDmConversationalMessage(
 
   if (!clean) return "";
 
+  const realName = await resolveRealName(userId, userName);
+  const { getGreetingByTime } = await import('../../whatsapp-utils');
+  const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
+
   // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
   if (isDebtCollectionOrSpamScam(clean, userName)) {
-    const defenseMsg = getDebtCollectionDefenseResponse();
+    const defenseMsg = getDebtCollectionDefenseResponse(timeSalutation);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", defenseMsg);
     return defenseMsg;
   }
-
-  const realName = await resolveRealName(userId, userName);
-  const { getGreetingByTime } = await import('../../whatsapp-utils');
-  const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
 
   // Detección directiva de Eduardo, Jani y Agenda de Confianza / Familiar
   const trustedContact = findTrustedContact(userId, userName || realName);
@@ -607,7 +607,7 @@ export async function processPrivateDmConversationalMessage(
       trustedContact.key === "chalo_andres" ||
       trustedContact.nicknames.includes("Chalo");
     if (isChalo && isChaloEscobarJoke(clean)) {
-      const chaloReply = buildChaloJokeResponse();
+      const chaloReply = buildChaloJokeResponse(timeSalutation);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", chaloReply);
       return chaloReply;
@@ -620,7 +620,7 @@ export async function processPrivateDmConversationalMessage(
       trustedContact.key === "jonathan_datacredito" ||
       trustedContact.names.some(n => n.toLowerCase().includes("jonathan"));
     if (isJonathan && isJonathanCreditProcessQuery(clean)) {
-      const jonathanReply = buildJonathanCreditResponse();
+      const jonathanReply = buildJonathanCreditResponse(timeSalutation);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", jonathanReply);
       return jonathanReply;
@@ -648,7 +648,7 @@ export async function processPrivateDmConversationalMessage(
     const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
     const isMediaMessage = hasImage || hasPdf || clean.startsWith("[Fotografía") || clean.startsWith("[Documento");
     if (history.length === 0 || isGreetingOnly || isAskingForEddu || isMediaMessage) {
-      const familyWelcome = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
+      const familyWelcome = buildFamilyWarmWelcomeMessage(trustedContact, timeSalutation);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyWelcome);
       return familyWelcome;
@@ -657,7 +657,7 @@ export async function processPrivateDmConversationalMessage(
     // 6. Conversación cotidiana continua con familiares (si no es una consulta inmobiliaria formal como predial, IDU o verificación)
     const isAskingRealEstateService = /(?:predial|idu|chip\b|aaa[a-z0-9]|verificar\s*(?:cc|c[eé]dula|nit|documento)|paz\s*y\s*salvo|aval[uú]o|matr[ií]cula|escritura)/i.test(cleanLower);
     if (!isAskingRealEstateService) {
-      const familyChat = `¡Hola, ${trustedContact.primaryNick}! 🥰 Aquí estoy cuidando y gestionando todo en VECY BIENES RAÍCES 🤖✨. Si necesitas dejarle algún recado o mensaje a Eduardo (Eddu), dime y yo se lo paso de una, o puedes comunicarte a su línea de bróker al +57 316 656 9719. ¡Te mandamos un abrazo gigante!`;
+      const familyChat = `¡${timeSalutation}, ${trustedContact.primaryNick}! 🥰 Aquí estoy cuidando y gestionando todo en VECY BIENES RAÍCES 🤖✨. Si necesitas dejarle algún recado o mensaje a Eduardo (Eddu), dime y yo se lo paso de una, o puedes comunicarte a su línea de bróker al +57 316 656 9719. ¡Te mandamos un abrazo gigante!`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyChat);
       return familyChat;
@@ -1296,16 +1296,16 @@ export async function processPrivateDmConversationalMessage(
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
     let fallback = isEduardo
-      ? `¡Hola, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
+      ? `¡${timeSalutation}, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
       : isJani
-        ? `¡Hola, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
+        ? `¡${timeSalutation}, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
         : isFamilyOrTrusted
-          ? `¡Hola, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
+          ? `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
           : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
     if (!isEduardo && !isJani && !isFamilyOrTrusted && isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
-    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
+    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory, timeSalutation);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;

@@ -1683,10 +1683,12 @@ export class JaniaMatchBot {
       if (isContactReq) {
         const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
         const contactType = wantsBroker ? 'broker' : 'jania';
+        const { getGreetingByTime } = await import('./whatsapp-utils');
+        const timeSalutation = getGreetingByTime();
         const firstName = extractFirstName(userName);
         const contactMsg = wantsBroker
-          ? `¡Hola ${firstName}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial humana y directa de VECY BIENES RAÍCES: 📲`
-          : `¡Hola ${firstName}! 👋 Con mucho gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesoría cuando quieras.`;
+          ? `¡${timeSalutation}${firstName ? `, ${firstName}` : ""}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial humana y directa de VECY BIENES RAÍCES: 📲`
+          : `¡${timeSalutation}${firstName ? `, ${firstName}` : ""}! 👋 Con mucho gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesoría cuando quieras.`;
 
         await this.queuedSend(senderId, contactMsg, { quoted: mainMsg, allowDirectMessage: true });
         await this.sendContactCard(senderId, contactType, mainMsg);
@@ -1981,9 +1983,11 @@ export class JaniaMatchBot {
       if (isContactRequest) {
         const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(bodyText);
         const contactType = wantsBroker ? 'broker' : 'jania';
+        const { getGreetingByTime } = await import('./whatsapp-utils');
+        const timeSalutation = getGreetingByTime();
         const contactMsg = wantsBroker
-          ? `¡Hola ${realName}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial personalizada de VECY BIENES RAÍCES: 📲`
-          : `¡Hola ${realName}! 👋 Con gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tus contactos para consultarme siempre que lo necesites.`;
+          ? `¡${timeSalutation}${realName ? `, ${realName}` : ""}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial personalizada de VECY BIENES RAÍCES: 📲`
+          : `¡${timeSalutation}${realName ? `, ${realName}` : ""}! 👋 Con gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tus contactos para consultarme siempre que lo necesites.`;
 
         await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
         await this.sendContactCard(chatId, contactType, msg);

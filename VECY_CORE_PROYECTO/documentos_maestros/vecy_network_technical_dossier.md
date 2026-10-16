@@ -331,6 +331,15 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.13 — Octubre 2026
+
+#### [v33.13.0] — 2026-10-15: Doctrina de Saludo Horario Universal, Cero "Hola" Aislado y Cierre Cordial en DMs
+- **Doctrina de Saludo Horario Universal (`whatsapp-utils.ts`, `dmHandler.ts`, `whatsapp-match.ts`):** Erradicación total de saludos informales o aislados tipo "¡Hola, [Nombre]!" o "Hola Pedro" en el primer turno de DMs. JanIA adopta la cortesía horaria colombiana sincronizada con el huso horario oficial de Bogotá (UTC-5: "Buenos días" 05:00-11:59, "Buenas tardes" 12:00-18:59, "Buenas noches" 19:00-04:59).
+- **Gobernanza del Saludo Horario Universal (`buildTimeSalutation` / `getGreetingByTime`):** Integración en `dmHandler.ts`, `whatsapp-match.ts` y en interceptores de contactos de confianza y tarjetas de presentación de la cortesía institucional indivisible `¡${timeSalutation}, ${contactName}! 👋`. Respuestas compactas sin provocar el botón "Leer más".
+- **Apodos Familiares Oficiales y Círculo de Confianza (`trustedContacts.ts`):** Mapeo preferencial y afectuoso de apodos cariñosos (Madrecita, Tía Olandita, Tía Tulita, Tía Marinita, Tío Luis, Pollotote, Mi Natis, etc.) combinados con saludo horario respetuoso y redirección al número de bróker de Eduardo (`+57 316 656 9719`).
+- **Robustez Ortográfica con Prefijo de Emojis (`dmHandler.ts`):** Corrección ortográfica estricta con mayúscula inicial y apertura obligatoria de signos de interrogación `¿` ante pronombres interrogativos, incluso tras emojis de prefijo.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **260/260 passing** al 100% en verde sin consumo de claves de pago | Build `npm run build` limpio en 22.93s (Vite) + 258ms (esbuild).
+
 ### 🔖 v33.12 — Octubre 2026
 
 #### [v33.12.0] — 2026-10-15: Unificación de Memoria Turno 1 y 2 (Cero Bucles), Reporte Compacto Oficial, Filtro Anti-Publicidad de Marketing/Meta Ads y Ventana Estricta de 15 Días

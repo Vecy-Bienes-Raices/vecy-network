@@ -1,12 +1,15 @@
+import { getGreetingByTime } from "../whatsapp-utils";
+
 /**
  * Módulo de Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam
- * VECY BIENES RAÍCES — JanIA Backend v33.10 (33.10.0)
+ * VECY BIENES RAÍCES — JanIA Backend v33.13 (33.13.0)
  *
  * Registra y gestiona:
  * 1. Contactos de alta confianza y círculo familiar de Eduardo ("Eddu") y Jani.
  * 2. Reconocimiento por teléfono (E.164, 10 dígitos colombianos, LIDs de WhatsApp) y apodos de cariño.
- * 3. Regla de Oro familiar/amigos (canal oficial de JanIA + número bróker de Eduardo +57 316 656 9719).
- * 4. Escudo defensivo estricto contra casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero.
+ * 3. Saludo cordial institucionalizado horario (¡Buenos días / Buenas tardes / Buenas noches!) erradicando el "Hola".
+ * 4. Regla de Oro familiar/amigos (canal oficial de JanIA + número bróker de Eduardo +57 316 656 9719).
+ * 5. Escudo defensivo estricto contra casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero.
  */
 
 export interface TrustedContact {
@@ -33,82 +36,82 @@ export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
     phones: ["573108643555"],
     names: ["María del Carmen Martínez Castro", "Carmenza", "Maria del Carmen"],
     relation: "Madre",
-    nicknames: ["Madrecita", "Madrecita querida", "Mamita hermosa"],
+    nicknames: ["madrecita hermosa", "Madrecita querida", "Mamita hermosa"],
     customMessage:
-      "¡Madrecita hermosa! Qué alegría tan grande saludarte. Te cuento con todo el amor que esta línea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su número directo y nuevo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigantesco y un beso enorme de su parte!"
+      "madrecita hermosa! ❤️ Qué alegría tan grande saludarte. Te cuento con todo el amor que esta línea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su número directo y nuevo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigantesco y un beso enorme de su parte!"
   },
   olanda: {
     phones: ["573138524917"],
     names: ["Olanda Inés Rivera Gómez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
     relation: "Tía",
-    nicknames: ["Tía Olandita", "Olandita"],
+    nicknames: ["tía Olandita", "Tía Olandita", "Olandita"],
     customMessage:
-      "¡Tía Olandita hermosa! Qué gusto saludarte. Te cuento con mucho cariño que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su línea directa de bróker al +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigante de su parte!"
+      "tía Olandita hermosa! 🥰 Qué gusto saludarte. Te cuento con mucho cariño que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su línea directa de bróker al +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigante de su parte!"
   },
   ana_tulia: {
     phones: ["573124794864"],
     names: ["Ana Tulia Rivera Gómez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
     relation: "Tía",
-    nicknames: ["Tía Tulita", "Anita Tulita"],
+    nicknames: ["tía Tulita", "Tía Tulita", "Anita Tulita"],
     customMessage:
-      "¡Tía Tulita querida! Qué alegría tan inmensa saludarte. Te cuento con todo el cariño que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigante de su parte!"
+      "tía Tulita querida! 🥰 Qué alegría tan inmensa saludarte. Te cuento con todo el cariño que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te mando un abrazo gigante de su parte!"
   },
   marina: {
     phones: ["573204997575"],
     names: ["Marina Martínez Castro", "Marina Martinez Castro", "Marina"],
     relation: "Tía",
-    nicknames: ["Tía Marinita", "Marinita"],
+    nicknames: ["tía Marinita", "Tía Marinita", "Marinita"],
     customMessage:
-      "¡Tía Marinita hermosa! Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con Eduardo (Eddu), te comparto su número directo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
+      "tía Marinita hermosa! 🥰 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con Eduardo (Eddu), te comparto su número directo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
   },
   tio_luis: {
     phones: ["573132094918"],
     names: ["Luis Eduardo Rivera Gómez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
     relation: "Tío",
-    nicknames: ["Tío Luis"],
+    nicknames: ["tío Luis", "Tío Luis"],
     customMessage:
-      "¡Tío Luis! Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Para cualquier asunto personal o familiar con Eduardo (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+      "tío Luis! 🤝 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Para cualquier asunto personal o familiar con Eduardo (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
   daniel: {
     phones: ["573006067089"],
     names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
     relation: "Hijo",
-    nicknames: ["Pollotote", "Campeón", "Mi ingeniero favorito"],
+    nicknames: ["mi Pollotote querido", "Pollotote", "Campeón", "Mi ingeniero favorito"],
     customMessage:
-      "¡Hola, mi Pollotote querido! ¡Campeón, mi ingeniero favorito! 🚀💻 Qué alegría que me escribas. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas llamar o escribirle a tu papá (Eddu) a su número personal directo, su nuevo contacto de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te quiere muchísimo!"
+      "mi Pollotote querido! ¡Campeón, mi ingeniero favorito! 🚀💻 Qué alegría que me escribas. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas llamar o escribirle a tu papá (Eddu) a su número personal directo, su nuevo contacto de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te quiere muchísimo!"
   },
   natalia: {
     phones: ["573058788329"],
     names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
     relation: "Hija",
-    nicknames: ["Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Corazón de Melocotón", "Monacha Remolacha"],
+    nicknames: ["mi Natillita hermosa", "Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Corazón de Melocotón", "Monacha Remolacha"],
     customMessage:
-      "¡Hola, mi Natis hermosa! ¡Mi princesa, Natillita, corazón de melocotón y monacha remolacha! ❤️🌸 Qué alegría tan grande saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con tu papá (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un besito gigante!"
+      "mi Natillita hermosa! ¡Mi princesa, mi Natis, corazón de melocotón y monacha remolacha! ❤️🌸 Qué alegría tan grande saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con tu papá (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un besito gigante!"
   },
   jani: {
     phones: ["573188096811", "573166569719"],
     names: ["Jani Alves Souza", "Jani Alves", "Jani"],
     relation: "Esposa / Co-founder",
-    nicknames: ["Amor", "Amorzote", "Corazón amado", "Mi vida hermosa", "Mi consentida", "Amada esposa mía"],
+    nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Corazón amado", "Mi vida hermosa", "Mi consentida", "Amada esposa mía"],
     customMessage:
-      "¡Hola, mi amorzote hermosa! ¡Mi vida hermosa, mi consentida y amada esposa mía! ❤️🥰 Qué alegría que me escribas. Aquí estoy al frente de JanIA operando en VECY BIENES RAÍCES. Si necesitas entrar a la línea directa de bróker o coordinar cualquier operación con Eddu, sabes que estamos conectados 24/7. ¡Te amo muchísimo! 🏡✨",
+      "mi amorzote hermosa! ¡Mi vida hermosa, mi consentida y amada esposa mía! ❤️🥰 Qué alegría que me escribas. Aquí estoy al frente de JanIA operando en VECY BIENES RAÍCES. Si necesitas entrar a la línea directa de bróker o coordinar cualquier operación con Eddu, sabes que estamos conectados 24/7. ¡Te amo muchísimo! 🏡✨",
     lids: ["167108705018103", "182781141344345", "218820279050385"]
   },
   monica: {
     phones: ["573103395788"],
     names: ["Mónica Martínez", "Monica Martinez", "Monica"],
     relation: "Prima",
-    nicknames: ["Monik", "Chinita", "Primi", "Primita"],
+    nicknames: ["mi Monik hermosa", "Monik", "Chinita", "Primi", "Primita"],
     customMessage:
-      "¡Hola, mi Monik hermosa! ¡Chinita querida! 😊 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
+      "mi Monik hermosa! ¡Chinita querida! 😊 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
   },
   liliana: {
     phones: ["573132533474"],
     names: ["Liliana Martínez", "Liliana Martinez", "Liliana"],
     relation: "Prima",
-    nicknames: ["Lili", "Chinita", "Primi", "Primitica"],
+    nicknames: ["mi Lili hermosa", "Lili", "Chinita", "Primi", "Primitica"],
     customMessage:
-      "¡Hola, mi Lili hermosa! ¡Chinita querida! 😊 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas escribirle a Eduardo (Eddu), su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+      "mi Lili hermosa! ¡Chinita querida! 😊 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas escribirle a Eduardo (Eddu), su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
   marcelita: {
     phones: ["573144354412"],
@@ -120,49 +123,49 @@ export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
       "Marcela"
     ],
     relation: "Prima",
-    nicknames: ["Marcelita", "Primita", "Primi", "Chinita"],
+    nicknames: ["mi Marcelita hermosa", "Marcelita", "Primita", "Primi", "Chinita"],
     customMessage:
-      "¡Hola, mi Marcelita hermosa! ¡Primi querida! 😊 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
+      "mi Marcelita hermosa! ¡Primi querida! 😊 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo gigante de su parte!"
   },
   carlitos: {
     phones: ["573054589435"],
     names: ["Carlitos Martínez", "Carlitos Martinez", "Charles Barber", "Carlos"],
     relation: "Primo",
-    nicknames: ["Cayaco", "Cayaquín", "Carlitos"],
+    nicknames: ["mi querido Cayaco", "Cayaco", "Cayaquín", "Carlitos"],
     customMessage:
-      "¡Hola, mi querido Cayaco! ¡Cayaquín, hermano! 💈✂️ Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas escribirle o llamar a Eduardo (Eddu) a su número personal directo, su nuevo contacto de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un abrazo de gol!"
+      "mi querido Cayaco! ¡Cayaquín, hermano! 💈✂️ Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas escribirle o llamar a Eduardo (Eddu) a su número personal directo, su nuevo contacto de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un abrazo de gol!"
   },
   jackson: {
     phones: ["573142721432"],
     names: ["Jackson Martínez", "Jackson Martinez", "Jackson"],
     relation: "Primo",
-    nicknames: ["Jatón", "Jaksitón", "Primo"],
+    nicknames: ["mi estimado Jatón", "Jatón", "Jaksitón", "Primo"],
     customMessage:
-      "¡Hola, mi estimado Jaton! ¡Jaksitón, primo! 🚀 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+      "mi estimado Jatón! ¡Jaksitón, primo! 🚀 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
   gus: {
     phones: ["573108096117"],
     names: ["Gustavo Guevara", "Gustavo"],
     relation: "Amigo",
-    nicknames: ["Gus"],
+    nicknames: ["mi estimado Gus", "Gus"],
     customMessage:
-      "¡Hola, mi estimado Gus! 🤝 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+      "mi estimado Gus! 🤝 Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
   lucho_taxi: {
     phones: ["573105772223"],
     names: ["Luis Ángel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
     relation: "Amigo / Servicio Especial Hotel",
-    nicknames: ["Lucho"],
+    nicknames: ["mi estimado Lucho", "Lucho"],
     customMessage:
-      "¡Hola, mi estimado Lucho! 🚕 Hotel y servicio especial. Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+      "mi estimado Lucho! 🚕 Hotel y servicio especial. Qué gusto saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
   chalo_andres: {
     phones: ["573005509529"],
     names: ["Andrés Ruiz", "Andres Ruiz", "Chalo"],
     relation: "Amigo",
-    nicknames: ["Chalo"],
+    nicknames: ["mi querido Chalo", "Chalo"],
     customMessage:
-      "¡Hola, mi querido Chalo!  patrón... digo, ¡compañero! 🕶️😂 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patrón favorito, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
+      "mi querido Chalo! Patrón... digo, ¡compañero! 🕶️😂 Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patrón favorito, su número directo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Un abrazo de su parte!"
   },
   jonathan_datacredito: {
     phones: ["573103790278"],
@@ -175,14 +178,14 @@ export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
     relation: "Cliente / Proceso Legal Datacrédito",
     nicknames: ["Jonathan"],
     customMessage:
-      "¡Hola, Jonathan! Qué gusto saludarte. Te comento que esta línea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Respecto a tu caso pendiente para salir de reportes en Datacrédito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con él para revisar los avances, su línea directa de bróker y gestión jurídica es el +57 316 656 9719 (https://wa.me/573166569719). ¡Seguimos firmes con tu caso!"
+      "Jonathan! Qué gusto saludarte. Te comento que esta línea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Respecto a tu caso pendiente para salir de reportes en Datacrédito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con él para revisar los avances, su línea directa de bróker y gestión jurídica es el +57 316 656 9719 (https://wa.me/573166569719). ¡Seguimos firmes con tu caso!"
   },
   eduardo: {
     phones: ["573192919978"],
     names: ["Eduardo Arturo Rivera Martínez", "Eduardo Rivera", "Eduardo", "Eddu"],
     relation: "Director de Tecnología / Fundador",
     nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
-    customMessage: "¡Hola Eduardo! Aquí estoy al frente de JanIA en VECY BIENES RAÍCES. ¿En qué te colaboro hoy?",
+    customMessage: "Eduardo! A tu disposición en VECY BIENES RAÍCES. ¿En qué te colaboro hoy? 🤝",
     aliases: ["3166569719"],
     lids: ["225954035179724"]
   }
@@ -206,11 +209,33 @@ export function normalizePhoneDigits(raw: string): string {
   return clean;
 }
 
+// Mapeo preferencial y afectuoso de apodos cariñosos oficiales instituidos por Eduardo
+export const CONTACT_PRIMARY_NICKS: Record<string, string> = {
+  carmenza: "Madrecita",
+  olanda: "Tía Olandita",
+  ana_tulia: "Tía Tulita",
+  marina: "Tía Marinita",
+  tio_luis: "Tío Luis",
+  daniel: "Pollotote",
+  natalia: "Mi Natis",
+  jani: "Jani",
+  monica: "Monik",
+  liliana: "Lili",
+  marcelita: "Marcelita",
+  carlitos: "Cayaco",
+  jackson: "Jatón",
+  gus: "Gus",
+  lucho_taxi: "Lucho",
+  chalo_andres: "Chalo",
+  jonathan_datacredito: "Jonathan",
+  eduardo: "Eduardo"
+};
+
 // Array sincronizado y enriquecido para búsquedas y retrocompatibilidad total
 export const TRUSTED_CONTACTS: TrustedContact[] = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
   ([key, contact]) => {
     const digits = normalizePhoneDigits(contact.phones[0] || "");
-    const primaryNick = contact.nicknames[0] || contact.names[0];
+    const primaryNick = CONTACT_PRIMARY_NICKS[key] || contact.nicknames[0] || contact.names[0];
     const enriched: TrustedContact = {
       ...contact,
       id: key,
@@ -325,15 +350,19 @@ export function findTrustedContact(userId: string, rawName?: string): TrustedCon
 
 /**
  * Genera el saludo de bienvenida familiar oficial según la Regla de Oro
- * Retorna el mensaje personalizado exacto definido en TRUSTED_FAMILY_AND_FRIENDS
+ * Retorna el mensaje personalizado exacto con el saludo horario institucionalizado (Buenos días / tardes / noches)
  */
-export function buildFamilyWarmWelcomeMessage(contact: TrustedContact): string {
+export function buildFamilyWarmWelcomeMessage(contact: TrustedContact, timeSalutation?: string): string {
+  const salutation = timeSalutation || getGreetingByTime();
+  const key = contact.id || contact.key || "";
+  const nick = CONTACT_PRIMARY_NICKS[key] || contact.primaryNick || contact.nicknames[0] || contact.names[0];
+
   if (contact.customMessage) {
-    return contact.customMessage;
+    return `¡${salutation}, ${contact.customMessage}`;
   }
-  const nick = contact.primaryNick || contact.nicknames[0] || contact.names[0];
+
   return (
-    `¡Hola ${nick}! Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨. Como hoy es el cumpleaños de Eduardo (Eddu) o para cualquier asunto personal, te comparto su número directo y nuevo de bróker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes dejarle recado o saludarlo cuando quieras!`
+    `¡${salutation}, ${nick}! Qué alegría saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES 🤖✨. Para cualquier asunto personal o familiar con Eduardo (Eddu), te comparto su número directo y nuevo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes dejarle recado o saludarlo cuando quieras!`
   );
 }
 
@@ -349,11 +378,12 @@ export function isChaloEscobarJoke(text: string): boolean {
 }
 
 /**
- * Respuesta simpática y con complicidad para la broma de Chalo
+ * Respuesta simpática y con complicidad para la broma de Chalo con saludo horario
  */
-export function buildChaloJokeResponse(): string {
+export function buildChaloJokeResponse(timeSalutation?: string): string {
+  const salutation = timeSalutation || getGreetingByTime();
   return (
-    `¡Hola Chalo! 🤫🇨🇴 Jajaja... Por acá todo bajo control con el cartel, pero de los bienes raíces y la inteligencia artificial 🤖✨.\n\n` +
+    `¡${salutation}, mi querido Chalo! 🤫🇨🇴 Jajaja... Por acá todo bajo control con el cartel, pero de los bienes raíces y la inteligencia artificial 🤖✨.\n\n` +
     `Te cuento que esta línea ahora es mi canal oficial como JanIA en VECY BIENES RAÍCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su número nuevo de bróker: +57 316 656 9719 (https://wa.me/573166569719). ¡O déjame tu razón por acá y yo se la entrego intacta!`
   );
 }
@@ -370,11 +400,12 @@ export function isJonathanCreditProcessQuery(text: string): boolean {
 }
 
 /**
- * Respuesta personalizada para Jonathan Martínez
+ * Respuesta personalizada para Jonathan Martínez con saludo horario
  */
-export function buildJonathanCreditResponse(): string {
+export function buildJonathanCreditResponse(timeSalutation?: string): string {
+  const salutation = timeSalutation || getGreetingByTime();
   return (
-    `¡Hola Jonathan! Qué alegría saludarte. Te confirmo que tus trámites de Datacrédito y TransUnion los está revisando y gestionando directamente Eduardo (Eddu) ⚖️📋.\n\n` +
+    `¡${salutation}, Jonathan! Qué alegría saludarte. Te confirmo que tus trámites de Datacrédito y TransUnion los está revisando y gestionando directamente Eduardo (Eddu) ⚖️📋.\n\n` +
     `Como esta línea ahora es mi canal exclusivo como JanIA en VECY BIENES RAÍCES, comunícate con él directamente a su línea de atención: +57 316 656 9719 (https://wa.me/573166569719). ¡O si deseas, déjame tu mensaje y yo se lo pongo de presente!`
   );
 }
@@ -411,6 +442,7 @@ export function isDebtCollectionOrSpamScam(text: string, senderName?: string): b
 /**
  * Respuesta oficial del escudo defensivo anti-cobranzas / spam
  */
-export function getDebtCollectionDefenseResponse(): string {
-  return "Hola. No tengo información de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca raíz y bienes raíces en VECY BIENES RAÍCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.";
+export function getDebtCollectionDefenseResponse(timeSalutation?: string): string {
+  const salutation = timeSalutation || getGreetingByTime();
+  return `¡${salutation}! No tengo información de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca raíz y bienes raíces en VECY BIENES RAÍCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
 }

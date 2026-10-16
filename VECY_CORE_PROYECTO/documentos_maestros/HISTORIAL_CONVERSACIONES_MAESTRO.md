@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-15] — Doctrina de Saludo Horario Universal, Cero "Hola" Aislado y Cierre Cordial en DMs (v33.13 - 33.13.0)
+
+**Versión:** `v33.13` (`33.13.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/handlers/dmHandler.ts` (Implementación de `buildTimeSalutation` y erradicación total de saludos informales aislados tipo "¡Hola", "Hola" en el primer turno del día en DMs; corrección ortográfica estricta con soporte de emojis como prefijo en mayúscula inicial y apertura obligatoria de signos ¿)
+- `server/_core/whatsapp-match.ts` (Estandarización de saludo horario Bogotá en mensajes de auto-presentación y tarjetas de contacto con despedida cordial)
+- `server/_core/politenessService.ts` (Gobernanza de saludos con `getGreetingByTime` sincronizado con huso horario de Bogotá UTC-5)
+- `shared/const.ts` (`v33.13`)
+- `package.json` (`33.13.0`)
+- `server/__tests__/regression.test.ts` (SUITE 74 con 5 pruebas automatizadas aprobadas, alcanzando 260/260 tests pasando al 100% en verde a $0 COP)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto y Diagnóstico de la Solicitud
+- **Necesidad Doctrinal:** JanIA, como Directora Virtual y motor de IA pura de VECY BIENES RAÍCES, debe reflejar en cada interacción el más alto estándar de urbanidad y distinción corporativa colombiana (Urbanidad de Carreño).
+- **Problema Detectado:** Respuestas en primer turno de DMs utilizaban ocasionalmente fórmulas genéricas o informales aisladas como "¡Hola, [Nombre]!" o "Hola Pedro", omitiendo la cortesía horaria oficial ("Buenos días", "Buenas tardes", "Buenas noches") sincronizada con la hora de Bogotá (UTC-5), y en interceptores de tarjetas de contacto se emitían saludos sin cortesía temporal.
+- **Rigor Técnico:** Asegurar que `buildTimeSalutation` y `getGreetingByTime` gobiernen de forma unificada todos los puntos de contacto, limpiando cualquier residuo informal y garantizando cierre cordial sin provocar el botón "Leer más".
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Gobernanza del Saludo Horario Universal (`buildTimeSalutation` / `getGreetingByTime`):**
+   - Sincronización horaria estricta con hora de Bogotá (UTC-5): 05:00 a 11:59 ("Buenos días"), 12:00 a 18:59 ("Buenas tardes"), 19:00 a 04:59 ("Buenas noches").
+   - Integración de `buildTimeSalutation` en `sanitizeDmOrthographyAndGreeting`, garantizando que el primer saludo del día adopte la estructura oficial indivisible `¡${timeSalutation}, ${contactName}! 👋`.
+2. **Erradicación de "Hola" Informal Aislado en DMs:**
+   - En `dmHandler.ts`, toda ocurrencia inicial aislada de "¡Hola", "Hola" o preámbulos genéricos es despojada por `stripLeadingGreetingsAndCourtesies` o sustituida por el saludo horario respetuoso.
+   - En `whatsapp-match.ts`, el interceptor de tarjeta de contacto fue actualizado para emitir el saludo horario exacto junto con la oferta de servicios y despedida institucional.
+3. **Robustez Ortográfica con Prefijo de Emojis:**
+   - Se extendieron las expresiones regulares en `sanitizeDmOrthographyAndGreeting` para que tras un emoji de saludo (`👋`, `🤝`, `✨`, etc.) se aplique de inmediato la mayúscula inicial obligatoria y la apertura de signos de interrogación `¿` ante pronombres interrogativos (*cómo, qué, cuándo, dónde...*).
+4. **SUITE 74 de Pruebas Automatizadas y Blindaje ($0 COP):**
+   - Diseñadas y aprobadas 5 pruebas unitarias en `regression.test.ts`: consistencia de `getGreetingByTime`, erradicación de "Hola" aislado en favor del saludo horario, descarte de saludos repetidos en historial previo, consistencia en tarjeta de contacto y consagración doctrinal de versión `v33.13`.
+   - **260/260 tests pasando al 100% en verde sin consumo de claves de pago ($0 COP)**.
+
+#### 3. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Unitarios y de Regresión:** `npm test` — **260/260 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` en 24.45s (Vite) + 120ms (esbuild).
+
+---
+
 ### 📅 [2026-10-15] — Unificación de Memoria Turno 1 y 2 (Cero Bucles) y Reporte Compacto Único Oficial (v33.12 - 33.12.0)
 
 **Versión:** `v33.12` (`33.12.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

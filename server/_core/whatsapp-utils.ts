@@ -212,6 +212,15 @@ export function getGreetingByTime(date?: Date): string {
 }
 
 /**
+ * Genera el saludo horario oficial de Bogotá con formato indivisible '¡${saludo}, ${nombre}! 👋' o '¡${saludo}! 👋'
+ */
+export function buildTimeSalutation(name?: string, date?: Date): string {
+  const greeting = getGreetingByTime(date);
+  const cleanName = name?.trim();
+  return cleanName ? `¡${greeting}, ${cleanName}! 👋` : `¡${greeting}! 👋`;
+}
+
+/**
  * Detecta si el texto del usuario solicita explícitamente una respuesta por voz u audio.
  */
 export function detectaVoz(text: string): boolean {

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.12";
+    VECY_VERSION = "v33.13";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14064,6 +14064,7 @@ var init_patchSignal = __esm({
 // server/_core/whatsapp-utils.ts
 var whatsapp_utils_exports = {};
 __export(whatsapp_utils_exports, {
+  buildTimeSalutation: () => buildTimeSalutation,
   cleanVoiceText: () => cleanVoiceText,
   detectaVoz: () => detectaVoz,
   extractFirstName: () => extractFirstName2,
@@ -14137,6 +14138,11 @@ function getGreetingByTime2(date) {
     return "Buenas tardes";
   }
   return "Buenas noches";
+}
+function buildTimeSalutation(name, date) {
+  const greeting = getGreetingByTime2(date);
+  const cleanName = name?.trim();
+  return cleanName ? `\xA1${greeting}, ${cleanName}! \u{1F44B}` : `\xA1${greeting}! \u{1F44B}`;
 }
 function detectaVoz(text2) {
   if (!text2) return false;
@@ -15553,6 +15559,7 @@ var init_notarialExpenseService = __esm({
 // server/_core/jania/trustedContacts.ts
 var trustedContacts_exports = {};
 __export(trustedContacts_exports, {
+  CONTACT_PRIMARY_NICKS: () => CONTACT_PRIMARY_NICKS,
   TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
   TRUSTED_FAMILY_AND_FRIENDS: () => TRUSTED_FAMILY_AND_FRIENDS,
   buildChaloJokeResponse: () => buildChaloJokeResponse,
@@ -15645,12 +15652,14 @@ function findTrustedContact(userId, rawName) {
   }
   return null;
 }
-function buildFamilyWarmWelcomeMessage(contact) {
+function buildFamilyWarmWelcomeMessage(contact, timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  const key = contact.id || contact.key || "";
+  const nick = CONTACT_PRIMARY_NICKS[key] || contact.primaryNick || contact.nicknames[0] || contact.names[0];
   if (contact.customMessage) {
-    return contact.customMessage;
+    return `\xA1${salutation}, ${contact.customMessage}`;
   }
-  const nick = contact.primaryNick || contact.nicknames[0] || contact.names[0];
-  return `\xA1Hola ${nick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Como hoy es el cumplea\xF1os de Eduardo (Eddu) o para cualquier asunto personal, te comparto su n\xFAmero directo y nuevo de br\xF3ker por si necesitas ubicarlo: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
+  return `\xA1${salutation}, ${nick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
 }
 function isChaloEscobarJoke(text2) {
   if (!text2) return false;
@@ -15659,8 +15668,9 @@ function isChaloEscobarJoke(text2) {
     clean
   );
 }
-function buildChaloJokeResponse() {
-  return `\xA1Hola Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
+function buildChaloJokeResponse(timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  return `\xA1${salutation}, mi querido Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
 
 Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA en VECY BIENES RA\xCDCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su n\xFAmero nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1O d\xE9jame tu raz\xF3n por ac\xE1 y yo se la entrego intacta!`;
 }
@@ -15671,8 +15681,9 @@ function isJonathanCreditProcessQuery(text2) {
     clean
   );
 }
-function buildJonathanCreditResponse() {
-  return `\xA1Hola Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
+function buildJonathanCreditResponse(timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  return `\xA1${salutation}, Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
 
 Como esta l\xEDnea ahora es mi canal exclusivo como JanIA en VECY BIENES RA\xCDCES, comun\xEDcate con \xE9l directamente a su l\xEDnea de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719). \xA1O si deseas, d\xE9jame tu mensaje y yo se lo pongo de presente!`;
 }
@@ -15690,84 +15701,86 @@ function isDebtCollectionOrSpamScam(text2, senderName) {
   );
   return hasCollectionKeywords || hasCollectionAgencies || hasTargetedCollection;
 }
-function getDebtCollectionDefenseResponse() {
-  return "Hola. No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.";
+function getDebtCollectionDefenseResponse(timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  return `\xA1${salutation}! No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
 }
-var TRUSTED_FAMILY_AND_FRIENDS, TRUSTED_CONTACTS;
+var TRUSTED_FAMILY_AND_FRIENDS, CONTACT_PRIMARY_NICKS, TRUSTED_CONTACTS;
 var init_trustedContacts = __esm({
   "server/_core/jania/trustedContacts.ts"() {
     "use strict";
+    init_whatsapp_utils();
     TRUSTED_FAMILY_AND_FRIENDS = {
       carmenza: {
         phones: ["573108643555"],
         names: ["Mar\xEDa del Carmen Mart\xEDnez Castro", "Carmenza", "Maria del Carmen"],
         relation: "Madre",
-        nicknames: ["Madrecita", "Madrecita querida", "Mamita hermosa"],
-        customMessage: "\xA1Madrecita hermosa! Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento con todo el amor que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigantesco y un beso enorme de su parte!"
+        nicknames: ["madrecita hermosa", "Madrecita querida", "Mamita hermosa"],
+        customMessage: "madrecita hermosa! \u2764\uFE0F Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento con todo el amor que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigantesco y un beso enorme de su parte!"
       },
       olanda: {
         phones: ["573138524917"],
         names: ["Olanda In\xE9s Rivera G\xF3mez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
         relation: "T\xEDa",
-        nicknames: ["T\xEDa Olandita", "Olandita"],
-        customMessage: "\xA1T\xEDa Olandita hermosa! Qu\xE9 gusto saludarte. Te cuento con mucho cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su l\xEDnea directa de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
+        nicknames: ["t\xEDa Olandita", "T\xEDa Olandita", "Olandita"],
+        customMessage: "t\xEDa Olandita hermosa! \u{1F970} Qu\xE9 gusto saludarte. Te cuento con mucho cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su l\xEDnea directa de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
       },
       ana_tulia: {
         phones: ["573124794864"],
         names: ["Ana Tulia Rivera G\xF3mez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
         relation: "T\xEDa",
-        nicknames: ["T\xEDa Tulita", "Anita Tulita"],
-        customMessage: "\xA1T\xEDa Tulita querida! Qu\xE9 alegr\xEDa tan inmensa saludarte. Te cuento con todo el cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
+        nicknames: ["t\xEDa Tulita", "T\xEDa Tulita", "Anita Tulita"],
+        customMessage: "t\xEDa Tulita querida! \u{1F970} Qu\xE9 alegr\xEDa tan inmensa saludarte. Te cuento con todo el cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
       },
       marina: {
         phones: ["573204997575"],
         names: ["Marina Mart\xEDnez Castro", "Marina Martinez Castro", "Marina"],
         relation: "T\xEDa",
-        nicknames: ["T\xEDa Marinita", "Marinita"],
-        customMessage: "\xA1T\xEDa Marinita hermosa! Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con Eduardo (Eddu), te comparto su n\xFAmero directo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+        nicknames: ["t\xEDa Marinita", "T\xEDa Marinita", "Marinita"],
+        customMessage: "t\xEDa Marinita hermosa! \u{1F970} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con Eduardo (Eddu), te comparto su n\xFAmero directo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
       },
       tio_luis: {
         phones: ["573132094918"],
         names: ["Luis Eduardo Rivera G\xF3mez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
         relation: "T\xEDo",
-        nicknames: ["T\xEDo Luis"],
-        customMessage: "\xA1T\xEDo Luis! Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+        nicknames: ["t\xEDo Luis", "T\xEDo Luis"],
+        customMessage: "t\xEDo Luis! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
       },
       daniel: {
         phones: ["573006067089"],
         names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
         relation: "Hijo",
-        nicknames: ["Pollotote", "Campe\xF3n", "Mi ingeniero favorito"],
-        customMessage: "\xA1Hola, mi Pollotote querido! \xA1Campe\xF3n, mi ingeniero favorito! \u{1F680}\u{1F4BB} Qu\xE9 alegr\xEDa que me escribas. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas llamar o escribirle a tu pap\xE1 (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te quiere much\xEDsimo!"
+        nicknames: ["mi Pollotote querido", "Pollotote", "Campe\xF3n", "Mi ingeniero favorito"],
+        customMessage: "mi Pollotote querido! \xA1Campe\xF3n, mi ingeniero favorito! \u{1F680}\u{1F4BB} Qu\xE9 alegr\xEDa que me escribas. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas llamar o escribirle a tu pap\xE1 (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te quiere much\xEDsimo!"
       },
       natalia: {
         phones: ["573058788329"],
         names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
         relation: "Hija",
-        nicknames: ["Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Coraz\xF3n de Melocot\xF3n", "Monacha Remolacha"],
-        customMessage: "\xA1Hola, mi Natis hermosa! \xA1Mi princesa, Natillita, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
+        nicknames: ["mi Natillita hermosa", "Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Coraz\xF3n de Melocot\xF3n", "Monacha Remolacha"],
+        customMessage: "mi Natillita hermosa! \xA1Mi princesa, mi Natis, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
       },
       jani: {
         phones: ["573188096811", "573166569719"],
         names: ["Jani Alves Souza", "Jani Alves", "Jani"],
         relation: "Esposa / Co-founder",
-        nicknames: ["Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
-        customMessage: "\xA1Hola, mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
+        nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
+        customMessage: "mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
         lids: ["167108705018103", "182781141344345", "218820279050385"]
       },
       monica: {
         phones: ["573103395788"],
         names: ["M\xF3nica Mart\xEDnez", "Monica Martinez", "Monica"],
         relation: "Prima",
-        nicknames: ["Monik", "Chinita", "Primi", "Primita"],
-        customMessage: "\xA1Hola, mi Monik hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+        nicknames: ["mi Monik hermosa", "Monik", "Chinita", "Primi", "Primita"],
+        customMessage: "mi Monik hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
       },
       liliana: {
         phones: ["573132533474"],
         names: ["Liliana Mart\xEDnez", "Liliana Martinez", "Liliana"],
         relation: "Prima",
-        nicknames: ["Lili", "Chinita", "Primi", "Primitica"],
-        customMessage: "\xA1Hola, mi Lili hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle a Eduardo (Eddu), su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+        nicknames: ["mi Lili hermosa", "Lili", "Chinita", "Primi", "Primitica"],
+        customMessage: "mi Lili hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle a Eduardo (Eddu), su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
       },
       marcelita: {
         phones: ["573144354412"],
@@ -15779,43 +15792,43 @@ var init_trustedContacts = __esm({
           "Marcela"
         ],
         relation: "Prima",
-        nicknames: ["Marcelita", "Primita", "Primi", "Chinita"],
-        customMessage: "\xA1Hola, mi Marcelita hermosa! \xA1Primi querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+        nicknames: ["mi Marcelita hermosa", "Marcelita", "Primita", "Primi", "Chinita"],
+        customMessage: "mi Marcelita hermosa! \xA1Primi querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
       },
       carlitos: {
         phones: ["573054589435"],
         names: ["Carlitos Mart\xEDnez", "Carlitos Martinez", "Charles Barber", "Carlos"],
         relation: "Primo",
-        nicknames: ["Cayaco", "Cayaqu\xEDn", "Carlitos"],
-        customMessage: "\xA1Hola, mi querido Cayaco! \xA1Cayaqu\xEDn, hermano! \u{1F488}\u2702\uFE0F Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle o llamar a Eduardo (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un abrazo de gol!"
+        nicknames: ["mi querido Cayaco", "Cayaco", "Cayaqu\xEDn", "Carlitos"],
+        customMessage: "mi querido Cayaco! \xA1Cayaqu\xEDn, hermano! \u{1F488}\u2702\uFE0F Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle o llamar a Eduardo (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un abrazo de gol!"
       },
       jackson: {
         phones: ["573142721432"],
         names: ["Jackson Mart\xEDnez", "Jackson Martinez", "Jackson"],
         relation: "Primo",
-        nicknames: ["Jat\xF3n", "Jaksit\xF3n", "Primo"],
-        customMessage: "\xA1Hola, mi estimado Jaton! \xA1Jaksit\xF3n, primo! \u{1F680} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+        nicknames: ["mi estimado Jat\xF3n", "Jat\xF3n", "Jaksit\xF3n", "Primo"],
+        customMessage: "mi estimado Jat\xF3n! \xA1Jaksit\xF3n, primo! \u{1F680} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
       },
       gus: {
         phones: ["573108096117"],
         names: ["Gustavo Guevara", "Gustavo"],
         relation: "Amigo",
-        nicknames: ["Gus"],
-        customMessage: "\xA1Hola, mi estimado Gus! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+        nicknames: ["mi estimado Gus", "Gus"],
+        customMessage: "mi estimado Gus! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
       },
       lucho_taxi: {
         phones: ["573105772223"],
         names: ["Luis \xC1ngel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
         relation: "Amigo / Servicio Especial Hotel",
-        nicknames: ["Lucho"],
-        customMessage: "\xA1Hola, mi estimado Lucho! \u{1F695} Hotel y servicio especial. Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+        nicknames: ["mi estimado Lucho", "Lucho"],
+        customMessage: "mi estimado Lucho! \u{1F695} Hotel y servicio especial. Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
       },
       chalo_andres: {
         phones: ["573005509529"],
         names: ["Andr\xE9s Ruiz", "Andres Ruiz", "Chalo"],
         relation: "Amigo",
-        nicknames: ["Chalo"],
-        customMessage: "\xA1Hola, mi querido Chalo!  patr\xF3n... digo, \xA1compa\xF1ero! \u{1F576}\uFE0F\u{1F602} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patr\xF3n favorito, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+        nicknames: ["mi querido Chalo", "Chalo"],
+        customMessage: "mi querido Chalo! Patr\xF3n... digo, \xA1compa\xF1ero! \u{1F576}\uFE0F\u{1F602} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patr\xF3n favorito, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
       },
       jonathan_datacredito: {
         phones: ["573103790278"],
@@ -15827,22 +15840,42 @@ var init_trustedContacts = __esm({
         ],
         relation: "Cliente / Proceso Legal Datacr\xE9dito",
         nicknames: ["Jonathan"],
-        customMessage: "\xA1Hola, Jonathan! Qu\xE9 gusto saludarte. Te comento que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Respecto a tu caso pendiente para salir de reportes en Datacr\xE9dito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con \xE9l para revisar los avances, su l\xEDnea directa de br\xF3ker y gesti\xF3n jur\xEDdica es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Seguimos firmes con tu caso!"
+        customMessage: "Jonathan! Qu\xE9 gusto saludarte. Te comento que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Respecto a tu caso pendiente para salir de reportes en Datacr\xE9dito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con \xE9l para revisar los avances, su l\xEDnea directa de br\xF3ker y gesti\xF3n jur\xEDdica es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Seguimos firmes con tu caso!"
       },
       eduardo: {
         phones: ["573192919978"],
         names: ["Eduardo Arturo Rivera Mart\xEDnez", "Eduardo Rivera", "Eduardo", "Eddu"],
         relation: "Director de Tecnolog\xEDa / Fundador",
         nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
-        customMessage: "\xA1Hola Eduardo! Aqu\xED estoy al frente de JanIA en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy?",
+        customMessage: "Eduardo! A tu disposici\xF3n en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}",
         aliases: ["3166569719"],
         lids: ["225954035179724"]
       }
     };
+    CONTACT_PRIMARY_NICKS = {
+      carmenza: "Madrecita",
+      olanda: "T\xEDa Olandita",
+      ana_tulia: "T\xEDa Tulita",
+      marina: "T\xEDa Marinita",
+      tio_luis: "T\xEDo Luis",
+      daniel: "Pollotote",
+      natalia: "Mi Natis",
+      jani: "Jani",
+      monica: "Monik",
+      liliana: "Lili",
+      marcelita: "Marcelita",
+      carlitos: "Cayaco",
+      jackson: "Jat\xF3n",
+      gus: "Gus",
+      lucho_taxi: "Lucho",
+      chalo_andres: "Chalo",
+      jonathan_datacredito: "Jonathan",
+      eduardo: "Eduardo"
+    };
     TRUSTED_CONTACTS = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
       ([key, contact]) => {
         const digits = normalizePhoneDigits(contact.phones[0] || "");
-        const primaryNick = contact.nicknames[0] || contact.names[0];
+        const primaryNick = CONTACT_PRIMARY_NICKS[key] || contact.nicknames[0] || contact.names[0];
         const enriched = {
           ...contact,
           id: key,
@@ -19807,17 +19840,17 @@ ${closingTag}${reviewSection}`;
   if (!success) {
     if (payloadText && payloadText.trim()) {
       if (isEduardo) {
-        return `\xA1Hola, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
+        return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
 
 ${payloadWithClosing}`;
       }
       if (isJani) {
-        return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
+        return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
 
 ${payloadWithClosing}`;
       }
       if (isFamilyOrTrusted) {
-        return `\xA1Hola, ${displayName}! Con todo gusto. Aqu\xED tienes el detalle del reporte solicitado:
+        return `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el detalle del reporte solicitado:
 
 ${payloadWithClosing}`;
       }
@@ -19827,33 +19860,33 @@ ${payloadWithClosing}`;
 `;
         return greetingHeader + payloadWithClosing;
       } else {
-        const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
+        const politeHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! `;
         return politeHeader + payloadWithClosing;
       }
     }
     if (isEduardo) {
-      return `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     if (isJani) {
-      return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     if (isFamilyOrTrusted) {
-      return `\xA1Hola, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
   }
   if (isEduardo) {
-    return `\xA1Hola, Eduardo! A tu disposici\xF3n:
+    return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n:
 
 ${payloadWithClosing}`;
   }
   if (isJani) {
-    return `\xA1Hola, Jani! Qu\xE9 gusto saludarte:
+    return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte:
 
 ${payloadWithClosing}`;
   }
   if (isFamilyOrTrusted) {
-    return `\xA1Hola, ${displayName}! Con todo gusto. Aqu\xED tienes el reporte solicitado:
+    return `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el reporte solicitado:
 
 ${payloadWithClosing}`;
   }
@@ -19909,9 +19942,9 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName,
   cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
     return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
   });
-  cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
-  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1Hola, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! `);
-  cleaned = cleaned.replace(/^hola\b/i, "\xA1Hola!");
+  const nameSalutation = displayName ? `\xA1${currentSalutation}, ${displayName}! \u{1F44B} ` : `\xA1${currentSalutation}! \u{1F44B} `;
+  cleaned = cleaned.replace(/^¡?hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1${currentSalutation}, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! \u{1F44B} `);
+  cleaned = cleaned.replace(/^¡?hola\b[!]?\s*/i, nameSalutation);
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
   if (isEduardo) {
     if (!hasPriorHistory) {
@@ -19932,8 +19965,8 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName,
       cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
   }
-  cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
-  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
+  cleaned = cleaned.replace(/(^|[.!?]\s+|[👋🤝✨🏘️😊🤖]\s*)([a-záéíóúñ])/gu, (_m, prefix, letter) => prefix + letter.toUpperCase());
+  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*|[👋🤝✨🏘️😊🤖]\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/giu, (_match, prefix, qWord, rest) => {
     const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
     return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
   });
@@ -19949,15 +19982,15 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     clean = "[Documento adjunto en PDF]";
   }
   if (!clean) return "";
+  const realName = await resolveRealName(userId, userName);
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
   if (isDebtCollectionOrSpamScam(clean, userName)) {
-    const defenseMsg = getDebtCollectionDefenseResponse();
+    const defenseMsg = getDebtCollectionDefenseResponse(timeSalutation);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", defenseMsg);
     return defenseMsg;
   }
-  const realName = await resolveRealName(userId, userName);
-  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-  const timeSalutation = getGreetingByTime4();
   const trustedContact = findTrustedContact(userId, userName || realName);
   const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
   const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
@@ -19994,14 +20027,14 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   if (isFamilyOrTrusted && trustedContact) {
     const isChalo = trustedContact.id === "chalo_andres" || trustedContact.id === "chalo_ruiz" || trustedContact.key === "chalo_andres" || trustedContact.nicknames.includes("Chalo");
     if (isChalo && isChaloEscobarJoke(clean)) {
-      const chaloReply = buildChaloJokeResponse();
+      const chaloReply = buildChaloJokeResponse(timeSalutation);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", chaloReply);
       return chaloReply;
     }
     const isJonathan = trustedContact.id === "jonathan_datacredito" || trustedContact.id === "jonathan_martinez" || trustedContact.key === "jonathan_datacredito" || trustedContact.names.some((n) => n.toLowerCase().includes("jonathan"));
     if (isJonathan && isJonathanCreditProcessQuery(clean)) {
-      const jonathanReply = buildJonathanCreditResponse();
+      const jonathanReply = buildJonathanCreditResponse(timeSalutation);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", jonathanReply);
       return jonathanReply;
@@ -20023,14 +20056,14 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     const isAskingForEddu = /(?:eduardo|eddu|ubicar|comunicarme|hablar\s+con|n[uú]mero|tel[eé]fono|cumple|cumplea[ñn]os)/i.test(cleanLower);
     const isMediaMessage = hasImage || hasPdf || clean.startsWith("[Fotograf\xEDa") || clean.startsWith("[Documento");
     if (history.length === 0 || isGreetingOnly || isAskingForEddu || isMediaMessage) {
-      const familyWelcome = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
+      const familyWelcome = buildFamilyWarmWelcomeMessage(trustedContact, timeSalutation);
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyWelcome);
       return familyWelcome;
     }
     const isAskingRealEstateService = /(?:predial|idu|chip\b|aaa[a-z0-9]|verificar\s*(?:cc|c[eé]dula|nit|documento)|paz\s*y\s*salvo|aval[uú]o|matr[ií]cula|escritura)/i.test(cleanLower);
     if (!isAskingRealEstateService) {
-      const familyChat = `\xA1Hola, ${trustedContact.primaryNick}! \u{1F970} Aqu\xED estoy cuidando y gestionando todo en VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas dejarle alg\xFAn recado o mensaje a Eduardo (Eddu), dime y yo se lo paso de una, o puedes comunicarte a su l\xEDnea de br\xF3ker al +57 316 656 9719. \xA1Te mandamos un abrazo gigante!`;
+      const familyChat = `\xA1${timeSalutation}, ${trustedContact.primaryNick}! \u{1F970} Aqu\xED estoy cuidando y gestionando todo en VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas dejarle alg\xFAn recado o mensaje a Eduardo (Eddu), dime y yo se lo paso de una, o puedes comunicarte a su l\xEDnea de br\xF3ker al +57 316 656 9719. \xA1Te mandamos un abrazo gigante!`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", familyChat);
       return familyChat;
@@ -20581,11 +20614,11 @@ QUI\xC9NES SOMOS, REDES SOCIALES Y SERVICIOS (M\xC1XIMO 2 P\xC1RRAFOS CORTOS):
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    let fallback = isEduardo ? `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isFamilyOrTrusted ? `\xA1Hola, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    let fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
     if (!isEduardo && !isJani && !isFamilyOrTrusted && isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
-    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
+    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory, timeSalutation);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;
@@ -21986,8 +22019,10 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
           if (isContactReq) {
             const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
             const contactType = wantsBroker ? "broker" : "jania";
+            const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+            const timeSalutation = getGreetingByTime4();
             const firstName = extractFirstName2(userName);
-            const contactMsg = wantsBroker ? `\xA1Hola ${firstName}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial humana y directa de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1Hola ${firstName}! \u{1F44B} Con mucho gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesor\xEDa cuando quieras.`;
+            const contactMsg = wantsBroker ? `\xA1${timeSalutation}${firstName ? `, ${firstName}` : ""}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial humana y directa de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1${timeSalutation}${firstName ? `, ${firstName}` : ""}! \u{1F44B} Con mucho gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesor\xEDa cuando quieras.`;
             await this.queuedSend(senderId, contactMsg, { quoted: mainMsg, allowDirectMessage: true });
             await this.sendContactCard(senderId, contactType, mainMsg);
             await this.logToDb(senderId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
@@ -22251,7 +22286,9 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
           if (isContactRequest) {
             const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(bodyText);
             const contactType = wantsBroker ? "broker" : "jania";
-            const contactMsg = wantsBroker ? `\xA1Hola ${realName}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1Hola ${realName}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
+            const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+            const timeSalutation = getGreetingByTime4();
+            const contactMsg = wantsBroker ? `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
             await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
             await this.sendContactCard(chatId, contactType, msg);
             await this.sock.sendPresenceUpdate("paused", chatId);
@@ -27111,6 +27148,7 @@ var init_jania = __esm({
 var janIA_exports = {};
 __export(janIA_exports, {
   COMMON_FIRST_NAMES: () => COMMON_FIRST_NAMES,
+  CONTACT_PRIMARY_NICKS: () => CONTACT_PRIMARY_NICKS,
   GREETED_TODAY: () => GREETED_TODAY,
   JANIA_ARGON_COGNITIVE_CORE: () => JANIA_ARGON_COGNITIVE_CORE,
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
