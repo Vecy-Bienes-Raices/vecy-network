@@ -360,11 +360,13 @@ export function getStartOfTodayBogota(): number {
   return Date.UTC(year, month, day, 5, 0, 0);
 }
 
+const WINDOW_72_HOURS_MS = 72 * 60 * 60 * 1000; // Ventana continua de 72 horas (Doctrina v33.16)
+
 export function getDmHistory(userId: string): DmTurn[] {
   const history = dmConversationHistory.get(userId) || [];
-  const startOfToday = getStartOfTodayBogota();
-  // Conservar mensajes del mismo día en curso hasta las 23:59:59 hora Bogotá (Doctrina v32.53)
-  return history.filter(h => h.ts >= startOfToday);
+  const cutoff = Date.now() - WINDOW_72_HOURS_MS;
+  // Conservar mensajes de las últimas 72 horas limitados a los últimos 20 turnos (Doctrina v33.16)
+  return history.filter(h => h.ts >= cutoff).slice(-20);
 }
 
 export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
@@ -373,24 +375,24 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
     return inMemory;
   }
 
-  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD del día en curso
+  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD de las últimas 72 horas
   try {
     const db = await getDb();
     if (db) {
       const conv = await db.select().from(dbConversations).where(eq(dbConversations.sessionId, userId)).limit(1);
       if (conv.length > 0) {
-        const startOfToday = getStartOfTodayBogota();
+        const cutoff = new Date(Date.now() - WINDOW_72_HOURS_MS);
         const recentMsgs = await db
           .select()
           .from(dbMessages)
           .where(
             and(
               eq(dbMessages.conversationId, conv[0].id),
-              gte(dbMessages.createdAt, new Date(startOfToday))
+              gte(dbMessages.createdAt, cutoff)
             )
           )
           .orderBy(desc(dbMessages.createdAt))
-          .limit(24);
+          .limit(20);
 
         if (recentMsgs.length > 0) {
           recentMsgs.reverse();
@@ -414,8 +416,8 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
 export function appendDmHistory(userId: string, role: "user" | "assistant", content: string) {
   const history = getDmHistory(userId);
   history.push({ role, content, ts: Date.now() });
-  // Conservar hasta 24 turnos completos del día
-  if (history.length > 24) history.shift();
+  // Conservar hasta 20 turnos de las últimas 72 horas
+  while (history.length > 20) history.shift();
   dmConversationHistory.set(userId, history);
 }
 

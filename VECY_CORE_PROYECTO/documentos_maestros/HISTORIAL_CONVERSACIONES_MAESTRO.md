@@ -7,6 +7,51 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-16] — Reforma Arquitectónica LLM Puro, Matches M-Code y Memoria 72h (v33.16 - 33.16.0)
+
+**Versión:** `v33.16` (`33.16.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-match.ts` (Erradicación completa de interceptores Regex de textos prefabricados y saludos enlatados; todo mensaje de texto y audio en DMs viaja directamente a `invokeLLM` con historial conversacional y herramientas de `JANIA_DM_TOOLS`)
+- `server/_core/jania/handlers/dmHandler.ts` (Eliminación de interceptores rígidos antes de Gemini; implementación de la Regla del Saludo Único: saludo horario indivisible solo en el primer turno de la conversación y continuidad directa en turnos siguientes; preservación del fallback de test $0 COP sin alterar la autonomía cognitiva en producción)
+- `server/_core/adminMatchAssistantService.ts` (Protección de datos en cruces de inmuebles: entrega de fichas completas a directores/admin; código único `#M[id]` y datos de contacto ofuscados para inmobiliarias externas, canalizando la alianza y mediación 40/20/40 a través del bróker oficial `+57 316 656 9719`)
+- `server/_core/jania/sessionManager.ts` (Ampliación de memoria conversacional a 72 horas continuas —3 días— y hasta 20 turnos, erradicando el reseteo artificial a medianoche y permitiendo continuidad fluida durante fines de semana)
+- `server/_core/llm.ts` (Priorización de `gemini-2.5-flash` en la rotación de claves gratuitas, aceleración de failover y eliminación de pacing artificial en `isTestEnvironment()`)
+- `shared/const.ts` (`v33.16`)
+- `package.json` (`33.16.0`)
+- `server/__tests__/regression.test.ts` (SUITE 77 con 3 pruebas automatizadas aprobadas, alcanzando 272/272 tests pasando al 100% en verde a $0 COP)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto, Diagnóstico de la Solicitud y Causa Raíz Forense
+- **Solicitud y Doctrina Arquitectónica de Eduardo A. Rivera:**
+  - *"Ejecuta esta orden arquitectónica al pie de la letra (Versión v33.16 de JanIA). Regla estricta de ingeniería: Está prohibido crear nuevas expresiones regulares (Regex), condicionales if/else de palabras sueltas o textos estáticos enlatados. Debes eliminar las camisas de fuerza para que Gemini opere con su inteligencia natural, historial y Function Calling (`JANIA_DM_TOOLS`)."*
+- **Problemas Identificados en la Arquitectura Previa:**
+  1. *Filtros e Interceptores Pre-LLM:* En `whatsapp-match.ts` y `dmHandler.ts` existían decenas de expresiones regulares y condicionales rígidos que interceptaban consultas sobre costos, presentación, servicios o dudas frecuentes, respondiendo con textos estáticos enlatados e impidiendo que Gemini generara respuestas dinámicas, empáticas y contextualmente adaptadas.
+  2. *Fugas de Datos de Contacto en Cruces Inmobiliarios:* En `adminMatchAssistantService.ts`, al solicitar cruces o matches de propiedades, se enviaban datos directos de los propietarios a terceros sin verificar el rol del usuario, arriesgando la intermediación de VECY Network.
+  3. *Ventana de Memoria Insuficiente (Medianoche):* El límite de memoria a las 23:59 reiniciaba la conversación cada noche, borrando el contexto de clientes que interactuaban a lo largo del fin de semana o en días consecutivos.
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Erradicación de Camisas de Fuerza Pre-LLM:**
+   - Eliminados todos los interceptores de texto prefabricado en `whatsapp-match.ts` y `dmHandler.ts`. Gemini 2.5 Flash asume el 100% de la conversación en chats privados, guiado por su prompt de sistema y asistido por las herramientas de consulta (`JANIA_DM_TOOLS`).
+2. **Regla del Saludo Único y Respuestas Orgánicas:**
+   - JanIA emite su saludo horario (`¡Buenos días / tardes / noches, [Nombre]! 👋`) una sola vez al inicio del hilo. En mensajes subsecuentes, responde directo al grano con amabilidad y concisión.
+3. **M-Code y Protección de Contactos en Matches Inmobiliarios:**
+   - Para Eduardo y directores de VECY: Fichas técnicas completas con nombre, teléfono y WhatsApp directo de colegas y propietarios.
+   - Para inmobiliarias externas y colegas: Ocultamiento estricto de teléfonos y enlaces directos; se asigna el código único `#M[id]` y se indica que para coordinar la visita y formalizar la alianza 40/20/40 deben comunicarse con la dirección de bróker (`+57 316 656 9719`).
+4. **Memoria Deslizante Continua de 72 Horas:**
+   - `sessionManager.ts` mantiene un búfer de 72 horas y hasta 20 turnos por usuario, garantizando continuidad natural a través de las noches y fines de semana.
+5. **SUITE 77 de Pruebas Automatizadas y Blindaje ($0 COP):**
+   - 3 pruebas de regresión verificando memoria de 72 horas, protección M-Code y versión `v33.16`.
+   - **272/272 tests pasando al 100% en verde sin consumo de claves de pago ($0 COP)**.
+
+#### 3. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Unitarios y de Regresión:** `npm test` — **272/272 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` limpio en 15.28s (Vite) + 157ms (esbuild).
+
+---
+
 ### 📅 [2026-10-16] — Servicio Incondicional, Libertad Total del Usuario y Erradicación de Bloqueos en DMs (v33.15 - 33.15.0)
 
 **Versión:** `v33.15` (`33.15.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -1328,61 +1328,6 @@ export class JaniaMatchBot {
       }
     } catch (_) { }
 
-    // 💖 INTERCEPCIÓN UNIVERSAL: CONTACTOS DE CONFIANZA Y CÍRCULO FAMILIAR (Doctrina v33.11)
-    // Aplica para cualquier mensaje entrante (texto, foto familiar, meme, nota de voz, documento o comprobante)
-    const {
-      findTrustedContact,
-      buildFamilyWarmWelcomeMessage,
-      isDebtCollectionOrSpamScam,
-      getDebtCollectionDefenseResponse,
-      isChaloEscobarJoke,
-      buildChaloJokeResponse,
-      isJonathanCreditProcessQuery,
-      buildJonathanCreditResponse
-    } = await import('./jania/trustedContacts');
-
-    const trustedContact = findTrustedContact(senderId, userName || rawPhone);
-    const isEduardoFundador = isSelfChat || rawPhone === "573192919978" || rawPhone === "225954035179724";
-    const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
-    const isBrokerOfficialLine = rawPhone === "573166569719" || senderId.includes("3166569719");
-    const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora && !isBrokerOfficialLine;
-
-    if (isFamilyOrFriend && trustedContact) {
-      console.log(`[JANIA-MATCH] [DM] 💖 Intercepción familiar inmediata para ${trustedContact.primaryNick} (${senderId})`);
-      let familyReply = trustedContact.customMessage || buildFamilyWarmWelcomeMessage(trustedContact);
-
-      // Si es un recado explícito para Eduardo
-      const cleanLower = (body || "").trim().toLowerCase();
-      const isLeavingMessageForEddu = /(?:dile\s+a\s+eddu|d[ií]gale\s+a\s+eddu|av[ií]sale\s+a\s+eddu|av[ií]sele\s+a\s+eddu|dile\s+a\s+eduardo|d[ií]gale\s+a\s+eduardo|av[ií]sale\s+a\s+eduardo|av[ií]sele\s+a\s+eduardo|d[eé]jale\s+dicho|recado|raz[oó]n\s+para\s+eddu|p[aá]sale\s+el\s+recado|felic[ií]talo|un\s+abrazo\s+a\s+eddu)/i.test(cleanLower);
-      if (isLeavingMessageForEddu) {
-        familyReply = `¡Anotadísimo, ${trustedContact.primaryNick}! 📝 Le paso tu mensaje a Eduardo (Eddu) de inmediato. Recuerda que también puedes escribirle directamente a su nuevo número de bróker: +57 316 656 9719 (https://wa.me/573166569719) 🤝💖`;
-      } else if (/(?:gracias|muchas\s*gracias|mil\s*gracias|am[eé]n|bendiciones|un\s*abrazo|besos?|te\s*quiero)/i.test(cleanLower) && cleanLower.length < 80) {
-        familyReply = `¡Con todo el cariño del mundo, ${trustedContact.primaryNick}! ❤️✨ Aquí estaré siempre atenta para lo que necesites. ¡Un abrazo inmenso y que tengas un día maravilloso!`;
-      } else if (isChaloEscobarJoke(cleanLower)) {
-        familyReply = buildChaloJokeResponse();
-      } else if (isJonathanCreditProcessQuery(cleanLower)) {
-        familyReply = buildJonathanCreditResponse();
-      }
-
-      await this.queuedSend(senderId, familyReply, { quoted: mainMsg, allowDirectMessage: true });
-      await this.logToDb(senderId, 'janIA', familyReply);
-      const { appendDmHistory } = await import('./janIA');
-      appendDmHistory(senderId, 'user', body || (imageBuffer ? '[Foto Familiar / Imagen]' : '[Audio / Mensaje]'));
-      appendDmHistory(senderId, 'assistant', familyReply);
-      return;
-    }
-
-    // 🛡️ ESCUDO DEFENSIVO: Casas de cobranza, bancos hostiles, cobro coactivo, estafas y spam financiero (Doctrina v33.08)
-    if (isDebtCollectionOrSpamScam(body, userName)) {
-      const defenseMsg = getDebtCollectionDefenseResponse();
-      await this.queuedSend(senderId, defenseMsg, { quoted: mainMsg, allowDirectMessage: true });
-      const { appendDmHistory } = await import('./janIA');
-      appendDmHistory(senderId, 'user', body);
-      appendDmHistory(senderId, 'assistant', defenseMsg);
-      await this.logToDb(senderId, 'janIA', `[ESCUDO-DEFENSIVO] ${defenseMsg}`);
-      return;
-    }
-
     // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123) para cualquier usuario (Double Opt-In)
     const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
     const matchConfirm = body.match(matchConfirmationRegex);
@@ -1393,243 +1338,12 @@ export class JaniaMatchBot {
       return;
     }
 
-    // ⏱️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CALIFICACIÓN (v32.96 — Eduardo A. Rivera):
-    // 1. Si el usuario escribe antes de que se cumpla el minuto de silencio, cancelamos el timer pendiente
+    // ⏱️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CALIFICACIÓN:
+    // Si el usuario escribe antes de que se cumpla el minuto de silencio, cancelamos el timer pendiente
     const pendingPoliteTimer = this.userPolitenessTimers.get(senderId);
     if (pendingPoliteTimer) {
       clearTimeout(pendingPoliteTimer);
       this.userPolitenessTimers.delete(senderId);
-    }
-
-    // 2. Si el usuario estaba en espera de responder a la pregunta de cortesía de Urbanidad de Carreño
-    if (this.userAwaitingReviewConsent.has(senderId)) {
-      const consentData = this.userAwaitingReviewConsent.get(senderId)!;
-      const {
-        isAffirmativeConsentResponse,
-        isNegativeConsentResponse,
-        formatPoliteYesReviewMessage,
-        formatPoliteNoReviewPersuasionMessage
-      } = await import('./politenessService');
-
-      const isRecentPrompt = (Date.now() - consentData.timestamp) < 4 * 60 * 60 * 1000;
-      if (isRecentPrompt) {
-        if (isAffirmativeConsentResponse(body)) {
-          this.userAwaitingReviewConsent.delete(senderId);
-          this.recentReviewPromptUsers.set(senderId, Date.now());
-
-          const replyText = formatPoliteYesReviewMessage(userName || consentData.userName);
-          await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
-          await this.logToDb(senderId, 'janIA', replyText);
-          const { appendDmHistory } = await import('./janIA');
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', replyText);
-
-          this.schedulePostReviewGroupInvitation(senderId, userName || consentData.userName);
-          console.log(`[JANIA-MATCH] ⭐ Usuario ${senderId} respondió SÍ a la cortesía -> Enlace entregado.`);
-          return;
-        } else if (isNegativeConsentResponse(body)) {
-          this.userAwaitingReviewConsent.delete(senderId);
-          this.recentReviewPromptUsers.set(senderId, Date.now());
-
-          const replyText = formatPoliteNoReviewPersuasionMessage(userName || consentData.userName);
-          await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
-          await this.logToDb(senderId, 'janIA', replyText);
-          const { appendDmHistory } = await import('./janIA');
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', replyText);
-
-          this.schedulePostReviewGroupInvitation(senderId, userName || consentData.userName);
-          console.log(`[JANIA-MATCH] ⭐ Usuario ${senderId} respondió NO a la cortesía -> Mensaje persuasivo entregado.`);
-          return;
-        }
-      }
-      // Si el usuario envió otra consulta o un número, limpiamos el estado de espera para permitir el flujo normal
-      this.userAwaitingReviewConsent.delete(senderId);
-    }
-
-    // 3. Si la persona contesta, agradece o se despide amablemente tras recibir el servicio:
-    // JanIA reacciona de inmediato con el mensaje de calificación personalizado (Doctrina v32.96)
-    const { isPoliteGratitudeOrClosing, formatImmediatePoliteReviewMessage } = await import('./politenessService');
-    const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-
-    if (isPoliteGratitudeOrClosing(body) && lastReviewSent < oneDayAgo) {
-      this.recentReviewPromptUsers.set(senderId, Date.now());
-      this.userAwaitingReviewConsent.delete(senderId);
-
-      const replyText = formatImmediatePoliteReviewMessage(userName);
-      await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
-      await this.logToDb(senderId, 'janIA', replyText);
-      const { appendDmHistory } = await import('./janIA');
-      appendDmHistory(senderId, 'user', body);
-      appendDmHistory(senderId, 'assistant', replyText);
-
-      this.schedulePostReviewGroupInvitation(senderId, userName);
-      console.log(`[JANIA-MATCH] ⭐ Usuario ${senderId} agradeció amablemente -> Calificación inmediata entregada.`);
-      return;
-    }
-
-    // 🎯 INTERCEPTOR ADMIN: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.94)
-    const { isMatchSearchQuery, executeAdminMatchSearch, isAuthorizedAdminPhone } = await import('./adminMatchAssistantService');
-    const isAdminUser = isAdmin || isAuthorizedAdminPhone(senderId, userName) || isAuthorizedAdminPhone(rawPhone, userName);
-    const isMatchIntent = isMatchSearchQuery(body, isAdminUser);
-    if (isMatchIntent) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const matchResult = await executeAdminMatchSearch(body, isAdminUser);
-        if (matchResult.isMatchQuery && matchResult.formattedReport) {
-          console.log(`[JANIA-MATCH] [DM] Asistente de Matches atendido para ${senderId} (Admin: ${isAdminUser}, Matches: ${matchResult.totalFound})`);
-          await this.queuedSend(senderId, matchResult.formattedReport, { quoted: mainMsg, allowDirectMessage: true });
-          const { appendDmHistory } = await import('./janIA');
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', matchResult.formattedReport);
-          await this.logToDb(senderId, 'janIA', matchResult.formattedReport);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
-    // ⚖️ INTERCEPTOR PRIORITARIO DM: LIQUIDACIÓN DE GASTOS NOTARIALES Y ASESORÍA DE FIGURAS JURÍDICAS (v32.74)
-    const { executeNotarialAssistanceFromWhatsApp, hasPendingNotarialSession } = await import('./notarialExpenseService');
-    const isNotarialContext =
-      (senderId && hasPendingNotarialSession(senderId)) ||
-      /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(body);
-
-    if (isNotarialContext) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const notarialCheck = await executeNotarialAssistanceFromWhatsApp(body, senderId, true);
-        if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Liquidación o consulta notarial atendida para ${senderId}`);
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'notarial', notarialCheck.reportText, true);
-          await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.onFreeToolServiceDelivered(senderId, userName);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
-    // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PAZ Y SALVO IDU (VALORIZACIÓN)
-    const { hasPendingIduSession, executeIduAssistanceFromWhatsApp } = await import('./iduValorizacionService');
-    if (senderId && hasPendingIduSession(senderId)) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const iduPendingCheck = await executeIduAssistanceFromWhatsApp(body, senderId, true);
-        if (iduPendingCheck.isIduRequest && iduPendingCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Asistencia de Paz y Salvo IDU completada con CHIP para ${senderId} (${iduPendingCheck.chip})`);
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'idu', iduPendingCheck.reportText, true);
-          if (iduPendingCheck.pdfBuffer) {
-            await this.queuedSend(senderId, {
-              document: iduPendingCheck.pdfBuffer,
-              mimetype: 'application/pdf',
-              fileName: iduPendingCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduPendingCheck.chip}_2026.pdf`,
-              caption: deliveredText
-            }, { quoted: mainMsg, allowDirectMessage: true });
-          } else {
-            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          }
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.onFreeToolServiceDelivered(senderId, userName);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
-    // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
-    const { hasPendingPredialSession, executePredialAssistanceFromWhatsApp } = await import('./predialService');
-    if (senderId && hasPendingPredialSession(senderId)) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
-      try {
-        const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
-        if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'predial', predialPendingCheck.reportText, true);
-          if (predialPendingCheck.pdfBuffer) {
-            await this.queuedSend(senderId, {
-              document: predialPendingCheck.pdfBuffer,
-              mimetype: 'application/pdf',
-              fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
-              caption: deliveredText
-            }, { quoted: mainMsg, allowDirectMessage: true });
-          } else {
-            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          }
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.onFreeToolServiceDelivered(senderId, userName);
-          return;
-        }
-      } finally {
-        stopPresence();
-      }
-    }
-
-    // 🛡️ INTERCEPTOR DE CONSULTA SOBRE CÉDULAS PENDIENTES EN SESIÓN DM
-    const { getPendingCedulaSession, executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
-    const isAskingPendingCedulas =
-      /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(body.trim().toLowerCase()) ||
-      /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(body.trim().toLowerCase()) ||
-      /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(body.trim().toLowerCase()) ||
-      /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(body.trim().toLowerCase()) ||
-      /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(body.trim().toLowerCase()) ||
-      ((getPendingCedulaSession(senderId) !== null) && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(body.trim().toLowerCase()));
-
-    if (isAskingPendingCedulas) {
-      const pendingSession = getPendingCedulaSession(senderId);
-      if (pendingSession && pendingSession.reportText) {
-        const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-        const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'cedula', pendingSession.reportText, !!pendingSession.success);
-        await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-        appendDmHistory(senderId, 'user', body);
-        appendDmHistory(senderId, 'assistant', deliveredText);
-        await this.logToDb(senderId, 'janIA', deliveredText);
-        this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
-        return;
-      }
-
-      // Buscar en el historial reciente si el usuario envió cédulas en mensajes previos
-      const { getOrLoadDmHistory } = await import('./janIA');
-      const history = await getOrLoadDmHistory(senderId);
-      let historicalItems: any[] = [];
-      for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].role === 'user') {
-          const { extractAllCedulasForVerification } = await import('./identityVerificationService');
-          const histCed = extractAllCedulasForVerification(history[i].content, true);
-          if (histCed.length > 0) {
-            historicalItems = histCed;
-            break;
-          }
-        }
-      }
-
-      if (historicalItems.length > 0) {
-        const idCheck = await executeIdentityVerificationFromWhatsApp(body, true, senderId, historicalItems);
-        if (idCheck.reportText) {
-          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
-          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'cedula', idCheck.reportText, !!idCheck.success);
-          await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
-          appendDmHistory(senderId, 'user', body);
-          appendDmHistory(senderId, 'assistant', deliveredText);
-          await this.logToDb(senderId, 'janIA', deliveredText);
-          this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
-          return;
-        }
-      }
     }
 
     // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO:
@@ -1646,7 +1360,7 @@ export class JaniaMatchBot {
           const { extractFlyerVisionSafely } = await import('./jania/vision');
           flyerVisionData = await extractFlyerVisionSafely(imageBuffer);
         } catch (visErr: any) {
-          console.warn('[JANIA-MATCH] [DM] Error en análisis visual defensivo:', visErr?.message || visErr);
+          console.warn('[JANIA-MATCH] [DM] Error en análisis visual:', visErr?.message || visErr);
         }
       }
 
@@ -1682,24 +1396,6 @@ export class JaniaMatchBot {
         } finally {
           stopPresence();
         }
-      }
-
-      // 📇 INTERCEPTOR DIRECTO: SOLICITUD DE CONTACTO EN DM PRIVADO (v32.60)
-      const isContactReq = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(cleanLower);
-      if (isContactReq) {
-        const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
-        const contactType = wantsBroker ? 'broker' : 'jania';
-        const { getGreetingByTime } = await import('./whatsapp-utils');
-        const timeSalutation = getGreetingByTime();
-        const firstName = extractFirstName(userName);
-        const contactMsg = wantsBroker
-          ? `¡${timeSalutation}${firstName ? `, ${firstName}` : ""}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial humana y directa de VECY BIENES RAÍCES: 📲`
-          : `¡${timeSalutation}${firstName ? `, ${firstName}` : ""}! 👋 Con mucho gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesoría cuando quieras.`;
-
-        await this.queuedSend(senderId, contactMsg, { quoted: mainMsg, allowDirectMessage: true });
-        await this.sendContactCard(senderId, contactType, mainMsg);
-        await this.logToDb(senderId, 'janIA', `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
-        return;
       }
 
       let stopPresence = startContinuousPresence(this.sock, senderId, 'composing');

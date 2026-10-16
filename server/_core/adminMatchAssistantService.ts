@@ -162,6 +162,90 @@ export function isMatchSearchQuery(text: string, isAdmin: boolean = false): bool
 }
 
 /**
+ * Formatea el reporte de coincidencias adaptado para Administradores vs Usuarios/Colegas Externos (Doctrina v33.16)
+ */
+export function formatMatchReport(
+  header: string,
+  criteriaSummary: string,
+  matches: AdminMatchItem[],
+  isAdmin: boolean,
+  adminDashboardUrl: string,
+  emptyDiagnosis: string
+): string {
+  if (matches.length === 0) {
+    if (isAdmin) {
+      return (
+        `${header}\n\n` +
+        `${criteriaSummary}\n\n` +
+        `🔍 *Diagnóstico en Base de Datos:*\n` +
+        `⛔ *No se encontraron coincidencias compatibles (Score ≥ 80%) en los últimos 15 días.*\n\n` +
+        `${emptyDiagnosis}\n\n` +
+        `👉 *Verificar en Mesa de Coincidencias:*\n${adminDashboardUrl}`
+      );
+    } else {
+      return (
+        `🎯 *MESA DE COINCIDENCIAS VECY BIENES RAÍCES*\n\n` +
+        `${criteriaSummary}\n\n` +
+        `🔍 *Diagnóstico de Búsqueda:*\n` +
+        `No encontramos una coincidencia activa inmediata (Score ≥ 80%) para este criterio en este momento.\n\n` +
+        `💡 Tu consulta permanece en monitoreo permanente 24/7 en nuestro sistema. Apenas ingrese una opción compatible, te notificaremos de inmediato.\n\n` +
+        `Para asesoría directa, peritajes o acuerdos entre colegas, comunícate con nuestros directores Eduardo A. Rivera y Jani Alves al WhatsApp oficial: *+57 316 656 9719* 🤝✨.`
+      );
+    }
+  }
+
+  // Hay matches
+  if (isAdmin) {
+    let report = `${header}\n\n${criteriaSummary}\n\n✨ *Se encontraron ${matches.length} coincidencia(s) compatible(s) (Últimos 15 días):*\n\n`;
+    matches.slice(0, 5).forEach((item, idx) => {
+      report +=
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🏅 *OPCIÓN #${idx + 1} — AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? '🔥' : '✅'}\n` +
+        `🔢 *${item.targetType === 'inmueble' ? `Inmueble #P${item.targetId}` : `Demanda #R${item.targetId}`}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ''}\n` +
+        `📍 *Ubicación / Sector:* ${item.neighborhood || item.city}\n` +
+        `💰 *Precio / Presupuesto:* ${item.priceOrBudgetFormatted}\n` +
+        `📐 *Detalles:* ${item.areaFormatted} • ${item.bedroomsFormatted} • ${item.bathroomsFormatted} • ${item.parkingFormatted}\n` +
+        `👤 *Colega / Asesor:* ${item.contactName}\n` +
+        `📱 *Teléfono:* ${item.contactPhone ? '+' + item.contactPhone : 'Sin registrar'}\n` +
+        `${item.contactWhatsAppLink ? `💬 *WhatsApp Directo:* ${item.contactWhatsAppLink}\n` : ''}`;
+    });
+    report +=
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `👉 *Gestionar en Mesa de Coincidencias:*\n${adminDashboardUrl}`;
+    return report;
+  } else {
+    // Usuario o Agente Externo (Doctrina v33.16)
+    const topMatch = matches[0];
+    const matchCode = topMatch.matchId ? `#M${topMatch.matchId}` : '#M15649';
+    let report =
+      `🎯 *¡HAY COINCIDENCIA ACTIVA (MATCH) EN NUESTRO SISTEMA!* 🚀✨\n\n` +
+      `${criteriaSummary}\n\n` +
+      `✨ *Se identificaron ${matches.length} oportunidad(es) de cruce comercial:* \n\n`;
+
+    matches.slice(0, 3).forEach((item, idx) => {
+      const codeStr = item.matchId ? `#M${item.matchId}` : matchCode;
+      report +=
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🏅 *OPCIÓN #${idx + 1} — COMPATIBILIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? '🔥' : '✅'}\n` +
+        `🔢 *Código Oficial del Match:* *${codeStr}*\n` +
+        `📍 *Zona / Ubicación:* ${item.neighborhood || item.city}\n` +
+        `💰 *Valor / Canon:* ${item.priceOrBudgetFormatted}\n` +
+        `📐 *Especificaciones:* ${item.areaFormatted} • ${item.bedroomsFormatted} • ${item.bathroomsFormatted} • ${item.parkingFormatted}\n` +
+        `🔒 *Punta Colega:* Colega de la Red VECY (Contacto protegido para mediación)\n`;
+    });
+
+    report +=
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🤝 *PROCESO DE MEDIACIÓN Y ALIANZA 40/20/40 VECY:*\n` +
+      `Para coordinar este cruce, proteger la comisión compartida (40/20/40), acordar las puntas entre agentes y realizar la presentación formal ante propietarios, comunícate con nuestra Dirección de Operaciones al WhatsApp oficial de Bróker:\n` +
+      `📲 *+57 316 656 9719* (https://wa.me/573166569719)\n` +
+      `suministrando el código de coincidencia: *${matchCode}* 🤝✨`;
+
+    return report;
+  }
+}
+
+/**
  * Ejecuta la búsqueda inteligente de MATCHES exclusiva para Administradores de VECY
  */
 export async function executeAdminMatchSearch(
@@ -207,24 +291,23 @@ export async function executeAdminMatchSearch(
     reqIdCaptured ? 'requirement_id' :
     (isDemand ? 'demand_search' : 'offer_search');
 
-  // 🛡️ REGLA SUPREMA DE SEGURIDAD Y PRIVACIDAD DOCTRINAL:
-  // Si quien consulta NO es administrador autorizado, BLOQUEO INMEDIATO de datos confidenciales
-  if (!isAdmin) {
-    const safeDenialReport =
-      `🔒 *ACCESO RESTRINGIDO — PROTOCOLO DE PRIVACIDAD VECY*\n\n` +
-      `Estimado colega: Por políticas de seguridad patrimonial, Hábeas Data (Ley 1581 de 2012) y doctrina de confidencialidad de *VECY BIENES RAÍCES*, la consulta interna de la mesa de coincidencias y los datos de contacto directo de captadores y demandantes están reservados exclusivamente para los administradores del sistema.\n\n` +
-      `🤝 *¿Cómo podemos ayudarte?*\n` +
-      `• Con gusto podemos recibir tu requerimiento o inmueble para registrarlo y cruzarlo automáticamente en la red.\n` +
-      `• Para gestión directa, peritajes o citas de negocios, comunícate con nuestros directores *Eduardo A. Rivera y Jani Alves* al WhatsApp oficial: *+57 316 656 9719* 📲`;
+  // 🛡️ ACCESO A MATCHES (DOCTRINA EDUARDO A. RIVERA v33.16):
+  // Administradores (Eduardo y Jani): Información 100% destapada (nombres, teléfonos, enlaces directos).
+  // Usuarios y Colegas Externos: Confirmación de match, perfil del cruce SIN datos de contacto del otro colega,
+  // código #M... y derivación a la línea oficial de bróker +57 316 656 9719 para mediación 40/20/40.
 
+  if (!isAdmin && !matchIdCaptured) {
     return {
       isMatchQuery: true,
       isAuthorizedAdmin: false,
-      queryType: 'unrecognized',
-      querySummary: "Consulta denegada por permisos de usuario",
+      queryType: resolvedQueryType,
+      querySummary: "Acceso restringido: Consulta de base de datos de coincidencias exclusiva para Administradores de Vecy Bienes Raíces.",
       totalFound: 0,
       matches: [],
-      formattedReport: safeDenialReport,
+      formattedReport: `🔒 *ACCESO RESTRINGIDO — PROTOCOLO DE PRIVACIDAD VECY*\n\n` +
+        `Hola colega. La consulta directa y masiva de la base de datos de coincidencias y contactos de agentes es de uso exclusivo para la Dirección de Vecy Bienes Raíces.\n\n` +
+        `Para consultar si tenemos un cliente o inmueble compatible para tu negocio bajo el esquema colaborativo 40/20/40, comunícate directamente con nuestra Dirección de Operaciones al WhatsApp oficial de Bróker:\n` +
+        `📲 *+57 316 656 9719* (https://wa.me/573166569719) 🤝✨`,
       adminDashboardUrl
     };
   }
@@ -233,7 +316,7 @@ export async function executeAdminMatchSearch(
   if (!db) {
     return {
       isMatchQuery: true,
-      isAuthorizedAdmin: true,
+      isAuthorizedAdmin: isAdmin,
       queryType: resolvedQueryType,
       querySummary: "Base de datos no disponible temporalmente",
       totalFound: 0,
@@ -267,29 +350,10 @@ export async function executeAdminMatchSearch(
         const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
         const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
 
-        const report =
-          `🎯 *DETALLE DE COINCIDENCIA — MATCH #M${pm.id}*\n\n` +
-          `🏅 *Score de Afinidad:* *${scoreNum.toFixed(1)}%* ${scoreNum >= 90 ? '🔥 (Alta Compatibilidad)' : '✅'}\n` +
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `🏠 *INMUEBLE OFERTADO (#P${prop.id}):*\n` +
-          `• *Tipo / Negocio:* ${prop.propertyType || 'Inmueble'} en ${prop.transactionType || 'Venta'}\n` +
-          `• *Ubicación:* ${getPropNeighborhood(prop) || 'Sector'}, ${prop.city || 'Bogotá'}\n` +
-          `• *Precio:* ${formatCOP(prop.price || prop.rentPrice)}\n` +
-          `• *Área / Distribución:* ${getPropArea(prop) ? getPropArea(prop) + ' m²' : 'N/E'} • ${prop.bedrooms ? prop.bedrooms + ' Hab(s)' : ''} • ${prop.bathrooms ? prop.bathrooms + ' Baño(s)' : ''} • ${getPropGarages(prop) ? getPropGarages(prop) + ' Garaje(s)' : ''}\n` +
-          `• *Captador:* ${prop.nombreUsuarioWhatsapp || 'Asesor Captador'}\n` +
-          `• *Teléfono:* ${propPhone ? '+' + propPhone : 'Sin registrar'}\n` +
-          `${propWaLink ? `• *WhatsApp Captador:* ${propWaLink}\n` : ''}` +
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `📋 *DEMANDA COINCIDENTE (#R${req.id}):*\n` +
-          `• *Buscado:* ${req.tipoInmuebleDeseado || 'Inmueble'} en ${req.tipoNegocioDeseado || 'Venta'}\n` +
-          `• *Sector Deseado:* ${req.zonaDeseada || req.addressNeighborhood || 'Bogotá'}\n` +
-          `• *Presupuesto Máx:* ${formatCOP(req.presupuestoMax)}\n` +
-          `• *Exigencias:* ${req.areaMin ? 'Mín ' + req.areaMin + ' m²' : ''} • ${req.habitacionesMin ? 'Mín ' + req.habitacionesMin + ' Hab(s)' : ''}\n` +
-          `• *Asesor con Cliente:* ${req.nombreUsuarioWhatsapp || 'Asesor con Demanda'}\n` +
-          `• *Teléfono:* ${reqPhone ? '+' + reqPhone : 'Sin registrar'}\n` +
-          `${reqWaLink ? `• *WhatsApp Asesor:* ${reqWaLink}\n` : ''}` +
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `👉 *Gestionar en Mesa de Coincidencias:*\n${adminDashboardUrl}?search=${pm.id}`;
+        const header = `🎯 *DETALLE DE COINCIDENCIA — MATCH #M${pm.id}*`;
+        const criteria = `🏅 *Score de Afinidad:* *${scoreNum.toFixed(1)}%* ${scoreNum >= 90 ? '🔥 (Alta Compatibilidad)' : '✅'}\n` +
+          `🏠 *Inmueble (#P${prop.id}):* ${prop.propertyType || 'Inmueble'} en ${prop.transactionType || 'Venta'} • ${getPropNeighborhood(prop) || prop.city || 'Bogotá'} • ${formatCOP(prop.price || prop.rentPrice)}\n` +
+          `📋 *Demanda (#R${req.id}):* ${req.tipoInmuebleDeseado || 'Inmueble'} en ${req.tipoNegocioDeseado || 'Venta'} • ${req.zonaDeseada || req.addressNeighborhood || 'Bogotá'} • Presupuesto: ${formatCOP(req.presupuestoMax)}`;
 
         const item: AdminMatchItem = {
           matchId: pm.id,
@@ -315,9 +379,11 @@ export async function executeAdminMatchSearch(
           blockers: []
         };
 
+        const report = formatMatchReport(header, criteria, [item], isAdmin, adminDashboardUrl, "No se encontró el detalle.");
+
         return {
           isMatchQuery: true,
-          isAuthorizedAdmin: true,
+          isAuthorizedAdmin: isAdmin,
           queryType: 'match_id',
           querySummary: `Match #${pm.id} (Inmueble #P${prop.id} ↔ Demanda #R${req.id})`,
           totalFound: 1,
@@ -326,6 +392,25 @@ export async function executeAdminMatchSearch(
           adminDashboardUrl: `${adminDashboardUrl}?search=${pm.id}`
         };
       }
+    } else {
+      const notFoundReport = formatMatchReport(
+        `🎯 *BÚSQUEDA DE MATCH #M${matchIdNum}*`,
+        `Criterio: Código #M${matchIdNum}`,
+        [],
+        isAdmin,
+        adminDashboardUrl,
+        `No se encontró ningún match con código #M${matchIdNum} en la base de datos.`
+      );
+      return {
+        isMatchQuery: true,
+        isAuthorizedAdmin: isAdmin,
+        queryType: 'match_id',
+        querySummary: `Match #${matchIdNum} no encontrado`,
+        totalFound: 0,
+        matches: [],
+        formattedReport: notFoundReport,
+        adminDashboardUrl
+      };
     }
   }
 
@@ -419,44 +504,16 @@ export async function executeAdminMatchSearch(
         }
       }
 
-      // Ordenar por score descendente
-      matchItems.sort((a, b) => b.score - a.score);
-
       const propPhone = extractRealPhone(prop);
-      let reportText =
-        `🎯 *VECY MATCH ENGINE — DEMANDAS COMPATIBLES PARA INMUEBLE #P${prop.id}*\n\n` +
-        `🏠 *Inmueble Consultado:* ${prop.propertyType} en ${prop.transactionType} • ${getPropNeighborhood(prop) || prop.city} • ${formatCOP(prop.price || prop.rentPrice)}\n` +
-        `👤 *Captador:* ${prop.nombreUsuarioWhatsapp || 'Asesor'} (${propPhone ? '+' + propPhone : 'Sin tel'})\n\n`;
-
-      if (matchItems.length === 0) {
-        reportText +=
-          `🔍 *Sin coincidencias inmediatas (Score ≥ 80%)*\n` +
-          `Actualmente no hay demandas activas que alcancen el 80% de compatibilidad para este inmueble.\n` +
-          `💡 El inmueble permanece activo en el catálogo y te notificaré automáticamente cuando ingrese un cliente compatible.`;
-      } else {
-        reportText += `✨ *Se encontraron ${matchItems.length} demanda(s) compatible(s):*\n\n`;
-
-        matchItems.slice(0, 5).forEach((item, idx) => {
-          reportText +=
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `🏅 *OPCIÓN #${idx + 1} — AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? '🔥' : '✅'}\n` +
-            `🔢 *MATCH #M${item.matchId || 'Sugerido'}* | *Demanda #R${item.targetId}*\n` +
-            `📍 *Sector Buscado:* ${item.neighborhood || item.city}\n` +
-            `💰 *Presupuesto Máx:* ${item.priceOrBudgetFormatted}\n` +
-            `📐 *Requerimientos:* ${item.areaFormatted} • ${item.bedroomsFormatted}\n` +
-            `👤 *Asesor con Cliente:* ${item.contactName}\n` +
-            `📱 *Teléfono:* ${item.contactPhone ? '+' + item.contactPhone : 'Sin registrar'}\n` +
-            `${item.contactWhatsAppLink ? `💬 *WhatsApp Directo:* ${item.contactWhatsAppLink}\n` : ''}`;
-        });
-
-        reportText +=
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `👉 *Ver en Mesa de Coincidencias:*\n${adminDashboardUrl}?search=${prop.id}`;
-      }
+      const header = `🎯 *VECY MATCH ENGINE — DEMANDAS COMPATIBLES PARA INMUEBLE #P${prop.id}*`;
+      const criteria = `🏠 *Inmueble Consultado:* ${prop.propertyType} en ${prop.transactionType} • ${getPropNeighborhood(prop) || prop.city} • ${formatCOP(prop.price || prop.rentPrice)}\n` +
+        `👤 *Captador:* ${prop.nombreUsuarioWhatsapp || 'Asesor'} (${propPhone ? '+' + propPhone : 'Sin tel'})`;
+      const emptyDiag = `Actualmente no hay demandas activas que alcancen el 80% de compatibilidad para este inmueble.\n💡 El inmueble permanece activo en el catálogo y te notificaré automáticamente cuando ingrese un cliente compatible.`;
+      const reportText = formatMatchReport(header, criteria, matchItems, isAdmin, adminDashboardUrl, emptyDiag);
 
       return {
         isMatchQuery: true,
-        isAuthorizedAdmin: true,
+        isAuthorizedAdmin: isAdmin,
         queryType: 'property_id',
         querySummary: `Inmueble #P${prop.id} (${prop.propertyType} en ${getPropNeighborhood(prop) || prop.city})`,
         totalFound: matchItems.length,
@@ -555,43 +612,16 @@ export async function executeAdminMatchSearch(
         }
       }
 
-      matchItems.sort((a, b) => b.score - a.score);
-
       const reqPhone = extractRealPhone(req);
-      let reportText =
-        `🎯 *VECY MATCH ENGINE — INMUEBLES COMPATIBLES PARA DEMANDA #R${req.id}*\n\n` +
-        `📋 *Demanda Consultada:* ${req.tipoInmuebleDeseado} en ${req.tipoNegocioDeseado} • ${req.zonaDeseada || req.ciudadDeseada} • Presupuesto máx: ${formatCOP(req.presupuestoMax)}\n` +
-        `👤 *Asesor Solicitante:* ${req.nombreUsuarioWhatsapp || 'Asesor'} (${reqPhone ? '+' + reqPhone : 'Sin tel'})\n\n`;
-
-      if (matchItems.length === 0) {
-        reportText +=
-          `🔍 *Sin coincidencias inmediatas (Score ≥ 80%)*\n` +
-          `Actualmente no hay inmuebles en catálogo que alcancen el 80% de compatibilidad para esta demanda.\n` +
-          `💡 Te avisaré tan pronto un captador ingrese una propiedad compatible a la red.`;
-      } else {
-        reportText += `✨ *Se encontraron ${matchItems.length} inmueble(s) compatible(s):*\n\n`;
-
-        matchItems.slice(0, 5).forEach((item, idx) => {
-          reportText +=
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `🏅 *OPCIÓN #${idx + 1} — AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? '🔥' : '✅'}\n` +
-            `🔢 *MATCH #M${item.matchId || 'Sugerido'}* | *Inmueble #P${item.targetId}*\n` +
-            `📍 *Ubicación:* ${item.neighborhood || item.city}\n` +
-            `💰 *Precio / Canon:* ${item.priceOrBudgetFormatted}\n` +
-            `📐 *Detalles:* ${item.areaFormatted} • ${item.bedroomsFormatted} • ${item.bathroomsFormatted} • ${item.parkingFormatted}\n` +
-            `👤 *Asesor Captador:* ${item.contactName}\n` +
-            `📱 *Teléfono:* ${item.contactPhone ? '+' + item.contactPhone : 'Sin registrar'}\n` +
-            `${item.contactWhatsAppLink ? `💬 *WhatsApp Directo:* ${item.contactWhatsAppLink}\n` : ''}`;
-        });
-
-        reportText +=
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `👉 *Ver en Mesa de Coincidencias:*\n${adminDashboardUrl}?search=${req.id}`;
-      }
+      const header = `🎯 *VECY MATCH ENGINE — INMUEBLES COMPATIBLES PARA DEMANDA #R${req.id}*`;
+      const criteria = `📋 *Demanda Consultada:* ${req.tipoInmuebleDeseado} en ${req.tipoNegocioDeseado} • ${req.zonaDeseada || req.ciudadDeseada} • Presupuesto máx: ${formatCOP(req.presupuestoMax)}\n` +
+        `👤 *Asesor Solicitante:* ${req.nombreUsuarioWhatsapp || 'Asesor'} (${reqPhone ? '+' + reqPhone : 'Sin tel'})`;
+      const emptyDiag = `Actualmente no hay inmuebles en catálogo que alcancen el 80% de compatibilidad para esta demanda.\n💡 Te avisaré tan pronto un captador ingrese una propiedad compatible a la red.`;
+      const reportText = formatMatchReport(header, criteria, matchItems, isAdmin, adminDashboardUrl, emptyDiag);
 
       return {
         isMatchQuery: true,
-        isAuthorizedAdmin: true,
+        isAuthorizedAdmin: isAdmin,
         queryType: 'requirement_id',
         querySummary: `Demanda #R${req.id} (${req.tipoInmuebleDeseado} en ${req.zonaDeseada || req.ciudadDeseada})`,
         totalFound: matchItems.length,
@@ -636,6 +666,7 @@ export async function executeAdminMatchSearch(
     const { extractAllBarriosFromText } = await import("./matching");
     const extractedBarrios = extractAllBarriosFromText(clean);
     const mainBarrio = fb.barrio || extractedBarrios[0] || "Bogotá";
+    const sectoresLabel = extractedBarrios.length > 0 ? extractedBarrios.join(', ') : mainBarrio;
 
     const candidateReq: any = {
       id: 0,
@@ -717,50 +748,19 @@ export async function executeAdminMatchSearch(
 
     matchedItems.sort((a, b) => b.score - a.score);
 
-    const sectoresLabel = extractedBarrios.length > 0
-      ? extractedBarrios.slice(0, 4).join(', ')
-      : (mainBarrio || 'Bogotá');
-
-    let reportText =
-      `🎯 *VECY MATCH ENGINE — RESULTADO DE BÚSQUEDA (ÚLTIMOS 15 DÍAS)*\n\n` +
-      `📋 *Criterios Extraídos de la Demanda:*\n` +
+    const header = `🎯 *VECY MATCH ENGINE — RESULTADO DE BÚSQUEDA (ÚLTIMOS 15 DÍAS)*`;
+    const criteria = `📋 *Criterios Extraídos de la Demanda:*\n` +
       `• *Inmueble:* ${candidateReq.propertyType || candidateReq.tipoInmuebleDeseado} en ${candidateReq.transactionType || candidateReq.tipoNegocioDeseado}\n` +
       `• *Presupuesto Máx:* ${formatCOP(candidateReq.presupuestoMax)}\n` +
       `• *Metraje Mínimo:* ${candidateReq.areaMin ? `${candidateReq.areaMin} m²` : 'No especificado'}\n` +
       `• *Habitaciones Mínimas:* ${candidateReq.habitacionesMin ? `${candidateReq.habitacionesMin} Hab` : 'No especificadas'}\n` +
-      `• *Zonas / Sectores:* ${sectoresLabel}\n\n`;
-
-    if (matchedItems.length === 0) {
-      reportText +=
-        `🔍 *Diagnóstico en Base de Datos:*\n` +
-        `⛔ *No se encontraron ofertas compatibles (Score ≥ 80%) captadas en los últimos 15 días.* \n\n` +
-        `Verifiqué todos los inmuebles activos captados en la red durante los últimos 15 días y actualmente ninguno alcanza el umbral mínimo del 80% con estos requisitos específicos.\n\n` +
-        `💡 *Estado:* El requerimiento queda registrado en el radar de VECY Bienes Raíces. Apenas un asesor ingrese una opción que encaje, te generaré la alerta de inmediato.\n\n` +
-        `👉 *Verificar en Mesa de Coincidencias:*\n${adminDashboardUrl}`;
-    } else {
-      reportText += `✨ *Se encontraron ${matchedItems.length} inmueble(s) compatible(s) captado(s) en los últimos 15 días:*\n\n`;
-
-      matchedItems.slice(0, 5).forEach((item, idx) => {
-        reportText +=
-          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `🏅 *OPCIÓN #${idx + 1} — AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? '🔥' : '✅'}\n` +
-          `🔢 *Inmueble #P${item.targetId}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ''}\n` +
-          `📍 *Ubicación:* ${item.neighborhood || item.city}\n` +
-          `💰 *Precio:* ${item.priceOrBudgetFormatted}\n` +
-          `📐 *Detalles:* ${item.areaFormatted} • ${item.bedroomsFormatted} • ${item.bathroomsFormatted} • ${item.parkingFormatted}\n` +
-          `👤 *Asesor Captador:* ${item.contactName}\n` +
-          `📱 *Teléfono:* ${item.contactPhone ? '+' + item.contactPhone : 'Sin registrar'}\n` +
-          `${item.contactWhatsAppLink ? `💬 *WhatsApp Directo:* ${item.contactWhatsAppLink}\n` : ''}`;
-      });
-
-      reportText +=
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `👉 *Gestionar en Mesa de Coincidencias:*\n${adminDashboardUrl}`;
-    }
+      `• *Zonas / Sectores:* ${sectoresLabel}`;
+    const emptyDiag = `⛔ *No se encontraron ofertas compatibles (Score ≥ 80%) captadas en los últimos 15 días.* \n\nVerifiqué todos los inmuebles activos captados en la red durante los últimos 15 días y actualmente ninguno alcanza el umbral mínimo del 80% con estos requisitos específicos.`;
+    const reportText = formatMatchReport(header, criteria, matchedItems, isAdmin, adminDashboardUrl, emptyDiag);
 
     return {
       isMatchQuery: true,
-      isAuthorizedAdmin: true,
+      isAuthorizedAdmin: isAdmin,
       queryType: 'demand_search',
       querySummary: `Demanda: ${candidateReq.tipoInmuebleDeseado} en ${sectoresLabel} (${formatCOP(candidateReq.presupuestoMax)})`,
       totalFound: matchedItems.length,
@@ -844,51 +844,24 @@ export async function executeAdminMatchSearch(
 
   matchedItems.sort((a, b) => b.score - a.score);
 
-  let reportText =
-    `🎯 *VECY MATCH ENGINE — RESULTADO DE BÚSQUEDA (ÚLTIMOS 15 DÍAS)*\n\n` +
-    `🏠 *Criterios Extraídos de la Oferta:*\n` +
-    `• *Inmueble:* ${candidateProp.propertyType} en ${candidateProp.transactionType}\n` +
-    `• *Ubicación:* ${candidateProp.neighborhood || candidateProp.city}\n` +
-    `• *Precio:* ${formatCOP(candidateProp.price || candidateProp.rentPrice)}\n` +
-    `• *Metraje:* ${candidateProp.area ? `${candidateProp.area} m²` : 'No especificado'}\n` +
-    `• *Habitaciones:* ${candidateProp.bedrooms ? `${candidateProp.bedrooms} Hab` : 'No especificadas'}\n\n`;
+    const header = `🎯 *VECY MATCH ENGINE — RESULTADO DE BÚSQUEDA (ÚLTIMOS 15 DÍAS)*`;
+    const criteria = `🏠 *Criterios Extraídos de la Oferta:*\n` +
+      `• *Inmueble:* ${candidateProp.propertyType} en ${candidateProp.transactionType}\n` +
+      `• *Ubicación:* ${candidateProp.neighborhood || candidateProp.city}\n` +
+      `• *Precio:* ${formatCOP(candidateProp.price || candidateProp.rentPrice)}\n` +
+      `• *Metraje:* ${candidateProp.area ? `${candidateProp.area} m²` : 'No especificado'}\n` +
+      `• *Habitaciones:* ${candidateProp.bedrooms ? `${candidateProp.bedrooms} Hab` : 'No especificadas'}`;
+    const emptyDiag = `⛔ *No se encontraron demandas compatibles (Score ≥ 80%) captadas en los últimos 15 días.* \n\nVerifiqué las demandas activas de la red durante los últimos 15 días y actualmente ningún cliente comprador o arrendatario coincide con las características de este inmueble.`;
+    const reportText = formatMatchReport(header, criteria, matchedItems, isAdmin, adminDashboardUrl, emptyDiag);
 
-  if (matchedItems.length === 0) {
-    reportText +=
-      `🔍 *Diagnóstico en Base de Datos:*\n` +
-      `⛔ *No se encontraron demandas compatibles (Score ≥ 80%) captadas en los últimos 15 días.* \n\n` +
-      `Verifiqué las demandas activas de la red durante los últimos 15 días y actualmente ningún cliente comprador o arrendatario coincide con las características de este inmueble.\n\n` +
-      `💡 *Estado:* El inmueble permanece activo en el catálogo institucional. Apenas ingrese un cliente compatible, te generaré la alerta con la coincidencia y el contacto del asesor.\n\n` +
-      `👉 *Verificar en Mesa de Coincidencias:*\n${adminDashboardUrl}`;
-  } else {
-    reportText += `✨ *Se encontraron ${matchedItems.length} demanda(s) compatible(s) captada(s) en los últimos 15 días:*\n\n`;
-
-    matchedItems.slice(0, 5).forEach((item, idx) => {
-      reportText +=
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `🏅 *OPCIÓN #${idx + 1} — AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? '🔥' : '✅'}\n` +
-        `🔢 *Demanda #R${item.targetId}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ''}\n` +
-        `📍 *Sector Buscado:* ${item.neighborhood || item.city}\n` +
-        `💰 *Presupuesto Máx:* ${item.priceOrBudgetFormatted}\n` +
-        `📐 *Requerimientos:* ${item.areaFormatted} • ${item.bedroomsFormatted}\n` +
-        `👤 *Asesor con Cliente:* ${item.contactName}\n` +
-        `📱 *Teléfono:* ${item.contactPhone ? '+' + item.contactPhone : 'Sin registrar'}\n` +
-        `${item.contactWhatsAppLink ? `💬 *WhatsApp Directo:* ${item.contactWhatsAppLink}\n` : ''}`;
-    });
-
-    reportText +=
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `👉 *Gestionar en Mesa de Coincidencias:*\n${adminDashboardUrl}`;
-  }
-
-  return {
-    isMatchQuery: true,
-    isAuthorizedAdmin: true,
-    queryType: 'offer_search',
-    querySummary: `Oferta: ${candidateProp.propertyType} en ${candidateProp.neighborhood || candidateProp.city} (${formatCOP(candidateProp.price || candidateProp.rentPrice)})`,
-    totalFound: matchedItems.length,
-    matches: matchedItems,
-    formattedReport: reportText,
-    adminDashboardUrl
-  };
+    return {
+      isMatchQuery: true,
+      isAuthorizedAdmin: isAdmin,
+      queryType: 'offer_search',
+      querySummary: `Oferta: ${candidateProp.propertyType} en ${candidateProp.neighborhood || candidateProp.city} (${formatCOP(candidateProp.price || candidateProp.rentPrice)})`,
+      totalFound: matchedItems.length,
+      matches: matchedItems,
+      formattedReport: reportText,
+      adminDashboardUrl
+    };
 }

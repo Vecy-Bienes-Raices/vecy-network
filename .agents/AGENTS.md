@@ -182,7 +182,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.15 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.16 — Octubre 2026
+
+### Novedades v33.16 (Reforma Arquitectónica LLM Puro, Matches M-Code y Memoria 72h):
+- **Diagnóstico y Solicitud Doctrinal de Eduardo A. Rivera**:
+  1. *"Ejecuta esta orden arquitectónica al pie de la letra (Versión v33.16 de JanIA). Regla estricta de ingeniería: Está prohibido crear nuevas expresiones regulares (Regex), condicionales if/else de palabras sueltas o textos estáticos enlatados. Debes eliminar las camisas de fuerza para que Gemini opere con su inteligencia natural, historial y Function Calling (`JANIA_DM_TOOLS`)."*
+  2. **Erradicación Total de Interceptores Pre-LLM en DMs (`whatsapp-match.ts` y `dmHandler.ts`)**: Eliminación completa de regexes mutiladores y respuestas prefabricadas enlatadas (costos, quiénes somos, cómo funciona, minutas/notaría, despedidas estáticas, preguntas genéricas). Todo mensaje conversacional en DMs viaja a `invokeLLM` con historial completo y herramientas de function calling.
+  3. **Regla del Saludo Único y Respuestas Orgánicas**: Saludo horario indivisible solo en el primer turno (`¡Buenos días / Buenas tardes / Buenas noches, [Nombre]! 👋`), suprimiendo saludos repetidos en turnos subsiguientes mediante historial de sesión y preservando la autonomía natural del modelo.
+  4. **Protección de Datos en Matches para Usuarios Externos (`adminMatchAssistantService.ts`)**:
+     - **Para Directores/Admin (Eduardo y Jani)**: Fichas técnicas completas con datos de contacto, teléfonos y enlaces de WhatsApp sin ofuscar.
+     - **Para Inmobiliarias/Corredores Externos**: Código único del match (ej. `#M15649`), especificaciones del inmueble y datos del contacto ofuscados, canalizando la mediación y acuerdo de corretaje 40/20/40 a través del bróker oficial de Eduardo: **`+57 316 656 9719`**.
+  5. **Ampliación de Memoria Deslizante a 72 Horas (`sessionManager.ts`)**: Sustitución del corte a medianoche por una ventana continua de 72 horas (`72 * 60 * 60 * 1000`) y hasta 20 turnos, permitiendo retomar conversaciones del fin de semana con contexto intacto.
+  6. **Priorización de Gemini 2.5 Flash y Aceleración de Fallover (`llm.ts`)**: Modelo principal `gemini-2.5-flash` con pool gratuito de 4 claves API; failover rápido ante errores 400/404 sin demoras artificiales en entorno de test (`isTestEnvironment()`).
+  7. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 272/272 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 15.28s (Vite) + 157ms (esbuild) ✅
+- `shared/const.ts` (`v33.16`) y `package.json` (`33.16.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.15 — Octubre 2026
 
 ### Novedades v33.15 (Doctrina de Servicio Incondicional, Libertad Total del Usuario, Cero Frenos en DMs y Respuestas Cortas):
 - **Diagnóstico y Solicitud Doctrinal de Eduardo A. Rivera**:

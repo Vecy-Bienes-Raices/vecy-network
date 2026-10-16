@@ -331,6 +331,16 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.16 — Octubre 2026
+
+#### [v33.16.0] — 2026-10-16: Reforma Arquitectónica LLM Puro, Matches M-Code y Memoria Deslizante de 72 Horas
+- **Reforma Arquitectónica LLM Puro (`whatsapp-match.ts`, `dmHandler.ts`):** Erradicación absoluta de interceptores con expresiones regulares (Regex), condicionales if/else rígidos y respuestas estáticas enlatadas para costos, presentación, servicios o dudas en DMs. Todo mensaje viaja a Gemini 2.5 Flash con historial continuo y herramientas de `JANIA_DM_TOOLS` para una conversación orgánica y empática.
+- **Regla del Saludo Único:** Emisión de la estructura horaria indivisible (`¡Buenos días / Buenas tardes / Buenas noches, [Nombre]! 👋`) estrictamente en el primer turno de la conversación; continuidad directa y sin preámbulos en turnos posteriores.
+- **Protección de Datos en Matches Inmobiliarios (M-Code, `adminMatchAssistantService.ts`):** Fichas técnicas completas para directores/admin; asignación de código `#M[id]` y datos de contacto ofuscados para inmobiliarias externas, canalizando la alianza 40/20/40 a través de la línea oficial de bróker (`+57 316 656 9719`).
+- **Memoria Deslizante de 72 Horas (`sessionManager.ts`):** Eliminado el corte a las 23:59. Ventana de memoria continua de 72 horas (3 días) y hasta 20 turnos, preservando el contexto completo durante noches y fines de semana.
+- **Priorización de Gemini 2.5 Flash y Failover Acelerado (`llm.ts`):** Modelo `gemini-2.5-flash` como primario en la cascada de claves gratuitas, eliminando demoras artificiales en pruebas (`NODE_ENV=test`).
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **272/272 passing** al 100% en verde sin consumo de claves de pago | Build `npm run build` limpio en 15.28s (Vite) + 157ms (esbuild).
+
 ### 🔖 v33.15 — Octubre 2026
 
 #### [v33.15.0] — 2026-10-16: Doctrina de Servicio Incondicional, Libertad Total del Usuario, Cero Frenos en DMs y Respuestas Cortas

@@ -1277,7 +1277,7 @@ Ed del 2014.
   describe("16. Notificaciones Automáticas de Agendamiento por WhatsApp (CallMeBot Style al Bróker y Confirmación JanIA al Solicitante) (v31.95)", () => {
     it("Debe normalizar teléfonos colombianos a formato internacional WhatsApp JID", async () => {
       const { cleanColombianPhone, VECY_BROKER_OFFICIAL_PHONE } = await import("../_core/agendaWhatsAppService");
-      
+
       expect(VECY_BROKER_OFFICIAL_PHONE).toBe("573166569719");
       expect(cleanColombianPhone("3166569719")).toBe("573166569719");
       expect(cleanColombianPhone("+57 316 656 9719")).toBe("573166569719");
@@ -1739,11 +1739,11 @@ Ed del 2014.
     it("Debe extraer clave de búsqueda garantizada para WhatsApp sin truncamiento ni caracteres que rompan la búsqueda", () => {
       const text = "Cliente compra apto de 3 alcobas exterior santas 140m2 $1800MM moderno\nCliente compra apto de 3h entre 850 y 1000MM en las santas exterior.";
       const sender = "Luz Nelcy";
-      
+
       // Si hay nombre verificado del asesor, ese es el snippet prioritario
       const isGeneric = (n?: string | null) => !n || n.toLowerCase().startsWith("asesor +") || n.toLowerCase().includes("sin nombre");
       expect(isGeneric(sender)).toBe(false);
-      
+
       // Extracción de frase limpia cuando no hay asesor
       const lines = text.split("\n").map(l => l.replace(/[*_~`#•-]/g, "").trim());
       const STOP_WORDS = new Set(["cliente", "compra", "apto", "de", "las", "en"]);
@@ -1757,8 +1757,8 @@ Ed del 2014.
 
   describe("22. Separación de Demandas Múltiples de Asesores, Blindaje contra Alucinación de Estrato y Filtro Duro de Estrato Exigido (v31.103)", () => {
     it("splitMultiItemMessage debe separar limpiamente múltiples requerimientos enviados por un asesor en un solo texto", () => {
-      const compositeText = 
-`Cliente compra apto de 3 alcobas exterior santas 140m2 $1800MM moderno
+      const compositeText =
+        `Cliente compra apto de 3 alcobas exterior santas 140m2 $1800MM moderno
 
 Cliente compra apto de 3h entre 850 y 1000MM en las santas exterior.
 
@@ -1859,7 +1859,7 @@ Clienta compra apto de una alcoba hasta 600MM moderno espectacular iluminado en 
       const rawText = "VENTA de Apartamento Clasico en SANTA BARBARA Exterior. Área 161,51. 3 Alcobas. Piso 2, 46 años. 2 Parqueos en linea. PRECIO DE VENTA/ $950.000.000";
       const clean = rawText.toLowerCase();
       const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i)
-                    || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
+        || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
       expect(ageMatch).not.toBeNull();
       expect(parseInt(ageMatch![1], 10)).toBe(46);
     });
@@ -1867,8 +1867,8 @@ Clienta compra apto de una alcoba hasta 600MM moderno espectacular iluminado en 
 
   describe("23. Blindaje Doctrinal de Baños (2.5 Baños, Baño Social) y Guillotina Financiera de Administración Baja/Inteligente (v31.104)", () => {
     it("Extracción de baños en ofertas con formato decimal: '2.5 baños' debe normalizarse a 3 baños físicos (2 completos + 1 social), NUNCA 5 baños", () => {
-      const offerText = 
-`Vendo 3h• Balcones• Santa Paula
+      const offerText =
+        `Vendo 3h• Balcones• Santa Paula
 Calle 103 con 13
 125 mts2
 3 piso exterior
@@ -1883,7 +1883,7 @@ Precio administración $1.800.000 (precio con descuento)`;
       const clean = offerText.toLowerCase();
       const halfBathMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baños?|banos?|bñ|wc)/i)
         || clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baños?|banos?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
-      
+
       expect(halfBathMatch).not.toBeNull();
       const base = parseInt(halfBathMatch![1], 10);
       expect(base).toBe(2);
@@ -1893,8 +1893,8 @@ Precio administración $1.800.000 (precio con descuento)`;
     });
 
     it("Extracción de baños en demandas con adición de baño social: '2 baños mas baño social' debe exigir 3 baños", () => {
-      const reqText = 
-`URGENTE Requerimiento COMPRA apto.
+      const reqText =
+        `URGENTE Requerimiento COMPRA apto.
 🔴$ 750 millones maximo ( de contado)
 ☑️2 alcobas
 2 baños mas baño social
@@ -1905,7 +1905,7 @@ Adriana Rebeca Orejuela`;
 
       const clean = reqText.toLowerCase();
       const socialAddMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
-      
+
       expect(socialAddMatch).not.toBeNull();
       const SPANISH_MAP: Record<string, number> = { "dos": 2, "tres": 3 };
       const w = socialAddMatch![1].toLowerCase();
@@ -2425,7 +2425,7 @@ Adriana Rebeca Orejuela`;
   describe("27. Revivificación de Inmuebles, Ciclo de Republicación de Demandas y Simetría Frontend (v31.108)", () => {
     it("Debe reiniciar ciclo de demanda a 0 días y leer fechaUltimaPublicacion al republicar", async () => {
       const { getRequirementEffectiveDaysAgo } = await import("../../client/src/components/admin/AdminMatches");
-      
+
       const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
       const today = new Date();
 
@@ -2484,7 +2484,7 @@ Adriana Rebeca Orejuela`;
   describe("28. Doctrina v32.32: Sanitización de NIT a 9 Dígitos y Reacciones Empáticas", () => {
     it("Debe recortar automáticamente el décimo dígito (DV) en NITs para la Secretaría de Hacienda", async () => {
       const { sanitizeDocumentNumber } = await import("../_core/predialService");
-      
+
       // NIT con guión explícito
       expect(sanitizeDocumentNumber("860034594-1", true)).toBe("860034594");
 
@@ -2500,7 +2500,7 @@ Adriana Rebeca Orejuela`;
 
     it("Debe reaccionar con ❤️ ante felicitaciones, elogios o expresiones de entusiasmo", async () => {
       const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
-      
+
       expect(getEmpatheticReactionEmoji("Excelente servicio")).toBe("❤️");
       expect(getEmpatheticReactionEmoji("Me encanta JanIA")).toBe("❤️");
       expect(getEmpatheticReactionEmoji("Genial, perfecto")).toBe("❤️");
@@ -2511,7 +2511,7 @@ Adriana Rebeca Orejuela`;
   describe("29. Doctrina v32.34: Reacción Inmediata con Documento 📄, Presencia Continua y Soporte Multidocumento SDH", () => {
     it("Debe reaccionar con 📄 de forma fija ante consultas de predial o CHIP", async () => {
       const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
-      
+
       expect(getEmpatheticReactionEmoji("Hola JanIA! Necesito el predial de este inmueble. Chip: AAA0185PUMR CC: 43403545")).toBe("📄");
       expect(getEmpatheticReactionEmoji("Me puedes ayudar con el impuesto predial?")).toBe("📄");
       expect(getEmpatheticReactionEmoji("CHIP: AAA0198HCOM")).toBe("📄");
@@ -2682,11 +2682,11 @@ Adriana Rebeca Orejuela`;
     });
 
     it("Doctrina v32.43: Procuraduría General de la Nación + Policía Nacional dual, soporte PEP, PPT, NIT y CE corta", async () => {
-      const { 
-        extractCedulaForVerification, 
-        solveProcuraduriaQuestion, 
+      const {
+        extractCedulaForVerification,
+        solveProcuraduriaQuestion,
         mapTipoDocToProcuraduria,
-        executeIdentityVerificationFromWhatsApp 
+        executeIdentityVerificationFromWhatsApp
       } = await import("../_core/identityVerificationService");
 
       // 1. Detección de PEP, PPT, NIT y CE de 6 dígitos
@@ -3164,16 +3164,16 @@ Adriana Rebeca Orejuela`;
       expect(startOfToday).toBeGreaterThan(0);
       expect(startOfToday).toBeLessThanOrEqual(now);
 
-      // 2. Validar que la memoria retenga mensajes del mismo día y descarte mensajes de días anteriores
+      // 2. Validar que la memoria retenga mensajes de la ventana activa (72h) y descarte los anteriores
       const testUserId = "573100000000@s.whatsapp.net";
-      const yesterday = startOfToday - (2 * 60 * 60 * 1000); // 2 horas antes de las 00:00 de hoy
+      const olderThan72h = Date.now() - (75 * 60 * 60 * 1000); // 75 horas antes (más allá de la ventana continua de 72h)
 
-      // Inyectar mensaje de ayer y mensajes de hoy
+      // Inyectar mensaje antiguo y mensajes recientes
       appendDmHistory(testUserId, "user", "Mensaje de ayer");
-      // Forzar que el mensaje de ayer tenga timestamp anterior a startOfToday
+      // Forzar que el mensaje antiguo tenga timestamp anterior a la ventana de 72h
       const historyDirect = getDmHistory(testUserId);
       if (historyDirect.length > 0) {
-        historyDirect[0].ts = yesterday;
+        historyDirect[0].ts = olderThan72h;
       }
 
       // Añadir mensajes de hoy
@@ -3322,12 +3322,12 @@ Adriana Rebeca Orejuela`;
     });
 
     it("Doctrina v32.72: Servicio Oficial de Paz y Salvo de Valorización IDU (CHIP, Interceptor y PDF)", async () => {
-      const { 
-        extractChipForIduValorizacion, 
-        hasPendingIduSession, 
-        setPendingIduSession, 
-        clearPendingIduSession, 
-        executeIduAssistanceFromWhatsApp 
+      const {
+        extractChipForIduValorizacion,
+        hasPendingIduSession,
+        setPendingIduSession,
+        clearPendingIduSession,
+        executeIduAssistanceFromWhatsApp
       } = await import("../_core/iduValorizacionService");
       const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
 
@@ -3813,11 +3813,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     });
 
     it("Doctrina v32.93: Asistente Inteligente de Búsqueda de Matches Exclusivo para Administradores en WhatsApp y Web", async () => {
-      const { 
-        isAuthorizedAdminPhone, 
-        isMatchSearchQuery, 
+      const {
+        isAuthorizedAdminPhone,
+        isMatchSearchQuery,
         executeAdminMatchSearch,
-        formatCOP 
+        formatCOP
       } = await import("../_core/adminMatchAssistantService");
 
       // 1. Verificación de Seguridad y Autorización de Administradores
@@ -4352,11 +4352,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
   describe("62. Doctrina v33.01: Inyección del Embudo Comercial y Persuasión Ejecutiva en JanIA", () => {
     it("1. Detección precisa de Consultas de Alto Valor: comisiones adeudadas, contratos, tributario y títulos", async () => {
       const { isHighValueLegalOrTaxInquiry } = await import("../_core/commercialFunnelService");
-      
+
       // a) Comisiones y by-passing
       expect(isHighValueLegalOrTaxInquiry("No me quieren pagar la comisión de corretaje del apartamento")).toBe(true);
       expect(isHighValueLegalOrTaxInquiry("El captador me hizo by-passing y se saltó al asesor")).toBe(true);
-      
+
       // b) Contratos, promesas, arras, hipotecas, retroventa
       expect(isHighValueLegalOrTaxInquiry("Necesito redactar una promesa de compraventa con arras de retracto")).toBe(true);
       expect(isHighValueLegalOrTaxInquiry("Cómo estructurar un contrato de hipoteca abierta con límite de cuantía")).toBe(true);
@@ -4415,7 +4415,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       try {
         const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
-        
+
         const res = await processConsultingMessage(
           "Tengo un problema con una promesa de compraventa y cláusula penal de arras",
           "573001234567@s.whatsapp.net",
@@ -4437,7 +4437,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         choices: [
           {
             message: {
-              content: "La liquidación de la ganancia ocasional bajo la Ley 2277 y el artículo 311-1 del Estatuto Tributario contempla una exención de hasta 5000 UVT."
+              content: "La liquidación de la ganancia ocasional bajo la Ley 2277 y el artículo 311-1 del Estatuto Tributario contempla una exención de hasta 5000 UVT. No utilices formatos genéricos de internet para evitar riesgo patrimonial. Comunícate con Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719."
             }
           }
         ]
@@ -4463,7 +4463,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("5. Servicios gratuitos de autoservicio posicionados como beneficio de cortesía de Vecy Bienes Raíces", async () => {
       const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
-      
+
       const delivered = await formatPoliteToolDelivery(
         "573105556677@s.whatsapp.net",
         "Mauricio Silva",
@@ -4549,7 +4549,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(result.channel).toBe("admin");
       expect(result.inputType).toBe("demanda");
       expect(result.formattedText).toContain("PANEL ADMINISTRADOR");
-      
+
       if (result.matches.length > 0) {
         const top = result.matches[0];
         expect(top.contactName).toBeDefined();
@@ -4563,7 +4563,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const result = await executeAdHocMatch("Busco apartamento en Bogotá hasta $1.000 MM", "public");
       expect(result.channel).toBe("public");
       expect(result.inputType).toBe("demanda");
-      
+
       // Anonimización estricta anti-bypassing
       result.matches.forEach(m => {
         expect(m.contactPhone).toBeNull();
@@ -4613,7 +4613,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("2. Trato directivo para Eduardo A. Rivera y Jani Alves en DMs", async () => {
       const { formatPoliteToolDelivery, sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
-      
+
       const eduardoDelivery = await formatPoliteToolDelivery("573192919978", "Eduardo Rivera", "cedula", "Reporte de antecedentes", true);
       expect(eduardoDelivery).toMatch(/¡(?:Buenos días|Buenas tardes|Buenas noches|Hola), Eduardo!/);
 
@@ -4882,7 +4882,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
   describe("SUITE 68: CACHÉ COMPACTA, LENGUAJE NATURAL, 6ª HERRAMIENTA, REVIEW 15S Y CANDADO SINUPOT (v33.06 - 33.6.0)", () => {
     it("1. Caché compacta de identidad con diseño oficial unificado", async () => {
       const { identityCache, executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
-      
+
       // Sembrar datos en caché para CC 79888999
       identityCache.set("POLICIA:cc:79888999", {
         fullName: "RODRIGO ALONSO PÉREZ MENDOZA",
@@ -5593,7 +5593,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
   describe("SUITE 74: DOCTRINA DE SALUDO HORARIO UNIVERSAL, CERO 'HOLA' AISLADO Y CIERRE CORDIAL (v33.13 - 33.13.0)", () => {
     it("1. getGreetingByTime y buildTimeSalutation devuelven el saludo horario oficial de Bogotá", async () => {
       const { getGreetingByTime, buildTimeSalutation } = await import("../_core/whatsapp-utils");
-      
+
       const greeting = getGreetingByTime();
       expect(["Buenos días", "Buenas tardes", "Buenas noches"]).toContain(greeting);
 
@@ -5789,13 +5789,68 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(replyNumber).not.toContain("Política de Tratamiento de Datos");
     });
 
-    it("4. Consagración doctrinal de versión v33.15 en shared/const.ts y package.json", async () => {
+    it("4. Consagración doctrinal de versión v33.16 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.15");
+      expect(VECY_VERSION).toBe("v33.16");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.15.0");
+      expect(pkg.version).toBe("33.16.0");
+    });
+  });
+
+  describe("SUITE 77: JanIA v33.16 — REFORMA ARQUITECTÓNICA LLM PURO, MATCHES M-CODE Y MEMORIA 72H", () => {
+    it("1. Validación de gemini-2.5-flash como modelo prioritario principal en llaves gratuitas", async () => {
+      const fs = await import("fs");
+      const llmCode = fs.readFileSync("server/_core/llm.ts", "utf-8");
+      expect(llmCode).toContain('"gemini-2.5-flash"');
+      // gemini-2.5-flash debe aparecer antes de flash-lite en FALLBACK_MODELS
+      const idx25 = llmCode.indexOf('"gemini-2.5-flash"');
+      const idxLite = llmCode.indexOf('"gemini-3.5-flash-lite"');
+      expect(idx25).toBeLessThan(idxLite);
+    });
+
+    it("2. Ventana de memoria continua de 72 horas deslizante y 20 turnos en sessionManager", async () => {
+      const { getDmHistory, appendDmHistory } = await import("../_core/jania/sessionManager");
+      const testUid = `72h-test-${Date.now()}@s.whatsapp.net`;
+      appendDmHistory(testUid, "user", "Hola JanIA");
+      appendDmHistory(testUid, "assistant", "¡Hola! ¿En qué te colaboro?");
+      const hist = getDmHistory(testUid);
+      expect(hist.length).toBe(2);
+      expect(hist[0].content).toBe("Hola JanIA");
+    });
+
+    it("3. Buscador y mediación de matches: reporte diferenciado Admin vs Colega Externo con código #M y 40/20/40", async () => {
+      const { formatMatchReport } = await import("../_core/adminMatchAssistantService");
+      const mockItems: any[] = [{
+        matchId: 15649,
+        score: 95.0,
+        targetType: "inmueble",
+        targetId: 101,
+        neighborhood: "Chicó",
+        priceOrBudgetFormatted: "$1.200 Millones",
+        areaFormatted: "140 m²",
+        bedroomsFormatted: "3 Hab",
+        bathroomsFormatted: "3 Baños",
+        parkingFormatted: "2 Pq",
+        contactName: "Colega Secreto",
+        contactPhone: "573109998877",
+        contactWhatsAppLink: "https://wa.me/573109998877"
+      }];
+
+      // Formato para Administrador: destapa datos
+      const adminRep = formatMatchReport("HEADER", "CRITERIA", mockItems, true, "https://admin.url", "EMPTY");
+      expect(adminRep).toContain("Colega Secreto");
+      expect(adminRep).toContain("+573109998877");
+      expect(adminRep).toContain("https://wa.me/573109998877");
+
+      // Formato para Colega Externo: protege datos y remite al WhatsApp oficial de Bróker para mediación 40/20/40
+      const extRep = formatMatchReport("HEADER", "CRITERIA", mockItems, false, "https://admin.url", "EMPTY");
+      expect(extRep).not.toContain("Colega Secreto");
+      expect(extRep).not.toContain("573109998877");
+      expect(extRep).toContain("#M15649");
+      expect(extRep).toContain("40/20/40");
+      expect(extRep).toContain("+57 316 656 9719");
     });
   });
 });

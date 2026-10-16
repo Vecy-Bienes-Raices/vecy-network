@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.15.0 — 2026-10-16)
-- **JanIA Server:** `v33.15` (`33.15.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Servicio Incondicional y Libertad del Usuario (Doctrina Eduardo A. Rivera):** Erradicación total de cualquier orden o código que obligue a los usuarios a hablar o escribir como JanIA; eliminación de la fricción pedagógica y aceptación libre de cualquier lenguaje o estilo humano.
-- **Eliminación del Bloqueo `isExplicitJanIaCall` en DMs:** Erradicación del filtro que exigía palabras clave para que JanIA respondiera; atención 100% activa ante cualquier mensaje, número, NIT, punto, sticker o afirmación en chats privados.
-- **Afirmaciones Naturales de Confirmación:** Soporte directo de `"adelante"`, `"si por fa"`, `"sí"`, `"dale"`, `"procede"`, `"hazlo"` para ejecutar inmediatamente consultas de antecedentes/NIT sin bucles ni repreguntas.
-- **Mensajes Cortos, Claros y Concisos:** Respuestas compactas y ágiles que evitan textos kilométricos y eliminan la aparición del botón 'Leer más' en WhatsApp.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing ($0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.16.0 — 2026-10-16)
+- **JanIA Server:** `v33.16` (`33.16.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Reforma Arquitectónica LLM Puro:** Erradicación total de expresiones regulares interceptoras, respuestas enlatadas rígidas y mutilaciones de texto en DMs; Gemini opera con total autonomía cognitiva, historial fluido y `JANIA_DM_TOOLS`.
+- **Regla del Saludo Único:** Estructura horaria indivisible (`¡Buenos días / tardes / noches, [Nombre]! 👋`) emitida estrictamente en el primer turno de la conversación; continuidad directa y limpia en turnos posteriores.
+- **Protección de Datos en Matches (M-Code):** Fichas técnicas completas para directores/admin; código único `#M[id]` y datos de contacto ofuscados para inmobiliarias externas, canalizando la alianza 40/20/40 al bróker oficial (`+57 316 656 9719`).
+- **Memoria Deslizante de 72 Horas:** Historial conversacional continuo que abarca hasta 3 días (72h) y 20 turnos, preservando el contexto completo de fines de semana.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (272/272 a $0 COP) | Build `npm run build` limpio (Vite 15.28s + esbuild 157ms).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

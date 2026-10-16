@@ -7,7 +7,8 @@ import {
   getActiveKey, 
   getFreeKeys, 
   getPaidKey, 
-  getAllAvailableKeys 
+  getAllAvailableKeys,
+  isTestEnvironment
 } from "./geminiKeyManager";
 
 export type LLMProvider = "google" | "anthropic";
@@ -27,12 +28,13 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos ordenados por prioridad de fallback (100% compatibles y activos en Google API)
+// Modelos ordenados por prioridad de fallback (gemini-2.5-flash como principal en llaves gratuitas - v33.16)
 const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+  "gemini-3.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-flash-lite-latest",
-  "gemini-3.5-flash",
-  "gemini-flash-latest",
 ];
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
@@ -149,8 +151,9 @@ async function invokeGemini(
   }
 
   let lastError: any = null;
-  const targetModels = modelsToTry; // Cascada completa de modelos (gemini-3.6-flash → gemini-flash-latest → gemini-flash-lite-latest)
-  const totalAttempts = Math.max(allKeys.length, 5);
+  const inTest = isTestEnvironment();
+  const targetModels = inTest ? modelsToTry.slice(0, 1) : modelsToTry;
+  const totalAttempts = inTest ? 1 : Math.max(allKeys.length, 5);
 
   for (const currentModel of targetModels) {
     // Intentar a través de las claves del Pool (Nivel 1 Gratis -> Nivel 2 Pago de Emergencia)
@@ -167,11 +170,11 @@ async function invokeGemini(
 
       for (let attempt = 1; attempt <= 1; attempt++) {
         try {
-          await paceRequest();
+          if (!inTest) await paceRequest();
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
           
           // Timeout seguro de 12 segundos: si Google tarda, no bloquea el servidor ni causa 504 a la web
-          const response = await axios.post(apiUrl, payload, { timeout: 12000 });
+          const response = await axios.post(apiUrl, payload, { timeout: inTest ? 600 : 12000 });
 
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
