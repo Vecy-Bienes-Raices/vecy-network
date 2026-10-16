@@ -5518,6 +5518,39 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(execRep.reportText).toContain("ADRES (BDUA)");
       expect(execRep.reportText).not.toContain("1️⃣ *DATOS DE IDENTIDAD*");
     });
+
+    it("5. Verificación de Persona Jurídica (NIT), filtro de nombres limpios y desacoplamiento de PDF en DM", async () => {
+      const {
+        formatCompactIdentityVerificationReport,
+        extractCedulaForVerification
+      } = await import("../_core/identityVerificationService");
+      const { setLatestDmPdf, popLatestDmPdf } = await import("../_core/jania/handlers/dmHandler");
+
+      // 1. Filtro de nombres limpios ante frases operativas
+      const extractedOp = extractCedulaForVerification("por favor verificar antecedentes CC 9536229", true);
+      expect(extractedOp.found).toBe(true);
+      expect(extractedOp.detectedName).toBeUndefined();
+
+      // 2. Reporte compacto adaptado a NIT
+      const nitRep = formatCompactIdentityVerificationReport({
+        cedula: "900123456",
+        tipoDoc: "nit",
+        fullName: "INVERSIONES INMOBILIARIAS SAS",
+        success: true
+      });
+      expect(nitRep).toContain("No aplica para personas jurídicas (exclusivo para personas naturales)");
+      expect(nitRep).toContain("Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI");
+      expect(nitRep).toContain("Persona Jurídica (no aplica afiliación individual en BDUA salud)");
+
+      // 3. Desacoplamiento de PDF en DM
+      const dummyBuffer = Buffer.from("%PDF-1.4 dummy", "utf-8");
+      setLatestDmPdf("user-test-pdf", { pdfBuffer: dummyBuffer, pdfFileName: "paz_y_salvo_idu.pdf" });
+      const popped = popLatestDmPdf("user-test-pdf");
+      expect(popped).toBeDefined();
+      expect(popped?.pdfFileName).toBe("paz_y_salvo_idu.pdf");
+      expect(popped?.pdfBuffer.length).toBe(dummyBuffer.length);
+      expect(popLatestDmPdf("user-test-pdf")).toBeUndefined();
+    });
   });
 });
 

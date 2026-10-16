@@ -7227,5 +7227,61 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Emojis**: Alineación formal con la Matriz v23.0 (`👍` Oferta Venta, `👌` Oferta Arriendo, `🔀` Oferta Permuta, `📝` Demanda Venta, `✏️` Demanda Arriendo, `🔄` Demanda Permuta).
 - **Memoria de Círculo Inmobiliario**: Creadas `getCirculoHistory` y `appendCirculoHistory` en `sessionManager.ts` y conectadas a `circuloHandler.ts`.
 
+---
+
+### Versión v33.06 — Octubre 2026: Núcleo Cognitivo Argon, Caché Compacta, 6ª Herramienta, Review 15s y Candado Anti-Alucinación SINUPOT
+- **Núcleo Cognitivo Argon**: Inyección de `JANIA_ARGON_COGNITIVE_CORE` en `prompts.ts`, `dmHandler.ts`, `consultingHandler.ts` y `circuloHandler.ts` reforzando la identidad de Directora Virtual de VECY BIENES RAÍCES y protocolo CoT de tres pasos.
+- **Caché Compacta de Sesión**: Caché de respuestas en memoria de corta duración para consultas frecuentes en DMs.
+- **6ª Herramienta de Captura en DMs**: Ingesta guiada de inmuebles y demandas desde mensajes privados.
+- **Copy Ganador Google Reviews 15s**: Mensaje desacoplado de gratitud orientado a la calificación rápida sin emojis competidores.
+- **Candado Anti-Alucinación SINUPOT**: Blindaje en consultas urbanísticas exigiendo verificación estricta en mapas oficiales distritales.
+
+---
+
+### Versión v33.07 — Octubre 2026: Supresión de Redundancias en Saludos y Compactación Máxima en DMs (Cero "Leer más")
+- **Eliminación de Saludos Duplicados**: Implementación de `stripLeadingGreetingsAndCourtesies` y refactorización de `sanitizeDmOrthographyAndGreeting` garantizando un único saludo horario indivisible (`¡Buenos días / tardes / noches, [Nombre]! 👋`) sin concatenaciones redundantes.
+- **Compactación Máxima en DMs**: Respuestas conversacionales de cortesía, consultas frecuentes, IDU y predial formateadas en máximo 2 párrafos cortos con viñetas ágiles, previniendo el botón "Leer más" en WhatsApp.
+
+---
+
+### Versión v33.08 — Octubre 2026: Agenda de Confianza, Círculo Familiar y Escudo Defensivo Anti-Cobranzas/Spam
+- **Agenda Familiar y de Confianza**: Mapeo telefónico para los 17 contactos clave de Eduardo (Madre Carmenza, tíos Olanda, Tulita, Marina, Luis; hijos Daniel y Natalia; esposa Jani; primos y amigos cercanos) con saludos personalizados y afectuosos.
+- **Escudo Defensivo Anti-Cobranzas / Spam**: Neutralización de llamadas y mensajes de cobro coactivo, prejurídico o cobradores financieros con postura corporativa neutral y despiste estricto.
+
+---
+
+### Versión v33.10 — Octubre 2026: Refinamiento de la Agenda Familiar (Natillita) y Blindaje Cognitivo en DMs
+- **Alineación de Apodos Familiares**: Corrección de Natalia ("Natillita" / "Mi Natis") y erradicación total de confusión cognitiva en mensajes cotidianos de familiares.
+- **Canalización Afectuosa**: Desvío amoroso a la línea directa de Eduardo (`+57 316 656 9719`) para recados y temas personales, sin solicitar reseñas de Google ni activar embudos comerciales a miembros de la familia.
+
+---
+
+### Versión v33.11 — Octubre 2026: Visión Universal, Autonomía Multimodal en DMs y Robustez contra Caídas
+- **Visión Universal en DMs**: Soporte completo de `DmMediaOptions` (`imageBuffer`, `pdfBuffer`, `pdfMimeType`, `isAudio`, `flyerVisionData`) sin requerir texto para procesar mensajes.
+- **Robustez contra Caídas**: Creación de `extractFlyerVisionSafely` con timeout de 8.000 ms, cascada jerárquica de modelos estables de Gemini y blindaje a prueba de caídas en Baileys.
+- **Respuesta a Memes y Fotos**: Saludo horario e invitación cordial a servicios inmobiliarios ante imágenes cotidianas de remitentes desconocidos.
+
+---
+
+### Versión v33.12 — Octubre 2026: Unificación de Memoria Turno 1/2 (Cero Bucles), Reporte Compacto Oficial, Filtro Anti-Publicidad Meta y PDFs Comerciales
+- **Unificación de Memoria Turno 1 / Turno 2 (Cero Bucles)**:
+  * Creación de `detectTramiteConfirmation` en `identityVerificationService.ts` reconociendo confirmaciones naturales ("CC", "1", "cédula", "antecedentes", "predial", "idu", "NIT", "pasaporte", "CE").
+  * Intercepción prioritaria en `dmHandler.ts` sobre sesiones pendientes de `pendingUnconfirmedDocs`, ejecutando la consulta de inmediato sin volver a preguntar el trámite ni repetir el menú.
+- **Reporte Compacto Único Oficial**:
+  * Formato unificado en `formatCompactIdentityVerificationReport` con ADRES BDUA al final y sin bloques numéricos largos `1️⃣`, `2️⃣`, `3️⃣`.
+  * Adaptación institucional para Personas Jurídicas (NIT) con líneas especiales para Policía, Procuraduría y ADRES.
+  * Filtro heurístico en `cleanPotentialPersonName` contra frases operativas ("verificar antecedentes", "por favor...").
+- **Desacoplamiento de Documentos PDF en DMs**:
+  * Funciones auxiliares `setLatestDmPdf` y `popLatestDmPdf` en `dmHandler.ts` permitiendo que el socket de WhatsApp en `whatsapp-match.ts` despache el archivo PDF adjunto oficial (Predial / IDU) con su pie de mensaje y reacción 📄 manteniendo retornos primitivos puros.
+- **Filtro Anti-Publicidad / Spam (Caso Caro Rodríguez)**:
+  * Bloqueo impermeable con reacción 🚫 y cero persistencia en BD para pauta digital, campañas en Meta, agencias de marketing o cursos no inmobiliarios.
+- **Ingesta Robusta de PDFs Comerciales (Caso Juan Alberto Duque)**:
+  * Salvaguarda de ofertas y demandas inmobiliarias compartidas exclusivamente en PDF contra falsos positivos de publicaciones vacías o descartes de texto corto.
+- **Ventana Estricta de 15 Días**:
+  * Confinamiento estricto a 15 días en base de datos, purgas y cruces ad-hoc, erradicando fallbacks residuales a 45 días.
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **255/255 passing** ($0 COP) | Build `npm run build` en 17.73s (Vite) + 209ms (esbuild).
+
+
 
 

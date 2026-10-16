@@ -193,7 +193,8 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
   5. **Filtro Anti-Publicidad / Spam (Caso Caro Rodríguez)**: Bloqueo inmediato con 🚫 y cero persistencia en BD para ofertas de campañas en Meta/Facebook/Instagram, pauta digital, agencias de marketing, embudos o venta de software/cursos no inmobiliarios.
   6. **Lectura de Documentos PDF Comerciales (Caso Juan Alberto Duque)**: Protección de ofertas y requerimientos compartidos en PDF (ej. "ESTOY BUSCANDO BODEGA EN COTA.pdf") para evitar descartes por texto hueco o comentarios cortos, garantizando su extracción y guardado en BD.
   7. **Ventana Estricta de 15 Días (Cero 45 Días Residuales)**: Confinamiento estricto a 15 días en consultas de base de datos, purgas automáticas y cruces ad-hoc, erradicando fallbacks de 30 o 45 días.
-  8. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 254/254 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio (Vite 39.36s + esbuild 500ms) ✅
+  8. **Desacoplamiento de PDF en DMs y Adaptación NIT**: `setLatestDmPdf` y `popLatestDmPdf` garantizan retornos primitivos puros en DMs y despacho directo del archivo PDF oficial (Predial/IDU) en WhatsApp. Reporte adaptativo oficial para NIT (personas jurídicas).
+  9. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 255/255 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio (Vite 17.73s + esbuild 209ms) ✅
 - `shared/const.ts` (`v33.12`) y `package.json` (`33.12.0`).
 
 ## 🔖 VERSIÓN ANTERIOR: v33.11 — Octubre 2026

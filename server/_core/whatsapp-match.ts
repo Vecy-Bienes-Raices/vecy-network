@@ -1718,7 +1718,7 @@ export class JaniaMatchBot {
               // Detener 'composing' e iniciar 'recording' continuo ("Grabando audio... 🎙️")
               stopPresence();
               stopPresence = startContinuousPresence(this.sock, senderId, 'recording');
-              const cleanText = cleanVoiceText(reply);
+              const cleanText = cleanVoiceText(String(reply));
               const media = await textToSpeechMedia(cleanText);
               if (media && media.data) {
                 const audioBuffer = Buffer.from(media.data, 'base64');
@@ -1727,7 +1727,7 @@ export class JaniaMatchBot {
                   mimetype: media.mimetype || 'audio/ogg; codecs=opus',
                   ptt: true
                 }, { quoted: mainMsg, allowDirectMessage: true, skipDelay: true });
-                await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT]: ${reply}`);
+                await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT]: ${String(reply)}`);
 
                 // Si la respuesta contenía enlaces URLs (como el canal de WhatsApp o el bróker),
                 // despachar también el texto para que el usuario tenga el enlace clickable en su pantalla
@@ -1759,8 +1759,25 @@ export class JaniaMatchBot {
             }
           }
 
-          await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
-          await this.logToDb(senderId, 'janIA', reply);
+          const { popLatestDmPdf } = await import('./jania/handlers/dmHandler');
+          const latestPdf = popLatestDmPdf(senderId);
+          const pdfBuffer = (reply as any)?.pdfBuffer || latestPdf?.pdfBuffer;
+          const pdfFileName = (reply as any)?.pdfFileName || latestPdf?.pdfFileName;
+          const replyText = String(reply);
+
+          if (pdfBuffer && Buffer.isBuffer(pdfBuffer)) {
+            console.log(`[JANIA-MATCH] [DM] Despachando documento PDF oficial (${pdfFileName || 'documento.pdf'}, ${pdfBuffer.length} bytes) a ${senderId}`);
+            await this.queuedSend(senderId, {
+              document: pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: pdfFileName || 'documento_oficial_vecy.pdf',
+              caption: replyText
+            }, { quoted: mainMsg, allowDirectMessage: true });
+            await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => { });
+          } else {
+            await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+          }
+          await this.logToDb(senderId, 'janIA', replyText);
 
           // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40 / v32.96)
           const isGratitudeOrClosing =

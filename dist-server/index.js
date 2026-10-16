@@ -19596,11 +19596,23 @@ __export(dmHandler_exports, {
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   executeJaniaDmTool: () => executeJaniaDmTool,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  popLatestDmPdf: () => popLatestDmPdf,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
   sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
+  setLatestDmPdf: () => setLatestDmPdf,
   stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
 });
+function setLatestDmPdf(userId, attachment) {
+  latestDmPdfMap.set(userId, attachment);
+}
+function popLatestDmPdf(userId) {
+  const attachment = latestDmPdfMap.get(userId);
+  if (attachment) {
+    latestDmPdfMap.delete(userId);
+  }
+  return attachment;
+}
 async function executeJaniaDmTool(toolName, args, userId, _userName) {
   switch (toolName) {
     case "registrar_inmueble_o_requerimiento": {
@@ -20065,7 +20077,7 @@ Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o q
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
   }
-  const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+  const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2, executeIduAssistanceFromWhatsApp: executeIduAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
   const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
   const {
     isBareDocumentNumber: isBareDocumentNumber2,
@@ -20093,6 +20105,9 @@ Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o q
         const iduRes = await executeIduValorizacionFromWhatsApp2(pendingDoc.rawNumber, userId, true);
         if (iduRes.isIduRequest && iduRes.reportText) {
           const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
+          if (iduRes.pdfBuffer) {
+            setLatestDmPdf(userId, { pdfBuffer: iduRes.pdfBuffer, pdfFileName: iduRes.pdfFileName });
+          }
           appendDmHistory(userId, "user", clean);
           appendDmHistory(userId, "assistant", delivered);
           return delivered;
@@ -20111,6 +20126,9 @@ Comp\xE1rteme el c\xF3digo CHIP y de inmediato te emito el Paz y Salvo oficial g
         const predialRes = await executePredialAssistanceFromWhatsApp2(pendingDoc.rawNumber, userId, true);
         if (predialRes?.reportText) {
           const delivered = await formatPoliteToolDelivery(userId, userName || "", "predial", predialRes.reportText, true);
+          if (predialRes.pdfBuffer) {
+            setLatestDmPdf(userId, { pdfBuffer: predialRes.pdfBuffer, pdfFileName: predialRes.pdfFileName });
+          }
           appendDmHistory(userId, "user", clean);
           appendDmHistory(userId, "assistant", delivered);
           return delivered;
@@ -20232,6 +20250,9 @@ P\xEDdele con toda tranquilidad y profesionalismo a tu cliente o colega su nombr
       if (chipMatch) {
         const iduRes = await executeIduValorizacionFromWhatsApp2(chipMatch, userId, true);
         const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText || "Reporte IDU", true);
+        if (iduRes.pdfBuffer) {
+          setLatestDmPdf(userId, { pdfBuffer: iduRes.pdfBuffer, pdfFileName: iduRes.pdfFileName });
+        }
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", delivered);
         return delivered;
@@ -20246,6 +20267,9 @@ P\xEDdele con toda tranquilidad y profesionalismo a tu cliente o colega su nombr
       if (chipMatch) {
         const iduRes = await executeIduValorizacionFromWhatsApp2(chipMatch, userId, true);
         const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText || "Reporte IDU", true);
+        if (iduRes.pdfBuffer) {
+          setLatestDmPdf(userId, { pdfBuffer: iduRes.pdfBuffer, pdfFileName: iduRes.pdfFileName });
+        }
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", delivered);
         return delivered;
@@ -20567,7 +20591,7 @@ QUI\xC9NES SOMOS, REDES SOCIALES Y SERVICIOS (M\xC1XIMO 2 P\xC1RRAFOS CORTOS):
     return fallback;
   }
 }
-var JANIA_DM_TOOLS;
+var latestDmPdfMap, JANIA_DM_TOOLS;
 var init_dmHandler = __esm({
   "server/_core/jania/handlers/dmHandler.ts"() {
     "use strict";
@@ -20580,6 +20604,7 @@ var init_dmHandler = __esm({
     init_valuation();
     init_whatsapp_utils();
     init_trustedContacts();
+    latestDmPdfMap = /* @__PURE__ */ new Map();
     JANIA_DM_TOOLS = [
       {
         functionDeclarations: [
@@ -21988,7 +22013,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
                   stopPresence();
                   stopPresence = startContinuousPresence(this.sock, senderId, "recording");
-                  const cleanText = cleanVoiceText2(reply);
+                  const cleanText = cleanVoiceText2(String(reply));
                   const media = await textToSpeechMedia2(cleanText);
                   if (media && media.data) {
                     const audioBuffer = Buffer.from(media.data, "base64");
@@ -21997,7 +22022,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       mimetype: media.mimetype || "audio/ogg; codecs=opus",
                       ptt: true
                     }, { quoted: mainMsg, allowDirectMessage: true, skipDelay: true });
-                    await this.logToDb(senderId, "janIA", `[Nota de Voz PTT]: ${reply}`);
+                    await this.logToDb(senderId, "janIA", `[Nota de Voz PTT]: ${String(reply)}`);
                     if (reply.includes("http")) {
                       await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                     }
@@ -22019,8 +22044,25 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   console.warn("[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:", ttsErr?.message);
                 }
               }
-              await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
-              await this.logToDb(senderId, "janIA", reply);
+              const { popLatestDmPdf: popLatestDmPdf2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+              const latestPdf = popLatestDmPdf2(senderId);
+              const pdfBuffer2 = reply?.pdfBuffer || latestPdf?.pdfBuffer;
+              const pdfFileName = reply?.pdfFileName || latestPdf?.pdfFileName;
+              const replyText = String(reply);
+              if (pdfBuffer2 && Buffer.isBuffer(pdfBuffer2)) {
+                console.log(`[JANIA-MATCH] [DM] Despachando documento PDF oficial (${pdfFileName || "documento.pdf"}, ${pdfBuffer2.length} bytes) a ${senderId}`);
+                await this.queuedSend(senderId, {
+                  document: pdfBuffer2,
+                  mimetype: "application/pdf",
+                  fileName: pdfFileName || "documento_oficial_vecy.pdf",
+                  caption: replyText
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
+                });
+              } else {
+                await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+              }
+              await this.logToDb(senderId, "janIA", replyText);
               const isGratitudeOrClosing = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
               const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
               const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
@@ -25799,6 +25841,7 @@ function cleanPotentialPersonName(str) {
   if (!s || s.length < 3 || s.length > 50) return void 0;
   const sLower = s.toLowerCase();
   if (sLower.includes("compradores se llaman") || sLower.includes("hola") || sLower.includes("buenos") || sLower.includes("gracias") || sLower.includes("buenas")) return void 0;
+  if (/(?:verific(?:ar|ando|aci[oó]n)|valid(?:ar|ando|aci[oó]n)|revis(?:ar|ando)|consult(?:ar|ando|a)|cheque(?:ar|ando)|mirar|antecedentes|c[eé]dula|documento|por\s*favor|favor|est[aá]|este|estos|estas)/i.test(sLower)) return void 0;
   if (/\d/.test(s)) return void 0;
   return s;
 }
@@ -26003,10 +26046,13 @@ function formatCompactIdentityVerificationReport(params) {
 `;
   }
   const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
+  const isNit = tipoDoc.toLowerCase() === "nit";
   const isWhiteLabelDoc = cedula === "43403545";
   let securityLine = policiaMessage;
   if (!securityLine) {
-    if (success) {
+    if (isNit) {
+      securityLine = "No aplica para personas jur\xEDdicas (exclusivo para personas naturales).";
+    } else if (success) {
       securityLine = isWhiteLabelDoc ? "Sin antecedentes judiciales ni requerimientos penales pendientes." : "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
     } else {
       securityLine = "Sin antecedentes judiciales penales reportados o documento no indexado.";
@@ -26014,7 +26060,7 @@ function formatCompactIdentityVerificationReport(params) {
   }
   let pgnLine = procuraduriaStatus;
   if (!pgnLine) {
-    pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
+    pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : isNit ? "Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI." : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
   }
   let cgrLine = contraloriaStatus;
   if (!cgrLine) {
@@ -26023,6 +26069,8 @@ function formatCompactIdentityVerificationReport(params) {
   let epsLine = "";
   if (adresEps) {
     epsLine = `${adresEps} (${adresEstado || "REGISTRADO"}${adresRegimen ? ` \u2014 ${adresRegimen}` : ""})`;
+  } else if (isNit) {
+    epsLine = "Persona Jur\xEDdica (no aplica afiliaci\xF3n individual en BDUA salud).";
   } else if (!success) {
     epsLine = "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
   } else {
@@ -27159,6 +27207,7 @@ __export(janIA_exports, {
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
   parseSafeJSON: () => parseSafeJSON,
+  popLatestDmPdf: () => popLatestDmPdf,
   preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
@@ -27174,6 +27223,7 @@ __export(janIA_exports, {
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  setLatestDmPdf: () => setLatestDmPdf,
   setPendingSession: () => setPendingSession,
   splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,

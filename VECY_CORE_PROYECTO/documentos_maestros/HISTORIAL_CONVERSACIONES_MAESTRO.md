@@ -12,8 +12,9 @@
 **Versión:** `v33.12` (`33.12.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
 **Archivos Afectados:**
 - `server/_core/identityVerificationService.ts` (Implementación de `detectTramiteConfirmation` con soporte natural de "CC", "1", "cédula", "antecedentes", "predial", "idu", "NIT", "pasaporte", "CE"; estandarización del reporte compacto oficial con ADRES al final y sin bloques numéricos largos)
-- `server/_core/jania/handlers/dmHandler.ts` (Unificación de memoria entre Turno 1 y Turno 2: intercepción inmediata de confirmaciones, erradicando bucles donde JanIA preguntaba nuevamente el trámite; supresión de bloques repetidos)
-- `server/__tests__/regression.test.ts` (SUITE 73 con 4 pruebas automatizadas aprobadas, alcanzando 254/254 tests pasando al 100% en verde a $0 COP)
+- `server/_core/jania/handlers/dmHandler.ts` (Unificación de memoria entre Turno 1 y Turno 2: intercepción inmediata de confirmaciones, erradicando bucles donde JanIA preguntaba nuevamente el trámite; desacoplamiento de adjuntos PDF con `setLatestDmPdf` y `popLatestDmPdf` garantizando retorno primitivo puro `string`)
+- `server/_core/whatsapp-match.ts` (Extracción desacoplada de PDF mediante `popLatestDmPdf` para despacho en WhatsApp sin afectar tipado o aserciones de tests)
+- `server/__tests__/regression.test.ts` (SUITE 73 con 5 pruebas automatizadas aprobadas, alcanzando 255/255 tests pasando al 100% en verde a $0 COP)
 - `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
 
 ---
@@ -38,13 +39,17 @@ Eduardo A. Rivera ordenó:
 3. **Estandarización del Reporte Compacto Oficial con ADRES al Final:**
    - Unificación de `formatCompactIdentityVerificationReport` en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`.
    - Estructura indivisible: Encabezado institucional -> Habeas Data (Ley 1581/12) -> Datos de Identidad (Cédula, Pertenece a, Estado) -> Antecedentes (Policía -> Procuraduría -> Contraloría -> ADRES BDUA al final). Erradicados los bloques numéricos largos `1️⃣`, `2️⃣`, `3️⃣`, `4️⃣`.
-4. **SUITE 73 de Pruebas Automatizadas y Blindaje ($0 COP):**
-   - Diseñadas y aprobadas 4 pruebas unitarias en `regression.test.ts`: ciclo seguro de memoria de sesiones pendientes, transición fluida Turno 1 -> Turno 2 (con "CC", "1", "cédula", "antecedentes"), flujo con código CHIP (Turno 1 -> Turno 2 "IDU"), y consistencia del reporte compacto único oficial en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`.
+   - Soporte adaptativo para Personas Jurídicas (NIT) con líneas institucionales específicas (Policía no aplica, PGN sin sanciones contractuales en SIRI, ADRES no aplica aseguramiento individual).
+   - Filtro heurístico en `cleanPotentialPersonName` contra frases operativas ("verificar antecedentes", "por favor...") evitando detecciones erróneas de nombres.
+4. **Desacoplamiento de Archivos Adjuntos PDF en DMs (`dmHandler.ts` y `whatsapp-match.ts`):**
+   - Mecanismo en memoria con `setLatestDmPdf` y `popLatestDmPdf`, garantizando que las funciones conversacionales retornen tipos primitivos limpios `string` y el socket de Baileys despache el documento PDF oficial junto con el pie de texto y la reacción 📄.
+5. **SUITE 73 de Pruebas Automatizadas y Blindaje ($0 COP):**
+   - Diseñadas y aprobadas 5 pruebas unitarias en `regression.test.ts`: ciclo seguro de memoria de sesiones pendientes, transición fluida Turno 1 -> Turno 2 (con "CC", "1", "cédula", "antecedentes"), flujo con código CHIP (Turno 1 -> Turno 2 "IDU"), consistencia del reporte compacto único oficial en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`, y validación integral de NIT, filtro de nombres y desacoplamiento de PDF en DM.
 
 #### 4. Verificación y Resultados
 - **Typecheck:** `npm run check` (0 errores).
-- **Tests Unitarios y de Regresión:** `npm test` — **254/254 tests pasando al 100% en verde** a **$0 COP**.
-- **Compilación de Producción:** `npm run build` en 39.36s (Vite) + 500ms (esbuild).
+- **Tests Unitarios y de Regresión:** `npm test` — **255/255 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` en 26.78s (Vite) + 78ms (esbuild).
 
 ---
 

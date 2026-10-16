@@ -786,6 +786,7 @@ function cleanPotentialPersonName(str?: string): string | undefined {
   if (!s || s.length < 3 || s.length > 50) return undefined;
   const sLower = s.toLowerCase();
   if (sLower.includes("compradores se llaman") || sLower.includes("hola") || sLower.includes("buenos") || sLower.includes("gracias") || sLower.includes("buenas")) return undefined;
+  if (/(?:verific(?:ar|ando|aci[oó]n)|valid(?:ar|ando|aci[oó]n)|revis(?:ar|ando)|consult(?:ar|ando|a)|cheque(?:ar|ando)|mirar|antecedentes|c[eé]dula|documento|por\s*favor|favor|est[aá]|este|estos|estas)/i.test(sLower)) return undefined;
   if (/\d/.test(s)) return undefined;
   return s;
 }
@@ -1019,11 +1020,14 @@ export function formatCompactIdentityVerificationReport(params: {
   }
 
   const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
+  const isNit = tipoDoc.toLowerCase() === 'nit';
   const isWhiteLabelDoc = cedula === '43403545';
 
   let securityLine = policiaMessage;
   if (!securityLine) {
-    if (success) {
+    if (isNit) {
+      securityLine = 'No aplica para personas jurídicas (exclusivo para personas naturales).';
+    } else if (success) {
       securityLine = isWhiteLabelDoc
         ? 'Sin antecedentes judiciales ni requerimientos penales pendientes.'
         : 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
@@ -1036,7 +1040,9 @@ export function formatCompactIdentityVerificationReport(params: {
   if (!pgnLine) {
     pgnLine = isForeign
       ? 'Documento registrado en el sistema oficial a nombre del titular.'
-      : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
+      : (isNit
+          ? 'Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI.'
+          : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.');
   }
 
   let cgrLine = contraloriaStatus;
@@ -1047,6 +1053,8 @@ export function formatCompactIdentityVerificationReport(params: {
   let epsLine = '';
   if (adresEps) {
     epsLine = `${adresEps} (${adresEstado || 'REGISTRADO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
+  } else if (isNit) {
+    epsLine = 'Persona Jurídica (no aplica afiliación individual en BDUA salud).';
   } else if (!success) {
     epsLine = 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
   } else {

@@ -27,6 +27,25 @@ export interface DmMediaOptions {
   flyerVisionData?: FlyerVisionResult | null;
 }
 
+export interface LatestDmPdfAttachment {
+  pdfBuffer: Buffer;
+  pdfFileName?: string;
+}
+
+const latestDmPdfMap = new Map<string, LatestDmPdfAttachment>();
+
+export function setLatestDmPdf(userId: string, attachment: LatestDmPdfAttachment): void {
+  latestDmPdfMap.set(userId, attachment);
+}
+
+export function popLatestDmPdf(userId: string): LatestDmPdfAttachment | undefined {
+  const attachment = latestDmPdfMap.get(userId);
+  if (attachment) {
+    latestDmPdfMap.delete(userId);
+  }
+  return attachment;
+}
+
 export const JANIA_DM_TOOLS = [
   {
     functionDeclarations: [
@@ -694,7 +713,7 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // 🏛️ Herramientas de asistencia técnica notarial, catastral y de identidad
-  const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
+  const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp, executeIduAssistanceFromWhatsApp } = await import('../../iduValorizacionService');
   const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
   const {
     isBareDocumentNumber,
@@ -730,6 +749,9 @@ export async function processPrivateDmConversationalMessage(
         const iduRes = await executeIduValorizacionFromWhatsApp(pendingDoc.rawNumber, userId, true);
         if (iduRes.isIduRequest && iduRes.reportText) {
           const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
+          if (iduRes.pdfBuffer) {
+            setLatestDmPdf(userId, { pdfBuffer: iduRes.pdfBuffer, pdfFileName: iduRes.pdfFileName });
+          }
           appendDmHistory(userId, "user", clean);
           appendDmHistory(userId, "assistant", delivered);
           return delivered;
@@ -748,6 +770,9 @@ export async function processPrivateDmConversationalMessage(
         const predialRes = await executePredialAssistanceFromWhatsApp(pendingDoc.rawNumber, userId, true);
         if (predialRes?.reportText) {
           const delivered = await formatPoliteToolDelivery(userId, userName || "", 'predial', predialRes.reportText, true);
+          if (predialRes.pdfBuffer) {
+            setLatestDmPdf(userId, { pdfBuffer: predialRes.pdfBuffer, pdfFileName: predialRes.pdfFileName });
+          }
           appendDmHistory(userId, "user", clean);
           appendDmHistory(userId, "assistant", delivered);
           return delivered;
@@ -820,7 +845,7 @@ export async function processPrivateDmConversationalMessage(
   const isCostInquiry =
     isShortQuery &&
     (/^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) ||
-    /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower));
+      /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower));
 
   if (isCostInquiry) {
     const isFreeToolsContext =
@@ -886,7 +911,7 @@ export async function processPrivateDmConversationalMessage(
   const isDocVerificationIntent =
     isShortQuery &&
     (/(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
-    !/\b\d{5,11}\b/.test(clean));
+      !/\b\d{5,11}\b/.test(clean));
 
   if (isDocVerificationIntent) {
     const docPromptMsg =
@@ -898,7 +923,7 @@ export async function processPrivateDmConversationalMessage(
     return docPromptMsg;
   }
 
-  // CASO 2: Recepción unificada de cualquier dato inicial sin confirmación previa
+  // CASO 2: Recepción unificada de cualquier dato inicial
   // (CHIP AAA..., número suelto 1941411, documento con sigla CC 1941411, nombre con número Héctor Orjuela 9536229)
   const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
   const idDetection = extractCedulaForVerification(clean, true);
@@ -911,6 +936,9 @@ export async function processPrivateDmConversationalMessage(
       if (chipMatch) {
         const iduRes = await executeIduValorizacionFromWhatsApp(chipMatch, userId, true);
         const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText || "Reporte IDU", true);
+        if (iduRes.pdfBuffer) {
+          setLatestDmPdf(userId, { pdfBuffer: iduRes.pdfBuffer, pdfFileName: iduRes.pdfFileName });
+        }
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", delivered);
         return delivered;
@@ -925,6 +953,9 @@ export async function processPrivateDmConversationalMessage(
       if (chipMatch) {
         const iduRes = await executeIduValorizacionFromWhatsApp(chipMatch, userId, true);
         const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText || "Reporte IDU", true);
+        if (iduRes.pdfBuffer) {
+          setLatestDmPdf(userId, { pdfBuffer: iduRes.pdfBuffer, pdfFileName: iduRes.pdfFileName });
+        }
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", delivered);
         return delivered;
@@ -937,27 +968,27 @@ export async function processPrivateDmConversationalMessage(
       }
     }
 
-    // Usuario externo / colega: protocolo unificado de Urbanidad de Carreño y Capa 3
+    // Usuario externo / colega sin intención explícita (Dato en frío / número suelto): protocolo unificado de Urbanidad de Carreño
     const datoDetectado = chipMatch || (idDetection.items && idDetection.items.length > 0 ? (idDetection.items[0].detectedName ? `${idDetection.items[0].detectedName} ${idDetection.items[0].cedula}` : idDetection.items[0].cedula) : (genericNumberMatch || clean));
     setPendingUnconfirmedDoc(userId, datoDetectado);
 
     const isChipOnly = !!chipMatch && !idDetection.found && !isBareNumber;
     const receptionMsg = isChipOnly
       ? `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-        `Recibí el código CHIP *${chipMatch}*. Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres exactamente? ¿La factura del impuesto predial de Bogotá, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.\n\n` +
-        `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`
+      `Recibí el código CHIP *${chipMatch}*. Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres exactamente? ¿La factura del impuesto predial de Bogotá, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.\n\n` +
+      `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`
       : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-        `Recibí el dato *${datoDetectado}*. Para orientarte con total precisión y emitirte el reporte oficial correspondiente, por favor confírmame qué trámite necesitas exactamente:\n\n` +
-        `1️⃣ *Verificación integral de identidad y antecedentes* (Policía Nacional, Procuraduría SIRI, Contraloría SIRECI y confirmar EPS en ADRES)\n` +
-        `2️⃣ *Factura del Impuesto Predial Bogotá* o certificado oficial de pago al día\n` +
-        `3️⃣ *Paz y Salvo de Valorización IDU* para escrituración notarial\n\n` +
-        `Si se trata de un número de identificación para verificación de identidad, por favor confírmame a qué tipo de documento corresponde:\n` +
-        `• *1. Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
-        `• *2. Cédula de Extranjería (C.E.)* 🌐\n` +
-        `• *3. Pasaporte* ✈️\n` +
-        `• *4. NIT (Persona Jurídica)* 🏢\n\n` +
-        `Solo respóndeme indicándome el trámite o tipo de documento (ejemplo: *"es CC"*, *"1"*, *"antecedentes"*, *"predial"* o *"IDU"*) y de inmediato te entrego tu reporte oficial gratuito.\n\n` +
-        `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`;
+      `Recibí el dato *${datoDetectado}*. Para orientarte con total precisión y emitirte el reporte oficial correspondiente, por favor confírmame qué trámite necesitas exactamente:\n\n` +
+      `1️⃣ *Verificación integral de identidad y antecedentes* (Policía Nacional, Procuraduría SIRI, Contraloría SIRECI y confirmar EPS en ADRES)\n` +
+      `2️⃣ *Factura del Impuesto Predial Bogotá* o certificado oficial de pago al día\n` +
+      `3️⃣ *Paz y Salvo de Valorización IDU* para escrituración notarial\n\n` +
+      `Si se trata de un número de identificación para verificación de identidad, por favor confírmame a qué tipo de documento corresponde:\n` +
+      `• *1. Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
+      `• *2. Cédula de Extranjería (C.E.)* 🌐\n` +
+      `• *3. Pasaporte* ✈️\n` +
+      `• *4. NIT (Persona Jurídica)* 🏢\n\n` +
+      `Solo respóndeme indicándome el trámite o tipo de documento (ejemplo: *"es CC"*, *"1"*, *"antecedentes"*, *"predial"* o *"IDU"*) y de inmediato te entrego tu reporte oficial gratuito.\n\n` +
+      `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", receptionMsg);

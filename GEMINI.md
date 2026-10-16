@@ -5,7 +5,7 @@
 - **Filtro Anti-Publicidad de Marketing/Meta Ads:** Bloqueo impermeable con 🚫 para campañas en Meta, pauta digital, agencias de marketing y venta de software/cursos no inmobiliarios.
 - **Ingesta de PDFs Comerciales:** Inmunidad contra falsos descartes por texto hueco en ofertas o requerimientos comerciales adjuntos en PDF.
 - **Ventana Estricta de 15 Días:** Confinamiento estricto a 15 días en base de datos, purgas y cruces ad-hoc, erradicando fallbacks residuales a 45 días.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 254/254 passing ($0 COP) | Build `npm run build` en 39s (Vite) + 500ms (esbuild).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 255/255 passing ($0 COP) | Build `npm run build` en 17.73s (Vite) + 209ms (esbuild).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
