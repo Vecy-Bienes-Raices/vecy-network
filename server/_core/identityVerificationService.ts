@@ -921,6 +921,7 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
   found: boolean;
   cedula: string;
   tipoDoc: string;
+  detectedName?: string;
   items?: ExtractedCedulaItem[];
 } {
   // Si el mensaje contiene un código CHIP (AAA...), predial o impuesto, NO es una verificación de cédula
@@ -934,6 +935,7 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
       found: true,
       cedula: items[0].cedula,
       tipoDoc: items[0].tipoDoc,
+      detectedName: items[0].detectedName,
       items
     };
   }
@@ -978,6 +980,7 @@ export function formatCompactIdentityVerificationReport(params: {
   tipoDoc: string;
   cedula: string;
   officialName?: string;
+  fullName?: string;
   detectedName?: string;
   success: boolean;
   policiaMessage?: string;
@@ -992,6 +995,7 @@ export function formatCompactIdentityVerificationReport(params: {
     tipoDoc,
     cedula,
     officialName,
+    fullName,
     detectedName,
     success,
     policiaMessage,
@@ -1006,14 +1010,15 @@ export function formatCompactIdentityVerificationReport(params: {
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const activeDocLabel = getDocumentTypeLabel(tipoDoc);
   const autoCeNotice = isAutoDetectedCe ? `\n📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).` : '';
+  const resolvedOfficialName = officialName || fullName || detectedName;
 
   let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
   reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
 
   reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
   reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
-  if (officialName) {
-    reportText += `👤 *Pertenece a:* ${officialName}${autoCeNotice}\n`;
+  if (resolvedOfficialName) {
+    reportText += `👤 *Pertenece a:* ${resolvedOfficialName}${autoCeNotice}\n`;
     reportText += `✅ *Identidad:* Validada.\n\n`;
   } else {
     reportText += `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n`;

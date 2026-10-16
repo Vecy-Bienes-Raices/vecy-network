@@ -101,10 +101,11 @@ export function detectInputListingType(text: string): 'demanda' | 'oferta' {
 export async function executeAdHocMatch(
   rawText: string,
   channel: 'admin' | 'public' = 'admin',
-  options: { minScore?: number; limit?: number } = {}
+  options: number | { minScore?: number; limit?: number } = {}
 ): Promise<AdHocMatchResult> {
-  const minScore = options.minScore ?? 75;
-  const limit = options.limit ?? 5;
+  const opts = typeof options === 'number' ? { limit: options } : options;
+  const minScore = opts.minScore ?? 75;
+  const limit = opts.limit ?? 5;
   const inputType = detectInputListingType(rawText);
 
   const db = await getDb();

@@ -26017,6 +26017,7 @@ function extractCedulaForVerification(text2, isPrivateDm = false) {
       found: true,
       cedula: items[0].cedula,
       tipoDoc: items[0].tipoDoc,
+      detectedName: items[0].detectedName,
       items
     };
   }
@@ -26047,6 +26048,7 @@ function formatCompactIdentityVerificationReport(params) {
     tipoDoc,
     cedula,
     officialName,
+    fullName,
     detectedName,
     success,
     policiaMessage,
@@ -26061,6 +26063,7 @@ function formatCompactIdentityVerificationReport(params) {
   const activeDocLabel = getDocumentTypeLabel(tipoDoc);
   const autoCeNotice = isAutoDetectedCe ? `
 \u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
+  const resolvedOfficialName = officialName || fullName || detectedName;
   let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
@@ -26071,8 +26074,8 @@ function formatCompactIdentityVerificationReport(params) {
 `;
   reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
 `;
-  if (officialName) {
-    reportText += `\u{1F464} *Pertenece a:* ${officialName}${autoCeNotice}
+  if (resolvedOfficialName) {
+    reportText += `\u{1F464} *Pertenece a:* ${resolvedOfficialName}${autoCeNotice}
 `;
     reportText += `\u2705 *Identidad:* Validada.
 
@@ -30227,8 +30230,9 @@ function detectInputListingType(text2) {
   return "oferta";
 }
 async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
-  const minScore = options.minScore ?? 75;
-  const limit = options.limit ?? 5;
+  const opts = typeof options === "number" ? { limit: options } : options;
+  const minScore = opts.minScore ?? 75;
+  const limit = opts.limit ?? 5;
   const inputType = detectInputListingType(rawText);
   const db = await getDb();
   const now = /* @__PURE__ */ new Date();

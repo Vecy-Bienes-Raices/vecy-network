@@ -4685,7 +4685,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     it("7. Resiliencia en ADRES / BDUA: reporte explícito de intermitencia sin enmascarar como 'sin novedad'", async () => {
       const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
       // Documento sintético no presente o con fallo en red
-      const res = await executeIdentityVerificationFromWhatsApp("Verificar CC 9999999999", "573001112233", true, false);
+      const res = await executeIdentityVerificationFromWhatsApp("Verificar CC 9999999999", true, "573001112233");
       expect(res.reportText).toBeDefined();
       if (!res.adres?.eps) {
         expect(res.reportText).toMatch(/(?:⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento|Sin novedad de aseguramiento registrada en BDUA|Sin registro activo de afiliación|No se encontraron datos de identidad en ADRES)/);
@@ -5427,7 +5427,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const adHocRes = await executeAdHocMatch(
         "Busco apartamento en venta en Chicó 3 alcobas hasta $1000 millones",
         "admin",
-        5
+        { limit: 5 }
       );
 
       expect(adHocRes).toBeDefined();
@@ -5571,6 +5571,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const nitRep = formatCompactIdentityVerificationReport({
         cedula: "900123456",
         tipoDoc: "nit",
+        officialName: "INVERSIONES INMOBILIARIAS SAS",
         fullName: "INVERSIONES INMOBILIARIAS SAS",
         success: true
       });
