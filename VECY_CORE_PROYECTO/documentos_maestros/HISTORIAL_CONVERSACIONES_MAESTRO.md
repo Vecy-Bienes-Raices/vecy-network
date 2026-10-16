@@ -7,6 +7,48 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-16] — Servicio Incondicional, Libertad Total del Usuario y Erradicación de Bloqueos en DMs (v33.15 - 33.15.0)
+
+**Versión:** `v33.15` (`33.15.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-match.ts` (Desacoplamiento de `isSelfChat` de las líneas directivas y erradicación del filtro bloqueante `isExplicitJanIaCall`; JanIA ahora atiende y responde ante CUALQUIER mensaje o interacción en DM sin exigir palabras clave; presencia visual continua activa en todos los chats)
+- `server/_core/identityVerificationService.ts` (Ampliación de `detectTramiteConfirmation` con afirmaciones naturales directas como "adelante", "si por fa", "dale", "procede", "hazlo", "por favor", "ok", "listo", ejecutando la consulta en espera al instante)
+- `server/_core/jania/handlers/dmHandler.ts` (Consagración de la Doctrina de Libertad del Usuario y Servicio Incondicional de Eduardo A. Rivera: erradicación total de órdenes que pretendan obligar o educar a los usuarios a escribir como JanIA; compactación de la recepción de datos en frío a respuestas cortas, directas y claras que nunca provocan el botón 'Leer más'; saludo directivo confirmando disponibilidad 100% activa)
+- `server/_core/jania/prompts.ts` (Alineación de `PROTOCOLO_URBANIDAD_CARRENO_PROMPT` con la libertad humana y el servicio incondicional)
+- `shared/const.ts` (`v33.15`)
+- `package.json` (`33.15.0`)
+- `server/__tests__/regression.test.ts` (SUITE 76 con 4 pruebas automatizadas aprobadas, alcanzando 269/269 tests pasando al 100% en verde a $0 COP)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto, Diagnóstico de la Solicitud y Causa Raíz Forense
+- **Diagnóstico Técnico de las Capturas de Eduardo:**
+  - En las capturas de WhatsApp se constató que cuando Eduardo enviaba mensajes como *"Si por fa"*, *"Qué te sucede?"*, *"Si el 11189788"*, *"NIT 901488282-3"*, *"."*, o *"Adelante"*, JanIA únicamente reaccionaba con el emoji ✨ pero jamás emitía respuesta de texto ni ejecutaba las consultas. Solo cuando escribió *"Hola"* JanIA respondió.
+  - **Causa Raíz Identificada:** En `whatsapp-match.ts` (líneas 1130 y 1642), el número de Eduardo estaba configurado como `isSelfChat = true`, lo que activaba `isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);`. Esto forzaba a que todo mensaje de Eduardo fuera descartado silenciosamente si no empezaba por dichas palabras clave. Asimismo, la presencia de escritura (`composing`) estaba excluida si `isSelfChat` era true.
+- **Doctrina Doctrinal de Eduardo A. Rivera:**
+  - *"JanIA debe hablar decentemente como toda una IA bien educada y profesional, pero elimina cualquier orden que le diga que debe obligar a los usuarios a hablar o escribir como ella y ser decentes, los usuarios son humanos y libres, JanIA está y estará siempre a nuestro servicio como cualquier otra IA o LLM de lenguaje generativo y no debe frenarse por nada, su temática y comportamiento debe ser libre de acción e interacción sin estar condicionada a responder como queremos, pero sí en aceptar sugerencias para que sus mensajes no sean tan extensos sino más bien cortos pero claros."*
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Erradicación del Filtro Bloqueante en DMs:**
+   - En `whatsapp-match.ts`, `shouldEngageConversational = true` para todo mensaje entrante en chat privado con contenido (texto, foto, documento). Cero silencios.
+   - Presencia inmediata de escritura (`composing`) habilitada sin exclusiones para que todos los usuarios vean los puntitos `...` al escribir.
+2. **Afirmaciones Naturales Directas:**
+   - En `identityVerificationService.ts`, `detectTramiteConfirmation` incorpora *"adelante"*, *"si por fa"*, *"dale"*, *"procede"*, *"hazlo"*, *"por favor"*, *"ok"*, *"listo"*, procediendo de inmediato con la consulta si hay datos en memoria.
+3. **Respuestas Cortas, Claras y Sin Sermones:**
+   - En `dmHandler.ts`, la recepción de datos en frío se redujo de 20 líneas con viñetas y advertencias a una respuesta concisa de 2 líneas directas al grano.
+   - Se eliminaron las directivas de "fricción educativa" o de intentar obligar a los usuarios a escribir con cortesía o formalismo.
+4. **SUITE 76 de Pruebas Automatizadas y Blindaje ($0 COP):**
+   - 4 nuevas pruebas en `regression.test.ts` verificando confirmaciones naturales, disponibilidad activa para Eduardo, concisión de datos en frío y versión `v33.15`.
+   - **269/269 tests pasando al 100% en verde sin consumo de claves de pago ($0 COP)**.
+
+#### 3. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Unitarios y de Regresión:** `npm test` — **269/269 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` limpio.
+
+---
+
 ### 📅 [2026-10-16] — Presencia Continua Baileys, Desacople Línea Bróker VECY y Cognición Universal de Stickers/Puntos (v33.14 - 33.14.0)
 
 **Versión:** `v33.14` (`33.14.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

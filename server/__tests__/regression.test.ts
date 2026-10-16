@@ -5648,13 +5648,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(code).not.toContain("`¡Hola ${realName}! 👋 Con gusto");
     });
 
-    it("5. Versión oficial v33.13 en shared/const.ts y 33.13.0 en package.json", async () => {
-      const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.14");
-
+    it("5. Versión oficial v33.13 en histórico", async () => {
       const fs = await import("fs");
-      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.14.0");
+      const dossier = fs.readFileSync("VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md", "utf-8");
+      expect(dossier).toContain("v33.13.0");
     });
   });
 
@@ -5744,16 +5741,65 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(replyExternalDot).toContain("VECY BIENES RAÍCES");
     });
 
-    it("5. Versión oficial v33.14 en shared/const.ts y 33.14.0 en package.json", async () => {
+    it("5. Versión oficial v33.14 en histórico", async () => {
+      const fs = await import("fs");
+      const dossier = fs.readFileSync("VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md", "utf-8");
+      expect(dossier).toContain("v33.14.0");
+    });
+  });
+
+  describe("SUITE 76: JanIA v33.15 — SERVICIO INCONDICIONAL, LIBERTAD DEL USUARIO Y CERO FRENOS EN DMS", () => {
+    it("1. detectTramiteConfirmation reconoce afirmaciones naturales de proceder (adelante, si por fa, dale, procede)", async () => {
+      const { detectTramiteConfirmation } = await import("../_core/identityVerificationService");
+
+      expect(detectTramiteConfirmation("adelante")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("Adelante")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("Si por fa")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("dale")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("procede")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("hazlo")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("por favor")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("ok")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("listo")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+      expect(detectTramiteConfirmation("de una")).toEqual({ isConfirmation: true, tramite: "cedula", tipoDoc: "cc" });
+    });
+
+    it("2. Saludo directivo de JanIA a Eduardo confirmando disponibilidad 100% activa", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const { getGreetingByTime } = await import("../_core/whatsapp-utils");
+      const timeGreeting = getGreetingByTime();
+
+      const reply = await processPrivateDmConversationalMessage("Hola", "573192919978@s.whatsapp.net", "Eduardo Rivera");
+      expect(reply).toContain(`¡${timeGreeting}, Eduardo! 👋`);
+      expect(reply).toContain("100% activa");
+      expect(reply).toContain("disposición para hablar");
+    });
+
+    it("3. Recepción compacta y concisa de datos en frío en DMs (cero parrafadas kilométricas)", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      // Un colega envía un número suelto
+      const replyNumber = await processPrivateDmConversationalMessage("1020304050", "573155554433@s.whatsapp.net", "Pedro Gómez");
+      expect(replyNumber).toContain("1020304050");
+      expect(replyNumber).toContain("Cédula de Ciudadanía (C.C.)");
+      expect(replyNumber).toContain("Ley 1581/12");
+      // Verificar que es compacto (menos de 450 caracteres, cero botón Leer más)
+      expect(replyNumber.length).toBeLessThan(450);
+      expect(replyNumber).not.toContain("1️⃣ *Verificación integral");
+      expect(replyNumber).not.toContain("Política de Tratamiento de Datos");
+    });
+
+    it("4. Consagración doctrinal de versión v33.15 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.14");
+      expect(VECY_VERSION).toBe("v33.15");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.14.0");
+      expect(pkg.version).toBe("33.15.0");
     });
   });
 });
+
 
 
 

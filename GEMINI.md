@@ -1,9 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.14.0 — 2026-10-16)
-- **JanIA Server:** `v33.14` (`33.14.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Restablecimiento de Presencia Continua (Baileys):** Inyección de `presenceSubscribe` y stanzas periódicas (`composing` / `recording`) con typing delays humanos visibles (1000ms - 2500ms) para garantizar los puntitos bailarines `...` y el micrófono 🎙️ en WhatsApp móvil y web.
-- **Línea Comercial Oficial VECY (+57 316 656 9719):** Desacoplamiento total del teléfono privado de Jani Alves; reconocimiento institucional para pruebas de directores (Eduardo / Jani) o consultas externas: `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`.
-- **Cognición ante Stickers, Emojis y Punticos (`isShortSignalOrSticker`):** Erradicación del silencio o bloqueo ante stickers, reacciones, emojis o un solo punto `.`; respuestas ágiles, cálidas y orientadas a servicios inmobiliarios.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 265/265 passing ($0 COP) | Build `npm run build` limpio en 29.86s (Vite) + 241ms (esbuild).
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.15.0 — 2026-10-16)
+- **JanIA Server:** `v33.15` (`33.15.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Servicio Incondicional y Libertad del Usuario (Doctrina Eduardo A. Rivera):** Erradicación total de cualquier orden o código que obligue a los usuarios a hablar o escribir como JanIA; eliminación de la fricción pedagógica y aceptación libre de cualquier lenguaje o estilo humano.
+- **Eliminación del Bloqueo `isExplicitJanIaCall` en DMs:** Erradicación del filtro que exigía palabras clave para que JanIA respondiera; atención 100% activa ante cualquier mensaje, número, NIT, punto, sticker o afirmación en chats privados.
+- **Afirmaciones Naturales de Confirmación:** Soporte directo de `"adelante"`, `"si por fa"`, `"sí"`, `"dale"`, `"procede"`, `"hazlo"` para ejecutar inmediatamente consultas de antecedentes/NIT sin bucles ni repreguntas.
+- **Mensajes Cortos, Claros y Concisos:** Respuestas compactas y ágiles que evitan textos kilométricos y eliminan la aparición del botón 'Leer más' en WhatsApp.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing ($0 COP) | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

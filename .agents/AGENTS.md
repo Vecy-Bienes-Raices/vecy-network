@@ -182,19 +182,18 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.14 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.15 — Octubre 2026
 
-### Novedades v33.14 (Presencia Continua Baileys, Desacople Línea Bróker VECY y Cognición Universal de Stickers/Puntos):
+### Novedades v33.15 (Doctrina de Servicio Incondicional, Libertad Total del Usuario, Cero Frenos en DMs y Respuestas Cortas):
 - **Diagnóstico y Solicitud Doctrinal de Eduardo A. Rivera**:
-  1. *"Investiga qué pasó con el anterior chat y por qué se quedó en un bucle infinito."* -> Descubierto y documentado bucle de 4.464 pasos y 633 ejecuciones redundantes de git por saturación de contexto al leer `transcript.jsonl` del IDE.
-  2. *"Haz uno a uno a ver si logramos reestablecer los servicios y el comportamiento de JanIA. ¿Crees que lo lograrás sin dejar error alguno?"* -> 100% de servicios y heurísticas restablecidas sin un solo error.
-  3. **Presencia Continua en Baileys (`whatsapp-utils.ts` & `whatsapp-match.ts`)**: Implementación de `sock.presenceSubscribe?.(jid)` y refresco a 2500ms en `startContinuousPresence` con delays humanos visibles (1000-2500ms texto, 1500-3000ms audio) para que el emisor siempre vea `...` (escribiendo) o 🎙️ (grabando audio).
-  4. **Desacople Doctrinal de la Línea Oficial de Bróker VECY (`+57 316 656 9719`)**: Eliminado `573166569719` del perfil personal de Jani Alves (`trustedContacts.ts`). JanIA ahora saluda a la línea oficial con la cortesía institucional: `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`.
-  5. **Cognición Universal de Stickers, Emojis y Puntos (`dmHandler.ts` & `whatsapp-match.ts`)**: Captura en búfer de `rawMsg.stickerMessage` (`😊 [Sticker]`), `reactionMessage`, `locationMessage` y `contactMessage`. JanIA responde con simpatía, empatía y orientación inmobiliaria inmediata ante cualquier sticker, emoji suelto o signo sin quedarse en silencio.
-  6. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 265/265 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 29.86s (Vite) + 241ms (esbuild) ✅
-- `shared/const.ts` (`v33.14`) y `package.json` (`33.14.0`).
+  1. *"JanIA debe hablar decentemente como toda una IA bien educada y profesional, pero elimina cualquier orden que le diga que debe obligar a los usuarios a hablar o escribir como ella y ser decentes, los usuarios son humanos y libres, JanIA está y estará siempre a nuestro servicio como cualquier otra IA o LLM de lenguaje generativo y no debe frenarse por nada, su temática y comportamiento debe ser libre de acción e interacción sin estar condicionada a responder como queremos, pero sí en aceptar sugerencias para que sus mensajes no sean tan extensos sino más bien cortos pero claros."*
+  2. **Erradicación del Filtro Bloqueante `isExplicitJanIaCall` (`whatsapp-match.ts`)**: Eliminada la restricción que exigía que mensajes de Eduardo o directores empezaran por "hola", "jania", "ayuda" o "?". JanIA ahora atiende y responde ante CUALQUIER mensaje, consulta, número, signo, punto o palabra en DMs.
+  3. **Presencia Inmediata Universal**: Emisión de stanzas de `composing` (escribiendo...) para todos los chats privados sin excepción, garantizando visibilidad de los puntitos `...`.
+  4. **Afirmaciones Naturales Directas (`detectTramiteConfirmation` en `identityVerificationService.ts`)**: Reconocimiento de "adelante", "si por fa", "dale", "procede", "hazlo", "por favor", "ok", "listo" para ejecutar inmediatamente consultas de antecedentes o trámites en espera sin bucles ni repreguntas.
+  5. **Respuestas Compactas y Cero Sermones (`dmHandler.ts` & `prompts.ts`)**: Erradicación de la fricción pedagógica y de las parrafadas kilométricas ante datos en frío. Mensajes breves (máximo 1 a 2 párrafos cortos), respetuosos y claros que nunca provocan el botón 'Leer más'.
+- `shared/const.ts` (`v33.15`) y `package.json` (`33.15.0`).
 
-## 🔖 VERSIÓN ANTERIOR: v33.13 — Octubre 2026
+## 🔖 VERSIÓN ANTERIOR: v33.14 — Octubre 2026
 
 ### Novedades v33.12 (Unificación de Memoria Turno 1/2, Reporte Compacto Oficial, Filtro Anti-Publicidad Meta y PDFs Comerciales):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

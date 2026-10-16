@@ -786,7 +786,7 @@ export async function processPrivateDmConversationalMessage(
       return welcomeMsg;
     }
     if (isEduardo) {
-      const welcomeMsg = `¡${timeSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
+      const welcomeMsg = `¡${timeSalutation}, Eduardo! 👋 Estoy 100% activa y a tu entera disposición para hablar o apoyarte en cualquier gestión. ¿En qué te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg);
       return welcomeMsg;
@@ -1068,21 +1068,11 @@ export async function processPrivateDmConversationalMessage(
 
     const isChipOnly = !!chipMatch && !idDetection.found && !isBareNumber;
     const receptionMsg = isChipOnly
-      ? `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-      `Recibí el código CHIP *${chipMatch}*. Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres exactamente? ¿La factura del impuesto predial de Bogotá, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.\n\n` +
-      `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`
-      : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-      `Recibí el dato *${datoDetectado}*. Para orientarte con total precisión y emitirte el reporte oficial correspondiente, por favor confírmame qué trámite necesitas exactamente:\n\n` +
-      `1️⃣ *Verificación integral de identidad y antecedentes* (Policía Nacional, Procuraduría SIRI, Contraloría SIRECI y confirmar EPS en ADRES)\n` +
-      `2️⃣ *Factura del Impuesto Predial Bogotá* o certificado oficial de pago al día\n` +
-      `3️⃣ *Paz y Salvo de Valorización IDU* para escrituración notarial\n\n` +
-      `Si se trata de un número de identificación para verificación de identidad, por favor confírmame a qué tipo de documento corresponde:\n` +
-      `• *1. Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
-      `• *2. Cédula de Extranjería (C.E.)* 🌐\n` +
-      `• *3. Pasaporte* ✈️\n` +
-      `• *4. NIT (Persona Jurídica)* 🏢\n\n` +
-      `Solo respóndeme indicándome el trámite o tipo de documento (ejemplo: *"es CC"*, *"1"*, *"antecedentes"*, *"predial"* o *"IDU"*) y de inmediato te entrego tu reporte oficial gratuito.\n\n` +
-      `_⚖️ Al interactuar con este servicio de cortesía, aceptas nuestra Política de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines legítimos de seguridad inmobiliaria._`;
+      ? `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Recibí el código CHIP *${chipMatch}*. ¿Deseas la factura del impuesto predial de Bogotá o el paz y salvo de valorización del IDU? Quedo atenta para emitirte el documento de inmediato 🤝✨.\n\n_⚖️ Tratamiento de datos Ley 1581/12._`
+      : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Recibí el dato *${datoDetectado}*. Confírmame qué trámite requieres:\n` +
+        `• Cédula de Ciudadanía (C.C.) / Cédula de Extranjería (C.E.) / Pasaporte / NIT (Persona Jurídica) para antecedentes.\n` +
+        `• O consulta de Factura Predial Bogotá / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial 🤝✨.\n\n` +
+        `_⚖️ Tratamiento de datos Ley 1581/12._`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", receptionMsg);
@@ -1257,7 +1247,8 @@ export async function processPrivateDmConversationalMessage(
           `    2° Alerta de Riesgo Patrimonial: Recuerda con elegancia que los contratos y liquidaciones no son formatos genéricos de internet; un vacío en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.\n` +
           `    3° Llamado a la Acción y Cierre Comercial: Invita obligatoriamente a formalizar la asesoría con la firma exacta:\n` +
           `       "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperación de tu comisión con nuestro acompañamiento directo, comunícate con nuestra Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719)."\n` +
-          `- PEDAGOGÍA DE CORTESÍA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), salúdalo educadamente por su nombre y con calidez humana. Enseña con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.\n` +
+          `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son humanos libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir, educar ni pretender que los usuarios hablen o escriban como ella. JanIA está y estará siempre al servicio incondicional del usuario como una IA y LLM de lenguaje generativo puro, sin frenarse por nada, respondiendo con profesionalismo, calidez, eficacia y libertad de acción e interacción.\n` +
+          `- REGLA DE MENSAJES CORTOS, DIRECTOS Y CLAROS: JanIA debe expresarse siempre con concisión quirúrgica. Respuestas breves, directas al grano, claras y fluidas (máximo 1 o 2 párrafos cortos), sin introducciones extensas, sin sermones ni textos kilométricos que fuercen el botón 'Leer más'.\n` +
           `- PEDAGOGÍA DE PACIENCIA TOTAL Y EMPATÍA TECNOLÓGICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnología (analfabetismo digital o confusión frente a la IA y el celular). Si un usuario no comprende cómo funciona el servicio, pregunta con timidez, pide explicación de cómo se hace o manifiesta enredo, JanIA JAMÁS debe mostrar impaciencia, frialdad ni tecnicismos. Trátalos con ternura, empatía, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Explícales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facilítame el nombre completo y número de documento que solicitas para el registro formal de portería y yo hago todo el trámite por ti en segundos". JanIA está siempre dispuesta a explicar, guiar y servir de corazón a todo el que lo necesite.\n` +
           `- MANEJO ELEGANTE DE DUDAS O AMBIGÜEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas genéricas; dile con simpatía humana: "Qué pena contigo, ${displayName || "colega"}. Debido a un pequeño fallo en la matrix 🤖😅 no alcancé a captar bien lo que me pides hacer. ¿Podrías por favor confirmarme o repetirme qué necesitas para ayudarte de inmediato?".\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +

@@ -331,6 +331,16 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.15 — Octubre 2026
+
+#### [v33.15.0] — 2026-10-16: Doctrina de Servicio Incondicional, Libertad Total del Usuario, Cero Frenos en DMs y Respuestas Cortas
+- **Servicio Incondicional y Libertad Humana (Doctrina Eduardo A. Rivera):** Erradicación total de órdenes de "fricción educativa" o de intentar obligar a los usuarios a escribir como JanIA. Los usuarios son libres de escribir como gusten (seco, con modismos o sin rodeos); JanIA opera al servicio incondicional con libertad generativa plena, calidez y profesionalismo.
+- **Erradicación del Filtro Bloqueante `isExplicitJanIaCall` (`whatsapp-match.ts`):** Eliminada la condición que forzaba a que los mensajes de Eduardo o de administración empezaran estrictamente por "hola", "jania", "ayuda" o "?". JanIA atiende y responde ante cualquier mensaje, número, NIT, punto, sticker o frase en chats privados.
+- **Presencia Inmediata Universal:** Habilitada la emisión de presencia (`composing`) en todos los DMs sin exclusión de directores, garantizando la visibilidad de los puntitos `...` escribiendo.
+- **Afirmaciones Naturales Directas (`identityVerificationService.ts`):** `detectTramiteConfirmation` reconoce "adelante", "si por fa", "dale", "procede", "hazlo", "por favor", "ok", "listo", ejecutando inmediatamente la verificación del documento en memoria sin bucles.
+- **Respuestas Cortas, Claras y Concisas (`dmHandler.ts`, `prompts.ts`):** Recepción de datos en frío compactada a 2 líneas directas, eliminando textos kilométricos y la aparición del botón 'Leer más'.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **269/269 passing** al 100% en verde sin consumo de claves de pago | Build `npm run build` limpio.
+
 ### 🔖 v33.14 — Octubre 2026
 
 #### [v33.14.0] — 2026-10-16: Presencia Continua Baileys, Desacople Línea Bróker VECY y Cognición Universal de Stickers/Puntos

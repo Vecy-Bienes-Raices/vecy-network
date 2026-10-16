@@ -1127,7 +1127,7 @@ export class JaniaMatchBot {
               "218820279050385", // LID Directivo Alterno Jani Alves
               ADMIN_PHONE
             ];
-            const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
+            const isSelfChat = senderId === botJid || rawPhone === botPhone;
             const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
             const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "573166569719" ? "VECY BIENES RAÍCES" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`)));
 
@@ -1205,13 +1205,11 @@ export class JaniaMatchBot {
 
             buffer.messages.push(msg);
 
-            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) si no es self-chat
-            if (!isSelfChat) {
-              try {
-                this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {});
-                await this.sock.sendPresenceUpdate('composing', targetDmId);
-              } catch (_) { }
-            }
+            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) en todo chat privado
+            try {
+              this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {});
+              await this.sock.sendPresenceUpdate('composing', targetDmId);
+            } catch (_) { }
 
             if (buffer.timer) {
               clearTimeout(buffer.timer);
@@ -1635,12 +1633,10 @@ export class JaniaMatchBot {
     }
 
     // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO:
-    // Aplica para todos los usuarios externos, clientes, colegas y números de prueba/directivos (Jani, Eduardo).
-    // Solo se omite si es un self-chat estricto (la línea del bot consigo misma) que no contenga
-    // una invocación explícita o pregunta hacia JanIA ("jania", "hola", "?", etc.).
+    // JanIA está al servicio incondicional del usuario y NO se frena ante ningún mensaje.
+    // Conversa, asiste y procesa ante cualquier texto, número, signo, punto, imagen o documento entrante.
     const cleanLower = body.trim().toLowerCase();
-    const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
-    const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
+    const shouldEngageConversational = true;
 
     if (shouldEngageConversational && (body.trim() || imageBuffer || pdfBuffer)) {
       // 📸 Análisis de visión si el mensaje contiene imagen

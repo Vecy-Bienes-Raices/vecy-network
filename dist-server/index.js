@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.14";
+    VECY_VERSION = "v33.15";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11307,12 +11307,11 @@ Antes de emitir cualquier respuesta o invocar una herramienta, ejecuta intername
 - F\xE1brica de Software Proptech a la Medida: Si un colega, inmobiliaria o inversionista desea cualquiera de nuestras herramientas tecnol\xF3gicas (Vecy Agenda Pro, motores de matching, scrapers de verificaci\xF3n, liquidadores notariales o asistentes de IA personalizados), VECY BIENES RA\xCDCES las dise\xF1a y programa a su exacta medida contactando a Eduardo Rivera al +57 316 656 9719.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
-## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y FRICCI\xD3N EDUCATIVA (v33.04):
+## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
 - Si el usuario arroja datos en fr\xEDo (CHIP, c\xE9dula o NIT sin saludar ni pedir el favor con cortes\xEDa):
-  * JanIA NO debe procesar la herramienta de inmediato como un bot ciego.
-  * Saluda con calidez seg\xFAn la franja horaria real de Bogot\xE1 (\xA1Buenos d\xEDas! / \xA1Buenas tardes! / \xA1Buenas noches!), identificando el primer nombre y g\xE9nero de la persona.
-  * Aplica una sutil repregunta pedag\xF3gica:
-    "Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n."
+  * JanIA saluda con calidez seg\xFAn la franja horaria real de Bogot\xE1 (\xA1Buenos d\xEDas! / \xA1Buenas tardes! / \xA1Buenas noches!), identificando el primer nombre y g\xE9nero de la persona.
+  * Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU?
+  * REGLA DOCTRINAL DE LIBERTAD (EDUARDO A. RIVERA): Los usuarios son humanos libres y tienen total libertad de escribir como deseen (seco, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen o escriban como ella. JanIA est\xE1 siempre a su servicio incondicional como una IA y LLM generativo de vanguardia, respondiendo con profesionalismo, calidez y brevedad (mensajes cortos, claros y directos).
 `;
     JANIA_PROMPT = `
 # JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
@@ -20178,7 +20177,7 @@ Cu\xE9ntame: \xBFen qu\xE9 te puedo colaborar hoy? Te ayudo con consultas de pre
       return welcomeMsg2;
     }
     if (isEduardo) {
-      const welcomeMsg2 = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+      const welcomeMsg2 = `\xA1${timeSalutation}, Eduardo! \u{1F44B} Estoy 100% activa y a tu entera disposici\xF3n para hablar o apoyarte en cualquier gesti\xF3n. \xBFEn qu\xE9 te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg2);
       return welcomeMsg2;
@@ -20403,27 +20402,13 @@ P\xEDdele con toda tranquilidad y profesionalismo a tu cliente o colega su nombr
     const datoDetectado = chipMatch || (idDetection.items && idDetection.items.length > 0 ? idDetection.items[0].detectedName ? `${idDetection.items[0].detectedName} ${idDetection.items[0].cedula}` : idDetection.items[0].cedula : genericNumberMatch || clean);
     setPendingUnconfirmedDoc2(userId, datoDetectado);
     const isChipOnly = !!chipMatch && !idDetection.found && !isBareNumber;
-    const receptionMsg = isChipOnly ? `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
+    const receptionMsg = isChipOnly ? `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el c\xF3digo CHIP *${chipMatch}*. \xBFDeseas la factura del impuesto predial de Bogot\xE1 o el paz y salvo de valorizaci\xF3n del IDU? Quedo atenta para emitirte el documento de inmediato \u{1F91D}\u2728.
 
-Recib\xED el c\xF3digo CHIP *${chipMatch}*. Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres exactamente? \xBFLa factura del impuesto predial de Bogot\xE1, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${datoDetectado}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
+\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
+\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
 
-_\u2696\uFE0F Al interactuar con este servicio de cortes\xEDa, aceptas nuestra Pol\xEDtica de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines leg\xEDtimos de seguridad inmobiliaria._` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
-
-Recib\xED el dato *${datoDetectado}*. Para orientarte con total precisi\xF3n y emitirte el reporte oficial correspondiente, por favor conf\xEDrmame qu\xE9 tr\xE1mite necesitas exactamente:
-
-1\uFE0F\u20E3 *Verificaci\xF3n integral de identidad y antecedentes* (Polic\xEDa Nacional, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI y confirmar EPS en ADRES)
-2\uFE0F\u20E3 *Factura del Impuesto Predial Bogot\xE1* o certificado oficial de pago al d\xEDa
-3\uFE0F\u20E3 *Paz y Salvo de Valorizaci\xF3n IDU* para escrituraci\xF3n notarial
-
-Si se trata de un n\xFAmero de identificaci\xF3n para verificaci\xF3n de identidad, por favor conf\xEDrmame a qu\xE9 tipo de documento corresponde:
-\u2022 *1. C\xE9dula de Ciudadan\xEDa (C.C.)* \u{1F1E8}\u{1F1F4}
-\u2022 *2. C\xE9dula de Extranjer\xEDa (C.E.)* \u{1F310}
-\u2022 *3. Pasaporte* \u2708\uFE0F
-\u2022 *4. NIT (Persona Jur\xEDdica)* \u{1F3E2}
-
-Solo resp\xF3ndeme indic\xE1ndome el tr\xE1mite o tipo de documento (ejemplo: *"es CC"*, *"1"*, *"antecedentes"*, *"predial"* o *"IDU"*) y de inmediato te entrego tu reporte oficial gratuito.
-
-_\u2696\uFE0F Al interactuar con este servicio de cortes\xEDa, aceptas nuestra Pol\xEDtica de Tratamiento de Datos (Ley 1581/12) y certificas que cuentas con la entrega voluntaria del titular para fines leg\xEDtimos de seguridad inmobiliaria._`;
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", receptionMsg);
     return receptionMsg;
@@ -20579,7 +20564,8 @@ PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
     2\xB0 Alerta de Riesgo Patrimonial: Recuerda con elegancia que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.
     3\xB0 Llamado a la Acci\xF3n y Cierre Comercial: Invita obligatoriamente a formalizar la asesor\xEDa con la firma exacta:
        "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719)."
-- PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
+- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son humanos libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir, educar ni pretender que los usuarios hablen o escriban como ella. JanIA est\xE1 y estar\xE1 siempre al servicio incondicional del usuario como una IA y LLM de lenguaje generativo puro, sin frenarse por nada, respondiendo con profesionalismo, calidez, eficacia y libertad de acci\xF3n e interacci\xF3n.
+- REGLA DE MENSAJES CORTOS, DIRECTOS Y CLAROS: JanIA debe expresarse siempre con concisi\xF3n quir\xFArgica. Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas, sin sermones ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.
 - PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facil\xEDtame el nombre completo y n\xFAmero de documento que solicitas para el registro formal de porter\xEDa y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
 - MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
@@ -21650,7 +21636,7 @@ ${quotedNote}` : quotedNote;
                   // LID Directivo Alterno Jani Alves
                   ADMIN_PHONE
                 ];
-                const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
+                const isSelfChat = senderId === botJid || rawPhone === botPhone;
                 const isAdmin = isSelfChat || ADMIN_IDENTIFIERS2.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
                 const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "573166569719" ? "VECY BIENES RA\xCDCES" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
                 const rawMsg = unwrapMessage(msg.message);
@@ -21709,13 +21695,11 @@ ${quotedNote}` : quotedNote;
                   this.dmMessageBuffers.set(targetDmId, buffer);
                 }
                 buffer.messages.push(msg);
-                if (!isSelfChat) {
-                  try {
-                    this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {
-                    });
-                    await this.sock.sendPresenceUpdate("composing", targetDmId);
-                  } catch (_) {
-                  }
+                try {
+                  this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {
+                  });
+                  await this.sock.sendPresenceUpdate("composing", targetDmId);
+                } catch (_) {
                 }
                 if (buffer.timer) {
                   clearTimeout(buffer.timer);
@@ -22067,8 +22051,7 @@ ${quotedNote}` : quotedNote;
           }
         }
         const cleanLower = body.trim().toLowerCase();
-        const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
-        const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
+        const shouldEngageConversational = true;
         if (shouldEngageConversational && (body.trim() || imageBuffer || pdfBuffer)) {
           let flyerVisionData = null;
           if (imageBuffer) {
@@ -26242,6 +26225,9 @@ function detectTramiteConfirmation(text2) {
     return { isConfirmation: true, tramite: "cedula", tipoDoc: docConf.tipoDoc || "cc" };
   }
   if (/(?:verificar|verificaci[oó]n|antecedentes|identidad|eps|polic[ií]a|seguridad|opci[oó]n\s*1|^1$)/i.test(clean)) {
+    return { isConfirmation: true, tramite: "cedula", tipoDoc: "cc" };
+  }
+  if (/^(?:adelante|si\s*por\s*fa|s[ií]|dale|procede|hazlo|claro|por\s*favor|ok|listo|de\s*una|bien|correcto|h[aá]zme\s*el\s*favor|h[aá]gale)\b/i.test(clean)) {
     return { isConfirmation: true, tramite: "cedula", tipoDoc: "cc" };
   }
   return { isConfirmation: false };

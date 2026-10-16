@@ -1107,6 +1107,11 @@ export function detectTramiteConfirmation(text: string): {
     return { isConfirmation: true, tramite: 'cedula', tipoDoc: 'cc' };
   }
 
+  // 4. Afirmaciones naturales directas ("adelante", "si por fa", "sí", "si", "dale", "procede", "hazlo", "claro", "por favor", "ok", "listo", "de una")
+  if (/^(?:adelante|si\s*por\s*fa|s[ií]|dale|procede|hazlo|claro|por\s*favor|ok|listo|de\s*una|bien|correcto|h[aá]zme\s*el\s*favor|h[aá]gale)\b/i.test(clean)) {
+    return { isConfirmation: true, tramite: 'cedula', tipoDoc: 'cc' };
+  }
+
   return { isConfirmation: false };
 }
 
