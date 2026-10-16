@@ -89,7 +89,7 @@ export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
       "mi Natillita hermosa! ¡Mi princesa, mi Natis, corazón de melocotón y monacha remolacha! ❤️🌸 Qué alegría tan grande saludarte. Te cuento que esta línea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Si necesitas hablar con tu papá (Eddu), su número directo y nuevo de bróker es el +57 316 656 9719 (https://wa.me/573166569719). ¡Te manda un besito gigante!"
   },
   jani: {
-    phones: ["573188096811", "573166569719"],
+    phones: ["573188096811"],
     names: ["Jani Alves Souza", "Jani Alves", "Jani"],
     relation: "Esposa / Co-founder",
     nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Corazón amado", "Mi vida hermosa", "Mi consentida", "Amada esposa mía"],
@@ -259,10 +259,25 @@ export const TRUSTED_CONTACTS: TrustedContact[] = Object.entries(TRUSTED_FAMILY_
 );
 
 /**
+ * Determina si un número o JID corresponde a la línea comercial oficial de VECY BIENES RAÍCES (+57 316 656 9719).
+ * Línea compartida directiva y de bróker donde operan Eduardo Rivera y Jani Alves para cotizaciones y pruebas.
+ */
+export function isVecyOfficialBrokerLine(userIdOrPhone: string): boolean {
+  if (!userIdOrPhone) return false;
+  const digits = normalizePhoneDigits(userIdOrPhone);
+  return digits === "3166569719" || digits === "573166569719" || userIdOrPhone.includes("3166569719");
+}
+
+/**
  * Busca un contacto en la Agenda de Confianza por número de WhatsApp, LID o nombre
  */
 export function findTrustedContact(userId: string, rawName?: string): TrustedContact | null {
   if (!userId && !rawName) return null;
+
+  // La línea comercial oficial de VECY (+57 316 656 9719) no se trata como contacto familiar privado de Jani
+  if (isVecyOfficialBrokerLine(userId)) {
+    return null;
+  }
 
   const userClean = (userId || "").toLowerCase();
   const digits = normalizePhoneDigits(userId);

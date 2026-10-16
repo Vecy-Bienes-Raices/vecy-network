@@ -1129,7 +1129,7 @@ export class JaniaMatchBot {
             ];
             const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
             const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
-            const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`));
+            const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "573166569719" ? "VECY BIENES RAÍCES" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`)));
 
             const rawMsg = unwrapMessage(msg.message);
             let body = '';
@@ -1138,6 +1138,10 @@ export class JaniaMatchBot {
             else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
             else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
             else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
+            else if (rawMsg?.stickerMessage) body = '😊 [Sticker]';
+            else if ((rawMsg as any)?.reactionMessage) body = `[Reacción: ${(rawMsg as any).reactionMessage?.text || 'emoji'}]`;
+            else if ((rawMsg as any)?.locationMessage) body = '[Ubicación compartida]';
+            else if ((rawMsg as any)?.contactMessage || (rawMsg as any)?.contactsArrayMessage) body = '[Tarjeta de contacto compartida]';
 
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
             if (msg.key.fromMe) {
@@ -1204,6 +1208,7 @@ export class JaniaMatchBot {
             // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) si no es self-chat
             if (!isSelfChat) {
               try {
+                this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {});
                 await this.sock.sendPresenceUpdate('composing', targetDmId);
               } catch (_) { }
             }
@@ -1254,6 +1259,10 @@ export class JaniaMatchBot {
       else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
       else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
       else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
+      else if (rawMsg?.stickerMessage) body = '😊 [Sticker]';
+      else if ((rawMsg as any)?.reactionMessage) body = `[Reacción: ${(rawMsg as any).reactionMessage?.text || 'emoji'}]`;
+      else if ((rawMsg as any)?.locationMessage) body = '[Ubicación compartida]';
+      else if ((rawMsg as any)?.contactMessage || (rawMsg as any)?.contactsArrayMessage) body = '[Tarjeta de contacto compartida]';
       else if (rawMsg?.audioMessage) {
         isAudioPTT = true;
         try {
@@ -1336,8 +1345,9 @@ export class JaniaMatchBot {
 
     const trustedContact = findTrustedContact(senderId, userName || rawPhone);
     const isEduardoFundador = isSelfChat || rawPhone === "573192919978" || rawPhone === "225954035179724";
-    const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
-    const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora;
+    const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
+    const isBrokerOfficialLine = rawPhone === "573166569719" || senderId.includes("3166569719");
+    const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora && !isBrokerOfficialLine;
 
     if (isFamilyOrFriend && trustedContact) {
       console.log(`[JANIA-MATCH] [DM] 💖 Intercepción familiar inmediata para ${trustedContact.primaryNick} (${senderId})`);
@@ -3276,14 +3286,16 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             await delay(250);
           } else if (textContent && typeof textContent === 'string') {
             try {
+              this.sock.presenceSubscribe?.(targetJid)?.catch?.(() => {});
               await this.sock.sendPresenceUpdate('composing', targetJid);
-              const typingDelay = Math.min(1200, Math.max(400, textContent.length * 10));
+              const typingDelay = Math.min(2500, Math.max(1000, textContent.length * 15));
               await delay(typingDelay);
             } catch (_) { }
           } else if (messagePayload.audio) {
             try {
+              this.sock.presenceSubscribe?.(targetJid)?.catch?.(() => {});
               await this.sock.sendPresenceUpdate('recording', targetJid);
-              const recordingDelay = Math.min(1200, Math.max(300, (options.voiceLength || 2) * 150));
+              const recordingDelay = Math.min(3000, Math.max(1500, (options.voiceLength || 2) * 200));
               await delay(recordingDelay);
             } catch (_) { }
           }

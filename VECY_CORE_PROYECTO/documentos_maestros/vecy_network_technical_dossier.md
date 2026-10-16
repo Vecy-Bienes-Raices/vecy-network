@@ -331,6 +331,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.14 — Octubre 2026
+
+#### [v33.14.0] — 2026-10-16: Presencia Continua Baileys, Desacople Línea Bróker VECY y Cognición Universal de Stickers/Puntos
+- **Presencia Continua en Baileys (`whatsapp-utils.ts`, `whatsapp-match.ts`):** Implementación de `sock.presenceSubscribe?.(jid)` y refresco a 2500ms en `startContinuousPresence`. Calibración de pausas humanas perceptibles en `queuedSend` (1000-2500ms para texto y 1500-3000ms para audio), garantizando que el usuario emisor siempre visualice los estados `...` (escribiendo) o 🎙️ (grabando audio) sin cortes prematuros.
+- **Desacoplamiento Doctrinal de la Línea Oficial de Bróker VECY (`trustedContacts.ts`, `dmHandler.ts`):** Erradicada la confusión en la que la línea corporativa `+57 316 656 9719` era clasificada bajo el perfil personal de Jani Alves (`573188096811`). JanIA ahora saluda a la línea oficial con la cortesía institucional: `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`.
+- **Cognición Universal de Stickers, Emojis y Puntos (`dmHandler.ts`, `whatsapp-match.ts`):** Inclusión de `rawMsg.stickerMessage` (`😊 [Sticker]`), `reactionMessage`, `locationMessage` y `contactMessage` en el búfer de mensajes para evitar su descarte por cuerpo de texto vacío. Función `isShortSignalOrSticker` y respuestas afectuosas e inteligentes de orientación inmobiliaria ante stickers o un solo punto `.`, erradicando el silencio.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **265/265 passing** al 100% en verde sin consumo de claves de pago | Build `npm run build` limpio en 29.86s (Vite) + 241ms (esbuild).
+
 ### 🔖 v33.13 — Octubre 2026
 
 #### [v33.13.0] — 2026-10-15: Doctrina de Saludo Horario Universal, Cero "Hola" Aislado y Cierre Cordial en DMs

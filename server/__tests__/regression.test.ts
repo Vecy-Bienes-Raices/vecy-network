@@ -5650,11 +5650,107 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("5. Versión oficial v33.13 en shared/const.ts y 33.13.0 en package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.13");
+      expect(VECY_VERSION).toBe("v33.14");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.13.0");
+      expect(pkg.version).toBe("33.14.0");
+    });
+  });
+
+  describe("SUITE 75: JanIA v33.14 — RESTABLECIMIENTO DE PRESENCIA (COMPOSING/RECORDING), LÍNEA OFICIAL VECY (3166569719) Y COGNICIÓN ANTE STICKERS/PUNTICOS", () => {
+    it("1. isVecyOfficialBrokerLine reconoce el número oficial 573166569719 y lo desacopla de Jani privada", async () => {
+      const { isVecyOfficialBrokerLine, findTrustedContact } = await import("../_core/jania/trustedContacts");
+
+      expect(isVecyOfficialBrokerLine("573166569719")).toBe(true);
+      expect(isVecyOfficialBrokerLine("3166569719")).toBe(true);
+      expect(isVecyOfficialBrokerLine("+57 316 656 9719")).toBe(true);
+      expect(isVecyOfficialBrokerLine("573188096811")).toBe(false); // Personal de Jani
+
+      // findTrustedContact no debe devolver a Jani para la línea oficial de bróker
+      const contactForBroker = findTrustedContact("573166569719@s.whatsapp.net");
+      expect(contactForBroker).toBeNull();
+
+      // En cambio para el personal de Jani sí debe devolver a Jani
+      const contactForJani = findTrustedContact("573188096811@s.whatsapp.net");
+      expect(contactForJani).not.toBeNull();
+      expect(contactForJani?.id).toBe("jani");
+    });
+
+    it("2. isShortSignalOrSticker detecta stickers, emojis y punticos/signos aislados", async () => {
+      const { isShortSignalOrSticker } = await import("../_core/jania/handlers/dmHandler");
+
+      expect(isShortSignalOrSticker(".")).toBe(true);
+      expect(isShortSignalOrSticker("...")).toBe(true);
+      expect(isShortSignalOrSticker("?")).toBe(true);
+      expect(isShortSignalOrSticker("??")).toBe(true);
+      expect(isShortSignalOrSticker("!")).toBe(true);
+      expect(isShortSignalOrSticker("[Sticker]")).toBe(true);
+      expect(isShortSignalOrSticker("😊 [Sticker]")).toBe(true);
+      expect(isShortSignalOrSticker("👍")).toBe(true);
+      expect(isShortSignalOrSticker("👋")).toBe(true);
+
+      // Frases con contenido inmobiliario o texto no deben marcarse como señal corta aislada
+      expect(isShortSignalOrSticker("Buenas tardes, requiero un predial")).toBe(false);
+      expect(isShortSignalOrSticker("CC 1023456789")).toBe(false);
+      expect(isShortSignalOrSticker("CHIP AAA0123BCDE")).toBe(false);
+    });
+
+    it("3. startContinuousPresence se suscribe a presencia (presenceSubscribe) y envía actualizaciones periódicas", async () => {
+      const { startContinuousPresence } = await import("../_core/whatsapp-utils");
+
+      let subscribedJid = "";
+      let presenceCalls: Array<{ type: string; jid: string }> = [];
+
+      const mockSock = {
+        presenceSubscribe: async (jid: string) => {
+          subscribedJid = jid;
+        },
+        sendPresenceUpdate: async (type: string, jid: string) => {
+          presenceCalls.push({ type, jid });
+        }
+      };
+
+      const stop = startContinuousPresence(mockSock, "573166569719@s.whatsapp.net", "composing", 500);
+      expect(subscribedJid).toBe("573166569719@s.whatsapp.net");
+      expect(presenceCalls.length).toBeGreaterThanOrEqual(1);
+      expect(presenceCalls[0].type).toBe("composing");
+
+      stop();
+      expect(presenceCalls[presenceCalls.length - 1].type).toBe("paused");
+    });
+
+    it("4. processPrivateDmConversationalMessage saluda a la línea oficial VECY (3166569719) sin confundir con Jani", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const { getGreetingByTime } = await import("../_core/whatsapp-utils");
+
+      const timeGreeting = getGreetingByTime();
+
+      // Saludo desde la línea oficial sin identificarse
+      const replyBroker = await processPrivateDmConversationalMessage("Hola JanIA", "573166569719@s.whatsapp.net", "VECY BIENES RAÍCES");
+      expect(replyBroker).toContain(`¡${timeGreeting}, VECY! 👋`);
+      expect(replyBroker).toContain("¿Con quién tengo el gusto de hablar hoy?");
+      expect(replyBroker).not.toContain("mi amorzote hermosa");
+      expect(replyBroker).not.toContain("amada esposa mía");
+
+      // Puntico enviado desde la línea oficial
+      const replyDot = await processPrivateDmConversationalMessage(".", "573166569719@s.whatsapp.net", "VECY BIENES RAÍCES");
+      expect(replyDot).toContain(`¡${timeGreeting}, VECY! 👋`);
+      expect(replyDot).toContain("¿Con quién tengo el gusto de hablar hoy?");
+
+      // Puntico o sticker enviado por un colega / cliente externo
+      const replyExternalDot = await processPrivateDmConversationalMessage(".", "573009998877@s.whatsapp.net", "Carlos Pérez");
+      expect(replyExternalDot).toContain("Recibí tu señal / puntico por aquí");
+      expect(replyExternalDot).toContain("VECY BIENES RAÍCES");
+    });
+
+    it("5. Versión oficial v33.14 en shared/const.ts y 33.14.0 en package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.14");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.14.0");
     });
   });
 });

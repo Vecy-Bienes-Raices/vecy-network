@@ -1,9 +1,9 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.13.0 — 2026-10-15)
-- **JanIA Server:** `v33.13` (`33.13.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Saludo Horario Universal y Cero "Hola" Aislado:** Erradicación total de saludos informales o aislados en DMs; gobernanza institucional de saludos según franja horaria de Bogotá (UTC-5: "Buenos días", "Buenas tardes", "Buenas noches") con cortesía de Carreño indivisible `¡${saludo}, ${nombre}! 👋`.
-- **Apodos Familiares Oficiales y Círculo de Confianza:** Integración con saludo horario respetuoso y apodos afectuosos exactos (Madrecita, Tía Olandita, Tía Tulita, Tía Marinita, Tío Luis, Pollotote, Mi Natis, etc.).
-- **Unificación de Memoria Turno 1/2 y Reporte Compacto:** Intercepción inmediata de confirmaciones ("CC", "1", "cédula", "antecedentes", "predial", "idu") y reporte compacto oficial sin bloques extensos.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 260/260 passing ($0 COP) | Build `npm run build` limpio en 21.26s (Vite) + 164ms (esbuild).
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.14.0 — 2026-10-16)
+- **JanIA Server:** `v33.14` (`33.14.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Restablecimiento de Presencia Continua (Baileys):** Inyección de `presenceSubscribe` y stanzas periódicas (`composing` / `recording`) con typing delays humanos visibles (1000ms - 2500ms) para garantizar los puntitos bailarines `...` y el micrófono 🎙️ en WhatsApp móvil y web.
+- **Línea Comercial Oficial VECY (+57 316 656 9719):** Desacoplamiento total del teléfono privado de Jani Alves; reconocimiento institucional para pruebas de directores (Eduardo / Jani) o consultas externas: `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`.
+- **Cognición ante Stickers, Emojis y Punticos (`isShortSignalOrSticker`):** Erradicación del silencio o bloqueo ante stickers, reacciones, emojis o un solo punto `.`; respuestas ágiles, cálidas y orientadas a servicios inmobiliarios.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` 265/265 passing ($0 COP) | Build `npm run build` limpio en 29.86s (Vite) + 241ms (esbuild).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

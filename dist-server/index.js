@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.13";
+    VECY_VERSION = "v33.14";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14503,19 +14503,21 @@ function getEmpatheticReactionEmoji(text2, options) {
   }
   return "\u2728";
 }
-function startContinuousPresence(sock, jid, type = "composing", intervalMs = 3500) {
+function startContinuousPresence(sock, jid, type = "composing", intervalMs = 2500) {
   if (!sock || !jid) return () => {
   };
   let isAlive = true;
   try {
-    sock.sendPresenceUpdate(type, jid).catch(() => {
+    sock.presenceSubscribe?.(jid)?.catch?.(() => {
+    });
+    sock.sendPresenceUpdate?.(type, jid)?.catch?.(() => {
     });
   } catch (_) {
   }
   const timer = setInterval(() => {
     if (!isAlive) return;
     try {
-      sock.sendPresenceUpdate(type, jid).catch(() => {
+      sock.sendPresenceUpdate?.(type, jid)?.catch?.(() => {
       });
     } catch (_) {
     }
@@ -14525,7 +14527,7 @@ function startContinuousPresence(sock, jid, type = "composing", intervalMs = 350
     isAlive = false;
     clearInterval(timer);
     try {
-      sock.sendPresenceUpdate("paused", jid).catch(() => {
+      sock.sendPresenceUpdate?.("paused", jid)?.catch?.(() => {
       });
     } catch (_) {
     }
@@ -15570,6 +15572,7 @@ __export(trustedContacts_exports, {
   isChaloEscobarJoke: () => isChaloEscobarJoke,
   isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
   isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
+  isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
   normalizePhoneDigits: () => normalizePhoneDigits
 });
 function normalizePhoneDigits(raw) {
@@ -15584,8 +15587,16 @@ function normalizePhoneDigits(raw) {
   }
   return clean;
 }
+function isVecyOfficialBrokerLine(userIdOrPhone) {
+  if (!userIdOrPhone) return false;
+  const digits = normalizePhoneDigits(userIdOrPhone);
+  return digits === "3166569719" || digits === "573166569719" || userIdOrPhone.includes("3166569719");
+}
 function findTrustedContact(userId, rawName) {
   if (!userId && !rawName) return null;
+  if (isVecyOfficialBrokerLine(userId)) {
+    return null;
+  }
   const userClean = (userId || "").toLowerCase();
   const digits = normalizePhoneDigits(userId);
   const nameClean = (rawName || "").toLowerCase().trim();
@@ -15761,7 +15772,7 @@ var init_trustedContacts = __esm({
         customMessage: "mi Natillita hermosa! \xA1Mi princesa, mi Natis, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
       },
       jani: {
-        phones: ["573188096811", "573166569719"],
+        phones: ["573188096811"],
         names: ["Jani Alves Souza", "Jani Alves", "Jani"],
         relation: "Esposa / Co-founder",
         nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
@@ -19629,6 +19640,7 @@ __export(dmHandler_exports, {
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   executeJaniaDmTool: () => executeJaniaDmTool,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  isShortSignalOrSticker: () => isShortSignalOrSticker,
   popLatestDmPdf: () => popLatestDmPdf,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
   sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
@@ -19960,6 +19972,13 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName,
     } else {
       cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
+  } else if (displayName === "VECY") {
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `\xA1${currentSalutation}, VECY! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, VECY! \u{1F44B} \xBFCon qui\xE9n tengo el gusto de hablar?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
   } else if (hasPriorHistory && !cleaned.includes("?")) {
     if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
       cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
@@ -19971,6 +19990,20 @@ function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName,
     return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
   });
   return cleaned.trim();
+}
+function isShortSignalOrSticker(text2) {
+  if (!text2) return false;
+  const clean = text2.trim();
+  if (clean === "[Sticker]" || clean === "\u{1F60A} [Sticker]" || clean.startsWith("[Reacci\xF3n") || clean === "[Tarjeta de contacto compartida]" || clean === "[Ubicaci\xF3n compartida]") {
+    return true;
+  }
+  if (/^[.¿?¡!_~^:;\-*#@+=]{1,8}$/.test(clean)) {
+    return true;
+  }
+  if (/^[\p{Extended_Pictographic}\s]{1,10}$/u.test(clean)) {
+    return true;
+  }
+  return false;
 }
 async function processPrivateDmConversationalMessage(text2, userId, userName, mediaOptions) {
   let clean = (text2 || "").trim();
@@ -19991,10 +20024,14 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     appendDmHistory(userId, "assistant", defenseMsg);
     return defenseMsg;
   }
+  const cleanLower = clean.toLowerCase();
+  const isVecyBrokerLine = userId.includes("3166569719") || userName && userName.includes("VECY BIENES RA\xCDCES");
+  const isEduardoIdentified = isVecyBrokerLine && /(?:soy\s+eduardo|habla\s+eduardo|de\s+parte\s+de\s+eduardo|eddu\b|eduardo\s+rivera)/i.test(cleanLower);
+  const isJaniIdentified = isVecyBrokerLine && /(?:soy\s+jani|habla\s+jani|de\s+parte\s+de\s+jani|jani\s+alves)/i.test(cleanLower);
   const trustedContact = findTrustedContact(userId, userName || realName);
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
-  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
+  const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador");
+  const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa");
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const compositeOrFirst = extractFirstName(realName);
   let displayName = "";
@@ -20002,6 +20039,8 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     displayName = "Eduardo";
   } else if (isJani) {
     displayName = "Jani";
+  } else if (isVecyBrokerLine) {
+    displayName = "VECY";
   } else if (isFamilyOrTrusted && trustedContact) {
     displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
@@ -20019,7 +20058,6 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   }
   const nameGreeting = displayName ? `, ${displayName}` : "";
   const vocativeGreeting = displayName ? `, ${displayName}` : "";
-  const cleanLower = clean.toLowerCase();
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = await getOrLoadDmHistory(userId);
   const hasPriorHistory = history.length > 0;
@@ -20090,7 +20128,55 @@ He recibido tu imagen \u{1F4F8}\u2728. Cu\xE9ntame${displayName ? `, ${displayNa
       return imageGreeting;
     }
   }
+  if (isShortSignalOrSticker(clean)) {
+    if (isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified) {
+      const brokerReply = `\xA1${timeSalutation}, VECY! \u{1F44B} Recib\xED su se\xF1al desde la l\xEDnea oficial. \xBFCon qui\xE9n tengo el gusto de hablar hoy? (\xBFEduardo o Jani haciendo pruebas?). \xA1Estoy lista para colaborarles! \u{1F916}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", brokerReply);
+      return brokerReply;
+    }
+    if (isEduardo) {
+      const edduReply = `\xA1${timeSalutation}, Eduardo! \u{1F44B} Recib\xED tu mensaje / se\xF1al. \xBFEn qu\xE9 te colaboro hoy?`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", edduReply);
+      return edduReply;
+    }
+    if (isJani) {
+      const janiReply = `\xA1${timeSalutation}, Jani! \u{1F44B} Recib\xED tu mensaje / se\xF1al. \xBFEn qu\xE9 te colaboro hoy?`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", janiReply);
+      return janiReply;
+    }
+    if (isFamilyOrTrusted && trustedContact) {
+      const familyReply = `\xA1${timeSalutation}, ${trustedContact.primaryNick}! \u2764\uFE0F\u{1F970} Recib\xED tu mensaje. \xBFC\xF3mo est\xE1s? \xBFEn qu\xE9 te puedo colaborar o le paso alg\xFAn recado a Eduardo?`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", familyReply);
+      return familyReply;
+    }
+    if (hasPriorHistory) {
+      const followUp = `Con mucho gusto${displayName && displayName !== "VECY" ? `, ${displayName}` : ""}. \xBFDeseas que revisemos alguna consulta de inmuebles, verificaci\xF3n de antecedentes, predial o liquidaci\xF3n notarial? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", followUp);
+      return followUp;
+    }
+    const isSticker = clean.includes("[Sticker]");
+    const isPunctuation = /^[.¿?¡!_~^:;\-*#@+=]{1,8}$/.test(clean);
+    const friendlyReply = isSticker ? `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} \xA1Qu\xE9 buen sticker! \u{1F60A} Soy *JanIA*, tu asistente de Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F.
+
+Cu\xE9ntame: \xBFen qu\xE9 te puedo colaborar hoy? Estoy a tu disposici\xF3n para consultar antecedentes oficiales de compradores, liquidar gastos notariales, descargar la factura predial en Bogot\xE1 en PDF o sondeo de mercado \u{1F91D}\u2728.` : isPunctuation ? `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} Recib\xED tu se\xF1al / puntico por aqu\xED \u{1F60A}. Soy *JanIA*, tu asistente de Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F.
+
+Cu\xE9ntame: \xBFen qu\xE9 te puedo colaborar hoy? Te ayudo con consultas de predial en Bogot\xE1, antecedentes oficiales de compradores, paz y salvo IDU o asesor\xEDa inmobiliaria \u{1F91D}\u2728.` : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} Recib\xED tu saludo ${clean} \u{1F60A}. En *VECY BIENES RA\xCDCES* estoy lista para facilitarte cualquier gesti\xF3n inmobiliaria: consultas oficiales gratuitas de antecedentes, predial de Bogot\xE1 en PDF, liquidaciones notariales o informaci\xF3n de propiedades. \xBFQu\xE9 te gustar\xEDa consultar hoy? \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", friendlyReply);
+    return friendlyReply;
+  }
   if (isGreetingOnly && history.length === 0) {
+    if (isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified) {
+      const welcomeMsg2 = `\xA1${timeSalutation}, VECY! \u{1F44B} \xBFCon qui\xE9n tengo el gusto de hablar hoy? (\xBFEduardo, Jani o alg\xFAn colega?). \xA1Estoy lista para colaborarles! \u{1F916}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg2);
+      return welcomeMsg2;
+    }
     if (isEduardo) {
       const welcomeMsg2 = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);
@@ -21566,7 +21652,7 @@ ${quotedNote}` : quotedNote;
                 ];
                 const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
                 const isAdmin = isSelfChat || ADMIN_IDENTIFIERS2.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
-                const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
+                const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "573166569719" ? "VECY BIENES RA\xCDCES" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
                 const rawMsg = unwrapMessage(msg.message);
                 let body = "";
                 if (rawMsg?.conversation) body = rawMsg.conversation;
@@ -21574,6 +21660,10 @@ ${quotedNote}` : quotedNote;
                 else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || "";
                 else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
                 else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
+                else if (rawMsg?.stickerMessage) body = "\u{1F60A} [Sticker]";
+                else if (rawMsg?.reactionMessage) body = `[Reacci\xF3n: ${rawMsg.reactionMessage?.text || "emoji"}]`;
+                else if (rawMsg?.locationMessage) body = "[Ubicaci\xF3n compartida]";
+                else if (rawMsg?.contactMessage || rawMsg?.contactsArrayMessage) body = "[Tarjeta de contacto compartida]";
                 if (msg.key.fromMe) {
                   const msgId = msg.key.id || "";
                   if (this.botSentMessageIds.has(msgId)) {
@@ -21621,6 +21711,8 @@ ${quotedNote}` : quotedNote;
                 buffer.messages.push(msg);
                 if (!isSelfChat) {
                   try {
+                    this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {
+                    });
                     await this.sock.sendPresenceUpdate("composing", targetDmId);
                   } catch (_) {
                   }
@@ -21659,6 +21751,10 @@ ${quotedNote}` : quotedNote;
           else if (rawMsg?.imageMessage) body2 = rawMsg.imageMessage.caption || "";
           else if (rawMsg?.documentMessage) body2 = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
           else if (rawMsg?.videoMessage) body2 = rawMsg.videoMessage.caption || "";
+          else if (rawMsg?.stickerMessage) body2 = "\u{1F60A} [Sticker]";
+          else if (rawMsg?.reactionMessage) body2 = `[Reacci\xF3n: ${rawMsg.reactionMessage?.text || "emoji"}]`;
+          else if (rawMsg?.locationMessage) body2 = "[Ubicaci\xF3n compartida]";
+          else if (rawMsg?.contactMessage || rawMsg?.contactsArrayMessage) body2 = "[Tarjeta de contacto compartida]";
           else if (rawMsg?.audioMessage) {
             isAudioPTT = true;
             try {
@@ -21730,8 +21826,9 @@ ${quotedNote}` : quotedNote;
         } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
         const trustedContact = findTrustedContact2(senderId, userName || rawPhone);
         const isEduardoFundador = isSelfChat || rawPhone === "573192919978" || rawPhone === "225954035179724";
-        const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
-        const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora;
+        const isJaniDirectora = rawPhone === "573188096811" || rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "218820279050385";
+        const isBrokerOfficialLine = rawPhone === "573166569719" || senderId.includes("3166569719");
+        const isFamilyOrFriend = !!trustedContact && !isEduardoFundador && !isJaniDirectora && !isBrokerOfficialLine;
         if (isFamilyOrFriend && trustedContact) {
           console.log(`[JANIA-MATCH] [DM] \u{1F496} Intercepci\xF3n familiar inmediata para ${trustedContact.primaryNick} (${senderId})`);
           let familyReply = trustedContact.customMessage || buildFamilyWarmWelcomeMessage2(trustedContact);
@@ -23356,15 +23453,19 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 await delay(250);
               } else if (textContent && typeof textContent === "string") {
                 try {
+                  this.sock.presenceSubscribe?.(targetJid)?.catch?.(() => {
+                  });
                   await this.sock.sendPresenceUpdate("composing", targetJid);
-                  const typingDelay = Math.min(1200, Math.max(400, textContent.length * 10));
+                  const typingDelay = Math.min(2500, Math.max(1e3, textContent.length * 15));
                   await delay(typingDelay);
                 } catch (_) {
                 }
               } else if (messagePayload.audio) {
                 try {
+                  this.sock.presenceSubscribe?.(targetJid)?.catch?.(() => {
+                  });
                   await this.sock.sendPresenceUpdate("recording", targetJid);
-                  const recordingDelay = Math.min(1200, Math.max(300, (options.voiceLength || 2) * 150));
+                  const recordingDelay = Math.min(3e3, Math.max(1500, (options.voiceLength || 2) * 200));
                   await delay(recordingDelay);
                 } catch (_) {
                 }
@@ -27238,6 +27339,8 @@ __export(janIA_exports, {
   isOutsideWorkingHours: () => isOutsideWorkingHours,
   isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
   isSessionMuted: () => isSessionMuted,
+  isShortSignalOrSticker: () => isShortSignalOrSticker,
+  isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
   janiaResultSchema: () => janiaResultSchema,
   lookupAdvisor: () => lookupAdvisor,
   lookupAdvisorSync: () => lookupAdvisorSync,

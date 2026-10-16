@@ -495,6 +495,13 @@ export function sanitizeDmOrthographyAndGreeting(
     } else {
       cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
+  } else if (displayName === "VECY") {
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `¡${currentSalutation}, VECY! 👋 ${body}`.trim() : `¡${currentSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
   } else if (hasPriorHistory && !cleaned.includes("?")) {
     if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
       cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
@@ -511,6 +518,33 @@ export function sanitizeDmOrthographyAndGreeting(
   });
 
   return cleaned.trim();
+}
+
+/**
+ * Detecta si un mensaje recibido es una señal corta, sticker, emoji o signo de puntuación aislado (Doctrina v33.14).
+ * JanIA responde a cualquier interacción con inteligencia y calidez, erradicando el silencio o bloqueo de bot rígido.
+ */
+export function isShortSignalOrSticker(text: string): boolean {
+  if (!text) return false;
+  const clean = text.trim();
+  if (
+    clean === "[Sticker]" ||
+    clean === "😊 [Sticker]" ||
+    clean.startsWith("[Reacción") ||
+    clean === "[Tarjeta de contacto compartida]" ||
+    clean === "[Ubicación compartida]"
+  ) {
+    return true;
+  }
+  // Puntuación aislada o signos repetidos (., .., ..., ?, ??, !, ¡, ¿, etc.)
+  if (/^[.¿?¡!_~^:;\-*#@+=]{1,8}$/.test(clean)) {
+    return true;
+  }
+  // Solo emojis (hasta 5 emojis sin texto)
+  if (/^[\p{Extended_Pictographic}\s]{1,10}$/u.test(clean)) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -554,11 +588,18 @@ export async function processPrivateDmConversationalMessage(
     return defenseMsg;
   }
 
+  const cleanLower = clean.toLowerCase();
+
+  // Detección de la línea comercial oficial de VECY BIENES RAÍCES (+57 316 656 9719)
+  const isVecyBrokerLine = userId.includes("3166569719") || (userName && userName.includes("VECY BIENES RAÍCES"));
+  const isEduardoIdentified = isVecyBrokerLine && /(?:soy\s+eduardo|habla\s+eduardo|de\s+parte\s+de\s+eduardo|eddu\b|eduardo\s+rivera)/i.test(cleanLower);
+  const isJaniIdentified = isVecyBrokerLine && /(?:soy\s+jani|habla\s+jani|de\s+parte\s+de\s+jani|jani\s+alves)/i.test(cleanLower);
+
   // Detección directiva de Eduardo, Jani y Agenda de Confianza / Familiar
   const trustedContact = findTrustedContact(userId, userName || realName);
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
-  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
+  const isEduardo = isEduardoIdentified || (!isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador"));
+  const isJani = isJaniIdentified || (!isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa"));
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
 
   // 🧑‍💼 Resolución inteligente de nombres compuestos, género gramatical y cortesía (v32.35)
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
@@ -569,6 +610,8 @@ export async function processPrivateDmConversationalMessage(
     displayName = "Eduardo";
   } else if (isJani) {
     displayName = "Jani";
+  } else if (isVecyBrokerLine) {
+    displayName = "VECY";
   } else if (isFamilyOrTrusted && trustedContact) {
     displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
@@ -589,7 +632,6 @@ export async function processPrivateDmConversationalMessage(
 
   const nameGreeting = displayName ? `, ${displayName}` : "";
   const vocativeGreeting = displayName ? `, ${displayName}` : "";
-  const cleanLower = clean.toLowerCase();
 
   // 1. Detectar saludos iniciales o preguntas directas cortas de entrada
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
@@ -689,8 +731,60 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
+  // 🌟 RESPUESTA COGNITIVA ANTE SEÑALES CORTAS, STICKERS, EMOJIS O PUNTICOS (Doctrina v33.14):
+  // JanIA jamás se queda callada ni actúa como bot rígido ante un punto, signo, emoji o sticker.
+  if (isShortSignalOrSticker(clean)) {
+    if (isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified) {
+      const brokerReply = `¡${timeSalutation}, VECY! 👋 Recibí su señal desde la línea oficial. ¿Con quién tengo el gusto de hablar hoy? (¿Eduardo o Jani haciendo pruebas?). ¡Estoy lista para colaborarles! 🤖✨`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", brokerReply);
+      return brokerReply;
+    }
+    if (isEduardo) {
+      const edduReply = `¡${timeSalutation}, Eduardo! 👋 Recibí tu mensaje / señal. ¿En qué te colaboro hoy?`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", edduReply);
+      return edduReply;
+    }
+    if (isJani) {
+      const janiReply = `¡${timeSalutation}, Jani! 👋 Recibí tu mensaje / señal. ¿En qué te colaboro hoy?`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", janiReply);
+      return janiReply;
+    }
+    if (isFamilyOrTrusted && trustedContact) {
+      const familyReply = `¡${timeSalutation}, ${trustedContact.primaryNick}! ❤️🥰 Recibí tu mensaje. ¿Cómo estás? ¿En qué te puedo colaborar o le paso algún recado a Eduardo?`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", familyReply);
+      return familyReply;
+    }
+    if (hasPriorHistory) {
+      const followUp = `Con mucho gusto${displayName && displayName !== "VECY" ? `, ${displayName}` : ""}. ¿Deseas que revisemos alguna consulta de inmuebles, verificación de antecedentes, predial o liquidación notarial? 🤝✨`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", followUp);
+      return followUp;
+    }
+    const isSticker = clean.includes("[Sticker]");
+    const isPunctuation = /^[.¿?¡!_~^:;\-*#@+=]{1,8}$/.test(clean);
+    const friendlyReply = isSticker
+      ? `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 ¡Qué buen sticker! 😊 Soy *JanIA*, tu asistente de Inteligencia Artificial de *VECY BIENES RAÍCES* 🏘️.\n\nCuéntame: ¿en qué te puedo colaborar hoy? Estoy a tu disposición para consultar antecedentes oficiales de compradores, liquidar gastos notariales, descargar la factura predial en Bogotá en PDF o sondeo de mercado 🤝✨.`
+      : isPunctuation
+        ? `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 Recibí tu señal / puntico por aquí 😊. Soy *JanIA*, tu asistente de Inteligencia Artificial de *VECY BIENES RAÍCES* 🏘️.\n\nCuéntame: ¿en qué te puedo colaborar hoy? Te ayudo con consultas de predial en Bogotá, antecedentes oficiales de compradores, paz y salvo IDU o asesoría inmobiliaria 🤝✨.`
+        : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 Recibí tu saludo ${clean} 😊. En *VECY BIENES RAÍCES* estoy lista para facilitarte cualquier gestión inmobiliaria: consultas oficiales gratuitas de antecedentes, predial de Bogotá en PDF, liquidaciones notariales o información de propiedades. ¿Qué te gustaría consultar hoy? 🤝✨`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", friendlyReply);
+    return friendlyReply;
+  }
+
   // Si es un saludo inicial y no hay historial previo reciente:
   if (isGreetingOnly && history.length === 0) {
+    if (isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified) {
+      const welcomeMsg = `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar hoy? (¿Eduardo, Jani o algún colega?). ¡Estoy lista para colaborarles! 🤖✨`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg);
+      return welcomeMsg;
+    }
     if (isEduardo) {
       const welcomeMsg = `¡${timeSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
       appendDmHistory(userId, "user", clean);

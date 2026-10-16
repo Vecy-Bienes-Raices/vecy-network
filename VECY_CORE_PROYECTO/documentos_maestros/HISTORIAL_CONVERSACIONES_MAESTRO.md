@@ -7,6 +7,51 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-16] — Presencia Continua Baileys, Desacople Línea Bróker VECY y Cognición Universal de Stickers/Puntos (v33.14 - 33.14.0)
+
+**Versión:** `v33.14` (`33.14.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-utils.ts` (Implementación de `sock.presenceSubscribe?.(jid)` y refresco a 2500ms en `startContinuousPresence` para garantizar que los estados `composing` y `recording` se transmitan con fluidez al dispositivo móvil del emisor)
+- `server/_core/whatsapp-match.ts` (Suscripción a presencia activa `presenceSubscribe` al recibir mensajes y durante envíos en cola `queuedSend`; incorporación de `rawMsg.stickerMessage`, `reactionMessage`, `locationMessage` y `contactMessage` en el búfer de mensajes para que nunca se descarten como texto vacío; identificación de la línea `573166569719` como `"VECY BIENES RAÍCES"`)
+- `server/_core/jania/trustedContacts.ts` (Desacoplamiento de la línea comercial y de pruebas de la inmobiliaria `573166569719` del perfil personal de Jani Alves; creación y exportación de `isVecyOfficialBrokerLine(phoneOrJid: string)`)
+- `server/_core/jania/handlers/dmHandler.ts` (Saludo institucional diferenciado para la línea oficial de VECY: `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`; función `isShortSignalOrSticker` y respuestas cognitivas enriquecidas para stickers, punticos `.`, signos y emojis sueltos)
+- `shared/const.ts` (`v33.14`)
+- `package.json` (`33.14.0`)
+- `server/__tests__/regression.test.ts` (SUITE 75 con 5 pruebas automatizadas aprobadas, alcanzando 265/265 tests pasando al 100% en verde a $0 COP)
+- `GEMINI.md`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md`
+
+---
+
+#### 1. Contexto, Diagnóstico de la Solicitud y Causa Raíz Forense
+- **Diagnóstico del Chat Anterior (Bucle Infinito):**
+  - Se analizó la base de datos de trazas del chat previo (`7e7e83ad-7615-4e15-83f8-5f98aeb0089f.db`), descubriendo un bucle degenerativo de 4.464 pasos a lo largo de 1 hora y 38 minutos (22:41 a 00:19).
+  - El agente intentó leer su propio log `transcript.jsonl` por terminal y, tras quedar un input en estado `CLEARED`, ejecutó en bucle 633 veces `git status && git log -n 5 --oneline` sin devolver el control al usuario ni responder a los mensajes encolados, provocando el colapso del IDE por saturación de contexto (>538 KB por generación).
+- **Problemas Funcionales en JanIA:**
+  1. *Ausencia de Presencia Visual en WhatsApp:* Los usuarios no veían los tres puntos `...` ni el micrófono 🎙️ mientras JanIA generaba respuestas o audios, porque los delays eran de 400ms (imperceptibles) y faltaba `sock.presenceSubscribe(jid)` para activar la propagación de eventos en Baileys.
+  2. *Confusión de Identidad en la Línea Oficial (+57 316 656 9719):* Al ser probada desde el teléfono corporativo de VECY BIENES RAÍCES, JanIA confundía la línea con la esposa de Eduardo (Jani Alves) y emitía saludos amorosos en lugar del trato institucional.
+  3. *Silencio ante Stickers, Puntos o Signos:* Al recibir un sticker (`stickerMessage`), el texto quedaba vacío y el guard de Baileys lo descartaba sin procesar; un punto `.` o signo provocaba respuestas erráticas o silencio.
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Presencia Continua y Delays Humanos Reales:**
+   - En `whatsapp-utils.ts`, `startContinuousPresence` invoca `sock.presenceSubscribe?.(jid)` y emite stanzas de presencia cada 2500ms.
+   - En `whatsapp-match.ts`, `queuedSend` añade pausas naturales perceptibles (1000-2500ms para texto y 1500-3000ms para audios) previas al envío, manteniendo el indicador de escritura/grabación activo.
+2. **Desacoplamiento Doctrinal de la Línea Oficial de Bróker:**
+   - En `trustedContacts.ts`, el número `573166569719` fue removido del array `phones` de Jani Alves (su línea personal exclusiva es `573188096811`).
+   - Implementado `isVecyOfficialBrokerLine(phoneOrJid)` y configurado en `dmHandler.ts` para que JanIA salude con distinción y respeto corporativo: `¡${timeSalutation}, VECY! 👋 ¿Con quién tengo el gusto de hablar?`.
+3. **Cognición Universal de Stickers, Emojis y Señales Cortas:**
+   - `whatsapp-match.ts` captura `rawMsg.stickerMessage` como `😊 [Sticker]`.
+   - `dmHandler.ts` evalúa `isShortSignalOrSticker(text)` y responde cálidamente: si es un sticker o emoji responde con amabilidad y apertura de servicio; si es un punto o interrogación invita a escribir con total comodidad.
+4. **SUITE 75 de Pruebas Automatizadas y Blindaje ($0 COP):**
+   - 5 nuevas pruebas unitarias en `regression.test.ts` verificando: presencia continua, desacople de línea bróker vs línea personal de Jani, saludo oficial de bróker `¡${timeSalutation}, VECY!`, cognición de stickers/puntos y consagración doctrinal de versión `v33.14`.
+   - **265/265 tests pasando al 100% en verde sin consumo de claves de pago ($0 COP)**.
+
+#### 3. Verificación y Resultados
+- **Typecheck:** `npm run check` (0 errores).
+- **Tests Unitarios y de Regresión:** `npm test` — **265/265 tests pasando al 100% en verde** a **$0 COP**.
+- **Compilación de Producción:** `npm run build` limpio en 29.86s (Vite) + 241ms (esbuild).
+
+---
+
 ### 📅 [2026-10-15] — Doctrina de Saludo Horario Universal, Cero "Hola" Aislado y Cierre Cordial en DMs (v33.13 - 33.13.0)
 
 **Versión:** `v33.13` (`33.13.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

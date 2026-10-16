@@ -808,18 +808,19 @@ export function startContinuousPresence(
   sock: any,
   jid: string,
   type: 'composing' | 'recording' = 'composing',
-  intervalMs: number = 3500
+  intervalMs: number = 2500
 ): () => void {
   if (!sock || !jid) return () => {};
   let isAlive = true;
   try {
-    sock.sendPresenceUpdate(type, jid).catch(() => {});
+    sock.presenceSubscribe?.(jid)?.catch?.(() => {});
+    sock.sendPresenceUpdate?.(type, jid)?.catch?.(() => {});
   } catch (_) {}
 
   const timer = setInterval(() => {
     if (!isAlive) return;
     try {
-      sock.sendPresenceUpdate(type, jid).catch(() => {});
+      sock.sendPresenceUpdate?.(type, jid)?.catch?.(() => {});
     } catch (_) {}
   }, intervalMs);
 
@@ -828,7 +829,7 @@ export function startContinuousPresence(
     isAlive = false;
     clearInterval(timer);
     try {
-      sock.sendPresenceUpdate('paused', jid).catch(() => {});
+      sock.sendPresenceUpdate?.('paused', jid)?.catch?.(() => {});
     } catch (_) {}
   };
 }
