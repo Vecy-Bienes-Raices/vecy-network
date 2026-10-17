@@ -830,12 +830,19 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
   const docPatterns = [
     { type: 'pep', regex: /(?:pep|permiso\s+especial\s+de\s+permanencia)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{10,18})/gi, sanitize: (s: string) => s.toUpperCase() },
     { type: 'ppt', regex: /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
-    { type: 'nit', regex: /(?:nit)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{4,12})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    {
+      type: 'nit',
+      regex: /(?:nit)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|es|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){2}(?:-[0-9])?|[0-9]{7,10}(?:-[0-9])?|[0-9]{4,12})/gi,
+      sanitize: (s: string) => {
+        const base = s.split('-')[0].replace(/\D/g, '');
+        return (base.length === 10 && /^[89]/.test(base)) ? base.slice(0, 9) : base;
+      }
+    },
     { type: 'dp', regex: /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s: string) => s.toUpperCase() },
     { type: 'pa', regex: /(?:pasaporte|pa)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s: string) => s.toUpperCase() },
     { type: 'cx', regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
     { type: 'cc', regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
-    { type: 'cc', regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
+    { type: 'cc', regex: /(?:verificar|verificaci[oó]n|verif[ií]came|validar|consultar|cons[uú]ltame|revisar|rev[ií]same|antecedentes)\s*(?:sus|los|el|este|esta)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
   ];
 
   /**
@@ -866,6 +873,8 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
         if (pat.type === 'cc' && (ced.length < 5 || ced.length > 10)) continue;
         if (pat.type === 'cx' && (ced.length < 4 || ced.length > 10)) continue;
 
+        const resolvedType = (pat.type === 'cc' && ced.length === 9 && /^[89]\d{8}$/.test(ced)) ? 'nit' : pat.type;
+
         let detectedName: string | undefined;
         const lineBeforeDoc = line.substring(lastMatchEnd, m.index).trim();
         if (lineBeforeDoc) {
@@ -873,7 +882,7 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
         } else if (i > 0) {
           detectedName = cleanPotentialPersonName(lines[i - 1]);
         }
-        items.push({ cedula: ced, tipoDoc: pat.type, rawNumber: raw, detectedName });
+        items.push({ cedula: ced, tipoDoc: resolvedType, rawNumber: raw, detectedName });
         lastMatchEnd = pat.regex.lastIndex;
       }
     }
@@ -892,9 +901,13 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
         if (isMonetaryContext(clean, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = raw.replace(/\D/g, '');
-        // Cédulas colombianas válidas: de 5 a 8 dígitos (antiguas) o 10 dígitos (nuevas)
-        // Cédulas de 9 dígitos nunca existieron en Colombia y casi siempre son precios de cientos de millones
-        if (ced.length === 9) continue;
+        // En Colombia los NIT de Personas Jurídicas tienen 9 dígitos e inician por 8 o 9
+        if (ced.length === 9) {
+          if (/^[89]\d{8}$/.test(ced) && !/00000$/.test(ced)) {
+            items.push({ cedula: ced, tipoDoc: 'nit', rawNumber: raw });
+          }
+          continue;
+        }
         if (ced.length >= 5 && ced.length <= 10) {
           items.push({ cedula: ced, tipoDoc: 'cc', rawNumber: raw });
         }
@@ -1193,7 +1206,7 @@ export interface EmpresaQueryResult {
  */
 export async function queryEmpresaOrNit(query: string, userId?: string): Promise<EmpresaQueryResult> {
   const clean = (query || "").trim();
-  const digitsMatch = clean.match(/\b\d{7,10}(?:-\d)?\b/);
+  const digitsMatch = clean.match(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-\d)?\b/);
   let baseNit = "";
   let providedDv = "";
 
@@ -1201,15 +1214,21 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     const rawDigits = digitsMatch[0];
     if (rawDigits.includes("-")) {
       const parts = rawDigits.split("-");
-      baseNit = parts[0];
-      providedDv = parts[1];
+      baseNit = parts[0].replace(/\D/g, "");
+      providedDv = parts[1].replace(/\D/g, "");
     } else {
-      baseNit = rawDigits;
+      const onlyDigits = rawDigits.replace(/\D/g, "");
+      if (onlyDigits.length === 10 && /^[89]/.test(onlyDigits)) {
+        baseNit = onlyDigits.slice(0, 9);
+        providedDv = onlyDigits.slice(9);
+      } else {
+        baseNit = onlyDigits;
+      }
     }
   }
 
-  // 1° Intentar consulta en vivo vía conector HTTP directo a RUES (Confecámaras)
-  const ruesLive = await queryRuesDirectHttp(clean).catch(() => null);
+  // 1° Intentar consulta en vivo vía conector HTTP directo a RUES (Confecámaras + Datos Abiertos)
+  const ruesLive = await queryRuesDirectHttp(baseNit || clean).catch(() => null);
 
   let razonSocial = "";
   let camaraComercio = "Cámara de Comercio de Bogotá";
@@ -1224,7 +1243,9 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
   if (ruesLive && ruesLive.found) {
     baseNit = ruesLive.nit || baseNit;
     razonSocial = ruesLive.razonSocial;
-    camaraComercio = `Cámara de Comercio de ${ruesLive.camaraComercio}`;
+    camaraComercio = ruesLive.camaraComercio.toLowerCase().includes("cámara")
+      ? ruesLive.camaraComercio
+      : `Cámara de Comercio de ${ruesLive.camaraComercio}`;
     ciudad = ruesLive.camaraComercio;
     estado = ruesLive.ultimoAnoRenovado
       ? `${ruesLive.estadoMatricula} (Renovada ${ruesLive.ultimoAnoRenovado})`
@@ -1327,8 +1348,8 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
       ciudad = "Bogotá D.C.";
       estado = "Activa (Renovada 2026)";
       organizacionJuridica = "Sociedad Anónima S.A.";
-    } else if (lowerQuery.includes("amarilo") || baseNit === "800192314") {
-      baseNit = baseNit || "800192314";
+    } else if (lowerQuery.includes("amarilo") || baseNit === "800192314" || baseNit === "800185295") {
+      baseNit = baseNit || "800185295";
       razonSocial = "AMARILO S.A.S.";
       camaraComercio = "Cámara de Comercio de Bogotá";
       ciudad = "Bogotá D.C.";
@@ -1344,14 +1365,19 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
       organizacionJuridica = "Sociedad Anónima S.A.";
       ciiuPrincipal = "4111 — Construcción de edificios residenciales";
     } else if (baseNit) {
-      razonSocial = clean.replace(/\b\d{7,10}(?:-\d)?\b/g, "").replace(/nit|empresa|sociedad|sa|sas|ltda/gi, "").trim();
+      razonSocial = clean
+        .replace(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-\d)?\b/g, "")
+        .replace(/\b(?:jania|vecy|hola|buenos|buenas|d[ií]as|tardes|noches|verif[ií]came|verificar|verifica|cons[uú]ltame|consultar|consulta|rev[ií]same|revisar|revisa|este|esta|el|la|un|una|por\s+favor|porfa|gracias|nit|empresa|sociedad|persona\s+jur[ií]dica|antecedentes|identidad|de|del|en|rues|sa|sas|ltda)\b/gi, "")
+        .replace(/[^\w\sáéíóúÁÉÍÓÚñÑ&-]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
       if (!razonSocial) {
         razonSocial = `EMPRESA / PERSONA JURÍDICA NIT ${baseNit}`;
       } else {
         razonSocial = formatTitleCase(razonSocial);
       }
     } else {
-      razonSocial = formatTitleCase(clean);
+      razonSocial = formatTitleCase(clean) || "VECY BIENES RAÍCES S.A.S.";
       baseNit = "901488282";
     }
   }
@@ -1370,7 +1396,11 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
         razonSocial = formatTitleCase(pgnRes.officialName);
       }
       if (pgnRes?.statusText) {
-        pgnStatus = pgnRes.statusText;
+        if (ruesLive?.found && !pgnRes.hasSanctions && /no\s+se\s+encuentra\s+registrado/i.test(pgnRes.statusText)) {
+          pgnStatus = "Sin sanciones ni inhabilidades contractuales registradas en el sistema SIRI de la Procuraduría.";
+        } else {
+          pgnStatus = pgnRes.statusText;
+        }
       }
       const cgrRes = await queryContraloria("nit", baseNit).catch(() => null);
       if (cgrRes?.statusText) {

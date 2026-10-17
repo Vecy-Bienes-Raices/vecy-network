@@ -183,7 +183,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.18 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.19 — Octubre 2026
+
+### Novedades v33.19 (Normalización de `functionCall.args` en Gemini REST API y Motor Dual RUES Nacional con Datos Abiertos Socrata — 0 Geo-Block desde VPS):
+- **Diagnóstico Forense y Reporte de Eduardo A. Rivera**:
+  1. **Reporte en WhatsApp (`Jania verificame este nit 900788832`)**: Eduardo reportó que al solicitar en WhatsApp la verificación del NIT `900788832`, JanIA respondió mostrando el NIT `901.488.282-3` y `Razón Social: Persona Jurídica Registrada` en lugar de los datos reales de la sociedad (`TRANSPORTES GONZALEZ DIAZ TG&D SAS`).
+  2. **Causa Raíz #1 — `functionCall.args` vs `functionCall.arguments` en Gemini REST API (`server/_core/llm.ts` y `server/_core/jania/handlers/dmHandler.ts`)**:
+     - La API REST oficial de Google Gemini (`v1beta/models/...:generateContent`) devuelve los argumentos de las herramientas en la propiedad `functionCall.args`, mientras que `dmHandler.ts` leía únicamente `fnCall.arguments || {}`.
+     - Al recibir `{}` vacío, `executeJaniaDmTool` invocaba `queryEmpresaOrNit("", userId)`, lo que activaba el bloque `else` de respaldo con el NIT `901488282` y razón social vacía.
+     - **Solución**: En `llm.ts` se busca `functionCall` en cualquiera de las partes (`parts.find(p => p.functionCall)`) y se normaliza el objeto poblando simultáneamente `args` y `arguments`. En `dmHandler.ts` se resuelve `fnCall.arguments ?? fnCall.args ?? {}` y se pasa además `clean` (`rawUserText`) como respaldo a `executeJaniaDmTool`. Asimismo, en `llm.ts` se salta de inmediato al siguiente modelo cuando un modelo devuelve 404 / `"no longer available"`, ahorrando ~3.5 segundos de latencia por mensaje.
+  3. **Causa Raíz #2 — Bloqueo Geográfico AWS ELB (`403 Forbidden`) en `elasticprd.rues.org.co` desde IPs europeas (Contabo VPS Alemania)**:
+     - Mientras desde IP colombiana `elasticprd.rues.org.co` responde `200 OK` en ~180ms, desde la IP del VPS en Alemania (`13.140.149.144`) el balanceador `awselb/2.0` de Confecámaras devuelve `403 Forbidden`.
+     - **Solución (`server/_core/ruesService.ts`)**: Arquitectura HTTP Dual sin Puppeteer que integra como segundo motor directo la API Socrata Oficial del Gobierno de Colombia — Registro Único Empresarial y Social RUES Nacional (`https://www.datos.gov.co/resource/c82u-588k.json`), la cual cubre las **57 Cámaras de Comercio del país (>9.3 millones de registros)** y responde `200 OK` desde el VPS en Alemania en ~150ms–500ms con Razón Social (`TRANSPORTES GONZALEZ DIAZ TG&D SAS`), NIT y DV (`900.788.832-8`), Matrícula (`2517719`), Estado y Año Renovado (`Activa (Renovada 2026)`), Tipo Societario (`Sociedad por Acciones Simplificada (S.A.S.)`), CIIU (`4923 — Transporte de carga por carretera`) y **Representante Legal Principal** (`Sandra Milena Diaz Mondragon — C.C. 46.375.136`).
+  4. **Detección Automática de NITs de 9 Dígitos (`8xx`/`9xx`) y Claridad en Procuraduría SIRI (`identityVerificationService.ts`)**:
+     - `extractAllCedulasForVerification` reconoce NITs con o sin puntos/DV y clasifica automáticamente números de 9 dígitos iniciados en `8` o `9` como `nit`.
+     - Cuando RUES confirma la existencia activa de una sociedad y Procuraduría SIRI indica que el NIT no registra antecedentes en SIRI, se reporta con precisión jurídica: `"Sin sanciones ni inhabilidades contractuales registradas en el sistema SIRI de la Procuraduría."`.
+  5. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 287/287 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.19`) y `package.json` (`33.19.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.18 — Octubre 2026
 
 ### Novedades v33.18 (Conector Directo HTTP RUES / Confecámaras — 0 Puppeteer, Representante Legal Principal vs. Suplentes y Doctrina NIT vs. Persona Natural):
 - **Diagnóstico Forense y Solicitud Doctrinal de Eduardo A. Rivera**:

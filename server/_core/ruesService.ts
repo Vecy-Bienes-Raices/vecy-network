@@ -106,16 +106,112 @@ export function cleanAndFormatDocNumber(rawDoc: string): { clean: string; format
   return { clean: digits, formatted };
 }
 
+const RUES_SOCRATA_URL = "https://www.datos.gov.co/resource/c82u-588k.json";
+let elasticGeoBlockedUntil = 0;
+
+/**
+ * Diccionario de códigos CIIU Rev. 4 A.C. más frecuentes en el sector empresarial e inmobiliario colombiano.
+ */
+export const CIIU_DESCRIPTIONS: Record<string, string> = {
+  "1103": "Producción de malta, elaboración de cervezas y otras bebidas malteadas",
+  "4111": "Construcción de edificios residenciales",
+  "4112": "Construcción de edificios no residenciales",
+  "4210": "Construcción de carreteras y vías de ferrocarril",
+  "4220": "Construcción de proyectos de servicio público",
+  "4290": "Construcción de otras obras de ingeniería civil",
+  "4311": "Demolición",
+  "4312": "Preparación del terreno",
+  "4321": "Instalaciones eléctricas",
+  "4322": "Instalaciones de fontanería, calefacción y aire acondicionado",
+  "4330": "Terminación y acabado de edificios y obras de ingeniería civil",
+  "4390": "Otras actividades especializadas para la construcción de edificios y obras de ingeniería civil",
+  "4511": "Comercio de vehículos automotores nuevos",
+  "4512": "Comercio de vehículos automotores usados",
+  "4610": "Comercio al por mayor a cambio de una retribución o por contrata",
+  "4663": "Comercio al por mayor de materiales de construcción, artículos de ferretería, pinturas y productos de vidrio",
+  "4690": "Comercio al por mayor no especializado",
+  "4711": "Comercio al por menor en establecimientos no especializados con surtido compuesto principalmente por alimentos",
+  "4752": "Comercio al por menor de artículos de ferretería, pinturas y productos de vidrio",
+  "4921": "Transporte de pasajeros",
+  "4922": "Transporte mixto",
+  "4923": "Transporte de carga por carretera",
+  "5210": "Almacenamiento y depósito",
+  "5229": "Otras actividades complementarias al transporte",
+  "5511": "Alojamiento en hoteles",
+  "5519": "Otros tipos de alojamientos para visitantes",
+  "5611": "Expendio a la mesa de comidas preparadas",
+  "6201": "Actividades de desarrollo de sistemas informáticos (planificación, análisis, diseño, programación, pruebas)",
+  "6202": "Actividades de consultoría informática y actividades de administración de instalaciones informáticas",
+  "6311": "Procesamiento de datos, alojamiento (hosting) y actividades relacionadas",
+  "6412": "Bancos comerciales",
+  "6492": "Actividades financieras de fondos de empleados y otras formas asociativas del sector solidario",
+  "6499": "Otras actividades de servicio financiero, excepto las de seguros y pensiones n.c.p.",
+  "6619": "Otras actividades auxiliares de las actividades de servicios financieros n.c.p.",
+  "6810": "Actividades inmobiliarias realizadas con bienes propios o arrendados",
+  "6820": "Actividades inmobiliarias realizadas a cambio de una retribución o por contrata",
+  "6910": "Actividades jurídicas",
+  "6920": "Actividades de contabilidad, teneduría de libros, auditoría financiera y asesoría tributaria",
+  "7010": "Actividades de administración empresarial",
+  "7020": "Actividades de consultoría de gestión",
+  "7111": "Actividades de arquitectura",
+  "7112": "Actividades de ingeniería y otras actividades conexas de consultoría técnica",
+  "7310": "Publicidad",
+  "7490": "Otras actividades profesionales, científicas y técnicas n.c.p.",
+  "7710": "Alquiler y arrendamiento de vehículos automotores",
+  "7730": "Alquiler y arrendamiento de otros tipos de maquinaria, equipo y bienes tangibles n.c.p.",
+  "8010": "Actividades de seguridad privada",
+  "8110": "Actividades combinadas de apoyo a instalaciones",
+  "8211": "Actividades combinadas de servicios administrativos de oficina",
+  "8299": "Otras actividades de servicio de apoyo a las empresas n.c.p.",
+  "8544": "Educación superior",
+  "8610": "Actividades de hospitales y clínicas, con internación",
+  "8621": "Actividades de la práctica médica, sin internación",
+  "9499": "Actividades de otras asociaciones n.c.p."
+};
+
+export function formatOrganizacionJuridica(raw: string): string {
+  const upper = (raw || "").toUpperCase().trim();
+  if (!upper) return "Sociedad Comercial";
+  if (upper.includes("SIMPLIFICADA") || upper.includes("S.A.S") || /\bSAS\b/.test(upper)) {
+    return "Sociedad por Acciones Simplificada (S.A.S.)";
+  }
+  if (upper.includes("ANONIMA") || upper.includes("ANÓNIMA")) {
+    return "Sociedad Anónima (S.A.)";
+  }
+  if (upper.includes("LIMITADA") || upper.includes("LTDA")) {
+    return "Sociedad Limitada (LTDA.)";
+  }
+  if (upper.includes("COMANDITA POR ACCIONES")) {
+    return "Sociedad en Comandita por Acciones (S.C.A.)";
+  }
+  if (upper.includes("COMANDITA SIMPLE")) {
+    return "Sociedad en Comandita Simple (S. en C.)";
+  }
+  if (upper.includes("UNIPERSONAL")) {
+    return "Empresa Unipersonal (E.U.)";
+  }
+  if (upper.includes("SIN ANIMO DE LUCRO") || upper.includes("ESAL")) {
+    return "Entidad Sin Ánimo de Lucro (ESAL)";
+  }
+  return formatTitleCase(raw);
+}
+
 /**
  * Realiza una petición POST directa al backend ElasticSearch de RUES.
+ * Si detecta bloqueo geográfico (HTTP 403 de AWS ELB fuera de Colombia), activa caché de conmutación rápida a Datos Abiertos.
  */
-async function postRuesEncrypted(path: string, payload: Record<string, any>, timeoutMs: number = 6500): Promise<any> {
+async function postRuesEncrypted(path: string, payload: Record<string, any>, timeoutMs: number = 5000): Promise<any> {
+  if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
+    return null;
+  }
+
+  const baseUrl = process.env.RUES_PROXY_URL || RUES_ELASTIC_BASE_URL;
   const encryptedBody = encryptRuesPayload(payload);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(`${RUES_ELASTIC_BASE_URL}${path}`, {
+    const res = await fetch(`${baseUrl}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -129,6 +225,10 @@ async function postRuesEncrypted(path: string, payload: Record<string, any>, tim
       signal: controller.signal
     });
 
+    if (res.status === 403) {
+      elasticGeoBlockedUntil = Date.now() + 15 * 60 * 1000;
+      return null;
+    }
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
@@ -154,9 +254,10 @@ export function selectPrincipalRuesRecord(registros: any[], targetNit?: string):
     const cat = String(reg.categoria || reg.categoria_matricula || "").toUpperCase();
     const est = String(reg.estado_matricula || "").toUpperCase();
     const org = String(reg.organizacion_juridica || "").toUpperCase();
-    const regNit = String(reg.nit || "").replace(/\D/g, "");
+    const regNit = String(reg.nit || reg.numero_identificacion || "").replace(/\D/g, "").replace(/^0+/, "");
+    const cleanTargetNit = (targetNit || "").replace(/\D/g, "").replace(/^0+/, "");
 
-    if (targetNit && regNit === targetNit) score += 100;
+    if (cleanTargetNit && regNit === cleanTargetNit) score += 100;
     if (cat.includes("SOCIEDAD") || cat.includes("PRINCIPAL") || cat.includes("PERSONA JURIDICA")) {
       score += 50;
     }
@@ -166,6 +267,7 @@ export function selectPrincipalRuesRecord(registros: any[], targetNit?: string):
     if (est === "ACTIVA") score += 25;
     if (org && !org.includes("ESTABLECIMIENTO")) score += 10;
     if (Number(reg.ultimo_ano_renovado || 0) >= 2024) score += 10;
+    if (reg.representante_legal || reg.num_identificacion_representante_legal) score += 15;
 
     return { reg, score };
   });
@@ -217,7 +319,6 @@ export function classifyRepresentantesLegales(
     const tipoVinculoRaw = String(item.tipovinculo || "Representante Legal").trim();
     const upperVinculo = tipoVinculoRaw.toUpperCase();
 
-    // Determinar si en el texto de facultades/nombramientos aparece como Judicial o Suplente específico
     let cargoEspecifico = tipoVinculoRaw;
     let isJudicialOnly = false;
 
@@ -251,10 +352,6 @@ export function classifyRepresentantesLegales(
       upperVinculo.includes("TERCER") ||
       isJudicialOnly;
 
-    // Si aún no hay ningún Principal registrado y el vínculo es "Representante Legal - Principal",
-    // el primero en el orden de inscripción mercantil es el Representante Legal Principal titular.
-    // Si una sociedad lista múltiples como "Principal" pero ya existe el titular n° 1 (ej. Presidente),
-    // el primero es el Representante Legal Principal titular y los subsiguientes se listan como Principales Adjuntos / Judiciales.
     const isFirstPrincipal = principales.length === 0 && !isSuplenteKeyword;
 
     const info: RepresentanteLegalInfo = {
@@ -280,7 +377,6 @@ export function classifyRepresentantesLegales(
     }
   }
 
-  // Si todos fueron marcados como suplentes pero hay al menos 1 registro, promover el primero como principal registrado
   if (principales.length === 0 && todos.length > 0) {
     const first = todos[0];
     first.esPrincipal = true;
@@ -298,16 +394,158 @@ export function classifyRepresentantesLegales(
 }
 
 /**
+ * Motor Nacional de Datos Abiertos RUES — Confecámaras (datos.gov.co/resource/c82u-588k.json).
+ * Opera a nivel mundial sin restricciones geográficas (200 OK en Contabo VPS en ~150-500ms),
+ * cubriendo las 57 Cámaras de Comercio de Colombia (>9.3 millones de matrículas) con Representante Legal Principal.
+ */
+async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, timeoutMs: number = 6500): Promise<RuesCompanyDetail | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    let registros: any[] = [];
+
+    if (baseNit) {
+      const cleanDigits = baseNit.replace(/\D/g, "").replace(/^0+/, "");
+      const [byNumIdRes, byNitRes] = await Promise.all([
+        fetch(`${RUES_SOCRATA_URL}?numero_identificacion=${encodeURIComponent(cleanDigits)}&$limit=15`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal
+        }).catch(() => null),
+        fetch(`${RUES_SOCRATA_URL}?nit=${encodeURIComponent(cleanDigits)}&$limit=15`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal
+        }).catch(() => null)
+      ]);
+
+      const listA = byNumIdRes && byNumIdRes.ok ? await byNumIdRes.json().catch(() => []) : [];
+      const listB = byNitRes && byNitRes.ok ? await byNitRes.json().catch(() => []) : [];
+      registros = [...(Array.isArray(listA) ? listA : []), ...(Array.isArray(listB) ? listB : [])];
+    } else if (cleanRazon && cleanRazon.length >= 3) {
+      const safeRazon = cleanRazon.toUpperCase().replace(/'/g, "''");
+      const whereClause = `upper(razon_social) like '%${safeRazon}%'`;
+      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=15`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal
+      }).catch(() => null);
+      if (res && res.ok) {
+        const list = await res.json().catch(() => []);
+        if (Array.isArray(list)) registros = list;
+      }
+    }
+
+    if (!Array.isArray(registros) || registros.length === 0) {
+      return null;
+    }
+
+    const mainRecord = selectPrincipalRuesRecord(registros, baseNit || undefined);
+    if (!mainRecord) return null;
+
+    const codCamara = String(mainRecord.codigo_camara || mainRecord.cod_camara || "04").trim();
+    const matricula = String(mainRecord.matricula || "").trim();
+    const idRm = buildRuesIdRm(codCamara, matricula);
+    const razonSocial = String(mainRecord.razon_social || "").trim();
+    if (!razonSocial) return null;
+
+    const nit = String(mainRecord.nit || mainRecord.numero_identificacion || baseNit).replace(/\D/g, "").replace(/^0+/, "");
+    const dv = String(mainRecord.digito_verificacion || mainRecord.dv || "").trim();
+    const camaraRaw = String(mainRecord.camara_comercio || mainRecord.nom_camara || "BOGOTA").trim();
+    const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogotá D.C." : formatTitleCase(camaraRaw);
+    const organizacionJuridica = formatOrganizacionJuridica(
+      String(mainRecord.organizacion_juridica || mainRecord.tipo_sociedad || "Sociedad Comercial")
+    );
+    const categoria = String(mainRecord.categoria_matricula || mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL").trim();
+    const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || "ACTIVA").trim());
+    const ultimoAnoRenovado = String(
+      mainRecord.ultimo_ano_renovado || (mainRecord.fecha_renovacion ? String(mainRecord.fecha_renovacion).slice(0, 4) : "")
+    ).trim();
+
+    const ciiuPrincipalCodigo = String(mainRecord.cod_ciiu_act_econ_pri || "").trim() || undefined;
+    const ciiuPrincipalDescripcion = ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : undefined;
+
+    const repNameRaw = String(mainRecord.representante_legal || "").trim();
+    const repDocRaw = String(mainRecord.num_identificacion_representante_legal || "").trim();
+    const repClaseRaw = String(mainRecord.clase_identificacion_rl || "").toUpperCase();
+    const { clean: cleanRepDoc, formatted: formattedRepDoc } = cleanAndFormatDocNumber(repDocRaw);
+
+    let representantePrincipal: RepresentanteLegalInfo | undefined;
+    const representantesPrincipales: RepresentanteLegalInfo[] = [];
+
+    if (repNameRaw) {
+      const tipoDocRep = repClaseRaw.includes("EXTRANJER")
+        ? "C.E."
+        : repClaseRaw.includes("PASAPORTE")
+          ? "Pasaporte"
+          : "C.C.";
+
+      representantePrincipal = {
+        nombre: formatTitleCase(repNameRaw),
+        numeroIdentificacion: cleanRepDoc,
+        numeroFormateado: formattedRepDoc || cleanRepDoc,
+        tipoDocumento: tipoDocRep,
+        cargo: "Representante Legal Principal",
+        tipoVinculoRaw: "Representante Legal - Principal",
+        esPrincipal: true,
+        advertenciaFacultades: "Titular con plenas facultades legales y estatutarias para obligar a la sociedad."
+      };
+      representantesPrincipales.push(representantePrincipal);
+    }
+
+    return {
+      found: true,
+      idRm,
+      nit,
+      dv,
+      razonSocial,
+      sigla: String(mainRecord.sigla || "").trim() || undefined,
+      organizacionJuridica,
+      categoria,
+      esSociedadPrincipal:
+        categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
+      codigoCamara: codCamara,
+      camaraComercio,
+      matricula: matricula.replace(/^0+/, "") || matricula,
+      estadoMatricula,
+      ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : undefined,
+      fechaMatricula: mainRecord.fecha_matricula || undefined,
+      fechaRenovacion: mainRecord.fecha_renovacion || undefined,
+      ciiuPrincipalCodigo,
+      ciiuPrincipalDescripcion,
+      representantePrincipal,
+      representantesPrincipales,
+      representantesSuplentes: [],
+      todosRepresentantes: representantesPrincipales,
+      source: "RUES — Registro Único Empresarial y Social (Confecámaras / Datos Abiertos)"
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Consulta en tiempo real el Registro Único Empresarial y Social (RUES - Confecámaras)
- * mediante peticiones HTTP directas (cero Puppeteer).
+ * mediante peticiones HTTP directas (cero Puppeteer), combinando el conector criptográfico
+ * ElasticSearch RUES y el motor nacional Socrata de Datos Abiertos de Colombia (57 Cámaras de Comercio).
  */
 export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDetail | null> {
   const clean = (query || "").trim();
   if (!clean) return null;
 
   const digitsMatch = clean.match(/\b(\d{7,10})(?:-\d)?\b/);
-  const baseNit = digitsMatch ? digitsMatch[1] : "";
-  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${clean.toUpperCase()}`;
+  let baseNit = digitsMatch ? digitsMatch[1] : "";
+  // Si el usuario envió los 10 dígitos seguidos incluyendo el DV (ej. 9007888328), separar los 9 dígitos base del NIT
+  if (baseNit.length === 10 && /^[89]/.test(baseNit)) {
+    baseNit = baseNit.slice(0, 9);
+  }
+
+  const cleanRazon = clean
+    .replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|constructora|inmobiliaria|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${(cleanRazon || clean).toUpperCase()}`;
 
   const cached = ruesCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < RUES_CACHE_TTL_MS) {
@@ -320,99 +558,106 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
   }
 
   try {
-    // PASO 1: Búsqueda avanzada en Registro Mercantil (por NIT o por Razón Social)
+    // MOTOR 1: Endpoint directo ElasticSearch RUES (óptimo desde IP Colombia o proxy)
     let searchPayload: Record<string, any>;
     if (baseNit) {
       searchPayload = { nit: baseNit };
     } else {
-      const cleanRazon = clean
-        .replace(/\b(?:consultar|verificar|revisar|empresa|sociedad|constructora|inmobiliaria|en\s+rues|rues|nit|por\s+favor|hola|jania)\b/gi, " ")
-        .replace(/\s+/g, " ")
-        .trim();
       searchPayload = { razon: (cleanRazon || clean).toUpperCase() };
     }
 
     const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
     const registros: any[] = searchRes?.registros || [];
 
-    if (!Array.isArray(registros) || registros.length === 0) {
-      return null;
+    if (Array.isArray(registros) && registros.length > 0) {
+      const mainRecord = selectPrincipalRuesRecord(registros, baseNit || undefined);
+      if (mainRecord) {
+        const codCamara = String(mainRecord.cod_camara || "04").trim();
+        const matricula = String(mainRecord.matricula || "").trim();
+        const idRm = String(mainRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
+
+        const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
+          postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
+          postRuesEncrypted("/api/ConsultarVinculos", { IDRM: idRm }),
+          codCamara && matricula
+            ? postRuesEncrypted("/api/ConsultFacultadesXCamYMatricula", {
+                codigo_camara: codCamara,
+                matricula: matricula.padStart(10, "0")
+              })
+            : Promise.resolve(null)
+        ]);
+
+        const det = detalleRes?.registros || {};
+        const vinculosList: any[] = vinculosRes?.registros || [];
+        const facultadesHtml = typeof facultadesRes === "string" ? facultadesRes : "";
+
+        const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
+
+        const razonSocial = String(det.razon_social || mainRecord.razon_social || "").trim();
+        const nit = String(det.numero_identificacion || mainRecord.nit || baseNit).replace(/\D/g, "");
+        const dv = String(det.dv || mainRecord.dv || "").trim();
+        const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
+        const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogotá D.C." : formatTitleCase(camaraRaw);
+        const organizacionJuridica = formatOrganizacionJuridica(
+          String(mainRecord.organizacion_juridica || det.organizacion_juridica || "Sociedad Comercial").trim()
+        );
+        const categoria = String(mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL").trim();
+        const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
+        const ultimoAnoRenovado = String(
+          mainRecord.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
+        ).trim();
+
+        const ciiuPrincipalCodigo = String(det.cod_ciiu_act_econ_pri || "").trim() || undefined;
+        const ciiuPrincipalDescripcion =
+          String(det.desc_ciiu_act_econ_pri || "").trim() ||
+          (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : undefined);
+
+        const result: RuesCompanyDetail = {
+          found: true,
+          idRm,
+          nit,
+          dv,
+          razonSocial,
+          sigla: String(det.sigla || mainRecord.sigla || "").trim() || undefined,
+          organizacionJuridica,
+          categoria,
+          esSociedadPrincipal:
+            categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
+          codigoCamara: codCamara,
+          camaraComercio,
+          matricula: matricula.replace(/^0+/, "") || matricula,
+          estadoMatricula,
+          ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : undefined,
+          fechaMatricula: det.fecha_matricula || undefined,
+          fechaRenovacion: det.fecha_renovacion || undefined,
+          ciiuPrincipalCodigo,
+          ciiuPrincipalDescripcion,
+          representantePrincipal: classifiedReps.representantePrincipal,
+          representantesPrincipales: classifiedReps.principales,
+          representantesSuplentes: classifiedReps.suplentes,
+          todosRepresentantes: classifiedReps.todos,
+          source: "RUES — Registro Único Empresarial y Social (Confecámaras)"
+        };
+
+        ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
+        if (nit) {
+          ruesCache.set(`NIT:${nit}`, { data: result, timestamp: Date.now() });
+        }
+        return result;
+      }
     }
 
-    const mainRecord = selectPrincipalRuesRecord(registros, baseNit || undefined);
-    if (!mainRecord) return null;
-
-    const codCamara = String(mainRecord.cod_camara || "04").trim();
-    const matricula = String(mainRecord.matricula || "").trim();
-    const idRm = String(mainRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
-
-    // PASO 2: Extracción paralela de DetalleRM, Vínculos (Representantes Legales) y Facultades
-    const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
-      postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
-      postRuesEncrypted("/api/ConsultarVinculos", { IDRM: idRm }),
-      codCamara && matricula
-        ? postRuesEncrypted("/api/ConsultFacultadesXCamYMatricula", {
-            codigo_camara: codCamara,
-            matricula: matricula.padStart(10, "0")
-          })
-        : Promise.resolve(null)
-    ]);
-
-    const det = detalleRes?.registros || {};
-    const vinculosList: any[] = vinculosRes?.registros || [];
-    const facultadesHtml = typeof facultadesRes === "string" ? facultadesRes : "";
-
-    const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
-
-    const razonSocial = String(det.razon_social || mainRecord.razon_social || "").trim();
-    const nit = String(det.numero_identificacion || mainRecord.nit || baseNit).replace(/\D/g, "");
-    const dv = String(det.dv || mainRecord.dv || "").trim();
-    const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
-    const camaraComercio = formatTitleCase(camaraRaw);
-    const organizacionJuridica = formatTitleCase(
-      String(mainRecord.organizacion_juridica || det.organizacion_juridica || "Sociedad Comercial").trim()
-    );
-    const categoria = String(mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL").trim();
-    const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
-    const ultimoAnoRenovado = String(
-      mainRecord.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
-    ).trim();
-
-    const ciiuPrincipalCodigo = String(det.cod_ciiu_act_econ_pri || "").trim() || undefined;
-    const ciiuPrincipalDescripcion = String(det.desc_ciiu_act_econ_pri || "").trim() || undefined;
-
-    const result: RuesCompanyDetail = {
-      found: true,
-      idRm,
-      nit,
-      dv,
-      razonSocial,
-      sigla: String(det.sigla || mainRecord.sigla || "").trim() || undefined,
-      organizacionJuridica,
-      categoria,
-      esSociedadPrincipal:
-        categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
-      codigoCamara: codCamara,
-      camaraComercio,
-      matricula: matricula.replace(/^0+/, "") || matricula,
-      estadoMatricula,
-      ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : undefined,
-      fechaMatricula: det.fecha_matricula || undefined,
-      fechaRenovacion: det.fecha_renovacion || undefined,
-      ciiuPrincipalCodigo,
-      ciiuPrincipalDescripcion,
-      representantePrincipal: classifiedReps.representantePrincipal,
-      representantesPrincipales: classifiedReps.principales,
-      representantesSuplentes: classifiedReps.suplentes,
-      todosRepresentantes: classifiedReps.todos,
-      source: "RUES — Registro Único Empresarial y Social (Confecámaras)"
-    };
-
-    ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
-    if (nit) {
-      ruesCache.set(`NIT:${nit}`, { data: result, timestamp: Date.now() });
+    // MOTOR 2: Respaldo directo Socrata Datos Abiertos de Colombia (57 Cámaras de Comercio — 0 Geo-Block desde VPS)
+    const socrataResult = await queryDatosGovSocrataRues(baseNit, cleanRazon || clean);
+    if (socrataResult && socrataResult.found) {
+      ruesCache.set(cacheKey, { data: socrataResult, timestamp: Date.now() });
+      if (socrataResult.nit) {
+        ruesCache.set(`NIT:${socrataResult.nit}`, { data: socrataResult, timestamp: Date.now() });
+      }
+      return socrataResult;
     }
-    return result;
+
+    return null;
   } catch (_) {
     return null;
   }

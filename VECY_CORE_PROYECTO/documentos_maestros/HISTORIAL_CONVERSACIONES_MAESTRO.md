@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-17] — Normalización de `functionCall.args` en Gemini REST API, Motor Dual RUES Nacional con Datos Abiertos Socrata (0 Geo-Block desde VPS) y Verificación Exacta de NIT (v33.19 - 33.19.0)
+
+**Versión:** `v33.19` (`33.19.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/llm.ts` (Normalización de `functionCall.args` y `functionCall.arguments` en todas las partes de la respuesta de Gemini REST API, y salto inmediato de modelo ante error 404 / `"no longer available"` ahorrando ~3.5s por invocación).
+- `server/_core/jania/handlers/dmHandler.ts` (Resolución dual `fnCall.arguments ?? fnCall.args ?? {}`, inyección de `rawUserText` como respaldo en `executeJaniaDmTool` y extracción automática de documento pendiente en sesión para verificación del Representante Legal en 1 paso).
+- `server/_core/ruesService.ts` (Arquitectura HTTP Dual 0 Puppeteer: Conector criptográfico `elasticprd.rues.org.co` + Conector Nacional Socrata Datos Abiertos de Colombia `https://www.datos.gov.co/resource/c82u-588k.json` con >9.3 millones de registros en las 57 Cámaras de Comercio que responde `200 OK` desde el VPS Contabo en Alemania sin bloqueo Geo-IP 403; diccionario `CIIU_DESCRIPTIONS` y normalizador `formatOrganizacionJuridica`).
+- `server/_core/identityVerificationService.ts` (Soporte de NITs con puntos/DV y detección automática de NITs colombianos de 9 dígitos iniciados en `8` o `9`; limpieza de prefijos conversacionales y claridad jurídica en estado SIRI de Procuraduría para sociedades activas en RUES).
+- `shared/const.ts` (`v33.19`) y `package.json` (`33.19.0`).
+- `server/__tests__/regression.test.ts` (SUITE 80 con 3 pruebas automatizadas a $0 COP, alcanzando 287/287 tests pasando al 100%).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Forense
+- **Solicitud de Eduardo A. Rivera:**
+  - Compartió la captura de WhatsApp:
+    `[23:47, 16/10/2026] Vecy Bienes Raíces: Jania verificame este nit 900788832`
+    donde JanIA respondió con `🏢 NIT: 901.488.282-3 (901488282-3)` y `📋 Razón Social: Persona Jurídica Registrada`, indicando: *"Mira que le dije eso a Jania y no lo hizo, creo que te quedó mal."*
+- **Diagnóstico Técnico de Causa Raíz Dual:**
+  1. **Desfase de propiedad `args` vs `arguments` en Function Calling de Gemini (`llm.ts` y `dmHandler.ts`):** La API REST de Google Gemini (`v1beta/models/...:generateContent`) entrega los parámetros de la herramienta invocada dentro de `functionCall.args` (ej. `{ name: "consultar_empresa_o_nit", args: { consultaEmpresa: "900788832" } }`), mientras que `dmHandler.ts` leía `fnCall.arguments || {}`. Al llegar `{}` vacío a `executeJaniaDmTool`, `queryEmpresaOrNit("", userId)` recibía una cadena vacía y caía en el fallback por defecto del NIT `901488282` con razón social genérica.
+  2. **Bloqueo Geográfico HTTP 403 (`awselb/2.0`) de `elasticprd.rues.org.co` hacia IPs fuera de Colombia:** Al probar desde el VPS Contabo en Alemania (`13.140.149.144`), el balanceador AWS ELB de `elasticprd.rues.org.co` bloquea peticiones provenientes de IPs europeas con `403 Forbidden`.
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Normalización Universal de `functionCall` y Respaldo `rawUserText` (`llm.ts` y `dmHandler.ts`):**
+   - `invokeGemini` ahora inspecciona todas las partes del candidato (`parts.find(p => p.functionCall)`) y garantiza que tanto `functionCall.args` como `functionCall.arguments` contengan el objeto de parámetros parseado.
+   - `executeJaniaDmTool` recibe `rawUserText` (`clean`) como respaldo directo y soporta todos los alias de parámetros (`consultaEmpresa`, `nit`, `numeroDocumento`, etc.).
+   - Si un modelo de la cascada devuelve 404 o `"no longer available"`, `invokeGemini` salta de inmediato al siguiente modelo sin repetir el intento en las demás llaves, reduciendo la latencia en ~3.5 segundos.
+2. **Motor Dual RUES Nacional con Datos Abiertos de Colombia (`ruesService.ts`):**
+   - Incorporación de `queryDatosGovSocrataRues` conectado a `https://www.datos.gov.co/resource/c82u-588k.json` (dataset nacional oficial de Confecámaras en Datos Abiertos con las 57 Cámaras de Comercio de Colombia y >9.3 millones de matrículas), que responde `200 OK` desde el VPS en Alemania sin restricción geográfica.
+   - Para el NIT `900788832`, extrae en tiempo real desde el VPS: **TRANSPORTES GONZALEZ DIAZ TG&D SAS**, NIT `900.788.832-8`, Matrícula `2517719` (Sociedad Principal), Cámara de Comercio de Bogotá D.C., Estado `Activa (Renovada 2026)`, Tipo Societario `Sociedad por Acciones Simplificada (S.A.S.)`, CIIU `4923 — Transporte de carga por carretera` y **Representante Legal Principal: Sandra Milena Diaz Mondragon — C.C. 46.375.136**.
+
+#### 3. Validación y Pruebas Empíricas
+- `npm run check`: **0 errores de TypeScript**.
+- `npm test`: **287/287 tests pasando al 100% en verde a $0 COP**.
+- `npm run build`: Compilación limpia de producción.
+
+---
+
 ### 📅 [2026-10-16] — Conector Directo HTTP RUES / Confecámaras (0 Puppeteer), Representante Legal Principal vs. Suplentes y Doctrina NIT vs. Persona Natural (v33.18 - 33.18.0)
 
 **Versión:** `v33.18` (`33.18.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

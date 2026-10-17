@@ -6085,13 +6085,74 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.18 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.19 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.18");
+      expect(VECY_VERSION).toBe("v33.19");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.18.0");
+      expect(pkg.version).toBe("33.19.0");
+    });
+  });
+
+  describe("SUITE 80: Resolución de FunctionCall.args de Gemini, Respaldo Socrata RUES Nacional (0 Geo-Block VPS) y Detección de NIT 9 Dígitos (v33.19)", () => {
+    it("1. executeJaniaDmTool resuelve correctamente NIT '900788832' desde rawUserText o alias de argumentos sin caer jamás en el NIT 901488282", async () => {
+      const { executeJaniaDmTool } = await import("../_core/jania/handlers/dmHandler");
+      const userId = "225954035179724@lid";
+
+      // Caso 1: Gemini envía argumentos vacíos pero rawUserText contiene "Jania verificame este nit 900788832"
+      const res1 = await executeJaniaDmTool(
+        "consultar_empresa_o_nit",
+        {},
+        userId,
+        "Vecy Bienes Raíces",
+        "Jania verificame este nit 900788832"
+      );
+      expect(res1.toolType).toBe("empresa");
+      expect(res1.resultJson.reporteOficial).toContain("900.788.832-8");
+      expect(res1.resultJson.reporteOficial).not.toContain("901.488.282-3");
+
+      // Caso 2: Gemini invoca consultar_identidad_y_antecedentes con numeroDocumento: "900788832"
+      const res2 = await executeJaniaDmTool(
+        "consultar_identidad_y_antecedentes",
+        { numeroDocumento: "900788832" },
+        userId,
+        "Vecy Bienes Raíces",
+        "Jania verificame este nit 900788832"
+      );
+      expect(res2.resultJson.reporteOficial).toContain("900.788.832-8");
+      expect(res2.resultJson.reporteOficial).toContain("DATOS EMPRESARIALES (RUES / DIAN / CONFECÁMARAS)");
+    });
+
+    it("2. extractAllCedulasForVerification detecta NITs con puntos, con DV o de 9 dígitos iniciados en 8/9", async () => {
+      const { extractAllCedulasForVerification } = await import("../_core/identityVerificationService");
+
+      const items1 = extractAllCedulasForVerification("Jania verificame este nit 900788832", true);
+      expect(items1.length).toBe(1);
+      expect(items1[0].cedula).toBe("900788832");
+      expect(items1[0].tipoDoc).toBe("nit");
+
+      const items2 = extractAllCedulasForVerification("Verificar NIT 900.788.832-8", true);
+      expect(items2.length).toBe(1);
+      expect(items2[0].cedula).toBe("900788832");
+      expect(items2[0].tipoDoc).toBe("nit");
+
+      const items3 = extractAllCedulasForVerification("Verifícame el 900788832", true);
+      expect(items3.length).toBe(1);
+      expect(items3[0].cedula).toBe("900788832");
+      expect(items3[0].tipoDoc).toBe("nit");
+    });
+
+    it("3. formatOrganizacionJuridica y CIIU_DESCRIPTIONS normalizan tipos societarios y actividades económicas de Datos Abiertos RUES", async () => {
+      const { formatOrganizacionJuridica, CIIU_DESCRIPTIONS } = await import("../_core/ruesService");
+
+      expect(formatOrganizacionJuridica("SOCIEDADES POR ACCIONES SIMPLIFICADAS SAS")).toBe(
+        "Sociedad por Acciones Simplificada (S.A.S.)"
+      );
+      expect(formatOrganizacionJuridica("SOCIEDAD ANONIMA")).toBe("Sociedad Anónima (S.A.)");
+      expect(CIIU_DESCRIPTIONS["4923"]).toBe("Transporte de carga por carretera");
+      expect(CIIU_DESCRIPTIONS["6820"]).toContain("Actividades inmobiliarias");
     });
   });
 });
+

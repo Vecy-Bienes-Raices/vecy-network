@@ -220,11 +220,12 @@ export async function executeJaniaDmTool(
   toolName: string,
   args: Record<string, any>,
   userId: string,
-  _userName?: string
+  _userName?: string,
+  rawUserText?: string
 ): Promise<{ resultJson: Record<string, any>; toolType: JaniaDmToolType }> {
   switch (toolName) {
     case "consultar_matches_o_codigo": {
-      const query = String(args.consulta || "").trim();
+      const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
       const { executeAdminMatchSearch } = await import("../../adminMatchAssistantService");
       const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
       const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("167108705018103");
@@ -242,7 +243,7 @@ export async function executeJaniaDmTool(
     case "registrar_inmueble_o_requerimiento": {
       const { processWhatsAppMessage } = await import("./propertiesHandler");
       const res = await processWhatsAppMessage(
-        String(args.textoCompletoPublicacion || ""),
+        String(args.textoCompletoPublicacion || rawUserText || ""),
         userId,
         _userName,
         false,
@@ -262,10 +263,32 @@ export async function executeJaniaDmTool(
       };
     }
     case "consultar_identidad_y_antecedentes": {
-      const doc = String(args.numeroDocumento || "").trim();
-      const tipo = String(args.tipoDocumento || "CC").trim();
-      const queryStr = `${tipo} ${doc}`;
-      const { executeIdentityVerificationFromWhatsApp } = await import("../../identityVerificationService");
+      const {
+        executeIdentityVerificationFromWhatsApp,
+        getPendingUnconfirmedDoc,
+        clearPendingUnconfirmedDoc
+      } = await import("../../identityVerificationService");
+      let doc = String(args.numeroDocumento || args.cedula || args.nit || args.documento || "").trim();
+      let tipo = String(args.tipoDocumento || "CC").trim();
+
+      if (!/\d{5,12}/.test(doc)) {
+        const pendingDoc = getPendingUnconfirmedDoc(userId);
+        if (pendingDoc?.cleanNumber) {
+          doc = pendingDoc.cleanNumber;
+          clearPendingUnconfirmedDoc(userId);
+        } else if (rawUserText) {
+          doc = rawUserText;
+        }
+      }
+
+      const cleanDigits = doc.split("-")[0].replace(/\D/g, "");
+      if (cleanDigits.length === 9 && /^[89]\d{8}$/.test(cleanDigits)) {
+        tipo = "NIT";
+      } else if (rawUserText && /\bnit\b/i.test(rawUserText)) {
+        tipo = "NIT";
+      }
+
+      const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp(queryStr, true, userId);
       return {
         toolType: "cedula",
@@ -279,7 +302,7 @@ export async function executeJaniaDmTool(
       };
     }
     case "consultar_paz_y_salvo_idu": {
-      const chip = String(args.chip || "").trim();
+      const chip = String(args.chip || rawUserText || "").trim();
       const { executeIduValorizacionFromWhatsApp } = await import("../../iduValorizacionService");
       const res = await executeIduValorizacionFromWhatsApp(chip, userId, true);
       if (res.pdfBuffer) {
@@ -296,7 +319,7 @@ export async function executeJaniaDmTool(
       };
     }
     case "consultar_factura_predial_bogota": {
-      const chip = String(args.chip || "").trim();
+      const chip = String(args.chip || rawUserText || "").trim();
       const doc = args.documentoTitular ? String(args.documentoTitular).trim() : undefined;
       const { executePredialAssistanceFromWhatsApp } = await import("../../predialService");
       const queryStr = doc ? `${chip} ${doc}` : chip;
@@ -317,7 +340,8 @@ export async function executeJaniaDmTool(
     case "liquidar_gastos_notariales_y_registro": {
       const precio = Number(args.precioVenta || 0);
       const { executeNotarialAssistanceFromWhatsApp } = await import("../../notarialExpenseService");
-      const res = await executeNotarialAssistanceFromWhatsApp(`liquidación notarial ${precio}`, userId, true);
+      const queryText = precio > 0 ? `liquidación notarial ${precio}` : (rawUserText || "liquidación notarial");
+      const res = await executeNotarialAssistanceFromWhatsApp(queryText, userId, true);
       return {
         toolType: "notarial",
         resultJson: {
@@ -343,7 +367,17 @@ export async function executeJaniaDmTool(
       };
     }
     case "consultar_empresa_o_nit": {
-      const q = String(args.consultaEmpresa || args.nitORazonSocial || args.query || "").trim();
+      const q = String(
+        args.consultaEmpresa ||
+        args.nitORazonSocial ||
+        args.nit ||
+        args.numeroDocumento ||
+        args.empresa ||
+        args.razonSocial ||
+        args.query ||
+        rawUserText ||
+        ""
+      ).trim();
       const { queryEmpresaOrNit } = await import("../../identityVerificationService");
       const empRes = await queryEmpresaOrNit(q, userId);
       return {
@@ -952,11 +986,20 @@ export async function processPrivateDmConversationalMessage(
     let reply = "";
     const fnCall = llmRes.choices[0]?.message?.functionCall;
     if (fnCall && fnCall.name) {
+      let rawFnArgs = fnCall.arguments ?? fnCall.args ?? {};
+      if (typeof rawFnArgs === "string") {
+        try {
+          rawFnArgs = JSON.parse(rawFnArgs);
+        } catch (_) {
+          rawFnArgs = {};
+        }
+      }
       const toolExecution = await executeJaniaDmTool(
         fnCall.name,
-        fnCall.arguments || {},
+        rawFnArgs,
         userId,
-        userName || displayName || realName
+        userName || displayName || realName,
+        clean
       );
       reply = await synthesizeToolResponseWithGemini(
         userId,

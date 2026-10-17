@@ -156,8 +156,10 @@ async function invokeGemini(
   const totalAttempts = inTest ? 1 : Math.max(allKeys.length, 5);
 
   for (const currentModel of targetModels) {
+    let modelUnavailable = false;
     // Intentar a través de las claves del Pool (Nivel 1 Gratis -> Nivel 2 Pago de Emergencia)
     for (let keyAttempt = 0; keyAttempt < totalAttempts; keyAttempt++) {
+      if (modelUnavailable) break;
       const activeKeyInfo = geminiKeyManager.getActiveKey();
       const activeKey = activeKeyInfo.key;
       const keyNum = activeKeyInfo.index;
@@ -177,18 +179,34 @@ async function invokeGemini(
           const response = await axios.post(apiUrl, payload, { timeout: inTest ? 600 : 12000 });
 
           if (response.data.candidates && response.data.candidates[0]) {
-            const firstPart = response.data.candidates[0].content?.parts?.[0];
-            if (firstPart) {
-              if (firstPart.functionCall) {
-                return {
-                  choices: [{
-                    message: {
-                      content: JSON.stringify({ functionCall: firstPart.functionCall }),
-                      functionCall: firstPart.functionCall
-                    }
-                  }]
-                };
+            const parts: any[] = response.data.candidates[0].content?.parts || [];
+            const fnCallPart = parts.find((p: any) => p && p.functionCall);
+            const firstPart = parts[0];
+            if (fnCallPart && fnCallPart.functionCall) {
+              const rawFn = fnCallPart.functionCall;
+              let normalizedArgs = rawFn.args ?? rawFn.arguments ?? {};
+              if (typeof normalizedArgs === "string") {
+                try {
+                  normalizedArgs = JSON.parse(normalizedArgs);
+                } catch (_) {
+                  normalizedArgs = {};
+                }
               }
+              const normalizedFnCall = {
+                ...rawFn,
+                args: normalizedArgs,
+                arguments: normalizedArgs
+              };
+              return {
+                choices: [{
+                  message: {
+                    content: JSON.stringify({ functionCall: normalizedFnCall }),
+                    functionCall: normalizedFnCall
+                  }
+                }]
+              };
+            }
+            if (firstPart) {
               const text = firstPart.text;
               if (text && text.trim() !== '') {
                 return { choices: [{ message: { content: text } }] };
@@ -203,6 +221,13 @@ async function invokeGemini(
           lastError = error;
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
+
+          // Si el modelo fue retirado o no está disponible (404 / "no longer available"), pasar de inmediato al siguiente modelo sin gastar las demás claves
+          if (status === 404 || /no longer available|not found for API version|is not found/i.test(String(errorMsg || ""))) {
+            console.warn(`[JanIA-LLM] Modelo ${currentModel} no disponible (${errorMsg}). Conmutando inmediatamente al siguiente modelo.`);
+            modelUnavailable = true;
+            break;
+          }
 
           // 429: Rate Limit (15 RPM) o Cuota saturada en este modelo/clave
           if (status === 429) {

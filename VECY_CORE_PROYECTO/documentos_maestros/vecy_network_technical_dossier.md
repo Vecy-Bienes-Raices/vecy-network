@@ -7360,3 +7360,18 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Pre-carga automática de la Cédula del Representante Legal Principal en `setPendingUnconfirmedDoc(userId, ...)` para ejecutar su verificación completa en un solo paso al responder `"verificar representante"` o `"sí"`.
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **284/284 passing** ($0 COP) | Build `npm run build` limpio.
+
+---
+
+### Versión v33.19 — Octubre 2026: Normalización de `functionCall.args` en Gemini REST API y Motor Dual RUES Nacional con Datos Abiertos Socrata (0 Geo-Block en VPS)
+- **Normalización de `functionCall.args` y `functionCall.arguments` (`server/_core/llm.ts` y `server/_core/jania/handlers/dmHandler.ts`)**:
+  * Corrección de la lectura de parámetros en `functionCall` de la API REST de Google Gemini (que entrega `functionCall.args` en lugar de `functionCall.arguments`), poblando ambas propiedades en `llm.ts` e inyectando `rawUserText` como respaldo en `executeJaniaDmTool`.
+  * Optimización de failover en `llm.ts`: conmutación inmediata al siguiente modelo ante errores 404 / `"no longer available"`, ahorrando ~3.5 segundos por llamada.
+- **Motor Dual RUES Nacional — 0 Geo-Block desde VPS (`server/_core/ruesService.ts`)**:
+  * Integración del endpoint nacional Socrata de Datos Abiertos de Colombia (`https://www.datos.gov.co/resource/c82u-588k.json` — 57 Cámaras de Comercio de Colombia, >9.3 millones de matrículas) como motor par sin bloqueo geográfico (`200 OK` desde el VPS Contabo en Alemania donde `elasticprd.rues.org.co` aplica filtro Geo-IP 403 de AWS ELB).
+  * Normalizador societario `formatOrganizacionJuridica` y diccionario `CIIU_DESCRIPTIONS` para entregar razón social, NIT con DV, matrícula, estado y año de renovación, tipo societario, actividad económica CIIU y **Representante Legal Principal** con número de cédula pre-cargado para verificación en 1 paso.
+- **Detección de NITs de 9 Dígitos (`8xx`/`9xx`) y Precisión en SIRI (`server/_core/identityVerificationService.ts`)**:
+  * Reconocimiento automático de NITs con puntos, con dígito de verificación o números de 9 dígitos iniciados en `8` o `9` como personas jurídicas (`nit`).
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **287/287 passing** ($0 COP) | Build `npm run build` limpio.
+

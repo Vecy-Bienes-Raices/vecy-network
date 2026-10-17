@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.18";
+    VECY_VERSION = "v33.19";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1216,7 +1216,9 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
   const targetModels = inTest ? modelsToTry.slice(0, 1) : modelsToTry;
   const totalAttempts = inTest ? 1 : Math.max(allKeys.length, 5);
   for (const currentModel of targetModels) {
+    let modelUnavailable = false;
     for (let keyAttempt = 0; keyAttempt < totalAttempts; keyAttempt++) {
+      if (modelUnavailable) break;
       const activeKeyInfo = geminiKeyManager.getActiveKey();
       const activeKey = activeKeyInfo.key;
       const keyNum = activeKeyInfo.index;
@@ -1229,18 +1231,34 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
           const response = await axios2.post(apiUrl, payload, { timeout: inTest ? 600 : 12e3 });
           if (response.data.candidates && response.data.candidates[0]) {
-            const firstPart = response.data.candidates[0].content?.parts?.[0];
-            if (firstPart) {
-              if (firstPart.functionCall) {
-                return {
-                  choices: [{
-                    message: {
-                      content: JSON.stringify({ functionCall: firstPart.functionCall }),
-                      functionCall: firstPart.functionCall
-                    }
-                  }]
-                };
+            const parts = response.data.candidates[0].content?.parts || [];
+            const fnCallPart = parts.find((p) => p && p.functionCall);
+            const firstPart = parts[0];
+            if (fnCallPart && fnCallPart.functionCall) {
+              const rawFn = fnCallPart.functionCall;
+              let normalizedArgs = rawFn.args ?? rawFn.arguments ?? {};
+              if (typeof normalizedArgs === "string") {
+                try {
+                  normalizedArgs = JSON.parse(normalizedArgs);
+                } catch (_) {
+                  normalizedArgs = {};
+                }
               }
+              const normalizedFnCall = {
+                ...rawFn,
+                args: normalizedArgs,
+                arguments: normalizedArgs
+              };
+              return {
+                choices: [{
+                  message: {
+                    content: JSON.stringify({ functionCall: normalizedFnCall }),
+                    functionCall: normalizedFnCall
+                  }
+                }]
+              };
+            }
+            if (firstPart) {
               const text2 = firstPart.text;
               if (text2 && text2.trim() !== "") {
                 return { choices: [{ message: { content: text2 } }] };
@@ -1253,6 +1271,11 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           lastError = error;
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
+          if (status === 404 || /no longer available|not found for API version|is not found/i.test(String(errorMsg || ""))) {
+            console.warn(`[JanIA-LLM] Modelo ${currentModel} no disponible (${errorMsg}). Conmutando inmediatamente al siguiente modelo.`);
+            modelUnavailable = true;
+            break;
+          }
           if (status === 429) {
             geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturaci\xF3n de Modelo (429)");
             break;
@@ -19673,10 +19696,10 @@ function popLatestDmPdf(userId) {
   }
   return attachment;
 }
-async function executeJaniaDmTool(toolName, args, userId, _userName) {
+async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
   switch (toolName) {
     case "consultar_matches_o_codigo": {
-      const query = String(args.consulta || "").trim();
+      const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
       const { executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
       const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
       const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("167108705018103");
@@ -19694,7 +19717,7 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
     case "registrar_inmueble_o_requerimiento": {
       const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
       const res = await processWhatsAppMessage2(
-        String(args.textoCompletoPublicacion || ""),
+        String(args.textoCompletoPublicacion || rawUserText || ""),
         userId,
         _userName,
         false,
@@ -19714,10 +19737,29 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
       };
     }
     case "consultar_identidad_y_antecedentes": {
-      const doc = String(args.numeroDocumento || "").trim();
-      const tipo = String(args.tipoDocumento || "CC").trim();
-      const queryStr = `${tipo} ${doc}`;
-      const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const {
+        executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
+        getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
+        clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2
+      } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      let doc = String(args.numeroDocumento || args.cedula || args.nit || args.documento || "").trim();
+      let tipo = String(args.tipoDocumento || "CC").trim();
+      if (!/\d{5,12}/.test(doc)) {
+        const pendingDoc = getPendingUnconfirmedDoc2(userId);
+        if (pendingDoc?.cleanNumber) {
+          doc = pendingDoc.cleanNumber;
+          clearPendingUnconfirmedDoc2(userId);
+        } else if (rawUserText) {
+          doc = rawUserText;
+        }
+      }
+      const cleanDigits = doc.split("-")[0].replace(/\D/g, "");
+      if (cleanDigits.length === 9 && /^[89]\d{8}$/.test(cleanDigits)) {
+        tipo = "NIT";
+      } else if (rawUserText && /\bnit\b/i.test(rawUserText)) {
+        tipo = "NIT";
+      }
+      const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
       return {
         toolType: "cedula",
@@ -19731,7 +19773,7 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
       };
     }
     case "consultar_paz_y_salvo_idu": {
-      const chip = String(args.chip || "").trim();
+      const chip = String(args.chip || rawUserText || "").trim();
       const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
       const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
       if (res.pdfBuffer) {
@@ -19748,7 +19790,7 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
       };
     }
     case "consultar_factura_predial_bogota": {
-      const chip = String(args.chip || "").trim();
+      const chip = String(args.chip || rawUserText || "").trim();
       const doc = args.documentoTitular ? String(args.documentoTitular).trim() : void 0;
       const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
       const queryStr = doc ? `${chip} ${doc}` : chip;
@@ -19769,7 +19811,8 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
     case "liquidar_gastos_notariales_y_registro": {
       const precio = Number(args.precioVenta || 0);
       const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
-      const res = await executeNotarialAssistanceFromWhatsApp2(`liquidaci\xF3n notarial ${precio}`, userId, true);
+      const queryText = precio > 0 ? `liquidaci\xF3n notarial ${precio}` : rawUserText || "liquidaci\xF3n notarial";
+      const res = await executeNotarialAssistanceFromWhatsApp2(queryText, userId, true);
       return {
         toolType: "notarial",
         resultJson: {
@@ -19795,7 +19838,9 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
       };
     }
     case "consultar_empresa_o_nit": {
-      const q = String(args.consultaEmpresa || args.nitORazonSocial || args.query || "").trim();
+      const q = String(
+        args.consultaEmpresa || args.nitORazonSocial || args.nit || args.numeroDocumento || args.empresa || args.razonSocial || args.query || rawUserText || ""
+      ).trim();
       const { queryEmpresaOrNit: queryEmpresaOrNit2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
       const empRes = await queryEmpresaOrNit2(q, userId);
       return {
@@ -20285,11 +20330,20 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
     let reply = "";
     const fnCall = llmRes.choices[0]?.message?.functionCall;
     if (fnCall && fnCall.name) {
+      let rawFnArgs = fnCall.arguments ?? fnCall.args ?? {};
+      if (typeof rawFnArgs === "string") {
+        try {
+          rawFnArgs = JSON.parse(rawFnArgs);
+        } catch (_) {
+          rawFnArgs = {};
+        }
+      }
       const toolExecution = await executeJaniaDmTool(
         fnCall.name,
-        fnCall.arguments || {},
+        rawFnArgs,
         userId,
-        userName || displayName || realName
+        userName || displayName || realName,
+        clean
       );
       reply = await synthesizeToolResponseWithGemini(
         userId,
@@ -25174,12 +25228,42 @@ function cleanAndFormatDocNumber(rawDoc) {
   const formatted = Number(digits).toLocaleString("es-CO");
   return { clean: digits, formatted };
 }
-async function postRuesEncrypted(path14, payload, timeoutMs = 6500) {
+function formatOrganizacionJuridica(raw) {
+  const upper = (raw || "").toUpperCase().trim();
+  if (!upper) return "Sociedad Comercial";
+  if (upper.includes("SIMPLIFICADA") || upper.includes("S.A.S") || /\bSAS\b/.test(upper)) {
+    return "Sociedad por Acciones Simplificada (S.A.S.)";
+  }
+  if (upper.includes("ANONIMA") || upper.includes("AN\xD3NIMA")) {
+    return "Sociedad An\xF3nima (S.A.)";
+  }
+  if (upper.includes("LIMITADA") || upper.includes("LTDA")) {
+    return "Sociedad Limitada (LTDA.)";
+  }
+  if (upper.includes("COMANDITA POR ACCIONES")) {
+    return "Sociedad en Comandita por Acciones (S.C.A.)";
+  }
+  if (upper.includes("COMANDITA SIMPLE")) {
+    return "Sociedad en Comandita Simple (S. en C.)";
+  }
+  if (upper.includes("UNIPERSONAL")) {
+    return "Empresa Unipersonal (E.U.)";
+  }
+  if (upper.includes("SIN ANIMO DE LUCRO") || upper.includes("ESAL")) {
+    return "Entidad Sin \xC1nimo de Lucro (ESAL)";
+  }
+  return formatTitleCase(raw);
+}
+async function postRuesEncrypted(path14, payload, timeoutMs = 5e3) {
+  if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
+    return null;
+  }
+  const baseUrl = process.env.RUES_PROXY_URL || RUES_ELASTIC_BASE_URL;
   const encryptedBody = encryptRuesPayload(payload);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${RUES_ELASTIC_BASE_URL}${path14}`, {
+    const res = await fetch(`${baseUrl}${path14}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -25192,6 +25276,10 @@ async function postRuesEncrypted(path14, payload, timeoutMs = 6500) {
       body: JSON.stringify({ dataBody: encryptedBody }),
       signal: controller.signal
     });
+    if (res.status === 403) {
+      elasticGeoBlockedUntil = Date.now() + 15 * 60 * 1e3;
+      return null;
+    }
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
@@ -25211,8 +25299,9 @@ function selectPrincipalRuesRecord(registros, targetNit) {
     const cat = String(reg.categoria || reg.categoria_matricula || "").toUpperCase();
     const est = String(reg.estado_matricula || "").toUpperCase();
     const org = String(reg.organizacion_juridica || "").toUpperCase();
-    const regNit = String(reg.nit || "").replace(/\D/g, "");
-    if (targetNit && regNit === targetNit) score += 100;
+    const regNit = String(reg.nit || reg.numero_identificacion || "").replace(/\D/g, "").replace(/^0+/, "");
+    const cleanTargetNit = (targetNit || "").replace(/\D/g, "").replace(/^0+/, "");
+    if (cleanTargetNit && regNit === cleanTargetNit) score += 100;
     if (cat.includes("SOCIEDAD") || cat.includes("PRINCIPAL") || cat.includes("PERSONA JURIDICA")) {
       score += 50;
     }
@@ -25222,6 +25311,7 @@ function selectPrincipalRuesRecord(registros, targetNit) {
     if (est === "ACTIVA") score += 25;
     if (org && !org.includes("ESTABLECIMIENTO")) score += 10;
     if (Number(reg.ultimo_ano_renovado || 0) >= 2024) score += 10;
+    if (reg.representante_legal || reg.num_identificacion_representante_legal) score += 15;
     return { reg, score };
   });
   scored.sort((a, b) => b.score - a.score);
@@ -25303,12 +25393,123 @@ function classifyRepresentantesLegales(vinculosRaw, facultadesHtml) {
     todos
   };
 }
+async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    let registros = [];
+    if (baseNit) {
+      const cleanDigits = baseNit.replace(/\D/g, "").replace(/^0+/, "");
+      const [byNumIdRes, byNitRes] = await Promise.all([
+        fetch(`${RUES_SOCRATA_URL}?numero_identificacion=${encodeURIComponent(cleanDigits)}&$limit=15`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal
+        }).catch(() => null),
+        fetch(`${RUES_SOCRATA_URL}?nit=${encodeURIComponent(cleanDigits)}&$limit=15`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal
+        }).catch(() => null)
+      ]);
+      const listA = byNumIdRes && byNumIdRes.ok ? await byNumIdRes.json().catch(() => []) : [];
+      const listB = byNitRes && byNitRes.ok ? await byNitRes.json().catch(() => []) : [];
+      registros = [...Array.isArray(listA) ? listA : [], ...Array.isArray(listB) ? listB : []];
+    } else if (cleanRazon && cleanRazon.length >= 3) {
+      const safeRazon = cleanRazon.toUpperCase().replace(/'/g, "''");
+      const whereClause = `upper(razon_social) like '%${safeRazon}%'`;
+      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=15`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal
+      }).catch(() => null);
+      if (res && res.ok) {
+        const list = await res.json().catch(() => []);
+        if (Array.isArray(list)) registros = list;
+      }
+    }
+    if (!Array.isArray(registros) || registros.length === 0) {
+      return null;
+    }
+    const mainRecord = selectPrincipalRuesRecord(registros, baseNit || void 0);
+    if (!mainRecord) return null;
+    const codCamara = String(mainRecord.codigo_camara || mainRecord.cod_camara || "04").trim();
+    const matricula = String(mainRecord.matricula || "").trim();
+    const idRm = buildRuesIdRm(codCamara, matricula);
+    const razonSocial = String(mainRecord.razon_social || "").trim();
+    if (!razonSocial) return null;
+    const nit = String(mainRecord.nit || mainRecord.numero_identificacion || baseNit).replace(/\D/g, "").replace(/^0+/, "");
+    const dv = String(mainRecord.digito_verificacion || mainRecord.dv || "").trim();
+    const camaraRaw = String(mainRecord.camara_comercio || mainRecord.nom_camara || "BOGOTA").trim();
+    const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogot\xE1 D.C." : formatTitleCase(camaraRaw);
+    const organizacionJuridica = formatOrganizacionJuridica(
+      String(mainRecord.organizacion_juridica || mainRecord.tipo_sociedad || "Sociedad Comercial")
+    );
+    const categoria = String(mainRecord.categoria_matricula || mainRecord.categoria || "SOCIEDAD \xF3 PERSONA JURIDICA PRINCIPAL").trim();
+    const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || "ACTIVA").trim());
+    const ultimoAnoRenovado = String(
+      mainRecord.ultimo_ano_renovado || (mainRecord.fecha_renovacion ? String(mainRecord.fecha_renovacion).slice(0, 4) : "")
+    ).trim();
+    const ciiuPrincipalCodigo = String(mainRecord.cod_ciiu_act_econ_pri || "").trim() || void 0;
+    const ciiuPrincipalDescripcion = ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : void 0;
+    const repNameRaw = String(mainRecord.representante_legal || "").trim();
+    const repDocRaw = String(mainRecord.num_identificacion_representante_legal || "").trim();
+    const repClaseRaw = String(mainRecord.clase_identificacion_rl || "").toUpperCase();
+    const { clean: cleanRepDoc, formatted: formattedRepDoc } = cleanAndFormatDocNumber(repDocRaw);
+    let representantePrincipal;
+    const representantesPrincipales = [];
+    if (repNameRaw) {
+      const tipoDocRep = repClaseRaw.includes("EXTRANJER") ? "C.E." : repClaseRaw.includes("PASAPORTE") ? "Pasaporte" : "C.C.";
+      representantePrincipal = {
+        nombre: formatTitleCase(repNameRaw),
+        numeroIdentificacion: cleanRepDoc,
+        numeroFormateado: formattedRepDoc || cleanRepDoc,
+        tipoDocumento: tipoDocRep,
+        cargo: "Representante Legal Principal",
+        tipoVinculoRaw: "Representante Legal - Principal",
+        esPrincipal: true,
+        advertenciaFacultades: "Titular con plenas facultades legales y estatutarias para obligar a la sociedad."
+      };
+      representantesPrincipales.push(representantePrincipal);
+    }
+    return {
+      found: true,
+      idRm,
+      nit,
+      dv,
+      razonSocial,
+      sigla: String(mainRecord.sigla || "").trim() || void 0,
+      organizacionJuridica,
+      categoria,
+      esSociedadPrincipal: categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
+      codigoCamara: codCamara,
+      camaraComercio,
+      matricula: matricula.replace(/^0+/, "") || matricula,
+      estadoMatricula,
+      ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : void 0,
+      fechaMatricula: mainRecord.fecha_matricula || void 0,
+      fechaRenovacion: mainRecord.fecha_renovacion || void 0,
+      ciiuPrincipalCodigo,
+      ciiuPrincipalDescripcion,
+      representantePrincipal,
+      representantesPrincipales,
+      representantesSuplentes: [],
+      todosRepresentantes: representantesPrincipales,
+      source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras / Datos Abiertos)"
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 async function queryRuesDirectHttp(query) {
   const clean = (query || "").trim();
   if (!clean) return null;
   const digitsMatch = clean.match(/\b(\d{7,10})(?:-\d)?\b/);
-  const baseNit = digitsMatch ? digitsMatch[1] : "";
-  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${clean.toUpperCase()}`;
+  let baseNit = digitsMatch ? digitsMatch[1] : "";
+  if (baseNit.length === 10 && /^[89]/.test(baseNit)) {
+    baseNit = baseNit.slice(0, 9);
+  }
+  const cleanRazon = clean.replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|constructora|inmobiliaria|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ").replace(/\s+/g, " ").trim();
+  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${(cleanRazon || clean).toUpperCase()}`;
   const cached = ruesCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < RUES_CACHE_TTL_MS) {
     return cached.data;
@@ -25321,81 +25522,89 @@ async function queryRuesDirectHttp(query) {
     if (baseNit) {
       searchPayload = { nit: baseNit };
     } else {
-      const cleanRazon = clean.replace(/\b(?:consultar|verificar|revisar|empresa|sociedad|constructora|inmobiliaria|en\s+rues|rues|nit|por\s+favor|hola|jania)\b/gi, " ").replace(/\s+/g, " ").trim();
       searchPayload = { razon: (cleanRazon || clean).toUpperCase() };
     }
     const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
     const registros = searchRes?.registros || [];
-    if (!Array.isArray(registros) || registros.length === 0) {
-      return null;
+    if (Array.isArray(registros) && registros.length > 0) {
+      const mainRecord = selectPrincipalRuesRecord(registros, baseNit || void 0);
+      if (mainRecord) {
+        const codCamara = String(mainRecord.cod_camara || "04").trim();
+        const matricula = String(mainRecord.matricula || "").trim();
+        const idRm = String(mainRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
+        const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
+          postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
+          postRuesEncrypted("/api/ConsultarVinculos", { IDRM: idRm }),
+          codCamara && matricula ? postRuesEncrypted("/api/ConsultFacultadesXCamYMatricula", {
+            codigo_camara: codCamara,
+            matricula: matricula.padStart(10, "0")
+          }) : Promise.resolve(null)
+        ]);
+        const det = detalleRes?.registros || {};
+        const vinculosList = vinculosRes?.registros || [];
+        const facultadesHtml = typeof facultadesRes === "string" ? facultadesRes : "";
+        const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
+        const razonSocial = String(det.razon_social || mainRecord.razon_social || "").trim();
+        const nit = String(det.numero_identificacion || mainRecord.nit || baseNit).replace(/\D/g, "");
+        const dv = String(det.dv || mainRecord.dv || "").trim();
+        const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
+        const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogot\xE1 D.C." : formatTitleCase(camaraRaw);
+        const organizacionJuridica = formatOrganizacionJuridica(
+          String(mainRecord.organizacion_juridica || det.organizacion_juridica || "Sociedad Comercial").trim()
+        );
+        const categoria = String(mainRecord.categoria || "SOCIEDAD \xF3 PERSONA JURIDICA PRINCIPAL").trim();
+        const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
+        const ultimoAnoRenovado = String(
+          mainRecord.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
+        ).trim();
+        const ciiuPrincipalCodigo = String(det.cod_ciiu_act_econ_pri || "").trim() || void 0;
+        const ciiuPrincipalDescripcion = String(det.desc_ciiu_act_econ_pri || "").trim() || (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : void 0);
+        const result = {
+          found: true,
+          idRm,
+          nit,
+          dv,
+          razonSocial,
+          sigla: String(det.sigla || mainRecord.sigla || "").trim() || void 0,
+          organizacionJuridica,
+          categoria,
+          esSociedadPrincipal: categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
+          codigoCamara: codCamara,
+          camaraComercio,
+          matricula: matricula.replace(/^0+/, "") || matricula,
+          estadoMatricula,
+          ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : void 0,
+          fechaMatricula: det.fecha_matricula || void 0,
+          fechaRenovacion: det.fecha_renovacion || void 0,
+          ciiuPrincipalCodigo,
+          ciiuPrincipalDescripcion,
+          representantePrincipal: classifiedReps.representantePrincipal,
+          representantesPrincipales: classifiedReps.principales,
+          representantesSuplentes: classifiedReps.suplentes,
+          todosRepresentantes: classifiedReps.todos,
+          source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras)"
+        };
+        ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
+        if (nit) {
+          ruesCache.set(`NIT:${nit}`, { data: result, timestamp: Date.now() });
+        }
+        return result;
+      }
     }
-    const mainRecord = selectPrincipalRuesRecord(registros, baseNit || void 0);
-    if (!mainRecord) return null;
-    const codCamara = String(mainRecord.cod_camara || "04").trim();
-    const matricula = String(mainRecord.matricula || "").trim();
-    const idRm = String(mainRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
-    const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
-      postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
-      postRuesEncrypted("/api/ConsultarVinculos", { IDRM: idRm }),
-      codCamara && matricula ? postRuesEncrypted("/api/ConsultFacultadesXCamYMatricula", {
-        codigo_camara: codCamara,
-        matricula: matricula.padStart(10, "0")
-      }) : Promise.resolve(null)
-    ]);
-    const det = detalleRes?.registros || {};
-    const vinculosList = vinculosRes?.registros || [];
-    const facultadesHtml = typeof facultadesRes === "string" ? facultadesRes : "";
-    const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
-    const razonSocial = String(det.razon_social || mainRecord.razon_social || "").trim();
-    const nit = String(det.numero_identificacion || mainRecord.nit || baseNit).replace(/\D/g, "");
-    const dv = String(det.dv || mainRecord.dv || "").trim();
-    const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
-    const camaraComercio = formatTitleCase(camaraRaw);
-    const organizacionJuridica = formatTitleCase(
-      String(mainRecord.organizacion_juridica || det.organizacion_juridica || "Sociedad Comercial").trim()
-    );
-    const categoria = String(mainRecord.categoria || "SOCIEDAD \xF3 PERSONA JURIDICA PRINCIPAL").trim();
-    const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
-    const ultimoAnoRenovado = String(
-      mainRecord.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
-    ).trim();
-    const ciiuPrincipalCodigo = String(det.cod_ciiu_act_econ_pri || "").trim() || void 0;
-    const ciiuPrincipalDescripcion = String(det.desc_ciiu_act_econ_pri || "").trim() || void 0;
-    const result = {
-      found: true,
-      idRm,
-      nit,
-      dv,
-      razonSocial,
-      sigla: String(det.sigla || mainRecord.sigla || "").trim() || void 0,
-      organizacionJuridica,
-      categoria,
-      esSociedadPrincipal: categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
-      codigoCamara: codCamara,
-      camaraComercio,
-      matricula: matricula.replace(/^0+/, "") || matricula,
-      estadoMatricula,
-      ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : void 0,
-      fechaMatricula: det.fecha_matricula || void 0,
-      fechaRenovacion: det.fecha_renovacion || void 0,
-      ciiuPrincipalCodigo,
-      ciiuPrincipalDescripcion,
-      representantePrincipal: classifiedReps.representantePrincipal,
-      representantesPrincipales: classifiedReps.principales,
-      representantesSuplentes: classifiedReps.suplentes,
-      todosRepresentantes: classifiedReps.todos,
-      source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras)"
-    };
-    ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
-    if (nit) {
-      ruesCache.set(`NIT:${nit}`, { data: result, timestamp: Date.now() });
+    const socrataResult = await queryDatosGovSocrataRues(baseNit, cleanRazon || clean);
+    if (socrataResult && socrataResult.found) {
+      ruesCache.set(cacheKey, { data: socrataResult, timestamp: Date.now() });
+      if (socrataResult.nit) {
+        ruesCache.set(`NIT:${socrataResult.nit}`, { data: socrataResult, timestamp: Date.now() });
+      }
+      return socrataResult;
     }
-    return result;
+    return null;
   } catch (_) {
     return null;
   }
 }
-var RUES_ELASTIC_BASE_URL, RUES_AES_PASSPHRASE, RUES_CACHE_TTL_MS, ruesCache;
+var RUES_ELASTIC_BASE_URL, RUES_AES_PASSPHRASE, RUES_CACHE_TTL_MS, ruesCache, RUES_SOCRATA_URL, elasticGeoBlockedUntil, CIIU_DESCRIPTIONS;
 var init_ruesService = __esm({
   "server/_core/ruesService.ts"() {
     "use strict";
@@ -25404,6 +25613,64 @@ var init_ruesService = __esm({
     RUES_AES_PASSPHRASE = "qwerty";
     RUES_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
     ruesCache = /* @__PURE__ */ new Map();
+    RUES_SOCRATA_URL = "https://www.datos.gov.co/resource/c82u-588k.json";
+    elasticGeoBlockedUntil = 0;
+    CIIU_DESCRIPTIONS = {
+      "1103": "Producci\xF3n de malta, elaboraci\xF3n de cervezas y otras bebidas malteadas",
+      "4111": "Construcci\xF3n de edificios residenciales",
+      "4112": "Construcci\xF3n de edificios no residenciales",
+      "4210": "Construcci\xF3n de carreteras y v\xEDas de ferrocarril",
+      "4220": "Construcci\xF3n de proyectos de servicio p\xFAblico",
+      "4290": "Construcci\xF3n de otras obras de ingenier\xEDa civil",
+      "4311": "Demolici\xF3n",
+      "4312": "Preparaci\xF3n del terreno",
+      "4321": "Instalaciones el\xE9ctricas",
+      "4322": "Instalaciones de fontaner\xEDa, calefacci\xF3n y aire acondicionado",
+      "4330": "Terminaci\xF3n y acabado de edificios y obras de ingenier\xEDa civil",
+      "4390": "Otras actividades especializadas para la construcci\xF3n de edificios y obras de ingenier\xEDa civil",
+      "4511": "Comercio de veh\xEDculos automotores nuevos",
+      "4512": "Comercio de veh\xEDculos automotores usados",
+      "4610": "Comercio al por mayor a cambio de una retribuci\xF3n o por contrata",
+      "4663": "Comercio al por mayor de materiales de construcci\xF3n, art\xEDculos de ferreter\xEDa, pinturas y productos de vidrio",
+      "4690": "Comercio al por mayor no especializado",
+      "4711": "Comercio al por menor en establecimientos no especializados con surtido compuesto principalmente por alimentos",
+      "4752": "Comercio al por menor de art\xEDculos de ferreter\xEDa, pinturas y productos de vidrio",
+      "4921": "Transporte de pasajeros",
+      "4922": "Transporte mixto",
+      "4923": "Transporte de carga por carretera",
+      "5210": "Almacenamiento y dep\xF3sito",
+      "5229": "Otras actividades complementarias al transporte",
+      "5511": "Alojamiento en hoteles",
+      "5519": "Otros tipos de alojamientos para visitantes",
+      "5611": "Expendio a la mesa de comidas preparadas",
+      "6201": "Actividades de desarrollo de sistemas inform\xE1ticos (planificaci\xF3n, an\xE1lisis, dise\xF1o, programaci\xF3n, pruebas)",
+      "6202": "Actividades de consultor\xEDa inform\xE1tica y actividades de administraci\xF3n de instalaciones inform\xE1ticas",
+      "6311": "Procesamiento de datos, alojamiento (hosting) y actividades relacionadas",
+      "6412": "Bancos comerciales",
+      "6492": "Actividades financieras de fondos de empleados y otras formas asociativas del sector solidario",
+      "6499": "Otras actividades de servicio financiero, excepto las de seguros y pensiones n.c.p.",
+      "6619": "Otras actividades auxiliares de las actividades de servicios financieros n.c.p.",
+      "6810": "Actividades inmobiliarias realizadas con bienes propios o arrendados",
+      "6820": "Actividades inmobiliarias realizadas a cambio de una retribuci\xF3n o por contrata",
+      "6910": "Actividades jur\xEDdicas",
+      "6920": "Actividades de contabilidad, tenedur\xEDa de libros, auditor\xEDa financiera y asesor\xEDa tributaria",
+      "7010": "Actividades de administraci\xF3n empresarial",
+      "7020": "Actividades de consultor\xEDa de gesti\xF3n",
+      "7111": "Actividades de arquitectura",
+      "7112": "Actividades de ingenier\xEDa y otras actividades conexas de consultor\xEDa t\xE9cnica",
+      "7310": "Publicidad",
+      "7490": "Otras actividades profesionales, cient\xEDficas y t\xE9cnicas n.c.p.",
+      "7710": "Alquiler y arrendamiento de veh\xEDculos automotores",
+      "7730": "Alquiler y arrendamiento de otros tipos de maquinaria, equipo y bienes tangibles n.c.p.",
+      "8010": "Actividades de seguridad privada",
+      "8110": "Actividades combinadas de apoyo a instalaciones",
+      "8211": "Actividades combinadas de servicios administrativos de oficina",
+      "8299": "Otras actividades de servicio de apoyo a las empresas n.c.p.",
+      "8544": "Educaci\xF3n superior",
+      "8610": "Actividades de hospitales y cl\xEDnicas, con internaci\xF3n",
+      "8621": "Actividades de la pr\xE1ctica m\xE9dica, sin internaci\xF3n",
+      "9499": "Actividades de otras asociaciones n.c.p."
+    };
   }
 });
 
@@ -26024,12 +26291,19 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
   const docPatterns = [
     { type: "pep", regex: /(?:pep|permiso\s+especial\s+de\s+permanencia)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{10,18})/gi, sanitize: (s) => s.toUpperCase() },
     { type: "ppt", regex: /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
-    { type: "nit", regex: /(?:nit)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{4,12})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    {
+      type: "nit",
+      regex: /(?:nit)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|es|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){2}(?:-[0-9])?|[0-9]{7,10}(?:-[0-9])?|[0-9]{4,12})/gi,
+      sanitize: (s) => {
+        const base = s.split("-")[0].replace(/\D/g, "");
+        return base.length === 10 && /^[89]/.test(base) ? base.slice(0, 9) : base;
+      }
+    },
     { type: "dp", regex: /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s) => s.toUpperCase() },
     { type: "pa", regex: /(?:pasaporte|pa)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s) => s.toUpperCase() },
     { type: "cx", regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
     { type: "cc", regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
-    { type: "cc", regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") }
+    { type: "cc", regex: /(?:verificar|verificaci[oó]n|verif[ií]came|validar|consultar|cons[uú]ltame|revisar|rev[ií]same|antecedentes)\s*(?:sus|los|el|este|esta)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") }
   ];
   function isMonetaryContext(text3, matchIndex, matchLength) {
     const prefix = text3.substring(Math.max(0, matchIndex - 25), matchIndex);
@@ -26054,6 +26328,7 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
         const ced = pat.sanitize(raw);
         if (pat.type === "cc" && (ced.length < 5 || ced.length > 10)) continue;
         if (pat.type === "cx" && (ced.length < 4 || ced.length > 10)) continue;
+        const resolvedType = pat.type === "cc" && ced.length === 9 && /^[89]\d{8}$/.test(ced) ? "nit" : pat.type;
         let detectedName;
         const lineBeforeDoc = line.substring(lastMatchEnd, m.index).trim();
         if (lineBeforeDoc) {
@@ -26061,7 +26336,7 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
         } else if (i > 0) {
           detectedName = cleanPotentialPersonName(lines[i - 1]);
         }
-        items.push({ cedula: ced, tipoDoc: pat.type, rawNumber: raw, detectedName });
+        items.push({ cedula: ced, tipoDoc: resolvedType, rawNumber: raw, detectedName });
         lastMatchEnd = pat.regex.lastIndex;
       }
     }
@@ -26076,7 +26351,12 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
         if (isMonetaryContext(clean, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = raw.replace(/\D/g, "");
-        if (ced.length === 9) continue;
+        if (ced.length === 9) {
+          if (/^[89]\d{8}$/.test(ced) && !/00000$/.test(ced)) {
+            items.push({ cedula: ced, tipoDoc: "nit", rawNumber: raw });
+          }
+          continue;
+        }
         if (ced.length >= 5 && ced.length <= 10) {
           items.push({ cedula: ced, tipoDoc: "cc", rawNumber: raw });
         }
@@ -26310,20 +26590,26 @@ function formatCompactIdentityVerificationReport(params) {
 }
 async function queryEmpresaOrNit(query, userId) {
   const clean = (query || "").trim();
-  const digitsMatch = clean.match(/\b\d{7,10}(?:-\d)?\b/);
+  const digitsMatch = clean.match(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-\d)?\b/);
   let baseNit = "";
   let providedDv = "";
   if (digitsMatch) {
     const rawDigits = digitsMatch[0];
     if (rawDigits.includes("-")) {
       const parts = rawDigits.split("-");
-      baseNit = parts[0];
-      providedDv = parts[1];
+      baseNit = parts[0].replace(/\D/g, "");
+      providedDv = parts[1].replace(/\D/g, "");
     } else {
-      baseNit = rawDigits;
+      const onlyDigits = rawDigits.replace(/\D/g, "");
+      if (onlyDigits.length === 10 && /^[89]/.test(onlyDigits)) {
+        baseNit = onlyDigits.slice(0, 9);
+        providedDv = onlyDigits.slice(9);
+      } else {
+        baseNit = onlyDigits;
+      }
     }
   }
-  const ruesLive = await queryRuesDirectHttp(clean).catch(() => null);
+  const ruesLive = await queryRuesDirectHttp(baseNit || clean).catch(() => null);
   let razonSocial = "";
   let camaraComercio = "C\xE1mara de Comercio de Bogot\xE1";
   let ciudad = "Bogot\xE1 D.C.";
@@ -26336,7 +26622,7 @@ async function queryEmpresaOrNit(query, userId) {
   if (ruesLive && ruesLive.found) {
     baseNit = ruesLive.nit || baseNit;
     razonSocial = ruesLive.razonSocial;
-    camaraComercio = `C\xE1mara de Comercio de ${ruesLive.camaraComercio}`;
+    camaraComercio = ruesLive.camaraComercio.toLowerCase().includes("c\xE1mara") ? ruesLive.camaraComercio : `C\xE1mara de Comercio de ${ruesLive.camaraComercio}`;
     ciudad = ruesLive.camaraComercio;
     estado = ruesLive.ultimoAnoRenovado ? `${ruesLive.estadoMatricula} (Renovada ${ruesLive.ultimoAnoRenovado})` : ruesLive.estadoMatricula;
     matricula = ruesLive.matricula;
@@ -26437,8 +26723,8 @@ async function queryEmpresaOrNit(query, userId) {
       ciudad = "Bogot\xE1 D.C.";
       estado = "Activa (Renovada 2026)";
       organizacionJuridica = "Sociedad An\xF3nima S.A.";
-    } else if (lowerQuery.includes("amarilo") || baseNit === "800192314") {
-      baseNit = baseNit || "800192314";
+    } else if (lowerQuery.includes("amarilo") || baseNit === "800192314" || baseNit === "800185295") {
+      baseNit = baseNit || "800185295";
       razonSocial = "AMARILO S.A.S.";
       camaraComercio = "C\xE1mara de Comercio de Bogot\xE1";
       ciudad = "Bogot\xE1 D.C.";
@@ -26454,14 +26740,14 @@ async function queryEmpresaOrNit(query, userId) {
       organizacionJuridica = "Sociedad An\xF3nima S.A.";
       ciiuPrincipal = "4111 \u2014 Construcci\xF3n de edificios residenciales";
     } else if (baseNit) {
-      razonSocial = clean.replace(/\b\d{7,10}(?:-\d)?\b/g, "").replace(/nit|empresa|sociedad|sa|sas|ltda/gi, "").trim();
+      razonSocial = clean.replace(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-\d)?\b/g, "").replace(/\b(?:jania|vecy|hola|buenos|buenas|d[ií]as|tardes|noches|verif[ií]came|verificar|verifica|cons[uú]ltame|consultar|consulta|rev[ií]same|revisar|revisa|este|esta|el|la|un|una|por\s+favor|porfa|gracias|nit|empresa|sociedad|persona\s+jur[ií]dica|antecedentes|identidad|de|del|en|rues|sa|sas|ltda)\b/gi, "").replace(/[^\w\sáéíóúÁÉÍÓÚñÑ&-]/g, "").replace(/\s+/g, " ").trim();
       if (!razonSocial) {
         razonSocial = `EMPRESA / PERSONA JUR\xCDDICA NIT ${baseNit}`;
       } else {
         razonSocial = formatTitleCase(razonSocial);
       }
     } else {
-      razonSocial = formatTitleCase(clean);
+      razonSocial = formatTitleCase(clean) || "VECY BIENES RA\xCDCES S.A.S.";
       baseNit = "901488282";
     }
   }
@@ -26477,7 +26763,11 @@ async function queryEmpresaOrNit(query, userId) {
         razonSocial = formatTitleCase(pgnRes.officialName);
       }
       if (pgnRes?.statusText) {
-        pgnStatus = pgnRes.statusText;
+        if (ruesLive?.found && !pgnRes.hasSanctions && /no\s+se\s+encuentra\s+registrado/i.test(pgnRes.statusText)) {
+          pgnStatus = "Sin sanciones ni inhabilidades contractuales registradas en el sistema SIRI de la Procuradur\xEDa.";
+        } else {
+          pgnStatus = pgnRes.statusText;
+        }
       }
       const cgrRes = await queryContraloria("nit", baseNit).catch(() => null);
       if (cgrRes?.statusText) {
