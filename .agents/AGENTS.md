@@ -183,18 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.21 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.22 — Octubre 2026
+
+### Novedades v33.22 (Estandarización de Iconografía y Formato en Verificación Oficial de Identidad — `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` + `⚖️ *_Habeas Data (Ley 1581/12):_* ... *_Art. 15 de la C.P._*`):
+- **Solicitud Doctrinal de Eduardo A. Rivera**:
+  1. **Actualización de Encabezado y Cláusula Habeas Data en Verificación de Identidad (`server/_core/identityVerificationService.ts`)**:
+     - Cambio de `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` + `🛡️ *_Habeas Data (Ley 1581/12):_* ... Art. 15 de la C.P."` por:
+       * `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`
+       * `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`
+  2. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 288/288 passing (100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.22`) y `package.json` (`33.22.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.21 — Octubre 2026
 
 ### Novedades v33.21 (Título y Marco Legal Propio por Servicio — Empresa vs. Identidad —, Pregunta Post-Reporte en Mensaje Separado y Flujo Interactivo NO vs. SÍ):
 - **Solicitud Doctrinal de Eduardo A. Rivera**:
   1. **Título y Marco Legal Propio para Empresa vs. Persona Natural (`server/_core/identityVerificationService.ts`)**:
      - **Verificación de Empresa (`isNit = true`)**: Encabezado propio `🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴` y bloque legal `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial sobre registros públicos mercantiles (RUES / Confecámaras) de libre acceso legal (Art. 26 C. de Co.) y datos públicos de representación legal exceptuados de autorización previa (Art. 10 lit. b Ley 1581/12 y Sentencia C-748/11)."` (ya que conforme a la Corte Constitucional Sentencia C-748/11 la Ley 1581 protege personas naturales, mientras que el registro mercantil societario se rige por la publicidad mercantil del Art. 26 del Código de Comercio y la excepción de datos públicos del Art. 10 de la Ley 1581/12 para sus representantes legales).
-     - **Verificación de Persona Natural (`CC / CE / Pasaporte`)**: Conserva su encabezado propio `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y su bloque `🛡️ *_Habeas Data (Ley 1581/12):_*`. Cada servicio mantiene su formato y título propio.
+     - **Verificación de Persona Natural (`CC / CE / Pasaporte`)**: Conserva su encabezado propio `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y su bloque `⚖️ *_Habeas Data (Ley 1581/12):_*`. Cada servicio mantiene su formato y título propio.
   2. **Pregunta Post-Reporte Desacoplada en Mensaje Separado (`identityVerificationService.ts`, `dmHandler.ts`, `whatsapp-match.ts`)**:
      - La pregunta `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*Sandra Milena Diaz Mondragon* — C.C. 46.375.136) o de algún otro miembro?*\n👉 Responde *"sí"* o *"verificar representante"* (o envíame la cédula a consultar).` ya NO se incrusta dentro del mismo reporte de la empresa, sino que se almacena en `followUpQuestionText` / `setLatestDmFollowUpMessage` y se despacha como un **mensaje independiente** ~900ms después del reporte empresarial.
   3. **Flujo Interactivo ante Respuesta "NO" vs. "SÍ" (`politenessService.ts`, `dmHandler.ts`, `identityVerificationService.ts`)**:
      - **Si el usuario responde "NO"** (`isDecliningCompanyMemberVerification`: `"no"`, `"no gracias"`, `"así está bien"`, `"ninguno"`): JanIA limpia la sesión pendiente y envía `formatCompanyFollowUpDeclineReviewMessage`, invitando amablemente a calificar y comentar en Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`) haciendo alusión explícita a que su opinión ayuda a que estos servicios sigan siendo **100% GRATUITOS**.
-     - **Si el usuario responde "SÍ"** (`isAcceptingCompanyMemberVerification`: `"sí"`, `"verificar representante"`, `"verificar todos"`, etc.): JanIA procede de inmediato a verificar el documento del Representante Legal (cacheando su nombre certificado por RUES en `ruesVerifiedNames` para máxima resiliencia) y entrega el reporte con su formato y título propios (`☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`).
+     - **Si el usuario responde "SÍ"** (`isAcceptingCompanyMemberVerification`: `"sí"`, `"verificar representante"`, `"verificar todos"`, etc.): JanIA procede de inmediato a verificar el documento del Representante Legal (cacheando su nombre certificado por RUES en `ruesVerifiedNames` para máxima resiliencia) y entrega el reporte con su formato y título propios (`🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`).
   4. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 288/288 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio ✅
 - `shared/const.ts` (`v33.21`) y `package.json` (`33.21.0`).
 

@@ -7400,7 +7400,16 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Separación de `followUpQuestionText` respecto a `reportText` y despacho automático como un mensaje independiente en WhatsApp mediante `setLatestDmFollowUpMessage` / `popLatestDmFollowUpMessage`.
 - **Flujo Interactivo NO vs. SÍ (`politenessService.ts` y `dmHandler.ts`)**:
   * Si el usuario responde **NO**, JanIA limpia el estado pendiente y envía `formatCompanyFollowUpDeclineReviewMessage`, invitando a calificar y comentar en Google Reviews destacando que su apoyo permite mantener estos servicios **100% GRATUITOS**.
-  * Si el usuario responde **SÍ** (o `"verificar representante"` / `"verificar todos"`), JanIA ejecuta la verificación del documento del Representante Legal (respaldado por `ruesVerifiedNames`) y entrega el reporte con su formato y título propios (`☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`).
+  * Si el usuario responde **SÍ** (o `"verificar representante"` / `"verificar todos"`), JanIA ejecuta la verificación del documento del Representante Legal (respaldado por `ruesVerifiedNames`) y entrega el reporte con su formato y título propios (`🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`).
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **288/288 passing** ($0 COP) | Build `npm run build` limpio.
+
+---
+
+### Versión v33.22 — Octubre 2026: Estandarización de Encabezado `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y Cláusula `⚖️ *_Habeas Data (Ley 1581/12):_* ... *_Art. 15 de la C.P._*`
+- **Actualización de Encabezado y Cláusula Legal en Identidad (`server/_core/identityVerificationService.ts`)**:
+  * En `formatCompactIdentityVerificationReport` y `buildConsolidatedReportText`, el encabezado de Verificación Oficial de Identidad utiliza el escudo `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y la balanza `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`.
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **288/288 passing** ($0 COP) | Build `npm run build` limpio.
+
 

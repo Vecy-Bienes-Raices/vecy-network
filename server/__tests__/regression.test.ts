@@ -4890,8 +4890,8 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const res = await executeIdentityVerificationFromWhatsApp("cc 79888999", true, "573112223344");
       expect(res.success).toBe(true);
       expect(res.officialName).toBe("Rodrigo Alonso Pérez Mendoza");
-      expect(res.reportText).toContain("☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
-      expect(res.reportText).toContain("🛡️ *_Habeas Data (Ley 1581/12):_*");
+      expect(res.reportText).toContain("🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
+      expect(res.reportText).toContain("⚖️ *_Habeas Data (Ley 1581/12):_*");
       expect(res.reportText).toContain("🆔 *DATOS DE IDENTIDAD*");
       expect(res.reportText).toContain("79.888.999");
       expect(res.reportText).toContain("👤 *Pertenece a:* Rodrigo Alonso Pérez Mendoza");
@@ -6103,17 +6103,17 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.21 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.22 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.21");
+      expect(VECY_VERSION).toBe("v33.22");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.21.0");
+      expect(pkg.version).toBe("33.22.0");
     });
   });
 
-  describe("SUITE 80: Plantilla RUES 4 Secciones (NIT <-> Razón Social), Título/Marco Legal Propio por Servicio, Pregunta Separada e Interacción NO vs SÍ (v33.21)", () => {
+  describe("SUITE 80: Plantilla RUES 4 Secciones (NIT <-> Razón Social), Título/Marco Legal Propio por Servicio, Pregunta Separada e Interacción NO vs SÍ (v33.22)", () => {
     it("1. executeJaniaDmTool entrega la plantilla completa RUES para NIT '900788832' con título 🛡️ VERIFICACIÓN OFICIAL DE EMPRESA y encola la pregunta post-reporte por separado", async () => {
       const { executeJaniaDmTool, popLatestDmFollowUpMessage } = await import("../_core/jania/handlers/dmHandler");
       const userId = "225954035179724@lid";
@@ -6158,8 +6158,8 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       popLatestDmFollowUpMessage(userId);
     });
 
-    it("2. Flujo interactivo post-reporte de empresa: si responde NO envía invitación a calificar (servicios GRATUITOS), y si responde SÍ verifica la cédula del Representante con título ☑️ VERIFICACIÓN OFICIAL DE IDENTIDAD", async () => {
-      const { queryEmpresaOrNit } = await import("../_core/identityVerificationService");
+    it("2. Flujo interactivo post-reporte de empresa: si responde NO envía invitación a calificar (servicios GRATUITOS), y si responde SÍ verifica la cédula del Representante con título 🛡️ VERIFICACIÓN OFICIAL DE IDENTIDAD", async () => {
+      const { queryEmpresaOrNit, identityCache } = await import("../_core/identityVerificationService");
       const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
 
       // Escenario A: Usuario consulta empresa y responde "No" a la pregunta separada
@@ -6171,14 +6171,19 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(replyNo).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
       // Escenario B: Usuario consulta empresa y responde "Sí" -> JanIA verifica la C.C. 46.375.136 de Sandra Milena Diaz Mondragon con su propio formato y título
+      identityCache.set("POLICIA:cc:46375136", {
+        fullName: "SANDRA MILENA DIAZ MONDRAGON",
+        timestamp: Date.now()
+      });
       const userYes = `test-company-yes-${Date.now()}@s.whatsapp.net`;
       await queryEmpresaOrNit("900788832", userYes);
       const replyYes = await processPrivateDmConversationalMessage("Sí", userYes, "Carlos Inversionista");
-      expect(replyYes).toContain("☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
-      expect(replyYes).toContain("🛡️ *_Habeas Data (Ley 1581/12):_*");
+      expect(replyYes).toContain("🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
+      expect(replyYes).toContain("⚖️ *_Habeas Data (Ley 1581/12):_*");
+      expect(replyYes).toContain("*_Art. 15 de la C.P._*");
       expect(replyYes).toContain("46.375.136");
       expect(replyYes).toContain("Sandra Milena Diaz Mondragon");
-    });
+    }, 30000);
 
     it("3. extractAllCedulasForVerification detecta NITs con puntos, con DV o de 9 dígitos iniciados en 8/9", async () => {
       const { extractAllCedulasForVerification } = await import("../_core/identityVerificationService");

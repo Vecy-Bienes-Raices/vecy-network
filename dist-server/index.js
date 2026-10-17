@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.21";
+    VECY_VERSION = "v33.22";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -26852,10 +26852,10 @@ function formatCompactIdentityVerificationReport(params) {
     }
     return reportText2.trim();
   }
-  let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+  let reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
-  reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."
+  reportText += `\u2696\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"
 
 `;
   reportText += `\u{1F194} *DATOS DE IDENTIDAD*
@@ -27373,10 +27373,10 @@ async function verifySingleDocumentInternal(item) {
 function buildConsolidatedReportText(results) {
   const allSuccess = results.every((r) => r.success);
   const someSuccess = results.some((r) => r.success);
-  let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+  let reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
-  reportText += `\u{1F6E1}\uFE0F *_Protecci\xF3n de Datos (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
+  reportText += `\u2696\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"
 
 `;
   results.forEach((r, idx) => {
@@ -27638,10 +27638,10 @@ El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad 
           customGuidance = `
 \u2022 \u{1F310} *\xBFEs un documento de extranjer\xEDa?:* Si este n\xFAmero corresponde a una persona extranjera con C\xE9dula de Extranjer\xEDa (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE ${formattedCedula}"* o *"Verificar Pasaporte ${formattedCedula}"*.`;
         }
-        reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+        reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
-        reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
+        reportText += `\u2696\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"
 
 `;
         reportText += `\u{1F194} *DATOS DE IDENTIDAD*

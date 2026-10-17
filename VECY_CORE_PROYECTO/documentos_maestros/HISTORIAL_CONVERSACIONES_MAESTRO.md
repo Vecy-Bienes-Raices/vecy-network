@@ -7,6 +7,35 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-17] — Estandarización de Encabezado `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y Cláusula `⚖️ *_Habeas Data (Ley 1581/12):_* ... *_Art. 15 de la C.P._*` (v33.22 - 33.22.0)
+
+**Versión:** `v33.22` (`33.22.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/identityVerificationService.ts` (Actualización en `formatCompactIdentityVerificationReport` y `buildConsolidatedReportText` del encabezado de Persona Natural a `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y cláusula `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`).
+- `shared/const.ts` (`v33.22`) y `package.json` (`33.22.0`).
+- `server/__tests__/regression.test.ts` (Actualización de SUITES 79 y 80 validando el nuevo encabezado y formato de `*_Art. 15 de la C.P._*`; 288/288 tests pasando al 100%).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Cambia esto; ☑️ VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES 🇨🇴 / 🛡️ Habeas Data (Ley 1581/12): "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P." | Por esto: 🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴 / ⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*""*
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Actualización en `server/_core/identityVerificationService.ts`:**
+   - En `formatCompactIdentityVerificationReport` y `buildConsolidatedReportText`, los reportes de Verificación Oficial de Identidad ahora inician con:
+     ```text
+     🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴
+
+     ⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"
+     ```
+2. **Validación y Pruebas Empíricas:**
+   - `npm run check`: **0 errores de TypeScript**.
+   - `npm test`: **288/288 tests pasando al 100% en verde a $0 COP**.
+   - `npm run build`: Compilación limpia de producción.
+
+---
+
 ### 📅 [2026-10-17] — Título y Marco Legal Propio por Servicio (`🛡️ VERIFICACIÓN OFICIAL DE EMPRESA` vs `☑️ VERIFICACIÓN OFICIAL DE IDENTIDAD`), Pregunta Post-Reporte en Mensaje Separado y Flujo Interactivo NO vs SÍ (v33.21 - 33.21.0)
 
 **Versión:** `v33.21` (`33.21.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

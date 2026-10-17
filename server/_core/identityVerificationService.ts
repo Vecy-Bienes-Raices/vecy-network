@@ -1276,8 +1276,8 @@ export function formatCompactIdentityVerificationReport(params: {
     return reportText.trim();
   }
 
-  let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."\n\n`;
+  let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+  reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
 
   reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
   reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
@@ -1912,8 +1912,8 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
   const allSuccess = results.every(r => r.success);
   const someSuccess = results.some(r => r.success);
 
-  let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `🛡️ *_Protección de Datos (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
+  let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+  reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
 
   results.forEach((r, idx) => {
     const numBadge = idx === 0 ? '1️⃣' : idx === 1 ? '2️⃣' : idx === 2 ? '3️⃣' : `${idx + 1}️⃣`;
@@ -2215,8 +2215,8 @@ export async function executeIdentityVerificationFromWhatsApp(
           customGuidance = `\n• 🌐 *¿Es un documento de extranjería?:* Si este número corresponde a una persona extranjera con Cédula de Extranjería (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE ${formattedCedula}"* o *"Verificar Pasaporte ${formattedCedula}"*.`;
         }
 
-        reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-        reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación ejecutada bajo los principios de finalidad legítima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."\n\n`;
+        reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+        reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
         reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
         reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
         reportText += `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n`;
