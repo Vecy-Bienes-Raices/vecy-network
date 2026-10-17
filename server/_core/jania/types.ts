@@ -138,6 +138,7 @@ export const janiaResultSchema = {
 export interface CanonicalBarrioItem {
   canonical: string;
   lower: string;
+  city?: string;
 }
 
 export interface FlyerVisionResult {

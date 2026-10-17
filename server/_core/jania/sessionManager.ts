@@ -389,9 +389,11 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
           recentMsgs.reverse();
           const restored: DmTurn[] = recentMsgs.map(m => {
             const dateStr = new Date(m.createdAt).toISOString().replace("T", " ").substring(0, 16);
+            const isAssistant = m.role === 'janIA';
+            const cleanMsg = m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, '').replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
             return {
-              role: m.role === 'janIA' ? 'assistant' : 'user',
-              content: `[${dateStr}] ${m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, '')}`,
+              role: isAssistant ? 'assistant' : 'user',
+              content: isAssistant ? cleanMsg : `[${dateStr}] ${cleanMsg}`,
               ts: new Date(m.createdAt).getTime()
             };
           });
@@ -411,7 +413,10 @@ export function appendDmHistory(userId: string, role: "user" | "assistant", cont
   const history = getDmHistory(userId);
   const now = new Date();
   const dateStr = now.toISOString().replace("T", " ").substring(0, 16);
-  const taggedContent = content.startsWith("[20") ? content : `[${dateStr}] ${content}`;
+  const cleanContent = content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
+  // Solo etiquetar con timestamp las intervenciones del usuario para contexto temporal;
+  // las intervenciones del asistente se almacenan limpias para evitar que el LLM imite el prefijo.
+  const taggedContent = role === "user" ? `[${dateStr}] ${cleanContent}` : cleanContent;
   history.push({ role, content: taggedContent, ts: now.getTime() });
   // Conservar siempre los últimos 20 turnos
   while (history.length > 20) history.shift();

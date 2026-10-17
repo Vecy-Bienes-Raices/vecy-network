@@ -28,13 +28,14 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos ordenados por prioridad de fallback (gemini-2.5-flash como principal en llaves gratuitas - v33.16)
+// Modelos ordenados por prioridad de fallback (gemini-flash-latest y gemini-3.8-flash prioritarios y verificados - v33.24)
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
   "gemini-flash-latest",
-  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+  "gemini-2.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-flash-lite-latest",
+  "gemini-3.1-flash-lite",
 ];
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
@@ -175,8 +176,8 @@ async function invokeGemini(
           if (!inTest) await paceRequest();
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
           
-          // Timeout seguro de 12 segundos: si Google tarda, no bloquea el servidor ni causa 504 a la web
-          const response = await axios.post(apiUrl, payload, { timeout: inTest ? 600 : 12000 });
+          // Timeout seguro de 25 segundos para razonamientos jurídicos complejos y function calling
+          const response = await axios.post(apiUrl, payload, { timeout: inTest ? 600 : 25000 });
 
           if (response.data.candidates && response.data.candidates[0]) {
             const parts: any[] = response.data.candidates[0].content?.parts || [];
@@ -229,6 +230,20 @@ async function invokeGemini(
             break;
           }
 
+          // Error 400 con herramientas: Declaración de esquema inválida o rechazada por el modelo -> Desactivar tools y reintentar de inmediato
+          if (status === 400 && payload.tools) {
+            console.warn(`[JanIA-LLM] ⚠️ Error 400 en declaración de herramientas (${errorMsg}). Desactivando tools y reintentando llamada conversacional pura...`);
+            delete payload.tools;
+            continue;
+          }
+
+          // Error 402: Créditos prepagados agotados en la clave de pago de Google Cloud Billing -> Pausar por 1 hora
+          if (status === 402 || /prepayment credits are depleted|billing|credit/i.test(String(errorMsg || ""))) {
+            console.warn(`[JanIA-LLM] ⚠️ Clave de pago (${tierTag}) con créditos agotados (402). Pausando por 1 hora para no frenar el servicio.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 3600, "Depleted Billing Credits (402)");
+            break; // Saltar de inmediato al pool gratuito
+          }
+
           // 429: Rate Limit (15 RPM) o Cuota saturada en este modelo/clave
           if (status === 429) {
             geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)");
@@ -258,6 +273,23 @@ async function invokeGemini(
           break; // Error no recuperable con esta clave, saltar a la siguiente
         }
       }
+    }
+  }
+
+  // Si falló con tools, intento final de rescate sin tools antes de arrojar error
+  if (payload.tools) {
+    console.warn("[JanIA-LLM] 🛡️ Intento final de rescate: ejecutando sin herramientas...");
+    delete payload.tools;
+    try {
+      const rescueKey = geminiKeyManager.getActiveKey().key;
+      const rescueUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${rescueKey}`;
+      const rescueRes = await axios.post(rescueUrl, payload, { timeout: inTest ? 600 : 20000 });
+      const text = rescueRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text && text.trim()) {
+        return { choices: [{ message: { content: text } }] };
+      }
+    } catch (rescueErr: any) {
+      console.error("[JanIA-LLM] Intento de rescate falló:", rescueErr?.message);
     }
   }
 

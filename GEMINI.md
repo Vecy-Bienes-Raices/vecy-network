@@ -1,9 +1,15 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.23.0 — 2026-10-17)
-- **JanIA Server:** `v33.23` (`33.23.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje contra Falsos Positivos de Moderación en Grupo 1 y Protección de Publicaciones con Bordes (`===` y `---`):** Corrección definitiva en `server/_core/jania/heuristics.ts` (`splitMultiItemMessage`, `isAutonomousListingBlock`, `isTrailerBlock`) para exigir al menos dos publicaciones inmobiliarias autónomas completas antes de dividir por delimitadores visuales, fusionando pies de contacto y llamadas a la acción; en `server/_core/jania/handlers/propertiesHandler.ts`, preservación de inserciones exitosas (`inserted: true`) sin permitir que fragmentos residuales generen amonestaciones, y enriquecimiento de `onTopicKeywords` con términos como `clienta`, `negocios`, `fotos`, `inversionista`, `broker`, `asesor`, `privado`, `colina`, `niza`, `suba`, etc.
-- **Reconocimiento Geográfico y Deducción Automática de Bogotá:** Inclusión de `Sotileza` y `Niza Antigua` en `KNOWN_BARRIOS_SORTED_ITEMS` y asignación automática de `city = "Bogotá, D.C."` en `server/_core/jania/parsers.ts` cuando se detecta un barrio capitalino sin ciudad explícita en el texto.
-- **Título y Marco Legal Propio por Servicio (`🛡️ VERIFICACIÓN OFICIAL DE EMPRESA` vs `🛡️ VERIFICACIÓN OFICIAL DE IDENTIDAD`), Pregunta de Seguimiento en Mensaje Separado y Flujo Interactivo NO vs SÍ:** Diferenciación estricta entre Persona Jurídica (`🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴` + `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_*`) y Persona Natural (`🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` + `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`).
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (291/291 a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.24.0 — 2026-10-17)
+- **JanIA Server:** `v33.24` (`33.24.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
+- **Resiliencia LLM en DMs y Erradicación de "Intermitencia Temporal":**
+  1. Timeout ampliado a 25s en `server/_core/llm.ts` para consultas jurídicas complejas y function calling.
+  2. Detección y manejo del error HTTP 402 ("prepayment credits are depleted") en la clave de pago de Google Gemini, activando un cooldown preventivo de 1 hora y regresando inmediatamente al pool gratuito ($0 COP).
+  3. Rescate inteligente ante errores de esquema/tools (HTTP 400): fallback inmediato sin herramientas para mantener viva la conversación.
+  4. Doble capa de reintento en `dmHandler.ts`: si `invokeLLM` con `JANIA_DM_TOOLS` falla, reintenta automáticamente como consulta conversacional pura, impidiendo caídas al catch genérico.
+- **Erradicación de Timestamps Huérfanos `[YYYY-MM-DD HH:mm]`:** Almacenamiento limpio de turnos del asistente en `sessionManager.ts`, desinfección regex de timestamps al inicio de las respuestas en `dmHandler.ts` y directivas negativas en los prompts.
+- **Supresión de Falsos Positivos de Review de Google e Invitación a Grupos:** En `whatsapp-match.ts`, blindaje para evitar disparar solicitudes de review cuando el mensaje contiene signos de interrogación `?`, más de 15 palabras, términos técnicos/jurídicos, si la respuesta fue un fallo o si el remitente es un administrador (Eduardo o Jani).
+- **Cobertura Geográfica Nacional Completa (Medellín, Cali, Barranquilla, Bucaramanga, Cartagena, etc.):** Ingesta, normalización y deducción geográfica multipropósito en WhatsApp y Web.
+- **Protocolo de Despliegue Dual:** Actualización del remoto de GitHub con token sin expiración y despliegue directo por SSH al VPS de Contabo (`13.140.149.144`).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (296/296 a $0 COP) | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

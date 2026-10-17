@@ -1448,10 +1448,23 @@ export class JaniaMatchBot {
                   await this.logToDb(senderId, 'janIA', voiceFollowUpQuestion);
                 }
 
-                // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40)
-                const isGratitudeOrClosing =
-                  /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
-                  (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
+                // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre genuino (v33.24)
+                const isSenderAdminVoice = /eduardo/i.test(userName || "") ||
+                  /jani/i.test(userName || "") ||
+                  senderId.includes("3192919978") ||
+                  senderId.includes("225954035179724") ||
+                  senderId.includes("3118536968") ||
+                  senderId.includes("3166569719");
+
+                const isLongQueryVoice = cleanLower.includes("?") ||
+                  cleanLower.split(/\s+/).filter(Boolean).length > 15 ||
+                  /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
+
+                const isGratitudeOrClosing = !isSenderAdminVoice && !isLongQueryVoice && (
+                  /^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) ||
+                  /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) ||
+                  (cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()))
+                );
                 const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
                 const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
@@ -1500,10 +1513,29 @@ export class JaniaMatchBot {
             await this.logToDb(senderId, 'janIA', followUpQuestion);
           }
 
-          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40 / v32.96)
-          const isGratitudeOrClosing =
-            /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
-            (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
+          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre genuino (v33.24)
+          const isSenderAdmin = /eduardo/i.test(userName || "") ||
+            /jani/i.test(userName || "") ||
+            senderId.includes("3192919978") ||
+            senderId.includes("225954035179724") ||
+            senderId.includes("3118536968") ||
+            senderId.includes("3166569719");
+
+          const isLongQueryOrQuestion = cleanLower.includes("?") ||
+            cleanLower.split(/\s+/).filter(Boolean).length > 15 ||
+            /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
+
+          const isErrorReply = typeof replyText === "string" && (
+            replyText.includes("intermitencia temporal") ||
+            replyText.includes("error") ||
+            replyText.includes("fallo en la matrix")
+          );
+
+          const isGratitudeOrClosing = !isSenderAdmin && !isLongQueryOrQuestion && !isErrorReply && (
+            /^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) ||
+            /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) ||
+            (cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()))
+          );
           const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
           const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 

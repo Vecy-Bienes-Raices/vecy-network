@@ -433,21 +433,257 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
 export const fallbackDataCache = new Map<string, any>();
 
 export const KNOWN_BARRIOS_SORTED_ITEMS: CanonicalBarrioItem[] = [
-  "Santa Bárbara Occidental", "Santa Bárbara Oriental", "Santa Bárbara Central", "Santa Bárbara Alta", "Santa Bárbara",
-  "Santa Ana Occidental", "Santa Ana Oriental", "Santa Ana Alta", "Santa Ana Central", "Santa Ana",
-  "San Cristóbal Norte", "La Alameda", "San Antonio Norte", "Villa Magdala",
-  "Chicó Reservado", "Chicó Norte", "Chicó Navarra", "Rincón del Chicó", "El Chicó", "Chicó",
-  "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "La Cabrera", "Cabrera",
-  "Los Rosales Alto", "Rosales Alto", "Los Rosales Bajo", "Rosales Bajo", "Los Rosales", "Rosales",
-  "El Nogal", "Nogal", "El Virrey", "El Retiro", "El Refugio", "Refugio", "Quinta Camacho", "Antiguo Country", "Country Club",
-  "La Calleja", "Calleja Alta", "Calleja Baja", "La Carolina", "Bosque Medina", "El Contador", "Alcalá", "Belmira", "La Castellana",
-  "Polo Club", "San Felipe", "Emaús", "Colina Campestre", "Ciudad Meléndez",
-  "Ciudad Jardín Norte", "Ciudad Jardín Sur", "Ciudad Jardín",
-  "Álamos Norte", "Álamos Sur", "Álamos",
-  "La Candelaria Centro", "Candelaria la Nueva", "Candelaria Sur", "La Candelaria",
-  "Nuevo Country", "Niza Norte", "Niza Antigua", "Niza", "Sotileza", "Bella Suiza", "Lisboa", "Alejandría", "Carmel Club",
-  "Cantalejo", "Sotavento", "San José de Bavaria", "Chapinero Alto", "Chapinero Central", "Chapinero", "Cedritos"
-].map(b => ({ canonical: b, lower: b.toLowerCase() }));
+  // ── BOGOTÁ D.C. ──
+  { canonical: "Santa Bárbara Occidental", city: "Bogotá, D.C." },
+  { canonical: "Santa Bárbara Oriental", city: "Bogotá, D.C." },
+  { canonical: "Santa Bárbara Central", city: "Bogotá, D.C." },
+  { canonical: "Santa Bárbara Alta", city: "Bogotá, D.C." },
+  { canonical: "Santa Bárbara", city: "Bogotá, D.C." },
+  { canonical: "Santa Ana Occidental", city: "Bogotá, D.C." },
+  { canonical: "Santa Ana Oriental", city: "Bogotá, D.C." },
+  { canonical: "Santa Ana Alta", city: "Bogotá, D.C." },
+  { canonical: "Santa Ana Central", city: "Bogotá, D.C." },
+  { canonical: "Santa Ana", city: "Bogotá, D.C." },
+  { canonical: "San Cristóbal Norte", city: "Bogotá, D.C." },
+  { canonical: "La Alameda", city: "Bogotá, D.C." },
+  { canonical: "San Antonio Norte", city: "Bogotá, D.C." },
+  { canonical: "Villa Magdala", city: "Bogotá, D.C." },
+  { canonical: "Chicó Reservado", city: "Bogotá, D.C." },
+  { canonical: "Chicó Norte", city: "Bogotá, D.C." },
+  { canonical: "Chicó Navarra", city: "Bogotá, D.C." },
+  { canonical: "Rincón del Chicó", city: "Bogotá, D.C." },
+  { canonical: "El Chicó", city: "Bogotá, D.C." },
+  { canonical: "Chicó", city: "Bogotá, D.C." },
+  { canonical: "Santa Paula", city: "Bogotá, D.C." },
+  { canonical: "Santa Bibiana", city: "Bogotá, D.C." },
+  { canonical: "San Patricio", city: "Bogotá, D.C." },
+  { canonical: "Santa Teresa", city: "Bogotá, D.C." },
+  { canonical: "La Cabrera", city: "Bogotá, D.C." },
+  { canonical: "Cabrera", city: "Bogotá, D.C." },
+  { canonical: "Los Rosales Alto", city: "Bogotá, D.C." },
+  { canonical: "Rosales Alto", city: "Bogotá, D.C." },
+  { canonical: "Los Rosales Bajo", city: "Bogotá, D.C." },
+  { canonical: "Rosales Bajo", city: "Bogotá, D.C." },
+  { canonical: "Los Rosales", city: "Bogotá, D.C." },
+  { canonical: "Rosales", city: "Bogotá, D.C." },
+  { canonical: "El Nogal", city: "Bogotá, D.C." },
+  { canonical: "Nogal", city: "Bogotá, D.C." },
+  { canonical: "El Virrey", city: "Bogotá, D.C." },
+  { canonical: "El Retiro", city: "Bogotá, D.C." },
+  { canonical: "El Refugio", city: "Bogotá, D.C." },
+  { canonical: "Refugio", city: "Bogotá, D.C." },
+  { canonical: "Quinta Camacho", city: "Bogotá, D.C." },
+  { canonical: "Antiguo Country", city: "Bogotá, D.C." },
+  { canonical: "Country Club", city: "Bogotá, D.C." },
+  { canonical: "La Calleja", city: "Bogotá, D.C." },
+  { canonical: "Calleja Alta", city: "Bogotá, D.C." },
+  { canonical: "Calleja Baja", city: "Bogotá, D.C." },
+  { canonical: "La Carolina", city: "Bogotá, D.C." },
+  { canonical: "Bosque Medina", city: "Bogotá, D.C." },
+  { canonical: "El Contador", city: "Bogotá, D.C." },
+  { canonical: "Alcalá", city: "Bogotá, D.C." },
+  { canonical: "Belmira", city: "Bogotá, D.C." },
+  { canonical: "La Castellana", city: "Bogotá, D.C." },
+  { canonical: "Polo Club", city: "Bogotá, D.C." },
+  { canonical: "San Felipe", city: "Bogotá, D.C." },
+  { canonical: "Emaús", city: "Bogotá, D.C." },
+  { canonical: "Colina Campestre", city: "Bogotá, D.C." },
+  { canonical: "Ciudad Jardín Norte", city: "Bogotá, D.C." },
+  { canonical: "Ciudad Jardín Sur", city: "Bogotá, D.C." },
+  { canonical: "Álamos Norte", city: "Bogotá, D.C." },
+  { canonical: "Álamos Sur", city: "Bogotá, D.C." },
+  { canonical: "La Candelaria Centro", city: "Bogotá, D.C." },
+  { canonical: "Candelaria la Nueva", city: "Bogotá, D.C." },
+  { canonical: "Candelaria Sur", city: "Bogotá, D.C." },
+  { canonical: "La Candelaria", city: "Bogotá, D.C." },
+  { canonical: "Nuevo Country", city: "Bogotá, D.C." },
+  { canonical: "Niza Norte", city: "Bogotá, D.C." },
+  { canonical: "Niza Antigua", city: "Bogotá, D.C." },
+  { canonical: "Niza", city: "Bogotá, D.C." },
+  { canonical: "Sotileza", city: "Bogotá, D.C." },
+  { canonical: "Bella Suiza", city: "Bogotá, D.C." },
+  { canonical: "Lisboa", city: "Bogotá, D.C." },
+  { canonical: "Alejandría", city: "Bogotá, D.C." },
+  { canonical: "Carmel Club", city: "Bogotá, D.C." },
+  { canonical: "Cantalejo", city: "Bogotá, D.C." },
+  { canonical: "Sotavento", city: "Bogotá, D.C." },
+  { canonical: "San José de Bavaria", city: "Bogotá, D.C." },
+  { canonical: "Chapinero Alto", city: "Bogotá, D.C." },
+  { canonical: "Chapinero Central", city: "Bogotá, D.C." },
+  { canonical: "Chapinero", city: "Bogotá, D.C." },
+  { canonical: "Cedritos", city: "Bogotá, D.C." },
+  { canonical: "Los Cedros", city: "Bogotá, D.C." },
+  { canonical: "Toberín", city: "Bogotá, D.C." },
+  { canonical: "Mazurén", city: "Bogotá, D.C." },
+  { canonical: "Mirandela", city: "Bogotá, D.C." },
+  { canonical: "Portales del Norte", city: "Bogotá, D.C." },
+  { canonical: "Victoria Norte", city: "Bogotá, D.C." },
+  { canonical: "Prado Veraniego", city: "Bogotá, D.C." },
+  { canonical: "La Floresta", city: "Bogotá, D.C." },
+  { canonical: "Pontevedra", city: "Bogotá, D.C." },
+  { canonical: "Morato", city: "Bogotá, D.C." },
+  { canonical: "Alhambra", city: "Bogotá, D.C." },
+  { canonical: "La Alhambra", city: "Bogotá, D.C." },
+  { canonical: "Batán", city: "Bogotá, D.C." },
+  { canonical: "Pasadena", city: "Bogotá, D.C." },
+  { canonical: "Ciudad Salitre", city: "Bogotá, D.C." },
+  { canonical: "Modelia", city: "Bogotá, D.C." },
+  { canonical: "Hayuelos", city: "Bogotá, D.C." },
+  { canonical: "Fontibón", city: "Bogotá, D.C." },
+  { canonical: "Nicolás de Federmann", city: "Bogotá, D.C." },
+  { canonical: "La Esmeralda", city: "Bogotá, D.C." },
+  { canonical: "Quinta Paredes", city: "Bogotá, D.C." },
+  { canonical: "Palermo", city: "Bogotá, D.C." },
+  { canonical: "Teusaquillo", city: "Bogotá, D.C." },
+  { canonical: "Usaquén", city: "Bogotá, D.C." },
+
+  // ── MEDELLÍN Y ÁREA METROPOLITANA ──
+  { canonical: "El Poblado", city: "Medellín" },
+  { canonical: "Altos del Poblado", city: "Medellín" },
+  { canonical: "Castropol", city: "Medellín" },
+  { canonical: "Provenza", city: "Medellín" },
+  { canonical: "Manila", city: "Medellín" },
+  { canonical: "Patio Bonito", city: "Medellín" },
+  { canonical: "San Lucas", city: "Medellín" },
+  { canonical: "Los Balsos", city: "Medellín" },
+  { canonical: "Los Naranjos", city: "Medellín" },
+  { canonical: "El Tesoro", city: "Medellín" },
+  { canonical: "Laureles", city: "Medellín" },
+  { canonical: "Estadio", city: "Medellín" },
+  { canonical: "Conquistadores", city: "Medellín" },
+  { canonical: "Suramericana", city: "Medellín" },
+  { canonical: "Carlos E. Restrepo", city: "Medellín" },
+  { canonical: "San Javier", city: "Medellín" },
+  { canonical: "Comuna 13", city: "Medellín" },
+  { canonical: "Belén", city: "Medellín" },
+  { canonical: "Belén Rincón", city: "Medellín" },
+  { canonical: "Loma de Los Bernal", city: "Medellín" },
+  { canonical: "La Mota", city: "Medellín" },
+  { canonical: "La América", city: "Medellín" },
+  { canonical: "Calasanz", city: "Medellín" },
+  { canonical: "Robledo", city: "Medellín" },
+  { canonical: "Pilarica", city: "Medellín" },
+  { canonical: "Castilla", city: "Medellín" },
+  { canonical: "Aranjuez", city: "Medellín" },
+  { canonical: "Manrique", city: "Medellín" },
+  { canonical: "Buenos Aires", city: "Medellín" },
+  { canonical: "Guayabal", city: "Medellín" },
+  { canonical: "Prado", city: "Medellín" },
+  { canonical: "Envigado", city: "Envigado" },
+  { canonical: "Sabaneta", city: "Sabaneta" },
+  { canonical: "Itagüí", city: "Itagüí" },
+  { canonical: "La Estrella", city: "La Estrella" },
+  { canonical: "Bello", city: "Bello" },
+  { canonical: "Rionegro", city: "Rionegro" },
+  { canonical: "La Ceja", city: "La Ceja" },
+  { canonical: "El Retiro", city: "El Retiro" },
+
+  // ── CALI Y VALLE DEL CAUCA ──
+  { canonical: "Ciudad Jardín", city: "Cali" },
+  { canonical: "San Antonio", city: "Cali" },
+  { canonical: "Granada", city: "Cali" },
+  { canonical: "Pance", city: "Cali" },
+  { canonical: "Valle del Lili", city: "Cali" },
+  { canonical: "El Caney", city: "Cali" },
+  { canonical: "Bochalema", city: "Cali" },
+  { canonical: "Ciudad Meléndez", city: "Cali" },
+  { canonical: "El Peñón", city: "Cali" },
+  { canonical: "Juanambú", city: "Cali" },
+  { canonical: "Santa Mónica", city: "Cali" },
+  { canonical: "La Flora", city: "Cali" },
+  { canonical: "Chipichape", city: "Cali" },
+  { canonical: "Menga", city: "Cali" },
+  { canonical: "San Fernando", city: "Cali" },
+  { canonical: "Tequendama", city: "Cali" },
+  { canonical: "Imbanaco", city: "Cali" },
+  { canonical: "Versalles", city: "Cali" },
+  { canonical: "San Cayetano", city: "Cali" },
+  { canonical: "Centenario", city: "Cali" },
+  { canonical: "Miraflores", city: "Cali" },
+  { canonical: "Santa Teresita", city: "Cali" },
+  { canonical: "Cristales", city: "Cali" },
+  { canonical: "Bellavista", city: "Cali" },
+  { canonical: "Limonar", city: "Cali" },
+  { canonical: "El Limonar", city: "Cali" },
+  { canonical: "Ciudad Capri", city: "Cali" },
+  { canonical: "Ingenio", city: "Cali" },
+  { canonical: "Santa Anita", city: "Cali" },
+  { canonical: "Meléndez", city: "Cali" },
+  { canonical: "Juanchito", city: "Cali" },
+  { canonical: "Jamundí", city: "Jamundí" },
+  { canonical: "Yumbo", city: "Yumbo" },
+  { canonical: "Palmira", city: "Palmira" },
+
+  // ── BARRANQUILLA Y ATLÁNTICO ──
+  { canonical: "Altos de Riomar", city: "Barranquilla" },
+  { canonical: "Barrio Abajo", city: "Barranquilla" },
+  { canonical: "Alto Prado", city: "Barranquilla" },
+  { canonical: "El Prado", city: "Barranquilla" },
+  { canonical: "Villa Santos", city: "Barranquilla" },
+  { canonical: "Buenavista", city: "Barranquilla" },
+  { canonical: "Riomar", city: "Barranquilla" },
+  { canonical: "Villa Carolina", city: "Barranquilla" },
+  { canonical: "Villa Campestre", city: "Puerto Colombia" },
+  { canonical: "El Golf", city: "Barranquilla" },
+  { canonical: "Villa Country", city: "Barranquilla" },
+  { canonical: "El Limón", city: "Barranquilla" },
+  { canonical: "Paraíso", city: "Barranquilla" },
+  { canonical: "Bellavista", city: "Barranquilla" },
+  { canonical: "Betania", city: "Barranquilla" },
+  { canonical: "Delicias", city: "Barranquilla" },
+  { canonical: "El Recreo", city: "Barranquilla" },
+  { canonical: "Centro Histórico", city: "Barranquilla" },
+  { canonical: "Miramar", city: "Barranquilla" },
+  { canonical: "Simón Bolívar", city: "Barranquilla" },
+  { canonical: "Las Nieves", city: "Barranquilla" },
+  { canonical: "Rebolo", city: "Barranquilla" },
+  { canonical: "Soledad", city: "Soledad" },
+  { canonical: "Puerto Colombia", city: "Puerto Colombia" },
+
+  // ── CARTAGENA ──
+  { canonical: "Bocagrande", city: "Cartagena" },
+  { canonical: "Castillogrande", city: "Cartagena" },
+  { canonical: "El Laguito", city: "Cartagena" },
+  { canonical: "Manga", city: "Cartagena" },
+  { canonical: "Crespo", city: "Cartagena" },
+  { canonical: "Marbella", city: "Cartagena" },
+  { canonical: "Pie de la Popa", city: "Cartagena" },
+  { canonical: "Getsemaní", city: "Cartagena" },
+  { canonical: "Serena del Mar", city: "Cartagena" },
+  { canonical: "Cielo Mar", city: "Cartagena" },
+  { canonical: "Los Morros", city: "Cartagena" },
+
+  // ── BUCARAMANGA Y METROPOLITANA ──
+  { canonical: "Cabecera del Llano", city: "Bucaramanga" },
+  { canonical: "Cabecera", city: "Bucaramanga" },
+  { canonical: "Sotomayor", city: "Bucaramanga" },
+  { canonical: "Cañaveral", city: "Floridablanca" },
+  { canonical: "Ruitoque Condominio", city: "Floridablanca" },
+  { canonical: "Ruitoque", city: "Floridablanca" },
+  { canonical: "Real de Minas", city: "Bucaramanga" },
+  { canonical: "Floridablanca", city: "Floridablanca" },
+  { canonical: "Piedecuesta", city: "Piedecuesta" },
+  { canonical: "Girón", city: "Girón" },
+
+  // ── SANTA MARTA ──
+  { canonical: "El Rodadero", city: "Santa Marta" },
+  { canonical: "Pozos Colorados", city: "Santa Marta" },
+  { canonical: "Bello Horizonte", city: "Santa Marta" },
+  { canonical: "Playa Dormida", city: "Santa Marta" },
+  { canonical: "Taganga", city: "Santa Marta" },
+
+  // ── EJE CAFETERO ──
+  { canonical: "Pinares", city: "Pereira" },
+  { canonical: "Cerritos", city: "Pereira" },
+  { canonical: "Circunvalar", city: "Pereira" },
+  { canonical: "Dosquebradas", city: "Dosquebradas" },
+  { canonical: "Palermo", city: "Manizales" },
+  { canonical: "El Cable", city: "Manizales" }
+].map(item => ({
+  canonical: item.canonical,
+  lower: item.canonical.toLowerCase(),
+  city: item.city
+})).sort((a, b) => b.lower.length - a.lower.length);
 
 export function extractFallbackDataFromText(text: string): any {
   if (!text || typeof text !== "string") return {};
@@ -939,10 +1175,12 @@ export function extractFallbackDataFromText(text: string): any {
     city = clean.includes("melgar") ? "Melgar" : clean.includes("carmen de apicala") ? "Carmen de Apicalá" : "Ibagué";
   } else if (clean.includes("villavicencio") || clean.includes("acacias")) {
     city = clean.includes("acacias") ? "Acacías" : "Villavicencio";
-  } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
+  } else if (clean.includes("cali") || clean.includes("valle del lili") || clean.includes("pance") || clean.includes("bochalema") || clean.includes("el caney") || clean.includes("chipichape") || clean.includes("melendez") || clean.includes("jamundi") || clean.includes("juanchito") || (clean.includes("san antonio") && !clean.includes("san antonio norte") && !clean.includes("san antonio noroccidental")) || (clean.includes("ciudad jardin") && !clean.includes("ciudad jardin norte") && !clean.includes("ciudad jardin sur"))) {
     city = clean.includes("jamundi") || clean.includes("jamundí") ? "Jamundí" : "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || (clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota")) || clean.includes("la ceja")) {
-    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medellín";
+  } else if (clean.includes("medellin") || clean.includes("medellín") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("san javier") || clean.includes("comuna 13") || clean.includes("belen") || clean.includes("belén") || clean.includes("conquistadores") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("itagui") || clean.includes("itagüí") || (clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota")) || clean.includes("la ceja") || clean.includes("el retiro")) {
+    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : (clean.includes("itagui") || clean.includes("itagüí")) ? "Itagüí" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : clean.includes("el retiro") ? "El Retiro" : "Medellín";
+  } else if (clean.includes("barranquilla") || clean.includes("altos de riomar") || clean.includes("barrio abajo") || clean.includes("alto prado") || clean.includes("villa santos") || clean.includes("villa campestre") || clean.includes("soledad") || clean.includes("puerto colombia")) {
+    city = clean.includes("soledad") ? "Soledad" : (clean.includes("puerto colombia") || clean.includes("villa campestre")) ? "Puerto Colombia" : "Barranquilla";
   } else if (clean.includes("chia") || clean.includes("chía")) {
     city = "Chía";
   } else if (clean.includes("cajica") || clean.includes("cajicá")) {
@@ -1109,9 +1347,16 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // Deducción automática de ciudad para barrios conocidos de la capital
-  if (!city && zone && zone !== "Ciudad Meléndez") {
-    city = "Bogotá, D.C.";
+  // Deducción automática de ciudad para barrios conocidos de Colombia
+  if (!city && zone) {
+    const matchedItem = KNOWN_BARRIOS_SORTED_ITEMS.find(i => i.canonical.toLowerCase() === zone.toLowerCase());
+    if (matchedItem && matchedItem.city) {
+      city = matchedItem.city;
+    } else if (zone === "Ciudad Meléndez") {
+      city = "Cali";
+    } else {
+      city = "Bogotá, D.C.";
+    }
   }
 
   // ── DETECCIONES DOCTRINALES ESTRUCTURADAS (v31.72) ──

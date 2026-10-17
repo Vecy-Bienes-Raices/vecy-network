@@ -1080,6 +1080,7 @@ export async function processPrivateDmConversationalMessage(
       }` +
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
+      `- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jamás texto que tú debas emitir.\n` +
       `- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER MÁS"): Respuestas breves, directas al grano, claras y fluidas (máximo 1 o 2 párrafos cortos), sin introducciones extensas ni textos kilométricos que fuercen el botón 'Leer más'.`;
 
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -1088,7 +1089,10 @@ export async function processPrivateDmConversationalMessage(
 
     // Incluir hasta 20 turnos de las últimas 72 horas para retención contextual completa
     for (const turn of history.slice(-20)) {
-      messages.push({ role: turn.role, content: turn.content });
+      const cleanTurnContent = turn.role === "assistant"
+        ? turn.content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim()
+        : turn.content;
+      messages.push({ role: turn.role, content: cleanTurnContent });
     }
 
     messages.push({
@@ -1096,10 +1100,18 @@ export async function processPrivateDmConversationalMessage(
       content: `Mensaje de ${realName} (${userId}): "${clean}"`
     });
 
-    const llmRes = await invokeLLM({
-      messages,
-      tools: JANIA_DM_TOOLS
-    });
+    let llmRes: any;
+    try {
+      llmRes = await invokeLLM({
+        messages,
+        tools: JANIA_DM_TOOLS
+      });
+    } catch (toolsErr: any) {
+      console.warn(`[dmHandler] ⚠️ Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
+      llmRes = await invokeLLM({
+        messages
+      });
+    }
 
     let reply = "";
     const fnCall = llmRes.choices[0]?.message?.functionCall;
@@ -1133,6 +1145,8 @@ export async function processPrivateDmConversationalMessage(
       reply = llmRes.choices[0]?.message?.content || "";
     }
 
+    // Limpiar cualquier prefijo de timestamp o corchete imitado por el LLM
+    reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
     reply = sanitizeResponseMarkdown(reply.trim());
 
     if (!reply) {
@@ -1153,7 +1167,7 @@ export async function processPrivateDmConversationalMessage(
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
 
-    if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+    {
       const { getGreetingByTime } = await import("../../whatsapp-utils");
       const timeGreeting = getGreetingByTime();
 
@@ -1342,12 +1356,12 @@ export async function processPrivateDmConversationalMessage(
     }
 
     const fallback = isEduardo
-      ? `¡${timeSalutation}, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
+      ? `¡${timeSalutation}, Eduardo! 👋 Estoy 100% atenta. Tuve una breve demora de conexión de red con el modelo de lenguaje, pero ya me restablecí. ¿En qué te colaboro hoy? 🤝`
       : isJani
-        ? `¡${timeSalutation}, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
+        ? `¡${timeSalutation}, Jani! Qué gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposición. ¿En qué te colaboro hoy? 🤝`
         : isFamilyOrTrusted
-          ? `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
-          : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+          ? `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una pequeña demora de red en mi sistema (un pequeño fallo en la matrix 🤖😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
+          : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Tuve una pequeña demora de conexión de red con mi servicio de lenguaje. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;

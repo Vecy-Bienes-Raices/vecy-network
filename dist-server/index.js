@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.23";
+    VECY_VERSION = "v33.24";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1229,7 +1229,7 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
         try {
           if (!inTest) await paceRequest();
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
-          const response = await axios2.post(apiUrl, payload, { timeout: inTest ? 600 : 12e3 });
+          const response = await axios2.post(apiUrl, payload, { timeout: inTest ? 600 : 25e3 });
           if (response.data.candidates && response.data.candidates[0]) {
             const parts = response.data.candidates[0].content?.parts || [];
             const fnCallPart = parts.find((p) => p && p.functionCall);
@@ -1276,6 +1276,16 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
             modelUnavailable = true;
             break;
           }
+          if (status === 400 && payload.tools) {
+            console.warn(`[JanIA-LLM] \u26A0\uFE0F Error 400 en declaraci\xF3n de herramientas (${errorMsg}). Desactivando tools y reintentando llamada conversacional pura...`);
+            delete payload.tools;
+            continue;
+          }
+          if (status === 402 || /prepayment credits are depleted|billing|credit/i.test(String(errorMsg || ""))) {
+            console.warn(`[JanIA-LLM] \u26A0\uFE0F Clave de pago (${tierTag}) con cr\xE9ditos agotados (402). Pausando por 1 hora para no frenar el servicio.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 3600, "Depleted Billing Credits (402)");
+            break;
+          }
           if (status === 429) {
             geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturaci\xF3n de Modelo (429)");
             break;
@@ -1300,6 +1310,21 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
       }
     }
   }
+  if (payload.tools) {
+    console.warn("[JanIA-LLM] \u{1F6E1}\uFE0F Intento final de rescate: ejecutando sin herramientas...");
+    delete payload.tools;
+    try {
+      const rescueKey = geminiKeyManager.getActiveKey().key;
+      const rescueUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${rescueKey}`;
+      const rescueRes = await axios2.post(rescueUrl, payload, { timeout: inTest ? 600 : 2e4 });
+      const text2 = rescueRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text2 && text2.trim()) {
+        return { choices: [{ message: { content: text2 } }] };
+      }
+    } catch (rescueErr) {
+      console.error("[JanIA-LLM] Intento de rescate fall\xF3:", rescueErr?.message);
+    }
+  }
   console.error("[Gemini Cascade Exhausted]: Todos los modelos y claves de Gemini fallaron:", lastError?.message || lastError);
   throw lastError || new Error("No fue posible obtener respuesta de ning\xFAn modelo de Gemini");
 }
@@ -1316,11 +1341,12 @@ var init_llm = __esm({
     getActiveRoundRobinKey = getActiveKey;
     getActiveFailoverKey = getActiveKey;
     FALLBACK_MODELS = [
-      "gemini-2.5-flash",
       "gemini-flash-latest",
-      "gemini-3.5-flash",
+      "gemini-3.8-flash",
+      "gemini-2.5-flash",
       "gemini-3.5-flash-lite",
-      "gemini-flash-lite-latest"
+      "gemini-flash-lite-latest",
+      "gemini-3.1-flash-lite"
     ];
     lastCallTimestamp = 0;
     MIN_CALL_INTERVAL_MS = 600;
@@ -3984,61 +4010,107 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
       confidence: "alta_deduccion_meta"
     };
   }
-  const caliSectors = [
-    "alamos",
-    "brisas de los alamos",
-    "menga",
+  const caliKeywords = [
+    "cali",
+    "valle del cauca",
+    "valle",
+    "santiago de cali",
+    "jamundi",
+    "jamund\xED",
+    "yumbo",
+    "palmira",
+    "san antonio",
+    "granada",
+    "ciudad jardin",
+    "pance",
+    "juanchito",
+    "valle del lili",
+    "el caney",
+    "bochalema",
     "chipichape",
     "la flora",
     "santa monica",
-    "ciudad jardin",
-    "valle del lili",
-    "san fernando",
-    "granada",
     "el penon",
+    "el pe\xF1on",
     "juanambu",
-    "pance",
-    "bochalema",
-    "caney",
-    "el caney",
     "tequendama",
-    "normandie",
     "imbanaco",
-    "cali",
-    "jamundi",
-    "yumbo",
-    "palmira",
-    "valle del cauca"
+    "san fernando",
+    "normandie",
+    "versalles",
+    "san cayetano",
+    "centenario",
+    "miraflores",
+    "cristales",
+    "bellavista",
+    "santa teresita",
+    "ciudad melendez",
+    "ciudad mel\xE9ndez",
+    "ca\xF1asgordas",
+    "la viga",
+    "san joaquin"
   ];
-  const isCali = normCity === "cali" || normCity === "" && normGroup.includes("cali") && !textCombined.includes("bogota") || caliSectors.some((s) => textCombined.includes(s));
+  const isBogotaMention = textCombined.includes("bogota") || textCombined.includes("bogot\xE1") || textCombined.includes("cundinamarca");
+  const isCali = normCity === "cali" || normCity === "" && normGroup.includes("cali") && !isBogotaMention || caliKeywords.some((s) => textCombined.includes(s)) && !textCombined.includes("san antonio norte") && !textCombined.includes("san antonio noroccidental") && !textCombined.includes("ciudad jardin norte") && !textCombined.includes("ciudad jardin sur") && !textCombined.includes("alamos norte") && !textCombined.includes("alamos sur") && !isBogotaMention;
   if (isCali) {
-    let neighborhood2 = "Cali";
+    let neighborhood2 = inputZone && inputZone.trim() !== "" && !caliKeywords.includes(normZone) && !GENERIC_ZONES_SET.has(normZone) ? inputZone.trim() : "Cali";
     let locality2 = "Cali Urbano";
     let city = "Cali";
+    let foundBarrio2 = false;
+    const allCaliBarrios = [];
+    for (const [, info] of Object.entries(DICCIONARIO_CALI)) {
+      for (const b of info.barrios) {
+        allCaliBarrios.push({ name: b, comuna: info.comuna, norm: normalizarTextoGeografico(b) });
+      }
+    }
+    allCaliBarrios.sort((a, b) => b.norm.length - a.norm.length);
+    if (normZone && !GENERIC_ZONES_SET.has(normZone)) {
+      for (const item of allCaliBarrios) {
+        if (item.norm === normZone || normZone.includes(item.norm) && item.norm.length > 4) {
+          neighborhood2 = item.name;
+          locality2 = item.comuna;
+          foundBarrio2 = true;
+          break;
+        }
+      }
+    }
+    if (!foundBarrio2) {
+      for (const item of allCaliBarrios) {
+        if (textCombined.includes(item.norm) && item.norm.length > 4) {
+          if (item.norm === "san antonio" && (textCombined.includes("san antonio norte") || textCombined.includes("san antonio noroccidental"))) continue;
+          if (item.norm === "ciudad jardin" && (textCombined.includes("ciudad jardin norte") || textCombined.includes("ciudad jardin sur"))) continue;
+          if (item.norm === "alamos" && (textCombined.includes("alamos norte") || textCombined.includes("alamos sur"))) continue;
+          neighborhood2 = item.name;
+          locality2 = item.comuna;
+          foundBarrio2 = true;
+          break;
+        }
+      }
+    }
     if (textCombined.includes("jamundi") || textCombined.includes("jamund\xED")) {
-      neighborhood2 = "Jamund\xED";
-      locality2 = "Jamund\xED";
       city = "Jamund\xED";
-    } else if (textCombined.includes("alamos") || textCombined.includes("brisas de los alamos")) {
-      neighborhood2 = "Brisas de los \xC1lamos";
-      locality2 = "Comuna 2 (Norte)";
-    } else if (textCombined.includes("menga") || textCombined.includes("chipichape") || textCombined.includes("la flora")) {
-      neighborhood2 = textCombined.includes("menga") ? "Menga" : textCombined.includes("chipichape") ? "Chipichape" : "La Flora";
-      locality2 = "Comuna 2 (Norte)";
-    } else if (textCombined.includes("ciudad jardin")) {
-      neighborhood2 = "Ciudad Jard\xEDn";
-      locality2 = "Comuna 22 (Sur)";
-    } else if (textCombined.includes("valle del lili") || textCombined.includes("lili")) {
-      neighborhood2 = "Valle del Lili";
-      locality2 = "Comuna 17 (Sur)";
-    } else if (textCombined.includes("san fernando") || textCombined.includes("tequendama") || textCombined.includes("imbanaco")) {
-      neighborhood2 = "San Fernando";
-      locality2 = "Comuna 19";
-    } else if (textCombined.includes("granada") || textCombined.includes("penon") || textCombined.includes("juanambu")) {
-      neighborhood2 = textCombined.includes("granada") ? "Granada" : textCombined.includes("juanambu") ? "Juanamb\xFA" : "El Pe\xF1\xF3n";
-      locality2 = "Comuna 3 (Oeste)";
-    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
-      neighborhood2 = inputZone.trim();
+      if (!foundBarrio2) {
+        neighborhood2 = "Jamund\xED";
+        locality2 = "Jamund\xED";
+      }
+    } else if (textCombined.includes("yumbo")) {
+      city = "Yumbo";
+      if (!foundBarrio2) {
+        neighborhood2 = "Yumbo";
+        locality2 = "Yumbo";
+      }
+    } else if (textCombined.includes("palmira")) {
+      city = "Palmira";
+      if (!foundBarrio2) {
+        neighborhood2 = "Palmira";
+        locality2 = "Palmira";
+      }
+    } else if (textCombined.includes("juanchito") || textCombined.includes("candelaria")) {
+      city = "Cali";
+      if (!foundBarrio2) {
+        neighborhood2 = "Juanchito";
+        locality2 = "\xC1rea Metropolitana de Cali";
+      }
     }
     return {
       neighborhood: neighborhood2,
@@ -4048,56 +4120,140 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
       confidence: "alta_deduccion_cali"
     };
   }
-  const medellinSectors = [
+  const medellinKeywords = [
+    "medellin",
+    "medell\xEDn",
+    "antioquia",
+    "valle de aburra",
+    "valle de aburr\xE1",
     "poblado",
     "el poblado",
     "laureles",
     "estadio",
+    "conquistadores",
+    "san javier",
+    "comuna 13",
+    "prado medellin",
+    "prado medell\xEDn",
     "belen",
+    "bel\xE9n",
+    "suramericana",
+    "carlos e restrepo",
+    "calasanz",
+    "la america",
+    "la am\xE9rica",
+    "robledo",
+    "castilla",
+    "aranjuez",
+    "manrique",
+    "buenos aires",
+    "guayabal",
+    "provenza",
+    "manila",
+    "patio bonito",
+    "san lucas",
+    "el tesoro",
+    "los balsos",
+    "los naranjos",
+    "castropol",
     "envigado",
     "sabaneta",
     "itagui",
+    "itag\xFC\xED",
+    "la estrella",
+    "caldas antioquia",
+    "bello antioquia",
+    "copacabana antioquia",
+    "girardota",
+    "barbosa antioquia",
     "rionegro",
     "la ceja",
     "el retiro",
-    "la estrella",
-    "copacabana",
-    "girardota",
-    "medellin",
-    "antioquia"
+    "guarne",
+    "marinilla"
   ];
-  const isMedellin = normCity === "medellin" || normCity === "" && normGroup.includes("medellin") && !textCombined.includes("bogota") || medellinSectors.some((s) => textCombined.includes(s));
+  const isMedellin = normCity === "medellin" || normCity === "" && normGroup.includes("medellin") && !isBogotaMention || medellinKeywords.some((s) => textCombined.includes(s)) && !textCombined.includes("prado veraniego") && !textCombined.includes("san jose del prado") && !isBogotaMention;
   if (isMedellin) {
-    let neighborhood2 = "Medell\xEDn";
+    let neighborhood2 = inputZone && inputZone.trim() !== "" && !medellinKeywords.includes(normZone) && !GENERIC_ZONES_SET.has(normZone) ? inputZone.trim() : "Medell\xEDn";
     let locality2 = "Valle de Aburr\xE1";
     let city = "Medell\xEDn";
-    if (textCombined.includes("poblado")) {
-      neighborhood2 = "El Poblado";
-      locality2 = "Comuna 14 (El Poblado)";
-    } else if (textCombined.includes("laureles") || textCombined.includes("estadio")) {
-      neighborhood2 = "Laureles";
-      locality2 = "Comuna 11 (Laureles-Estadio)";
-    } else if (textCombined.includes("belen")) {
-      neighborhood2 = "Bel\xE9n";
-      locality2 = "Comuna 16 (Bel\xE9n)";
-    } else if (textCombined.includes("envigado")) {
-      neighborhood2 = "Envigado";
-      locality2 = "Envigado";
+    let foundBarrio2 = false;
+    const allMedBarrios = [];
+    for (const [, info] of Object.entries(DICCIONARIO_MEDELLIN)) {
+      for (const b of info.barrios) {
+        allMedBarrios.push({ name: b, comuna: info.comuna, norm: normalizarTextoGeografico(b) });
+      }
+    }
+    allMedBarrios.sort((a, b) => b.norm.length - a.norm.length);
+    if (normZone && !GENERIC_ZONES_SET.has(normZone)) {
+      for (const item of allMedBarrios) {
+        if (item.norm === normZone || normZone.includes(item.norm) && item.norm.length > 4) {
+          neighborhood2 = item.name;
+          locality2 = item.comuna;
+          foundBarrio2 = true;
+          break;
+        }
+      }
+    }
+    if (!foundBarrio2) {
+      for (const item of allMedBarrios) {
+        if (textCombined.includes(item.norm) && item.norm.length > 4) {
+          if (item.norm === "prado" && (textCombined.includes("prado veraniego") || textCombined.includes("san jose del prado"))) continue;
+          neighborhood2 = item.name;
+          locality2 = item.comuna;
+          foundBarrio2 = true;
+          break;
+        }
+      }
+    }
+    if (textCombined.includes("envigado")) {
       city = "Envigado";
+      if (!foundBarrio2) {
+        neighborhood2 = "Envigado";
+        locality2 = "Envigado";
+      }
     } else if (textCombined.includes("sabaneta")) {
-      neighborhood2 = "Sabaneta";
-      locality2 = "Sabaneta";
       city = "Sabaneta";
+      if (!foundBarrio2) {
+        neighborhood2 = "Sabaneta";
+        locality2 = "Sabaneta";
+      }
+    } else if (textCombined.includes("itagui") || textCombined.includes("itag\xFC\xED")) {
+      city = "Itag\xFC\xED";
+      if (!foundBarrio2) {
+        neighborhood2 = "Itag\xFC\xED";
+        locality2 = "Itag\xFC\xED";
+      }
     } else if (textCombined.includes("rionegro")) {
-      neighborhood2 = "Rionegro";
-      locality2 = "Rionegro";
       city = "Rionegro";
+      if (!foundBarrio2) {
+        neighborhood2 = "Rionegro";
+        locality2 = "Rionegro";
+      }
     } else if (textCombined.includes("la ceja")) {
-      neighborhood2 = "La Ceja";
-      locality2 = "Oriente Antioque\xF1o";
       city = "La Ceja";
-    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
-      neighborhood2 = inputZone.trim();
+      if (!foundBarrio2) {
+        neighborhood2 = "La Ceja";
+        locality2 = "Oriente Antioque\xF1o";
+      }
+    } else if (textCombined.includes("el retiro")) {
+      city = "El Retiro";
+      if (!foundBarrio2) {
+        neighborhood2 = "El Retiro";
+        locality2 = "Oriente Antioque\xF1o";
+      }
+    } else if (textCombined.includes("la estrella")) {
+      city = "La Estrella";
+      if (!foundBarrio2) {
+        neighborhood2 = "La Estrella";
+        locality2 = "La Estrella";
+      }
+    } else if (textCombined.includes("bello")) {
+      city = "Bello";
+      if (!foundBarrio2) {
+        neighborhood2 = "Bello";
+        locality2 = "Bello";
+      }
     }
     return {
       neighborhood: neighborhood2,
@@ -4105,6 +4261,102 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
       city,
       department: "Antioquia",
       confidence: "alta_deduccion_medellin"
+    };
+  }
+  const barranquillaKeywords = [
+    "barranquilla",
+    "atlantico",
+    "atl\xE1ntico",
+    "curramba",
+    "altos de riomar",
+    "barrio abajo",
+    "el prado barranquilla",
+    "alto prado",
+    "villa santos",
+    "buenavista barranquilla",
+    "riomar",
+    "el limon",
+    "el lim\xF3n",
+    "paraiso barranquilla",
+    "para\xEDso barranquilla",
+    "bellavista barranquilla",
+    "villa carolina",
+    "villa campestre",
+    "el golf barranquilla",
+    "villa country",
+    "ciudad jardin barranquilla",
+    "ciudad jard\xEDn barranquilla",
+    "miramar barranquilla",
+    "rebolo",
+    "chiquinquira barranquilla",
+    "chiquinquir\xE1 barranquilla",
+    "simon bolivar barranquilla",
+    "sim\xF3n bol\xEDvar barranquilla",
+    "las nieves barranquilla",
+    "soledad atlantico",
+    "soledad atl\xE1ntico",
+    "malambo",
+    "puerto colombia",
+    "galapa"
+  ];
+  const isBarranquilla = normCity === "barranquilla" || normCity === "" && normGroup.includes("barranquilla") && !isBogotaMention || barranquillaKeywords.some((s) => textCombined.includes(s)) && !isBogotaMention;
+  if (isBarranquilla) {
+    let neighborhood2 = inputZone && inputZone.trim() !== "" && !barranquillaKeywords.includes(normZone) && !GENERIC_ZONES_SET.has(normZone) ? inputZone.trim() : "Barranquilla";
+    let locality2 = "Barranquilla Urbano";
+    let city = "Barranquilla";
+    let foundBarrio2 = false;
+    const allBqBarrios = [];
+    for (const [, info] of Object.entries(DICCIONARIO_BARRANQUILLA)) {
+      for (const b of info.barrios) {
+        allBqBarrios.push({ name: b, localidad: info.localidad, norm: normalizarTextoGeografico(b) });
+      }
+    }
+    allBqBarrios.sort((a, b) => b.norm.length - a.norm.length);
+    if (normZone && !GENERIC_ZONES_SET.has(normZone)) {
+      for (const item of allBqBarrios) {
+        if (item.norm === normZone || normZone.includes(item.norm) && item.norm.length > 4) {
+          neighborhood2 = item.name;
+          locality2 = item.localidad;
+          foundBarrio2 = true;
+          break;
+        }
+      }
+    }
+    if (!foundBarrio2) {
+      for (const item of allBqBarrios) {
+        if (textCombined.includes(item.norm) && item.norm.length > 4) {
+          neighborhood2 = item.name;
+          locality2 = item.localidad;
+          foundBarrio2 = true;
+          break;
+        }
+      }
+    }
+    if (textCombined.includes("soledad")) {
+      city = "Soledad";
+      if (!foundBarrio2) {
+        neighborhood2 = "Soledad";
+        locality2 = "\xC1rea Metropolitana de Barranquilla";
+      }
+    } else if (textCombined.includes("puerto colombia") || textCombined.includes("villa campestre")) {
+      city = "Puerto Colombia";
+      if (!foundBarrio2) {
+        neighborhood2 = "Puerto Colombia";
+        locality2 = "\xC1rea Metropolitana de Barranquilla";
+      }
+    } else if (textCombined.includes("malambo")) {
+      city = "Malambo";
+      if (!foundBarrio2) {
+        neighborhood2 = "Malambo";
+        locality2 = "\xC1rea Metropolitana de Barranquilla";
+      }
+    }
+    return {
+      neighborhood: neighborhood2,
+      locality: locality2,
+      city,
+      department: "Atl\xE1ntico",
+      confidence: "alta_deduccion_barranquilla"
     };
   }
   const sabanaSectors = {
@@ -4217,6 +4469,17 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     }
   }
   if (!foundBarrio) {
+    const normCleanZone = inputZone ? normalizarTextoGeografico(inputZone) : "";
+    if (normCleanZone && MAPA_BARRIOS[normCleanZone]) {
+      const match = MAPA_BARRIOS[normCleanZone];
+      return {
+        neighborhood: match.barrioCanonico,
+        locality: match.localidad,
+        city: match.ciudad || "Bogot\xE1, D.C.",
+        department: match.departamento || "Cundinamarca / D.C.",
+        confidence: "alta_deduccion_nacional"
+      };
+    }
     neighborhood = isGenericZone ? null : inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null;
     locality = null;
   }
@@ -4273,7 +4536,7 @@ function resolveIntersectionToBarrio(text2) {
     ciudad: "Bogot\xE1, D.C."
   };
 }
-var GENERIC_ZONES_SET, DICCIONARIO_BOGOTA, MUNICIPIOS_CERCANOS, MAPA_BARRIOS, MAPA_LOCALIDADES;
+var GENERIC_ZONES_SET, DICCIONARIO_BOGOTA, MUNICIPIOS_CERCANOS, DICCIONARIO_MEDELLIN, DICCIONARIO_CALI, DICCIONARIO_BARRANQUILLA, DICCIONARIO_BUCARAMANGA, DICCIONARIO_CARTAGENA, DICCIONARIO_SANTA_MARTA, DICCIONARIO_EJE_CAFETERO, MAPA_BARRIOS, MAPA_LOCALIDADES;
 var init_geography = __esm({
   "server/_core/geography.ts"() {
     "use strict";
@@ -4638,16 +4901,436 @@ var init_geography = __esm({
       "Subachoque",
       "Gachancip\xE1"
     ];
+    DICCIONARIO_MEDELLIN = {
+      "comuna 1 popular": {
+        comuna: "Comuna 1 (Popular)",
+        barrios: ["Popular", "Santo Domingo Savio No. 1", "Santo Domingo Savio No. 2", "Santo Domingo Savio", "Granizal", "Mosc\xFA No. 2", "Villa Guadalupe", "San Pablo", "Aldea Pablo VI", "La Esperanza No. 2", "El Compromiso"]
+      },
+      "comuna 2 santa cruz": {
+        comuna: "Comuna 2 (Santa Cruz)",
+        barrios: ["Santa Cruz", "La Isla", "El Play\xF3n de Los Comuneros", "Pablo VI", "La Frontera", "La Francia", "Andaluc\xEDa", "Villa del Socorro", "Villa Niza", "Mosc\xFA No. 1", "Rosa M\xEDstica"]
+      },
+      "comuna 3 manrique": {
+        comuna: "Comuna 3 (Manrique)",
+        barrios: ["Manrique Central", "Manrique Central No. 1", "Manrique Central No. 2", "Manrique Oriental", "El Raizal", "Santa In\xE9s", "La Salle", "Las Granjas", "Campo Vald\xE9s No. 2", "San Jos\xE9 La Cima No. 1", "San Jos\xE9 La Cima No. 2", "Versalles No. 1", "Versalles No. 2", "El Pomar", "La Cruz", "Oriente", "Mar\xEDa Cano-Carambolas"]
+      },
+      "comuna 4 aranjuez": {
+        comuna: "Comuna 4 (Aranjuez)",
+        barrios: ["Aranjuez", "Berl\xEDn", "San Isidro", "Palermo", "Bermejal-Los \xC1lamos", "Moravia", "Sevilla", "San Pedro", "Campo Vald\xE9s No. 1", "Las Esmeraldas", "Brasilia", "Miranda"]
+      },
+      "comuna 5 castilla": {
+        comuna: "Comuna 5 (Castilla)",
+        barrios: ["Castilla", "Toscana", "Las Brisas", "Florencia", "Tejelo", "Boyac\xE1", "H\xE9ctor Abad G\xF3mez", "Belalc\xE1zar", "Girardot", "Tricentenario", "Plaza de Ferias", "Caribe", "Alfonso L\xF3pez", "Francisco Antonio Zea"]
+      },
+      "comuna 6 doce de octubre": {
+        comuna: "Comuna 6 (Doce de Octubre)",
+        barrios: ["Doce de Octubre", "Doce de Octubre No. 1", "Doce de Octubre No. 2", "Santander", "Pedregal", "La Esperanza", "El Progreso No. 2", "San Mart\xEDn de Porres", "Kennedy", "Picacho", "Mirador del Doce"]
+      },
+      "comuna 7 robledo": {
+        comuna: "Comuna 7 (Robledo)",
+        barrios: ["Robledo", "El Volador", "San Germ\xE1n", "Facultad de Minas", "La Pilarica", "Bosques de San Pablo", "Altamira", "C\xF3rdoba", "L\xF3pez de Mesa", "El Diamante", "Aures No. 1", "Aures No. 2", "Bello Horizonte", "Villa Flora", "Palenque", "Cucaracho", "Fuente Clara", "Santa Margarita", "Olaya Herrera", "Pajarito"]
+      },
+      "comuna 8 villa hermosa": {
+        comuna: "Comuna 8 (Villa Hermosa)",
+        barrios: ["Villa Hermosa", "La Mansi\xF3n", "San Miguel", "Los \xC1ngeles", "Boston", "Ladera", "Sucre", "El Fanal", "Enciso", "La Libertad", "Trece de Noviembre", "Llanaditas", "Los Mangos", "Golondrinas", "Alejandro Echavarr\xEDa", "San Antonio", "Las Estancias", "Villa Turbay"]
+      },
+      "comuna 9 buenos aires": {
+        comuna: "Comuna 9 (Buenos Aires)",
+        barrios: ["Buenos Aires", "Caicedo", "Juan Pablo II", "Ocho de Marzo", "Barrios de Jes\xFAs", "Bombon\xE1 No. 2", "Los Cerros El Vergel", "Miraflores", "Catalu\xF1a", "La Milagrosa", "Gerona", "El Salvador", "Loreto", "Asomadera No. 1", "Asomadera No. 2", "Asomadera No. 3"]
+      },
+      "comuna 10 la candelaria": {
+        comuna: "Comuna 10 (La Candelaria - Centro)",
+        barrios: ["La Candelaria", "Prado", "Centro", "Guayaquil", "San Benito", "Coraz\xF3n de Jes\xFAs", "Calle Nueva", "Perpetuo Socorro", "Col\xF3n", "Las Palmas", "Villanueva", "San Diego", "Estaci\xF3n Villa"]
+      },
+      "comuna 11 laureles estadio": {
+        comuna: "Comuna 11 (Laureles-Estadio)",
+        barrios: ["Laureles", "Estadio", "Conquistadores", "Suramericana", "Carlos E. Restrepo", "Cuarta Brigada", "Florida Nueva", "Naranjal", "San Joaqu\xEDn", "Bolivariana", "Las Acacias", "La Castellana", "Lorena", "El Vel\xF3dromo", "Los Conquistadores"]
+      },
+      "comuna 12 la america": {
+        comuna: "Comuna 12 (La Am\xE9rica)",
+        barrios: ["La Am\xE9rica", "Ferrini", "Calasanz", "Calasanz Parte Alta", "Los Pinos", "La Floresta", "Santa Luc\xEDa", "El Danubio", "Campo Alegre", "Santa M\xF3nica", "Barrio Crist\xF3bal", "Sim\xF3n Bol\xEDvar", "Santa Teresita"]
+      },
+      "comuna 13 san javier": {
+        comuna: "Comuna 13 (San Javier)",
+        barrios: ["San Javier", "San Javier No. 1", "San Javier No. 2", "El Pesebre", "Blanquizal", "Santa Rosa de Lima", "Los Alc\xE1zares", "Metropolitano", "La Pradera", "Juan XXIII", "La Divisa", "Veinte de Julio", "Belencito", "Betania", "Antonio Nari\xF1o", "El Socorro", "Eduardo Santos", "Nuevos Conquistadores", "Las Independencias"]
+      },
+      "comuna 14 el poblado": {
+        comuna: "Comuna 14 (El Poblado)",
+        barrios: ["El Poblado", "Castropol", "Barrio Colombia", "Lalinde", "Manila", "Las Lomas No. 1", "Las Lomas No. 2", "Altos del Poblado", "El Tesoro", "Los Naranjos", "Los Balsos No. 1", "Los Balsos No. 2", "San Lucas", "El Diamante No. 2", "El Castillo", "Alejandr\xEDa", "La Florida", "Provenza", "Patio Bonito", "Astorga", "Santa Mar\xEDa de Los \xC1ngeles"]
+      },
+      "comuna 15 guayabal": {
+        comuna: "Comuna 15 (Guayabal)",
+        barrios: ["Guayabal", "Tenche", "Trinidad", "Santa Fe", "Campo Amor", "Cristo Rey", "San Rafael", "La Colina"]
+      },
+      "comuna 16 belen": {
+        comuna: "Comuna 16 (Bel\xE9n)",
+        barrios: ["Bel\xE9n", "F\xE1tima", "Rosales", "Granada", "San Bernardo", "Las Playas", "Diego Echavarr\xEDa", "La Mota", "El Rinc\xF3n", "La Hondonada", "La Loma de Los Bernal", "La Gloria", "Altavista", "Bel\xE9n Rinc\xF3n", "Bel\xE9n Aliadas", "Bel\xE9n La Palma", "Bel\xE9n Parque", "Bel\xE9n San Bernardo", "Bel\xE9n Zafra"]
+      },
+      "corregimientos medellin": {
+        comuna: "Corregimientos de Medell\xEDn",
+        barrios: ["San Sebasti\xE1n de Palmitas", "Palmitas", "San Crist\xF3bal", "Altavista Rural", "San Antonio de Prado", "Santa Elena"]
+      },
+      "valle de aburra metro": {
+        comuna: "Valle de Aburr\xE1 / \xC1rea Metropolitana",
+        barrios: ["Envigado", "Sabaneta", "Itag\xFC\xED", "La Estrella", "Caldas", "Bello", "Copacabana", "Girardota", "Barbosa", "Rionegro", "La Ceja", "El Retiro", "Guarne", "Marinilla"]
+      }
+    };
+    DICCIONARIO_CALI = {
+      "comuna 1": {
+        comuna: "Comuna 1 (Oeste)",
+        barrios: ["Terr\xF3n Colorado", "Vista Hermosa"]
+      },
+      "comuna 2": {
+        comuna: "Comuna 2 (Norte)",
+        barrios: ["Santa M\xF3nica", "Santa M\xF3nica Residencial", "Granada", "Versalles", "Chipichape", "La Flora", "Menga", "Vipasa", "Prados del Norte", "San Vicente", "Urbanizaci\xF3n La Merced", "Brisas de los \xC1lamos", "\xC1lamos", "Centenario"]
+      },
+      "comuna 3": {
+        comuna: "Comuna 3 (Centro - San Antonio)",
+        barrios: ["San Antonio", "El Pe\xF1\xF3n", "San Cayetano", "Los Libertadores", "San Juan Bosco", "San Pascual", "El Calvario", "La Merced", "San Pedro", "Santa Rosa"]
+      },
+      "comuna 4": {
+        comuna: "Comuna 4 (Nororiente)",
+        barrios: ["Santander", "Las Delicias", "Manzanares", "Salomia", "F\xE1tima", "Jorge Isaacs", "Porvenir", "San Pedro Claver", "La Esmeralda", "Bolivariano"]
+      },
+      "comuna 5": {
+        comuna: "Comuna 5 (Norte)",
+        barrios: ["La Rivera", "Chiminangos", "Los Andes", "Sena", "Villa del Sol", "Torres de Comfandi", "Guayacanes", "Paseo de Los \xC1lamos"]
+      },
+      "comuna 6": {
+        comuna: "Comuna 6 (Nororiente)",
+        barrios: ["Petecuy", "Petecuy I", "Petecuy II", "Petecuy III", "Los Alc\xE1zares", "Guaduales", "Floralia", "Paso del Comercio", "San Luis"]
+      },
+      "comuna 7": {
+        comuna: "Comuna 7 (Oriente)",
+        barrios: ["Alfonso L\xF3pez", "Alfonso L\xF3pez I", "Alfonso L\xF3pez II", "Alfonso L\xF3pez III", "Puerto Mallarino", "Siete de Agosto", "Las Ceibas", "Base A\xE9rea", "Los Pinos"]
+      },
+      "comuna 8": {
+        comuna: "Comuna 8 (Oriente)",
+        barrios: ["Las Am\xE9ricas", "Atanasio Girardot", "Benjam\xEDn Herrera", "Chapinero", "La Nueva Base", "Santa Fe", "Primitivo Crespo", "El Tr\xE9bol", "Industrial"]
+      },
+      "comuna 9": {
+        comuna: "Comuna 9 (Centro)",
+        barrios: ["Alameda", "Breta\xF1a", "Guayaquil", "Obrero", "Sucre", "Jun\xEDn", "Belalc\xE1zar", "Aranjuez", "Manuel Mar\xEDa Buenaventura"]
+      },
+      "comuna 10": {
+        comuna: "Comuna 10 (Suroriente)",
+        barrios: ["San Crist\xF3bal", "Santa Elena", "Santo Domingo", "Departamental", "Pasoancho", "Colseguros Andes", "El Guabal", "San Judas Tadeo", "Ol\xEDmpico", "Crist\xF3bal Col\xF3n"]
+      },
+      "comuna 11": {
+        comuna: "Comuna 11 (Oriente)",
+        barrios: ["20 de Julio", "Aguablanca", "Prados de Oriente", "La Independencia", "San Benito", "Villanueva", "La Esperanza", "Jos\xE9 Holgu\xEDn Garc\xE9s"]
+      },
+      "comuna 12": {
+        comuna: "Comuna 12 (Oriente)",
+        barrios: ["Doce de Octubre", "El Para\xEDso", "Fenalco Kennedy", "Nueva Floresta", "Asturias", "Eduardo Santos", "Alfonso Barberena"]
+      },
+      "comuna 13": {
+        comuna: "Comuna 13 (Oriente)",
+        barrios: ["El Vergel", "Poblado I", "Poblado II", "Los Robles", "Marroqu\xEDn I", "Marroqu\xEDn II", "Marroqu\xEDn III", "Rodrigo Lara Bonilla", "Calipso", "El Diamante", "Omar Torrijos"]
+      },
+      "comuna 14": {
+        comuna: "Comuna 14 (Oriente)",
+        barrios: ["Alirio Mora Beltr\xE1n", "Manuela Beltr\xE1n", "Las Orqu\xEDdeas", "Alfonso Bonilla Arag\xF3n", "Puerta del Sol", "Los Naranjos"]
+      },
+      "comuna 15": {
+        comuna: "Comuna 15 (Oriente)",
+        barrios: ["Ciudad C\xF3rdoba", "Morichal de Comfandi", "El Vallado", "Retiro", "Llano Verde", "Mojica"]
+      },
+      "comuna 16": {
+        comuna: "Comuna 16 (Oriente)",
+        barrios: ["Mariano Ramos", "Rep\xFAblica de Israel", "Uni\xF3n de Vivienda Popular", "Antonio Nari\xF1o"]
+      },
+      "comuna 17": {
+        comuna: "Comuna 17 (Sur)",
+        barrios: ["Valle del Lili", "El Caney", "Ciudad Capri", "Mayap\xE1n - Las Vegas", "El Limonar", "Limonar", "La Selva", "Primero de Mayo", "Quintas de Don Sim\xF3n", "Ingenio", "Ingenio I", "Ingenio II", "Ingenio III", "Santa Anita", "Bosques del Limonar", "Ca\xF1averales", "Gran Limonar", "Prados del Limonar", "Bochalema", "Ciudad Mel\xE9ndez"]
+      },
+      "comuna 18": {
+        comuna: "Comuna 18 (Suroccidente)",
+        barrios: ["Mel\xE9ndez", "Buenos Aires", "Los Chorros", "Horizontes", "Polvorines", "Francisco Eladio Ram\xEDrez", "Prados del Sur"]
+      },
+      "comuna 19": {
+        comuna: "Comuna 19 (Oeste - San Fernando)",
+        barrios: ["San Fernando", "San Fernando Viejo", "Tequendama", "Nueva Tequendama", "Imbanaco", "Miraflores", "El Lido", "Santa Isabel", "Cuarto de Legua", "Guadalupe", "Camino Real", "Los C\xE1mbulos", "Bellavista", "Champagnat", "Urbanizaci\xF3n Tequendama", "Eucar\xEDstico", "San Antonio de Padua", "Santa Teresita", "Cristales", "Normand\xEDa", "Juanamb\xFA"]
+      },
+      "comuna 20": {
+        comuna: "Comuna 20 (Suroccidente)",
+        barrios: ["Silo\xE9", "Belisario Caicedo", "Brisas de Mayo", "Lleras Camargo", "Tierra Blanca", "Pueblo Joven"]
+      },
+      "comuna 21": {
+        comuna: "Comuna 21 (Oriente)",
+        barrios: ["Desepaz", "Compartir", "P\xEDzamos I", "P\xEDzamos II", "P\xEDzamos III", "Potrero Grande", "Calimio Desepaz", "Ciudad Talanga"]
+      },
+      "comuna 22": {
+        comuna: "Comuna 22 (Sur - Ciudad Jard\xEDn / Pance)",
+        barrios: ["Ciudad Jard\xEDn", "Pance", "Parcelaciones Pance", "Campestre", "Ca\xF1asgordas", "La Viga", "San Joaqu\xEDn", "La Umbr\xEDa", "El Hormiguero"]
+      },
+      "corregimientos cali": {
+        comuna: "Corregimientos de Cali",
+        barrios: ["La Buitrera", "Villacarmelo", "Pichind\xE9", "Los Andes", "Felidia", "El Saladito", "La Leonera", "La Elvira", "Montebello", "Golondrinas", "La Paz", "Castilla", "Navarro"]
+      },
+      "area metro cali": {
+        comuna: "\xC1rea Metropolitana de Cali",
+        barrios: ["Jamund\xED", "Yumbo", "Palmira", "Juanchito", "Candelaria"]
+      }
+    };
+    DICCIONARIO_BARRANQUILLA = {
+      "localidad riomar": {
+        localidad: "Localidad Riomar",
+        barrios: [
+          "Altos de Riomar",
+          "Riomar",
+          "Villa Santos",
+          "Buenavista",
+          "La Castellana",
+          "Villa Carolina",
+          "Santa M\xF3nica",
+          "El Limoncito",
+          "San Salvador",
+          "Las Flores",
+          "Siape",
+          "Para\xEDso",
+          "El Golf",
+          "San Vicente",
+          "Altos del Parque",
+          "Villa Campestre",
+          "Andaluc\xEDa",
+          "El Poblado",
+          "Granadillo",
+          "Altos del Lim\xF3n"
+        ]
+      },
+      "localidad norte centro historico": {
+        localidad: "Localidad Norte-Centro Hist\xF3rico",
+        barrios: [
+          "El Prado",
+          "Alto Prado",
+          "Villa Country",
+          "Bellavista",
+          "Boston",
+          "Betania",
+          "Delicias",
+          "El Recreo",
+          "Centro",
+          "Centro Hist\xF3rico",
+          "Barrio Abajo",
+          "Rosario",
+          "San Roque",
+          "Montecristo",
+          "Modelo",
+          "Concepci\xF3n",
+          "Santa Ana",
+          "Am\xE9rica",
+          "Colombia",
+          "Prado Norte",
+          "San Francisco",
+          "Tabor",
+          "Los Alpes",
+          "Miramar"
+        ]
+      },
+      "localidad sur occidente": {
+        localidad: "Localidad Sur Occidente",
+        barrios: [
+          "La Pradera",
+          "Los Olivos",
+          "Los Olivos I",
+          "Los Olivos II",
+          "El Pueblito",
+          "El Bosque",
+          "La Ceiba",
+          "Cevillar",
+          "El Valle",
+          "San Felipe",
+          "La Esmeralda",
+          "Lipaya",
+          "Los \xC1ngeles",
+          "Las Terrazas",
+          "La Manga",
+          "Por Fin",
+          "Me Quejo",
+          "El Ed\xE9n",
+          "Sourd\xEDs",
+          "La Paz"
+        ]
+      },
+      "localidad metropolitana": {
+        localidad: "Localidad Metropolitana",
+        barrios: [
+          "Ciudadela 20 de Julio",
+          "Las Cayenas",
+          "Los Girasoles",
+          "Carrizal",
+          "Buenos Aires",
+          "Santo Domingo de Guzm\xE1n",
+          "Santa Mar\xEDa",
+          "7 de Abril",
+          "Las Gardenias",
+          "San Luis",
+          "Santa Fe",
+          "La Sierra",
+          "Kennedy",
+          "La Victoria"
+        ]
+      },
+      "localidad sur oriente": {
+        localidad: "Localidad Sur Oriente",
+        barrios: [
+          "Sim\xF3n Bol\xEDvar",
+          "Las Nieves",
+          "La Uni\xF3n",
+          "Rebolo",
+          "Montes",
+          "San Jos\xE9",
+          "Boyac\xE1",
+          "Atl\xE1ntico",
+          "Chiquinquir\xE1",
+          "Las Palmas",
+          "La Alboraya",
+          "El Campito",
+          "La Magdalena",
+          "Tayrona",
+          "El Lim\xF3n",
+          "Las Dunas",
+          "Universal",
+          "Bellarena",
+          "Jos\xE9 Antonio Gal\xE1n"
+        ]
+      },
+      "area metro barranquilla": {
+        localidad: "\xC1rea Metropolitana de Barranquilla",
+        barrios: ["Soledad", "Malambo", "Puerto Colombia", "Galapa", "Sabanagrande"]
+      }
+    };
+    DICCIONARIO_BUCARAMANGA = {
+      "bucaramanga centro y oriente": {
+        localidad: "Bucaramanga",
+        barrios: [
+          "Cabecera del Llano",
+          "Cabecera",
+          "Sotomayor",
+          "San Francisco",
+          "San Alonso",
+          "Provenza",
+          "Diamante II",
+          "Mutis",
+          "Real de Minas",
+          "La Concordia",
+          "Alarc\xF3n",
+          "Antonia Santos",
+          "Comuneros",
+          "La Aurora",
+          "Morrorrico",
+          "Pan de Az\xFAcar",
+          "Terrazas",
+          "\xC1lvarez",
+          "Garc\xEDa Rovira"
+        ]
+      },
+      "floridablanca": {
+        localidad: "Floridablanca",
+        barrios: [
+          "Ca\xF1averal",
+          "Ruitoque Condominio",
+          "Ruitoque",
+          "Ruitoque Alto",
+          "Ruitoque Bajo",
+          "Lagos del Cacique",
+          "El Bosque",
+          "Bucarica",
+          "Molinos",
+          "Villabel",
+          "La Florida"
+        ]
+      },
+      "piedecuesta": {
+        localidad: "Piedecuesta",
+        barrios: ["Barroblanco", "San Telmo", "La Argentina", "Cabecera de Piedecuesta", "La Colina"]
+      },
+      "giron": {
+        localidad: "Gir\xF3n",
+        barrios: ["El Poblado Gir\xF3n", "Santa Cruz", "Rinc\xF3n de Gir\xF3n", "Centro Hist\xF3rico Gir\xF3n"]
+      }
+    };
+    DICCIONARIO_CARTAGENA = {
+      "localidad historica y caribe norte": {
+        localidad: "Localidad Hist\xF3rica y del Caribe Norte",
+        barrios: [
+          "Bocagrande",
+          "Castillogrande",
+          "El Laguito",
+          "Manga",
+          "Crespo",
+          "Marbella",
+          "El Cabrero",
+          "Pie de la Popa",
+          "Getseman\xED",
+          "Centro Hist\xF3rico",
+          "San Diego",
+          "Chambac\xFA",
+          "Torices",
+          "La Boquilla",
+          "Serena del Mar",
+          "Cielo Mar",
+          "Los Morros",
+          "Manzanillo del Mar"
+        ]
+      },
+      "localidad virgen y turistica": {
+        localidad: "Localidad de la Virgen y Tur\xEDstica",
+        barrios: ["Olaya Herrera", "Boston", "El L\xEDbano", "La Esperanza", "Fredonia"]
+      },
+      "localidad industrial y de la bahia": {
+        localidad: "Localidad Industrial y de la Bah\xEDa",
+        barrios: ["El Recreo", "Los Cerezos", "Santa Luc\xEDa", "El Socorro", "Los Jardines", "Blas de Lezo", "San Fernando", "Ternera", "Mamonal", "El Campestre"]
+      }
+    };
+    DICCIONARIO_SANTA_MARTA = {
+      "turistica y hotelera": {
+        localidad: "Santa Marta Tur\xEDstica",
+        barrios: [
+          "El Rodadero",
+          "Rodadero Sur",
+          "Pozos Colorados",
+          "Bello Horizonte",
+          "Playa Dormida",
+          "Taganga",
+          "Bavaria",
+          "El Jard\xEDn",
+          "Centro Hist\xF3rico",
+          "Mamatoco",
+          "Gaira",
+          "Salguero",
+          "Los Alc\xE1zares",
+          "Bellavista"
+        ]
+      }
+    };
+    DICCIONARIO_EJE_CAFETERO = {
+      "pereira": {
+        localidad: "Pereira",
+        barrios: ["Pinares", "\xC1lamos Pereira", "Cerritos", "Circunvalar", "Los Alpes", "Cuba", "Maraya", "Providencia", "Belmonte", "Corocito", "San Antonio Pereira", "Ciudad Victoria", "Dosquebradas"]
+      },
+      "manizales": {
+        localidad: "Manizales",
+        barrios: ["Palermo", "El Cable", "Chipre", "Mil\xE1n", "La Florida", "Bel\xE9n Manizales", "La Sultana", "Alta Suiza", "Los Rosales Manizales", "Campohermoso", "La Estrella", "San Jorge", "Villamar\xEDa"]
+      },
+      "armenia": {
+        localidad: "Armenia",
+        barrios: ["El Nogal Armenia", "Castellana Armenia", "Laureles Armenia", "Coinca", "Los Profesionales", "Puerto Espejo", "Granada Armenia", "Providencia Armenia", "La Florida Armenia", "Calarc\xE1", "Quimbaya"]
+      }
+    };
     MAPA_BARRIOS = {};
     MAPA_LOCALIDADES = {};
-    for (const [key, info] of Object.entries(DICCIONARIO_BOGOTA)) {
+    for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
       const normLocalidad = normalizarTextoGeografico(info.localidad);
       MAPA_LOCALIDADES[normLocalidad] = info.localidad;
       for (const barrio of info.barrios) {
         const normBarrio = normalizarTextoGeografico(barrio);
         MAPA_BARRIOS[normBarrio] = {
           barrioCanonico: barrio,
-          localidad: info.localidad
+          localidad: info.localidad,
+          ciudad: "Bogot\xE1, D.C.",
+          departamento: "Cundinamarca / D.C."
         };
       }
     }
@@ -4656,8 +5339,118 @@ var init_geography = __esm({
       MAPA_BARRIOS[normMun] = {
         barrioCanonico: mun,
         localidad: "Sabana de Bogot\xE1",
+        ciudad: mun,
+        departamento: "Cundinamarca",
         isMunicipio: true
       };
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_MEDELLIN)) {
+      const normComuna = normalizarTextoGeografico(info.comuna);
+      MAPA_LOCALIDADES[normComuna] = info.comuna;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          const isMetro = ["envigado", "sabaneta", "itagui", "la estrella", "caldas", "bello", "copacabana", "girardota", "barbosa", "rionegro", "la ceja", "el retiro", "guarne", "marinilla"].includes(normBarrio);
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.comuna,
+            ciudad: isMetro ? barrio : "Medell\xEDn",
+            departamento: "Antioquia"
+          };
+        }
+      }
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_CALI)) {
+      const normComuna = normalizarTextoGeografico(info.comuna);
+      MAPA_LOCALIDADES[normComuna] = info.comuna;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          const isMetro = ["jamundi", "yumbo", "palmira", "candelaria"].includes(normBarrio);
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.comuna,
+            ciudad: isMetro ? barrio : normBarrio === "juanchito" ? "Candelaria / Cali" : "Cali",
+            departamento: "Valle del Cauca"
+          };
+        }
+      }
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_BARRANQUILLA)) {
+      const normLoc = normalizarTextoGeografico(info.localidad);
+      MAPA_LOCALIDADES[normLoc] = info.localidad;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          const isMetro = ["soledad", "malambo", "puerto colombia", "galapa", "sabanagrande"].includes(normBarrio);
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.localidad,
+            ciudad: isMetro ? barrio : "Barranquilla",
+            departamento: "Atl\xE1ntico"
+          };
+        }
+      }
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_BUCARAMANGA)) {
+      const normLoc = normalizarTextoGeografico(info.localidad);
+      MAPA_LOCALIDADES[normLoc] = info.localidad;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.localidad,
+            ciudad: info.localidad,
+            departamento: "Santander"
+          };
+        }
+      }
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_CARTAGENA)) {
+      const normLoc = normalizarTextoGeografico(info.localidad);
+      MAPA_LOCALIDADES[normLoc] = info.localidad;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.localidad,
+            ciudad: "Cartagena",
+            departamento: "Bol\xEDvar"
+          };
+        }
+      }
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_SANTA_MARTA)) {
+      const normLoc = normalizarTextoGeografico(info.localidad);
+      MAPA_LOCALIDADES[normLoc] = info.localidad;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.localidad,
+            ciudad: "Santa Marta",
+            departamento: "Magdalena"
+          };
+        }
+      }
+    }
+    for (const [, info] of Object.entries(DICCIONARIO_EJE_CAFETERO)) {
+      const normLoc = normalizarTextoGeografico(info.localidad);
+      MAPA_LOCALIDADES[normLoc] = info.localidad;
+      for (const barrio of info.barrios) {
+        const normBarrio = normalizarTextoGeografico(barrio);
+        if (!MAPA_BARRIOS[normBarrio]) {
+          MAPA_BARRIOS[normBarrio] = {
+            barrioCanonico: barrio,
+            localidad: info.localidad,
+            ciudad: info.localidad,
+            departamento: info.localidad === "Pereira" ? "Risaralda" : info.localidad === "Manizales" ? "Caldas" : "Quind\xEDo"
+          };
+        }
+      }
     }
   }
 });
@@ -8143,30 +8936,138 @@ var init_matching = __esm({
       "candelaria",
       "el poblado",
       "poblado",
+      "altos del poblado",
+      "castropol",
+      "provenza",
+      "manila",
+      "patio bonito",
+      "san lucas",
+      "los balsos",
+      "los naranjos",
+      "el tesoro",
       "laureles",
-      "envigado",
-      "sabaneta",
-      "bel\xE9n",
-      "belen",
       "estadio",
       "conquistadores",
+      "suramericana",
+      "carlos e restrepo",
+      "san javier",
+      "comuna 13",
+      "bel\xE9n",
+      "belen",
+      "loma de los bernal",
+      "la mota",
+      "la am\xE9rica",
+      "la america",
+      "calasanz",
+      "robledo",
+      "pilarica",
+      "castilla",
+      "aranjuez",
+      "manrique",
+      "buenos aires",
+      "guayabal",
+      "prado",
+      "envigado",
+      "sabaneta",
+      "itag\xFC\xED",
+      "itagui",
+      "la estrella",
+      "rionegro",
+      "la ceja",
+      "el retiro",
+      "san antonio",
       "granada",
+      "ciudad jard\xEDn",
+      "ciudad jardin",
+      "pance",
+      "valle del lili",
+      "el caney",
+      "bochalema",
+      "ciudad mel\xE9ndez",
+      "ciudad melendez",
       "el pe\xF1\xF3n",
       "el pe\xF1on",
       "juanamb\xFA",
       "juanambu",
+      "santa m\xF3nica",
+      "santa monica",
+      "la flora",
+      "chipichape",
+      "menga",
       "san fernando",
-      "valle del lili",
-      "el prado",
+      "tequendama",
+      "imbanaco",
+      "versalles",
+      "san cayetano",
+      "centenario",
+      "miraflores",
+      "santa teresita",
+      "cristales",
+      "bellavista",
+      "limonar",
+      "el limonar",
+      "ciudad capri",
+      "ingenio",
+      "santa anita",
+      "mel\xE9ndez",
+      "melendez",
+      "juanchito",
+      "jamund\xED",
+      "jamundi",
+      "yumbo",
+      "palmira",
+      "altos de riomar",
+      "barrio abajo",
       "alto prado",
-      "riomar",
+      "el prado",
       "villa santos",
       "buenavista",
+      "riomar",
+      "villa carolina",
+      "villa campestre",
+      "el golf",
+      "villa country",
+      "el limon",
+      "el lim\xF3n",
+      "paraiso",
+      "para\xEDso",
+      "delicias",
+      "el recreo",
+      "rebolo",
+      "soledad",
+      "puerto colombia",
+      "bocagrande",
+      "castillogrande",
+      "el laguito",
+      "manga",
+      "crespo",
+      "marbella",
+      "pie de la popa",
+      "getseman\xED",
+      "getsemani",
+      "serena del mar",
+      "cielo mar",
+      "los morros",
+      "cabecera del llano",
       "cabecera",
+      "sotomayor",
       "ca\xF1averal",
       "canaveral",
+      "ruitoque condominio",
       "ruitoque",
-      "sotomayor"
+      "floridablanca",
+      "piedecuesta",
+      "gir\xF3n",
+      "giron",
+      "el rodadero",
+      "pozos colorados",
+      "bello horizonte",
+      "playa dormida",
+      "taganga",
+      "pinares",
+      "cerritos",
+      "circunvalar",
+      "dosquebradas"
     ];
     KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
     COMPILED_BARRIOS = KNOWN_BARRIOS_CANONICAL.map((b) => {
@@ -9644,10 +10545,12 @@ function extractFallbackDataFromText(text2) {
     city = clean.includes("melgar") ? "Melgar" : clean.includes("carmen de apicala") ? "Carmen de Apical\xE1" : "Ibagu\xE9";
   } else if (clean.includes("villavicencio") || clean.includes("acacias")) {
     city = clean.includes("acacias") ? "Acac\xEDas" : "Villavicencio";
-  } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
+  } else if (clean.includes("cali") || clean.includes("valle del lili") || clean.includes("pance") || clean.includes("bochalema") || clean.includes("el caney") || clean.includes("chipichape") || clean.includes("melendez") || clean.includes("jamundi") || clean.includes("juanchito") || clean.includes("san antonio") && !clean.includes("san antonio norte") && !clean.includes("san antonio noroccidental") || clean.includes("ciudad jardin") && !clean.includes("ciudad jardin norte") && !clean.includes("ciudad jardin sur")) {
     city = clean.includes("jamundi") || clean.includes("jamund\xED") ? "Jamund\xED" : "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota") || clean.includes("la ceja")) {
-    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medell\xEDn";
+  } else if (clean.includes("medellin") || clean.includes("medell\xEDn") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("san javier") || clean.includes("comuna 13") || clean.includes("belen") || clean.includes("bel\xE9n") || clean.includes("conquistadores") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("itagui") || clean.includes("itag\xFC\xED") || clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota") || clean.includes("la ceja") || clean.includes("el retiro")) {
+    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("itagui") || clean.includes("itag\xFC\xED") ? "Itag\xFC\xED" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : clean.includes("el retiro") ? "El Retiro" : "Medell\xEDn";
+  } else if (clean.includes("barranquilla") || clean.includes("altos de riomar") || clean.includes("barrio abajo") || clean.includes("alto prado") || clean.includes("villa santos") || clean.includes("villa campestre") || clean.includes("soledad") || clean.includes("puerto colombia")) {
+    city = clean.includes("soledad") ? "Soledad" : clean.includes("puerto colombia") || clean.includes("villa campestre") ? "Puerto Colombia" : "Barranquilla";
   } else if (clean.includes("chia") || clean.includes("ch\xEDa")) {
     city = "Ch\xEDa";
   } else if (clean.includes("cajica") || clean.includes("cajic\xE1")) {
@@ -9806,8 +10709,15 @@ function extractFallbackDataFromText(text2) {
     } catch (e) {
     }
   }
-  if (!city && zone && zone !== "Ciudad Mel\xE9ndez") {
-    city = "Bogot\xE1, D.C.";
+  if (!city && zone) {
+    const matchedItem = KNOWN_BARRIOS_SORTED_ITEMS.find((i) => i.canonical.toLowerCase() === zone.toLowerCase());
+    if (matchedItem && matchedItem.city) {
+      city = matchedItem.city;
+    } else if (zone === "Ciudad Mel\xE9ndez") {
+      city = "Cali";
+    } else {
+      city = "Bogot\xE1, D.C.";
+    }
   }
   const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
   const aceptaTerceria = !noTerceriaMatch;
@@ -10332,88 +11242,250 @@ var init_parsers = __esm({
     ]);
     fallbackDataCache = /* @__PURE__ */ new Map();
     KNOWN_BARRIOS_SORTED_ITEMS = [
-      "Santa B\xE1rbara Occidental",
-      "Santa B\xE1rbara Oriental",
-      "Santa B\xE1rbara Central",
-      "Santa B\xE1rbara Alta",
-      "Santa B\xE1rbara",
-      "Santa Ana Occidental",
-      "Santa Ana Oriental",
-      "Santa Ana Alta",
-      "Santa Ana Central",
-      "Santa Ana",
-      "San Crist\xF3bal Norte",
-      "La Alameda",
-      "San Antonio Norte",
-      "Villa Magdala",
-      "Chic\xF3 Reservado",
-      "Chic\xF3 Norte",
-      "Chic\xF3 Navarra",
-      "Rinc\xF3n del Chic\xF3",
-      "El Chic\xF3",
-      "Chic\xF3",
-      "Santa Paula",
-      "Santa Bibiana",
-      "San Patricio",
-      "Santa Teresa",
-      "La Cabrera",
-      "Cabrera",
-      "Los Rosales Alto",
-      "Rosales Alto",
-      "Los Rosales Bajo",
-      "Rosales Bajo",
-      "Los Rosales",
-      "Rosales",
-      "El Nogal",
-      "Nogal",
-      "El Virrey",
-      "El Retiro",
-      "El Refugio",
-      "Refugio",
-      "Quinta Camacho",
-      "Antiguo Country",
-      "Country Club",
-      "La Calleja",
-      "Calleja Alta",
-      "Calleja Baja",
-      "La Carolina",
-      "Bosque Medina",
-      "El Contador",
-      "Alcal\xE1",
-      "Belmira",
-      "La Castellana",
-      "Polo Club",
-      "San Felipe",
-      "Ema\xFAs",
-      "Colina Campestre",
-      "Ciudad Mel\xE9ndez",
-      "Ciudad Jard\xEDn Norte",
-      "Ciudad Jard\xEDn Sur",
-      "Ciudad Jard\xEDn",
-      "\xC1lamos Norte",
-      "\xC1lamos Sur",
-      "\xC1lamos",
-      "La Candelaria Centro",
-      "Candelaria la Nueva",
-      "Candelaria Sur",
-      "La Candelaria",
-      "Nuevo Country",
-      "Niza Norte",
-      "Niza Antigua",
-      "Niza",
-      "Sotileza",
-      "Bella Suiza",
-      "Lisboa",
-      "Alejandr\xEDa",
-      "Carmel Club",
-      "Cantalejo",
-      "Sotavento",
-      "San Jos\xE9 de Bavaria",
-      "Chapinero Alto",
-      "Chapinero Central",
-      "Chapinero",
-      "Cedritos"
-    ].map((b) => ({ canonical: b, lower: b.toLowerCase() }));
+      // ── BOGOTÁ D.C. ──
+      { canonical: "Santa B\xE1rbara Occidental", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa B\xE1rbara Oriental", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa B\xE1rbara Central", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa B\xE1rbara Alta", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa B\xE1rbara", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Ana Occidental", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Ana Oriental", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Ana Alta", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Ana Central", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Ana", city: "Bogot\xE1, D.C." },
+      { canonical: "San Crist\xF3bal Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "La Alameda", city: "Bogot\xE1, D.C." },
+      { canonical: "San Antonio Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "Villa Magdala", city: "Bogot\xE1, D.C." },
+      { canonical: "Chic\xF3 Reservado", city: "Bogot\xE1, D.C." },
+      { canonical: "Chic\xF3 Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "Chic\xF3 Navarra", city: "Bogot\xE1, D.C." },
+      { canonical: "Rinc\xF3n del Chic\xF3", city: "Bogot\xE1, D.C." },
+      { canonical: "El Chic\xF3", city: "Bogot\xE1, D.C." },
+      { canonical: "Chic\xF3", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Paula", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Bibiana", city: "Bogot\xE1, D.C." },
+      { canonical: "San Patricio", city: "Bogot\xE1, D.C." },
+      { canonical: "Santa Teresa", city: "Bogot\xE1, D.C." },
+      { canonical: "La Cabrera", city: "Bogot\xE1, D.C." },
+      { canonical: "Cabrera", city: "Bogot\xE1, D.C." },
+      { canonical: "Los Rosales Alto", city: "Bogot\xE1, D.C." },
+      { canonical: "Rosales Alto", city: "Bogot\xE1, D.C." },
+      { canonical: "Los Rosales Bajo", city: "Bogot\xE1, D.C." },
+      { canonical: "Rosales Bajo", city: "Bogot\xE1, D.C." },
+      { canonical: "Los Rosales", city: "Bogot\xE1, D.C." },
+      { canonical: "Rosales", city: "Bogot\xE1, D.C." },
+      { canonical: "El Nogal", city: "Bogot\xE1, D.C." },
+      { canonical: "Nogal", city: "Bogot\xE1, D.C." },
+      { canonical: "El Virrey", city: "Bogot\xE1, D.C." },
+      { canonical: "El Retiro", city: "Bogot\xE1, D.C." },
+      { canonical: "El Refugio", city: "Bogot\xE1, D.C." },
+      { canonical: "Refugio", city: "Bogot\xE1, D.C." },
+      { canonical: "Quinta Camacho", city: "Bogot\xE1, D.C." },
+      { canonical: "Antiguo Country", city: "Bogot\xE1, D.C." },
+      { canonical: "Country Club", city: "Bogot\xE1, D.C." },
+      { canonical: "La Calleja", city: "Bogot\xE1, D.C." },
+      { canonical: "Calleja Alta", city: "Bogot\xE1, D.C." },
+      { canonical: "Calleja Baja", city: "Bogot\xE1, D.C." },
+      { canonical: "La Carolina", city: "Bogot\xE1, D.C." },
+      { canonical: "Bosque Medina", city: "Bogot\xE1, D.C." },
+      { canonical: "El Contador", city: "Bogot\xE1, D.C." },
+      { canonical: "Alcal\xE1", city: "Bogot\xE1, D.C." },
+      { canonical: "Belmira", city: "Bogot\xE1, D.C." },
+      { canonical: "La Castellana", city: "Bogot\xE1, D.C." },
+      { canonical: "Polo Club", city: "Bogot\xE1, D.C." },
+      { canonical: "San Felipe", city: "Bogot\xE1, D.C." },
+      { canonical: "Ema\xFAs", city: "Bogot\xE1, D.C." },
+      { canonical: "Colina Campestre", city: "Bogot\xE1, D.C." },
+      { canonical: "Ciudad Jard\xEDn Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "Ciudad Jard\xEDn Sur", city: "Bogot\xE1, D.C." },
+      { canonical: "\xC1lamos Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "\xC1lamos Sur", city: "Bogot\xE1, D.C." },
+      { canonical: "La Candelaria Centro", city: "Bogot\xE1, D.C." },
+      { canonical: "Candelaria la Nueva", city: "Bogot\xE1, D.C." },
+      { canonical: "Candelaria Sur", city: "Bogot\xE1, D.C." },
+      { canonical: "La Candelaria", city: "Bogot\xE1, D.C." },
+      { canonical: "Nuevo Country", city: "Bogot\xE1, D.C." },
+      { canonical: "Niza Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "Niza Antigua", city: "Bogot\xE1, D.C." },
+      { canonical: "Niza", city: "Bogot\xE1, D.C." },
+      { canonical: "Sotileza", city: "Bogot\xE1, D.C." },
+      { canonical: "Bella Suiza", city: "Bogot\xE1, D.C." },
+      { canonical: "Lisboa", city: "Bogot\xE1, D.C." },
+      { canonical: "Alejandr\xEDa", city: "Bogot\xE1, D.C." },
+      { canonical: "Carmel Club", city: "Bogot\xE1, D.C." },
+      { canonical: "Cantalejo", city: "Bogot\xE1, D.C." },
+      { canonical: "Sotavento", city: "Bogot\xE1, D.C." },
+      { canonical: "San Jos\xE9 de Bavaria", city: "Bogot\xE1, D.C." },
+      { canonical: "Chapinero Alto", city: "Bogot\xE1, D.C." },
+      { canonical: "Chapinero Central", city: "Bogot\xE1, D.C." },
+      { canonical: "Chapinero", city: "Bogot\xE1, D.C." },
+      { canonical: "Cedritos", city: "Bogot\xE1, D.C." },
+      { canonical: "Los Cedros", city: "Bogot\xE1, D.C." },
+      { canonical: "Tober\xEDn", city: "Bogot\xE1, D.C." },
+      { canonical: "Mazur\xE9n", city: "Bogot\xE1, D.C." },
+      { canonical: "Mirandela", city: "Bogot\xE1, D.C." },
+      { canonical: "Portales del Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "Victoria Norte", city: "Bogot\xE1, D.C." },
+      { canonical: "Prado Veraniego", city: "Bogot\xE1, D.C." },
+      { canonical: "La Floresta", city: "Bogot\xE1, D.C." },
+      { canonical: "Pontevedra", city: "Bogot\xE1, D.C." },
+      { canonical: "Morato", city: "Bogot\xE1, D.C." },
+      { canonical: "Alhambra", city: "Bogot\xE1, D.C." },
+      { canonical: "La Alhambra", city: "Bogot\xE1, D.C." },
+      { canonical: "Bat\xE1n", city: "Bogot\xE1, D.C." },
+      { canonical: "Pasadena", city: "Bogot\xE1, D.C." },
+      { canonical: "Ciudad Salitre", city: "Bogot\xE1, D.C." },
+      { canonical: "Modelia", city: "Bogot\xE1, D.C." },
+      { canonical: "Hayuelos", city: "Bogot\xE1, D.C." },
+      { canonical: "Fontib\xF3n", city: "Bogot\xE1, D.C." },
+      { canonical: "Nicol\xE1s de Federmann", city: "Bogot\xE1, D.C." },
+      { canonical: "La Esmeralda", city: "Bogot\xE1, D.C." },
+      { canonical: "Quinta Paredes", city: "Bogot\xE1, D.C." },
+      { canonical: "Palermo", city: "Bogot\xE1, D.C." },
+      { canonical: "Teusaquillo", city: "Bogot\xE1, D.C." },
+      { canonical: "Usaqu\xE9n", city: "Bogot\xE1, D.C." },
+      // ── MEDELLÍN Y ÁREA METROPOLITANA ──
+      { canonical: "El Poblado", city: "Medell\xEDn" },
+      { canonical: "Altos del Poblado", city: "Medell\xEDn" },
+      { canonical: "Castropol", city: "Medell\xEDn" },
+      { canonical: "Provenza", city: "Medell\xEDn" },
+      { canonical: "Manila", city: "Medell\xEDn" },
+      { canonical: "Patio Bonito", city: "Medell\xEDn" },
+      { canonical: "San Lucas", city: "Medell\xEDn" },
+      { canonical: "Los Balsos", city: "Medell\xEDn" },
+      { canonical: "Los Naranjos", city: "Medell\xEDn" },
+      { canonical: "El Tesoro", city: "Medell\xEDn" },
+      { canonical: "Laureles", city: "Medell\xEDn" },
+      { canonical: "Estadio", city: "Medell\xEDn" },
+      { canonical: "Conquistadores", city: "Medell\xEDn" },
+      { canonical: "Suramericana", city: "Medell\xEDn" },
+      { canonical: "Carlos E. Restrepo", city: "Medell\xEDn" },
+      { canonical: "San Javier", city: "Medell\xEDn" },
+      { canonical: "Comuna 13", city: "Medell\xEDn" },
+      { canonical: "Bel\xE9n", city: "Medell\xEDn" },
+      { canonical: "Bel\xE9n Rinc\xF3n", city: "Medell\xEDn" },
+      { canonical: "Loma de Los Bernal", city: "Medell\xEDn" },
+      { canonical: "La Mota", city: "Medell\xEDn" },
+      { canonical: "La Am\xE9rica", city: "Medell\xEDn" },
+      { canonical: "Calasanz", city: "Medell\xEDn" },
+      { canonical: "Robledo", city: "Medell\xEDn" },
+      { canonical: "Pilarica", city: "Medell\xEDn" },
+      { canonical: "Castilla", city: "Medell\xEDn" },
+      { canonical: "Aranjuez", city: "Medell\xEDn" },
+      { canonical: "Manrique", city: "Medell\xEDn" },
+      { canonical: "Buenos Aires", city: "Medell\xEDn" },
+      { canonical: "Guayabal", city: "Medell\xEDn" },
+      { canonical: "Prado", city: "Medell\xEDn" },
+      { canonical: "Envigado", city: "Envigado" },
+      { canonical: "Sabaneta", city: "Sabaneta" },
+      { canonical: "Itag\xFC\xED", city: "Itag\xFC\xED" },
+      { canonical: "La Estrella", city: "La Estrella" },
+      { canonical: "Bello", city: "Bello" },
+      { canonical: "Rionegro", city: "Rionegro" },
+      { canonical: "La Ceja", city: "La Ceja" },
+      { canonical: "El Retiro", city: "El Retiro" },
+      // ── CALI Y VALLE DEL CAUCA ──
+      { canonical: "Ciudad Jard\xEDn", city: "Cali" },
+      { canonical: "San Antonio", city: "Cali" },
+      { canonical: "Granada", city: "Cali" },
+      { canonical: "Pance", city: "Cali" },
+      { canonical: "Valle del Lili", city: "Cali" },
+      { canonical: "El Caney", city: "Cali" },
+      { canonical: "Bochalema", city: "Cali" },
+      { canonical: "Ciudad Mel\xE9ndez", city: "Cali" },
+      { canonical: "El Pe\xF1\xF3n", city: "Cali" },
+      { canonical: "Juanamb\xFA", city: "Cali" },
+      { canonical: "Santa M\xF3nica", city: "Cali" },
+      { canonical: "La Flora", city: "Cali" },
+      { canonical: "Chipichape", city: "Cali" },
+      { canonical: "Menga", city: "Cali" },
+      { canonical: "San Fernando", city: "Cali" },
+      { canonical: "Tequendama", city: "Cali" },
+      { canonical: "Imbanaco", city: "Cali" },
+      { canonical: "Versalles", city: "Cali" },
+      { canonical: "San Cayetano", city: "Cali" },
+      { canonical: "Centenario", city: "Cali" },
+      { canonical: "Miraflores", city: "Cali" },
+      { canonical: "Santa Teresita", city: "Cali" },
+      { canonical: "Cristales", city: "Cali" },
+      { canonical: "Bellavista", city: "Cali" },
+      { canonical: "Limonar", city: "Cali" },
+      { canonical: "El Limonar", city: "Cali" },
+      { canonical: "Ciudad Capri", city: "Cali" },
+      { canonical: "Ingenio", city: "Cali" },
+      { canonical: "Santa Anita", city: "Cali" },
+      { canonical: "Mel\xE9ndez", city: "Cali" },
+      { canonical: "Juanchito", city: "Cali" },
+      { canonical: "Jamund\xED", city: "Jamund\xED" },
+      { canonical: "Yumbo", city: "Yumbo" },
+      { canonical: "Palmira", city: "Palmira" },
+      // ── BARRANQUILLA Y ATLÁNTICO ──
+      { canonical: "Altos de Riomar", city: "Barranquilla" },
+      { canonical: "Barrio Abajo", city: "Barranquilla" },
+      { canonical: "Alto Prado", city: "Barranquilla" },
+      { canonical: "El Prado", city: "Barranquilla" },
+      { canonical: "Villa Santos", city: "Barranquilla" },
+      { canonical: "Buenavista", city: "Barranquilla" },
+      { canonical: "Riomar", city: "Barranquilla" },
+      { canonical: "Villa Carolina", city: "Barranquilla" },
+      { canonical: "Villa Campestre", city: "Puerto Colombia" },
+      { canonical: "El Golf", city: "Barranquilla" },
+      { canonical: "Villa Country", city: "Barranquilla" },
+      { canonical: "El Lim\xF3n", city: "Barranquilla" },
+      { canonical: "Para\xEDso", city: "Barranquilla" },
+      { canonical: "Bellavista", city: "Barranquilla" },
+      { canonical: "Betania", city: "Barranquilla" },
+      { canonical: "Delicias", city: "Barranquilla" },
+      { canonical: "El Recreo", city: "Barranquilla" },
+      { canonical: "Centro Hist\xF3rico", city: "Barranquilla" },
+      { canonical: "Miramar", city: "Barranquilla" },
+      { canonical: "Sim\xF3n Bol\xEDvar", city: "Barranquilla" },
+      { canonical: "Las Nieves", city: "Barranquilla" },
+      { canonical: "Rebolo", city: "Barranquilla" },
+      { canonical: "Soledad", city: "Soledad" },
+      { canonical: "Puerto Colombia", city: "Puerto Colombia" },
+      // ── CARTAGENA ──
+      { canonical: "Bocagrande", city: "Cartagena" },
+      { canonical: "Castillogrande", city: "Cartagena" },
+      { canonical: "El Laguito", city: "Cartagena" },
+      { canonical: "Manga", city: "Cartagena" },
+      { canonical: "Crespo", city: "Cartagena" },
+      { canonical: "Marbella", city: "Cartagena" },
+      { canonical: "Pie de la Popa", city: "Cartagena" },
+      { canonical: "Getseman\xED", city: "Cartagena" },
+      { canonical: "Serena del Mar", city: "Cartagena" },
+      { canonical: "Cielo Mar", city: "Cartagena" },
+      { canonical: "Los Morros", city: "Cartagena" },
+      // ── BUCARAMANGA Y METROPOLITANA ──
+      { canonical: "Cabecera del Llano", city: "Bucaramanga" },
+      { canonical: "Cabecera", city: "Bucaramanga" },
+      { canonical: "Sotomayor", city: "Bucaramanga" },
+      { canonical: "Ca\xF1averal", city: "Floridablanca" },
+      { canonical: "Ruitoque Condominio", city: "Floridablanca" },
+      { canonical: "Ruitoque", city: "Floridablanca" },
+      { canonical: "Real de Minas", city: "Bucaramanga" },
+      { canonical: "Floridablanca", city: "Floridablanca" },
+      { canonical: "Piedecuesta", city: "Piedecuesta" },
+      { canonical: "Gir\xF3n", city: "Gir\xF3n" },
+      // ── SANTA MARTA ──
+      { canonical: "El Rodadero", city: "Santa Marta" },
+      { canonical: "Pozos Colorados", city: "Santa Marta" },
+      { canonical: "Bello Horizonte", city: "Santa Marta" },
+      { canonical: "Playa Dormida", city: "Santa Marta" },
+      { canonical: "Taganga", city: "Santa Marta" },
+      // ── EJE CAFETERO ──
+      { canonical: "Pinares", city: "Pereira" },
+      { canonical: "Cerritos", city: "Pereira" },
+      { canonical: "Circunvalar", city: "Pereira" },
+      { canonical: "Dosquebradas", city: "Dosquebradas" },
+      { canonical: "Palermo", city: "Manizales" },
+      { canonical: "El Cable", city: "Manizales" }
+    ].map((item) => ({
+      canonical: item.canonical,
+      lower: item.canonical.toLowerCase(),
+      city: item.city
+    })).sort((a, b) => b.lower.length - a.lower.length);
   }
 });
 
@@ -11880,9 +12952,11 @@ async function getOrLoadDmHistory(userId) {
           recentMsgs.reverse();
           const restored = recentMsgs.map((m) => {
             const dateStr = new Date(m.createdAt).toISOString().replace("T", " ").substring(0, 16);
+            const isAssistant = m.role === "janIA";
+            const cleanMsg = m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, "").replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
             return {
-              role: m.role === "janIA" ? "assistant" : "user",
-              content: `[${dateStr}] ${m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, "")}`,
+              role: isAssistant ? "assistant" : "user",
+              content: isAssistant ? cleanMsg : `[${dateStr}] ${cleanMsg}`,
               ts: new Date(m.createdAt).getTime()
             };
           });
@@ -11900,7 +12974,8 @@ function appendDmHistory(userId, role, content) {
   const history = getDmHistory(userId);
   const now = /* @__PURE__ */ new Date();
   const dateStr = now.toISOString().replace("T", " ").substring(0, 16);
-  const taggedContent = content.startsWith("[20") ? content : `[${dateStr}] ${content}`;
+  const cleanContent = content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
+  const taggedContent = role === "user" ? `[${dateStr}] ${cleanContent}` : cleanContent;
   history.push({ role, content: taggedContent, ts: now.getTime() });
   while (history.length > 20) history.shift();
   dmConversationHistory.set(userId, history);
@@ -20496,21 +21571,31 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : `- Usuario identificado: ${displayName || realName || "Colega"}.
 `}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
 - SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
+- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
 - MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
     const messages2 = [
       { role: "system", content: systemPrompt }
     ];
     for (const turn of history.slice(-20)) {
-      messages2.push({ role: turn.role, content: turn.content });
+      const cleanTurnContent = turn.role === "assistant" ? turn.content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim() : turn.content;
+      messages2.push({ role: turn.role, content: cleanTurnContent });
     }
     messages2.push({
       role: "user",
       content: `Mensaje de ${realName} (${userId}): "${clean}"`
     });
-    const llmRes = await invokeLLM({
-      messages: messages2,
-      tools: JANIA_DM_TOOLS
-    });
+    let llmRes;
+    try {
+      llmRes = await invokeLLM({
+        messages: messages2,
+        tools: JANIA_DM_TOOLS
+      });
+    } catch (toolsErr) {
+      console.warn(`[dmHandler] \u26A0\uFE0F Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
+      llmRes = await invokeLLM({
+        messages: messages2
+      });
+    }
     let reply = "";
     const fnCall = llmRes.choices[0]?.message?.functionCall;
     if (fnCall && fnCall.name) {
@@ -20542,6 +21627,7 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
     } else {
       reply = llmRes.choices[0]?.message?.content || "";
     }
+    reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
     reply = sanitizeResponseMarkdown(reply.trim());
     if (!reply) {
       if (isEduardo) {
@@ -20557,7 +21643,7 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+    {
       const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
       const timeGreeting = getGreetingByTime4();
       if (isEduardo) {
@@ -20755,7 +21841,7 @@ ${verifResult.reportText}`;
         return hMsg;
       }
     }
-    const fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    const fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! \u{1F44B} Estoy 100% atenta. Tuve una breve demora de conexi\xF3n de red con el modelo de lenguaje, pero ya me restablec\xED. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una peque\xF1a demora de red en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Tuve una peque\xF1a demora de conexi\xF3n de red con mi servicio de lenguaje. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;
@@ -22052,7 +23138,9 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       await this.queuedSend(senderId, voiceFollowUpQuestion, { allowDirectMessage: true });
                       await this.logToDb(senderId, "janIA", voiceFollowUpQuestion);
                     }
-                    const isGratitudeOrClosing2 = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
+                    const isSenderAdminVoice = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
+                    const isLongQueryVoice = cleanLower.includes("?") || cleanLower.split(/\s+/).filter(Boolean).length > 15 || /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
+                    const isGratitudeOrClosing2 = !isSenderAdminVoice && !isLongQueryVoice && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
                     const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
                     const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
                     if (isGratitudeOrClosing2 && lastReviewSent2 < oneDayAgo2) {
@@ -22095,7 +23183,10 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                 await this.queuedSend(senderId, followUpQuestion, { allowDirectMessage: true });
                 await this.logToDb(senderId, "janIA", followUpQuestion);
               }
-              const isGratitudeOrClosing = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
+              const isSenderAdmin = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
+              const isLongQueryOrQuestion = cleanLower.includes("?") || cleanLower.split(/\s+/).filter(Boolean).length > 15 || /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
+              const isErrorReply = typeof replyText === "string" && (replyText.includes("intermitencia temporal") || replyText.includes("error") || replyText.includes("fallo en la matrix"));
+              const isGratitudeOrClosing = !isSenderAdmin && !isLongQueryOrQuestion && !isErrorReply && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
               const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
               const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
               if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {

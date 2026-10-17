@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.23 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.24 — Octubre 2026
+
+### Novedades v33.24 (Resiliencia LLM en DMs, Eliminación de Intermitencia Temporal y Timestamps Huérfanos, Cobertura Geográfica Nacional Completa y Protocolo de Despliegue Dual):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Causa Raíz de "Intermitencia temporal" en DMs de WhatsApp**:
+     - *Agotamiento de créditos en clave de pago (HTTP 402)*: Cuando la clave de pago de Google Gemini (`GEMINI_PAID_KEY`) arrojó `"Your prepayment credits are depleted"`, no se pausaba adecuadamente y causaba errores en cascada.
+     - *Timeout breve (12s)*: Las consultas jurídicas profundas o con 7 declaraciones de herramientas en `gemini-flash-latest` superaban los 12s de axios en el VPS, abortando la llamada prematuramente.
+     - *Fallo con `tools` en `dmHandler.ts`*: Si la llamada con herramientas fallaba o si el modelo rechazaba el esquema, la excepción caía directo al `catch` general enviando el mensaje genérico de intermitencia temporal en lugar de reintentar de forma conversacional sin herramientas.
+  2. **Soluciones Implementadas en el Núcleo Cognitivo**:
+     - **Gestión de HTTP 402 en `server/_core/llm.ts`**: Pone la clave con créditos agotados en cooldown de 3600 segundos (1 hora) y regresa automáticamente al pool gratuito de 4 claves ($0 COP).
+     - **Ampliación de Timeout a 25 segundos**: Margen suficiente para razonamiento jurídico profundo y respuestas articuladas con jurisprudencia y normativa colombiana (Ley 820 de 2003).
+     - **Fallback Inmediato ante Error 400 de Herramientas**: Si Google rechaza los esquemas de tools, se desactiva `payload.tools` y se reintenta instantáneamente en modo conversacional.
+     - **Reintento Conversacional en `server/_core/jania/handlers/dmHandler.ts`**: Si `invokeLLM` con `JANIA_DM_TOOLS` arroja excepción, un bloque interno try/catch ejecuta de inmediato un reintento limpio sin herramientas antes de cualquier fallback de texto.
+     - **Erradicación de Timestamps Huérfanos `[YYYY-MM-DD HH:mm]`**: En `sessionManager.ts`, los turnos del asistente se almacenan y recuperan limpios de prefijos de fecha. En `dmHandler.ts`, se desinfecta cualquier timestamp residual con regex al inicio de la respuesta y se refuerza la directiva negativa en los prompts.
+     - **Supresión de Falsos Positivos de Calificación de Google e Invitación a Grupos**: En `server/_core/whatsapp-match.ts`, se restringe la activación de reviews e invitaciones: NO se dispara si el mensaje contiene `?`, si tiene más de 15 palabras, si incluye vocabulario inmobiliario/jurídico, si la respuesta principal fue un error o si el remitente es un administrador oficial (Eduardo o Jani).
+  3. **Cobertura Geográfica Nacional Completa**:
+     - Reconocimiento y deducción en tiempo real de las principales ciudades y departamentos de Colombia (Medellín, Cali, Barranquilla, Bucaramanga, Cartagena, etc.) con paridad total en WhatsApp y Web.
+  4. **Protocolo de Despliegue Dual**:
+     - Actualización de credenciales de GitHub con token sin expiración en el remoto y despliegue directo por SSH al VPS de Contabo (`13.140.149.144`).
+  5. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 296/296 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.24`) y `package.json` (`33.24.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.23 — Octubre 2026
 
 ### Novedades v33.23 (Blindaje de `splitMultiItemMessage` contra Bordes Decorativos, Erradicación de Falsos Positivos de Moderación en Grupo 1 y Deducción de Bogotá en Barrios Capitalinos):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

@@ -7,6 +7,62 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-17] — JanIA v33.24: Cobertura Geográfica Nacional Completa, Resiliencia LLM en DMs y Protocolo de Despliegue Dual (v33.24 - 33.24.0)
+
+**Versión:** `v33.24` (`33.24.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/llm.ts`: Ampliación del timeout a 25s; manejo de HTTP 402 ("prepayment credits are depleted") con cooldown preventivo de 1 hora en la clave de pago y failover al pool gratuito; rescate ante error HTTP 400 de esquemas de tools; intento final de rescate sin tools si todas las llamadas con tools fallan.
+- `server/_core/jania/handlers/dmHandler.ts`: Envoltorio try/catch para reintentar de inmediato como consulta conversacional limpia sin herramientas ante fallos en `invokeLLM` con `JANIA_DM_TOOLS`; desinfección de timestamps residuales `^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*` en la respuesta generada; instrucciones negativas para evitar que el LLM devuelva timestamps en lugar de texto.
+- `server/_core/jania/sessionManager.ts`: Desinfección y almacenamiento limpio de turnos de rol `assistant` sin prefijos de fecha `[YYYY-MM-DD HH:mm]`, impidiendo la retroalimentación de timestamps en el historial contextual.
+- `server/_core/whatsapp-match.ts`: Blindaje contra falsos positivos de review de Google Reviews e invitaciones a grupos ante cierres de cortesía ("Gracias y quedo atento a comentarios") mediante condiciones estrictas (no disparar si contiene `?`, si tiene más de 15 palabras, términos técnicos/jurídicos, si la respuesta fue un fallo o si el remitente es Eduardo o Jani).
+- `server/_core/divipola.ts`, `server/_core/jania/parsers.ts`, `server/_core/geocoding.ts`: Cobertura nacional completa para Medellín, Cali, Barranquilla, Bucaramanga, Cartagena, etc., con paridad en WhatsApp y Web.
+- `shared/const.ts` (`v33.24`) y `package.json` (`33.24.0`).
+- `server/__tests__/regression.test.ts`: SUITE 82 (5 tests de cobertura nacional y paridad) y actualización de versión a v33.24 (296/296 passing).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"EJECUTA ESTA ORDEN DE DESPLIEGUE DUAL (GITHUB + SSH VPS DIRECTO) Y REPARACIÓN URGENTE DE `invokeLLM` EN WHATSAPP (v33.24):*
+  *1. CONFIGURACIÓN DE TOKEN DE GITHUB Y DESPLIEGUE DIRECTO AL VPS DE CONTABO: Actualiza el remoto de GitHub con este nuevo token sin expiración (ghp_***[CONFIGURADO_SIN_EXPIRACION]) en git remote set-url origin y en ~/.git-credentials, y ejecuta git push origin main. ADEMÁS, restablece el protocolo clásico: SIEMPRE debes desplegar en GitHub Y TAMBIÉN desplegar directamente en el VPS de Contabo (13.140.149.144) vía SSH / scripts/deploy-vps.sh para no depender únicamente de GitHub Actions y poder verificar los logs reales del servidor (pm2 logs).*
+  *2. DIAGNÓSTICO Y REPARACIÓN URGENTE EN EL VPS DEL ERROR 'Ocurrió una intermitencia temporal en el sistema de consulta': En pruebas reales hoy en WhatsApp (15:40 a 15:46) enviando una consulta jurídica de arrendamiento y mensajes conversacionales ('Por supuesto, yo misma los cree jejejeje'), JanIA está cayendo sistemáticamente en el bloque catch y respondiendo: '¡Buenas tardes, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝' Y en un turno intermedio (15:41) respondió únicamente: [2026-10-17 10:35]. Revisa inmediatamente los logs del VPS por SSH y corrige las 3 causas raíz: a) Fallo en invokeLLM con JANIA_DM_TOOLS, b) Respuesta [2026-10-17 10:35], c) Falsos Positivos de 'Gracias' e Invitación a Grupos en whatsapp-match.ts.*
+  *3. PRUEBA REAL DE FUEGO ANTES DE CERRAR: Ejecuta con npx tsx una prueba real (con las llaves reales de .env) pasando por processPrivateDmConversationalMessage el caso real de arrendamiento: 'Resuelve este caso inmobiliario: Tengo un cliente en ARRIENDO desde hace más de 4 años con poliza de seguros y como los canon han tenido incrementos considerables, pues lógicamente el canon está en un valor muy barato...'. Comprueba en consola que JanIA responda con una asesoría jurídica magistral (Ley 820 de 2003, Art. 20, novación vs. otrosí) y CERO mensajes de 'intermitencia temporal'.*
+  *4. CIERRE Y DESPLIEGUE EN AMBOS LADOS: Corre npm run check, npm test y npm run build. Actualiza las 4 bitácoras maestras (v33.24). Haz git commit, git push origin main Y ejecuta el despliegue directo por SSH en el VPS de Contabo, verificando con pm2 status y pm2 logs --lines 30 que JanIA quede 100% activa y respondiendo en producción."*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Causa Raíz #1 — Agotamiento de Créditos (HTTP 402) y Cascada Abortada en `invokeGemini` (`llm.ts`):**
+   - La clave de pago de Google Gemini (`GEMINI_PAID_KEY`) arrojaba `"Your prepayment credits are depleted"`.
+   - Cuando las 4 claves gratuitas sufrían una pausa momentánea o cuando el timeout de 12s abortaba las llamadas en `gemini-flash-latest`, el sistema intentaba invocar la clave de pago. Al recibir HTTP 402, `llm.ts` no la clasificaba de forma duradera, provocando que la cascada colapsara y arrojara excepción hacia `dmHandler.ts`.
+2. **Causa Raíz #2 — Inexistencia de Fallback sin Herramientas en `dmHandler.ts`:**
+   - Si la invocación de `invokeLLM` con `JANIA_DM_TOOLS` fallaba (por timeout, rechazo de esquema o agotamiento temporal), el bloque `try/catch` de `dmHandler.ts` capturaba el error y, en lugar de intentar una llamada conversacional simple sin tools, caía directo a la respuesta de respaldo ("Ocurrió una intermitencia temporal...").
+3. **Causa Raíz #3 — Imitación de Timestamps del Historial `[YYYY-MM-DD HH:mm]`:**
+   - La función `appendDmHistory` almacenaba los mensajes del asistente agregando el prefijo `[${dateStr}]`.
+   - Al alimentar el historial contextual a Gemini con ese prefijo en cada turno, el modelo de lenguaje comenzó a inferir como primer token el timestamp `[2026-10-17 10:35]` y, al agotarse su generación o detenerse, enviaba únicamente esa fecha como texto al usuario.
+4. **Causa Raíz #4 — Falsos Positivos de Despedida y Review de Google:**
+   - Consultas con frases de cortesía al final como *"Gracias y quedo atento a comentarios"* activaban la expresión regular `/gracias\b/i`, disparando un mensaje secundario con el enlace de Google Reviews o invitaciones a grupos de WhatsApp a pesar de que el usuario estaba en medio de una consulta o que el usuario era el propio administrador (Eduardo).
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Resiliencia en `llm.ts`:**
+   - Ampliación del timeout seguro de axios a **25.000 ms** (25 segundos) para razonamiento jurídico y llamadas con tools.
+   - Detección explícita de error HTTP 402 / créditos prepagados agotados: se marca la clave afectada con 3600 segundos (1 hora) de cooldown preventivo y se continúa en el pool gratuito sin interrumpir el servicio.
+   - Fallback instantáneo ante error HTTP 400 con `payload.tools`: remueve `tools` y reintenta inmediatamente la llamada.
+   - Intento final de rescate: si todas las claves/modelos fallan con herramientas, se ejecuta una última llamada de emergencia sin herramientas.
+2. **Resiliencia y Desinfección en `dmHandler.ts` y `sessionManager.ts`:**
+   - Se envolvió la llamada a `invokeLLM` con `JANIA_DM_TOOLS` en un `try/catch` que reintenta de inmediato en modo conversacional limpio si el tool-calling arroja error.
+   - En `sessionManager.ts`, los mensajes de rol `assistant` se guardan y devuelven 100% limpios de timestamps.
+   - En `dmHandler.ts`, se añade un desinfectante regex `reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim()` y directivas de prompt para prohibir prefijos de fecha.
+3. **Blindaje de Cortesías en `whatsapp-match.ts`:**
+   - Se blindó la condición de despedida: NO se disparan reseñas de Google ni invitaciones si el mensaje contiene signos de interrogación `?`, si tiene más de 15 palabras, si incluye términos inmobiliarios/jurídicos, si la respuesta de JanIA fue un error o si el remitente es Eduardo (+573192919978) o Jani (+573166569719).
+4. **Prueba Real de Fuego con LLM:**
+   - Se evaluó el caso real del contrato de arrendamiento de 4 años, IPC, póliza de seguros y novación objetiva.
+   - JanIA respondió con una asesoría legal magistral citando el artículo 20 de la Ley 820 de 2003, la doctrina de las aseguradoras (El Libertador, Seguros Bolívar) y la validez de un nuevo contrato vs. otrosí, con 0 errores y 0 mensajes de intermitencia temporal.
+5. **Validación Exhaustiva:**
+   - `npm run check`: **0 errores de TypeScript**.
+   - `npm test`: **296/296 tests pasando al 100% en verde a $0 COP**.
+   - `npm run build`: Compilación de producción (cliente Vite + backend esbuild) 100% limpia.
+
+---
+
 ### 📅 [2026-10-17] — JanIA v33.23: Blindaje de `splitMultiItemMessage` contra Bordes Decorativos, Erradicación de Falsos Positivos de Moderación en Grupo 1 y Deducción de Bogotá en Barrios Capitalinos (v33.23 - 33.23.0)
 
 **Versión:** `v33.23` (`33.23.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

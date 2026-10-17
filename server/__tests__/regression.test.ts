@@ -6103,13 +6103,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.23 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.24 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.23");
+      expect(VECY_VERSION).toBe("v33.24");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.23.0");
+      expect(pkg.version).toBe("33.24.0");
     });
   });
 
@@ -6301,6 +6301,193 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(["Sotileza", "Colina Campestre"]).toContain(fallback.zone);
       expect(fallback.city).toBe("Bogotá, D.C.");
       expect(fallback.ciudadDeseada).toBe("Bogotá, D.C.");
+    });
+  });
+
+  describe("SUITE 82: JanIA v33.24 — Cobertura Geográfica Nacional Completa (Medellín, Cali, Barranquilla y Principales Ciudades) con Paridad WhatsApp y Web (v33.24)", () => {
+    it("1. Deducción tripartita y fallback para Medellín (El Poblado, Laureles, San Javier) con comuna y departamento", async () => {
+      const { deducirGeografiaTripartita } = await import("../_core/geography");
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+
+      // Inmueble en El Poblado
+      const textoPoblado = "Se vende hermoso apartamento en El Poblado, 120m2, 3 alcobas, 2 baños, parqueadero, $650M";
+      const fbPoblado = extractFallbackDataFromText(textoPoblado);
+      expect(fbPoblado.zone).toBe("El Poblado");
+      expect(fbPoblado.city).toBe("Medellín");
+
+      const geoPoblado = deducirGeografiaTripartita(fbPoblado.zone, fbPoblado.city, null, textoPoblado);
+      expect(geoPoblado.neighborhood).toBe("El Poblado");
+      expect(geoPoblado.locality).toBe("Comuna 14 (El Poblado)");
+      expect(geoPoblado.city).toBe("Medellín");
+      expect(geoPoblado.department).toBe("Antioquia");
+      expect(geoPoblado.confidence).toBe("alta_deduccion_medellin");
+
+      // Inmueble en Laureles
+      const textoLaureles = "Arriendo apartamento en Laureles cerca al parque, 85m2, 2 habitaciones, canon 3.2 millones";
+      const fbLaureles = extractFallbackDataFromText(textoLaureles);
+      expect(fbLaureles.zone).toBe("Laureles");
+      expect(fbLaureles.city).toBe("Medellín");
+
+      const geoLaureles = deducirGeografiaTripartita(fbLaureles.zone, fbLaureles.city, null, textoLaureles);
+      expect(geoLaureles.neighborhood).toBe("Laureles");
+      expect(geoLaureles.locality).toBe("Comuna 11 (Laureles-Estadio)");
+      expect(geoLaureles.city).toBe("Medellín");
+
+      // Requerimiento en San Javier (Comuna 13)
+      const textoSanJavier = "Busco casa en San Javier, 3 alcobas, presupuesto 300 millones";
+      const fbSanJavier = extractFallbackDataFromText(textoSanJavier);
+      expect(fbSanJavier.zone).toBe("San Javier");
+      expect(fbSanJavier.city).toBe("Medellín");
+
+      const geoSanJavier = deducirGeografiaTripartita(fbSanJavier.zone, fbSanJavier.city, null, textoSanJavier);
+      expect(geoSanJavier.neighborhood).toBe("San Javier");
+      expect(geoSanJavier.locality).toBe("Comuna 13 (San Javier)");
+      expect(geoSanJavier.city).toBe("Medellín");
+    });
+
+    it("2. Deducción tripartita y fallback para Cali (San Antonio, Ciudad Jardín, Pance, Granada) con comuna y departamento", async () => {
+      const { deducirGeografiaTripartita } = await import("../_core/geography");
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+
+      // Inmueble en San Antonio (Cali)
+      const textoSanAntonio = "Hermosa casa colonial en venta en San Antonio, 180m2, patio central, $700 millones";
+      const fbSanAntonio = extractFallbackDataFromText(textoSanAntonio);
+      expect(fbSanAntonio.zone).toBe("San Antonio");
+      expect(fbSanAntonio.city).toBe("Cali");
+
+      const geoSanAntonio = deducirGeografiaTripartita(fbSanAntonio.zone, fbSanAntonio.city, null, textoSanAntonio);
+      expect(geoSanAntonio.neighborhood).toBe("San Antonio");
+      expect(geoSanAntonio.locality).toBe("Comuna 3 (Centro - San Antonio)");
+      expect(geoSanAntonio.city).toBe("Cali");
+      expect(geoSanAntonio.department).toBe("Valle del Cauca");
+      expect(geoSanAntonio.confidence).toBe("alta_deduccion_cali");
+
+      // Inmueble en Ciudad Jardín y Pance
+      const textoPance = "Espectacular lote campestre en venta en Pance, 1500m2, conjunto cerrado, $1200 millones";
+      const fbPance = extractFallbackDataFromText(textoPance);
+      expect(fbPance.zone).toBe("Pance");
+      expect(fbPance.city).toBe("Cali");
+
+      const geoPance = deducirGeografiaTripartita(fbPance.zone, fbPance.city, null, textoPance);
+      expect(geoPance.neighborhood).toBe("Pance");
+      expect(geoPance.locality).toBe("Comuna 22 (Sur - Ciudad Jardín / Pance)");
+      expect(geoPance.city).toBe("Cali");
+
+      // Inmueble en Granada (Cali)
+      const textoGranada = "Local comercial en arriendo en Granada Cali, zona rosa, 110m2, canon 6 millones";
+      const fbGranada = extractFallbackDataFromText(textoGranada);
+      expect(fbGranada.zone).toBe("Granada");
+      expect(fbGranada.city).toBe("Cali");
+
+      const geoGranada = deducirGeografiaTripartita(fbGranada.zone, fbGranada.city, null, textoGranada);
+      expect(geoGranada.neighborhood).toBe("Granada");
+      expect(geoGranada.locality).toBe("Comuna 2 (Norte)");
+      expect(geoGranada.city).toBe("Cali");
+    });
+
+    it("3. Deducción tripartita y fallback para Barranquilla (Altos de Riomar, Barrio Abajo, El Prado) con localidad y departamento", async () => {
+      const { deducirGeografiaTripartita } = await import("../_core/geography");
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+
+      // Inmueble en Altos de Riomar
+      const textoRiomar = "Vendo apartamento en Altos de Riomar, 140m2, 3 habitaciones, vista al río, $580 millones";
+      const fbRiomar = extractFallbackDataFromText(textoRiomar);
+      expect(fbRiomar.zone).toBe("Altos de Riomar");
+      expect(fbRiomar.city).toBe("Barranquilla");
+
+      const geoRiomar = deducirGeografiaTripartita(fbRiomar.zone, fbRiomar.city, null, textoRiomar);
+      expect(geoRiomar.neighborhood).toBe("Altos de Riomar");
+      expect(geoRiomar.locality).toBe("Localidad Riomar");
+      expect(geoRiomar.city).toBe("Barranquilla");
+      expect(geoRiomar.department).toBe("Atlántico");
+      expect(geoRiomar.confidence).toBe("alta_deduccion_barranquilla");
+
+      // Inmueble en Barrio Abajo
+      const textoBarrioAbajo = "Casa tradicional en arriendo en Barrio Abajo, cerca a la Casa del Carnaval, 120m2, canon 2.5 millones";
+      const fbAbajo = extractFallbackDataFromText(textoBarrioAbajo);
+      expect(fbAbajo.zone).toBe("Barrio Abajo");
+      expect(fbAbajo.city).toBe("Barranquilla");
+
+      const geoAbajo = deducirGeografiaTripartita(fbAbajo.zone, fbAbajo.city, null, textoBarrioAbajo);
+      expect(geoAbajo.neighborhood).toBe("Barrio Abajo");
+      expect(geoAbajo.locality).toBe("Localidad Norte-Centro Histórico");
+      expect(geoAbajo.city).toBe("Barranquilla");
+      expect(geoAbajo.department).toBe("Atlántico");
+
+      // Inmueble en El Prado (Barranquilla)
+      const textoPradoBq = "Mansión republicana en venta en El Prado Barranquilla, 450m2, patrimonio arquitectónico";
+      const fbPrado = extractFallbackDataFromText(textoPradoBq);
+      expect(fbPrado.zone).toBe("El Prado");
+      expect(fbPrado.city).toBe("Barranquilla");
+
+      const geoPrado = deducirGeografiaTripartita(fbPrado.zone, fbPrado.city, null, textoPradoBq);
+      expect(geoPrado.neighborhood).toBe("El Prado");
+      expect(geoPrado.locality).toBe("Localidad Norte-Centro Histórico");
+      expect(geoPrado.city).toBe("Barranquilla");
+    });
+
+    it("4. Desambiguación estricta anti-colisiones (San Antonio Norte vs San Antonio Cali, Ciudad Jardín Norte vs Ciudad Jardín Cali)", async () => {
+      const { deducirGeografiaTripartita } = await import("../_core/geography");
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+
+      // San Antonio Norte debe ser Bogotá (Suba), NO Cali
+      const textoBogotaSanAntonio = "Apartamento en venta en San Antonio Norte, 62m2, 3 habitaciones, $230M";
+      const fbSanAntonioBog = extractFallbackDataFromText(textoBogotaSanAntonio);
+      expect(fbSanAntonioBog.zone).toBe("San Antonio Norte");
+      expect(fbSanAntonioBog.city).toBe("Bogotá, D.C.");
+
+      const geoSanAntonioBog = deducirGeografiaTripartita(fbSanAntonioBog.zone, fbSanAntonioBog.city, null, textoBogotaSanAntonio);
+      expect(geoSanAntonioBog.neighborhood).toBe("San Antonio Norte");
+      expect(geoSanAntonioBog.locality).toBe("Usaquén");
+      expect(geoSanAntonioBog.city).toBe("Bogotá, D.C.");
+
+      // Ciudad Jardín Norte debe ser Bogotá (Suba), NO Cali
+      const textoBogotaCiudadJardin = "Casa en arriendo en Ciudad Jardín Norte Bogotá, 150m2, $4.2 millones";
+      const fbJardinBog = extractFallbackDataFromText(textoBogotaCiudadJardin);
+      expect(fbJardinBog.zone).toBe("Ciudad Jardín Norte");
+      expect(fbJardinBog.city).toBe("Bogotá, D.C.");
+
+      const geoJardinBog = deducirGeografiaTripartita(fbJardinBog.zone, fbJardinBog.city, null, textoBogotaCiudadJardin);
+      expect(geoJardinBog.neighborhood).toBe("Ciudad Jardín Norte");
+      expect(geoJardinBog.city).toBe("Bogotá, D.C.");
+    });
+
+    it("5. Paridad Total Web y WhatsApp: processWhatsAppMessage ingesta y reconoce inmuebles en Medellín, Cali y Barranquilla", async () => {
+      const { processWhatsAppMessage } = await import("../_core/janIA");
+
+      // Ingesta de oferta en Medellín
+      const msgMedellin = "VENTA APARTAMENTO EL POBLADO MEDELLIN\nÁrea: 135 m2\nHabitaciones: 3\nParqueaderos: 2\nPrecio: $780.000.000";
+      const resMed = await processWhatsAppMessage(
+        msgMedellin,
+        "573001234567@s.whatsapp.net",
+        "Broker Medellín",
+        false,
+        undefined,
+        undefined,
+        undefined,
+        false
+      );
+      expect(resMed.classification).toBe("INMUEBLE");
+      expect(resMed.extractedData?.zone).toBe("El Poblado");
+      expect(resMed.extractedData?.city).toBe("Medellín");
+      expect(resMed.extractedData?.addressLocality).toBe("Comuna 14 (El Poblado)");
+
+      // Ingesta de demanda en Barranquilla
+      const msgBq = "BUSCO APARTAMENTO EN ARRIENDO EN ALTOS DE RIOMAR BARRANQUILLA\n3 alcobas, 2 parqueaderos, presupuesto $4.000.000 con admon";
+      const resBq = await processWhatsAppMessage(
+        msgBq,
+        "573109876543@s.whatsapp.net",
+        "Asesora Barranquilla",
+        false,
+        undefined,
+        undefined,
+        undefined,
+        false
+      );
+      expect(resBq.classification).toBe("REQUERIMIENTO");
+      expect(resBq.extractedData?.zonaDeseada).toBe("Altos de Riomar");
+      expect(resBq.extractedData?.ciudadDeseada).toBe("Barranquilla");
+      expect(resBq.extractedData?.addressLocality).toBe("Localidad Riomar");
     });
   });
 });

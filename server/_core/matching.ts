@@ -537,8 +537,13 @@ export const KNOWN_BARRIOS_CANONICAL = [
   "ciudad jardín norte", "ciudad jardin norte", "ciudad jardín sur", "ciudad jardin sur", "ciudad jardín", "ciudad jardin",
   "álamos norte", "alamos norte", "álamos sur", "alamos sur", "álamos", "alamos",
   "la candelaria centro", "candelaria centro", "candelaria la nueva", "candelaria sur", "la candelaria", "candelaria",
-  "el poblado", "poblado", "laureles", "envigado", "sabaneta", "belén", "belen", "estadio", "conquistadores", "granada", "el peñón", "el peñon",
-  "juanambú", "juanambu", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "canaveral", "ruitoque", "sotomayor"
+  "el poblado", "poblado", "altos del poblado", "castropol", "provenza", "manila", "patio bonito", "san lucas", "los balsos", "los naranjos", "el tesoro", "laureles", "estadio", "conquistadores", "suramericana", "carlos e restrepo", "san javier", "comuna 13", "belén", "belen", "loma de los bernal", "la mota", "la américa", "la america", "calasanz", "robledo", "pilarica", "castilla", "aranjuez", "manrique", "buenos aires", "guayabal", "prado", "envigado", "sabaneta", "itagüí", "itagui", "la estrella", "rionegro", "la ceja", "el retiro",
+  "san antonio", "granada", "ciudad jardín", "ciudad jardin", "pance", "valle del lili", "el caney", "bochalema", "ciudad meléndez", "ciudad melendez", "el peñón", "el peñon", "juanambú", "juanambu", "santa mónica", "santa monica", "la flora", "chipichape", "menga", "san fernando", "tequendama", "imbanaco", "versalles", "san cayetano", "centenario", "miraflores", "santa teresita", "cristales", "bellavista", "limonar", "el limonar", "ciudad capri", "ingenio", "santa anita", "meléndez", "melendez", "juanchito", "jamundí", "jamundi", "yumbo", "palmira",
+  "altos de riomar", "barrio abajo", "alto prado", "el prado", "villa santos", "buenavista", "riomar", "villa carolina", "villa campestre", "el golf", "villa country", "el limon", "el limón", "paraiso", "paraíso", "delicias", "el recreo", "rebolo", "soledad", "puerto colombia",
+  "bocagrande", "castillogrande", "el laguito", "manga", "crespo", "marbella", "pie de la popa", "getsemaní", "getsemani", "serena del mar", "cielo mar", "los morros",
+  "cabecera del llano", "cabecera", "sotomayor", "cañaveral", "canaveral", "ruitoque condominio", "ruitoque", "floridablanca", "piedecuesta", "girón", "giron",
+  "el rodadero", "pozos colorados", "bello horizonte", "playa dormida", "taganga",
+  "pinares", "cerritos", "circunvalar", "dosquebradas"
 ];
 KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
 

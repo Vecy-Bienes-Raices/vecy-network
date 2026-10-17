@@ -331,7 +331,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
-### 🔖 v33.17 — Octubre 2026
+### 🔖 v33.24 — Octubre 2026
+
+#### [v33.24.0] — 2026-10-17: Cobertura Geográfica Nacional Completa, Resiliencia LLM en DMs y Protocolo de Despliegue Dual
+- **Resiliencia Extrema en LLM y Erradicación de "Intermitencia Temporal" (`llm.ts`, `dmHandler.ts`):**
+  - **Ampliación de Timeout:** Timeout ampliado a 25.000 ms en llamadas a Gemini para consultas jurídicas complejas y análisis de casos de arrendamiento (Ley 820 de 2003).
+  - **Manejo Preventivo de HTTP 402 (Créditos Agotados):** Detección de errores por créditos prepagados agotados en la clave de pago de Google Gemini, activando un cooldown preventivo de 3600s (1 hora) y retornando inmediatamente al pool gratuito de 4 claves ($0 COP) sin romper la cascada.
+  - **Recuperación Inmediata ante Error 400 en Tools:** Si la declaración de herramientas es rechazada por el modelo, `invokeGemini` elimina `payload.tools` y reintenta de inmediato en modo puramente conversacional.
+  - **Doble Capa de Reintento en DMs:** Si `invokeLLM` con `JANIA_DM_TOOLS` arroja excepción en `dmHandler.ts`, un bloque try/catch ejecuta de inmediato una llamada limpia sin herramientas, impidiendo caídas al catch genérico.
+- **Erradicación de Timestamps Huérfanos `[YYYY-MM-DD HH:mm]` (`sessionManager.ts`, `dmHandler.ts`):**
+  - Almacenamiento y recuperación limpia de turnos de rol `assistant` sin prefijos de fecha.
+  - Desinfección regex en `dmHandler.ts` (`reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim()`) y directivas de prompt para prohibir la generación de timestamps al inicio de la respuesta.
+- **Blindaje de Cortesías y Falsos Positivos de Review (`whatsapp-match.ts`):**
+  - Supresión de enlaces de Google Reviews e invitaciones a grupos de WhatsApp cuando el mensaje contiene signos de interrogación `?`, más de 15 palabras, términos técnicos/jurídicos, si la respuesta principal fue un error o si el remitente es un administrador oficial (Eduardo o Jani).
+- **Cobertura Geográfica Nacional Completa (`divipola.ts`, `parsers.ts`, `geocoding.ts`):**
+  - Ingesta, normalización y deducción geográfica multipropósito en WhatsApp y Web para las principales capitales de Colombia (Medellín, Cali, Barranquilla, Bucaramanga, Cartagena, etc.).
+- **Protocolo de Despliegue Dual:**
+  - Configuración de nuevo token sin expiración en el remoto de GitHub y ejecución del despliegue directo por SSH al VPS de Contabo (`13.140.149.144`).
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **296/296 passing** al 100% en verde a $0 COP | Build `npm run build` limpio en 14.78s (Vite) + 89ms (esbuild).
 
 #### [v33.17.0] — 2026-10-16: JanIA "Gemela Cognitiva de Gemini 4 Argon": Reconexión de Scrapers Oficiales, RUES/NIT, PDFs, Memoria Permanente y Superpoderes Nativos WhatsApp Business
 - **Personalidad Gemini 4 Argon y Erradicación del Doble Saludo (`prompts.ts`, `dmHandler.ts`):** Fusión de persuasión ejecutiva, calidez y conocimiento normativo inmobiliario colombiano. Erradicación definitiva de saludos duplicados y concatenaciones redundantes (`formatPoliteToolDelivery` y `stripLeadingGreetingsAndCourtesies` con delimitadores expandidos a dos puntos `:`).
