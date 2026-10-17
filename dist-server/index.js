@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.22";
+    VECY_VERSION = "v33.23";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -9748,8 +9748,10 @@ function extractFallbackDataFromText(text2) {
     else if (clean.includes("candelaria la nueva") || clean.includes("candelaria sur")) zone = "Candelaria la Nueva";
     else if (clean.includes("la candelaria") || clean.includes("candelaria")) zone = "La Candelaria";
     else if (clean.includes("nuevo country")) zone = "Nuevo Country";
+    else if (clean.includes("niza antigua")) zone = "Niza Antigua";
     else if (clean.includes("niza norte")) zone = "Niza Norte";
     else if (clean.includes("niza")) zone = "Niza";
+    else if (clean.includes("sotileza")) zone = "Sotileza";
     else if (clean.includes("bella suiza")) zone = "Bella Suiza";
     else if (clean.includes("lisboa")) zone = "Lisboa";
     else if (clean.includes("alejandria") || clean.includes("alejandr\xEDa")) zone = "Alejandr\xEDa";
@@ -9803,6 +9805,9 @@ function extractFallbackDataFromText(text2) {
       }
     } catch (e) {
     }
+  }
+  if (!city && zone && zone !== "Ciudad Mel\xE9ndez") {
+    city = "Bogot\xE1, D.C.";
   }
   const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
   const aceptaTerceria = !noTerceriaMatch;
@@ -10394,7 +10399,9 @@ var init_parsers = __esm({
       "La Candelaria",
       "Nuevo Country",
       "Niza Norte",
+      "Niza Antigua",
       "Niza",
+      "Sotileza",
       "Bella Suiza",
       "Lisboa",
       "Alejandr\xEDa",
@@ -10610,11 +10617,28 @@ function evaluateMultiItemHeuristics(text2) {
     signals
   };
 }
+function isAutonomousListingBlock(block) {
+  if (!block || block.length < 35) return false;
+  const clean = block.toLowerCase().replace(/^[^\wáéíóúñ]+/i, "").trim();
+  const hasIntentOrType = /\b(?:vendo|se vende|venta|arriendo|se arrienda|alquilo|se alquila|alquiler|arrendamiento|busco|se busca|compro|comprador|compradora|compran|requiero|requerimiento|necesito|solicito|permuto|venpermuto|apto|apartamento|casa|lote|bodega|oficina|local|finca|penthouse|dúplex|duplex|edificio|predio|terreno)\b/i.test(clean);
+  if (!hasIntentOrType) return false;
+  const hasPrice = /\$|\b\d{1,3}(?:\.\d{3}){1,2}\b|\bmillones|\bmillon|\bmm\b|\bcanon\b|\bvr\b/i.test(clean);
+  const hasSpecs = /\b\d+\s*(?:m2|mts|metros|hab|alcoba|baño|parqueadero|garaje)/i.test(clean);
+  const hasLocation = /\b(?:en|barrio|sector|zona|calle|carrera|cra|clle)\s+[a-záéíóúñ]+/i.test(clean);
+  return (hasPrice || hasSpecs) && (hasIntentOrType || hasLocation);
+}
+function isTrailerBlock(block) {
+  const textNoUrls = block.replace(/https?:\/\/[^\s]+/gi, "").trim();
+  if (textNoUrls.length < 35) return true;
+  const clean = textNoUrls.toLowerCase().replace(/^[^\wáéíóúñ]+/i, "").trim();
+  const isTrailerWord = /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|agenda|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor|broker|clienta|cliente|directa|directo|hag[aá]mos|hagamos|negocios|privado|inbox|dm)\b/i.test(clean);
+  const hasStandaloneListingSpecs = /\$|\b\d{1,3}(?:\.\d{3}){1,2}\b|\bmillones|\bmm\b/i.test(clean) && /\b(?:apto|casa|lote|oficina|bodega|habitaci|alcoba|m2|mts)\b/i.test(clean);
+  return isTrailerWord && !hasStandaloneListingSpecs;
+}
 function cleanAndMergeSubstantiveBlocks(rawList) {
   const merged = [];
   for (const b of rawList) {
-    const textNoUrls = b.replace(/https?:\/\/[^\s]+/gi, "").trim();
-    const isTrailer = textNoUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textNoUrls);
+    const isTrailer = isTrailerBlock(b);
     if (isTrailer && merged.length > 0) {
       merged[merged.length - 1] += `
 
@@ -10630,13 +10654,14 @@ function splitMultiItemMessage(text2) {
   const delimiterSplit = text2.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
   if (delimiterSplit.length >= 2) {
     const validBlocks = cleanAndMergeSubstantiveBlocks(delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 35));
-    if (validBlocks.length >= 2) {
+    const autonomousCount = validBlocks.filter((b) => isAutonomousListingBlock(b)).length;
+    if (validBlocks.length >= 2 && autonomousCount >= 2) {
       return validBlocks;
     }
   }
   const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\*?(?:Cliente|Clienta|Comprador|Compradora|Varios clientes|Tengo cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)\b|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
   const rawBlocks = cleanAndMergeSubstantiveBlocks(text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 35));
-  if (rawBlocks.length >= 2) {
+  if (rawBlocks.length >= 2 && rawBlocks.filter((b) => isAutonomousListingBlock(b)).length >= 2) {
     return rawBlocks;
   }
   const paragraphs = text2.split(/(?:\r?\n){2,}/);
@@ -10660,7 +10685,7 @@ ${cleanP}` : cleanP;
     }
     if (currentBlock) blocks.push(currentBlock.trim());
     const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
-    if (validParagraphBlocks.length >= 2) {
+    if (validParagraphBlocks.length >= 2 && validParagraphBlocks.filter((b) => isAutonomousListingBlock(b)).length >= 2) {
       return validParagraphBlocks;
     }
   }
@@ -16848,9 +16873,10 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       const subBlocks = splitMultiItemMessage(text2);
       if (subBlocks.length >= 2) {
         console.log(`[JanIA-MultiItemSplitter] \u{1F680} Ingestando ${subBlocks.length} publicaciones individuales de manera independiente...`);
-        let finalResult = { classification: "INMUEBLE", response: "", inserted: true };
+        let bestResult = null;
+        let insertedAny = false;
         for (const subText of subBlocks) {
-          finalResult = await processWhatsAppMessage(
+          const subRes = await processWhatsAppMessage(
             `${subText}
 __is_sub_message__`,
             userId,
@@ -16866,8 +16892,21 @@ __is_sub_message__`,
             groupName,
             flyerVisionData
           );
+          if (subRes.inserted) insertedAny = true;
+          if (subRes.classification === "INMUEBLE" || subRes.classification === "REQUERIMIENTO") {
+            if (!bestResult) bestResult = subRes;
+          }
         }
-        return finalResult;
+        if (insertedAny && bestResult) {
+          return {
+            ...bestResult,
+            inserted: true,
+            response: "",
+            // Silencio absoluto en grupos
+            dmResponse: bestResult.dmResponse || ""
+          };
+        }
+        return bestResult || { classification: "INMUEBLE", response: "", inserted: true };
       }
     }
     if (!isWebUser && text2) {
@@ -17202,6 +17241,8 @@ ${content.substring(0, 15e3)}
         "disponible",
         "cliente",
         "clientes",
+        "clienta",
+        "clientas",
         "comprando",
         "buscando",
         "solicito",
@@ -17220,7 +17261,36 @@ ${content.substring(0, 15e3)}
         "d\xFAplex",
         "triplex",
         "tr\xEDplex",
-        "estudio"
+        "estudio",
+        "negocio",
+        "negocios",
+        "fotos",
+        "foto",
+        "inversion",
+        "inversi\xF3n",
+        "inversionista",
+        "inversionistas",
+        "inmobiliaria",
+        "inmobiliario",
+        "asesor",
+        "asesora",
+        "broker",
+        "privado",
+        "inbox",
+        "habitaciones",
+        "parqueaderos",
+        "colina",
+        "niza",
+        "suba",
+        "usaquen",
+        "usaqu\xE9n",
+        "cedritos",
+        "chico",
+        "chic\xF3",
+        "rosales",
+        "chapinero",
+        "poblado",
+        "laureles"
       ];
       const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {

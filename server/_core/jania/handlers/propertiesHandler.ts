@@ -1496,9 +1496,10 @@ export async function processWhatsAppMessage(
       const subBlocks = splitMultiItemMessage(text);
       if (subBlocks.length >= 2) {
         console.log(`[JanIA-MultiItemSplitter] 🚀 Ingestando ${subBlocks.length} publicaciones individuales de manera independiente...`);
-        let finalResult: JanIAResult = { classification: "INMUEBLE", response: "", inserted: true };
+        let bestResult: JanIAResult | null = null;
+        let insertedAny = false;
         for (const subText of subBlocks) {
-          finalResult = await processWhatsAppMessage(
+          const subRes = await processWhatsAppMessage(
             `${subText}\n__is_sub_message__`,
             userId,
             userName,
@@ -1513,8 +1514,20 @@ export async function processWhatsAppMessage(
             groupName,
             flyerVisionData
           );
+          if (subRes.inserted) insertedAny = true;
+          if (subRes.classification === "INMUEBLE" || subRes.classification === "REQUERIMIENTO") {
+            if (!bestResult) bestResult = subRes;
+          }
         }
-        return finalResult;
+        if (insertedAny && bestResult) {
+          return {
+            ...bestResult,
+            inserted: true,
+            response: "", // Silencio absoluto en grupos
+            dmResponse: bestResult.dmResponse || ""
+          };
+        }
+        return bestResult || { classification: "INMUEBLE", response: "", inserted: true };
       }
     }
 
@@ -1843,9 +1856,13 @@ export async function processWhatsAppMessage(
         "escritura", "notaria", "notaría", "registro", "sucesión", "sucesion", "herencia", "embargo",
         "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo", "jania", "vecy", "bot", "ayuda",
         "cómo", "como", "funciona", "publicar", "registrar", "match", "coincidencia", "contacto", "cuenta",
-        "hola", "gracias", "saludo", "req", "tengo", "disponible", "cliente", "clientes", "comprando",
-        "buscando", "solicito", "solicitamos", "piso", "balcon", "balcón", "terraza", "deposito", "depósito",
-        "conjunto", "edificio", "ph", "penthouse", "duplex", "dúplex", "triplex", "tríplex", "estudio"
+        "hola", "gracias", "saludo", "req", "tengo", "disponible", "cliente", "clientes", "clienta", "clientas",
+        "comprando", "buscando", "solicito", "solicitamos", "piso", "balcon", "balcón", "terraza", "deposito",
+        "depósito", "conjunto", "edificio", "ph", "penthouse", "duplex", "dúplex", "triplex", "tríplex", "estudio",
+        "negocio", "negocios", "fotos", "foto", "inversion", "inversión", "inversionista", "inversionistas",
+        "inmobiliaria", "inmobiliario", "asesor", "asesora", "broker", "privado", "inbox", "habitaciones",
+        "parqueaderos", "colina", "niza", "suba", "usaquen", "usaquén", "cedritos", "chico", "chicó", "rosales",
+        "chapinero", "poblado", "laureles"
       ];
 
       const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));

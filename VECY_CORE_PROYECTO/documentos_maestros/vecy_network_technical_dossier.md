@@ -7412,4 +7412,20 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **288/288 passing** ($0 COP) | Build `npm run build` limpio.
 
+---
+
+### Versión v33.23 — Octubre 2026: Blindaje de `splitMultiItemMessage` contra Bordes Decorativos, Erradicación de Falsos Positivos de Moderación en Grupo 1 y Deducción de Bogotá en Barrios Capitalinos
+- **Blindaje de Fragmentación Multi-Item (`server/_core/jania/heuristics.ts`)**:
+  * Introducción de `isAutonomousListingBlock` y `isTrailerBlock`. El corte por delimitadores (`===`, `---`, `___`) ahora valida que al menos dos bloques sean publicaciones inmobiliarias autónomas completas con intención y especificaciones independientes (`autonomousCount >= 2`); si no lo son, se preserva el mensaje como 1 solo bloque unificado, evitando partir publicaciones estéticamente formateadas con recuadros.
+  * Fusión automática de pies de contacto, notas de asesor y llamadas a la acción (`isTrailerBlock`) con el bloque anterior.
+- **Preservación de Inserciones y Vocabulario Inmobiliario (`server/_core/jania/handlers/propertiesHandler.ts`)**:
+  * En el bucle de ingestión multi-item, la presencia de al menos una inserción exitosa (`insertedAny = true`) garantiza que se preserve el resultado de `INMUEBLE` o `REQUERIMIENTO` y bloquea cualquier amonestación fuera de tema por fragmentos residuales.
+  * Ampliación de `onTopicKeywords` con términos reales del corretaje: `clienta`, `clientas`, `negocio`, `negocios`, `fotos`, `inversionista`, `broker`, `asesor`, `privado`, `colina`, `niza`, `suba`, etc.
+- **Deducción Geográfica y Nuevos Barrios Bogotanos (`server/_core/jania/parsers.ts`)**:
+  * Incorporación de `Sotileza` y `Niza Antigua` a `KNOWN_BARRIOS_SORTED_ITEMS`.
+  * Asignación automática de `city = "Bogotá, D.C."` y `ciudadDeseada = "Bogotá, D.C."` cuando se reconoce un barrio capitalino sin ciudad explícita en el texto.
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **291/291 passing** ($0 COP) | Build `npm run build` limpio.
+
+
 

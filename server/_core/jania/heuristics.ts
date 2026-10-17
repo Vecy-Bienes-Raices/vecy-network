@@ -278,12 +278,38 @@ export function evaluateMultiItemHeuristics(text: string): { isMultiItem: boolea
   };
 }
 
+function isAutonomousListingBlock(block: string): boolean {
+  if (!block || block.length < 35) return false;
+  const clean = block.toLowerCase().replace(/^[^\wáéíóúñ]+/i, "").trim();
+
+  // 1. Intención de negocio o tipo de inmueble
+  const hasIntentOrType = /\b(?:vendo|se vende|venta|arriendo|se arrienda|alquilo|se alquila|alquiler|arrendamiento|busco|se busca|compro|comprador|compradora|compran|requiero|requerimiento|necesito|solicito|permuto|venpermuto|apto|apartamento|casa|lote|bodega|oficina|local|finca|penthouse|dúplex|duplex|edificio|predio|terreno)\b/i.test(clean);
+  if (!hasIntentOrType) return false;
+
+  // 2. Datos comerciales o físicos sustantivos (precio, área, habitaciones, o barrio específico)
+  const hasPrice = /\$|\b\d{1,3}(?:\.\d{3}){1,2}\b|\bmillones|\bmillon|\bmm\b|\bcanon\b|\bvr\b/i.test(clean);
+  const hasSpecs = /\b\d+\s*(?:m2|mts|metros|hab|alcoba|baño|parqueadero|garaje)/i.test(clean);
+  const hasLocation = /\b(?:en|barrio|sector|zona|calle|carrera|cra|clle)\s+[a-záéíóúñ]+/i.test(clean);
+
+  return (hasPrice || hasSpecs) && (hasIntentOrType || hasLocation);
+}
+
+function isTrailerBlock(block: string): boolean {
+  const textNoUrls = block.replace(/https?:\/\/[^\s]+/gi, "").trim();
+  if (textNoUrls.length < 35) return true;
+  const clean = textNoUrls.toLowerCase().replace(/^[^\wáéíóúñ]+/i, "").trim();
+
+  const isTrailerWord = /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|agenda|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor|broker|clienta|cliente|directa|directo|hag[aá]mos|hagamos|negocios|privado|inbox|dm)\b/i.test(clean);
+  const hasStandaloneListingSpecs = (/\$|\b\d{1,3}(?:\.\d{3}){1,2}\b|\bmillones|\bmm\b/i.test(clean)) &&
+    (/\b(?:apto|casa|lote|oficina|bodega|habitaci|alcoba|m2|mts)\b/i.test(clean));
+
+  return isTrailerWord && !hasStandaloneListingSpecs;
+}
+
 function cleanAndMergeSubstantiveBlocks(rawList: string[]): string[] {
   const merged: string[] = [];
   for (const b of rawList) {
-    const textNoUrls = b.replace(/https?:\/\/[^\s]+/gi, "").trim();
-    // Si el bloque es residual (menos de 35 caracteres de texto real o solo contiene enlaces/intro de contacto), se fusiona con el anterior
-    const isTrailer = textNoUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textNoUrls);
+    const isTrailer = isTrailerBlock(b);
     if (isTrailer && merged.length > 0) {
       merged[merged.length - 1] += `\n\n${b}`;
     } else {
@@ -300,7 +326,9 @@ export function splitMultiItemMessage(text: string): string[] {
   const delimiterSplit = text.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
   if (delimiterSplit.length >= 2) {
     const validBlocks = cleanAndMergeSubstantiveBlocks(delimiterSplit.map(b => b.trim()).filter(b => b.length >= 35));
-    if (validBlocks.length >= 2) {
+    // Solo dividir si al menos 2 bloques representan publicaciones inmobiliarias autónomas
+    const autonomousCount = validBlocks.filter(b => isAutonomousListingBlock(b)).length;
+    if (validBlocks.length >= 2 && autonomousCount >= 2) {
       return validBlocks;
     }
   }
@@ -308,7 +336,7 @@ export function splitMultiItemMessage(text: string): string[] {
   // 2. Encabezados formales repetidos (Requerimientos, Inmuebles, Clientes, Búsquedas, Ofertas)
   const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\*?(?:Cliente|Clienta|Comprador|Compradora|Varios clientes|Tengo cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)\b|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
   const rawBlocks = cleanAndMergeSubstantiveBlocks(text.split(headerSplitRegex).map(b => b.trim()).filter(b => b.length >= 35));
-  if (rawBlocks.length >= 2) {
+  if (rawBlocks.length >= 2 && rawBlocks.filter(b => isAutonomousListingBlock(b)).length >= 2) {
     return rawBlocks;
   }
 
@@ -341,7 +369,7 @@ export function splitMultiItemMessage(text: string): string[] {
     }
     if (currentBlock) blocks.push(currentBlock.trim());
     const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
-    if (validParagraphBlocks.length >= 2) {
+    if (validParagraphBlocks.length >= 2 && validParagraphBlocks.filter(b => isAutonomousListingBlock(b)).length >= 2) {
       return validParagraphBlocks;
     }
   }

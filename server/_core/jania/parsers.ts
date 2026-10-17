@@ -445,7 +445,7 @@ export const KNOWN_BARRIOS_SORTED_ITEMS: CanonicalBarrioItem[] = [
   "Ciudad Jardín Norte", "Ciudad Jardín Sur", "Ciudad Jardín",
   "Álamos Norte", "Álamos Sur", "Álamos",
   "La Candelaria Centro", "Candelaria la Nueva", "Candelaria Sur", "La Candelaria",
-  "Nuevo Country", "Niza Norte", "Niza", "Bella Suiza", "Lisboa", "Alejandría", "Carmel Club",
+  "Nuevo Country", "Niza Norte", "Niza Antigua", "Niza", "Sotileza", "Bella Suiza", "Lisboa", "Alejandría", "Carmel Club",
   "Cantalejo", "Sotavento", "San José de Bavaria", "Chapinero Alto", "Chapinero Central", "Chapinero", "Cedritos"
 ].map(b => ({ canonical: b, lower: b.toLowerCase() }));
 
@@ -1047,8 +1047,10 @@ export function extractFallbackDataFromText(text: string): any {
     else if (clean.includes("candelaria la nueva") || clean.includes("candelaria sur")) zone = "Candelaria la Nueva";
     else if (clean.includes("la candelaria") || clean.includes("candelaria")) zone = "La Candelaria";
     else if (clean.includes("nuevo country")) zone = "Nuevo Country";
+    else if (clean.includes("niza antigua")) zone = "Niza Antigua";
     else if (clean.includes("niza norte")) zone = "Niza Norte";
     else if (clean.includes("niza")) zone = "Niza";
+    else if (clean.includes("sotileza")) zone = "Sotileza";
     else if (clean.includes("bella suiza")) zone = "Bella Suiza";
     else if (clean.includes("lisboa")) zone = "Lisboa";
     else if (clean.includes("alejandria") || clean.includes("alejandría")) zone = "Alejandría";
@@ -1105,6 +1107,11 @@ export function extractFallbackDataFromText(text: string): any {
     } catch (e) {
       // Ignorar error si no se puede resolver perímetro
     }
+  }
+
+  // Deducción automática de ciudad para barrios conocidos de la capital
+  if (!city && zone && zone !== "Ciudad Meléndez") {
+    city = "Bogotá, D.C.";
   }
 
   // ── DETECCIONES DOCTRINALES ESTRUCTURADAS (v31.72) ──

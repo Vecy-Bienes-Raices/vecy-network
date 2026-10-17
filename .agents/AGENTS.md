@@ -183,7 +183,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.22 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.23 — Octubre 2026
+
+### Novedades v33.23 (Blindaje de `splitMultiItemMessage` contra Bordes Decorativos, Erradicación de Falsos Positivos de Moderación en Grupo 1 y Deducción de Bogotá en Barrios Capitalinos):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Causa Raíz Identificada**: Un requerimiento legítimo de arriendo con formato estético de líneas `===` y `---` era dividido por `splitMultiItemMessage` en 3 fragmentos aislados. El último fragmento (`👤 Clienta directa lista / 📲 Info & fotos al privado / 🤝 ¡Hagámos negocios!`) se procesaba como mensaje autónomo y, al carecer aisladamente de palabras como "apto" o "arriendo", activaba el filtro de fuera de tema emitiendo una amonestación indebida al grupo y sobreescribiendo el éxito de las inserciones previas.
+  2. **Blindaje de `splitMultiItemMessage` (`server/_core/jania/heuristics.ts`)**: Introducción de `isAutonomousListingBlock` y `isTrailerBlock`. El corte por delimitadores (`===`, `---`) ahora exige que al menos dos de los bloques resultantes sean publicaciones inmobiliarias autónomas completas (`autonomousCount >= 2`); de lo contrario, se mantiene unificado como un único mensaje. Además, los bloques residuales de contacto o llamadas a la acción se fusionan de forma automática con el bloque anterior.
+  3. **Preservación de Inserciones y Vocabulario Inmobiliario (`server/_core/jania/handlers/propertiesHandler.ts`)**: En el bucle multi-item, si al menos un fragmento fue insertado con éxito, se preserva el resultado válido (`INMUEBLE` o `REQUERIMIENTO`) y jamás se emite una amonestación por fragmentos residuales. Se amplió `onTopicKeywords` con términos reales del corretaje (`clienta`, `negocios`, `fotos`, `inversionista`, `broker`, `asesor`, `privado`, `colina`, `niza`, `suba`, etc.).
+  4. **Reconocimiento y Deducción Geográfica (`server/_core/jania/parsers.ts`)**: Se incluyeron `Sotileza` y `Niza Antigua` en `KNOWN_BARRIOS_SORTED_ITEMS` y se implementó la deducción automática de `Bogotá, D.C.` cuando se identifica un barrio bogotano sin ciudad explícita en el texto.
+  5. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 291/291 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.23`) y `package.json` (`33.23.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.22 — Octubre 2026
 
 ### Novedades v33.22 (Estandarización de Iconografía y Formato en Verificación Oficial de Identidad — `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` + `⚖️ *_Habeas Data (Ley 1581/12):_* ... *_Art. 15 de la C.P._*`):
 - **Solicitud Doctrinal de Eduardo A. Rivera**:

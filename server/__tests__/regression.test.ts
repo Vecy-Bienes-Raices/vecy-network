@@ -6103,13 +6103,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.22 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.23 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.22");
+      expect(VECY_VERSION).toBe("v33.23");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.22.0");
+      expect(pkg.version).toBe("33.23.0");
     });
   });
 
@@ -6223,5 +6223,86 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(acts[1]).toEqual({ codigo: "7710", descripcion: "Alquiler y arrendamiento de vehículos automotores" });
     });
   });
+
+  describe("SUITE 81: JanIA v33.23 — Blindaje contra Falsos Positivos de Moderación, Bordes Decorativos en Grupo 1 y Deducción Automática de Barrios Bogotanos (v33.23)", () => {
+    it("1. splitMultiItemMessage NO fragmenta una publicación única decorada con bordes === y ---", async () => {
+      const singleListingWithBorders = `========================
+🔑 EN ARRENDAMIENTO BUSCO
+🏢 Apto o Casa
+   (Piso no muy alto)
+========================
+📍 Zonas:
+   • Colina Campestre
+   • Niza Antigua
+   • Sotileza
+🛏️ 3 Habitaciones
+🚗 2 Parqueaderos
+💰 $4.500.000 (con admin)
+------------------------
+👤 Clienta directa lista
+📲 Info & fotos al privado
+🤝 ¡Hagámos negocios!
+========================`;
+
+      const blocks = splitMultiItemMessage(singleListingWithBorders);
+      expect(blocks.length).toBe(1);
+      expect(blocks[0]).toContain("EN ARRENDAMIENTO BUSCO");
+      expect(blocks[0]).toContain("Colina Campestre");
+      expect(blocks[0]).toContain("4.500.000");
+    });
+
+    it("2. processWhatsAppMessage ingesta el requerimiento sin emitir amonestación fuera de tema ni violación de normas", async () => {
+      const { processWhatsAppMessage } = await import("../_core/janIA");
+      const singleListingWithBorders = `========================
+🔑 EN ARRENDAMIENTO BUSCO
+🏢 Apto o Casa
+   (Piso no muy alto)
+========================
+📍 Zonas:
+   • Colina Campestre
+   • Niza Antigua
+   • Sotileza
+🛏️ 3 Habitaciones
+🚗 2 Parqueaderos
+💰 $4.500.000 (con admin)
+------------------------
+👤 Clienta directa lista
+📲 Info & fotos al privado
+🤝 ¡Hagámos negocios!
+========================`;
+
+      const res = await processWhatsAppMessage(
+        singleListingWithBorders,
+        "573112557269@s.whatsapp.net",
+        "Asesora Inmobiliaria",
+        false,
+        undefined,
+        undefined,
+        undefined,
+        true,
+        undefined,
+        undefined,
+        "120363260108880069@g.us",
+        "VECY INMO OFERTAS Y DEMANDAS"
+      );
+
+      expect(res.classification).toBe("REQUERIMIENTO");
+      expect(res.reactionEmoji).toBe("✏️");
+      expect(res.response).toBe(""); // Cero mensajes o amonestaciones en Grupo 1
+      expect(res.inserted).toBe(true);
+    });
+
+    it("3. extractFallbackDataFromText deduce Bogotá, D.C. a partir de barrios como Sotileza o Colina Campestre", async () => {
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+      const text = `Busco apartamento en arriendo en Sotileza o Colina Campestre, 3 alcobas, presupuesto 4.5 millones con admin`;
+      const fallback = extractFallbackDataFromText(text);
+
+      expect(fallback.transactionType).toBe("arriendo");
+      expect(["Sotileza", "Colina Campestre"]).toContain(fallback.zone);
+      expect(fallback.city).toBe("Bogotá, D.C.");
+      expect(fallback.ciudadDeseada).toBe("Bogotá, D.C.");
+    });
+  });
 });
+
 

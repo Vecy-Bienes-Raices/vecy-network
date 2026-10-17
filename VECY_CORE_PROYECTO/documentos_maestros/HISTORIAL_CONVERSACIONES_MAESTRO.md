@@ -7,6 +7,55 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-17] — JanIA v33.23: Blindaje de `splitMultiItemMessage` contra Bordes Decorativos, Erradicación de Falsos Positivos de Moderación en Grupo 1 y Deducción de Bogotá en Barrios Capitalinos (v33.23 - 33.23.0)
+
+**Versión:** `v33.23` (`33.23.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/heuristics.ts` (`isAutonomousListingBlock`, `isTrailerBlock`, `cleanAndMergeSubstantiveBlocks` y `splitMultiItemMessage`: validación de que un mensaje dividido por delimitadores `===` o `---` contenga al menos 2 publicaciones inmobiliarias autónomas completas antes de fragmentarlo, fusionando pies de contacto y trailers de asesores para evitar partir publicaciones únicas).
+- `server/_core/jania/handlers/propertiesHandler.ts` (En el bucle de ingestión multi-item, preservación de resultados válidos de `INMUEBLE` o `REQUERIMIENTO` para que ningún fragmento residual o trailer sobrescriba con `VIOLACION_DE_NORMAS`; ampliación de `onTopicKeywords` con términos inmobiliarios como `clienta`, `negocios`, `fotos`, `inversionista`, `asesor`, `broker`, `privado`, `colina`, `niza`, `suba`, etc.).
+- `server/_core/jania/parsers.ts` (Incorporación de `Sotileza` y `Niza Antigua` en `KNOWN_BARRIOS_SORTED_ITEMS` y asignación automática de `city = "Bogotá, D.C."` cuando se reconoce un barrio capitalino sin ciudad explícita en el texto).
+- `shared/const.ts` (`v33.23`) y `package.json` (`33.23.0`).
+- `server/__tests__/regression.test.ts` (Actualización de Suite 79 y adición de SUITE 81: 291/291 tests pasando al 100% en verde a $0 COP).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Necesito que revises por qué JanIa dice que esta publicación no pertenece al grupo 1 que es de OFERTAS y DEMANDAS y la amonesta diciendole eso, creo que esta fallando porque la publicación de ella si es del tema del grupo. Mira las normas: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴... No entiendo que hiciste o configuraste mal en JanIa, pregúntame lo necesaria para que todo quede bien por favor."*
+- Solicitud de continuidad en IDE: *"Hola agente. Por favor revisa que todo esté funcionando bien, en especial nuestra agente JanIA y cuentame cómo quedó ya que tuve que terminar el procedimiento con CLI."*
+
+#### 2. Diagnóstico Técnico Forense y Causa Raíz
+1. **Causa Raíz #1 — Fragmentación Indebida por Delimitadores `===` y `---`:**
+   - En WhatsApp, los asesores inmobiliarios usan frecuentemente líneas de `===` y `---` como recuadros estéticos o separadores de secciones dentro de una misma publicación.
+   - La función `splitMultiItemMessage` dividía de forma indiscriminada por `(?:_{3,}|-{3,}|={3,}|\*{3,})`, partiendo un único requerimiento legítimo en 3 bloques:
+     - Bloque 0: Título ("EN ARRENDAMIENTO BUSCO Apto o Casa")
+     - Bloque 1: Especificaciones ("Zonas: Colina Campestre, Niza Antigua, Sotileza, 3 Habs, 2 Parqueaderos, $4.500.000")
+     - Bloque 2: Pie de contacto ("👤 Clienta directa lista / 📲 Info & fotos al privado / 🤝 ¡Hagámos negocios!")
+2. **Causa Raíz #2 — Falso Positivo de Fuera de Tema en el Fragmento Residual:**
+   - El Bloque 2 era procesado por el bucle multi-item de `propertiesHandler.ts` como un mensaje aislado.
+   - Al carecer aisladamente de palabras como "apto" o "arriendo", el filtro de temas no lo reconoció (`hasOnTopicKeyword = false`), clasificándolo como `VIOLACION_DE_NORMAS` y generando el mensaje de amonestación en el grupo.
+   - Asimismo, el bucle multi-item retornaba el resultado del último fragmento, sobreescribiendo las inserciones exitosas de los bloques anteriores.
+3. **Causa Raíz #3 — Barrios sin Ciudad Explícita:**
+   - La publicación mencionaba "Zonas: Colina Campestre, Niza Antigua, Sotileza", pero no indicaba explícitamente "Bogotá". En el fallback, la ciudad quedaba vacía (`city = ""`).
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Blindaje de `splitMultiItemMessage` (`heuristics.ts`):**
+   - Se introdujo `isAutonomousListingBlock` y `isTrailerBlock`.
+   - Se condicionó el corte por delimitadores (`===`, `---`): solo se divide si al menos 2 bloques constituyen publicaciones inmobiliarias autónomas completas con intención/tipo y especificaciones comerciales o físicas independientes (`autonomousCount >= 2`). De lo contrario, se mantiene el mensaje unificado en 1 solo bloque.
+   - Detección y fusión automática de pies de contacto, notas de asesor y llamadas a la acción (`isTrailerBlock`).
+2. **Preservación de Inserciones Exitosas y Vocabulario Inmobiliario (`propertiesHandler.ts`):**
+   - En el bucle multi-item, si al menos un fragmento fue insertado con éxito, se preserva el resultado válido (`INMUEBLE` o `REQUERIMIENTO`) y jamás se emite una amonestación por fragmentos residuales.
+   - Se enriqueció `onTopicKeywords` con términos reales del corretaje: `clienta`, `clientas`, `negocio`, `negocios`, `fotos`, `inversionista`, `inmobiliaria`, `asesor`, `broker`, `privado`, `colina`, `niza`, `suba`, `usaquen`, `cedritos`, `chico`, etc.
+3. **Reconocimiento y Deducción Geográfica (`parsers.ts`):**
+   - Se incorporaron `Sotileza` y `Niza Antigua` a `KNOWN_BARRIOS_SORTED_ITEMS`.
+   - Al detectarse un barrio capitalino conocido sin ciudad declarada, se asigna automáticamente `city = "Bogotá, D.C."` y `ciudadDeseada = "Bogotá, D.C."`.
+4. **Validación Exhaustiva:**
+   - `npm run check`: **0 errores de TypeScript**.
+   - `npm test`: **291/291 tests pasando al 100% en verde a $0 COP (incluyendo SUITE 81)**.
+   - `npm run build`: Compilación de cliente y servidor limpia.
+
+---
+
 ### 📅 [2026-10-17] — Estandarización de Encabezado `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y Cláusula `⚖️ *_Habeas Data (Ley 1581/12):_* ... *_Art. 15 de la C.P._*` (v33.22 - 33.22.0)
 
 **Versión:** `v33.22` (`33.22.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
