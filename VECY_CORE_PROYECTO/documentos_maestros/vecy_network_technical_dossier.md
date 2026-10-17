@@ -7389,3 +7389,18 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Al cierre de la plantilla, JanIA pregunta al usuario si desea ejecutar la verificación de identidad y antecedentes del **Representante Legal Principal** (`"verificar representante"`) o de **cada miembro inscrito** (`"verificar todos"`), almacenando en sesión tanto la cédula principal (`setPendingUnconfirmedDoc`) como todos los miembros (`setPendingCompanyMembers`).
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **287/287 passing** ($0 COP) | Build `npm run build` limpio.
+
+---
+
+### Versión v33.21 — Octubre 2026: Título y Marco Legal Propio por Servicio (`🛡️ VERIFICACIÓN OFICIAL DE EMPRESA` vs `☑️ VERIFICACIÓN OFICIAL DE IDENTIDAD`), Pregunta Post-Reporte en Mensaje Separado y Flujo Interactivo NO vs SÍ
+- **Diferenciación de Encabezado y Marco Jurídico por Servicio (`server/_core/identityVerificationService.ts`)**:
+  * **Empresas / Personas Jurídicas (`isNit = true`)**: Encabezado `🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴` y fundamento jurídico `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_*` (en virtud de la Sentencia C-748/11 de la Corte Constitucional, el Art. 26 del Código de Comercio sobre publicidad del Registro Mercantil y el Art. 10 lit. b de la Ley 1581/12 sobre datos públicos de representación legal).
+  * **Personas Naturales (`CC / CE / Pasaporte`)**: Encabezado `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y cláusula `🛡️ *_Habeas Data (Ley 1581/12):_*`.
+- **Pregunta Post-Reporte en Mensaje Separado (`identityVerificationService.ts`, `dmHandler.ts`, `whatsapp-match.ts`)**:
+  * Separación de `followUpQuestionText` respecto a `reportText` y despacho automático como un mensaje independiente en WhatsApp mediante `setLatestDmFollowUpMessage` / `popLatestDmFollowUpMessage`.
+- **Flujo Interactivo NO vs. SÍ (`politenessService.ts` y `dmHandler.ts`)**:
+  * Si el usuario responde **NO**, JanIA limpia el estado pendiente y envía `formatCompanyFollowUpDeclineReviewMessage`, invitando a calificar y comentar en Google Reviews destacando que su apoyo permite mantener estos servicios **100% GRATUITOS**.
+  * Si el usuario responde **SÍ** (o `"verificar representante"` / `"verificar todos"`), JanIA ejecuta la verificación del documento del Representante Legal (respaldado por `ruesVerifiedNames`) y entrega el reporte con su formato y título propios (`☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`).
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **288/288 passing** ($0 COP) | Build `npm run build` limpio.
+

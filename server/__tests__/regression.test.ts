@@ -5565,7 +5565,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(extractedOp.found).toBe(true);
       expect(extractedOp.detectedName).toBeUndefined();
 
-      // 2. Reporte compacto adaptado a NIT (Plantilla RUES de 4 secciones + pregunta interactiva)
+      // 2. Reporte compacto adaptado a NIT (Plantilla RUES de 4 secciones con título propio de empresa y pregunta separada)
       const nitRep = formatCompactIdentityVerificationReport({
         cedula: "900123456",
         tipoDoc: "nit",
@@ -5573,10 +5573,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         fullName: "INVERSIONES INMOBILIARIAS SAS",
         success: true
       });
+      expect(nitRep).toContain("🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴");
       expect(nitRep).toContain("INFORMACIÓN GENERAL — DATOS EMPRESARIALES");
       expect(nitRep).toContain("ACTIVIDAD ECONÓMICA (CIIU)");
       expect(nitRep).toContain("PROPIETARIO / ESTABLECIMIENTO");
-      expect(nitRep).toContain("¿Deseas que realice la verificación de identidad y antecedentes");
+      expect(nitRep).not.toContain("¿Deseas que realice la verificación de identidad y antecedentes");
 
       // 3. Desacoplamiento de PDF en DM
       const dummyBuffer = Buffer.from("%PDF-1.4 dummy", "utf-8");
@@ -6056,12 +6057,14 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(representantesSuplentes[0].numeroIdentificacion).toBe("1032440704");
     });
 
-    it("4. Plantilla Informativa Oficial RUES de 4 secciones (Información General, Actividad Económica, Representante Legal y Establecimientos) + pregunta post-reporte sin mezclar antecedentes", async () => {
+    it("4. Plantilla Informativa Oficial RUES de 4 secciones (Información General, Actividad Económica, Representante Legal y Establecimientos) + pregunta post-reporte enviada por separado sin mezclar antecedentes", async () => {
       const { queryEmpresaOrNit, getPendingUnconfirmedDoc, getPendingCompanyMembers, detectTramiteConfirmation } = await import("../_core/identityVerificationService");
       const testUserId = `rues-test-${Date.now()}@s.whatsapp.net`;
 
       const res = await queryEmpresaOrNit("860005224", testUserId);
       expect(res.success).toBe(true);
+      expect(res.reportText).toContain("🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴");
+      expect(res.reportText).toContain("⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_*");
       expect(res.reportText).toContain("INFORMACIÓN GENERAL — DATOS EMPRESARIALES (RUES / DIAN / CONFECÁMARAS)");
       expect(res.reportText).toContain("BAVARIA & CIA S.C.A.");
       expect(res.reportText).toContain("860.005.224-6");
@@ -6077,7 +6080,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(res.reportText).toContain("Advertencia Jurídica:");
       expect(res.reportText).toContain("PROPIETARIO / ESTABLECIMIENTO");
       expect(res.reportText).toContain("No se encontraron resultados.");
-      expect(res.reportText).toContain("¿Deseas que realice la verificación de identidad y antecedentes");
+      // La pregunta de seguimiento ya NO va incrustada en reportText, sino en followUpQuestionText para enviarse aparte
+      expect(res.reportText).not.toContain("¿Deseas que realice la verificación de identidad y antecedentes");
+      expect(res.followUpQuestionText).toContain("¿Deseas que realice la verificación de identidad y antecedentes");
+      expect(res.followUpQuestionText).toContain("Sergio Andres Rincon Rincon");
 
       // Debe haber pre-cargado la cédula del Representante Legal Principal y los miembros en la sesión del usuario
       const pendingRepDoc = getPendingUnconfirmedDoc(testUserId);
@@ -6097,19 +6103,19 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.20 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.21 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.20");
+      expect(VECY_VERSION).toBe("v33.21");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.20.0");
+      expect(pkg.version).toBe("33.21.0");
     });
   });
 
-  describe("SUITE 80: Plantilla RUES 4 Secciones (NIT <-> Razón Social), FunctionCall.args de Gemini y Respaldo Socrata RUES Nacional (v33.20)", () => {
-    it("1. executeJaniaDmTool entrega la plantilla completa RUES para NIT '900788832' (Transportes Gonzalez Diaz TG&D SAS, CIIU 4923 y 7710, Rep Legal Sandra Milena Diaz Mondragon) y ofrece verificar antecedentes post-reporte", async () => {
-      const { executeJaniaDmTool } = await import("../_core/jania/handlers/dmHandler");
+  describe("SUITE 80: Plantilla RUES 4 Secciones (NIT <-> Razón Social), Título/Marco Legal Propio por Servicio, Pregunta Separada e Interacción NO vs SÍ (v33.21)", () => {
+    it("1. executeJaniaDmTool entrega la plantilla completa RUES para NIT '900788832' con título 🛡️ VERIFICACIÓN OFICIAL DE EMPRESA y encola la pregunta post-reporte por separado", async () => {
+      const { executeJaniaDmTool, popLatestDmFollowUpMessage } = await import("../_core/jania/handlers/dmHandler");
       const userId = "225954035179724@lid";
 
       // Caso 1: Gemini envía argumentos vacíos pero rawUserText contiene "Jania verificame este nit 900788832"
@@ -6121,6 +6127,8 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         "Jania verificame este nit 900788832"
       );
       expect(res1.toolType).toBe("empresa");
+      expect(res1.resultJson.reporteOficial).toContain("🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴");
+      expect(res1.resultJson.reporteOficial).toContain("⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_*");
       expect(res1.resultJson.reporteOficial).toContain("900.788.832-8");
       expect(res1.resultJson.reporteOficial).toContain("TRANSPORTES GONZALEZ DIAZ TG&D SAS");
       expect(res1.resultJson.reporteOficial).toContain("4923");
@@ -6131,6 +6139,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(res1.resultJson.reporteOficial).toContain("46.375.136");
       expect(res1.resultJson.reporteOficial).toContain("PROPIETARIO / ESTABLECIMIENTO");
       expect(res1.resultJson.reporteOficial).not.toContain("901.488.282-3");
+      // La pregunta va en mensaje separado (popLatestDmFollowUpMessage) y no dentro del reporte
+      expect(res1.resultJson.reporteOficial).not.toContain("¿Deseas que realice la verificación de identidad y antecedentes");
+      const queuedFollowUp = popLatestDmFollowUpMessage(userId);
+      expect(queuedFollowUp).toBeDefined();
+      expect(queuedFollowUp).toContain("💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*Sandra Milena Diaz Mondragon* — C.C. 46.375.136) o de algún otro miembro?*");
 
       // Caso 2: Búsqueda inversa por Razón Social ("Transportes Gonzalez Diaz") devuelve el NIT 900.788.832-8
       const resRazon = await executeJaniaDmTool(
@@ -6142,9 +6155,32 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       );
       expect(resRazon.resultJson.reporteOficial).toContain("900.788.832-8");
       expect(resRazon.resultJson.reporteOficial).toContain("2517719");
+      popLatestDmFollowUpMessage(userId);
     });
 
-    it("2. extractAllCedulasForVerification detecta NITs con puntos, con DV o de 9 dígitos iniciados en 8/9", async () => {
+    it("2. Flujo interactivo post-reporte de empresa: si responde NO envía invitación a calificar (servicios GRATUITOS), y si responde SÍ verifica la cédula del Representante con título ☑️ VERIFICACIÓN OFICIAL DE IDENTIDAD", async () => {
+      const { queryEmpresaOrNit } = await import("../_core/identityVerificationService");
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      // Escenario A: Usuario consulta empresa y responde "No" a la pregunta separada
+      const userNo = `test-company-no-${Date.now()}@s.whatsapp.net`;
+      await queryEmpresaOrNit("900788832", userNo);
+      const replyNo = await processPrivateDmConversationalMessage("No", userNo, "Carlos Inversionista");
+      expect(replyNo).toContain("100% GRATUITOS");
+      expect(replyNo).toContain("GRATIS");
+      expect(replyNo).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // Escenario B: Usuario consulta empresa y responde "Sí" -> JanIA verifica la C.C. 46.375.136 de Sandra Milena Diaz Mondragon con su propio formato y título
+      const userYes = `test-company-yes-${Date.now()}@s.whatsapp.net`;
+      await queryEmpresaOrNit("900788832", userYes);
+      const replyYes = await processPrivateDmConversationalMessage("Sí", userYes, "Carlos Inversionista");
+      expect(replyYes).toContain("☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
+      expect(replyYes).toContain("🛡️ *_Habeas Data (Ley 1581/12):_*");
+      expect(replyYes).toContain("46.375.136");
+      expect(replyYes).toContain("Sandra Milena Diaz Mondragon");
+    });
+
+    it("3. extractAllCedulasForVerification detecta NITs con puntos, con DV o de 9 dígitos iniciados en 8/9", async () => {
       const { extractAllCedulasForVerification } = await import("../_core/identityVerificationService");
 
       const items1 = extractAllCedulasForVerification("Jania verificame este nit 900788832", true);
@@ -6163,7 +6199,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(items3[0].tipoDoc).toBe("nit");
     });
 
-    it("3. formatOrganizacionJuridica, extractActividadesEconomicas y CIIU_DESCRIPTIONS normalizan tipos societarios y múltiples CIIU de RUES", async () => {
+    it("4. formatOrganizacionJuridica, extractActividadesEconomicas y CIIU_DESCRIPTIONS normalizan tipos societarios y múltiples CIIU de RUES", async () => {
       const { formatOrganizacionJuridica, extractActividadesEconomicas, CIIU_DESCRIPTIONS } = await import("../_core/ruesService");
 
       expect(formatOrganizacionJuridica("SOCIEDADES POR ACCIONES SIMPLIFICADAS SAS")).toBe(

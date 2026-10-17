@@ -91,6 +91,20 @@ export function formatPoliteNoReviewPersuasionMessage(userName?: string): string
 }
 
 /**
+ * 4b. Mensaje cordial de cierre e invitación a calificar y comentar en Google Reviews cuando el usuario
+ * responde "NO" a la pregunta post-reporte de empresa sobre verificar al Representante Legal o miembros (Doctrina v33.21).
+ * Hace alusión explícita a que su calificación y comentario permiten que estos servicios sigan siendo 100% GRATUITOS.
+ */
+export function formatCompanyFollowUpDeclineReviewMessage(userName?: string): string {
+  const cleanName = extractFirstName(userName || 'Colega') || 'Colega';
+  return (
+    `¡Entendido con todo gusto, ${cleanName}! 🤝 Quedo 100% a tu disposición cuando necesites realizar cualquier otra consulta.\n\n` +
+    `💡 *Tu calificación y comentario son fundamentales para que estos servicios de verificación y consulta sigan siendo 100% GRATUITOS para toda la comunidad:*\n\n` +
+    buildWinningGoogleReviewMessage(userName)
+  );
+}
+
+/**
  * Evalúa si una respuesta del usuario es afirmativa (SÍ, claro, de una, obvio, con gusto, etc.)
  */
 export function isAffirmativeConsentResponse(text: string): boolean {

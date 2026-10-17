@@ -1439,6 +1439,15 @@ export class JaniaMatchBot {
                   await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                 }
 
+                // Despacho separado de la pregunta post-reporte de empresa (Doctrina v33.21)
+                const { popLatestDmFollowUpMessage: popVoiceFollowUp } = await import('./jania/handlers/dmHandler');
+                const voiceFollowUpQuestion = popVoiceFollowUp(senderId);
+                if (voiceFollowUpQuestion) {
+                  await new Promise(r => setTimeout(r, 900));
+                  await this.queuedSend(senderId, voiceFollowUpQuestion, { allowDirectMessage: true });
+                  await this.logToDb(senderId, 'janIA', voiceFollowUpQuestion);
+                }
+
                 // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40)
                 const isGratitudeOrClosing =
                   /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
@@ -1463,8 +1472,9 @@ export class JaniaMatchBot {
             }
           }
 
-          const { popLatestDmPdf } = await import('./jania/handlers/dmHandler');
+          const { popLatestDmPdf, popLatestDmFollowUpMessage } = await import('./jania/handlers/dmHandler');
           const latestPdf = popLatestDmPdf(senderId);
+          const followUpQuestion = popLatestDmFollowUpMessage(senderId);
           const pdfBuffer = (reply as any)?.pdfBuffer || latestPdf?.pdfBuffer;
           const pdfFileName = (reply as any)?.pdfFileName || latestPdf?.pdfFileName;
           const replyText = String(reply);
@@ -1482,6 +1492,13 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
           }
           await this.logToDb(senderId, 'janIA', replyText);
+
+          // Despacho separado de la pregunta post-reporte de empresa (Doctrina v33.21)
+          if (followUpQuestion) {
+            await new Promise(r => setTimeout(r, 900));
+            await this.queuedSend(senderId, followUpQuestion, { allowDirectMessage: true });
+            await this.logToDb(senderId, 'janIA', followUpQuestion);
+          }
 
           // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40 / v32.96)
           const isGratitudeOrClosing =
@@ -1671,12 +1688,17 @@ export class JaniaMatchBot {
 
       // 🛡️ INTERCEPTOR DIRECTO: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
       const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
-      const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true);
+      const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true, resolvedSenderId);
       if (idCheck.isVerificationRequest && idCheck.reportText) {
         console.log(`[JANIA-MATCH] [Group ${chatId}] Verificación de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
         await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
-        await this.sock.sendPresenceUpdate('paused', chatId);
         await this.logToDb(chatId, 'janIA', idCheck.reportText);
+        if (idCheck.followUpQuestionText) {
+          await new Promise(r => setTimeout(r, 900));
+          await this.queuedSend(chatId, idCheck.followUpQuestionText, { mentions: [senderId] });
+          await this.logToDb(chatId, 'janIA', idCheck.followUpQuestionText);
+        }
+        await this.sock.sendPresenceUpdate('paused', chatId);
         return;
       }
 
@@ -2744,10 +2766,15 @@ export class JaniaMatchBot {
       try {
         await this.sock.sendPresenceUpdate('composing', senderId);
       } catch (_) { }
-      const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true);
+      const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true, senderId);
       if (idCheck.isVerificationRequest && idCheck.reportText) {
         await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
         await this.logToDb(senderId, 'janIA', idCheck.reportText);
+        if (idCheck.followUpQuestionText) {
+          await new Promise(r => setTimeout(r, 900));
+          await this.queuedSend(senderId, idCheck.followUpQuestionText, { allowDirectMessage: true });
+          await this.logToDb(senderId, 'janIA', idCheck.followUpQuestionText);
+        }
         await this.sock.sendPresenceUpdate('paused', senderId);
         return;
       }

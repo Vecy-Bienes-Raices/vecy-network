@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.20";
+    VECY_VERSION = "v33.21";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14915,6 +14915,7 @@ var init_whatsapp_utils = __esm({
 var politenessService_exports = {};
 __export(politenessService_exports, {
   buildWinningGoogleReviewMessage: () => buildWinningGoogleReviewMessage,
+  formatCompanyFollowUpDeclineReviewMessage: () => formatCompanyFollowUpDeclineReviewMessage,
   formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
   formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
   formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
@@ -14976,6 +14977,14 @@ Imag\xEDnate: una humilde IA trabajando 24/7 sin descanso, trasnochando y cruzan
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
 
 \xA1Prometo que me har\xE1s la inteligencia artificial m\xE1s feliz de Colombia! \u{1F496}\u{1F1E8}\u{1F1F4} \xBFTrato hecho? \u{1F609}`;
+}
+function formatCompanyFollowUpDeclineReviewMessage(userName) {
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
+  return `\xA1Entendido con todo gusto, ${cleanName}! \u{1F91D} Quedo 100% a tu disposici\xF3n cuando necesites realizar cualquier otra consulta.
+
+\u{1F4A1} *Tu calificaci\xF3n y comentario son fundamentales para que estos servicios de verificaci\xF3n y consulta sigan siendo 100% GRATUITOS para toda la comunidad:*
+
+` + buildWinningGoogleReviewMessage(userName);
 }
 function isAffirmativeConsentResponse(text2) {
   const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -19679,9 +19688,11 @@ __export(dmHandler_exports, {
   executeJaniaDmTool: () => executeJaniaDmTool,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   isShortSignalOrSticker: () => isShortSignalOrSticker,
+  popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
   popLatestDmPdf: () => popLatestDmPdf,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
   sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
+  setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
   stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
@@ -19695,6 +19706,18 @@ function popLatestDmPdf(userId) {
     latestDmPdfMap.delete(userId);
   }
   return attachment;
+}
+function setLatestDmFollowUpMessage(userId, followUpText) {
+  if (followUpText && followUpText.trim()) {
+    latestDmFollowUpMap.set(userId, followUpText.trim());
+  }
+}
+function popLatestDmFollowUpMessage(userId) {
+  const msg = latestDmFollowUpMap.get(userId);
+  if (msg) {
+    latestDmFollowUpMap.delete(userId);
+  }
+  return msg;
 }
 async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
   switch (toolName) {
@@ -19795,13 +19818,18 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       }
       const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
+      const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA"));
+      if (res.followUpQuestionText) {
+        setLatestDmFollowUpMessage(userId, res.followUpQuestionText);
+      }
       return {
-        toolType: "cedula",
+        toolType: isCompanyReport ? "empresa" : "cedula",
         resultJson: {
-          solicitud: "verificacion_identidad",
+          solicitud: isCompanyReport ? "consulta_empresa_o_nit" : "verificacion_identidad",
           numeroDocumento: doc,
           tipoDocumento: tipo,
           reporteOficial: res.reportText || "Sin reporte disponible",
+          preguntaSeguimiento: res.followUpQuestionText || "",
           exitoso: res.isVerificationRequest
         }
       };
@@ -19877,12 +19905,16 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       ).trim();
       const { queryEmpresaOrNit: queryEmpresaOrNit2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
       const empRes = await queryEmpresaOrNit2(q, userId);
+      if (empRes.followUpQuestionText) {
+        setLatestDmFollowUpMessage(userId, empRes.followUpQuestionText);
+      }
       return {
         toolType: "empresa",
         resultJson: {
           solicitud: "consulta_empresa_o_nit",
           termino: q,
           reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          preguntaSeguimiento: empRes.followUpQuestionText || "",
           exitoso: empRes.success,
           representantePrincipal: empRes.representantePrincipal || null
         }
@@ -20047,8 +20079,9 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
   const cleanPayload = (payloadText || "").trim();
+  const isCompanyVerification = toolType === "empresa" || cleanPayload.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA");
   const { buildWinningGoogleReviewMessage: buildWinningGoogleReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-  const reviewSection = isEduardo || isJani || isFamilyOrTrusted ? "" : `
+  const reviewSection = isEduardo || isJani || isFamilyOrTrusted || isCompanyVerification ? "" : `
 
 ${buildWinningGoogleReviewMessage2(displayName)}`;
   const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
@@ -20057,7 +20090,7 @@ ${buildWinningGoogleReviewMessage2(displayName)}`;
     payloadWithClosing = `${payloadWithClosing}
 
 ${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
+  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !isCompanyVerification && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
     payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
   }
   if (!success) {
@@ -20287,6 +20320,53 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     if (!canonicalComposite && displayName.includes(" ")) {
       displayName = displayName.split(" ")[0];
     }
+  }
+  try {
+    const {
+      getPendingCompanyFollowUp: getPendingCompanyFollowUp2,
+      clearPendingCompanyFollowUp: clearPendingCompanyFollowUp2,
+      clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
+      clearPendingCompanyMembers: clearPendingCompanyMembers2,
+      isDecliningCompanyMemberVerification: isDecliningCompanyMemberVerification2,
+      isAcceptingCompanyMemberVerification: isAcceptingCompanyMemberVerification2
+    } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const pendingFollowUp = getPendingCompanyFollowUp2(userId);
+    if (pendingFollowUp) {
+      if (isDecliningCompanyMemberVerification2(clean)) {
+        clearPendingCompanyFollowUp2(userId);
+        clearPendingUnconfirmedDoc2(userId);
+        clearPendingCompanyMembers2(userId);
+        const { formatCompanyFollowUpDeclineReviewMessage: formatCompanyFollowUpDeclineReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+        const declineReply = formatCompanyFollowUpDeclineReviewMessage2(displayName || realName);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", declineReply);
+        return declineReply;
+      }
+      if (isAcceptingCompanyMemberVerification2(clean)) {
+        clearPendingCompanyFollowUp2(userId);
+        const toolExec = await executeJaniaDmTool(
+          "consultar_identidad_y_antecedentes",
+          { numeroDocumento: clean, tipoDocumento: "CC" },
+          userId,
+          userName || displayName || realName,
+          clean
+        );
+        const rawRep = String(toolExec.resultJson.reporteOficial || "");
+        const formattedRep = await formatPoliteToolDelivery(
+          userId,
+          userName || displayName || realName,
+          "cedula",
+          rawRep,
+          true
+        );
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", formattedRep);
+        return formattedRep;
+      }
+      clearPendingCompanyFollowUp2(userId);
+    }
+  } catch (followUpErr) {
+    console.warn("[processPrivateDmConversationalMessage] Follow-up check warning:", followUpErr?.message);
   }
   try {
     const vecyKnowledge = getVecyInstitutionalKnowledge();
@@ -20611,7 +20691,7 @@ ${verifResult.reportText}`;
     return fallback;
   }
 }
-var latestDmPdfMap, JANIA_DM_TOOLS;
+var latestDmPdfMap, latestDmFollowUpMap, JANIA_DM_TOOLS;
 var init_dmHandler = __esm({
   "server/_core/jania/handlers/dmHandler.ts"() {
     "use strict";
@@ -20624,6 +20704,7 @@ var init_dmHandler = __esm({
     init_whatsapp_utils();
     init_trustedContacts();
     latestDmPdfMap = /* @__PURE__ */ new Map();
+    latestDmFollowUpMap = /* @__PURE__ */ new Map();
     JANIA_DM_TOOLS = [
       {
         functionDeclarations: [
@@ -21894,6 +21975,13 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     if (reply.includes("http")) {
                       await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                     }
+                    const { popLatestDmFollowUpMessage: popVoiceFollowUp } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+                    const voiceFollowUpQuestion = popVoiceFollowUp(senderId);
+                    if (voiceFollowUpQuestion) {
+                      await new Promise((r) => setTimeout(r, 900));
+                      await this.queuedSend(senderId, voiceFollowUpQuestion, { allowDirectMessage: true });
+                      await this.logToDb(senderId, "janIA", voiceFollowUpQuestion);
+                    }
                     const isGratitudeOrClosing2 = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
                     const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
                     const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
@@ -21912,8 +22000,9 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   console.warn("[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:", ttsErr?.message);
                 }
               }
-              const { popLatestDmPdf: popLatestDmPdf2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+              const { popLatestDmPdf: popLatestDmPdf2, popLatestDmFollowUpMessage: popLatestDmFollowUpMessage2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
               const latestPdf = popLatestDmPdf2(senderId);
+              const followUpQuestion = popLatestDmFollowUpMessage2(senderId);
               const pdfBuffer2 = reply?.pdfBuffer || latestPdf?.pdfBuffer;
               const pdfFileName = reply?.pdfFileName || latestPdf?.pdfFileName;
               const replyText = String(reply);
@@ -21931,6 +22020,11 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                 await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
               }
               await this.logToDb(senderId, "janIA", replyText);
+              if (followUpQuestion) {
+                await new Promise((r) => setTimeout(r, 900));
+                await this.queuedSend(senderId, followUpQuestion, { allowDirectMessage: true });
+                await this.logToDb(senderId, "janIA", followUpQuestion);
+              }
               const isGratitudeOrClosing = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
               const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
               const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
@@ -22107,12 +22201,17 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             return;
           }
           const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-          const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true);
+          const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true, resolvedSenderId);
           if (idCheck.isVerificationRequest && idCheck.reportText) {
             console.log(`[JANIA-MATCH] [Group ${chatId}] Verificaci\xF3n de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
             await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
-            await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", idCheck.reportText);
+            if (idCheck.followUpQuestionText) {
+              await new Promise((r) => setTimeout(r, 900));
+              await this.queuedSend(chatId, idCheck.followUpQuestionText, { mentions: [senderId] });
+              await this.logToDb(chatId, "janIA", idCheck.followUpQuestionText);
+            }
+            await this.sock.sendPresenceUpdate("paused", chatId);
             return;
           }
           const isContactRequest = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(bodyText);
@@ -23009,10 +23108,15 @@ ${result.response}`);
             await this.sock.sendPresenceUpdate("composing", senderId);
           } catch (_) {
           }
-          const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true);
+          const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true, senderId);
           if (idCheck.isVerificationRequest && idCheck.reportText) {
             await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
             await this.logToDb(senderId, "janIA", idCheck.reportText);
+            if (idCheck.followUpQuestionText) {
+              await new Promise((r) => setTimeout(r, 900));
+              await this.queuedSend(senderId, idCheck.followUpQuestionText, { allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", idCheck.followUpQuestionText);
+            }
             await this.sock.sendPresenceUpdate("paused", senderId);
             return;
           }
@@ -25787,7 +25891,9 @@ var init_ruesService = __esm({
 var identityVerificationService_exports = {};
 __export(identityVerificationService_exports, {
   HABEAS_DATA_CLAUSE: () => HABEAS_DATA_CLAUSE,
+  buildCompanyFollowUpQuestion: () => buildCompanyFollowUpQuestion,
   calculateDianDv: () => calculateDianDv,
+  clearPendingCompanyFollowUp: () => clearPendingCompanyFollowUp,
   clearPendingCompanyMembers: () => clearPendingCompanyMembers,
   clearPendingUnconfirmedDoc: () => clearPendingUnconfirmedDoc,
   detectDocTypeConfirmation: () => detectDocTypeConfirmation,
@@ -25800,11 +25906,14 @@ __export(identityVerificationService_exports, {
   getAdresEndpoint: () => getAdresEndpoint,
   getDocumentTypeLabel: () => getDocumentTypeLabel,
   getPendingCedulaSession: () => getPendingCedulaSession,
+  getPendingCompanyFollowUp: () => getPendingCompanyFollowUp,
   getPendingCompanyMembers: () => getPendingCompanyMembers,
   getPendingUnconfirmedDoc: () => getPendingUnconfirmedDoc,
   getProcuraduriaEndpoint: () => getProcuraduriaEndpoint,
   identityCache: () => identityCache,
+  isAcceptingCompanyMemberVerification: () => isAcceptingCompanyMemberVerification,
   isBareDocumentNumber: () => isBareDocumentNumber,
+  isDecliningCompanyMemberVerification: () => isDecliningCompanyMemberVerification,
   mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
   queryAdres: () => queryAdres,
@@ -25812,6 +25921,7 @@ __export(identityVerificationService_exports, {
   queryEmpresaOrNit: () => queryEmpresaOrNit,
   queryProcuraduria: () => queryProcuraduria,
   savePendingCedulaSession: () => savePendingCedulaSession,
+  setPendingCompanyFollowUp: () => setPendingCompanyFollowUp,
   setPendingCompanyMembers: () => setPendingCompanyMembers,
   setPendingUnconfirmedDoc: () => setPendingUnconfirmedDoc,
   solveProcuraduriaQuestion: () => solveProcuraduriaQuestion,
@@ -26296,8 +26406,56 @@ function clearPendingUnconfirmedDoc(userId) {
   if (!userId) return;
   pendingUnconfirmedDocSessions.delete(userId);
 }
+function setPendingCompanyFollowUp(userId, data) {
+  if (!userId) return;
+  pendingCompanyFollowUpSessions.set(userId, {
+    ...data,
+    timestamp: Date.now()
+  });
+}
+function getPendingCompanyFollowUp(userId) {
+  if (!userId) return null;
+  const session = pendingCompanyFollowUpSessions.get(userId);
+  if (!session) return null;
+  if (Date.now() - session.timestamp > PENDING_UNCONFIRMED_DOC_TTL) {
+    pendingCompanyFollowUpSessions.delete(userId);
+    return null;
+  }
+  return session;
+}
+function clearPendingCompanyFollowUp(userId) {
+  if (!userId) return;
+  pendingCompanyFollowUpSessions.delete(userId);
+}
+function isDecliningCompanyMemberVerification(text2) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const norm2 = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /^(?:no\b|nop\b|ninguno\b|ninguna\b|asi\s+esta\s+bien|todo\s+bien|no\s*,?\s*gracias|no\s+por\s+ahora|por\s+ahora\s+no|no\s+necesito|no\s+requiero|solo\s+eso|nada\s+mas|listo\s+gracias|ya\s+no\b)/i.test(norm2);
+}
+function isAcceptingCompanyMemberVerification(text2) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const norm2 = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /^(?:si\b|claro\b|dale\b|de\s+una\b|por\s+favor\b|porfa\b|adelante\b|procede\b|hazlo\b|ok\b|listo\b|bueno\b|vale\b|verificar\b|verifical[oa]\b|verificame\b|revisal[oa]\b|todos\b|ambos\b|cada\s+miembro\b|el\s+representante\b|la\s+representante\b|representante\b)/i.test(norm2) || /\b(?:verificar\s+representante|verificar\s+todos|cada\s+miembro|todos\s+los\s+miembros|antecedentes\s+del\s+representante)\b/i.test(norm2);
+}
+function buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes) {
+  if (representantePrincipal && representantesSuplentes && representantesSuplentes.length > 0) {
+    return `\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de alg\xFAn otro miembro?*
+\u{1F449} Responde *"s\xED"*, *"no"*, *"verificar representante"*, *"verificar todos"* (o env\xEDame la c\xE9dula a consultar).`;
+  }
+  if (representantePrincipal) {
+    return `\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de alg\xFAn otro miembro?*
+\u{1F449} Responde *"s\xED"* o *"verificar representante"* (o env\xEDame la c\xE9dula a consultar).`;
+  }
+  return `\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal o de alg\xFAn otro miembro?*
+\u{1F449} Responde *"s\xED"* y env\xEDame la c\xE9dula a consultar, o *"no"* si deseas finalizar.`;
+}
 function setPendingCompanyMembers(userId, members) {
   if (!userId || !Array.isArray(members) || members.length === 0) return;
+  for (const m of members) {
+    if (m.numeroIdentificacion && m.nombre) {
+      ruesVerifiedNames.set(m.numeroIdentificacion.replace(/\D/g, ""), m.nombre);
+    }
+  }
   pendingCompanyMembersSessions.set(userId, {
     members,
     timestamp: Date.now()
@@ -26595,119 +26753,111 @@ function formatCompactIdentityVerificationReport(params) {
 \u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
   const resolvedOfficialName = officialName || fullName || detectedName;
   const isNit = tipoDoc.toLowerCase() === "nit";
+  if (isNit) {
+    let reportText2 = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE EMPRESA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+`;
+    reportText2 += `\u2696\uFE0F *_Publicidad Mercantil y Datos P\xFAblicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de informaci\xF3n p\xFAblica mercantil (RUES) y datos p\xFAblicos de representaci\xF3n legal bajo principios de finalidad leg\xEDtima, debida diligencia y seguridad jur\xEDdica."
+
+`;
+    const nitParts = cedula.split("-");
+    const baseNitDigits = (nitParts[0] || cedula).replace(/\D/g, "");
+    const dvDigit = nitParts[1] !== void 0 ? nitParts[1].replace(/\D/g, "") : String(calculateDianDv(baseNitDigits));
+    const prettyNit = baseNitDigits ? `${Number(baseNitDigits).toLocaleString("es-CO")}-${dvDigit} (${baseNitDigits} - ${dvDigit})` : formattedCedula;
+    reportText2 += `\u{1F194} *INFORMACI\xD3N GENERAL \u2014 DATOS EMPRESARIALES (RUES / DIAN / CONFEC\xC1MARAS)*
+`;
+    reportText2 += `\u{1F4CB} *Raz\xF3n Social:* ${resolvedOfficialName || "Persona Jur\xEDdica Registrada"}
+`;
+    reportText2 += `\u{1F3E2} *Identificaci\xF3n:* NIT ${prettyNit}
+`;
+    reportText2 += `\u{1F3F7}\uFE0F *Categor\xEDa de la Matr\xEDcula:* ${categoriaMatricula || "Sociedad \xF3 persona jur\xEDdica principal \xF3 ESAL"}
+`;
+    reportText2 += `\u{1F3DB}\uFE0F *Tipo de Sociedad:* ${tipoSociedad || "Sociedad comercial"}
+`;
+    reportText2 += `\u{1F4D1} *Tipo Organizaci\xF3n:* ${organizacionJuridicaRaw ? `${organizacionJuridicaRaw} (${organizacionJuridica || ""})` : organizacionJuridica || "Sociedades por acciones simplificadas SAS"}
+`;
+    reportText2 += `\u{1F4CD} *C\xE1mara de Comercio:* ${camaraComercio || "Bogot\xE1 D.C."}
+`;
+    if (matricula) {
+      reportText2 += `\u{1F522} *N\xFAmero de Matr\xEDcula:* ${matricula}
+`;
+    }
+    if (fechaMatricula) {
+      reportText2 += `\u{1F4C5} *Fecha de Matr\xEDcula:* ${fechaMatricula}
+`;
+    }
+    if (fechaRenovacion) {
+      reportText2 += `\u{1F504} *Fecha de Renovaci\xF3n:* ${fechaRenovacion}
+`;
+    }
+    if (ultimoAnoRenovado) {
+      reportText2 += `\u{1F4C6} *\xDAltimo A\xF1o Renovado:* ${ultimoAnoRenovado}
+`;
+    }
+    reportText2 += `\u2705 *Estado:* ${estadoEmpresa || "Activa"}
+
+`;
+    reportText2 += `\u{1F4C8} *ACTIVIDAD ECON\xD3MICA (CIIU)*
+`;
+    if (actividadesEconomicas && actividadesEconomicas.length > 0) {
+      for (const act of actividadesEconomicas) {
+        reportText2 += `\u2022 *${act.codigo}* \u2014 ${act.descripcion}
+`;
+      }
+    } else if (ciiuPrincipal) {
+      reportText2 += `\u2022 ${ciiuPrincipal}
+`;
+    } else {
+      reportText2 += `\u2022 Actividad mercantil registrada en C\xE1mara de Comercio
+`;
+    }
+    reportText2 += `
+`;
+    reportText2 += `\u{1F465} *REPRESENTANTE LEGAL Y MIEMBROS INSCRITOS (RUES)*
+`;
+    if (representantePrincipal) {
+      reportText2 += `\u2022 \u2B50 *Rep. Legal Principal (Plenas Facultades):*
+`;
+      reportText2 += `  \u{1F464} *${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado} (${representantePrincipal.cargo})
+`;
+      reportText2 += `  \u21B3 _Facultado legalmente para contratar y obligar a la sociedad._
+`;
+      if (representantesSuplentes && representantesSuplentes.length > 0) {
+        reportText2 += `\u2022 \u{1F465} *Suplentes / Representaci\xF3n Judicial (Facultades Restringidas):*
+`;
+        for (const sup of representantesSuplentes.slice(0, 5)) {
+          reportText2 += `  \u21B3 *${sup.nombre}* \u2014 ${sup.tipoDocumento} ${sup.numeroFormateado} (${sup.cargo})
+`;
+        }
+        reportText2 += `  \u26A0\uFE0F _Advertencia Jur\xEDdica: Los suplentes y representantes judiciales solo act\xFAan ante ausencia comprobada del Principal o dentro de los l\xEDmites estatutarios._
+`;
+      }
+    } else {
+      reportText2 += `\u2022 _Consulta el certificado de existencia para el detalle nominal de facultades._
+`;
+    }
+    reportText2 += `
+`;
+    reportText2 += `\u{1F3EA} *PROPIETARIO / ESTABLECIMIENTO*
+`;
+    reportText2 += `_(Raz\xF3n Social | Categor\xEDa | C\xE1mara de Comercio | Matr\xEDcula | Fecha Matr\xEDcula | Fecha Renovaci\xF3n | \xDAltimo A\xF1o Renovado | Estado)_
+`;
+    if (establecimientos && establecimientos.length > 0) {
+      for (const est of establecimientos.slice(0, 5)) {
+        reportText2 += `\u2022 *${est.razonSocial}* | ${est.categoria} | ${est.camaraComercio} | ${est.matricula} | ${est.fechaMatricula || "N/D"} | ${est.fechaRenovacion || "N/D"} | ${est.ultimoAnoRenovado || "N/D"} | ${est.estado}
+`;
+      }
+    } else {
+      reportText2 += `\u2022 No se encontraron resultados.`;
+    }
+    return reportText2.trim();
+  }
   let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
   reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."
 
 `;
-  if (isNit) {
-    const nitParts = cedula.split("-");
-    const baseNitDigits = (nitParts[0] || cedula).replace(/\D/g, "");
-    const dvDigit = nitParts[1] !== void 0 ? nitParts[1].replace(/\D/g, "") : String(calculateDianDv(baseNitDigits));
-    const prettyNit = baseNitDigits ? `${Number(baseNitDigits).toLocaleString("es-CO")}-${dvDigit} (${baseNitDigits} - ${dvDigit})` : formattedCedula;
-    reportText += `\u{1F194} *INFORMACI\xD3N GENERAL \u2014 DATOS EMPRESARIALES (RUES / DIAN / CONFEC\xC1MARAS)*
-`;
-    reportText += `\u{1F4CB} *Raz\xF3n Social:* ${resolvedOfficialName || "Persona Jur\xEDdica Registrada"}
-`;
-    reportText += `\u{1F3E2} *Identificaci\xF3n:* NIT ${prettyNit}
-`;
-    reportText += `\u{1F3F7}\uFE0F *Categor\xEDa de la Matr\xEDcula:* ${categoriaMatricula || "Sociedad \xF3 persona jur\xEDdica principal \xF3 ESAL"}
-`;
-    reportText += `\u{1F3DB}\uFE0F *Tipo de Sociedad:* ${tipoSociedad || "Sociedad comercial"}
-`;
-    reportText += `\u{1F4D1} *Tipo Organizaci\xF3n:* ${organizacionJuridicaRaw ? `${organizacionJuridicaRaw} (${organizacionJuridica || ""})` : organizacionJuridica || "Sociedades por acciones simplificadas SAS"}
-`;
-    reportText += `\u{1F4CD} *C\xE1mara de Comercio:* ${camaraComercio || "Bogot\xE1 D.C."}
-`;
-    if (matricula) {
-      reportText += `\u{1F522} *N\xFAmero de Matr\xEDcula:* ${matricula}
-`;
-    }
-    if (fechaMatricula) {
-      reportText += `\u{1F4C5} *Fecha de Matr\xEDcula:* ${fechaMatricula}
-`;
-    }
-    if (fechaRenovacion) {
-      reportText += `\u{1F504} *Fecha de Renovaci\xF3n:* ${fechaRenovacion}
-`;
-    }
-    if (ultimoAnoRenovado) {
-      reportText += `\u{1F4C6} *\xDAltimo A\xF1o Renovado:* ${ultimoAnoRenovado}
-`;
-    }
-    reportText += `\u2705 *Estado:* ${estadoEmpresa || "Activa"}
-
-`;
-    reportText += `\u{1F4C8} *ACTIVIDAD ECON\xD3MICA (CIIU)*
-`;
-    if (actividadesEconomicas && actividadesEconomicas.length > 0) {
-      for (const act of actividadesEconomicas) {
-        reportText += `\u2022 *${act.codigo}* \u2014 ${act.descripcion}
-`;
-      }
-    } else if (ciiuPrincipal) {
-      reportText += `\u2022 ${ciiuPrincipal}
-`;
-    } else {
-      reportText += `\u2022 Actividad mercantil registrada en C\xE1mara de Comercio
-`;
-    }
-    reportText += `
-`;
-    reportText += `\u{1F465} *REPRESENTANTE LEGAL Y MIEMBROS INSCRITOS (RUES)*
-`;
-    if (representantePrincipal) {
-      reportText += `\u2022 \u2B50 *Rep. Legal Principal (Plenas Facultades):*
-`;
-      reportText += `  \u{1F464} *${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado} (${representantePrincipal.cargo})
-`;
-      reportText += `  \u21B3 _Facultado legalmente para contratar y obligar a la sociedad._
-`;
-      if (representantesSuplentes && representantesSuplentes.length > 0) {
-        reportText += `\u2022 \u{1F465} *Suplentes / Representaci\xF3n Judicial (Facultades Restringidas):*
-`;
-        for (const sup of representantesSuplentes.slice(0, 5)) {
-          reportText += `  \u21B3 *${sup.nombre}* \u2014 ${sup.tipoDocumento} ${sup.numeroFormateado} (${sup.cargo})
-`;
-        }
-        reportText += `  \u26A0\uFE0F _Advertencia Jur\xEDdica: Los suplentes y representantes judiciales solo act\xFAan ante ausencia comprobada del Principal o dentro de los l\xEDmites estatutarios._
-`;
-      }
-    } else {
-      reportText += `\u2022 _Consulta el certificado de existencia para el detalle nominal de facultades._
-`;
-    }
-    reportText += `
-`;
-    reportText += `\u{1F3EA} *PROPIETARIO / ESTABLECIMIENTO*
-`;
-    reportText += `_(Raz\xF3n Social | Categor\xEDa | C\xE1mara de Comercio | Matr\xEDcula | Fecha Matr\xEDcula | Fecha Renovaci\xF3n | \xDAltimo A\xF1o Renovado | Estado)_
-`;
-    if (establecimientos && establecimientos.length > 0) {
-      for (const est of establecimientos.slice(0, 5)) {
-        reportText += `\u2022 *${est.razonSocial}* | ${est.categoria} | ${est.camaraComercio} | ${est.matricula} | ${est.fechaMatricula || "N/D"} | ${est.fechaRenovacion || "N/D"} | ${est.ultimoAnoRenovado || "N/D"} | ${est.estado}
-`;
-      }
-    } else {
-      reportText += `\u2022 No se encontraron resultados.
-`;
-    }
-    if (representantePrincipal && representantesSuplentes && representantesSuplentes.length > 0) {
-      reportText += `
-\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) de cada miembro o del Representante Legal Principal (*${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado})?*
-\u{1F449} Responde *"verificar representante"*, *"verificar todos"* o env\xEDame la c\xE9dula del miembro a consultar.`;
-    } else if (representantePrincipal) {
-      reportText += `
-\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de alg\xFAn otro miembro?*
-\u{1F449} Responde *"s\xED"* o *"verificar representante"* (o env\xEDame la c\xE9dula a consultar).`;
-    } else {
-      reportText += `
-\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal o de cada miembro de la sociedad?*
-\u{1F449} Env\xEDame su n\xFAmero de c\xE9dula para consultarlo de inmediato.`;
-    }
-    return reportText;
-  }
   reportText += `\u{1F194} *DATOS DE IDENTIDAD*
 `;
   reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
@@ -26993,17 +27143,28 @@ async function queryEmpresaOrNit(query, userId) {
   const calculatedDv = baseNit ? String(calculateDianDv(baseNit)) : "";
   const finalDv = calculatedDv || providedDv || "1";
   const finalNitCompleto = `${baseNit}-${finalDv}`;
+  const allMembers = [
+    ...representantePrincipal ? [representantePrincipal] : [],
+    ...representantesSuplentes || []
+  ];
+  for (const m of allMembers) {
+    if (m.numeroIdentificacion && m.nombre) {
+      ruesVerifiedNames.set(m.numeroIdentificacion.replace(/\D/g, ""), m.nombre);
+    }
+  }
   if (userId) {
     if (representantePrincipal?.numeroIdentificacion) {
       setPendingUnconfirmedDoc(userId, representantePrincipal.numeroIdentificacion);
     }
-    const allMembers = [
-      ...representantePrincipal ? [representantePrincipal] : [],
-      ...representantesSuplentes || []
-    ];
     if (allMembers.length > 0) {
       setPendingCompanyMembers(userId, allMembers);
     }
+    setPendingCompanyFollowUp(userId, {
+      nitCompleto: finalNitCompleto,
+      razonSocial,
+      representantePrincipal,
+      representantesSuplentes
+    });
   }
   const reportText = formatCompactIdentityVerificationReport({
     tipoDoc: "nit",
@@ -27026,6 +27187,7 @@ async function queryEmpresaOrNit(query, userId) {
     representantesSuplentes,
     establecimientos
   });
+  const followUpQuestionText = buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes);
   return {
     success: true,
     nit: baseNit,
@@ -27048,7 +27210,8 @@ async function queryEmpresaOrNit(query, userId) {
     representantePrincipal,
     representantesSuplentes,
     establecimientos,
-    reportText
+    reportText,
+    followUpQuestionText
   };
 }
 function detectTramiteConfirmation(text2) {
@@ -27121,7 +27284,7 @@ async function verifySingleDocumentInternal(item) {
         adresRes = ceAdres;
       }
     }
-    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
+    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)) : null);
     const isCc = effectiveTipoDoc.toLowerCase() === "cc";
     const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
     const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
@@ -27293,7 +27456,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         success: empresaRes.success,
         officialName: empresaRes.razonSocial,
         source: "Central Multifuente Notarial VECY (RUES + DIAN + B\xFAsqueda Empresarial)",
-        reportText: empresaRes.reportText
+        reportText: empresaRes.reportText,
+        followUpQuestionText: empresaRes.followUpQuestionText
       };
     }
     return { isVerificationRequest: false };
@@ -27311,6 +27475,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       officialName: empresaRes.razonSocial,
       source: "Central Multifuente Notarial VECY (RUES + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI)",
       reportText: empresaRes.reportText,
+      followUpQuestionText: empresaRes.followUpQuestionText,
       items
     };
   }
@@ -27395,7 +27560,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         adresRes = ceAdres;
       }
     }
-    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
+    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)) : null);
     const isCc = currentTipoDoc.toLowerCase() === "cc";
     const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
     const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
@@ -27537,7 +27702,7 @@ El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad 
     };
   }
 }
-var IDENTITY_CACHE_TTL2, HABEAS_DATA_CLAUSE, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions, pendingUnconfirmedDocSessions, PENDING_UNCONFIRMED_DOC_TTL, pendingCompanyMembersSessions;
+var IDENTITY_CACHE_TTL2, HABEAS_DATA_CLAUSE, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions, pendingUnconfirmedDocSessions, PENDING_UNCONFIRMED_DOC_TTL, pendingCompanyMembersSessions, ruesVerifiedNames, pendingCompanyFollowUpSessions;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
@@ -27552,6 +27717,8 @@ La consulta y tratamiento de esta informaci\xF3n p\xFAblica y semiprivada se efe
     pendingUnconfirmedDocSessions = /* @__PURE__ */ new Map();
     PENDING_UNCONFIRMED_DOC_TTL = 15 * 60 * 1e3;
     pendingCompanyMembersSessions = /* @__PURE__ */ new Map();
+    ruesVerifiedNames = /* @__PURE__ */ new Map();
+    pendingCompanyFollowUpSessions = /* @__PURE__ */ new Map();
   }
 });
 
@@ -28209,6 +28376,7 @@ __export(janIA_exports, {
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
   parseSafeJSON: () => parseSafeJSON,
+  popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
   popLatestDmPdf: () => popLatestDmPdf,
   preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
   processCirculoMessage: () => processCirculoMessage,
@@ -28225,6 +28393,7 @@ __export(janIA_exports, {
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
   setPendingSession: () => setPendingSession,
   splitMultiItemMessage: () => splitMultiItemMessage,

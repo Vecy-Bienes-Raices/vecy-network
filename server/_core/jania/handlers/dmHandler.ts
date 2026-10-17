@@ -46,6 +46,22 @@ export function popLatestDmPdf(userId: string): LatestDmPdfAttachment | undefine
   return attachment;
 }
 
+const latestDmFollowUpMap = new Map<string, string>();
+
+export function setLatestDmFollowUpMessage(userId: string, followUpText: string): void {
+  if (followUpText && followUpText.trim()) {
+    latestDmFollowUpMap.set(userId, followUpText.trim());
+  }
+}
+
+export function popLatestDmFollowUpMessage(userId: string): string | undefined {
+  const msg = latestDmFollowUpMap.get(userId);
+  if (msg) {
+    latestDmFollowUpMap.delete(userId);
+  }
+  return msg;
+}
+
 export const JANIA_DM_TOOLS = [
   {
     functionDeclarations: [
@@ -327,13 +343,18 @@ export async function executeJaniaDmTool(
 
       const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp(queryStr, true, userId);
+      const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACIÓN OFICIAL DE EMPRESA"));
+      if (res.followUpQuestionText) {
+        setLatestDmFollowUpMessage(userId, res.followUpQuestionText);
+      }
       return {
-        toolType: "cedula",
+        toolType: isCompanyReport ? "empresa" : "cedula",
         resultJson: {
-          solicitud: "verificacion_identidad",
+          solicitud: isCompanyReport ? "consulta_empresa_o_nit" : "verificacion_identidad",
           numeroDocumento: doc,
           tipoDocumento: tipo,
           reporteOficial: res.reportText || "Sin reporte disponible",
+          preguntaSeguimiento: res.followUpQuestionText || "",
           exitoso: res.isVerificationRequest
         }
       };
@@ -417,12 +438,16 @@ export async function executeJaniaDmTool(
       ).trim();
       const { queryEmpresaOrNit } = await import("../../identityVerificationService");
       const empRes = await queryEmpresaOrNit(q, userId);
+      if (empRes.followUpQuestionText) {
+        setLatestDmFollowUpMessage(userId, empRes.followUpQuestionText);
+      }
       return {
         toolType: "empresa",
         resultJson: {
           solicitud: "consulta_empresa_o_nit",
           termino: q,
           reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          preguntaSeguimiento: empRes.followUpQuestionText || "",
           exitoso: empRes.success,
           representantePrincipal: empRes.representantePrincipal || null
         }
@@ -589,7 +614,7 @@ export async function synthesizeToolResponseWithGemini(
 export async function formatPoliteToolDelivery(
   userId: string,
   rawName: string,
-  toolType: "cedula" | "predial" | "idu" | "notarial",
+  toolType: "cedula" | "predial" | "idu" | "notarial" | "empresa",
   payloadText: string,
   success: boolean = true
 ): Promise<string> {
@@ -624,10 +649,13 @@ export async function formatPoliteToolDelivery(
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
 
-  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.06)
+  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.06 / v33.21)
+  // En verificación de empresa (isCompanyVerification), la invitación a calificar se envía cuando el usuario
+  // responde "NO" a la pregunta separada de verificación de miembros, o tras entregar el reporte del miembro si responde "SÍ".
   const cleanPayload = (payloadText || "").trim();
+  const isCompanyVerification = toolType === "empresa" || cleanPayload.includes("VERIFICACIÓN OFICIAL DE EMPRESA");
   const { buildWinningGoogleReviewMessage } = await import('../../politenessService');
-  const reviewSection = (isEduardo || isJani || isFamilyOrTrusted)
+  const reviewSection = (isEduardo || isJani || isFamilyOrTrusted || isCompanyVerification)
     ? ""
     : `\n\n${buildWinningGoogleReviewMessage(displayName)}`;
 
@@ -635,7 +663,7 @@ export async function formatPoliteToolDelivery(
   let payloadWithClosing = cleanPayload;
   if (!payloadWithClosing.includes(closingTag)) {
     payloadWithClosing = `${payloadWithClosing}\n\n${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
+  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !isCompanyVerification && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
     payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
   }
 
@@ -938,6 +966,59 @@ export async function processPrivateDmConversationalMessage(
     if (!canonicalComposite && displayName.includes(" ")) {
       displayName = displayName.split(" ")[0];
     }
+  }
+
+  // 🛡️ FLUJO POST-REPORTE DE EMPRESA (Doctrina v33.21):
+  // Si existe una pregunta de seguimiento empresarial activa ("¿Deseas que realice la verificación de identidad y antecedentes del Representante Legal Principal..."):
+  // - Si el usuario responde NO -> Enviar invitación a calificar y comentar haciendo alusión a que ayuda a que estos servicios sigan siendo 100% GRATUITOS.
+  // - Si el usuario responde SÍ o solicita verificar -> Ejecutar la verificación de identidad del documento y entregar en su propio formato y título oficial.
+  try {
+    const {
+      getPendingCompanyFollowUp,
+      clearPendingCompanyFollowUp,
+      clearPendingUnconfirmedDoc,
+      clearPendingCompanyMembers,
+      isDecliningCompanyMemberVerification,
+      isAcceptingCompanyMemberVerification
+    } = await import("../../identityVerificationService");
+    const pendingFollowUp = getPendingCompanyFollowUp(userId);
+    if (pendingFollowUp) {
+      if (isDecliningCompanyMemberVerification(clean)) {
+        clearPendingCompanyFollowUp(userId);
+        clearPendingUnconfirmedDoc(userId);
+        clearPendingCompanyMembers(userId);
+        const { formatCompanyFollowUpDeclineReviewMessage } = await import("../../politenessService");
+        const declineReply = formatCompanyFollowUpDeclineReviewMessage(displayName || realName);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", declineReply);
+        return declineReply;
+      }
+      if (isAcceptingCompanyMemberVerification(clean)) {
+        clearPendingCompanyFollowUp(userId);
+        const toolExec = await executeJaniaDmTool(
+          "consultar_identidad_y_antecedentes",
+          { numeroDocumento: clean, tipoDocumento: "CC" },
+          userId,
+          userName || displayName || realName,
+          clean
+        );
+        const rawRep = String(toolExec.resultJson.reporteOficial || "");
+        const formattedRep = await formatPoliteToolDelivery(
+          userId,
+          userName || displayName || realName,
+          "cedula",
+          rawRep,
+          true
+        );
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", formattedRep);
+        return formattedRep;
+      }
+      // Si el usuario envía otro comando o documento distinto, limpiamos el estado de pregunta pendiente y dejamos fluir
+      clearPendingCompanyFollowUp(userId);
+    }
+  } catch (followUpErr: any) {
+    console.warn("[processPrivateDmConversationalMessage] Follow-up check warning:", followUpErr?.message);
   }
 
   // Procesamiento con IA Pura (Gemini + JANIA_DM_TOOLS)

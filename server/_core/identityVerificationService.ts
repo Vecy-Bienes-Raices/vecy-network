@@ -110,6 +110,7 @@ export interface IdentityVerificationReport {
   officialName?: string;
   source?: string;
   reportText?: string;
+  followUpQuestionText?: string;
   procuraduria?: ProcuraduriaResult;
   adres?: AdresResult;
   contraloria?: ContraloriaResult;
@@ -714,9 +715,94 @@ export function clearPendingUnconfirmedDoc(userId: string): void {
 
 // 🛡️ MEMORIA DE MIEMBROS / REPRESENTANTES INSCRITOS EN RUES PARA VERIFICACIÓN POSTERIOR
 const pendingCompanyMembersSessions = new Map<string, { members: RepresentanteLegalInfo[]; timestamp: number }>();
+const ruesVerifiedNames = new Map<string, string>();
+
+export interface PendingCompanyFollowUpSession {
+  nitCompleto: string;
+  razonSocial: string;
+  representantePrincipal?: RepresentanteLegalInfo;
+  representantesSuplentes?: RepresentanteLegalInfo[];
+  timestamp: number;
+}
+
+const pendingCompanyFollowUpSessions = new Map<string, PendingCompanyFollowUpSession>();
+
+export function setPendingCompanyFollowUp(userId: string, data: Omit<PendingCompanyFollowUpSession, 'timestamp'>): void {
+  if (!userId) return;
+  pendingCompanyFollowUpSessions.set(userId, {
+    ...data,
+    timestamp: Date.now()
+  });
+}
+
+export function getPendingCompanyFollowUp(userId: string): PendingCompanyFollowUpSession | null {
+  if (!userId) return null;
+  const session = pendingCompanyFollowUpSessions.get(userId);
+  if (!session) return null;
+  if (Date.now() - session.timestamp > PENDING_UNCONFIRMED_DOC_TTL) {
+    pendingCompanyFollowUpSessions.delete(userId);
+    return null;
+  }
+  return session;
+}
+
+export function clearPendingCompanyFollowUp(userId: string): void {
+  if (!userId) return;
+  pendingCompanyFollowUpSessions.delete(userId);
+}
+
+export function isDecliningCompanyMemberVerification(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const norm = text
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return /^(?:no\b|nop\b|ninguno\b|ninguna\b|asi\s+esta\s+bien|todo\s+bien|no\s*,?\s*gracias|no\s+por\s+ahora|por\s+ahora\s+no|no\s+necesito|no\s+requiero|solo\s+eso|nada\s+mas|listo\s+gracias|ya\s+no\b)/i.test(norm);
+}
+
+export function isAcceptingCompanyMemberVerification(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const norm = text
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return (
+    /^(?:si\b|claro\b|dale\b|de\s+una\b|por\s+favor\b|porfa\b|adelante\b|procede\b|hazlo\b|ok\b|listo\b|bueno\b|vale\b|verificar\b|verifical[oa]\b|verificame\b|revisal[oa]\b|todos\b|ambos\b|cada\s+miembro\b|el\s+representante\b|la\s+representante\b|representante\b)/i.test(norm) ||
+    /\b(?:verificar\s+representante|verificar\s+todos|cada\s+miembro|todos\s+los\s+miembros|antecedentes\s+del\s+representante)\b/i.test(norm)
+  );
+}
+
+export function buildCompanyFollowUpQuestion(
+  representantePrincipal?: RepresentanteLegalInfo,
+  representantesSuplentes?: RepresentanteLegalInfo[]
+): string {
+  if (representantePrincipal && representantesSuplentes && representantesSuplentes.length > 0) {
+    return (
+      `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* — ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de algún otro miembro?*\n` +
+      `👉 Responde *"sí"*, *"no"*, *"verificar representante"*, *"verificar todos"* (o envíame la cédula a consultar).`
+    );
+  }
+  if (representantePrincipal) {
+    return (
+      `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* — ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de algún otro miembro?*\n` +
+      `👉 Responde *"sí"* o *"verificar representante"* (o envíame la cédula a consultar).`
+    );
+  }
+  return (
+    `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal o de algún otro miembro?*\n` +
+    `👉 Responde *"sí"* y envíame la cédula a consultar, o *"no"* si deseas finalizar.`
+  );
+}
 
 export function setPendingCompanyMembers(userId: string, members: RepresentanteLegalInfo[]): void {
   if (!userId || !Array.isArray(members) || members.length === 0) return;
+  for (const m of members) {
+    if (m.numeroIdentificacion && m.nombre) {
+      ruesVerifiedNames.set(m.numeroIdentificacion.replace(/\D/g, ''), m.nombre);
+    }
+  }
   pendingCompanyMembersSessions.set(userId, {
     members,
     timestamp: Date.now()
@@ -1113,10 +1199,10 @@ export function formatCompactIdentityVerificationReport(params: {
   const resolvedOfficialName = officialName || fullName || detectedName;
   const isNit = tipoDoc.toLowerCase() === 'nit';
 
-  let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."\n\n`;
-
   if (isNit) {
+    let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+    reportText += `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de información pública mercantil (RUES) y datos públicos de representación legal bajo principios de finalidad legítima, debida diligencia y seguridad jurídica."\n\n`;
+
     const nitParts = cedula.split('-');
     const baseNitDigits = (nitParts[0] || cedula).replace(/\D/g, '');
     const dvDigit = nitParts[1] !== undefined ? nitParts[1].replace(/\D/g, '') : String(calculateDianDv(baseNitDigits));
@@ -1184,20 +1270,14 @@ export function formatCompactIdentityVerificationReport(params: {
         reportText += `• *${est.razonSocial}* | ${est.categoria} | ${est.camaraComercio} | ${est.matricula} | ${est.fechaMatricula || 'N/D'} | ${est.fechaRenovacion || 'N/D'} | ${est.ultimoAnoRenovado || 'N/D'} | ${est.estado}\n`;
       }
     } else {
-      reportText += `• No se encontraron resultados.\n`;
+      reportText += `• No se encontraron resultados.`;
     }
 
-    // 5. PREGUNTA INTERACTIVA POST-REPORTE (SIN MEZCLAR ANTECEDENTES EN LA FICHA RUES)
-    if (representantePrincipal && representantesSuplentes && representantesSuplentes.length > 0) {
-      reportText += `\n💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) de cada miembro o del Representante Legal Principal (*${representantePrincipal.nombre}* — ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado})?*\n👉 Responde *"verificar representante"*, *"verificar todos"* o envíame la cédula del miembro a consultar.`;
-    } else if (representantePrincipal) {
-      reportText += `\n💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* — ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de algún otro miembro?*\n👉 Responde *"sí"* o *"verificar representante"* (o envíame la cédula a consultar).`;
-    } else {
-      reportText += `\n💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal o de cada miembro de la sociedad?*\n👉 Envíame su número de cédula para consultarlo de inmediato.`;
-    }
-
-    return reportText;
+    return reportText.trim();
   }
+
+  let reportText = `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+  reportText += `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."\n\n`;
 
   reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
   reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
@@ -1279,13 +1359,14 @@ export interface EmpresaQueryResult {
   procuraduriaStatus?: string;
   contraloriaStatus?: string;
   reportText: string;
+  followUpQuestionText: string;
 }
 
 /**
  * Consulta oficial de Empresas y Personas Jurídicas por NIT o Razón Social (RUES + DIAN).
  * Opera de forma bidireccional (NIT -> Razón Social o Razón Social -> NIT),
  * estructurando las 4 secciones de la Plantilla Oficial RUES (Información General, Actividad Económica,
- * Representante Legal y Establecimientos) y ofreciendo al final verificar los antecedentes de cada miembro.
+ * Representante Legal y Establecimientos) y generando por separado la pregunta interactiva post-reporte.
  */
 export async function queryEmpresaOrNit(query: string, userId?: string): Promise<EmpresaQueryResult> {
   const clean = (query || "").trim();
@@ -1532,19 +1613,31 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
   const finalDv = calculatedDv || providedDv || "1";
   const finalNitCompleto = `${baseNit}-${finalDv}`;
 
+  const allMembers = [
+    ...(representantePrincipal ? [representantePrincipal] : []),
+    ...(representantesSuplentes || [])
+  ];
+  for (const m of allMembers) {
+    if (m.numeroIdentificacion && m.nombre) {
+      ruesVerifiedNames.set(m.numeroIdentificacion.replace(/\D/g, ''), m.nombre);
+    }
+  }
+
   // Si conocemos la cédula del Representante Legal Principal y/o demás miembros y tenemos userId,
-  // dejarlos pre-cargados en sesión para que el usuario pueda verificar sus antecedentes con 1 mensaje ("verificar representante" / "verificar todos" / "sí")
+  // dejarlos pre-cargados en sesión para que el usuario pueda verificar sus antecedentes con 1 mensaje ("verificar representante" / "verificar todos" / "sí" / "no")
   if (userId) {
     if (representantePrincipal?.numeroIdentificacion) {
       setPendingUnconfirmedDoc(userId, representantePrincipal.numeroIdentificacion);
     }
-    const allMembers = [
-      ...(representantePrincipal ? [representantePrincipal] : []),
-      ...(representantesSuplentes || [])
-    ];
     if (allMembers.length > 0) {
       setPendingCompanyMembers(userId, allMembers);
     }
+    setPendingCompanyFollowUp(userId, {
+      nitCompleto: finalNitCompleto,
+      razonSocial,
+      representantePrincipal,
+      representantesSuplentes
+    });
   }
 
   const reportText = formatCompactIdentityVerificationReport({
@@ -1569,6 +1662,8 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     establecimientos
   });
 
+  const followUpQuestionText = buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes);
+
   return {
     success: true,
     nit: baseNit,
@@ -1591,7 +1686,8 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     representantePrincipal,
     representantesSuplentes,
     establecimientos,
-    reportText
+    reportText,
+    followUpQuestionText
   };
 }
 
@@ -1706,10 +1802,11 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
     }
 
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
-      (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
+      (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
+      (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)!) : null);
 
     // 🛡️ ESTRATEGIA FAIL-FAST:
-    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN):
+    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN ni RUES):
     // ABORTAR antes de consumir recursos de captcha de la Policía Nacional.
     const isCc = effectiveTipoDoc.toLowerCase() === 'cc';
     const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
@@ -1897,7 +1994,8 @@ export async function executeIdentityVerificationFromWhatsApp(
         success: empresaRes.success,
         officialName: empresaRes.razonSocial,
         source: 'Central Multifuente Notarial VECY (RUES + DIAN + Búsqueda Empresarial)',
-        reportText: empresaRes.reportText
+        reportText: empresaRes.reportText,
+        followUpQuestionText: empresaRes.followUpQuestionText
       };
     }
     return { isVerificationRequest: false };
@@ -1916,6 +2014,7 @@ export async function executeIdentityVerificationFromWhatsApp(
       officialName: empresaRes.razonSocial,
       source: 'Central Multifuente Notarial VECY (RUES + DIAN + Procuraduría SIRI + Contraloría SIRECI)',
       reportText: empresaRes.reportText,
+      followUpQuestionText: empresaRes.followUpQuestionText,
       items
     };
   }
@@ -2025,10 +2124,11 @@ export async function executeIdentityVerificationFromWhatsApp(
     }
 
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
-      (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
+      (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
+      (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)!) : null);
 
     // 🛡️ ESTRATEGIA FAIL-FAST:
-    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN):
+    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN ni RUES):
     // ABORTAR antes de consumir recursos de captcha de la Policía Nacional.
     const isCc = currentTipoDoc.toLowerCase() === 'cc';
     const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);

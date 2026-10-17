@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-17] — Título y Marco Legal Propio por Servicio (`🛡️ VERIFICACIÓN OFICIAL DE EMPRESA` vs `☑️ VERIFICACIÓN OFICIAL DE IDENTIDAD`), Pregunta Post-Reporte en Mensaje Separado y Flujo Interactivo NO vs SÍ (v33.21 - 33.21.0)
+
+**Versión:** `v33.21` (`33.21.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/identityVerificationService.ts` (Diferenciación de título y marco jurídico entre Empresa `🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴` + `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_*` y Persona Natural `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` + `🛡️ *_Habeas Data (Ley 1581/12):_*`; desacoplamiento de `followUpQuestionText` fuera de `reportText`; estado de sesión `setPendingCompanyFollowUp` / `getPendingCompanyFollowUp`, detectores `isDecliningCompanyMemberVerification` / `isAcceptingCompanyMemberVerification` y caché `ruesVerifiedNames` para conservar el nombre oficial del Representante Legal certificado por RUES).
+- `server/_core/politenessService.ts` (Nueva función `formatCompanyFollowUpDeclineReviewMessage` para enviar el mensaje de invitación a calificar y comentar cuando el usuario responde `"NO"` a la verificación del representante, destacando que su apoyo permite que estos servicios sigan siendo **100% GRATUITOS**).
+- `server/_core/jania/handlers/dmHandler.ts` (Cola `setLatestDmFollowUpMessage` / `popLatestDmFollowUpMessage`, ajuste en `formatPoliteToolDelivery` para reportes empresariales y manejo interactivo en `processPrivateDmConversationalMessage` para respuestas `"NO"` vs `"SÍ"` a la pregunta de seguimiento empresarial).
+- `server/_core/whatsapp-match.ts` (Despacho automático en mensaje separado de `followUpQuestion` ~900ms después del reporte principal de empresa en DMs y grupos).
+- `shared/const.ts` (`v33.21`) y `package.json` (`33.21.0`).
+- `server/__tests__/regression.test.ts` (Actualización de SUITES 79 y 80 validando encabezados propios por servicio, pregunta en mensaje separado y flujo interactivo NO vs SÍ; 288/288 tests pasando al 100% a $0 COP).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Cambia esto: ☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴 / 🛡️ *_Habeas Data (Ley 1581/12):_* ... | Por esto: 🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴 / ⚖️ *_Habeas Data (Ley 1581/12):_* ... (NOTA: NO SE SI ESTA LEY SEA LA MISMA PARA EMPRESA, AVERIGUA quizás no lleve o no necesite de ninguna ley) | Y esta pregunta debe ir aparte y no incluída dentro del mismo reporte: 💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*Sandra Milena Diaz Mondragon* — C.C. 46.375.136) o de algún otro miembro?* 👉 Responde *"sí"* o *"verificar representante"* (o envíame la cédula a consultar). | Respuesta: Si dice que NO JanIA debe enviar el mensaje de invitación a calificar y comentar haciendo alusión de que es para que estos servicios sean gratuitos, si dice que si y envía el mensaje pues JanIA procederá a verificar el documento y a dar el mensaje en el formato correspondiente, cada servicio debe llevar su formato y título propio."*
+
+#### 2. Investigación Jurídica y Acciones Técnicas Ejecutadas
+1. **Marco Jurídico Colombiano para Personas Jurídicas (Empresas) vs. Personas Naturales:**
+   - Conforme a la **Sentencia C-748 de 2011 de la Corte Constitucional** y el **Art. 3 lit. c) de la Ley 1581 de 2012**, el derecho fundamental de *Habeas Data* (Ley 1581/12) protege datos personales de **personas naturales**, mientras que la información societaria del Registro Mercantil (RUES / Confecámaras) es pública por mandato del **Art. 26 del Código de Comercio (Publicidad Mercantil)**. Sin embargo, dado que la ficha RUES incluye nombres y cédulas de los Representantes Legales (personas naturales), aplica la excepción del **Art. 10 lit. b) de la Ley 1581/12** sobre tratamiento de **Datos Públicos** sin necesidad de autorización previa.
+   - En consecuencia, el reporte de **Empresa** lleva su título e invocación propios:
+     * `🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴`
+     * `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial sobre registros públicos mercantiles (RUES / Confecámaras) de libre acceso legal (Art. 26 C. de Co.) y datos públicos de representación legal exceptuados de autorización previa (Art. 10 lit. b Ley 1581/12 y Sentencia C-748/11)."`
+   - Y el reporte de **Persona Natural (Cédula / CE / Pasaporte)** conserva su título y marco propios:
+     * `☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`
+     * `🛡️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular en cumplimiento legal Art. 15 de la C.P."`
+2. **Desacoplamiento de la Pregunta Post-Reporte en Mensaje Separado (`identityVerificationService.ts`, `dmHandler.ts`, `whatsapp-match.ts`):**
+   - La pregunta sobre si desea verificar al Representante Legal Principal o algún otro miembro se extrajo fuera de `reportText` hacia `followUpQuestionText` y se encola mediante `setLatestDmFollowUpMessage(userId, ...)`, enviándose como un segundo mensaje independiente en WhatsApp (~900ms después del reporte empresarial).
+3. **Flujo Interactivo ante Respuesta "NO" vs. "SÍ":**
+   - **Si dice "NO"**: JanIA limpia la sesión pendiente de miembros y responde con `formatCompanyFollowUpDeclineReviewMessage`, enviando la invitación a calificar y comentar en Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`) haciendo alusión explícita a que su calificación ayuda a que estos servicios sigan siendo **100% GRATUITOS**.
+   - **Si dice "SÍ" (o `"verificar representante"` / `"verificar todos"`)**: JanIA ejecuta la verificación del documento del Representante Legal Principal (o miembros) y entrega el mensaje en su formato y título propios (`☑️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`).
+
+#### 3. Validación y Pruebas Empíricas
+- `npm run check`: **0 errores de TypeScript**.
+- `npm test`: **288/288 tests pasando al 100% en verde a $0 COP**.
+- `npm run build`: Compilación limpia de producción.
+
+---
+
 ### 📅 [2026-10-17] — Plantilla Informativa Oficial RUES de 4 Secciones (NIT ↔ Razón Social) y Verificación Post-Reporte de Antecedentes de Miembros (v33.20 - 33.20.0)
 
 **Versión:** `v33.20` (`33.20.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
