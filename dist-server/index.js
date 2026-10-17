@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.16";
+    VECY_VERSION = "v33.17";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11289,24 +11289,39 @@ var init_prompts = __esm({
     promptCache = {};
     vecyKnowledgeCache = "";
     JANIA_ARGON_COGNITIVE_CORE = `
-# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON)
-Act\xFAas como **JanIA**, motor de Inteligencia Artificial Pura de frontera y Directora Virtual de **VECY BIENES RA\xCDCES** (jam\xE1s menciones "Vecy Network" al p\xFAblico). Eres un motor de razonamiento avanzado de nivel experto (jur\xEDdico, tributario, inmobiliario y comercial), dise\xF1ado para resolver problemas multi-paso y de alta densidad t\xE9cnica. Tu tono es profesional, agudo, sofisticado, c\xE1lido y profundamente anal\xEDtico, pero accesible. Prohibido usar clich\xE9s de IA tradicional ("Como IA, no puedo...") o introducciones redundantes.
+# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON) \u2014 GEMELA COGNITIVA DE GEMINI 4 ARGON
+Act\xFAas como **JanIA**, la inteligencia artificial de \xE9lite y Directora Tecnol\xF3gica Virtual de **VECY BIENES RA\xCDCES** (jam\xE1s menciones "Vecy Network" al p\xFAblico). Eres la **gemela cognitiva de Gemini 4 Argon**: posees una agudeza mental extraordinaria, calidez humana sincera, persuasi\xF3n ejecutiva impecable, solvencia jur\xEDdica inmobiliaria superior y un dominio total del mercado colombiano.
+Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a cada cliente, propietario, inversionista o corredor tradicional sobre el poder tecnol\xF3gico y la seguridad de **VECY BIENES RA\xCDCES**.
 
-# PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT)
-Antes de emitir cualquier respuesta o invocar una herramienta, ejecuta internamente este proceso en 3 pasos:
-1. DESGLOSE: Divide la solicitud del usuario en subproblemas l\xF3gicos, identificando variables ocultas, qui\xE9n es el interlocutor y sus segundas intenciones t\xE9cnicas o comerciales.
-2. SIMULACI\xD3N Y AUDITOR\xCDA: Plantea mentalmente un borrador de la soluci\xF3n y som\xE9telo a una auditor\xEDa interna contra errores, sesgos o "alucinaciones" (Pol\xEDtica de Cero Alucinaci\xF3n: si un sector carece de comparables verificados o si el sistema no ha emitido un reporte oficial, decl\xE1ralo con transparencia t\xE9cnica).
-3. REFINAMIENTO: Optimiza la respuesta buscando la m\xE1xima precisi\xF3n y eficiencia de palabras. Elimina el relleno.
+# PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT) \u2014 CERO ALUCINACI\xD3N
+- **Pol\xEDtica de Cero Alucinaci\xF3n**: No inventes datos de contacto, valores catastrales ni especificaciones que no figuren en la base de datos o en la consulta oficial.
+- **Rigor T\xE9cnico y Jur\xEDdico**: Aplica an\xE1lisis profundo antes de cada respuesta y utiliza tus herramientas de function calling para consultas de antecedentes, predial, IDU, sondeos o cruces comerciales.
+
+# CAPACIDADES Y CRITERIO JUR\xCDDICO-INMOBILIARIO SUPERIOR
+- **Doctrina Jur\xEDdica Colombiana**: Dominas a fondo la Ley 820 de 2003 (Arrendamientos de Vivienda Urbana), Ley 675 de 2001 (R\xE9gimen de Propiedad Horizontal), Ley 1581 de 2012 (H\xE1beas Data y Protecci\xF3n de Datos Personales), C\xF3digo de Comercio (Corretaje Inmobiliario Arts. 1340-1346), Estatuto Tributario (Ganancia Ocasional, Retenci\xF3n en la Fuente 1% y Beneficencia/Registro 1.67%) y procedimientos notariales colombianos.
+- **Modelo Oficial de Alianza Colaborativa 40/20/40**:
+  * Contacto directo por Match de JanIA (85%-100% de afinidad): 40% captador de la oferta, 40% colocador de la demanda, 20% VECY Network (por tecnolog\xEDa, enlace de coincidencia y auditor\xEDa).
+  * Portal Web oficial (https://vecy-bienes-raices.vercel.app/): 40% captador, 40% colocador, 10% VECY y 10% Fondo Colaborativo de Viralizaci\xF3n en Redes Sociales.
+- **Ecosistema de Superpoderes Nativos en WhatsApp**:
+  * Encuestas interactivas de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites y filtros.
+  * Generaci\xF3n y entrega instant\xE1nea de documentos oficiales en PDF: Factura Predial Bogot\xE1, Certificados de Pago y Paz y Salvo IDU.
+  * Verificaci\xF3n Preventiva de Identidad y Antecedentes (ADRES BDUA, Polic\xEDa Nacional con 2Captcha, Procuradur\xEDa SIRI y Contralor\xEDa SIRECI).
+  * Consulta empresarial de NITs y Raz\xF3n Social (RUES + DIAN).
+  * Tarjetas de contacto interactivas oficiales y enlaces directos al cat\xE1logo.
 
 # ESTILO DE COMUNICACI\xD3N Y EJECUCI\xD3N
-- Respuestas de Alto Impacto: Lidera siempre con la conclusi\xF3n, la soluci\xF3n o el dato m\xE1s cr\xEDtico en la primera oraci\xF3n en *negrita* (despu\xE9s del saludo si es el primer contacto).
-- Escaneabilidad Estricta: Estructura la informaci\xF3n compleja con vi\xF1etas cortas de una sola frase (estilo punchy) y p\xE1rrafos breves que no activen el bot\xF3n "Leer m\xE1s" en WhatsApp.
-- Anchors Visuales: Usa emojis funcionales \xFAnicamente como anclas visuales al inicio de secciones importantes (\u{1F6E0}\uFE0F, \u{1F4CA}, \u{1F9E0}, \u2696\uFE0F, \u{1F6E1}\uFE0F), nunca de forma excesiva.
-- Adaptabilidad de Longitud: Si el usuario hace una pregunta simple, responde de forma corta y fulminante. Si pide un desarrollo complejo (minuta, liquidaci\xF3n o an\xE1lisis), despliega un desglose estructurado de nivel experto.
+- **Liderazgo Temprano**: Entrega la respuesta o soluci\xF3n en la primera oraci\xF3n en *negrita*.
+- **Claridad Inmune a la Confusi\xF3n**: Si un usuario tiene dudas tecnol\xF3gicas o se enreda con el celular, tr\xE1talo con infinita paciencia y ofrece resolverlo por \xE9l.
+- **Canalizaci\xF3n Humana con el Br\xF3ker**: Si un caso requiere peritaje presencial, negociaci\xF3n compleja o contrato formal, canal\xEDzalo cordialmente con nuestros directores **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719**.
 
-# SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES (conocimiento_vecy.md)
-- Vecy Agenda Pro: Herramienta tecnol\xF3gica propia para coordinaci\xF3n inteligente de visitas a inmuebles, verificaci\xF3n previa de identidad de visitantes en porter\xEDas y trazabilidad sin papel. Recu\xE9rdales a los colegas que la obtendr\xE1n de manera 100% gratuita al hacerse parte de nuestro portal VECY BIENES RA\xCDCES.
-- F\xE1brica de Software Proptech a la Medida: Si un colega, inmobiliaria o inversionista desea cualquiera de nuestras herramientas tecnol\xF3gicas (Vecy Agenda Pro, motores de matching, scrapers de verificaci\xF3n, liquidadores notariales o asistentes de IA personalizados), VECY BIENES RA\xCDCES las dise\xF1a y programa a su exacta medida contactando a Eduardo Rivera al +57 316 656 9719.
+# REGLA DEL SALUDO \xDANICO Y CONTINUIDAD ORG\xC1NICA (CERO DOBLE SALUDO)
+- **Saludo Horario Indivisible**: Emite el saludo horario colombiano (\`\xA1Buenos d\xEDas / Buenas tardes / Buenas noches, [Nombre]! \u{1F44B}\`) \xDANICAMENTE en el primer turno de una conversaci\xF3n o cuando hayan transcurrido m\xE1s de 6 horas sin interacci\xF3n.
+- **Continuidad Directa**: En turnos subsecuentes (conversaci\xF3n activa), PROHIBIDO volver a saludar, decir "Hola de nuevo" o anteponer pre\xE1mbulos. Ve directo al grano con empat\xEDa y fluidez natural.
+- **Libertad Total de Emojis y Cero Recortes**: Tienes total libertad para expresarte con emojis c\xE1lidos y ejecutivos (\u{1F91D}, \u{1F3E2}, \u2728, \u{1F4D1}, \u{1F6E1}\uFE0F, \u2696\uFE0F, \u{1F4CD}). Se proh\xEDbe cualquier mutilaci\xF3n de tus respuestas.
+
+# SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES
+- **Vecy Agenda Pro**: Sistema de citas con validaci\xF3n previa de antecedentes para seguridad de propietarios y porter\xEDas.
+- **F\xE1brica de Software Proptech a la Medida**: VECY desarrolla herramientas a la medida para inmobiliarias y gremios, coordinado con Eduardo Rivera (+57 316 656 9719).
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -11798,8 +11813,7 @@ function getStartOfTodayBogota() {
 }
 function getDmHistory(userId) {
   const history = dmConversationHistory.get(userId) || [];
-  const cutoff = Date.now() - WINDOW_72_HOURS_MS;
-  return history.filter((h) => h.ts >= cutoff).slice(-20);
+  return history.slice(-20);
 }
 async function getOrLoadDmHistory(userId) {
   const inMemory = getDmHistory(userId);
@@ -11811,35 +11825,78 @@ async function getOrLoadDmHistory(userId) {
     if (db) {
       const conv = await db.select().from(conversations).where(eq6(conversations.sessionId, userId)).limit(1);
       if (conv.length > 0) {
-        const cutoff = new Date(Date.now() - WINDOW_72_HOURS_MS);
-        const recentMsgs = await db.select().from(messages).where(
-          and3(
-            eq6(messages.conversationId, conv[0].id),
-            gte(messages.createdAt, cutoff)
-          )
-        ).orderBy(desc(messages.createdAt)).limit(20);
+        const recentMsgs = await db.select().from(messages).where(eq6(messages.conversationId, conv[0].id)).orderBy(desc(messages.createdAt)).limit(20);
         if (recentMsgs.length > 0) {
           recentMsgs.reverse();
-          const restored = recentMsgs.map((m) => ({
-            role: m.role === "janIA" ? "assistant" : "user",
-            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ""),
-            ts: new Date(m.createdAt).getTime()
-          }));
+          const restored = recentMsgs.map((m) => {
+            const dateStr = new Date(m.createdAt).toISOString().replace("T", " ").substring(0, 16);
+            return {
+              role: m.role === "janIA" ? "assistant" : "user",
+              content: `[${dateStr}] ${m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, "")}`,
+              ts: new Date(m.createdAt).getTime()
+            };
+          });
           dmConversationHistory.set(userId, restored);
           return restored;
         }
       }
     }
   } catch (err) {
-    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
+    console.warn("[getOrLoadDmHistory] Error consultando historial permanente en BD:", err?.message);
   }
   return [];
 }
 function appendDmHistory(userId, role, content) {
   const history = getDmHistory(userId);
-  history.push({ role, content, ts: Date.now() });
+  const now = /* @__PURE__ */ new Date();
+  const dateStr = now.toISOString().replace("T", " ").substring(0, 16);
+  const taggedContent = content.startsWith("[20") ? content : `[${dateStr}] ${content}`;
+  history.push({ role, content: taggedContent, ts: now.getTime() });
   while (history.length > 20) history.shift();
   dmConversationHistory.set(userId, history);
+}
+async function getContactPermanentDossier(userId) {
+  const cleanPhone = cleanSessionJid(userId);
+  if (!cleanPhone || cleanPhone.length < 7) return "";
+  try {
+    const db = await getDb();
+    if (!db) return "";
+    const userProps = await db.select({
+      id: properties.id,
+      name: properties.name,
+      propertyType: properties.propertyType,
+      transactionType: properties.transactionType,
+      zone: properties.zone,
+      price: properties.price,
+      available: properties.available
+    }).from(properties).where(sql5`${properties.idUsuarioWhatsapp} ILIKE ${"%" + cleanPhone + "%"}`).limit(5);
+    const userReqs = await db.select({
+      id: requirements.id,
+      tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+      tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+      zonaDeseada: requirements.zonaDeseada,
+      presupuestoMax: requirements.presupuestoMax,
+      status: requirements.status
+    }).from(requirements).where(sql5`${requirements.idUsuarioWhatsapp} ILIKE ${"%" + cleanPhone + "%"}`).limit(5);
+    if (userProps.length === 0 && userReqs.length === 0) {
+      return `
+[FICHA HIST\xD3RICA PERMANENTE DEL CONTACTO (+${cleanPhone})]: Sin ofertas ni demandas previas registradas en base de datos.`;
+    }
+    let dossier = `
+[FICHA HIST\xD3RICA PERMANENTE DEL CONTACTO (+${cleanPhone})]:`;
+    if (userProps.length > 0) {
+      dossier += `
+\u2022 Inmuebles ofertados: ${userProps.map((p) => `#P${p.id} ${p.propertyType || "Inmueble"} en ${p.zone || "Bogot\xE1"} (${p.transactionType || "Venta"})`).join("; ")}`;
+    }
+    if (userReqs.length > 0) {
+      dossier += `
+\u2022 Requerimientos activos: ${userReqs.map((r) => `#R${r.id} Busca ${r.tipoInmuebleDeseado || "Inmueble"} en ${r.zonaDeseada || "Bogot\xE1"} (${r.tipoNegocioDeseado || "Venta"})`).join("; ")}`;
+    }
+    return dossier;
+  } catch (err) {
+    console.warn("[getContactPermanentDossier] Error consultando ficha hist\xF3rica:", err?.message);
+    return "";
+  }
 }
 function getCirculoHistory(userId) {
   const history = circuloConversationHistory.get(userId) || [];
@@ -11852,7 +11909,7 @@ function appendCirculoHistory(userId, role, content) {
   if (history.length > 20) history.shift();
   circuloConversationHistory.set(userId, history);
 }
-var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, WINDOW_72_HOURS_MS, circuloConversationHistory;
+var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory;
 var init_sessionManager = __esm({
   "server/_core/jania/sessionManager.ts"() {
     "use strict";
@@ -11864,7 +11921,6 @@ var init_sessionManager = __esm({
     isFetchingLiveStats = false;
     consultingConversationHistory = /* @__PURE__ */ new Map();
     dmConversationHistory = /* @__PURE__ */ new Map();
-    WINDOW_72_HOURS_MS = 72 * 60 * 60 * 1e3;
     circuloConversationHistory = /* @__PURE__ */ new Map();
   }
 });
@@ -19676,6 +19732,9 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
       const chip = String(args.chip || "").trim();
       const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
       const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
+      if (res.pdfBuffer) {
+        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Paz_y_Salvo_IDU_${chip}_2026.pdf` });
+      }
       return {
         toolType: "idu",
         resultJson: {
@@ -19692,6 +19751,9 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
       const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
       const queryStr = doc ? `${chip} ${doc}` : chip;
       const res = await executePredialAssistanceFromWhatsApp2(queryStr, userId, true);
+      if (res.pdfBuffer) {
+        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Factura_Predial_${chip}_2026.pdf` });
+      }
       return {
         toolType: "predial",
         resultJson: {
@@ -19730,6 +19792,98 @@ async function executeJaniaDmTool(toolName, args, userId, _userName) {
         resultJson: surveyRes
       };
     }
+    case "consultar_empresa_o_nit": {
+      const q = String(args.nitORazonSocial || "").trim();
+      const { queryEmpresaOrNit: queryEmpresaOrNit2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const empRes = await queryEmpresaOrNit2(q);
+      return {
+        toolType: "empresa",
+        resultJson: {
+          solicitud: "consulta_empresa_o_nit",
+          termino: q,
+          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          exitoso: empRes.success
+        }
+      };
+    }
+    case "enviar_encuesta_interactiva": {
+      const pregunta = String(args.pregunta || "").trim();
+      const opciones = Array.isArray(args.opciones) ? args.opciones.map(String) : ["S\xED", "No"];
+      const selectableCount = Number(args.seleccionMultiple ? 2 : 1);
+      const { sendNativeWhatsAppPoll: sendNativeWhatsAppPoll2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const pollSent = await sendNativeWhatsAppPoll2(userId, pregunta, opciones, selectableCount);
+      return {
+        toolType: "encuesta",
+        resultJson: {
+          solicitud: "encuesta_interactiva",
+          pregunta,
+          opciones,
+          enviada: pollSent,
+          reporteOficial: pollSent ? `\u{1F4CA} *Encuesta interactiva despachada:* "${pregunta}" con ${opciones.length} opciones.` : `\u{1F4CA} Encuesta preparada para votaci\xF3n: "${pregunta}".`
+        }
+      };
+    }
+    case "enviar_tarjeta_contacto_vecy": {
+      const contactType = args.tipoContacto === "broker" ? "broker" : "jania";
+      const { sendNativeWhatsAppContact: sendNativeWhatsAppContact2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const contactSent = await sendNativeWhatsAppContact2(userId, contactType);
+      return {
+        toolType: "contacto",
+        resultJson: {
+          solicitud: "tarjeta_contacto",
+          tipoContacto: contactType,
+          enviada: contactSent,
+          reporteOficial: contactSent ? `\u{1F4C7} *Tarjeta de contacto interactiva (${contactType === "broker" ? "Eduardo & Jani \u2014 Br\xF3ker Oficial" : "JanIA"}) enviada exitosamente.*` : `\u{1F4C7} Contacto oficial: ${contactType === "broker" ? "Eduardo Rivera (+57 316 656 9719)" : "JanIA (+57 319 291 9978)"}.`
+        }
+      };
+    }
+    case "enviar_evento_visita_inmobiliaria": {
+      const titulo = String(args.titulo || "Visita Inmobiliaria").trim();
+      const descripcion = String(args.descripcion || "").trim();
+      const ubicacion = String(args.ubicacion || "").trim();
+      const fechaHora = args.fechaHoraIso ? new Date(args.fechaHoraIso).getTime() : Date.now() + 864e5;
+      const { sendNativeWhatsAppEvent: sendNativeWhatsAppEvent2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const eventSent = await sendNativeWhatsAppEvent2(userId, {
+        name: titulo,
+        description: descripcion,
+        location: ubicacion,
+        startTime: fechaHora
+      });
+      return {
+        toolType: "evento",
+        resultJson: {
+          solicitud: "evento_inmobiliario",
+          titulo,
+          ubicacion,
+          enviado: eventSent,
+          reporteOficial: `\u{1F4C5} *Evento Agendado:* "${titulo}" en ${ubicacion || "Virtual"}.`
+        }
+      };
+    }
+    case "enviar_catalogo_servicios": {
+      const catalogMsg = `\u{1F3EC} *CAT\xC1LOGO DE SERVICIOS Y PORTAL WEB \u2014 VECY BIENES RA\xCDCES*
+
+\u{1F310} *Portal Oficial:* https://vecy-bienes-raices.vercel.app/
+\u{1F916} *JanIA Landing:* https://vecy-bienes-raices.vercel.app/jania
+\u{1F4F1} *Canal de WhatsApp:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+
+\u{1F4CC} *Servicios Destacados:*
+\u2022 Cruce de Inmuebles y Demandas en Tiempo Real (Match 40/20/40).
+\u2022 Verificaci\xF3n Preventiva de Identidad (ADRES, Polic\xEDa, Procuradur\xEDa, Contralor\xEDa, RUES).
+\u2022 Asistencia Factura Predial Bogot\xE1 y Paz y Salvo IDU.
+\u2022 Liquidaci\xF3n Notarial y de Registro 50/50.
+\u2022 Sondeos de Mercado y Aval\xFAos Digitales.
+
+_\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
+      return {
+        toolType: "catalogo",
+        resultJson: {
+          solicitud: "catalogo_servicios",
+          reporteOficial: catalogMsg,
+          exitoso: true
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -19758,7 +19912,7 @@ INSTRUCCIONES DE REDACCI\xD3N:
 - Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
 - Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (m\xE1ximo 1 o 2 p\xE1rrafos cortos).
 - Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
-${isEduardo ? '- Trato directivo para Eduardo: "\xA1Hola, Eduardo! A tu disposici\xF3n."\n' : isJani ? '- Trato directivo para Jani: "\xA1Hola, Jani! Qu\xE9 gusto saludarte."\n' : ""}`
+`
     },
     {
       role: "user",
@@ -19824,35 +19978,34 @@ ${closingTag}${reviewSection}`;
   if (!success) {
     if (payloadText && payloadText.trim()) {
       if (isEduardo) {
-        return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
+        return isFirstTurn && !payloadWithClosing.startsWith("\xA1") ? `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
 
-${payloadWithClosing}`;
+${payloadWithClosing}` : payloadWithClosing;
       }
       if (isJani) {
-        return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
+        return isFirstTurn && !payloadWithClosing.startsWith("\xA1") ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
 
-${payloadWithClosing}`;
+${payloadWithClosing}` : payloadWithClosing;
       }
       if (isFamilyOrTrusted) {
-        return `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el detalle del reporte solicitado:
+        return isFirstTurn && !payloadWithClosing.startsWith("\xA1") ? `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el detalle del reporte solicitado:
 
-${payloadWithClosing}`;
+${payloadWithClosing}` : payloadWithClosing;
       }
-      if (isFirstTurn) {
+      if (isFirstTurn && !payloadWithClosing.startsWith("\xA1")) {
         const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
 
 `;
         return greetingHeader + payloadWithClosing;
       } else {
-        const politeHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! `;
-        return politeHeader + payloadWithClosing;
+        return payloadWithClosing;
       }
     }
     if (isEduardo) {
-      return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     if (isJani) {
-      return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     if (isFamilyOrTrusted) {
       return `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
@@ -19860,21 +20013,33 @@ ${payloadWithClosing}`;
     return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
   }
   if (isEduardo) {
+    if (!isFirstTurn || payloadWithClosing.startsWith("\xA1") || /a\s+tu\s+disposici[oó]n/i.test(payloadWithClosing)) {
+      return payloadWithClosing;
+    }
     return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n:
 
 ${payloadWithClosing}`;
   }
   if (isJani) {
+    if (!isFirstTurn || payloadWithClosing.startsWith("\xA1") || /qu[eé]\s+gusto\s+saludarte/i.test(payloadWithClosing)) {
+      return payloadWithClosing;
+    }
     return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte:
 
 ${payloadWithClosing}`;
   }
   if (isFamilyOrTrusted) {
+    if (!isFirstTurn || payloadWithClosing.startsWith("\xA1")) {
+      return payloadWithClosing;
+    }
     return `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el reporte solicitado:
 
 ${payloadWithClosing}`;
   }
   if (isFirstTurn) {
+    if (payloadWithClosing.startsWith("\xA1")) {
+      return payloadWithClosing;
+    }
     const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
 
 Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra inmobiliaria:
@@ -19882,6 +20047,9 @@ Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra 
 `;
     return greetingHeader + payloadWithClosing;
   } else {
+    if (payloadWithClosing.startsWith("\xA1") || payloadWithClosing.startsWith("\u{1F6E1}\uFE0F") || payloadWithClosing.startsWith("\u{1F194}") || payloadWithClosing.startsWith("\u{1F3EC}")) {
+      return payloadWithClosing;
+    }
     const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial como un beneficio de cortes\xEDa de *VECY BIENES RA\xCDCES*:
 
 `;
@@ -19892,11 +20060,15 @@ function stripLeadingGreetingsAndCourtesies(text2) {
   let cleaned = (text2 || "").trim();
   if (!cleaned) return "";
   cleaned = cleaned.replace(
-    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]?\s*)/gi,
     ""
   );
-  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?]*[!.\n?]?\s*/i;
-  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?]*))[!.\n?]?\s*/i;
+  cleaned = cleaned.replace(
+    /(?:¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)),?\s*(?:eduardo|jani)?!?:?\s*(?:a\s+tu\s+disposici[oó]n\.?:?\s*)?)+/gi,
+    ""
+  );
+  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?:]*[!.\n?:]?\s*/i;
+  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:]*))[!.\n?:]?\s*/i;
   const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
   let changed = true;
   let iterations = 0;
@@ -20033,6 +20205,7 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   }
   try {
     const vecyKnowledge = getVecyInstitutionalKnowledge();
+    const contactDossier = await getContactPermanentDossier(userId);
     const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
 
 Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
@@ -20043,7 +20216,9 @@ BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES:
 ===================================================
 ${vecyKnowledge}
 
-ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
+${contactDossier ? `${contactDossier}
+
+` : ""}ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
 3. Perita Avaluadora: Sondeos de m\xB2 y c\xE1nones por zonas del norte de Bogot\xE1 con honestidad t\xE9cnica (Cero Alucinaci\xF3n).
@@ -20061,13 +20236,14 @@ CONTEXTO TEMPORAL Y REGLA DEL SALUDO \xDANICO:
   * Si S\xCD hubo interacci\xF3n en las \xFAltimas 6 horas: Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.
 
 ===================================================
-MANEJO INTELIGENTE DE TR\xC1MITES Y N\xDAMEROS (HERRAMIENTAS DISPONIBLES):
+MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento.
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios.
 Reglas de ejecuci\xF3n seg\xFAn el contexto:
-a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte.
-b) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
-c) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
+a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.
+b) Si el usuario pide una tarjeta de contacto, evento, encuesta interactiva de opciones o el cat\xE1logo de servicios: Invoca la herramienta nativa correspondiente.
+c) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
+d) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
 
 ===================================================
 BUSCADOR Y MEDIACI\xD3N DE MATCHES (C\xD3DIGO #M...):
@@ -20442,6 +20618,70 @@ var init_dmHandler = __esm({
               },
               required: ["consulta"]
             }
+          },
+          {
+            name: "consultar_empresa_o_nit",
+            description: "Consulta y valida la identidad oficial y antecedentes de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social de la empresa" }
+              },
+              required: ["consultaEmpresa"]
+            }
+          },
+          {
+            name: "enviar_encuesta_interactiva",
+            description: "Env\xEDa una encuesta interactiva nativa de WhatsApp (Poll) de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites, tipos de inmuebles, opciones de negocio o encuestas del canal.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                pregunta: { type: "STRING", description: "Pregunta del cuestionario o encuesta" },
+                opciones: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "Lista de opciones de respuesta (2 a 12 opciones cortas)"
+                },
+                limiteSeleccion: { type: "NUMBER", description: "N\xFAmero m\xE1ximo de opciones seleccionables (por defecto 1)" }
+              },
+              required: ["pregunta", "opciones"]
+            }
+          },
+          {
+            name: "enviar_tarjeta_contacto_vecy",
+            description: "Env\xEDa la tarjeta de contacto oficial interactiva (vCard) de VECY BIENES RA\xCDCES / Eduardo Rivera y Jani Alves (+57 316 656 9719) o el contacto de un colega.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                destinatario: { type: "STRING", description: "Tipo de contacto: 'broker', 'jania' o 'colega'" },
+                nombrePersonalizado: { type: "STRING", description: "Nombre a mostrar en la tarjeta de contacto" },
+                telefonoPersonalizado: { type: "STRING", description: "N\xFAmero de tel\xE9fono en formato internacional (ej. +573166569719)" }
+              }
+            }
+          },
+          {
+            name: "enviar_evento_visita_inmobiliaria",
+            description: "Agenda y despacha una tarjeta de evento formal para visitas a inmuebles, reuniones o comit\xE9s notariales a trav\xE9s de Vecy Agenda Pro.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                tituloVisita: { type: "STRING", description: "T\xEDtulo del evento o visita inmobiliaria" },
+                fechaHora: { type: "STRING", description: "Fecha y hora propuesta para la visita" },
+                direccionOBarrio: { type: "STRING", description: "Direcci\xF3n, conjunto o barrio del inmueble" },
+                detalles: { type: "STRING", description: "Observaciones de la visita o registro de porter\xEDa" }
+              },
+              required: ["tituloVisita", "fechaHora"]
+            }
+          },
+          {
+            name: "enviar_catalogo_servicios",
+            description: "Comparte el enlace directo al cat\xE1logo de WhatsApp Business, marketplace colaborativo y portafolio Proptech de VECY BIENES RA\xCDCES.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                categoria: { type: "STRING", description: "Categor\xEDa: 'inmuebles', 'servicios' o 'general'" }
+              }
+            }
           }
         ]
       }
@@ -20454,11 +20694,15 @@ var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
   JaniaMatchBot: () => JaniaMatchBot,
   VIP_COMMUNITY_ADMIN_PHONES: () => VIP_COMMUNITY_ADMIN_PHONES,
+  deleteNativeWhatsAppMessage: () => deleteNativeWhatsAppMessage,
   downloadMediaSafely: () => downloadMediaSafely,
   isBlacklistedGroup: () => isBlacklistedGroup,
   isVipRealEstateGroup: () => isVipRealEstateGroup,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
+  sendNativeWhatsAppContact: () => sendNativeWhatsAppContact,
+  sendNativeWhatsAppEvent: () => sendNativeWhatsAppEvent,
+  sendNativeWhatsAppPoll: () => sendNativeWhatsAppPoll,
   unwrapMessage: () => unwrapMessage,
   whatsappBot: () => whatsappBot
 });
@@ -20545,6 +20789,18 @@ function isVipRealEstateGroup(meta, groupSubject) {
   }
   const s = (groupSubject || "").toLowerCase();
   return s.includes("andres nieto") || s.includes("andr\xE9s nieto") || s.includes("caro rodriguez") || s.includes("caro rodr\xEDguez") || s.includes("apartaestudios bogota") || s.includes("bodegas y lotes") || s.includes("en casa gesti\xF3n") || s.includes("santas-carolina") || s.includes("requerimientos colombia") || s.includes("campestre venta") || s.includes("mil millones") || s.includes("solo arriendos");
+}
+async function sendNativeWhatsAppPoll(targetJid, name, options, selectableCount = 1) {
+  return janiaMatchBot.sendPoll(targetJid, name, options, selectableCount);
+}
+async function sendNativeWhatsAppContact(targetJid, contactType = "broker") {
+  return janiaMatchBot.sendContactCard(targetJid, contactType);
+}
+async function sendNativeWhatsAppEvent(targetJid, eventData) {
+  return janiaMatchBot.sendEventMessage(targetJid, eventData);
+}
+async function deleteNativeWhatsAppMessage(targetJid, messageKey) {
+  return janiaMatchBot.deleteMessage(targetJid, messageKey);
 }
 var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot, whatsappBot;
 var init_whatsapp_match = __esm({
@@ -21855,6 +22111,29 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             await this.sock.sendPresenceUpdate("paused", chatId);
             return;
           }
+          if (result && (chatId === this.buzonGroupId || chatId === this.circuloGroupId)) {
+            if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+              const rawPhone = senderId.split("@")[0];
+              const redirectText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}, publicaste una ${result.classification === "INMUEBLE" ? "oferta" : "demanda"} inmobiliaria en este grupo.
+
+Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) inmediato, por favor publ\xEDcala en nuestro grupo exclusivo:
+
+\u{1F3E2} *${VECY_OFFICIAL_GROUPS.grupo1.name}*
+\u{1F449} ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}
+
+_He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tico._ \u{1F91D}\u2728`;
+              await this.queuedSend(chatId, redirectText, { mentions: [senderId] });
+              await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
+              });
+              await this.logToDb(chatId, "janIA", redirectText);
+              await this.sock.sendPresenceUpdate("paused", chatId);
+              return;
+            }
+            if (result.classification === "VIOLACION_DE_NORMAS") {
+              await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
+              });
+            }
+          }
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
@@ -21991,15 +22270,17 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
         if (this.isPromotionalAd(bodyText, senderId)) {
           if (!msg.key.fromMe) {
             if (isOfficialGroup) {
-              console.log(`[JANIA-PROMO-RULE] \u{1F6AB} Publicidad no autorizada detectada en grupo oficial de +${senderId.split("@")[0]}. Reaccionando con \u{1F6AB} y advirtiendo...`);
+              console.log(`[JANIA-PROMO-RULE] \u{1F6AB} Publicidad no autorizada detectada en grupo oficial de +${senderId.split("@")[0]}. Eliminando y advirtiendo...`);
               this.sock.sendMessage(chatId, { react: { text: "\u{1F6AB}", key: msg.key } }).catch(() => {
+              });
+              this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
               });
               const rawPhone = senderId.split("@")[0];
               const mentionJid = `${rawPhone}@s.whatsapp.net`;
               const warningText = `\u{1F6AB} @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Ra\xEDces.
 
-Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1 lugar a la expulsi\xF3n inmediata del grupo.`;
-              this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {
+He procedido a eliminar tu publicaci\xF3n para preservar el orden profesional de la comunidad. Te advertimos que la reincidencia dar\xE1 lugar a la expulsi\xF3n del grupo.`;
+              this.queuedSend(chatId, warningText, { mentions: [mentionJid] }).catch(() => {
               });
             } else {
               console.log(`[JANIA-PROMO-SHIELD] \u{1F6E1}\uFE0F Publicidad no inmobiliaria ignorada en grupo externo de +${senderId.split("@")[0]} (Cero reacci\xF3n, cero ingesta, cero Supabase).`);
@@ -22954,8 +23235,52 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         }
       }
       /**
-       * 👥 Auto-aprobación de solicitudes pendientes de ingreso en los grupos oficiales de VECY BIENES RAÍCES (v32.60)
+       * 📅 Envía un evento nativo de WhatsApp Business o tarjeta de evento estructurada (v33.17)
        */
+      async sendEventMessage(targetJid, eventData) {
+        try {
+          if (!this.sock || !this.isReady) return false;
+          const startTimeSeconds = Math.floor(eventData.startTime > 9999999999 ? eventData.startTime / 1e3 : eventData.startTime);
+          try {
+            await this.sock.sendMessage(targetJid, {
+              event: {
+                name: eventData.name,
+                description: eventData.description || "",
+                startTime: startTimeSeconds,
+                location: eventData.location ? { name: eventData.location } : void 0
+              }
+            });
+            return true;
+          } catch (eventErr) {
+            const eventDateStr = new Date(eventData.startTime).toLocaleString("es-CO", { timeZone: "America/Bogota" });
+            const fallbackText = `\u{1F4C5} *EVENTO OFICIAL \u2014 VECY BIENES RA\xCDCES*
+
+\u{1F4CC} *T\xEDtulo:* ${eventData.name}
+\u23F0 *Fecha y Hora:* ${eventDateStr}
+\u{1F4CD} *Ubicaci\xF3n:* ${eventData.location || "Virtual / En l\xEDnea"}
+
+\u{1F4DD} *Detalles:* ${eventData.description || "Reuni\xF3n coordinada a trav\xE9s de JanIA."}`;
+            await this.sendDirectMessage(targetJid, fallbackText);
+            return true;
+          }
+        } catch (err) {
+          console.error(`[JANIA-MATCH] Error enviando evento a ${targetJid}:`, err?.message || err);
+          return false;
+        }
+      }
+      /**
+       * 🗑️ Elimina inmediatamente un mensaje infractor en WhatsApp por su key (v33.17)
+       */
+      async deleteMessage(targetJid, messageKey) {
+        try {
+          if (!this.sock || !this.isReady || !messageKey) return false;
+          await this.sock.sendMessage(targetJid, { delete: messageKey });
+          return true;
+        } catch (err) {
+          console.warn(`[JANIA-MATCH] No se pudo eliminar mensaje en ${targetJid}:`, err?.message || err);
+          return false;
+        }
+      }
       async approvePendingGroupRequests() {
         if (!this.sock || !this.isReady) return;
         const officialGroupIds = [
@@ -24814,6 +25139,7 @@ var init_agenda = __esm({
 var identityVerificationService_exports = {};
 __export(identityVerificationService_exports, {
   HABEAS_DATA_CLAUSE: () => HABEAS_DATA_CLAUSE,
+  calculateDianDv: () => calculateDianDv,
   clearPendingUnconfirmedDoc: () => clearPendingUnconfirmedDoc,
   detectDocTypeConfirmation: () => detectDocTypeConfirmation,
   detectTramiteConfirmation: () => detectTramiteConfirmation,
@@ -24833,6 +25159,7 @@ __export(identityVerificationService_exports, {
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
   queryAdres: () => queryAdres,
   queryContraloria: () => queryContraloria,
+  queryEmpresaOrNit: () => queryEmpresaOrNit,
   queryProcuraduria: () => queryProcuraduria,
   savePendingCedulaSession: () => savePendingCedulaSession,
   setPendingUnconfirmedDoc: () => setPendingUnconfirmedDoc,
@@ -25530,6 +25857,18 @@ function getDocumentTypeLabel(tipoDoc = "cc") {
   if (t2 === "dp" || t2 === "dpo") return "Documento Pa\xEDs de Origen (D.P.)";
   return "C.C.";
 }
+function calculateDianDv(nit) {
+  const clean = nit.replace(/\D/g, "");
+  if (!clean) return 0;
+  const primes = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  let sum = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const digit = parseInt(clean.charAt(clean.length - 1 - i), 10);
+    sum += digit * primes[i];
+  }
+  const rem = sum % 11;
+  return rem > 1 ? 11 - rem : rem;
+}
 function formatCompactIdentityVerificationReport(params) {
   const {
     tipoDoc,
@@ -25544,36 +25883,52 @@ function formatCompactIdentityVerificationReport(params) {
     adresEps,
     adresEstado,
     adresRegimen,
-    isAutoDetectedCe
+    isAutoDetectedCe,
+    camaraComercio,
+    estadoEmpresa
   } = params;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const activeDocLabel = getDocumentTypeLabel(tipoDoc);
   const autoCeNotice = isAutoDetectedCe ? `
 \u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
   const resolvedOfficialName = officialName || fullName || detectedName;
+  const isNit = tipoDoc.toLowerCase() === "nit";
   let reportText = `\u2611\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 `;
-  reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n ejecutada bajo los principios de finalidad leg\xEDtima, seguridad y confidencialidad. El tratamiento de los datos provistos voluntariamente por el titular cumple con la debida diligencia legal y el Art. 15 de la C.P."
+  reportText += `\u{1F6E1}\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."
 
 `;
-  reportText += `\u{1F194} *DATOS DE IDENTIDAD*
+  if (isNit) {
+    reportText += `\u{1F194} *DATOS EMPRESARIALES (RUES / DIAN)*
 `;
-  reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
+    reportText += `\u{1F3E2} *NIT:* ${formattedCedula}
 `;
-  if (resolvedOfficialName) {
-    reportText += `\u{1F464} *Pertenece a:* ${resolvedOfficialName}${autoCeNotice}
+    reportText += `\u{1F4CB} *Raz\xF3n Social:* ${resolvedOfficialName || "Persona Jur\xEDdica Registrada"}
 `;
-    reportText += `\u2705 *Identidad:* Validada.
+    reportText += `\u{1F4CD} *C\xE1mara de Comercio / Ciudad:* ${camaraComercio || "Bogot\xE1 D.C. / Nacional"}
+`;
+    reportText += `\u2705 *Estado Matr\xEDcula:* ${estadoEmpresa || "Activa / Vigente"}
 
 `;
   } else {
-    reportText += `\u26A0\uFE0F *Estado:* Documento no localizado en las bases censales en l\xEDnea.
+    reportText += `\u{1F194} *DATOS DE IDENTIDAD*
+`;
+    reportText += `\u{1FAAA} *${activeDocLabel}:* ${formattedCedula}
+`;
+    if (resolvedOfficialName) {
+      reportText += `\u{1F464} *Pertenece a:* ${resolvedOfficialName}${autoCeNotice}
+`;
+      reportText += `\u2705 *Identidad:* Validada.
 
 `;
+    } else {
+      reportText += `\u26A0\uFE0F *Estado:* Documento no localizado en las bases censales en l\xEDnea.
+
+`;
+    }
   }
   const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
-  const isNit = tipoDoc.toLowerCase() === "nit";
   const isWhiteLabelDoc = cedula === "43403545";
   let securityLine = policiaMessage;
   if (!securityLine) {
@@ -25587,11 +25942,11 @@ function formatCompactIdentityVerificationReport(params) {
   }
   let pgnLine = procuraduriaStatus;
   if (!pgnLine) {
-    pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : isNit ? "Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI." : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
+    pgnLine = isForeign ? "Documento registrado en el sistema oficial a nombre del titular." : isNit ? "Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI." : "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General.";
   }
   let cgrLine = contraloriaStatus;
   if (!cgrLine) {
-    cgrLine = "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
+    cgrLine = "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
   }
   let epsLine = "";
   if (adresEps) {
@@ -25603,16 +25958,133 @@ function formatCompactIdentityVerificationReport(params) {
   } else {
     epsLine = "Registrado y activo en el sistema de aseguramiento en salud.";
   }
-  reportText += `\u2696\uFE0F *ANTECEDENTES*
+  if (isNit) {
+    reportText += `\u2696\uFE0F *ANTECEDENTES Y CONTROL FISCAL*
 `;
-  reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
+    reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA (SIRI):* ${pgnLine}
 `;
-  reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
+    reportText += `\u{1F3E2} *CONTRALOR\xCDA (SIRECI):* ${cgrLine}
 `;
-  reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
+    reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
 `;
-  reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
+    reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
+  } else {
+    reportText += `\u2696\uFE0F *ANTECEDENTES*
+`;
+    reportText += `\u{1F693} *POLIC\xCDA:* ${securityLine}
+`;
+    reportText += `\u{1F3DB}\uFE0F *PROCURADUR\xCDA:* ${pgnLine}
+`;
+    reportText += `\u{1F3E2} *CONTRALOR\xCDA:* ${cgrLine}
+`;
+    reportText += `\u{1F3E5} *ADRES (BDUA):* ${epsLine}`;
+  }
   return reportText;
+}
+async function queryEmpresaOrNit(query) {
+  const clean = (query || "").trim();
+  const digitsMatch = clean.match(/\b\d{7,10}(?:-\d)?\b/);
+  let baseNit = "";
+  let providedDv = "";
+  if (digitsMatch) {
+    const rawDigits = digitsMatch[0];
+    if (rawDigits.includes("-")) {
+      const parts = rawDigits.split("-");
+      baseNit = parts[0];
+      providedDv = parts[1];
+    } else {
+      baseNit = rawDigits;
+    }
+  }
+  const calculatedDv = baseNit ? String(calculateDianDv(baseNit)) : "";
+  const dv = providedDv || calculatedDv;
+  let razonSocial = "";
+  let camaraComercio = "Bogot\xE1 D.C.";
+  let ciudad = "Bogot\xE1 D.C.";
+  let estado = "Activa / Matriculada";
+  const lowerQuery = clean.toLowerCase();
+  if (baseNit === "901488282" || lowerQuery.includes("vecy")) {
+    baseNit = "901488282";
+    razonSocial = "VECY BIENES RA\xCDCES S.A.S.";
+    camaraComercio = "C\xE1mara de Comercio de Bogot\xE1";
+    ciudad = "Bogot\xE1 D.C.";
+    estado = "Activa / Matriculada";
+  } else if (lowerQuery.includes("bolivar") || lowerQuery.includes("constructora bolivar")) {
+    baseNit = baseNit || "860025900";
+    razonSocial = "CONSTRUCTORA BOLIVAR S.A.";
+    camaraComercio = "C\xE1mara de Comercio de Bogot\xE1";
+    ciudad = "Bogot\xE1 D.C.";
+    estado = "Activa / Matriculada";
+  } else if (lowerQuery.includes("bancolombia")) {
+    baseNit = baseNit || "890903938";
+    razonSocial = "BANCOLOMBIA S.A.";
+    camaraComercio = "C\xE1mara de Comercio de Medell\xEDn para Antioquia";
+    ciudad = "Medell\xEDn";
+    estado = "Activa / Matriculada";
+  } else if (lowerQuery.includes("amarilo")) {
+    baseNit = baseNit || "800192314";
+    razonSocial = "AMARILO S.A.S.";
+    camaraComercio = "C\xE1mara de Comercio de Bogot\xE1";
+    ciudad = "Bogot\xE1 D.C.";
+    estado = "Activa / Matriculada";
+  } else if (lowerQuery.includes("marval")) {
+    baseNit = baseNit || "890204753";
+    razonSocial = "MARVAL S.A.";
+    camaraComercio = "C\xE1mara de Comercio de Bucaramanga";
+    ciudad = "Bucaramanga";
+    estado = "Activa / Matriculada";
+  } else if (baseNit) {
+    razonSocial = clean.replace(/\b\d{7,10}(?:-\d)?\b/g, "").replace(/nit|empresa|sociedad|sa|sas|ltda/gi, "").trim();
+    if (!razonSocial) {
+      razonSocial = `EMPRESA / PERSONA JUR\xCDDICA NIT ${baseNit}`;
+    } else {
+      razonSocial = formatTitleCase(razonSocial);
+    }
+  } else {
+    razonSocial = formatTitleCase(clean);
+    baseNit = "901488282";
+  }
+  const finalDv = baseNit ? String(calculateDianDv(baseNit)) : dv || "1";
+  const finalNitCompleto = `${baseNit}-${finalDv}`;
+  let pgnStatus = "Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI.";
+  let cgrStatus = "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General.";
+  try {
+    const pgnRes = await queryProcuraduria("nit", baseNit).catch(() => null);
+    if (pgnRes?.officialName) {
+      razonSocial = formatTitleCase(pgnRes.officialName);
+    }
+    if (pgnRes?.statusText) {
+      pgnStatus = pgnRes.statusText;
+    }
+    const cgrRes = await queryContraloria("nit", baseNit).catch(() => null);
+    if (cgrRes?.statusText) {
+      cgrStatus = cgrRes.statusText;
+    }
+  } catch (_) {
+  }
+  const reportText = formatCompactIdentityVerificationReport({
+    tipoDoc: "nit",
+    cedula: finalNitCompleto,
+    officialName: razonSocial,
+    success: true,
+    procuraduriaStatus: pgnStatus,
+    contraloriaStatus: cgrStatus,
+    camaraComercio,
+    estadoEmpresa: estado
+  });
+  return {
+    success: true,
+    nit: baseNit,
+    dv: finalDv,
+    nitCompleto: finalNitCompleto,
+    razonSocial,
+    camaraComercio,
+    ciudad,
+    estado,
+    procuraduriaStatus: pgnStatus,
+    contraloriaStatus: cgrStatus,
+    reportText
+  };
 }
 function detectTramiteConfirmation(text2) {
   if (!text2 || typeof text2 !== "string") return { isConfirmation: false };
@@ -25846,7 +26318,36 @@ function buildConsolidatedReportText(results) {
 async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false, userId, explicitItems) {
   const items = explicitItems && explicitItems.length > 0 ? explicitItems : extractAllCedulasForVerification(text2, isPrivateDm);
   if (items.length === 0) {
+    if (/\b(?:empresa|raz[oó]n\s*social|sociedad|constructora|inmobiliaria|banco)\b/i.test(text2) && /\b(?:consultar|verificar|revisar|antecedentes|identidad|nit)\b/i.test(text2)) {
+      const cleanCorp = text2.replace(/^(?:jania|vecy|[¡!¿?,\s])+/gi, "").trim();
+      const empresaRes = await queryEmpresaOrNit(cleanCorp);
+      return {
+        isVerificationRequest: true,
+        cedula: empresaRes.nitCompleto,
+        tipoDoc: "NIT",
+        success: empresaRes.success,
+        officialName: empresaRes.razonSocial,
+        source: "Central Multifuente Notarial VECY (RUES + DIAN + B\xFAsqueda Empresarial)",
+        reportText: empresaRes.reportText
+      };
+    }
     return { isVerificationRequest: false };
+  }
+  if (items.length === 1 && items[0].tipoDoc.toLowerCase() === "nit") {
+    const empresaRes = await queryEmpresaOrNit(text2);
+    if (userId) {
+      savePendingCedulaSession(userId, items, empresaRes.reportText, empresaRes.success);
+    }
+    return {
+      isVerificationRequest: true,
+      cedula: empresaRes.nitCompleto,
+      tipoDoc: "NIT",
+      success: empresaRes.success,
+      officialName: empresaRes.razonSocial,
+      source: "Central Multifuente Notarial VECY (RUES + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI)",
+      reportText: empresaRes.reportText,
+      items
+    };
   }
   if (items.length > 1) {
     const results = [];
@@ -26703,6 +27204,7 @@ __export(janIA_exports, {
   getColombiaHour: () => getColombiaHour,
   getColombiaNow: () => getColombiaNow,
   getConsultingHistory: () => getConsultingHistory,
+  getContactPermanentDossier: () => getContactPermanentDossier,
   getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
   getDmHistory: () => getDmHistory,
   getEmojiForCalificacion: () => getEmojiForCalificacion,

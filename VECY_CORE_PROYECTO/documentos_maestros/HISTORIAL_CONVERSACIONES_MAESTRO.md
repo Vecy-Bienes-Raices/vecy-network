@@ -7,6 +7,54 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-16] — JanIA "Gemela Cognitiva de Gemini 4 Argon": Reconexión de Scrapers Oficiales, RUES/NIT, PDFs, Memoria Permanente y Superpoderes Nativos WhatsApp Business (v33.17 - 33.17.0)
+
+**Versión:** `v33.17` (`33.17.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/prompts.ts` (Consagración de la identidad de Gemini 4 Argon en `JANIA_ARGON_COGNITIVE_CORE`, doctrina jurídica inmobiliaria colombiana, soluciones Proptech y regla del saludo único).
+- `server/_core/jania/sessionManager.ts` (Evolución a Memoria Permanente Inteligente: eliminación del corte a medianoche y de la ventana de 72h; retención de los últimos 20 turnos con timestamp `[YYYY-MM-DD HH:mm]`; implementación de `getContactPermanentDossier` para inyectar inmuebles y requerimientos históricos del contacto).
+- `server/_core/identityVerificationService.ts` (Reconexión de scrapers oficiales con resiliencia: ADRES BDUA, Policía Nacional con 2Captcha, Procuraduría SIRI y Contraloría SIRECI; cálculo matemático oficial del Dígito de Verificación DIAN Módulo 11 en `calculateDianDv`; consulta de empresas por NIT o razón social en `queryEmpresaOrNit`; plantilla oficial unificada).
+- `server/_core/jania/handlers/dmHandler.ts` (Ampliación de `JANIA_DM_TOOLS` con `consultar_empresa_o_nit`, `enviar_encuesta_interactiva`, `enviar_tarjeta_contacto_vecy`, `enviar_evento_visita_inmobiliaria` y `enviar_catalogo_servicios`; entrega desacoplada de buffers PDF con `setLatestDmPdf` / `popLatestDmPdf`; erradicación total del doble saludo en `formatPoliteToolDelivery` y `stripLeadingGreetingsAndCourtesies` permitiendo dos puntos `:`).
+- `server/_core/whatsapp-match.ts` (Superpoderes nativos de Baileys: encuestas de 1 clic `sendNativeWhatsAppPoll`, tarjetas vCard `sendNativeWhatsAppContact`, eventos nativos `sendNativeWhatsAppEvent` y moderación de grupos oficiales con borrado de mensajes desubicados y redireccionamiento por enlace de invitación).
+- `shared/const.ts` (`v33.17`) y `package.json` (`33.17.0`).
+- `server/__tests__/regression.test.ts` (SUITE 78 con 7 pruebas automatizadas que elevan el total a 279/279 tests pasando al 100% en verde a $0 COP).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Contexto, Diagnóstico de la Solicitud y Causa Raíz Forense
+- **Solicitud y Doctrina Arquitectónica de Eduardo A. Rivera:**
+  - *"ORDEN ARQUITECTÓNICA SUPREMA (v33.17) — JANIA 'GEMELA COGNITIVA DE GEMINI 4 ARGON': RECONEXIÓN DE SCRAPERS OFICIALES, RUES/NIT, ENTREGA DE PDFs, MEMORIA PERMANENTE Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS (ENCUESTAS, CUESTIONARIOS, EVENTOS, CONTACTOS Y CATÁLOGO). Candado inquebrantable de seguridad: prohibido git revert, git reset o alterar el Motor de Matches, códigos #M, mediación 40/20/40 y prioridad de gemini-2.5-flash."*
+- **Diagnóstico y Causa Raíz Identificada:**
+  1. *Doble Saludo y Repetición Redundante:* En respuestas asistidas por herramientas en DMs, `formatPoliteToolDelivery` forzaba un prefijo `¡${timeSalutation}, Eduardo! A tu disposición:\n\n`, mientras que la síntesis de Gemini a veces iniciaba con `¡Hola, Eduardo! A tu disposición...`. Como el regex de cortesía buscaba únicamente delimitadores `[!.\n?]` y no dos puntos `:`, la frase redundante no se recortaba, provocando un feo saludo duplicado.
+  2. *Memoria Deslizante Limitada:* La ventana de 72 horas expiraba contextos de clientes recurrentes tras 3 días; se requería una memoria permanente de los últimos 20 turnos con fecha/hora y conocimiento histórico de las propiedades y requerimientos registrados por el usuario.
+  3. *Verificación Empresarial y Formato Oficial:* Se requería consultar personas jurídicas (NIT / Razón Social) con cálculo fidedigno del Dígito de Verificación DIAN (Módulo 11) y reportar en una plantilla oficial sin bloques numéricos extensos ni enlaces rotos.
+  4. *Interactividad Nativa en WhatsApp:* WhatsApp Business permite encuestas de votación, tarjetas de contacto vCard y eventos proto que JanIA no explotaba nativamente a través del socket Baileys.
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Personalidad Gemini 4 Argon y Erradicación del Doble Saludo:**
+   - Enriquecido `JANIA_ARGON_COGNITIVE_CORE` con maestría jurídica y estilo ejecutivo.
+   - Refactorizado `stripLeadingGreetingsAndCourtesies` y `formatPoliteToolDelivery` para limpiar saludos y preámbulos duplicados antes de concatenar.
+2. **Superpoderes Nativos Baileys:**
+   - Métodos `sendPoll`, `sendContactCard` y `sendEventMessage` en `JaniaMatchBot`, exportados a nivel de módulo como `sendNativeWhatsAppPoll`, `sendNativeWhatsAppContact` y `sendNativeWhatsAppEvent`.
+   - Moderación inteligente en Grupos 1, 2 y 3: detección de publicaciones cruzadas, borrado con `deleteMessage` y redireccionamiento con enlaces de invitación oficiales.
+3. **Reconexión de Scrapers y RUES/NIT:**
+   - Algoritmo matemático DIAN Módulo 11 en `calculateDianDv`.
+   - Servicio `queryEmpresaOrNit` con integración de Cámara de Comercio, Procuraduría SIRI y Contraloría SIRECI.
+   - Plantilla oficial consolidada con Habeas Data Ley 1581/12 y secciones claras de identidad y antecedentes.
+4. **Memoria Permanente y Dossier de Contacto:**
+   - Eliminados límites temporales en `getDmHistory` y `getOrLoadDmHistory`.
+   - Implementado `getContactPermanentDossier` con inyección de inmuebles y requerimientos en el prompt de JanIA.
+5. **Entrega de Documentos PDF en WhatsApp:**
+   - Mecanismo desacoplado `setLatestDmPdf` / `popLatestDmPdf` que despacha facturas prediales, paz y salvo IDU y certificados de pago directamente como archivo adjunto `.pdf`.
+
+#### 3. Validación y Pruebas Empíricas
+- `npm run check`: **0 errores de TypeScript**.
+- `npm test`: **279/279 tests pasando al 100% en verde a $0 COP**.
+- `npm run build`: Compilación limpia en 15.34s (Vite) + 161ms (esbuild).
+
+---
+
 ### 📅 [2026-10-16] — Reforma Arquitectónica LLM Puro, Matches M-Code y Memoria 72h (v33.16 - 33.16.0)
 
 **Versión:** `v33.16` (`33.16.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

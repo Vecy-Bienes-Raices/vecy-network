@@ -360,13 +360,10 @@ export function getStartOfTodayBogota(): number {
   return Date.UTC(year, month, day, 5, 0, 0);
 }
 
-const WINDOW_72_HOURS_MS = 72 * 60 * 60 * 1000; // Ventana continua de 72 horas (Doctrina v33.16)
-
 export function getDmHistory(userId: string): DmTurn[] {
   const history = dmConversationHistory.get(userId) || [];
-  const cutoff = Date.now() - WINDOW_72_HOURS_MS;
-  // Conservar mensajes de las últimas 72 horas limitados a los últimos 20 turnos (Doctrina v33.16)
-  return history.filter(h => h.ts >= cutoff).slice(-20);
+  // Memoria Permanente Inteligente (v33.17): Conservar siempre los últimos 20 turnos sin caducidad temporal
+  return history.slice(-20);
 }
 
 export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
@@ -375,39 +372,36 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
     return inMemory;
   }
 
-  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD de las últimas 72 horas
+  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar los últimos 20 mensajes de BD sin corte de fecha
   try {
     const db = await getDb();
     if (db) {
       const conv = await db.select().from(dbConversations).where(eq(dbConversations.sessionId, userId)).limit(1);
       if (conv.length > 0) {
-        const cutoff = new Date(Date.now() - WINDOW_72_HOURS_MS);
         const recentMsgs = await db
           .select()
           .from(dbMessages)
-          .where(
-            and(
-              eq(dbMessages.conversationId, conv[0].id),
-              gte(dbMessages.createdAt, cutoff)
-            )
-          )
+          .where(eq(dbMessages.conversationId, conv[0].id))
           .orderBy(desc(dbMessages.createdAt))
           .limit(20);
 
         if (recentMsgs.length > 0) {
           recentMsgs.reverse();
-          const restored: DmTurn[] = recentMsgs.map(m => ({
-            role: m.role === 'janIA' ? 'assistant' : 'user',
-            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ''),
-            ts: new Date(m.createdAt).getTime()
-          }));
+          const restored: DmTurn[] = recentMsgs.map(m => {
+            const dateStr = new Date(m.createdAt).toISOString().replace("T", " ").substring(0, 16);
+            return {
+              role: m.role === 'janIA' ? 'assistant' : 'user',
+              content: `[${dateStr}] ${m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, '')}`,
+              ts: new Date(m.createdAt).getTime()
+            };
+          });
           dmConversationHistory.set(userId, restored);
           return restored;
         }
       }
     }
   } catch (err: any) {
-    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
+    console.warn("[getOrLoadDmHistory] Error consultando historial permanente en BD:", err?.message);
   }
 
   return [];
@@ -415,10 +409,71 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
 
 export function appendDmHistory(userId: string, role: "user" | "assistant", content: string) {
   const history = getDmHistory(userId);
-  history.push({ role, content, ts: Date.now() });
-  // Conservar hasta 20 turnos de las últimas 72 horas
+  const now = new Date();
+  const dateStr = now.toISOString().replace("T", " ").substring(0, 16);
+  const taggedContent = content.startsWith("[20") ? content : `[${dateStr}] ${content}`;
+  history.push({ role, content: taggedContent, ts: now.getTime() });
+  // Conservar siempre los últimos 20 turnos
   while (history.length > 20) history.shift();
   dmConversationHistory.set(userId, history);
+}
+
+/**
+ * Consulta la Ficha Histórica Permanente del Contacto en PostgreSQL
+ * obteniendo sus propiedades y requerimientos registrados.
+ */
+export async function getContactPermanentDossier(userId: string): Promise<string> {
+  const cleanPhone = cleanSessionJid(userId);
+  if (!cleanPhone || cleanPhone.length < 7) return "";
+
+  try {
+    const db = await getDb();
+    if (!db) return "";
+
+    const userProps = await db
+      .select({
+        id: properties.id,
+        name: properties.name,
+        propertyType: properties.propertyType,
+        transactionType: properties.transactionType,
+        zone: properties.zone,
+        price: properties.price,
+        available: properties.available
+      })
+      .from(properties)
+      .where(sql`${properties.idUsuarioWhatsapp} ILIKE ${'%' + cleanPhone + '%'}`)
+      .limit(5);
+
+    const userReqs = await db
+      .select({
+        id: requirements.id,
+        tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+        tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+        zonaDeseada: requirements.zonaDeseada,
+        presupuestoMax: requirements.presupuestoMax,
+        status: requirements.status
+      })
+      .from(requirements)
+      .where(sql`${requirements.idUsuarioWhatsapp} ILIKE ${'%' + cleanPhone + '%'}`)
+      .limit(5);
+
+    if (userProps.length === 0 && userReqs.length === 0) {
+      return `\n[FICHA HISTÓRICA PERMANENTE DEL CONTACTO (+${cleanPhone})]: Sin ofertas ni demandas previas registradas en base de datos.`;
+    }
+
+    let dossier = `\n[FICHA HISTÓRICA PERMANENTE DEL CONTACTO (+${cleanPhone})]:`;
+    if (userProps.length > 0) {
+      dossier += `\n• Inmuebles ofertados: ${userProps.map(p => `#P${p.id} ${p.propertyType || "Inmueble"} en ${p.zone || "Bogotá"} (${p.transactionType || "Venta"})`).join("; ")}`;
+    }
+    if (userReqs.length > 0) {
+      dossier += `\n• Requerimientos activos: ${userReqs.map(r => `#R${r.id} Busca ${r.tipoInmuebleDeseado || "Inmueble"} en ${r.zonaDeseada || "Bogotá"} (${r.tipoNegocioDeseado || "Venta"})`).join("; ")}`;
+    }
+
+    return dossier;
+  } catch (err: any) {
+    console.warn("[getContactPermanentDossier] Error consultando ficha histórica:", err?.message);
+    return "";
+  }
 }
 
 // ─── Memoria Conversacional Grupo Proyecto VECY / Círculo (Singleton v33.4.1) ─

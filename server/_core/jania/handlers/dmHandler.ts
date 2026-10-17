@@ -1,4 +1,4 @@
-import { resolveRealName, getOrLoadDmHistory, appendDmHistory } from "../sessionManager";
+import { resolveRealName, getOrLoadDmHistory, appendDmHistory, getContactPermanentDossier } from "../sessionManager";
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
@@ -134,17 +134,94 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["consulta"]
         }
+      },
+      {
+        name: "consultar_empresa_o_nit",
+        description: "Consulta y valida la identidad oficial y antecedentes de Empresas y Personas Jurídicas por NIT o Razón Social (RUES + DIAN + Procuraduría SIRI + Contraloría SIRECI).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            consultaEmpresa: { type: "STRING", description: "Número de NIT con o sin dígito de verificación o Nombre/Razón Social de la empresa" }
+          },
+          required: ["consultaEmpresa"]
+        }
+      },
+      {
+        name: "enviar_encuesta_interactiva",
+        description: "Envía una encuesta interactiva nativa de WhatsApp (Poll) de 1 clic para selección ágil de trámites, tipos de inmuebles, opciones de negocio o encuestas del canal.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            pregunta: { type: "STRING", description: "Pregunta del cuestionario o encuesta" },
+            opciones: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "Lista de opciones de respuesta (2 a 12 opciones cortas)"
+            },
+            limiteSeleccion: { type: "NUMBER", description: "Número máximo de opciones seleccionables (por defecto 1)" }
+          },
+          required: ["pregunta", "opciones"]
+        }
+      },
+      {
+        name: "enviar_tarjeta_contacto_vecy",
+        description: "Envía la tarjeta de contacto oficial interactiva (vCard) de VECY BIENES RAÍCES / Eduardo Rivera y Jani Alves (+57 316 656 9719) o el contacto de un colega.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            destinatario: { type: "STRING", description: "Tipo de contacto: 'broker', 'jania' o 'colega'" },
+            nombrePersonalizado: { type: "STRING", description: "Nombre a mostrar en la tarjeta de contacto" },
+            telefonoPersonalizado: { type: "STRING", description: "Número de teléfono en formato internacional (ej. +573166569719)" }
+          }
+        }
+      },
+      {
+        name: "enviar_evento_visita_inmobiliaria",
+        description: "Agenda y despacha una tarjeta de evento formal para visitas a inmuebles, reuniones o comités notariales a través de Vecy Agenda Pro.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            tituloVisita: { type: "STRING", description: "Título del evento o visita inmobiliaria" },
+            fechaHora: { type: "STRING", description: "Fecha y hora propuesta para la visita" },
+            direccionOBarrio: { type: "STRING", description: "Dirección, conjunto o barrio del inmueble" },
+            detalles: { type: "STRING", description: "Observaciones de la visita o registro de portería" }
+          },
+          required: ["tituloVisita", "fechaHora"]
+        }
+      },
+      {
+        name: "enviar_catalogo_servicios",
+        description: "Comparte el enlace directo al catálogo de WhatsApp Business, marketplace colaborativo y portafolio Proptech de VECY BIENES RAÍCES.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            categoria: { type: "STRING", description: "Categoría: 'inmuebles', 'servicios' o 'general'" }
+          }
+        }
       }
     ]
   }
 ];
+
+export type JaniaDmToolType =
+  | "cedula"
+  | "predial"
+  | "idu"
+  | "notarial"
+  | "sondeo"
+  | "match"
+  | "empresa"
+  | "encuesta"
+  | "contacto"
+  | "evento"
+  | "catalogo";
 
 export async function executeJaniaDmTool(
   toolName: string,
   args: Record<string, any>,
   userId: string,
   _userName?: string
-): Promise<{ resultJson: Record<string, any>; toolType: "cedula" | "predial" | "idu" | "notarial" | "sondeo" | "match" }> {
+): Promise<{ resultJson: Record<string, any>; toolType: JaniaDmToolType }> {
   switch (toolName) {
     case "consultar_matches_o_codigo": {
       const query = String(args.consulta || "").trim();
@@ -205,6 +282,9 @@ export async function executeJaniaDmTool(
       const chip = String(args.chip || "").trim();
       const { executeIduValorizacionFromWhatsApp } = await import("../../iduValorizacionService");
       const res = await executeIduValorizacionFromWhatsApp(chip, userId, true);
+      if (res.pdfBuffer) {
+        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Paz_y_Salvo_IDU_${chip}_2026.pdf` });
+      }
       return {
         toolType: "idu",
         resultJson: {
@@ -221,6 +301,9 @@ export async function executeJaniaDmTool(
       const { executePredialAssistanceFromWhatsApp } = await import("../../predialService");
       const queryStr = doc ? `${chip} ${doc}` : chip;
       const res = await executePredialAssistanceFromWhatsApp(queryStr, userId, true);
+      if (res.pdfBuffer) {
+        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Factura_Predial_${chip}_2026.pdf` });
+      }
       return {
         toolType: "predial",
         resultJson: {
@@ -259,6 +342,100 @@ export async function executeJaniaDmTool(
         resultJson: surveyRes
       };
     }
+    case "consultar_empresa_o_nit": {
+      const q = String(args.nitORazonSocial || "").trim();
+      const { queryEmpresaOrNit } = await import("../../identityVerificationService");
+      const empRes = await queryEmpresaOrNit(q);
+      return {
+        toolType: "empresa",
+        resultJson: {
+          solicitud: "consulta_empresa_o_nit",
+          termino: q,
+          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          exitoso: empRes.success
+        }
+      };
+    }
+    case "enviar_encuesta_interactiva": {
+      const pregunta = String(args.pregunta || "").trim();
+      const opciones = Array.isArray(args.opciones) ? args.opciones.map(String) : ["Sí", "No"];
+      const selectableCount = Number(args.seleccionMultiple ? 2 : 1);
+      const { sendNativeWhatsAppPoll } = await import("../../whatsapp-match");
+      const pollSent = await sendNativeWhatsAppPoll(userId, pregunta, opciones, selectableCount);
+      return {
+        toolType: "encuesta",
+        resultJson: {
+          solicitud: "encuesta_interactiva",
+          pregunta,
+          opciones,
+          enviada: pollSent,
+          reporteOficial: pollSent
+            ? `📊 *Encuesta interactiva despachada:* "${pregunta}" con ${opciones.length} opciones.`
+            : `📊 Encuesta preparada para votación: "${pregunta}".`
+        }
+      };
+    }
+    case "enviar_tarjeta_contacto_vecy": {
+      const contactType = args.tipoContacto === "broker" ? "broker" : "jania";
+      const { sendNativeWhatsAppContact } = await import("../../whatsapp-match");
+      const contactSent = await sendNativeWhatsAppContact(userId, contactType);
+      return {
+        toolType: "contacto",
+        resultJson: {
+          solicitud: "tarjeta_contacto",
+          tipoContacto: contactType,
+          enviada: contactSent,
+          reporteOficial: contactSent
+            ? `📇 *Tarjeta de contacto interactiva (${contactType === "broker" ? "Eduardo & Jani — Bróker Oficial" : "JanIA"}) enviada exitosamente.*`
+            : `📇 Contacto oficial: ${contactType === "broker" ? "Eduardo Rivera (+57 316 656 9719)" : "JanIA (+57 319 291 9978)"}.`
+        }
+      };
+    }
+    case "enviar_evento_visita_inmobiliaria": {
+      const titulo = String(args.titulo || "Visita Inmobiliaria").trim();
+      const descripcion = String(args.descripcion || "").trim();
+      const ubicacion = String(args.ubicacion || "").trim();
+      const fechaHora = args.fechaHoraIso ? new Date(args.fechaHoraIso).getTime() : Date.now() + 86400000;
+      const { sendNativeWhatsAppEvent } = await import("../../whatsapp-match");
+      const eventSent = await sendNativeWhatsAppEvent(userId, {
+        name: titulo,
+        description: descripcion,
+        location: ubicacion,
+        startTime: fechaHora
+      });
+      return {
+        toolType: "evento",
+        resultJson: {
+          solicitud: "evento_inmobiliario",
+          titulo,
+          ubicacion,
+          enviado: eventSent,
+          reporteOficial: `📅 *Evento Agendado:* "${titulo}" en ${ubicacion || "Virtual"}.`
+        }
+      };
+    }
+    case "enviar_catalogo_servicios": {
+      const catalogMsg =
+        `🏬 *CATÁLOGO DE SERVICIOS Y PORTAL WEB — VECY BIENES RAÍCES*\n\n` +
+        `🌐 *Portal Oficial:* https://vecy-bienes-raices.vercel.app/\n` +
+        `🤖 *JanIA Landing:* https://vecy-bienes-raices.vercel.app/jania\n` +
+        `📱 *Canal de WhatsApp:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
+        `📌 *Servicios Destacados:*\n` +
+        `• Cruce de Inmuebles y Demandas en Tiempo Real (Match 40/20/40).\n` +
+        `• Verificación Preventiva de Identidad (ADRES, Policía, Procuraduría, Contraloría, RUES).\n` +
+        `• Asistencia Factura Predial Bogotá y Paz y Salvo IDU.\n` +
+        `• Liquidación Notarial y de Registro 50/50.\n` +
+        `• Sondeos de Mercado y Avalúos Digitales.\n\n` +
+        `_¿Deseas activar alguno de estos servicios de inmediato?_ 🤝✨`;
+      return {
+        toolType: "catalogo",
+        resultJson: {
+          solicitud: "catalogo_servicios",
+          reporteOficial: catalogMsg,
+          exitoso: true
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -270,7 +447,7 @@ export async function executeJaniaDmTool(
 export async function synthesizeToolResponseWithGemini(
   userId: string,
   userName: string,
-  toolType: "cedula" | "predial" | "idu" | "notarial" | "sondeo" | "match",
+  toolType: JaniaDmToolType,
   toolJson: Record<string, any>,
   userMessage: string,
   isEduardo: boolean,
@@ -300,8 +477,7 @@ export async function synthesizeToolResponseWithGemini(
         `- Si es una consulta de matches, explica con claridad el cruce encontrado.\n` +
         `- Explica con claridad los datos técnicos sin tecnicismos robóticos ni plantillas rígidas.\n` +
         `- Mantén concisión y estructura óptima para WhatsApp (máximo 1 o 2 párrafos cortos).\n` +
-        `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n` +
-        `${isEduardo ? '- Trato directivo para Eduardo: "¡Hola, Eduardo! A tu disposición."\n' : isJani ? '- Trato directivo para Jani: "¡Hola, Jani! Qué gusto saludarte."\n' : ''}`
+        `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n`
     },
     {
       role: "user",
@@ -389,27 +565,32 @@ export async function formatPoliteToolDelivery(
   if (!success) {
     if (payloadText && payloadText.trim()) {
       if (isEduardo) {
-        return `¡${timeSalutation}, Eduardo! A tu disposición. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+        return isFirstTurn && !payloadWithClosing.startsWith("¡")
+          ? `¡${timeSalutation}, Eduardo! A tu disposición. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`
+          : payloadWithClosing;
       }
       if (isJani) {
-        return `¡${timeSalutation}, Jani! Qué gusto saludarte. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+        return isFirstTurn && !payloadWithClosing.startsWith("¡")
+          ? `¡${timeSalutation}, Jani! Qué gusto saludarte. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`
+          : payloadWithClosing;
       }
       if (isFamilyOrTrusted) {
-        return `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+        return isFirstTurn && !payloadWithClosing.startsWith("¡")
+          ? `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`
+          : payloadWithClosing;
       }
-      if (isFirstTurn) {
+      if (isFirstTurn && !payloadWithClosing.startsWith("¡")) {
         const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\n`;
         return greetingHeader + payloadWithClosing;
       } else {
-        const politeHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! `;
-        return politeHeader + payloadWithClosing;
+        return payloadWithClosing;
       }
     }
     if (isEduardo) {
-      return `¡${timeSalutation}, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+      return `Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
     if (isJani) {
-      return `¡${timeSalutation}, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+      return `Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
     if (isFamilyOrTrusted) {
       return `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
@@ -418,19 +599,34 @@ export async function formatPoliteToolDelivery(
   }
 
   if (isEduardo) {
+    if (!isFirstTurn || payloadWithClosing.startsWith("¡") || /a\s+tu\s+disposici[oó]n/i.test(payloadWithClosing)) {
+      return payloadWithClosing;
+    }
     return `¡${timeSalutation}, Eduardo! A tu disposición:\n\n${payloadWithClosing}`;
   }
   if (isJani) {
+    if (!isFirstTurn || payloadWithClosing.startsWith("¡") || /qu[eé]\s+gusto\s+saludarte/i.test(payloadWithClosing)) {
+      return payloadWithClosing;
+    }
     return `¡${timeSalutation}, Jani! Qué gusto saludarte:\n\n${payloadWithClosing}`;
   }
   if (isFamilyOrTrusted) {
+    if (!isFirstTurn || payloadWithClosing.startsWith("¡")) {
+      return payloadWithClosing;
+    }
     return `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el reporte solicitado:\n\n${payloadWithClosing}`;
   }
 
   if (isFirstTurn) {
+    if (payloadWithClosing.startsWith("¡")) {
+      return payloadWithClosing;
+    }
     const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta como un beneficio de cortesía de nuestra inmobiliaria:\n\n`;
     return greetingHeader + payloadWithClosing;
   } else {
+    if (payloadWithClosing.startsWith("¡") || payloadWithClosing.startsWith("🛡️") || payloadWithClosing.startsWith("🆔") || payloadWithClosing.startsWith("🏬")) {
+      return payloadWithClosing;
+    }
     const politeHeader = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial como un beneficio de cortesía de *VECY BIENES RAÍCES*:\n\n`;
     return politeHeader + payloadWithClosing;
   }
@@ -439,21 +635,25 @@ export async function formatPoliteToolDelivery(
 /**
  * Remueve de forma exhaustiva e iterativa cualquier saludo inicial, vocativo redundante,
  * frase de cortesía repetida ("Qué gusto saludarte", "Es un placer", "En este nuevo día")
- * y emojis de saludo al comienzo del texto (Doctrina v33.07).
+ * y emojis de saludo al comienzo del texto (Doctrina v33.07 / v33.17).
  */
 export function stripLeadingGreetingsAndCourtesies(text: string): string {
   let cleaned = (text || "").trim();
   if (!cleaned) return "";
 
-  // 1. Erradicar frases redundantes concatenadas como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día"
+  // 1. Erradicar frases redundantes concatenadas como "Qué gusto saludarte. Qué gusto saludarte en este nuevo día" o "¡Hola, Eduardo! A tu disposición."
   cleaned = cleaned.replace(
-    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]?\s*)/gi,
+    ""
+  );
+  cleaned = cleaned.replace(
+    /(?:¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)),?\s*(?:eduardo|jani)?!?:?\s*(?:a\s+tu\s+disposici[oó]n\.?:?\s*)?)+/gi,
     ""
   );
 
-  // 2. Patrones de saludos al inicio (con signos ¡ o sin ellos)
-  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?]*[!.\n?]?\s*/i;
-  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?]*))[!.\n?]?\s*/i;
+  // 2. Patrones de saludos al inicio (con signos ¡ o sin ellos, permitiendo dos puntos :)
+  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?:]*[!.\n?:]?\s*/i;
+  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:]*))[!.\n?:]?\s*/i;
   const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
 
   let changed = true;
@@ -666,6 +866,7 @@ export async function processPrivateDmConversationalMessage(
   // Procesamiento con IA Pura (Gemini + JANIA_DM_TOOLS)
   try {
     const vecyKnowledge = getVecyInstitutionalKnowledge();
+    const contactDossier = await getContactPermanentDossier(userId);
     const systemPrompt =
       `${JANIA_ARGON_COGNITIVE_CORE}\n\n` +
       `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
@@ -674,6 +875,7 @@ export async function processPrivateDmConversationalMessage(
       `BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RAÍCES:\n` +
       `===================================================\n` +
       `${vecyKnowledge}\n\n` +
+      `${contactDossier ? `${contactDossier}\n\n` : ''}` +
       `ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:\n` +
       `1. Abogada Contractual Senior: Rigor jurídico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).\n` +
       `2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retención en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).\n` +
@@ -690,13 +892,14 @@ export async function processPrivateDmConversationalMessage(
       `  * Si NO hubo interacción reciente en las últimas 6 horas: Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n` +
       `  * Si SÍ hubo interacción en las últimas 6 horas: Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.\n\n` +
       `===================================================\n` +
-      `MANEJO INTELIGENTE DE TRÁMITES Y NÚMEROS (HERRAMIENTAS DISPONIBLES):\n` +
+      `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios.\n` +
       `Reglas de ejecución según el contexto:\n` +
-      `a) Si el usuario envía un número o documento con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte.\n` +
-      `b) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
-      `c) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
+      `a) Si el usuario envía un número o documento con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.\n` +
+      `b) Si el usuario pide una tarjeta de contacto, evento, encuesta interactiva de opciones o el catálogo de servicios: Invoca la herramienta nativa correspondiente.\n` +
+      `c) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
+      `d) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
       `===================================================\n` +
       `BUSCADOR Y MEDIACIÓN DE MATCHES (CÓDIGO #M...):\n` +
       `===================================================\n` +

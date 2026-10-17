@@ -1783,6 +1783,25 @@ export class JaniaMatchBot {
         return;
       }
 
+      if (result && (chatId === this.buzonGroupId || chatId === this.circuloGroupId)) {
+        if (result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO') {
+          const rawPhone = senderId.split('@')[0];
+          const redirectText =
+            `Hola @${rawPhone} 👋🏻, publicaste una ${result.classification === 'INMUEBLE' ? 'oferta' : 'demanda'} inmobiliaria en este grupo.\n\n` +
+            `Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) inmediato, por favor publícala en nuestro grupo exclusivo:\n\n` +
+            `🏢 *${VECY_OFFICIAL_GROUPS.grupo1.name}*\n👉 ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
+            `_He eliminado tu publicación en este canal para preservar el orden temático._ 🤝✨`;
+          await this.queuedSend(chatId, redirectText, { mentions: [senderId] });
+          await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => { });
+          await this.logToDb(chatId, 'janIA', redirectText);
+          await this.sock.sendPresenceUpdate('paused', chatId);
+          return;
+        }
+        if (result.classification === 'VIOLACION_DE_NORMAS') {
+          await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => { });
+        }
+      }
+
       if (result && result.response && result.response.trim() !== '') {
         const textToDeliver = result.response;
         const voiceToDeliver = (result.voiceResponse && result.voiceResponse.trim() !== "")
@@ -1950,16 +1969,17 @@ export class JaniaMatchBot {
     if (this.isPromotionalAd(bodyText, senderId)) {
       if (!msg.key.fromMe) {
         if (isOfficialGroup) {
-          // 🚫 EN GRUPOS OFICIALES VECY: Reaccionar con 🚫 y enviar advertencia formal de sanción
-          console.log(`[JANIA-PROMO-RULE] 🚫 Publicidad no autorizada detectada en grupo oficial de +${senderId.split('@')[0]}. Reaccionando con 🚫 y advirtiendo...`);
+          // 🚫 EN GRUPOS OFICIALES VECY: Reaccionar con 🚫, eliminar de inmediato y advertir formalmente
+          console.log(`[JANIA-PROMO-RULE] 🚫 Publicidad no autorizada detectada en grupo oficial de +${senderId.split('@')[0]}. Eliminando y advirtiendo...`);
 
           this.sock.sendMessage(chatId, { react: { text: '🚫', key: msg.key } }).catch(() => { });
+          this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => { });
 
           const rawPhone = senderId.split('@')[0];
           const mentionJid = `${rawPhone}@s.whatsapp.net`;
-          const warningText = `🚫 @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Raíces.\n\nPor favor elimina esta publicación. Te advertimos que la reincidencia dará lugar a la expulsión inmediata del grupo.`;
+          const warningText = `🚫 @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Raíces.\n\nHe procedido a eliminar tu publicación para preservar el orden profesional de la comunidad. Te advertimos que la reincidencia dará lugar a la expulsión del grupo.`;
 
-          this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => { });
+          this.queuedSend(chatId, warningText, { mentions: [mentionJid] }).catch(() => { });
         } else {
           // 🛡️ EN GRUPOS EXTERNOS: CERO REACCIONES, CERO INGESTA, CERO SUPABASE / BD (IGNORAR 100% SILENCIOSO)
           console.log(`[JANIA-PROMO-SHIELD] 🛡️ Publicidad no inmobiliaria ignorada en grupo externo de +${senderId.split('@')[0]} (Cero reacción, cero ingesta, cero Supabase).`);
@@ -3114,8 +3134,48 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 
   /**
-   * 👥 Auto-aprobación de solicitudes pendientes de ingreso en los grupos oficiales de VECY BIENES RAÍCES (v32.60)
+   * 📅 Envía un evento nativo de WhatsApp Business o tarjeta de evento estructurada (v33.17)
    */
+  public async sendEventMessage(targetJid: string, eventData: { name: string; description?: string; startTime: number; location?: string }): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady) return false;
+      const startTimeSeconds = Math.floor(eventData.startTime > 9999999999 ? eventData.startTime / 1000 : eventData.startTime);
+      try {
+        await this.sock.sendMessage(targetJid, {
+          event: {
+            name: eventData.name,
+            description: eventData.description || '',
+            startTime: startTimeSeconds,
+            location: eventData.location ? { name: eventData.location } : undefined
+          }
+        });
+        return true;
+      } catch (eventErr) {
+        // Fallback enriquecido si el cliente WhatsApp no soporta payload proto de evento
+        const eventDateStr = new Date(eventData.startTime).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+        const fallbackText = `📅 *EVENTO OFICIAL — VECY BIENES RAÍCES*\n\n📌 *Título:* ${eventData.name}\n⏰ *Fecha y Hora:* ${eventDateStr}\n📍 *Ubicación:* ${eventData.location || 'Virtual / En línea'}\n\n📝 *Detalles:* ${eventData.description || 'Reunión coordinada a través de JanIA.'}`;
+        await this.sendDirectMessage(targetJid, fallbackText);
+        return true;
+      }
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] Error enviando evento a ${targetJid}:`, err?.message || err);
+      return false;
+    }
+  }
+
+  /**
+   * 🗑️ Elimina inmediatamente un mensaje infractor en WhatsApp por su key (v33.17)
+   */
+  public async deleteMessage(targetJid: string, messageKey: any): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady || !messageKey) return false;
+      await this.sock.sendMessage(targetJid, { delete: messageKey });
+      return true;
+    } catch (err: any) {
+      console.warn(`[JANIA-MATCH] No se pudo eliminar mensaje en ${targetJid}:`, err?.message || err);
+      return false;
+    }
+  }
   public async approvePendingGroupRequests(): Promise<void> {
     if (!this.sock || !this.isReady) return;
     const officialGroupIds = [
@@ -3592,3 +3652,20 @@ export const janiaMatchBot = new JaniaMatchBot({
 });
 export const janiaCaptadorBot = janiaMatchBot;
 export const whatsappBot = janiaMatchBot;
+
+// ─── Superpoderes Nativos WhatsApp Business Exportados (v33.17) ──────────────
+export async function sendNativeWhatsAppPoll(targetJid: string, name: string, options: string[], selectableCount: number = 1): Promise<boolean> {
+  return janiaMatchBot.sendPoll(targetJid, name, options, selectableCount);
+}
+
+export async function sendNativeWhatsAppContact(targetJid: string, contactType: 'jania' | 'broker' = 'broker'): Promise<boolean> {
+  return janiaMatchBot.sendContactCard(targetJid, contactType);
+}
+
+export async function sendNativeWhatsAppEvent(targetJid: string, eventData: { name: string; description?: string; startTime: number; location?: string }): Promise<boolean> {
+  return janiaMatchBot.sendEventMessage(targetJid, eventData);
+}
+
+export async function deleteNativeWhatsAppMessage(targetJid: string, messageKey: any): Promise<boolean> {
+  return janiaMatchBot.deleteMessage(targetJid, messageKey);
+}

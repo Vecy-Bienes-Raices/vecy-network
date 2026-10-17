@@ -331,6 +331,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.17 — Octubre 2026
+
+#### [v33.17.0] — 2026-10-16: JanIA "Gemela Cognitiva de Gemini 4 Argon": Reconexión de Scrapers Oficiales, RUES/NIT, PDFs, Memoria Permanente y Superpoderes Nativos WhatsApp Business
+- **Personalidad Gemini 4 Argon y Erradicación del Doble Saludo (`prompts.ts`, `dmHandler.ts`):** Fusión de persuasión ejecutiva, calidez y conocimiento normativo inmobiliario colombiano. Erradicación definitiva de saludos duplicados y concatenaciones redundantes (`formatPoliteToolDelivery` y `stripLeadingGreetingsAndCourtesies` con delimitadores expandidos a dos puntos `:`).
+- **Superpoderes Nativos de WhatsApp Business (`whatsapp-match.ts`, `dmHandler.ts`):**
+  - Encuestas interactivas de 1 clic con límite de opciones seleccionables (`sendNativeWhatsAppPoll`).
+  - Tarjetas de contacto vCard profesionales (`sendNativeWhatsAppContact`) para JanIA y Bróker Oficial (+57 316 656 9719).
+  - Mensajes de evento estructurado (`sendNativeWhatsAppEvent`) para agendamiento de visitas a propiedades.
+  - Moderación inteligente en Grupos 1, 2 y 3: eliminación inmediata de publicaciones cruzadas o fuera de tema (`deleteMessage`) y redirección cordial con enlace de invitación oficial.
+- **Reconexión de Scrapers Oficiales y Consulta RUES/DIAN (`identityVerificationService.ts`):**
+  - Implementación del algoritmo matemático oficial de la DIAN para el Dígito de Verificación (Módulo 11 con pesos primos inversos) en `calculateDianDv`.
+  - Nueva función `queryEmpresaOrNit` para consulta de personas jurídicas por NIT o razón social, integrando información de Cámara de Comercio y antecedentes en Procuraduría (SIRI) y Contraloría (SIRECI).
+  - Reconexión robusta de ADRES BDUA, Policía Nacional (con bypass 2Captcha), Procuraduría y Contraloría bajo la plantilla unificada de Habeas Data (Ley 1581/12).
+- **Memoria Permanente Inteligente y Dossier de Contacto (`sessionManager.ts`):**
+  - Eliminada la caducidad temporal a medianoche y la ventana fija de 72 horas. Memoria conversacional permanente que mantiene los últimos 20 turnos con fecha y hora `[YYYY-MM-DD HH:mm]`.
+  - Inyección del historial inmobiliario del contacto (`getContactPermanentDossier`) consultando en base de datos propiedades y requerimientos previos asociados a su teléfono.
+- **Entrega Desacoplada de Documentos PDF (`dmHandler.ts`):** Soporte de entrega de archivos PDF nativos (Facturas Predial Bogotá, Paz y Salvo IDU, Certificados de Pago) tanto en WhatsApp (`document` message) como en Web.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **279/279 passing** al 100% en verde a $0 COP | Build `npm run build` limpio en 15.34s (Vite) + 161ms (esbuild).
+
 ### 🔖 v33.16 — Octubre 2026
 
 #### [v33.16.0] — 2026-10-16: Reforma Arquitectónica LLM Puro, Matches M-Code y Memoria Deslizante de 72 Horas

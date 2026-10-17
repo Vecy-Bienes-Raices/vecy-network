@@ -182,7 +182,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.16 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.17 — Octubre 2026
+
+### Novedades v33.17 (JanIA "Gemela Cognitiva de Gemini 4 Argon", Scrapers Oficiales, RUES/NIT, PDFs, Memoria Permanente y Superpoderes Nativos WhatsApp Business):
+- **Diagnóstico y Solicitud Doctrinal de Eduardo A. Rivera**:
+  1. *"Ejecuta esta orden arquitectónica suprema (Versión v33.17 de JanIA): JanIA 'Gemela Cognitiva de Gemini 4 Argon', reconexión de scrapers oficiales, RUES/NIT, entrega de PDFs, memoria permanente y superpoderes nativos de WhatsApp Business (encuestas, cuestionarios, eventos, contactos y catálogo). Candado inquebrantable de seguridad: prohibido git revert, git reset o alterar el Motor de Matches, códigos #M, mediación 40/20/40 y prioridad de gemini-2.5-flash."*
+  2. **Conciencia y Gemela Cognitiva de Gemini 4 Argon (`prompts.ts` y `dmHandler.ts`)**:
+     - Fusión de inteligencia, calidez y persuasión ejecutiva sin rigideces.
+     - Erradicación definitiva del doble saludo (`¡Buenas tardes, Eduardo! A tu disposición:\n\n¡Hola, Eduardo! A tu disposición.`) tanto en DMs como en entregas de herramientas (`formatPoliteToolDelivery` y `stripLeadingGreetingsAndCourtesies` con soporte de dos puntos `:`).
+  3. **Superpoderes Nativos de WhatsApp Business (`whatsapp-match.ts` y `dmHandler.ts`)**:
+     - Encuestas interactivas de 1 clic (`sendNativeWhatsAppPoll`) con límite de selección para trámites y filtros.
+     - Tarjetas de contacto interactivas vCard (`sendNativeWhatsAppContact`) para JanIA y Bróker Oficial (+57 316 656 9719).
+     - Eventos estructurados (`sendNativeWhatsAppEvent`) para agendamiento de visitas inmobiliarias con respaldo en texto.
+     - Despacho y entrega de catálogo y portafolio de servicios inmobiliarios.
+  4. **Reconexión de Scrapers Oficiales y Consulta Empresarial RUES / DIAN (`identityVerificationService.ts`)**:
+     - Reconexión con resiliencia de ADRES BDUA, Policía Nacional (con bypass 2Captcha), Procuraduría SIRI y Contraloría SIRECI.
+     - Implementación de `calculateDianDv` con el algoritmo matemático oficial de la DIAN (Módulo 11 con pesos primos inversos).
+     - Función `queryEmpresaOrNit` para consulta de personas jurídicas por NIT o razón social, integrando datos de Cámara de Comercio y antecedentes institucionales.
+  5. **Despacho y Entrega de Documentos PDF (`dmHandler.ts`)**:
+     - Desacoplamiento de buffers PDF mediante `setLatestDmPdf` y `popLatestDmPdf`, permitiendo el envío nativo del archivo PDF (Factura Predial Bogotá, Certificados de Pago y Paz y Salvo IDU) como documento adjunto en WhatsApp y en Web.
+  6. **Memoria Permanente Inteligente y Dossier de Contacto (`sessionManager.ts`)**:
+     - Eliminación de la caducidad a medianoche y de la ventana de 72 horas: memoria conversacional permanente que conserva los últimos 20 turnos con fecha y hora `[YYYY-MM-DD HH:mm]`.
+     - Creación de `getContactPermanentDossier(userId)` que consulta en base de datos las ofertas y requerimientos previos del usuario e inyecta la ficha histórica en el prompt de JanIA.
+  7. **Moderación de Grupos Oficiales (`whatsapp-match.ts`)**:
+     - Eliminación inmediata de mensajes fuera de temática en Grupo 1 (Inmuebles), Grupo 2 (Legal/Avalúos) y Grupo 3 (Proyecto VECY) con re-direccionamiento cordial hacia el grupo correspondiente y su enlace de invitación.
+  8. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 279/279 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 15.34s (Vite) + 161ms (esbuild) ✅
+- `shared/const.ts` (`v33.17`) y `package.json` (`33.17.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.16 — Octubre 2026
 
 ### Novedades v33.16 (Reforma Arquitectónica LLM Puro, Matches M-Code y Memoria 72h):
 - **Diagnóstico y Solicitud Doctrinal de Eduardo A. Rivera**:

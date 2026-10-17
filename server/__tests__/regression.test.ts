@@ -3182,11 +3182,9 @@ Adriana Rebeca Orejuela`;
       appendDmHistory(testUserId, "user", "En el que ya tengan");
 
       const activeTodayHistory = getDmHistory(testUserId);
-      // El mensaje de ayer debe haber sido filtrado por la ventana del día en curso
-      expect(activeTodayHistory.some(m => m.content === "Mensaje de ayer")).toBe(false);
-      // Los mensajes de hoy deben estar intactos
-      expect(activeTodayHistory.length).toBe(3);
-      expect(activeTodayHistory[2].content).toBe("En el que ya tengan");
+      // Memoria permanente v33.17: conserva los mensajes sin descarte temporal
+      expect(activeTodayHistory.length).toBeGreaterThanOrEqual(3);
+      expect(activeTodayHistory.some(m => m.content.includes("En el que ya tengan"))).toBe(true);
 
       // 3. Validar capacidad ampliada de hasta 24 turnos
       for (let i = 1; i <= 20; i++) {
@@ -5789,13 +5787,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(replyNumber).not.toContain("Política de Tratamiento de Datos");
     });
 
-    it("4. Consagración doctrinal de versión v33.16 en shared/const.ts y package.json", async () => {
+    it("4. Consagración doctrinal de versión v33.16/v33.17 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.16");
+      expect(VECY_VERSION).toMatch(/^v33\.1[67]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.16.0");
+      expect(pkg.version).toMatch(/^33\.1[67]\.0$/);
     });
   });
 
@@ -5817,7 +5815,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       appendDmHistory(testUid, "assistant", "¡Hola! ¿En qué te colaboro?");
       const hist = getDmHistory(testUid);
       expect(hist.length).toBe(2);
-      expect(hist[0].content).toBe("Hola JanIA");
+      expect(hist[0].content).toContain("Hola JanIA");
     });
 
     it("3. Buscador y mediación de matches: reporte diferenciado Admin vs Colega Externo con código #M y 40/20/40", async () => {
@@ -5851,6 +5849,131 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(extRep).toContain("#M15649");
       expect(extRep).toContain("40/20/40");
       expect(extRep).toContain("+57 316 656 9719");
+    });
+  });
+
+  describe("SUITE 78: JanIA v33.17 — GEMELA COGNITIVA ARGON, SCRAPERS OFICIALES, RUES/NIT, PDFs, MEMORIA PERMANENTE Y SUPERPODERES NATIVOS WHATSAPP", () => {
+    it("1. Validación de Memoria Permanente Inteligente (20 turnos con timestamp [YYYY-MM-DD HH:mm] y Ficha Histórica)", async () => {
+      const { getDmHistory, appendDmHistory, getContactPermanentDossier } = await import("../_core/jania/sessionManager");
+      const testUid = `perm-test-${Date.now()}@s.whatsapp.net`;
+      appendDmHistory(testUid, "user", "Consulta predial Bogotá");
+      appendDmHistory(testUid, "assistant", "Con gusto, facilítame el CHIP.");
+
+      const hist = getDmHistory(testUid);
+      expect(hist.length).toBe(2);
+      expect(hist[0].content).toMatch(/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] Consulta predial Bogotá/);
+
+      const dossier = await getContactPermanentDossier(testUid);
+      expect(typeof dossier).toBe("string");
+    });
+
+    it("2. Consulta de Empresas y NITs por número o razón social (RUES + DIAN con Dígito de Verificación Módulo 11)", async () => {
+      const { calculateDianDv, queryEmpresaOrNit } = await import("../_core/identityVerificationService");
+      // Validación del algoritmo oficial DIAN Módulo 11
+      expect(calculateDianDv("900123456")).toBe(8);
+      expect(calculateDianDv("860002964")).toBe(4); // Banco de Bogotá
+
+      const resEmpresa = await queryEmpresaOrNit("860002964");
+      expect(resEmpresa.success).toBe(true);
+      expect(resEmpresa.reportText).toContain("RUES / DIAN");
+      expect(resEmpresa.reportText).toContain("860002964");
+      expect(resEmpresa.reportText).toContain("Ley 1581/12");
+    });
+
+    it("3. Verificación de Identidad con Plantilla Oficial (Habeas Data, Datos de Identidad, Antecedentes PONAL/PGN/CGR/ADRES)", async () => {
+      const { formatCompactIdentityVerificationReport } = await import("../_core/identityVerificationService");
+      const report = formatCompactIdentityVerificationReport({
+        tipoDoc: "CC",
+        cedula: "1233903423",
+        fullName: "Daniel Eduardo Rivera Noguera",
+        idValidated: true,
+        policiaStatus: "Sin antecedentes judiciales ni requerimientos penales.",
+        procuraduriaStatus: "No registra sanciones ni inhabilidades vigentes.",
+        contraloriaStatus: "Sin reporte en Boletín de Responsables Fiscales.",
+        adresStatus: 'Activo, eps "Cápital Salud" Regimen Subsidiado.'
+      });
+
+      expect(report).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(report).toContain("Habeas Data (Ley 1581/12)");
+      expect(report).toContain("🆔 *DATOS DE IDENTIDAD*");
+      expect(report).toContain("1.233.903.423");
+      expect(report).toContain("Daniel Eduardo Rivera Noguera");
+      expect(report).toContain("ANTECEDENTES");
+      expect(report).toContain("POLICÍA:");
+      expect(report).toContain("PROCURADURÍA:");
+      expect(report).toContain("CONTRALORÍA:");
+      expect(report).toContain("ADRES (BDUA):");
+    });
+
+    it("4. Despacho y entrega desacoplada de documentos PDF en DMs (setLatestDmPdf / popLatestDmPdf)", async () => {
+      const { setLatestDmPdf, popLatestDmPdf } = await import("../_core/jania/handlers/dmHandler");
+      const testUser = "573192919978@s.whatsapp.net";
+      const dummyPdf = Buffer.from("%PDF-1.4 dummy predial content");
+
+      setLatestDmPdf(testUser, { pdfBuffer: dummyPdf, pdfFileName: "Factura_Predial_AAA0123_2026.pdf" });
+      const popped = popLatestDmPdf(testUser);
+      expect(popped).toBeDefined();
+      expect(popped?.pdfFileName).toBe("Factura_Predial_AAA0123_2026.pdf");
+      expect(popped?.pdfBuffer.toString()).toContain("%PDF-1.4");
+
+      // Segundo pop debe estar vacío
+      const empty = popLatestDmPdf(testUser);
+      expect(empty).toBeUndefined();
+    });
+
+    it("5. Superpoderes Nativos WhatsApp Business: Encuestas, vCard, Eventos y Eliminación de Mensajes", async () => {
+      const { sendNativeWhatsAppPoll, sendNativeWhatsAppContact, sendNativeWhatsAppEvent, deleteNativeWhatsAppMessage } = await import("../_core/whatsapp-match");
+      expect(typeof sendNativeWhatsAppPoll).toBe("function");
+      expect(typeof sendNativeWhatsAppContact).toBe("function");
+      expect(typeof sendNativeWhatsAppEvent).toBe("function");
+      expect(typeof deleteNativeWhatsAppMessage).toBe("function");
+
+      // En entorno de test sin socket activo, retornan false limpiamente sin crashear
+      const pollRes = await sendNativeWhatsAppPoll("test@g.us", "¿Qué trámite deseas?", ["Predial", "Cédula", "Match"]);
+      expect(pollRes).toBe(false);
+
+      const contactRes = await sendNativeWhatsAppContact("test@s.whatsapp.net", "broker");
+      expect(contactRes).toBe(false);
+
+      const eventRes = await sendNativeWhatsAppEvent("test@s.whatsapp.net", {
+        name: "Visita Inmobiliaria Chicó",
+        startTime: Date.now() + 3600000,
+        location: "Carrera 15 # 93-20"
+      });
+      expect(eventRes).toBe(false);
+
+      const delRes = await deleteNativeWhatsAppMessage("test@g.us", { id: "msg-123" });
+      expect(delRes).toBe(false);
+    });
+
+    it("6. Erradicación total de dobles saludos y limpieza de prefijos redundantes", async () => {
+      const { stripLeadingGreetingsAndCourtesies, formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
+
+      // Strip de saludos iniciales y cortesías repetidas
+      const dirty1 = "¡Hola, Eduardo! A tu disposición:\n\n¡Hola, Eduardo! A tu disposición. Aquí tienes el reporte.";
+      const cleaned1 = stripLeadingGreetingsAndCourtesies(dirty1);
+      expect(cleaned1).not.toContain("¡Hola, Eduardo! A tu disposición:");
+      expect(cleaned1).toContain("Aquí tienes el reporte.");
+
+      const dirty2 = "¡Buenas tardes, Eduardo! A tu disposición:\n\nAquí están los antecedentes.";
+      const cleaned2 = stripLeadingGreetingsAndCourtesies(dirty2);
+      expect(cleaned2).not.toContain("A tu disposición:");
+      expect(cleaned2).toContain("Aquí están los antecedentes.");
+
+      // En entrega de herramientas para Eduardo en turnos posteriores, no debe duplicar saludo
+      const toolReport = "🛡️ VERIFICACIÓN OFICIAL PONAL: Sin antecedentes.";
+      const delivered = await formatPoliteToolDelivery("573192919978@s.whatsapp.net", "Eduardo Rivera", "cedula", toolReport, true);
+      expect(delivered).not.toContain("¡Buenas tardes, Eduardo! A tu disposición:\n\n¡Hola, Eduardo! A tu disposición.");
+      expect(delivered).toContain("VERIFICACIÓN OFICIAL PONAL");
+    });
+
+    it("7. Consagración doctrinal de versión v33.17 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.17");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.17.0");
     });
   });
 });

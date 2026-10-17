@@ -1,10 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.16.0 — 2026-10-16)
-- **JanIA Server:** `v33.16` (`33.16.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Reforma Arquitectónica LLM Puro:** Erradicación total de expresiones regulares interceptoras, respuestas enlatadas rígidas y mutilaciones de texto en DMs; Gemini opera con total autonomía cognitiva, historial fluido y `JANIA_DM_TOOLS`.
-- **Regla del Saludo Único:** Estructura horaria indivisible (`¡Buenos días / tardes / noches, [Nombre]! 👋`) emitida estrictamente en el primer turno de la conversación; continuidad directa y limpia en turnos posteriores.
-- **Protección de Datos en Matches (M-Code):** Fichas técnicas completas para directores/admin; código único `#M[id]` y datos de contacto ofuscados para inmobiliarias externas, canalizando la alianza 40/20/40 al bróker oficial (`+57 316 656 9719`).
-- **Memoria Deslizante de 72 Horas:** Historial conversacional continuo que abarca hasta 3 días (72h) y 20 turnos, preservando el contexto completo de fines de semana.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (272/272 a $0 COP) | Build `npm run build` limpio (Vite 15.28s + esbuild 157ms).
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.17.0 — 2026-10-16)
+- **JanIA Server:** `v33.17` (`33.17.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **JanIA "Gemela Cognitiva de Gemini 4 Argon":** Personalidad Argon de persuasión ejecutiva, agudeza mental, calidez humana y solvencia jurídica superior; erradicación definitiva del doble saludo en DMs y entregas de herramientas.
+- **Superpoderes Nativos WhatsApp Business:** Encuestas interactivas (`sendNativeWhatsAppPoll`), tarjetas de contacto vCard (`sendNativeWhatsAppContact`), eventos estructurados (`sendNativeWhatsAppEvent`) y moderación con borrado en grupos oficiales con enlace de invitación.
+- **Reconexión de Scrapers y Consulta Empresarial RUES / DIAN:** Verificación oficial de identidad unificada (Habeas Data Ley 1581/12, Policía, Procuraduría, Contraloría, ADRES BDUA) y consulta de empresas / NITs con cálculo matemático de Dígito de Verificación Módulo 11.
+- **Memoria Permanente Inteligente:** Historial continuo permanente de hasta 20 turnos con timestamp `[YYYY-MM-DD HH:mm]` e inyección de ficha histórica del contacto desde la base de datos (`getContactPermanentDossier`).
+- **Entrega de Documentos PDF:** Despacho nativo de archivos PDF en WhatsApp para Predial Bogotá, Certificados de Pago y Paz y Salvo IDU.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (279/279 a $0 COP) | Build `npm run build` limpio (Vite 15.34s + esbuild 161ms).
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
