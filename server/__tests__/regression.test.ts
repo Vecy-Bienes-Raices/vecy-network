@@ -4586,11 +4586,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(0[2-9]|1[0-9])$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(0[2-9]|[1-9][0-9])$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:[2-9]|1[0-9])\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:[2-9]|[1-9][0-9])\.0$/);
     });
   });
 
@@ -4950,11 +4950,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versión v33.06 y package.json 33.6.0", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(0[6-9]|1[0-9])$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(0[6-9]|[1-9][0-9])$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:[6-9]|1[0-9])\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:[6-9]|[1-9][0-9])\.0$/);
     });
   });
 
@@ -5028,11 +5028,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("5. Consagración doctrinal de versión v33.07 en histórico", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(0[7-9]|1[0-9])/);
+      expect(VECY_VERSION).toMatch(/^v33\.(0[7-9]|[1-9][0-9])/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:[7-9]|1[0-9])\.0/);
+      expect(pkg.version).toMatch(/^33\.(?:[7-9]|[1-9][0-9])\.0/);
     });
   });
 
@@ -5439,11 +5439,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("4. Consagración doctrinal de versión v33.12 y package.json 33.12.0 (o superior)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.1[2-9]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(1[2-9]|[2-9][0-9])$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.1[2-9]\.0$/);
+      expect(pkg.version).toMatch(/^33\.(1[2-9]|[2-9][0-9])\.0$/);
     });
   });
 
@@ -5565,7 +5565,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(extractedOp.found).toBe(true);
       expect(extractedOp.detectedName).toBeUndefined();
 
-      // 2. Reporte compacto adaptado a NIT
+      // 2. Reporte compacto adaptado a NIT (Plantilla RUES de 4 secciones + pregunta interactiva)
       const nitRep = formatCompactIdentityVerificationReport({
         cedula: "900123456",
         tipoDoc: "nit",
@@ -5573,9 +5573,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         fullName: "INVERSIONES INMOBILIARIAS SAS",
         success: true
       });
-      expect(nitRep).toContain("No aplica para personas jurídicas (exclusivo para personas naturales)");
-      expect(nitRep).toContain("Sin sanciones ni inhabilidades contractuales vigentes en el sistema SIRI");
-      expect(nitRep).toContain("Persona Jurídica (no aplica afiliación individual en BDUA salud)");
+      expect(nitRep).toContain("INFORMACIÓN GENERAL — DATOS EMPRESARIALES");
+      expect(nitRep).toContain("ACTIVIDAD ECONÓMICA (CIIU)");
+      expect(nitRep).toContain("PROPIETARIO / ESTABLECIMIENTO");
+      expect(nitRep).toContain("¿Deseas que realice la verificación de identidad y antecedentes");
 
       // 3. Desacoplamiento de PDF en DM
       const dummyBuffer = Buffer.from("%PDF-1.4 dummy", "utf-8");
@@ -5789,11 +5790,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("4. Consagración doctrinal de versión v33.16+ en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.1[6789]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(1[6789]|[2-9][0-9])$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.1[6789]\.0$/);
+      expect(pkg.version).toMatch(/^33\.(1[6789]|[2-9][0-9])\.0$/);
     });
   });
 
@@ -5970,11 +5971,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("7. Consagración doctrinal de versión v33.17+ en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.1[789]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(1[789]|2\d)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.1[789]\.0$/);
+      expect(pkg.version).toMatch(/^33\.(1[789]|2\d)\.0$/);
     });
   });
 
@@ -6055,27 +6056,38 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(representantesSuplentes[0].numeroIdentificacion).toBe("1032440704");
     });
 
-    it("4. Reporte corporativo de NIT/Empresa distingue Representante Legal Principal vs Suplentes, aclara antecedentes de Personas Jurídicas vs Naturales y pre-carga la CC del Representante Principal", async () => {
-      const { queryEmpresaOrNit, getPendingUnconfirmedDoc, detectTramiteConfirmation } = await import("../_core/identityVerificationService");
+    it("4. Plantilla Informativa Oficial RUES de 4 secciones (Información General, Actividad Económica, Representante Legal y Establecimientos) + pregunta post-reporte sin mezclar antecedentes", async () => {
+      const { queryEmpresaOrNit, getPendingUnconfirmedDoc, getPendingCompanyMembers, detectTramiteConfirmation } = await import("../_core/identityVerificationService");
       const testUserId = `rues-test-${Date.now()}@s.whatsapp.net`;
 
       const res = await queryEmpresaOrNit("860005224", testUserId);
       expect(res.success).toBe(true);
-      expect(res.reportText).toContain("DATOS EMPRESARIALES (RUES / DIAN / CONFECÁMARAS)");
+      expect(res.reportText).toContain("INFORMACIÓN GENERAL — DATOS EMPRESARIALES (RUES / DIAN / CONFECÁMARAS)");
       expect(res.reportText).toContain("BAVARIA & CIA S.C.A.");
       expect(res.reportText).toContain("860.005.224-6");
+      expect(res.reportText).toContain("Categoría de la Matrícula:");
+      expect(res.reportText).toContain("Tipo de Sociedad:");
+      expect(res.reportText).toContain("Tipo Organización:");
+      expect(res.reportText).toContain("ACTIVIDAD ECONÓMICA (CIIU)");
+      expect(res.reportText).toContain("REPRESENTANTE LEGAL Y MIEMBROS INSCRITOS (RUES)");
       expect(res.reportText).toContain("Rep. Legal Principal (Plenas Facultades)");
       expect(res.reportText).toContain("Sergio Andres Rincon Rincon");
       expect(res.reportText).toContain("71.755.745");
       expect(res.reportText).toContain("Suplentes / Representación Judicial (Facultades Restringidas)");
       expect(res.reportText).toContain("Advertencia Jurídica:");
-      expect(res.reportText).toContain("No aplica para personas jurídicas");
+      expect(res.reportText).toContain("PROPIETARIO / ESTABLECIMIENTO");
+      expect(res.reportText).toContain("No se encontraron resultados.");
+      expect(res.reportText).toContain("¿Deseas que realice la verificación de identidad y antecedentes");
 
-      // Debe haber pre-cargado la cédula del Representante Legal Principal en la sesión del usuario para verificación en 1 paso
+      // Debe haber pre-cargado la cédula del Representante Legal Principal y los miembros en la sesión del usuario
       const pendingRepDoc = getPendingUnconfirmedDoc(testUserId);
       expect(pendingRepDoc).not.toBeNull();
       expect(pendingRepDoc?.cleanNumber).toBe("71755745");
       expect(pendingRepDoc?.rawNumber).toBe("71755745");
+
+      const pendingMembers = getPendingCompanyMembers(testUserId);
+      expect(pendingMembers).not.toBeNull();
+      expect(pendingMembers?.length).toBe(3);
 
       // Y detectTramiteConfirmation reconoce "verificar representante" para disparar el chequeo del Representante Principal
       expect(detectTramiteConfirmation("verificar representante")).toEqual({
@@ -6085,18 +6097,18 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.19 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.20 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.19");
+      expect(VECY_VERSION).toBe("v33.20");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.19.0");
+      expect(pkg.version).toBe("33.20.0");
     });
   });
 
-  describe("SUITE 80: Resolución de FunctionCall.args de Gemini, Respaldo Socrata RUES Nacional (0 Geo-Block VPS) y Detección de NIT 9 Dígitos (v33.19)", () => {
-    it("1. executeJaniaDmTool resuelve correctamente NIT '900788832' desde rawUserText o alias de argumentos sin caer jamás en el NIT 901488282", async () => {
+  describe("SUITE 80: Plantilla RUES 4 Secciones (NIT <-> Razón Social), FunctionCall.args de Gemini y Respaldo Socrata RUES Nacional (v33.20)", () => {
+    it("1. executeJaniaDmTool entrega la plantilla completa RUES para NIT '900788832' (Transportes Gonzalez Diaz TG&D SAS, CIIU 4923 y 7710, Rep Legal Sandra Milena Diaz Mondragon) y ofrece verificar antecedentes post-reporte", async () => {
       const { executeJaniaDmTool } = await import("../_core/jania/handlers/dmHandler");
       const userId = "225954035179724@lid";
 
@@ -6110,18 +6122,26 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       );
       expect(res1.toolType).toBe("empresa");
       expect(res1.resultJson.reporteOficial).toContain("900.788.832-8");
+      expect(res1.resultJson.reporteOficial).toContain("TRANSPORTES GONZALEZ DIAZ TG&D SAS");
+      expect(res1.resultJson.reporteOficial).toContain("4923");
+      expect(res1.resultJson.reporteOficial).toContain("Transporte de carga por carretera");
+      expect(res1.resultJson.reporteOficial).toContain("7710");
+      expect(res1.resultJson.reporteOficial).toContain("Alquiler y arrendamiento de vehículos automotores");
+      expect(res1.resultJson.reporteOficial).toContain("Sandra Milena Diaz Mondragon");
+      expect(res1.resultJson.reporteOficial).toContain("46.375.136");
+      expect(res1.resultJson.reporteOficial).toContain("PROPIETARIO / ESTABLECIMIENTO");
       expect(res1.resultJson.reporteOficial).not.toContain("901.488.282-3");
 
-      // Caso 2: Gemini invoca consultar_identidad_y_antecedentes con numeroDocumento: "900788832"
-      const res2 = await executeJaniaDmTool(
-        "consultar_identidad_y_antecedentes",
-        { numeroDocumento: "900788832" },
+      // Caso 2: Búsqueda inversa por Razón Social ("Transportes Gonzalez Diaz") devuelve el NIT 900.788.832-8
+      const resRazon = await executeJaniaDmTool(
+        "consultar_empresa_o_nit",
+        { consultaEmpresa: "Transportes Gonzalez Diaz" },
         userId,
         "Vecy Bienes Raíces",
-        "Jania verificame este nit 900788832"
+        "Verificar empresa Transportes Gonzalez Diaz"
       );
-      expect(res2.resultJson.reporteOficial).toContain("900.788.832-8");
-      expect(res2.resultJson.reporteOficial).toContain("DATOS EMPRESARIALES (RUES / DIAN / CONFECÁMARAS)");
+      expect(resRazon.resultJson.reporteOficial).toContain("900.788.832-8");
+      expect(resRazon.resultJson.reporteOficial).toContain("2517719");
     });
 
     it("2. extractAllCedulasForVerification detecta NITs con puntos, con DV o de 9 dígitos iniciados en 8/9", async () => {
@@ -6143,15 +6163,23 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(items3[0].tipoDoc).toBe("nit");
     });
 
-    it("3. formatOrganizacionJuridica y CIIU_DESCRIPTIONS normalizan tipos societarios y actividades económicas de Datos Abiertos RUES", async () => {
-      const { formatOrganizacionJuridica, CIIU_DESCRIPTIONS } = await import("../_core/ruesService");
+    it("3. formatOrganizacionJuridica, extractActividadesEconomicas y CIIU_DESCRIPTIONS normalizan tipos societarios y múltiples CIIU de RUES", async () => {
+      const { formatOrganizacionJuridica, extractActividadesEconomicas, CIIU_DESCRIPTIONS } = await import("../_core/ruesService");
 
       expect(formatOrganizacionJuridica("SOCIEDADES POR ACCIONES SIMPLIFICADAS SAS")).toBe(
         "Sociedad por Acciones Simplificada (S.A.S.)"
       );
       expect(formatOrganizacionJuridica("SOCIEDAD ANONIMA")).toBe("Sociedad Anónima (S.A.)");
       expect(CIIU_DESCRIPTIONS["4923"]).toBe("Transporte de carga por carretera");
-      expect(CIIU_DESCRIPTIONS["6820"]).toContain("Actividades inmobiliarias");
+      expect(CIIU_DESCRIPTIONS["7710"]).toBe("Alquiler y arrendamiento de vehículos automotores");
+
+      const acts = extractActividadesEconomicas({
+        cod_ciiu_act_econ_pri: "4923",
+        cod_ciiu_act_econ_sec: "7710"
+      });
+      expect(acts.length).toBe(2);
+      expect(acts[0]).toEqual({ codigo: "4923", descripcion: "Transporte de carga por carretera" });
+      expect(acts[1]).toEqual({ codigo: "7710", descripcion: "Alquiler y arrendamiento de vehículos automotores" });
     });
   });
 });

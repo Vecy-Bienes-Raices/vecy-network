@@ -7375,3 +7375,17 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **287/287 passing** ($0 COP) | Build `npm run build` limpio.
 
+---
+
+### Versión v33.20 — Octubre 2026: Plantilla Informativa Oficial RUES en 4 Secciones Bidireccional (NIT ↔ Razón Social) y Verificación Posterior de Antecedentes a Solicitud del Usuario
+- **Plantilla Informativa Oficial RUES en 4 Secciones (`server/_core/ruesService.ts` y `server/_core/identityVerificationService.ts`)**:
+  * Estructuración exacta solicitada por Eduardo para consultas de empresas (`consultar_empresa_o_nit` y `queryEmpresaOrNit`), operando de forma bidireccional (si entregan NIT devuelve Razón Social, y si entregan Razón Social averigua y entrega el NIT con dígito de verificación):
+    1. **📌 Información General:** `Razón Social`, `Identificación` (`NIT 900788832 - 8`), `Categoría de la Matrícula` (`Sociedad ó persona jurídica principal ó ESAL`), `Tipo de Sociedad` (`Sociedad comercial`), `Tipo Organización` (`Sociedades por acciones simplificadas SAS`), `Cámara de Comercio` (`Bogotá D.C.`), `Número de Matrícula`, `Fecha de Matrícula`, `Fecha de Renovación`, `Último Año Renovado` y `Estado`.
+    2. **🏭 Actividad Económica:** Extracción de todas las actividades CIIU registradas (`CIIU 1`, `CIIU 2`, `CIIU 3`, `CIIU 4`), ej. `4923 — Transporte de carga por carretera` y `7710 — Alquiler y arrendamiento de vehículos automotores`.
+    3. **👔 Representante Legal y Miembros Inscritos:** Listado con cargo específico (`Presidente`, `Representante Legal Principal`, `Suplente(s)`), nombre completo y documento de identidad (`C.C. ...`).
+    4. **🏪 Propietario / Establecimiento:** Columnas `Razón Social | Categoría | Cámara de Comercio | Matrícula | Fecha Matrícula | Fecha Renovación | Último Año Renovado | Estado`, o `"No se encontraron resultados."` si no registra establecimientos asociados.
+- **Omisión de Antecedentes en el Reporte RUES Inicial y Pregunta Interactiva Posterior (`identityVerificationService.ts` y `dmHandler.ts`)**:
+  * Se obvia la sección de antecedentes (`Procuraduría / Contraloría / Policía / ADRES`) dentro de la plantilla informativa inicial de la empresa, acelerando la respuesta a ~180ms.
+  * Al cierre de la plantilla, JanIA pregunta al usuario si desea ejecutar la verificación de identidad y antecedentes del **Representante Legal Principal** (`"verificar representante"`) o de **cada miembro inscrito** (`"verificar todos"`), almacenando en sesión tanto la cédula principal (`setPendingUnconfirmedDoc`) como todos los miembros (`setPendingCompanyMembers`).
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **287/287 passing** ($0 COP) | Build `npm run build` limpio.

@@ -7,6 +7,39 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-17] — Plantilla Informativa Oficial RUES de 4 Secciones (NIT ↔ Razón Social) y Verificación Post-Reporte de Antecedentes de Miembros (v33.20 - 33.20.0)
+
+**Versión:** `v33.20` (`33.20.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/ruesService.ts` (Extracción completa de las 4 secciones de RUES en `queryDatosGovSocrataRues` y `queryRuesDirectHttp`: `tipoSociedad`, `organizacionJuridicaRaw`, `extractActividadesEconomicas` para todos los CIIU 1 a 4, `extractEstablecimientos` para establecimientos de comercio asociados y `formatRuesDate`; desacoplamiento total de `formatTitleCase` respecto a `agenda.ts`).
+- `server/_core/identityVerificationService.ts` (Rediseño de `formatCompactIdentityVerificationReport` para `isNit` y `queryEmpresaOrNit` con las 4 secciones oficiales de RUES: 1. Información General, 2. Actividad Económica CIIU, 3. Representante Legal y Miembros Inscritos, 4. Propietario / Establecimiento; eliminación del bloque de antecedentes dentro del reporte inicial de RUES y cierre con pregunta interactiva de JanIA ofreciendo verificar los antecedentes de cada miembro o del Representante Legal Principal; memoria `setPendingCompanyMembers` / `getPendingCompanyMembers`).
+- `server/_core/jania/handlers/dmHandler.ts` (Soporte en `consultar_identidad_y_antecedentes` para `"verificar representante"` y `"verificar todos"` / `"cada miembro"` consultando automáticamente la lista de representantes inscritos en sesión).
+- `shared/const.ts` (`v33.20`) y `package.json` (`33.20.0`).
+- `server/__tests__/regression.test.ts` (Actualización de SUITES 77, 79 y 80 para validar la plantilla RUES de 4 secciones y búsqueda inversa por Razón Social; 287/287 tests pasando al 100%).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Y no olvides decirle a JanIA que elabore en el chat una plantilla informativa o hasla tu para ella, una con todos los datos de la empresa que sería El Nit que ya se le entregó y que debe corresponder a una Razón Social o viceversa, si le dan una razón social pues averiguar el nit. Luego colocarcada sección con: Información general: Identificación: NIT 900788832 - 8 | Categoria de la Matrícula: Sociedad ó persona juridica principal ó esal | Tipo de Sociedad: Sociedad comercial | Tipo Organización: Sociedades por acciones simplificadas sas | Cámara de Comercio: Bogota | Número de Matrícula: 2517719 | Actividad económica: 4923 Transporte de carga por carretera 7710 Alquiler y arrendamiento de vehículos automotores | Representante Legal con cada nombre correspondiente si es Presidente (nombre y documento de identidad/Representante Legal+documento/Suplente/s+documentos, etc | Propietario / Establecimiento: Razon Social | Categoria | Cámara de Comercio | Matrícula Fecha Matrícula | Fecha Renovación | Ultimo Año Renovado | Estado -> No se encontraron resultados // HA bueno yo te iba a dar esta plantilla, pero veo que le pusiste lo de los antecedentes, sería obviar esa parte y más bien que JanIA despues del reporte le pregunte al usuario si quiere que le haga lo de la verificación y los antecedentes de cada miembro o del representante legal por lo menos. Listo."*
+
+#### 2. Acciones Técnicas Ejecutadas
+1. **Plantilla Informativa Oficial RUES de 4 Secciones (`ruesService.ts` e `identityVerificationService.ts`):**
+   - Búsqueda bidireccional: dado un NIT entrega la Razón Social y toda la ficha; dada una Razón Social averigua el NIT + DV y entrega toda la ficha.
+   - **Sección 1 (`🆔 INFORMACIÓN GENERAL — DATOS EMPRESARIALES`)**: Razón Social, Identificación (`NIT 900.788.832-8 (900788832 - 8)`), Categoría de la Matrícula (`Sociedad ó persona jurídica principal ó ESAL`), Tipo de Sociedad (`Sociedad comercial`), Tipo Organización (`Sociedades por acciones simplificadas SAS`), Cámara de Comercio (`Bogotá D.C.`), Número de Matrícula (`2517719`), Fecha de Matrícula (`2014-11-10`), Fecha de Renovación (`2026-04-08`), Último Año Renovado (`2026`) y Estado (`Activa`).
+   - **Sección 2 (`📈 ACTIVIDAD ECONÓMICA (CIIU)`)**: Lista todos los CIIU registrados (`4923 — Transporte de carga por carretera` y `7710 — Alquiler y arrendamiento de vehículos automotores`).
+   - **Sección 3 (`👥 REPRESENTANTE LEGAL Y MIEMBROS INSCRITOS`)**: Lista cada representante con su cargo exacto (Presidente, Representante Legal Principal, Suplentes), nombre completo y documento de identidad (`C.C. ...`).
+   - **Sección 4 (`🏪 PROPIETARIO / ESTABLECIMIENTO`)**: Muestra la tabla de establecimientos (`Razón Social | Categoría | Cámara de Comercio | Matrícula | Fecha Matrícula | Fecha Renovación | Último Año Renovado | Estado`) o `"No se encontraron resultados."`.
+2. **Omisión del Bloque de Antecedentes en Ficha RUES y Pregunta Interactiva Post-Reporte (`identityVerificationService.ts` y `dmHandler.ts`):**
+   - Se eliminó el bloque de antecedentes dentro del reporte RUES para entregar una ficha empresarial limpia e instantánea (~180ms), cerrando con la pregunta interactiva de JanIA sobre si el usuario desea realizar la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal o de cada uno de los miembros registrados (`"verificar representante"` o `"verificar todos"`).
+
+#### 3. Validación y Pruebas Empíricas
+- `npm run check`: **0 errores de TypeScript**.
+- `npm test`: **287/287 tests pasando al 100% en verde a $0 COP**.
+- `npm run build`: Compilación limpia de producción.
+
+---
+
 ### 📅 [2026-10-17] — Normalización de `functionCall.args` en Gemini REST API, Motor Dual RUES Nacional con Datos Abiertos Socrata (0 Geo-Block desde VPS) y Verificación Exacta de NIT (v33.19 - 33.19.0)
 
 **Versión:** `v33.19` (`33.19.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

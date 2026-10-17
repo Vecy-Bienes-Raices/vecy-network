@@ -183,7 +183,22 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.19 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.20 — Octubre 2026
+
+### Novedades v33.20 (Plantilla Informativa Oficial RUES de 4 Secciones — NIT ↔ Razón Social — y Verificación Post-Reporte de Miembros):
+- **Solicitud Doctrinal de Eduardo A. Rivera**:
+  1. **Plantilla Informativa Oficial RUES en 4 Secciones (`server/_core/ruesService.ts` y `server/_core/identityVerificationService.ts`)**:
+     - Operación bidireccional: si el usuario entrega un **NIT**, JanIA consulta y devuelve la **Razón Social** y toda la ficha RUES; si el usuario entrega una **Razón Social**, JanIA averigua el **NIT + DV** y entrega toda la ficha RUES.
+     - **Sección 1 — Información General (`🆔 INFORMACIÓN GENERAL — DATOS EMPRESARIALES`)**: Razón Social, Identificación (`NIT 900.788.832-8 (900788832 - 8)`), Categoría de la Matrícula (`Sociedad ó persona jurídica principal ó ESAL`), Tipo de Sociedad (`Sociedad comercial`), Tipo Organización (`Sociedades por acciones simplificadas SAS`), Cámara de Comercio (`Bogotá D.C.`), Número de Matrícula (`2517719`), Fecha de Matrícula (`2014-11-10`), Fecha de Renovación (`2026-04-08`), Último Año Renovado (`2026`) y Estado (`Activa`).
+     - **Sección 2 — Actividad Económica (`📈 ACTIVIDAD ECONÓMICA (CIIU)`)**: Extracción de todas las actividades económicas registradas (`extractActividadesEconomicas`, ej. `4923 — Transporte de carga por carretera` y `7710 — Alquiler y arrendamiento de vehículos automotores`).
+     - **Sección 3 — Representante Legal (`👥 REPRESENTANTE LEGAL Y MIEMBROS INSCRITOS`)**: Desglose de cada miembro con cargo específico (Presidente / Representante Legal Principal / Suplentes), nombre completo y documento de identidad (`C.C. ...`).
+     - **Sección 4 — Propietario / Establecimiento (`🏪 PROPIETARIO / ESTABLECIMIENTO`)**: Tabla estructurada (`Razón Social | Categoría | Cámara de Comercio | Matrícula | Fecha Matrícula | Fecha Renovación | Último Año Renovado | Estado`) o `"No se encontraron resultados."` cuando no registra establecimientos adicionales.
+  2. **Separación Limpia entre Ficha RUES y Verificación de Antecedentes de los Miembros (`identityVerificationService.ts` y `dmHandler.ts`)**:
+     - Se obvia el bloque de antecedentes dentro del reporte inicial de RUES y, al finalizar la ficha empresarial, JanIA pregunta directamente al usuario si desea que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del **Representante Legal Principal** o de **cada uno de los miembros** registrados (`"verificar representante"` o `"verificar todos"`), almacenando la lista completa en sesión (`setPendingCompanyMembers`).
+  3. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 287/287 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.20`) y `package.json` (`33.20.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.19 — Octubre 2026
 
 ### Novedades v33.19 (Normalización de `functionCall.args` en Gemini REST API y Motor Dual RUES Nacional con Datos Abiertos Socrata — 0 Geo-Block desde VPS):
 - **Diagnóstico Forense y Reporte de Eduardo A. Rivera**:

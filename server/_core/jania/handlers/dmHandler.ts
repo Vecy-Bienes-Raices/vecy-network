@@ -266,10 +266,47 @@ export async function executeJaniaDmTool(
       const {
         executeIdentityVerificationFromWhatsApp,
         getPendingUnconfirmedDoc,
-        clearPendingUnconfirmedDoc
+        clearPendingUnconfirmedDoc,
+        getPendingCompanyMembers,
+        clearPendingCompanyMembers
       } = await import("../../identityVerificationService");
       let doc = String(args.numeroDocumento || args.cedula || args.nit || args.documento || "").trim();
       let tipo = String(args.tipoDocumento || "CC").trim();
+
+      const combinedIntent = `${doc} ${rawUserText || ""}`.toLowerCase();
+      if (/(?:todos|cada\s+miembro|todos\s+los\s+miembros|suplentes\s+y\s+principal|ambos)/i.test(combinedIntent)) {
+        const pendingMembers = getPendingCompanyMembers(userId);
+        if (pendingMembers && pendingMembers.length > 0) {
+          clearPendingCompanyMembers(userId);
+          clearPendingUnconfirmedDoc(userId);
+          const explicitItems = pendingMembers
+            .filter((m) => Boolean(m.numeroIdentificacion))
+            .map((m) => ({
+              cedula: m.numeroIdentificacion,
+              tipoDoc: m.tipoDocumento.toLowerCase().includes("e") ? "ce" : "cc",
+              rawNumber: m.numeroIdentificacion,
+              detectedName: m.nombre
+            }));
+          if (explicitItems.length > 0) {
+            const resAll = await executeIdentityVerificationFromWhatsApp(
+              explicitItems.map((i) => `${i.tipoDoc.toUpperCase()} ${i.cedula}`).join(", "),
+              true,
+              userId,
+              explicitItems
+            );
+            return {
+              toolType: "cedula",
+              resultJson: {
+                solicitud: "verificacion_identidad_miembros_empresa",
+                numeroDocumento: explicitItems.map((i) => i.cedula).join(", "),
+                tipoDocumento: "CC",
+                reporteOficial: resAll.reportText || "Sin reporte disponible",
+                exitoso: resAll.isVerificationRequest
+              }
+            };
+          }
+        }
+      }
 
       if (!/\d{5,12}/.test(doc)) {
         const pendingDoc = getPendingUnconfirmedDoc(userId);

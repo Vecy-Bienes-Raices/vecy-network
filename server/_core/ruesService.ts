@@ -13,7 +13,24 @@
  */
 
 import crypto from "crypto";
-import { formatTitleCase } from "../routers/agenda";
+
+function formatTitleCase(text: string): string {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ""))
+    .join(" ");
+}
+
+export function formatRuesDate(raw?: string): string | undefined {
+  const clean = String(raw || "").trim();
+  if (!clean || clean === "0" || clean === "00000000") return undefined;
+  if (/^\d{8}$/.test(clean)) {
+    return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 8)}`;
+  }
+  return clean;
+}
 
 const RUES_ELASTIC_BASE_URL = "https://elasticprd.rues.org.co";
 const RUES_AES_PASSPHRASE = "qwerty";
@@ -30,6 +47,22 @@ export interface RepresentanteLegalInfo {
   advertenciaFacultades?: string;
 }
 
+export interface RuesActividadEconomica {
+  codigo: string;
+  descripcion: string;
+}
+
+export interface RuesEstablecimientoInfo {
+  razonSocial: string;
+  categoria: string;
+  camaraComercio: string;
+  matricula: string;
+  fechaMatricula?: string;
+  fechaRenovacion?: string;
+  ultimoAnoRenovado?: string;
+  estado: string;
+}
+
 export interface RuesCompanyDetail {
   found: boolean;
   idRm: string;
@@ -37,7 +70,9 @@ export interface RuesCompanyDetail {
   dv: string;
   razonSocial: string;
   sigla?: string;
+  tipoSociedad?: string;
   organizacionJuridica: string;
+  organizacionJuridicaRaw?: string;
   categoria: string;
   esSociedadPrincipal: boolean;
   codigoCamara: string;
@@ -49,10 +84,12 @@ export interface RuesCompanyDetail {
   fechaRenovacion?: string;
   ciiuPrincipalCodigo?: string;
   ciiuPrincipalDescripcion?: string;
+  actividadesEconomicas?: RuesActividadEconomica[];
   representantePrincipal?: RepresentanteLegalInfo;
   representantesPrincipales: RepresentanteLegalInfo[];
   representantesSuplentes: RepresentanteLegalInfo[];
   todosRepresentantes: RepresentanteLegalInfo[];
+  establecimientos?: RuesEstablecimientoInfo[];
   resumenFacultades?: string;
   source: string;
 }
@@ -393,6 +430,69 @@ export function classifyRepresentantesLegales(
   };
 }
 
+export function extractActividadesEconomicas(sourceRecord: any): RuesActividadEconomica[] {
+  if (!sourceRecord) return [];
+  const items: RuesActividadEconomica[] = [];
+  const seen = new Set<string>();
+
+  const candidates = [
+    { code: sourceRecord.cod_ciiu_act_econ_pri, desc: sourceRecord.desc_ciiu_act_econ_pri },
+    { code: sourceRecord.cod_ciiu_act_econ_sec, desc: sourceRecord.desc_ciiu_act_econ_sec },
+    { code: sourceRecord.ciiu3 || sourceRecord.cod_ciiu_act_econ_adi1, desc: sourceRecord.desc_ciiu3 },
+    { code: sourceRecord.ciiu4 || sourceRecord.cod_ciiu_act_econ_adi2, desc: sourceRecord.desc_ciiu4 }
+  ];
+
+  for (const cand of candidates) {
+    const code = String(cand.code || "").trim();
+    if (!code || code === "0" || code === "0000" || seen.has(code)) continue;
+    seen.add(code);
+    const desc =
+      String(cand.desc || "").trim() ||
+      CIIU_DESCRIPTIONS[code] ||
+      "Actividad económica mercantil registrada en RUES";
+    items.push({ codigo: code, descripcion: desc });
+  }
+  return items;
+}
+
+export function extractEstablecimientos(registros: any[], mainRecord: any): RuesEstablecimientoInfo[] {
+  if (!Array.isArray(registros) || registros.length <= 1 || !mainRecord) return [];
+  const mainMat = String(mainRecord.matricula || "").replace(/^0+/, "");
+  const mainNit = String(mainRecord.nit || mainRecord.numero_identificacion || "").replace(/\D/g, "").replace(/^0+/, "");
+  const list: RuesEstablecimientoInfo[] = [];
+  const seenMat = new Set<string>();
+  if (mainMat) seenMat.add(mainMat);
+
+  for (const reg of registros) {
+    const mat = String(reg.matricula || "").replace(/^0+/, "");
+    if (!mat || seenMat.has(mat)) continue;
+    const cat = String(reg.categoria_matricula || reg.categoria || "").toUpperCase();
+    const regNit = String(reg.nit || reg.numero_identificacion || "").replace(/\D/g, "").replace(/^0+/, "");
+
+    const isEstablecimientoOrBranch =
+      cat.includes("ESTABLECIMIENTO") ||
+      cat.includes("SUCURSAL") ||
+      cat.includes("AGENCIA") ||
+      (mainNit && regNit === mainNit && !cat.includes("PERSONA NATURAL"));
+
+    if (!isEstablecimientoOrBranch) continue;
+    seenMat.add(mat);
+
+    const camRaw = String(reg.camara_comercio || reg.nom_camara || reg.camara || "BOGOTA").trim();
+    list.push({
+      razonSocial: String(reg.razon_social || "").trim() || "Establecimiento de Comercio",
+      categoria: formatTitleCase(cat || "Establecimiento de Comercio"),
+      camaraComercio: camRaw.toUpperCase() === "BOGOTA" ? "Bogotá D.C." : formatTitleCase(camRaw),
+      matricula: mat,
+      fechaMatricula: formatRuesDate(reg.fecha_matricula),
+      fechaRenovacion: formatRuesDate(reg.fecha_renovacion),
+      ultimoAnoRenovado: reg.ultimo_ano_renovado ? String(reg.ultimo_ano_renovado).trim() : undefined,
+      estado: formatTitleCase(String(reg.estado_matricula || reg.estado || "ACTIVA").trim())
+    });
+  }
+  return list;
+}
+
 /**
  * Motor Nacional de Datos Abiertos RUES — Confecámaras (datos.gov.co/resource/c82u-588k.json).
  * Opera a nivel mundial sin restricciones geográficas (200 OK en Contabo VPS en ~150-500ms),
@@ -451,17 +551,23 @@ async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, tim
     const dv = String(mainRecord.digito_verificacion || mainRecord.dv || "").trim();
     const camaraRaw = String(mainRecord.camara_comercio || mainRecord.nom_camara || "BOGOTA").trim();
     const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogotá D.C." : formatTitleCase(camaraRaw);
-    const organizacionJuridica = formatOrganizacionJuridica(
-      String(mainRecord.organizacion_juridica || mainRecord.tipo_sociedad || "Sociedad Comercial")
-    );
-    const categoria = String(mainRecord.categoria_matricula || mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL").trim();
+    const tipoSociedadRaw = String(mainRecord.tipo_sociedad || "SOCIEDAD COMERCIAL").trim();
+    const tipoSociedad = formatTitleCase(tipoSociedadRaw);
+    const orgRaw = String(mainRecord.organizacion_juridica || mainRecord.tipo_sociedad || "Sociedad Comercial").trim();
+    const organizacionJuridica = formatOrganizacionJuridica(orgRaw);
+    const organizacionJuridicaRaw = formatTitleCase(orgRaw).replace(/\bSas\b/g, "SAS").replace(/\bS\.a\.s\b/gi, "S.A.S.");
+    const categoria = String(mainRecord.categoria_matricula || mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL").trim();
     const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || "ACTIVA").trim());
     const ultimoAnoRenovado = String(
       mainRecord.ultimo_ano_renovado || (mainRecord.fecha_renovacion ? String(mainRecord.fecha_renovacion).slice(0, 4) : "")
     ).trim();
 
-    const ciiuPrincipalCodigo = String(mainRecord.cod_ciiu_act_econ_pri || "").trim() || undefined;
-    const ciiuPrincipalDescripcion = ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : undefined;
+    const actividadesEconomicas = extractActividadesEconomicas(mainRecord);
+    const ciiuPrincipalCodigo = actividadesEconomicas[0]?.codigo || String(mainRecord.cod_ciiu_act_econ_pri || "").trim() || undefined;
+    const ciiuPrincipalDescripcion =
+      actividadesEconomicas[0]?.descripcion || (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : undefined);
+
+    const establecimientos = extractEstablecimientos(registros, mainRecord);
 
     const repNameRaw = String(mainRecord.representante_legal || "").trim();
     const repDocRaw = String(mainRecord.num_identificacion_representante_legal || "").trim();
@@ -498,7 +604,9 @@ async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, tim
       dv,
       razonSocial,
       sigla: String(mainRecord.sigla || "").trim() || undefined,
+      tipoSociedad,
       organizacionJuridica,
+      organizacionJuridicaRaw,
       categoria,
       esSociedadPrincipal:
         categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
@@ -507,14 +615,16 @@ async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, tim
       matricula: matricula.replace(/^0+/, "") || matricula,
       estadoMatricula,
       ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : undefined,
-      fechaMatricula: mainRecord.fecha_matricula || undefined,
-      fechaRenovacion: mainRecord.fecha_renovacion || undefined,
+      fechaMatricula: formatRuesDate(mainRecord.fecha_matricula),
+      fechaRenovacion: formatRuesDate(mainRecord.fecha_renovacion),
       ciiuPrincipalCodigo,
       ciiuPrincipalDescripcion,
+      actividadesEconomicas,
       representantePrincipal,
       representantesPrincipales,
       representantesSuplentes: [],
       todosRepresentantes: representantesPrincipales,
+      establecimientos,
       source: "RUES — Registro Único Empresarial y Social (Confecámaras / Datos Abiertos)"
     };
   } catch (_) {
@@ -598,19 +708,25 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
         const dv = String(det.dv || mainRecord.dv || "").trim();
         const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
         const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogotá D.C." : formatTitleCase(camaraRaw);
-        const organizacionJuridica = formatOrganizacionJuridica(
-          String(mainRecord.organizacion_juridica || det.organizacion_juridica || "Sociedad Comercial").trim()
-        );
-        const categoria = String(mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL").trim();
+        const tipoSociedadRaw = String(det.tipo_sociedad || mainRecord.tipo_sociedad || "SOCIEDAD COMERCIAL").trim();
+        const tipoSociedad = formatTitleCase(tipoSociedadRaw);
+        const orgRaw = String(det.organizacion_juridica || mainRecord.organizacion_juridica || "Sociedad Comercial").trim();
+        const organizacionJuridica = formatOrganizacionJuridica(orgRaw);
+        const organizacionJuridicaRaw = formatTitleCase(orgRaw).replace(/\bSas\b/g, "SAS").replace(/\bS\.a\.s\b/gi, "S.A.S.");
+        const categoria = String(det.categoria_matricula || mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL").trim();
         const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
         const ultimoAnoRenovado = String(
-          mainRecord.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
+          mainRecord.ultimo_ano_renovado || det.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
         ).trim();
 
-        const ciiuPrincipalCodigo = String(det.cod_ciiu_act_econ_pri || "").trim() || undefined;
+        const actividadesEconomicas = extractActividadesEconomicas(det.cod_ciiu_act_econ_pri ? det : mainRecord);
+        const ciiuPrincipalCodigo = actividadesEconomicas[0]?.codigo || String(det.cod_ciiu_act_econ_pri || "").trim() || undefined;
         const ciiuPrincipalDescripcion =
+          actividadesEconomicas[0]?.descripcion ||
           String(det.desc_ciiu_act_econ_pri || "").trim() ||
           (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : undefined);
+
+        const establecimientos = extractEstablecimientos(registros, mainRecord);
 
         const result: RuesCompanyDetail = {
           found: true,
@@ -619,7 +735,9 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
           dv,
           razonSocial,
           sigla: String(det.sigla || mainRecord.sigla || "").trim() || undefined,
+          tipoSociedad,
           organizacionJuridica,
+          organizacionJuridicaRaw,
           categoria,
           esSociedadPrincipal:
             categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
@@ -628,14 +746,16 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
           matricula: matricula.replace(/^0+/, "") || matricula,
           estadoMatricula,
           ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : undefined,
-          fechaMatricula: det.fecha_matricula || undefined,
-          fechaRenovacion: det.fecha_renovacion || undefined,
+          fechaMatricula: formatRuesDate(det.fecha_matricula || mainRecord.fecha_matricula),
+          fechaRenovacion: formatRuesDate(det.fecha_renovacion || mainRecord.fecha_renovacion),
           ciiuPrincipalCodigo,
           ciiuPrincipalDescripcion,
+          actividadesEconomicas,
           representantePrincipal: classifiedReps.representantePrincipal,
           representantesPrincipales: classifiedReps.principales,
           representantesSuplentes: classifiedReps.suplentes,
           todosRepresentantes: classifiedReps.todos,
+          establecimientos,
           source: "RUES — Registro Único Empresarial y Social (Confecámaras)"
         };
 
