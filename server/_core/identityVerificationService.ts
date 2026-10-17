@@ -998,13 +998,16 @@ export function formatCompactIdentityVerificationReport(params: {
   officialName?: string;
   fullName?: string;
   detectedName?: string;
-  success: boolean;
+  success?: boolean;
+  idValidated?: boolean;
   policiaMessage?: string;
+  policiaStatus?: string;
   procuraduriaStatus?: string;
   contraloriaStatus?: string;
   adresEps?: string;
   adresEstado?: string;
   adresRegimen?: string;
+  adresStatus?: string;
   isAutoDetectedCe?: boolean;
   camaraComercio?: string;
   estadoEmpresa?: string;
@@ -1016,17 +1019,21 @@ export function formatCompactIdentityVerificationReport(params: {
     fullName,
     detectedName,
     success,
+    idValidated,
     policiaMessage,
+    policiaStatus,
     procuraduriaStatus,
     contraloriaStatus,
     adresEps,
     adresEstado,
     adresRegimen,
+    adresStatus,
     isAutoDetectedCe,
     camaraComercio,
     estadoEmpresa
   } = params;
 
+  const resolvedSuccess = success ?? idValidated ?? false;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const activeDocLabel = getDocumentTypeLabel(tipoDoc);
   const autoCeNotice = isAutoDetectedCe ? `\n📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).` : '';
@@ -1056,11 +1063,11 @@ export function formatCompactIdentityVerificationReport(params: {
   const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
   const isWhiteLabelDoc = cedula === '43403545';
 
-  let securityLine = policiaMessage;
+  let securityLine = policiaMessage || policiaStatus;
   if (!securityLine) {
     if (isNit) {
       securityLine = 'No aplica para personas jurídicas (exclusivo para personas naturales).';
-    } else if (success) {
+    } else if (resolvedSuccess) {
       securityLine = isWhiteLabelDoc
         ? 'Sin antecedentes judiciales ni requerimientos penales pendientes.'
         : 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
@@ -1084,11 +1091,13 @@ export function formatCompactIdentityVerificationReport(params: {
   }
 
   let epsLine = '';
-  if (adresEps) {
+  if (adresStatus) {
+    epsLine = adresStatus;
+  } else if (adresEps) {
     epsLine = `${adresEps} (${adresEstado || 'REGISTRADO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
   } else if (isNit) {
     epsLine = 'Persona Jurídica (no aplica afiliación individual en BDUA salud).';
-  } else if (!success) {
+  } else if (!resolvedSuccess) {
     epsLine = 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
   } else {
     epsLine = 'Registrado y activo en el sistema de aseguramiento en salud.';

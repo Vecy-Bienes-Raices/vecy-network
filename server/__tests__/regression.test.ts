@@ -5886,6 +5886,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
         tipoDoc: "CC",
         cedula: "1233903423",
         fullName: "Daniel Eduardo Rivera Noguera",
+        success: true,
         idValidated: true,
         policiaStatus: "Sin antecedentes judiciales ni requerimientos penales.",
         procuraduriaStatus: "No registra sanciones ni inhabilidades vigentes.",

@@ -25877,16 +25877,20 @@ function formatCompactIdentityVerificationReport(params) {
     fullName,
     detectedName,
     success,
+    idValidated,
     policiaMessage,
+    policiaStatus,
     procuraduriaStatus,
     contraloriaStatus,
     adresEps,
     adresEstado,
     adresRegimen,
+    adresStatus,
     isAutoDetectedCe,
     camaraComercio,
     estadoEmpresa
   } = params;
+  const resolvedSuccess = success ?? idValidated ?? false;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const activeDocLabel = getDocumentTypeLabel(tipoDoc);
   const autoCeNotice = isAutoDetectedCe ? `
@@ -25930,11 +25934,11 @@ function formatCompactIdentityVerificationReport(params) {
   }
   const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
   const isWhiteLabelDoc = cedula === "43403545";
-  let securityLine = policiaMessage;
+  let securityLine = policiaMessage || policiaStatus;
   if (!securityLine) {
     if (isNit) {
       securityLine = "No aplica para personas jur\xEDdicas (exclusivo para personas naturales).";
-    } else if (success) {
+    } else if (resolvedSuccess) {
       securityLine = isWhiteLabelDoc ? "Sin antecedentes judiciales ni requerimientos penales pendientes." : "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
     } else {
       securityLine = "Sin antecedentes judiciales penales reportados o documento no indexado.";
@@ -25949,11 +25953,13 @@ function formatCompactIdentityVerificationReport(params) {
     cgrLine = "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
   }
   let epsLine = "";
-  if (adresEps) {
+  if (adresStatus) {
+    epsLine = adresStatus;
+  } else if (adresEps) {
     epsLine = `${adresEps} (${adresEstado || "REGISTRADO"}${adresRegimen ? ` \u2014 ${adresRegimen}` : ""})`;
   } else if (isNit) {
     epsLine = "Persona Jur\xEDdica (no aplica afiliaci\xF3n individual en BDUA salud).";
-  } else if (!success) {
+  } else if (!resolvedSuccess) {
     epsLine = "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
   } else {
     epsLine = "Registrado y activo en el sistema de aseguramiento en salud.";
