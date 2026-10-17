@@ -176,13 +176,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ### 5. Roles Telefónicos en WhatsApp — DOCTRINA v31.28
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
-- **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
+- **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritaj
+es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.17 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.18 — Octubre 2026
+
+### Novedades v33.18 (Conector Directo HTTP RUES / Confecámaras — 0 Puppeteer, Representante Legal Principal vs. Suplentes y Doctrina NIT vs. Persona Natural):
+- **Diagnóstico Forense y Solicitud Doctrinal de Eduardo A. Rivera**:
+  1. **Diagnóstico del bloqueo `[working...]` en sesión previa del IDE**: Se identificó en los logs del sistema (`transcript.jsonl` y `crash_300135_dc7206bf-4401-4d97-9fdb-41047fe9d450.log`) que un script previo de Puppeteer (`scripts/test_rues_flow.ts`) quedó esperando selectores en la SPA de RUES detrás de CloudFront y posteriormente el proceso `agentapi` del IDE sufrió un crash tras `grep_search`, dejando el indicador visual congelado en `[working...]`.
+  2. **Ingeniería Inversa de la API REST Oficial de RUES — Cero Puppeteer (`server/_core/ruesService.ts`)**:
+     - Descubrimiento e implementación del protocolo criptográfico de los microfrontends de RUES (`https://elasticprd.rues.org.co`): cifrado OpenSSL `EVP_BytesToKey` (`Salted__` + AES-256-CBC + MD5 con passphrase oficial de aplicación) enviando `{ dataBody: "<base64>" }` con cabeceras `Origin: https://www.rues.org.co`, `Referer: https://www.rues.org.co/` y `app-name: RuesFront`.
+     - Peticiones HTTP directas (`fetch` nativo Node + `crypto`) en **~180ms** sin navegadores headless ni consumo de RAM a los 4 endpoints oficiales:
+       * `POST /api/ConsultasRUES/BusquedaAvanzadaRM` (búsqueda por NIT, Razón Social o Matrícula).
+       * `POST /api/Expediente/DetalleRM` (CIIU principal/secundarios, estado, organización jurídica y renovación).
+       * `POST /api/ConsultarVinculos` (extracción estructurada de representantes legales con nombres, cédulas y tipo de vínculo).
+       * `POST /api/ConsultFacultadesXCamYMatricula` (extracto de actas y facultades estatutarias).
+  3. **Filtrado de Sociedad Principal y Clasificación Jurídica Representante Legal Principal vs. Suplentes**:
+     - `selectPrincipalRuesRecord` prioriza siempre la `"SOCIEDAD ó PERSONA JURIDICA PRINCIPAL"` y matrícula `"ACTIVA"` sobre sucursales, agencias o establecimientos de comercio.
+     - `classifyRepresentantesLegales` separa estrictamente al **Representante Legal Principal** (`⭐ Rep. Legal Principal (Plenas Facultades)`) de los **Suplentes y Representantes Judiciales** (`👥 Suplentes / Representación Judicial (Facultades Restringidas)`), incorporando la advertencia legal de que solo el Principal obliga de forma ordinaria a la sociedad mientras los suplentes actúan en ausencia o bajo facultades restringidas.
+  4. **Doctrina de Verificación Personas Jurídicas (NIT) vs. Personas Naturales (CC/CE) y Encadenamiento en 1 Paso (`identityVerificationService.ts`, `dmHandler.ts`, `prompts.ts`)**:
+     - El reporte corporativo explica con claridad jurídica que las empresas (NIT) no tienen antecedentes penales (Policía) ni afiliación a salud (ADRES), sino control fiscal (Contraloría SIRECI) y disciplinario/contractual (Procuraduría SIRI), mientras que los antecedentes judiciales y de salud recaen sobre el Representante Legal como persona natural.
+     - Al consultar cualquier empresa en RUES, JanIA pre-carga automáticamente la Cédula del **Representante Legal Principal** en la sesión del usuario (`setPendingUnconfirmedDoc`), permitiendo que con solo responder `"verificar representante"` o `"sí"` se ejecute de inmediato la verificación completa de antecedentes del firmante.
+  5. **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 284/284 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.18`) y `package.json` (`33.18.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.17 — Octubre 2026
 
 ### Novedades v33.17 (JanIA "Gemela Cognitiva de Gemini 4 Argon", Scrapers Oficiales, RUES/NIT, PDFs, Memoria Permanente y Superpoderes Nativos WhatsApp Business):
 - **Diagnóstico y Solicitud Doctrinal de Eduardo A. Rivera**:

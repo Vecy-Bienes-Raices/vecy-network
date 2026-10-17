@@ -343,23 +343,26 @@ export async function executeJaniaDmTool(
       };
     }
     case "consultar_empresa_o_nit": {
-      const q = String(args.nitORazonSocial || "").trim();
+      const q = String(args.consultaEmpresa || args.nitORazonSocial || args.query || "").trim();
       const { queryEmpresaOrNit } = await import("../../identityVerificationService");
-      const empRes = await queryEmpresaOrNit(q);
+      const empRes = await queryEmpresaOrNit(q, userId);
       return {
         toolType: "empresa",
         resultJson: {
           solicitud: "consulta_empresa_o_nit",
           termino: q,
           reporteOficial: empRes.reportText || "Consulta empresarial procesada",
-          exitoso: empRes.success
+          exitoso: empRes.success,
+          representantePrincipal: empRes.representantePrincipal || null
         }
       };
     }
     case "enviar_encuesta_interactiva": {
       const pregunta = String(args.pregunta || "").trim();
       const opciones = Array.isArray(args.opciones) ? args.opciones.map(String) : ["Sí", "No"];
-      const selectableCount = Number(args.seleccionMultiple ? 2 : 1);
+      const selectableCount = args.limiteSeleccion
+        ? Number(args.limiteSeleccion)
+        : Number(args.seleccionMultiple ? 2 : 1);
       const { sendNativeWhatsAppPoll } = await import("../../whatsapp-match");
       const pollSent = await sendNativeWhatsAppPoll(userId, pregunta, opciones, selectableCount);
       return {
@@ -376,7 +379,8 @@ export async function executeJaniaDmTool(
       };
     }
     case "enviar_tarjeta_contacto_vecy": {
-      const contactType = args.tipoContacto === "broker" ? "broker" : "jania";
+      const rawContact = String(args.destinatario || args.tipoContacto || "broker").toLowerCase();
+      const contactType = rawContact === "jania" ? "jania" : "broker";
       const { sendNativeWhatsAppContact } = await import("../../whatsapp-match");
       const contactSent = await sendNativeWhatsAppContact(userId, contactType);
       return {
@@ -392,10 +396,12 @@ export async function executeJaniaDmTool(
       };
     }
     case "enviar_evento_visita_inmobiliaria": {
-      const titulo = String(args.titulo || "Visita Inmobiliaria").trim();
-      const descripcion = String(args.descripcion || "").trim();
-      const ubicacion = String(args.ubicacion || "").trim();
-      const fechaHora = args.fechaHoraIso ? new Date(args.fechaHoraIso).getTime() : Date.now() + 86400000;
+      const titulo = String(args.tituloVisita || args.titulo || "Visita Inmobiliaria").trim();
+      const descripcion = String(args.detalles || args.descripcion || "").trim();
+      const ubicacion = String(args.direccionOBarrio || args.ubicacion || "").trim();
+      const rawFecha = args.fechaHora || args.fechaHoraIso;
+      const parsedTime = rawFecha ? new Date(rawFecha).getTime() : NaN;
+      const fechaHora = !Number.isNaN(parsedTime) ? parsedTime : Date.now() + 86400000;
       const { sendNativeWhatsAppEvent } = await import("../../whatsapp-match");
       const eventSent = await sendNativeWhatsAppEvent(userId, {
         name: titulo,

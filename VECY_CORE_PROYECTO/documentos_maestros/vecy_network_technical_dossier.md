@@ -7338,6 +7338,25 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **255/255 passing** ($0 COP) | Build `npm run build` en 17.73s (Vite) + 209ms (esbuild).
 
+---
 
+### Versión v33.17 — Octubre 2026: JanIA "Gemela Cognitiva de Gemini 4 Argon", Superpoderes Nativos WhatsApp Business, Memoria Permanente y Entrega de PDFs
+- **Gemela Cognitiva de Gemini 4 Argon**: Consagración de `JANIA_ARGON_COGNITIVE_CORE` en `prompts.ts` y erradicación definitiva del doble saludo en DMs y entregas de herramientas (`stripLeadingGreetingsAndCourtesies` con soporte de `:`).
+- **Superpoderes Nativos WhatsApp Business**: Encuestas interactivas (`sendNativeWhatsAppPoll`), tarjetas de contacto vCard (`sendNativeWhatsAppContact`), eventos estructurados (`sendNativeWhatsAppEvent`) y moderación automática de grupos oficiales con borrado y enlace de invitación.
+- **Memoria Permanente Inteligente**: Conservación permanente de los últimos 20 turnos con timestamp `[YYYY-MM-DD HH:mm]` y ficha histórica del contacto desde base de datos (`getContactPermanentDossier`).
+- **Despacho Nativo de PDFs**: Entrega adjunta en WhatsApp de Factura Predial Bogotá, Certificados de Pago y Paz y Salvo IDU mediante `setLatestDmPdf` y `popLatestDmPdf`.
 
+---
 
+### Versión v33.18 — Octubre 2026: Conector Directo HTTP RUES / Confecámaras (0 Puppeteer), Representante Legal Principal vs. Suplentes y Doctrina NIT vs. Persona Natural
+- **Conector Directo HTTP RUES (`server/_core/ruesService.ts`)**:
+  * Reemplazo total de cualquier dependencia de navegador headless por peticiones HTTP directas (`fetch` + `crypto` nativo) a la API REST oficial de RUES (`https://elasticprd.rues.org.co`) usando cifrado `EVP_BytesToKey` AES-256-CBC (`Salted__`), respondiendo en ~180ms.
+  * Consulta en 2 fases: `BusquedaAvanzadaRM` + `DetalleRM`, `ConsultarVinculos` y `ConsultFacultadesXCamYMatricula`.
+- **Filtrado de Sociedad Principal y Clasificación de Representantes Legales**:
+  * `selectPrincipalRuesRecord` prioriza siempre la `"SOCIEDAD ó PERSONA JURIDICA PRINCIPAL"` activa sobre sucursales, agencias o establecimientos de comercio.
+  * `classifyRepresentantesLegales` distingue explícitamente al **Representante Legal Principal** (`⭐ Rep. Legal Principal (Plenas Facultades)`) de los **Suplentes y Representantes Judiciales** (`👥 Suplentes / Representación Judicial (Facultades Restringidas)`), advirtiendo que los suplentes tienen facultades restringidas o solo actúan ante ausencia del titular.
+- **Doctrina Jurídica Personas Jurídicas (NIT) vs. Personas Naturales (CC/CE) y Encadenamiento en 1 Paso**:
+  * Aclaración expresa en el reporte y en el prompt de JanIA de que las empresas (NIT) no tienen antecedentes penales ni afiliación en salud (ADRES), sino validación mercantil (RUES), control fiscal (Contraloría SIRECI) y disciplinario/contractual (Procuraduría SIRI), mientras que los antecedentes judiciales y de salud se verifican sobre la cédula del Representante Legal Principal.
+  * Pre-carga automática de la Cédula del Representante Legal Principal en `setPendingUnconfirmedDoc(userId, ...)` para ejecutar su verificación completa en un solo paso al responder `"verificar representante"` o `"sí"`.
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **284/284 passing** ($0 COP) | Build `npm run build` limpio.

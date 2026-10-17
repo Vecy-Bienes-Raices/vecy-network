@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-16] — Conector Directo HTTP RUES / Confecámaras (0 Puppeteer), Representante Legal Principal vs. Suplentes y Doctrina NIT vs. Persona Natural (v33.18 - 33.18.0)
+
+**Versión:** `v33.18` (`33.18.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/ruesService.ts` (NUEVO — Conector directo HTTP puro a la API REST de RUES `https://elasticprd.rues.org.co` con cifrado `EVP_BytesToKey` AES-256-CBC compatible con OpenSSL `Salted__`, priorización de Sociedad Principal sobre sucursales y clasificación de Representante Legal Principal vs. Suplentes/Judiciales en ~180ms sin Puppeteer).
+- `server/_core/identityVerificationService.ts` (Integración de `queryRuesDirectHttp` en `queryEmpresaOrNit` y `formatCompactIdentityVerificationReport`, distinción visual y jurídica entre `⭐ Rep. Legal Principal (Plenas Facultades)` y `👥 Suplentes / Representación Judicial (Facultades Restringidas)`, nota legal aclarando antecedentes de Personas Jurídicas vs. Personas Naturales, y pre-carga en sesión de la C.C. del Representante Legal Principal para verificación en 1 paso con `"verificar representante"`).
+- `server/_core/jania/handlers/dmHandler.ts` (Unificación de alias de parámetros en `executeJaniaDmTool` para `consultar_empresa_o_nit` y herramientas nativas de WhatsApp, pasando `userId` a `queryEmpresaOrNit`).
+- `server/_core/jania/prompts.ts` (Enriquecimiento de `JANIA_ARGON_COGNITIVE_CORE` con la doctrina de verificación de Personas Naturales vs. Personas Jurídicas y Representante Legal Principal vs. Suplentes).
+- `shared/const.ts` (`v33.18`) y `package.json` (`33.18.0`).
+- `server/__tests__/regression.test.ts` (SUITE 79 con 5 pruebas unitarias y de integración a $0 COP, alcanzando 284/284 tests pasando al 100%).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Contexto, Diagnóstico Forense de la Sesión Previa y Solicitud de Eduardo A. Rivera
+- **Solicitud Exacta de Eduardo A. Rivera:**
+  1. *"Si por favor, pero recuerda que hay representante legal uno solo si hay más los otros son suplentes y no tienen las mismas facultades muchas veces. Ok Pero me encanta lo que vas a hacer, solo quería aclararte ese pedacito por si no lo sabías, entonces ténlo en cuenta a la hora que JanIA ofrezca sus servicios de consulta y verificación de datos (Y no se cómo poner lo de antecedentes, pues las empresas no tienen o si, creo que toca como dijiste tu se verificarían sería los representantes legales, más no la empresa pues no se) de identidad de personas, jurídicas y naturales."*
+  2. *"Dile al agente en el chat del IDE: 'Olvida el navegador de Puppeteer para RUES. Conéctate directo mediante peticiones HTTP (fetch / axios) a los endpoints públicos de la API de RUES que descubriste, o parsea el HTML directamente con cheerio, que es 100 veces más rápido y liviano.' y se quedó trabado, qué puede ser, lleva muchos minutos en [working...]"*
+- **Diagnóstico Forense del Bloqueo `[working...]` en la Sesión Anterior (`0b51d2a8-5ce6-4ab4-98a9-3f69a19651de`):**
+  1. Se inspeccionaron los logs del sistema (`transcript.jsonl` y `crash_300135_dc7206bf-4401-4d97-9fdb-41047fe9d450.log`).
+  2. Se determinaron dos causas exactas: primero, el intento previo de usar Puppeteer (`scripts/test_rues_flow.ts`, `task-109`) quedó colgado esperando un selector en la SPA Angular de RUES protegida por CloudFront mientras el IDE reiniciaba tareas en segundo plano; segundo, a las `22:45:08` (paso 246), tras ejecutar `grep_search`, el proceso binario `agentapi` del IDE sufrió un cierre inesperado (`crash_300135`), dejando la interfaz gráfica congelada en `[working...]` sin recibir el evento de finalización.
+
+#### 2. Ingeniería Inversa de la API REST de RUES y Acciones Técnicas Ejecutadas
+1. **Conector HTTP Directo a RUES sin Puppeteer (`server/_core/ruesService.ts`):**
+   - Extracción y análisis de los bundles Webpack de RUES (`490.5cddd7e9cb23419aa814.js` y `127.01df25eccaf3f4271888.js`).
+   - Implementación en `encryptRuesPayload` del cifrado exacto exigido por `https://elasticprd.rues.org.co`: derivación `EVP_BytesToKey` (MD5) + AES-256-CBC con prefijo `"Salted__"` y cabeceras requeridas por CloudFront (`Origin: https://www.rues.org.co`, `Referer: https://www.rues.org.co/`, `app-name: RuesFront`).
+   - Conexión directa mediante `fetch` en **~180ms** a `/api/ConsultasRUES/BusquedaAvanzadaRM`, `/api/Expediente/DetalleRM`, `/api/ConsultarVinculos` y `/api/ConsultFacultadesXCamYMatricula`.
+2. **Priorización de Sociedad Principal y Separación Representante Legal Principal vs. Suplentes:**
+   - `selectPrincipalRuesRecord` puntúa y selecciona siempre la `"SOCIEDAD ó PERSONA JURIDICA PRINCIPAL"` activa por encima de sucursales o establecimientos de comercio.
+   - `classifyRepresentantesLegales` identifica al **Representante Legal Principal** (quien tiene plenas facultades para obligar a la sociedad) y agrupa por separado a los **Suplentes y Representantes Judiciales** (quienes tienen facultades restringidas o solo actúan por falta temporal/absoluta del titular).
+3. **Claridad Jurídica en Antecedentes (NIT vs. Persona Natural) y Verificación en 1 Paso:**
+   - El reporte corporativo explica expresamente que las personas jurídicas (NIT) no poseen antecedentes penales (Policía) ni afiliación en salud (ADRES), sino validación de existencia mercantil (RUES), control fiscal (Contraloría SIRECI) e inhabilidades (Procuraduría SIRI), y que la idoneidad penal y ciudadana se verifica sobre la cédula del Representante Legal Principal.
+   - Pre-carga automática de la C.C. del Representante Legal Principal en `setPendingUnconfirmedDoc` para que el corredor o abogado pueda verificarlo en un solo paso respondiendo `"verificar representante"` o `"sí"`.
+
+#### 3. Validación y Pruebas Empíricas
+- `npm run check`: **0 errores de TypeScript**.
+- `npm test`: **284/284 tests pasando al 100% en verde a $0 COP**.
+- `npm run build`: Compilación limpia de frontend (Vite) y backend (esbuild).
+
+---
+
 ### 📅 [2026-10-16] — JanIA "Gemela Cognitiva de Gemini 4 Argon": Reconexión de Scrapers Oficiales, RUES/NIT, PDFs, Memoria Permanente y Superpoderes Nativos WhatsApp Business (v33.17 - 33.17.0)
 
 **Versión:** `v33.17` (`33.17.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

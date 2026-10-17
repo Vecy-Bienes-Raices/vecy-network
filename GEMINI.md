@@ -1,11 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.17.0 — 2026-10-16)
-- **JanIA Server:** `v33.17` (`33.17.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.18.0 — 2026-10-16)
+- **JanIA Server:** `v33.18` (`33.18.0`) listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Conector Directo HTTP RUES / Confecámaras (0 Puppeteer):** Integración criptográfica nativa (`EVP_BytesToKey` AES-256-CBC sobre `elasticprd.rues.org.co`) en `server/_core/ruesService.ts` en ~180ms sin navegadores headless; priorización de *Sociedad o Persona Jurídica Principal* sobre sucursales, separación jurídica entre **Representante Legal Principal** (plenas facultades) y **Suplentes / Judiciales** (facultades restringidas), y pre-carga automática de la Cédula del Representante Principal para verificación de antecedentes en 1 paso.
+- **Doctrina de Verificación Personas Naturales vs. Personas Jurídicas:** Distinción clara entre Personas Naturales (CC/CE/PPT/PA: Policía, Procuraduría, Contraloría y ADRES) y Personas Jurídicas (NIT/RUES: Existencia, Matrícula Principal, CIIU, Contraloría y Procuraduría, aclarando que las empresas no tienen antecedentes penales ni EPS y que éstos se verifican sobre el Representante Legal Principal).
 - **JanIA "Gemela Cognitiva de Gemini 4 Argon":** Personalidad Argon de persuasión ejecutiva, agudeza mental, calidez humana y solvencia jurídica superior; erradicación definitiva del doble saludo en DMs y entregas de herramientas.
 - **Superpoderes Nativos WhatsApp Business:** Encuestas interactivas (`sendNativeWhatsAppPoll`), tarjetas de contacto vCard (`sendNativeWhatsAppContact`), eventos estructurados (`sendNativeWhatsAppEvent`) y moderación con borrado en grupos oficiales con enlace de invitación.
-- **Reconexión de Scrapers y Consulta Empresarial RUES / DIAN:** Verificación oficial de identidad unificada (Habeas Data Ley 1581/12, Policía, Procuraduría, Contraloría, ADRES BDUA) y consulta de empresas / NITs con cálculo matemático de Dígito de Verificación Módulo 11.
-- **Memoria Permanente Inteligente:** Historial continuo permanente de hasta 20 turnos con timestamp `[YYYY-MM-DD HH:mm]` e inyección de ficha histórica del contacto desde la base de datos (`getContactPermanentDossier`).
-- **Entrega de Documentos PDF:** Despacho nativo de archivos PDF en WhatsApp para Predial Bogotá, Certificados de Pago y Paz y Salvo IDU.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (279/279 a $0 COP) | Build `npm run build` limpio (Vite 15.34s + esbuild 161ms).
+- **Memoria Permanente Inteligente y Entrega de Documentos PDF:** Historial continuo permanente de hasta 20 turnos con timestamp `[YYYY-MM-DD HH:mm]`, ficha histórica del contacto (`getContactPermanentDossier`) y despacho nativo de archivos PDF en WhatsApp (Predial Bogotá, Certificados de Pago y Paz y Salvo IDU).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (284/284 a $0 COP) | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

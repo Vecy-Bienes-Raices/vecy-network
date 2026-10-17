@@ -5787,13 +5787,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(replyNumber).not.toContain("Política de Tratamiento de Datos");
     });
 
-    it("4. Consagración doctrinal de versión v33.16/v33.17 en shared/const.ts y package.json", async () => {
+    it("4. Consagración doctrinal de versión v33.16+ en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.1[67]$/);
+      expect(VECY_VERSION).toMatch(/^v33\.1[6789]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.1[67]\.0$/);
+      expect(pkg.version).toMatch(/^33\.1[6789]\.0$/);
     });
   });
 
@@ -5875,8 +5875,8 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       const resEmpresa = await queryEmpresaOrNit("860002964");
       expect(resEmpresa.success).toBe(true);
-      expect(resEmpresa.reportText).toContain("RUES / DIAN");
-      expect(resEmpresa.reportText).toContain("860002964");
+      expect(resEmpresa.reportText).toContain("RUES");
+      expect(resEmpresa.reportText).toContain("860.002.964");
       expect(resEmpresa.reportText).toContain("Ley 1581/12");
     });
 
@@ -5968,22 +5968,130 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(delivered).toContain("VERIFICACIÓN OFICIAL PONAL");
     });
 
-    it("7. Consagración doctrinal de versión v33.17 en shared/const.ts y package.json", async () => {
+    it("7. Consagración doctrinal de versión v33.17+ en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.17");
+      expect(VECY_VERSION).toMatch(/^v33\.1[789]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.17.0");
+      expect(pkg.version).toMatch(/^33\.1[789]\.0$/);
+    });
+  });
+
+  describe("SUITE 79: JanIA v33.18 — CONECTOR DIRECTO HTTP RUES / CONFECÁMARAS (0 PUPPETEER), REPRESENTANTE LEGAL PRINCIPAL VS SUPLENTES Y DOCTRINA NIT VS PERSONA NATURAL", () => {
+    it("1. Cifrado criptográfico EVP_BytesToKey AES-256-CBC compatible con API REST de RUES (elasticprd.rues.org.co)", async () => {
+      const { encryptRuesPayload } = await import("../_core/ruesService");
+      const encrypted = encryptRuesPayload({ nit: 860005224 });
+      expect(typeof encrypted).toBe("string");
+      const rawBuf = Buffer.from(encrypted, "base64");
+      // Debe iniciar con la cabecera OpenSSL 'Salted__' (8 bytes) + 8 bytes de salt + ciphertext múltiplo de 16
+      expect(rawBuf.subarray(0, 8).toString("utf-8")).toBe("Salted__");
+      expect((rawBuf.length - 16) % 16).toBe(0);
+    });
+
+    it("2. Filtrado inteligente de Sociedad o Persona Jurídica Principal sobre sucursales y agencias en RUES", async () => {
+      const { selectPrincipalRuesRecord } = await import("../_core/ruesService");
+      const mockRecords = [
+        {
+          id_rm: "410008888",
+          razon_social: "CONSTRUCTORA BOLIVAR SUCURSAL NORTE",
+          categoria_matricula: "SUCURSAL",
+          estado_matricula: "ACTIVA",
+          ultimo_ano_renovado: "2026"
+        },
+        {
+          id_rm: "040019772",
+          razon_social: "BAVARIA & CIA S.C.A.",
+          categoria_matricula: "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL",
+          estado_matricula: "ACTIVA",
+          ultimo_ano_renovado: "2026"
+        },
+        {
+          id_rm: "040001111",
+          razon_social: "BAVARIA ESTABLECIMIENTO CENTRO",
+          categoria_matricula: "ESTABLECIMIENTO DE COMERCIO",
+          estado_matricula: "CANCELADA",
+          ultimo_ano_renovado: "2020"
+        }
+      ];
+
+      const selected = selectPrincipalRuesRecord(mockRecords);
+      expect(selected).not.toBeNull();
+      expect(selected.id_rm).toBe("040019772");
+      expect(selected.razon_social).toBe("BAVARIA & CIA S.C.A.");
+    });
+
+    it("3. Clasificación jurídica entre Representante Legal Principal (plenas facultades) y Suplentes / Judiciales (facultades restringidas)", async () => {
+      const { classifyRepresentantesLegales } = await import("../_core/ruesService");
+      const mockVinculos = [
+        {
+          tipo_identificacion: "C.C.",
+          numero_identificacion: "00001032440704",
+          nombre: "MEJIA NINO ANA MILENA",
+          tipovinculo: "Representante Legal - Suplente"
+        },
+        {
+          tipo_identificacion: "C.C.",
+          numero_identificacion: "00000071755745",
+          nombre: "RINCON RINCON SERGIO ANDRES",
+          tipovinculo: "Representante Legal - Principal"
+        },
+        {
+          tipo_identificacion: "C.C.",
+          numero_identificacion: "00001098709679",
+          nombre: "JARAMILLO SUS SERGIO ANDRES",
+          tipovinculo: "Representante Legal Judicial - Suplente"
+        }
+      ];
+
+      const { representantePrincipal, representantesSuplentes } = classifyRepresentantesLegales(mockVinculos);
+      expect(representantePrincipal).not.toBeNull();
+      expect(representantePrincipal?.esPrincipal).toBe(true);
+      expect(representantePrincipal?.numeroIdentificacion).toBe("71755745");
+      expect(representantePrincipal?.nombre).toContain("Rincon Rincon Sergio Andres");
+
+      expect(representantesSuplentes.length).toBe(2);
+      expect(representantesSuplentes[0].esPrincipal).toBe(false);
+      expect(representantesSuplentes[0].numeroIdentificacion).toBe("1032440704");
+    });
+
+    it("4. Reporte corporativo de NIT/Empresa distingue Representante Legal Principal vs Suplentes, aclara antecedentes de Personas Jurídicas vs Naturales y pre-carga la CC del Representante Principal", async () => {
+      const { queryEmpresaOrNit, getPendingUnconfirmedDoc, detectTramiteConfirmation } = await import("../_core/identityVerificationService");
+      const testUserId = `rues-test-${Date.now()}@s.whatsapp.net`;
+
+      const res = await queryEmpresaOrNit("860005224", testUserId);
+      expect(res.success).toBe(true);
+      expect(res.reportText).toContain("DATOS EMPRESARIALES (RUES / DIAN / CONFECÁMARAS)");
+      expect(res.reportText).toContain("BAVARIA & CIA S.C.A.");
+      expect(res.reportText).toContain("860.005.224-6");
+      expect(res.reportText).toContain("Rep. Legal Principal (Plenas Facultades)");
+      expect(res.reportText).toContain("Sergio Andres Rincon Rincon");
+      expect(res.reportText).toContain("71.755.745");
+      expect(res.reportText).toContain("Suplentes / Representación Judicial (Facultades Restringidas)");
+      expect(res.reportText).toContain("Advertencia Jurídica:");
+      expect(res.reportText).toContain("No aplica para personas jurídicas");
+
+      // Debe haber pre-cargado la cédula del Representante Legal Principal en la sesión del usuario para verificación en 1 paso
+      const pendingRepDoc = getPendingUnconfirmedDoc(testUserId);
+      expect(pendingRepDoc).not.toBeNull();
+      expect(pendingRepDoc?.cleanNumber).toBe("71755745");
+      expect(pendingRepDoc?.rawNumber).toBe("71755745");
+
+      // Y detectTramiteConfirmation reconoce "verificar representante" para disparar el chequeo del Representante Principal
+      expect(detectTramiteConfirmation("verificar representante")).toEqual({
+        isConfirmation: true,
+        tramite: "cedula",
+        tipoDoc: "cc"
+      });
+    });
+
+    it("5. Consagración doctrinal de versión v33.18 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.18");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.18.0");
     });
   });
 });
-
-
-
-
-
-
-
-
-
