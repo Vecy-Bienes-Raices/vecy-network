@@ -331,6 +331,21 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.25 — Octubre 2026
+
+#### [v33.25.0] — 2026-10-19: Prevalencia de Venta sobre Cuotas de Administración (+ admón), Deduplicación de Reacciones por Grupo y Subsanación en Republicación
+- **Prevalencia Absoluta de Venta (`isExplicitVenta`) (`whatsapp-match.ts`, `propertiesHandler.ts`):**
+  - **Problema:** En publicaciones de venta de inmuebles que incluían cuota de administración (ej. `VENTA • OFICINA • CEDRITOS ... 💰 Precio: $750,000,000 + admón $1,100,000 ... Amoblado o sin muebles`), las expresiones regulares `hasRentExplicit` y `hasRentSignals` interpretaban `+ admón` y `amoblado` como señales de arriendo, asignando erróneamente la reacción `👌` y catalogando el negocio como arriendo.
+  - **Solución:** Introducción de `isExplicitVenta` tanto en el clasificador de mensajes de WhatsApp como en el Fast-Path determinista, en el clasificador de propiedades y en los bloques de fallback. Si la publicación declara venta explícitamente (`VENTA`, `vendo`, `se vende`, etc.), las cuotas de administración y el mobiliario no alteran el tipo de transacción hacia arriendo, asegurando la clasificación como `venta` y la reacción `👍`.
+- **Deduplicación de Reacciones por Grupo (`safeReact`) (`whatsapp-match.ts`):**
+  - **Problema:** La caché en memoria de `safeReact` deduplicaba únicamente por `msgId` global. Cuando un asesor publicaba el mismo inmueble en múltiples grupos en el mismo segundo, la reacción se enviaba al primer grupo procesado y se bloqueaba en los demás grupos, dejando sin emoji al grupo oficial de Vecy (`VECY INMO OFERTAS Y DEMANDAS`).
+  - **Solución:** Indexación compuesta de la caché de reacciones mediante `${chatId}_${msgId}`. Cada grupo independiente recibe su reacción emoji correspondiente.
+  - **Cero Costo de Cuota LLM ($0 COP / 0 tokens):** Las reacciones en Baileys son tramas nativas de WebSocket directas a los servidores de WhatsApp; la clasificación previa corre en memoria vía Fast-Path en < 2ms sin invocar las APIs de Gemini.
+- **Subsanación de Datos en Republicaciones (`propertiesHandler.ts`):**
+  - **Problema:** Al detectar una republicación de un inmueble previamente ingestrado con datos incompletos o erróneos (como la propiedad #4890, creada el 8 de octubre como arriendo y precio $0), el sistema no actualizaba el precio ni el tipo de negocio.
+  - **Solución:** Se incluyó actualización en caliente de `price`, `rentPrice` y `transactionType` en la base de datos si la nueva publicación contiene un precio válido mayor a 0. Adicionalmente, se corrigió directamente en PostgreSQL en el VPS la propiedad #4890 estableciendo `$750.000.000`, `venta` y administración `$1.100.000`.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **298/298 passing** (100% verde) | Build `npm run build` limpio en 25s (Vite) + 148ms (esbuild).
+
 ### 🔖 v33.24 — Octubre 2026
 
 #### [v33.24.0] — 2026-10-17: Cobertura Geográfica Nacional Completa, Resiliencia LLM en DMs y Protocolo de Despliegue Dual

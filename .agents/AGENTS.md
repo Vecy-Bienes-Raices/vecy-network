@@ -183,7 +183,27 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.24 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.25 — Octubre 2026
+
+### Novedades v33.25 (Prevalencia de Venta sobre Cuota de Administración (+ admón), Deduplicación de Reacciones por Grupo y Subsanación en Republicación):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Causas Raíz Identificadas**:
+     - *Falso positivo de arriendo por cuota de administración y amoblado*: La publicación de Ana Morales Castillo (`VENTA • OFICINA • CEDRITOS ... $750M + admón $1.1M ... amoblado o sin muebles`) activaba `hasRentExplicit` y `hasRentSignals` por `+ admón` y `amoblado`. Esto hacía que JanIA asignara reacción de arriendo `👌` en vez de `👍`.
+     - *Deduplicación global por `msgId`*: La asesora publicó simultáneamente en varios grupos. `safeReact` deduplicaba por `msgId` en lugar de `chatId + msgId`. El emoji `👌` se colocó en un grupo externo y bloqueó la reacción en nuestro grupo oficial `VECY INMO OFERTAS Y DEMANDAS` (`120363260108880069@g.us`).
+     - *Deficiencia en republicación*: En base de datos, la publicación coincidió con la propiedad #4890 (ingestada previamente como arriendo con precio $0). La republicación no actualizaba `price`, `rentPrice` ni `transactionType`.
+  2. **Aclaración Estratégica de Costos a Eduardo**:
+     - Las reacciones de WhatsApp vía socket Baileys (`safeReact`) consumen **$0.00 COP y 0 tokens de Gemini**. Son tramas WebSocket nativas directas al servidor de WhatsApp.
+     - La clasificación para reacción opera mediante Fast-Path heurístico local en < 2ms sin invocar el LLM.
+     - Indexar `safeReact` por `${chatId}_${msgId}` garantiza que cada grupo independiente (incluido el oficial de Vecy) reciba su reacción sin incrementar cuotas de IA.
+  3. **Soluciones Implementadas**:
+     - **Prevalencia de Venta en `whatsapp-match.ts` y `propertiesHandler.ts`**: Si el texto contiene venta explícita (`isExplicitVenta`), las menciones de cuota de administración o amoblado no activan señales de arriendo.
+     - **Deduplicación por Grupo en `safeReact`**: Clave compuesta `reactKey = `${chatId}_${msgId}``.
+     - **Subsanación en Republicaciones**: En `propertiesHandler.ts`, si la nueva publicación aporta precio válido > 0, se actualizan `price`, `rentPrice` y `transactionType`.
+     - **Subsanación en BD Contabo**: Propiedad #4890 actualizada a `venta`, $750.000.000 y admón $1.100.000.
+     - **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 298/298 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 25s ✅
+- `shared/const.ts` (`v33.25`) y `package.json` (`33.25.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.24 — Octubre 2026
 
 ### Novedades v33.24 (Resiliencia LLM en DMs, Eliminación de Intermitencia Temporal y Timestamps Huérfanos, Cobertura Geográfica Nacional Completa y Protocolo de Despliegue Dual):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

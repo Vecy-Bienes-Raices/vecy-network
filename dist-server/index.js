@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.24";
+    VECY_VERSION = "v33.25";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17525,10 +17525,23 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       insertDataWithCalif.nombreUsuarioWhatsapp
     );
     const updatedCount = (existing[0].republicacionesCount || 0) + 1;
+    const newPriceVal = parseFloat(String(insertDataWithCalif.price || 0));
+    const existingPriceVal = parseFloat(String(existing[0].price || 0));
+    const effectivePrice = newPriceVal > 0 ? insertDataWithCalif.price : existing[0].price;
+    const newTx = insertDataWithCalif.transactionType;
+    const existingTx = existing[0].transactionType;
+    const effectiveTx = newPriceVal > 0 && (existingPriceVal === 0 || existingTx === "arriendo") ? newTx : insertDataWithCalif.transactionType || existingTx;
     const [updated] = await db.update(properties).set({
       available: true,
       // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
-      price: insertDataWithCalif.price,
+      price: effectivePrice,
+      rentPrice: insertDataWithCalif.rentPrice || existing[0].rentPrice,
+      transactionType: effectiveTx,
+      propertyType: insertDataWithCalif.propertyType || existing[0].propertyType,
+      areaTotal: insertDataWithCalif.areaTotal || existing[0].areaTotal,
+      bathrooms: insertDataWithCalif.bathrooms || existing[0].bathrooms,
+      garages: insertDataWithCalif.garages || existing[0].garages,
+      stratum: insertDataWithCalif.stratum || existing[0].stratum,
       description: insertDataWithCalif.description || existing[0].description,
       adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
       images: finalImages.length > 0 ? finalImages : existing[0].images,
@@ -18605,7 +18618,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const cleanLower = messageToProcess.toLowerCase();
       const detData = extractFallbackDataFromText(messageToProcess);
       const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isRent = detData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+      const isExplicitVentaClean = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta|para venta)\b/i.test(cleanLower);
+      const isRent = detData.transactionType === "arriendo" || !isExplicitVentaClean && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler"));
       const isPermuta = detData.transactionType.includes("permuta");
       const classification = isDetDemand ? "REQUERIMIENTO" : "INMUEBLE";
       const emoji = classification === "INMUEBLE" ? isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}" : isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
@@ -18966,8 +18980,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const groupForTx = (groupName || "").toLowerCase();
       const isGroupRent = groupForTx.includes("arriend") || groupForTx.includes("alquil") || groupForTx.includes("renta");
       const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckText);
-      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText) || /valor arriendo/i.test(cleanCheckText);
-      const hasVentaSignals = /\b(?:vendo|vendemos|se vende|en venta|venta directa|valor venta)\b/i.test(cleanCheckText);
+      const isExplicitVentaSignals = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta|para venta)\b/i.test(cleanCheckText);
+      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText) || !isExplicitVentaSignals && /(?:amoblado|amoblada|sin amoblar)/i.test(cleanCheckText) || !isExplicitVentaSignals && /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText) || !isExplicitVentaSignals && /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText) || /valor arriendo/i.test(cleanCheckText);
+      const hasVentaSignals = isExplicitVentaSignals;
       if (hasPermutaSignals) {
         extracted.transactionType = hasVentaSignals ? "venta_permuta" : "permuta";
       } else if (hasRentSignals && hasVentaSignals) {
@@ -19058,8 +19073,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const isGroupReqRent = groupForReqTx.includes("arriend") || groupForReqTx.includes("alquil") || groupForReqTx.includes("renta");
       const isInvestorPurchaseReq = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|con contrato de arrendamiento|para compra|compro|compra ya|busco para compra)\b/i.test(cleanCheckReqText);
       const hasPermutaReqSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckReqText);
-      const hasRentReqSignals = !isInvestorPurchaseReq && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText) || /valor arriendo/i.test(cleanCheckReqText));
-      const hasVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar)\b/i.test(cleanCheckReqText);
+      const isExplicitVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar|busco para compra)\b/i.test(cleanCheckReqText);
+      const hasRentReqSignals = !isInvestorPurchaseReq && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText) || !isExplicitVentaReqSignals && /(?:amoblado|amoblada|sin amoblar)/i.test(cleanCheckReqText) || !isExplicitVentaReqSignals && /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText) || !isExplicitVentaReqSignals && /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText) || /valor arriendo/i.test(cleanCheckReqText));
+      const hasVentaReqSignals = isExplicitVentaReqSignals;
       if (hasPermutaReqSignals) {
         extracted.transactionType = hasVentaReqSignals ? "venta_permuta" : "permuta";
       } else if (hasRentReqSignals && hasVentaReqSignals) {
@@ -19233,7 +19249,8 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
       const origenId = isGroup || groupJid ? groupJid || userId : userId;
       const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
       if (isExplicitDemand) {
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+        const isExplicitVentaFb = /\b(?:compra|compro|comprador|comprar|en compra|para compra|adquirir)\b/i.test(cleanLower);
+        const isRent = fbData.transactionType === "arriendo" || !isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler"));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
         const savedReq = await saveRequirement({
@@ -19268,7 +19285,8 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
           inserted: true
         };
       } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+        const isExplicitVentaFb = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta)\b/i.test(cleanLower);
+        const isRent = fbData.transactionType === "arriendo" || !isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler"));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
         const savedProp = await saveProperty({
@@ -23669,8 +23687,9 @@ He procedido a eliminar tu publicaci\xF3n para preservar el orden profesional de
           const isGroupOfferContext = isVipGroup || /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
           const isGroupDemandContext = isVipGroup || /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
           const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
-          const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower);
-          const isRentOperation = hasRentExplicit || isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
+          const isExplicitVenta = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|compro|compran|compramos|para compra|en compra|comprador|compradores)\b/i.test(cleanLower);
+          const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || !isExplicitVenta && (/(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower) || /\bamoblado\b|\bamoblada\b|\bsin amoblar\b/i.test(cleanLower) && !isExplicitVenta);
+          const isRentOperation = hasRentExplicit || isGroupRentContext && !isExplicitVenta && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
           const hasPropertyKeyword = /\b(?:apto|aptos|apartamento|apartamentos|casa|casas|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos|penthouse|duplex|dúplex|consultorio|consultorios)\b/i.test(cleanLower);
           const isExplicitDemand = /\b(?:req\b|requerimiento|requerimientos|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
           const isExplicitOffer = !isExplicitDemand && (/\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|disponibles|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower) || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower) || hasPropertyKeyword && (isGroupOfferContext || cleanLower.includes("$") || cleanLower.includes("millon") || cleanLower.includes("precio") || cleanLower.includes("canon")));
@@ -23771,17 +23790,18 @@ He procedido a eliminar tu publicaci\xF3n para preservar el orden profesional de
       async safeReact(chatId, msgKey, emoji, reason = "REACT") {
         if (!msgKey || !msgKey.id || !emoji || !this.sock) return;
         const msgId = msgKey.id;
-        const existing = this.reactedMessageIds.get(msgId);
+        const reactKey = `${chatId}_${msgId}`;
+        const existing = this.reactedMessageIds.get(reactKey);
         if (existing && existing.emoji === emoji && Date.now() - existing.time < 6e4) {
-          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada o en cola para Msg ID ${msgId}. Omitiendo duplicado.`);
+          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada o en cola para ${reactKey}. Omitiendo duplicado.`);
           return;
         }
-        this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
+        this.reactedMessageIds.set(reactKey, { emoji, time: Date.now() });
         this.reactionQueue = this.reactionQueue.then(async () => {
           try {
             if (!this.sock || !this.isReady) {
               console.warn(`[JANIA-${reason}] \u26A0\uFE0F Socket no disponible o reconectando. Omitiendo reacci\xF3n ${emoji} a ${chatId}`);
-              this.reactedMessageIds.delete(msgId);
+              this.reactedMessageIds.delete(reactKey);
               return;
             }
             const now = Date.now();
@@ -23803,7 +23823,7 @@ He procedido a eliminar tu publicaci\xF3n para preservar el orden profesional de
               }
             }
           } catch (err) {
-            this.reactedMessageIds.delete(msgId);
+            this.reactedMessageIds.delete(reactKey);
             const errMsg = err?.message || String(err);
             const isNotAuth = errMsg.includes("not-authorized") || !this.isReady;
             if (isNotAuth) {

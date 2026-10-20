@@ -2075,13 +2075,17 @@ export class JaniaMatchBot {
       const isGroupDemandContext = isVipGroup || /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
 
       const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
-      const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower)
-        || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower)
-        || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower)
-        || /valor arriendo/i.test(cleanLower);
+      const isExplicitVenta = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|compro|compran|compramos|para compra|en compra|comprador|compradores)\b/i.test(cleanLower);
+      const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|arrendatario|arrendador|inquilino)\b/i.test(cleanLower)
+        || (!isExplicitVenta && (
+             /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower)
+             || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower)
+             || /valor arriendo/i.test(cleanLower)
+             || (/\bamoblado\b|\bamoblada\b|\bsin amoblar\b/i.test(cleanLower) && !isExplicitVenta)
+           ));
 
       // Si el grupo es explícitamente de arriendos o el texto tiene señales de arriendo (administración incluida, canon, etc.)
-      const isRentOperation = hasRentExplicit || (isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith('vendo') && !cleanLower.startsWith('se vende'));
+      const isRentOperation = hasRentExplicit || (isGroupRentContext && !isExplicitVenta && !cleanLower.startsWith('vendo') && !cleanLower.startsWith('se vende'));
 
       const hasPropertyKeyword = /\b(?:apto|aptos|apartamento|apartamentos|casa|casas|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos|penthouse|duplex|dúplex|consultorio|consultorios)\b/i.test(cleanLower);
 
@@ -2208,23 +2212,26 @@ export class JaniaMatchBot {
     if (!msgKey || !msgKey.id || !emoji || !this.sock) return;
 
     const msgId = msgKey.id;
+    const reactKey = `${chatId}_${msgId}`;
 
-    // Deduplicación estricta: evitar disparar reacciones idénticas al mismo mensaje en menos de 60 segundos
-    const existing = this.reactedMessageIds.get(msgId);
+    // Deduplicación estricta por grupo y mensaje (${chatId}_${msgId}):
+    // Garantiza que cada grupo reciba su reacción correspondiente (especialmente los grupos oficiales VECY),
+    // pero evita colisiones o reenvíos repetitivos dentro del mismo grupo en menos de 60 segundos.
+    const existing = this.reactedMessageIds.get(reactKey);
     if (existing && existing.emoji === emoji && (Date.now() - existing.time < 60000)) {
-      console.log(`[JANIA-${reason}] ℹ️ Reacción ${emoji} ya entregada o en cola para Msg ID ${msgId}. Omitiendo duplicado.`);
+      console.log(`[JANIA-${reason}] ℹ️ Reacción ${emoji} ya entregada o en cola para ${reactKey}. Omitiendo duplicado.`);
       return;
     }
 
     // Registrar provisionalmente en memoria para evitar colisiones simultáneas
-    this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
+    this.reactedMessageIds.set(reactKey, { emoji, time: Date.now() });
 
     // Encolar de forma estrictamente secuencial con pacing seguro para blindar contra 'rate-overlimit' y desconexiones 408
     this.reactionQueue = this.reactionQueue.then(async () => {
       try {
         if (!this.sock || !this.isReady) {
           console.warn(`[JANIA-${reason}] ⚠️ Socket no disponible o reconectando. Omitiendo reacción ${emoji} a ${chatId}`);
-          this.reactedMessageIds.delete(msgId);
+          this.reactedMessageIds.delete(reactKey);
           return;
         }
 
@@ -2252,7 +2259,7 @@ export class JaniaMatchBot {
         }
       } catch (err: any) {
         // 🛡️ Si falló la entrega, liberar de reactedMessageIds para permitir reintento de BUFFER-REACT
-        this.reactedMessageIds.delete(msgId);
+        this.reactedMessageIds.delete(reactKey);
 
         const errMsg = err?.message || String(err);
         const isNotAuth = errMsg.includes("not-authorized") || !this.isReady;

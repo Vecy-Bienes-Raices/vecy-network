@@ -995,11 +995,29 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     );
 
     const updatedCount = (existing[0].republicacionesCount || 0) + 1;
+    const newPriceVal = parseFloat(String(insertDataWithCalif.price || 0));
+    const existingPriceVal = parseFloat(String(existing[0].price || 0));
+    const effectivePrice = newPriceVal > 0 ? insertDataWithCalif.price : existing[0].price;
+
+    const newTx = insertDataWithCalif.transactionType;
+    const existingTx = existing[0].transactionType;
+    // Si la ficha existente tenía precio 0 o la nueva publicación viene con venta explícita y precio real, actualizar tipo de transacción
+    const effectiveTx = (newPriceVal > 0 && (existingPriceVal === 0 || existingTx === "arriendo")) 
+      ? newTx 
+      : (insertDataWithCalif.transactionType || existingTx);
+
     const [updated] = await db
       .update(properties)
       .set({
         available: true, // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
-        price: insertDataWithCalif.price,
+        price: effectivePrice,
+        rentPrice: insertDataWithCalif.rentPrice || existing[0].rentPrice,
+        transactionType: effectiveTx as any,
+        propertyType: insertDataWithCalif.propertyType || existing[0].propertyType,
+        areaTotal: insertDataWithCalif.areaTotal || existing[0].areaTotal,
+        bathrooms: insertDataWithCalif.bathrooms || existing[0].bathrooms,
+        garages: insertDataWithCalif.garages || existing[0].garages,
+        stratum: insertDataWithCalif.stratum || existing[0].stratum,
         description: insertDataWithCalif.description || existing[0].description,
         adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
         images: finalImages.length > 0 ? finalImages : existing[0].images,
@@ -2169,7 +2187,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       const cleanLower = messageToProcess.toLowerCase();
       const detData = extractFallbackDataFromText(messageToProcess);
       const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isRent = detData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+      const isExplicitVentaClean = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta|para venta)\b/i.test(cleanLower);
+      const isRent = detData.transactionType === "arriendo" || (!isExplicitVentaClean && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler")));
       const isPermuta = detData.transactionType.includes("permuta");
       const classification = isDetDemand ? "REQUERIMIENTO" : "INMUEBLE";
       const emoji = classification === "INMUEBLE"
@@ -2683,11 +2702,13 @@ Por lo tanto, DEBES hacer lo siguiente:
       const isGroupRent = groupForTx.includes('arriend') || groupForTx.includes('alquil') || groupForTx.includes('renta');
 
       const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckText);
-      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText)
-        || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText)
-        || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText)
+      const isExplicitVentaSignals = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta|para venta)\b/i.test(cleanCheckText);
+      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText)
+        || (!isExplicitVentaSignals && /(?:amoblado|amoblada|sin amoblar)/i.test(cleanCheckText))
+        || (!isExplicitVentaSignals && /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText))
+        || (!isExplicitVentaSignals && /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText))
         || /valor arriendo/i.test(cleanCheckText);
-      const hasVentaSignals = /\b(?:vendo|vendemos|se vende|en venta|venta directa|valor venta)\b/i.test(cleanCheckText);
+      const hasVentaSignals = isExplicitVentaSignals;
 
       if (hasPermutaSignals) {
         extracted.transactionType = hasVentaSignals ? "venta_permuta" : "permuta";
@@ -2802,13 +2823,15 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const isInvestorPurchaseReq = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|con contrato de arrendamiento|para compra|compro|compra ya|busco para compra)\b/i.test(cleanCheckReqText);
       const hasPermutaReqSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckReqText);
+      const isExplicitVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar|busco para compra)\b/i.test(cleanCheckReqText);
       const hasRentReqSignals = !isInvestorPurchaseReq && (
-        /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText)
-        || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText)
-        || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText)
+        /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText)
+        || (!isExplicitVentaReqSignals && /(?:amoblado|amoblada|sin amoblar)/i.test(cleanCheckReqText))
+        || (!isExplicitVentaReqSignals && /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText))
+        || (!isExplicitVentaReqSignals && /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText))
         || /valor arriendo/i.test(cleanCheckReqText)
       );
-      const hasVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar)\b/i.test(cleanCheckReqText);
+      const hasVentaReqSignals = isExplicitVentaReqSignals;
 
       if (hasPermutaReqSignals) {
         extracted.transactionType = hasVentaReqSignals ? "venta_permuta" : "permuta";
@@ -3047,7 +3070,8 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       if (isExplicitDemand) {
         // Fallback para DEMANDA (REQUERIMIENTO)
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+        const isExplicitVentaFb = /\b(?:compra|compro|comprador|comprar|en compra|para compra|adquirir)\b/i.test(cleanLower);
+        const isRent = fbData.transactionType === "arriendo" || (!isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler")));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "🔄" : (isRent ? "✏️" : "📝");
 
@@ -3085,7 +3109,8 @@ Por lo tanto, DEBES hacer lo siguiente:
         };
       } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
         // Fallback para OFERTA (INMUEBLE)
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+        const isExplicitVentaFb = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta)\b/i.test(cleanLower);
+        const isRent = fbData.transactionType === "arriendo" || (!isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler")));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "🔀" : (isRent ? "👌" : "👍");
 

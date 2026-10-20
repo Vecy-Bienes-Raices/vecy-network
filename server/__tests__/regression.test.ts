@@ -6103,13 +6103,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.24 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.25 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.24");
+      expect(VECY_VERSION).toBe("v33.25");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.24.0");
+      expect(pkg.version).toBe("33.25.0");
     });
   });
 
@@ -6490,6 +6490,71 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(resBq.extractedData?.addressLocality).toBe("Localidad Riomar");
     });
   });
+
+  describe("SUITE 83: JanIA v33.25 — Prevalencia de Venta sobre Cuota de Administración (+ admón), Deduplicación por Grupo y Subsanación en Republicación (v33.25)", () => {
+    it("1. Inmueble con VENTA y cuota de administración (+ admón $1,100,000) se clasifica como VENTA con emoji 👍", async () => {
+      const { processWhatsAppMessage } = await import("../_core/janIA");
+      const msgVenta = `VENTA • OFICINA • CEDRITOS
+Cód. WRE-116
+
+💰 Precio: $750,000,000 + admón $1,100,000
+📍 Ubicación: Cedritos, cerca a la calle 153 con Carrera 7ma
+📐 Área: 100 m² · Estrato 6 · Edad 10 años
+
+Características
+- 1 baño
+- 2 parqueaderos
+- Espacio con divisiones, sala de juntas, cocineta, espacio para servidores,
+- Amoblado o sin muebles
+- Recepción, Vista panorámica
+
+Edificio / conjunto
+- Edificio con Auditorio, Area de Comedor, Sal de Juntas
+- Planta eléctrica y recepción 24 h
+- 2 Parqueadero y parqueadero publico
+
+🤝 Comisión compartida: 50/50
+📝 Condiciones: Disponible de inmediato
+
+¿Tienes un cliente para esta oficina? Escríbeme y te envío fotos, ficha tecnica
+Ana Morales Castillo
+📲 313 466 8266`;
+
+      const res = await processWhatsAppMessage(
+        msgVenta,
+        "573134668266@s.whatsapp.net",
+        "Ana Morales Castillo",
+        false,
+        undefined,
+        undefined,
+        undefined,
+        true,
+        undefined,
+        undefined,
+        "120363260108880069@g.us",
+        "VECY INMO OFERTAS Y DEMANDAS"
+      );
+
+      expect(res.classification).toBe("INMUEBLE");
+      expect(res.reactionEmoji).toBe("👍"); // Oferta Venta, NUNCA 👌 (arriendo)
+      expect(res.extractedData?.transactionType).toBe("venta");
+      expect(Number(res.extractedData?.price)).toBe(750000000);
+      expect(res.extractedData?.zone).toBe("Cedritos");
+      expect(res.extractedData?.propertyType).toBe("office");
+    });
+
+    it("2. extractFallbackDataFromText extrae correctamente Venta y $750M cuando se menciona + admón", async () => {
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+      const texto = `VENTA OFICINA CEDRITOS Precio: $750,000,000 + admón $1,100,000 Área: 100 m²`;
+      const fb = extractFallbackDataFromText(texto);
+
+      expect(fb.transactionType).toBe("venta");
+      expect(fb.price).toBe(750000000);
+      expect(fb.propertyType).toBe("office");
+      expect(fb.area).toBe(100);
+    });
+  });
 });
+
 
 

@@ -1,15 +1,15 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.24.0 — 2026-10-17)
-- **JanIA Server:** `v33.24` (`33.24.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
-- **Resiliencia LLM en DMs y Erradicación de "Intermitencia Temporal":**
-  1. Timeout ampliado a 25s en `server/_core/llm.ts` para consultas jurídicas complejas y function calling.
-  2. Detección y manejo del error HTTP 402 ("prepayment credits are depleted") en la clave de pago de Google Gemini, activando un cooldown preventivo de 1 hora y regresando inmediatamente al pool gratuito ($0 COP).
-  3. Rescate inteligente ante errores de esquema/tools (HTTP 400): fallback inmediato sin herramientas para mantener viva la conversación.
-  4. Doble capa de reintento en `dmHandler.ts`: si `invokeLLM` con `JANIA_DM_TOOLS` falla, reintenta automáticamente como consulta conversacional pura, impidiendo caídas al catch genérico.
-- **Erradicación de Timestamps Huérfanos `[YYYY-MM-DD HH:mm]`:** Almacenamiento limpio de turnos del asistente en `sessionManager.ts`, desinfección regex de timestamps al inicio de las respuestas en `dmHandler.ts` y directivas negativas en los prompts.
-- **Supresión de Falsos Positivos de Review de Google e Invitación a Grupos:** En `whatsapp-match.ts`, blindaje para evitar disparar solicitudes de review cuando el mensaje contiene signos de interrogación `?`, más de 15 palabras, términos técnicos/jurídicos, si la respuesta fue un fallo o si el remitente es un administrador (Eduardo o Jani).
-- **Cobertura Geográfica Nacional Completa (Medellín, Cali, Barranquilla, Bucaramanga, Cartagena, etc.):** Ingesta, normalización y deducción geográfica multipropósito en WhatsApp y Web.
-- **Protocolo de Despliegue Dual:** Actualización del remoto de GitHub con token sin expiración y despliegue directo por SSH al VPS de Contabo (`13.140.149.144`).
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (296/296 a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.25.0 — 2026-10-19)
+- **JanIA Server:** `v33.25` (`33.25.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
+- **Prevalencia de Venta sobre Cuota de Administración (+ admón) y Amoblado:**
+  1. En `whatsapp-match.ts` y `propertiesHandler.ts`, inclusión de `isExplicitVenta` para que menciones de administración (`+ admón $1,100,000`) o mobiliario (`amoblado o sin muebles`) jamás desvíen una venta explícita hacia arriendo.
+  2. Asignación correcta y rigurosa de reacción emoji: `👍` para inmueble en venta, erradicando falsos `👌` (arriendo).
+- **Deduplicación de Reacciones por Grupo (`${chatId}_${msgId}`):**
+  1. `safeReact` en `whatsapp-match.ts` ahora indexa por `${chatId}_${msgId}` en lugar de un `msgId` global.
+  2. Publicaciones simultáneas en múltiples grupos reciben su reacción en cada grupo independiente (incluido el grupo oficial de Vecy) a costo $0 COP y 0 tokens LLM (vía Baileys WebSocket nativo).
+- **Subsanación de Datos en Republicaciones:**
+  1. Actualización en caliente de `price`, `rentPrice` y `transactionType` en la base de datos cuando una republicación aporta valores válidos > 0.
+  2. Subsanación manual directa de la propiedad #4890 en PostgreSQL Contabo ($750M / venta / admón $1.1M).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (298/298 a $0 COP) | Build `npm run build` limpio en 25s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

@@ -7,6 +7,55 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-19] — JanIA v33.25: Prevalencia de Venta sobre Cuotas de Administración (+ admón), Deduplicación de Reacciones por Grupo y Subsanación en Republicación (v33.25 - 33.25.0)
+
+**Versión:** `v33.25` (`33.25.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-match.ts`: Inclusión de `isExplicitVenta` para impedir que `+ admón`, `amoblado` o `administración` activen `hasRentExplicit` cuando la publicación declara venta explícita; deduplicación de `safeReact` por clave compuesta `reactKey = `${chatId}_${msgId}``, garantizando que el emoji se coloque en cada grupo independiente (incluido el grupo oficial VECY) a costo $0 COP / 0 tokens LLM.
+- `server/_core/jania/handlers/propertiesHandler.ts`: Blindaje en Fast-Path determinista (`isRent` condicionado a `!isExplicitVentaClean`), en la extracción de propiedades (`isExplicitVentaSignals` con `\bventa\b`), en requerimientos y en bloques de fallback; subsanación en republicaciones actualizando `price`, `rentPrice` y `transactionType` cuando los nuevos datos tienen un precio válido > 0.
+- `server/__tests__/regression.test.ts`: Creación de SUITE 83 con 2 pruebas de regresión doctrinal para prevalencia de venta con administración y actualización de la prueba de versión a `v33.25` / `33.25.0`.
+- `shared/const.ts` (`v33.25`) y `package.json` (`33.25.0`).
+- Base de datos PostgreSQL en VPS Contabo: Corrección directa de la propiedad #4890 estableciendo `price = 750000000.00`, `transactionType = 'venta'` y `adminFee = 1100000.00`.
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md` (§10).
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"¿Por qué JanIA no tuvo en cuenta esa publicación? Qué sucedió?"* (Refiriéndose a la publicación de Ana Morales Castillo: VENTA OFICINA CEDRITOS $750M + admón $1.1M en el grupo oficial `VECY INMO OFERTAS Y DEMANDAS`, a la cual no se le puso reacción, mientras que a una posterior sí).
+- *"Espera porque no estoy seguro de esta y no se si al cambiar la regla que teníamos antes, esto afecte las cuotas que tiene que gastar la IA o si no pasa nada y la API no gastaría más ni excedería su cuota gratuita solo por el hecho de ponerle una misma reacción a la misma publicación en cada grupo distinto. Eso explícamelo mejor antes de arrancar con las correcciones. SI ves que no gasta nada y se puede hacer adelante, pero si ves que gasta de más dejarlo como está y si ya fue detectada en el primer grupo pues no sería necesario reaccionarlo en todas, lo dejo a tu decisión y análisis así me vas a recomendar lo que es mejor para el proyecto. Con lo demás estoy de acuerdo."*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Causa Raíz #1 — Falso positivo de Arriendo por Cuota de Administración (+ admón) y Amoblado:**
+   - La publicación decía: `VENTA • OFICINA • CEDRITOS ... 💰 Precio: $750,000,000 + admón $1,100,000 ... Amoblado o sin muebles`.
+   - Las expresiones regulares `hasRentExplicit` en `whatsapp-match.ts` y `hasRentSignals` en `propertiesHandler.ts` evaluaban patrones como `/(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i` y `amoblado`.
+   - Al coincidir con la cuota de administración de la oficina en venta, el sistema consideraba que era un arriendo y pretendía asignarle el emoji `👌` en vez de `👍`.
+2. **Causa Raíz #2 — Deduplicación Global por `msgId` en lugar de `chatId + msgId`:**
+   - La asesora remitió la publicación a varios grupos inmobiliarios de WhatsApp casi en el mismo segundo.
+   - `safeReact` en `whatsapp-match.ts` mantenía una caché en memoria indexada únicamente por `msgId`.
+   - Cuando JanIA procesó el mensaje en un grupo externo (`120363394914273327@g.us`), le colocó la reacción `👌` y guardó el `msgId` en la caché.
+   - Milisegundos después, al procesar el mensaje en nuestro grupo oficial (`120363260108880069@g.us`), `safeReact` detectó el `msgId` como ya reaccionado y abortó la reacción en el grupo de Vecy.
+3. **Causa Raíz #3 — Deficiencia en la Actualización de Republicaciones:**
+   - En la base de datos, el mensaje coincidió con la propiedad #4890 registrada previamente como `arriendo` con `price = 0.00`.
+   - El manejador de republicaciones actualizaba la fecha pero no reemplazaba el `price`, `rentPrice` ni el `transactionType` cuando la nueva publicación aportaba los valores correctos de venta.
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Aclaración Estratégica de Costos a Eduardo:**
+   - Se ratificó que las reacciones de WhatsApp en Baileys son tramas nativas de WebSocket que cuestan **$0 COP y 0 tokens de Gemini**. La clasificación para reacción se realiza mediante heurísticas Fast-Path en < 2ms sin invocar el LLM. Deduplicar por `${chatId}_${msgId}` es 100% seguro y no incrementa el consumo de cuota gratuita.
+2. **Prevalencia Absoluta de Venta (`isExplicitVenta`):**
+   - En `whatsapp-match.ts` y `propertiesHandler.ts`, las menciones de cuota de administración (`+ admón $1.1M`) o mobiliario (`amoblado o sin muebles`) se ignoran como señal de arriendo si existe una declaración explícita de venta (`VENTA`, `vendo`, `se vende`, etc.).
+3. **Deduplicación por Grupo (`${chatId}_${msgId}`):**
+   - Se actualizó la clave de `safeReact` para que cada grupo reciba su emoji de forma independiente, asegurando que los grupos oficiales de Vecy siempre muestren la reacción correspondiente.
+4. **Subsanación de Datos en Republicación:**
+   - En `propertiesHandler.ts`, al detectarse una republicación con precio válido > 0, se actualizan `price`, `rentPrice` y `transactionType` en la base de datos.
+5. **Corrección de Datos en VPS Contabo:**
+   - Se actualizó la propiedad #4890 directamente en PostgreSQL: `transactionType = 'venta'`, `price = 750000000.00`, `adminFee = 1100000.00`.
+6. **Validación Exhaustiva:**
+   - `npm test`: 298/298 pruebas pasando (100% verde a $0 COP).
+   - `npm run check`: 0 errores de TypeScript.
+   - `npm run build`: compilación limpia en 25s.
+
+---
+
 ### 📅 [2026-10-17] — JanIA v33.24: Cobertura Geográfica Nacional Completa, Resiliencia LLM en DMs y Protocolo de Despliegue Dual (v33.24 - 33.24.0)
 
 **Versión:** `v33.24` (`33.24.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
