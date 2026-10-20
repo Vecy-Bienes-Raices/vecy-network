@@ -331,6 +331,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.27 — Octubre 2026
+
+#### [v33.27.0] — 2026-10-20: ADRES BDUA con EPS Limpia, Hábeas Data al Final, Autonomía de Reportes de JanIA, Visión y Debate Orgánico en Grupos 2 y 3
+- **ADRES (BDUA) con Extracción de EPS Limpia y Consulta Multisectorial (`identityVerificationService.ts`, `agenda.ts`):**
+  - **Problema:** En el flujo de verificación de identidad, la consulta a ADRES extraía el nombre de la EPS pero este no se guardaba en `identityCache`, por lo que en subsecuentes aciertos de caché se mostraba un texto genérico (`Registrado y activo en el sistema de aseguramiento en salud`) en lugar del nombre de la EPS. Además, la respuesta cruda de ADRES contenía entidades HTML (`&#201;`) y nombres corporativos extensos que dificultaban la lectura rápida.
+  - **Solución:** Se creó `formatCleanEpsName` para decodificar entidades HTML y mapear nombres comerciales limpios (`Capital Salud EPS-S`, `Sanitas EPS`, `Nueva EPS`, `Sura EPS`, `Compensar EPS`, `Salud Total EPS`, `Famisanar EPS`). Se extendió `AdresResult` e `identityCache` con `eps`, `estado` y `regimen` tanto en caliente como en memoria persistente, permitiendo que el reporte cite con exactitud: `🏥 *ADRES (BDUA):* Capital Salud EPS-S (ACTIVO — SUBSIDIADO)`.
+- **Posicionamiento Doctrinal de Hábeas Data al Final y Cierre de Cortesía VECY (`identityVerificationService.ts`):**
+  - **Problema:** La cláusula de Hábeas Data aparecía antes de los datos de identidad o en medio del reporte, interrumpiendo la lectura de los resultados principales.
+  - **Solución:** Reubicación obligatoria de la cláusula `⚖️ Habeas Data (Ley 1581/12)` al FINAL de todos los reportes (persona natural, personas jurídicas y consolidado multi-documento), concluyendo con el sello de valor: `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
+- **Autonomía Cognitiva de Diseño de Reportes para JanIA (`prompts.ts`):**
+  - Se incorporó en `JANIA_ARGON_COGNITIVE_CORE` la directiva que confiere a JanIA total libertad para estructurar, diagramar y entregar sus reportes de forma corta, elegante, ejecutiva y contundente bajo su propio estilo y el de VECY, sin fichas fijas ni plantillas rígidas impuestas.
+- **Visión Multimodal, Documentos y Debate Orgánico en Grupos 2 y 3 (`whatsapp-match.ts`, `circuloHandler.ts`):**
+  - **Problema:** En el Grupo 3 (`circuloGroupId`), JanIA no recibía imágenes, PDFs ni el contexto de mensajes citados (`quotedContext`), lo que impedía que analizara afiches compartidos o continuara debates iniciados por colegas (como Karina), respondiendo con frases genéricas de atención al cliente.
+  - **Solución:** Se unificó la descarga de multimedia (`imageBuffer`, `pdfBuffer`, `pdfMimeType`) y extracción de contexto citado para los Grupos 2 y 3 en `handleDirectGroupQuestion` y `processGroupBuffer`. Se instruyó en `circuloHandler.ts` un debate orgánico, citando nombres reales de los participantes y evitando respuestas acartonadas.
+- **Depuración de Nombres en `nameAndGenderResolver` (`nameAndGenderResolver.ts`):**
+  - Depuración automática de sufijos y títulos profesionales (ej. "Karina Agente Inmobiliaria Independiente" -> `Karina`, género femenino, cortesía `estimada Karina`) y bloqueo de saludos aislados como nombres propios ("Hola" -> `colega`).
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **303/303 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 14s.
+
 ### 🔖 v33.26 — Octubre 2026
 
 #### [v33.26.0] — 2026-10-19: Pedagogía en Firma Electrónica Estatal (MinTIC - AND), Vecy Agenda Pro, Riqueza de Emojis y Presencia Realista

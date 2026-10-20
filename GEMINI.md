@@ -1,15 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.26.0 — 2026-10-19)
-- **JanIA Server:** `v33.26` (`33.26.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
-- **Pedagogía en Firma Electrónica Estatal (MinTIC - AND / GOV.CO):**
-  1. Integración en el dossier cognitivo de la plataforma estatal gratuita `https://autenticaciondigital.and.gov.co/` (Decreto 620/2020 y Ley 527/1999) con sus 5 pasos oficiales para firmar documentos PDF sin costo y validación de firmas de terceros.
-  2. Rol de tutora pedagógica que enseña a los usuarios a usar la herramienta estatal gratuita y canaliza la venta de plataformas privadas de firma electrónica con Eduardo Rivera (+57 316 656 9719).
-- **Integración Activa de Vecy Agenda Pro y Catálogo:**
-  1. Enlace oficial `https://vecy-agenda-pro.vercel.app/` incorporado para coordinación de citas con verificación de identidad y antecedentes.
-  2. Catálogo oficial de WhatsApp (`https://wa.me/c/573192919978`) y portal de propiedades.
-- **Riqueza y Libertad de Emojis de WhatsApp (IA Pura):**
-  1. Directiva explícita de expresividad contextual con gran variedad de emojis (🤔, 💡, ✍️, 📄, ⚖️, 🛡️, 🧐, 🤝, 🚀, 🏡, 🏢, 💰, 👍, 👌, 🎯).
-  2. Preservación del estado de presencia de grabación (`🎙️ Grabando audio...`) retenido al menos 1.8s antes de despachar notas de voz para visibilidad garantizada en WhatsApp.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (300/300 a $0 COP) | Build `npm run build` limpio en 35s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.27.0 — 2026-10-20)
+- **JanIA Server:** `v33.27` (`33.27.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
+- **ADRES (BDUA) con Extracción de EPS Limpia y Consulta Multisectorial:**
+  1. Conexión y extracción de EPS en tiempo real (ej. `Capital Salud EPS-S`, `Sanitas EPS`, `Nueva EPS`, `Sura EPS`), decodificación de entidades HTML y estado/régimen (`ACTIVO — SUBSIDIADO` / `CONTRIBUTIVO`).
+  2. Almacenamiento y persistencia en `identityCache` para evitar consultas redundantes a $0 COP.
+- **Posicionamiento Doctrinal de Hábeas Data y Cierre de Cortesía VECY:**
+  1. Cláusula de Hábeas Data (Ley 1581/12 y Art. 15 C.P.) reubicada OBLIGATORIAMENTE al FINAL del reporte para no interrumpir ni anteponerse a los datos de identidad.
+  2. Sello de cierre institucional: `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
+- **Autonomía Cognitiva de Diseño de Reportes para JanIA:**
+  1. Directiva en `JANIA_ARGON_COGNITIVE_CORE` otorgando a JanIA total libertad para diseñar y estructurar reportes cortos, elegantes y contundentes sin quedar encasillada en una plantilla rígida.
+- **Visión Multimodal, Documentos y Debate Orgánico en Grupos 2 y 3:**
+  1. Soporte completo de imágenes, PDFs y contexto de mensajes citados (`quotedContext`) en Grupo 3 (`circuloGroupId`) y Grupo 2 (`buzonGroupId`).
+  2. Debate fluido y orgánico en Grupo 3 sin respuestas de atención al cliente vacías.
+  3. Desinfección de nombres en `nameAndGenderResolver` (depuración de títulos como "Agente Inmobiliaria Independiente" y rechazo de saludos como nombres).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (303/303 a $0 COP) | Build `npm run build` limpio en 14s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

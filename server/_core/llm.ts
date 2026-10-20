@@ -28,14 +28,15 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos ordenados por prioridad de fallback (gemini-flash-latest y gemini-3.8-flash prioritarios y verificados - v33.24)
+// Modelos ordenados por prioridad de fallback (gemini-flash-lite-latest prioritario por 1500 req/día y velocidad <1s - v33.27)
 const FALLBACK_MODELS = [
-  "gemini-flash-latest",
-  "gemini-3.8-flash",
-  "gemini-2.5-flash",
-  "gemini-3.5-flash-lite",
   "gemini-flash-lite-latest",
-  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-3.5-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-1.5-flash",
 ];
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
@@ -238,7 +239,8 @@ async function invokeGemini(
           }
 
           // Error 402: Créditos prepagados agotados en la clave de pago de Google Cloud Billing -> Pausar por 1 hora
-          if (status === 402 || /prepayment credits are depleted|billing|credit/i.test(String(errorMsg || ""))) {
+          // NOTA CRÍTICA: status !== 429 para no confundir "check your plan and billing details" de cuota 429 con 402 agotado
+          if (status === 402 || (status !== 429 && /prepayment credits are depleted|credit balance is too low|insufficient funds/i.test(String(errorMsg || "")))) {
             console.warn(`[JanIA-LLM] ⚠️ Clave de pago (${tierTag}) con créditos agotados (402). Pausando por 1 hora para no frenar el servicio.`);
             geminiKeyManager.markKeyCooldown(activeKey, 3600, "Depleted Billing Credits (402)");
             break; // Saltar de inmediato al pool gratuito

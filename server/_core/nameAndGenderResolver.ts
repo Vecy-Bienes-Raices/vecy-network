@@ -180,28 +180,40 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
 
   // Si no es compuesto clásico de la lista estática, analizar si son dos nombres propios
   if (!resolvedDisplayName) {
-    const parts = cleaned.split(/\s+/).filter(Boolean);
+    let parts = cleaned.split(/\s+/).filter(Boolean);
     const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "raíces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
-    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase());
+    const professionalTitles = new Set([
+      "agente", "asesor", "asesora", "broker", "inmobiliaria", "inmobiliario", "independiente",
+      "consultor", "consultora", "abogado", "abogada", "arquitecto", "arquitecta", "director",
+      "directora", "gerente", "perito", "valuador", "tasador", "colombia", "bogota", "bogotá",
+      "medellin", "medellín", "cali", "ventas", "arriendos", "finca", "propiedades", "red", "vecy"
+    ]);
+
+    // Si empieza con título profesional o saludo (ej: "Agente Karina", "Asesor Carlos", "Hola"):
+    if (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
+      parts = parts.slice(1);
+    }
+
+    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
 
     if (isGenericBusiness) {
       resolvedDisplayName = cleaned;
-    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()))) {
+    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase())) && !professionalTitles.has(parts[1].toLowerCase())) {
       // Casos como "Maria Claudia", "Ana Maria", "Luz Dary", "Juan Diego", "Luis Fer"
       resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
-    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop")) {
+    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase())) {
       // Si tiene dos nombres personales claros (ej. Nelson Enrique, Gustavo Adolfo)
       resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
-    } else if (parts.length > 0) {
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";
     }
   }
 
-  // 2. Extraer primer token para análisis de género
-  const firstWord = cleaned.split(/\s+/)[0]?.toLowerCase() || "";
-  const firstWordClean = firstWord.replace(/[^a-záéíóúüñ]/g, "");
+  // 2. Extraer primer token real para análisis de género
+  const nameTokens = resolvedDisplayName.split(/\s+/).filter(Boolean);
+  const firstWordClean = (nameTokens[0] || "").toLowerCase().replace(/[^a-záéíóúüñ]/g, "");
 
   // 3. Determinar género
   let isFemale = false;

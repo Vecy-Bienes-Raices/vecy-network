@@ -97,15 +97,28 @@ export function extractFirstName(fullName: string): string {
   clean = clean.replace(/[0-9]/g, "");
   if (!clean.trim()) return "";
 
-  const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  const filteredWords = words.filter(w => w.length > 0);
+  let wordsList = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter(w => w.length > 0);
+  if (wordsList.length === 0 || !wordsList[0]) return "";
+
+  const INVALID_FIRST_NAMES = new Set([
+    "hola", "buenas", "buenos", "asesor", "asesora", "agente", "inmobiliaria", "inmobiliario",
+    "contacto", "usuario", "desconocido", "admin", "administrador", "broker", "vecy",
+    "propiedades", "finca", "raices", "bienes", "consultor", "consultora", "independiente"
+  ]);
+
+  // Si la primera palabra es un título o saludo (ej: "Agente Karina", "Asesor Carlos", "Hola"):
+  if (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
+    wordsList = wordsList.slice(1);
+  }
+
+  const filteredWords = wordsList;
   if (filteredWords.length === 0 || !filteredWords[0]) return "";
 
   const w1 = filteredWords[0].toLowerCase();
   const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
 
   // Si hay al menos dos palabras y ambas están en la lista de nombres comunes, es un nombre compuesto
-  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
+  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2) && !INVALID_FIRST_NAMES.has(w2)) {
     const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
     const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
     return `${first} ${second}`;
@@ -121,6 +134,11 @@ export function extractFirstName(fullName: string): string {
   }
 
   const candidate = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+
+  // Si el candidato resultante es un saludo o genérico inválido, retornar vacío
+  if (INVALID_FIRST_NAMES.has(candidate.toLowerCase())) {
+    return "";
+  }
 
   // Filtro anti-iniciales en nombres (Regla Doctrinal v33.4.1):
   // Si el nombre extraído tiene <= 3 caracteres y NO está en COMMON_FIRST_NAMES

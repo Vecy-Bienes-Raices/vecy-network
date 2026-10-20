@@ -32,12 +32,12 @@ export async function extractFlyerVision(imageBufferBase64: string): Promise<Fly
     };
   }
 
-  // Modelos estables y de alta disponibilidad ordenados por velocidad y cuota
+  // Modelos estables y de alta disponibilidad ordenados por velocidad y cuota (v33.27)
   const models = [
-    "gemini-2.5-flash",
     "gemini-flash-lite-latest",
     "gemini-flash-latest",
     "gemini-2.5-flash-lite",
+    "gemini-3.5-flash-lite",
     "gemini-1.5-flash"
   ];
 

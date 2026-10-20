@@ -7,6 +7,75 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-20] — JanIA v33.27: ADRES BDUA con EPS Limpia, Hábeas Data al Final, Autonomía de Diseño de Reportes, Visión y Debate Orgánico en Grupos 2 y 3 (v33.27 - 33.27.0)
+
+**Versión:** `v33.27` (`33.27.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/identityVerificationService.ts`:
+  1. Nueva función `formatCleanEpsName`: decodificación de entidades HTML (`&#201;` -> `É`) y mapeo a nombres comerciales reconocidos y concisos (ej. `Capital Salud EPS-S`, `Sanitas EPS`, `Nueva EPS`, `Sura EPS`, `Compensar EPS`, `Salud Total EPS`, `Famisanar EPS`).
+  2. Inclusión de `eps`, `estado` y `regimen` en `AdresResult` y almacenamiento persistente en `identityCache`.
+  3. Búsqueda y cotejo de EPS en caché y en vivo dentro de `executeIdentityVerificationFromWhatsApp` tanto para verificaciones individuales como múltiples.
+  4. Reubicación estricta y doctrinal de la cláusula `⚖️ Habeas Data (Ley 1581/12)` al FINAL de todos los reportes (`formatCompactIdentityVerificationReport` y `buildConsolidatedReportText`), impidiendo que interrumpa la lectura de los datos de identidad y antecedentes.
+  5. Inclusión del sello de cierre institucional solicitado por Eduardo: `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
+- `server/routers/agenda.ts`: Extensión de la interfaz de `identityCache` con `eps`, `estado` y `regimen`; precarga de las identidades doctrinales de Eduardo Rivera (`Capital Salud EPS-S`) y Jani Alves (`Sanitas EPS`).
+- `server/_core/whatsapp-match.ts`:
+  1. Unificación en `handleDirectGroupQuestion` de la descarga de multimedia (`imageBuffer`, `pdfBuffer`, `pdfMimeType`) y extracción de contexto de citas (`quotedContext`) para el Grupo 3 (`circuloGroupId` / Proyecto VECY) en paridad total con el Grupo 2 (`buzonGroupId`).
+  2. Transmisión de buffers multimedia a `processCirculoMessage` en `processGroupBuffer`.
+- `server/_core/jania/handlers/circuloHandler.ts`:
+  1. Soporte de parámetros multimodales (`imageBuffer`, `pdfBuffer`, `pdfMimeType`, `quotedContext`).
+  2. Directivas de debate orgánico en Grupo 3: JanIA sigue el hilo conversacional, cita el nombre de los colegas de forma natural (ej. "Karina") y evita respuestas enlatadas de atención al cliente ("¿cuál es tu consulta sobre VECY?").
+- `server/_core/nameAndGenderResolver.ts`: Limpieza y desinfección de sufijos profesionales (ej. "Karina Agente Inmobiliaria Independiente" -> `Karina`, género femenino, cortesía `estimada Karina`) y rechazo de saludos aislados como nombres propios ("Hola" -> `colega`).
+- `server/_core/jania/prompts.ts`: Actualización de `JANIA_ARGON_COGNITIVE_CORE` otorgando a JanIA autonomía cognitiva y libertad de diseño para construir sus propios modelos de reportes cortos, elegantes y contundentes bajo el estilo VECY, reportando la EPS respectiva en ADRES BDUA, ubicando Hábeas Data al final y cerrando con el sello de cortesía VECY.
+- `server/_core/llm.ts`: Reincorporación de `gemini-2.5-flash` en `FALLBACK_MODELS` y blindaje del manejo de errores 402/429.
+- `server/__tests__/regression.test.ts`: Creación de la SUITE 85 con 4 pruebas aprobadas para EPS limpia, Hábeas Data al final, desinfección de nombres y soporte multimodal en Círculo.
+- `shared/const.ts` (`v33.27`) y `package.json` (`33.27.0`).
+- Documentos maestros: `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md` (§10).
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Ahora necesito que JanIA pueda ingresar al Adres BDUA y colocar en su reporte cual es la eps de ese individuo que le estan pidiendo revisar o consultar y poder llenar todos los campos correctamente, pero que ojalá sea ella misma quien cree el cuadro de reporte que entrega a cada usuario y que no le tengamos que dar una ficha fija extricta ni exclusiva como la que tenemos, ¿me entiendes?.
+Me refiero a esta, la cual se la damo pero como guía aunque tambien sería mejor que la ley de habeas data vaya mejor al final y no interrumpa la lectura de los datos anteponiendose a estos:
+El formato actual está en la imagen y el nuevo propuesto por mi te lo dejo acá en seguida, aunque me gustaría que JanIA elija y construya su propio modelo, corto y contundente bajo su propio estilo y el de VECY. No se si sea posible y que cualquier otro formato igualmente sea ella quien lo cree diseñe y lo maneje a su libre decisión y autonomía, se que le hemos puesto varios candados en su actuar, pero poco a poco se los iremos suprimiendo si es posible que me jor le digas o la entrenes para que aprenda que puede hacer, donde y donde no y que puede decir o que no, etc....
+🛡️ VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES 🇨🇴
+🆔 DATOS DE IDENTIDAD
+🪪 C.C./C.E.: 
+👤 Pertenece a: 
+✅ Identidad:
+⚖️ ANTECEDENTES
+🚓 POLICÍA: 
+🏛️ PROCURADURÍA: 
+🏢 CONTRALORÍA: 
+🏥 ADRES (BDUA):
+⚖️ Habeas Data (Ley 1581/12): "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal Art. 15 de la C.P."
+Servicio de cortesía de VECY BIENES RAÍCES 🤝."*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Pérdida de la EPS en ADRES BDUA**:
+   - El conector `queryAdres` extraía la EPS de la entidad gubernamental pero no la transfería al objeto `identityCache`, provocando que en subsecuentes lecturas de caché se perdiera la EPS y se mostrara el texto por defecto `Registrado y activo en el sistema de aseguramiento en salud.` en lugar del nombre real de la EPS.
+   - Adicionalmente, el portal de ADRES devuelve entidades HTML crudas como `R&#201;GIMEN` y nombres corporativos extensos como `CAPITAL SALUD ENTIDAD PROMOTORA DE SALUD DEL RÉGIMEN SUBSIDIADO SAS "CAPITAL SALUD EPS-S S.A.S."` que sobrecargaban la lectura.
+2. **Posición Antinatural de la Cláusula de Hábeas Data**:
+   - En las versiones anteriores, la cláusula legal aparecía antes de los datos de identidad o en medio del reporte, interrumpiendo la lectura de los resultados principales.
+3. **Falta de Paridad Multimodal y Contextual en Grupo 3**:
+   - En `whatsapp-match.ts`, el Grupo 3 (`circuloGroupId`) invocaba a `processCirculoMessage` sin extraer imágenes, PDFs ni `quotedContext`, dejando a JanIA sin visibilidad de afiches ni de mensajes a los que los usuarios hacían réplica en debates.
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Normalización y Extracción Limpia de EPS (`identityVerificationService.ts`):**
+   - Creación de `formatCleanEpsName`: decodifica entidades HTML y mapea las EPS colombianas a sus denominaciones directas (`Capital Salud EPS-S`, `Sanitas EPS`, `Nueva EPS`, `Sura EPS`, `Salud Total EPS`, etc.).
+   - Persistencia completa en `identityCache`: almacena `eps`, `estado` y `regimen` por 24 horas.
+2. **Reubicación de Hábeas Data al Final y Sello VECY:**
+   - La cláusula de Hábeas Data se colocó al cierre del reporte, seguida de `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
+3. **Autonomía Cognitiva de Formateo para JanIA:**
+   - En `JANIA_ARGON_COGNITIVE_CORE`, se instruyó la libertad de JanIA para construir sus reportes de forma corta, elegante y contundente sin rigideces.
+4. **Visión Multimodal y Debate Orgánico en Grupo 3:**
+   - Habilitación de buffers de imágenes, PDFs y contexto de citas en `circuloHandler.ts` y `whatsapp-match.ts`.
+5. **Validación Exhaustiva:**
+   - `npm test`: 303/303 tests aprobados (100% verde a $0 COP).
+   - `npm run check`: 0 errores.
+   - `npm run build`: compilación limpia en 14s.
+
+---
+
 ### 📅 [2026-10-19] — JanIA v33.26: Pedagogía Oficial en Firma Electrónica Estatal (MinTIC - AND), Vecy Agenda Pro, Riqueza de Emojis y Presencia Realista (v33.26 - 33.26.0)
 
 **Versión:** `v33.26` (`33.26.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

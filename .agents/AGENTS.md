@@ -183,19 +183,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.26 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.27 — Octubre 2026
 
-### Novedades v33.26 (Pedagogía en Firma Electrónica Estatal MinTIC - AND, Vecy Agenda Pro, Riqueza de Emojis y Presencia Realista):
+### Novedades v33.27 (ADRES BDUA con EPS limpia, Hábeas Data al Final, Autonomía de Reportes de JanIA, Visión y Debate Orgánico en Grupos 2 y 3):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
-  1. **Autonomía Orgánica e IA Pura (Cero Guiones)**: JanIA debe interactuar de forma libre, empática y espontánea, sin textos acartonados ni respuestas que parezcan plantillas rígidas.
-  2. **Pedagogía en Firma Electrónica Estatal (MinTIC / AND)**: Incorporar en el núcleo cognitivo de JanIA la plataforma oficial `https://autenticaciondigital.and.gov.co/` (Decreto 620/2020 y Ley 527/1999) con sus 5 pasos para firmar PDF gratis, módulo de validación de firmas y bandeja de 15 días. Aclarar con amabilidad que JanIA es una tutora que enseña a firmar (no estampa firmas en WhatsApp) y canalizar la venta de software de firma electrónica para inmobiliarias con Eduardo Rivera (+57 316 656 9719).
-  3. **Integración Activa de Vecy Agenda Pro**: Enlace oficial `https://vecy-agenda-pro.vercel.app/` para que JanIA guíe a los usuarios en el agendamiento seguro con validación algorítmica de identidad y antecedentes.
-  4. **Riqueza de Emojis de WhatsApp**: Directiva para usar con libertad contextual toda la variedad de emojis (🤔, 💡, ✍️, 📄, ⚖️, 🛡️, 🧐, 🤝, 🚀, 🏡, 🏢, 💰, 👍, 👌, 🎯, etc.) sin encasillarse en los mismos.
-  5. **Presencia Humana en WhatsApp (Baileys)**: Garantizar retención activa de al menos 1.8s en el estado `recording` (`🎙️ Grabando audio...`) antes de despachar notas de voz PTT para que el usuario siempre vea la animación en su teléfono.
-- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 300/300 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 35s ✅
-- `shared/const.ts` (`v33.26`) y `package.json` (`33.26.0`).
+  1. **ADRES BDUA y Extracción de EPS Real**: JanIA debe consultar ADRES (BDUA) y reflejar con exactitud la EPS a la que pertenece el individuo verificado (ej. `Capital Salud EPS-S`, `Sanitas EPS`, `Nueva EPS`, `Sura EPS`), decodificando entidades HTML y reportando su estado (`ACTIVO`) y régimen (`SUBSIDIADO` o `CONTRIBUTIVO`), persistiendo estos datos en caché para cero latencia y $0 COP.
+  2. **Posición Doctrinal de la Cláusula de Hábeas Data**: La cláusula de Hábeas Data (Ley 1581/12 y Art. 15 C.P.) debe ubicarse OBLIGATORIAMENTE al FINAL del reporte, evitando anteponerse o interrumpir la lectura de los datos de identidad y antecedentes. Finaliza con el sello de cortesía: `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
+  3. **Autonomía Cognitiva de Diseño de Reportes para JanIA**: JanIA no queda restringida a una ficha fija ni plantilla rígida obligatoria; tiene plena libertad para diagramar, construir y entregar a cada usuario su propio modelo de reporte de forma corta, elegante, ejecutiva y contundente bajo el estilo de VECY.
+  4. **Visión Multimodal, Documentos y Debate Orgánico en Grupos 2 y 3**: Se amplió el soporte para que el Grupo 3 (`circuloGroupId` / Proyecto VECY) procese imágenes, PDFs y el contexto de mensajes citados (`quotedContext`) con la misma solvencia que el Grupo 2 (`buzonGroupId`), debatiendo fluidamente sin respuestas robóticas de servicio al cliente.
+  5. **Depuración de Nombres en `nameAndGenderResolver`**: Limpieza de títulos profesionales (ej. "Karina Agente Inmobiliaria Independiente" -> "Karina", femenino, "estimada Karina") y bloqueo de saludos aislados como nombres propios ("Hola" -> "colega").
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 303/303 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 14s ✅
+- `shared/const.ts` (`v33.27`) y `package.json` (`33.27.0`).
 
-## 🔖 VERSIÓN ANTERIOR: v33.25 — Octubre 2026
+## 🔖 VERSIÓN ANTERIOR: v33.26 — Octubre 2026
 
 ### Novedades v33.25 (Prevalencia de Venta sobre Cuota de Administración (+ admón), Deduplicación de Reacciones por Grupo y Subsanación en Republicación):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

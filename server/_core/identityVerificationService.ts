@@ -475,6 +475,64 @@ export function mapTipoDocToAdres(tipoDoc: string): string | null {
 }
 
 /**
+ * Limpia y normaliza el nombre de la EPS proveniente de ADRES (BDUA),
+ * decodificando entidades HTML y extrayendo nombres comerciales limpios y contundentes.
+ */
+export function formatCleanEpsName(rawEps: string | null | undefined): string {
+  if (!rawEps || !rawEps.trim()) return '';
+
+  let clean = rawEps
+    .replace(/&#201;/g, 'É')
+    .replace(/&#225;/g, 'á')
+    .replace(/&#233;/g, 'é')
+    .replace(/&#237;/g, 'í')
+    .replace(/&#243;/g, 'ó')
+    .replace(/&#250;/g, 'ú')
+    .replace(/&#241;/g, 'ñ')
+    .replace(/&#209;/g, 'Ñ')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const quoteMatch = clean.match(/"([^"]+)"/);
+  if (quoteMatch && quoteMatch[1] && quoteMatch[1].trim().length > 3) {
+    clean = quoteMatch[1].trim();
+  }
+
+  const upper = clean.toUpperCase();
+  if (upper.includes('CAPITAL SALUD')) return 'Capital Salud EPS-S';
+  if (upper.includes('SANITAS')) return 'Sanitas EPS';
+  if (upper.includes('NUEVA EPS')) return 'Nueva EPS';
+  if (upper.includes('COMPENSAR')) return 'Compensar EPS';
+  if (upper.includes('SALUD TOTAL')) return 'Salud Total EPS';
+  if (upper.includes('SURAMERICANA') || upper.includes('EPS SURA') || upper.includes('SURA')) return 'Sura EPS';
+  if (upper.includes('FAMISANAR')) return 'Famisanar EPS';
+  if (upper.includes('SAVIA SALUD')) return 'Savia Salud EPS';
+  if (upper.includes('COOSALUD')) return 'Coosalud EPS';
+  if (upper.includes('MUTUAL SER')) return 'Mutual Ser EPS';
+  if (upper.includes('ASMET SALUD')) return 'Asmet Salud EPS';
+  if (upper.includes('EMSSANAR')) return 'Emssanar EPS';
+  if (upper.includes('ALIANSALUD') || upper.includes('COLMEDICA')) return 'Aliansalud EPS';
+  if (upper.includes('SOS') || upper.includes('SERVICIO OCCIDENTAL')) return 'S.O.S. EPS';
+  if (upper.includes('MALLAMAS')) return 'Mallamas EPS-I';
+  if (upper.includes('PIJAOS')) return 'Pijaos Salud EPS-I';
+  if (upper.includes('ANAS WAYUU')) return 'Anas Wayuu EPS-I';
+  if (upper.includes('DUSAKAWI')) return 'Dusakawi EPS-I';
+  if (upper.includes('AIC') || upper.includes('ASOCIACION INDIGENA DEL CAUCA')) return 'AIC EPS-I';
+
+  let formatted = formatTitleCase(clean);
+  formatted = formatted
+    .replace(/\bEps\b/g, 'EPS')
+    .replace(/\bEps-s\b/g, 'EPS-S')
+    .replace(/\bEps-i\b/g, 'EPS-I')
+    .replace(/\bSas\b/g, 'SAS')
+    .replace(/\bS\.a\.s\.\b/g, 'S.A.S.')
+    .replace(/\bS\.a\.\b/g, 'S.A.');
+  return formatted;
+}
+
+/**
  * Consulta oficial a la Base de Datos Única de Afiliados (BDUA) de ADRES (Ministerio de Salud).
  * Extrae nombres, apellidos, departamento, municipio, EPS y estado de afiliación para colombianos y extranjeros.
  */
@@ -491,11 +549,14 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
   }
 
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
-  const cached = identityCache.get(cacheKey);
+  const cached = identityCache.get(cacheKey) || identityCache.get(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
   if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
     return {
       success: true,
       officialName: cached.fullName,
+      eps: cached.eps,
+      estado: cached.estado,
+      regimen: cached.regimen,
       documentType: mappedTipo,
       documentNumber: cleanNum,
       source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
@@ -610,7 +671,14 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
     }
 
     const officialName = formatTitleCase(fullNameRaw);
-    identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+    const cleanEps = formatCleanEpsName(eps);
+    identityCache.set(cacheKey, {
+      fullName: officialName,
+      eps: cleanEps || undefined,
+      estado: estado ? estado.toUpperCase() : undefined,
+      regimen: regimen ? regimen.toUpperCase() : undefined,
+      timestamp: Date.now()
+    });
 
     return {
       success: true,
@@ -622,7 +690,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       departamento: formatTitleCase(departamento),
       municipio: formatTitleCase(municipio),
       estado: estado ? estado.toUpperCase() : undefined,
-      eps: eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim() : undefined,
+      eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim() : undefined),
       regimen: regimen ? regimen.toUpperCase() : undefined,
       source: 'ADRES - Base de Datos Única de Afiliados (BDUA)'
     };
@@ -1201,7 +1269,6 @@ export function formatCompactIdentityVerificationReport(params: {
 
   if (isNit) {
     let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE EMPRESA — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-    reportText += `⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de información pública mercantil (RUES) y datos públicos de representación legal bajo principios de finalidad legítima, debida diligencia y seguridad jurídica."\n\n`;
 
     const nitParts = cedula.split('-');
     const baseNitDigits = (nitParts[0] || cedula).replace(/\D/g, '');
@@ -1270,14 +1337,15 @@ export function formatCompactIdentityVerificationReport(params: {
         reportText += `• *${est.razonSocial}* | ${est.categoria} | ${est.camaraComercio} | ${est.matricula} | ${est.fechaMatricula || 'N/D'} | ${est.fechaRenovacion || 'N/D'} | ${est.ultimoAnoRenovado || 'N/D'} | ${est.estado}\n`;
       }
     } else {
-      reportText += `• No se encontraron resultados.`;
+      reportText += `• No se encontraron resultados.\n`;
     }
+
+    reportText += `\n⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de información pública mercantil (RUES) y datos públicos de representación legal bajo principios de finalidad legítima, debida diligencia y seguridad jurídica."`;
 
     return reportText.trim();
   }
 
   let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
 
   reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
   reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
@@ -1318,7 +1386,8 @@ export function formatCompactIdentityVerificationReport(params: {
   if (adresStatus) {
     epsLine = adresStatus;
   } else if (adresEps) {
-    epsLine = `${adresEps} (${adresEstado || 'REGISTRADO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
+    const cleanEps = formatCleanEpsName(adresEps);
+    epsLine = `${cleanEps} (${adresEstado || 'ACTIVO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
   } else if (!resolvedSuccess) {
     epsLine = 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
   } else {
@@ -1329,7 +1398,10 @@ export function formatCompactIdentityVerificationReport(params: {
   reportText += `🚓 *POLICÍA:* ${securityLine}\n`;
   reportText += `🏛️ *PROCURADURÍA:* ${pgnLine}\n`;
   reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
-  reportText += `🏥 *ADRES (BDUA):* ${epsLine}`;
+  reportText += `🏥 *ADRES (BDUA):* ${epsLine}\n\n`;
+
+  reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
+  reportText += `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
 
   return reportText;
 }
@@ -1745,18 +1817,41 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
   const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
 
+  const cachedAdres = identityCache.get(adresCacheKey) ||
+    identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`) ||
+    identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
+
+  let cachedEps = cachedAdres?.eps;
+  let cachedEstado = cachedAdres?.estado;
+  let cachedRegimen = cachedAdres?.regimen;
+
   const cachedName = identityCache.get(ponalCacheKey)?.fullName ||
     identityCache.get(pgnCacheKey)?.fullName ||
-    identityCache.get(adresCacheKey)?.fullName;
+    cachedAdres?.fullName;
 
   if (cachedName) {
+    const isAdresSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'pa'].includes(tipoDoc.toLowerCase());
+    if (!cachedEps && isAdresSupported) {
+      try {
+        const liveAdres = await queryAdres(tipoDoc, cedula);
+        if (liveAdres?.eps) {
+          cachedEps = liveAdres.eps;
+          cachedEstado = liveAdres.estado;
+          cachedRegimen = liveAdres.regimen;
+        }
+      } catch (e) { }
+    }
+
     const officialName = formatTitleCase(cachedName);
     const reportText = formatCompactIdentityVerificationReport({
       tipoDoc,
       cedula,
       officialName,
       detectedName,
-      success: true
+      success: true,
+      adresEps: cachedEps,
+      adresEstado: cachedEstado,
+      adresRegimen: cachedRegimen
     });
     return {
       cedula,
@@ -1831,7 +1926,14 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
     const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : undefined);
 
     if (finalOfficialName) {
-      identityCache.set(adresCacheKey, { fullName: finalOfficialName, timestamp: Date.now() });
+      const cleanEpsFormatted = adresRes?.eps ? formatCleanEpsName(adresRes.eps) : undefined;
+      identityCache.set(adresCacheKey, {
+        fullName: finalOfficialName,
+        eps: cleanEpsFormatted,
+        estado: adresRes?.estado,
+        regimen: adresRes?.regimen,
+        timestamp: Date.now()
+      });
       const reportText = formatCompactIdentityVerificationReport({
         tipoDoc: effectiveTipoDoc,
         cedula,
@@ -1841,7 +1943,7 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
         policiaMessage: ponalRes?.message,
         procuraduriaStatus: pgnRes?.statusText,
         contraloriaStatus: cgrRes?.statusText,
-        adresEps: adresRes?.eps,
+        adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
         adresRegimen: adresRes?.regimen,
         isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === 'ce' && tipoDoc.toLowerCase() === 'cc'
@@ -1913,7 +2015,6 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
   const someSuccess = results.some(r => r.success);
 
   let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
 
   results.forEach((r, idx) => {
     const numBadge = idx === 0 ? '1️⃣' : idx === 1 ? '2️⃣' : idx === 2 ? '3️⃣' : `${idx + 1}️⃣`;
@@ -1957,12 +2058,15 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
   });
 
   if (allSuccess) {
-    reportText += `✅ *Dictamen Notarial:* Verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.\n`;
+    reportText += `✅ *Dictamen Notarial:* Verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.\n\n`;
   } else if (someSuccess) {
-    reportText += `⚠️ *Dictamen Notarial:* Verificación parcial completada. Revisa documentos que requieran cotejo físico.\n`;
+    reportText += `⚠️ *Dictamen Notarial:* Verificación parcial completada. Revisa documentos que requieran cotejo físico.\n\n`;
   } else {
-    reportText += `⚠️ *Dictamen Notarial:* Se sugiere solicitar fotocopia legible para cotejo directo ante notarías.\n`;
+    reportText += `⚠️ *Dictamen Notarial:* Se sugiere solicitar fotocopia legible para cotejo directo ante notarías.\n\n`;
   }
+
+  reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
+  reportText += `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
 
   return reportText;
 }
@@ -2057,18 +2161,42 @@ export async function executeIdentityVerificationFromWhatsApp(
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
   const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
+
+  const cachedAdres = identityCache.get(adresCacheKey) ||
+    identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`) ||
+    identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
+
+  let cachedEps = cachedAdres?.eps;
+  let cachedEstado = cachedAdres?.estado;
+  let cachedRegimen = cachedAdres?.regimen;
+
   const cachedName = identityCache.get(ponalCacheKey)?.fullName ||
     identityCache.get(pgnCacheKey)?.fullName ||
-    identityCache.get(adresCacheKey)?.fullName;
+    cachedAdres?.fullName;
 
   if (cachedName) {
+    const isAdresSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'pa'].includes(tipoDoc.toLowerCase());
+    if (!cachedEps && isAdresSupported) {
+      try {
+        const liveAdres = await queryAdres(tipoDoc, cedula);
+        if (liveAdres?.eps) {
+          cachedEps = liveAdres.eps;
+          cachedEstado = liveAdres.estado;
+          cachedRegimen = liveAdres.regimen;
+        }
+      } catch (e) { }
+    }
+
     const officialName = formatTitleCase(cachedName);
     const reportText = formatCompactIdentityVerificationReport({
       tipoDoc,
       cedula,
       officialName,
       detectedName: item.detectedName,
-      success: true
+      success: true,
+      adresEps: cachedEps,
+      adresEstado: cachedEstado,
+      adresRegimen: cachedRegimen
     });
 
     if (userId) {
@@ -2216,7 +2344,6 @@ export async function executeIdentityVerificationFromWhatsApp(
         }
 
         reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-        reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
         reportText += `🆔 *DATOS DE IDENTIDAD*\n`;
         reportText += `🪪 *${activeDocLabel}:* ${formattedCedula}\n`;
         reportText += `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n`;
@@ -2226,7 +2353,8 @@ export async function executeIdentityVerificationFromWhatsApp(
         reportText += `🏢 *CONTRALORÍA:* ${cgrLine}\n`;
         reportText += `🏥 *ADRES (BDUA):* ${epsLine}\n\n`;
         reportText += `📌 *Orientación de Verificación:*${customGuidance}\n` +
-          `• Verifica que el número digitado coincida exactamente con el documento físico.`;
+          `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
+          `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`;
       }
 
       if (userId) {

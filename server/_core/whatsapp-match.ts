@@ -1755,7 +1755,10 @@ export class JaniaMatchBot {
       }
 
       let result;
-      if (chatId === this.buzonGroupId) { // VECY: Soporte Legal, Tributario, Avalúos y Marketing
+      const isBuzonGroup = chatId === this.buzonGroupId;
+      const isCirculoGroup = chatId === this.circuloGroupId;
+
+      if (isBuzonGroup || isCirculoGroup) {
         const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
         const rawMsg = unwrapMessage(msg.message);
         let imageBuffer: string | undefined;
@@ -1769,7 +1772,7 @@ export class JaniaMatchBot {
               imageBuffer = mediaBuffer.toString('base64');
             }
           } catch (e) {
-            console.error('[JANIA-CONSULTING] Error descargando imagen adjunta:', e);
+            console.error('[JANIA-MEDIA] Error descargando imagen adjunta en grupo:', e);
           }
         } else if (rawMsg?.documentMessage) {
           try {
@@ -1779,7 +1782,7 @@ export class JaniaMatchBot {
               pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
             }
           } catch (e) {
-            console.error('[JANIA-CONSULTING] Error descargando documento adjunto:', e);
+            console.error('[JANIA-MEDIA] Error descargando documento adjunto en grupo:', e);
           }
         }
 
@@ -1797,19 +1800,29 @@ export class JaniaMatchBot {
           }
         } catch (e) { }
 
-        result = await processConsultingMessage(
-          bodyText,
-          resolvedSenderId,
-          realName,
-          imageBuffer,
-          pdfBuffer,
-          pdfMimeType,
-          isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
-          msgTs,
-          quotedContext
-        );
-      } else if (chatId === this.circuloGroupId) { // 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
-        result = await processCirculoMessage(bodyText, resolvedSenderId, realName);
+        if (isBuzonGroup) {
+          result = await processConsultingMessage(
+            bodyText,
+            resolvedSenderId,
+            realName,
+            imageBuffer,
+            pdfBuffer,
+            pdfMimeType,
+            isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
+            msgTs,
+            quotedContext
+          );
+        } else {
+          result = await processCirculoMessage(
+            bodyText,
+            resolvedSenderId,
+            realName,
+            imageBuffer,
+            pdfBuffer,
+            pdfMimeType,
+            quotedContext
+          );
+        }
       } else if (isMainGroupChat) { // 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 — preguntas sobre el grupo/sistema
         let groupName = "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴";
         try {
@@ -2126,8 +2139,8 @@ export class JaniaMatchBot {
       // evaluamos el buffer de imagen con visión ligera en tiempo real
       if (!fastEmoji && imageBufferImmediate) {
         try {
-          const { extractFlyerVision } = await import('./janIA');
-          flyerVisionData = await extractFlyerVision(imageBufferImmediate);
+          const { extractFlyerVisionSafely } = await import('./jania/vision');
+          flyerVisionData = await extractFlyerVisionSafely(imageBufferImmediate);
           if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
             fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "📝" : "👍");
             console.log(`[JANIA-FAST-REACT] 🎯 Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacción rápida: ${fastEmoji}`);
@@ -2568,7 +2581,10 @@ export class JaniaMatchBot {
         result = await processCirculoMessage(
           fullText,
           resolvedSenderId,
-          userName
+          userName,
+          imageMsg?.imageBuffer,
+          pdfMsg?.pdfBuffer,
+          pdfMsg?.pdfMimeType
         );
       } else {
         const groupName = await this.resolveGroupName(chatId);

@@ -16,13 +16,18 @@ import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 export async function processCirculoMessage(
   text: string,
   userId: string,
-  userName?: string
+  userName?: string,
+  imageBuffer?: string,
+  pdfBuffer?: string,
+  pdfMimeType?: string,
+  quotedContext?: string
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
     const firstName = extractFirstName(realName);
-    const userGreetingName = firstName ? ` ${firstName}` : "";
+    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor"].includes(firstName.toLowerCase()) ? firstName : "";
+    const userGreetingName = cleanFirstName ? ` ${cleanFirstName}` : "";
 
     // Intercepción estricta de mensajes OFF-TOPIC prohibidos (Política, Religión, Cursos, Links ajenos, Memes, Spam)
     const strictOffTopic = checkStrictOffTopic(text);
@@ -107,7 +112,7 @@ export async function processCirculoMessage(
       `1. **DEBATE_COMPETIDOR**: Si mencionan a Ubicapp o Cristian Samboni. Debate con altura técnica, datos y cortesía.\n` +
       `2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 con amabilidad.\n` +
       `3. **AVALUO_O_LEGAL**: Redirecciona a 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠 con amabilidad.\n` +
-      `4. **CONSULTA_GENERAL**: Dudas sobre VECY, sugerencias, tecnología, saludos o agradecimientos.\n` +
+      `4. **CONSULTA_GENERAL**: Dudas sobre VECY, sugerencias, tecnología, opiniones, debates, foros, saludos o agradecimientos.\n` +
       `5. **VIOLACION_DE_NORMAS**: Política, religión, spam o publicidad externa.\n\n` +
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
       `{\n` +
@@ -121,8 +126,8 @@ export async function processCirculoMessage(
     const hour = nowBogota.getHours();
 
     // Detección magistral de nombre y género
-    const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
-    const targetName = nameInfo.displayName;
+    const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
+    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "colega";
     const isFemale = nameInfo.isFemale;
     const genderTerm = nameInfo.genderTerm;
 
@@ -132,9 +137,10 @@ export async function processCirculoMessage(
 - Trato respetuoso adecuado: "${genderTerm}".
 - Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
 - Canal: Grupo oficial 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀.
-- DIRECTRICES DE LIBRE ALBEDRÍO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+- DIRECTRICES DE LIBRE ALBEDRÍO, CONTINUIDAD DE DEBATE Y NATURALIDAD HUMANA:
   * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RAÍCES. JAMÁS uses plantillas rígidas ni suenes como un contestador automático.
   * Dirígete a la persona por su nombre ("${targetName}") de forma fluida, cálida y natural.
+  * CONTINUIDAD DE DEBATE Y FOROS (REGLA DE ORO): Si el usuario está comentando, reflexionando, opinando o respondiendo a un mensaje citado, PROHIBIDO preguntar "¿cuál es tu consulta sobre VECY?". Al contrario: profundiza sobre su argumento, valida su punto con empatía y aporta tu perspectiva de líder gremial y tecnológica.
   * Si el interlocutor saluda, salúdalo con estilo propio y dinamismo.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditoría), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralización en redes), matching en tiempo real y tecnología Cero Papel.
   * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.`;
@@ -148,14 +154,29 @@ export async function processCirculoMessage(
       messages.push({ role: h.role, content: h.content });
     }
 
+    let userPromptContent = `Usuario: @${rawPhone} (${realName})\nMensaje/Aporte: ${text}`;
+    if (quotedContext) {
+      userPromptContent += `\n[Contexto del mensaje previo citado al que responde el interlocutor: "${quotedContext}"]`;
+    }
+    if (imageBuffer) {
+      userPromptContent += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visión multimodal (captura de pantalla, caso jurídico, noticia, documento o meme inmobiliario) y aporta tu opinión o análisis profesional dentro del foro.]`;
+    }
+    if (pdfBuffer) {
+      userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el contenido con tu comprensión documental nativa y participa en la conversación con solvencia.]`;
+    }
+    userPromptContent += greetingInstruction;
+
     messages.push({
       role: "user",
-      content: `Usuario: @${rawPhone} (${realName})\nPregunta: ${text}${greetingInstruction}`
+      content: userPromptContent
     });
 
     const llmRes = await invokeLLM({
       messages,
       responseFormat: { type: "json_object" },
+      imageBuffer,
+      pdfBuffer,
+      pdfMimeType,
       enableSearch: false
     });
 
@@ -187,11 +208,16 @@ export async function processCirculoMessage(
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
     const firstName = extractFirstName(realName);
-    const userGreetingName = firstName ? ` ${firstName}` : "";
+    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor"].includes(firstName.toLowerCase()) ? firstName : "";
+    const userGreetingName = cleanFirstName ? ` ${cleanFirstName}` : "";
+
+    const fallbackResponse = quotedContext
+      ? `¡${timeGreeting}${userGreetingName}! 👋🏻 Totalmente de acuerdo contigo. En VECY BIENES RAÍCES defendemos la ética profesional, la dignidad gremial y las alianzas transparentes entre colegas. ¿Qué otra perspectiva o experiencia tienes sobre este punto? 🤝✨`
+      : `¡${timeGreeting}${userGreetingName}! 👋🏻 Gracias por tu participación en el grupo oficial del Proyecto VECY BIENES RAÍCES. Estamos transformando el corretaje inmobiliario con tecnología colaborativa y comisiones justas. ¿Cómo podemos sumar hoy a tus negocios? 💡✨`;
 
     return {
       classification: "CONSULTA_GENERAL",
-      response: `¡${timeGreeting}${userGreetingName}! 👋🏻 Con gusto estoy aquí para apoyarte. Cuéntame cuál es tu consulta sobre VECY BIENES RAÍCES, nuestra tecnología o comisiones y con gusto te respondo. 💡✨`,
+      response: fallbackResponse,
       reactionEmoji: "💡"
     };
   }

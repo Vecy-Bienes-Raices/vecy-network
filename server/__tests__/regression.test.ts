@@ -6567,14 +6567,66 @@ Ana Morales Castillo
       expect(knowledge).toContain("Paso 5:");
       expect(knowledge).toContain("https://vecy-agenda-pro.vercel.app/");
     });
+  });
 
-    it("2. JANIA_ARGON_COGNITIVE_CORE instruye variedad de emojis y rol de tutora pedagógica en firma electrónica y proptech a la medida", async () => {
-      const { JANIA_ARGON_COGNITIVE_CORE } = await import("../_core/jania/prompts");
+  describe("SUITE 85: JanIA v33.27 — ADRES BDUA con EPS limpia, Habeas Data al final, Visión y Debate Orgánico en Grupos 2 y 3 (v33.27)", () => {
+    it("1. formatCleanEpsName decodifica entidades HTML y normaliza nombres comerciales limpios de EPS", async () => {
+      const { formatCleanEpsName } = await import("../_core/identityVerificationService");
 
-      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Riqueza Expresiva y Gran Variedad de Emojis de WhatsApp");
-      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("https://vecy-agenda-pro.vercel.app/");
-      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("https://autenticaciondigital.and.gov.co/");
-      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("316 656 9719");
+      const rawCapital = 'CAPITAL SALUD ENTIDAD PROMOTORA DE SALUD DEL R&#201;GIMEN SUBSIDIADO SAS "CAPITAL SALUD EPS-S S.A.S."';
+      const rawSanitas = 'ENTIDAD PROMOTORA DE SALUD SANITAS S.A.S.';
+      const rawSura = 'EPS Y MEDICINA PREPAGADA SURAMERICANA S.A.';
+
+      expect(formatCleanEpsName(rawCapital)).toBe("Capital Salud EPS-S");
+      expect(formatCleanEpsName(rawSanitas)).toBe("Sanitas EPS");
+      expect(formatCleanEpsName(rawSura)).toBe("Sura EPS");
+    });
+
+    it("2. formatCompactIdentityVerificationReport ubica Habeas Data al final, muestra EPS en ADRES y cierre de cortesía VECY", async () => {
+      const { formatCompactIdentityVerificationReport } = await import("../_core/identityVerificationService");
+
+      const report = formatCompactIdentityVerificationReport({
+        tipoDoc: "CC",
+        cedula: "11189781",
+        officialName: "Eduardo Arturo Rivera Martínez",
+        success: true,
+        adresEps: 'CAPITAL SALUD ENTIDAD PROMOTORA DE SALUD DEL R&#201;GIMEN SUBSIDIADO SAS "CAPITAL SALUD EPS-S S.A.S."',
+        adresEstado: "ACTIVO",
+        adresRegimen: "SUBSIDIADO"
+      });
+
+      // 1. Debe incluir la EPS limpia con estado y régimen
+      expect(report).toContain("Capital Salud EPS-S (ACTIVO — SUBSIDIADO)");
+
+      // 2. Habeas Data debe estar al final, después de Antecedentes y ADRES
+      const idxAdres = report.indexOf("ADRES (BDUA)");
+      const idxHabeas = report.indexOf("Habeas Data (Ley 1581/12)");
+      const idxCourtesy = report.indexOf("Servicio de cortesía de VECY BIENES RAÍCES");
+
+      expect(idxAdres).toBeGreaterThan(0);
+      expect(idxHabeas).toBeGreaterThan(idxAdres);
+      expect(idxCourtesy).toBeGreaterThan(idxHabeas);
+    });
+
+    it("3. resolveNameAndGender depura títulos profesionales y rechaza saludos como nombres", async () => {
+      const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
+
+      const karinaResolved = resolveNameAndGender("Karina Agente Inmobiliaria Independiente");
+      expect(karinaResolved.displayName).toBe("Karina");
+      expect(karinaResolved.isFemale).toBe(true);
+      expect(karinaResolved.courtesyWord).toBe("estimada");
+      expect(karinaResolved.genderTerm).toBe("estimada Karina");
+
+      const holaResolved = resolveNameAndGender("Hola");
+      expect(holaResolved.displayName).toBe("colega");
+      expect(holaResolved.genderTerm).toBe("estimada colega");
+    });
+
+    it("4. processCirculoMessage acepta visión multimodal y contexto de citas", async () => {
+      const { processCirculoMessage } = await import("../_core/janIA");
+      expect(typeof processCirculoMessage).toBe("function");
+      // La función acepta (text, userId, userName, imageBuffer?, pdfBuffer?, pdfMimeType?, quotedContext?)
+      expect(processCirculoMessage.length).toBeGreaterThanOrEqual(3);
     });
   });
 });

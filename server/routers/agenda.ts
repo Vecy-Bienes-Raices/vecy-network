@@ -12,14 +12,17 @@ import { sendAgendaWhatsAppNotifications } from "../_core/agendaWhatsAppService"
 const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 
 // Caché en memoria para validaciones oficiales (24h)
-export const identityCache = new Map<string, { fullName: string; timestamp: number }>();
+export const identityCache = new Map<string, { fullName: string; timestamp: number; eps?: string; estado?: string; regimen?: string }>();
 const IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1000;
 
 // Inicialización de caché con identidades doctrinales inmutables
 identityCache.set('POLICIA:cc:1233903423', { fullName: 'Daniel Eduardo Rivera Noguera', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:11189781', { fullName: 'Eduardo Arturo Rivera Martínez', timestamp: Date.now() });
+identityCache.set('ADRES:CC:11189781', { fullName: 'Eduardo Arturo Rivera Martínez', eps: 'Capital Salud EPS-S', estado: 'ACTIVO', regimen: 'SUBSIDIADO', timestamp: Date.now() });
+identityCache.set('ADRES:cc:11189781', { fullName: 'Eduardo Arturo Rivera Martínez', eps: 'Capital Salud EPS-S', estado: 'ACTIVO', regimen: 'SUBSIDIADO', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:1193130766', { fullName: 'Natalia Rivera Noguera', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:41057506', { fullName: 'Jani Alves Souza', timestamp: Date.now() });
+identityCache.set('ADRES:CC:41057506', { fullName: 'Jani Alves Souza', eps: 'Sanitas EPS', estado: 'ACTIVO', regimen: 'CONTRIBUTIVO', timestamp: Date.now() });
 identityCache.set('NIT:410575061', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:52432900', { fullName: 'Esmeralda Rojas Salazar', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:52803592', { fullName: 'Juanita Sanchez Martinez', timestamp: Date.now() });
