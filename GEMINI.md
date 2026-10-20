@@ -1,15 +1,15 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.25.0 — 2026-10-19)
-- **JanIA Server:** `v33.25` (`33.25.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
-- **Prevalencia de Venta sobre Cuota de Administración (+ admón) y Amoblado:**
-  1. En `whatsapp-match.ts` y `propertiesHandler.ts`, inclusión de `isExplicitVenta` para que menciones de administración (`+ admón $1,100,000`) o mobiliario (`amoblado o sin muebles`) jamás desvíen una venta explícita hacia arriendo.
-  2. Asignación correcta y rigurosa de reacción emoji: `👍` para inmueble en venta, erradicando falsos `👌` (arriendo).
-- **Deduplicación de Reacciones por Grupo (`${chatId}_${msgId}`):**
-  1. `safeReact` en `whatsapp-match.ts` ahora indexa por `${chatId}_${msgId}` en lugar de un `msgId` global.
-  2. Publicaciones simultáneas en múltiples grupos reciben su reacción en cada grupo independiente (incluido el grupo oficial de Vecy) a costo $0 COP y 0 tokens LLM (vía Baileys WebSocket nativo).
-- **Subsanación de Datos en Republicaciones:**
-  1. Actualización en caliente de `price`, `rentPrice` y `transactionType` en la base de datos cuando una republicación aporta valores válidos > 0.
-  2. Subsanación manual directa de la propiedad #4890 en PostgreSQL Contabo ($750M / venta / admón $1.1M).
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (298/298 a $0 COP) | Build `npm run build` limpio en 25s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.26.0 — 2026-10-19)
+- **JanIA Server:** `v33.26` (`33.26.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
+- **Pedagogía en Firma Electrónica Estatal (MinTIC - AND / GOV.CO):**
+  1. Integración en el dossier cognitivo de la plataforma estatal gratuita `https://autenticaciondigital.and.gov.co/` (Decreto 620/2020 y Ley 527/1999) con sus 5 pasos oficiales para firmar documentos PDF sin costo y validación de firmas de terceros.
+  2. Rol de tutora pedagógica que enseña a los usuarios a usar la herramienta estatal gratuita y canaliza la venta de plataformas privadas de firma electrónica con Eduardo Rivera (+57 316 656 9719).
+- **Integración Activa de Vecy Agenda Pro y Catálogo:**
+  1. Enlace oficial `https://vecy-agenda-pro.vercel.app/` incorporado para coordinación de citas con verificación de identidad y antecedentes.
+  2. Catálogo oficial de WhatsApp (`https://wa.me/c/573192919978`) y portal de propiedades.
+- **Riqueza y Libertad de Emojis de WhatsApp (IA Pura):**
+  1. Directiva explícita de expresividad contextual con gran variedad de emojis (🤔, 💡, ✍️, 📄, ⚖️, 🛡️, 🧐, 🤝, 🚀, 🏡, 🏢, 💰, 👍, 👌, 🎯).
+  2. Preservación del estado de presencia de grabación (`🎙️ Grabando audio...`) retenido al menos 1.8s antes de despachar notas de voz para visibilidad garantizada en WhatsApp.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (300/300 a $0 COP) | Build `npm run build` limpio en 35s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

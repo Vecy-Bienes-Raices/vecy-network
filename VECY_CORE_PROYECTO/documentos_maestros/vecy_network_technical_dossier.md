@@ -331,6 +331,21 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.26 — Octubre 2026
+
+#### [v33.26.0] — 2026-10-19: Pedagogía en Firma Electrónica Estatal (MinTIC - AND), Vecy Agenda Pro, Riqueza de Emojis y Presencia Realista
+- **Integración de Autenticación Digital Estatal (MinTIC / AND) (`conocimiento_vecy.md`, `prompts.ts`, `dmHandler.ts`):**
+  - **Problema:** Expectativas erróneas de usuarios que asumían que JanIA firmaba o estampaba directamente archivos PDF dentro de WhatsApp, generando inconformidad.
+  - **Solución:** Integración de la plataforma gratuita oficial de Autenticación Digital (`https://autenticaciondigital.and.gov.co/` / `https://firmaautenticaciondigital.and.gov.co/`) operada por la Agencia Nacional Digital (AND / MinTIC / GOV.CO), fundamentada en el Decreto 620 de 2020 y la Ley 527 de 1999.
+  - **Los 5 Pasos Oficiales:** JanIA enseña a los usuarios los 5 pasos para firmar PDF gratis (1. Ingreso con cédula a Autenticación Digital, 2. Módulo "Firmar documento electrónicamente", 3. Asunto y motivo, 4. Cargar PDF máx 10MB sin clave, 5. Código OTP al correo y clic en firmar; junto con validación de firmas y bandeja de 15 días). JanIA asume el rol de tutora pedagógica y canaliza la venta de plataformas privadas de firma electrónica para inmobiliarias con Eduardo Rivera (+57 316 656 9719).
+- **Integración Activa de Vecy Agenda Pro (`https://vecy-agenda-pro.vercel.app/`):**
+  - Inclusión en el núcleo cognitivo de JanIA para invitar a los clientes a agendar citas y visitas a inmuebles con verificación algorítmica de identidad y antecedentes.
+- **Riqueza Expresiva y Variedad de Emojis de WhatsApp (IA Pura):**
+  - Directiva explícita en `JANIA_ARGON_COGNITIVE_CORE` para que JanIA utilice con total libertad y variedad los emojis de WhatsApp (🤔, 💡, ✍️, 📄, ⚖️, 🛡️, 🧐, 🤝, 🚀, 🏡, 🏢, 💰, 👍, 👌, 🎯, etc.) adaptados al significado emocional y contextual del mensaje, sin respuestas acartonadas ni guiones rígidos.
+- **Optimización de Presencia Humana en WhatsApp (`whatsapp-match.ts`):**
+  - Retención activa de al menos 1.8s a 2.5s en el estado `recording` (`🎙️ Grabando audio...`) antes de despachar notas de voz PTT, garantizando que el usuario receptor visualice de forma nítida la animación de grabación en su dispositivo.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **300/300 passing** (100% verde) | Build `npm run build` limpio en 35s.
+
 ### 🔖 v33.25 — Octubre 2026
 
 #### [v33.25.0] — 2026-10-19: Prevalencia de Venta sobre Cuotas de Administración (+ admón), Deduplicación de Reacciones por Grupo y Subsanación en Republicación

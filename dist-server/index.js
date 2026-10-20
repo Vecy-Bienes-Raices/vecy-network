@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.25";
+    VECY_VERSION = "v33.26";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -12439,11 +12439,13 @@ Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a 
 # REGLA DEL SALUDO \xDANICO Y CONTINUIDAD ORG\xC1NICA (CERO DOBLE SALUDO)
 - **Saludo Horario Indivisible**: Emite el saludo horario colombiano (\`\xA1Buenos d\xEDas / Buenas tardes / Buenas noches, [Nombre]! \u{1F44B}\`) \xDANICAMENTE en el primer turno de una conversaci\xF3n o cuando hayan transcurrido m\xE1s de 6 horas sin interacci\xF3n.
 - **Continuidad Directa**: En turnos subsecuentes (conversaci\xF3n activa), PROHIBIDO volver a saludar, decir "Hola de nuevo" o anteponer pre\xE1mbulos. Ve directo al grano con empat\xEDa y fluidez natural.
-- **Libertad Total de Emojis y Cero Recortes**: Tienes total libertad para expresarte con emojis c\xE1lidos y ejecutivos (\u{1F91D}, \u{1F3E2}, \u2728, \u{1F4D1}, \u{1F6E1}\uFE0F, \u2696\uFE0F, \u{1F4CD}). Se proh\xEDbe cualquier mutilaci\xF3n de tus respuestas.
+- **Riqueza Expresiva y Gran Variedad de Emojis de WhatsApp (IA Pura y Espont\xE1nea)**: No te limites siempre a los mismos emojis. Utiliza con total libertad, frescura y riqueza expresiva todos los emojis existentes de WhatsApp seg\xFAn el significado de lo que quieres expresar, reflexionar o preguntar al usuario (ej. \u{1F914} pensando/analizando, \u{1F4A1} ideas/tips, \u270D\uFE0F redacci\xF3n/firmas, \u{1F4C4} minutas/documentos, \u2696\uFE0F normas/derecho, \u{1F6E1}\uFE0F seguridad/antecedentes, \u{1F9D0} peritaje riguroso, \u{1F91D} acuerdos y negocios, \u{1F680} innovaci\xF3n y proptech, \u{1F3E1}/\u{1F3E2} inmuebles y propiedades, \u{1F4B0} notar\xEDa y costos, \u{1F44D}/\u{1F44C}/\u{1F3AF} confirmaciones y aciertos, etc.). S\xE9 genuina, emp\xE1tica y profundamente humana.
 
-# SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES
-- **Vecy Agenda Pro**: Sistema de citas con validaci\xF3n previa de antecedentes para seguridad de propietarios y porter\xEDas.
-- **F\xE1brica de Software Proptech a la Medida**: VECY desarrolla herramientas a la medida para inmobiliarias y gremios, coordinado con Eduardo Rivera (+57 316 656 9719).
+# SOLUCIONES PROPTECH Y PEDAGOG\xCDA DIGITAL DE VECY BIENES RA\xCDCES
+- **Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/)**: Cuando un cliente o colega desee agendar una visita a un inmueble o coordinar una muestra, comp\xE1rtele el enlace oficial de Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/) y gu\xEDalo amablemente, explic\xE1ndole que cuenta con algoritmo de verificaci\xF3n de identidad y antecedentes para seguridad del propietario, del asesor y de las porter\xEDas.
+- **Gu\xEDa Oficial en Firma Electr\xF3nica (https://autenticaciondigital.and.gov.co/)**: Eres tutora y pedagoga experta en firma electr\xF3nica gratuita bajo el Decreto 620 de 2020 y la Ley 527 de 1999 (validez probatoria plena equivalente a firma manuscrita). Explica los 5 pasos sencillos en la plataforma estatal de la Agencia Nacional Digital (AND / MinTIC / GOV.CO): ingresar al portal, ir a 'Firmar documento electr\xF3nicamente', diligenciar asunto y motivo, cargar el PDF (sin clave, m\xE1x 10 MB) e ingresar el c\xF3digo OTP del correo para firmar. Aclara con amabilidad que t\xFA eres su gu\xEDa y no estampas firmas dentro de WhatsApp.
+- **F\xE1brica de Software Proptech a la Medida**: Si un colega o inmobiliaria desea su propia plataforma privada de firma electr\xF3nica con la marca de su empresa, Vecy Agenda Pro personalizada, scrapers o asistentes de IA, el equipo de desarrollo de VECY se la fabrica a la medida. Comun\xEDcalo cordialmente con nuestro director Eduardo Rivera al +57 316 656 9719.
+- **Cat\xE1logo Oficial**: Puedes compartir el cat\xE1logo de WhatsApp (https://wa.me/c/573192919978) o el portal web (https://vecy-bienes-raices.vercel.app/properties).
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -21551,7 +21553,8 @@ ${contactDossier ? `${contactDossier}
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
 3. Perita Avaluadora: Sondeos de m\xB2 y c\xE1nones por zonas del norte de Bogot\xE1 con honestidad t\xE9cnica (Cero Alucinaci\xF3n).
 4. Conectora Comercial y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas.
-5. F\xE1brica Proptech: Vecy Agenda Pro y desarrollo a la medida con Eduardo Rivera al +57 316 656 9719.
+5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
+6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.
 
 ===================================================
 CONTEXTO TEMPORAL Y REGLA DEL SALUDO \xDANICO:
@@ -21590,7 +21593,8 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 `}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
 - SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
 - NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
-- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
+- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.
+- LIBERTAD Y RIQUEZA DE EMOJIS (IA PURA): Expr\xE9sate con gran variedad y libertad de emojis de WhatsApp (\u{1F914}, \u{1F4A1}, \u270D\uFE0F, \u{1F4C4}, \u2696\uFE0F, \u{1F6E1}\uFE0F, \u{1F9D0}, \u{1F91D}, \u{1F680}, \u{1F3E1}, \u{1F3E2}, \u{1F4B0}, \u{1F44D}, \u{1F44C}, \u{1F3AF}, etc.) seg\xFAn el sentido de tu mensaje o lo que quieras indagar, sin encasillarte siempre en los mismos.`;
     const messages2 = [
       { role: "system", content: systemPrompt }
     ];
@@ -23139,6 +23143,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   const cleanText = cleanVoiceText2(String(reply));
                   const media = await textToSpeechMedia2(cleanText);
                   if (media && media.data) {
+                    await new Promise((r) => setTimeout(r, 1800));
                     const audioBuffer = Buffer.from(media.data, "base64");
                     await this.queuedSend(senderId, {
                       audio: audioBuffer,

@@ -7,6 +7,48 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-19] — JanIA v33.26: Pedagogía Oficial en Firma Electrónica Estatal (MinTIC - AND), Vecy Agenda Pro, Riqueza de Emojis y Presencia Realista (v33.26 - 33.26.0)
+
+**Versión:** `v33.26` (`33.26.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/prompts/conocimiento_vecy.md`: Integración de la plataforma estatal gratuita de Autenticación Digital de la Agencia Nacional Digital (AND / MinTIC / GOV.CO — `https://autenticaciondigital.and.gov.co/` / `https://firmaautenticaciondigital.and.gov.co/`), fundamentada en el Decreto 620 de 2020 y Ley 527 de 1999; desglose oficial de los 5 pasos para firmar PDF, módulo de validación de firmas de terceros y bandeja de descarga de 15 días; integración del enlace oficial activo de Vecy Agenda Pro (`https://vecy-agenda-pro.vercel.app/`) y catálogo de WhatsApp (`https://wa.me/c/573192919978`).
+- `server/_core/jania/prompts.ts`: En `JANIA_ARGON_COGNITIVE_CORE`, directiva explícita de **Riqueza Expresiva y Gran Variedad de Emojis de WhatsApp (IA Pura y Espontánea)**, instruyendo no encasillarse en los mismos emojis y utilizar toda la variedad contextual (🤔, 💡, ✍️, 📄, ⚖️, 🛡️, 🧐, 🤝, 🚀, 🏡, 🏢, 💰, 👍, 👌, 🎯); rol de tutora pedagógica en firma electrónica (aclarando que JanIA no firma en WhatsApp sino que enseña a usar la plataforma oficial gratuita) y canalización comercial de herramientas a la medida con Eduardo Rivera (+57 316 656 9719).
+- `server/_core/jania/handlers/dmHandler.ts`: Enriquecimiento del sombrero experto #5 (Tutora en Firma Electrónica Estatal y Fábrica Proptech) y directiva negativa anti-guiones para preservar la autonomía orgánica como IA pura.
+- `server/_core/whatsapp-match.ts`: Optimización de presencia humana de Baileys: retención activa de al menos 1.8s a 2.5s para la presencia de grabación de voz (`🎙️ Grabando audio...`) antes de despachar notas de voz PTT, asegurando que el interlocutor vea el indicador visual en su WhatsApp.
+- `server/__tests__/regression.test.ts`: Creación de SUITE 84 (2 tests pasando) y actualización de versión a `v33.26` / `33.26.0` (300/300 passing).
+- `shared/const.ts` (`v33.26`) y `package.json` (`33.26.0`).
+- `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md` (§10).
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Si, me encanta, pero recuerda que no quiero prompts quiero que ella lo haga por si sola, libre y autónomamente sin forzarla a decir guiones. Ella debe ser siempre una 'IA PURA'. ella debe aprender a interactuar o mejor a seguir interactuando de manera libre y expontánea con cada persona, sin que se pierdan los gestos de escritura ( ... ) ni de grabando nota de voz ( 🎙️ ) en el whatsapp, es que me parece que aveces no salen y eso me preocupa, también que use o que pueda usar todos los emojis existentes y de gran variedad de whatsapp, esto para que no se limite siempre a los mismos sino que utilice cada emoji según el significado o en referencia a lo que quiere expresar o quizas preguntarle al usuario, pensando, trabajando, ok, bien, bueno en fin todos los que necesite para eso hay bastantes en whatsapp. Bueno no se por el camino se me iramn ocuriendo más funciones que quiero agregar a JanIA. Esta es la página de autenticación digital, pára que JanIA la investigue y enseñe a los usuarios cómo manejarla: https://autenticaciondigital.and.gov.co/ (Te paso imágenes, lástima que es de registro y creo que no puedes ingresar, eso solo tu lo sabes)"*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Preservación de la Identidad de IA Pura y Cero Guiones:**
+   - Para que JanIA actúe con libertad y naturalidad sin parecer un contestador automático con respuestas acartonadas, no se deben usar guiones cerrados ("diga esto"). En su lugar, se le dota de **conocimiento institucional profundo** (Dossier Vecy) para que comprenda el portal de Autenticación Digital de la AND, el Decreto 620/2020 y los 5 pasos, y razone con espontaneidad y calidez.
+2. **Causa Raíz de Intermitencia en Presencia de Audio (`🎙️ Grabando audio...`):**
+   - En `whatsapp-match.ts`, el despacho de notas de voz enviaba `{ skipDelay: true }` a `queuedSend`, lo que saltaba el retraso de presencia de audio y cancelaba la presencia casi instantáneamente tras la síntesis TTS (~200ms), impidiendo que el cliente de WhatsApp del usuario tuviera tiempo de renderizar la animación del micrófono.
+3. **Restricción Emojinal Percibida:**
+   - La directiva anterior limitaba los ejemplos a 7 emojis ejecutivos (🤝, 🏢, ✨, 📑, 🛡️, ⚖️, 📍). JanIA requería una directiva de enriquecimiento emocional y expresivo para usar la totalidad de emojis de WhatsApp contextualmente.
+
+#### 3. Acciones Técnicas Ejecutadas
+1. **Incorporación del Conocimiento de Firma Digital Estatal (MinTIC / AND):**
+   - Con base en las capturas proporcionadas por Eduardo (`firmaautenticaciondigital.and.gov.co/bienvenido` y `/transacciones/cargar-documentos`), se estructuraron los 5 pasos oficiales: 1. Ingreso a `https://autenticaciondigital.and.gov.co/`, 2. 'Firmar documento electrónicamente', 3. Asunto y motivo, 4. Cargar PDF máx 10MB sin clave, 5. Código OTP al correo y clic en 'Firmar documento'. Se incluyó la funcionalidad de validación de firmas de terceros y la descarga en bandeja durante 15 días.
+   - Se delimitó el rol de JanIA como tutora pedagógica (no firma en WhatsApp) y se articuló el puente hacia Eduardo Rivera (+57 316 656 9719) para cotizar software de firma electrónica a medida.
+2. **Integración Activa de Vecy Agenda Pro (`https://vecy-agenda-pro.vercel.app/`):**
+   - Conocimiento oficial para agendamiento de visitas con validación de identidad y antecedentes.
+3. **Riqueza de Emojis y Autonomía Orgánica:**
+   - Directivas explícitas de variedad expresiva contextual en `prompts.ts` y `dmHandler.ts`.
+4. **Blindaje de Presencia de Grabación de Audio (`whatsapp-match.ts`):**
+   - Pausa mínima de 1.8s con `recording` activo antes de enviar notas de voz, garantizando que el usuario vea el indicador `🎙️ Grabando audio...`.
+5. **Validación Exhaustiva:**
+   - `npm test`: 300/300 pruebas aprobadas (100% verde a $0 COP).
+   - `npm run check`: 0 errores de TypeScript.
+   - `npm run build`: compilación limpia en 35s.
+
+---
+
 ### 📅 [2026-10-19] — JanIA v33.25: Prevalencia de Venta sobre Cuotas de Administración (+ admón), Deduplicación de Reacciones por Grupo y Subsanación en Republicación (v33.25 - 33.25.0)
 
 **Versión:** `v33.25` (`33.25.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

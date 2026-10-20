@@ -6103,13 +6103,13 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       });
     });
 
-    it("5. Consagración doctrinal de versión v33.25 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.26 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.25");
+      expect(VECY_VERSION).toBe("v33.26");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.25.0");
+      expect(pkg.version).toBe("33.26.0");
     });
   });
 
@@ -6552,6 +6552,29 @@ Ana Morales Castillo
       expect(fb.price).toBe(750000000);
       expect(fb.propertyType).toBe("office");
       expect(fb.area).toBe(100);
+    });
+  });
+
+  describe("SUITE 84: JanIA v33.26 — Pedagogía en Firma Electrónica Estatal (MinTIC - AND), Vecy Agenda Pro y Expresividad con Variedad de Emojis (v33.26)", () => {
+    it("1. getVecyInstitutionalKnowledge integra el portal oficial https://autenticaciondigital.and.gov.co/ y los 5 pasos de firma", async () => {
+      const { getVecyInstitutionalKnowledge } = await import("../_core/jania/prompts");
+      const knowledge = getVecyInstitutionalKnowledge();
+
+      expect(knowledge).toContain("https://autenticaciondigital.and.gov.co/");
+      expect(knowledge).toContain("Decreto 620 de 2020");
+      expect(knowledge).toContain("Ley 527 de 1999");
+      expect(knowledge).toContain("Paso 1:");
+      expect(knowledge).toContain("Paso 5:");
+      expect(knowledge).toContain("https://vecy-agenda-pro.vercel.app/");
+    });
+
+    it("2. JANIA_ARGON_COGNITIVE_CORE instruye variedad de emojis y rol de tutora pedagógica en firma electrónica y proptech a la medida", async () => {
+      const { JANIA_ARGON_COGNITIVE_CORE } = await import("../_core/jania/prompts");
+
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Riqueza Expresiva y Gran Variedad de Emojis de WhatsApp");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("https://vecy-agenda-pro.vercel.app/");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("https://autenticaciondigital.and.gov.co/");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("316 656 9719");
     });
   });
 });

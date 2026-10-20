@@ -1425,6 +1425,8 @@ export class JaniaMatchBot {
               const cleanText = cleanVoiceText(String(reply));
               const media = await textToSpeechMedia(cleanText);
               if (media && media.data) {
+                // Mantener activa la presencia 'Grabando audio... 🎙️' durante al menos 1.8s para visibilidad total en el móvil del usuario
+                await new Promise(r => setTimeout(r, 1800));
                 const audioBuffer = Buffer.from(media.data, 'base64');
                 await this.queuedSend(senderId, {
                   audio: audioBuffer,
