@@ -168,7 +168,7 @@ export async function getProcuraduriaEndpoint(): Promise<{ host: string; port: n
 /**
  * Cliente HTTP ligero y seguro para portales del Estado colombiano con certificados autofirmados o cadenas gubernamentales.
  */
-function httpRequest(options: https.RequestOptions, data?: string): Promise<{ statusCode: number; headers: any; body: string }> {
+function httpRequest(options: https.RequestOptions, data?: string, timeoutMs: number = 15000): Promise<{ statusCode: number; headers: any; body: string }> {
   return new Promise((resolve, reject) => {
     const rawHeaders = options.headers as Record<string, any> | undefined;
     const servername = (rawHeaders?.Host as string) || (rawHeaders?.host as string) || 'apps.procuraduria.gov.co';
@@ -178,8 +178,9 @@ function httpRequest(options: https.RequestOptions, data?: string): Promise<{ st
       res.on('end', () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
     });
     req.on('error', reject);
-    req.setTimeout(12000, () => {
-      req.destroy(new Error('Timeout de conexión'));
+    const timeout = (options as any).timeout || timeoutMs;
+    req.setTimeout(timeout, () => {
+      req.destroy(new Error(`Timeout de conexión (${timeout}ms)`));
     });
     if (data) req.write(data);
     req.end();
@@ -440,7 +441,7 @@ export async function getAdresEndpoint(): Promise<{ host: string; port: number }
   if (!adresEndpointCache || Date.now() - adresEndpointCache.lastChecked > 30000) {
     const isTunnelOpen = await new Promise<boolean>((resolve) => {
       const sock = new net.Socket();
-      sock.setTimeout(400);
+      sock.setTimeout(1200);
       sock.once('connect', () => { sock.destroy(); resolve(true); });
       sock.once('timeout', () => { sock.destroy(); resolve(false); });
       sock.once('error', () => { sock.destroy(); resolve(false); });
@@ -551,16 +552,26 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
   const cached = identityCache.get(cacheKey) || identityCache.get(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
   if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
-    return {
-      success: true,
-      officialName: cached.fullName,
-      eps: cached.eps,
-      estado: cached.estado,
-      regimen: cached.regimen,
-      documentType: mappedTipo,
-      documentNumber: cleanNum,
-      source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
-    };
+    // Si la entrada en caché contiene el texto genérico antiguo ("Registrado y activo en el sistema de aseguramiento en salud")
+    // o carece del nombre real de la EPS, invalidar la entrada para forzar consulta fresca a ADRES
+    const isGenericEps = !cached.eps ||
+      cached.eps.toLowerCase().includes("registrado y activo") ||
+      cached.eps.toLowerCase().includes("aseguramiento en salud");
+    if (isGenericEps) {
+      identityCache.delete(cacheKey);
+      identityCache.delete(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
+    } else {
+      return {
+        success: true,
+        officialName: cached.fullName,
+        eps: cached.eps,
+        estado: cached.estado,
+        regimen: cached.regimen,
+        documentType: mappedTipo,
+        documentNumber: cleanNum,
+        source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
+      };
+    }
   }
 
   try {
@@ -571,14 +582,15 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       'Referer': 'https://www.adres.gov.co/consulte-su-eps'
     };
 
-    // 1. GET formulario para inicializar tokens y cookies
+    // 1. GET formulario para inicializar tokens y cookies (timeout: 15000ms)
     const r1 = await httpRequest({
       hostname: ep.host,
       port: ep.port,
       path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
       method: 'GET',
-      headers: commonHeaders
-    });
+      headers: commonHeaders,
+      timeout: 15000
+    } as any);
 
     const c1 = r1.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
     const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || '';
@@ -598,7 +610,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       btnConsultar: 'Consultar'
     });
 
-    // 2. POST formulario de consulta
+    // 2. POST formulario de consulta (timeout: 15000ms)
     const r2 = await httpRequest({
       hostname: ep.host,
       port: ep.port,
@@ -609,8 +621,9 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(postData),
         'Cookie': c1.join('; ')
-      }
-    }, postData);
+      },
+      timeout: 15000
+    } as any, postData);
 
     const c2 = r2.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
     const allCookies = [...c1, ...c2].join('; ');
@@ -627,7 +640,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
 
     const popupUrl = m[1];
 
-    // 3. GET resultado del afiliado
+    // 3. GET resultado del afiliado (timeout: 15000ms)
     const r3 = await httpRequest({
       hostname: ep.host,
       port: ep.port,
@@ -636,8 +649,9 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       headers: {
         ...commonHeaders,
         'Cookie': allCookies
-      }
-    });
+      },
+      timeout: 15000
+    } as any);
 
     if (r3.statusCode !== 200 || r3.body.includes('Error de servidor')) {
       return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'Intermitencia en el servidor ADRES' };
@@ -663,6 +677,24 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       estado = lines[estadoIdx + offset] || '';
       eps = lines[estadoIdx + offset + 1] || '';
       regimen = lines[estadoIdx + offset + 2] || '';
+    }
+
+    // Búsqueda inteligente complementaria de EPS si el offset no la capturó directamente
+    if (!eps || eps.length < 3) {
+      const entidadIdx = lines.findIndex((l: string) => {
+        const u = l.toUpperCase();
+        return u === 'ENTIDAD' || u === 'ENTIDAD PROMOTORA' || u.includes('ADMINISTRADORA');
+      });
+      if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
+        eps = lines[entidadIdx + 1];
+      }
+    }
+    if (!eps || eps.length < 3) {
+      const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+      const directMatch = r3.body.match(epsRegex);
+      if (directMatch) {
+        eps = directMatch[0];
+      }
     }
 
     const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, ' ').trim();
@@ -1220,6 +1252,8 @@ export function formatCompactIdentityVerificationReport(params: {
   fechaMatricula?: string;
   fechaRenovacion?: string;
   ultimoAnoRenovado?: string;
+  direccionComercial?: string;
+  telefonoComercial?: string;
   ciiuPrincipal?: string;
   actividadesEconomicas?: RuesActividadEconomica[];
   representantePrincipal?: RepresentanteLegalInfo;
@@ -1257,7 +1291,9 @@ export function formatCompactIdentityVerificationReport(params: {
     actividadesEconomicas,
     representantePrincipal,
     representantesSuplentes,
-    establecimientos
+    establecimientos,
+    direccionComercial,
+    telefonoComercial
   } = params;
 
   const resolvedSuccess = success ?? idValidated ?? false;
@@ -1285,6 +1321,12 @@ export function formatCompactIdentityVerificationReport(params: {
     reportText += `📍 *Cámara de Comercio:* ${camaraComercio || 'Bogotá D.C.'}\n`;
     if (matricula) {
       reportText += `🔢 *Número de Matrícula:* ${matricula}\n`;
+    }
+    if (direccionComercial) {
+      reportText += `📍 *Dirección Comercial:* ${direccionComercial}\n`;
+    }
+    if (telefonoComercial) {
+      reportText += `📞 *Teléfono:* ${telefonoComercial}\n`;
     }
     if (fechaMatricula) {
       reportText += `📅 *Fecha de Matrícula:* ${fechaMatricula}\n`;
@@ -1340,7 +1382,8 @@ export function formatCompactIdentityVerificationReport(params: {
       reportText += `• No se encontraron resultados.\n`;
     }
 
-    reportText += `\n⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de información pública mercantil (RUES) y datos públicos de representación legal bajo principios de finalidad legítima, debida diligencia y seguridad jurídica."`;
+    reportText += `\n⚖️ *_Publicidad Mercantil y Datos Públicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de información pública mercantil (RUES) y datos públicos de representación legal bajo principios de finalidad legítima, debida diligencia y seguridad jurídica."\n\n`;
+    reportText += `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
 
     return reportText.trim();
   }
@@ -1423,6 +1466,8 @@ export interface EmpresaQueryResult {
   fechaMatricula?: string;
   fechaRenovacion?: string;
   ultimoAnoRenovado?: string;
+  direccionComercial?: string;
+  telefonoComercial?: string;
   ciiuPrincipal?: string;
   actividadesEconomicas?: RuesActividadEconomica[];
   representantePrincipal?: RepresentanteLegalInfo;
@@ -1731,7 +1776,9 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     actividadesEconomicas,
     representantePrincipal,
     representantesSuplentes,
-    establecimientos
+    establecimientos,
+    direccionComercial: ruesLive?.direccionComercial,
+    telefonoComercial: ruesLive?.telefonoComercial
   });
 
   const followUpQuestionText = buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes);
@@ -1753,6 +1800,8 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     fechaMatricula,
     fechaRenovacion,
     ultimoAnoRenovado,
+    direccionComercial: ruesLive?.direccionComercial,
+    telefonoComercial: ruesLive?.telefonoComercial,
     ciiuPrincipal,
     actividadesEconomicas,
     representantePrincipal,
@@ -1831,7 +1880,13 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
 
   if (cachedName) {
     const isAdresSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'pa'].includes(tipoDoc.toLowerCase());
-    if (!cachedEps && isAdresSupported) {
+    const isGenericEps = !cachedEps ||
+      cachedEps.toLowerCase().includes("registrado y activo") ||
+      cachedEps.toLowerCase().includes("aseguramiento en salud");
+    if (isGenericEps && isAdresSupported) {
+      identityCache.delete(adresCacheKey);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
@@ -1911,8 +1966,10 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
       // 3° PASO: Contraloría General de la República (CGR - SIRECI)
       cgrRes = await queryContraloria(effectiveTipoDoc, cedula).catch(() => null);
 
-      // 4° PASO: Policía Nacional (PONAL) - Antecedentes penales/judiciales
-      ponalRes = await queryPoliciaNacional(effectiveTipoDoc, cedula).catch(() => null);
+      // 4° PASO: Policía Nacional (PONAL) - Antecedentes penales/judiciales con Promise.race (35s timeout)
+      const ponalPromise = queryPoliciaNacional(effectiveTipoDoc, cedula);
+      const timeoutPromise = new Promise<any>((resolve) => setTimeout(() => resolve(null), 35000));
+      ponalRes = await Promise.race([ponalPromise, timeoutPromise]).catch(() => null);
     } else {
       // Documento CC inexistente en el censo: evitar llamar a queryPoliciaNacional (0 captchas consumidos)
       ponalRes = {
@@ -2066,7 +2123,7 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
   }
 
   reportText += `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n`;
-  reportText += `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
+  reportText += `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
 
   return reportText;
 }
@@ -2176,7 +2233,13 @@ export async function executeIdentityVerificationFromWhatsApp(
 
   if (cachedName) {
     const isAdresSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'pa'].includes(tipoDoc.toLowerCase());
-    if (!cachedEps && isAdresSupported) {
+    const isGenericEps = !cachedEps ||
+      cachedEps.toLowerCase().includes("registrado y activo") ||
+      cachedEps.toLowerCase().includes("aseguramiento en salud");
+    if (isGenericEps && isAdresSupported) {
+      identityCache.delete(adresCacheKey);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
@@ -2266,8 +2329,10 @@ export async function executeIdentityVerificationFromWhatsApp(
       // 3° PASO: Contraloría General de la República (SIRECI - Boletín de Responsables Fiscales)
       cgrRes = await queryContraloria(currentTipoDoc, cedula).catch(() => null);
 
-      // 4° PASO: Policía Nacional (PONAL) - Antecedentes penales/judiciales
-      ponalRes = await queryPoliciaNacional(currentTipoDoc, cedula).catch(() => null);
+      // 4° PASO: Policía Nacional (PONAL) - Antecedentes penales/judiciales con Promise.race (35s timeout)
+      const ponalPromise = queryPoliciaNacional(currentTipoDoc, cedula);
+      const timeoutPromise = new Promise<any>((resolve) => setTimeout(() => resolve(null), 35000));
+      ponalRes = await Promise.race([ponalPromise, timeoutPromise]).catch(() => null);
     } else {
       // Documento CC inexistente en el censo: evitar llamar a queryPoliciaNacional para ahorrar 2Captcha
       ponalRes = {
@@ -2354,7 +2419,8 @@ export async function executeIdentityVerificationFromWhatsApp(
         reportText += `🏥 *ADRES (BDUA):* ${epsLine}\n\n`;
         reportText += `📌 *Orientación de Verificación:*${customGuidance}\n` +
           `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
-          `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`;
+          `⚖️ *_Habeas Data (Ley 1581/12):_* "Validación bajo principios de finalidad legítima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"\n\n` +
+          `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
       }
 
       if (userId) {

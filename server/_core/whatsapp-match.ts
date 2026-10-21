@@ -1285,17 +1285,21 @@ export class JaniaMatchBot {
 
       if (rawMsg?.imageMessage && !imageBuffer) {
         try {
-          const media = await downloadMediaMessage(msg, 'buffer', {});
-          imageBuffer = media.toString('base64');
-          mainMsg = msg; // El mensaje con la imagen se vuelve el mensaje de referencia
+          const media = await downloadMediaSafely(msg as any, 'image');
+          if (media && media.length > 0) {
+            imageBuffer = media.toString('base64');
+            mainMsg = msg; // El mensaje con la imagen se vuelve el mensaje de referencia
+          }
         } catch (e) { }
       }
       if (rawMsg?.documentMessage && !pdfBuffer) {
         try {
-          const media = await downloadMediaMessage(msg, 'buffer', {});
-          pdfBuffer = media.toString('base64');
-          pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
-          mainMsg = msg; // El mensaje con el pdf se vuelve el mensaje de referencia
+          const media = await downloadMediaSafely(msg as any, 'document');
+          if (media && media.length > 0) {
+            pdfBuffer = media.toString('base64');
+            pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+            mainMsg = msg; // El mensaje con el pdf se vuelve el mensaje de referencia
+          }
         } catch (e) { }
       }
     }

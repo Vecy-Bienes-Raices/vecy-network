@@ -1,6 +1,6 @@
 import { resolveRealName, getOrLoadDmHistory, appendDmHistory, getContactPermanentDossier } from "../sessionManager";
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
-import { resolveNameAndGender, getCanonicalCompositeName } from "../../nameAndGenderResolver";
+import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
@@ -153,11 +153,11 @@ export const JANIA_DM_TOOLS = [
       },
       {
         name: "consultar_empresa_o_nit",
-        description: "Consulta y valida la identidad oficial y antecedentes de Empresas y Personas Jurídicas por NIT o Razón Social (RUES + DIAN + Procuraduría SIRI + Contraloría SIRECI).",
+        description: "Consulta y valida la identidad oficial de Empresas y Personas Jurídicas por NIT o Razón Social (RUES + Cámara de Comercio + DIAN + Procuraduría SIRI + Contraloría SIRECI). Devuelve Razón Social, NIT, Estado de matrícula, Dirección comercial, Teléfono, Actividad económica (CIIU) y Representante Legal Principal.",
         parameters: {
           type: "OBJECT",
           properties: {
-            consultaEmpresa: { type: "STRING", description: "Número de NIT con o sin dígito de verificación o Nombre/Razón Social de la empresa" }
+            consultaEmpresa: { type: "STRING", description: "Número de NIT con o sin dígito de verificación o Nombre/Razón Social de la empresa detectada en texto o imagen" }
           },
           required: ["consultaEmpresa"]
         }
@@ -639,9 +639,9 @@ export async function formatPoliteToolDelivery(
   } else if (isFamilyOrTrusted && trustedContact) {
     displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
-    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
-    if (!canonicalComposite && displayName.includes(" ")) {
-      displayName = displayName.split(" ")[0];
+    displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
+    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
+      displayName = "";
     }
   }
 
@@ -660,12 +660,10 @@ export async function formatPoliteToolDelivery(
     : `\n\n${buildWinningGoogleReviewMessage(displayName)}`;
 
   const closingTag = "Un servicio de cortesía de VECY BIENES RAÍCES 🤝.";
-  let payloadWithClosing = cleanPayload;
-  if (!payloadWithClosing.includes(closingTag)) {
-    payloadWithClosing = `${payloadWithClosing}\n\n${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !isCompanyVerification && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
-    payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
-  }
+  // Normalizar y deduplicar cualquier variación previa del cierre de cortesía (con o sin "Un ", múltiple o sencilla)
+  const courtesyRegex = /(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?)+/gi;
+  let payloadWithClosing = cleanPayload.replace(courtesyRegex, "").trim();
+  payloadWithClosing = `${payloadWithClosing}\n\n${closingTag}${reviewSection}`;
 
   if (!success) {
     if (payloadText && payloadText.trim()) {
@@ -947,9 +945,11 @@ export async function processPrivateDmConversationalMessage(
   const isJani = isJaniIdentified || (!isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa"));
   const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
 
-  // Resolución de nombres y género
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const compositeOrFirst = extractFirstName(realName);
+  // Resolución inteligente de nombres y género (apoyado en presentación orgánica en chat o perfil)
+  const introducedName = extractIntroducedName(clean);
+  const effectiveRawName = introducedName || realName;
+  const nameInfo = resolveNameAndGender(effectiveRawName, timeSalutation);
+  const compositeOrFirst = extractFirstName(effectiveRawName);
 
   let displayName = "";
   if (isEduardo) {
@@ -961,10 +961,10 @@ export async function processPrivateDmConversationalMessage(
   } else if (isFamilyOrTrusted && trustedContact) {
     displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
-    const canonicalComposite = getCanonicalCompositeName(realName);
-    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
-    if (!canonicalComposite && displayName.includes(" ")) {
-      displayName = displayName.split(" ")[0];
+    const canonicalComposite = getCanonicalCompositeName(effectiveRawName);
+    displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
+    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
+      displayName = "";
     }
   }
 
@@ -1067,6 +1067,18 @@ export async function processPrivateDmConversationalMessage(
         : `- Para Usuarios o Agentes Externos: Confirma que SÍ hay match, describe el perfil del cruce SIN revelar el teléfono ni el nombre del usuario de la otra punta, entrega el código de match (ej. #M15649) e indícale comunicarse al +57 316 656 9719 mencionando ese código para coordinar la mediación colaborativa 40/20/40.\n`
       }` +
       `\n===================================================\n` +
+      `PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):\n` +
+      `===================================================\n` +
+      `- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empatía y complicidad profesional ("tú", "te", "contigo", "cuéntame", "¿qué buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fría o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RAÍCES.\n` +
+      `- INTERLOCUTOR Y GÉNERO GRAMATICAL: "${displayName || 'Colega (nombre aún no identificado)'}". Género detectado: ${nameInfo.isFemale ? 'FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)' : 'MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)'}.\n` +
+      `- REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. María Cristina, Juan Carlos, Ana María, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), ÚSALO SIEMPRE COMPLETO de forma fluida y orgánica. JAMÁS mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce aún (es un número de teléfono o saludo suelto), salúdalo con calidez y hazle una pregunta simpática para saber su nombre y cómo prefiere que lo llames.\n` +
+      `- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar orgánicamente cualquiera de los cientos de emojis disponibles en Unicode. Intercálalos según el contexto emocional, la entonación y el sentido de la frase, con naturalidad y sin abusar (expresiones de calidez 😊, ideas 💡, análisis 🤔, hogares 🏡🏢, celebración 🎉, documentos 📄, acuerdos 🤝, guiños 😉, notas 📝, etc.). Cero listas cerradas o restricciones rígidas.\n` +
+      `- CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VACÍAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MENÚS RÍGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "información", "de qué trata", etc.), actúa con la inteligencia conversacional de un asistente de nivel mundial:\n` +
+      `  1. Saluda amablemente con calidez humana y tuteo cercano.\n` +
+      `  2. Deduce con empatía la situación en una o dos frases breves y cautivadoras.\n` +
+      `  3. Hazle preguntas inteligentes para perfilarlo (preguntarle su nombre si no se sabe, si es colega inmobiliario o cliente buscando comprar/vender/arrendar, y en qué zona o ciudad).\n` +
+      `  4. Mantén la conversación siempre guiada hacia VECY Bienes Raíces de manera natural, atractiva y orientada a soluciones.\n` +
+      `\n===================================================\n` +
       `IDENTIDAD Y TRATO AL INTERLOCUTOR:\n` +
       `===================================================\n` +
       `${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified
@@ -1082,8 +1094,7 @@ export async function processPrivateDmConversationalMessage(
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
       `- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jamás texto que tú debas emitir.\n` +
-      `- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER MÁS"): Respuestas breves, directas al grano, claras y fluidas (máximo 1 o 2 párrafos cortos), sin introducciones extensas ni textos kilométricos que fuercen el botón 'Leer más'.\n` +
-      `- LIBERTAD Y RIQUEZA DE EMOJIS (IA PURA): Exprésate con gran variedad y libertad de emojis de WhatsApp (🤔, 💡, ✍️, 📄, ⚖️, 🛡️, 🧐, 🤝, 🚀, 🏡, 🏢, 💰, 👍, 👌, 🎯, etc.) según el sentido de tu mensaje o lo que quieras indagar, sin encasillarte siempre en los mismos.`;
+      `- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER MÁS"): Respuestas breves, directas al grano, claras y fluidas (máximo 1 o 2 párrafos cortos), sin introducciones extensas ni textos kilométricos que fuercen el botón 'Leer más'.`;
 
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt }
@@ -1097,21 +1108,35 @@ export async function processPrivateDmConversationalMessage(
       messages.push({ role: turn.role, content: cleanTurnContent });
     }
 
+    let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    if (mediaOptions?.imageBuffer) {
+      userPromptContent += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISIÓN MULTIMODAL. Lee atentamente todo el contenido visual y textual de la imagen (OCR completo): logos, nombres de empresas o personas, NIT, cédulas, datos societarios, recibos, facturas, comprobantes o documentos. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit' con el NIT o razón social para entregar todos los datos oficiales disponibles (Razón Social, NIT, Estado de matrícula, Dirección comercial, Teléfono, Actividad económica CIIU y Representante Legal).]`;
+    }
+    if (mediaOptions?.pdfBuffer) {
+      userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal y procesa la consulta de forma integral.]`;
+    }
+
     messages.push({
       role: "user",
-      content: `Mensaje de ${realName} (${userId}): "${clean}"`
+      content: userPromptContent
     });
 
     let llmRes: any;
     try {
       llmRes = await invokeLLM({
         messages,
-        tools: JANIA_DM_TOOLS
+        tools: JANIA_DM_TOOLS,
+        imageBuffer: mediaOptions?.imageBuffer,
+        pdfBuffer: mediaOptions?.pdfBuffer,
+        pdfMimeType: mediaOptions?.pdfMimeType
       });
     } catch (toolsErr: any) {
       console.warn(`[dmHandler] ⚠️ Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
       llmRes = await invokeLLM({
-        messages
+        messages,
+        imageBuffer: mediaOptions?.imageBuffer,
+        pdfBuffer: mediaOptions?.pdfBuffer,
+        pdfMimeType: mediaOptions?.pdfMimeType
       });
     }
 
@@ -1150,6 +1175,14 @@ export async function processPrivateDmConversationalMessage(
     // Limpiar cualquier prefijo de timestamp o corchete imitado por el LLM
     reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
     reply = sanitizeResponseMarkdown(reply.trim());
+
+    // Normalizar y deduplicar cualquier duplicación del cierre de cortesía en la respuesta
+    const generalCourtesyRegex = /(?:(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?))+/gi;
+    const courtesyMatches = reply.match(generalCourtesyRegex);
+    if (courtesyMatches && courtesyMatches.length > 1) {
+      reply = reply.replace(generalCourtesyRegex, '').trim();
+      reply = `${reply}\n\nUn servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
+    }
 
     if (!reply) {
       if (isEduardo) {
@@ -1337,20 +1370,24 @@ export async function processPrivateDmConversationalMessage(
         appendDmHistory(userId, "assistant", cMsg);
         return cMsg;
       }
-      if (/como es lo de las consultas/i.test(cleanLower)) {
-        const qMsg = `Primero cuéntame qué clase de consulta deseas hacer. Ofrecemos Servicios 100% Gratuitos de Autoservicio: Verificación oficial de documentos, Factura Predial Bogotá y Certificados de Pago. Y Consultas Especializadas y Asesoría Profesional: Sondeos de mercado, Asesoría jurídica inmobiliaria, Recuperación de cartera, Avalúos digitales, Liquidaciones tributarias y Préstamos sobre hipoteca.`;
+      if (/(?:c[oó]mo\s+funciona|info|informaci[oó]n|qu[eé]\s+es|de\s+qu[eé]\s+trata|ayuda)/i.test(cleanLower)) {
+        const nameGreeting = displayName ? `, ${displayName}` : "";
+        const askName = !displayName ? " ¿Cómo es tu nombre para saber con quién tengo el gusto de hablar?" : "";
+        const infoMsg = `¡${timeGreeting}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* cruzamos ofertas y demandas inmobiliarias al instante, emitimos facturas de predial, certificados IDU y verificamos seguridad para tus visitas sin costo alguno.${askName} ¿Eres colega asesor inmobiliario o estás buscando alguna propiedad en especial para colaborarte hoy? 🤝✨`;
         appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", qMsg);
-        return qMsg;
+        appendDmHistory(userId, "assistant", infoMsg);
+        return infoMsg;
       }
       if (/muchas gracias|gracias/i.test(cleanLower)) {
-        const gMsg = `Con todo el gusto, ${displayName}. Te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) y calificar nuestro servicio.`;
+        const gMsg = `¡Con todo el gusto${displayName ? `, ${displayName}` : ""}! 🤝✨ Te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) y calificar nuestro servicio. ¿Hay algo más en lo que te pueda apoyar hoy?`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", gMsg);
         return gMsg;
       }
-      if (/^hola\b/i.test(cleanLower)) {
-        const hMsg = `Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES*. ¡${timeGreeting}, ${displayName}! ¿a qué te dedicas o qué haces actualmente?`;
+      if (/^hola\b|^buenas\b|^buenos\s+d[ií]as\b|^buenas\s+tardes\b|^buenas\s+noches\b/i.test(cleanLower)) {
+        const nameGreeting = displayName ? `, ${displayName}` : "";
+        const askName = !displayName ? " ¿Cómo es tu nombre para poder saludarte como se debe?" : "";
+        const hMsg = `¡${timeGreeting}${nameGreeting}! 👋 Soy *JanIA*, tu colega y asistente inmobiliaria con IA de *VECY BIENES RAÍCES*.${askName} ¿Eres colega asesor inmobiliario o te gustaría consultar alguna propiedad o trámite hoy? 🏡✨`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", hMsg);
         return hMsg;

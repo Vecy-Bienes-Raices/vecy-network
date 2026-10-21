@@ -62,6 +62,21 @@ const COMPOSITE_PATTERNS: Array<{ pattern: RegExp; canonical: string }> = [
   { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sofía" },
   { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
   { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Lucía" },
+  { pattern: /^lina\s+mar[ií]a\b/i, canonical: "Lina María" },
+  { pattern: /^lina\s+marcela\b/i, canonical: "Lina Marcela" },
+  { pattern: /^jenny\s+paola\b/i, canonical: "Jenny Paola" },
+  { pattern: /^yenny\s+paola\b/i, canonical: "Yenny Paola" },
+  { pattern: /^mar[ií]a\s+clara\b/i, canonical: "María Clara" },
+  { pattern: /^mar[ií]a\s+cecilia\b/i, canonical: "María Cecilia" },
+  { pattern: /^mar[ií]a\s+adelaida\b/i, canonical: "María Adelaida" },
+  { pattern: /^andrea\s+del\s+pilar\b/i, canonical: "Andrea del Pilar" },
+  { pattern: /^carmen\s+rosa\b/i, canonical: "Carmen Rosa" },
+  { pattern: /^rosa\s+elena\b/i, canonical: "Rosa Elena" },
+  { pattern: /^diana\s+paola\b/i, canonical: "Diana Paola" },
+  { pattern: /^sandra\s+paola\b/i, canonical: "Sandra Paola" },
+  { pattern: /^claudia\s+viviana\b/i, canonical: "Claudia Viviana" },
+  { pattern: /^gloria\s+amparo\b/i, canonical: "Gloria Amparo" },
+  { pattern: /^martha\s+elena\b/i, canonical: "Martha Elena" },
 
   // Masculinos
   { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
@@ -102,7 +117,27 @@ const COMPOSITE_PATTERNS: Array<{ pattern: RegExp; canonical: string }> = [
   { pattern: /^jos[eé]\s+manuel\b/i, canonical: "José Manuel" },
   { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "José Gregorio" },
   { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "José Ignacio" },
-  { pattern: /^jos[eé]\s+vicente\b/i, canonical: "José Vicente" }
+  { pattern: /^jos[eé]\s+vicente\b/i, canonical: "José Vicente" },
+  { pattern: /^diego\s+fernando\b/i, canonical: "Diego Fernando" },
+  { pattern: /^andr[eé]s\s+felipe\b/i, canonical: "Andrés Felipe" },
+  { pattern: /^v[ií]ctor\s+manuel\b/i, canonical: "Víctor Manuel" },
+  { pattern: /^v[ií]ctor\s+hugo\b/i, canonical: "Víctor Hugo" },
+  { pattern: /^jorge\s+enrique\b/i, canonical: "Jorge Enrique" },
+  { pattern: /^jorge\s+iv[aá]n\b/i, canonical: "Jorge Iván" },
+  { pattern: /^jorge\s+eli[eé]cer\b/i, canonical: "Jorge Eliécer" },
+  { pattern: /^nelson\s+enrique\b/i, canonical: "Nelson Enrique" },
+  { pattern: /^gustavo\s+adolfo\b/i, canonical: "Gustavo Adolfo" },
+  { pattern: /^h[eé]ctor\s+fabio\b/i, canonical: "Héctor Fabio" },
+  { pattern: /^fabio\s+nelson\b/i, canonical: "Fabio Nelson" },
+  { pattern: /^javier\s+orlando\b/i, canonical: "Javier Orlando" },
+  { pattern: /^c[eé]sar\s+augusto\b/i, canonical: "César Augusto" },
+  { pattern: /^julio\s+c[eé]sar\b/i, canonical: "Julio César" },
+  { pattern: /^mario\s+fernando\b/i, canonical: "Mario Fernando" },
+  { pattern: /^edgar\s+eduardo\b/i, canonical: "Edgar Eduardo" },
+  { pattern: /^camilo\s+andr[eé]s\b/i, canonical: "Camilo Andrés" },
+  { pattern: /^felipe\s+andr[eé]s\b/i, canonical: "Felipe Andrés" },
+  { pattern: /^santiago\s+andr[eé]s\b/i, canonical: "Santiago Andrés" },
+  { pattern: /^daniel\s+felipe\b/i, canonical: "Daniel Felipe" }
 ];
 
 // 2. Diccionario de Nombres Femeninos Explícitos (incluyendo terminaciones no 'a' y anglo/franceses)
@@ -163,6 +198,35 @@ export function getCanonicalCompositeName(rawName: string): string | null {
   for (const comp of COMPOSITE_PATTERNS) {
     if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
       return comp.canonical;
+    }
+  }
+  return null;
+}
+
+/**
+ * Extrae un nombre propio presentado orgánicamente por el usuario en el mensaje de chat
+ * (ej: "Hola, soy María Cristina", "me llamo Juan Carlos", "mi nombre es Ana Sofía", "hablas con Nelson Enrique")
+ */
+export function extractIntroducedName(text: string): string | null {
+  if (!text) return null;
+  const match = text.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  if (match && match[1]) {
+    const rawCandidate = match[1].trim();
+    const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
+    const INVALID = new Set([
+      "un", "una", "el", "la", "asesor", "asesora", "agente", "cliente", "inmobiliaria", "broker",
+      "propietario", "propietaria", "comprador", "compradora", "arrendatario", "arrendataria",
+      "abogado", "abogada", "perito", "desconocido", "alguien"
+    ]);
+    if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
+      const canonicalComp = getCanonicalCompositeName(rawCandidate);
+      if (canonicalComp) return canonicalComp;
+      if (candidateParts.length >= 2) {
+        return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
+      }
+      return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
     }
   }
   return null;

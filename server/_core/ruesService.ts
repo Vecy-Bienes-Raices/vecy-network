@@ -90,6 +90,8 @@ export interface RuesCompanyDetail {
   representantesSuplentes: RepresentanteLegalInfo[];
   todosRepresentantes: RepresentanteLegalInfo[];
   establecimientos?: RuesEstablecimientoInfo[];
+  direccionComercial?: string;
+  telefonoComercial?: string;
   resumenFacultades?: string;
   source: string;
 }
@@ -625,6 +627,8 @@ async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, tim
       representantesSuplentes: [],
       todosRepresentantes: representantesPrincipales,
       establecimientos,
+      direccionComercial: String(mainRecord.direccion_comercial || mainRecord.dir_comercial || mainRecord.direccion || "").trim() || undefined,
+      telefonoComercial: String(mainRecord.telefono_comercial_1 || mainRecord.telefono_comercial || mainRecord.telefono_1 || mainRecord.telefono || "").trim() || undefined,
       source: "RUES — Registro Único Empresarial y Social (Confecámaras / Datos Abiertos)"
     };
   } catch (_) {
@@ -756,6 +760,8 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
           representantesSuplentes: classifiedReps.suplentes,
           todosRepresentantes: classifiedReps.todos,
           establecimientos,
+          direccionComercial: String(det.dir_comercial || det.direccion_comercial || det.direccion || mainRecord.dir_comercial || mainRecord.direccion_comercial || mainRecord.direccion || "").trim() || undefined,
+          telefonoComercial: String(det.tel_comercial_1 || det.telefono_comercial_1 || det.telefono_1 || det.telefono || mainRecord.tel_comercial_1 || mainRecord.telefono_comercial_1 || mainRecord.telefono_1 || mainRecord.telefono || "").trim() || undefined,
           source: "RUES — Registro Único Empresarial y Social (Confecámaras)"
         };
 

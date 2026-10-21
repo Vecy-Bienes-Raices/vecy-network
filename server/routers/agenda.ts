@@ -289,17 +289,23 @@ export async function queryPoliciaNacional(
         return { success: false };
       }
 
-      // 4. Resolver reCAPTCHA v2 con 2Captcha
-      console.log(`[queryPoliciaNacional] Intento ${attempt}: Resolviendo captcha...`);
-      const captcha = await solver.recaptcha({
+      // 4. Resolver reCAPTCHA v2 con 2Captcha con timeout controlado (máx 35s)
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Resolviendo captcha (timeout máx 35s)...`);
+      const captchaPromise = solver.recaptcha({
         googlekey: '6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH',
         pageurl: 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
+      });
+      const timeoutPromise = new Promise<{ data?: string }>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout de 35s en 2Captcha')), 35000)
+      );
+      const captcha = await Promise.race([captchaPromise, timeoutPromise]).catch((cErr: any) => {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: Error o timeout en 2Captcha:`, cErr?.message || cErr);
+        return null;
       });
 
       if (!captcha || !captcha.data) {
         console.warn(`[queryPoliciaNacional] Intento ${attempt}: 2Captcha no retornó token`);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-        return { success: false };
+        return { success: false, cedula: sanitizedDoc, tipoDoc };
       }
 
       // 5. POST consulta antecedentes con token de captcha y cédula
