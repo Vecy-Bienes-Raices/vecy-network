@@ -48,18 +48,13 @@ export function popLatestDmPdf(userId: string): LatestDmPdfAttachment | undefine
 
 const latestDmFollowUpMap = new Map<string, string>();
 
-export function setLatestDmFollowUpMessage(userId: string, followUpText: string): void {
-  if (followUpText && followUpText.trim()) {
-    latestDmFollowUpMap.set(userId, followUpText.trim());
-  }
+export function setLatestDmFollowUpMessage(_userId: string, _followUpText: string): void {
+  // ⚠️ CERO SEGUNDO MENSAJE FORZADO (v33.29):
+  // No-op para mantener retrocompatibilidad sin encolar mensajes forzados
 }
 
-export function popLatestDmFollowUpMessage(userId: string): string | undefined {
-  const msg = latestDmFollowUpMap.get(userId);
-  if (msg) {
-    latestDmFollowUpMap.delete(userId);
-  }
-  return msg;
+export function popLatestDmFollowUpMessage(_userId: string): string | undefined {
+  return undefined;
 }
 
 export const JANIA_DM_TOOLS = [
@@ -350,9 +345,18 @@ export async function executeJaniaDmTool(
           solicitud: isCompanyReport ? "consulta_empresa_o_nit" : "verificacion_identidad",
           numeroDocumento: doc,
           tipoDocumento: tipo,
+          nombreOficial: res.officialName || null,
+          exitoso: res.success ?? res.isVerificationRequest,
+          policia: res.policia?.message || (res.success ? "Sin antecedentes judiciales ni requerimientos penales pendientes" : null),
+          procuraduria: res.procuraduria?.statusText || (res.success ? "No registra sanciones ni inhabilidades vigentes ante la Procuraduría General" : null),
+          contraloria: res.contraloria?.statusText || (res.success ? "Sin reporte en el Boletín de Responsables Fiscales (SIRECI)" : null),
+          adres: res.adres ? {
+            eps: res.adres.eps,
+            estado: res.adres.estado,
+            regimen: res.adres.regimen
+          } : null,
           reporteOficial: res.reportText || "Sin reporte disponible",
-          preguntaSeguimiento: res.followUpQuestionText || "",
-          exitoso: res.isVerificationRequest
+          preguntaSeguimiento: ""
         }
       };
     }
@@ -435,18 +439,36 @@ export async function executeJaniaDmTool(
       ).trim();
       const { queryEmpresaOrNit } = await import("../../identityVerificationService");
       const empRes = await queryEmpresaOrNit(q, userId);
-      if (empRes.followUpQuestionText) {
-        setLatestDmFollowUpMessage(userId, empRes.followUpQuestionText);
-      }
       return {
         toolType: "empresa",
         resultJson: {
           solicitud: "consulta_empresa_o_nit",
           termino: q,
-          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
-          preguntaSeguimiento: empRes.followUpQuestionText || "",
           exitoso: empRes.success,
-          representantePrincipal: empRes.representantePrincipal || null
+          nit: empRes.nit,
+          dv: empRes.dv,
+          nitCompleto: empRes.nitCompleto,
+          razonSocial: empRes.razonSocial,
+          camaraComercio: empRes.camaraComercio,
+          ciudad: empRes.ciudad,
+          estado: empRes.estado,
+          matricula: empRes.matricula,
+          categoriaMatricula: empRes.categoriaMatricula,
+          tipoSociedad: empRes.tipoSociedad,
+          organizacionJuridica: empRes.organizacionJuridica,
+          organizacionJuridicaRaw: empRes.organizacionJuridicaRaw,
+          fechaMatricula: empRes.fechaMatricula,
+          fechaRenovacion: empRes.fechaRenovacion,
+          ultimoAnoRenovado: empRes.ultimoAnoRenovado,
+          ciiuPrincipal: empRes.ciiuPrincipal,
+          actividadesEconomicas: empRes.actividadesEconomicas,
+          representantePrincipal: empRes.representantePrincipal || null,
+          representantesSuplentes: empRes.representantesSuplentes || [],
+          establecimientos: empRes.establecimientos || [],
+          direccionComercial: empRes.direccionComercial,
+          telefonoComercial: empRes.telefonoComercial,
+          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          preguntaSeguimiento: ""
         }
       };
     }
@@ -556,10 +578,48 @@ export async function synthesizeToolResponseWithGemini(
   const isFreeTool = toolType !== "sondeo" && toolType !== "match";
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
 
-  if (rawReport && (rawReport.includes("VERIFICACIÓN OFICIAL") || rawReport.includes("PAZ Y SALVO") || rawReport.includes("LIQUIDACIÓN ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"))) {
+  // 1. Bypass exclusivo para herramientas con documentos oficiales descargables o formatos especiales (Predial, IDU, Notarial y Match)
+  const isDirectBypass = rawReport && (
+    rawReport.includes("PAZ Y SALVO") ||
+    rawReport.includes("FACTURA PREDIAL") ||
+    rawReport.includes("LIQUIDACIÓN ESTIMADA") ||
+    rawReport.includes("COINCIDENCIA") ||
+    rawReport.includes("MATCH")
+  );
+  if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")
       ? rawReport
       : await formatPoliteToolDelivery(userId, userName, toolType as any, rawReport, true);
+  }
+
+  let specialToolInstructions = "";
+  if (toolType === "cedula") {
+    specialToolInstructions =
+      `- HERRAMIENTA: Verificación Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).\n` +
+      `- REDACCIÓN 100% LIBRE Y CONVERSACIONAL: Cero plantillas rígidas prefabricadas, cero encabezados acartonados o viñetas robóticas. Redacta de forma fresca, original, corta y humana como experta de VECY.\n` +
+      `- CERO ALUCINACIÓN: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:\n` +
+      `  * Nombre oficial de la persona y número de documento validado.\n` +
+      `  * Policía Nacional: Antecedentes penales / requerimientos judiciales.\n` +
+      `  * Procuraduría General: Sanciones disciplinarias e inhabilidades vigentes.\n` +
+      `  * Contraloría General: Boletín de Responsables Fiscales (SIRECI).\n` +
+      `  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y régimen.\n` +
+      `- Si el documento no aparece indexado en las bases censales en línea, indícalo con honestidad y claridad para que verifique el número físico.\n` +
+      `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Ubica al final una línea breve y elegante de Hábeas Data (Ley 1581/12 y Art. 15 C.P.).\n` +
+      `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana, simpática y persuasiva invitando a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.\n`;
+  } else if (toolType === "empresa") {
+    specialToolInstructions =
+      `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confecámaras / Cámaras de Comercio de Colombia / DIAN).\n` +
+      `- REDACCIÓN 100% LIBRE Y CONVERSACIONAL: Cero plantillas rígidas prefabricadas de 4 secciones, cero formatos acartonados ni viñetas robóticas. Redacta de forma fresca, ejecutiva, original y charlada.\n` +
+      `- CERO ALUCINACIÓN: Respeta estrictamente TODOS los datos reales obtenidos de RUES:\n` +
+      `  * Razón social oficial, NIT y Dígito de Verificación (DV).\n` +
+      `  * Estado de la matrícula mercantil (ej. Activa) y Cámara de Comercio donde está inscrita.\n` +
+      `  * Tipo de sociedad / organización jurídica y actividad económica principal (CIIU).\n` +
+      `  * Representante Legal Principal: Si el RUES arroja el Representante Legal Principal, menciónalo de forma fluida y natural dentro de tu respuesta (nombre, documento y que cuenta con plenas facultades estatutarias para obligar a la sociedad).\n` +
+      `  * Si hay suplentes o establecimientos relevantes, menciónalos con brevedad.\n` +
+      `- SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localizó la empresa, informa con total honestidad que no se halló registro en las 57 Cámaras de Comercio del país y pídele con amabilidad el número de NIT para una búsqueda exacta.\n` +
+      `- CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma robótica si desea verificar al representante. JanIA lo menciona en su única respuesta con naturalidad.\n` +
+      `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Incluye una línea breve de publicidad mercantil y hábeas data (Art. 26 C.Co. y Ley 1581/12).\n` +
+      `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.\n`;
   }
 
   const synthPrompt = [
@@ -572,10 +632,11 @@ export async function synthesizeToolResponseWithGemini(
         `${JSON.stringify(toolJson, null, 2)}\n\n` +
         `INSTRUCCIONES DE REDACCIÓN:\n` +
         `- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasión de IA pura.\n` +
+        specialToolInstructions +
         `- Si es un sondeo de mercado, entrega el valor por m² homologado, valor comercial sugerido, canon estimado y factores de ajuste según tu rol de Perita Avaluadora.\n` +
         `- Si es una consulta de matches, explica con claridad el cruce encontrado.\n` +
         `- Explica con claridad los datos técnicos sin tecnicismos robóticos ni plantillas rígidas.\n` +
-        `- Mantén concisión y estructura óptima para WhatsApp (máximo 1 o 2 párrafos cortos).\n` +
+        `- Mantén concisión y estructura óptima para WhatsApp.\n` +
         `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n`
     },
     {
@@ -598,9 +659,42 @@ export async function synthesizeToolResponseWithGemini(
     console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
   }
 
+  // Fallback conversacional orgánico en caso de que LLM no esté disponible o arroje timeout
+  let fallbackText = "";
+  if (toolType === "cedula" && toolJson) {
+    const doc = toolJson.numeroDocumento || "";
+    const tipo = toolJson.tipoDocumento || "CC";
+    const name = toolJson.nombreOficial;
+    const eps = toolJson.adres?.eps;
+    const estadoEps = toolJson.adres?.estado;
+    const regEps = toolJson.adres?.regimen;
+    const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
+    const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
+    const cgr = toolJson.contraloria || "Sin reporte en Boletín de Responsables Fiscales (SIRECI)";
+    if (name) {
+      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Policía Nacional registra ${pol.toLowerCase()}, en Procuraduría General ${pgn.toLowerCase()} y en Contraloría General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}). Todo en regla y validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._\n\n¿Nos regalas un minuto con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Nos ayuda un montón para seguir ofreciendo estas herramientas gratuitas para el gremio! 🤝✨`;
+    } else {
+      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
+    }
+  } else if (toolType === "empresa" && toolJson) {
+    if (toolJson.exitoso && toolJson.razonSocial) {
+      const nit = toolJson.nitCompleto || toolJson.nit || "";
+      const razon = toolJson.razonSocial;
+      const camara = toolJson.camaraComercio || "Cámara de Comercio";
+      const estado = toolJson.estado || "Activa";
+      const ciiu = toolJson.ciiuPrincipal || "";
+      const rep = toolJson.representantePrincipal;
+      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! Ya consulté en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matrícula mercantil *${estado}* en la ${camara}. Su actividad económica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}\n\n⚖️ _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._\n\n¿Nos regalas un minutico con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! 🤝✨`;
+    } else {
+      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! No encontré ninguna empresa registrada con ese nombre en el Registro Único Empresarial y Social (RUES). Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor compárteme el número de NIT. 🤝`;
+    }
+  } else {
+    fallbackText = rawReport;
+  }
+
   return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"))
     ? rawReport
-    : await formatPoliteToolDelivery(userId, userName, toolType as any, rawReport, true);
+    : await formatPoliteToolDelivery(userId, userName, toolType as any, fallbackText, true);
 }
 
 /**

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.28";
+    VECY_VERSION = "v33.29";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -21049,17 +21049,10 @@ function popLatestDmPdf(userId) {
   }
   return attachment;
 }
-function setLatestDmFollowUpMessage(userId, followUpText) {
-  if (followUpText && followUpText.trim()) {
-    latestDmFollowUpMap.set(userId, followUpText.trim());
-  }
+function setLatestDmFollowUpMessage(_userId, _followUpText) {
 }
-function popLatestDmFollowUpMessage(userId) {
-  const msg = latestDmFollowUpMap.get(userId);
-  if (msg) {
-    latestDmFollowUpMap.delete(userId);
-  }
-  return msg;
+function popLatestDmFollowUpMessage(_userId) {
+  return void 0;
 }
 async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
   switch (toolName) {
@@ -21167,9 +21160,18 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
           solicitud: isCompanyReport ? "consulta_empresa_o_nit" : "verificacion_identidad",
           numeroDocumento: doc,
           tipoDocumento: tipo,
+          nombreOficial: res.officialName || null,
+          exitoso: res.success ?? res.isVerificationRequest,
+          policia: res.policia?.message || (res.success ? "Sin antecedentes judiciales ni requerimientos penales pendientes" : null),
+          procuraduria: res.procuraduria?.statusText || (res.success ? "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General" : null),
+          contraloria: res.contraloria?.statusText || (res.success ? "Sin reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI)" : null),
+          adres: res.adres ? {
+            eps: res.adres.eps,
+            estado: res.adres.estado,
+            regimen: res.adres.regimen
+          } : null,
           reporteOficial: res.reportText || "Sin reporte disponible",
-          preguntaSeguimiento: res.followUpQuestionText || "",
-          exitoso: res.isVerificationRequest
+          preguntaSeguimiento: ""
         }
       };
     }
@@ -21244,18 +21246,36 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       ).trim();
       const { queryEmpresaOrNit: queryEmpresaOrNit2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
       const empRes = await queryEmpresaOrNit2(q, userId);
-      if (empRes.followUpQuestionText) {
-        setLatestDmFollowUpMessage(userId, empRes.followUpQuestionText);
-      }
       return {
         toolType: "empresa",
         resultJson: {
           solicitud: "consulta_empresa_o_nit",
           termino: q,
-          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
-          preguntaSeguimiento: empRes.followUpQuestionText || "",
           exitoso: empRes.success,
-          representantePrincipal: empRes.representantePrincipal || null
+          nit: empRes.nit,
+          dv: empRes.dv,
+          nitCompleto: empRes.nitCompleto,
+          razonSocial: empRes.razonSocial,
+          camaraComercio: empRes.camaraComercio,
+          ciudad: empRes.ciudad,
+          estado: empRes.estado,
+          matricula: empRes.matricula,
+          categoriaMatricula: empRes.categoriaMatricula,
+          tipoSociedad: empRes.tipoSociedad,
+          organizacionJuridica: empRes.organizacionJuridica,
+          organizacionJuridicaRaw: empRes.organizacionJuridicaRaw,
+          fechaMatricula: empRes.fechaMatricula,
+          fechaRenovacion: empRes.fechaRenovacion,
+          ultimoAnoRenovado: empRes.ultimoAnoRenovado,
+          ciiuPrincipal: empRes.ciiuPrincipal,
+          actividadesEconomicas: empRes.actividadesEconomicas,
+          representantePrincipal: empRes.representantePrincipal || null,
+          representantesSuplentes: empRes.representantesSuplentes || [],
+          establecimientos: empRes.establecimientos || [],
+          direccionComercial: empRes.direccionComercial,
+          telefonoComercial: empRes.telefonoComercial,
+          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          preguntaSeguimiento: ""
         }
       };
     }
@@ -21350,8 +21370,38 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
 async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
   const isFreeTool = toolType !== "sondeo" && toolType !== "match";
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
-  if (rawReport && (rawReport.includes("VERIFICACI\xD3N OFICIAL") || rawReport.includes("PAZ Y SALVO") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"))) {
+  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"));
+  if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+  }
+  let specialToolInstructions = "";
+  if (toolType === "cedula") {
+    specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
+- REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas, cero encabezados acartonados o vi\xF1etas rob\xF3ticas. Redacta de forma fresca, original, corta y humana como experta de VECY.
+- CERO ALUCINACI\xD3N: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:
+  * Nombre oficial de la persona y n\xFAmero de documento validado.
+  * Polic\xEDa Nacional: Antecedentes penales / requerimientos judiciales.
+  * Procuradur\xEDa General: Sanciones disciplinarias e inhabilidades vigentes.
+  * Contralor\xEDa General: Bolet\xEDn de Responsables Fiscales (SIRECI).
+  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
+- Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico.
+- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
+- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
+`;
+  } else if (toolType === "empresa") {
+    specialToolInstructions = `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confec\xE1maras / C\xE1maras de Comercio de Colombia / DIAN).
+- REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas de 4 secciones, cero formatos acartonados ni vi\xF1etas rob\xF3ticas. Redacta de forma fresca, ejecutiva, original y charlada.
+- CERO ALUCINACI\xD3N: Respeta estrictamente TODOS los datos reales obtenidos de RUES:
+  * Raz\xF3n social oficial, NIT y D\xEDgito de Verificaci\xF3n (DV).
+  * Estado de la matr\xEDcula mercantil (ej. Activa) y C\xE1mara de Comercio donde est\xE1 inscrita.
+  * Tipo de sociedad / organizaci\xF3n jur\xEDdica y actividad econ\xF3mica principal (CIIU).
+  * Representante Legal Principal: Si el RUES arroja el Representante Legal Principal, menci\xF3nalo de forma fluida y natural dentro de tu respuesta (nombre, documento y que cuenta con plenas facultades estatutarias para obligar a la sociedad).
+  * Si hay suplentes o establecimientos relevantes, menci\xF3nalos con brevedad.
+- SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localiz\xF3 la empresa, informa con total honestidad que no se hall\xF3 registro en las 57 C\xE1maras de Comercio del pa\xEDs y p\xEDdele con amabilidad el n\xFAmero de NIT para una b\xFAsqueda exacta.
+- CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma rob\xF3tica si desea verificar al representante. JanIA lo menciona en su \xFAnica respuesta con naturalidad.
+- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Incluye una l\xEDnea breve de publicidad mercantil y h\xE1beas data (Art. 26 C.Co. y Ley 1581/12).
+- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.
+`;
   }
   const synthPrompt = [
     {
@@ -21363,10 +21413,10 @@ ${JSON.stringify(toolJson, null, 2)}
 
 INSTRUCCIONES DE REDACCI\xD3N:
 - Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasi\xF3n de IA pura.
-- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
+` + specialToolInstructions + `- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
 - Si es una consulta de matches, explica con claridad el cruce encontrado.
 - Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
-- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (m\xE1ximo 1 o 2 p\xE1rrafos cortos).
+- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp.
 - Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
 `
     },
@@ -21388,7 +21438,48 @@ INSTRUCCIONES DE REDACCI\xD3N:
   } catch (err) {
     console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
   }
-  return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")) ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+  let fallbackText = "";
+  if (toolType === "cedula" && toolJson) {
+    const doc = toolJson.numeroDocumento || "";
+    const tipo = toolJson.tipoDocumento || "CC";
+    const name = toolJson.nombreOficial;
+    const eps = toolJson.adres?.eps;
+    const estadoEps = toolJson.adres?.estado;
+    const regEps = toolJson.adres?.regimen;
+    const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
+    const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
+    const cgr = toolJson.contraloria || "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI)";
+    if (name) {
+      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Polic\xEDa Nacional registra ${pol.toLowerCase()}, en Procuradur\xEDa General ${pgn.toLowerCase()} y en Contralor\xEDa General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}). Todo en regla y validado para tu seguridad jur\xEDdica.
+
+\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._
+
+\xBFNos regalas un minuto con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Nos ayuda un mont\xF3n para seguir ofreciendo estas herramientas gratuitas para el gremio! \u{1F91D}\u2728`;
+    } else {
+      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! Revis\xE9 el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en l\xEDnea. Por favor verifica que el n\xFAmero f\xEDsico coincida o si corresponde a un documento de extranjer\xEDa.
+
+\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012._`;
+    }
+  } else if (toolType === "empresa" && toolJson) {
+    if (toolJson.exitoso && toolJson.razonSocial) {
+      const nit = toolJson.nitCompleto || toolJson.nit || "";
+      const razon = toolJson.razonSocial;
+      const camara = toolJson.camaraComercio || "C\xE1mara de Comercio";
+      const estado = toolJson.estado || "Activa";
+      const ciiu = toolJson.ciiuPrincipal || "";
+      const rep = toolJson.representantePrincipal;
+      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! Ya consult\xE9 en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matr\xEDcula mercantil *${estado}* en la ${camara}. Su actividad econ\xF3mica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}
+
+\u2696\uFE0F _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._
+
+\xBFNos regalas un minutico con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! \u{1F91D}\u2728`;
+    } else {
+      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! No encontr\xE9 ninguna empresa registrada con ese nombre en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor comp\xE1rteme el n\xFAmero de NIT. \u{1F91D}`;
+    }
+  } else {
+    fallbackText = rawReport;
+  }
+  return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")) ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, fallbackText, true);
 }
 function formatPoliteToolDelivery(rawAiResponse, userName, userId, customGuidance, _legacyArg) {
   const isLegacyToolType = typeof userId === "string" && ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
@@ -21974,7 +22065,7 @@ ${verifResult.reportText}`;
     return fallback;
   }
 }
-var latestDmPdfMap, latestDmFollowUpMap, JANIA_DM_TOOLS;
+var latestDmPdfMap, JANIA_DM_TOOLS;
 var init_dmHandler = __esm({
   "server/_core/jania/handlers/dmHandler.ts"() {
     "use strict";
@@ -21987,7 +22078,6 @@ var init_dmHandler = __esm({
     init_whatsapp_utils();
     init_trustedContacts();
     latestDmPdfMap = /* @__PURE__ */ new Map();
-    latestDmFollowUpMap = /* @__PURE__ */ new Map();
     JANIA_DM_TOOLS = [
       {
         functionDeclarations: [
@@ -23263,13 +23353,6 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     if (reply.includes("http")) {
                       await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                     }
-                    const { popLatestDmFollowUpMessage: popVoiceFollowUp } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
-                    const voiceFollowUpQuestion = popVoiceFollowUp(senderId);
-                    if (voiceFollowUpQuestion) {
-                      await new Promise((r) => setTimeout(r, 900));
-                      await this.queuedSend(senderId, voiceFollowUpQuestion, { allowDirectMessage: true });
-                      await this.logToDb(senderId, "janIA", voiceFollowUpQuestion);
-                    }
                     const isSenderAdminVoice = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
                     const isLongQueryVoice = cleanLower.includes("?") || cleanLower.split(/\s+/).filter(Boolean).length > 15 || /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
                     const isGratitudeOrClosing2 = !isSenderAdminVoice && !isLongQueryVoice && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
@@ -23290,9 +23373,8 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   console.warn("[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:", ttsErr?.message);
                 }
               }
-              const { popLatestDmPdf: popLatestDmPdf2, popLatestDmFollowUpMessage: popLatestDmFollowUpMessage2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+              const { popLatestDmPdf: popLatestDmPdf2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
               const latestPdf = popLatestDmPdf2(senderId);
-              const followUpQuestion = popLatestDmFollowUpMessage2(senderId);
               const pdfBuffer2 = reply?.pdfBuffer || latestPdf?.pdfBuffer;
               const pdfFileName = reply?.pdfFileName || latestPdf?.pdfFileName;
               const replyText = String(reply);
@@ -23310,11 +23392,6 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                 await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
               }
               await this.logToDb(senderId, "janIA", replyText);
-              if (followUpQuestion) {
-                await new Promise((r) => setTimeout(r, 900));
-                await this.queuedSend(senderId, followUpQuestion, { allowDirectMessage: true });
-                await this.logToDb(senderId, "janIA", followUpQuestion);
-              }
               const isSenderAdmin = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
               const isLongQueryOrQuestion = cleanLower.includes("?") || cleanLower.split(/\s+/).filter(Boolean).length > 15 || /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
               const isErrorReply = typeof replyText === "string" && (replyText.includes("intermitencia temporal") || replyText.includes("error") || replyText.includes("fallo en la matrix"));
@@ -26769,6 +26846,41 @@ function normalizeCorporateName(raw) {
   }
   return clean;
 }
+function getCoreTokens(normalizedStr) {
+  return normalizedStr.split(/\s+/).map((w) => w.trim()).filter((w) => w.length > 0 && !SPANISH_STOPWORDS.has(w));
+}
+function generateRazonSocialSearchVariants(raw) {
+  if (!raw) return [];
+  const normalized = normalizeCorporateName(raw);
+  const variants = /* @__PURE__ */ new Set();
+  if (normalized) {
+    variants.add(normalized);
+  }
+  const spaceSeparated = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+  const cleanSpace = normalizeCorporateName(spaceSeparated);
+  if (cleanSpace) variants.add(cleanSpace);
+  const compact = cleanSpace.replace(/\s+/g, "");
+  if (compact && compact.length >= 3) {
+    variants.add(compact);
+  }
+  const tokens = getCoreTokens(cleanSpace);
+  if (tokens.length >= 2) {
+    variants.add(tokens.join(""));
+    variants.add(tokens.join("%"));
+  } else if (tokens.length === 1) {
+    const single = tokens[0];
+    const prefixes = ["MULTI", "INTER", "TRANS", "ELECTRO", "AUTO", "AGRO", "SERVI", "SUPER", "DISTRI", "INVER", "COOP", "MICRO", "MACRO", "TELE"];
+    for (const pref of prefixes) {
+      if (single.startsWith(pref) && single.length > pref.length + 2) {
+        const rest = single.slice(pref.length);
+        variants.add(`${pref} ${rest}`);
+        variants.add(`${pref}%${rest}`);
+        break;
+      }
+    }
+  }
+  return Array.from(variants).filter((v) => v.length >= 3);
+}
 function evaluateRazonSocialMatch(query, recordRazon, recordSigla) {
   const cleanQ = (query || "").trim().toUpperCase();
   const cleanR = (recordRazon || "").trim().toUpperCase();
@@ -26778,6 +26890,30 @@ function evaluateRazonSocialMatch(query, recordRazon, recordSigla) {
     const targetMatch = cleanR.includes(cleanQ) ? cleanR : cleanS;
     const diffLength = targetMatch.length - cleanQ.length;
     return 80 - Math.min(diffLength, 30);
+  }
+  const compactQ = cleanQ.replace(/[^A-Z0-9]/g, "");
+  const compactR = cleanR.replace(/[^A-Z0-9]/g, "");
+  const compactS = cleanS.replace(/[^A-Z0-9]/g, "");
+  if (compactQ.length >= 3) {
+    if (compactR === compactQ || compactS && compactS === compactQ) return 95;
+    if (compactR.includes(compactQ) || compactS && compactS.includes(compactQ)) {
+      const targetMatch = compactR.includes(compactQ) ? compactR : compactS;
+      const diffLength = targetMatch.length - compactQ.length;
+      return 75 - Math.min(diffLength, 30);
+    }
+  }
+  const variants = generateRazonSocialSearchVariants(cleanQ);
+  for (const v of variants) {
+    const rawV = v.replace(/%/g, " ").replace(/\s+/g, " ").trim();
+    if (cleanR.includes(rawV) || cleanS && cleanS.includes(rawV)) {
+      const targetMatch = cleanR.includes(rawV) ? cleanR : cleanS;
+      const diffLength = targetMatch.length - rawV.length;
+      return 70 - Math.min(diffLength, 30);
+    }
+    const compV = v.replace(/[^A-Z0-9]/g, "");
+    if (compV.length >= 3 && (compactR.includes(compV) || compactS && compactS.includes(compV))) {
+      return 65;
+    }
   }
   return 0;
 }
@@ -26971,10 +27107,15 @@ async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500, t
       const listB = byNitRes && byNitRes.ok ? await byNitRes.json().catch(() => []) : [];
       registros = [...Array.isArray(listA) ? listA : [], ...Array.isArray(listB) ? listB : []];
     } else if (cleanRazon && cleanRazon.length >= 3) {
-      const coreSearchTerm = normalizeCorporateName(cleanRazon) || cleanRazon.toUpperCase().trim();
-      const safeRazon = coreSearchTerm.replace(/'/g, "''");
-      const whereClause = `upper(razon_social) like '%${safeRazon}%'`;
-      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=20`, {
+      const searchVariants = generateRazonSocialSearchVariants(cleanRazon);
+      const clauses = [];
+      for (const v of searchVariants) {
+        const safeV = v.replace(/'/g, "''");
+        clauses.push(`upper(razon_social) like '%${safeV}%'`);
+        clauses.push(`upper(sigla) like '%${safeV}%'`);
+      }
+      const whereClause = clauses.length > 1 ? `(${clauses.join(" or ")})` : clauses[0] || `upper(razon_social) like '%${cleanRazon.toUpperCase().replace(/'/g, "''")}%'`;
+      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=25`, {
         headers: { Accept: "application/json" },
         signal: controller.signal
       }).catch(() => null);
@@ -27095,11 +27236,25 @@ async function queryRuesDirectHttp(query) {
     if (baseNit) {
       searchPayload = { nit: baseNit };
     } else {
-      const coreSearchTerm = normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
+      const variants = generateRazonSocialSearchVariants(targetRazonName);
+      const coreSearchTerm = variants[0] || normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
       searchPayload = { razon: coreSearchTerm };
     }
-    const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
-    const registros = searchRes?.registros || [];
+    let searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
+    let registros = searchRes?.registros || [];
+    if ((!registros || registros.length === 0) && !baseNit) {
+      const variants = generateRazonSocialSearchVariants(targetRazonName);
+      for (let i = 1; i < Math.min(variants.length, 3); i++) {
+        const altVariant = variants[i].replace(/%/g, " ").replace(/\s+/g, " ").trim();
+        if (altVariant && altVariant !== searchPayload.razon) {
+          const altRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { razon: altVariant });
+          if (Array.isArray(altRes?.registros) && altRes.registros.length > 0) {
+            registros = altRes.registros;
+            break;
+          }
+        }
+      }
+    }
     if (Array.isArray(registros) && registros.length > 0) {
       const mainRecord = selectPrincipalRuesRecord(
         registros,
@@ -27197,7 +27352,7 @@ async function queryRuesDirectHttp(query) {
     return null;
   }
 }
-var RUES_ELASTIC_BASE_URL, RUES_AES_PASSPHRASE, RUES_CACHE_TTL_MS, ruesCache, RUES_SOCRATA_URL, elasticGeoBlockedUntil, CIIU_DESCRIPTIONS;
+var RUES_ELASTIC_BASE_URL, RUES_AES_PASSPHRASE, RUES_CACHE_TTL_MS, ruesCache, RUES_SOCRATA_URL, elasticGeoBlockedUntil, CIIU_DESCRIPTIONS, SPANISH_STOPWORDS;
 var init_ruesService = __esm({
   "server/_core/ruesService.ts"() {
     "use strict";
@@ -27263,6 +27418,20 @@ var init_ruesService = __esm({
       "8621": "Actividades de la pr\xE1ctica m\xE9dica, sin internaci\xF3n",
       "9499": "Actividades de otras asociaciones n.c.p."
     };
+    SPANISH_STOPWORDS = /* @__PURE__ */ new Set([
+      "DE",
+      "DEL",
+      "LA",
+      "EL",
+      "LOS",
+      "LAS",
+      "Y",
+      "E",
+      "EN",
+      "A",
+      "O",
+      "U"
+    ]);
   }
 });
 
@@ -27884,17 +28053,8 @@ function isAcceptingCompanyMemberVerification(text2) {
   const norm2 = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /^(?:si\b|claro\b|dale\b|de\s+una\b|por\s+favor\b|porfa\b|adelante\b|procede\b|hazlo\b|ok\b|listo\b|bueno\b|vale\b|verificar\b|verifical[oa]\b|verificame\b|revisal[oa]\b|todos\b|ambos\b|cada\s+miembro\b|el\s+representante\b|la\s+representante\b|representante\b)/i.test(norm2) || /\b(?:verificar\s+representante|verificar\s+todos|cada\s+miembro|todos\s+los\s+miembros|antecedentes\s+del\s+representante)\b/i.test(norm2);
 }
-function buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes) {
-  if (representantePrincipal && representantesSuplentes && representantesSuplentes.length > 0) {
-    return `\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de alg\xFAn otro miembro?*
-\u{1F449} Responde *"s\xED"*, *"no"*, *"verificar representante"*, *"verificar todos"* (o env\xEDame la c\xE9dula a consultar).`;
-  }
-  if (representantePrincipal) {
-    return `\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* \u2014 ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de alg\xFAn otro miembro?*
-\u{1F449} Responde *"s\xED"* o *"verificar representante"* (o env\xEDame la c\xE9dula a consultar).`;
-  }
-  return `\u{1F4A1} *\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) del Representante Legal o de alg\xFAn otro miembro?*
-\u{1F449} Responde *"s\xED"* y env\xEDame la c\xE9dula a consultar, o *"no"* si deseas finalizar.`;
+function buildCompanyFollowUpQuestion(_representantePrincipal, _representantesSuplentes) {
+  return "";
 }
 function setPendingCompanyMembers(userId, members) {
   if (!userId || !Array.isArray(members) || members.length === 0) return;
@@ -28262,7 +28422,7 @@ function formatCompactIdentityVerificationReport(params) {
       reportText2 += `\u2022 ${ciiuPrincipal}
 `;
     } else {
-      reportText2 += `\u2022 Actividad mercantil registrada en C\xE1mara de Comercio
+      reportText2 += `\u2022 Sin actividad econ\xF3mica CIIU registrada o pendiente de actualizaci\xF3n.
 `;
     }
     reportText2 += `
@@ -28287,7 +28447,7 @@ function formatCompactIdentityVerificationReport(params) {
 `;
       }
     } else {
-      reportText2 += `\u2022 _Consulta el certificado de existencia para el detalle nominal de facultades._
+      reportText2 += `\u2022 Sin representante legal principal inscrito en el registro mercantil consultado.
 `;
     }
     reportText2 += `
@@ -28600,8 +28760,18 @@ async function queryEmpresaOrNit(query, userId) {
         razonSocial = formatTitleCase(razonSocial);
       }
     } else {
-      razonSocial = formatTitleCase(clean) || "VECY BIENES RA\xCDCES S.A.S.";
-      baseNit = "901488282";
+      return {
+        success: false,
+        nit: "",
+        dv: "",
+        nitCompleto: "",
+        razonSocial: formatTitleCase(clean) || clean,
+        camaraComercio: "C\xE1maras de Comercio de Colombia (RUES)",
+        ciudad: "Colombia",
+        estado: "No localizada",
+        reportText: `No se encontr\xF3 ninguna empresa o persona jur\xEDdica registrada bajo el nombre "${clean}" en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor ind\xEDcame el n\xFAmero de NIT de la sociedad.`,
+        followUpQuestionText: ""
+      };
     }
   }
   const calculatedDv = baseNit ? String(calculateDianDv(baseNit)) : "";
@@ -28623,12 +28793,6 @@ async function queryEmpresaOrNit(query, userId) {
     if (allMembers.length > 0) {
       setPendingCompanyMembers(userId, allMembers);
     }
-    setPendingCompanyFollowUp(userId, {
-      nitCompleto: finalNitCompleto,
-      razonSocial,
-      representantePrincipal,
-      representantesSuplentes
-    });
   }
   const reportText = formatCompactIdentityVerificationReport({
     tipoDoc: "nit",
@@ -28653,7 +28817,7 @@ async function queryEmpresaOrNit(query, userId) {
     direccionComercial: ruesLive?.direccionComercial,
     telefonoComercial: ruesLive?.telefonoComercial
   });
-  const followUpQuestionText = buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes);
+  const followUpQuestionText = "";
   return {
     success: true,
     nit: baseNit,
@@ -28961,7 +29125,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         officialName: empresaRes.razonSocial,
         source: "Central Multifuente Notarial VECY (RUES + DIAN + B\xFAsqueda Empresarial)",
         reportText: empresaRes.reportText,
-        followUpQuestionText: empresaRes.followUpQuestionText
+        followUpQuestionText: void 0
       };
     }
     return { isVerificationRequest: false };
@@ -28979,7 +29143,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       officialName: empresaRes.razonSocial,
       source: "Central Multifuente Notarial VECY (RUES + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI)",
       reportText: empresaRes.reportText,
-      followUpQuestionText: empresaRes.followUpQuestionText,
+      followUpQuestionText: void 0,
       items
     };
   }

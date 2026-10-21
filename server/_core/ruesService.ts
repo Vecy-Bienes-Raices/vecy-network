@@ -323,8 +323,61 @@ function getCoreTokens(normalizedStr: string): string[] {
 }
 
 /**
+ * Genera variantes de búsqueda para una razón social, limpiando sufijos societarios
+ * y normalizando espacios, guiones o términos compuestos
+ * (ej. "Multi-impresos SAS" o "Multiimpresos" -> ["MULTI IMPRESOS", "MULTIIMPRESOS", "MULTI%IMPRESOS"]).
+ */
+export function generateRazonSocialSearchVariants(raw: string): string[] {
+  if (!raw) return [];
+  const normalized = normalizeCorporateName(raw);
+  const variants = new Set<string>();
+
+  if (normalized) {
+    variants.add(normalized);
+  }
+
+  // Variante con guiones y signos reemplazados por espacio
+  const spaceSeparated = raw
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const cleanSpace = normalizeCorporateName(spaceSeparated);
+  if (cleanSpace) variants.add(cleanSpace);
+
+  // Variante unida sin espacios ni guiones
+  const compact = cleanSpace.replace(/\s+/g, "");
+  if (compact && compact.length >= 3) {
+    variants.add(compact);
+  }
+
+  // Tokens individuales
+  const tokens = getCoreTokens(cleanSpace);
+  if (tokens.length >= 2) {
+    variants.add(tokens.join(""));
+    variants.add(tokens.join("%"));
+  } else if (tokens.length === 1) {
+    const single = tokens[0];
+    const prefixes = ["MULTI", "INTER", "TRANS", "ELECTRO", "AUTO", "AGRO", "SERVI", "SUPER", "DISTRI", "INVER", "COOP", "MICRO", "MACRO", "TELE"];
+    for (const pref of prefixes) {
+      if (single.startsWith(pref) && single.length > pref.length + 2) {
+        const rest = single.slice(pref.length);
+        variants.add(`${pref} ${rest}`);
+        variants.add(`${pref}%${rest}`);
+        break;
+      }
+    }
+  }
+
+  return Array.from(variants).filter((v) => v.length >= 3);
+}
+
+/**
  * Evalúa el nivel de coincidencia entre una razón social candidata de RUES
  * y el término consultado por el usuario, descartando homónimos lejanos o empresas genéricas.
+ * Admite coincidencia exacta, contenida, compacta (sin espacios/guiones) o por variantes morfológicas.
  */
 export function evaluateRazonSocialMatch(query: string, recordRazon: string, recordSigla?: string): number {
   const cleanQ = (query || "").trim().toUpperCase();
@@ -338,7 +391,37 @@ export function evaluateRazonSocialMatch(query: string, recordRazon: string, rec
     const diffLength = targetMatch.length - cleanQ.length;
     return 80 - Math.min(diffLength, 30);
   }
-  return 0; // Si no contiene el término exacto buscado, descartar (retorna 0 para evitar falsos positivos como "Multiempresas" vs otra empresa lejana)
+
+  // Comparación compacta (sin espacios ni puntuación, ej. "Multi-impresos" vs "Multiimpresos")
+  const compactQ = cleanQ.replace(/[^A-Z0-9]/g, "");
+  const compactR = cleanR.replace(/[^A-Z0-9]/g, "");
+  const compactS = cleanS.replace(/[^A-Z0-9]/g, "");
+
+  if (compactQ.length >= 3) {
+    if (compactR === compactQ || (compactS && compactS === compactQ)) return 95;
+    if (compactR.includes(compactQ) || (compactS && compactS.includes(compactQ))) {
+      const targetMatch = compactR.includes(compactQ) ? compactR : compactS;
+      const diffLength = targetMatch.length - compactQ.length;
+      return 75 - Math.min(diffLength, 30);
+    }
+  }
+
+  // Variantes de búsqueda (guiones convertidos a espacios, palabras unidas o con comodín)
+  const variants = generateRazonSocialSearchVariants(cleanQ);
+  for (const v of variants) {
+    const rawV = v.replace(/%/g, " ").replace(/\s+/g, " ").trim();
+    if (cleanR.includes(rawV) || (cleanS && cleanS.includes(rawV))) {
+      const targetMatch = cleanR.includes(rawV) ? cleanR : cleanS;
+      const diffLength = targetMatch.length - rawV.length;
+      return 70 - Math.min(diffLength, 30);
+    }
+    const compV = v.replace(/[^A-Z0-9]/g, "");
+    if (compV.length >= 3 && (compactR.includes(compV) || (compactS && compactS.includes(compV)))) {
+      return 65;
+    }
+  }
+
+  return 0; // Si no contiene el término exacto buscado ni sus variantes morfológicas, descartar
 }
 
 /**
@@ -622,10 +705,15 @@ async function queryDatosGovSocrataRues(
       const listB = byNitRes && byNitRes.ok ? await byNitRes.json().catch(() => []) : [];
       registros = [...(Array.isArray(listA) ? listA : []), ...(Array.isArray(listB) ? listB : [])];
     } else if (cleanRazon && cleanRazon.length >= 3) {
-      const coreSearchTerm = normalizeCorporateName(cleanRazon) || cleanRazon.toUpperCase().trim();
-      const safeRazon = coreSearchTerm.replace(/'/g, "''");
-      const whereClause = `upper(razon_social) like '%${safeRazon}%'`;
-      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=20`, {
+      const searchVariants = generateRazonSocialSearchVariants(cleanRazon);
+      const clauses: string[] = [];
+      for (const v of searchVariants) {
+        const safeV = v.replace(/'/g, "''");
+        clauses.push(`upper(razon_social) like '%${safeV}%'`);
+        clauses.push(`upper(sigla) like '%${safeV}%'`);
+      }
+      const whereClause = clauses.length > 1 ? `(${clauses.join(" or ")})` : (clauses[0] || `upper(razon_social) like '%${cleanRazon.toUpperCase().replace(/'/g, "''")}%'`);
+      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=25`, {
         headers: { Accept: "application/json" },
         signal: controller.signal
       }).catch(() => null);
@@ -781,12 +869,28 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
     if (baseNit) {
       searchPayload = { nit: baseNit };
     } else {
-      const coreSearchTerm = normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
+      const variants = generateRazonSocialSearchVariants(targetRazonName);
+      const coreSearchTerm = variants[0] || normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
       searchPayload = { razon: coreSearchTerm };
     }
 
-    const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
-    const registros: any[] = searchRes?.registros || [];
+    let searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
+    let registros: any[] = searchRes?.registros || [];
+
+    // Si no encontró resultados con el término inicial y hay variantes morfológicas (ej. unida o dividida), probar con la siguiente
+    if ((!registros || registros.length === 0) && !baseNit) {
+      const variants = generateRazonSocialSearchVariants(targetRazonName);
+      for (let i = 1; i < Math.min(variants.length, 3); i++) {
+        const altVariant = variants[i].replace(/%/g, " ").replace(/\s+/g, " ").trim();
+        if (altVariant && altVariant !== searchPayload.razon) {
+          const altRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { razon: altVariant });
+          if (Array.isArray(altRes?.registros) && altRes.registros.length > 0) {
+            registros = altRes.registros;
+            break;
+          }
+        }
+      }
+    }
 
     if (Array.isArray(registros) && registros.length > 0) {
       const mainRecord = selectPrincipalRuesRecord(

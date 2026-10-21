@@ -1445,14 +1445,7 @@ export class JaniaMatchBot {
                   await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                 }
 
-                // Despacho separado de la pregunta post-reporte de empresa (Doctrina v33.21)
-                const { popLatestDmFollowUpMessage: popVoiceFollowUp } = await import('./jania/handlers/dmHandler');
-                const voiceFollowUpQuestion = popVoiceFollowUp(senderId);
-                if (voiceFollowUpQuestion) {
-                  await new Promise(r => setTimeout(r, 900));
-                  await this.queuedSend(senderId, voiceFollowUpQuestion, { allowDirectMessage: true });
-                  await this.logToDb(senderId, 'janIA', voiceFollowUpQuestion);
-                }
+
 
                 // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre genuino (v33.24)
                 const isSenderAdminVoice = /eduardo/i.test(userName || "") ||
@@ -1491,9 +1484,8 @@ export class JaniaMatchBot {
             }
           }
 
-          const { popLatestDmPdf, popLatestDmFollowUpMessage } = await import('./jania/handlers/dmHandler');
+          const { popLatestDmPdf } = await import('./jania/handlers/dmHandler');
           const latestPdf = popLatestDmPdf(senderId);
-          const followUpQuestion = popLatestDmFollowUpMessage(senderId);
           const pdfBuffer = (reply as any)?.pdfBuffer || latestPdf?.pdfBuffer;
           const pdfFileName = (reply as any)?.pdfFileName || latestPdf?.pdfFileName;
           const replyText = String(reply);
@@ -1511,13 +1503,6 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
           }
           await this.logToDb(senderId, 'janIA', replyText);
-
-          // Despacho separado de la pregunta post-reporte de empresa (Doctrina v33.21)
-          if (followUpQuestion) {
-            await new Promise(r => setTimeout(r, 900));
-            await this.queuedSend(senderId, followUpQuestion, { allowDirectMessage: true });
-            await this.logToDb(senderId, 'janIA', followUpQuestion);
-          }
 
           // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre genuino (v33.24)
           const isSenderAdmin = /eduardo/i.test(userName || "") ||

@@ -875,25 +875,13 @@ export function isAcceptingCompanyMemberVerification(text: string): boolean {
 }
 
 export function buildCompanyFollowUpQuestion(
-  representantePrincipal?: RepresentanteLegalInfo,
-  representantesSuplentes?: RepresentanteLegalInfo[]
+  _representantePrincipal?: RepresentanteLegalInfo,
+  _representantesSuplentes?: RepresentanteLegalInfo[]
 ): string {
-  if (representantePrincipal && representantesSuplentes && representantesSuplentes.length > 0) {
-    return (
-      `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* — ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de algún otro miembro?*\n` +
-      `👉 Responde *"sí"*, *"no"*, *"verificar representante"*, *"verificar todos"* (o envíame la cédula a consultar).`
-    );
-  }
-  if (representantePrincipal) {
-    return (
-      `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*${representantePrincipal.nombre}* — ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado}) o de algún otro miembro?*\n` +
-      `👉 Responde *"sí"* o *"verificar representante"* (o envíame la cédula a consultar).`
-    );
-  }
-  return (
-    `💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal o de algún otro miembro?*\n` +
-    `👉 Responde *"sí"* y envíame la cédula a consultar, o *"no"* si deseas finalizar.`
-  );
+  // ⚠️ CERO SEGUNDO MENSAJE FORZADO (v33.29):
+  // Se elimina la plantilla forzada post-reporte. JanIA menciona al representante legal
+  // con naturalidad dentro de su propia y única respuesta si está inscrito en RUES.
+  return "";
 }
 
 export function setPendingCompanyMembers(userId: string, members: RepresentanteLegalInfo[]): void {
@@ -1348,7 +1336,7 @@ export function formatCompactIdentityVerificationReport(params: {
     } else if (ciiuPrincipal) {
       reportText += `• ${ciiuPrincipal}\n`;
     } else {
-      reportText += `• Actividad mercantil registrada en Cámara de Comercio\n`;
+      reportText += `• Sin actividad económica CIIU registrada o pendiente de actualización.\n`;
     }
     reportText += `\n`;
 
@@ -1367,7 +1355,7 @@ export function formatCompactIdentityVerificationReport(params: {
         reportText += `  ⚠️ _Advertencia Jurídica: Los suplentes y representantes judiciales solo actúan ante ausencia comprobada del Principal o dentro de los límites estatutarios._\n`;
       }
     } else {
-      reportText += `• _Consulta el certificado de existencia para el detalle nominal de facultades._\n`;
+      reportText += `• Sin representante legal principal inscrito en el registro mercantil consultado.\n`;
     }
     reportText += `\n`;
 
@@ -1721,8 +1709,21 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
         razonSocial = formatTitleCase(razonSocial);
       }
     } else {
-      razonSocial = formatTitleCase(clean) || "VECY BIENES RAÍCES S.A.S.";
-      baseNit = "901488282";
+      // ⚠️ CERO FALLBACK FALSO CON 901.488.282-3 (v33.29):
+      // Jamás inventar ni devolver un NIT sintético o quemado. Si la empresa no aparece en las fuentes oficiales,
+      // informar con total honestidad que no se encontró coincidencia exacta y solicitar el NIT.
+      return {
+        success: false,
+        nit: "",
+        dv: "",
+        nitCompleto: "",
+        razonSocial: formatTitleCase(clean) || clean,
+        camaraComercio: "Cámaras de Comercio de Colombia (RUES)",
+        ciudad: "Colombia",
+        estado: "No localizada",
+        reportText: `No se encontró ninguna empresa o persona jurídica registrada bajo el nombre "${clean}" en el Registro Único Empresarial y Social (RUES). Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor indícame el número de NIT de la sociedad.`,
+        followUpQuestionText: ""
+      };
     }
   }
 
@@ -1740,8 +1741,6 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     }
   }
 
-  // Si conocemos la cédula del Representante Legal Principal y/o demás miembros y tenemos userId,
-  // dejarlos pre-cargados en sesión para que el usuario pueda verificar sus antecedentes con 1 mensaje ("verificar representante" / "verificar todos" / "sí" / "no")
   if (userId) {
     if (representantePrincipal?.numeroIdentificacion) {
       setPendingUnconfirmedDoc(userId, representantePrincipal.numeroIdentificacion);
@@ -1749,12 +1748,6 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     if (allMembers.length > 0) {
       setPendingCompanyMembers(userId, allMembers);
     }
-    setPendingCompanyFollowUp(userId, {
-      nitCompleto: finalNitCompleto,
-      razonSocial,
-      representantePrincipal,
-      representantesSuplentes
-    });
   }
 
   const reportText = formatCompactIdentityVerificationReport({
@@ -1781,7 +1774,7 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     telefonoComercial: ruesLive?.telefonoComercial
   });
 
-  const followUpQuestionText = buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes);
+  const followUpQuestionText = "";
 
   return {
     success: true,
@@ -2156,7 +2149,7 @@ export async function executeIdentityVerificationFromWhatsApp(
         officialName: empresaRes.razonSocial,
         source: 'Central Multifuente Notarial VECY (RUES + DIAN + Búsqueda Empresarial)',
         reportText: empresaRes.reportText,
-        followUpQuestionText: empresaRes.followUpQuestionText
+        followUpQuestionText: undefined
       };
     }
     return { isVerificationRequest: false };
@@ -2175,7 +2168,7 @@ export async function executeIdentityVerificationFromWhatsApp(
       officialName: empresaRes.razonSocial,
       source: 'Central Multifuente Notarial VECY (RUES + DIAN + Procuraduría SIRI + Contraloría SIRECI)',
       reportText: empresaRes.reportText,
-      followUpQuestionText: empresaRes.followUpQuestionText,
+      followUpQuestionText: undefined,
       items
     };
   }

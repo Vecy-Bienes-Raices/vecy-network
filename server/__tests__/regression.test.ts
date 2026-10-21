@@ -6133,11 +6133,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(res1.resultJson.reporteOficial).toContain("46.375.136");
       expect(res1.resultJson.reporteOficial).toContain("PROPIETARIO / ESTABLECIMIENTO");
       expect(res1.resultJson.reporteOficial).not.toContain("901.488.282-3");
-      // La pregunta va en mensaje separado (popLatestDmFollowUpMessage) y no dentro del reporte
+      // En v33.29 se erradicó el segundo mensaje forzado (popLatestDmFollowUpMessage retorna undefined)
       expect(res1.resultJson.reporteOficial).not.toContain("¿Deseas que realice la verificación de identidad y antecedentes");
       const queuedFollowUp = popLatestDmFollowUpMessage(userId);
-      expect(queuedFollowUp).toBeDefined();
-      expect(queuedFollowUp).toContain("💡 *¿Deseas que realice la verificación de identidad y antecedentes (Policía, Procuraduría, Contraloría y ADRES) del Representante Legal Principal (*Sandra Milena Diaz Mondragon* — C.C. 46.375.136) o de algún otro miembro?*");
+      expect(queuedFollowUp).toBeUndefined();
 
       // Caso 2: Búsqueda inversa por Razón Social ("Transportes Gonzalez Diaz") devuelve el NIT 900.788.832-8
       const resRazon = await executeJaniaDmTool(
@@ -6149,32 +6148,38 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       );
       expect(resRazon.resultJson.reporteOficial).toContain("900.788.832-8");
       expect(resRazon.resultJson.reporteOficial).toContain("2517719");
-      popLatestDmFollowUpMessage(userId);
+      expect(popLatestDmFollowUpMessage(userId)).toBeUndefined();
     });
 
-    it("2. Flujo interactivo post-reporte de empresa: si responde NO envía invitación a calificar (servicios GRATUITOS), y si responde SÍ verifica la cédula del Representante con título 🛡️ VERIFICACIÓN OFICIAL DE IDENTIDAD", async () => {
-      const { queryEmpresaOrNit, identityCache } = await import("../_core/identityVerificationService");
+    it("2. Flujo interactivo post-reporte de empresa: si responde NO envía invitación a calificar (servicios GRATUITOS), y si responde SÍ verifica la cédula del Representante con título de verificación", async () => {
+      const { queryEmpresaOrNit, identityCache, setPendingCompanyFollowUp } = await import("../_core/identityVerificationService");
       const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
 
-      // Escenario A: Usuario consulta empresa y responde "No" a la pregunta separada
+      // Escenario A: Usuario con follow-up que responde "No" -> envía invitación a calificar (servicios GRATUITOS)
       const userNo = `test-company-no-${Date.now()}@s.whatsapp.net`;
       await queryEmpresaOrNit("900788832", userNo);
+      setPendingCompanyFollowUp(userNo, {
+        nitCompleto: "900788832-8",
+        razonSocial: "TRANSPORTES GONZALEZ DIAZ TG&D SAS"
+      });
       const replyNo = await processPrivateDmConversationalMessage("No", userNo, "Carlos Inversionista");
       expect(replyNo).toContain("100% GRATUITOS");
       expect(replyNo).toContain("GRATIS");
       expect(replyNo).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
 
-      // Escenario B: Usuario consulta empresa y responde "Sí" -> JanIA verifica la C.C. 46.375.136 de Sandra Milena Diaz Mondragon con su propio formato y título
+      // Escenario B: Usuario que responde "Sí" a la verificación de representante precargado
       identityCache.set("POLICIA:cc:46375136", {
         fullName: "SANDRA MILENA DIAZ MONDRAGON",
         timestamp: Date.now()
       });
       const userYes = `test-company-yes-${Date.now()}@s.whatsapp.net`;
-      await queryEmpresaOrNit("900788832", userYes);
+      const empResYes = await queryEmpresaOrNit("900788832", userYes);
+      setPendingCompanyFollowUp(userYes, {
+        nitCompleto: empResYes.nitCompleto,
+        razonSocial: empResYes.razonSocial,
+        representantePrincipal: empResYes.representantePrincipal
+      });
       const replyYes = await processPrivateDmConversationalMessage("Sí", userYes, "Carlos Inversionista");
-      expect(replyYes).toContain("🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴");
-      expect(replyYes).toContain("⚖️ *_Habeas Data (Ley 1581/12):_*");
-      expect(replyYes).toContain("*_Art. 15 de la C.P._*");
       expect(replyYes).toContain("46.375.136");
       expect(replyYes).toContain("Sandra Milena Diaz Mondragon");
     }, 30000);
@@ -6682,11 +6687,123 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.28 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.28");
+      expect(VECY_VERSION).toBe("v33.29");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.28.0");
+      expect(pkg.version).toBe("33.29.0");
+    });
+  });
+
+  describe("SUITE 87: JanIA v33.29 — Erradicación de Fallback Sintético RUES (901.488.282-3), Variantes Morfológicas (Multi-impresos / Multiimpresos), Entrega Libre sin Plantillas Rígidas y Cero Segundo Mensaje Forzado (v33.29)", () => {
+    it("1. generateRazonSocialSearchVariants genera variantes unidas, separadas y con comodín limpiando sufijos societarios", async () => {
+      const { generateRazonSocialSearchVariants, evaluateRazonSocialMatch } = await import("../_core/ruesService");
+
+      const variantsConGuion = generateRazonSocialSearchVariants("Multi-impresos SAS");
+      expect(variantsConGuion).toContain("MULTI IMPRESOS");
+      expect(variantsConGuion).toContain("MULTIIMPRESOS");
+      expect(variantsConGuion).toContain("MULTI%IMPRESOS");
+
+      const variantsUnida = generateRazonSocialSearchVariants("Multiimpresos");
+      expect(variantsUnida).toContain("MULTIIMPRESOS");
+      expect(variantsUnida).toContain("MULTI IMPRESOS");
+      expect(variantsUnida).toContain("MULTI%IMPRESOS");
+
+      // evaluateRazonSocialMatch evalúa con éxito la coincidencia entre variantes
+      const scoreGuionVsUnida = evaluateRazonSocialMatch("Multi-impresos", "MULTIIMPRESOS DE COLOMBIA S.A.S.");
+      expect(scoreGuionVsUnida).toBeGreaterThan(60);
+
+      const scoreUnidaVsSeparada = evaluateRazonSocialMatch("Multiimpresos", "MULTI IMPRESOS NACIONALES LTDA");
+      expect(scoreUnidaVsSeparada).toBeGreaterThan(60);
+    });
+
+    it("2. queryEmpresaOrNit NUNCA inventa el NIT sintético 901.488.282-3 si la empresa no existe y reporta con honestidad pidiendo el NIT", async () => {
+      const { queryEmpresaOrNit } = await import("../_core/identityVerificationService");
+
+      const noCorp = await queryEmpresaOrNit("Compañía Ficticia Inexistente 987654321");
+      expect(noCorp.success).toBe(false);
+      expect(noCorp.nit).toBe("");
+      expect(noCorp.reportText).not.toContain("901.488.282-3");
+      expect(noCorp.reportText).not.toContain("901488282");
+      expect(noCorp.reportText).toContain("No se encontró ninguna empresa o persona jurídica registrada");
+      expect(noCorp.reportText).toContain("indícame el número de NIT");
+    });
+
+    it("3. executeJaniaDmTool entrega datos oficiales estructurados en resultJson y popLatestDmFollowUpMessage retorna undefined (cero mensaje forzado)", async () => {
+      const { executeJaniaDmTool, popLatestDmFollowUpMessage } = await import("../_core/jania/handlers/dmHandler");
+      const userId = "test-user-dm-v3329@s.whatsapp.net";
+
+      const res = await executeJaniaDmTool(
+        "consultar_empresa_o_nit",
+        { nit: "900788832" },
+        userId,
+        "Eduardo Rivera",
+        "consultar nit 900788832"
+      );
+
+      expect(res.toolType).toBe("empresa");
+      expect(res.resultJson.exitoso).toBe(true);
+      expect(res.resultJson.nit).toBe("900788832");
+      expect(res.resultJson.nitCompleto).toBe("900788832-8");
+      expect(res.resultJson.razonSocial).toBe("TRANSPORTES GONZALEZ DIAZ TG&D SAS");
+      expect(res.resultJson.representantePrincipal?.nombre).toBe("Sandra Milena Diaz Mondragon");
+      expect(res.resultJson.preguntaSeguimiento).toBe("");
+
+      // popLatestDmFollowUpMessage retorna undefined (cero encolado automático de segundo mensaje)
+      expect(popLatestDmFollowUpMessage(userId)).toBeUndefined();
+    });
+
+    it("4. synthesizeToolResponseWithGemini formula respuesta conversacional libre con Hábeas Data sutil y cierre persuasivo de reseña en Google", async () => {
+      const { synthesizeToolResponseWithGemini } = await import("../_core/jania/handlers/dmHandler");
+      const userId = "test-user-synth@s.whatsapp.net";
+
+      const mockToolJson = {
+        solicitud: "consulta_empresa_o_nit",
+        termino: "Bavaria",
+        exitoso: true,
+        nit: "860005224",
+        nitCompleto: "860005224-0",
+        razonSocial: "BAVARIA & CIA S.C.A.",
+        camaraComercio: "Cámara de Comercio de Bogotá",
+        estado: "Activa",
+        ciiuPrincipal: "1103 — Producción de malta y cervezas",
+        representantePrincipal: {
+          nombre: "Sergio Andres Rincon Rincon",
+          tipoDocumento: "C.C.",
+          numeroFormateado: "71.755.745",
+          cargo: "Presidente / Representante Legal Principal"
+        }
+      };
+
+      const synthesized = await synthesizeToolResponseWithGemini(
+        userId,
+        "Eduardo Rivera",
+        "empresa",
+        mockToolJson,
+        "Verificar empresa Bavaria",
+        true,
+        false,
+        "Eduardo"
+      );
+
+      expect(synthesized).toContain("BAVARIA");
+      expect(synthesized).toContain("860005224");
+      expect(synthesized).toContain("Sergio Andres Rincon Rincon");
+      // Cierre con invitación a calificar en Google
+      expect(synthesized).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      // Hábeas Data sutil
+      expect(synthesized).toContain("Ley 1581/12");
+      // Cero plantillas robóticas con viñetas estáticas obligatorias de 4 secciones
+      expect(synthesized).not.toContain("PROPIETARIO / ESTABLECIMIENTO\n_(Razón Social | Categoría");
+    });
+
+    it("5. Consagración doctrinal de versión v33.29 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.29");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.29.0");
     });
   });
 });
