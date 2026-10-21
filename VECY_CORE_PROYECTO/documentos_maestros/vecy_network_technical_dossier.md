@@ -331,6 +331,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.28 — Octubre 2026
+
+#### [v33.28.0] — 2026-10-20: Endurecimiento RUES contra Homónimos Falsos y Entrega 100% Libre sin Plantillas Rígidas en DMs
+- **Endurecimiento de Coincidencia RUES contra Homónimos Falsos (`ruesService.ts`):**
+  - **Problema:** En búsquedas abiertas por razón social (por ejemplo "Multiempresas"), el RUES traía coincidencias parciales amplias que asociaban entidades homónimas lejanas o corporaciones con nombres colaterales y genéricos desalineados.
+  - **Solución:** Se implementó el algoritmo quirúrgico `evaluateRazonSocialMatch`:
+    1. Si `cleanR === cleanQ`, retorna `100` (coincidencia exacta perfecta).
+    2. Si `cleanR.includes(cleanQ)`, se penaliza por diferencia de longitud: `80 - Math.min(diffLength, 30)`.
+    3. Si no contiene el término buscado, retorna estrictamente `0`, descartando falsos positivos.
+    4. En `selectPrincipalRuesRecord`, se filtran únicamente registros con puntaje `> 0`. Si no hay coincidencias directas, se devuelve `null` de forma segura en lugar de asignar homónimos arbitrarios.
+- **Entrega 100% Libre y Conversacional sin Plantillas Rígidas en DMs (`dmHandler.ts`):**
+  - **Problema:** Al ensamblar respuestas en DMs (`formatPoliteToolDelivery`), se concatenaban bloques fijos, firmas obligatorias de cortesía y preguntas forzadas (como insistir en verificar al representante legal o incrustar enlaces de reseñas), encasillando las respuestas de JanIA en un formato rígido y prefabricado.
+  - **Solución:**
+    1. Se limpió `formatPoliteToolDelivery` para entregar directamente la redacción fluida, elegante y orgánica generada por JanIA (`rawAiResponse.trim()`), sin incrustaciones estáticas obligatorias.
+    2. Se erradicó la inyección forzada de preguntas de seguimiento sobre representantes legales en `executeJaniaDmTool`, permitiendo que JanIA converse con autonomía y estilo propios.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **307/307 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 12s.
+
 ### 🔖 v33.27 — Octubre 2026
 
 #### [v33.27.0] — 2026-10-20: ADRES BDUA con EPS Limpia, Hábeas Data al Final, Autonomía de Reportes de JanIA, Visión y Debate Orgánico en Grupos 2 y 3

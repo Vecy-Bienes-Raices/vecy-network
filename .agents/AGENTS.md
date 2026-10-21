@@ -183,7 +183,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.27 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.28 — Octubre 2026
+
+### Novedades v33.28 (Endurecimiento RUES contra Homónimos Falsos y Entrega 100% Libre sin Plantillas Rígidas en DMs):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Endurecimiento de Búsqueda RUES (`server/_core/ruesService.ts`)**:
+     - *Causa raíz*: Las búsquedas abiertas traían coincidencias parciales amplias que asociaban homónimos lejanos o empresas genéricas no deseadas cuando el usuario consultaba una razón social (ej. "Multiempresas").
+     - *Implementación de `evaluateRazonSocialMatch`*: 100 puntos a coincidencia exacta perfecta; `80 - Math.min(diffLength, 30)` si el término está contenido penalizando longitud excesiva; 0 puntos si no contiene el término buscado.
+     - *Filtrado estricto en `selectPrincipalRuesRecord`*: Si ningún registro obtiene score > 0, se descartan homónimos falsos y se retorna null de forma segura.
+  2. **Entrega 100% Libre y Conversacional sin Plantillas Rígidas en DMs (`server/_core/jania/handlers/dmHandler.ts`)**:
+     - *Eliminación de Plantillas y Coletillas Estáticas*: Se limpió `formatPoliteToolDelivery` para que retorne directamente la respuesta original, pulida y fluida del LLM (`rawAiResponse.trim()`), sin incrustaciones prefabricadas de Google Reviews ni bloques obligatorios de cierre.
+     - *Erradicación de la Pregunta Forzada de Representante Legal*: Se eliminó la inyección artificial de `setLatestDmFollowUpMessage` tras consultas empresariales, permitiendo que JanIA fluya con libertad cognitiva total.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 307/307 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 12s ✅
+- `shared/const.ts` (`v33.28`) y `package.json` (`33.28.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.27 — Octubre 2026
 
 ### Novedades v33.27 (ADRES BDUA con EPS limpia, Hábeas Data al Final, Autonomía de Reportes de JanIA, Visión y Debate Orgánico en Grupos 2 y 3):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

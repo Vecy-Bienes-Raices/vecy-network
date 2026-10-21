@@ -281,22 +281,115 @@ async function postRuesEncrypted(path: string, payload: Record<string, any>, tim
   }
 }
 
+const SPANISH_STOPWORDS = new Set([
+  "DE", "DEL", "LA", "EL", "LOS", "LAS", "Y", "E", "EN", "A", "O", "U"
+]);
+
+const GENERIC_SECTOR_PREFIXES = new Set([
+  "CONSTRUCTORA", "INMOBILIARIA", "GRUPO", "COMPANIA", "COMPAÑIA", "CORPORACION", "ORGANIZACION"
+]);
+
+/**
+ * Normaliza una razón social eliminando acentos, caracteres especiales y formas societarias
+ * (S.A.S., S.A., LTDA, S.C.A., E.U., BIC, etc.) para comparación jurídica y búsqueda de alta precisión.
+ */
+export function normalizeCorporateName(raw: string): string {
+  if (!raw) return "";
+  let clean = raw
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " Y ")
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const corporateTokensRegex = /\b(?:SOCIEDAD POR ACCIONES SIMPLIFICADAS?|SOCIEDADES POR ACCIONES SIMPLIFICADAS?|SOCIEDAD ANONIMA|SOCIEDAD LIMITADA|SOCIEDAD EN COMANDITA POR ACCIONES|SOCIEDAD EN COMANDITA SIMPLE|SOCIEDAD EN COMANDITA|SOCIEDAD COLECTIVA|EMPRESA UNIPERSONAL|EMPRESA SOCIAL DEL ESTADO|EMPRESA DE SERVICIOS PUBLICOS|COMERCIALIZADORA INTERNACIONAL|DE BENEFICIO E INTERES COLECTIVO|BENEFICIO E INTERES COLECTIVO|ENTIDAD SIN ANIMO DE LUCRO|SUCURSAL(?: EN)? COLOMBIA|EN LIQUIDACION(?: JUDICIAL)?|EN REESTRUCTURACION|EN CONCORDATO|S A S|SAS|S A|SA|LTDA|LIMITADA|S C A|SCA|S EN C POR A|S EN C|E U|EU|E S E|ESE|E S P|ESP|B I C|BIC|C I|CI|Y CIA|CIA|Y COMPANIA|COMPANIA)\b/gi;
+
+  let prev = "";
+  while (prev !== clean) {
+    prev = clean;
+    clean = clean.replace(corporateTokensRegex, " ").replace(/\s+/g, " ").trim();
+  }
+
+  return clean;
+}
+
+function getCoreTokens(normalizedStr: string): string[] {
+  return normalizedStr
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0 && !SPANISH_STOPWORDS.has(w));
+}
+
+/**
+ * Evalúa el nivel de coincidencia entre una razón social candidata de RUES
+ * y el término consultado por el usuario, descartando homónimos lejanos o empresas genéricas.
+ */
+export function evaluateRazonSocialMatch(query: string, recordRazon: string, recordSigla?: string): number {
+  const cleanQ = (query || "").trim().toUpperCase();
+  const cleanR = (recordRazon || "").trim().toUpperCase();
+  const cleanS = (recordSigla || "").trim().toUpperCase();
+
+  if (cleanR === cleanQ || (cleanS && cleanS === cleanQ)) return 100; // Coincidencia exacta perfecta
+  if (cleanR.includes(cleanQ) || (cleanS && cleanS.includes(cleanQ))) {
+    // Si lo contiene, penalizamos ligeramente si la diferencia de longitud es muy grande (evitar genéricos)
+    const targetMatch = cleanR.includes(cleanQ) ? cleanR : cleanS;
+    const diffLength = targetMatch.length - cleanQ.length;
+    return 80 - Math.min(diffLength, 30);
+  }
+  return 0; // Si no contiene el término exacto buscado, descartar (retorna 0 para evitar falsos positivos como "Multiempresas" vs otra empresa lejana)
+}
+
 /**
  * Selecciona y prioriza siempre la "Sociedad o Persona Jurídica Principal" y con matrícula ACTIVA
- * por encima de sucursales, agencias o establecimientos de comercio.
+ * por encima de sucursales, agencias o establecimientos de comercio, aplicando filtro riguroso
+ * de coincidencia exacta o de alta proximidad sobre la razón social cuando se consulta por nombre.
  */
-export function selectPrincipalRuesRecord(registros: any[], targetNit?: string): any | null {
+export function selectPrincipalRuesRecord(
+  registros: any[],
+  targetNit?: string,
+  targetRazon?: string
+): any | null {
   if (!Array.isArray(registros) || registros.length === 0) return null;
 
-  const scored = registros.map((reg) => {
+  const cleanTargetNit = (targetNit || "").replace(/\D/g, "").replace(/^0+/, "");
+  const cleanTargetRazon = (targetRazon || "").trim();
+
+  // Si se consulta por Razón Social (sin NIT explícito), filtrar primero con rigor de coincidencia
+  let eligibleRecords = registros;
+
+  if (!cleanTargetNit && cleanTargetRazon) {
+    const matchingRecords = registros.filter((reg) => {
+      const candRazon = String(reg.razon_social || reg.nombre || "").trim();
+      const candSigla = String(reg.sigla || "").trim();
+      const matchScore = evaluateRazonSocialMatch(cleanTargetRazon, candRazon, candSigla);
+      return matchScore > 0;
+    });
+
+    // Si NINGÚN registro contiene el término exacto buscado, descartar para evitar falsos positivos
+    if (matchingRecords.length === 0) {
+      return null;
+    }
+    eligibleRecords = matchingRecords;
+  }
+
+  const scored = eligibleRecords.map((reg) => {
     let score = 0;
     const cat = String(reg.categoria || reg.categoria_matricula || "").toUpperCase();
     const est = String(reg.estado_matricula || "").toUpperCase();
     const org = String(reg.organizacion_juridica || "").toUpperCase();
     const regNit = String(reg.nit || reg.numero_identificacion || "").replace(/\D/g, "").replace(/^0+/, "");
-    const cleanTargetNit = (targetNit || "").replace(/\D/g, "").replace(/^0+/, "");
+    const candRazon = String(reg.razon_social || reg.nombre || "").trim();
+    const candSigla = String(reg.sigla || "").trim();
 
-    if (cleanTargetNit && regNit === cleanTargetNit) score += 100;
+    if (cleanTargetNit && regNit === cleanTargetNit) score += 1000;
+
+    if (cleanTargetRazon) {
+      const matchScore = evaluateRazonSocialMatch(cleanTargetRazon, candRazon, candSigla);
+      score += matchScore * 10;
+    }
+
     if (cat.includes("SOCIEDAD") || cat.includes("PRINCIPAL") || cat.includes("PERSONA JURIDICA")) {
       score += 50;
     }
@@ -312,7 +405,7 @@ export function selectPrincipalRuesRecord(registros: any[], targetNit?: string):
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored[0]?.reg || registros[0];
+  return scored[0]?.reg || null;
 }
 
 /**
@@ -500,7 +593,12 @@ export function extractEstablecimientos(registros: any[], mainRecord: any): Rues
  * Opera a nivel mundial sin restricciones geográficas (200 OK en Contabo VPS en ~150-500ms),
  * cubriendo las 57 Cámaras de Comercio de Colombia (>9.3 millones de matrículas) con Representante Legal Principal.
  */
-async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, timeoutMs: number = 6500): Promise<RuesCompanyDetail | null> {
+async function queryDatosGovSocrataRues(
+  baseNit: string,
+  cleanRazon: string,
+  timeoutMs: number = 6500,
+  targetRazon?: string
+): Promise<RuesCompanyDetail | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -524,9 +622,10 @@ async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, tim
       const listB = byNitRes && byNitRes.ok ? await byNitRes.json().catch(() => []) : [];
       registros = [...(Array.isArray(listA) ? listA : []), ...(Array.isArray(listB) ? listB : [])];
     } else if (cleanRazon && cleanRazon.length >= 3) {
-      const safeRazon = cleanRazon.toUpperCase().replace(/'/g, "''");
+      const coreSearchTerm = normalizeCorporateName(cleanRazon) || cleanRazon.toUpperCase().trim();
+      const safeRazon = coreSearchTerm.replace(/'/g, "''");
       const whereClause = `upper(razon_social) like '%${safeRazon}%'`;
-      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=15`, {
+      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=20`, {
         headers: { Accept: "application/json" },
         signal: controller.signal
       }).catch(() => null);
@@ -540,7 +639,11 @@ async function queryDatosGovSocrataRues(baseNit: string, cleanRazon: string, tim
       return null;
     }
 
-    const mainRecord = selectPrincipalRuesRecord(registros, baseNit || undefined);
+    const mainRecord = selectPrincipalRuesRecord(
+      registros,
+      baseNit || undefined,
+      baseNit ? undefined : (targetRazon || cleanRazon)
+    );
     if (!mainRecord) return null;
 
     const codCamara = String(mainRecord.codigo_camara || mainRecord.cod_camara || "04").trim();
@@ -655,11 +758,12 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
   }
 
   const cleanRazon = clean
-    .replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|constructora|inmobiliaria|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ")
+    .replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${(cleanRazon || clean).toUpperCase()}`;
+  const targetRazonName = cleanRazon || clean;
+  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${targetRazonName.toUpperCase()}`;
 
   const cached = ruesCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < RUES_CACHE_TTL_MS) {
@@ -677,14 +781,19 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
     if (baseNit) {
       searchPayload = { nit: baseNit };
     } else {
-      searchPayload = { razon: (cleanRazon || clean).toUpperCase() };
+      const coreSearchTerm = normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
+      searchPayload = { razon: coreSearchTerm };
     }
 
     const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
     const registros: any[] = searchRes?.registros || [];
 
     if (Array.isArray(registros) && registros.length > 0) {
-      const mainRecord = selectPrincipalRuesRecord(registros, baseNit || undefined);
+      const mainRecord = selectPrincipalRuesRecord(
+        registros,
+        baseNit || undefined,
+        baseNit ? undefined : targetRazonName
+      );
       if (mainRecord) {
         const codCamara = String(mainRecord.cod_camara || "04").trim();
         const matricula = String(mainRecord.matricula || "").trim();
@@ -774,7 +883,12 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
     }
 
     // MOTOR 2: Respaldo directo Socrata Datos Abiertos de Colombia (57 Cámaras de Comercio — 0 Geo-Block desde VPS)
-    const socrataResult = await queryDatosGovSocrataRues(baseNit, cleanRazon || clean);
+    const socrataResult = await queryDatosGovSocrataRues(
+      baseNit,
+      targetRazonName,
+      6500,
+      baseNit ? undefined : targetRazonName
+    );
     if (socrataResult && socrataResult.found) {
       ruesCache.set(cacheKey, { data: socrataResult, timestamp: Date.now() });
       if (socrataResult.nit) {

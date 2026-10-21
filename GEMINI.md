@@ -1,18 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.27.0 — 2026-10-20)
-- **JanIA Server:** `v33.27` (`33.27.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
-- **ADRES (BDUA) con Extracción de EPS Limpia y Consulta Multisectorial:**
-  1. Conexión y extracción de EPS en tiempo real (ej. `Capital Salud EPS-S`, `Sanitas EPS`, `Nueva EPS`, `Sura EPS`), decodificación de entidades HTML y estado/régimen (`ACTIVO — SUBSIDIADO` / `CONTRIBUTIVO`).
-  2. Almacenamiento y persistencia en `identityCache` para evitar consultas redundantes a $0 COP.
-- **Posicionamiento Doctrinal de Hábeas Data y Cierre de Cortesía VECY:**
-  1. Cláusula de Hábeas Data (Ley 1581/12 y Art. 15 C.P.) reubicada OBLIGATORIAMENTE al FINAL del reporte para no interrumpir ni anteponerse a los datos de identidad.
-  2. Sello de cierre institucional: `Servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
-- **Autonomía Cognitiva de Diseño de Reportes para JanIA:**
-  1. Directiva en `JANIA_ARGON_COGNITIVE_CORE` otorgando a JanIA total libertad para diseñar y estructurar reportes cortos, elegantes y contundentes sin quedar encasillada en una plantilla rígida.
-- **Visión Multimodal, Documentos y Debate Orgánico en Grupos 2 y 3:**
-  1. Soporte completo de imágenes, PDFs y contexto de mensajes citados (`quotedContext`) en Grupo 3 (`circuloGroupId`) y Grupo 2 (`buzonGroupId`).
-  2. Debate fluido y orgánico en Grupo 3 sin respuestas de atención al cliente vacías.
-  3. Desinfección de nombres en `nameAndGenderResolver` (depuración de títulos como "Agente Inmobiliaria Independiente" y rechazo de saludos como nombres).
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (303/303 a $0 COP) | Build `npm run build` limpio en 14s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.28.0 — 2026-10-20)
+- **JanIA Server:** `v33.28` (`33.28.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
+- **Endurecimiento de Coincidencia RUES contra Homónimos Falsos (`ruesService.ts`):**
+  1. Nueva función `evaluateRazonSocialMatch` estricta: Coincidencia exacta perfecta (100 pts), término contenido con penalización por exceso de longitud (`80 - Math.min(diffLength, 30)`), y descarte total (0 pts) si no contiene el término buscado.
+  2. `selectPrincipalRuesRecord` filtra registros con score > 0, descartando homónimos colaterales o genéricos desalineados (ej. "Multiempresas" vs nombres lejanos).
+- **Entrega 100% Libre sin Plantillas Rígidas en DMs (`dmHandler.ts`):**
+  1. `formatPoliteToolDelivery` limpio y orgánico sin bloques de cierre forzados, sin incrustaciones estáticas de reseñas ni colectillas artificiales de preguntas.
+  2. Erradicación de la pregunta forzada de verificación del representante legal tras la consulta de empresa, permitiendo a JanIA fluir de forma natural y conversacional con estilo propio.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (307/307 a $0 COP) | Build `npm run build` limpio en 12s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

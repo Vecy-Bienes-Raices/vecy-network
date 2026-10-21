@@ -7,6 +7,73 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-20] — JanIA v33.28: Endurecimiento RUES contra Homónimos Falsos y Entrega 100% Libre sin Plantillas Rígidas en DMs (v33.28 - 33.28.0)
+
+**Versión:** `v33.28` (`33.28.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/ruesService.ts`:
+  1. Implementación de `evaluateRazonSocialMatch` quirúrgica: 100 pts para coincidencia exacta (`cleanR === cleanQ`), `80 - Math.min(diffLength, 30)` si el término está contenido penalizando longitud excedente, y descarte total (`0` pts) para homónimos o empresas no coincidentes. Mantiene compatibilidad opcional evaluando `recordSigla` si existe.
+  2. Filtrado estricto en `selectPrincipalRuesRecord`: únicamente se consideran registros con puntaje `> 0`. Si no hay coincidencias directas, retorna `null` impidiendo que una búsqueda de razón social (ej. "Multiempresas") devuelva entidades arbitrarias o lejanas.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Limpieza de `formatPoliteToolDelivery`: entrega directamente la redacción original, elegante y orgánica generada por el LLM (`rawAiResponse.trim()`), erradicando bloques estáticos forzados, firmas obligatorias de cortesía, enlaces fijos a Google Reviews o preguntas prefabricadas.
+  2. Erradicación de la inyección obligatoria de `setLatestDmFollowUpMessage` para la verificación del representante legal tras consultas empresariales, devolviendo plena autonomía conversacional a JanIA.
+  3. Soporte polimórfico retrocompatible para llamadas legado a `formatPoliteToolDelivery` garantizando estabilidad total en tests existentes.
+  4. Restauración del bloque de contingencia didáctica para consultas (`"como es lo de las consultas"`) en el bloque catch del manejador de DMs.
+- `server/__tests__/regression.test.ts`:
+  1. SUITE 86 incorporada con 4 pruebas doctrinales (score estricto de razón social, selección precisa de empresa en RUES, entrega limpia sin plantillas rígidas en `formatPoliteToolDelivery`, y consistencia de versión `v33.28`).
+  2. Ajuste de suites de regresión previas (62, 64, 65, 66) para alinearlas con la supresión de bloques fijos concatenados en `formatPoliteToolDelivery`.
+- `shared/const.ts` (`v33.28`) y `package.json` (`33.28.0`).
+- Documentos maestros: `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md` (§10).
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Te paso de inmediato los dos bloques de código limpios y quirúrgicos para que Antigravity (o tú mismo en los archivos) los aplique y erradiquemos tanto el error de los homónimos en el RUES como las plantillas rígidas en los mensajes.
+1. Ajuste en server/_core/ruesService.ts
+En este archivo, vamos a endurecer la evaluación de coincidencia en evaluateRazonSocialMatch para que, cuando busques una empresa (por ejemplo, Multiempresas), el algoritmo dé máxima prioridad y devuelva estrictamente la que contenga el término de forma exacta o muy próxima, descartando empresas con nombres colaterales o genéricos desalineados.
+Busca la función encargada de puntuar o seleccionar el registro principal (alrededor de las líneas 335 a 474) y asegúrate de que use este bloque de filtrado estricto:
+export function evaluateRazonSocialMatch(query: string, recordRazon: string): number {
+  const cleanQ = query.trim().toUpperCase();
+  const cleanR = recordRazon.trim().toUpperCase();
+  if (cleanR === cleanQ) return 100;
+  if (cleanR.includes(cleanQ)) {
+    const diffLength = cleanR.length - cleanQ.length;
+    return 80 - Math.min(diffLength, 30);
+  }
+  return 0;
+}
+2. Limpieza en server/_core/jania/handlers/dmHandler.ts
+Para eliminar de raíz los bloques fijos, las firmas obligatorias de cortesía y las estructuras rígidas de cierre (como la de forzar al usuario a verificar al representante legal), vamos a limpiar la función que ensambla la respuesta final (formatPoliteToolDelivery o equivalente).
+Busca en dmHandler.ts el bloque donde se unen las partes de la respuesta (cerca de la línea 614 a 725) y déjalo de esta forma tan limpia, permitiendo que el texto generado por JanIA pase directo y sin parches estáticos:
+export function formatPoliteToolDelivery(
+  rawAiResponse: string,
+  userName?: string,
+  userId?: string,
+  customGuidance?: string
+): string {
+  if (!rawAiResponse) return "";
+  let cleaned = rawAiResponse.trim();
+  return cleaned;
+}
+Con esto, el RUES arrojará el blanco exacto sin inventar homónimos, y los reportes saldrán 100% libres, conversacionales y con el estilo original de JanIA. ¡Pruébalo y me cuentas cómo se comporta en WhatsApp! 🚀"*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Falsos Positivos de Homónimos en Búsquedas Abiertas RUES**:
+   - `selectPrincipalRuesRecord` permitía que si ningún registro cumplía una coincidencia estricta previa, se seleccionara por defecto `registros[0]` o coincidencias difusas, devolviendo una empresa no relacionada cuando se consultaba por nombre o razón social.
+2. **Plantillas Rígidas y Encadenamiento Artificial en DMs**:
+   - `formatPoliteToolDelivery` forzaba la adición de párrafos de invitación a Google Reviews, firmas estáticas de cortesía y preguntas fijas sobre los datos.
+   - En `executeJaniaDmTool`, tras consultar una empresa con representante legal, se forzaba mediante `setLatestDmFollowUpMessage` una pregunta interactiva que forzaba al usuario a contestar sobre el representante legal antes de permitir cualquier otra conversación libre.
+
+#### 3. Acciones Ejecutadas
+1. En `server/_core/ruesService.ts`, se implementó la función estricta `evaluateRazonSocialMatch` provista por Eduardo, puntuando con 100 coincidencias exactas, penalizando la longitud de subcadenas contenidas y descartando (puntuando 0) cualquier homónimo o razón social que no contenga el término buscado. En `selectPrincipalRuesRecord`, se filtran únicamente registros con puntaje `> 0`.
+2. En `server/_core/jania/handlers/dmHandler.ts`, se reemplazó `formatPoliteToolDelivery` por la versión limpia solicitada por Eduardo, retornando directamente `rawAiResponse.trim()` sin cadenas prefabricadas ni parches estáticos. Se añadió soporte de sobrecarga polimórfica para compatibilidad de firmas legado.
+3. Se eliminó la asignación forzada de `setLatestDmFollowUpMessage` para representante legal en las herramientas de DM de JanIA.
+4. Se agregó la suite de pruebas unitarias y doctrinales `SUITE 86` en `server/__tests__/regression.test.ts`.
+5. Se validó la suite completa con `npm run check` (0 errores), `npm test` (307/307 pasando 100% verde a $0 COP) y `npm run build` limpio en 12s.
+6. Actualización de versión a `v33.28` (`33.28.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-20] — JanIA v33.27: ADRES BDUA con EPS Limpia, Hábeas Data al Final, Autonomía de Diseño de Reportes, Visión y Debate Orgánico en Grupos 2 y 3 (v33.27 - 33.27.0)
 
 **Versión:** `v33.27` (`33.27.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

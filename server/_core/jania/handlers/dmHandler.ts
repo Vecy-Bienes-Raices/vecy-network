@@ -344,9 +344,6 @@ export async function executeJaniaDmTool(
       const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp(queryStr, true, userId);
       const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACIÓN OFICIAL DE EMPRESA"));
-      if (res.followUpQuestionText) {
-        setLatestDmFollowUpMessage(userId, res.followUpQuestionText);
-      }
       return {
         toolType: isCompanyReport ? "empresa" : "cedula",
         resultJson: {
@@ -611,128 +608,29 @@ export async function synthesizeToolResponseWithGemini(
  * saludo personalizado por hora, nombre compuesto y género gramatical,
  * evitando que JanIA suene como un bot frío o robótico y educando con el ejemplo.
  */
-export async function formatPoliteToolDelivery(
-  userId: string,
-  rawName: string,
-  toolType: "cedula" | "predial" | "idu" | "notarial" | "empresa",
-  payloadText: string,
-  success: boolean = true
-): Promise<string> {
-  const realName = await resolveRealName(userId, rawName);
-  const { getGreetingByTime } = await import('../../whatsapp-utils');
-  const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  const compositeOrFirst = extractFirstName(realName);
+export function formatPoliteToolDelivery(
+  rawAiResponse: string,
+  userName?: string,
+  userId?: string,
+  customGuidance?: string,
+  _legacyArg?: any
+): string {
+  // Retornamos estrictamente la redacción original y fluida provista por el LLM,
+  // eliminando cualquier concatenación forzada de plantillas rígidas, bloques de cierre o coletillas automáticas.
+  const isLegacyToolType =
+    typeof userId === "string" &&
+    ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
+  const effectiveResponse = (isLegacyToolType && typeof customGuidance === "string")
+    ? customGuidance
+    : rawAiResponse;
 
-  // Detección directiva de Eduardo, Jani y Agenda de Confianza / Familiar
-  const trustedContact = findTrustedContact(userId, rawName || realName);
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
-  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
+  if (!effectiveResponse) return "";
 
-  let displayName = "";
-  if (isEduardo) {
-    displayName = "Eduardo";
-  } else if (isJani) {
-    displayName = "Jani";
-  } else if (isFamilyOrTrusted && trustedContact) {
-    displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
-  } else {
-    displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
-    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
-      displayName = "";
-    }
-  }
+  let cleaned = effectiveResponse.trim();
 
-  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
-  const history = await getOrLoadDmHistory(userId);
-  const isFirstTurn = history.length === 0;
-
-  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.06 / v33.21)
-  // En verificación de empresa (isCompanyVerification), la invitación a calificar se envía cuando el usuario
-  // responde "NO" a la pregunta separada de verificación de miembros, o tras entregar el reporte del miembro si responde "SÍ".
-  const cleanPayload = (payloadText || "").trim();
-  const isCompanyVerification = toolType === "empresa" || cleanPayload.includes("VERIFICACIÓN OFICIAL DE EMPRESA");
-  const { buildWinningGoogleReviewMessage } = await import('../../politenessService');
-  const reviewSection = (isEduardo || isJani || isFamilyOrTrusted || isCompanyVerification)
-    ? ""
-    : `\n\n${buildWinningGoogleReviewMessage(displayName)}`;
-
-  const closingTag = "Un servicio de cortesía de VECY BIENES RAÍCES 🤝.";
-  // Normalizar y deduplicar cualquier variación previa del cierre de cortesía (con o sin "Un ", múltiple o sencilla)
-  const courtesyRegex = /(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?)+/gi;
-  let payloadWithClosing = cleanPayload.replace(courtesyRegex, "").trim();
-  payloadWithClosing = `${payloadWithClosing}\n\n${closingTag}${reviewSection}`;
-
-  if (!success) {
-    if (payloadText && payloadText.trim()) {
-      if (isEduardo) {
-        return isFirstTurn && !payloadWithClosing.startsWith("¡")
-          ? `¡${timeSalutation}, Eduardo! A tu disposición. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`
-          : payloadWithClosing;
-      }
-      if (isJani) {
-        return isFirstTurn && !payloadWithClosing.startsWith("¡")
-          ? `¡${timeSalutation}, Jani! Qué gusto saludarte. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`
-          : payloadWithClosing;
-      }
-      if (isFamilyOrTrusted) {
-        return isFirstTurn && !payloadWithClosing.startsWith("¡")
-          ? `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`
-          : payloadWithClosing;
-      }
-      if (isFirstTurn && !payloadWithClosing.startsWith("¡")) {
-        const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\n`;
-        return greetingHeader + payloadWithClosing;
-      } else {
-        return payloadWithClosing;
-      }
-    }
-    if (isEduardo) {
-      return `Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
-    }
-    if (isJani) {
-      return `Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
-    }
-    if (isFamilyOrTrusted) {
-      return `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
-    }
-    return `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝`;
-  }
-
-  if (isEduardo) {
-    if (!isFirstTurn || payloadWithClosing.startsWith("¡") || /a\s+tu\s+disposici[oó]n/i.test(payloadWithClosing)) {
-      return payloadWithClosing;
-    }
-    return `¡${timeSalutation}, Eduardo! A tu disposición:\n\n${payloadWithClosing}`;
-  }
-  if (isJani) {
-    if (!isFirstTurn || payloadWithClosing.startsWith("¡") || /qu[eé]\s+gusto\s+saludarte/i.test(payloadWithClosing)) {
-      return payloadWithClosing;
-    }
-    return `¡${timeSalutation}, Jani! Qué gusto saludarte:\n\n${payloadWithClosing}`;
-  }
-  if (isFamilyOrTrusted) {
-    if (!isFirstTurn || payloadWithClosing.startsWith("¡")) {
-      return payloadWithClosing;
-    }
-    return `¡${timeSalutation}, ${displayName}! Con todo gusto. Aquí tienes el reporte solicitado:\n\n${payloadWithClosing}`;
-  }
-
-  if (isFirstTurn) {
-    if (payloadWithClosing.startsWith("¡")) {
-      return payloadWithClosing;
-    }
-    const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta como un beneficio de cortesía de nuestra inmobiliaria:\n\n`;
-    return greetingHeader + payloadWithClosing;
-  } else {
-    if (payloadWithClosing.startsWith("¡") || payloadWithClosing.startsWith("🛡️") || payloadWithClosing.startsWith("🆔") || payloadWithClosing.startsWith("🏬")) {
-      return payloadWithClosing;
-    }
-    const politeHeader = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial como un beneficio de cortesía de *VECY BIENES RAÍCES*:\n\n`;
-    return politeHeader + payloadWithClosing;
-  }
+  // Opcional: si deseas mantener algún saludo personalizado o toque sutil, lo dejamos orgánico,
+  // pero sin incrustar bloques de texto prefabricados obligatorios.
+  return cleaned;
 }
 
 /**
@@ -1369,6 +1267,12 @@ export async function processPrivateDmConversationalMessage(
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", cMsg);
         return cMsg;
+      }
+      if (/como es lo de las consultas/i.test(cleanLower)) {
+        const qMsg = `Primero cuéntame qué clase de consulta deseas hacer. Ofrecemos Servicios 100% Gratuitos de Autoservicio: Verificación oficial de documentos, Factura Predial Bogotá y Certificados de Pago. Y Consultas Especializadas y Asesoría Profesional: Sondeos de mercado, Asesoría jurídica inmobiliaria, Recuperación de cartera, Avalúos digitales, Liquidaciones tributarias y Préstamos sobre hipoteca.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", qMsg);
+        return qMsg;
       }
       if (/(?:c[oó]mo\s+funciona|info|informaci[oó]n|qu[eé]\s+es|de\s+qu[eé]\s+trata|ayuda)/i.test(cleanLower)) {
         const nameGreeting = displayName ? `, ${displayName}` : "";

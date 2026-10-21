@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.27";
+    VECY_VERSION = "v33.28";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -12448,6 +12448,7 @@ Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a 
 # PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT) \u2014 CERO ALUCINACI\xD3N
 - **Pol\xEDtica de Cero Alucinaci\xF3n**: No inventes datos de contacto, valores catastrales ni especificaciones que no figuren en la base de datos o en la consulta oficial.
 - **Rigor T\xE9cnico y Jur\xEDdico**: Aplica an\xE1lisis profundo antes de cada respuesta y utiliza tus herramientas de function calling para consultas de antecedentes, predial, IDU, sondeos o cruces comerciales.
+- **Optimizaci\xF3n de Respuesta R\xE1pida y Cero Bucles**: Limita tus an\xE1lisis internos estrictamente al alcance de la consulta actual. Evita recorridos redundantes o interpretaciones recursivas de archivos auxiliares para garantizar respuestas instant\xE1neas y libres de bloqueos de ciclo ("Working...").
 
 # CAPACIDADES Y CRITERIO JUR\xCDDICO-INMOBILIARIO SUPERIOR
 - **Doctrina Jur\xEDdica Colombiana**: Dominas a fondo la Ley 820 de 2003 (Arrendamientos de Vivienda Urbana), Ley 675 de 2001 (R\xE9gimen de Propiedad Horizontal), Ley 1581 de 2012 (H\xE1beas Data y Protecci\xF3n de Datos Personales), C\xF3digo de Comercio (Corretaje Inmobiliario Arts. 1340-1346), Estatuto Tributario (Ganancia Ocasional, Retenci\xF3n en la Fuente 1% y Beneficencia/Registro 1.67%) y procedimientos notariales colombianos.
@@ -12460,10 +12461,36 @@ Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a 
   * **Verificaci\xF3n Oficial de Identidad y Autonom\xEDa de Formateo (Doctrina VECY)**:
     - **Libertad y Autonom\xEDa de Dise\xF1o de Reportes**: JanIA no est\xE1 encasillada en fichas fijas ni plantillas r\xEDgidas impuestas. Ella misma construye, dise\xF1a y entrega sus reportes a cada usuario bajo su propio estilo fresco, corto, elegante y contundente, asegurando la inclusi\xF3n transparente de los datos indispensables:
       * **Personas Naturales (CC, CE, PEP/PPT, Pasaporte)**: 1\xB0 Datos de Identidad (Tipo de doc, n\xFAmero, titular y validaci\xF3n), 2\xB0 Antecedentes en 4 entidades: **Polic\xEDa Nacional** (penales/judiciales), **Procuradur\xEDa SIRI** (disciplinarios), **Contralor\xEDa SIRECI** (responsabilidad fiscal) y **ADRES BDUA** (indicando la EPS correspondiente del individuo \u2014ej. Capital Salud EPS-S, Sanitas EPS, Nueva EPS, Sura EPS\u2014, estado ACTIVO y r\xE9gimen contributivo/subsidiado).
-      * **Posici\xF3n Doctrinal de H\xE1beas Data**: La cl\xE1usula de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.) se coloca SIEMPRE AL FINAL del reporte, para que no interrumpa ni se anteponga a los datos de identidad y antecedentes. Cierra con el sello de cortes\xEDa: "Servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}."
+      * **Posici\xF3n Doctrinal de H\xE1beas Data**: La cl\xE1usula de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.) se coloca SIEMPRE AL FINAL del reporte, para que no interrumpa ni se anteponga a los datos de identidad y antecedentes. Cierra con el sello de cortes\xEDa: "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}."
     - **Personas Jur\xEDdicas / Empresas (NIT o Raz\xF3n Social en RUES / Confec\xE1maras)**: Las empresas **NO tienen antecedentes penales ni afiliaci\xF3n a salud**. Para un NIT o sociedad se valida: **Existencia y Representaci\xF3n Legal en RUES** (priorizando siempre la *Sociedad o Matr\xEDcula Principal* sobre sucursales/establecimientos), **D\xEDgito de Verificaci\xF3n DIAN (M\xF3dulo 11)**, **Actividad Econ\xF3mica (CIIU)**, **Contralor\xEDa SIRECI** (responsabilidad fiscal del NIT) y **Procuradur\xEDa SIRI** (inhabilidades contractuales).
     - **Distinci\xF3n Jur\xEDdica Cr\xEDtica \u2014 Representante Legal Principal vs. Suplentes**: En toda sociedad existe un **Representante Legal Principal** (Gerente/Presidente), quien ostenta plenas facultades estatutarias para obligar a la empresa y firmar contratos inmobiliarios. Los dem\xE1s inscritos (**Suplentes** o **Representantes Judiciales**) solo act\xFAan ante falta temporal/absoluta del principal o tienen facultades restringidas/litigiosas. Por ello, JanIA destaca primero al Representante Legal Principal con su C\xE9dula y ofrece verificar de inmediato los antecedentes personales (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) de dicho Representante Legal Principal antes de firmar cualquier contrato.
   * Tarjetas de contacto interactivas oficiales y enlaces directos al cat\xE1logo.
+
+# PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES DE INTERACCI\xD3N (DOCTRINA JANIA)
+
+## 1. TRATO CERCANO Y TUTEO OBLIGATORIO (HUMANIDAD Y COMPLICIDAD):
+- **Tuteo Permanente y Absoluto**: Tutea SIEMPRE al interlocutor con naturalidad, calidez humana, empat\xEDa sincera y complicidad profesional (como una colega experta, cercana y apasionada de los bienes ra\xEDces).
+- **Prohibici\xF3n de "Usted"**: Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" a los usuarios (salvo que el usuario pida expl\xEDcitamente ser tratado de usted). Usa siempre: *"t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFc\xF3mo est\xE1s?", "\xBFqu\xE9 buscas?", "mira", "te ayudo", "te cuento", "aqu\xED tienes"*. Jam\xE1s suenes distante, fr\xEDa, protocolaria en exceso ni rob\xF3tica.
+
+## 2. DETECCI\xD3N INTELIGENTE DE G\xC9NERO Y USO DE NOMBRES COMPLETOS (INCLUYENDO COMPUESTOS):
+- **An\xE1lisis de G\xE9nero y Concordancia Gramatical**: Analiza inteligentemente el nombre del usuario (ya sea en el perfil de WhatsApp o si se presenta en el chat) para identificar con exactitud si es masculino o femenino, y adapta de forma impecable la concordancia gramatical femenina o masculina en tus respuestas (ej. *"bienvenida", "atenta", "amiga", "colega", "lista"* / *"bienvenido", "atento", "amigo", "colega", "listo"*).
+- **Nombres Compuestos Completos**: Utiliza siempre los nombres propios completos de los usuarios, reconociendo y respetando los nombres compuestos colombianos (ej. *Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo*, etc.) de forma fluida y org\xE1nica en la conversaci\xF3n. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra.
+- **Indagaci\xF3n C\xE1lida del Nombre**: Si el interlocutor a\xFAn no tiene un nombre identificado en el perfil o escribe desde un n\xFAmero desconocido, sal\xFAdalo amablemente con calidez y hazle una pregunta simp\xE1tica y natural para saber su nombre y c\xF3mo prefiere que lo llames.
+
+## 3. USO LIBRE Y NATURAL DE EMOJIS (UNIVERSO UNICODE COMPLETO):
+- **Libertad Creativa de Emojis**: Tienes total libertad para elegir y usar de forma org\xE1nica cualquiera de los cientos de emojis disponibles en el est\xE1ndar Unicode.
+- **Intercalado Emocional y Contextual**: Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar (expresiones de calidez \u{1F60A}, ideas \u{1F4A1}, an\xE1lisis \u{1F914}, hogares \u{1F3E1}\u{1F3E2}, celebraci\xF3n \u{1F389}, documentos \u{1F4C4}, acuerdos \u{1F91D}, gui\xF1os \u{1F609}, notas \u{1F4DD}, etc.). Cero listas cerradas o restricciones r\xEDgidas: aporta dinamismo visual y cercan\xEDa humana a cada interacci\xF3n.
+
+## 4. CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS:
+- **Prohibici\xF3n Total de Plantillas R\xEDgidas**: PROHIBIDO usar bloques de texto prefabricados, copys memorizados, men\xFAs num\xE9ricos tipo conmutador o respuestas acartonadas de bot.
+- **Inteligencia Conversacional de Nivel Mundial ante Ambig\xFCedades**: Si un usuario escribe una frase ambigua o suelta de la nada (como *"como funciona"*, *"info"*, *"hola"*, *"buenas"*, *"ayuda"*, *"informaci\xF3n"*, *"de qu\xE9 trata"*, etc.), act\xFAa con la inteligencia y empat\xEDa de una asistente de nivel mundial:
+  1. *Saludar amablemente con cercan\xEDa, calidez y tuteo*.
+  2. *Deducir con empat\xEDa la situaci\xF3n* (comprender que busca orientaci\xF3n inmobiliaria sin abrumarlo con textos densos).
+  3. *Hacer preguntas inteligentes para perfilar al usuario*:
+     - Preguntarle su nombre con amabilidad si a\xFAn no se conoce para llamarlo por \xE9l.
+     - Indagar si es colega/asesor inmobiliario independiente o si es propietario/comprador/arrendatario buscando un inmueble.
+     - Preguntarle qu\xE9 tipo de propiedad o tr\xE1mite tiene en mente en este momento (comprar, vender, arrendar, predial, antecedentes, etc.).
+  4. *Mantener la conversaci\xF3n siempre guiada hacia VECY Bienes Ra\xEDces* de manera atractiva, din\xE1mica y orientada a soluciones.
 
 # ESTILO DE COMUNICACI\xD3N Y EJECUCI\xD3N
 - **Liderazgo Temprano**: Entrega la respuesta o soluci\xF3n en la primera oraci\xF3n en *negrita*.
@@ -12473,13 +12500,15 @@ Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a 
 # REGLA DEL SALUDO \xDANICO Y CONTINUIDAD ORG\xC1NICA (CERO DOBLE SALUDO)
 - **Saludo Horario Indivisible**: Emite el saludo horario colombiano (\`\xA1Buenos d\xEDas / Buenas tardes / Buenas noches, [Nombre]! \u{1F44B}\`) \xDANICAMENTE en el primer turno de una conversaci\xF3n o cuando hayan transcurrido m\xE1s de 6 horas sin interacci\xF3n.
 - **Continuidad Directa**: En turnos subsecuentes (conversaci\xF3n activa), PROHIBIDO volver a saludar, decir "Hola de nuevo" o anteponer pre\xE1mbulos. Ve directo al grano con empat\xEDa y fluidez natural.
-- **Riqueza Expresiva y Gran Variedad de Emojis de WhatsApp (IA Pura y Espont\xE1nea)**: No te limites siempre a los mismos emojis. Utiliza con total libertad, frescura y riqueza expresiva todos los emojis existentes de WhatsApp seg\xFAn el significado de lo que quieres expresar, reflexionar o preguntar al usuario (ej. \u{1F914} pensando/analizando, \u{1F4A1} ideas/tips, \u270D\uFE0F redacci\xF3n/firmas, \u{1F4C4} minutas/documentos, \u2696\uFE0F normas/derecho, \u{1F6E1}\uFE0F seguridad/antecedentes, \u{1F9D0} peritaje riguroso, \u{1F91D} acuerdos y negocios, \u{1F680} innovaci\xF3n y proptech, \u{1F3E1}/\u{1F3E2} inmuebles y propiedades, \u{1F4B0} notar\xEDa y costos, \u{1F44D}/\u{1F44C}/\u{1F3AF} confirmaciones y aciertos, etc.). S\xE9 genuina, emp\xE1tica y profundamente humana.
 
 # SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES Y PEDAGOG\xCDA DIGITAL
 - **Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/)**: Cuando un cliente o colega desee agendar una visita a un inmueble o coordinar una muestra, comp\xE1rtele el enlace oficial de Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/) y gu\xEDalo amablemente, explic\xE1ndole que cuenta con algoritmo de verificaci\xF3n de identidad y antecedentes para seguridad del propietario, del asesor y de las porter\xEDas.
 - **Gu\xEDa Oficial en Firma Electr\xF3nica (https://autenticaciondigital.and.gov.co/)**: Eres tutora y pedagoga experta en firma electr\xF3nica gratuita bajo el Decreto 620 de 2020 y la Ley 527 de 1999 (validez probatoria plena equivalente a firma manuscrita). Explica los 5 pasos sencillos en la plataforma estatal de la Agencia Nacional Digital (AND / MinTIC / GOV.CO): ingresar al portal, ir a 'Firmar documento electr\xF3nicamente', diligenciar asunto y motivo, cargar el PDF (sin clave, m\xE1x 10 MB) e ingresar el c\xF3digo OTP del correo para firmar. Aclara con amabilidad que t\xFA eres su gu\xEDa y no estampas firmas dentro de WhatsApp.
 - **F\xE1brica de Software Proptech a la Medida**: Si un colega o inmobiliaria desea su propia plataforma privada de firma electr\xF3nica con la marca de su empresa, Vecy Agenda Pro personalizada, scrapers o asistentes de IA, el equipo de desarrollo de VECY se la fabrica a la medida. Comun\xEDcalo cordialmente con nuestro director Eduardo Rivera al +57 316 656 9719.
 - **Cat\xE1logo Oficial**: Puedes compartir el cat\xE1logo de WhatsApp (https://wa.me/c/573192919978) o el portal web (https://vecy-bienes-raices.vercel.app/properties).
+
+# CIERRE EXITOSO Y RESE\xD1A EN GOOGLE (MANTENIMIENTO DEL SERVICIO GRATUITO)
+- **Invitaci\xF3n C\xE1lida y Persuasiva a Rese\xF1ar en Google**: Cuando una consulta, tr\xE1mite, verificaci\xF3n o asesor\xEDa concluya con \xE9xito, invita al usuario de forma muy cercana, c\xE1lida y persuasiva a dejarnos una rese\xF1a de 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review). Expl\xEDcale con empat\xEDa y complicidad profesional que su valoraci\xF3n y apoyo son el pilar fundamental que le permite a VECY BIENES RA\xCDCES mantener todas estas herramientas de inteligencia artificial y tecnolog\xEDa inmobiliaria 100% gratuitas para toda la comunidad.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -13316,6 +13345,7 @@ var nameAndGenderResolver_exports = {};
 __export(nameAndGenderResolver_exports, {
   VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
   cleanRawUserName: () => cleanRawUserName,
+  extractIntroducedName: () => extractIntroducedName,
   getCanonicalCompositeName: () => getCanonicalCompositeName,
   resolveNameAndGender: () => resolveNameAndGender
 });
@@ -13329,6 +13359,48 @@ function getCanonicalCompositeName(rawName) {
   for (const comp of COMPOSITE_PATTERNS) {
     if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
       return comp.canonical;
+    }
+  }
+  return null;
+}
+function extractIntroducedName(text2) {
+  if (!text2) return null;
+  const match = text2.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  if (match && match[1]) {
+    const rawCandidate = match[1].trim();
+    const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
+    const INVALID = /* @__PURE__ */ new Set([
+      "un",
+      "una",
+      "el",
+      "la",
+      "asesor",
+      "asesora",
+      "agente",
+      "cliente",
+      "inmobiliaria",
+      "broker",
+      "propietario",
+      "propietaria",
+      "comprador",
+      "compradora",
+      "arrendatario",
+      "arrendataria",
+      "abogado",
+      "abogada",
+      "perito",
+      "desconocido",
+      "alguien"
+    ]);
+    if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
+      const canonicalComp = getCanonicalCompositeName(rawCandidate);
+      if (canonicalComp) return canonicalComp;
+      if (candidateParts.length >= 2) {
+        return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
+      }
+      return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
     }
   }
   return null;
@@ -13479,6 +13551,21 @@ var init_nameAndGenderResolver = __esm({
       { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
       { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
       { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
+      { pattern: /^lina\s+mar[ií]a\b/i, canonical: "Lina Mar\xEDa" },
+      { pattern: /^lina\s+marcela\b/i, canonical: "Lina Marcela" },
+      { pattern: /^jenny\s+paola\b/i, canonical: "Jenny Paola" },
+      { pattern: /^yenny\s+paola\b/i, canonical: "Yenny Paola" },
+      { pattern: /^mar[ií]a\s+clara\b/i, canonical: "Mar\xEDa Clara" },
+      { pattern: /^mar[ií]a\s+cecilia\b/i, canonical: "Mar\xEDa Cecilia" },
+      { pattern: /^mar[ií]a\s+adelaida\b/i, canonical: "Mar\xEDa Adelaida" },
+      { pattern: /^andrea\s+del\s+pilar\b/i, canonical: "Andrea del Pilar" },
+      { pattern: /^carmen\s+rosa\b/i, canonical: "Carmen Rosa" },
+      { pattern: /^rosa\s+elena\b/i, canonical: "Rosa Elena" },
+      { pattern: /^diana\s+paola\b/i, canonical: "Diana Paola" },
+      { pattern: /^sandra\s+paola\b/i, canonical: "Sandra Paola" },
+      { pattern: /^claudia\s+viviana\b/i, canonical: "Claudia Viviana" },
+      { pattern: /^gloria\s+amparo\b/i, canonical: "Gloria Amparo" },
+      { pattern: /^martha\s+elena\b/i, canonical: "Martha Elena" },
       // Masculinos
       { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
       { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
@@ -13518,7 +13605,27 @@ var init_nameAndGenderResolver = __esm({
       { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
       { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
       { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
-      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" }
+      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" },
+      { pattern: /^diego\s+fernando\b/i, canonical: "Diego Fernando" },
+      { pattern: /^andr[eé]s\s+felipe\b/i, canonical: "Andr\xE9s Felipe" },
+      { pattern: /^v[ií]ctor\s+manuel\b/i, canonical: "V\xEDctor Manuel" },
+      { pattern: /^v[ií]ctor\s+hugo\b/i, canonical: "V\xEDctor Hugo" },
+      { pattern: /^jorge\s+enrique\b/i, canonical: "Jorge Enrique" },
+      { pattern: /^jorge\s+iv[aá]n\b/i, canonical: "Jorge Iv\xE1n" },
+      { pattern: /^jorge\s+eli[eé]cer\b/i, canonical: "Jorge Eli\xE9cer" },
+      { pattern: /^nelson\s+enrique\b/i, canonical: "Nelson Enrique" },
+      { pattern: /^gustavo\s+adolfo\b/i, canonical: "Gustavo Adolfo" },
+      { pattern: /^h[eé]ctor\s+fabio\b/i, canonical: "H\xE9ctor Fabio" },
+      { pattern: /^fabio\s+nelson\b/i, canonical: "Fabio Nelson" },
+      { pattern: /^javier\s+orlando\b/i, canonical: "Javier Orlando" },
+      { pattern: /^c[eé]sar\s+augusto\b/i, canonical: "C\xE9sar Augusto" },
+      { pattern: /^julio\s+c[eé]sar\b/i, canonical: "Julio C\xE9sar" },
+      { pattern: /^mario\s+fernando\b/i, canonical: "Mario Fernando" },
+      { pattern: /^edgar\s+eduardo\b/i, canonical: "Edgar Eduardo" },
+      { pattern: /^camilo\s+andr[eé]s\b/i, canonical: "Camilo Andr\xE9s" },
+      { pattern: /^felipe\s+andr[eé]s\b/i, canonical: "Felipe Andr\xE9s" },
+      { pattern: /^santiago\s+andr[eé]s\b/i, canonical: "Santiago Andr\xE9s" },
+      { pattern: /^daniel\s+felipe\b/i, canonical: "Daniel Felipe" }
     ];
     FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
       "jeannette",
@@ -21054,9 +21161,6 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
       const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA"));
-      if (res.followUpQuestionText) {
-        setLatestDmFollowUpMessage(userId, res.followUpQuestionText);
-      }
       return {
         toolType: isCompanyReport ? "empresa" : "cedula",
         resultJson: {
@@ -21286,128 +21390,12 @@ INSTRUCCIONES DE REDACCI\xD3N:
   }
   return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")) ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
 }
-async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
-  const realName = await resolveRealName(userId, rawName);
-  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-  const timeSalutation = getGreetingByTime4();
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  const compositeOrFirst = extractFirstName(realName);
-  const trustedContact = findTrustedContact(userId, rawName || realName);
-  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador";
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa";
-  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani;
-  let displayName = "";
-  if (isEduardo) {
-    displayName = "Eduardo";
-  } else if (isJani) {
-    displayName = "Jani";
-  } else if (isFamilyOrTrusted && trustedContact) {
-    displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
-  } else {
-    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
-    if (!canonicalComposite && displayName.includes(" ")) {
-      displayName = displayName.split(" ")[0];
-    }
-  }
-  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
-  const history = await getOrLoadDmHistory(userId);
-  const isFirstTurn = history.length === 0;
-  const cleanPayload = (payloadText || "").trim();
-  const isCompanyVerification = toolType === "empresa" || cleanPayload.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA");
-  const { buildWinningGoogleReviewMessage: buildWinningGoogleReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-  const reviewSection = isEduardo || isJani || isFamilyOrTrusted || isCompanyVerification ? "" : `
-
-${buildWinningGoogleReviewMessage2(displayName)}`;
-  const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
-  let payloadWithClosing = cleanPayload;
-  if (!payloadWithClosing.includes(closingTag)) {
-    payloadWithClosing = `${payloadWithClosing}
-
-${closingTag}${reviewSection}`;
-  } else if (!isEduardo && !isJani && !isFamilyOrTrusted && !isCompanyVerification && !payloadWithClosing.includes("CctNbwU6UpX5EBM/review")) {
-    payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
-  }
-  if (!success) {
-    if (payloadText && payloadText.trim()) {
-      if (isEduardo) {
-        return isFirstTurn && !payloadWithClosing.startsWith("\xA1") ? `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
-
-${payloadWithClosing}` : payloadWithClosing;
-      }
-      if (isJani) {
-        return isFirstTurn && !payloadWithClosing.startsWith("\xA1") ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
-
-${payloadWithClosing}` : payloadWithClosing;
-      }
-      if (isFamilyOrTrusted) {
-        return isFirstTurn && !payloadWithClosing.startsWith("\xA1") ? `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el detalle del reporte solicitado:
-
-${payloadWithClosing}` : payloadWithClosing;
-      }
-      if (isFirstTurn && !payloadWithClosing.startsWith("\xA1")) {
-        const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
-
-`;
-        return greetingHeader + payloadWithClosing;
-      } else {
-        return payloadWithClosing;
-      }
-    }
-    if (isEduardo) {
-      return `Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
-    }
-    if (isJani) {
-      return `Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
-    }
-    if (isFamilyOrTrusted) {
-      return `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
-    }
-    return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
-  }
-  if (isEduardo) {
-    if (!isFirstTurn || payloadWithClosing.startsWith("\xA1") || /a\s+tu\s+disposici[oó]n/i.test(payloadWithClosing)) {
-      return payloadWithClosing;
-    }
-    return `\xA1${timeSalutation}, Eduardo! A tu disposici\xF3n:
-
-${payloadWithClosing}`;
-  }
-  if (isJani) {
-    if (!isFirstTurn || payloadWithClosing.startsWith("\xA1") || /qu[eé]\s+gusto\s+saludarte/i.test(payloadWithClosing)) {
-      return payloadWithClosing;
-    }
-    return `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte:
-
-${payloadWithClosing}`;
-  }
-  if (isFamilyOrTrusted) {
-    if (!isFirstTurn || payloadWithClosing.startsWith("\xA1")) {
-      return payloadWithClosing;
-    }
-    return `\xA1${timeSalutation}, ${displayName}! Con todo gusto. Aqu\xED tienes el reporte solicitado:
-
-${payloadWithClosing}`;
-  }
-  if (isFirstTurn) {
-    if (payloadWithClosing.startsWith("\xA1")) {
-      return payloadWithClosing;
-    }
-    const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
-
-Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra inmobiliaria:
-
-`;
-    return greetingHeader + payloadWithClosing;
-  } else {
-    if (payloadWithClosing.startsWith("\xA1") || payloadWithClosing.startsWith("\u{1F6E1}\uFE0F") || payloadWithClosing.startsWith("\u{1F194}") || payloadWithClosing.startsWith("\u{1F3EC}")) {
-      return payloadWithClosing;
-    }
-    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial como un beneficio de cortes\xEDa de *VECY BIENES RA\xCDCES*:
-
-`;
-    return politeHeader + payloadWithClosing;
-  }
+function formatPoliteToolDelivery(rawAiResponse, userName, userId, customGuidance, _legacyArg) {
+  const isLegacyToolType = typeof userId === "string" && ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
+  const effectiveResponse = isLegacyToolType && typeof customGuidance === "string" ? customGuidance : rawAiResponse;
+  if (!effectiveResponse) return "";
+  let cleaned = effectiveResponse.trim();
+  return cleaned;
 }
 function stripLeadingGreetingsAndCourtesies(text2) {
   let cleaned = (text2 || "").trim();
@@ -21538,8 +21526,10 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador");
   const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa");
   const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const compositeOrFirst = extractFirstName(realName);
+  const introducedName = extractIntroducedName(clean);
+  const effectiveRawName = introducedName || realName;
+  const nameInfo = resolveNameAndGender(effectiveRawName, timeSalutation);
+  const compositeOrFirst = extractFirstName(effectiveRawName);
   let displayName = "";
   if (isEduardo) {
     displayName = "Eduardo";
@@ -21550,10 +21540,10 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   } else if (isFamilyOrTrusted && trustedContact) {
     displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
   } else {
-    const canonicalComposite = getCanonicalCompositeName(realName);
-    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
-    if (!canonicalComposite && displayName.includes(" ")) {
-      displayName = displayName.split(" ")[0];
+    const canonicalComposite = getCanonicalCompositeName(effectiveRawName);
+    displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
+    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
+      displayName = "";
     }
   }
   try {
@@ -21653,6 +21643,19 @@ ${isEduardo || isJani ? `- Para Eduardo o Jani: Entrega la informaci\xF3n 100% d
 ` : `- Para Usuarios o Agentes Externos: Confirma que S\xCD hay match, describe el perfil del cruce SIN revelar el tel\xE9fono ni el nombre del usuario de la otra punta, entrega el c\xF3digo de match (ej. #M15649) e ind\xEDcale comunicarse al +57 316 656 9719 mencionando ese c\xF3digo para coordinar la mediaci\xF3n colaborativa 40/20/40.
 `}
 ===================================================
+PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):
+===================================================
+- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empat\xEDa y complicidad profesional ("t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFqu\xE9 buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fr\xEDa o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RA\xCDCES.
+- INTERLOCUTOR Y G\xC9NERO GRAMATICAL: "${displayName || "Colega (nombre a\xFAn no identificado)"}". G\xE9nero detectado: ${nameInfo.isFemale ? "FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)" : "MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)"}.
+- REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), \xDASALO SIEMPRE COMPLETO de forma fluida y org\xE1nica. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce a\xFAn (es un n\xFAmero de tel\xE9fono o saludo suelto), sal\xFAdalo con calidez y hazle una pregunta simp\xE1tica para saber su nombre y c\xF3mo prefiere que lo llames.
+- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar org\xE1nicamente cualquiera de los cientos de emojis disponibles en Unicode. Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar (expresiones de calidez \u{1F60A}, ideas \u{1F4A1}, an\xE1lisis \u{1F914}, hogares \u{1F3E1}\u{1F3E2}, celebraci\xF3n \u{1F389}, documentos \u{1F4C4}, acuerdos \u{1F91D}, gui\xF1os \u{1F609}, notas \u{1F4DD}, etc.). Cero listas cerradas o restricciones r\xEDgidas.
+- CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MEN\xDAS R\xCDGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "informaci\xF3n", "de qu\xE9 trata", etc.), act\xFAa con la inteligencia conversacional de un asistente de nivel mundial:
+  1. Saluda amablemente con calidez humana y tuteo cercano.
+  2. Deduce con empat\xEDa la situaci\xF3n en una o dos frases breves y cautivadoras.
+  3. Hazle preguntas inteligentes para perfilarlo (preguntarle su nombre si no se sabe, si es colega inmobiliario o cliente buscando comprar/vender/arrendar, y en qu\xE9 zona o ciudad).
+  4. Mant\xE9n la conversaci\xF3n siempre guiada hacia VECY Bienes Ra\xEDces de manera natural, atractiva y orientada a soluciones.
+
+===================================================
 IDENTIDAD Y TRATO AL INTERLOCUTOR:
 ===================================================
 ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s recibiendo mensaje desde la l\xEDnea oficial de br\xF3ker (+57 316 656 9719). Tr\xE1talos con la naturalidad de compa\xF1era de equipo y mano derecha hacia tus creadores, preguntando con amabilidad y naturalidad con cu\xE1l de los dos est\xE1s hablando si no lo han especificado.
@@ -21663,8 +21666,7 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 `}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
 - SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
 - NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
-- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.
-- LIBERTAD Y RIQUEZA DE EMOJIS (IA PURA): Expr\xE9sate con gran variedad y libertad de emojis de WhatsApp (\u{1F914}, \u{1F4A1}, \u270D\uFE0F, \u{1F4C4}, \u2696\uFE0F, \u{1F6E1}\uFE0F, \u{1F9D0}, \u{1F91D}, \u{1F680}, \u{1F3E1}, \u{1F3E2}, \u{1F4B0}, \u{1F44D}, \u{1F44C}, \u{1F3AF}, etc.) seg\xFAn el sentido de tu mensaje o lo que quieras indagar, sin encasillarte siempre en los mismos.`;
+- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
     const messages2 = [
       { role: "system", content: systemPrompt }
     ];
@@ -21672,20 +21674,35 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       const cleanTurnContent = turn.role === "assistant" ? turn.content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim() : turn.content;
       messages2.push({ role: turn.role, content: cleanTurnContent });
     }
+    let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    if (mediaOptions?.imageBuffer) {
+      userPromptContent += `
+[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual de la imagen (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas, datos societarios, recibos, facturas, comprobantes o documentos. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit' con el NIT o raz\xF3n social para entregar todos los datos oficiales disponibles (Raz\xF3n Social, NIT, Estado de matr\xEDcula, Direcci\xF3n comercial, Tel\xE9fono, Actividad econ\xF3mica CIIU y Representante Legal).]`;
+    }
+    if (mediaOptions?.pdfBuffer) {
+      userPromptContent += `
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visi\xF3n multimodal y procesa la consulta de forma integral.]`;
+    }
     messages2.push({
       role: "user",
-      content: `Mensaje de ${realName} (${userId}): "${clean}"`
+      content: userPromptContent
     });
     let llmRes;
     try {
       llmRes = await invokeLLM({
         messages: messages2,
-        tools: JANIA_DM_TOOLS
+        tools: JANIA_DM_TOOLS,
+        imageBuffer: mediaOptions?.imageBuffer,
+        pdfBuffer: mediaOptions?.pdfBuffer,
+        pdfMimeType: mediaOptions?.pdfMimeType
       });
     } catch (toolsErr) {
       console.warn(`[dmHandler] \u26A0\uFE0F Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
       llmRes = await invokeLLM({
-        messages: messages2
+        messages: messages2,
+        imageBuffer: mediaOptions?.imageBuffer,
+        pdfBuffer: mediaOptions?.pdfBuffer,
+        pdfMimeType: mediaOptions?.pdfMimeType
       });
     }
     let reply = "";
@@ -21721,6 +21738,14 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
     }
     reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
     reply = sanitizeResponseMarkdown(reply.trim());
+    const generalCourtesyRegex = /(?:(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?))+/gi;
+    const courtesyMatches = reply.match(generalCourtesyRegex);
+    if (courtesyMatches && courtesyMatches.length > 1) {
+      reply = reply.replace(generalCourtesyRegex, "").trim();
+      reply = `${reply}
+
+Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
+    }
     if (!reply) {
       if (isEduardo) {
         reply = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
@@ -21920,14 +21945,24 @@ ${verifResult.reportText}`;
         appendDmHistory(userId, "assistant", qMsg);
         return qMsg;
       }
+      if (/(?:c[oó]mo\s+funciona|info|informaci[oó]n|qu[eé]\s+es|de\s+qu[eé]\s+trata|ayuda)/i.test(cleanLower)) {
+        const nameGreeting = displayName ? `, ${displayName}` : "";
+        const askName = !displayName ? " \xBFC\xF3mo es tu nombre para saber con qui\xE9n tengo el gusto de hablar?" : "";
+        const infoMsg = `\xA1${timeGreeting}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* cruzamos ofertas y demandas inmobiliarias al instante, emitimos facturas de predial, certificados IDU y verificamos seguridad para tus visitas sin costo alguno.${askName} \xBFEres colega asesor inmobiliario o est\xE1s buscando alguna propiedad en especial para colaborarte hoy? \u{1F91D}\u2728`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", infoMsg);
+        return infoMsg;
+      }
       if (/muchas gracias|gracias/i.test(cleanLower)) {
-        const gMsg = `Con todo el gusto, ${displayName}. Te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) y calificar nuestro servicio.`;
+        const gMsg = `\xA1Con todo el gusto${displayName ? `, ${displayName}` : ""}! \u{1F91D}\u2728 Te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) y calificar nuestro servicio. \xBFHay algo m\xE1s en lo que te pueda apoyar hoy?`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", gMsg);
         return gMsg;
       }
-      if (/^hola\b/i.test(cleanLower)) {
-        const hMsg = `Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES*. \xA1${timeGreeting}, ${displayName}! \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente?`;
+      if (/^hola\b|^buenas\b|^buenos\s+d[ií]as\b|^buenas\s+tardes\b|^buenas\s+noches\b/i.test(cleanLower)) {
+        const nameGreeting = displayName ? `, ${displayName}` : "";
+        const askName = !displayName ? " \xBFC\xF3mo es tu nombre para poder saludarte como se debe?" : "";
+        const hMsg = `\xA1${timeGreeting}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu colega y asistente inmobiliaria con IA de *VECY BIENES RA\xCDCES*.${askName} \xBFEres colega asesor inmobiliario o te gustar\xEDa consultar alguna propiedad o tr\xE1mite hoy? \u{1F3E1}\u2728`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", hMsg);
         return hMsg;
@@ -22044,11 +22079,11 @@ var init_dmHandler = __esm({
           },
           {
             name: "consultar_empresa_o_nit",
-            description: "Consulta y valida la identidad oficial y antecedentes de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI).",
+            description: "Consulta y valida la identidad oficial de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + C\xE1mara de Comercio + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI). Devuelve Raz\xF3n Social, NIT, Estado de matr\xEDcula, Direcci\xF3n comercial, Tel\xE9fono, Actividad econ\xF3mica (CIIU) y Representante Legal Principal.",
             parameters: {
               type: "OBJECT",
               properties: {
-                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social de la empresa" }
+                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social de la empresa detectada en texto o imagen" }
               },
               required: ["consultaEmpresa"]
             }
@@ -23095,18 +23130,22 @@ ${quotedNote}` : quotedNote;
           }
           if (rawMsg?.imageMessage && !imageBuffer) {
             try {
-              const media = await downloadMediaMessage(msg, "buffer", {});
-              imageBuffer = media.toString("base64");
-              mainMsg = msg;
+              const media = await downloadMediaSafely(msg, "image");
+              if (media && media.length > 0) {
+                imageBuffer = media.toString("base64");
+                mainMsg = msg;
+              }
             } catch (e) {
             }
           }
           if (rawMsg?.documentMessage && !pdfBuffer) {
             try {
-              const media = await downloadMediaMessage(msg, "buffer", {});
-              pdfBuffer = media.toString("base64");
-              pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
-              mainMsg = msg;
+              const media = await downloadMediaSafely(msg, "document");
+              if (media && media.length > 0) {
+                pdfBuffer = media.toString("base64");
+                pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                mainMsg = msg;
+              }
             } catch (e) {
             }
           }
@@ -25556,18 +25595,21 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         }
         return { success: false };
       }
-      console.log(`[queryPoliciaNacional] Intento ${attempt}: Resolviendo captcha...`);
-      const captcha = await solver.recaptcha({
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Resolviendo captcha (timeout m\xE1x 35s)...`);
+      const captchaPromise = solver.recaptcha({
         googlekey: "6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH",
         pageurl: "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
       });
+      const timeoutPromise = new Promise(
+        (_, reject) => setTimeout(() => reject(new Error("Timeout de 35s en 2Captcha")), 35e3)
+      );
+      const captcha = await Promise.race([captchaPromise, timeoutPromise]).catch((cErr) => {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: Error o timeout en 2Captcha:`, cErr?.message || cErr);
+        return null;
+      });
       if (!captcha || !captcha.data) {
         console.warn(`[queryPoliciaNacional] Intento ${attempt}: 2Captcha no retorn\xF3 token`);
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 1500));
-          continue;
-        }
-        return { success: false };
+        return { success: false, cedula: sanitizedDoc, tipoDoc };
       }
       const btnMatch = res3.body.match(/<button[^>]+name="([^"]+)"[^>]*>[^<]*<span[^>]*>\s*Consultar\s*<\/span>/i) || res3.body.match(/name="([^"]+)"[^>]*type="submit"/i);
       const submitButtonName = btnMatch ? btnMatch[1] : "j_idt17";
@@ -26716,16 +26758,59 @@ async function postRuesEncrypted(path14, payload, timeoutMs = 5e3) {
     clearTimeout(timer);
   }
 }
-function selectPrincipalRuesRecord(registros, targetNit) {
+function normalizeCorporateName(raw) {
+  if (!raw) return "";
+  let clean = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, " Y ").replace(/[^A-Z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const corporateTokensRegex = /\b(?:SOCIEDAD POR ACCIONES SIMPLIFICADAS?|SOCIEDADES POR ACCIONES SIMPLIFICADAS?|SOCIEDAD ANONIMA|SOCIEDAD LIMITADA|SOCIEDAD EN COMANDITA POR ACCIONES|SOCIEDAD EN COMANDITA SIMPLE|SOCIEDAD EN COMANDITA|SOCIEDAD COLECTIVA|EMPRESA UNIPERSONAL|EMPRESA SOCIAL DEL ESTADO|EMPRESA DE SERVICIOS PUBLICOS|COMERCIALIZADORA INTERNACIONAL|DE BENEFICIO E INTERES COLECTIVO|BENEFICIO E INTERES COLECTIVO|ENTIDAD SIN ANIMO DE LUCRO|SUCURSAL(?: EN)? COLOMBIA|EN LIQUIDACION(?: JUDICIAL)?|EN REESTRUCTURACION|EN CONCORDATO|S A S|SAS|S A|SA|LTDA|LIMITADA|S C A|SCA|S EN C POR A|S EN C|E U|EU|E S E|ESE|E S P|ESP|B I C|BIC|C I|CI|Y CIA|CIA|Y COMPANIA|COMPANIA)\b/gi;
+  let prev = "";
+  while (prev !== clean) {
+    prev = clean;
+    clean = clean.replace(corporateTokensRegex, " ").replace(/\s+/g, " ").trim();
+  }
+  return clean;
+}
+function evaluateRazonSocialMatch(query, recordRazon, recordSigla) {
+  const cleanQ = (query || "").trim().toUpperCase();
+  const cleanR = (recordRazon || "").trim().toUpperCase();
+  const cleanS = (recordSigla || "").trim().toUpperCase();
+  if (cleanR === cleanQ || cleanS && cleanS === cleanQ) return 100;
+  if (cleanR.includes(cleanQ) || cleanS && cleanS.includes(cleanQ)) {
+    const targetMatch = cleanR.includes(cleanQ) ? cleanR : cleanS;
+    const diffLength = targetMatch.length - cleanQ.length;
+    return 80 - Math.min(diffLength, 30);
+  }
+  return 0;
+}
+function selectPrincipalRuesRecord(registros, targetNit, targetRazon) {
   if (!Array.isArray(registros) || registros.length === 0) return null;
-  const scored = registros.map((reg) => {
+  const cleanTargetNit = (targetNit || "").replace(/\D/g, "").replace(/^0+/, "");
+  const cleanTargetRazon = (targetRazon || "").trim();
+  let eligibleRecords = registros;
+  if (!cleanTargetNit && cleanTargetRazon) {
+    const matchingRecords = registros.filter((reg) => {
+      const candRazon = String(reg.razon_social || reg.nombre || "").trim();
+      const candSigla = String(reg.sigla || "").trim();
+      const matchScore = evaluateRazonSocialMatch(cleanTargetRazon, candRazon, candSigla);
+      return matchScore > 0;
+    });
+    if (matchingRecords.length === 0) {
+      return null;
+    }
+    eligibleRecords = matchingRecords;
+  }
+  const scored = eligibleRecords.map((reg) => {
     let score = 0;
     const cat = String(reg.categoria || reg.categoria_matricula || "").toUpperCase();
     const est = String(reg.estado_matricula || "").toUpperCase();
     const org = String(reg.organizacion_juridica || "").toUpperCase();
     const regNit = String(reg.nit || reg.numero_identificacion || "").replace(/\D/g, "").replace(/^0+/, "");
-    const cleanTargetNit = (targetNit || "").replace(/\D/g, "").replace(/^0+/, "");
-    if (cleanTargetNit && regNit === cleanTargetNit) score += 100;
+    const candRazon = String(reg.razon_social || reg.nombre || "").trim();
+    const candSigla = String(reg.sigla || "").trim();
+    if (cleanTargetNit && regNit === cleanTargetNit) score += 1e3;
+    if (cleanTargetRazon) {
+      const matchScore = evaluateRazonSocialMatch(cleanTargetRazon, candRazon, candSigla);
+      score += matchScore * 10;
+    }
     if (cat.includes("SOCIEDAD") || cat.includes("PRINCIPAL") || cat.includes("PERSONA JURIDICA")) {
       score += 50;
     }
@@ -26739,7 +26824,7 @@ function selectPrincipalRuesRecord(registros, targetNit) {
     return { reg, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  return scored[0]?.reg || registros[0];
+  return scored[0]?.reg || null;
 }
 function classifyRepresentantesLegales(vinculosRaw, facultadesHtml) {
   if (!Array.isArray(vinculosRaw) || vinculosRaw.length === 0) {
@@ -26865,7 +26950,7 @@ function extractEstablecimientos(registros, mainRecord) {
   }
   return list;
 }
-async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500) {
+async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500, targetRazon) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -26886,9 +26971,10 @@ async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500) {
       const listB = byNitRes && byNitRes.ok ? await byNitRes.json().catch(() => []) : [];
       registros = [...Array.isArray(listA) ? listA : [], ...Array.isArray(listB) ? listB : []];
     } else if (cleanRazon && cleanRazon.length >= 3) {
-      const safeRazon = cleanRazon.toUpperCase().replace(/'/g, "''");
+      const coreSearchTerm = normalizeCorporateName(cleanRazon) || cleanRazon.toUpperCase().trim();
+      const safeRazon = coreSearchTerm.replace(/'/g, "''");
       const whereClause = `upper(razon_social) like '%${safeRazon}%'`;
-      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=15`, {
+      const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=20`, {
         headers: { Accept: "application/json" },
         signal: controller.signal
       }).catch(() => null);
@@ -26900,7 +26986,11 @@ async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500) {
     if (!Array.isArray(registros) || registros.length === 0) {
       return null;
     }
-    const mainRecord = selectPrincipalRuesRecord(registros, baseNit || void 0);
+    const mainRecord = selectPrincipalRuesRecord(
+      registros,
+      baseNit || void 0,
+      baseNit ? void 0 : targetRazon || cleanRazon
+    );
     if (!mainRecord) return null;
     const codCamara = String(mainRecord.codigo_camara || mainRecord.cod_camara || "04").trim();
     const matricula = String(mainRecord.matricula || "").trim();
@@ -26972,6 +27062,8 @@ async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500) {
       representantesSuplentes: [],
       todosRepresentantes: representantesPrincipales,
       establecimientos,
+      direccionComercial: String(mainRecord.direccion_comercial || mainRecord.dir_comercial || mainRecord.direccion || "").trim() || void 0,
+      telefonoComercial: String(mainRecord.telefono_comercial_1 || mainRecord.telefono_comercial || mainRecord.telefono_1 || mainRecord.telefono || "").trim() || void 0,
       source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras / Datos Abiertos)"
     };
   } catch (_) {
@@ -26988,8 +27080,9 @@ async function queryRuesDirectHttp(query) {
   if (baseNit.length === 10 && /^[89]/.test(baseNit)) {
     baseNit = baseNit.slice(0, 9);
   }
-  const cleanRazon = clean.replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|constructora|inmobiliaria|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ").replace(/\s+/g, " ").trim();
-  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${(cleanRazon || clean).toUpperCase()}`;
+  const cleanRazon = clean.replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ").replace(/\s+/g, " ").trim();
+  const targetRazonName = cleanRazon || clean;
+  const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${targetRazonName.toUpperCase()}`;
   const cached = ruesCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < RUES_CACHE_TTL_MS) {
     return cached.data;
@@ -27002,12 +27095,17 @@ async function queryRuesDirectHttp(query) {
     if (baseNit) {
       searchPayload = { nit: baseNit };
     } else {
-      searchPayload = { razon: (cleanRazon || clean).toUpperCase() };
+      const coreSearchTerm = normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
+      searchPayload = { razon: coreSearchTerm };
     }
     const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
     const registros = searchRes?.registros || [];
     if (Array.isArray(registros) && registros.length > 0) {
-      const mainRecord = selectPrincipalRuesRecord(registros, baseNit || void 0);
+      const mainRecord = selectPrincipalRuesRecord(
+        registros,
+        baseNit || void 0,
+        baseNit ? void 0 : targetRazonName
+      );
       if (mainRecord) {
         const codCamara = String(mainRecord.cod_camara || "04").trim();
         const matricula = String(mainRecord.matricula || "").trim();
@@ -27070,6 +27168,8 @@ async function queryRuesDirectHttp(query) {
           representantesSuplentes: classifiedReps.suplentes,
           todosRepresentantes: classifiedReps.todos,
           establecimientos,
+          direccionComercial: String(det.dir_comercial || det.direccion_comercial || det.direccion || mainRecord.dir_comercial || mainRecord.direccion_comercial || mainRecord.direccion || "").trim() || void 0,
+          telefonoComercial: String(det.tel_comercial_1 || det.telefono_comercial_1 || det.telefono_1 || det.telefono || mainRecord.tel_comercial_1 || mainRecord.telefono_comercial_1 || mainRecord.telefono_1 || mainRecord.telefono || "").trim() || void 0,
           source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras)"
         };
         ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
@@ -27079,7 +27179,12 @@ async function queryRuesDirectHttp(query) {
         return result;
       }
     }
-    const socrataResult = await queryDatosGovSocrataRues(baseNit, cleanRazon || clean);
+    const socrataResult = await queryDatosGovSocrataRues(
+      baseNit,
+      targetRazonName,
+      6500,
+      baseNit ? void 0 : targetRazonName
+    );
     if (socrataResult && socrataResult.found) {
       ruesCache.set(cacheKey, { data: socrataResult, timestamp: Date.now() });
       if (socrataResult.nit) {
@@ -27241,7 +27346,7 @@ async function getProcuraduriaEndpoint() {
     port: pgnEndpointCache.port
   };
 }
-function httpRequest(options, data) {
+function httpRequest(options, data, timeoutMs = 15e3) {
   return new Promise((resolve, reject) => {
     const rawHeaders = options.headers;
     const servername = rawHeaders?.Host || rawHeaders?.host || "apps.procuraduria.gov.co";
@@ -27251,8 +27356,9 @@ function httpRequest(options, data) {
       res.on("end", () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
     });
     req.on("error", reject);
-    req.setTimeout(12e3, () => {
-      req.destroy(new Error("Timeout de conexi\xF3n"));
+    const timeout = options.timeout || timeoutMs;
+    req.setTimeout(timeout, () => {
+      req.destroy(new Error(`Timeout de conexi\xF3n (${timeout}ms)`));
     });
     if (data) req.write(data);
     req.end();
@@ -27453,7 +27559,7 @@ async function getAdresEndpoint() {
   if (!adresEndpointCache || Date.now() - adresEndpointCache.lastChecked > 3e4) {
     const isTunnelOpen = await new Promise((resolve) => {
       const sock = new net.Socket();
-      sock.setTimeout(400);
+      sock.setTimeout(1200);
       sock.once("connect", () => {
         sock.destroy();
         resolve(true);
@@ -27533,16 +27639,22 @@ async function queryAdres(tipoDoc, numDoc) {
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
   const cached = identityCache.get(cacheKey) || identityCache.get(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL2) {
-    return {
-      success: true,
-      officialName: cached.fullName,
-      eps: cached.eps,
-      estado: cached.estado,
-      regimen: cached.regimen,
-      documentType: mappedTipo,
-      documentNumber: cleanNum,
-      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Cach\xE9)"
-    };
+    const isGenericEps = !cached.eps || cached.eps.toLowerCase().includes("registrado y activo") || cached.eps.toLowerCase().includes("aseguramiento en salud");
+    if (isGenericEps) {
+      identityCache.delete(cacheKey);
+      identityCache.delete(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
+    } else {
+      return {
+        success: true,
+        officialName: cached.fullName,
+        eps: cached.eps,
+        estado: cached.estado,
+        regimen: cached.regimen,
+        documentType: mappedTipo,
+        documentNumber: cleanNum,
+        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Cach\xE9)"
+      };
+    }
   }
   try {
     const ep = await getAdresEndpoint();
@@ -27556,7 +27668,8 @@ async function queryAdres(tipoDoc, numDoc) {
       port: ep.port,
       path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
       method: "GET",
-      headers: commonHeaders
+      headers: commonHeaders,
+      timeout: 15e3
     });
     const c1 = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
     const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || "";
@@ -27583,7 +27696,8 @@ async function queryAdres(tipoDoc, numDoc) {
         "Content-Type": "application/x-www-form-urlencoded",
         "Content-Length": Buffer.byteLength(postData),
         "Cookie": c1.join("; ")
-      }
+      },
+      timeout: 15e3
     }, postData);
     const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
     const allCookies = [...c1, ...c2].join("; ");
@@ -27605,7 +27719,8 @@ async function queryAdres(tipoDoc, numDoc) {
       headers: {
         ...commonHeaders,
         "Cookie": allCookies
-      }
+      },
+      timeout: 15e3
     });
     if (r3.statusCode !== 200 || r3.body.includes("Error de servidor")) {
       return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "Intermitencia en el servidor ADRES" };
@@ -27628,6 +27743,22 @@ async function queryAdres(tipoDoc, numDoc) {
       estado = lines[estadoIdx + offset] || "";
       eps = lines[estadoIdx + offset + 1] || "";
       regimen = lines[estadoIdx + offset + 2] || "";
+    }
+    if (!eps || eps.length < 3) {
+      const entidadIdx = lines.findIndex((l) => {
+        const u = l.toUpperCase();
+        return u === "ENTIDAD" || u === "ENTIDAD PROMOTORA" || u.includes("ADMINISTRADORA");
+      });
+      if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
+        eps = lines[entidadIdx + 1];
+      }
+    }
+    if (!eps || eps.length < 3) {
+      const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+      const directMatch = r3.body.match(epsRegex);
+      if (directMatch) {
+        eps = directMatch[0];
+      }
     }
     const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, " ").trim();
     if (!fullNameRaw) {
@@ -28060,7 +28191,9 @@ function formatCompactIdentityVerificationReport(params) {
     actividadesEconomicas,
     representantePrincipal,
     representantesSuplentes,
-    establecimientos
+    establecimientos,
+    direccionComercial,
+    telefonoComercial
   } = params;
   const resolvedSuccess = success ?? idValidated ?? false;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
@@ -28093,6 +28226,14 @@ function formatCompactIdentityVerificationReport(params) {
 `;
     if (matricula) {
       reportText2 += `\u{1F522} *N\xFAmero de Matr\xEDcula:* ${matricula}
+`;
+    }
+    if (direccionComercial) {
+      reportText2 += `\u{1F4CD} *Direcci\xF3n Comercial:* ${direccionComercial}
+`;
+    }
+    if (telefonoComercial) {
+      reportText2 += `\u{1F4DE} *Tel\xE9fono:* ${telefonoComercial}
 `;
     }
     if (fechaMatricula) {
@@ -28165,7 +28306,10 @@ function formatCompactIdentityVerificationReport(params) {
 `;
     }
     reportText2 += `
-\u2696\uFE0F *_Publicidad Mercantil y Datos P\xFAblicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de informaci\xF3n p\xFAblica mercantil (RUES) y datos p\xFAblicos de representaci\xF3n legal bajo principios de finalidad leg\xEDtima, debida diligencia y seguridad jur\xEDdica."`;
+\u2696\uFE0F *_Publicidad Mercantil y Datos P\xFAblicos (Art. 26 C. de Co. y Ley 1581/12):_* "Consulta oficial de informaci\xF3n p\xFAblica mercantil (RUES) y datos p\xFAblicos de representaci\xF3n legal bajo principios de finalidad leg\xEDtima, debida diligencia y seguridad jur\xEDdica."
+
+`;
+    reportText2 += `Servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
     return reportText2.trim();
   }
   let reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
@@ -28505,7 +28649,9 @@ async function queryEmpresaOrNit(query, userId) {
     actividadesEconomicas,
     representantePrincipal,
     representantesSuplentes,
-    establecimientos
+    establecimientos,
+    direccionComercial: ruesLive?.direccionComercial,
+    telefonoComercial: ruesLive?.telefonoComercial
   });
   const followUpQuestionText = buildCompanyFollowUpQuestion(representantePrincipal, representantesSuplentes);
   return {
@@ -28525,6 +28671,8 @@ async function queryEmpresaOrNit(query, userId) {
     fechaMatricula,
     fechaRenovacion,
     ultimoAnoRenovado,
+    direccionComercial: ruesLive?.direccionComercial,
+    telefonoComercial: ruesLive?.telefonoComercial,
     ciiuPrincipal,
     actividadesEconomicas,
     representantePrincipal,
@@ -28567,7 +28715,11 @@ async function verifySingleDocumentInternal(item) {
   const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName || cachedAdres?.fullName;
   if (cachedName) {
     const isAdresSupported2 = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
-    if (!cachedEps && isAdresSupported2) {
+    const isGenericEps = !cachedEps || cachedEps.toLowerCase().includes("registrado y activo") || cachedEps.toLowerCase().includes("aseguramiento en salud");
+    if (isGenericEps && isAdresSupported2) {
+      identityCache.delete(adresCacheKey);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
@@ -28629,7 +28781,9 @@ async function verifySingleDocumentInternal(item) {
     const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
     if (shouldQueryPolicia) {
       cgrRes = await queryContraloria(effectiveTipoDoc, cedula).catch(() => null);
-      ponalRes = await queryPoliciaNacional(effectiveTipoDoc, cedula).catch(() => null);
+      const ponalPromise = queryPoliciaNacional(effectiveTipoDoc, cedula);
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 35e3));
+      ponalRes = await Promise.race([ponalPromise, timeoutPromise]).catch(() => null);
     } else {
       ponalRes = {
         valid: false,
@@ -28790,7 +28944,7 @@ function buildConsolidatedReportText(results) {
   reportText += `\u2696\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"
 
 `;
-  reportText += `Servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
+  reportText += `Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
   return reportText;
 }
 async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false, userId, explicitItems) {
@@ -28866,7 +29020,11 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
   const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName || cachedAdres?.fullName;
   if (cachedName) {
     const isAdresSupported = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
-    if (!cachedEps && isAdresSupported) {
+    const isGenericEps = !cachedEps || cachedEps.toLowerCase().includes("registrado y activo") || cachedEps.toLowerCase().includes("aseguramiento en salud");
+    if (isGenericEps && isAdresSupported) {
+      identityCache.delete(adresCacheKey);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
+      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
@@ -28935,7 +29093,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
     if (shouldQueryPolicia) {
       cgrRes = await queryContraloria(currentTipoDoc, cedula).catch(() => null);
-      ponalRes = await queryPoliciaNacional(currentTipoDoc, cedula).catch(() => null);
+      const ponalPromise = queryPoliciaNacional(currentTipoDoc, cedula);
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 35e3));
+      ponalRes = await Promise.race([ponalPromise, timeoutPromise]).catch(() => null);
     } else {
       ponalRes = {
         valid: false,
@@ -29031,7 +29191,9 @@ El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad 
         reportText += `\u{1F4CC} *Orientaci\xF3n de Verificaci\xF3n:*${customGuidance}
 \u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.
 
-\u2696\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"`;
+\u2696\uFE0F *_Habeas Data (Ley 1581/12):_* "Validaci\xF3n bajo principios de finalidad leg\xEDtima, seguridad y confidencialidad. Tratamiento de datos provistos voluntariamente por el titular cumplimiento legal *_Art. 15 de la C.P._*"
+
+Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
       }
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, false);
