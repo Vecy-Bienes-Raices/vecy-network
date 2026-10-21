@@ -498,3 +498,104 @@ export function appendCirculoHistory(userId: string, role: "user" | "assistant",
   circuloConversationHistory.set(userId, history);
 }
 
+// ─── Memoria y Persistencia de Sesión Empresarial RUES (v33.29) ───────────────
+export interface CompanySessionData {
+  nit: string;
+  dv?: string;
+  razonSocial: string;
+  camaraComercio?: string;
+  matricula?: string;
+  estado?: string;
+  representantePrincipal?: {
+    nombre: string;
+    numeroIdentificacion: string;
+    numeroFormateado?: string;
+    tipoDocumento: string;
+    cargo?: string;
+    esPrincipal?: boolean;
+  };
+  representantes?: Array<{
+    nombre: string;
+    numeroIdentificacion: string;
+    numeroFormateado?: string;
+    tipoDocumento: string;
+    cargo?: string;
+    esPrincipal?: boolean;
+  }>;
+  timestamp: number;
+}
+
+export const companySessionMap = new Map<string, CompanySessionData>();
+
+export async function setCompanySession(userId: string, data: Omit<CompanySessionData, "timestamp">): Promise<void> {
+  if (!userId) return;
+  const cleanJid = cleanSessionJid(userId);
+  const sessionEntry: CompanySessionData = {
+    ...data,
+    timestamp: Date.now()
+  };
+  companySessionMap.set(cleanJid, sessionEntry);
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `company:${cleanJid}`;
+      await db.insert(pendingSessions).values({
+        jid: dbKey,
+        sessionData: sessionEntry,
+        updatedAt: new Date()
+      }).onConflictDoUpdate({
+        target: pendingSessions.jid,
+        set: {
+          sessionData: sessionEntry,
+          updatedAt: new Date()
+        }
+      });
+    }
+  } catch (err: any) {
+    console.warn("[setCompanySession] Error persistiendo sesión empresarial en BD:", err?.message);
+  }
+}
+
+export async function getCompanySession(userId: string): Promise<CompanySessionData | null> {
+  if (!userId) return null;
+  const cleanJid = cleanSessionJid(userId);
+
+  // 1. Memoria rápida en RAM (TTL 24 horas)
+  const inMemory = companySessionMap.get(cleanJid);
+  if (inMemory && Date.now() - inMemory.timestamp < 24 * 60 * 60 * 1000) {
+    return inMemory;
+  }
+
+  // 2. Restauración desde base de datos PostgreSQL si el proceso fue reiniciado
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `company:${cleanJid}`;
+      const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, dbKey)).limit(1);
+      if (existing && existing.sessionData) {
+        const data = existing.sessionData as any;
+        if (data && typeof data === "object") {
+          companySessionMap.set(cleanJid, data);
+          return data;
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[getCompanySession] Error recuperando sesión empresarial en BD:", err?.message);
+  }
+
+  return null;
+}
+
+export async function clearCompanySession(userId: string): Promise<void> {
+  if (!userId) return;
+  const cleanJid = cleanSessionJid(userId);
+  companySessionMap.delete(cleanJid);
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.delete(pendingSessions).where(eq(pendingSessions.jid, `company:${cleanJid}`));
+    }
+  } catch (_) { }
+}

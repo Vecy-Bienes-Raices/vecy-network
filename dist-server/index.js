@@ -12719,6 +12719,38 @@ JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A par
 });
 
 // server/_core/jania/sessionManager.ts
+var sessionManager_exports = {};
+__export(sessionManager_exports, {
+  GREETED_TODAY: () => GREETED_TODAY,
+  analyzeSender: () => analyzeSender,
+  appendCirculoHistory: () => appendCirculoHistory,
+  appendConsultingHistory: () => appendConsultingHistory,
+  appendDmHistory: () => appendDmHistory,
+  checkAlreadyGreeted: () => checkAlreadyGreeted,
+  circuloConversationHistory: () => circuloConversationHistory,
+  cleanSessionJid: () => cleanSessionJid,
+  clearCompanySession: () => clearCompanySession,
+  companySessionMap: () => companySessionMap,
+  consultingConversationHistory: () => consultingConversationHistory,
+  deletePendingSession: () => deletePendingSession,
+  dmConversationHistory: () => dmConversationHistory,
+  getCirculoHistory: () => getCirculoHistory,
+  getCompanySession: () => getCompanySession,
+  getConsultingHistory: () => getConsultingHistory,
+  getContactPermanentDossier: () => getContactPermanentDossier,
+  getDmHistory: () => getDmHistory,
+  getLiveStats: () => getLiveStats,
+  getOrLoadDmHistory: () => getOrLoadDmHistory,
+  getPendingSession: () => getPendingSession,
+  getRecentChatHistory: () => getRecentChatHistory,
+  getStartOfTodayBogota: () => getStartOfTodayBogota,
+  hasGreetedUserToday: () => hasGreetedUserToday,
+  isSessionMuted: () => isSessionMuted,
+  muteSession: () => muteSession,
+  resolveRealName: () => resolveRealName,
+  setCompanySession: () => setCompanySession,
+  setPendingSession: () => setPendingSession
+});
 import { eq as eq6, and as and3, gte, desc, sql as sql5 } from "drizzle-orm";
 function cleanSessionJid(jid) {
   if (!jid) return "";
@@ -13099,7 +13131,72 @@ function appendCirculoHistory(userId, role, content) {
   if (history.length > 20) history.shift();
   circuloConversationHistory.set(userId, history);
 }
-var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory;
+async function setCompanySession(userId, data) {
+  if (!userId) return;
+  const cleanJid2 = cleanSessionJid(userId);
+  const sessionEntry = {
+    ...data,
+    timestamp: Date.now()
+  };
+  companySessionMap.set(cleanJid2, sessionEntry);
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `company:${cleanJid2}`;
+      await db.insert(pendingSessions).values({
+        jid: dbKey,
+        sessionData: sessionEntry,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).onConflictDoUpdate({
+        target: pendingSessions.jid,
+        set: {
+          sessionData: sessionEntry,
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("[setCompanySession] Error persistiendo sesi\xF3n empresarial en BD:", err?.message);
+  }
+}
+async function getCompanySession(userId) {
+  if (!userId) return null;
+  const cleanJid2 = cleanSessionJid(userId);
+  const inMemory = companySessionMap.get(cleanJid2);
+  if (inMemory && Date.now() - inMemory.timestamp < 24 * 60 * 60 * 1e3) {
+    return inMemory;
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `company:${cleanJid2}`;
+      const [existing] = await db.select().from(pendingSessions).where(eq6(pendingSessions.jid, dbKey)).limit(1);
+      if (existing && existing.sessionData) {
+        const data = existing.sessionData;
+        if (data && typeof data === "object") {
+          companySessionMap.set(cleanJid2, data);
+          return data;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[getCompanySession] Error recuperando sesi\xF3n empresarial en BD:", err?.message);
+  }
+  return null;
+}
+async function clearCompanySession(userId) {
+  if (!userId) return;
+  const cleanJid2 = cleanSessionJid(userId);
+  companySessionMap.delete(cleanJid2);
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.delete(pendingSessions).where(eq6(pendingSessions.jid, `company:${cleanJid2}`));
+    }
+  } catch (_) {
+  }
+}
+var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory, companySessionMap;
 var init_sessionManager = __esm({
   "server/_core/jania/sessionManager.ts"() {
     "use strict";
@@ -13112,6 +13209,7 @@ var init_sessionManager = __esm({
     consultingConversationHistory = /* @__PURE__ */ new Map();
     dmConversationHistory = /* @__PURE__ */ new Map();
     circuloConversationHistory = /* @__PURE__ */ new Map();
+    companySessionMap = /* @__PURE__ */ new Map();
   }
 });
 
@@ -27216,10 +27314,20 @@ async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500, t
 async function queryRuesDirectHttp(query) {
   const clean = (query || "").trim();
   if (!clean) return null;
-  const digitsMatch = clean.match(/\b(\d{7,10})(?:-\d)?\b/);
-  let baseNit = digitsMatch ? digitsMatch[1] : "";
-  if (baseNit.length === 10 && /^[89]/.test(baseNit)) {
-    baseNit = baseNit.slice(0, 9);
+  const dottedNitMatch = clean.match(/\b(\d{1,3}(?:\.\d{3}){2,3})(?:-(\d))?\b/);
+  let baseNit = "";
+  if (dottedNitMatch) {
+    baseNit = dottedNitMatch[1].replace(/\./g, "");
+  } else {
+    const digitsMatch = clean.match(/\b(\d{7,10})(?:-(\d))?\b/);
+    if (digitsMatch) {
+      const raw = digitsMatch[1];
+      if (raw.length === 10 && /^[89]/.test(raw) && !digitsMatch[2]) {
+        baseNit = raw.slice(0, 9);
+      } else {
+        baseNit = raw;
+      }
+    }
   }
   const cleanRazon = clean.replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ").replace(/\s+/g, " ").trim();
   const targetRazonName = cleanRazon || clean;
@@ -27468,6 +27576,7 @@ __export(identityVerificationService_exports, {
   queryAdres: () => queryAdres,
   queryContraloria: () => queryContraloria,
   queryEmpresaOrNit: () => queryEmpresaOrNit,
+  queryPoliciaNacional: () => queryPoliciaNacional2,
   queryProcuraduria: () => queryProcuraduria,
   savePendingCedulaSession: () => savePendingCedulaSession,
   setPendingCompanyFollowUp: () => setPendingCompanyFollowUp,
@@ -27825,6 +27934,13 @@ async function queryAdres(tipoDoc, numDoc) {
       };
     }
   }
+  if (process.env.NODE_ENV === "test" && !process.env.FORCE_LIVE_ADRES_TEST) {
+    return {
+      success: false,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
+      error: "Entorno de prueba automatizada (sin red externa)"
+    };
+  }
   try {
     const ep = await getAdresEndpoint();
     const commonHeaders = {
@@ -27912,6 +28028,18 @@ async function queryAdres(tipoDoc, numDoc) {
       estado = lines[estadoIdx + offset] || "";
       eps = lines[estadoIdx + offset + 1] || "";
       regimen = lines[estadoIdx + offset + 2] || "";
+    }
+    if (!regimen) {
+      const regMatch = r3.body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
+      if (regMatch) {
+        regimen = regMatch[1].toUpperCase();
+      }
+    }
+    if (!estado) {
+      const estMatch = r3.body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
+      if (estMatch) {
+        estado = estMatch[1].toUpperCase();
+      }
     }
     if (!eps || eps.length < 3) {
       const entidadIdx = lines.findIndex((l) => {
@@ -28053,8 +28181,9 @@ function isAcceptingCompanyMemberVerification(text2) {
   const norm2 = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /^(?:si\b|claro\b|dale\b|de\s+una\b|por\s+favor\b|porfa\b|adelante\b|procede\b|hazlo\b|ok\b|listo\b|bueno\b|vale\b|verificar\b|verifical[oa]\b|verificame\b|revisal[oa]\b|todos\b|ambos\b|cada\s+miembro\b|el\s+representante\b|la\s+representante\b|representante\b)/i.test(norm2) || /\b(?:verificar\s+representante|verificar\s+todos|cada\s+miembro|todos\s+los\s+miembros|antecedentes\s+del\s+representante)\b/i.test(norm2);
 }
-function buildCompanyFollowUpQuestion(_representantePrincipal, _representantesSuplentes) {
-  return "";
+function buildCompanyFollowUpQuestion(representantePrincipal, _representantesSuplentes) {
+  if (!representantePrincipal?.nombre || !representantePrincipal?.numeroIdentificacion) return "";
+  return `\xBFDeseas que realice la verificaci\xF3n de identidad y antecedentes del Representante Legal Principal (*${representantePrincipal.nombre}*, ${representantePrincipal.tipoDocumento} ${representantePrincipal.numeroFormateado || representantePrincipal.numeroIdentificacion}) ante Polic\xEDa Nacional, Procuradur\xEDa y Contralor\xEDa? Responde *S\xCD* para iniciarla o *NO* para finalizar.`;
 }
 function setPendingCompanyMembers(userId, members) {
   if (!userId || !Array.isArray(members) || members.length === 0) return;
@@ -28514,10 +28643,8 @@ function formatCompactIdentityVerificationReport(params) {
   } else if (adresEps) {
     const cleanEps = formatCleanEpsName(adresEps);
     epsLine = `${cleanEps} (${adresEstado || "ACTIVO"}${adresRegimen ? ` \u2014 ${adresRegimen}` : ""})`;
-  } else if (!resolvedSuccess) {
-    epsLine = "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
   } else {
-    epsLine = "Registrado y activo en el sistema de aseguramiento en salud.";
+    epsLine = "Sin novedad de aseguramiento registrada en BDUA o EPS no reportada en censo p\xFAblico.";
   }
   reportText += `\u2696\uFE0F *ANTECEDENTES*
 `;
@@ -28538,22 +28665,22 @@ function formatCompactIdentityVerificationReport(params) {
 }
 async function queryEmpresaOrNit(query, userId) {
   const clean = (query || "").trim();
-  const digitsMatch = clean.match(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-\d)?\b/);
+  const dottedNitMatch = clean.match(/\b(\d{1,3}(?:\.\d{3}){2,3})(?:-(\d))?\b/);
   let baseNit = "";
   let providedDv = "";
-  if (digitsMatch) {
-    const rawDigits = digitsMatch[0];
-    if (rawDigits.includes("-")) {
-      const parts = rawDigits.split("-");
-      baseNit = parts[0].replace(/\D/g, "");
-      providedDv = parts[1].replace(/\D/g, "");
-    } else {
-      const onlyDigits = rawDigits.replace(/\D/g, "");
-      if (onlyDigits.length === 10 && /^[89]/.test(onlyDigits)) {
-        baseNit = onlyDigits.slice(0, 9);
-        providedDv = onlyDigits.slice(9);
+  if (dottedNitMatch) {
+    baseNit = dottedNitMatch[1].replace(/\./g, "");
+    providedDv = dottedNitMatch[2] || "";
+  } else {
+    const rawDigitsMatch = clean.match(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-(\d))?\b/);
+    if (rawDigitsMatch) {
+      const raw = rawDigitsMatch[1].replace(/\D/g, "");
+      providedDv = rawDigitsMatch[2] || "";
+      if (raw.length === 10 && /^[89]/.test(raw) && !providedDv) {
+        baseNit = raw.slice(0, 9);
+        providedDv = raw.slice(9);
       } else {
-        baseNit = onlyDigits;
+        baseNit = raw;
       }
     }
   }
@@ -28752,14 +28879,9 @@ async function queryEmpresaOrNit(query, userId) {
       organizacionJuridica = "Sociedad An\xF3nima (S.A.)";
       ciiuPrincipal = "4111 \u2014 Construcci\xF3n de edificios residenciales";
       actividadesEconomicas = [{ codigo: "4111", descripcion: "Construcci\xF3n de edificios residenciales" }];
-    } else if (baseNit) {
-      razonSocial = clean.replace(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-\d)?\b/g, "").replace(/\b(?:jania|vecy|hola|buenos|buenas|d[ií]as|tardes|noches|verif[ií]came|verificar|verifica|cons[uú]ltame|consultar|consulta|rev[ií]same|revisar|revisa|este|esta|el|la|un|una|por\s+favor|porfa|gracias|nit|empresa|sociedad|persona\s+jur[ií]dica|antecedentes|identidad|de|del|en|rues|sa|sas|ltda)\b/gi, "").replace(/[^\w\sáéíóúÁÉÍÓÚñÑ&-]/g, "").replace(/\s+/g, " ").trim();
-      if (!razonSocial) {
-        razonSocial = `EMPRESA / PERSONA JUR\xCDDICA NIT ${baseNit}`;
-      } else {
-        razonSocial = formatTitleCase(razonSocial);
-      }
     } else {
+      const searchTarget = baseNit ? `para el NIT ${baseNit}` : `bajo el nombre "${clean}"`;
+      const askFor = baseNit ? `Por favor verifica que el n\xFAmero sea correcto y no contenga errores de digitaci\xF3n.` : `Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor ind\xEDcame el n\xFAmero de NIT de la sociedad.`;
       return {
         success: false,
         nit: "",
@@ -28769,7 +28891,7 @@ async function queryEmpresaOrNit(query, userId) {
         camaraComercio: "C\xE1maras de Comercio de Colombia (RUES)",
         ciudad: "Colombia",
         estado: "No localizada",
-        reportText: `No se encontr\xF3 ninguna empresa o persona jur\xEDdica registrada bajo el nombre "${clean}" en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor ind\xEDcame el n\xFAmero de NIT de la sociedad.`,
+        reportText: `No se encontr\xF3 ninguna empresa o persona jur\xEDdica registrada ${searchTarget} en el Registro \xDAnico Empresarial y Social (RUES). ${askFor}`,
         followUpQuestionText: ""
       };
     }
@@ -28792,6 +28914,20 @@ async function queryEmpresaOrNit(query, userId) {
     }
     if (allMembers.length > 0) {
       setPendingCompanyMembers(userId, allMembers);
+    }
+    try {
+      const { setCompanySession: setCompanySession2 } = await Promise.resolve().then(() => (init_sessionManager(), sessionManager_exports));
+      setCompanySession2(userId, {
+        nit: baseNit,
+        dv: finalDv,
+        razonSocial,
+        camaraComercio,
+        matricula,
+        estado,
+        representantePrincipal,
+        representantes: allMembers
+      });
+    } catch (_) {
     }
   }
   const reportText = formatCompactIdentityVerificationReport({
@@ -28817,7 +28953,10 @@ async function queryEmpresaOrNit(query, userId) {
     direccionComercial: ruesLive?.direccionComercial,
     telefonoComercial: ruesLive?.telefonoComercial
   });
-  const followUpQuestionText = "";
+  const followUpQuestionText = buildCompanyFollowUpQuestion(
+    representantePrincipal,
+    representantesSuplentes
+  );
   return {
     success: true,
     nit: baseNit,
@@ -29396,12 +29535,14 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
     };
   }
 }
-var IDENTITY_CACHE_TTL2, HABEAS_DATA_CLAUSE, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions, pendingUnconfirmedDocSessions, PENDING_UNCONFIRMED_DOC_TTL, pendingCompanyMembersSessions, ruesVerifiedNames, pendingCompanyFollowUpSessions;
+var queryPoliciaNacional2, IDENTITY_CACHE_TTL2, HABEAS_DATA_CLAUSE, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions, pendingUnconfirmedDocSessions, PENDING_UNCONFIRMED_DOC_TTL, pendingCompanyMembersSessions, ruesVerifiedNames, pendingCompanyFollowUpSessions;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
     init_agenda();
+    init_agenda();
     init_ruesService();
+    queryPoliciaNacional2 = (...args) => queryPoliciaNacional(...args);
     IDENTITY_CACHE_TTL2 = 24 * 60 * 60 * 1e3;
     HABEAS_DATA_CLAUSE = `\u{1F4C4} *Cl\xE1usula de Protecci\xF3n de Datos Personales (H\xE1beas Data \u2014 Ley 1581 de 2012 y Decreto 1377 de 2013):*
 La consulta y tratamiento de esta informaci\xF3n p\xFAblica y semiprivada se efect\xFAa bajo el principio de finalidad leg\xEDtima, seguridad jur\xEDdica y debida diligencia en actos negociales e inmobiliarios, en estricto cumplimiento del Art\xEDculo 15 de la Constituci\xF3n Pol\xEDtica de Colombia.`;
@@ -30030,7 +30171,9 @@ __export(janIA_exports, {
   circuloConversationHistory: () => circuloConversationHistory,
   cleanSessionJid: () => cleanSessionJid,
   cleanUnescapedQuotesInJSON: () => cleanUnescapedQuotesInJSON,
+  clearCompanySession: () => clearCompanySession,
   clearPromptCache: () => clearPromptCache,
+  companySessionMap: () => companySessionMap,
   consultingConversationHistory: () => consultingConversationHistory,
   deletePendingSession: () => deletePendingSession,
   dmConversationHistory: () => dmConversationHistory,
@@ -30052,6 +30195,7 @@ __export(janIA_exports, {
   getCirculoHistory: () => getCirculoHistory,
   getColombiaHour: () => getColombiaHour,
   getColombiaNow: () => getColombiaNow,
+  getCompanySession: () => getCompanySession,
   getConsultingHistory: () => getConsultingHistory,
   getContactPermanentDossier: () => getContactPermanentDossier,
   getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
@@ -30108,6 +30252,7 @@ __export(janIA_exports, {
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  setCompanySession: () => setCompanySession,
   setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
   setPendingSession: () => setPendingSession,

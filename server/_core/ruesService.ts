@@ -838,11 +838,21 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
   const clean = (query || "").trim();
   if (!clean) return null;
 
-  const digitsMatch = clean.match(/\b(\d{7,10})(?:-\d)?\b/);
-  let baseNit = digitsMatch ? digitsMatch[1] : "";
-  // Si el usuario envió los 10 dígitos seguidos incluyendo el DV (ej. 9007888328), separar los 9 dígitos base del NIT
-  if (baseNit.length === 10 && /^[89]/.test(baseNit)) {
-    baseNit = baseNit.slice(0, 9);
+  // Detección exhaustiva de NIT con puntos, guiones o dígitos planos (limpiando puntos y DV)
+  const dottedNitMatch = clean.match(/\b(\d{1,3}(?:\.\d{3}){2,3})(?:-(\d))?\b/);
+  let baseNit = "";
+  if (dottedNitMatch) {
+    baseNit = dottedNitMatch[1].replace(/\./g, "");
+  } else {
+    const digitsMatch = clean.match(/\b(\d{7,10})(?:-(\d))?\b/);
+    if (digitsMatch) {
+      const raw = digitsMatch[1];
+      if (raw.length === 10 && /^[89]/.test(raw) && !digitsMatch[2]) {
+        baseNit = raw.slice(0, 9);
+      } else {
+        baseNit = raw;
+      }
+    }
   }
 
   const cleanRazon = clean
