@@ -6869,11 +6869,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.30 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.31");
+      expect(VECY_VERSION).toMatch(/^v33\.(3[0-9]|[4-9]\d)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.31.0");
+      expect(pkg.version).toMatch(/^33\.(3[0-9]|[4-9]\d)\.0$/);
     });
   });
 
@@ -6913,11 +6913,51 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.31 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.31");
+      expect(VECY_VERSION).toMatch(/^v33\.(3[1-9]|[4-9]\d)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.31.0");
+      expect(pkg.version).toMatch(/^33\.(3[1-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 125. v33.32 — EMBUDO ESTRATÉGICO TRAMPOLÍN, CAPA 1 MULTIMEDIA Y ENCUESTAS NATIVAS
+  // ─────────────────────────────────────────────────────────────
+  describe("125. v33.32 — Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3), Capa 1 Multimedia y Encuestas Nativas", () => {
+    it("1. Capa 1 Multimedia Resiliente: existe banco curado local para temas clave", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      
+      const broadcastDir = path.resolve(process.cwd(), "assets/broadcast");
+      expect(fs.existsSync(broadcastDir)).toBe(true);
+      
+      const files = fs.readdirSync(broadcastDir);
+      expect(files.length).toBeGreaterThanOrEqual(5);
+      expect(files).toContain("jania_juridico.jpg");
+      expect(files).toContain("jania_tributario.jpg");
+      expect(files).toContain("jania_avaluos.jpg");
+    });
+
+    it("2. Despacho coordinado: sendMorningPillAndGroupTeasers está definido y exportado", async () => {
+      const { whatsappBot } = await import("../_core/whatsapp-match");
+      expect(typeof (whatsappBot as any)?.sendMorningPillAndGroupTeasers).toBe("function");
+    });
+
+    it("3. CronService exporta funciones de disparo de encuestas y servicios vespertinos", async () => {
+      const cronService = await import("../_core/cronService");
+      expect(typeof cronService.publishEveningPollNow).toBe("function");
+      expect(typeof cronService.publishEveningServicesNow).toBe("function");
+      expect(typeof cronService.initCronScheduler).toBe("function");
+    });
+
+    it("4. Consagración doctrinal de versión v33.32 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.32");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.32.0");
     });
   });
 });

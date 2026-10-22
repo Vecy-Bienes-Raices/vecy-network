@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-22] — JanIA v33.32: Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3), Capa 1 Multimedia Resiliente y Encuestas Nativas Estrictas (v33.32 - 33.32.0)
+
+**Versión:** `v33.32` (`33.32.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-match.ts`: Implementación de `sendMorningPillAndGroupTeasers` para el despacho coordinado: entrega la píldora completa de alto valor con imagen HD al Canal Oficial de WhatsApp, y simultáneamente envía un micro-gancho persuasivo (teaser trampolín) a los Grupos 2 y 3 con enlace al Canal y pregunta detonante para abrir debates gremiales.
+- `server/_core/cronService.ts`: 
+  1. Reestructuración de la frecuencia a 2 impactos diarios:
+     - **Mañana (08:45 AM):** Píldora del Calendario de 30 días completa con imagen HD en el Canal + micro-gancho en Grupos 2 y 3.
+     - **Tarde (06:30 PM):** Martes y Jueves (encuesta nativa interactiva en Canal + teaser de debate en grupos); Viernes (servicios gratuitos de verificación con JanIA: ADRES, Policía, Procuraduría, Contraloría, RUES, Predial, IDU).
+  2. Implementación de `getLocalCuratedThemeImage` (Capa 1 Resiliente Local) con banco de respaldo curado en `assets/broadcast/`, `client/public/assets/broadcast/` y `client/public/assets/jania/` para garantizar de forma inmutable que el Canal Oficial jamás salga en texto plano.
+  3. Despacho estricto de encuestas mediante `sendPoll` con `selectableCount: 1` obligatorio (voto único), límite de 3 a 4 opciones cortas (máximo 5-6 palabras) y erradicación de emojis en opciones.
+- `assets/broadcast/` y `client/public/assets/broadcast/`: Banco local curado de imágenes temáticas de alta calidad para la Capa 1.
+- `shared/const.ts` (`v33.32`) y `package.json` (`33.32.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Revisa esta propuesta de automatización para Jania, analiza si es conveniente y cómo la complementarías o enriquecerías con tu experiencia y conocimiento para que sea la mejor estrategia:*
+  *Frecuencia:*
+  *2 publicaciones al día: Una en la mañana (8:00 AM o 9:00 AM) con una píldora de alto valor y otra en la tarde (alrededor de las 6:00 PM o 7:00 PM) para interactuar, como una encuesta.*
+  *Estrategia de interacción:*
+  *Tarde: Encuestas interactivas de WhatsApp (1 sola respuesta), preguntas para abrir debate.*
+  *El objetivo es que los grupos no sean solo un monólogo de la IA, sino que ella sea una moderadora que invite a los asesores a opinar.*
+  *¿Cómo enriquecerías esto?"*
+
+#### 2. Diagnóstico Estratégico y Propuesta de Valor Aprobada
+1. **El Canal Oficial como Escenario Principal (Vitrina Institucional):**
+   - El Canal Oficial de WhatsApp (`VECY_SOCIAL_NETWORKS.whatsappChannel`) es un canal unidireccional idóneo para contenidos extensos, formateados y visuales con imágenes HD garantizadas.
+2. **Grupos 2 y 3 como Foros Vivos (Efecto Trampolín / Debate Moderado):**
+   - Los grupos comunitarios no deben saturarse con publicaciones largas tipo "periódico", pues matan la conversación y ahuyentan a los miembros. Deben recibir **micro-ganchos persuasivos (teasers)** con Copywriting AIDA de 3 a 4 líneas que generen curiosidad, dirijan tráfico hacia el Canal Oficial y formulen una pregunta detonante para abrir debates activos donde JanIA interactúa como colega de alto nivel.
+3. **Capa 1 Resiliente Multimedia (Cero Texto Plano en el Canal):**
+   - Depender exclusivamente de APIs de imágenes en vivo en internet puede fallar por timeouts o cuotas. Se blindó una arquitectura de 2 capas: búsqueda web en Openverse y, ante cualquier latencia o falla, conmutación instantánea a la Capa 1 local con banco curado temático de alta resolución.
+4. **Encuestas Nativas con Voto Único:**
+   - Despacho exclusivo a través de la herramienta nativa de WhatsApp (`pollCreationMessageV3`) con `selectableCount: 1` para obligar a una postura clara, 3-4 opciones concisas de máximo 5-6 palabras y cero artificios de emojis como opciones de texto.
+
+#### 3. Acciones Ejecutadas
+1. Creación de `sendMorningPillAndGroupTeasers` en `whatsapp-match.ts`.
+2. Creación de `getLocalCuratedThemeImage`, `publishEveningPollNow` y `publishEveningServicesNow` en `cronService.ts`.
+3. Reconfiguración horaria en hora Bogotá: 08:45 AM (Píldora matutina) y 06:30 PM (Encuestas interactivas Martes/Jueves, Servicios gratuitos Viernes).
+4. Generación y almacenamiento del banco curado de imágenes en `assets/broadcast/` y `client/public/assets/broadcast/`.
+5. Compilación y build verificados con `npm run check` (0 errores) y `npm run build` limpio en 22s.
+6. Actualización mandatoria de la bitácora cuádruple del proyecto.
+
+---
+
 ### 📅 [2026-10-22] — JanIA v33.31: Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica (v33.31 - 33.31.0)
 
 **Versión:** `v33.31` (`33.31.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

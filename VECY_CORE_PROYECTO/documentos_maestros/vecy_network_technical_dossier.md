@@ -331,6 +331,22 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.32 — Octubre 2026
+
+#### [v33.32.0] — 2026-10-22: Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3), Capa 1 Multimedia Resiliente y Encuestas Nativas Estrictas
+- **Frecuencia Optimizada de 2 Impactos Diarios (Sin Saturación):**
+  - **Mañana (08:45 AM):** Despacho en el Canal Oficial de la píldora de alto valor completa con imagen HD garantizada (temas jurídicos, notariales, tributarios Art. 72/73 o valor $/m²) + micro-gancho persuasivo (teaser trampolín) en Grupos 2 y 3 invitando al Canal y detonando debate entre colegas.
+  - **Tarde (06:30 PM):** Martes y Jueves (encuesta nativa interactiva en WhatsApp con `selectableCount: 1`, 3-4 opciones cortas y cero emojis en opciones + teaser de debate en grupos); Viernes (servicios gratuitos de verificación con JanIA: ADRES, Policía, Procuraduría, Contraloría, RUES, Predial, IDU).
+- **Encuestas Nativas Estrictas en WhatsApp:**
+  - Despacho exclusivo mediante `pollCreationMessageV3` / `sendPoll` con `selectableCount: 1` obligatorio (voto único).
+  - Límite estricto de 3 a 4 opciones cortas (máximo 5 a 6 palabras por opción) y eliminación de votaciones simuladas con emojis.
+- **Capa 1 Multimedia Resiliente Garantizada:**
+  - Creación y vinculación del banco local curado en `assets/broadcast/`, `client/public/assets/broadcast/` y `client/public/assets/jania/` (`jania_juridico.jpg`, `jania_tributario.jpg`, `jania_avaluos.jpg`, `jania_noticias.jpg`, `jania_verificacion_servicio.jpg`, `jania_matches.jpg`, `jania_marketing.jpg`).
+  - `fetchPublicThemeImage` ahora conmuta de manera inmediata a la Capa 1 local si la descarga web falla o demora, garantizando que el Canal Oficial de WhatsApp JAMÁS salga en texto plano.
+- **Despacho Especializado:**
+  - Implementación de `sendMorningPillAndGroupTeasers` en `whatsapp-match.ts` y reconfiguración integral de `initCronScheduler` en `cronService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Build `npm run build` limpio en 22s.
+
 ### 🔖 v33.31 — Octubre 2026
 
 #### [v33.31.0] — 2026-10-22: Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica

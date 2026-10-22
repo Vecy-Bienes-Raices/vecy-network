@@ -1,10 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.31.0 — 2026-10-22)
-- **JanIA Server:** `v33.31` (`33.31.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
-- **Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica:**
-  1. Depuración quirúrgica de apellidos en `nameAndGenderResolver`: identificación de `COMMON_COLOMBIAN_SURNAMES` para evitar concatenar apellidos ("Mario Pérez" -> "Mario"), manteniendo exclusivamente nombres compuestos legítimos ("Flor Alba", "Juan Carlos").
-  2. Continuidad conversacional en grupos (`circuloHandler.ts` y `consultingHandler.ts`): erradicación de bucles de saludos repetitivos y menciones robóticas del nombre en turnos continuos; activación de `markUserGreetedToday`.
-  3. Criterio de unificación estratégica: paridad cognitiva 100% idéntica a DMs en ambos grupos (2 y 3), respondiendo al grano con empatía, calidez y solidez técnica.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (319/319 passing al 100% verde a $0 COP) | Build `npm run build` limpio en 15s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.32.0 — 2026-10-22)
+- **JanIA Server:** `v33.32` (`33.32.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
+- **Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3) & Capa 1 Multimedia Resiliente:**
+  1. **Frecuencia Optimizada de 2 Impactos Diarios:**
+     - **Mañana (08:45 AM):** Píldora de alto valor completa con imagen HD garantizada al Canal Oficial + micro-gancho persuasivo (teaser trampolín) en Grupos 2 y 3 invitando al Canal y detonando debate profesional.
+     - **Tarde (06:30 PM):** Martes y Jueves (encuesta nativa interactiva en WhatsApp con `selectableCount: 1`, 3-4 opciones cortas y cero emojis en opciones + teaser de debate en grupos); Viernes (píldora y guía de servicios gratuitos de verificación con JanIA a $0 COP).
+  2. **Capa 1 Multimedia Local 100% Garantizada:** Inclusión de banco curado local en `assets/broadcast/` y `client/public/assets/broadcast/` (jurídico, tributario, avalúos, noticias, verificación, matches, marketing) para que el Canal Oficial jamás salga en texto plano.
+  3. **Despacho Especializado:** `sendMorningPillAndGroupTeasers` en `whatsapp-match.ts` y orquestador optimizado en `cronService.ts`.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Build `npm run build` limpio en 22s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

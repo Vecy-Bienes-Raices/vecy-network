@@ -11,7 +11,7 @@ import { gte, and, eq, sql, desc } from 'drizzle-orm';
 import { janiaMatchBot as whatsappBot } from './whatsapp-match';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 import { invokeLLM } from './llm';
-import { VECY_OFFICIAL_GROUPS } from '../../shared/const';
+import { VECY_OFFICIAL_GROUPS, VECY_SOCIAL_NETWORKS } from '../../shared/const';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -1385,77 +1385,79 @@ export interface PollDefinition {
 
 export const WEEKLY_POLLS_LIST: PollDefinition[] = [
   {
-    // Semana 1: Preferencia de Canales de Atención de JanIA (Nativa de WhatsApp)
-    question: "🤖 ¿Por cuál canal prefieres que JanIA te atienda y resuelva tus consultas inmobiliarias?",
+    // Semana 1: Preferencia de Canales de Atención de JanIA
+    question: "🤖 ¿Por cuál canal prefieres que JanIA resuelva tus consultas?",
     options: [
-      "Por WhatsApp (mensajes y notas de voz)",
-      "Por el Chat Web de la plataforma",
-      "Por ambos canales integrados en tiempo real",
-      "Por llamadas y reportes ejecutivos semanales"
+      "WhatsApp y notas de voz",
+      "Chat Web del portal",
+      "Ambos canales integrados",
+      "Llamadas y reportes ejecutivos"
     ]
   },
   {
-    // Semana 2: Ecológica - Avisos en Ventanas vs Medio Ambiente
-    question: "🌱 En pro del medio ambiente y la estética urbana: ¿Debemos erradicar avisos físicos en ventanas y migrar al 100% digital?",
+    // Semana 2: Fideicomiso vs Sucesión
+    question: "🏛️ ¿Qué figura patrimonial prefieres para tus clientes?",
     options: [
-      "Sí: Evita plástico contaminante y cuida la fachada",
-      "No: Siento que el aviso en ventana aún atrae vecinos",
-      "Modelo híbrido: Solo aviso temporal con código QR digital"
+      "Fideicomiso civil blindado",
+      "Sucesión en vida",
+      "Donación con usufructo",
+      "Compraventa tradicional"
     ]
   },
   {
-    // Semana 3: Ecológica - Cero Papel y Contratación Electrónica
-    question: "⚖️ Política Cero Papel en promesas y contratos: ¿Qué beneficio consideras más valioso para tus negocios?",
+    // Semana 3: Ganancia Ocasional y Costo Fiscal
+    question: "💰 ¿Cómo optimizas la ganancia ocasional al vender?",
     options: [
-      "Cierre inmediato por firma digital sin desplazamientos",
-      "Salvar árboles y frenar la huella de carbono",
-      "Seguridad jurídica total con trazabilidad electrónica"
+      "Avalúo catastral del año anterior",
+      "Reajuste fiscal por antigüedad",
+      "Exención vivienda 5000 UVT",
+      "Costo histórico en escritura"
     ]
   },
   {
-    // Semana 4: Ecológica - Ahorro de Agua y Sostenibilidad
-    question: "💧 Ahorro de agua y sostenibilidad: ¿Qué tanto influyen las tecnologías ecológicas al vender o arrendar hoy?",
+    // Semana 4: Contratación Electrónica y Cero Papel
+    question: "⚖️ ¿Qué beneficio valoras más de la firma electrónica?",
     options: [
-      "Mucho: Los clientes buscan reducir costos y cuidar el planeta",
-      "Moderado: Es un plus atractivo pero no decisivo",
-      "Poco: La mayoría solo se fija en precio y ubicación"
+      "Cierre inmediato a distancia",
+      "Ahorro absoluto de papel",
+      "Seguridad jurídica demostrable"
     ]
   },
   {
-    // Semana 5: Modelo Colaborativo VECY - Velocidad vs Espera
-    question: "⚡ Modelo Colaborativo VECY: ¿Qué prefieres para tus ingresos como asesor inmobiliario?",
+    // Semana 5: Modelo Colaborativo 40/20/40
+    question: "⚡ ¿Qué modelo prefieres para tus ingresos como asesor?",
     options: [
-      "Ganar 40% recurrente cada 3-4 días en red (Modelo 40/20/40)",
-      "Esperar 2 o 3 meses solo para ganar el 50% o 100%",
-      "Combinar ambos esquemas según la exclusividad del predio"
+      "40% recurrente cada tres días",
+      "100% cada tres meses",
+      "Esquema mixto según predio"
     ]
   },
   {
-    // Semana 6: Soluciones Financieras, Notariales y Alianzas
-    question: "🏛️ Servicios Financieros y Notariales: ¿Cuál herramienta de VECY BIENES RAÍCES acelera más tus negocios?",
+    // Semana 6: Promesas y Cláusulas
+    question: "📝 ¿Qué tipo de arras pactas más en promesas?",
     options: [
-      "Hipotecas y liquidez con Banco Caja Social y particulares",
-      "Redacción de promesas, minutas y cobros prejurídicos",
-      "Cruce automático de ofertas y demandas con IA en segundos",
-      "Contratos por correo con validez de firma electrónica"
+      "Arras de retracto",
+      "Arras confirmatorias",
+      "Cláusula penal directa",
+      "Pacto con retroventa"
     ]
   },
   {
-    // Semana 7: Portal Gratuito y Vitrina Propia para Demandas
-    question: "🌐 Portal VECY Gratuito: Además de vitrina para inmuebles, ¿qué opinas de tener vitrina propia para DEMANDAS?",
+    // Semana 7: Parqueaderos y Valor Comercial
+    question: "🚗 ¿Qué tanto castiga el precio un garaje lineal?",
     options: [
-      "Revolucionario: Ningún portal tradicional lo permite",
-      "Excelente: Agiliza la búsqueda para clientes compradores",
-      "Muy útil: Multiplica las probabilidades de cierre en red"
+      "Castiga entre 10% y 15%",
+      "No castiga si es cubierto",
+      "Prefieren sólo parqueaderos independientes"
     ]
   },
   {
-    // Semana 8: Tecnología y Tabús - La IA como Aliada
-    question: "🚀 Frente al tabú de que 'la IA va a desplazar al asesor', ¿cuál es tu percepción real en VECY?",
+    // Semana 8: Tecnología e IA en el Corretaje
+    question: "🚀 ¿Cómo ves el impacto de la IA en finca raíz?",
     options: [
-      "Es una aliada: Nos ahorra tiempo y multiplica los ingresos",
-      "Loro viejo sí aprende: La tecnología nos hace más profesionales",
-      "Aún siento temor, pero quiero aprender a dominarla"
+      "Acelera cierres y ahorra tiempo",
+      "Es una herramienta indispensable",
+      "Requiere capacitación continua"
     ]
   }
 ];
@@ -1472,70 +1474,145 @@ export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
 };
 
 /**
- * Publica la encuesta periódica EXCLUSIVAMENTE en el Canal Oficial de WhatsApp.
+ * 📊 Despacha la Encuesta Vespertina Nativa en el Canal Oficial de WhatsApp
+ * y envía el micro-gancho persuasivo (teaser) a Grupos 2 y 3 invitando a votar y debatir.
+ * Martes y Jueves (06:30 PM).
  * Doctrina Eduardo A. Rivera:
- * - Herramienta nativa de encuesta de WhatsApp (pollCreationMessage interactiva).
- * - Modo de votación de UNA SOLA RESPUESTA (selectableCount: 1, no múltiple).
- * - NUNCA presentar texto plano simulando encuesta con 1️⃣ 2️⃣ 3️⃣. Siempre encuesta nativa interactiva.
- * - NUNCA se envía a Grupo 1, Grupo 2 ni Grupo 3 para evitar saturación de la comunidad.
+ * - Herramienta nativa de encuesta de WhatsApp (pollCreationMessageV3 interactiva).
+ * - Modo de votación de UNA SOLA RESPUESTA (selectableCount: 1 obligatorio).
+ * - Límite estricto de 3 a 4 opciones cortas (máximo 5 a 6 palabras por opción).
+ * - Cero votos con emojis en texto.
  */
-export async function publishWeeklyPoll(targetDateBogota?: string, force: boolean = false) {
-  const dateBogota = targetDateBogota || getBogotaDateString();
+export async function publishEveningPollNow(force: boolean = false) {
+  const dateBogota = getBogotaDateString();
   const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
   const startOfYear = new Date(d.getFullYear(), 0, 1);
   const diffDays = Math.floor((d.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+  const dayOfWeek = d.getDay(); // 2 = Martes, 4 = Jueves
   const weekNumber = Math.floor(diffDays / 7);
-  const pollIndex = weekNumber % WEEKLY_POLLS_LIST.length;
+  const pollIndex = (weekNumber * 2 + (dayOfWeek === 4 ? 1 : 0)) % WEEKLY_POLLS_LIST.length;
   const poll = WEEKLY_POLLS_LIST[pollIndex] || WEEKLY_POLLS_LIST[0];
 
-  console.log(`[CRON-POLL] Evaluando despacho de encuesta semanal nativa para canal (Semana ${weekNumber}, Índice ${pollIndex})...`);
-
-  // 1. Bloqueo en PostgreSQL usando target_group 'canal_poll'
-  const lock = await acquireBroadcastLock('canal_poll', 'encuesta_semanal', dateBogota, force);
+  console.log(`[CRON-POLL] 📊 Despachando encuesta vespertina interactiva (Canal Oficial + Teasers Grupos 2 y 3)...`);
+  const lock = await acquireBroadcastLock('canal_evening_poll', 'encuesta_vespertina', dateBogota, force);
   if (!lock.allowed) {
-    console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta semanal: ${lock.reason}`);
+    console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta vespertina: ${lock.reason}`);
     return { success: false, reason: lock.reason };
   }
 
   try {
-    // 2. Despachar EXCLUSIVAMENTE al Canal Oficial de WhatsApp (Newsletter) como encuesta interactiva nativa (1 sola respuesta)
+    // 1. Despachar encuesta nativa interactiva (1 sola opción, 3-4 opciones cortas) al Canal Oficial
     if (whatsappBot.channelNewsletterId) {
-      console.log(`[CRON-POLL] 📢 Despachando encuesta nativa interactiva (1 sola opción) al Canal Oficial (${whatsappBot.channelNewsletterId}): "${poll.question}"...`);
-      let sent = await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
-      if (!sent) {
-        // Reintento de resiliencia en 3 segundos
-        await new Promise(r => setTimeout(r, 3000));
-        sent = await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
-      }
-      if (!sent) {
-        console.warn('[CRON-POLL] ⚠️ Advertencia: No se pudo entregar la encuesta nativa al canal en este intento.');
-      }
+      await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
+      console.log(`[CRON-POLL] ✅ Encuesta nativa interactiva entregada al Canal Oficial: "${poll.question}".`);
     } else {
-      console.warn('[CRON-POLL] Canal Oficial no configurado en este momento.');
+      console.warn('[CRON-POLL] Canal Oficial no disponible al despachar encuesta vespertina.');
     }
 
-    // 3. Asentar en PostgreSQL
+    // 2. Despachar micro-gancho trampolín a Grupo 2 y Grupo 3 invitando a votar y debatir
+    const pollTeaser = `📊 *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* 🗳️\n\n` +
+      `Acabamos de lanzar la encuesta en nuestro Canal Oficial:\n` +
+      `*«${poll.question}»*\n\n` +
+      `👉 *Participa con 1 solo toque en nuestro Canal aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+      `Colegas, ¿por qué eligieron esa opción? Cuéntennos su experiencia y debatimos con JanIA aquí abajo 👇`;
+
+    const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
+    if (targetGroup2) {
+      await whatsappBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
+    }
+    const targetGroup3 = whatsappBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
+    if (targetGroup3) {
+      await whatsappBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
+    }
+
     await completeBroadcast(lock.broadcastId, {
       topicTitle: poll.question,
-      themeKey: 'encuesta_semanal',
+      themeKey: 'encuesta_vespertina',
       voiceText: poll.question,
       captionText: poll.options.join(' | ')
     });
 
-    console.log(`[CRON-POLL] ✅ Encuesta semanal nativa interactiva despachada exitosamente al Canal Oficial (0 mensajes a grupos).`);
     return { success: true, question: poll.question };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
-    console.error(`[CRON-POLL] ❌ Error despachando encuesta semanal:`, err?.message || err);
     return { success: false, error: err?.message };
   }
+}
+
+/**
+ * 🛡️ Despacha la Píldora de Servicios Gratuitos de Verificación con JanIA
+ * Canal Oficial (post completo con imagen) + Micro-gancho a Grupos 2 y 3.
+ * Viernes (06:30 PM).
+ */
+export async function publishEveningServicesNow(force: boolean = false) {
+  const dateBogota = getBogotaDateString();
+  const lock = await acquireBroadcastLock('canal_evening_services', 'servicios_verificacion', dateBogota, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-SERVICES] ⏭️ Omitiendo servicios vespertinos de viernes: ${lock.reason}`);
+    return { success: false, reason: lock.reason };
+  }
+
+  try {
+    const imagePath = getLocalCuratedThemeImage('verificacion');
+    const channelText = `🛡️ *SERVICIOS GRATUITOS DE VERIFICACIÓN CON JANIA* 🇨🇴\n\n` +
+      `Estimados colegas y aliados de VECY Bienes Raíces:\n\n` +
+      `¿Sabías que puedes proteger tus negociaciones y verificar a tus clientes en segundos a $0 COP antes de firmar cualquier contrato o recibir un inmueble?\n\n` +
+      `JanIA, nuestra Inteligencia Artificial Oficial, te entrega al instante:\n` +
+      `✅ *Identidad y EPS (ADRES):* Consulta BDUA, estado activo y régimen (Contributivo o Subsidiado).\n` +
+      `✅ *Antecedentes Oficiales:* Policía Nacional, Procuraduría General (SIRI) y Contraloría (Boletín Fiscal).\n` +
+      `✅ *Registro Mercantil RUES:* NIT, razón social, actividad económica y representación legal.\n` +
+      `✅ *Trámites Distritales:* Consulta de impuesto predial y estado de valorización IDU.\n\n` +
+      `📲 *¿Cómo solicitarlo gratis?*\n` +
+      `Escribe directamente al WhatsApp de JanIA (+57 319 291 9978) con el número de documento o NIT y recibe tu reporte ejecutivo inmediato.\n\n` +
+      `👉 *Sigue nuestro Canal Oficial para más herramientas y beneficios:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+      `${VECY_MOTTO_FOOTER}`;
+
+    // 1. Despachar al Canal Oficial con imagen
+    if (whatsappBot.channelNewsletterId) {
+      await whatsappBot.sendToGroup(channelText, imagePath, [], whatsappBot.channelNewsletterId);
+      console.log(`[CRON-SERVICES] ✅ Servicios gratuitos despachados al Canal con imagen.`);
+    }
+
+    // 2. Despachar micro-gancho a Grupos 2 y 3
+    const servicesTeaser = `🛡️ *BLINDA TUS NEGOCIACIONES ESTE FIN DE SEMANA CON JANIA* 📲\n\n` +
+      `¿Vas a recibir una oferta o firmar promesa este fin de semana? Recuerda que JanIA te ayuda a verificar antecedentes, ADRES EPS, RUES y Predial gratis en segundos.\n\n` +
+      `En el Canal Oficial acabamos de publicar la guía completa de cómo solicitar tus consultas a $0 COP 👉 ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+      `¡Protege tus comisiones y cierra seguro!`;
+
+    const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
+    if (targetGroup2) {
+      await whatsappBot.queuedSend(targetGroup2, servicesTeaser, { allowGroupMessage: true });
+    }
+    const targetGroup3 = whatsappBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
+    if (targetGroup3) {
+      await whatsappBot.queuedSend(targetGroup3, servicesTeaser, { allowGroupMessage: true });
+    }
+
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: "Servicios Gratuitos de Verificación con JanIA",
+      themeKey: "verificacion_servicios",
+      imageFileName: path.basename(imagePath),
+      captionText: channelText
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    await failBroadcast(lock.broadcastId, err?.message);
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Retrocompatibilidad: alias hacia la encuesta periódica
+ */
+export async function publishWeeklyPoll(targetDateBogota?: string, force: boolean = false) {
+  return publishEveningPollNow(force);
 }
 
 export const publishDailyPoll = publishWeeklyPoll;
 
 export async function publishDailyPollNow(force: boolean = false) {
-  const dateBogota = getBogotaDateString();
-  return publishWeeklyPoll(dateBogota, force);
+  return publishEveningPollNow(force);
 }
 
 /**
@@ -1790,10 +1867,60 @@ export const THEME_IMAGE_SEARCH_MAP: Record<string, string> = {
 };
 
 /**
- * Busca y descarga una imagen pública relevante en internet (Openverse API) con licencia comercial/CC0.
- * Retorna la ruta local de la imagen descargada o undefined si no está disponible (failsafe texto).
+ * Capa 1 Resiliente (v33.32 — Doctrina Eduardo A. Rivera):
+ * Banco de respaldo local curado en assets/broadcast/, client/public/assets/broadcast/ y client/public/assets/jania/.
+ * Garantiza de forma inmutable que el Canal Oficial de WhatsApp JAMÁS salga en texto plano.
  */
-export async function fetchPublicThemeImage(themeKey: string, dayOfMonth: number): Promise<string | undefined> {
+export function getLocalCuratedThemeImage(themeKey: string): string {
+  const normalized = (themeKey || "").toLowerCase();
+  let baseName = "jania_juridico.jpg";
+
+  if (normalized.includes("tribut") || normalized.includes("ganancia") || normalized.includes("retencion") || normalized.includes("dian") || normalized.includes("impuesto") || normalized.includes("costo_fiscal")) {
+    baseName = "jania_tributario.jpg";
+  } else if (normalized.includes("avaluo") || normalized.includes("metro_cuadrado") || normalized.includes("precio") || normalized.includes("catastral") || normalized.includes("peritaje")) {
+    baseName = "jania_avaluos.jpg";
+  } else if (normalized.includes("noticia") || normalized.includes("pot") || normalized.includes("mercado") || normalized.includes("divisa") || normalized.includes("cripto") || normalized.includes("urbanis")) {
+    baseName = "jania_noticias.jpg";
+  } else if (normalized.includes("verificacion") || normalized.includes("cedula") || normalized.includes("rues") || normalized.includes("predial") || normalized.includes("idu") || normalized.includes("antecedente") || normalized.includes("adres")) {
+    baseName = "jania_verificacion_servicio.jpg";
+  } else if (normalized.includes("match") || normalized.includes("bolsa") || normalized.includes("reporte") || normalized.includes("demanda") || normalized.includes("oferta")) {
+    baseName = "jania_matches.jpg";
+  } else if (normalized.includes("marketing") || normalized.includes("asesor") || normalized.includes("comision") || normalized.includes("alianza") || normalized.includes("colabora")) {
+    baseName = "jania_marketing.jpg";
+  } else {
+    baseName = "jania_juridico.jpg";
+  }
+
+  const candidateDirs = [
+    path.resolve(process.cwd(), 'assets/broadcast'),
+    path.resolve(process.cwd(), 'client/public/assets/broadcast'),
+    path.resolve(process.cwd(), 'client/public/assets/jania')
+  ];
+
+  for (const dir of candidateDirs) {
+    const candidatePath = path.join(dir, baseName);
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  // Failsafe absoluto de último recurso
+  const fallbackDir = path.resolve(process.cwd(), 'client/public/assets/jania');
+  if (fs.existsSync(fallbackDir)) {
+    const files = fs.readdirSync(fallbackDir).filter(f => f.endsWith('.jpg') || f.endsWith('.jpeg') || f.endsWith('.png'));
+    if (files.length > 0) {
+      return path.join(fallbackDir, files[0]);
+    }
+  }
+
+  return path.resolve(process.cwd(), 'client/public/jania_post.png');
+}
+
+/**
+ * Busca y descarga una imagen pública relevante en internet (Openverse API) con licencia comercial/CC0.
+ * Con Capa 1 de Resiliencia Local garantizada: si la descarga falla o no hay red, retorna la imagen local curada.
+ */
+export async function fetchPublicThemeImage(themeKey: string, dayOfMonth: number): Promise<string> {
   const query = THEME_IMAGE_SEARCH_MAP[themeKey] || "modern architecture real estate building";
   console.log(`[CRON-IMAGE-WEB] 🌐 Buscando imagen pública en internet para Día ${dayOfMonth} (${themeKey}): "${query}"...`);
 
@@ -1801,82 +1928,66 @@ export async function fetchPublicThemeImage(themeKey: string, dayOfMonth: number
     const searchUrl = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=8&license_type=commercial`;
     const res = await fetch(searchUrl, {
       headers: { "User-Agent": "VecyBienesRaices/1.0" },
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(6000)
     });
-    if (!res.ok) {
-      console.warn(`[CRON-IMAGE-WEB] Openverse retornó status ${res.status}`);
-      return undefined;
+    if (res.ok) {
+      const data: any = await res.json();
+      const results = data.results || [];
+      if (results.length > 0) {
+        const selected = results[(dayOfMonth - 1) % results.length] || results[0];
+        const imgUrl = selected?.url;
+        if (imgUrl) {
+          console.log(`[CRON-IMAGE-WEB] 📥 Descargando imagen: "${selected.title || 'Inmueble'}" (${imgUrl.substring(0, 60)}...)...`);
+          const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(8000) });
+          if (imgRes.ok) {
+            const buffer = Buffer.from(await imgRes.arrayBuffer());
+            if (buffer.length >= 1000) {
+              const cacheDir = path.resolve(process.cwd(), 'client/public/assets/broadcast');
+              if (!fs.existsSync(cacheDir)) {
+                fs.mkdirSync(cacheDir, { recursive: true });
+              }
+              const targetFile = path.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+              fs.writeFileSync(targetFile, buffer);
+              console.log(`[CRON-IMAGE-WEB] ✅ Imagen pública guardada localmente (${buffer.length} bytes): ${targetFile}`);
+              return targetFile;
+            }
+          }
+        }
+      }
     }
-    const data: any = await res.json();
-    const results = data.results || [];
-    if (results.length === 0) {
-      console.warn(`[CRON-IMAGE-WEB] No se encontraron resultados para "${query}"`);
-      return undefined;
-    }
-
-    // Rotar según el día del mes para no usar siempre el primer resultado
-    const selected = results[(dayOfMonth - 1) % results.length] || results[0];
-    const imgUrl = selected?.url;
-    if (!imgUrl) return undefined;
-
-    console.log(`[CRON-IMAGE-WEB] 📥 Descargando imagen seleccionada: "${selected.title || 'Inmueble'}" (${imgUrl.substring(0, 60)}...)...`);
-    const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(12000) });
-    if (!imgRes.ok) return undefined;
-
-    const buffer = Buffer.from(await imgRes.arrayBuffer());
-    if (buffer.length < 1000) return undefined;
-
-    const cacheDir = path.resolve(process.cwd(), 'client/public/assets/broadcast');
-    if (!fs.existsSync(cacheDir)) {
-      fs.mkdirSync(cacheDir, { recursive: true });
-    }
-    const targetFile = path.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-    fs.writeFileSync(targetFile, buffer);
-    console.log(`[CRON-IMAGE-WEB] ✅ Imagen guardada localmente (${buffer.length} bytes): ${targetFile}`);
-    return targetFile;
   } catch (err: any) {
-    console.warn(`[CRON-IMAGE-WEB] Aviso: Búsqueda o descarga de imagen no completada (${err?.message}). Se despachará en texto puro.`);
-    return undefined;
+    console.warn(`[CRON-IMAGE-WEB] Búsqueda externa no completada (${err?.message}). Activando Capa 1 de respaldo local.`);
   }
+
+  const localBackup = getLocalCuratedThemeImage(themeKey);
+  console.log(`[CRON-IMAGE-WEB] 🛡️ Capa 1 Activada: Asignando imagen curada local: ${localBackup}`);
+  return localBackup;
 }
 
-// ── ORQUESTADOR PRINCIPAL DE CRONS (v32.59 — HORA BOGOTÁ) ───────────────────
+// ── ORQUESTADOR PRINCIPAL DE CRONS (v33.32 — HORA BOGOTÁ) ───────────────────
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador v32.59 (Encuesta SEMANAL nativa solo en Canal Oficial, Difusión diaria con imágenes públicas de internet, Invitaciones periódicas separadas, PostgreSQL Lock anti-duplicados)...');
+  console.log('[CRON-SERVICE] Inicializando orquestador v33.32 (Mañana 08:45 AM Píldora + Teaser Trampolín, Tarde 06:30 PM Encuestas/Servicios, Capa 1 Multimedia Resiliente)...');
 
-  // 📊 LUNES 08:00 AM — Encuesta SEMANAL NATIVA (EXCLUSIVA del Canal Oficial de WhatsApp, 1 sola respuesta, cero emojis)
-  cron.schedule('0 8 * * 1', async () => {
-    console.log('[CRON-SERVICE] Disparando encuesta semanal del Canal Oficial (Lunes 08:00 AM)...');
-    await publishWeeklyPoll(undefined, false);
-  }, { timezone: 'America/Bogota' });
-
-  // ☀️ 10:00 AM DIARIO — Tip del Calendario de 30 días (IMAGEN PÚBLICA DE INTERNET + TEXTO SIN AUDIO → Grupo 2 + Grupo 3 + Canal Oficial)
-  cron.schedule('0 10 * * *', async () => {
-    console.log('[CRON-SERVICE] Disparando difusión diaria (10:00 AM)...');
+  // ☀️ 08:45 AM DIARIO — Píldora de alto valor en el Canal (con imagen HD) + Micro-gancho persuasivo en Grupos 2 y 3
+  cron.schedule('45 8 * * *', async () => {
+    console.log('[CRON-SERVICE] Disparando píldora matutina de alto valor (08:45 AM)...');
     await publishTodayTipNow(false);
   }, { timezone: 'America/Bogota' });
 
-  // 📢 INVITACIONES PERIÓDICAS DESDE EL CANAL HACIA LOS GRUPOS (Días y horas distintos a la encuesta de los Lunes 8am, con mensajes y enlaces separados)
-  // Miércoles 04:30 PM (16:30) -> Invitación al Grupo 1 (Ofertas y Demandas)
-  cron.schedule('30 16 * * 3', async () => {
-    console.log('[CRON-SERVICE] Disparando invitación del Canal al Grupo 1 (Miércoles 16:30)...');
-    await publishChannelGroupInvitation('grupo1', false);
+  // 📊 MARTES Y JUEVES 06:30 PM — Encuesta Nativa en Canal Oficial + Teaser de Debate en Grupos 2 y 3
+  cron.schedule('30 18 * * 2,4', async () => {
+    console.log('[CRON-SERVICE] Disparando encuesta nativa interactiva vespertina (Martes/Jueves 18:30)...');
+    await publishEveningPollNow(false);
   }, { timezone: 'America/Bogota' });
 
-  // Jueves 04:30 PM (16:30) -> Invitación al Grupo 2 (Tips y Consultas)
-  cron.schedule('30 16 * * 4', async () => {
-    console.log('[CRON-SERVICE] Disparando invitación del Canal al Grupo 2 (Jueves 16:30)...');
-    await publishChannelGroupInvitation('grupo2', false);
+  // 🛡️ VIERNES 06:30 PM — Servicios Gratuitos de Verificación con JanIA (Canal + Teaser Grupos)
+  cron.schedule('30 18 * * 5', async () => {
+    console.log('[CRON-SERVICE] Disparando difusión de servicios gratuitos de verificación (Viernes 18:30)...');
+    await publishEveningServicesNow(false);
   }, { timezone: 'America/Bogota' });
 
-  // Viernes 04:30 PM (16:30) -> Invitación al Grupo 3 (Proyecto VECY)
-  cron.schedule('30 16 * * 5', async () => {
-    console.log('[CRON-SERVICE] Disparando invitación del Canal al Grupo 3 (Viernes 16:30)...');
-    await publishChannelGroupInvitation('grupo3', false);
-  }, { timezone: 'America/Bogota' });
-
-  // 🔄 RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Madrugada profunda a las 03:45 AM (Ventana Inactiva)
+  // 🔄 03:45 AM DIARIO — Re-matching masivo silencioso (Base de Datos): Madrugada profunda
   cron.schedule('45 3 * * *', async () => {
     console.log('[CRON-SERVICE] Ejecutando cruce masivo nocturno (Re-matching 03:45 AM)...');
     try {
@@ -1899,25 +2010,19 @@ export function initCronScheduler() {
       const min = parseInt(minStr, 10);
       const day = new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' })).getDay();
 
-      // Ventana de seguridad de la encuesta semanal: Lunes entre 08:01 y 08:15 AM
-      if (day === 1 && hour === 8 && min >= 1 && min <= 15) {
-        await publishWeeklyPoll(undefined, false);
-      }
-
-      // Ventana de seguridad de la difusión diaria: entre 10:01 y 10:15 AM
-      if (hour === 10 && min >= 1 && min <= 15) {
+      // Ventana de seguridad de la píldora matutina diaria: entre 08:46 y 08:59 AM
+      if (hour === 8 && min >= 46 && min <= 59) {
         await publishTodayTipNow(false);
       }
 
-      // Ventanas de seguridad de invitaciones desde el canal hacia los grupos:
-      if (day === 3 && hour === 16 && min >= 31 && min <= 45) {
-        await publishChannelGroupInvitation('grupo1', false);
+      // Ventana de seguridad de encuesta vespertina: Martes y Jueves entre 18:31 y 18:45 PM
+      if ((day === 2 || day === 4) && hour === 18 && min >= 31 && min <= 45) {
+        await publishEveningPollNow(false);
       }
-      if (day === 4 && hour === 16 && min >= 31 && min <= 45) {
-        await publishChannelGroupInvitation('grupo2', false);
-      }
-      if (day === 5 && hour === 16 && min >= 31 && min <= 45) {
-        await publishChannelGroupInvitation('grupo3', false);
+
+      // Ventana de seguridad de servicios gratuitos: Viernes entre 18:31 y 18:45 PM
+      if (day === 5 && hour === 18 && min >= 31 && min <= 45) {
+        await publishEveningServicesNow(false);
       }
     } catch (err: any) {
       console.error('[CRON-FAILSAFE] Error en chequeo de seguridad minutero:', err?.message || err);
@@ -1935,7 +2040,7 @@ export function initCronScheduler() {
  * El bloqueo PostgreSQL impide cualquier envío duplicado en el mismo día.
  */
 export async function publishGrupo3TipNow(force: boolean = false) {
-  console.log('[CRON-SERVICE] publishGrupo3TipNow → unificado en la difusión diaria (Grupo 2 + Grupo 3 + Canal).');
+  console.log('[CRON-SERVICE] publishGrupo3TipNow → unificado en la difusión matutina.');
   return publishTodayTipNow(force);
 }
 
@@ -1949,8 +2054,9 @@ export async function publishDailyTipForDay(tipoKey: string, force: boolean = fa
 }
 
 /**
- * Publica el tema del día del Calendario de 30 días con IMAGEN PÚBLICA DE INTERNET Y TEXTO
- * (sin audio TTS, imágenes reales del sector inmobiliario/arquitectura) a Grupo 2, Grupo 3 y Canal Oficial.
+ * Publica la Píldora Matutina (08:45 AM) del Calendario de 30 días:
+ * - CANAL OFICIAL: Píldora de alto valor completa con imagen HD garantizada (Capa 1).
+ * - GRUPOS 2 Y 3: Micro-gancho persuasivo (teaser trampolín) con enlace al Canal y pregunta detonante.
  */
 export async function publishTodayTipNow(force: boolean = true) {
   const dateKey = getBogotaDateString();
@@ -1963,23 +2069,30 @@ export async function publishTodayTipNow(force: boolean = true) {
     return { skipped: true, reason: lock.reason };
   }
 
-  console.log(`[CRON-SERVICE] 🚀 Difusión diaria — Día ${tip.dayOfMonth}: "${tip.topicTitle}"`);
+  console.log(`[CRON-SERVICE] 🚀 Difusión matutina (08:45 AM) — Día ${tip.dayOfMonth}: "${tip.topicTitle}"`);
   const content = await generateCalendarDailyText(tip);
 
-  // 2. Búsqueda y descarga de imagen pública de internet acorde al tema (sin repetir)
-  const imagePath = await fetchPublicThemeImage(content.themeKey || tip.themeKey, tip.dayOfMonth);
+  // 2. Búsqueda y descarga de imagen con Capa 1 Resiliente garantizada
+  const imagePath = (await fetchPublicThemeImage(content.themeKey || tip.themeKey, tip.dayOfMonth)) || getLocalCuratedThemeImage(content.themeKey || tip.themeKey);
+
+  // 3. Generación del Micro-Gancho Persuasivo (Teaser Trampolín) para Grupos 2 y 3
+  const teaserText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴\n\n` +
+    `📌 *${tip.topicTitle}*\n` +
+    `Acabamos de subir al Canal Oficial el análisis legal y técnico desglosado con los artículos clave que necesitas para blindar tus operaciones y comisiones.\n\n` +
+    `👉 *Sigue el Canal Oficial y lee la guía completa aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+    `Colegas, ¿ustedes cómo están manejando este tema en el día a día? Cuéntennos su experiencia y debatimos aquí abajo 👇`;
 
   try {
-    // 3. Despachar a Grupo 2, Grupo 3 y Canal Oficial (imagen + texto, CERO audio)
-    await whatsappBot.sendDailyTipToGroupsAndChannel(content.captionText, imagePath);
+    // 4. Despachar: Píldora completa con imagen al Canal Oficial, y micro-gancho persuasivo a Grupos 2 y 3
+    await whatsappBot.sendMorningPillAndGroupTeasers(content.captionText, teaserText, imagePath);
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
       imageFileName: imagePath ? path.basename(imagePath) : undefined,
       captionText: content.captionText,
     });
-    console.log(`[CRON-SERVICE] ✓ Difusión diaria entregada (${imagePath ? 'con imagen pública' : 'texto puro'}) a Grupo 2, Grupo 3 y Canal Oficial: "${content.topicTitle}".`);
-    return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath };
+    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen + Grupos 2 y 3 con teaser trampolín): "${content.topicTitle}".`);
+    return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText };
   } catch (err: any) {
     console.error(`[CRON-SERVICE] Error despachando difusión diaria (Día ${tip.dayOfMonth}):`, err?.message);
     await failBroadcast(lock.broadcastId, err?.message);

@@ -183,7 +183,28 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.31 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.32 — Octubre 2026
+
+### Novedades v33.32 (Embudo Estratégico Trampolín Canal vs Grupos 2 y 3, Capa 1 Multimedia Resiliente y Encuestas Nativas Estrictas):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3)**:
+     - *Canal Oficial*: Escenario principal con publicaciones completas, profundas, formateadas y con imagen temática HD garantizada.
+     - *Grupos 2 y 3*: Micro-ganchos persuasivos (teasers) de 3 a 4 líneas de alto impacto con Copywriting AIDA, enlace directo al Canal Oficial (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`) y pregunta detonante para abrir debates profesionales que modera JanIA.
+  2. **Frecuencia Optimizada de 2 Impactos Diarios (Sin Saturación)**:
+     - *Mañana (08:45 AM)*: Píldora de alto valor en el Canal (jurídico, tributario Art. 72/73, notarial, avalúos $/m²) con imagen HD + micro-gancho en Grupos 2 y 3.
+     - *Tarde (06:30 PM)*: Martes y Jueves (encuesta nativa interactiva en Canal + teaser de debate en grupos); Viernes (servicios gratuitos de verificación con JanIA: ADRES, Policía, Procuraduría, Contraloría, RUES, Predial, IDU).
+  3. **Encuestas Nativas Estrictas en WhatsApp**:
+     - Exclusivamente `pollCreationMessageV3` / `sendPoll` con `selectableCount: 1` obligatorio (voto único; nada de selección múltiple ni emojis simulados).
+     - Límite estricto de 3 a 4 opciones cortas (máximo 5 a 6 palabras por opción).
+  4. **Capa 1 Multimedia Resiliente Garantizada**:
+     - Banco curado local en `assets/broadcast/`, `client/public/assets/broadcast/` y `client/public/assets/jania/` (`jania_juridico.jpg`, `jania_tributario.jpg`, `jania_avaluos.jpg`, `jania_noticias.jpg`, `jania_verificacion_servicio.jpg`, `jania_matches.jpg`, `jania_marketing.jpg`).
+     - Si la búsqueda web en Openverse falla o tarda, `fetchPublicThemeImage` conmuta automáticamente a la Capa 1 local, garantizando que el Canal JAMÁS salga en texto plano.
+  5. **Despacho Especializado**:
+     - Implementación de `sendMorningPillAndGroupTeasers` en `server/_core/whatsapp-match.ts` y reconfiguración integral de `initCronScheduler` en `server/_core/cronService.ts`.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm run build` limpio en 22s ✅
+- `shared/const.ts` (`v33.32`) y `package.json` (`33.32.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.31 — Octubre 2026
 
 ### Novedades v33.31 (Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

@@ -3442,6 +3442,62 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 
   /**
+   * 🚀 Despacho Estratégico Matutino (v33.32 — Doctrina Embudo Trampolín):
+   * - Canal Oficial (Newsletter): Píldora de alto valor completa con imagen HD garantizada.
+   * - Grupos 2 y 3: Micro-gancho persuasivo (teaser) con CTA al canal y pregunta detonante de debate.
+   */
+  public async sendMorningPillAndGroupTeasers(channelText: string, teaserText: string, imagePath?: string) {
+    if (!this.channelNewsletterId) {
+      await this.discoverAndSyncNewsletters().catch(() => { });
+    }
+
+    const fs = await import('fs');
+    const hasImage = imagePath && fs.existsSync(imagePath);
+
+    // 1. Canal Oficial: Publicación completa con imagen
+    if (this.channelNewsletterId) {
+      try {
+        if (hasImage) {
+          console.log(`[JANIA-MATCH] 📢 Despachando píldora matutina con imagen HD a Canal Oficial (${this.channelNewsletterId})...`);
+          await this.sendToGroup(channelText, imagePath, [], this.channelNewsletterId);
+        } else {
+          console.log(`[JANIA-MATCH] 📢 Despachando píldora matutina a Canal Oficial (${this.channelNewsletterId})...`);
+          await this.queuedSend(this.channelNewsletterId, channelText, { allowDirectMessage: true });
+        }
+        console.log(`[JANIA-MATCH] ✓ Píldora matutina entregada al Canal Oficial.`);
+      } catch (chanErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando píldora al Canal Oficial:`, chanErr?.message);
+      }
+    } else {
+      console.warn(`[JANIA-MATCH] Canal Oficial no disponible al despachar píldora matutina.`);
+    }
+
+    // 2. Grupo 2 (Tips & Consultas): Micro-gancho persuasivo (teaser)
+    const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
+    if (targetGroup2) {
+      try {
+        console.log(`[JANIA-MATCH] 📤 Despachando micro-gancho trampolín a Grupo 2 (${targetGroup2})...`);
+        await this.queuedSend(targetGroup2, teaserText, { allowGroupMessage: true });
+        console.log(`[JANIA-MATCH] ✓ Teaser trampolín entregado a Grupo 2.`);
+      } catch (grpErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando teaser a Grupo 2:`, grpErr?.message);
+      }
+    }
+
+    // 3. Grupo 3 (Proyecto VECY): Micro-gancho persuasivo (teaser)
+    const targetGroup3 = this.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
+    if (targetGroup3) {
+      try {
+        console.log(`[JANIA-MATCH] 📤 Despachando micro-gancho trampolín a Grupo 3 (${targetGroup3})...`);
+        await this.queuedSend(targetGroup3, teaserText, { allowGroupMessage: true });
+        console.log(`[JANIA-MATCH] ✓ Teaser trampolín entregado a Grupo 3.`);
+      } catch (grpErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando teaser a Grupo 3:`, grpErr?.message);
+      }
+    }
+  }
+
+  /**
    * Compatibilidad: Despacho de texto puro delegando a sendDailyTipToGroupsAndChannel sin imagen
    */
   public async sendDailyTipTextToGroupsAndChannel(captionText: string) {
