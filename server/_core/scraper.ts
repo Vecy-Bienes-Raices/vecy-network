@@ -193,3 +193,42 @@ export function extractPortalAndListingId(urlStr: string): { portal: string | nu
     return { portal: null, listingId: null };
   }
 }
+
+/**
+ * Descarga y extrae el contenido de cualquier URL web (portales inmobiliarios, páginas corporativas o documentos)
+ * para análisis conversacional inmediato en JanIA (Nivel ARGON — v33.30)
+ */
+export async function fetchWebUrlContent(
+  urlStr: string,
+  timeoutMs: number = 10000
+): Promise<{ title: string; content: string; url: string; success: boolean }> {
+  try {
+    const response = await axios.get(urlStr, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (VECY-Browser/33.30)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-CO,es;q=0.9,en;q=0.8'
+      },
+      timeout: timeoutMs
+    });
+
+    const $ = cheerio.load(response.data);
+    const title = $('title').text() || $('h1').first().text() || "Página web";
+    $('script, style, nav, footer, iframe, header, noscript, svg, .ad, .advertisement').remove();
+    const text = $('body').text().replace(/\s+/g, ' ').trim();
+    return {
+      title: title.trim(),
+      content: text.slice(0, 8000),
+      url: urlStr,
+      success: true
+    };
+  } catch (err: any) {
+    return {
+      title: "Error al acceder a la URL",
+      content: `No se pudo descargar el contenido de ${urlStr}: ${err?.message}`,
+      url: urlStr,
+      success: false
+    };
+  }
+}
+

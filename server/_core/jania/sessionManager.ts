@@ -3,6 +3,8 @@
  * Gestión de sesiones temporales, control de mutes, historial conversacional (DMs y Consultoría),
  * métricas en vivo y análisis morfológico de saludos.
  */
+import fs from 'fs';
+import path from 'path';
 import { getDb, getRawSql } from "../../db";
 import {
   pendingSessions,
@@ -599,3 +601,195 @@ export async function clearCompanySession(userId: string): Promise<void> {
     }
   } catch (_) { }
 }
+
+// ─── Expediente Perpetuo y Memoria Persistente de Usuario (Nivel ARGON — v33.30) ───
+export interface UserPerpetualSession {
+  userId: string;
+  phone: string;
+  name?: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  messageCount: number;
+  freeServicesUsedCount: number;
+  hasVerifiedGoogleReview: boolean;
+  reviewVerifiedAt?: string;
+  reviewClaimedAt?: string;
+  reviewScreenshotReceived?: boolean;
+  notes?: string[];
+  keyFacts?: Record<string, any>;
+  analyzedDocs?: Array<{ type: string; identifier: string; timestamp: number }>;
+}
+
+const PERSISTENT_SESSIONS_FILE = path.resolve(process.cwd(), "data/jania_persistent_sessions.json");
+const userPerpetualSessionMap = new Map<string, UserPerpetualSession>();
+let persistentSessionsLoaded = false;
+
+export function isEduardoOrJani(phoneOrJid: string): boolean {
+  if (!phoneOrJid) return false;
+  const clean = phoneOrJid.replace(/\D/g, "");
+  const vipList = [
+    "3192919978", "573192919978", "225954035179724", "3118536968", "573118536968", "3166569719", "573166569719",
+    "3188096811", "573188096811", "167108705018103", "182781141344345", "218820279050385"
+  ];
+  return vipList.some(v => clean.includes(v) || v.includes(clean));
+}
+
+function ensureLoadedFromDisk(): void {
+  if (persistentSessionsLoaded) return;
+  persistentSessionsLoaded = true;
+  try {
+    if (fs.existsSync(PERSISTENT_SESSIONS_FILE)) {
+      const raw = fs.readFileSync(PERSISTENT_SESSIONS_FILE, "utf-8");
+      const list: UserPerpetualSession[] = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        for (const item of list) {
+          if (item?.userId) {
+            userPerpetualSessionMap.set(item.userId, item);
+          }
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[sessionManager] Error loading persistent sessions from disk:", err?.message);
+  }
+}
+
+function saveSessionsToDisk(): void {
+  try {
+    const dir = path.dirname(PERSISTENT_SESSIONS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const all = Array.from(userPerpetualSessionMap.values());
+    fs.writeFileSync(PERSISTENT_SESSIONS_FILE, JSON.stringify(all, null, 2), "utf-8");
+  } catch (err: any) {
+    console.warn("[sessionManager] Error saving persistent sessions to disk:", err?.message);
+  }
+}
+
+export async function getUserPerpetualSession(userId: string, userName?: string): Promise<UserPerpetualSession> {
+  ensureLoadedFromDisk();
+  const cleanJid = cleanSessionJid(userId);
+
+  // 1. Memoria RAM
+  let session = userPerpetualSessionMap.get(cleanJid);
+  if (session) {
+    if (userName && !session.name) session.name = userName;
+    return session;
+  }
+
+  // 2. Base de Datos PostgreSQL
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `user_memory:${cleanJid}`;
+      const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, dbKey)).limit(1);
+      if (existing && existing.sessionData && typeof existing.sessionData === "object") {
+        session = existing.sessionData as UserPerpetualSession;
+        userPerpetualSessionMap.set(cleanJid, session);
+        saveSessionsToDisk();
+        return session;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[getUserPerpetualSession] Error recuperando de BD:", err?.message);
+  }
+
+  // 3. Crear Nueva Sesión si no existía
+  const isVip = isEduardoOrJani(cleanJid);
+  const now = new Date().toISOString();
+  session = {
+    userId: cleanJid,
+    phone: cleanJid,
+    name: userName || undefined,
+    firstSeenAt: now,
+    lastSeenAt: now,
+    messageCount: 0,
+    freeServicesUsedCount: 0,
+    hasVerifiedGoogleReview: isVip,
+    notes: [],
+    keyFacts: {}
+  };
+  userPerpetualSessionMap.set(cleanJid, session);
+  saveSessionsToDisk();
+  return session;
+}
+
+export async function saveUserPerpetualSession(session: UserPerpetualSession): Promise<void> {
+  ensureLoadedFromDisk();
+  userPerpetualSessionMap.set(session.userId, session);
+  saveSessionsToDisk();
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `user_memory:${session.userId}`;
+      await db.insert(pendingSessions).values({
+        jid: dbKey,
+        sessionData: session,
+        updatedAt: new Date()
+      }).onConflictDoUpdate({
+        target: pendingSessions.jid,
+        set: {
+          sessionData: session,
+          updatedAt: new Date()
+        }
+      });
+    }
+  } catch (err: any) {
+    console.warn("[saveUserPerpetualSession] Error persistiendo en BD:", err?.message);
+  }
+}
+
+export async function isNewUser(userId: string): Promise<boolean> {
+  const session = await getUserPerpetualSession(userId);
+  const history = getDmHistory(userId);
+  return session.messageCount === 0 && history.length === 0;
+}
+
+export async function incrementUserMessageCount(userId: string): Promise<number> {
+  const session = await getUserPerpetualSession(userId);
+  session.messageCount = (session.messageCount || 0) + 1;
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+  return session.messageCount;
+}
+
+export async function incrementFreeServicesCount(userId: string): Promise<number> {
+  const session = await getUserPerpetualSession(userId);
+  session.freeServicesUsedCount = (session.freeServicesUsedCount || 0) + 1;
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+  return session.freeServicesUsedCount;
+}
+
+export async function recordUserReviewClaim(userId: string): Promise<void> {
+  const session = await getUserPerpetualSession(userId);
+  session.reviewClaimedAt = new Date().toISOString();
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+}
+
+export async function verifyUserGoogleReview(userId: string): Promise<void> {
+  const session = await getUserPerpetualSession(userId);
+  session.hasVerifiedGoogleReview = true;
+  session.reviewVerifiedAt = new Date().toISOString();
+  session.reviewScreenshotReceived = true;
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+  console.log(`[GoogleReview] Usuario ${session.userId} marcado como hasVerifiedGoogleReview = true`);
+}
+
+export async function isUserVerifiedGoogleReview(userId: string): Promise<boolean> {
+  if (isEduardoOrJani(userId)) return true;
+  const session = await getUserPerpetualSession(userId);
+  return !!session.hasVerifiedGoogleReview;
+}
+
+export async function shouldAskForGoogleReview(userId: string): Promise<boolean> {
+  if (isEduardoOrJani(userId)) return false;
+  const session = await getUserPerpetualSession(userId);
+  if (session.hasVerifiedGoogleReview) return false;
+  return session.freeServicesUsedCount >= 1;
+}
+

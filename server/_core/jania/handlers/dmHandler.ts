@@ -1,4 +1,23 @@
-import { resolveRealName, getOrLoadDmHistory, appendDmHistory, getContactPermanentDossier } from "../sessionManager";
+import {
+  resolveRealName,
+  getOrLoadDmHistory,
+  appendDmHistory,
+  getContactPermanentDossier,
+  getUserPerpetualSession,
+  saveUserPerpetualSession,
+  isNewUser,
+  incrementUserMessageCount,
+  incrementFreeServicesCount,
+  recordUserReviewClaim,
+  verifyUserGoogleReview,
+  isUserVerifiedGoogleReview,
+  shouldAskForGoogleReview,
+  isEduardoOrJani
+} from "../sessionManager";
+import { fetchWebUrlContent } from "../../scraper";
+import { getDb } from "../../../db";
+import { properties } from "../../../../drizzle/schema";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
@@ -209,6 +228,30 @@ export const JANIA_DM_TOOLS = [
             categoria: { type: "STRING", description: "Categoría: 'inmuebles', 'servicios' o 'general'" }
           }
         }
+      },
+      {
+        name: "navegar_o_buscar_web",
+        description: "Abre y extrae el contenido real de una URL/enlace web (portales inmobiliarios como Metrocuadrado, Fincaraiz, Ciencuadras, páginas corporativas o documentos web) o busca información actualizada en internet.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            url: { type: "STRING", description: "URL o enlace web completo a consultar (ej. https://...)" },
+            query: { type: "STRING", description: "Término de búsqueda web si no hay URL directa" }
+          }
+        }
+      },
+      {
+        name: "consultar_catalogo_inmuebles_vecy",
+        description: "Consulta el catálogo oficial y base de datos de propiedades de VECY BIENES RAÍCES (Atención Bróker 3166569719), filtrando por tipo de inmueble, tipo de negocio (venta, arriendo), zona/barrio, rango de precio o características, entregando fichas y sondeos de $/m² al instante.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, local, lote, etc." },
+            tipoNegocio: { type: "STRING", description: "venta, arriendo, venta_o_arriendo" },
+            zona: { type: "STRING", description: "Zona o barrio de Bogotá o municipio" },
+            precioMaximo: { type: "NUMBER", description: "Presupuesto máximo en COP" }
+          }
+        }
       }
     ]
   }
@@ -225,7 +268,9 @@ export type JaniaDmToolType =
   | "encuesta"
   | "contacto"
   | "evento"
-  | "catalogo";
+  | "catalogo"
+  | "web"
+  | "catalogo_inmuebles";
 
 export async function executeJaniaDmTool(
   toolName: string,
@@ -557,6 +602,118 @@ export async function executeJaniaDmTool(
         }
       };
     }
+    case "navegar_o_buscar_web": {
+      const url = String(args.url || "").trim();
+      const query = String(args.query || rawUserText || "").trim();
+      if (url && /^https?:\/\//i.test(url)) {
+        const pageData = await fetchWebUrlContent(url);
+        return {
+          toolType: "web",
+          resultJson: {
+            solicitud: "navegacion_web",
+            url,
+            titulo: pageData.title,
+            contenido: pageData.content,
+            exitoso: pageData.success
+          }
+        };
+      }
+      return {
+        toolType: "web",
+        resultJson: {
+          solicitud: "busqueda_web",
+          query,
+          mensaje: "Búsqueda web procesada en el núcleo cognitivo de JanIA.",
+          exitoso: true
+        }
+      };
+    }
+    case "consultar_catalogo_inmuebles_vecy": {
+      const tipoInmueble = String(args.tipoInmueble || "").toLowerCase().trim();
+      const tipoNegocio = String(args.tipoNegocio || "").toLowerCase().trim();
+      const zona = String(args.zona || "").trim();
+      const precioMax = Number(args.precioMaximo || 0);
+
+      const db = await getDb();
+      let foundProps: any[] = [];
+      if (db) {
+        try {
+          const conditions: any[] = [eq(properties.available, true)];
+          if (tipoInmueble) {
+            conditions.push(sql`LOWER(${properties.propertyType}) LIKE ${'%' + tipoInmueble + '%'}`);
+          }
+          if (tipoNegocio) {
+            conditions.push(sql`LOWER(${properties.transactionType}) LIKE ${'%' + tipoNegocio + '%'}`);
+          }
+          if (zona) {
+            conditions.push(sql`LOWER(${properties.zone}) LIKE ${'%' + zona.toLowerCase() + '%'}`);
+          }
+          if (precioMax > 0) {
+            conditions.push(sql`(${properties.price} <= ${precioMax} OR ${properties.rentPrice} <= ${precioMax})`);
+          }
+          foundProps = await db
+            .select({
+              id: properties.id,
+              name: properties.name,
+              propertyType: properties.propertyType,
+              transactionType: properties.transactionType,
+              zone: properties.zone,
+              price: properties.price,
+              rentPrice: properties.rentPrice,
+              areaTotal: properties.areaTotal,
+              bedrooms: properties.bedrooms,
+              bathrooms: properties.bathrooms,
+              garages: properties.garages,
+              description: properties.description
+            })
+            .from(properties)
+            .where(and(...conditions))
+            .orderBy(desc(properties.id))
+            .limit(5);
+        } catch (dbErr: any) {
+          console.warn("[consultar_catalogo_inmuebles_vecy] Error querying DB:", dbErr?.message);
+        }
+      }
+
+      const totalProps = foundProps.length;
+      let avgM2Price = 0;
+      if (totalProps > 0) {
+        const prices = foundProps.map(p => {
+          const pr = Number(p.price || p.rentPrice || 0);
+          const ar = Number(p.areaTotal || 0);
+          return ar > 0 && pr > 0 ? pr / ar : 0;
+        }).filter(v => v > 0);
+        if (prices.length > 0) {
+          avgM2Price = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+        }
+      }
+
+      return {
+        toolType: "catalogo_inmuebles",
+        resultJson: {
+          solicitud: "catalogo_inmuebles_vecy",
+          tipoInmueble,
+          tipoNegocio,
+          zona,
+          totalEncontrados: totalProps,
+          precioPromedioM2: avgM2Price,
+          inmuebles: foundProps.map(p => ({
+            codigo: `#P${p.id}`,
+            titulo: p.name,
+            tipo: p.propertyType,
+            operacion: p.transactionType,
+            zona: p.zone,
+            precioVenta: p.price ? `$${Number(p.price).toLocaleString('es-CO')} COP` : undefined,
+            precioCanon: p.rentPrice ? `$${Number(p.rentPrice).toLocaleString('es-CO')} COP/mes` : undefined,
+            areaM2: p.areaTotal ? `${p.areaTotal} m²` : undefined,
+            habitaciones: p.bedrooms,
+            banos: p.bathrooms,
+            garajes: p.garages
+          })),
+          contactoBroker: "Eduardo Rivera & Jani Alves — WhatsApp Oficial +57 316 656 9719"
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -576,6 +733,9 @@ export async function synthesizeToolResponseWithGemini(
   displayName: string
 ): Promise<string> {
   const isFreeTool = toolType !== "sondeo" && toolType !== "match";
+  if (isFreeTool) {
+    await incrementFreeServicesCount(userId);
+  }
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
 
   // 1. Bypass exclusivo para herramientas con documentos oficiales descargables o formatos especiales (Predial, IDU, Notarial y Match)
@@ -592,6 +752,10 @@ export async function synthesizeToolResponseWithGemini(
       : await formatPoliteToolDelivery(userId, userName, toolType as any, rawReport, true);
   }
 
+  const userVerifiedReview = await isUserVerifiedGoogleReview(userId);
+  const isVip = isEduardoOrJani(userId);
+  const askReview = !userVerifiedReview && !isVip && (await shouldAskForGoogleReview(userId));
+
   let specialToolInstructions = "";
   if (toolType === "cedula") {
     specialToolInstructions =
@@ -605,7 +769,9 @@ export async function synthesizeToolResponseWithGemini(
       `  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y régimen.\n` +
       `- Si el documento no aparece indexado en las bases censales en línea, indícalo con honestidad y claridad para que verifique el número físico.\n` +
       `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Ubica al final una línea breve y elegante de Hábeas Data (Ley 1581/12 y Art. 15 C.P.).\n` +
-      `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana, simpática y persuasiva invitando a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.\n`;
+      (askReview
+        ? `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana, simpática y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.\n`
+        : `- REGLA ESTRICTA DE RESEÑA: No pidas ni menciones reseña de Google a este usuario.\n`);
   } else if (toolType === "empresa") {
     specialToolInstructions =
       `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confecámaras / Cámaras de Comercio de Colombia / DIAN).\n` +
@@ -619,7 +785,18 @@ export async function synthesizeToolResponseWithGemini(
       `- SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localizó la empresa, informa con total honestidad que no se halló registro en las 57 Cámaras de Comercio del país y pídele con amabilidad el número de NIT para una búsqueda exacta.\n` +
       `- CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma robótica si desea verificar al representante. JanIA lo menciona en su única respuesta con naturalidad.\n` +
       `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Incluye una línea breve de publicidad mercantil y hábeas data (Art. 26 C.Co. y Ley 1581/12).\n` +
-      `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.\n`;
+      (askReview
+        ? `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.\n`
+        : `- REGLA ESTRICTA DE RESEÑA: No pidas ni menciones reseña de Google a este usuario.\n`);
+  } else if (toolType === "web") {
+    specialToolInstructions =
+      `- HERRAMIENTA: Navegación y Lectura Web Abierta en Tiempo Real.\n` +
+      `- Extrae y analiza los datos reales de la página o portal consultado, entregando síntesis ejecutiva, directa y sin rodeos al usuario.\n`;
+  } else if (toolType === "catalogo_inmuebles") {
+    specialToolInstructions =
+      `- HERRAMIENTA: Consulta de Catálogo Oficial de VECY BIENES RAÍCES (Atención Bróker 3166569719).\n` +
+      `- Presenta de forma clara y organizada las propiedades encontradas con su código (#P...), tipo, ubicación, precio o canon y metraje, junto con el valor promedio de $/m² de la zona.\n` +
+      `- Invita cordialmente a comunicarse con Eduardo Rivera o Jani Alves a la línea de atención de bróker (+57 316 656 9719) para coordinar visitas o recibir dossier completo.\n`;
   }
 
   const synthPrompt = [
@@ -630,13 +807,13 @@ export async function synthesizeToolResponseWithGemini(
         `Acabas de ejecutar la herramienta correspondiente a: ${toolType}.\n` +
         `Datos estructurados del sistema en JSON:\n` +
         `${JSON.stringify(toolJson, null, 2)}\n\n` +
-        `INSTRUCCIONES DE REDACCIÓN:\n` +
-        `- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasión de IA pura.\n` +
+        `INSTRUCCIONES DE REDACCIÓN (NIVEL ARGON — VOZ LAOMEDEIA):\n` +
+        `- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia, concisión y persuasión de IA pura.\n` +
         specialToolInstructions +
         `- Si es un sondeo de mercado, entrega el valor por m² homologado, valor comercial sugerido, canon estimado y factores de ajuste según tu rol de Perita Avaluadora.\n` +
         `- Si es una consulta de matches, explica con claridad el cruce encontrado.\n` +
         `- Explica con claridad los datos técnicos sin tecnicismos robóticos ni plantillas rígidas.\n` +
-        `- Mantén concisión y estructura óptima para WhatsApp.\n` +
+        `- Mantén concisión y estructura óptima para WhatsApp (*negritas*, viñetas limpias).\n` +
         `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n`
     },
     {
@@ -646,7 +823,7 @@ export async function synthesizeToolResponseWithGemini(
   ];
 
   try {
-    const res = await invokeLLM({ messages: synthPrompt });
+    const res = await invokeLLM({ messages: synthPrompt, highReasoning: true });
     let text = res.choices[0]?.message?.content || "";
     if (text) {
       text = sanitizeResponseMarkdown(text.trim());
@@ -906,6 +1083,15 @@ export async function processPrivateDmConversationalMessage(
   // 🇨🇴 Franja Horaria de Colombia (America/Bogota, UTC-5)
   const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
   const hour = nowBogota.getHours();
+  const minutes = String(nowBogota.getMinutes()).padStart(2, '0');
+  const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const diaSemanaStr = diasSemana[nowBogota.getDay()];
+  const diaMes = nowBogota.getDate();
+  const mesStr = meses[nowBogota.getMonth()];
+  const anio = nowBogota.getFullYear();
+  const colombiaTimeFormatted = `${diaSemanaStr}, ${diaMes} de ${mesStr} de ${anio}, ${String(hour).padStart(2, '0')}:${minutes} hora Colombia (America/Bogota)`;
+
   let timeOfDay = "Mañana (5:00 am - 11:59 am)";
   let timeSalutation = "Buenos días";
   if (hour >= 5 && hour < 12) {
@@ -918,6 +1104,12 @@ export async function processPrivateDmConversationalMessage(
     timeOfDay = "Noche (7:00 pm - 4:59 am)";
     timeSalutation = "Buenas noches";
   }
+
+  // Expediente Perpetuo y Distinción Nuevo vs. Recurrente (Nivel ARGON — v33.30)
+  const isFirstTimeUser = await isNewUser(userId);
+  await incrementUserMessageCount(userId);
+  const userPerpetualSession = await getUserPerpetualSession(userId, userName);
+  const hasVerifiedReview = userPerpetualSession.hasVerifiedGoogleReview || isEduardoOrJani(userId);
 
   // Historial conversacional de 72 horas y verificación de interacción en últimas 6 horas
   const history = await getOrLoadDmHistory(userId);
@@ -960,10 +1152,31 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
+  // 🌟 AUDITORÍA INTELIGENTE DE RESEÑA EN GOOGLE (Nivel ARGON — v33.30):
+  // Si el usuario afirma que ya calificó o comentó en Google y no adjuntó imagen, solicitar amablemente el pantallazo
+  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
+
+  if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
+    await recordUserReviewClaim(userId);
+    const claimReply = `¡Muchísimas gracias por tu apoyo${displayName ? `, ${displayName}` : ""}! 🌟\n\nPara validar tu calificación y actualizar tu registro permanente en el sistema, ¿me compartes por favor un *pantallazo o captura de pantalla* de tu reseña y comentario en Google? 📸\n\nAsí te dejo verificado de inmediato y no te vuelvo a insistir jamás. ¡Te agradezco de todo corazón! 🤝✨`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", claimReply);
+    return claimReply;
+  }
+
+  // 🌐 NAVEGACIÓN Y EXTRACCIÓN PREVIA DE URLs:
+  let preloadedWebContent = "";
+  const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch && urlMatch[0]) {
+    try {
+      const pageInfo = await fetchWebUrlContent(urlMatch[0], 8000);
+      if (pageInfo.success && pageInfo.content) {
+        preloadedWebContent = `\n[SISTEMA - NAVEGACIÓN WEB EN TIEMPO REAL: Se descargó el contenido de la URL ${urlMatch[0]} enviada por el usuario:\nTítulo: ${pageInfo.title}\nContenido: ${pageInfo.content.slice(0, 4500)}]`;
+      }
+    } catch (_) {}
+  }
+
   // 🛡️ FLUJO POST-REPORTE DE EMPRESA (Doctrina v33.21):
-  // Si existe una pregunta de seguimiento empresarial activa ("¿Deseas que realice la verificación de identidad y antecedentes del Representante Legal Principal..."):
-  // - Si el usuario responde NO -> Enviar invitación a calificar y comentar haciendo alusión a que ayuda a que estos servicios sigan siendo 100% GRATUITOS.
-  // - Si el usuario responde SÍ o solicita verificar -> Ejecutar la verificación de identidad del documento y entregar en su propio formato y título oficial.
   try {
     const {
       getPendingCompanyFollowUp,
@@ -1006,7 +1219,6 @@ export async function processPrivateDmConversationalMessage(
         appendDmHistory(userId, "assistant", formattedRep);
         return formattedRep;
       }
-      // Si el usuario envía otro comando o documento distinto, limpiamos el estado de pregunta pendiente y dejamos fluir
       clearPendingCompanyFollowUp(userId);
     }
   } catch (followUpErr: any) {
@@ -1022,6 +1234,29 @@ export async function processPrivateDmConversationalMessage(
       `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
       `Estás conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.\n\n` +
       `===================================================\n` +
+      `CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:\n` +
+      `===================================================\n` +
+      `- Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.\n` +
+      `- Franja del día actual: ${timeOfDay}.\n` +
+      `- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.\n` +
+      `- ¿Hubo interacción reciente en las últimas 6 horas?: ${hasRecentInteractionPast6Hours ? "SÍ (Conversación activa en curso)" : "NO (Nueva interacción / inicio)"}.\n` +
+      `- REGLA ESTRICTA DEL SALUDO ÚNICO:\n` +
+      `  * Si NO hubo interacción reciente en las últimas 6 horas: Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n` +
+      `  * Si SÍ hubo interacción en las últimas 6 horas: Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.\n\n` +
+      `===================================================\n` +
+      `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:\n` +
+      `===================================================\n` +
+      `${isFirstTimeUser
+        ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida única, fresca, cercana y humana, transmitiendo confianza y empatía inmediata al estilo VECY sin sonar a robot.`
+        : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversación y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Raíces' o dar introducciones largas como si fuera un desconocido.`
+      }\n\n` +
+      `===================================================\n` +
+      `ESTILO Y VOZ LAOMEDEIA (HUMANIDAD PURA, CONCISIÓN Y CERO REDUNDANCIA):\n` +
+      `===================================================\n` +
+      `- Escribe con la misma calidez, chispa, persuasión y naturalidad con la que hablas en tus audios de Laomedeia, yendo SIEMPRE AL GRANO.\n` +
+      `- Prohibido extenderse con párrafos redundantes, introducciones largas o ladrillos de texto que aburran al lector: entrega explicaciones y reportes concretos, ágiles, visualmente elegantes y organizados por ti misma con Markdown de WhatsApp (*negritas*, _cursivas_, viñetas limpias y emojis precisos).\n` +
+      `- Respuestas ágiles, concretas y legibles en la pantalla del celular sin provocar el botón 'Leer más'.\n\n` +
+      `===================================================\n` +
       `BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RAÍCES:\n` +
       `===================================================\n` +
       `${vecyKnowledge}\n\n` +
@@ -1034,23 +1269,15 @@ export async function processPrivateDmConversationalMessage(
       `5. Tutora en Firma Electrónica Oficial y Fábrica Proptech: Guía paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electrónicamente', 3. Asunto y motivo, 4. Cargar PDF máx 10MB sin clave, 5. Código OTP al correo y firmar; también validar firmas de terceros y bandeja de 15 días). Recuerda que eres su tutora pedagógica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electrónica, canalízala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y guía en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificación algorítmica de identidad.\n` +
       `6. Asesora en Marketing Digital Inmobiliario: Estrategias, públicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversión.\n\n` +
       `===================================================\n` +
-      `CONTEXTO TEMPORAL Y REGLA DEL SALUDO ÚNICO:\n` +
-      `===================================================\n` +
-      `- Franja horaria actual en Colombia (Bogotá UTC-5): ${timeOfDay}.\n` +
-      `- Saludo institucional del momento: "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n` +
-      `- ¿Hubo interacción reciente en las últimas 6 horas?: ${hasRecentInteractionPast6Hours ? "SÍ (Conversación activa en curso)" : "NO (Nueva interacción / inicio)"}.\n` +
-      `- REGLA ESTRICTA DEL SALUDO ÚNICO:\n` +
-      `  * Si NO hubo interacción reciente en las últimas 6 horas: Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n` +
-      `  * Si SÍ hubo interacción en las últimas 6 horas: Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.\n\n` +
-      `===================================================\n` +
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.\n` +
       `Reglas de ejecución según el contexto:\n` +
       `a) Si el usuario envía un número o documento con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.\n` +
-      `b) Si el usuario pide una tarjeta de contacto, evento, encuesta interactiva de opciones o el catálogo de servicios: Invoca la herramienta nativa correspondiente.\n` +
-      `c) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
-      `d) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
+      `b) Si el usuario pide buscar en la web o comparte un enlace URL (portal inmobiliario, página corporativa): Invoca 'navegar_o_buscar_web' para extraer el contenido real al instante.\n` +
+      `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +
+      `d) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
+      `e) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
       `===================================================\n` +
       `BUSCADOR Y MEDIACIÓN DE MATCHES (CÓDIGO #M...):\n` +
       `===================================================\n` +
@@ -1064,7 +1291,7 @@ export async function processPrivateDmConversationalMessage(
       `- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empatía y complicidad profesional ("tú", "te", "contigo", "cuéntame", "¿qué buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fría o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RAÍCES.\n` +
       `- INTERLOCUTOR Y GÉNERO GRAMATICAL: "${displayName || 'Colega (nombre aún no identificado)'}". Género detectado: ${nameInfo.isFemale ? 'FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)' : 'MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)'}.\n` +
       `- REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. María Cristina, Juan Carlos, Ana María, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), ÚSALO SIEMPRE COMPLETO de forma fluida y orgánica. JAMÁS mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce aún (es un número de teléfono o saludo suelto), salúdalo con calidez y hazle una pregunta simpática para saber su nombre y cómo prefiere que lo llames.\n` +
-      `- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar orgánicamente cualquiera de los cientos de emojis disponibles en Unicode. Intercálalos según el contexto emocional, la entonación y el sentido de la frase, con naturalidad y sin abusar (expresiones de calidez 😊, ideas 💡, análisis 🤔, hogares 🏡🏢, celebración 🎉, documentos 📄, acuerdos 🤝, guiños 😉, notas 📝, etc.). Cero listas cerradas o restricciones rígidas.\n` +
+      `- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar orgánicamente cualquiera de los cientos de emojis disponibles en Unicode. Intercálalos según el contexto emocional, la entonación y el sentido de la frase, con naturalidad y sin abusar.\n` +
       `- CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VACÍAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MENÚS RÍGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "información", "de qué trata", etc.), actúa con la inteligencia conversacional de un asistente de nivel mundial:\n` +
       `  1. Saluda amablemente con calidez humana y tuteo cercano.\n` +
       `  2. Deduce con empatía la situación en una o dos frases breves y cautivadoras.\n` +
@@ -1082,6 +1309,10 @@ export async function processPrivateDmConversationalMessage(
             : isFamilyOrTrusted && trustedContact
               ? `- CÍRCULO FAMILIAR Y DE CONFIANZA: Estás conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Trátala/lo con inmenso cariño, afecto familiar y respeto natural. Cuéntale con fluidez (sin plantillas rígidas) que Eduardo ahora está disponible en su línea de bróker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal frío de vendedor, pedirle reseñas en Google o venderle servicios comerciales a familiares.\n`
               : `- Usuario identificado: ${displayName || realName || "Colega"}.\n`
+      }` +
+      `${hasVerifiedReview || isEduardo || isJani
+        ? `- REGLA ABSOLUTA DE RESEÑAS EN GOOGLE: Este usuario YA VALIDÓ su reseña en Google o es miembro VIP. Está TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.\n`
+        : ""
       }` +
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
@@ -1101,8 +1332,11 @@ export async function processPrivateDmConversationalMessage(
     }
 
     let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    if (preloadedWebContent) {
+      userPromptContent += preloadedWebContent;
+    }
     if (mediaOptions?.imageBuffer) {
-      userPromptContent += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISIÓN MULTIMODAL. Lee atentamente todo el contenido visual y textual de la imagen (OCR completo): logos, nombres de empresas o personas, NIT, cédulas, datos societarios, recibos, facturas, comprobantes o documentos. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit' con el NIT o razón social para entregar todos los datos oficiales disponibles (Razón Social, NIT, Estado de matrícula, Dirección comercial, Teléfono, Actividad económica CIIU y Representante Legal).]`;
+      userPromptContent += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISIÓN MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, cédulas, datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una reseña o calificación en Google (Google Maps / Reseña / Estrellas / VECY Bienes Raíces), valida la reseña cordialmente, agradécele con mucho cariño y calidez humana e incluye la etiqueta interna [RESEÑA_GOOGLE_VALIDADA].]`;
     }
     if (mediaOptions?.pdfBuffer) {
       userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal y procesa la consulta de forma integral.]`;
@@ -1118,6 +1352,7 @@ export async function processPrivateDmConversationalMessage(
       llmRes = await invokeLLM({
         messages,
         tools: JANIA_DM_TOOLS,
+        highReasoning: true,
         imageBuffer: mediaOptions?.imageBuffer,
         pdfBuffer: mediaOptions?.pdfBuffer,
         pdfMimeType: mediaOptions?.pdfMimeType
@@ -1126,6 +1361,7 @@ export async function processPrivateDmConversationalMessage(
       console.warn(`[dmHandler] ⚠️ Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
       llmRes = await invokeLLM({
         messages,
+        highReasoning: true,
         imageBuffer: mediaOptions?.imageBuffer,
         pdfBuffer: mediaOptions?.pdfBuffer,
         pdfMimeType: mediaOptions?.pdfMimeType
@@ -1162,6 +1398,12 @@ export async function processPrivateDmConversationalMessage(
       );
     } else {
       reply = llmRes.choices[0]?.message?.content || "";
+    }
+
+    // 🌟 VALIDACIÓN DE RESEÑA EN GOOGLE POR VISIÓN MULTIMODAL:
+    if (reply.includes("[RESEÑA_GOOGLE_VALIDADA]") || (hasImage && /rese[ñn]a\s+validada|calificaci[oó]n\s+validada|valid[eé]\s+tu\s+rese[ñn]a|gracias\s+por\s+tu\s+rese[ñn]a/i.test(reply))) {
+      reply = reply.replace(/\[RESEÑA_GOOGLE_VALIDADA\]/g, "").trim();
+      await verifyUserGoogleReview(userId);
     }
 
     // Limpiar cualquier prefijo de timestamp o corchete imitado por el LLM

@@ -1370,10 +1370,10 @@ export class JaniaMatchBot {
 
       // Si es un afiche/flyer comercial legítimo (oferta o demanda)
       if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
-        const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+        // Ingestar en la base de datos de inmuebles en segundo plano
         try {
           const { processWhatsAppMessage } = await import('./jania/handlers/propertiesHandler');
-          await processWhatsAppMessage(
+          processWhatsAppMessage(
             body || flyerVisionData.flyerVerbatimText || "Publicación de inmueble por flyer",
             senderId,
             userName,
@@ -1387,18 +1387,25 @@ export class JaniaMatchBot {
             undefined,
             undefined,
             flyerVisionData
-          );
-          const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
-          const flyerReply = `¡Excelente! He analizado tu afiche comercial con visión artificial: *${flyerTitle}* 📸✨.\n\n` +
-            `Ha quedado captado en nuestro sistema de VECY BIENES RAÍCES para cruzarlo con nuestra base de datos inmobiliaria 🏢✨. Si necesitas consultar el predial en Bogotá o verificar antecedentes de tu cliente, dime y te colaboro de inmediato 🤝.`;
-          await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
-          const { appendDmHistory } = await import('./janIA');
-          appendDmHistory(senderId, 'user', body || `[Flyer: ${flyerTitle}]`);
-          appendDmHistory(senderId, 'assistant', flyerReply);
-          await this.logToDb(senderId, 'janIA', flyerReply);
-          return;
-        } finally {
-          stopPresence();
+          ).catch(e => console.warn('[JANIA-MATCH] Error ingesting flyer in propertiesHandler:', e));
+        } catch (_) {}
+
+        // Si el usuario NO envió texto conversacional (solo envió la imagen del flyer sin pregunta), responder con acuse de captación inteligente:
+        if (!body.trim() || body.trim().length < 5) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+          try {
+            const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
+            const flyerReply = `¡Excelente! He analizado tu afiche comercial con visión artificial: *${flyerTitle}* 📸✨.\n\n` +
+              `Ha quedado captado en nuestro sistema de VECY BIENES RAÍCES para cruzarlo con nuestra base de datos inmobiliaria 🏢✨. Si necesitas consultar el predial en Bogotá o verificar antecedentes de tu cliente, dime y te colaboro de inmediato 🤝.`;
+            await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
+            const { appendDmHistory } = await import('./janIA');
+            appendDmHistory(senderId, 'user', body || `[Flyer: ${flyerTitle}]`);
+            appendDmHistory(senderId, 'assistant', flyerReply);
+            await this.logToDb(senderId, 'janIA', flyerReply);
+            return;
+          } finally {
+            stopPresence();
+          }
         }
       }
 

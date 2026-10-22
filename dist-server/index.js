@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.29";
+    VECY_VERSION = "v33.30";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1132,6 +1132,8 @@ var init_geminiKeyManager = __esm({
 // server/_core/llm.ts
 var llm_exports = {};
 __export(llm_exports, {
+  HIGH_REASONING_MODELS: () => HIGH_REASONING_MODELS,
+  MECHANICAL_MODELS: () => MECHANICAL_MODELS,
   getActiveFailoverKey: () => getActiveFailoverKey,
   getActiveRoundRobinKey: () => getActiveRoundRobinKey,
   getGeminiKeys: () => getGeminiKeys,
@@ -1151,6 +1153,7 @@ async function invokeLLM({
   responseFormat,
   provider = "google",
   model,
+  highReasoning = false,
   imageBuffer,
   pdfBuffer,
   pdfMimeType,
@@ -1161,10 +1164,11 @@ async function invokeLLM({
   if (provider === "anthropic") {
     return await invokeClaude(messages2, responseFormat);
   }
-  return await invokeGemini(messages2, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
+  return await invokeGemini(messages2, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning);
 }
-async function invokeGemini(messages2, responseFormat, customModel, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools) {
-  const modelsToTry = customModel ? [customModel, ...FALLBACK_MODELS.filter((m) => m !== customModel)] : FALLBACK_MODELS;
+async function invokeGemini(messages2, responseFormat, customModel, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning = false) {
+  const baseModelList = highReasoning ? HIGH_REASONING_MODELS : FALLBACK_MODELS;
+  const modelsToTry = customModel ? [customModel, ...baseModelList.filter((m) => m !== customModel)] : baseModelList;
   const allKeys = getGeminiKeys();
   const systemMessage = messages2.find((m) => m.role === "system");
   const userMessages = messages2.filter((m) => m.role !== "system");
@@ -1332,7 +1336,7 @@ async function invokeClaude(messages2, responseFormat) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic est\xE1 preparado en c\xF3digo pero requiere API KEY y activaci\xF3n financiera.");
 }
-var getGeminiKeys, getActiveRoundRobinKey, getActiveFailoverKey, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
+var getGeminiKeys, getActiveRoundRobinKey, getActiveFailoverKey, HIGH_REASONING_MODELS, MECHANICAL_MODELS, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
@@ -1340,15 +1344,24 @@ var init_llm = __esm({
     getGeminiKeys = getAllAvailableKeys;
     getActiveRoundRobinKey = getActiveKey;
     getActiveFailoverKey = getActiveKey;
-    FALLBACK_MODELS = [
-      "gemini-flash-lite-latest",
-      "gemini-flash-latest",
+    HIGH_REASONING_MODELS = [
       "gemini-2.5-flash",
+      "gemini-2.5-pro",
+      "gemini-flash-latest",
+      "gemini-flash-lite-latest",
       "gemini-2.5-flash-lite",
       "gemini-3.5-flash-lite",
       "gemini-3.8-flash",
       "gemini-1.5-flash"
     ];
+    MECHANICAL_MODELS = [
+      "gemini-flash-lite-latest",
+      "gemini-2.5-flash-lite",
+      "gemini-flash-latest",
+      "gemini-2.5-flash",
+      "gemini-3.5-flash-lite"
+    ];
+    FALLBACK_MODELS = HIGH_REASONING_MODELS;
     lastCallTimestamp = 0;
     MIN_CALL_INTERVAL_MS = 600;
   }
@@ -1487,6 +1500,35 @@ function extractPortalAndListingId(urlStr) {
     return { portal, listingId };
   } catch {
     return { portal: null, listingId: null };
+  }
+}
+async function fetchWebUrlContent(urlStr, timeoutMs = 1e4) {
+  try {
+    const response = await axios3.get(urlStr, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (VECY-Browser/33.30)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-CO,es;q=0.9,en;q=0.8"
+      },
+      timeout: timeoutMs
+    });
+    const $ = cheerio.load(response.data);
+    const title = $("title").text() || $("h1").first().text() || "P\xE1gina web";
+    $("script, style, nav, footer, iframe, header, noscript, svg, .ad, .advertisement").remove();
+    const text2 = $("body").text().replace(/\s+/g, " ").trim();
+    return {
+      title: title.trim(),
+      content: text2.slice(0, 8e3),
+      url: urlStr,
+      success: true
+    };
+  } catch (err) {
+    return {
+      title: "Error al acceder a la URL",
+      content: `No se pudo descargar el contenido de ${urlStr}: ${err?.message}`,
+      url: urlStr,
+      success: false
+    };
   }
 }
 var DOMINIOS_PERMITIDOS, DOMINIOS_BLOQUEADOS;
@@ -12441,74 +12483,74 @@ var init_prompts = __esm({
     promptCache = {};
     vecyKnowledgeCache = "";
     JANIA_ARGON_COGNITIVE_CORE = `
-# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON) \u2014 GEMELA COGNITIVA DE GEMINI 4 ARGON
+# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON \u2014 NIVEL ARGON v33.30)
 Act\xFAas como **JanIA**, la inteligencia artificial de \xE9lite y Directora Tecnol\xF3gica Virtual de **VECY BIENES RA\xCDCES** (jam\xE1s menciones "Vecy Network" al p\xFAblico). Eres la **gemela cognitiva de Gemini 4 Argon**: posees una agudeza mental extraordinaria, calidez humana sincera, persuasi\xF3n ejecutiva impecable, solvencia jur\xEDdica inmobiliaria superior y un dominio total del mercado colombiano.
 Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a cada cliente, propietario, inversionista o corredor tradicional sobre el poder tecnol\xF3gico y la seguridad de **VECY BIENES RA\xCDCES**.
 
 # PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT) \u2014 CERO ALUCINACI\xD3N
 - **Pol\xEDtica de Cero Alucinaci\xF3n**: No inventes datos de contacto, valores catastrales ni especificaciones que no figuren en la base de datos o en la consulta oficial.
 - **Rigor T\xE9cnico y Jur\xEDdico**: Aplica an\xE1lisis profundo antes de cada respuesta y utiliza tus herramientas de function calling para consultas de antecedentes, predial, IDU, sondeos o cruces comerciales.
-- **Optimizaci\xF3n de Respuesta R\xE1pida y Cero Bucles**: Limita tus an\xE1lisis internos estrictamente al alcance de la consulta actual. Evita recorridos redundantes o interpretaciones recursivas de archivos auxiliares para garantizar respuestas instant\xE1neas y libres de bloqueos de ciclo ("Working...").
+- **Optimizaci\xF3n de Respuesta R\xE1pida y Cero Bucles**: Limita tus an\xE1lisis internos estrictamente al alcance de la consulta actual. Evita recorridos redundantes para garantizar respuestas instant\xE1neas y libres de bloqueos de ciclo ("Working...").
 
-# CAPACIDADES Y CRITERIO JUR\xCDDICO-INMOBILIARIO SUPERIOR
-- **Doctrina Jur\xEDdica Colombiana**: Dominas a fondo la Ley 820 de 2003 (Arrendamientos de Vivienda Urbana), Ley 675 de 2001 (R\xE9gimen de Propiedad Horizontal), Ley 1581 de 2012 (H\xE1beas Data y Protecci\xF3n de Datos Personales), C\xF3digo de Comercio (Corretaje Inmobiliario Arts. 1340-1346), Estatuto Tributario (Ganancia Ocasional, Retenci\xF3n en la Fuente 1% y Beneficencia/Registro 1.67%) y procedimientos notariales colombianos.
-- **Modelo Oficial de Alianza Colaborativa 40/20/40**:
-  * Contacto directo por Match de JanIA (85%-100% de afinidad): 40% captador de la oferta, 40% colocador de la demanda, 20% VECY Network (por tecnolog\xEDa, enlace de coincidencia y auditor\xEDa).
-  * Portal Web oficial (https://vecy-bienes-raices.vercel.app/): 40% captador, 40% colocador, 10% VECY y 10% Fondo Colaborativo de Viralizaci\xF3n en Redes Sociales.
-- **Ecosistema de Superpoderes Nativos en WhatsApp**:
-  * Encuestas interactivas de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites y filtros.
-  * Generaci\xF3n y entrega instant\xE1nea de documentos oficiales en PDF: Factura Predial Bogot\xE1, Certificados de Pago y Paz y Salvo IDU.
-  * **Verificaci\xF3n Oficial de Identidad y Autonom\xEDa de Formateo (Doctrina VECY)**:
-    - **Libertad y Autonom\xEDa de Dise\xF1o de Reportes**: JanIA no est\xE1 encasillada en fichas fijas ni plantillas r\xEDgidas impuestas. Ella misma construye, dise\xF1a y entrega sus reportes a cada usuario bajo su propio estilo fresco, corto, elegante y contundente, asegurando la inclusi\xF3n transparente de los datos indispensables:
-      * **Personas Naturales (CC, CE, PEP/PPT, Pasaporte)**: 1\xB0 Datos de Identidad (Tipo de doc, n\xFAmero, titular y validaci\xF3n), 2\xB0 Antecedentes en 4 entidades: **Polic\xEDa Nacional** (penales/judiciales), **Procuradur\xEDa SIRI** (disciplinarios), **Contralor\xEDa SIRECI** (responsabilidad fiscal) y **ADRES BDUA** (indicando la EPS correspondiente del individuo \u2014ej. Capital Salud EPS-S, Sanitas EPS, Nueva EPS, Sura EPS\u2014, estado ACTIVO y r\xE9gimen contributivo/subsidiado).
-      * **Posici\xF3n Doctrinal de H\xE1beas Data**: La cl\xE1usula de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.) se coloca SIEMPRE AL FINAL del reporte, para que no interrumpa ni se anteponga a los datos de identidad y antecedentes. Cierra con el sello de cortes\xEDa: "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}."
-    - **Personas Jur\xEDdicas / Empresas (NIT o Raz\xF3n Social en RUES / Confec\xE1maras)**: Las empresas **NO tienen antecedentes penales ni afiliaci\xF3n a salud**. Para un NIT o sociedad se valida: **Existencia y Representaci\xF3n Legal en RUES** (priorizando siempre la *Sociedad o Matr\xEDcula Principal* sobre sucursales/establecimientos), **D\xEDgito de Verificaci\xF3n DIAN (M\xF3dulo 11)**, **Actividad Econ\xF3mica (CIIU)**, **Contralor\xEDa SIRECI** (responsabilidad fiscal del NIT) y **Procuradur\xEDa SIRI** (inhabilidades contractuales).
-    - **Distinci\xF3n Jur\xEDdica Cr\xEDtica \u2014 Representante Legal Principal vs. Suplentes**: En toda sociedad existe un **Representante Legal Principal** (Gerente/Presidente), quien ostenta plenas facultades estatutarias para obligar a la empresa y firmar contratos inmobiliarios. Los dem\xE1s inscritos (**Suplentes** o **Representantes Judiciales**) solo act\xFAan ante falta temporal/absoluta del principal o tienen facultades restringidas/litigiosas. Por ello, JanIA destaca primero al Representante Legal Principal con su C\xE9dula y ofrece verificar de inmediato los antecedentes personales (Polic\xEDa, Procuradur\xEDa, Contralor\xEDa y ADRES) de dicho Representante Legal Principal antes de firmar cualquier contrato.
-  * Tarjetas de contacto interactivas oficiales y enlaces directos al cat\xE1logo.
+# CONOCIMIENTO ENCICLOP\xC9DICO INMOBILIARIO Y MAESTR\xCDA JUR\xCDDICA INTEGRAL (NIVEL ARGON):
+Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 
-# PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES DE INTERACCI\xD3N (DOCTRINA JANIA)
+1. **Derecho Civil, Comercial, Administrativo, Inmobiliario, Urbano y Notarial/Registral**:
+   - **Normas Urban\xEDsticas y POT 555 de 2021 de Bogot\xE1**: Usos del suelo permitidos, complementarios, condicionados y prohibidos; tratamientos urban\xEDsticos (desarrollo, consolidaci\xF3n, renovaci\xF3n urbana, conservaci\xF3n, mejoramiento integral); \xEDndices de ocupaci\xF3n y construcci\xF3n; licencias de construcci\xF3n, urbanizaci\xF3n, parcelaci\xF3n y subdivisi\xF3n (Decreto 1077 de 2015); consultas en SINUPOT y Secretar\xEDa Distrital de Planeaci\xF3n (SDP).
+   - **Derecho Notarial y Registral (Ley 1579 de 2012 \u2014 Estatuto de Registro de Instrumentos P\xFAblicos)**: Principios registrales (rogaci\xF3n, especialidad, prioridad o rango, legalidad, tracto sucesivo); matr\xEDculas inmobiliarias; c\xF3digos de naturaleza jur\xEDdica de actos notariales; radicaci\xF3n y calificaci\xF3n registral ante las Oficinas de Registro de Instrumentos P\xFAblicos (ORIP).
 
-## 1. TRATO CERCANO Y TUTEO OBLIGATORIO (HUMANIDAD Y COMPLICIDAD):
-- **Tuteo Permanente y Absoluto**: Tutea SIEMPRE al interlocutor con naturalidad, calidez humana, empat\xEDa sincera y complicidad profesional (como una colega experta, cercana y apasionada de los bienes ra\xEDces).
-- **Prohibici\xF3n de "Usted"**: Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" a los usuarios (salvo que el usuario pida expl\xEDcitamente ser tratado de usted). Usa siempre: *"t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFc\xF3mo est\xE1s?", "\xBFqu\xE9 buscas?", "mira", "te ayudo", "te cuento", "aqu\xED tienes"*. Jam\xE1s suenes distante, fr\xEDa, protocolaria en exceso ni rob\xF3tica.
+2. **Redacci\xF3n y Revisi\xF3n Completa de Documentos Legales Listos para Firmar**:
+   - **Promesas de Compraventa de Inmuebles**: Requisitos taxativos de validez del Art. 1611 C.C. (por escrito, capacidad legal, plazo o condici\xF3n determinada con fecha, hora y notar\xEDa exacta, determinaci\xF3n plena del inmueble con linderos y matr\xEDcula). Distinci\xF3n precisa entre arras de retracto (Arts. 1859-1860 C.C.) y arras confirmatorias penales (Art. 1861 C.C.); cl\xE1usula penal compensatoria y moratoria (Art. 1592 C.C.); obligaciones de saneamiento por evicci\xF3n y vicios redhibitorios u ocultos (Arts. 1893 y 1914 C.C.).
+   - **Contratos de Corretaje Inmobiliario**: R\xE9gimen del C\xF3digo de Comercio (Arts. 1340 a 1346 C.Co.), causales de remuneraci\xF3n/comisi\xF3n, pactos de exclusividad, derecho a la comisi\xF3n aun concluido el plazo si el negocio se cierra con cliente presentado, y blindaje contra el "by-passing" o elusi\xF3n del intermediario.
+   - **Contratos de Arrendamiento**:
+     * *Vivienda Urbana (Ley 820 de 2003)*: Pr\xF3rrogas autom\xE1ticas, causales taxativas de terminaci\xF3n unilateral por el arrendador (Art. 22) con preaviso e indemnizaci\xF3n de 3 c\xE1nones o causales especiales sin indemnizaci\xF3n; canon m\xE1ximo mensual del 1% del valor comercial (Art. 18); reajuste anual indexado al IPC (Art. 20); prohibici\xF3n absoluta de dep\xF3sitos o cauciones reales (Art. 16).
+     * *Locales Comerciales (Arts. 518 a 524 C.Co.)*: Derecho a la renovaci\xF3n obligatoria del contrato tras 2 a\xF1os consecutivos de ocupaci\xF3n; causales taxativas de desahucio con 6 meses de antelaci\xF3n (reparaci\xF3n o demolici\xF3n necesaria, o destinaci\xF3n para habitaci\xF3n o negocio propio sustancialmente distinto); derecho de preferencia e indemnizaciones por desahucio injustificado.
+   - **Minutas con Hipoteca y Tracto Sucesivo**: Hipotecas abiertas sin l\xEDmite de cuant\xEDa o cerradas con cuant\xEDa determinada ante entidades financieras o personas naturales; revisi\xF3n de la cadena ininterrumpida de tradici\xF3n de dominio.
+   - **Leasing Habitacional y No Habitacional**: Modalidad de arrendamiento financiero con opci\xF3n irrevocable de compra, cesi\xF3n de posici\xF3n contractual y cesi\xF3n de derechos fiduciarios.
+   - **Pacto de Retroventa (Art. 1939 C.C.)**: Estructuraci\xF3n del pacto con plazo legal m\xE1ximo de 4 a\xF1os, recobro del bien mediante reembolso del precio pactado.
+   - **Compraventa con Permuta (Art. 1850 C.Co. / C.C.)**: Cuando el precio consiste parte en dinero y parte en otra cosa (inmueble o veh\xEDculo), determinando con precisi\xF3n si la operaci\xF3n se califica como permuta o venta.
+   - **Daci\xF3n en Pago y Transacciones (Art. 2469 C.C.)**: Extinci\xF3n de obligaciones crediticias o privadas mediante transferencia de bien ra\xEDz; contratos de transacci\xF3n para terminar extrajudicialmente pleitos o precaver litigios futuros con efectos de cosa juzgada.
+   - **Firma Electr\xF3nica vs Notarial Tradicional**: Prop\xF3n SIEMPRE firma electr\xF3nica oficial bajo Ley 527 de 1999 y Decreto 620 de 2020 (Autenticaci\xF3n Digital MinTIC / AND / Mailsuite), preguntando si el cliente es tradicional (notar\xEDa f\xEDsica con biometr\xEDa) o digital (firma electr\xF3nica con plena validez probatoria).
 
-## 2. DETECCI\xD3N INTELIGENTE DE G\xC9NERO Y USO DE NOMBRES COMPLETOS (INCLUYENDO COMPUESTOS):
-- **An\xE1lisis de G\xE9nero y Concordancia Gramatical**: Analiza inteligentemente el nombre del usuario (ya sea en el perfil de WhatsApp o si se presenta en el chat) para identificar con exactitud si es masculino o femenino, y adapta de forma impecable la concordancia gramatical femenina o masculina en tus respuestas (ej. *"bienvenida", "atenta", "amiga", "colega", "lista"* / *"bienvenido", "atento", "amigo", "colega", "listo"*).
-- **Nombres Compuestos Completos**: Utiliza siempre los nombres propios completos de los usuarios, reconociendo y respetando los nombres compuestos colombianos (ej. *Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo*, etc.) de forma fluida y org\xE1nica en la conversaci\xF3n. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra.
-- **Indagaci\xF3n C\xE1lida del Nombre**: Si el interlocutor a\xFAn no tiene un nombre identificado en el perfil o escribe desde un n\xFAmero desconocido, sal\xFAdalo amablemente con calidez y hazle una pregunta simp\xE1tica y natural para saber su nombre y c\xF3mo prefiere que lo llames.
+3. **Negocios Internacionales, Divisas y Criptomonedas**:
+   - **Compraventas Inmobiliarias en Divisas (USD, EUR)**: Canalizaci\xF3n cambiaria obligatoria a trav\xE9s del Mercado Cambiario (IMC: intermediarios como bancos comerciales autorizados o cuentas de compensaci\xF3n) ante el Banco de la Rep\xFAblica (Circular Reglamentaria Externa DCIN-83); presentaci\xF3n de la Declaraci\xF3n de Cambio por Inversiones Internacionales (Formulario No. 4 de Inversi\xF3n Extranjera Directa - IED); monetizaci\xF3n oficial; y visas de inversionista (Visa de Migrante M o Residente R por inversi\xF3n inmobiliaria seg\xFAn Resoluci\xF3n 5477 de 2022 de Canciller\xEDa).
+   - **Operaciones con Criptomonedas (Bitcoin BTC, USDT, USDC, Ethereum ETH)**: Estructuraci\xF3n mediante contratos de permuta de bien inmueble por activos virtuales o compraventa con pago en criptoactivos referenciados a pesos colombianos (COP), alineados con las directrices de la Superintendencia de Notariado y Registro (SNR), Superintendencia de Sociedades (Oficio 100-237890 de 2020), DIAN (tributaci\xF3n y retenciones de activos intangibles) y debida diligencia SARLAFT/SAGRILAFT para acreditar origen l\xEDcito y trazabilidad blockchain.
 
-## 3. USO LIBRE Y NATURAL DE EMOJIS (UNIVERSO UNICODE COMPLETO):
-- **Libertad Creativa de Emojis**: Tienes total libertad para elegir y usar de forma org\xE1nica cualquiera de los cientos de emojis disponibles en el est\xE1ndar Unicode.
-- **Intercalado Emocional y Contextual**: Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar (expresiones de calidez \u{1F60A}, ideas \u{1F4A1}, an\xE1lisis \u{1F914}, hogares \u{1F3E1}\u{1F3E2}, celebraci\xF3n \u{1F389}, documentos \u{1F4C4}, acuerdos \u{1F91D}, gui\xF1os \u{1F609}, notas \u{1F4DD}, etc.). Cero listas cerradas o restricciones r\xEDgidas: aporta dinamismo visual y cercan\xEDa humana a cada interacci\xF3n.
+4. **Estudio de T\xEDtulos, Aval\xFAos, An\xE1lisis Financiero y Pleitos Prejur\xEDdicos**:
+   - **Lectura Cr\xEDtica de Certificados de Tradici\xF3n y Libertad**: Cadena de tradici\xF3n a 20 o 30 a\xF1os, detecci\xF3n de falsa tradici\xF3n (posesi\xF3n inscrita, venta de cosa ajena), embargos judiciales civiles o coactivos, demandas civiles registradas, hipotecas abiertas/cerradas, grav\xE1menes, patrimonio de familia inembargable (Ley 70 de 1931 / Ley 848 de 2003), afectaci\xF3n a vivienda familiar (Ley 258 de 1996 / Ley 854 de 2003), servidumbres, condici\xF3n resolutoria expresa o t\xE1cita, usufructo y nuda propiedad, lesi\xF3n enorme (Art. 1947 C.C. cuando el precio pactado es menor a la mitad o mayor al doble del justo precio) y vicios ocultos.
+   - **Resoluci\xF3n de Litigios y Pleitos Prejur\xEDdicos**: Cartas de requerimiento prejudicial con constituci\xF3n en mora, cobro prejur\xEDdico de comisiones inmobiliarias, reportes en Datacr\xE9dito/TransUnion bajo Ley 1266 de 2008 y Ley 2157 de 2021 (Borr\xF3n y Cuenta Nueva con comunicaci\xF3n previa de 20 d\xEDas).
+   - **Optimizaci\xF3n Tributaria Real Inmobiliaria**:
+     * *Ganancia Ocasional*: Tarifa general del 15% (Ley 2277 de 2022) sobre la utilidad neta para inmuebles pose\xEDdos por 2 a\xF1os o m\xE1s.
+     * *Costo Fiscal por Aval\xFAo Catastral (Art. 72 E.T.)*: Utilizaci\xF3n del aval\xFAo catastral fijado en la declaraci\xF3n de renta del a\xF1o inmediatamente anterior a la enajenaci\xF3n para reducir leg\xEDtimamente la base gravable.
+     * *Multiplicadores de Reajuste Fiscal por Antig\xFCedad (Art. 73 E.T.)*: Aplicaci\xF3n de los coeficientes de reajuste anual para personas naturales seg\xFAn el a\xF1o de adquisici\xF3n.
+     * *Exenci\xF3n de Ganancia Ocasional en Vivienda de Habitaci\xF3n (Art. 311-1 E.T.)*: Exenci\xF3n hasta 5.000 UVT del valor de la utilidad generada en la venta de la casa o apartamento de habitaci\xF3n, depositando los recursos en cuentas AFC o destin\xE1ndolos al pago de cr\xE9ditos hipotecarios.
+     * *Retenci\xF3n en la Fuente en Notar\xEDa*: 1% para vendedores personas naturales (Art. 398 E.T.) o 2.5% para personas jur\xEDdicas (Art. 401 E.T.).
+     * *Impuesto de Registro y Beneficencia*: 1.67% a cargo del comprador.
+     * *Impuesto de Timbre*: Para inmuebles cuyo valor escriturado supere 20.000 UVT (Ley 2277 de 2022).
 
-## 4. CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS:
-- **Prohibici\xF3n Total de Plantillas R\xEDgidas**: PROHIBIDO usar bloques de texto prefabricados, copys memorizados, men\xFAs num\xE9ricos tipo conmutador o respuestas acartonadas de bot.
-- **Inteligencia Conversacional de Nivel Mundial ante Ambig\xFCedades**: Si un usuario escribe una frase ambigua o suelta de la nada (como *"como funciona"*, *"info"*, *"hola"*, *"buenas"*, *"ayuda"*, *"informaci\xF3n"*, *"de qu\xE9 trata"*, etc.), act\xFAa con la inteligencia y empat\xEDa de una asistente de nivel mundial:
-  1. *Saludar amablemente con cercan\xEDa, calidez y tuteo*.
-  2. *Deducir con empat\xEDa la situaci\xF3n* (comprender que busca orientaci\xF3n inmobiliaria sin abrumarlo con textos densos).
-  3. *Hacer preguntas inteligentes para perfilar al usuario*:
-     - Preguntarle su nombre con amabilidad si a\xFAn no se conoce para llamarlo por \xE9l.
-     - Indagar si es colega/asesor inmobiliario independiente o si es propietario/comprador/arrendatario buscando un inmueble.
-     - Preguntarle qu\xE9 tipo de propiedad o tr\xE1mite tiene en mente en este momento (comprar, vender, arrendar, predial, antecedentes, etc.).
-  4. *Mantener la conversaci\xF3n siempre guiada hacia VECY Bienes Ra\xEDces* de manera atractiva, din\xE1mica y orientada a soluciones.
+# MODELO OFICIAL DE ALIANZA COLABORATIVA 40/20/40
+- Contacto directo por Match de JanIA (85%-100% de afinidad): 40% captador de la oferta, 40% colocador de la demanda, 20% VECY Network (por tecnolog\xEDa, enlace de coincidencia y auditor\xEDa).
+- Portal Web oficial (https://vecy-bienes-raices.vercel.app/): 40% captador, 40% colocador, 10% VECY y 10% Fondo Colaborativo de Viralizaci\xF3n en Redes Sociales.
 
-# ESTILO DE COMUNICACI\xD3N Y EJECUCI\xD3N
-- **Liderazgo Temprano**: Entrega la respuesta o soluci\xF3n en la primera oraci\xF3n en *negrita*.
-- **Claridad Inmune a la Confusi\xF3n**: Si un usuario tiene dudas tecnol\xF3gicas o se enreda con el celular, tr\xE1talo con infinita paciencia y ofrece resolverlo por \xE9l.
-- **Canalizaci\xF3n Humana con el Br\xF3ker**: Si un caso requiere peritaje presencial, negociaci\xF3n compleja o contrato formal, canal\xEDzalo cordialmente con nuestros directores **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719**.
+# ECOSISTEMA DE SUPERPODERES NATIVOS EN WHATSAPP:
+- Encuestas interactivas de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites y filtros.
+- Generaci\xF3n y entrega instant\xE1nea de documentos oficiales en PDF: Factura Predial Bogot\xE1, Certificados de Pago y Paz y Salvo IDU.
+- Verificaci\xF3n Oficial de Identidad: Polic\xEDa Nacional, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI y ADRES BDUA con EPS limpia, estado y r\xE9gimen. Posici\xF3n doctrinal de H\xE1beas Data obligatoriamente al final del reporte.
+- Empresas / Personas Jur\xEDdicas: Consulta universal en RUES (Sociedades, Establecimientos y Personas Naturales matriculadas en las 57 C\xE1maras de Comercio), D\xEDgito de Verificaci\xF3n DIAN, CIIU y Representante Legal Principal con facultades.
+- Tarjetas de contacto interactivas oficiales y enlaces directos al cat\xE1logo.
 
-# REGLA DEL SALUDO \xDANICO Y CONTINUIDAD ORG\xC1NICA (CERO DOBLE SALUDO)
-- **Saludo Horario Indivisible**: Emite el saludo horario colombiano (\`\xA1Buenos d\xEDas / Buenas tardes / Buenas noches, [Nombre]! \u{1F44B}\`) \xDANICAMENTE en el primer turno de una conversaci\xF3n o cuando hayan transcurrido m\xE1s de 6 horas sin interacci\xF3n.
-- **Continuidad Directa**: En turnos subsecuentes (conversaci\xF3n activa), PROHIBIDO volver a saludar, decir "Hola de nuevo" o anteponer pre\xE1mbulos. Ve directo al grano con empat\xEDa y fluidez natural.
-
-# SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES Y PEDAGOG\xCDA DIGITAL
-- **Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/)**: Cuando un cliente o colega desee agendar una visita a un inmueble o coordinar una muestra, comp\xE1rtele el enlace oficial de Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/) y gu\xEDalo amablemente, explic\xE1ndole que cuenta con algoritmo de verificaci\xF3n de identidad y antecedentes para seguridad del propietario, del asesor y de las porter\xEDas.
-- **Gu\xEDa Oficial en Firma Electr\xF3nica (https://autenticaciondigital.and.gov.co/)**: Eres tutora y pedagoga experta en firma electr\xF3nica gratuita bajo el Decreto 620 de 2020 y la Ley 527 de 1999 (validez probatoria plena equivalente a firma manuscrita). Explica los 5 pasos sencillos en la plataforma estatal de la Agencia Nacional Digital (AND / MinTIC / GOV.CO): ingresar al portal, ir a 'Firmar documento electr\xF3nicamente', diligenciar asunto y motivo, cargar el PDF (sin clave, m\xE1x 10 MB) e ingresar el c\xF3digo OTP del correo para firmar. Aclara con amabilidad que t\xFA eres su gu\xEDa y no estampas firmas dentro de WhatsApp.
-- **F\xE1brica de Software Proptech a la Medida**: Si un colega o inmobiliaria desea su propia plataforma privada de firma electr\xF3nica con la marca de su empresa, Vecy Agenda Pro personalizada, scrapers o asistentes de IA, el equipo de desarrollo de VECY se la fabrica a la medida. Comun\xEDcalo cordialmente con nuestro director Eduardo Rivera al +57 316 656 9719.
-- **Cat\xE1logo Oficial**: Puedes compartir el cat\xE1logo de WhatsApp (https://wa.me/c/573192919978) o el portal web (https://vecy-bienes-raices.vercel.app/properties).
-
-# CIERRE EXITOSO Y RESE\xD1A EN GOOGLE (MANTENIMIENTO DEL SERVICIO GRATUITO)
-- **Invitaci\xF3n C\xE1lida y Persuasiva a Rese\xF1ar en Google**: Cuando una consulta, tr\xE1mite, verificaci\xF3n o asesor\xEDa concluya con \xE9xito, invita al usuario de forma muy cercana, c\xE1lida y persuasiva a dejarnos una rese\xF1a de 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review). Expl\xEDcale con empat\xEDa y complicidad profesional que su valoraci\xF3n y apoyo son el pilar fundamental que le permite a VECY BIENES RA\xCDCES mantener todas estas herramientas de inteligencia artificial y tecnolog\xEDa inmobiliaria 100% gratuitas para toda la comunidad.
+# PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA)
+1. **TRATO CERCANO Y TUTEO OBLIGATORIO**: Tutea SIEMPRE al interlocutor con naturalidad, calidez humana, empat\xEDa y complicidad profesional ("t\xFA", "te", "contigo", "cu\xE9ntame", "mira", "te ayudo"). Prohibido tratar de "usted" salvo solicitud expresa.
+2. **DETECCI\xD3N INTELIGENTE DE G\xC9NERO Y NOMBRES COMPUESTOS**: Reconoce y respeta nombres compuestos (Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, etc.) de forma completa y fluida.
+3. **LIBERTAD CREATIVA DE EMOJIS**: Uso libre y din\xE1mico de emojis del est\xE1ndar Unicode, intercalados con naturalidad.
+4. **CERO PLANTILLAS R\xCDGIDAS Y DISE\xD1O EDITORIAL MARKDOWN**: Prohibido usar bloques acartonados o conmutadores r\xEDgidos. Dise\xF1a t\xFA misma informes y respuestas visualmente impecables usando WhatsApp Markdown (*negritas*, _cursivas_, listas estructuradas y emojis precisos), prohibiendo los ladrillos de texto planos.
+5. **PROHIBICI\xD3N ABSOLUTA DE SALUDOS REPETIDOS O PRESENTACI\xD3N DE BOT**:
+   - JAM\xC1S repitas "Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces" en cada turno.
+   - En una conversaci\xF3n en curso (\xFAltimas 6 horas o turnos previos), est\xE1 TERMINANTEMENTE PROHIBIDO volver a saludar con "\xA1Hola!", "\xA1Hola, [Nombre]!" o "\xBFC\xF3mo est\xE1s?". Ve DIRECTO al grano a responder con empat\xEDa y fluidez natural.
+6. **INVITACI\xD3N A CALIFICAR EN GOOGLE (M\xC1XIMO UNA VEZ)**:
+   - Solo incluye la invitaci\xF3n charlada a calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review) cuando una consulta haya sido 100% exitosa, m\xE1ximo una vez por sesi\xF3n, y JAM\xC1S a Eduardo o Jani. Explica con cercan\xEDa que su rese\xF1a ayuda a mantener estas herramientas 100% gratuitas para todo el gremio.
+7. **CANALIZACI\xD3N HUMANA CON EL BR\xD3KER**:
+   - Para peritajes presenciales, firma de contratos o gestiones directas con los fundadores, refiere con calidez a **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719** (https://wa.me/573166569719).
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -12744,13 +12786,25 @@ __export(sessionManager_exports, {
   getPendingSession: () => getPendingSession,
   getRecentChatHistory: () => getRecentChatHistory,
   getStartOfTodayBogota: () => getStartOfTodayBogota,
+  getUserPerpetualSession: () => getUserPerpetualSession,
   hasGreetedUserToday: () => hasGreetedUserToday,
+  incrementFreeServicesCount: () => incrementFreeServicesCount,
+  incrementUserMessageCount: () => incrementUserMessageCount,
+  isEduardoOrJani: () => isEduardoOrJani,
+  isNewUser: () => isNewUser,
   isSessionMuted: () => isSessionMuted,
+  isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
   muteSession: () => muteSession,
+  recordUserReviewClaim: () => recordUserReviewClaim,
   resolveRealName: () => resolveRealName,
+  saveUserPerpetualSession: () => saveUserPerpetualSession,
   setCompanySession: () => setCompanySession,
-  setPendingSession: () => setPendingSession
+  setPendingSession: () => setPendingSession,
+  shouldAskForGoogleReview: () => shouldAskForGoogleReview,
+  verifyUserGoogleReview: () => verifyUserGoogleReview
 });
+import fs4 from "fs";
+import path4 from "path";
 import { eq as eq6, and as and3, gte, desc, sql as sql5 } from "drizzle-orm";
 function cleanSessionJid(jid) {
   if (!jid) return "";
@@ -13196,7 +13250,167 @@ async function clearCompanySession(userId) {
   } catch (_) {
   }
 }
-var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory, companySessionMap;
+function isEduardoOrJani(phoneOrJid) {
+  if (!phoneOrJid) return false;
+  const clean = phoneOrJid.replace(/\D/g, "");
+  const vipList = [
+    "3192919978",
+    "573192919978",
+    "225954035179724",
+    "3118536968",
+    "573118536968",
+    "3166569719",
+    "573166569719",
+    "3188096811",
+    "573188096811",
+    "167108705018103",
+    "182781141344345",
+    "218820279050385"
+  ];
+  return vipList.some((v) => clean.includes(v) || v.includes(clean));
+}
+function ensureLoadedFromDisk() {
+  if (persistentSessionsLoaded) return;
+  persistentSessionsLoaded = true;
+  try {
+    if (fs4.existsSync(PERSISTENT_SESSIONS_FILE)) {
+      const raw = fs4.readFileSync(PERSISTENT_SESSIONS_FILE, "utf-8");
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        for (const item of list) {
+          if (item?.userId) {
+            userPerpetualSessionMap.set(item.userId, item);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[sessionManager] Error loading persistent sessions from disk:", err?.message);
+  }
+}
+function saveSessionsToDisk() {
+  try {
+    const dir = path4.dirname(PERSISTENT_SESSIONS_FILE);
+    if (!fs4.existsSync(dir)) {
+      fs4.mkdirSync(dir, { recursive: true });
+    }
+    const all = Array.from(userPerpetualSessionMap.values());
+    fs4.writeFileSync(PERSISTENT_SESSIONS_FILE, JSON.stringify(all, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[sessionManager] Error saving persistent sessions to disk:", err?.message);
+  }
+}
+async function getUserPerpetualSession(userId, userName) {
+  ensureLoadedFromDisk();
+  const cleanJid2 = cleanSessionJid(userId);
+  let session = userPerpetualSessionMap.get(cleanJid2);
+  if (session) {
+    if (userName && !session.name) session.name = userName;
+    return session;
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `user_memory:${cleanJid2}`;
+      const [existing] = await db.select().from(pendingSessions).where(eq6(pendingSessions.jid, dbKey)).limit(1);
+      if (existing && existing.sessionData && typeof existing.sessionData === "object") {
+        session = existing.sessionData;
+        userPerpetualSessionMap.set(cleanJid2, session);
+        saveSessionsToDisk();
+        return session;
+      }
+    }
+  } catch (err) {
+    console.warn("[getUserPerpetualSession] Error recuperando de BD:", err?.message);
+  }
+  const isVip = isEduardoOrJani(cleanJid2);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  session = {
+    userId: cleanJid2,
+    phone: cleanJid2,
+    name: userName || void 0,
+    firstSeenAt: now,
+    lastSeenAt: now,
+    messageCount: 0,
+    freeServicesUsedCount: 0,
+    hasVerifiedGoogleReview: isVip,
+    notes: [],
+    keyFacts: {}
+  };
+  userPerpetualSessionMap.set(cleanJid2, session);
+  saveSessionsToDisk();
+  return session;
+}
+async function saveUserPerpetualSession(session) {
+  ensureLoadedFromDisk();
+  userPerpetualSessionMap.set(session.userId, session);
+  saveSessionsToDisk();
+  try {
+    const db = await getDb();
+    if (db) {
+      const dbKey = `user_memory:${session.userId}`;
+      await db.insert(pendingSessions).values({
+        jid: dbKey,
+        sessionData: session,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).onConflictDoUpdate({
+        target: pendingSessions.jid,
+        set: {
+          sessionData: session,
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("[saveUserPerpetualSession] Error persistiendo en BD:", err?.message);
+  }
+}
+async function isNewUser(userId) {
+  const session = await getUserPerpetualSession(userId);
+  const history = getDmHistory(userId);
+  return session.messageCount === 0 && history.length === 0;
+}
+async function incrementUserMessageCount(userId) {
+  const session = await getUserPerpetualSession(userId);
+  session.messageCount = (session.messageCount || 0) + 1;
+  session.lastSeenAt = (/* @__PURE__ */ new Date()).toISOString();
+  await saveUserPerpetualSession(session);
+  return session.messageCount;
+}
+async function incrementFreeServicesCount(userId) {
+  const session = await getUserPerpetualSession(userId);
+  session.freeServicesUsedCount = (session.freeServicesUsedCount || 0) + 1;
+  session.lastSeenAt = (/* @__PURE__ */ new Date()).toISOString();
+  await saveUserPerpetualSession(session);
+  return session.freeServicesUsedCount;
+}
+async function recordUserReviewClaim(userId) {
+  const session = await getUserPerpetualSession(userId);
+  session.reviewClaimedAt = (/* @__PURE__ */ new Date()).toISOString();
+  session.lastSeenAt = (/* @__PURE__ */ new Date()).toISOString();
+  await saveUserPerpetualSession(session);
+}
+async function verifyUserGoogleReview(userId) {
+  const session = await getUserPerpetualSession(userId);
+  session.hasVerifiedGoogleReview = true;
+  session.reviewVerifiedAt = (/* @__PURE__ */ new Date()).toISOString();
+  session.reviewScreenshotReceived = true;
+  session.lastSeenAt = (/* @__PURE__ */ new Date()).toISOString();
+  await saveUserPerpetualSession(session);
+  console.log(`[GoogleReview] Usuario ${session.userId} marcado como hasVerifiedGoogleReview = true`);
+}
+async function isUserVerifiedGoogleReview(userId) {
+  if (isEduardoOrJani(userId)) return true;
+  const session = await getUserPerpetualSession(userId);
+  return !!session.hasVerifiedGoogleReview;
+}
+async function shouldAskForGoogleReview(userId) {
+  if (isEduardoOrJani(userId)) return false;
+  const session = await getUserPerpetualSession(userId);
+  if (session.hasVerifiedGoogleReview) return false;
+  return session.freeServicesUsedCount >= 1;
+}
+var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory, companySessionMap, PERSISTENT_SESSIONS_FILE, userPerpetualSessionMap, persistentSessionsLoaded;
 var init_sessionManager = __esm({
   "server/_core/jania/sessionManager.ts"() {
     "use strict";
@@ -13210,6 +13424,9 @@ var init_sessionManager = __esm({
     dmConversationHistory = /* @__PURE__ */ new Map();
     circuloConversationHistory = /* @__PURE__ */ new Map();
     companySessionMap = /* @__PURE__ */ new Map();
+    PERSISTENT_SESSIONS_FILE = path4.resolve(process.cwd(), "data/jania_persistent_sessions.json");
+    userPerpetualSessionMap = /* @__PURE__ */ new Map();
+    persistentSessionsLoaded = false;
   }
 });
 
@@ -13449,7 +13666,13 @@ __export(nameAndGenderResolver_exports, {
 });
 function cleanRawUserName(name) {
   if (!name) return "";
-  return name.replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  let cleaned = name.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
+  const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    cleaned = withoutGuild;
+  }
+  return cleaned.replace(/\s+/g, " ").trim();
 }
 function getCanonicalCompositeName(rawName) {
   const cleaned = cleanRawUserName(rawName);
@@ -13622,10 +13845,10 @@ var init_nameAndGenderResolver = __esm({
       { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
       { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
       { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
-      { pattern: /^luz\s+adriana\b/i, canonical: "Luz Adriana" },
-      { pattern: /^luz\s+amparo\b/i, canonical: "Luz Amparo" },
       { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
       { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
+      { pattern: /^flor\s+alba\b/i, canonical: "Flor Alba" },
+      { pattern: /^floralba\b/i, canonical: "Flor Alba" },
       { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
       { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
       { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
@@ -13860,9 +14083,12 @@ var init_nameAndGenderResolver = __esm({
       "ingrid",
       "katherin",
       "katherine",
-      "katherine",
       "stefany",
-      "stephanie"
+      "stephanie",
+      "flor",
+      "floralba",
+      "florencia",
+      "florinda"
     ]);
     MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
       "luca",
@@ -14297,8 +14523,8 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
     const solver = new Solver2(apiKey);
     const puppeteer = (await import("puppeteer")).default;
-    const fs13 = await import("fs");
-    const executablePath = fs13.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const fs14 = await import("fs");
+    const executablePath = fs14.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -15534,8 +15760,8 @@ __export(whatsapp_utils_exports, {
   startContinuousPresence: () => startContinuousPresence,
   textToSpeechMedia: () => textToSpeechMedia
 });
-import path4 from "path";
-import fs4 from "fs";
+import path5 from "path";
+import fs5 from "fs";
 import os from "os";
 import { execSync } from "child_process";
 import { createSign } from "crypto";
@@ -15723,11 +15949,11 @@ async function getVertexAIAccessToken() {
     return cachedVertexToken.token;
   }
   try {
-    const credPath = path4.join(process.cwd(), "server", "_core", "google-service-account.json");
-    if (!fs4.existsSync(credPath)) {
+    const credPath = path5.join(process.cwd(), "server", "_core", "google-service-account.json");
+    if (!fs5.existsSync(credPath)) {
       return null;
     }
-    const sa = JSON.parse(fs4.readFileSync(credPath, "utf8"));
+    const sa = JSON.parse(fs5.readFileSync(credPath, "utf8"));
     if (!sa.client_email || !sa.private_key) {
       return null;
     }
@@ -15768,18 +15994,18 @@ function convertAudioToOggOpus(inputBuffer) {
   try {
     const tmpDir = os.tmpdir();
     const uniqueId = `tts_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const tmpIn = path4.join(tmpDir, `${uniqueId}_in.mp3`);
-    const tmpOut = path4.join(tmpDir, `${uniqueId}_out.ogg`);
-    fs4.writeFileSync(tmpIn, inputBuffer);
+    const tmpIn = path5.join(tmpDir, `${uniqueId}_in.mp3`);
+    const tmpOut = path5.join(tmpDir, `${uniqueId}_out.ogg`);
+    fs5.writeFileSync(tmpIn, inputBuffer);
     execSync(`ffmpeg -y -i "${tmpIn}" -c:a libopus -b:a 32k -vbr on -compression_level 10 -vn "${tmpOut}"`, { stdio: "ignore" });
-    if (fs4.existsSync(tmpOut)) {
-      const oggBuf = fs4.readFileSync(tmpOut);
+    if (fs5.existsSync(tmpOut)) {
+      const oggBuf = fs5.readFileSync(tmpOut);
       try {
-        fs4.unlinkSync(tmpIn);
+        fs5.unlinkSync(tmpIn);
       } catch (_) {
       }
       try {
-        fs4.unlinkSync(tmpOut);
+        fs5.unlinkSync(tmpOut);
       } catch (_) {
       }
       if (oggBuf && oggBuf.length > 0) {
@@ -17033,8 +17259,8 @@ __export(storage_exports, {
   storageGet: () => storageGet,
   storagePut: () => storagePut
 });
-import fs5 from "fs";
-import path5 from "path";
+import fs6 from "fs";
+import path6 from "path";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
@@ -17044,13 +17270,13 @@ function buildAbsoluteLocalUrl(key) {
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
   const key = normalizeKey(relKey);
-  const targetFilePath = path5.join(uploadsDir, key);
-  const targetSubdir = path5.dirname(targetFilePath);
-  if (!fs5.existsSync(targetSubdir)) {
-    fs5.mkdirSync(targetSubdir, { recursive: true });
+  const targetFilePath = path6.join(uploadsDir, key);
+  const targetSubdir = path6.dirname(targetFilePath);
+  if (!fs6.existsSync(targetSubdir)) {
+    fs6.mkdirSync(targetSubdir, { recursive: true });
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs5.writeFileSync(targetFilePath, buffer);
+  fs6.writeFileSync(targetFilePath, buffer);
   const publicUrl = buildAbsoluteLocalUrl(key);
   console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
   return { key, url: `/uploads/${key}` };
@@ -17066,16 +17292,16 @@ var uploadsDir;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
-    uploadsDir = path5.resolve(process.cwd(), "public/uploads");
-    if (!fs5.existsSync(uploadsDir)) {
-      fs5.mkdirSync(uploadsDir, { recursive: true });
+    uploadsDir = path6.resolve(process.cwd(), "public/uploads");
+    if (!fs6.existsSync(uploadsDir)) {
+      fs6.mkdirSync(uploadsDir, { recursive: true });
     }
   }
 });
 
 // server/_core/divipola.ts
-import fs6 from "fs";
-import path6 from "path";
+import fs7 from "fs";
+import path7 from "path";
 var municipalitiesMap, initDivipola, validateCity;
 var init_divipola = __esm({
   "server/_core/divipola.ts"() {
@@ -17083,13 +17309,13 @@ var init_divipola = __esm({
     municipalitiesMap = /* @__PURE__ */ new Map();
     initDivipola = () => {
       try {
-        const jsonPath = path6.join(process.cwd(), "server", "data", "divipola.json");
+        const jsonPath = path7.join(process.cwd(), "server", "data", "divipola.json");
         municipalitiesMap.clear();
-        if (!fs6.existsSync(jsonPath)) {
+        if (!fs7.existsSync(jsonPath)) {
           console.warn("Divipola JSON data file not found at", jsonPath);
           return;
         }
-        const raw = fs6.readFileSync(jsonPath, "utf-8");
+        const raw = fs7.readFileSync(jsonPath, "utf-8");
         const list = JSON.parse(raw);
         for (const item of list) {
           if (item.municipio) {
@@ -20813,8 +21039,8 @@ __export(iduValorizacionService_exports, {
   isIduInquiry: () => isIduInquiry,
   setPendingIduSession: () => setPendingIduSession
 });
-import fs7 from "fs";
-import path7 from "path";
+import fs8 from "fs";
+import path8 from "path";
 import os2 from "os";
 function hasPendingIduSession(senderId) {
   const session = pendingIduSessions.get(senderId);
@@ -20887,15 +21113,15 @@ function extractChipForIduValorizacion(text2) {
 }
 async function downloadIduCertificatePdf(chip) {
   const cleanChip = chip.toUpperCase().trim();
-  const downloadDir = path7.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const downloadDir = path8.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
   try {
-    fs7.mkdirSync(downloadDir, { recursive: true });
+    fs8.mkdirSync(downloadDir, { recursive: true });
   } catch (_) {
   }
   let browser = null;
   try {
     const puppeteer = (await import("puppeteer")).default;
-    const executablePath = fs7.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const executablePath = fs8.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -20953,16 +21179,16 @@ async function downloadIduCertificatePdf(chip) {
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 1e3));
-      if (fs7.existsSync(downloadDir)) {
-        const files = fs7.readdirSync(downloadDir);
+      if (fs8.existsSync(downloadDir)) {
+        const files = fs8.readdirSync(downloadDir);
         const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
         if (pdfFile) {
-          downloadedFilePath = path7.join(downloadDir, pdfFile);
+          downloadedFilePath = path8.join(downloadDir, pdfFile);
           break;
         }
       }
     }
-    if (!downloadedFilePath || !fs7.existsSync(downloadedFilePath)) {
+    if (!downloadedFilePath || !fs8.existsSync(downloadedFilePath)) {
       return {
         success: false,
         errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
@@ -20970,7 +21196,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: predioData.direccion
       };
     }
-    const pdfBuffer = fs7.readFileSync(downloadedFilePath);
+    const pdfBuffer = fs8.readFileSync(downloadedFilePath);
     if (!pdfBuffer || pdfBuffer.length < 500) {
       return {
         success: false,
@@ -21001,8 +21227,8 @@ async function downloadIduCertificatePdf(chip) {
       }
     }
     try {
-      if (fs7.existsSync(downloadDir)) {
-        fs7.rmSync(downloadDir, { recursive: true, force: true });
+      if (fs8.existsSync(downloadDir)) {
+        fs8.rmSync(downloadDir, { recursive: true, force: true });
       }
     } catch (_) {
     }
@@ -21141,6 +21367,7 @@ __export(dmHandler_exports, {
   stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
 });
+import { eq as eq9, and as and6, sql as sql8, desc as desc4 } from "drizzle-orm";
 function setLatestDmPdf(userId, attachment) {
   latestDmPdfMap.set(userId, attachment);
 }
@@ -21462,6 +21689,110 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
         }
       };
     }
+    case "navegar_o_buscar_web": {
+      const url = String(args.url || "").trim();
+      const query = String(args.query || rawUserText || "").trim();
+      if (url && /^https?:\/\//i.test(url)) {
+        const pageData = await fetchWebUrlContent(url);
+        return {
+          toolType: "web",
+          resultJson: {
+            solicitud: "navegacion_web",
+            url,
+            titulo: pageData.title,
+            contenido: pageData.content,
+            exitoso: pageData.success
+          }
+        };
+      }
+      return {
+        toolType: "web",
+        resultJson: {
+          solicitud: "busqueda_web",
+          query,
+          mensaje: "B\xFAsqueda web procesada en el n\xFAcleo cognitivo de JanIA.",
+          exitoso: true
+        }
+      };
+    }
+    case "consultar_catalogo_inmuebles_vecy": {
+      const tipoInmueble = String(args.tipoInmueble || "").toLowerCase().trim();
+      const tipoNegocio = String(args.tipoNegocio || "").toLowerCase().trim();
+      const zona = String(args.zona || "").trim();
+      const precioMax = Number(args.precioMaximo || 0);
+      const db = await getDb();
+      let foundProps = [];
+      if (db) {
+        try {
+          const conditions = [eq9(properties.available, true)];
+          if (tipoInmueble) {
+            conditions.push(sql8`LOWER(${properties.propertyType}) LIKE ${"%" + tipoInmueble + "%"}`);
+          }
+          if (tipoNegocio) {
+            conditions.push(sql8`LOWER(${properties.transactionType}) LIKE ${"%" + tipoNegocio + "%"}`);
+          }
+          if (zona) {
+            conditions.push(sql8`LOWER(${properties.zone}) LIKE ${"%" + zona.toLowerCase() + "%"}`);
+          }
+          if (precioMax > 0) {
+            conditions.push(sql8`(${properties.price} <= ${precioMax} OR ${properties.rentPrice} <= ${precioMax})`);
+          }
+          foundProps = await db.select({
+            id: properties.id,
+            name: properties.name,
+            propertyType: properties.propertyType,
+            transactionType: properties.transactionType,
+            zone: properties.zone,
+            price: properties.price,
+            rentPrice: properties.rentPrice,
+            areaTotal: properties.areaTotal,
+            bedrooms: properties.bedrooms,
+            bathrooms: properties.bathrooms,
+            garages: properties.garages,
+            description: properties.description
+          }).from(properties).where(and6(...conditions)).orderBy(desc4(properties.id)).limit(5);
+        } catch (dbErr) {
+          console.warn("[consultar_catalogo_inmuebles_vecy] Error querying DB:", dbErr?.message);
+        }
+      }
+      const totalProps = foundProps.length;
+      let avgM2Price = 0;
+      if (totalProps > 0) {
+        const prices = foundProps.map((p) => {
+          const pr = Number(p.price || p.rentPrice || 0);
+          const ar = Number(p.areaTotal || 0);
+          return ar > 0 && pr > 0 ? pr / ar : 0;
+        }).filter((v) => v > 0);
+        if (prices.length > 0) {
+          avgM2Price = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+        }
+      }
+      return {
+        toolType: "catalogo_inmuebles",
+        resultJson: {
+          solicitud: "catalogo_inmuebles_vecy",
+          tipoInmueble,
+          tipoNegocio,
+          zona,
+          totalEncontrados: totalProps,
+          precioPromedioM2: avgM2Price,
+          inmuebles: foundProps.map((p) => ({
+            codigo: `#P${p.id}`,
+            titulo: p.name,
+            tipo: p.propertyType,
+            operacion: p.transactionType,
+            zona: p.zone,
+            precioVenta: p.price ? `$${Number(p.price).toLocaleString("es-CO")} COP` : void 0,
+            precioCanon: p.rentPrice ? `$${Number(p.rentPrice).toLocaleString("es-CO")} COP/mes` : void 0,
+            areaM2: p.areaTotal ? `${p.areaTotal} m\xB2` : void 0,
+            habitaciones: p.bedrooms,
+            banos: p.bathrooms,
+            garajes: p.garages
+          })),
+          contactoBroker: "Eduardo Rivera & Jani Alves \u2014 WhatsApp Oficial +57 316 656 9719"
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -21471,11 +21802,17 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
 }
 async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
   const isFreeTool = toolType !== "sondeo" && toolType !== "match";
+  if (isFreeTool) {
+    await incrementFreeServicesCount(userId);
+  }
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
   const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"));
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
   }
+  const userVerifiedReview = await isUserVerifiedGoogleReview(userId);
+  const isVip = isEduardoOrJani(userId);
+  const askReview = !userVerifiedReview && !isVip && await shouldAskForGoogleReview(userId);
   let specialToolInstructions = "";
   if (toolType === "cedula") {
     specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
@@ -21488,8 +21825,9 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
 - Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico.
 - NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
-- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
-`;
+` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
+` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
+`);
   } else if (toolType === "empresa") {
     specialToolInstructions = `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confec\xE1maras / C\xE1maras de Comercio de Colombia / DIAN).
 - REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas de 4 secciones, cero formatos acartonados ni vi\xF1etas rob\xF3ticas. Redacta de forma fresca, ejecutiva, original y charlada.
@@ -21502,7 +21840,17 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
 - SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localiz\xF3 la empresa, informa con total honestidad que no se hall\xF3 registro en las 57 C\xE1maras de Comercio del pa\xEDs y p\xEDdele con amabilidad el n\xFAmero de NIT para una b\xFAsqueda exacta.
 - CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma rob\xF3tica si desea verificar al representante. JanIA lo menciona en su \xFAnica respuesta con naturalidad.
 - NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Incluye una l\xEDnea breve de publicidad mercantil y h\xE1beas data (Art. 26 C.Co. y Ley 1581/12).
-- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.
+` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.
+` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
+`);
+  } else if (toolType === "web") {
+    specialToolInstructions = `- HERRAMIENTA: Navegaci\xF3n y Lectura Web Abierta en Tiempo Real.
+- Extrae y analiza los datos reales de la p\xE1gina o portal consultado, entregando s\xEDntesis ejecutiva, directa y sin rodeos al usuario.
+`;
+  } else if (toolType === "catalogo_inmuebles") {
+    specialToolInstructions = `- HERRAMIENTA: Consulta de Cat\xE1logo Oficial de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719).
+- Presenta de forma clara y organizada las propiedades encontradas con su c\xF3digo (#P...), tipo, ubicaci\xF3n, precio o canon y metraje, junto con el valor promedio de $/m\xB2 de la zona.
+- Invita cordialmente a comunicarse con Eduardo Rivera o Jani Alves a la l\xEDnea de atenci\xF3n de br\xF3ker (+57 316 656 9719) para coordinar visitas o recibir dossier completo.
 `;
   }
   const synthPrompt = [
@@ -21513,12 +21861,12 @@ Acabas de ejecutar la herramienta correspondiente a: ${toolType}.
 Datos estructurados del sistema en JSON:
 ${JSON.stringify(toolJson, null, 2)}
 
-INSTRUCCIONES DE REDACCI\xD3N:
-- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasi\xF3n de IA pura.
+INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA):
+- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia, concisi\xF3n y persuasi\xF3n de IA pura.
 ` + specialToolInstructions + `- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
 - Si es una consulta de matches, explica con claridad el cruce encontrado.
 - Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
-- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp.
+- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (*negritas*, vi\xF1etas limpias).
 - Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
 `
     },
@@ -21528,7 +21876,7 @@ INSTRUCCIONES DE REDACCI\xD3N:
     }
   ];
   try {
-    const res = await invokeLLM({ messages: synthPrompt });
+    const res = await invokeLLM({ messages: synthPrompt, highReasoning: true });
     let text2 = res.choices[0]?.message?.content || "";
     if (text2) {
       text2 = sanitizeResponseMarkdown(text2.trim());
@@ -21696,6 +22044,14 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   const realName = await resolveRealName(userId, userName);
   const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
   const hour = nowBogota.getHours();
+  const minutes = String(nowBogota.getMinutes()).padStart(2, "0");
+  const diasSemana = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
+  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const diaSemanaStr = diasSemana[nowBogota.getDay()];
+  const diaMes = nowBogota.getDate();
+  const mesStr = meses[nowBogota.getMonth()];
+  const anio = nowBogota.getFullYear();
+  const colombiaTimeFormatted = `${diaSemanaStr}, ${diaMes} de ${mesStr} de ${anio}, ${String(hour).padStart(2, "0")}:${minutes} hora Colombia (America/Bogota)`;
   let timeOfDay = "Ma\xF1ana (5:00 am - 11:59 am)";
   let timeSalutation = "Buenos d\xEDas";
   if (hour >= 5 && hour < 12) {
@@ -21708,6 +22064,10 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     timeOfDay = "Noche (7:00 pm - 4:59 am)";
     timeSalutation = "Buenas noches";
   }
+  const isFirstTimeUser = await isNewUser(userId);
+  await incrementUserMessageCount(userId);
+  const userPerpetualSession = await getUserPerpetualSession(userId, userName);
+  const hasVerifiedReview = userPerpetualSession.hasVerifiedGoogleReview || isEduardoOrJani(userId);
   const history = await getOrLoadDmHistory(userId);
   const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1e3;
   const hasRecentInteractionPast6Hours = history.some((h) => (h.ts || 0) > sixHoursAgo);
@@ -21737,6 +22097,32 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
     displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
     if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
       displayName = "";
+    }
+  }
+  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
+  if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
+    await recordUserReviewClaim(userId);
+    const claimReply = `\xA1Much\xEDsimas gracias por tu apoyo${displayName ? `, ${displayName}` : ""}! \u{1F31F}
+
+Para validar tu calificaci\xF3n y actualizar tu registro permanente en el sistema, \xBFme compartes por favor un *pantallazo o captura de pantalla* de tu rese\xF1a y comentario en Google? \u{1F4F8}
+
+As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1Te agradezco de todo coraz\xF3n! \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", claimReply);
+    return claimReply;
+  }
+  let preloadedWebContent = "";
+  const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch && urlMatch[0]) {
+    try {
+      const pageInfo = await fetchWebUrlContent(urlMatch[0], 8e3);
+      if (pageInfo.success && pageInfo.content) {
+        preloadedWebContent = `
+[SISTEMA - NAVEGACI\xD3N WEB EN TIEMPO REAL: Se descarg\xF3 el contenido de la URL ${urlMatch[0]} enviada por el usuario:
+T\xEDtulo: ${pageInfo.title}
+Contenido: ${pageInfo.content.slice(0, 4500)}]`;
+      }
+    } catch (_) {
     }
   }
   try {
@@ -21795,6 +22181,29 @@ Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xC
 Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
 
 ===================================================
+CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:
+===================================================
+- Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.
+- Franja del d\xEDa actual: ${timeOfDay}.
+- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.
+- \xBFHubo interacci\xF3n reciente en las \xFAltimas 6 horas?: ${hasRecentInteractionPast6Hours ? "S\xCD (Conversaci\xF3n activa en curso)" : "NO (Nueva interacci\xF3n / inicio)"}.
+- REGLA ESTRICTA DEL SALUDO \xDANICO:
+  * Si NO hubo interacci\xF3n reciente en las \xFAltimas 6 horas: Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional UNA SOLA VEZ al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
+  * Si S\xCD hubo interacci\xF3n en las \xFAltimas 6 horas: Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.
+
+===================================================
+MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:
+===================================================
+${isFirstTimeUser ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida \xFAnica, fresca, cercana y humana, transmitiendo confianza y empat\xEDa inmediata al estilo VECY sin sonar a robot.` : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversaci\xF3n y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces' o dar introducciones largas como si fuera un desconocido.`}
+
+===================================================
+ESTILO Y VOZ LAOMEDEIA (HUMANIDAD PURA, CONCISI\xD3N Y CERO REDUNDANCIA):
+===================================================
+- Escribe con la misma calidez, chispa, persuasi\xF3n y naturalidad con la que hablas en tus audios de Laomedeia, yendo SIEMPRE AL GRANO.
+- Prohibido extenderse con p\xE1rrafos redundantes, introducciones largas o ladrillos de texto que aburran al lector: entrega explicaciones y reportes concretos, \xE1giles, visualmente elegantes y organizados por ti misma con Markdown de WhatsApp (*negritas*, _cursivas_, vi\xF1etas limpias y emojis precisos).
+- Respuestas \xE1giles, concretas y legibles en la pantalla del celular sin provocar el bot\xF3n 'Leer m\xE1s'.
+
+===================================================
 BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES:
 ===================================================
 ${vecyKnowledge}
@@ -21810,24 +22219,15 @@ ${contactDossier ? `${contactDossier}
 6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.
 
 ===================================================
-CONTEXTO TEMPORAL Y REGLA DEL SALUDO \xDANICO:
-===================================================
-- Franja horaria actual en Colombia (Bogot\xE1 UTC-5): ${timeOfDay}.
-- Saludo institucional del momento: "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
-- \xBFHubo interacci\xF3n reciente en las \xFAltimas 6 horas?: ${hasRecentInteractionPast6Hours ? "S\xCD (Conversaci\xF3n activa en curso)" : "NO (Nueva interacci\xF3n / inicio)"}.
-- REGLA ESTRICTA DEL SALUDO \xDANICO:
-  * Si NO hubo interacci\xF3n reciente en las \xFAltimas 6 horas: Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional UNA SOLA VEZ al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
-  * Si S\xCD hubo interacci\xF3n en las \xFAltimas 6 horas: Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.
-
-===================================================
 MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios.
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.
 Reglas de ejecuci\xF3n seg\xFAn el contexto:
 a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.
-b) Si el usuario pide una tarjeta de contacto, evento, encuesta interactiva de opciones o el cat\xE1logo de servicios: Invoca la herramienta nativa correspondiente.
-c) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
-d) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
+b) Si el usuario pide buscar en la web o comparte un enlace URL (portal inmobiliario, p\xE1gina corporativa): Invoca 'navegar_o_buscar_web' para extraer el contenido real al instante.
+c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
+d) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
+e) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
 
 ===================================================
 BUSCADOR Y MEDIACI\xD3N DE MATCHES (C\xD3DIGO #M...):
@@ -21841,7 +22241,7 @@ PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):
 - TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empat\xEDa y complicidad profesional ("t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFqu\xE9 buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fr\xEDa o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RA\xCDCES.
 - INTERLOCUTOR Y G\xC9NERO GRAMATICAL: "${displayName || "Colega (nombre a\xFAn no identificado)"}". G\xE9nero detectado: ${nameInfo.isFemale ? "FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)" : "MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)"}.
 - REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), \xDASALO SIEMPRE COMPLETO de forma fluida y org\xE1nica. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce a\xFAn (es un n\xFAmero de tel\xE9fono o saludo suelto), sal\xFAdalo con calidez y hazle una pregunta simp\xE1tica para saber su nombre y c\xF3mo prefiere que lo llames.
-- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar org\xE1nicamente cualquiera de los cientos de emojis disponibles en Unicode. Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar (expresiones de calidez \u{1F60A}, ideas \u{1F4A1}, an\xE1lisis \u{1F914}, hogares \u{1F3E1}\u{1F3E2}, celebraci\xF3n \u{1F389}, documentos \u{1F4C4}, acuerdos \u{1F91D}, gui\xF1os \u{1F609}, notas \u{1F4DD}, etc.). Cero listas cerradas o restricciones r\xEDgidas.
+- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar org\xE1nicamente cualquiera de los cientos de emojis disponibles en Unicode. Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar.
 - CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MEN\xDAS R\xCDGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "informaci\xF3n", "de qu\xE9 trata", etc.), act\xFAa con la inteligencia conversacional de un asistente de nivel mundial:
   1. Saluda amablemente con calidez humana y tuteo cercano.
   2. Deduce con empat\xEDa la situaci\xF3n en una o dos frases breves y cautivadoras.
@@ -21856,7 +22256,8 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : isJani ? `- Trato directivo para JANI ALVES (Fundadora y Directora de Operaciones): Compa\xF1era de equipo y mano derecha leal, operativa, c\xE1lida y ejecutiva.
 ` : isFamilyOrTrusted && trustedContact ? `- C\xCDRCULO FAMILIAR Y DE CONFIANZA: Est\xE1s conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Tr\xE1tala/lo con inmenso cari\xF1o, afecto familiar y respeto natural. Cu\xE9ntale con fluidez (sin plantillas r\xEDgidas) que Eduardo ahora est\xE1 disponible en su l\xEDnea de br\xF3ker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal fr\xEDo de vendedor, pedirle rese\xF1as en Google o venderle servicios comerciales a familiares.
 ` : `- Usuario identificado: ${displayName || realName || "Colega"}.
-`}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
+`}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
+` : ""}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
 - SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
 - NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
 - MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
@@ -21868,9 +22269,12 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       messages2.push({ role: turn.role, content: cleanTurnContent });
     }
     let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    if (preloadedWebContent) {
+      userPromptContent += preloadedWebContent;
+    }
     if (mediaOptions?.imageBuffer) {
       userPromptContent += `
-[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual de la imagen (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas, datos societarios, recibos, facturas, comprobantes o documentos. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit' con el NIT o raz\xF3n social para entregar todos los datos oficiales disponibles (Raz\xF3n Social, NIT, Estado de matr\xEDcula, Direcci\xF3n comercial, Tel\xE9fono, Actividad econ\xF3mica CIIU y Representante Legal).]`;
+[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas, datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una rese\xF1a o calificaci\xF3n en Google (Google Maps / Rese\xF1a / Estrellas / VECY Bienes Ra\xEDces), valida la rese\xF1a cordialmente, agrad\xE9cele con mucho cari\xF1o y calidez humana e incluye la etiqueta interna [RESE\xD1A_GOOGLE_VALIDADA].]`;
     }
     if (mediaOptions?.pdfBuffer) {
       userPromptContent += `
@@ -21885,6 +22289,7 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       llmRes = await invokeLLM({
         messages: messages2,
         tools: JANIA_DM_TOOLS,
+        highReasoning: true,
         imageBuffer: mediaOptions?.imageBuffer,
         pdfBuffer: mediaOptions?.pdfBuffer,
         pdfMimeType: mediaOptions?.pdfMimeType
@@ -21893,6 +22298,7 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       console.warn(`[dmHandler] \u26A0\uFE0F Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
       llmRes = await invokeLLM({
         messages: messages2,
+        highReasoning: true,
         imageBuffer: mediaOptions?.imageBuffer,
         pdfBuffer: mediaOptions?.pdfBuffer,
         pdfMimeType: mediaOptions?.pdfMimeType
@@ -21928,6 +22334,10 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       );
     } else {
       reply = llmRes.choices[0]?.message?.content || "";
+    }
+    if (reply.includes("[RESE\xD1A_GOOGLE_VALIDADA]") || hasImage && /rese[ñn]a\s+validada|calificaci[oó]n\s+validada|valid[eé]\s+tu\s+rese[ñn]a|gracias\s+por\s+tu\s+rese[ñn]a/i.test(reply)) {
+      reply = reply.replace(/\[RESEÑA_GOOGLE_VALIDADA\]/g, "").trim();
+      await verifyUserGoogleReview(userId);
     }
     reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
     reply = sanitizeResponseMarkdown(reply.trim());
@@ -22172,6 +22582,9 @@ var init_dmHandler = __esm({
   "server/_core/jania/handlers/dmHandler.ts"() {
     "use strict";
     init_sessionManager();
+    init_scraper();
+    init_db();
+    init_schema();
     init_parsers();
     init_nameAndGenderResolver();
     init_llm();
@@ -22332,6 +22745,30 @@ var init_dmHandler = __esm({
                 categoria: { type: "STRING", description: "Categor\xEDa: 'inmuebles', 'servicios' o 'general'" }
               }
             }
+          },
+          {
+            name: "navegar_o_buscar_web",
+            description: "Abre y extrae el contenido real de una URL/enlace web (portales inmobiliarios como Metrocuadrado, Fincaraiz, Ciencuadras, p\xE1ginas corporativas o documentos web) o busca informaci\xF3n actualizada en internet.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                url: { type: "STRING", description: "URL o enlace web completo a consultar (ej. https://...)" },
+                query: { type: "STRING", description: "T\xE9rmino de b\xFAsqueda web si no hay URL directa" }
+              }
+            }
+          },
+          {
+            name: "consultar_catalogo_inmuebles_vecy",
+            description: "Consulta el cat\xE1logo oficial y base de datos de propiedades de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719), filtrando por tipo de inmueble, tipo de negocio (venta, arriendo), zona/barrio, rango de precio o caracter\xEDsticas, entregando fichas y sondeos de $/m\xB2 al instante.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, local, lote, etc." },
+                tipoNegocio: { type: "STRING", description: "venta, arriendo, venta_o_arriendo" },
+                zona: { type: "STRING", description: "Zona o barrio de Bogot\xE1 o municipio" },
+                precioMaximo: { type: "NUMBER", description: "Presupuesto m\xE1ximo en COP" }
+              }
+            }
           }
         ]
       }
@@ -22367,9 +22804,9 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs8 from "fs";
-import path8 from "path";
-import { eq as eq9 } from "drizzle-orm";
+import fs9 from "fs";
+import path9 from "path";
+import { eq as eq10 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -22578,7 +23015,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path8.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path9.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -22743,9 +23180,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path8.join(process.cwd(), this.sessionFolderName);
-          if (!fs8.existsSync(sessionDir)) {
-            fs8.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path9.join(process.cwd(), this.sessionFolderName);
+          if (!fs9.existsSync(sessionDir)) {
+            fs9.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -22767,7 +23204,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs8.existsSync(path8.join(sessionDir, "creds.json"))) {
+          if (!fs9.existsSync(path9.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -22861,12 +23298,12 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path8.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path8.join(process.cwd(), "client", "public");
-              if (!fs8.existsSync(publicQrDir)) {
-                fs8.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path9.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path9.join(process.cwd(), "client", "public");
+              if (!fs9.existsSync(publicQrDir)) {
+                fs9.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path8.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path9.join(publicQrDir, "qr-match.png");
               await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -23389,10 +23826,9 @@ ${quotedNote}` : quotedNote;
             }
           }
           if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
-            const stopPresence2 = startContinuousPresence(this.sock, senderId, "composing");
             try {
               const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
-              await processWhatsAppMessage2(
+              processWhatsAppMessage2(
                 body || flyerVisionData.flyerVerbatimText || "Publicaci\xF3n de inmueble por flyer",
                 senderId,
                 userName,
@@ -23406,19 +23842,25 @@ ${quotedNote}` : quotedNote;
                 void 0,
                 void 0,
                 flyerVisionData
-              );
-              const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
-              const flyerReply = `\xA1Excelente! He analizado tu afiche comercial con visi\xF3n artificial: *${flyerTitle}* \u{1F4F8}\u2728.
+              ).catch((e) => console.warn("[JANIA-MATCH] Error ingesting flyer in propertiesHandler:", e));
+            } catch (_) {
+            }
+            if (!body.trim() || body.trim().length < 5) {
+              const stopPresence2 = startContinuousPresence(this.sock, senderId, "composing");
+              try {
+                const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
+                const flyerReply = `\xA1Excelente! He analizado tu afiche comercial con visi\xF3n artificial: *${flyerTitle}* \u{1F4F8}\u2728.
 
 Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con nuestra base de datos inmobiliaria \u{1F3E2}\u2728. Si necesitas consultar el predial en Bogot\xE1 o verificar antecedentes de tu cliente, dime y te colaboro de inmediato \u{1F91D}.`;
-              await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
-              const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-              appendDmHistory2(senderId, "user", body || `[Flyer: ${flyerTitle}]`);
-              appendDmHistory2(senderId, "assistant", flyerReply);
-              await this.logToDb(senderId, "janIA", flyerReply);
-              return;
-            } finally {
-              stopPresence2();
+                await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
+                const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                appendDmHistory2(senderId, "user", body || `[Flyer: ${flyerTitle}]`);
+                appendDmHistory2(senderId, "assistant", flyerReply);
+                await this.logToDb(senderId, "janIA", flyerReply);
+                return;
+              } finally {
+                stopPresence2();
+              }
             }
           }
           let stopPresence = startContinuousPresence(this.sock, senderId, "composing");
@@ -24491,7 +24933,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq9(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq10(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -24505,7 +24947,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq9(conversations.id, conversationId));
+            }).where(eq10(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -24648,13 +25090,13 @@ Mis grupos oficiales:
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq9(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq9(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq9(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq10(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq10(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -24669,7 +25111,7 @@ Mis grupos oficiales:
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq9(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq10(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -24683,19 +25125,19 @@ Mis grupos oficiales:
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq9(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq9(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq10(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq9(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq10(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq9(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq10(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq9(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq10(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -25001,10 +25443,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs13 = await import("fs");
-            const buffer = fs13.readFileSync(mediaPath);
-            const path14 = await import("path");
-            const ext = path14.extname(mediaPath).toLowerCase();
+            const fs14 = await import("fs");
+            const buffer = fs14.readFileSync(mediaPath);
+            const path15 = await import("path");
+            const ext = path15.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -25022,7 +25464,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path14.basename(mediaPath)
+                fileName: path15.basename(mediaPath)
               };
             }
           } else {
@@ -25044,8 +25486,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const fs13 = await import("fs");
-          if (imagePath && fs13.existsSync(imagePath)) {
+          const fs14 = await import("fs");
+          if (imagePath && fs14.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -25084,8 +25526,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
-        const fs13 = await import("fs");
-        const hasImage = imagePath && fs13.existsSync(imagePath);
+        const fs14 = await import("fs");
+        const hasImage = imagePath && fs14.existsSync(imagePath);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -25148,11 +25590,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         const voiceMedia = await textToSpeechMedia2(cleaned);
         const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
         const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs13 = await import("fs");
+        const fs14 = await import("fs");
         if (this.buzonGroupId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs13.existsSync(imagePath)) {
+            if (imagePath && fs14.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
             }
             if (audioBuffer) {
@@ -25172,7 +25614,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         if (this.channelNewsletterId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs13.existsSync(imagePath)) {
+            if (imagePath && fs14.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
             }
             if (audioBuffer) {
@@ -25310,7 +25752,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path8.resolve("./client/public/jania_perfil.png");
+        const imgPath = path9.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -25341,10 +25783,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path8.join(process.cwd(), ".baileys_auth");
-        if (fs8.existsSync(sessionDir)) {
+        const sessionDir = path9.join(process.cwd(), ".baileys_auth");
+        if (fs9.existsSync(sessionDir)) {
           try {
-            fs8.rmSync(sessionDir, { recursive: true, force: true });
+            fs9.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -25363,8 +25805,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs8.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs8.readFileSync(this.cooldownFile, "utf8"));
+          if (fs9.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs9.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -25373,7 +25815,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs8.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs9.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -25613,7 +26055,7 @@ var init_agendaWhatsAppService = __esm({
 
 // server/routers/agenda.ts
 import { z as z2 } from "zod";
-import { desc as desc4, ilike, or as or3, sql as sql8, eq as eq10 } from "drizzle-orm";
+import { desc as desc5, ilike, or as or3, sql as sql9, eq as eq11 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -26227,7 +26669,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       const profileRows = await db.select({
         fullName: profiles.fullName,
         numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq10(profiles.numeroDocumento, clean)).limit(5);
+      }).from(profiles).where(eq11(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const officialFormatted = formatTitleCase(row.fullName.trim());
@@ -26249,10 +26691,10 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         interesadoNombre: solicitudes.interesadoNombre
       }).from(solicitudes).where(
         or3(
-          eq10(solicitudes.solicitanteNumeroDocumento, clean),
-          eq10(solicitudes.interesadoDocumento, clean)
+          eq11(solicitudes.solicitanteNumeroDocumento, clean),
+          eq11(solicitudes.interesadoDocumento, clean)
         )
-      ).orderBy(desc4(solicitudes.id)).limit(10);
+      ).orderBy(desc5(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
@@ -26436,10 +26878,10 @@ async function processAndSaveSolicitud(input) {
     }
   } catch (_) {
   }
-  const maxRes = await db.select({ maxId: sql8`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const maxRes = await db.select({ maxId: sql9`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
   const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
   const inserted = await db.insert(solicitudes).values({
-    id: sql8`nextval('solicitudes_id_seq')`,
+    id: sql9`nextval('solicitudes_id_seq')`,
     solicitudId: nextSolicitudId,
     solicitanteNombre: input.solicitante_nombre,
     solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
@@ -26626,7 +27068,7 @@ var init_agenda = __esm({
             ilike(solicitudes.interesadoNombre, searchPattern)
           ];
           if (!isNaN(numSearch)) {
-            searchConditions.push(eq10(solicitudes.solicitudId, numSearch));
+            searchConditions.push(eq11(solicitudes.solicitudId, numSearch));
           }
           whereConditions.push(or3(...searchConditions));
         }
@@ -26649,9 +27091,9 @@ var init_agenda = __esm({
             );
           }
         }
-        const finalWhere = whereConditions.length > 0 ? sql8.join(whereConditions, sql8` AND `) : void 0;
-        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql8`${solicitudes.solicitudId} DESC NULLS LAST`, desc4(solicitudes.id)).limit(limit).offset(offset);
-        const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(finalWhere);
+        const finalWhere = whereConditions.length > 0 ? sql9.join(whereConditions, sql9` AND `) : void 0;
+        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql9`${solicitudes.solicitudId} DESC NULLS LAST`, desc5(solicitudes.id)).limit(limit).offset(offset);
+        const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(finalWhere);
         return {
           items,
           total: Number(totalRes[0]?.count || 0)
@@ -26660,9 +27102,9 @@ var init_agenda = __esm({
       getStats: publicProcedure.query(async () => {
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-        const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes);
+        const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes);
         const total = Number(totalRes[0]?.count || 0);
-        const agentesRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(
+        const agentesRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(
           or3(
             ilike(solicitudes.solicitantePerfil, "%agente%"),
             ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
@@ -26671,7 +27113,7 @@ var init_agenda = __esm({
           )
         );
         const agentes = Number(agentesRes[0]?.count || 0);
-        const conFirmaRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(sql8`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+        const conFirmaRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(sql9`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
         const conFirma = Number(conFirmaRes[0]?.count || 0);
         const directos = Math.max(0, total - agentes);
         return {
@@ -26794,7 +27236,7 @@ var init_agenda = __esm({
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
         const { id, ...dataToUpdate } = input;
-        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq10(solicitudes.id, id)).returning();
+        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq11(solicitudes.id, id)).returning();
         return {
           success: true,
           item: updated[0] || null
@@ -26907,7 +27349,7 @@ function formatOrganizacionJuridica(raw) {
   }
   return formatTitleCase2(raw);
 }
-async function postRuesEncrypted(path14, payload, timeoutMs = 5e3) {
+async function postRuesEncrypted(path15, payload, timeoutMs = 5e3) {
   if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
     return null;
   }
@@ -26916,7 +27358,7 @@ async function postRuesEncrypted(path14, payload, timeoutMs = 5e3) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${baseUrl}${path14}`, {
+    const res = await fetch(`${baseUrl}${path15}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -27162,8 +27604,8 @@ function extractActividadesEconomicas(sourceRecord) {
     const code = String(cand.code || "").trim();
     if (!code || code === "0" || code === "0000" || seen.has(code)) continue;
     seen.add(code);
-    const desc10 = String(cand.desc || "").trim() || CIIU_DESCRIPTIONS[code] || "Actividad econ\xF3mica mercantil registrada en RUES";
-    items.push({ codigo: code, descripcion: desc10 });
+    const desc11 = String(cand.desc || "").trim() || CIIU_DESCRIPTIONS[code] || "Actividad econ\xF3mica mercantil registrada en RUES";
+    items.push({ codigo: code, descripcion: desc11 });
   }
   return items;
 }
@@ -30235,22 +30677,28 @@ __export(janIA_exports, {
   getRecentChatHistory: () => getRecentChatHistory,
   getStartOfTodayBogota: () => getStartOfTodayBogota,
   getTimeOfDayGreetingForUser: () => getTimeOfDayGreetingForUser,
+  getUserPerpetualSession: () => getUserPerpetualSession,
   getVecyInstitutionalKnowledge: () => getVecyInstitutionalKnowledge,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasGreetedUserToday: () => hasGreetedUserToday,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
+  incrementFreeServicesCount: () => incrementFreeServicesCount,
+  incrementUserMessageCount: () => incrementUserMessageCount,
   initAdvisorsDirectory: () => initAdvisorsDirectory,
   initBrokerDirectory: () => initBrokerDirectory,
   isChaloEscobarJoke: () => isChaloEscobarJoke,
   isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
+  isEduardoOrJani: () => isEduardoOrJani,
   isGenericName: () => isGenericName,
   isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
   isLidIdentifier: () => isLidIdentifier,
+  isNewUser: () => isNewUser,
   isOutsideWorkingHours: () => isOutsideWorkingHours,
   isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
   isSessionMuted: () => isSessionMuted,
   isShortSignalOrSticker: () => isShortSignalOrSticker,
+  isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
   isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
   janiaResultSchema: () => janiaResultSchema,
   lookupAdvisor: () => lookupAdvisor,
@@ -30271,6 +30719,7 @@ __export(janIA_exports, {
   processWhatsAppMessage: () => processWhatsAppMessage,
   promptCache: () => promptCache,
   propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings,
+  recordUserReviewClaim: () => recordUserReviewClaim,
   repairJSON: () => repairJSON,
   resolveContactPhone: () => resolveContactPhone,
   resolveRealName: () => resolveRealName,
@@ -30278,17 +30727,20 @@ __export(janIA_exports, {
   sanitizeGeoString: () => sanitizeGeoString,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
+  saveUserPerpetualSession: () => saveUserPerpetualSession,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
   setCompanySession: () => setCompanySession,
   setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
   setPendingSession: () => setPendingSession,
+  shouldAskForGoogleReview: () => shouldAskForGoogleReview,
   splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
   stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini,
   translatePropertyType: () => translatePropertyType,
-  translateTransactionType: () => translateTransactionType
+  translateTransactionType: () => translateTransactionType,
+  verifyUserGoogleReview: () => verifyUserGoogleReview
 });
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
@@ -30303,7 +30755,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and8, eq as eq12, sql as sql10 } from "drizzle-orm";
+import { and as and9, eq as eq13, sql as sql11 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -30318,11 +30770,11 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    await db.execute(sql10`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days'`);
-    await db.execute(sql10`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days')`);
+    await db.execute(sql11`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days'`);
+    await db.execute(sql11`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '15 days')`);
     const [activeReqs, availProps] = await Promise.all([
-      db.select().from(requirements).where(eq12(requirements.status, "active")),
-      db.select().from(properties).where(eq12(properties.available, true))
+      db.select().from(requirements).where(eq13(requirements.status, "active")),
+      db.select().from(properties).where(eq13(properties.available, true))
     ]);
     console.log(
       `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
@@ -30382,9 +30834,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and8(
-                  eq12(propertyMatches.requirementId, req.id),
-                  eq12(propertyMatches.propertyId, prop.id)
+                and9(
+                  eq13(propertyMatches.requirementId, req.id),
+                  eq13(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -30398,9 +30850,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and8(
-                  eq12(propertyMatches.requirementId, req.id),
-                  eq12(propertyMatches.propertyId, prop.id)
+                and9(
+                  eq13(propertyMatches.requirementId, req.id),
+                  eq13(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -30413,9 +30865,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and8(
-                  eq12(propertyMatches.requirementId, req.id),
-                  eq12(propertyMatches.propertyId, prop.id)
+                and9(
+                  eq13(propertyMatches.requirementId, req.id),
+                  eq13(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -30426,9 +30878,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and8(
-                  eq12(propertyMatches.requirementId, req.id),
-                  eq12(propertyMatches.propertyId, prop.id)
+                and9(
+                  eq13(propertyMatches.requirementId, req.id),
+                  eq13(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -30439,9 +30891,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and8(
-                  eq12(propertyMatches.requirementId, req.id),
-                  eq12(propertyMatches.propertyId, prop.id)
+                and9(
+                  eq13(propertyMatches.requirementId, req.id),
+                  eq13(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -30468,9 +30920,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and8(
-                  eq12(propertyMatches.requirementId, req.id),
-                  eq12(propertyMatches.propertyId, prop.id)
+                and9(
+                  eq13(propertyMatches.requirementId, req.id),
+                  eq13(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -30479,9 +30931,9 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and8(
-              eq12(propertyMatches.requirementId, req.id),
-              eq12(propertyMatches.propertyId, prop.id)
+            and9(
+              eq13(propertyMatches.requirementId, req.id),
+              eq13(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -30501,7 +30953,7 @@ async function runNightlyRematch() {
               await db.update(propertyMatches).set({
                 matchScore: exp.score.toFixed(2),
                 matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
-              }).where(eq12(propertyMatches.id, existing[0].id));
+              }).where(eq13(propertyMatches.id, existing[0].id));
               updatedCount++;
             }
           }
@@ -30548,14 +31000,14 @@ async function recalculateAndCleanupMatches() {
     let updatedCount = 0;
     for (const m of allMatches) {
       if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
-        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq13(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const [prop] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq12(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq13(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq13(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq13(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
@@ -30568,12 +31020,12 @@ async function recalculateAndCleanupMatches() {
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
-        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq13(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.5) {
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq12(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq13(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -30643,10 +31095,10 @@ __export(cronService_exports, {
   publishWeeklyReportNow: () => publishWeeklyReportNow
 });
 import cron from "node-cron";
-import path9 from "path";
-import fs9 from "fs";
+import path10 from "path";
+import fs10 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte3, and as and9, eq as eq13, sql as sql11, desc as desc6 } from "drizzle-orm";
+import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -30659,9 +31111,9 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     }
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
-        and9(
-          eq13(dailyBroadcasts.dateBogota, dateBogota),
-          eq13(dailyBroadcasts.targetGroup, targetGroup)
+        and10(
+          eq14(dailyBroadcasts.dateBogota, dateBogota),
+          eq14(dailyBroadcasts.targetGroup, targetGroup)
         )
       ).limit(1);
       if (existing.length > 0) {
@@ -30693,7 +31145,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql11`NOW()`
+        createdAt: sql12`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -30717,7 +31169,7 @@ async function completeBroadcast(broadcastId, data) {
       voiceText: data.voiceText,
       captionText: data.captionText,
       status: "completed"
-    }).where(eq13(dailyBroadcasts.id, broadcastId));
+    }).where(eq14(dailyBroadcasts.id, broadcastId));
     console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
     console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
@@ -30731,7 +31183,7 @@ async function failBroadcast(broadcastId, reason) {
     await db.update(dailyBroadcasts).set({
       topicTitle: `Error: ${reason}`,
       status: "failed"
-    }).where(eq13(dailyBroadcasts.id, broadcastId));
+    }).where(eq14(dailyBroadcasts.id, broadcastId));
   } catch (err) {
     console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
@@ -30743,7 +31195,7 @@ async function getRecentBroadcastTopics(limit = 30) {
     const rows = await db.select({
       dateBogota: dailyBroadcasts.dateBogota,
       topicTitle: dailyBroadcasts.topicTitle
-    }).from(dailyBroadcasts).where(eq13(dailyBroadcasts.status, "completed")).orderBy(desc6(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(eq14(dailyBroadcasts.status, "completed")).orderBy(desc7(dailyBroadcasts.createdAt)).limit(limit);
     return rows;
   } catch (err) {
     console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
@@ -30756,7 +31208,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and9(eq13(dailyBroadcasts.status, "completed"), sql11`image_file_name IS NOT NULL`)).orderBy(desc6(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and10(eq14(dailyBroadcasts.status, "completed"), sql12`image_file_name IS NOT NULL`)).orderBy(desc7(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -30808,16 +31260,16 @@ function enforceJanIAIdentity(text2) {
 async function getThemedImagePathAsync(tipo) {
   const recent = await getRecentImageFiles(3);
   const possibleDirs = [
-    path9.resolve(process.cwd(), "client/public/assets/jania"),
-    path9.resolve(process.cwd(), "dist/assets/jania"),
-    path9.resolve(__dirname, "../../client/public/assets/jania")
+    path10.resolve(process.cwd(), "client/public/assets/jania"),
+    path10.resolve(process.cwd(), "dist/assets/jania"),
+    path10.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
     if (pref.endsWith(".mp4") || pref.endsWith(".mov")) {
       for (const dir of possibleDirs) {
-        const candidate = path9.join(dir, pref);
-        if (fs9.existsSync(candidate)) {
+        const candidate = path10.join(dir, pref);
+        if (fs10.existsSync(candidate)) {
           return { fullPath: candidate, fileName: pref };
         }
       }
@@ -30830,8 +31282,8 @@ async function getThemedImagePathAsync(tipo) {
     chosenFile = effectivePool[0];
   }
   for (const dir of possibleDirs) {
-    const candidatePath = path9.join(dir, chosenFile);
-    if (fs9.existsSync(candidatePath)) {
+    const candidatePath = path10.join(dir, chosenFile);
+    if (fs10.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -30839,15 +31291,15 @@ async function getThemedImagePathAsync(tipo) {
 }
 function getThemedImagePath(tipo) {
   const possibleDirs = [
-    path9.resolve(process.cwd(), "client/public/assets/jania"),
-    path9.resolve(process.cwd(), "dist/assets/jania"),
-    path9.resolve(__dirname, "../../client/public/assets/jania")
+    path10.resolve(process.cwd(), "client/public/assets/jania"),
+    path10.resolve(process.cwd(), "dist/assets/jania"),
+    path10.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
   for (const dir of possibleDirs) {
-    const candidatePath = path9.join(dir, chosenFile);
-    if (fs9.existsSync(candidatePath)) {
+    const candidatePath = path10.join(dir, chosenFile);
+    if (fs10.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -31264,12 +31716,12 @@ async function fetchPublicThemeImage(themeKey, dayOfMonth) {
     if (!imgRes.ok) return void 0;
     const buffer = Buffer.from(await imgRes.arrayBuffer());
     if (buffer.length < 1e3) return void 0;
-    const cacheDir = path9.resolve(process.cwd(), "client/public/assets/broadcast");
-    if (!fs9.existsSync(cacheDir)) {
-      fs9.mkdirSync(cacheDir, { recursive: true });
+    const cacheDir = path10.resolve(process.cwd(), "client/public/assets/broadcast");
+    if (!fs10.existsSync(cacheDir)) {
+      fs10.mkdirSync(cacheDir, { recursive: true });
     }
-    const targetFile = path9.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-    fs9.writeFileSync(targetFile, buffer);
+    const targetFile = path10.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+    fs10.writeFileSync(targetFile, buffer);
     console.log(`[CRON-IMAGE-WEB] \u2705 Imagen guardada localmente (${buffer.length} bytes): ${targetFile}`);
     return targetFile;
   } catch (err) {
@@ -31364,7 +31816,7 @@ async function publishTodayTipNow(force = true) {
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
-      imageFileName: imagePath ? path9.basename(imagePath) : void 0,
+      imageFileName: imagePath ? path10.basename(imagePath) : void 0,
       captionText: content.captionText
     });
     console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n diaria entregada (${imagePath ? "con imagen p\xFAblica" : "texto puro"}) a Grupo 2, Grupo 3 y Canal Oficial: "${content.topicTitle}".`);
@@ -31476,9 +31928,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql11`count(*)::int` }).from(properties).where(eq13(properties.available, true)),
-      db.select({ count: sql11`count(*)::int` }).from(requirements).where(eq13(requirements.status, "active")),
-      db.select({ count: sql11`count(*)::int` }).from(propertyMatches).where(gte3(propertyMatches.matchScore, "80"))
+      db.select({ count: sql12`count(*)::int` }).from(properties).where(eq14(properties.available, true)),
+      db.select({ count: sql12`count(*)::int` }).from(requirements).where(eq14(requirements.status, "active")),
+      db.select({ count: sql12`count(*)::int` }).from(propertyMatches).where(gte3(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -31564,7 +32016,7 @@ var init_cronService = __esm({
     init_llm();
     init_const();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path9.dirname(__filename);
+    __dirname = path10.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -33208,7 +33660,7 @@ __export(matchAdHocService_exports, {
   detectInputListingType: () => detectInputListingType,
   executeAdHocMatch: () => executeAdHocMatch
 });
-import { sql as sql14, eq as eq19, and as and12, desc as desc9, gte as gte5 } from "drizzle-orm";
+import { sql as sql15, eq as eq20, and as and13, desc as desc10, gte as gte5 } from "drizzle-orm";
 function formatAdHocCOP(val) {
   if (!val) return "N/E";
   const num = Number(val);
@@ -33260,15 +33712,15 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
   let activeReqs = [];
   if (db) {
     if (inputType === "demanda") {
-      availableProps = await db.select().from(properties).where(and12(
-        eq19(properties.available, true),
-        gte5(sql14`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
-      )).orderBy(desc9(properties.createdAt)).limit(100);
+      availableProps = await db.select().from(properties).where(and13(
+        eq20(properties.available, true),
+        gte5(sql15`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
+      )).orderBy(desc10(properties.createdAt)).limit(100);
     } else {
-      activeReqs = await db.select().from(requirements).where(and12(
-        eq19(requirements.status, "active"),
-        gte5(sql14`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
-      )).orderBy(desc9(requirements.createdAt)).limit(100);
+      activeReqs = await db.select().from(requirements).where(and13(
+        eq20(requirements.status, "active"),
+        gte5(sql15`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
+      )).orderBy(desc10(requirements.createdAt)).limit(100);
     }
   } else {
     if (inputType === "demanda") {
@@ -34174,17 +34626,17 @@ init_matching();
 init_voiceTranscription();
 init_storage();
 import { z as z4 } from "zod";
-import { eq as eq14, and as and10, desc as desc7, sql as sql12, inArray as inArray2 } from "drizzle-orm";
+import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
-import fs10 from "fs";
-import path10 from "path";
+import fs11 from "fs";
+import path11 from "path";
 
 // server/routers/properties.ts
 init_trpc();
 init_db();
 init_schema();
 import { z as z3 } from "zod";
-import { eq as eq11, desc as desc5, ilike as ilike2, or as or4, and as and7 } from "drizzle-orm";
+import { eq as eq12, desc as desc6, ilike as ilike2, or as or4, and as and8 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var propertyInputSchema = z3.object({
   name: z3.string().min(2),
@@ -34593,13 +35045,13 @@ var propertiesRouter = router({
       );
     }
     if (input?.type) {
-      whereConditions.push(eq11(properties.propertyType, input.type));
+      whereConditions.push(eq12(properties.propertyType, input.type));
     }
     if (input?.transactionType) {
-      whereConditions.push(eq11(properties.transactionType, input.transactionType));
+      whereConditions.push(eq12(properties.transactionType, input.transactionType));
     }
-    whereConditions.push(eq11(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and7(...whereConditions) : void 0).orderBy(desc5(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    whereConditions.push(eq12(properties.available, true));
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and8(...whereConditions) : void 0).orderBy(desc6(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
   }),
@@ -34611,9 +35063,9 @@ var propertiesRouter = router({
     }
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const item = await db.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
+    const item = await db.select().from(properties).where(eq12(properties.id, input.id)).limit(1);
     if (item.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
-    const images = await db.select().from(propertyImages).where(eq11(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    const images = await db.select().from(propertyImages).where(eq12(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
     const result = {
       ...item[0],
       imagesList: images
@@ -34742,24 +35194,24 @@ ${input.text || "Ver documento PDF adjunto"}`;
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq12(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(properties.id, input.id)).returning();
     invalidatePropertiesListCache();
     return updated[0];
   }),
   delete: publicProcedure.input(z3.object({ id: z3.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq12(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    await db.delete(properties).where(eq11(properties.id, input.id));
+    await db.delete(properties).where(eq12(properties.id, input.id));
     invalidatePropertiesListCache();
     return { success: true };
   }),
@@ -34773,12 +35225,12 @@ ${input.text || "Ver documento PDF adjunto"}`;
       if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
         return cachedAdminMyList;
       }
-      const data = await db.select(propertyFields).from(properties).orderBy(desc5(properties.id));
+      const data = await db.select(propertyFields).from(properties).orderBy(desc6(properties.id));
       cachedAdminMyList = data;
       cachedAdminMyListTime = now;
       return data;
     }
-    return await db.select(propertyFields).from(properties).where(eq11(properties.agentId, user.id)).orderBy(desc5(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq12(properties.agentId, user.id)).orderBy(desc6(properties.id));
   })
 });
 
@@ -34812,7 +35264,7 @@ async function processUnresolvedMatches() {
       try {
         const exp = explicarMatch(task.requirement, task.property);
         if (db) {
-          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq14(propertyMatches.id, task.id));
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq15(propertyMatches.id, task.id));
         }
       } catch (err) {
       }
@@ -34881,7 +35333,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq15(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -34896,7 +35348,7 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq14(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq15(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
@@ -35015,7 +35467,7 @@ ${liveStats}${userContextInstruction}
 1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY BIENES RA\xCDCES. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
 2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
 3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes ra\xEDces.`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq14(messages.conversationId, conversationId)).orderBy(desc7(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq15(messages.conversationId, conversationId)).orderBy(desc8(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -35054,7 +35506,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq14(conversations.id, conversationId));
+      }).where(eq15(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -35072,7 +35524,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq14(conversations.userId, String(ctx.user.id))).orderBy(desc7(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq15(conversations.userId, String(ctx.user.id))).orderBy(desc8(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -35083,7 +35535,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).orderBy(desc7(conversations.updatedAt));
+      return await db.select().from(conversations).orderBy(desc8(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting all conversations:", error);
       return [];
@@ -35094,9 +35546,9 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq15(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq14(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq15(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
@@ -35107,10 +35559,10 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq15(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq14(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq14(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq15(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq15(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -35185,7 +35637,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq15(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -35204,7 +35656,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq14(conversations.id, conversationId));
+        }).where(eq15(conversations.id, conversationId));
       }
       return {
         analysis
@@ -35224,7 +35676,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq14(propertyMatches.requirementId, input.requirementId)).orderBy(desc7(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq15(propertyMatches.requirementId, input.requirementId)).orderBy(desc8(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -35337,7 +35789,7 @@ ${liveStats}${userContextInstruction}
           status: requirements.status,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq14(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq14(propertyMatches.requirementId, requirements.id)).where(sql12`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+      }).from(propertyMatches).innerJoin(properties, eq15(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq15(propertyMatches.requirementId, requirements.id)).where(sql13`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
             AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
@@ -35347,7 +35799,7 @@ ${liveStats}${userContextInstruction}
               COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '15 days'
               AND COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt}) >= NOW() - INTERVAL '15 days'
             )
-            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc7(propertyMatches.id)).limit(800);
+            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc8(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -35412,7 +35864,7 @@ ${liveStats}${userContextInstruction}
           broker: propertyPublicationHistory.broker,
           portal: propertyPublicationHistory.portal,
           grupo: propertyPublicationHistory.grupo
-        }).from(propertyPublicationHistory).where(inArray2(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc7(propertyPublicationHistory.fecha));
+        }).from(propertyPublicationHistory).where(inArray2(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc8(propertyPublicationHistory.fecha));
         const historyMap = /* @__PURE__ */ new Map();
         for (const h of histories) {
           let list = historyMap.get(h.propertyId);
@@ -35502,7 +35954,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq14(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq15(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -35624,7 +36076,7 @@ ${liveStats}${userContextInstruction}
     if (hasAmenitiesChange) {
       updateData.amenities = mergedAmenities;
     }
-    await db.update(properties).set(updateData).where(eq14(properties.id, input.propertyId));
+    await db.update(properties).set(updateData).where(eq15(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
@@ -35686,7 +36138,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq14(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq15(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -35780,7 +36232,7 @@ ${liveStats}${userContextInstruction}
     if (hasCaractChange) {
       updateData.caracteristicasDeseadas = mergedCaract;
     }
-    await db.update(requirements).set(updateData).where(eq14(requirements.id, input.requirementId));
+    await db.update(requirements).set(updateData).where(eq15(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
@@ -35873,7 +36325,7 @@ ${liveStats}${userContextInstruction}
       if (input.action === "exitoso" || input.action === "en_negociacion") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq14(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq15(propertyMatches.id, input.matchId));
           } catch (updErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar interested:`, updErr.message);
           }
@@ -35881,9 +36333,9 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "interested" }).where(
-              and10(
-                eq14(propertyMatches.propertyId, input.propertyId),
-                eq14(propertyMatches.requirementId, input.requirementId)
+              and11(
+                eq15(propertyMatches.propertyId, input.propertyId),
+                eq15(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (updErrPair) {
@@ -35894,7 +36346,7 @@ ${liveStats}${userContextInstruction}
       if (input.action === "rechazado") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq14(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq15(propertyMatches.id, input.matchId));
           } catch (delErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar rejected:`, delErr.message);
           }
@@ -35902,9 +36354,9 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(
-              and10(
-                eq14(propertyMatches.propertyId, input.propertyId),
-                eq14(propertyMatches.requirementId, input.requirementId)
+              and11(
+                eq15(propertyMatches.propertyId, input.propertyId),
+                eq15(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (delErrPair) {
@@ -35920,8 +36372,8 @@ ${liveStats}${userContextInstruction}
             estadoComercial: nuevoEstado,
             vigenciaIa: "NO_DISPONIBLE",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq14(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq14(propertyMatches.propertyId, input.propertyId));
+          }).where(eq15(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq15(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
         }
@@ -35932,8 +36384,8 @@ ${liveStats}${userContextInstruction}
             standByDirectoVecy: true,
             estadoComercial: "STANDBY",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq14(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq14(propertyMatches.propertyId, input.propertyId));
+          }).where(eq15(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq15(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a secci\xF3n Inmuebles StandBy (No Tercer\xEDa / No Referidos)`);
         }
@@ -35943,8 +36395,8 @@ ${liveStats}${userContextInstruction}
             aceptaTerceria: false,
             standByDirectoVecy: true,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq14(requirements.id, input.requirementId));
-          await db.delete(propertyMatches).where(eq14(propertyMatches.requirementId, input.requirementId));
+          }).where(eq15(requirements.id, input.requirementId));
+          await db.delete(propertyMatches).where(eq15(propertyMatches.requirementId, input.requirementId));
           cachedRequirementsData = null;
           cachedRequirementsTime = 0;
           console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
@@ -35975,8 +36427,8 @@ ${liveStats}${userContextInstruction}
       estadoComercial: nuevoEstado,
       vigenciaIa: "NO_DISPONIBLE",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq14(properties.id, input.propertyId));
-    await db.delete(propertyMatches).where(eq14(propertyMatches.propertyId, input.propertyId));
+    }).where(eq15(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq15(propertyMatches.propertyId, input.propertyId));
     try {
       await db.insert(matchFeedback).values({
         matchId: input.matchId || null,
@@ -36009,7 +36461,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc7(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc8(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -36036,7 +36488,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql12`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql13`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -36089,7 +36541,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq14(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq15(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -36184,13 +36636,13 @@ ${liveStats}${userContextInstruction}
       } else {
         const db = await getDb();
         if (db) {
-          const [statusRow] = await db.select().from(pendingSessions).where(eq14(pendingSessions.jid, "system:bot_status")).limit(1);
+          const [statusRow] = await db.select().from(pendingSessions).where(eq15(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql12`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql12`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql12`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql12`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql12`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql12`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql13`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql13`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql13`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql13`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql13`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql13`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -36234,11 +36686,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path10.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path10.join(process.cwd(), "qr-match.png");
-      let targetPath = fs10.existsSync(qrPath) ? qrPath : fs10.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path11.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path11.join(process.cwd(), "qr-match.png");
+      let targetPath = fs11.existsSync(qrPath) ? qrPath : fs11.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs10.readFileSync(targetPath);
+        const fileData = fs11.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -36271,7 +36723,7 @@ ${liveStats}${userContextInstruction}
         areaMin: requirements.areaMin,
         status: requirements.status,
         createdAt: requirements.createdAt
-      }).from(requirements).orderBy(desc7(requirements.id));
+      }).from(requirements).orderBy(desc8(requirements.id));
       const enrichedData = data.map((r) => {
         let phone = r.idUsuarioWhatsapp;
         let name = r.nombreUsuarioWhatsapp;
@@ -36315,20 +36767,20 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql12`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql12`count(*)::int` }).from(properties).where(sql12`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql12`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql12`count(*)::int` }).from(requirements).where(eq14(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql12`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql12`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql12`
+      const [propTotal] = await db.select({ count: sql13`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql13`count(*)::int` }).from(properties).where(sql13`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql13`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql13`count(*)::int` }).from(requirements).where(eq15(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql13`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql13`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql13`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql12`
+      const monthlyReqs = await db.execute(sql13`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -36679,7 +37131,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z5 } from "zod";
-import { eq as eq15 } from "drizzle-orm";
+import { eq as eq16 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -37055,7 +37507,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq15(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq16(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -37072,14 +37524,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq15(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq16(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq15(properties.id, existing[0].id));
+              }).where(eq16(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -37169,7 +37621,7 @@ init_db();
 init_db();
 init_schema();
 import { z as z6 } from "zod";
-import { eq as eq16 } from "drizzle-orm";
+import { eq as eq17 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
@@ -37194,7 +37646,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq16(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq17(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -37259,7 +37711,7 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq16(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq17(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -37280,8 +37732,8 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq16(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq16(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq17(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq17(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -37297,7 +37749,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z7 } from "zod";
-import { eq as eq17, and as and11, desc as desc8, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq18, and as and12, desc as desc9, isNull as isNull2 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -37310,42 +37762,42 @@ var agentRouter = router({
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq17(users.id, input.id)).limit(1);
+    }).from(users).where(eq18(users.id, input.id)).limit(1);
     if (agent.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq17(properties.agentId, ctx.user.id)).orderBy(desc8(properties.createdAt));
+    return await db.select().from(properties).where(eq18(properties.agentId, ctx.user.id)).orderBy(desc9(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq17(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq18(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId) throw new TRPCError5({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq17(properties.id, input.propertyId));
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq18(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc8(properties.createdAt));
+    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc9(properties.createdAt));
   }),
   generateStealthLink: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq17(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq18(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
       throw new TRPCError5({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and11(
-        eq17(referralLinks.propertyId, input.propertyId),
-        eq17(referralLinks.agentId, ctx.user.id)
+      and12(
+        eq18(referralLinks.propertyId, input.propertyId),
+        eq18(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -37370,7 +37822,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq17(referralLinks.propertyId, properties.id)).where(eq17(referralLinks.agentId, ctx.user.id)).orderBy(desc8(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq18(referralLinks.propertyId, properties.id)).where(eq18(referralLinks.agentId, ctx.user.id)).orderBy(desc9(referralLinks.createdAt));
   })
 });
 
@@ -37379,18 +37831,18 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z8 } from "zod";
-import { eq as eq18, sql as sql13 } from "drizzle-orm";
+import { eq as eq19, sql as sql14 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z8.object({ token: z8.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq18(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql13`${referralLinks.clicks} + 1` }).where(eq18(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql14`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -37401,7 +37853,7 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq18(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq19(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -37418,7 +37870,7 @@ var leadsRouter = router({
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq18(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -37452,7 +37904,7 @@ init_db();
 init_schema();
 init_matching();
 import { z as z9 } from "zod";
-import { eq as eq20 } from "drizzle-orm";
+import { eq as eq21 } from "drizzle-orm";
 var matchingRouter = router({
   /**
    * Buscar matches para un inmueble específico (Oferta -> Demanda)
@@ -37460,10 +37912,10 @@ var matchingRouter = router({
   findMatchesForProperty: publicProcedure.input(z9.object({ propertyId: z9.number() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database unavailable");
-    const property = await db.select().from(properties).where(eq20(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq21(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new Error("Propiedad no encontrada");
     const p = property[0];
-    const activeReqs = await db.select().from(requirements).where(eq20(requirements.status, "active"));
+    const activeReqs = await db.select().from(requirements).where(eq21(requirements.status, "active"));
     const matches = activeReqs.map((r) => ({
       requirementId: r.id,
       score: calcularScoreMatch(r, p)
@@ -37528,7 +37980,7 @@ var matchingRouter = router({
     }).returning();
     const reqId = newReq[0].id;
     const req = newReq[0];
-    const activeProps = await db.select().from(properties).where(eq20(properties.available, true));
+    const activeProps = await db.select().from(properties).where(eq21(properties.available, true));
     const matches = activeProps.map((p) => ({
       propertyId: p.id,
       score: calcularScoreMatch(req, p)
@@ -37664,10 +38116,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq21 } = await import("drizzle-orm");
+          const { eq: eq22 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq21(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq22(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -37681,10 +38133,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq21 } = await import("drizzle-orm");
+        const { eq: eq22 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq21(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq22(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -37719,30 +38171,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs11 from "fs";
+import fs12 from "fs";
 import { nanoid } from "nanoid";
-import path12 from "path";
+import path13 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path11 from "node:path";
+import path12 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path11.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path11.resolve(import.meta.dirname, "shared"),
-      "@assets": path11.resolve(import.meta.dirname, "attached_assets")
+      "@": path12.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path12.resolve(import.meta.dirname, "shared"),
+      "@assets": path12.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path11.resolve(import.meta.dirname),
-  root: path11.resolve(import.meta.dirname, "client"),
-  publicDir: path11.resolve(import.meta.dirname, "client", "public"),
+  envDir: path12.resolve(import.meta.dirname),
+  root: path12.resolve(import.meta.dirname, "client"),
+  publicDir: path12.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path11.resolve(import.meta.dirname, "dist"),
+    outDir: path12.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -37793,13 +38245,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path12.resolve(
+      const clientTemplate = path13.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs11.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs12.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -37813,15 +38265,15 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path12.resolve(import.meta.dirname, "..", "dist");
-  if (!fs11.existsSync(distPath)) {
+  const distPath = path13.resolve(import.meta.dirname, "..", "dist");
+  if (!fs12.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path12.resolve(distPath, "index.html"));
+    res.sendFile(path13.resolve(distPath, "index.html"));
   });
 }
 
@@ -37833,8 +38285,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs12 from "fs";
-import path13 from "path";
+import fs13 from "fs";
+import path14 from "path";
 init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -38013,10 +38465,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path13.join(process.cwd(), "qr-match.png");
-      const distQrPath = path13.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs12.existsSync(activePath)) {
+      const qrPath = path14.join(process.cwd(), "qr-match.png");
+      const distQrPath = path14.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs13.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -38036,10 +38488,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path13.join(process.cwd(), "qr-match.png");
-      const distQrPath = path13.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs12.existsSync(activePath)) {
+      const qrPath = path14.join(process.cwd(), "qr-match.png");
+      const distQrPath = path14.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs13.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -38060,10 +38512,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path13.join(process.cwd(), "qr-match.png");
-      const distQrPath = path13.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs12.existsSync(activePath)) {
+      const qrPath = path14.join(process.cwd(), "qr-match.png");
+      const distQrPath = path14.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs13.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -38090,10 +38542,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path13.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path13.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs12.existsSync(activePath)) {
+      const qrPath = path14.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path14.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs13.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -38144,8 +38596,8 @@ async function startServer() {
           let docBuffer;
           if (Buffer.isBuffer(document2)) {
             docBuffer = document2;
-          } else if (typeof document2 === "string" && fs12.existsSync(document2)) {
-            docBuffer = fs12.readFileSync(document2);
+          } else if (typeof document2 === "string" && fs13.existsSync(document2)) {
+            docBuffer = fs13.readFileSync(document2);
           } else if (typeof document2 === "string") {
             const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
             docBuffer = Buffer.from(cleanBase64, "base64");
@@ -38348,23 +38800,23 @@ _(Si es empresa, usa NIT en vez de CC)_
   });
   function resolveBroadcastImagePath(filenames) {
     const searchDirs = [
-      path13.join(process.cwd(), "client/public/assets/jania"),
-      path13.join(process.cwd(), "client/public/images"),
-      path13.join(process.cwd(), "client/public"),
+      path14.join(process.cwd(), "client/public/assets/jania"),
+      path14.join(process.cwd(), "client/public/images"),
+      path14.join(process.cwd(), "client/public"),
       process.cwd(),
-      path13.join(process.cwd(), "dist/assets/jania"),
-      path13.join(process.cwd(), "dist/images"),
-      path13.join(process.cwd(), "dist")
+      path14.join(process.cwd(), "dist/assets/jania"),
+      path14.join(process.cwd(), "dist/images"),
+      path14.join(process.cwd(), "dist")
     ];
     for (const name of filenames) {
       for (const dir of searchDirs) {
-        const fullPath = path13.join(dir, name);
-        if (fs12.existsSync(fullPath)) {
+        const fullPath = path14.join(dir, name);
+        if (fs13.existsSync(fullPath)) {
           return { path: fullPath, exists: true };
         }
       }
     }
-    return { path: path13.join(process.cwd(), filenames[0]), exists: false };
+    return { path: path14.join(process.cwd(), filenames[0]), exists: false };
   }
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -38533,9 +38985,9 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path13.resolve(process.cwd(), "public/uploads");
-  if (!fs12.existsSync(uploadsDir2)) {
-    fs12.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path14.resolve(process.cwd(), "public/uploads");
+  if (!fs13.existsSync(uploadsDir2)) {
+    fs13.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -38544,7 +38996,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path13.extname(file.originalname));
+      cb(null, uniqueSuffix + path14.extname(file.originalname));
     }
   });
   const uploadDisk = multer({
@@ -38681,7 +39133,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq21, gte: gte6 } = await import("drizzle-orm");
+      const { eq: eq22, gte: gte6 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
@@ -38703,8 +39155,8 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq21(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq21(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq22(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq22(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

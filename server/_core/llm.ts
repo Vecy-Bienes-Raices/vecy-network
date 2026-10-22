@@ -28,16 +28,29 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos ordenados por prioridad de fallback (gemini-flash-lite-latest prioritario por 1500 req/día y velocidad <1s - v33.27)
-const FALLBACK_MODELS = [
-  "gemini-flash-lite-latest",
-  "gemini-flash-latest",
+// Modelos de alto razonamiento cognitivo (Nivel ARGON — gemini-2.5-flash y gemini-2.5-pro prioritarios en DMs y síntesis de herramientas)
+export const HIGH_REASONING_MODELS = [
   "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
   "gemini-2.5-flash-lite",
   "gemini-3.5-flash-lite",
   "gemini-3.8-flash",
   "gemini-1.5-flash",
 ];
+
+// Modelos mecánicos secundarios para tareas rápidas de bajo cómputo
+export const MECHANICAL_MODELS = [
+  "gemini-flash-lite-latest",
+  "gemini-2.5-flash-lite",
+  "gemini-flash-latest",
+  "gemini-2.5-flash",
+  "gemini-3.5-flash-lite",
+];
+
+// Modelos ordenados por prioridad de fallback (priorizando alto razonamiento)
+const FALLBACK_MODELS = HIGH_REASONING_MODELS;
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
 let lastCallTimestamp = 0;
@@ -60,6 +73,7 @@ export async function invokeLLM({
   responseFormat, 
   provider = "google",
   model,
+  highReasoning = false,
   imageBuffer,
   pdfBuffer,
   pdfMimeType,
@@ -71,6 +85,7 @@ export async function invokeLLM({
   responseFormat?: any, 
   provider?: LLMProvider,
   model?: string,
+  highReasoning?: boolean,
   imageBuffer?: string, 
   pdfBuffer?: string, 
   pdfMimeType?: string, 
@@ -81,7 +96,7 @@ export async function invokeLLM({
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
+  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning);
 }
 
 /**
@@ -95,9 +110,11 @@ async function invokeGemini(
   pdfBuffer?: string, 
   pdfMimeType?: string, 
   enableSearch?: boolean,
-  tools?: any[]
+  tools?: any[],
+  highReasoning: boolean = false
 ) {
-  const modelsToTry = customModel ? [customModel, ...FALLBACK_MODELS.filter(m => m !== customModel)] : FALLBACK_MODELS;
+  const baseModelList = highReasoning ? HIGH_REASONING_MODELS : FALLBACK_MODELS;
+  const modelsToTry = customModel ? [customModel, ...baseModelList.filter(m => m !== customModel)] : baseModelList;
   const allKeys = getGeminiKeys();
 
   const systemMessage = messages.find(m => m.role === "system");

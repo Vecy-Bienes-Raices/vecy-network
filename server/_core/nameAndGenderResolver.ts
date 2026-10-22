@@ -35,10 +35,10 @@ const COMPOSITE_PATTERNS: Array<{ pattern: RegExp; canonical: string }> = [
   { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
   { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
   { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
-  { pattern: /^luz\s+adriana\b/i, canonical: "Luz Adriana" },
-  { pattern: /^luz\s+amparo\b/i, canonical: "Luz Amparo" },
   { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz Ángela" },
   { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
+  { pattern: /^flor\s+alba\b/i, canonical: "Flor Alba" },
+  { pattern: /^floralba\b/i, canonical: "Flor Alba" },
   { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
   { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
   { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
@@ -156,7 +156,8 @@ const FEMALE_EXPLICIT_NAMES = new Set([
   "diana", "claudia", "monica", "mónica", "sandra", "patricia", "gloria", "martha", "marta",
   "olga", "sonia", "adriana", "marcela", "carolina", "elena", "victoria", "teresa", "mercedes",
   "fabiola", "blanca", "esperanza", "dora", "yolanda", "lucero", "yamile", "leidys", "leidy",
-  "yeimy", "yuliana", "yuri", "ingrid", "katherin", "katherine", "katherine", "stefany", "stephanie"
+  "yeimy", "yuliana", "yuri", "ingrid", "katherin", "katherine", "stefany", "stephanie",
+  "flor", "floralba", "florencia", "florinda"
 ]);
 
 // 3. Excepciones Masculinas que terminan en 'A'
@@ -179,14 +180,29 @@ export interface NameAndGenderResult {
 
 /**
  * Limpia y normaliza el nombre de un usuario de WhatsApp
+ * Remueve etiquetas gremiales, paréntesis, barras y caracteres decorativos
  */
 export function cleanRawUserName(name: string): string {
   if (!name) return "";
-  return name
+  let cleaned = name
+    // Eliminar contenido entre paréntesis, corchetes o llaves: (Inmo), [Broker], etc.
+    .replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "")
+    // Eliminar sufijos tras barras o plecas: " / Realtor", " | Inmobiliaria"
+    .replace(/\s*[\/\|\\].*$/, "")
+    // Eliminar prefijos / sufijos de símbolos decorativos de WhatsApp
     .replace(/^[~•\-\*\_\s]+/, "")
     .replace(/[~•\-\*\_\s]+$/, "")
     .replace(/\s+/g, " ")
     .trim();
+
+  // Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora")
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
+  const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    cleaned = withoutGuild;
+  }
+
+  return cleaned.replace(/\s+/g, " ").trim();
 }
 
 /**
