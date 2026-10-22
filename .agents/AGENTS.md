@@ -183,7 +183,22 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.30 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.31 — Octubre 2026
+
+### Novedades v33.31 (Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Depuración de Apellidos vs. Nombres Compuestos (`server/_core/nameAndGenderResolver.ts`)**:
+     - *Causa raíz*: En WhatsApp, usuarios con nombre y apellido (ej. "Mario Pérez") eran procesados por la heurística de 2 palabras concatenando el apellido como parte del nombre ("Mario Pérez"), generando vocativos repetitivos y acartonados.
+     - *Solución*: Inclusión de `COMMON_COLOMBIAN_SURNAMES` y `COMMON_FIRST_NAMES_SET`. Ahora, cualquier apellido común detectado en la segunda posición es descartado, asignando como `displayName` exclusivamente el nombre de pila ("Mario"). Se preservan con total exactitud los nombres compuestos legítimos ("Flor Alba", "Juan Carlos", "Carlos Mario").
+  2. **Continuidad Conversacional y Erradicación de Saludos Bucle en Grupos 2 y 3 (`circuloHandler.ts` y `consultingHandler.ts`)**:
+     - *Causa raíz*: En los grupos 2 (`VECY TIPS / CONSULTAS INMOBILIARIAS`) y 3 (`PROYECTO VECY NETWORK`), no se marcaba la sesión del usuario al responder (`markUserGreetedToday(userId)` no se invocaba). Esto provocaba que en cada turno JanIA interpretara `alreadyGreeted = false` y volviera a emitir "¡Buenos días, estimado Mario Pérez!", y a repetir su nombre en cada frase.
+     - *Solución*: Inyección de `isOngoingChat = alreadyGreeted || history.length > 0` y llamada rigurosa a `markUserGreetedToday(userId)`. Directiva inquebrantable de continuidad: si la conversación está en curso, queda TERMINANTEMENTE PROHIBIDO volver a saludar y TERMINANTEMENTE PROHIBIDO repetir el nombre de la persona en cada mensaje como muletilla.
+  3. **Criterio Estratégico de Unificación de Grupos**:
+     - Paridad cognitiva absoluta en backend: JanIA atiende con el mismo nivel de inteligencia profunda ARGON, sin plantillas rígidas, tanto en el Grupo 2 (jurídico/tributario/avalúos/predial) como en el Grupo 3 (debate/visión/proyecto), fluyendo como en los DMs privados.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 319/319 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 15s ✅
+- `shared/const.ts` (`v33.31`) y `package.json` (`33.31.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.30 — Octubre 2026
 
 ### Novedades v33.30 (Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

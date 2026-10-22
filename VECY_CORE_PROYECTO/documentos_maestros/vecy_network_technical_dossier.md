@@ -331,6 +331,19 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.31 — Octubre 2026
+
+#### [v33.31.0] — 2026-10-22: Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica
+- **Depuración Quirúrgica de Apellidos en `nameAndGenderResolver`:**
+  - **Problema:** En grupos de WhatsApp, usuarios con nombres y apellidos (ej. "Mario Pérez") eran procesados por la heurística de 2 palabras concatenando el apellido como parte del nombre ("Mario Pérez"), generando vocativos forzados, repetitivos y acartonados.
+  - **Solución:** Inclusión de `COMMON_COLOMBIAN_SURNAMES` y `COMMON_FIRST_NAMES_SET`. Ahora, cualquier apellido común detectado en la segunda posición es descartado, asignando como `displayName` exclusivamente el nombre de pila ("Mario"). Se preservan con total exactitud los nombres compuestos legítimos ("Flor Alba", "Juan Carlos", "Carlos Mario").
+- **Continuidad Conversacional y Erradicación de Saludos Bucle en Grupos 2 y 3 (`circuloHandler.ts` y `consultingHandler.ts`):**
+  - **Problema:** En los grupos 2 (`VECY TIPS / CONSULTAS INMOBILIARIAS`) y 3 (`PROYECTO VECY NETWORK`), no se marcaba la sesión del usuario al responder (`markUserGreetedToday(userId)` no se invocaba). Esto provocaba que en cada turno JanIA interpretara `alreadyGreeted = false` y volviera a emitir "¡Buenos días, estimado Mario Pérez!", repitiendo su nombre en cada frase de turnos continuos.
+  - **Solución:** Inyección de `isOngoingChat = alreadyGreeted || history.length > 0` y llamada rigurosa a `markUserGreetedToday(userId)`. Directiva inquebrantable de continuidad: si la conversación está en curso, queda TERMINANTEMENTE PROHIBIDO volver a saludar y TERMINANTEMENTE PROHIBIDO repetir el nombre de la persona en cada mensaje como muletilla.
+- **Unificación Estratégica de Experiencia en Foros:**
+  - Paridad cognitiva absoluta en backend: JanIA atiende con el mismo nivel de inteligencia profunda ARGON, sin plantillas rígidas, tanto en el Grupo 2 (jurídico/tributario/avalúos/predial) como en el Grupo 3 (debate/visión/proyecto), fluyendo como en los DMs privados.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **319/319 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 15s.
+
 ### 🔖 v33.30 — Octubre 2026
 
 #### [v33.30.0] — 2026-10-22: Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web

@@ -1,5 +1,5 @@
 import { JanIAResult } from "../types";
-import { resolveRealName, checkAlreadyGreeted, getCirculoHistory, appendCirculoHistory } from "../sessionManager";
+import { resolveRealName, checkAlreadyGreeted, getCirculoHistory, appendCirculoHistory, markUserGreetedToday } from "../sessionManager";
 import {
   extractFirstName,
   parseSafeJSON,
@@ -125,27 +125,34 @@ export async function processCirculoMessage(
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
 
-    // Detección magistral de nombre y género
+    // Detección magistral de nombre de pila y género (sin apellidos)
     const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
-    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "colega";
+    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
-    const genderTerm = nameInfo.genderTerm;
+    const genderTerm = targetName ? (isFemale ? `estimada ${targetName}` : `estimado ${targetName}`) : "colega";
 
-    const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y LIBRE ALBEDRÍO]:
+    const circuloHistory = getCirculoHistory(userId);
+    const isOngoingChat = alreadyGreeted || circuloHistory.length > 0;
+
+    const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y CONTINUIDAD DE DEBATE]:
 - Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).
-- Nombre exacto resuelto: "${targetName}".
-- Trato respetuoso adecuado: "${genderTerm}".
-- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Canal: Grupo oficial 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀.
-- DIRECTRICES DE LIBRE ALBEDRÍO, CONTINUIDAD DE DEBATE Y NATURALIDAD HUMANA:
+- Nombre de pila resuelto: "${targetName || 'colega'}".
+- Conversación activa en curso con esta persona: ${isOngoingChat ? "SÍ (YA ESTÁN CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL DÍA)"}.
+- Canal: Grupo oficial "${groupZeroName}".
+- DIRECTRICES DE NATURALIDAD HUMANA ESTILO LAOMEDEIA (CERO ROBOT):
   * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RAÍCES. JAMÁS uses plantillas rígidas ni suenes como un contestador automático.
-  * Dirígete a la persona por su nombre ("${targetName}") de forma fluida, cálida y natural.
+  * REGLA DE ORO DE CONTINUIDAD (CONVERSACIÓN EN CURSO):
+    - Si la conversación está activa (${isOngoingChat ? "SÍ, YA ESTÁ EN CURSO" : "NO, ES EL PRIMER MENSAJE"}):
+      1. ESTÁ TERMINANTEMENTE PROHIBIDO volver a saludar ("¡Buenos días!", "¡Hola!", "¿Cómo estás?", "¡Qué gusto saludarte!").
+      2. ESTÁ TERMINANTEMENTE PROHIBIDO repetir el nombre de la persona ("${targetName}") en cada mensaje como un robot. Un ser humano en WhatsApp NO dice "¡Excelente, Mario! ... ¿cómo ves tu zona, Mario?". Háblale fluido, directo y natural como colega, sin muletillas con su nombre.
+      3. Solo menciona su nombre si es imprescindible para citarlo entre varios participantes. NUNCA menciones su apellido como si fuera su nombre.
+    - Si es el PRIMER contacto del día (${!isOngoingChat ? "SÍ" : "NO"}):
+      1. Salúdalo con calidez y dinamismo por su primer nombre ("¡${timeGreeting}${targetName ? `, ${targetName}` : ''}!").
+      2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
   * CONTINUIDAD DE DEBATE Y FOROS (REGLA DE ORO): Si el usuario está comentando, reflexionando, opinando o respondiendo a un mensaje citado, PROHIBIDO preguntar "¿cuál es tu consulta sobre VECY?". Al contrario: profundiza sobre su argumento, valida su punto con empatía y aporta tu perspectiva de líder gremial y tecnológica.
-  * Si el interlocutor saluda, salúdalo con estilo propio y dinamismo.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditoría), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralización en redes), matching en tiempo real y tecnología Cero Papel.
   * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.`;
 
-    const circuloHistory = getCirculoHistory(userId);
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt }
     ];
@@ -185,6 +192,7 @@ export async function processCirculoMessage(
       const cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
       appendCirculoHistory(userId, "user", text);
       appendCirculoHistory(userId, "assistant", cleanResponse);
+      markUserGreetedToday(userId);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: cleanResponse,
@@ -195,6 +203,7 @@ export async function processCirculoMessage(
       const cleanResponse = sanitizeResponseMarkdown(replyContent);
       appendCirculoHistory(userId, "user", text);
       appendCirculoHistory(userId, "assistant", cleanResponse);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: cleanResponse,

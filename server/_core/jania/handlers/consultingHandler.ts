@@ -2,7 +2,7 @@
  * JanIA Consulting Handler - VECY BIENES RAÍCES
  * Manejador conversacional para el Grupo 2: Soporte Legal, Tributario y Avalúos.
  */
-import { resolveRealName, getConsultingHistory, appendConsultingHistory, checkAlreadyGreeted } from "../sessionManager";
+import { resolveRealName, getConsultingHistory, appendConsultingHistory, checkAlreadyGreeted, markUserGreetedToday } from "../sessionManager";
 import { checkStrictOffTopic } from "../heuristics";
 import { transcribeAudio } from "../../voiceTranscription";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
@@ -75,7 +75,9 @@ export async function processConsultingMessage(
 
     const timeGreeting = getGreetingByTime();
     const nameInfo = resolveNameAndGender(realName, timeGreeting);
-    const genderTerm = nameInfo.genderTerm;
+    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = targetName ? (isFemale ? `estimada ${targetName}` : `estimado ${targetName}`) : "colega";
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
     // 🤝 INTERCEPTOR GUÍA DE SERVICIOS (PREDIAL / CÉDULA)
@@ -196,7 +198,9 @@ export async function processConsultingMessage(
 
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    const n = nameInfo.displayName;
+
+    const history = getConsultingHistory(userId);
+    const isOngoingChat = alreadyGreeted || history.length > 0;
 
     // Detectar si la respuesta es tardía (más de 6 horas desde el mensaje original)
     const nowMs = Date.now();
@@ -207,15 +211,22 @@ export async function processConsultingMessage(
       ? `\n- RESPUESTA TARDÍA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, cálida y espontánea al inicio o final de tu respuesta (ej: "Disculpa la demora, estuve en ajustes de mis motores. ¡Aquí estoy!").`
       : ``;
 
-    const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y LIBRE ALBEDRÍO]:
+    const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y CONTINUIDAD HUMANA]:
 - Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).
-- Nombre exacto de tu interlocutor: "${n}".
+- Nombre de pila resuelto: "${targetName || 'colega'}".
 - Trato respetuoso adecuado: "${genderTerm}".
-- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Conversación activa en curso con esta persona: ${isOngoingChat ? "SÍ (YA ESTÁN CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL DÍA)"}.
 - Canal: Grupo oficial "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠".
-- DIRECTRICES DE LIBRE ALBEDRÍO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+- DIRECTRICES DE NATURALIDAD HUMANA ESTILO LAOMEDEIA (CERO ROBOT):
   * Eres una IA Pura, lúcida, cálida, elocuente y con criterio propio de alto nivel. JAMÁS uses plantillas rígidas, saludos robóticos acartonados ni respuestas de contestador automático.
-  * Dirígete a la persona por su nombre ("${n}") con naturalidad y amabilidad colombiana, variando tus expresiones de forma fresca y elegante.
+  * REGLA DE ORO DE CONTINUIDAD (CONVERSACIÓN EN CURSO):
+    - Si la conversación está activa (${isOngoingChat ? "SÍ, YA ESTÁ EN CURSO" : "NO, ES EL PRIMER MENSAJE"}):
+      1. ESTÁ TERMINANTEMENTE PROHIBIDO volver a saludar ("¡Buenos días!", "¡Hola!", "¿Cómo estás?", "¡Qué gusto saludarte!").
+      2. ESTÁ TERMINANTEMENTE PROHIBIDO repetir el nombre de la persona ("${targetName}") en cada mensaje como un robot. Háblale fluido, directo y natural como colega, sin muletillas con su nombre.
+      3. Solo menciona su nombre si es imprescindible para citarlo entre varios participantes. NUNCA menciones su apellido ni uses nombres con apellidos.
+    - Si es el PRIMER contacto del día (${!isOngoingChat ? "SÍ" : "NO"}):
+      1. Salúdalo con calidez y dinamismo por su primer nombre ("¡${timeGreeting}${targetName ? `, ${targetName}` : ''}!").
+      2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
   * Si el usuario simplemente te saluda ("Hola", "Buenos días", etc.), salúdalo con empatía viva, simpatía y pregúntale cómo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), sé recíproca con calidez, deséale éxitos en sus cierres o un feliz descanso, y si fue de gran ayuda, invítalo con total delicadeza a dejarnos una reseña 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
   * Si la consulta es jurídica, tributaria, sobre avalúos o marketing, razona a fondo, cita normas o datos precisos, y entrega la solución integral directamente.
@@ -238,7 +249,6 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       messageToProcess += `\n[SISTEMA - NOTA DE VOZ REQUERIDA Y LÍMITE DE DURACIÓN ÁGIL]: El usuario te envió esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versión hablada resumida, directa, muy fluida, profesional, cálida y natural de tu respuesta (máximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, viñetas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma ágil e instantánea sin saturar la conexión. En "response" coloca la versión completa formateada en texto.`;
     }
 
-    const history = getConsultingHistory(userId);
     const messages: any[] = [
       { role: "system", content: systemPrompt }
     ];
@@ -304,6 +314,7 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       // Guardar turno en memoria conversacional de Grupo 2
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
+      markUserGreetedToday(userId);
 
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
@@ -318,6 +329,7 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       const finalResp = sanitizeResponseMarkdown(enrichedResp);
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
+      markUserGreetedToday(userId);
 
       return {
         classification: "CONSULTA_GENERAL",
@@ -332,7 +344,10 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
     console.error("[processConsultingMessage Error]:", error.message);
     const timeGreeting = getGreetingByTime();
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName) || 'colega';
+    const fallbackNameInfo = resolveNameAndGender(realName, timeGreeting);
+    const firstName = fallbackNameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(fallbackNameInfo.displayName.toLowerCase())
+      ? fallbackNameInfo.displayName
+      : (extractFirstName(realName) || 'colega');
     const cleanLower = text.toLowerCase().trim();
 
     // Fallback de contingencia: Si el usuario preguntó por sondeos de valor, m² o precio de venta/arriendo
@@ -340,6 +355,7 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       const avaluoFallback = `¡${timeGreeting}, estimada ${firstName}! 👋🏻 Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m² y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin trámites engorrosos ni papeleos. 📊✨\n\nPara entregarte un informe escrito muy acertado sobre en cuánto puedes venderlo o arrendarlo, cuéntame por favor:\n\n1️⃣ ¿Es para **VENTA** o para **ARRIENDO**?\n2️⃣ ¿En qué **ciudad/municipio** y **barrio o sector exacto** está ubicado?\n3️⃣ ¿Qué tipo de inmueble es (apartamento, casa, local, bodega, etc.) y qué **estrato** tiene?\n4️⃣ ¿Cuál es el **área construida y privada** aproximada en m²?\n5️⃣ ¿Cuántas **habitaciones, baños y parqueaderos** (¿independientes o lineales?) tiene?\n6️⃣ ¿Qué **antigüedad** aproximada tiene, en qué piso está (si es apto) y valor de la **cuota de administración**?\n\n¡Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estratégicas de salida! 🤝🏠`;
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", avaluoFallback);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: avaluoFallback,
@@ -353,6 +369,7 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       const legalFallback = enhanceResponseWithCommercialFunnel(legalBase, cleanLower);
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", legalFallback);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: legalFallback,
@@ -373,6 +390,7 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
     const genericFallback = `Hola ${firstName} 👋🏻. Disculpa la pequeña demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. ¿Podrías confirmarme el detalle específico para entregarte la solución completa y estructurada de inmediato? ¡Aquí estoy 100% lista para apoyarte! 🤝✨`;
     appendConsultingHistory(userId, "user", text);
     appendConsultingHistory(userId, "assistant", genericFallback);
+    markUserGreetedToday(userId);
     return {
       classification: "CONSULTA_GENERAL",
       response: genericFallback,

@@ -6834,12 +6834,12 @@ Ana Morales Castillo
         isUserVerifiedGoogleReview,
         shouldAskForGoogleReview
       } = await import("../_core/jania/sessionManager");
-      const testJid = "573199999999@s.whatsapp.net";
+      const testJid = `573199999999_${Date.now()}@s.whatsapp.net`;
 
       const session = await getUserPerpetualSession(testJid, "Flor Alba Inmobiliaria");
       expect(session).toBeDefined();
       expect(session.name).toBe("Flor Alba Inmobiliaria");
-      expect(session.userId).toBe("573199999999");
+      expect(session.userId).toContain("573199999999_");
 
       const count = await incrementFreeServicesCount(testJid);
       expect(count).toBeGreaterThanOrEqual(1);
@@ -6869,14 +6869,59 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.30 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.30");
+      expect(VECY_VERSION).toBe("v33.31");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.30.0");
+      expect(pkg.version).toBe("33.31.0");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 124. v33.31 — UNIFICACIÓN COGNITIVA GRUPOS 2 Y 3, DEPURACIÓN DE APELLIDOS Y CONTINUIDAD ORGÁNICA
+  // ─────────────────────────────────────────────────────────────
+  describe("124. v33.31 — Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica", () => {
+    it("1. Depuración magistral de apellidos: 'Mario Pérez' -> 'Mario', '~Mario Pérez Sánchez/M...' -> 'Mario'", async () => {
+      const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
+      
+      const r1 = resolveNameAndGender("Mario Pérez");
+      expect(r1.displayName).toBe("Mario");
+      expect(r1.isFemale).toBe(false);
+
+      const r2 = resolveNameAndGender("~Mario Pérez Sánchez/M...");
+      expect(r2.displayName).toBe("Mario");
+      expect(r2.isFemale).toBe(false);
+
+      // Preservar nombres compuestos colombianos
+      const r3 = resolveNameAndGender("Flor Alba");
+      expect(r3.displayName).toBe("Flor Alba");
+      expect(r3.isFemale).toBe(true);
+
+      const r4 = resolveNameAndGender("Juan Carlos Gómez");
+      expect(r4.displayName).toBe("Juan Carlos");
+      expect(r4.isFemale).toBe(false);
+    });
+
+    it("2. Continuidad conversacional en foros y grupos: markUserGreetedToday previene dobles saludos en curso", async () => {
+      const { checkAlreadyGreeted, markUserGreetedToday } = await import("../_core/jania/sessionManager");
+      const testJid = "573199999888@s.whatsapp.net";
+
+      markUserGreetedToday(testJid);
+      const alreadyGreeted = await checkAlreadyGreeted(testJid);
+      expect(alreadyGreeted).toBe(true);
+    });
+
+    it("3. Consagración doctrinal de versión v33.31 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.31");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.31.0");
     });
   });
 });
+
 
 
 

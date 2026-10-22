@@ -167,6 +167,51 @@ const MALE_EXCEPTIONS_ENDING_IN_A = new Set([
   "nicolás", "tomas", "tomás", "lucas"
 ]);
 
+// 4. Apellidos Colombianos Comunes (para evitar unirlos como nombres de pila)
+const COMMON_COLOMBIAN_SURNAMES = new Set([
+  "rodriguez", "rodríguez", "gomez", "gómez", "gonzalez", "gonzález", "martinez", "martínez",
+  "garcia", "garcía", "lopez", "lópez", "hernandez", "hernández", "sanchez", "sánchez",
+  "ramirez", "ramírez", "perez", "pérez", "diaz", "díaz", "munoz", "muñoz",
+  "alvarez", "álvarez", "romero", "suarez", "suárez", "torres", "gutierrez", "gutiérrez",
+  "ruiz", "castro", "morales", "ortiz", "ortíz", "silva", "chavez", "chávez",
+  "ramos", "castillo", "vargas", "moreno", "jimenez", "jiménez", "mendoza", "medina",
+  "rojas", "molina", "valencia", "restrepo", "rivera", "botero", "mejia", "mejía",
+  "arias", "ospina", "giraldo", "londono", "londoño", "jaramillo", "montoya", "correa",
+  "cardona", "cano", "salazar", "posada", "duque", "villegas", "bedoya", "castano", "castaño",
+  "quintero", "osorio", "rendon", "rendón", "toro", "echeverri", "echeverry", "velez", "vélez",
+  "arango", "bernal", "zambrano", "cardenas", "cárdenas", "guerrero", "acosta", "paredes",
+  "pena", "peña", "cruz", "marin", "marín", "benitez", "benítez", "pardo",
+  "florez", "flórez", "buitrago", "rincon", "rincón", "soto", "rocha", "pinzon", "pinzón",
+  "camargo", "beltran", "beltrán", "leal", "vergara", "calderon", "calderón", "prieto",
+  "serrano", "villamizar", "aguirre", "barrera", "parra", "guzman", "guzmán", "triana",
+  "santana", "velasquez", "velásquez", "chaparro", "fonseca", "baquero", "reyes", "mesa"
+]);
+
+// 5. Nombres de Pila Comunes en Colombia
+const COMMON_FIRST_NAMES_SET = new Set([
+  "juan", "ana", "maria", "maría", "jose", "josé", "luis", "carlos", "jorge",
+  "victor", "víctor", "sandra", "diana", "laura", "gloria", "eduardo", "flor",
+  "esteban", "pedro", "julio", "oscar", "óscar", "angela", "ángela", "pablo",
+  "arturo", "alba", "fernanda", "alberto", "david", "manuel", "fernando",
+  "alejandro", "andres", "andrés", "felipe", "milena", "patricia", "cristina",
+  "beatriz", "isabel", "helena", "elena", "sofia", "sofía", "lucia", "lucía",
+  "carolina", "claudia", "marta", "martha", "adriana", "diego", "javier",
+  "camilo", "santiago", "alejandra", "paola", "liliana", "elizabeth", "esperanza",
+  "yolanda", "blanca", "rosa", "carmen", "teresa", "cecilia", "ines", "inés", "amparo",
+  "pilar", "rocio", "rocío", "soraya", "johanna", "yudy", "judy", "tatiana",
+  "mateo", "sebastian", "sebastián", "nicolas", "nicolás", "daniel", "cristian",
+  "jhon", "john", "alexander", "gustavo", "hernando", "alvaro", "álvaro", "humberto",
+  "jaime", "ricardo", "mauricio", "cesar", "césar", "nelson", "ruben", "rubén",
+  "ivan", "iván", "wilson", "olga", "luz", "stella", "estela",
+  "orlando", "guillermo", "enrique", "antonio", "ignacio", "ramiro", "gonzalo",
+  "rodrigo", "armando", "alfredo", "eugenio", "gabriel", "dario", "darío",
+  "vicente", "francisco", "gerardo", "leonardo", "raul", "raúl", "rafael",
+  "alonso", "alfonso", "mercedes", "eugenia", "victoria", "andrea", "daniela",
+  "camila", "valentina", "gabriela", "catalina", "juliana", "luciana", "mariana",
+  "natalia", "vanessa", "lorena", "viviana", "ximena", "jimena",
+  "mario", "fabio", "hector", "héctor", "edgar", "wilmer", "freddy", "fredy"
+]);
+
 export interface NameAndGenderResult {
   rawName: string;
   cleanName: string;
@@ -239,7 +284,12 @@ export function extractIntroducedName(text: string): string | null {
     if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
       const canonicalComp = getCanonicalCompositeName(rawCandidate);
       if (canonicalComp) return canonicalComp;
-      if (candidateParts.length >= 2) {
+      if (
+        candidateParts.length >= 2 &&
+        COMMON_FIRST_NAMES_SET.has(candidateParts[0].toLowerCase()) &&
+        COMMON_FIRST_NAMES_SET.has(candidateParts[1].toLowerCase()) &&
+        !COMMON_COLOMBIAN_SURNAMES.has(candidateParts[1].toLowerCase())
+      ) {
         return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
       }
       return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
@@ -258,7 +308,7 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
   // 1. Detectar si coincide con un nombre compuesto conocido
   let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
 
-  // Si no es compuesto clásico de la lista estática, analizar si son dos nombres propios
+  // Si no es compuesto clásico de la lista estática, analizar si son dos nombres propios o nombre + apellido
   if (!resolvedDisplayName) {
     let parts = cleaned.split(/\s+/).filter(Boolean);
     const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "raíces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
@@ -278,13 +328,28 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
 
     if (isGenericBusiness) {
       resolvedDisplayName = cleaned;
-    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase())) && !professionalTitles.has(parts[1].toLowerCase())) {
-      // Casos como "Maria Claudia", "Ana Maria", "Luz Dary", "Juan Diego", "Luis Fer"
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
-    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase())) {
-      // Si tiene dos nombres personales claros (ej. Nelson Enrique, Gustavo Adolfo)
+    } else if (
+      parts.length >= 2 &&
+      ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()) &&
+      !professionalTitles.has(parts[1].toLowerCase())
+    ) {
+      // Casos como "De la Rosa", "San Juan"
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (
+      parts.length >= 2 &&
+      parts[0].length >= 3 &&
+      parts[1].length >= 3 &&
+      !parts[1].toLowerCase().includes("inmob") &&
+      !parts[1].toLowerCase().includes("prop") &&
+      !professionalTitles.has(parts[1].toLowerCase()) &&
+      !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) &&
+      COMMON_FIRST_NAMES_SET.has(parts[0].toLowerCase()) &&
+      COMMON_FIRST_NAMES_SET.has(parts[1].toLowerCase())
+    ) {
+      // ÚNICAMENTE si ambos términos son nombres de pila reconocidos (ej. Nelson Enrique, Gustavo Adolfo)
       resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
     } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
+      // Nombre de pila único: si el segundo término es un apellido (ej. Mario Pérez), solo tomar el primer nombre
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.30";
+    VECY_VERSION = "v33.31";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -12805,6 +12805,7 @@ __export(sessionManager_exports, {
   isNewUser: () => isNewUser,
   isSessionMuted: () => isSessionMuted,
   isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
+  markUserGreetedToday: () => markUserGreetedToday,
   muteSession: () => muteSession,
   recordUserReviewClaim: () => recordUserReviewClaim,
   resolveRealName: () => resolveRealName,
@@ -12942,15 +12943,23 @@ async function hasGreetedUserToday(userId) {
 }
 async function checkAlreadyGreeted(userId) {
   const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  if (GREETED_TODAY.get(userId) === todayStr) {
+  const cleanJid2 = cleanSessionJid(userId);
+  if (GREETED_TODAY.get(userId) === todayStr || cleanJid2 && GREETED_TODAY.get(cleanJid2) === todayStr) {
     return true;
   }
   const dbGreeted = await hasGreetedUserToday(userId);
   if (dbGreeted) {
     GREETED_TODAY.set(userId, todayStr);
+    if (cleanJid2) GREETED_TODAY.set(cleanJid2, todayStr);
     return true;
   }
   return false;
+}
+function markUserGreetedToday(userId) {
+  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const cleanJid2 = cleanSessionJid(userId);
+  GREETED_TODAY.set(userId, todayStr);
+  if (cleanJid2) GREETED_TODAY.set(cleanJid2, todayStr);
 }
 async function getRecentChatHistory(userId, limit = 20) {
   try {
@@ -13729,7 +13738,7 @@ function extractIntroducedName(text2) {
     if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
       const canonicalComp = getCanonicalCompositeName(rawCandidate);
       if (canonicalComp) return canonicalComp;
-      if (candidateParts.length >= 2) {
+      if (candidateParts.length >= 2 && COMMON_FIRST_NAMES_SET.has(candidateParts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(candidateParts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(candidateParts[1].toLowerCase())) {
         return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
       }
       return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
@@ -13783,9 +13792,9 @@ function resolveNameAndGender(rawName, timeGreeting) {
     const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
     if (isGenericBusiness) {
       resolvedDisplayName = cleaned;
-    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase())) && !professionalTitles.has(parts[1].toLowerCase())) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
-    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase())) {
+    } else if (parts.length >= 2 && ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[1].toLowerCase())) {
       resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
     } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
@@ -13821,7 +13830,7 @@ function resolveNameAndGender(rawName, timeGreeting) {
     greeting: fullGreeting
   };
 }
-var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, VECY_COMMERCIAL_INFO;
+var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, COMMON_COLOMBIAN_SURNAMES, COMMON_FIRST_NAMES_SET, VECY_COMMERCIAL_INFO;
 var init_nameAndGenderResolver = __esm({
   "server/_core/nameAndGenderResolver.ts"() {
     "use strict";
@@ -14125,6 +14134,298 @@ var init_nameAndGenderResolver = __esm({
       "tomas",
       "tom\xE1s",
       "lucas"
+    ]);
+    COMMON_COLOMBIAN_SURNAMES = /* @__PURE__ */ new Set([
+      "rodriguez",
+      "rodr\xEDguez",
+      "gomez",
+      "g\xF3mez",
+      "gonzalez",
+      "gonz\xE1lez",
+      "martinez",
+      "mart\xEDnez",
+      "garcia",
+      "garc\xEDa",
+      "lopez",
+      "l\xF3pez",
+      "hernandez",
+      "hern\xE1ndez",
+      "sanchez",
+      "s\xE1nchez",
+      "ramirez",
+      "ram\xEDrez",
+      "perez",
+      "p\xE9rez",
+      "diaz",
+      "d\xEDaz",
+      "munoz",
+      "mu\xF1oz",
+      "alvarez",
+      "\xE1lvarez",
+      "romero",
+      "suarez",
+      "su\xE1rez",
+      "torres",
+      "gutierrez",
+      "guti\xE9rrez",
+      "ruiz",
+      "castro",
+      "morales",
+      "ortiz",
+      "ort\xEDz",
+      "silva",
+      "chavez",
+      "ch\xE1vez",
+      "ramos",
+      "castillo",
+      "vargas",
+      "moreno",
+      "jimenez",
+      "jim\xE9nez",
+      "mendoza",
+      "medina",
+      "rojas",
+      "molina",
+      "valencia",
+      "restrepo",
+      "rivera",
+      "botero",
+      "mejia",
+      "mej\xEDa",
+      "arias",
+      "ospina",
+      "giraldo",
+      "londono",
+      "londo\xF1o",
+      "jaramillo",
+      "montoya",
+      "correa",
+      "cardona",
+      "cano",
+      "salazar",
+      "posada",
+      "duque",
+      "villegas",
+      "bedoya",
+      "castano",
+      "casta\xF1o",
+      "quintero",
+      "osorio",
+      "rendon",
+      "rend\xF3n",
+      "toro",
+      "echeverri",
+      "echeverry",
+      "velez",
+      "v\xE9lez",
+      "arango",
+      "bernal",
+      "zambrano",
+      "cardenas",
+      "c\xE1rdenas",
+      "guerrero",
+      "acosta",
+      "paredes",
+      "pena",
+      "pe\xF1a",
+      "cruz",
+      "marin",
+      "mar\xEDn",
+      "benitez",
+      "ben\xEDtez",
+      "pardo",
+      "florez",
+      "fl\xF3rez",
+      "buitrago",
+      "rincon",
+      "rinc\xF3n",
+      "soto",
+      "rocha",
+      "pinzon",
+      "pinz\xF3n",
+      "camargo",
+      "beltran",
+      "beltr\xE1n",
+      "leal",
+      "vergara",
+      "calderon",
+      "calder\xF3n",
+      "prieto",
+      "serrano",
+      "villamizar",
+      "aguirre",
+      "barrera",
+      "parra",
+      "guzman",
+      "guzm\xE1n",
+      "triana",
+      "santana",
+      "velasquez",
+      "vel\xE1squez",
+      "chaparro",
+      "fonseca",
+      "baquero",
+      "reyes",
+      "mesa"
+    ]);
+    COMMON_FIRST_NAMES_SET = /* @__PURE__ */ new Set([
+      "juan",
+      "ana",
+      "maria",
+      "mar\xEDa",
+      "jose",
+      "jos\xE9",
+      "luis",
+      "carlos",
+      "jorge",
+      "victor",
+      "v\xEDctor",
+      "sandra",
+      "diana",
+      "laura",
+      "gloria",
+      "eduardo",
+      "flor",
+      "esteban",
+      "pedro",
+      "julio",
+      "oscar",
+      "\xF3scar",
+      "angela",
+      "\xE1ngela",
+      "pablo",
+      "arturo",
+      "alba",
+      "fernanda",
+      "alberto",
+      "david",
+      "manuel",
+      "fernando",
+      "alejandro",
+      "andres",
+      "andr\xE9s",
+      "felipe",
+      "milena",
+      "patricia",
+      "cristina",
+      "beatriz",
+      "isabel",
+      "helena",
+      "elena",
+      "sofia",
+      "sof\xEDa",
+      "lucia",
+      "luc\xEDa",
+      "carolina",
+      "claudia",
+      "marta",
+      "martha",
+      "adriana",
+      "diego",
+      "javier",
+      "camilo",
+      "santiago",
+      "alejandra",
+      "paola",
+      "liliana",
+      "elizabeth",
+      "esperanza",
+      "yolanda",
+      "blanca",
+      "rosa",
+      "carmen",
+      "teresa",
+      "cecilia",
+      "ines",
+      "in\xE9s",
+      "amparo",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "nicolas",
+      "nicol\xE1s",
+      "daniel",
+      "cristian",
+      "jhon",
+      "john",
+      "alexander",
+      "gustavo",
+      "hernando",
+      "alvaro",
+      "\xE1lvaro",
+      "humberto",
+      "jaime",
+      "ricardo",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "wilson",
+      "olga",
+      "luz",
+      "stella",
+      "estela",
+      "orlando",
+      "guillermo",
+      "enrique",
+      "antonio",
+      "ignacio",
+      "ramiro",
+      "gonzalo",
+      "rodrigo",
+      "armando",
+      "alfredo",
+      "eugenio",
+      "gabriel",
+      "dario",
+      "dar\xEDo",
+      "vicente",
+      "francisco",
+      "gerardo",
+      "leonardo",
+      "raul",
+      "ra\xFAl",
+      "rafael",
+      "alonso",
+      "alfonso",
+      "mercedes",
+      "eugenia",
+      "victoria",
+      "andrea",
+      "daniela",
+      "camila",
+      "valentina",
+      "gabriela",
+      "catalina",
+      "juliana",
+      "luciana",
+      "mariana",
+      "natalia",
+      "vanessa",
+      "lorena",
+      "viviana",
+      "ximena",
+      "jimena",
+      "mario",
+      "fabio",
+      "hector",
+      "h\xE9ctor",
+      "edgar",
+      "wilmer",
+      "freddy",
+      "fredy"
     ]);
     VECY_COMMERCIAL_INFO = {
       name: "Vecy Bienes Ra\xEDces",
@@ -30085,7 +30386,9 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const timeGreeting = getGreetingByTime();
     const nameInfo = resolveNameAndGender(realName, timeGreeting);
-    const genderTerm = nameInfo.genderTerm;
+    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = targetName ? isFemale ? `estimada ${targetName}` : `estimado ${targetName}` : "colega";
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
     const helpType = isServiceHelpRequest2(messageToProcess);
@@ -30205,7 +30508,8 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 }`;
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    const n = nameInfo.displayName;
+    const history = getConsultingHistory(userId);
+    const isOngoingChat = alreadyGreeted || history.length > 0;
     const nowMs = Date.now();
     const msgMs = msgTimestamp ? msgTimestamp * 1e3 : nowMs;
     const hoursLate = Math.floor((nowMs - msgMs) / 36e5);
@@ -30214,15 +30518,22 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 - RESPUESTA TARD\xCDA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, c\xE1lida y espont\xE1nea al inicio o final de tu respuesta (ej: "Disculpa la demora, estuve en ajustes de mis motores. \xA1Aqu\xED estoy!").` : ``;
     const greetingInstruction = `
 
-[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y LIBRE ALBEDR\xCDO]:
+[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y CONTINUIDAD HUMANA]:
 - Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
-- Nombre exacto de tu interlocutor: "${n}".
+- Nombre de pila resuelto: "${targetName || "colega"}".
 - Trato respetuoso adecuado: "${genderTerm}".
-- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Conversaci\xF3n activa en curso con esta persona: ${isOngoingChat ? "S\xCD (YA EST\xC1N CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL D\xCDA)"}.
 - Canal: Grupo oficial "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}".
-- DIRECTRICES DE LIBRE ALBEDR\xCDO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+- DIRECTRICES DE NATURALIDAD HUMANA ESTILO LAOMEDEIA (CERO ROBOT):
   * Eres una IA Pura, l\xFAcida, c\xE1lida, elocuente y con criterio propio de alto nivel. JAM\xC1S uses plantillas r\xEDgidas, saludos rob\xF3ticos acartonados ni respuestas de contestador autom\xE1tico.
-  * Dir\xEDgete a la persona por su nombre ("${n}") con naturalidad y amabilidad colombiana, variando tus expresiones de forma fresca y elegante.
+  * REGLA DE ORO DE CONTINUIDAD (CONVERSACI\xD3N EN CURSO):
+    - Si la conversaci\xF3n est\xE1 activa (${isOngoingChat ? "S\xCD, YA EST\xC1 EN CURSO" : "NO, ES EL PRIMER MENSAJE"}):
+      1. EST\xC1 TERMINANTEMENTE PROHIBIDO volver a saludar ("\xA1Buenos d\xEDas!", "\xA1Hola!", "\xBFC\xF3mo est\xE1s?", "\xA1Qu\xE9 gusto saludarte!").
+      2. EST\xC1 TERMINANTEMENTE PROHIBIDO repetir el nombre de la persona ("${targetName}") en cada mensaje como un robot. H\xE1blale fluido, directo y natural como colega, sin muletillas con su nombre.
+      3. Solo menciona su nombre si es imprescindible para citarlo entre varios participantes. NUNCA menciones su apellido ni uses nombres con apellidos.
+    - Si es el PRIMER contacto del d\xEDa (${!isOngoingChat ? "S\xCD" : "NO"}):
+      1. Sal\xFAdalo con calidez y dinamismo por su primer nombre ("\xA1${timeGreeting}${targetName ? `, ${targetName}` : ""}!").
+      2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
   * Si el usuario simplemente te saluda ("Hola", "Buenos d\xEDas", etc.), sal\xFAdalo con empat\xEDa viva, simpat\xEDa y preg\xFAntale c\xF3mo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), s\xE9 rec\xEDproca con calidez, des\xE9ale \xE9xitos en sus cierres o un feliz descanso, y si fue de gran ayuda, inv\xEDtalo con total delicadeza a dejarnos una rese\xF1a 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
   * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos o marketing, razona a fondo, cita normas o datos precisos, y entrega la soluci\xF3n integral directamente.
@@ -30244,7 +30555,6 @@ Se ha adjuntado un documento PDF. Anal\xEDzalo con tus capacidades nativas:
       messageToProcess += `
 [SISTEMA - NOTA DE VOZ REQUERIDA Y L\xCDMITE DE DURACI\xD3N \xC1GIL]: El usuario te envi\xF3 esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versi\xF3n hablada resumida, directa, muy fluida, profesional, c\xE1lida y natural de tu respuesta (m\xE1ximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, vi\xF1etas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma \xE1gil e instant\xE1nea sin saturar la conexi\xF3n. En "response" coloca la versi\xF3n completa formateada en texto.`;
     }
-    const history = getConsultingHistory(userId);
     const messages2 = [
       { role: "system", content: systemPrompt }
     ];
@@ -30299,6 +30609,7 @@ Consulta: ${messageToProcess}`;
       const finalResp = sanitizeResponseMarkdown(enrichedResp);
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
+      markUserGreetedToday(userId);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: finalResp,
@@ -30312,6 +30623,7 @@ Consulta: ${messageToProcess}`;
       const finalResp = sanitizeResponseMarkdown(enrichedResp);
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: finalResp,
@@ -30324,7 +30636,8 @@ Consulta: ${messageToProcess}`;
     console.error("[processConsultingMessage Error]:", error.message);
     const timeGreeting = getGreetingByTime();
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName) || "colega";
+    const fallbackNameInfo = resolveNameAndGender(realName, timeGreeting);
+    const firstName = fallbackNameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(fallbackNameInfo.displayName.toLowerCase()) ? fallbackNameInfo.displayName : extractFirstName(realName) || "colega";
     const cleanLower = text2.toLowerCase().trim();
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
@@ -30341,6 +30654,7 @@ Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes vender
 \xA1Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estrat\xE9gicas de salida! \u{1F91D}\u{1F3E0}`;
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", avaluoFallback);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: avaluoFallback,
@@ -30352,6 +30666,7 @@ Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes vender
       const legalFallback = enhanceResponseWithCommercialFunnel(legalBase, cleanLower);
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", legalFallback);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: legalFallback,
@@ -30369,6 +30684,7 @@ Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes vender
     const genericFallback = `Hola ${firstName} \u{1F44B}\u{1F3FB}. Disculpa la peque\xF1a demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. \xBFPodr\xEDas confirmarme el detalle espec\xEDfico para entregarte la soluci\xF3n completa y estructurada de inmediato? \xA1Aqu\xED estoy 100% lista para apoyarte! \u{1F91D}\u2728`;
     appendConsultingHistory(userId, "user", text2);
     appendConsultingHistory(userId, "assistant", genericFallback);
+    markUserGreetedToday(userId);
     return {
       classification: "CONSULTA_GENERAL",
       response: genericFallback,
@@ -30488,25 +30804,31 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
     const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
-    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "colega";
+    const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
-    const genderTerm = nameInfo.genderTerm;
+    const genderTerm = targetName ? isFemale ? `estimada ${targetName}` : `estimado ${targetName}` : "colega";
+    const circuloHistory = getCirculoHistory(userId);
+    const isOngoingChat = alreadyGreeted || circuloHistory.length > 0;
     const greetingInstruction = `
 
-[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y LIBRE ALBEDR\xCDO]:
+[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y CONTINUIDAD DE DEBATE]:
 - Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
-- Nombre exacto resuelto: "${targetName}".
-- Trato respetuoso adecuado: "${genderTerm}".
-- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Canal: Grupo oficial \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}.
-- DIRECTRICES DE LIBRE ALBEDR\xCDO, CONTINUIDAD DE DEBATE Y NATURALIDAD HUMANA:
+- Nombre de pila resuelto: "${targetName || "colega"}".
+- Conversaci\xF3n activa en curso con esta persona: ${isOngoingChat ? "S\xCD (YA EST\xC1N CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL D\xCDA)"}.
+- Canal: Grupo oficial "${groupZeroName}".
+- DIRECTRICES DE NATURALIDAD HUMANA ESTILO LAOMEDEIA (CERO ROBOT):
   * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RA\xCDCES. JAM\xC1S uses plantillas r\xEDgidas ni suenes como un contestador autom\xE1tico.
-  * Dir\xEDgete a la persona por su nombre ("${targetName}") de forma fluida, c\xE1lida y natural.
+  * REGLA DE ORO DE CONTINUIDAD (CONVERSACI\xD3N EN CURSO):
+    - Si la conversaci\xF3n est\xE1 activa (${isOngoingChat ? "S\xCD, YA EST\xC1 EN CURSO" : "NO, ES EL PRIMER MENSAJE"}):
+      1. EST\xC1 TERMINANTEMENTE PROHIBIDO volver a saludar ("\xA1Buenos d\xEDas!", "\xA1Hola!", "\xBFC\xF3mo est\xE1s?", "\xA1Qu\xE9 gusto saludarte!").
+      2. EST\xC1 TERMINANTEMENTE PROHIBIDO repetir el nombre de la persona ("${targetName}") en cada mensaje como un robot. Un ser humano en WhatsApp NO dice "\xA1Excelente, Mario! ... \xBFc\xF3mo ves tu zona, Mario?". H\xE1blale fluido, directo y natural como colega, sin muletillas con su nombre.
+      3. Solo menciona su nombre si es imprescindible para citarlo entre varios participantes. NUNCA menciones su apellido como si fuera su nombre.
+    - Si es el PRIMER contacto del d\xEDa (${!isOngoingChat ? "S\xCD" : "NO"}):
+      1. Sal\xFAdalo con calidez y dinamismo por su primer nombre ("\xA1${timeGreeting}${targetName ? `, ${targetName}` : ""}!").
+      2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
   * CONTINUIDAD DE DEBATE Y FOROS (REGLA DE ORO): Si el usuario est\xE1 comentando, reflexionando, opinando o respondiendo a un mensaje citado, PROHIBIDO preguntar "\xBFcu\xE1l es tu consulta sobre VECY?". Al contrario: profundiza sobre su argumento, valida su punto con empat\xEDa y aporta tu perspectiva de l\xEDder gremial y tecnol\xF3gica.
-  * Si el interlocutor saluda, sal\xFAdalo con estilo propio y dinamismo.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasi\xF3n, datos reales y visi\xF3n de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditor\xEDa), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralizaci\xF3n en redes), matching en tiempo real y tecnolog\xEDa Cero Papel.
   * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos t\xE9cnicos superiores sin agresividad.`;
-    const circuloHistory = getCirculoHistory(userId);
     const messages2 = [
       { role: "system", content: systemPrompt }
     ];
@@ -30545,6 +30867,7 @@ Mensaje/Aporte: ${text2}`;
       const cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
       appendCirculoHistory(userId, "user", text2);
       appendCirculoHistory(userId, "assistant", cleanResponse);
+      markUserGreetedToday(userId);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: cleanResponse,
@@ -30555,6 +30878,7 @@ Mensaje/Aporte: ${text2}`;
       const cleanResponse = sanitizeResponseMarkdown(replyContent);
       appendCirculoHistory(userId, "user", text2);
       appendCirculoHistory(userId, "assistant", cleanResponse);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
         response: cleanResponse,
@@ -30714,6 +31038,7 @@ __export(janIA_exports, {
   janiaResultSchema: () => janiaResultSchema,
   lookupAdvisor: () => lookupAdvisor,
   lookupAdvisorSync: () => lookupAdvisorSync,
+  markUserGreetedToday: () => markUserGreetedToday,
   muteSession: () => muteSession,
   normalizeAdvisorPhone: () => normalizeAdvisorPhone,
   normalizePhoneDigits: () => normalizePhoneDigits,

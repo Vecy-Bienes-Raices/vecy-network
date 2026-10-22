@@ -7,6 +7,42 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-22] — JanIA v33.31: Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica (v33.31 - 33.31.0)
+
+**Versión:** `v33.31` (`33.31.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/nameAndGenderResolver.ts`: Creación del catálogo `COMMON_COLOMBIAN_SURNAMES` y `COMMON_FIRST_NAMES_SET`. Si un usuario tiene nombre y apellido (ej. "Mario Pérez"), el apellido es discriminado quirúrgicamente para que su `displayName` sea el nombre de pila ("Mario"), salvaguardando a la vez nombres compuestos reales como "Flor Alba" o "Carlos Mario".
+- `server/_core/jania/sessionManager.ts`: Creación y exportación de `markUserGreetedToday(userId)` y normalización de JID (`cleanSessionJid`) en `checkAlreadyGreeted`.
+- `server/_core/jania/handlers/circuloHandler.ts` (Grupo 3): Implementación de detección de chat activo (`isOngoingChat = alreadyGreeted || circuloHistory.length > 0`), prohibición terminante de saludos reiterativos y muletillas con el nombre, e invocación obligatoria de `markUserGreetedToday(userId)`.
+- `server/_core/jania/handlers/consultingHandler.ts` (Grupo 2): Exacta unificación conversacional con el Grupo 3: activación de `markUserGreetedToday(userId)`, supresión de saludos repetidos y trato humano directo.
+- `server/__tests__/regression.test.ts`: SUITE 124 con 3 tests validando depuración de apellidos, continuidad en grupos y consagración doctrinal de versión.
+- `shared/const.ts` (`v33.31`) y `package.json` (`33.31.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Pero en los grupos 2 y 3 sigue contestando con nombre y apellido, observa, qué no puede quedar igual que en su privado o hay alguna regla que se lo impide o cómo me suguieres manejarlo ya que cada grupo es para temas distintos o qué me dices unificamos esos dos grupos y no nos complicamos o qué dime algo que funcione para todos."*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Tratamiento de Apellidos como Nombre Compuesto:**
+   - En `nameAndGenderResolver.ts`, el resolvedor interpretaba cualquier entrada de dos palabras (como "Mario Pérez") concatenando ambas como nombre compuesto. Al extraer `displayName = "Mario Pérez"`, JanIA lo usaba en los vocativos en lugar de llamarlo simplemente "Mario".
+2. **Falta de Persistencia del Saludo Diario en Grupos:**
+   - Tanto `consultingHandler.ts` (Grupo 2) como `circuloHandler.ts` (Grupo 3) leían `checkAlreadyGreeted`, pero **NUNCA** llamaban a `markUserGreetedToday(userId)`. Esto provocaba que cada nuevo mensaje del usuario evaluara `alreadyGreeted = false`, obligando a JanIA a saludar formalmente ("¡Buenos días, estimado Mario Pérez!") y a repetir su nombre como muletilla en turnos continuos.
+3. **Estrategia sobre Unificar los Grupos 2 y 3:**
+   - La diferenciación entre grupos en WhatsApp responde a un propósito temático y de orden para la comunidad (Grupo 2: Consultas legales, tributarias, predial, trámites, peritajes; Grupo 3: Proyecto Vecy Network, debate gremial, visión colaborativa).
+   - Fusionar los grupos en WhatsApp de manera apresurada puede romper enlaces de invitación compartidos con asesores y generar confusión. La verdadera solución consistió en **unificar el motor cognitivo interno** para que JanIA sea igual de inteligente, humana, concisa y libre en ambos grupos, sin fórmulas acartonadas ni bucles de saludo, operando exactamente igual que en el privado (DM). Si más adelante Eduardo decide unificarlos en WhatsApp en una sola "Comunidad Vecy", el backend ya está 100% listo.
+
+#### 3. Acciones Ejecutadas y Auto-Reparación Quirúrgica
+1. Se añadieron listas de apellidos y nombres colombianos en `server/_core/nameAndGenderResolver.ts`, garantizando que "Mario Pérez" devuelva "Mario" y "Flor Alba" devuelva "Flor Alba".
+2. Se implementó `markUserGreetedToday` en `server/_core/jania/sessionManager.ts`.
+3. Se actualizaron `circuloHandler.ts` y `consultingHandler.ts` prohibiendo estrictamente los dobles saludos y la repetición del nombre del usuario en charlas activas.
+4. Se incorporó la SUITE 124 en `server/__tests__/regression.test.ts` pasando al 100% verde (319/319 tests).
+5. Compilación y build limpios (`npm run check` y `npm run build`).
+6. Actualización mandatoria de la bitácora y documentos maestros del proyecto.
+
+---
+
 ### 📅 [2026-10-22] — JanIA v33.30: Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web (v33.30 - 33.30.0)
 
 **Versión:** `v33.30` (`33.30.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

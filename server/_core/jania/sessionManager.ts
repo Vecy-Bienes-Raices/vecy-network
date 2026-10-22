@@ -164,15 +164,24 @@ export async function hasGreetedUserToday(userId: string): Promise<boolean> {
 
 export async function checkAlreadyGreeted(userId: string): Promise<boolean> {
   const todayStr = new Date().toISOString().split("T")[0];
-  if (GREETED_TODAY.get(userId) === todayStr) {
+  const cleanJid = cleanSessionJid(userId);
+  if (GREETED_TODAY.get(userId) === todayStr || (cleanJid && GREETED_TODAY.get(cleanJid) === todayStr)) {
     return true;
   }
   const dbGreeted = await hasGreetedUserToday(userId);
   if (dbGreeted) {
     GREETED_TODAY.set(userId, todayStr);
+    if (cleanJid) GREETED_TODAY.set(cleanJid, todayStr);
     return true;
   }
   return false;
+}
+
+export function markUserGreetedToday(userId: string): void {
+  const todayStr = new Date().toISOString().split("T")[0];
+  const cleanJid = cleanSessionJid(userId);
+  GREETED_TODAY.set(userId, todayStr);
+  if (cleanJid) GREETED_TODAY.set(cleanJid, todayStr);
 }
 
 export async function getRecentChatHistory(userId: string, limit = 20): Promise<{ role: "user" | "assistant", content: string }[]> {

@@ -1,11 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.30.0 — 2026-10-22)
-- **JanIA Server:** `v33.30` (`33.30.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
-- **Arquitectura Cognitiva Nivel ARGON y Memoria Perpetua:**
-  1. Routing inteligente a modelos de alto razonamiento (`gemini-2.5-flash` y `gemini-2.5-pro`) en DMs y herramientas cognitivas.
-  2. Depuración estricta de tags gremiales (`Inmo`, `Realtor`, `Broker`), corchetes, paréntesis y reconocimiento de nombres compuestos femeninos ("Flor Alba", "Floralba").
-  3. Memoria perpetua (`UserPerpetualSession`) con persistencia dual (archivo JSON en disco y base de datos PostgreSQL en `pendingSessions`), tracking de reseñas de Google y control de servicios gratuitos.
-  4. Inyección en tiempo real de hora colombiana (`America/Bogota`), voz estilo Laomedeia (cercana, empática, concisa, sin dobles saludos) y herramientas cognitivas ampliadas (`consultar_catalogo_inmuebles_vecy`, `navegar_o_buscar_web`).
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (316/316 passing al 100% verde a $0 COP) | Build `npm run build` limpio en 21s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.31.0 — 2026-10-22)
+- **JanIA Server:** `v33.31` (`33.31.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
+- **Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica:**
+  1. Depuración quirúrgica de apellidos en `nameAndGenderResolver`: identificación de `COMMON_COLOMBIAN_SURNAMES` para evitar concatenar apellidos ("Mario Pérez" -> "Mario"), manteniendo exclusivamente nombres compuestos legítimos ("Flor Alba", "Juan Carlos").
+  2. Continuidad conversacional en grupos (`circuloHandler.ts` y `consultingHandler.ts`): erradicación de bucles de saludos repetitivos y menciones robóticas del nombre en turnos continuos; activación de `markUserGreetedToday`.
+  3. Criterio de unificación estratégica: paridad cognitiva 100% idéntica a DMs en ambos grupos (2 y 3), respondiendo al grano con empatía, calidez y solidez técnica.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (319/319 passing al 100% verde a $0 COP) | Build `npm run build` limpio en 15s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
