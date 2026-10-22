@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.29 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.30 — Octubre 2026
+
+### Novedades v33.30 (Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Nivel Cognitivo ARGON y Modelos de Alto Razonamiento (`llm.ts` y `prompts.ts`)**:
+     - *Elevación del razonamiento*: Priorización en DMs y herramientas cognitivas de los modelos de alto razonamiento (`gemini-2.5-flash` y `gemini-2.5-pro`), asegurando maestría enciclopédica en Derecho Civil, Comercial, Administrativo, Notarial/Registral (Ley 1579 de 2012), POT 555 de Bogotá y operaciones internacionales en divisas y criptoactivos.
+     - *Preservación aditiva total*: Coexistencia armónica de la doctrina de urbanidad de Carreño, pedagogía de firma electrónica (MinTIC/AND), soluciones proptech (`Vecy Agenda Pro`, software a la medida) y canalización personalizada con el bróker oficial (`+57 316 656 9719`).
+  2. **Voz Humana Estilo "Laomedeia" y Conciencia Horaria/Género (`dmHandler.ts` y `nameAndGenderResolver.ts`)**:
+     - *Inyección horaria precisa*: Determinación en tiempo real de la hora, día de la semana y fecha exacta de Colombia (`America/Bogota`) para contextualizar con naturalidad el momento del día y emitir saludos horarios precisos ("buenos días", "buenas tardes", "buenas noches") solo en el primer turno de una sesión.
+     - *Resolución depurada de nombres y género*: Limpieza de etiquetas gremiales entre corchetes, paréntesis o barras (`[Inmo]`, `(Realtor)`, `/ Broker`), detección de nombres compuestos femeninos ("Flor Alba", "Floralba") y trato con vocativos y cortesía natural.
+     - *Cero dobles saludos*: Si la conversación está activa (últimas 6 horas), JanIA va directo al grano con empatía y calidez, sin repetir "Soy JanIA..." ni anteponer "¡Hola!" en cada turno.
+  3. **Memoria Perpetua Dual y Auditoría Estricta de Reseñas en Google (`sessionManager.ts`)**:
+     - *Expediente perpetuo*: Creación de `UserPerpetualSession` persistido tanto en memoria RAM como en archivo JSON en disco (`data/jania_persistent_sessions.json`) y en base de datos PostgreSQL (`pendingSessions` con clave `user_memory:${cleanJid}`).
+     - *Auditoría de reseñas*: Seguimiento riguroso del estado de reseña en Google. Si el usuario afirma haber dejado reseña, JanIA solicita amablemente la captura de pantalla para verificarla mediante visión multimodal antes de otorgar beneficios adicionales. Eduardo Rivera y Jani Alves quedan exonerados permanentemente de peticiones de calificación.
+     - *Control de gratuidad*: Conteo de servicios de cortesía utilizados (cédulas, predial, IDU, RUES).
+  4. **Superpoderes de Navegación Web y Consulta de Catálogo (`scraper.ts` y `dmHandler.ts`)**:
+     - *Scraper web en vivo*: Integración de `fetchWebUrlContent` para acceder e inspeccionar páginas públicas en tiempo real ante consultas con URLs.
+     - *Herramienta de catálogo*: Incorporación de `consultar_catalogo_inmuebles_vecy` para buscar inmuebles directamente en la base de datos de Vecy y compartir enlaces oficiales (`https://vecy-bienes-raices.vercel.app/properties`).
+     - *Asincronía en flyers*: En WhatsApp, los flyers comerciales se procesan en segundo plano sin interrumpir ni bloquear preguntas conversacionales inmediatas del usuario.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 316/316 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 21s ✅
+- `shared/const.ts` (`v33.30`) y `package.json` (`33.30.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.29 — Octubre 2026
 
 ### Novedades v33.29 (Erradicación de Fallback Sintético RUES 901.488.282-3, Variantes Morfológicas, Blindaje contra Cuelgues SSE en Tests y Fallback IDU con Chat Virtual):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

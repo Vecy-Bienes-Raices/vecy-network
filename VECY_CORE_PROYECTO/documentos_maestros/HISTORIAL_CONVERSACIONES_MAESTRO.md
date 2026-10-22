@@ -7,6 +7,55 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-22] — JanIA v33.30: Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web (v33.30 - 33.30.0)
+
+**Versión:** `v33.30` (`33.30.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/llm.ts`: Priorización en DMs y herramientas cognitivas de los modelos de alto razonamiento (`gemini-2.5-flash` y `gemini-2.5-pro`), asegurando solidez enciclopédica y jurídica sin degradar a modelos ligeros en tareas de consultoría.
+- `server/_core/jania/prompts.ts`: Consolidación del núcleo cognitivo `JANIA_ARGON_COGNITIVE_CORE` preservando aditivamente las directivas previas de urbanidad de Carreño, pedagogía de firma electrónica MinTIC/AND, soluciones proptech (`Vecy Agenda Pro`) y canalización con el bróker oficial (`+57 316 656 9719`), incorporando conocimiento enciclopédico sobre Derecho Civil, Comercial, Administrativo, Urbano (POT 555 de 2021), Notarial/Registral (Ley 1579 de 2012) y operaciones internacionales en divisas y criptoactivos.
+- `server/_core/nameAndGenderResolver.ts`: Depuración de etiquetas gremiales entre corchetes, paréntesis o barras (`[Inmo]`, `(Realtor)`, `/ Broker`) y reconocimiento de nombres compuestos femeninos ("Flor Alba", "Floralba") para un trato con vocativo y cortesía natural.
+- `server/_core/jania/sessionManager.ts`: Creación de `UserPerpetualSession` con persistencia dual (archivo JSON en disco `data/jania_persistent_sessions.json` y PostgreSQL en tabla `pendingSessions` con clave `user_memory:${cleanJid}`), tracking riguroso del estado de reseñas en Google y contador de servicios gratuitos utilizados.
+- `server/_core/scraper.ts`: Implementación de `fetchWebUrlContent` para inspección en vivo de sitios web públicos.
+- `server/_core/jania/handlers/dmHandler.ts`: Inyección en tiempo real de la hora colombiana (`America/Bogota`), voz estilo Laomedeia (cercana, empática, concisa, sin dobles saludos) y herramientas cognitivas ampliadas (`consultar_catalogo_inmuebles_vecy`, `navegar_o_buscar_web`).
+- `server/_core/whatsapp-match.ts`: Ingesta asíncrona de flyers comerciales en WhatsApp sin bloquear ni interrumpir preguntas directas del interlocutor.
+- `shared/const.ts` (`v33.30`) y `package.json` (`33.30.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Tuve que ejecutar una serie de comandos, por favor revisa que todos los proceso hayan concluido bien y si faltó cumplir algo terminalo bien:
+Comandos ejecutados en la terminal: 
+npm run check
+npm run build
+git add -A && git commit -m "feat(v33.38): arquitectura cognitiva nivel argon y memoria perpetua"
+git push origin main
+ssh root@13.140.149.144 "cd /var/www/vecy-network && git pull origin main && npm run build && pm2 reload jania-server --update-env && pm2 status"(este dio error y se remplazó por el siguiente)
+ssh root@13.140.149.144 "cd /var/www/vecy-network && git fetch origin main && git reset --hard origin/main && npm run build && pm2 reload jania-server --update-env && pm2 status""*
+
+#### 2. Diagnóstico Técnico Forense y Causas Raíz
+1. **Verificación de Comandos Ejecutados por Eduardo:**
+   - En el VPS (`13.140.149.144`), el primer comando `git pull origin main` falló debido a cambios locales no confirmados o divergencia de commits en el servidor remoto, siendo reemplazado correctamente por `git fetch origin main && git reset --hard origin/main`.
+   - `jania-server` en PM2 se recargó y está operativo con PID activo, memoria estable (~170 MB), 0% CPU y conexión WebSocket de Baileys al socket de WhatsApp activa.
+2. **Sincronización de Versión y Package.json:**
+   - El commit en GitHub se tituló `feat(v33.38)` como una errata tipográfica mientras `shared/const.ts` declaraba `v33.30`, y `package.json` había quedado rezagado en `33.29.0`. Se sincronizó inmediatamente `package.json` a `33.30.0`.
+3. **Preservación Aditiva en `prompts.ts`:**
+   - La edición previa de `JANIA_ARGON_COGNITIVE_CORE` había omitido bloques esenciales consagrados en suites de regresión anteriores (`SOLUCIONES PROPTECH DE VECY BIENES RAÍCES`, `ESTILO DE COMUNICACIÓN Y EJECUCIÓN`, `Vecy Agenda Pro`). Se restauraron de forma 100% aditiva, permitiendo que convivan con el nuevo conocimiento enciclopédico.
+4. **Regresión y Suite 88:**
+   - Se crearon las pruebas de la SUITE 88 en `server/__tests__/regression.test.ts` para verificar la depuración gremial de nombres, la persistencia dual de `sessionManager`, la inyección de hora colombiana y la consagración oficial de la versión `v33.30`.
+
+#### 3. Acciones Ejecutadas y Auto-Reparación Quirúrgica
+1. Sincronización oficial de `package.json` a `33.30.0` y adición de `data/` a `.gitignore`.
+2. Preservación aditiva del núcleo cognitivo en `server/_core/jania/prompts.ts`.
+3. Creación y pase exitoso de la SUITE 88 en `server/__tests__/regression.test.ts`.
+4. Verificación y validación empírica completa:
+   - `npm run check`: 0 errores.
+   - `npm test`: **316/316 tests pasando (100% verde a $0 COP sin claves de pago)**.
+   - `npm run build`: Compilación limpia en 21s para cliente y servidor.
+5. Actualización mandatoria de los 4 documentos maestros del proyecto.
+
+---
+
 ### 📅 [2026-10-21] — JanIA v33.29: Erradicación de Fallback Sintético RUES (901.488.282-3), Variantes Morfológicas, Fallback IDU con Chat Virtual y Blindaje Integral de Red contra Cuelgues SSE (v33.29 - 33.29.0)
 
 **Versión:** `v33.29` (`33.29.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -331,6 +331,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.30 — Octubre 2026
+
+#### [v33.30.0] — 2026-10-22: Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web
+- **Nivel Cognitivo ARGON y Modelos de Alto Razonamiento (`llm.ts`, `prompts.ts`):**
+  - **Problema:** En interacciones de alta complejidad jurídica o financiera inmobiliaria, JanIA requería un razonamiento superior, evitando respuestas simplistas y asumiendo plena maestría sobre el marco normativo colombiano (POT 555 Bogotá, Ley 1579 de 2012, Ley 820 de 2003, operaciones en divisas con formulario 4 Banco de la República, y criptoactivos con lineamientos SNR/SuperSociedades/DIAN).
+  - **Solución:**
+    1. Se priorizaron los modelos `gemini-2.5-flash` y `gemini-2.5-pro` para DMs y herramientas cognitivas, preservando el uso de `flash-lite` solo para tareas secundarias mecánicas.
+    2. Se enriqueció `JANIA_ARGON_COGNITIVE_CORE` preservando 100% aditivamente la doctrina de urbanidad de Carreño, pedagogía de firma digital estatal (MinTIC/AND), soluciones proptech (`Vecy Agenda Pro`) y canalización con el bróker oficial (`+57 316 656 9719`).
+- **Voz Humana Estilo "Laomedeia", Conciencia Horaria y Depuración Gremial (`dmHandler.ts`, `nameAndGenderResolver.ts`):**
+  - **Problema:** Respuestas que repetían saludos de presentación en cada turno ("Soy JanIA...") o utilizaban saludos desfasados respecto a la hora local real de Colombia, además de tropezar con tags gremiales (`Inmo`, `Realtor`, `Broker`) en nombres de WhatsApp.
+  - **Solución:**
+    1. Inyección en tiempo real en cada turno de la fecha, día de la semana y hora colombiana exacta (`America/Bogota`), emitiendo saludos horarios ("buenos días", "buenas tardes", "buenas noches") únicamente en el primer turno de la conversación.
+    2. Depuración estricta de tags gremiales entre corchetes, paréntesis o barras (`[Inmo]`, `(Realtor)`, `/ Broker`) y reconocimiento de nombres compuestos femeninos ("Flor Alba", "Floralba").
+    3. Cero dobles saludos: en conversaciones activas dentro de las últimas 6 horas, JanIA responde de inmediato y directo al grano con calidez y concisión.
+- **Memoria Perpetua Dual y Auditoría Estricta de Reseñas en Google (`sessionManager.ts`):**
+  - **Problema:** Necesidad de mantener un expediente perpetuo de cada usuario (`UserPerpetualSession`) entre reinicios del servidor, controlando el número de servicios gratuitos utilizados y auditando las afirmaciones de haber dejado reseña en Google.
+  - **Solución:**
+    1. Implementación de persistencia dual: archivo JSON en disco (`data/jania_persistent_sessions.json`) y PostgreSQL (`pendingSessions` con clave `user_memory:${cleanJid}`).
+    2. Auditoría rigurosa de reseñas: si el usuario indica que ya calificó en Google, JanIA solicita amablemente la captura de pantalla para verificarla mediante visión multimodal. Exoneración permanente de reseñas para Eduardo Rivera y Jani Alves.
+- **Superpoderes de Navegación Web en Vivo y Consulta de Catálogo (`scraper.ts`, `dmHandler.ts`, `whatsapp-match.ts`):**
+  - **Problema:** Los usuarios comparten enlaces a páginas web o buscan inmuebles específicos en WhatsApp sin que JanIA pudiera explorar la URL en tiempo real o consultar el inventario de Vecy.
+  - **Solución:**
+    1. Se implementó `fetchWebUrlContent` en `scraper.ts` y la herramienta `navegar_o_buscar_web`.
+    2. Se incorporó `consultar_catalogo_inmuebles_vecy` para buscar inmuebles en la base de datos de Vecy y compartir enlaces oficiales (`https://vecy-bienes-raices.vercel.app/properties`).
+    3. En WhatsApp, los flyers comerciales se procesan en segundo plano de manera asíncrona, evitando bloquear la conversación o ignorar preguntas de texto formuladas junto al flyer.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **316/316 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 21s.
+
 ### 🔖 v33.29 — Octubre 2026
 
 #### [v33.29.0] — 2026-10-21: Erradicación de Fallback Sintético RUES (901.488.282-3), Variantes Morfológicas, Fallback IDU con Chat Virtual y Blindaje Integral de Red contra Cuelgues SSE

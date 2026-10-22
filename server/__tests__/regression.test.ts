@@ -5966,11 +5966,11 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("7. Consagración doctrinal de versión v33.17+ en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(1[789]|2\d)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(1[789]|[2-9]\d)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(1[789]|2\d)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(1[789]|[2-9]\d)\.0$/);
     });
   });
 
@@ -6687,11 +6687,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.28 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.29");
+      expect(VECY_VERSION).toMatch(/^v33\.(2[89]|[3-9]\d)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.29.0");
+      expect(pkg.version).toMatch(/^33\.(2[89]|[3-9]\d)\.0$/);
     });
   });
 
@@ -6799,11 +6799,81 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.29 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.29");
+      expect(VECY_VERSION).toMatch(/^v33\.(29|[3-9]\d)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.29.0");
+      expect(pkg.version).toMatch(/^33\.(29|[3-9]\d)\.0$/);
+    });
+  });
+
+  describe("SUITE 88: JanIA v33.30 — Arquitectura Cognitiva Nivel ARGON, Memoria Perpetua, Auditoría Google Review y Navegación Web (v33.30)", () => {
+    it("1. nameAndGenderResolver depura tags gremiales, corchetes, parentesis y reconoce nombres compuestos femeninos", async () => {
+      const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
+
+      const r1 = resolveNameAndGender("Flor Alba Inmobiliaria");
+      expect(r1.isFemale).toBe(true);
+      expect(r1.displayName).toBe("Flor Alba");
+      expect(r1.courtesyWord).toBe("estimada");
+
+      const r2 = resolveNameAndGender("Floralba [Realtor]");
+      expect(r2.isFemale).toBe(true);
+      expect(r2.displayName).toBe("Flor Alba");
+
+      const r3 = resolveNameAndGender("Carlos Mario / Broker");
+      expect(r3.isFemale).toBe(false);
+      expect(r3.displayName).toBe("Carlos Mario");
+      expect(r3.courtesyWord).toBe("estimado");
+    });
+
+    it("2. sessionManager gestiona memoria perpetua con persistencia dual, tracking de review de Google y conteo de servicios gratuitos", async () => {
+      const {
+        getUserPerpetualSession,
+        incrementFreeServicesCount,
+        verifyUserGoogleReview,
+        isUserVerifiedGoogleReview,
+        shouldAskForGoogleReview
+      } = await import("../_core/jania/sessionManager");
+      const testJid = "573199999999@s.whatsapp.net";
+
+      const session = await getUserPerpetualSession(testJid, "Flor Alba Inmobiliaria");
+      expect(session).toBeDefined();
+      expect(session.name).toBe("Flor Alba Inmobiliaria");
+      expect(session.userId).toBe("573199999999");
+
+      const count = await incrementFreeServicesCount(testJid);
+      expect(count).toBeGreaterThanOrEqual(1);
+
+      const shouldAskBefore = await shouldAskForGoogleReview(testJid);
+      expect(shouldAskBefore).toBe(true);
+
+      await verifyUserGoogleReview(testJid);
+      const isVerified = await isUserVerifiedGoogleReview(testJid);
+      expect(isVerified).toBe(true);
+
+      const shouldAskAfter = await shouldAskForGoogleReview(testJid);
+      expect(shouldAskAfter).toBe(false);
+    });
+
+    it("3. JANIA_ARGON_COGNITIVE_CORE contiene conocimiento enciclopédico inmobiliario integral preservando directivas previas", async () => {
+      const { JANIA_ARGON_COGNITIVE_CORE } = await import("../_core/jania/prompts");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("NIVEL ARGON v33.30");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("POT 555 de 2021 de Bogotá");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Ley 1579 de 2012");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("SOLUCIONES PROPTECH DE VECY BIENES RAÍCES");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Vecy Agenda Pro");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Fábrica de Software Proptech a la Medida");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("+57 316 656 9719");
+    });
+
+    it("4. Consagración doctrinal de versión v33.30 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.30");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.30.0");
     });
   });
 });

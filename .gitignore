@@ -130,6 +130,7 @@ client/public/__manus__/version.json
 # Bot runtime state (auto-generated while running, not source code)
 .cooldown_map.json
 recent_joins.txt
+data/
 
 # Scratch / temporary dev scripts
 scratch/

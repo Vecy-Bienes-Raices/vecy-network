@@ -1,12 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.29.0 — 2026-10-21)
-- **JanIA Server:** `v33.29` (`33.29.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
-- **Erradicación de Fallback Sintético RUES (901.488.282-3) y Detección Robusta:**
-  1. Limpieza de datos sintéticos y soporte nativo de búsqueda por NIT y Razón Social sin inventar sociedades ficticias (`queryEmpresaOrNit`).
-  2. Corrección del grupo de captura regex de dígitos y normalización de variantes morfológicas ("Multi-impresos" / "Multiimpresos").
-- **Protección de Red y Resiliencia en Tests ($0 COP):**
-  1. Bypass inmediato en entorno de tests (`NODE_ENV === "test"`) para `queryProcuraduria`, `queryAdres` y `queryPoliciaNacional`, eliminando esperas y cuelgues de sockets SSE de red.
-  2. Preservación intacta de `identityCache` sin borrado destructivo.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (312/312 passing al 100% verde a $0 COP) | Build `npm run build` limpio en 15s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.30.0 — 2026-10-22)
+- **JanIA Server:** `v33.30` (`33.30.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
+- **Arquitectura Cognitiva Nivel ARGON y Memoria Perpetua:**
+  1. Routing inteligente a modelos de alto razonamiento (`gemini-2.5-flash` y `gemini-2.5-pro`) en DMs y herramientas cognitivas.
+  2. Depuración estricta de tags gremiales (`Inmo`, `Realtor`, `Broker`), corchetes, paréntesis y reconocimiento de nombres compuestos femeninos ("Flor Alba", "Floralba").
+  3. Memoria perpetua (`UserPerpetualSession`) con persistencia dual (archivo JSON en disco y base de datos PostgreSQL en `pendingSessions`), tracking de reseñas de Google y control de servicios gratuitos.
+  4. Inyección en tiempo real de hora colombiana (`America/Bogota`), voz estilo Laomedeia (cercana, empática, concisa, sin dobles saludos) y herramientas cognitivas ampliadas (`consultar_catalogo_inmuebles_vecy`, `navegar_o_buscar_web`).
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (316/316 passing al 100% verde a $0 COP) | Build `npm run build` limpio en 21s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
