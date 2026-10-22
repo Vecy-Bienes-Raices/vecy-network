@@ -1,12 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.28.0 — 2026-10-20)
-- **JanIA Server:** `v33.28` (`33.28.0`) listo para despliegue dual en GitHub y Contabo VPS (`13.140.149.144`).
-- **Endurecimiento de Coincidencia RUES contra Homónimos Falsos (`ruesService.ts`):**
-  1. Nueva función `evaluateRazonSocialMatch` estricta: Coincidencia exacta perfecta (100 pts), término contenido con penalización por exceso de longitud (`80 - Math.min(diffLength, 30)`), y descarte total (0 pts) si no contiene el término buscado.
-  2. `selectPrincipalRuesRecord` filtra registros con score > 0, descartando homónimos colaterales o genéricos desalineados (ej. "Multiempresas" vs nombres lejanos).
-- **Entrega 100% Libre sin Plantillas Rígidas en DMs (`dmHandler.ts`):**
-  1. `formatPoliteToolDelivery` limpio y orgánico sin bloques de cierre forzados, sin incrustaciones estáticas de reseñas ni colectillas artificiales de preguntas.
-  2. Erradicación de la pregunta forzada de verificación del representante legal tras la consulta de empresa, permitiendo a JanIA fluir de forma natural y conversacional con estilo propio.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (307/307 a $0 COP) | Build `npm run build` limpio en 12s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.29.0 — 2026-10-21)
+- **JanIA Server:** `v33.29` (`33.29.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
+- **Erradicación de Fallback Sintético RUES (901.488.282-3) y Detección Robusta:**
+  1. Limpieza de datos sintéticos y soporte nativo de búsqueda por NIT y Razón Social sin inventar sociedades ficticias (`queryEmpresaOrNit`).
+  2. Corrección del grupo de captura regex de dígitos y normalización de variantes morfológicas ("Multi-impresos" / "Multiimpresos").
+- **Protección de Red y Resiliencia en Tests ($0 COP):**
+  1. Bypass inmediato en entorno de tests (`NODE_ENV === "test"`) para `queryProcuraduria`, `queryAdres` y `queryPoliciaNacional`, eliminando esperas y cuelgues de sockets SSE de red.
+  2. Preservación intacta de `identityCache` sin borrado destructivo.
+- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Tests `npm test` passing (312/312 passing al 100% verde a $0 COP) | Build `npm run build` limpio en 15s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

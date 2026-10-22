@@ -99,11 +99,13 @@ export function formatIduAssistanceGuide(displayName?: string): string {
     `Se consulta fácilmente con el *código CHIP* del predio (inicia por AAA, visible en la parte superior de tu factura predial) o con el número de *Matrícula Inmobiliaria* de la Oficina de Registro (ORIP).\n\n` +
     `🌐 *Trámite oficial en línea ($0 COP):*\n` +
     `Puedes expedir tu certificado oficial en PDF en el portal web institucional del IDU:\n` +
-    `👉 https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml` +
-    `💬 *Canal de Contingencia (Chat de Valorización):*\n` +
-    `Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone del Chat de Valorización directo:\n` +
-    `👉 https://webidu.idu.gov.co/chat_valorizacion/chat\n` +
-    `⏰ *Horario de atención distrital:* Lunes a Viernes de 7:00 a.m. a 4:30 p.m. _(no disponible fines de semana ni festivos)_.\n\n` +
+    `👉 https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml\n\n` +
+    `💬 *Canal de Contingencia (Chat Virtual IDU):*\n` +
+    `Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone de su Chat Virtual de atención al ciudadano:\n` +
+    `👉 https://www.idu.gov.co/page/atencion-al-ciudadano/canales-de-atencion/chat-virtual\n` +
+    `_(Acceso directo de contingencia: https://webidu.idu.gov.co/chat_valorizacion/chat)_\n` +
+    `⏰ *Horario de atención distrital:* Lunes a Viernes de 7:00 a.m. a 4:30 p.m. _(no disponible fines de semana ni festivos)_.\n` +
+    `📌 *Paso para contingencia:* Si te atienden en el chat, solicita al agente humano que te remita el Paz y Salvo oficial directamente a tu correo electrónico.\n\n` +
     `💡 *O si prefieres:* Envíame aquí mismo el código CHIP de tu predio (ej: *AAA0058EEXS*) y yo me conecto automáticamente para generarte y descargarte el PDF oficial listo para tu notaría. 🤝📄`
   );
 }

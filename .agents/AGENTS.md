@@ -183,7 +183,27 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.28 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.29 — Octubre 2026
+
+### Novedades v33.29 (Erradicación de Fallback Sintético RUES 901.488.282-3, Variantes Morfológicas, Blindaje contra Cuelgues SSE en Tests y Fallback IDU con Chat Virtual):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Erradicación Definitiva de Datos Sintéticos RUES (`identityVerificationService.ts` y `ruesService.ts`)**:
+     - *Causa raíz*: Se generaba un NIT sintético `901.488.282-3` de relleno cuando RUES no encontraba una empresa.
+     - *Solución*: Erradicación total de NITs o razones sociales ficticias; reporte transparente pidiendo el NIT oficial.
+     - *Soporte morfológico*: Generación de variantes unidas, separadas y con comodín ("Multi-impresos" / "Multiimpresos") con `evaluateRazonSocialMatch`.
+     - *Corrección de captura regex*: Reparación del grupo capturante en `clean.match(/\b((?:\d{1,3}(?:\.\d{3}){2}|\d{7,10}))(?:-(\d))?\b/)` resolviendo `TypeError: Cannot read properties of undefined (reading 'replace')`.
+  2. **Blindaje de Red y Protección contra Cuelgues de Conexión en Tests**:
+     - *Causa raíz del corte de socket SSE (`use of closed network connection`)*: `queryProcuraduria` ejecutaba 6 intentos de `httpRequest` externos de 15 segundos cada uno en entorno de test sin mock, provocando un congelamiento de más de un minuto que cerraba el socket TCP de streaming en el IDE.
+     - *Solución*: Bypass rápido en `NODE_ENV === "test"` para `queryProcuraduria`, `queryAdres` y `queryPoliciaNacional`.
+     - *Preservación de identidad en caché*: Corrección de la invalidación destructiva de `identityCache` cuando se pre-sembraban datos en tests (Caso Martha Mesa).
+  3. **Fallback Inteligente y Canales de Contingencia de IDU (`iduValorizacionService.ts`)**:
+     - Inclusión del portal oficial (`generateCert.xhtml`), del enlace directo al Chat Virtual de Atención al Ciudadano (`https://www.idu.gov.co/page/atencion-al-ciudadano/canales-de-atencion/chat-virtual`), acceso directo (`chat_valorizacion/chat`), horarios de atención (L-V 7:00 a.m. a 4:30 p.m.) y guía para solicitar remisión del Paz y Salvo al correo por agente humano.
+  4. **Cero Segundo Mensaje Automático en DMs (`dmHandler.ts`)**:
+     - `popLatestDmFollowUpMessage` retorna `undefined` de forma consistente, preservando la autonomía y naturalidad de JanIA sin encadenar mensajes forzados.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 312/312 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 15s ✅
+- `shared/const.ts` (`v33.29`) y `package.json` (`33.29.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.28 — Octubre 2026
 
 ### Novedades v33.28 (Endurecimiento RUES contra Homónimos Falsos y Entrega 100% Libre sin Plantillas Rígidas en DMs):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

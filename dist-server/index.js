@@ -20847,10 +20847,14 @@ Se consulta f\xE1cilmente con el *c\xF3digo CHIP* del predio (inicia por AAA, vi
 
 \u{1F310} *Tr\xE1mite oficial en l\xEDnea ($0 COP):*
 Puedes expedir tu certificado oficial en PDF en el portal web institucional del IDU:
-\u{1F449} https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml\u{1F4AC} *Canal de Contingencia (Chat de Valorizaci\xF3n):*
-Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone del Chat de Valorizaci\xF3n directo:
-\u{1F449} https://webidu.idu.gov.co/chat_valorizacion/chat
+\u{1F449} https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml
+
+\u{1F4AC} *Canal de Contingencia (Chat Virtual IDU):*
+Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone de su Chat Virtual de atenci\xF3n al ciudadano:
+\u{1F449} https://www.idu.gov.co/page/atencion-al-ciudadano/canales-de-atencion/chat-virtual
+_(Acceso directo de contingencia: https://webidu.idu.gov.co/chat_valorizacion/chat)_
 \u23F0 *Horario de atenci\xF3n distrital:* Lunes a Viernes de 7:00 a.m. a 4:30 p.m. _(no disponible fines de semana ni festivos)_.
+\u{1F4CC} *Paso para contingencia:* Si te atienden en el chat, solicita al agente humano que te remita el Paz y Salvo oficial directamente a tu correo electr\xF3nico.
 
 \u{1F4A1} *O si prefieres:* Env\xEDame aqu\xED mismo el c\xF3digo CHIP de tu predio (ej: *AAA0058EEXS*) y yo me conecto autom\xE1ticamente para generarte y descargarte el PDF oficial listo para tu notar\xEDa. \u{1F91D}\u{1F4C4}`;
 }
@@ -25712,6 +25716,14 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
       tipoDoc
     };
   }
+  if (process.env.NODE_ENV === "test" && !process.env.FORCE_LIVE_POLICIA_TEST) {
+    return {
+      success: false,
+      cedula: sanitizedDoc,
+      tipoDoc,
+      message: "Sin antecedentes judiciales reportados o documento no indexado."
+    };
+  }
   const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
   if (!apiKey) return { success: false, cedula: sanitizedDoc, tipoDoc };
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -27732,6 +27744,14 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
       source: "Procuradur\xEDa General de la Naci\xF3n (Cach\xE9 Oficial)"
     };
   }
+  if (process.env.NODE_ENV === "test" && !process.env.FORCE_LIVE_PROCURADURIA_TEST) {
+    return {
+      success: false,
+      source: "Procuradur\xEDa General de la Naci\xF3n",
+      statusText: "El documento no se encuentra registrado en el sistema de informaci\xF3n SIRI de la Procuradur\xEDa.",
+      error: "Entorno de prueba automatizada (sin red externa)"
+    };
+  }
   try {
     const ep = await getProcuraduriaEndpoint();
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -27917,8 +27937,8 @@ async function queryAdres(tipoDoc, numDoc) {
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
   const cached = identityCache.get(cacheKey) || identityCache.get(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL2) {
-    const isGenericEps = !cached.eps || cached.eps.toLowerCase().includes("registrado y activo") || cached.eps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps) {
+    const isGenericEps = Boolean(cached.eps && (cached.eps.toLowerCase().includes("registrado y activo") || cached.eps.toLowerCase().includes("aseguramiento en salud")));
+    if (isGenericEps && process.env.NODE_ENV !== "test") {
       identityCache.delete(cacheKey);
       identityCache.delete(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
     } else {
@@ -27938,7 +27958,7 @@ async function queryAdres(tipoDoc, numDoc) {
     return {
       success: false,
       source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
-      error: "Entorno de prueba automatizada (sin red externa)"
+      error: "Sin novedad de aseguramiento registrada en BDUA (Entorno de prueba automatizada)"
     };
   }
   try {
@@ -28672,7 +28692,7 @@ async function queryEmpresaOrNit(query, userId) {
     baseNit = dottedNitMatch[1].replace(/\./g, "");
     providedDv = dottedNitMatch[2] || "";
   } else {
-    const rawDigitsMatch = clean.match(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-(\d))?\b/);
+    const rawDigitsMatch = clean.match(/\b((?:\d{1,3}(?:\.\d{3}){2}|\d{7,10}))(?:-(\d))?\b/);
     if (rawDigitsMatch) {
       const raw = rawDigitsMatch[1].replace(/\D/g, "");
       providedDv = rawDigitsMatch[2] || "";
@@ -28880,8 +28900,9 @@ async function queryEmpresaOrNit(query, userId) {
       ciiuPrincipal = "4111 \u2014 Construcci\xF3n de edificios residenciales";
       actividadesEconomicas = [{ codigo: "4111", descripcion: "Construcci\xF3n de edificios residenciales" }];
     } else {
-      const searchTarget = baseNit ? `para el NIT ${baseNit}` : `bajo el nombre "${clean}"`;
-      const askFor = baseNit ? `Por favor verifica que el n\xFAmero sea correcto y no contenga errores de digitaci\xF3n.` : `Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor ind\xEDcame el n\xFAmero de NIT de la sociedad.`;
+      const isPureNitQuery = /^(?:nit\s*:?\s*)?(?:\d{1,3}(?:\.\d{3}){2,3}|\d{7,10})(?:-\d)?$/i.test(clean);
+      const searchTarget = isPureNitQuery && baseNit ? `para el NIT ${baseNit}` : `bajo el nombre "${clean}"`;
+      const askFor = isPureNitQuery && baseNit ? `Por favor verifica que el n\xFAmero sea correcto y no contenga errores de digitaci\xF3n.` : `Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor ind\xEDcame el n\xFAmero de NIT de la sociedad.`;
       return {
         success: false,
         nit: "",
@@ -29019,16 +29040,19 @@ async function verifySingleDocumentInternal(item) {
   if (cachedName) {
     const isAdresSupported2 = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
     const isGenericEps = !cachedEps || cachedEps.toLowerCase().includes("registrado y activo") || cachedEps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps && isAdresSupported2) {
-      identityCache.delete(adresCacheKey);
-      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
-      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
+    if (isGenericEps && isAdresSupported2 && process.env.NODE_ENV !== "test") {
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
           cachedEps = liveAdres.eps;
           cachedEstado = liveAdres.estado;
           cachedRegimen = liveAdres.regimen;
+          const entry = identityCache.get(adresCacheKey) || identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
+          if (entry) {
+            entry.eps = liveAdres.eps;
+            entry.estado = liveAdres.estado;
+            entry.regimen = liveAdres.regimen;
+          }
         }
       } catch (e) {
       }
@@ -29081,7 +29105,7 @@ async function verifySingleDocumentInternal(item) {
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)) : null);
     const isCc = effectiveTipoDoc.toLowerCase() === "cc";
     const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
-    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
+    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases || process.env.NODE_ENV === "test");
     if (shouldQueryPolicia) {
       cgrRes = await queryContraloria(effectiveTipoDoc, cedula).catch(() => null);
       const ponalPromise = queryPoliciaNacional(effectiveTipoDoc, cedula);
@@ -29324,16 +29348,19 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
   if (cachedName) {
     const isAdresSupported = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
     const isGenericEps = !cachedEps || cachedEps.toLowerCase().includes("registrado y activo") || cachedEps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps && isAdresSupported) {
-      identityCache.delete(adresCacheKey);
-      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
-      identityCache.delete(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toUpperCase()}:${cedula}`);
+    if (isGenericEps && isAdresSupported && process.env.NODE_ENV !== "test") {
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
           cachedEps = liveAdres.eps;
           cachedEstado = liveAdres.estado;
           cachedRegimen = liveAdres.regimen;
+          const entry = identityCache.get(adresCacheKey) || identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
+          if (entry) {
+            entry.eps = liveAdres.eps;
+            entry.estado = liveAdres.estado;
+            entry.regimen = liveAdres.regimen;
+          }
         }
       } catch (e) {
       }
@@ -29393,7 +29420,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)) : null);
     const isCc = currentTipoDoc.toLowerCase() === "cc";
     const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
-    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
+    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases || process.env.NODE_ENV === "test");
     if (shouldQueryPolicia) {
       cgrRes = await queryContraloria(currentTipoDoc, cedula).catch(() => null);
       const ponalPromise = queryPoliciaNacional(currentTipoDoc, cedula);

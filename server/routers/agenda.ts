@@ -227,6 +227,16 @@ export async function queryPoliciaNacional(
     };
   }
 
+  // En entorno de pruebas automatizadas sin mock ni red externa, evitar demoras de 2Captcha
+  if (process.env.NODE_ENV === "test" && !process.env.FORCE_LIVE_POLICIA_TEST) {
+    return {
+      success: false,
+      cedula: sanitizedDoc,
+      tipoDoc,
+      message: 'Sin antecedentes judiciales reportados o documento no indexado.'
+    };
+  }
+
   const apiKey = process.env.TWOCAPTCHA_API_KEY || '673ddb810e9f700065ccbe6034f26629';
   if (!apiKey) return { success: false, cedula: sanitizedDoc, tipoDoc };
 

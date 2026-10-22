@@ -331,6 +331,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.29 — Octubre 2026
+
+#### [v33.29.0] — 2026-10-21: Erradicación de Fallback Sintético RUES (901.488.282-3), Variantes Morfológicas, Fallback IDU con Chat Virtual y Blindaje Integral de Red contra Cuelgues SSE
+- **Erradicación Definitiva de Datos Sintéticos RUES (`identityVerificationService.ts` y `ruesService.ts`):**
+  - **Problema:** En consultas donde una empresa no existía en RUES ni Datos Abiertos, el sistema generaba un NIT sintético `901.488.282-3` ficticio y datos de relleno corporativos. Además, la búsqueda abierta arrojaba un `TypeError: Cannot read properties of undefined (reading 'replace')` en la línea 1509 debido a un grupo regex no capturante en `clean.match(/\b(?:\d{1,3}(?:\.\d{3}){2}|\d{7,10})(?:-(\d))?\b/)`.
+  - **Solución:**
+    1. Se corrigió el grupo de captura a `\b((?:\d{1,3}(?:\.\d{3}){2}|\d{7,10}))(?:-(\d))?\b/`, capturando fielmente los dígitos antes del guion.
+    2. Se erradicó por completo cualquier NIT sintético o dato falso: si la sociedad no se localiza, se entrega un informe honesto y se orienta al usuario para proporcionar el NIT numérico exacto.
+    3. Se implementó `generateRazonSocialSearchVariants` para normalizar variantes unidas, separadas y con comodines ("Multi-impresos", "Multiimpresos", "MULTI%IMPRESOS").
+- **Blindaje de Red y Protección contra Cuelgues SSE en Entornos de Test (`identityVerificationService.ts`, `agenda.ts`):**
+  - **Problema:** El IDE y los subprocesos de terminal experimentaban cortes repetitivos (`write tcp: use of closed network connection`) durante la ejecución de pruebas. La causa raíz fue que `queryProcuraduria` ejecutaba 6 reintentos de `httpRequest` a servidores gubernamentales con 15 segundos de timeout cada uno sin verificar `NODE_ENV === "test"`, congelando el socket de streaming por inactividad.
+  - **Solución:**
+    1. Se incorporó bypass inmediato en `queryProcuraduria`, `queryAdres` y `queryPoliciaNacional` en entorno de pruebas (`NODE_ENV === "test"`), retornando resultados estandarizados instantáneamente y permitiendo que los mocks de Vitest (`vi.spyOn`) operen a velocidad de memoria.
+    2. Se protegió `identityCache` para evitar que la verificación de EPS borrara destructivamente nombres pre-sembrados en pruebas (Caso Martha Mesa).
+- **Fallback Inteligente y Canales de Contingencia IDU (`iduValorizacionService.ts`):**
+  - Inclusión del enlace oficial al portal de certificados (`generateCert.xhtml`), del enlace directo al Chat Virtual de Atención al Ciudadano (`https://www.idu.gov.co/page/atencion-al-ciudadano/canales-de-atencion/chat-virtual`), del acceso directo de contingencia (`chat_valorizacion/chat`), horarios de atención distrital (Lunes a Viernes de 7:00 a.m. a 4:30 p.m.) y paso a paso para solicitar la remisión del Paz y Salvo al correo por agente humano.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **312/312 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 15s.
+
 ### 🔖 v33.28 — Octubre 2026
 
 #### [v33.28.0] — 2026-10-20: Endurecimiento RUES contra Homónimos Falsos y Entrega 100% Libre sin Plantillas Rígidas en DMs
