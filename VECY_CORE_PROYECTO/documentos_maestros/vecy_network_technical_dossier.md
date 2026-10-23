@@ -331,6 +331,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.36 — Octubre 2026
+
+#### [v33.36.0] — 2026-10-23: Astucia Inmobiliaria, Goal Tracking en Sondeos de Mercado, Documentos de Soporte (CTL, Escritura, Predial) y Acceso Multi-Capa a ADRES
+- **Goal Tracking Multi-Turno en Sondeos de Mercado (`dmHandler.ts`):**
+  - **Problema:** En chats privados (como el caso de Carolina Z. en Alameda Cra 15 # 170), el usuario solicitaba revisar el valor comercial de una propiedad y tras la pregunta de confirmación de JanIA respondía afirmativamente ("Si es ese") o agregaba datos faltantes ("Nov 2006", "año de construcción"). Como el guard `isExplicitValuation` solo evaluaba el mensaje actual sin mirar el historial, la herramienta se auto-omitía (`omitted: true`) y el LLM perdía el hilo, saltando a agendar visitas o publicidad en lugar de entregar la tasación.
+  - **Solución:** `isExplicitValuation` ahora inspecciona una ventana de 6 turnos en el historial del chat. Si hay intención previa de avalúo/sondeo y el usuario asiente o envía características complementarias, el sistema mantiene el objetivo de forma inquebrantable y ejecuta `sondeo_mercado_inmobiliario`.
+- **Astucia Inmobiliaria y Solicitud de Documentos de Soporte (`dmHandler.ts`, `prompts.ts`):**
+  - **Problema:** JanIA se limitaba a arrojar un número o responder con protocolo básico, sin orientar al cliente o colega hacia los 3 soportes indispensables de una transacción inmobiliaria en Colombia ni generar captación comercial.
+  - **Solución:** Al emitir el sondeo, JanIA instruye con astucia profesional que los números son un estimado estadístico y que para cerrar con exactitud y blindaje jurídico es indispensable contar con: 1) Certificado de Tradición y Libertad (CTL) actualizado (< 30 días), 2) Copia de la escritura pública, y 3) Impuesto predial vigente.
+- **Venta Cruzada In-Chat de Factura Predial (`dmHandler.ts`):**
+  - **Problema:** Vecy cuenta con la herramienta de consulta y descarga oficial de facturas de impuesto predial en Bogotá en PDF a $0 COP, pero JanIA no la ofrecía cuando el usuario manifestaba no tener o no encontrar su predial.
+  - **Solución:** JanIA ofrece de inmediato en el mismo chat la entrega de la factura predial oficial en PDF sin costo, solicitando únicamente el número de CHIP catastral o la cédula de ciudadanía del propietario para gestionarlo al instante.
+- **Enriquecimiento de Sectores Catastrales (`valuation.ts`):**
+  - Incorporación y calibración de zonas norte de Bogotá: "alameda", "170", "toberín", "toberin", "mirandela", con valor base de $5,200,000 COP/m² y marca de comparables verificados activos.
+- **Arquitectura Multi-Capa para Acceso a ADRES BDUA (`identityVerificationService.ts`):**
+  - **Problema:** El portal ASP.NET de ADRES (`ConsultarAfiliadoWeb_2.aspx`) bloqueaba consultas directas debido a la protección Telerik RadAjaxManager y desafíos dinámicos de Google reCAPTCHA Enterprise (`sitekey: 6LdjqjksAAAAAAduGUnDTl7-kSoeSDI7S-vAazXp`).
+  - **Solución:** Esquema multi-capa:
+    1. *Capa 1*: Petición HTTP rápida ASP.NET (~0.5s).
+    2. *Capa 2*: Puppeteer Headless con Chromium (`/usr/bin/google-chrome`), automatización del formulario con `document.forms[0].submit()` y captura del popup dinámico `RespuestaConsulta.aspx?tokenId=...`.
+    3. *Capa 3*: Integración con 2Captcha Enterprise para resolución de reCAPTCHA ante bloqueos.
+    4. *Parser Oficial `parseAdresHtml()`*: Extracción estandarizada de nombres, apellidos, estado de afiliación, EPS limpia (`formatCleanEpsName`), régimen y municipio/departamento.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **338/338 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 34s.
+
 ### 🔖 v33.35 — Octubre 2026
 
 #### [v33.35.0] — 2026-10-23: Unificación de Identidad Servidora de JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas

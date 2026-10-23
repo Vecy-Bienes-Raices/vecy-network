@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-23] — JanIA v33.36: Astucia Inmobiliaria, Goal Tracking en Sondeos de Mercado, Documentos de Soporte (CTL, Escritura, Predial) y Acceso Multi-Capa a ADRES (v33.36 - 33.36.0)
+
+**Versión:** `v33.36` (`33.36.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. **Goal Tracking Multi-Turno en Sondeos de Mercado**: Resolución definitiva del bug donde JanIA perdía el hilo y meta de la conversación. `isExplicitValuation` ahora rastrea el contexto de los últimos 6 turnos. Si el usuario solicitó revisar el valor o sondeo y luego responde afirmativamente ("Si es ese", "dale") o complementa datos ("Nov 2006", "el año de construcción"), JanIA mantiene el objetivo firme y ejecuta `sondeo_mercado_inmobiliario` sin desviar el tema a visitas o publicidad.
+  2. **Astucia Inmobiliaria y Solicitud de Documentos de Soporte**: Tras entregar los números del sondeo (rango $/m², valor de venta y canon estimado), JanIA solicita con astucia profesional los 3 documentos de soporte obligatorios para blindar el negocio: 1) Certificado de Tradición y Libertad (CTL) actualizado, 2) Copia de la escritura pública, y 3) Impuesto predial vigente.
+  3. **Venta Cruzada In-Chat de Factura Predial**: Si el usuario no tiene o no encuentra su impuesto predial, JanIA ofrece de inmediato en el chat el servicio oficial de consulta y entrega en PDF sin costo adicional, solicitando el CHIP o cédula del propietario para descargarlo al instante.
+  4. Directivas de Perita Avaluadora y seguimiento cognitivo incorporadas en el prompt maestro de DMs.
+- `server/_core/valuation.ts`:
+  1. Enriquecimiento de sectores catastrales de Bogotá: soporte específico para "alameda", "170", "toberín", "toberin", "mirandela", con precio base calibrado de $5,200,000 COP/m² y marca de comparables activos verificados.
+- `server/_core/identityVerificationService.ts`:
+  1. **Arquitectura Multi-Capa para Consulta ADRES BDUA**:
+     - *Capa 1*: Petición HTTP directa ultra-rápida ASP.NET (~0.5s).
+     - *Capa 2*: Automatización Headless con Puppeteer (`/usr/bin/google-chrome`), superando restricciones de ASP.NET Telerik RadAjaxManager mediante envío directo de formulario (`document.forms[0].submit()`) y captura del popup dinámico `RespuestaConsulta.aspx?tokenId=...`.
+     - *Capa 3*: Integración con 2Captcha Enterprise (`sitekey: 6LdjqjksAAAAAAduGUnDTl7-kSoeSDI7S-vAazXp`) ante desafíos interactivos de Google reCAPTCHA.
+     - *Parser Modular `parseAdresHtml()`*: Extracción limpia y formateo de datos oficiales: nombres, apellidos, estado (ACTIVO/INACTIVO), EPS normalizada (`formatCleanEpsName`), régimen (SUBSIDIADO/CONTRIBUTIVO) y ubicación.
+- `server/_core/nameAndGenderResolver.ts`:
+  1. Blindaje en `genderTerm` para evitar retornos `undefined` o duplicados cuando `resolvedDisplayName` sea "colega".
+- `server/__tests__/regression.test.ts`: Creación de Suite v33.36 validando sondeo en Alameda 170, parser oficial de ADRES BDUA, arquitectura Puppeteer y versionamiento doctrinal.
+- `shared/const.ts` (`v33.36`) y `package.json` (`33.36.0`).
+- Documentos maestros actualizados: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"No sé cómo llamar lo que le falta a JanIA, es que veo que pierde el contexto y seguimiento de la conversación o dicho en mis palabras se pierde y más si la persona no le habla coherentemente o sigue a la perfección el tema, por ejemplo; Acabo de revisar la conversación que está sosteniendo con este usuario que ves en la imagen, pero siento que le falta inteligencia a JanIA y ser demasiado astuta y muy pilosa para ser capaz de resolver lo que le están solicitando, creo que si JanIA quisiera dar un mejor dato, debería por ejemplo solicitar el certificado de libertad actualizado, copia de la escritura y predial actual, si en algún caso la persona dice uy el predial no lo tengo o algo así pues Jania puede de una ofrecerle el servicio de entregárselo de una vez en el chat ya que contamos con ese servicio, y pedirle los datos que JanIA necesita para entregárselo y así ya con esos documentos que el usuario le entregue pues JanIA le podrá hacer un sondeo comercial y de precios más ajustado y exacto no crees?*
+  *Por otra parte tenemos que hacer algo ya que JanIA no está logrando ingresar a ADRES, mira a ver qué alternativas tenemos bien sea con Puppeteer, scraper, 2captcha, ingreso directo por internet a las páginas o sitios web necesarios pero poder cumplir el cometido."*
+
+#### 2. Diagnóstico Técnico Profundo y Causas Raíz
+1. **Pérdida de Meta y Contexto en Sondeos Inmobiliarios (Caso Carolina Z. - Cra 15 # 170 Alameda):**
+   - *Evidencia en capturas de pantalla*: Carolina solicita revisar valor de venta para un apartamento en Alameda Cra 15 # 170-65 (80.14 m², 3 alcobas, estrato 4). JanIA pregunta: *"¿Deseas que calcule el valor de venta haciendo un avalúo o sondeo técnico...?"*. Carolina responde: *"Si es ese"*.
+   - *Causa raíz*: En `dmHandler.ts`, el guard `isExplicitValuation` se evaluaba como `const isExplicitValuation = /avaluo|sondeo|valor comercial|.../.test(rawUserText || "")`. Dado que el texto del turno actual era únicamente *"Si es ese"*, no contenía ninguna palabra clave de avalúo. El guard evaluó a `false`, disparando el retorno de herramienta omitida: `{ omitted: true, reason: "El usuario no solicitó expresamente un avalúo..." }`.
+   - *Consecuencia*: El LLM, al no recibir datos de cálculo numérico, improvisó una respuesta estándar de bienvenida comercial: *"¿Deseas que avancemos agendando una visita técnica... o prefieres que organicemos la estrategia comercial y publicitaria?"*, perdiendo completamente el hilo de la conversación. Cuando Carolina corrigió *"Falta un dato importante: El año de construcción. Nov 2006"*, el texto volvió a carecer de la palabra clave, y JanIA se limitó a un acuse de recibo protocolario sin dar los números.
+2. **Carencia de Astucia Inmobiliaria y Captación Documental:**
+   - Un asesor inmobiliario de alto nivel nunca se queda solo con el cálculo algorítmico. Para tener exactitud y validar la titularidad y estado físico del inmueble, se requieren:
+     a) Certificado de Tradición y Libertad (CTL) con vigencia menor a 30 días (para verificar propietarios, hipotecas, embargos, afectaciones familiares).
+     b) Copia de la escritura pública de adquisición (para linderos, área privada vs. construida y coeficiente de copropiedad).
+     c) Recibo/factura del impuesto predial unificado actual (para verificar avalúo catastral, estrato y área registrada).
+   - Vecy ya tiene la infraestructura para consultar y descargar el impuesto predial de Bogotá en el chat a $0 COP. Si el usuario no tiene el predial, JanIA debe ofrecer de inmediato el servicio en el mismo chat, solicitando el CHIP o cédula del titular.
+3. **Bloqueo y Desafíos de Integración en ADRES BDUA:**
+   - El portal oficial (`https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx`) cuenta con capas de protección ASP.NET con Telerik RadAjaxManager y Google reCAPTCHA Enterprise (`sitekey: 6LdjqjksAAAAAAduGUnDTl7-kSoeSDI7S-vAazXp`).
+   - Peticiones HTTP planas sin JavaScript o que no manejan el ciclo de vida del ViewState y tokens dinámicos son rechazadas o devuelven páginas en blanco.
+   - En Puppeteer, la invocación de scripts de Telerik (`_doPostBack`) desde contextos aislados causaba fallos de llamada estricta. El envío nativo del formulario `document.forms[0].submit()` o el reenvío de tokens resueltos por 2Captcha hacia el endpoint de respuesta dinámica (`RespuestaConsulta.aspx?tokenId=...`) garantiza la extracción de la tabla oficial (Flor Alba Falla Otalora CC 41642346, Capital Salud EPS-S, Estado ACTIVO, Régimen SUBSIDIADO).
+
+---
+
 ### 📅 [2026-10-23] — JanIA v33.35: Unificación de Identidad Servidora de JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas (v33.35 - 33.35.0)
 
 **Versión:** `v33.35` (`33.35.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

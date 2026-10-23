@@ -415,7 +415,7 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
   }
 
   const courtesyWord = isFemale ? "estimada" : "estimado";
-  const genderTerm = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
+  const genderTerm = resolvedDisplayName ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
   const effectiveGreeting = timeGreeting || "Hola";
   const fullGreeting = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${effectiveGreeting}, ${genderTerm} 👋🏻` : `${effectiveGreeting} 👋🏻`;
 

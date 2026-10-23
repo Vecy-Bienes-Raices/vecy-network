@@ -206,6 +206,8 @@ export function executeMarketValuationSurvey(params: {
     basePrice = 5800000;
   } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
     basePrice = 5500000;
+  } else if (zonaLower.includes("alameda") || zonaLower.includes("170") || zonaLower.includes("toberín") || zonaLower.includes("toberin") || zonaLower.includes("mirandela")) {
+    basePrice = 5200000;
   } else if (zonaLower.includes("bogotá") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
     basePrice = 6500000;
   } else {

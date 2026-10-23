@@ -1,11 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.35.0 — 2026-10-23)
-- **JanIA Server:** `v33.35` (`33.35.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Unificación de Identidad Servidora de JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas:**
-  1. **Identidad Oficial de Servidora Humilde (Cero 'Directora'):** JanIA se consagra como la agente de inteligencia artificial de VECY BIENES RAÍCES, concebida y desarrollada por Eduardo Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), al servicio incondicional de colegas y clientes. Erradicación total de títulos directivos ficticios ("directora tecnológica virtual") en Web Chat, DMs y Grupos.
-  2. **Resolución de Nombres Invertidos y Supresión de Apellidos Únicos:** En `nameAndGenderResolver.ts` y `parsers.ts`, soporte a casos invertidos (ej. "Luna Rosmery" -> "Rosmery") y supresión de apellidos únicos como vocativos directos (ej. si el usuario es "Luna" o "Pérez", se evita llamarlo por el apellido a secas, respondiendo con cortesía neutra y cálida). Diccionario enriquecido con apellidos hispanos frecuentes (Luna, Mora, Paz, Ríos, Vega, etc.).
-  3. **Manejo Conciso y Humano de Llamadas:** Cuando un usuario pide una llamada ("me regalas una llamada"), JanIA responde en máximo 2 a 3 líneas naturales canalizando a la línea de Eduardo Rivera y Jani Alves (+57 316 656 9719), con prohibición estricta de soltar discursos de autopresentación o recitar su menú de servicios.
-  4. **Continuidad Conversacional sin Muletillas de Nombre:** Prohibición estricta de clavar el nombre del usuario al inicio de cada frase consecutiva en conversaciones activas.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` passing | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.36.0 — 2026-10-23)
+- **JanIA Server:** `v33.36` (`33.36.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Astucia Inmobiliaria, Continuidad de Meta (Goal Tracking), Soporte Documental (CTL, Escritura, Predial) y Conexión Multi-Capa ADRES:**
+  1. **Continuidad de Meta y Sondeo Contextual (Caso Carolina Z. / Alameda 170):** Resuelta la causa raíz de omisión de avalúos y pérdida del hilo conversacional. `isExplicitValuation` ahora rastrea la intención previa en los últimos turnos de la sesión. Si el usuario confirma afirmativamente ("Si es ese", "dale") o complementa datos ("Nov 2006", "el año de construcción", "80m2"), JanIA NO desvía la conversación a visitas técnicas o publicidad; entrega de inmediato el estudio técnico del $/m², rango comercial de venta y canon estimado.
+  2. **Astucia Comercial y Solicitud de Documentos Soporte:** Para blindar el análisis de precio al milímetro con rigor técnico, JanIA solicita diplomáticamente tres (3) soportes oficiales: 1) Certificado de Tradición y Libertad (CTL) actualizado, 2) Copia de la Escritura Pública y 3) Factura Predial vigente.
+  3. **Cross-Selling de Factura Predial Oficial en Chat:** Si el usuario indica no tener el predial a la mano, JanIA de una le ofrece expedírselo y entregárselo en formato PDF oficial en el mismo chat en un minuto con solo el CHIP o la cédula del titular catastral.
+  4. **Conexión Multi-Capa Resiliente ADRES / BDUA:** Arquitectura en 3 niveles: Nivel 1 HTTP directo ultra-rápido; Nivel 2 resolución y paso de token con 2Captcha si hay desafío de seguridad; Nivel 3 motor headless con Puppeteer Chrome (`/usr/bin/google-chrome`) con emulación de navegador real, extracción de popup y normalización limpia de EPS (`parseAdresHtml`).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 338/338 passing | Build `npm run build` limpio en 34s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

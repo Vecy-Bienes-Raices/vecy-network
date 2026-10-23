@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.35";
+    VECY_VERSION = "v33.36";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10122,7 +10122,7 @@ function resolveNameAndGender(rawName, timeGreeting) {
     }
   }
   const courtesyWord = isFemale ? "estimada" : "estimado";
-  const genderTerm = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
+  const genderTerm = resolvedDisplayName ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
   const effectiveGreeting = timeGreeting || "Hola";
   const fullGreeting = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}` : `${effectiveGreeting} \u{1F44B}\u{1F3FB}`;
   return {
@@ -14928,6 +14928,8 @@ function executeMarketValuationSurvey(params) {
     basePrice = 58e5;
   } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
     basePrice = 55e5;
+  } else if (zonaLower.includes("alameda") || zonaLower.includes("170") || zonaLower.includes("tober\xEDn") || zonaLower.includes("toberin") || zonaLower.includes("mirandela")) {
+    basePrice = 52e5;
   } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
     basePrice = 65e5;
   } else {
@@ -27299,7 +27301,9 @@ __export(identityVerificationService_exports, {
   isDecliningCompanyMemberVerification: () => isDecliningCompanyMemberVerification,
   mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
+  parseAdresHtml: () => parseAdresHtml,
   queryAdres: () => queryAdres,
+  queryAdresViaPuppeteer: () => queryAdresViaPuppeteer,
   queryContraloria: () => queryContraloria,
   queryEmpresaOrNit: () => queryEmpresaOrNit,
   queryPoliciaNacional: () => queryPoliciaNacional2,
@@ -27716,16 +27720,17 @@ async function queryAdres(tipoDoc, numDoc) {
           await new Promise((r) => setTimeout(r, 600));
           continue;
         }
-        return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: lastError };
+        break;
       }
-      const postData = querystring.stringify({
+      const postDataObj = {
         __VIEWSTATE: vs,
         __VIEWSTATEGENERATOR: vsg,
         __EVENTVALIDATION: ev,
         tipoDoc: mappedTipo,
         txtNumDoc: cleanNum,
         btnConsultar: "Consultar"
-      });
+      };
+      const postData = querystring.stringify(postDataObj);
       const postHeaders = {
         "Host": "aplicaciones.adres.gov.co",
         "User-Agent": userAgent,
@@ -27753,112 +27758,38 @@ async function queryAdres(tipoDoc, numDoc) {
       const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
       const allCookies = [...c1, ...c2].join("; ");
       const m = r2.body.match(/window\.open\('([^']+)'/);
-      if (!m) {
-        const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+      if (m && m[1]) {
+        const popupUrl = m[1];
+        const r3 = await httpRequest({
+          hostname: ep.host,
+          port: ep.port,
+          path: "/BDUA_Internet/Pages/" + popupUrl,
+          method: "GET",
+          headers: {
+            "Host": "aplicaciones.adres.gov.co",
+            "User-Agent": userAgent,
+            "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
+            "Cookie": allCookies,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
+          },
+          timeout: 15e3
+        });
+        if (r3.statusCode === 200 && !r3.body.includes("Error de servidor")) {
+          const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
+          if (parsed.success) {
+            return parsed;
+          }
+        }
+      }
+      const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+      if (alertMatch && alertMatch[1] && alertMatch[1].toLowerCase().includes("no se encuentra")) {
         return {
           success: false,
           source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
-          error: alertMatch ? alertMatch[1] : "El ciudadano no registra afiliaci\xF3n vigente en la Base de Datos \xDAnica de Afiliados (BDUA)"
+          error: alertMatch[1]
         };
       }
-      const popupUrl = m[1];
-      const r3 = await httpRequest({
-        hostname: ep.host,
-        port: ep.port,
-        path: "/BDUA_Internet/Pages/" + popupUrl,
-        method: "GET",
-        headers: {
-          "Host": "aplicaciones.adres.gov.co",
-          "User-Agent": userAgent,
-          "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
-          "Cookie": allCookies,
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-          "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
-        },
-        timeout: 15e3
-      });
-      if (r3.statusCode !== 200 || r3.body.includes("Error de servidor")) {
-        lastError = "Intermitencia en el servidor ADRES";
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 600));
-          continue;
-        }
-        return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: lastError };
-      }
-      const lines = r3.body.replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
-      const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
-      const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
-      const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : "";
-      const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "";
-      const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
-      const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
-      const departamento = depIdx !== -1 ? lines[depIdx + 1] : "";
-      const municipio = munIdx !== -1 ? lines[munIdx + 1] : "";
-      const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
-      let estado = "";
-      let eps = "";
-      let regimen = "";
-      if (estadoIdx !== -1) {
-        const offset = 6;
-        estado = lines[estadoIdx + offset] || "";
-        eps = lines[estadoIdx + offset + 1] || "";
-        regimen = lines[estadoIdx + offset + 2] || "";
-      }
-      if (!regimen) {
-        const regMatch = r3.body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
-        if (regMatch) {
-          regimen = regMatch[1].toUpperCase();
-        }
-      }
-      if (!estado) {
-        const estMatch = r3.body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
-        if (estMatch) {
-          estado = estMatch[1].toUpperCase();
-        }
-      }
-      if (!eps || eps.length < 3) {
-        const entidadIdx = lines.findIndex((l) => {
-          const u = l.toUpperCase();
-          return u === "ENTIDAD" || u === "ENTIDAD PROMOTORA" || u.includes("ADMINISTRADORA");
-        });
-        if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
-          eps = lines[entidadIdx + 1];
-        }
-      }
-      if (!eps || eps.length < 3) {
-        const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
-        const directMatch = r3.body.match(epsRegex);
-        if (directMatch) {
-          eps = directMatch[0];
-        }
-      }
-      const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, " ").trim();
-      if (!fullNameRaw) {
-        return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No se encontraron datos de identidad en ADRES" };
-      }
-      const officialName = formatTitleCase(fullNameRaw);
-      const cleanEps = formatCleanEpsName(eps);
-      identityCache.set(cacheKey, {
-        fullName: officialName,
-        eps: cleanEps || void 0,
-        estado: estado ? estado.toUpperCase() : void 0,
-        regimen: regimen ? regimen.toUpperCase() : void 0,
-        timestamp: Date.now()
-      });
-      return {
-        success: true,
-        officialName,
-        nombres: formatTitleCase(nombres),
-        apellidos: formatTitleCase(apellidos),
-        documentType: mappedTipo,
-        documentNumber: cleanNum,
-        departamento: formatTitleCase(departamento),
-        municipio: formatTitleCase(municipio),
-        estado: estado ? estado.toUpperCase() : void 0,
-        eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, " ").trim() : void 0),
-        regimen: regimen ? regimen.toUpperCase() : void 0,
-        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)"
-      };
     } catch (err) {
       lastError = `Intermitencia de conexi\xF3n con ADRES: ${err?.message || err}`;
       if (attempt < 2) {
@@ -27867,11 +27798,182 @@ async function queryAdres(tipoDoc, numDoc) {
       }
     }
   }
+  try {
+    const puppeteerResult = await queryAdresViaPuppeteer(mappedTipo, cleanNum);
+    if (puppeteerResult && puppeteerResult.success) {
+      return puppeteerResult;
+    }
+    if (puppeteerResult && puppeteerResult.error && !puppeteerResult.error.includes("Error en navegaci\xF3n")) {
+      return puppeteerResult;
+    }
+  } catch (puppetErr) {
+    console.warn("[queryAdres] Fallback Puppeteer advertencia:", puppetErr?.message || puppetErr);
+  }
   return {
     success: false,
     source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
     error: lastError
   };
+}
+function parseAdresHtml(body, mappedTipo, cleanNum) {
+  const lines = (body || "").replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+  const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
+  const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
+  const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : "";
+  const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "";
+  const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
+  const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
+  const departamento = depIdx !== -1 ? lines[depIdx + 1] : "";
+  const municipio = munIdx !== -1 ? lines[munIdx + 1] : "";
+  const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
+  let estado = "";
+  let eps = "";
+  let regimen = "";
+  if (estadoIdx !== -1) {
+    const offset = 6;
+    estado = lines[estadoIdx + offset] || "";
+    eps = lines[estadoIdx + offset + 1] || "";
+    regimen = lines[estadoIdx + offset + 2] || "";
+  }
+  if (!regimen) {
+    const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
+    if (regMatch) {
+      regimen = regMatch[1].toUpperCase();
+    }
+  }
+  if (!estado) {
+    const estMatch = body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
+    if (estMatch) {
+      estado = estMatch[1].toUpperCase();
+    }
+  }
+  if (!eps || eps.length < 3) {
+    const entidadIdx = lines.findIndex((l) => {
+      const u = l.toUpperCase();
+      return u === "ENTIDAD" || u === "ENTIDAD PROMOTORA" || u.includes("ADMINISTRADORA");
+    });
+    if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
+      eps = lines[entidadIdx + 1];
+    }
+  }
+  if (!eps || eps.length < 3) {
+    const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+    const directMatch = body.match(epsRegex);
+    if (directMatch) {
+      eps = directMatch[0];
+    }
+  }
+  const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, " ").trim();
+  if (!fullNameRaw) {
+    return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No se encontraron datos de identidad en ADRES" };
+  }
+  const officialName = formatTitleCase(fullNameRaw);
+  const cleanEps = formatCleanEpsName(eps);
+  const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
+  identityCache.set(cacheKey, {
+    fullName: officialName,
+    eps: cleanEps || void 0,
+    estado: estado ? estado.toUpperCase() : void 0,
+    regimen: regimen ? regimen.toUpperCase() : void 0,
+    timestamp: Date.now()
+  });
+  return {
+    success: true,
+    officialName,
+    nombres: formatTitleCase(nombres),
+    apellidos: formatTitleCase(apellidos),
+    documentType: mappedTipo,
+    documentNumber: cleanNum,
+    departamento: formatTitleCase(departamento),
+    municipio: formatTitleCase(municipio),
+    estado: estado ? estado.toUpperCase() : void 0,
+    eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, " ").trim() : void 0),
+    regimen: regimen ? regimen.toUpperCase() : void 0,
+    source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)"
+  };
+}
+async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
+  const puppeteer = (await import("puppeteer")).default;
+  const fs14 = await import("fs");
+  const executablePath = fs14.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs14.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
+  let browser = null;
+  try {
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-blink-features=AutomationControlled",
+        "--ignore-certificate-errors"
+      ]
+    });
+    const page = await browser.newPage();
+    page.setDefaultTimeout(25e3);
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+    await page.goto("https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx", {
+      waitUntil: "domcontentloaded",
+      timeout: 25e3
+    });
+    await page.waitForSelector("#txtNumDoc", { timeout: 15e3 });
+    await page.evaluate((tipo, num) => {
+      const sel = document.getElementById("tipoDoc");
+      if (sel) sel.value = tipo;
+      const inp = document.getElementById("txtNumDoc");
+      if (inp) inp.value = num;
+      const hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.name = "btnConsultar";
+      hidden.value = "Consultar";
+      document.forms[0]?.appendChild(hidden);
+    }, mappedTipo, cleanNum);
+    let popupUrl = "";
+    page.on("response", async (res) => {
+      if (res.url().includes("ConsultarAfiliadoWeb_2")) {
+        try {
+          const text2 = await res.text();
+          const m = text2.match(/window\.open\(\x27([^\x27]+)\x27/);
+          if (m && m[1]) popupUrl = m[1];
+        } catch (_) {
+        }
+      }
+    });
+    await page.evaluate(() => {
+      document.forms[0]?.submit();
+    });
+    for (let i = 0; i < 24; i++) {
+      if (popupUrl) break;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (popupUrl) {
+      await page.goto("https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/" + popupUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 15e3
+      });
+      const html = await page.content();
+      return parseAdresHtml(html, mappedTipo, cleanNum);
+    }
+    const currentHtml = await page.content();
+    if (currentHtml.includes("Informaci\xF3n B\xE1sica del Afiliado") || currentHtml.includes("Resultados de la consulta")) {
+      return parseAdresHtml(currentHtml, mappedTipo, cleanNum);
+    }
+    return {
+      success: false,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Puppeteer)",
+      error: "El ciudadano no registra afiliaci\xF3n vigente en la Base de Datos \xDAnica de Afiliados (BDUA)"
+    };
+  } catch (err) {
+    return {
+      success: false,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Puppeteer)",
+      error: `Error en navegaci\xF3n headless ADRES: ${err?.message || err}`
+    };
+  } finally {
+    if (browser) await browser.close().catch(() => {
+    });
+  }
 }
 function savePendingCedulaSession(userId, items, reportText, success) {
   if (!userId) return;
@@ -29563,7 +29665,22 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       };
     }
     case "sondeo_mercado_inmobiliario": {
-      const isExplicitValuation = /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje)\b/i.test(rawUserText || "");
+      let isExplicitValuation = /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje|revisar\s+(?:otro\s+)?valor|valor\s+de\s+venta)\b/i.test(rawUserText || "");
+      if (!isExplicitValuation && userId) {
+        try {
+          const recentHistory = await getOrLoadDmHistory(userId);
+          const lastFewTurns = recentHistory.slice(-6);
+          const hadPriorValuationIntent = lastFewTurns.some(
+            (t2) => /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje|revisar\s+(?:otro\s+)?valor|valor\s+de\s+venta|sondeo\s+t[eé]cnico|calcule\s+el\s+valor)\b/i.test(t2.content)
+          );
+          const isAffirmativeConfirmation = /\b(?:s[ií]|si\s+es\s+ese|claro|dale|adelante|procede|de\s+una|por\s+fa|por\s+favor|hazlo|calc[uú]lalo|ese\s+mismo|correcto)\b/i.test(rawUserText || "");
+          const isPropertyDataUpdate = /\b(?:a[ñn]o|construcci[oó]n|antig[uü]edad|piso|m2|metros|habitaci[oó]n|habitaciones|ba[ñn]os|garaje|noviembre|nov|200[0-9]|201[0-9]|202[0-9]|estrato)\b/i.test(rawUserText || "");
+          if (hadPriorValuationIntent && (isAffirmativeConfirmation || isPropertyDataUpdate || args.zonaOBarrio || args.areaM2)) {
+            isExplicitValuation = true;
+          }
+        } catch (_) {
+        }
+      }
       if (!isExplicitValuation) {
         return {
           toolType: "sondeo",
@@ -29873,6 +29990,21 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
     specialToolInstructions = `- HERRAMIENTA: Consulta de Cat\xE1logo Oficial de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719).
 - Presenta de forma clara y organizada las propiedades encontradas con su c\xF3digo (#P...), tipo, ubicaci\xF3n, precio o canon y metraje, junto con el valor promedio de $/m\xB2 de la zona.
 - Invita cordialmente a comunicarse con Eduardo Rivera o Jani Alves a la l\xEDnea de atenci\xF3n de br\xF3ker (+57 316 656 9719) para coordinar visitas o recibir dossier completo.
+`;
+  } else if (toolType === "sondeo") {
+    specialToolInstructions = `- HERRAMIENTA: Sondeo T\xE9cnico Inmobiliario y Estudio de Valor Comercial ($/m\xB2 y Canon sugerido).
+- EXPERTA AVALUADORA VECY (ESTRUCTURA CLARA, DIRECTA Y ATRACTIVA EN WHATSAPP):
+  * Entrega de inmediato el valor estimado del m\xB2 homologado para la zona/barrio, el rango de precio comercial de venta sugerido y el canon estimado de arriendo.
+  * Menciona los factores t\xE9cnicos de valorizaci\xF3n tenidos en cuenta (piso, club house, parqueadero, estrato, antig\xFCedad y din\xE1mica de la zona).
+- CONTINUIDAD CONVERSACIONAL Y METAS (GOAL TRACKING):
+  * Si el usuario consult\xF3 el valor o complement\xF3 datos (ej. a\xF1o de construcci\xF3n "Nov 2006"), ENTREGA EL VALOR Y C\xC1LCULO DE INMEDIATO. Queda TERMINANTEMENTE PROHIBIDO desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios sin haber entregado primero el sondeo de precio que el usuario pidi\xF3.
+- ASTUCIA COMERCIAL Y SOLICITUD DE DOCUMENTOS SOPORTE (DOCTRINA EDUARDO A. RIVERA):
+  * Explica con autoridad profesional y calidez que este estudio comparativo de mercado es de alta precisi\xF3n, pero que para blindar el precio de venta definitivo al mil\xEDmetro y no perder compradores ni tiempo, se deben cotejar tres (3) documentos clave:
+    1. \u{1F4DC} *Certificado de Tradici\xF3n y Libertad (CTL) actualizado:* Para verificar el \xE1rea privada real en el Reglamento de Propiedad Horizontal (RPH), linderos, grav\xE1menes, hipotecas o embargos vigentes.
+    2. \u{1F4D1} *Copia de la Escritura P\xFAblica:* Para cotejar titularidad, linderos de garaje/dep\xF3sito y verificar afectaciones a vivienda familiar o patrimonio de familia inembargable.
+    3. \u{1F3DB}\uFE0F *Factura del Impuesto Predial del a\xF1o vigente:* Para validar el estrato catastral oficial, aval\xFAo catastral y c\xF3digo CHIP.
+- CROSS-SELLING DE SERVICIOS VECY IN-CHAT (GENERACI\xD3N DE PREDIAL EN PDF):
+  * Ofr\xE9cele con total simpat\xEDa y servicialidad que si no tiene el Predial a la mano o no lo ha descargado, en VECY contamos con el servicio oficial para consultarlo y expedirlo en PDF en este mismo chat en un minuto: que solo te comparta el c\xF3digo CHIP o la c\xE9dula del titular catastral y se lo descargas de inmediato \u{1F4C4}\u2728. Y que si necesita el Certificado de Libertad, tambi\xE9n la guiamos para tenerlo al d\xEDa.
 `;
   }
   const synthPrompt = [
@@ -30291,7 +30423,11 @@ ${contactDossier ? `${contactDossier}
 ` : ""}ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
-3. Perita Avaluadora: Sondeos de m\xB2 y c\xE1nones por zonas del norte de Bogot\xE1 con honestidad t\xE9cnica (Cero Alucinaci\xF3n). REGLA MANDATORIA DE APAGADO AUTOM\xC1TICO: NUNCA liquides aval\xFAos, estudios de valor de m\xB2 ni peritajes cuando un usuario solo env\xEDe datos de un inmueble o requerimiento. \xDANICAMENTE se liquida aval\xFAo si el usuario escribe de manera EXPRESA palabras como 'avaluo', 'aval\xFAo', 'avaluar', 'cuanto vale' o 'cu\xE1nto vale'.
+3. Perita Avaluadora y Asesora de Precios de Venta: Sondeos de m\xB2 y c\xE1nones por zonas de Bogot\xE1 con honestidad t\xE9cnica y comparables homologados (Cero Alucinaci\xF3n).
+  * Si el usuario solicita conocer o revisar el valor de venta, precio de mercado o aval\xFAo de una propiedad (o dice 'quiero revisar otro valor', 'cu\xE1nto vale', 'a c\xF3mo est\xE1 el metro'): Invoca de inmediato 'sondeo_mercado_inmobiliario'.
+  * CONTINUIDAD DE LA META (GOAL TRACKING): Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado.
+  * DOCTRINA DE ASTUCIA COMERCIAL Y SOPORTE DOCUMENTAL (DOCTRINA EDUARDO A. RIVERA): Al entregar el sondeo o al asesorar sobre el precio de venta, JanIA solicita con perspicacia y autoridad profesional los tres (3) documentos soporte indispensables para blindar el valor definitivo al mil\xEDmetro: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado, 2) Copia de la Escritura P\xFAblica y 3) Factura Predial del a\xF1o vigente.
+  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL O DOCUMENTOS (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece expedirlo y entreg\xE1rselo en PDF de forma gratuita en este mismo chat en un minuto: le pide el CHIP o la c\xE9dula del titular catastral y se lo genera aqu\xED mismo \u{1F4C4}\u2728.
 4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
 5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
 6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.

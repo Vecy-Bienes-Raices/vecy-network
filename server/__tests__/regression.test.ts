@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36)\.0/);
     });
   });
 
@@ -7091,11 +7091,82 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.35");
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.35.0");
+      expect(pkg.version).toMatch(/^33\.(35|36)\.0/);
+    });
+  });
+
+  describe("Suite v33.36 — Astucia Inmobiliaria, Continuidad de Meta (Goal Tracking), Soporte Documental (CTL, Escritura, Predial) y Conexión Multi-Capa ADRES", () => {
+    it("1. Continuidad de meta y sondeo de mercado con datos complementarios (zona Alameda / Cra 15 con 170)", async () => {
+      const { executeMarketValuationSurvey } = await import("../_core/valuation");
+      const surveyAlameda = executeMarketValuationSurvey({
+        zonaOBarrio: "Alameda Cra 15 con Calle 170",
+        areaM2: 80.14,
+        estrato: 4,
+        antiguedadAnos: 19,
+        garajes: 1,
+        piso: 9,
+        esClubHouse: true
+      });
+
+      expect(surveyAlameda).toBeDefined();
+      expect(surveyAlameda.tieneComparablesVerificados).toBe(true);
+      expect(surveyAlameda.valorM2Estimado).toBeGreaterThan(3000000);
+      expect(surveyAlameda.valorComercialSugerido).toBeGreaterThan(250000000);
+      expect(surveyAlameda.canonArriendoEstimado).toBeGreaterThan(1000000);
+    });
+
+    it("2. parseAdresHtml extrae con exactitud los datos de afiliación y salud de ADRES BDUA", async () => {
+      const { parseAdresHtml } = await import("../_core/identityVerificationService");
+      const sampleHtml = `
+        <table>
+          <tr><td>TIPO DE IDENTIFICACIÓN</td><td>CC</td></tr>
+          <tr><td>NÚMERO DE IDENTIFICACION</td><td>41642346</td></tr>
+          <tr><td>NOMBRES</td><td>FLOR ALBA</td></tr>
+          <tr><td>APELLIDOS</td><td>FALLA OTALORA</td></tr>
+          <tr><td>DEPARTAMENTO</td><td>BOGOTA D.C.</td></tr>
+          <tr><td>MUNICIPIO</td><td>BOGOTA D.C.</td></tr>
+        </table>
+        <table>
+          <tr>
+            <th>ESTADO</th><th>ENTIDAD</th><th>REGIMEN</th><th>FECHA DE AFILIACIÓN EFECTIVA</th><th>FECHA DE FINALIZACIÓN</th><th>TIPO DE AFILIADO</th>
+          </tr>
+          <tr>
+            <td>ACTIVO</td>
+            <td>CAPITAL SALUD ENTIDAD PROMOTORA DE SALUD DEL RÉGIMEN SUBSIDIADO SAS "CAPITAL SALUD EPS-S S.A.S."</td>
+            <td>SUBSIDIADO</td>
+            <td>15/06/2017</td>
+            <td>31/12/2999</td>
+            <td>CABEZA DE FAMILIA</td>
+          </tr>
+        </table>
+      `;
+
+      const parsed = parseAdresHtml(sampleHtml, "CC", "41642346");
+      expect(parsed.success).toBe(true);
+      expect(parsed.officialName).toBe("Flor Alba Falla Otalora");
+      expect(parsed.eps).toBe("Capital Salud EPS-S");
+      expect(parsed.estado).toBe("ACTIVO");
+      expect(parsed.regimen).toBe("SUBSIDIADO");
+      expect(parsed.departamento).toBe("Bogota D.c.");
+      expect(parsed.municipio).toBe("Bogota D.c.");
+    });
+
+    it("3. queryAdresViaPuppeteer está definida y exportada para navegación headless resiliente", async () => {
+      const { queryAdresViaPuppeteer } = await import("../_core/identityVerificationService");
+      expect(typeof queryAdresViaPuppeteer).toBe("function");
+    });
+
+    it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.36");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.36.0");
     });
   });
 });

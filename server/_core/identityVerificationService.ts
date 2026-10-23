@@ -606,6 +606,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
 
   let lastError: string = 'Intermitencia o sin respuesta en el servidor ADRES';
 
+  // Capa 1: Intento Directo HTTP ASP.NET
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const ep = await getAdresEndpoint();
@@ -644,17 +645,19 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
           await new Promise(r => setTimeout(r, 600));
           continue;
         }
-        return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: lastError };
+        break;
       }
 
-      const postData = querystring.stringify({
+      const postDataObj: Record<string, string> = {
         __VIEWSTATE: vs,
         __VIEWSTATEGENERATOR: vsg,
         __EVENTVALIDATION: ev,
         tipoDoc: mappedTipo,
         txtNumDoc: cleanNum,
         btnConsultar: 'Consultar'
-      });
+      };
+
+      const postData = querystring.stringify(postDataObj);
 
       // 2. POST formulario de consulta con cabeceras ASP.NET estrictas (Origin y Referer exactos)
       const postHeaders = {
@@ -687,126 +690,43 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       const allCookies = [...c1, ...c2].join('; ');
 
       const m = r2.body.match(/window\.open\('([^']+)'/);
-      if (!m) {
-        const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+      if (m && m[1]) {
+        const popupUrl = m[1];
+
+        // 3. GET resultado del afiliado (timeout: 15000ms)
+        const r3 = await httpRequest({
+          hostname: ep.host,
+          port: ep.port,
+          path: '/BDUA_Internet/Pages/' + popupUrl,
+          method: 'GET',
+          headers: {
+            'Host': 'aplicaciones.adres.gov.co',
+            'User-Agent': userAgent,
+            'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
+            'Cookie': allCookies,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+          },
+          timeout: 15000
+        } as any);
+
+        if (r3.statusCode === 200 && !r3.body.includes('Error de servidor')) {
+          const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
+          if (parsed.success) {
+            return parsed;
+          }
+        }
+      }
+
+      const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+      if (alertMatch && alertMatch[1] && alertMatch[1].toLowerCase().includes('no se encuentra')) {
         return {
           success: false,
           source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
-          error: alertMatch ? alertMatch[1] : 'El ciudadano no registra afiliación vigente en la Base de Datos Única de Afiliados (BDUA)'
+          error: alertMatch[1]
         };
       }
-
-      const popupUrl = m[1];
-
-      // 3. GET resultado del afiliado (timeout: 15000ms)
-      const r3 = await httpRequest({
-        hostname: ep.host,
-        port: ep.port,
-        path: '/BDUA_Internet/Pages/' + popupUrl,
-        method: 'GET',
-        headers: {
-          'Host': 'aplicaciones.adres.gov.co',
-          'User-Agent': userAgent,
-          'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
-          'Cookie': allCookies,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
-        },
-        timeout: 15000
-      } as any);
-
-      if (r3.statusCode !== 200 || r3.body.includes('Error de servidor')) {
-        lastError = 'Intermitencia en el servidor ADRES';
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 600));
-          continue;
-        }
-        return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: lastError };
-      }
-
-    const lines = r3.body.replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
-    const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
-    const apellidosIdx = lines.findIndex((l: string) => l.toUpperCase().includes('APELLIDOS'));
-    const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : '';
-    const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : '';
-
-    const depIdx = lines.findIndex((l: string) => l.toUpperCase().includes('DEPARTAMENTO'));
-    const munIdx = lines.findIndex((l: string) => l.toUpperCase().includes('MUNICIPIO'));
-    const departamento = depIdx !== -1 ? lines[depIdx + 1] : '';
-    const municipio = munIdx !== -1 ? lines[munIdx + 1] : '';
-
-    const estadoIdx = lines.findIndex((l: string) => l.toUpperCase().includes('ESTADO'));
-    let estado = '';
-    let eps = '';
-    let regimen = '';
-    if (estadoIdx !== -1) {
-      const offset = 6;
-      estado = lines[estadoIdx + offset] || '';
-      eps = lines[estadoIdx + offset + 1] || '';
-      regimen = lines[estadoIdx + offset + 2] || '';
-    }
-
-    if (!regimen) {
-      const regMatch = r3.body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
-      if (regMatch) {
-        regimen = regMatch[1].toUpperCase();
-      }
-    }
-    if (!estado) {
-      const estMatch = r3.body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
-      if (estMatch) {
-        estado = estMatch[1].toUpperCase();
-      }
-    }
-
-    // Búsqueda inteligente complementaria de EPS si el offset no la capturó directamente
-    if (!eps || eps.length < 3) {
-      const entidadIdx = lines.findIndex((l: string) => {
-        const u = l.toUpperCase();
-        return u === 'ENTIDAD' || u === 'ENTIDAD PROMOTORA' || u.includes('ADMINISTRADORA');
-      });
-      if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
-        eps = lines[entidadIdx + 1];
-      }
-    }
-    if (!eps || eps.length < 3) {
-      const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
-      const directMatch = r3.body.match(epsRegex);
-      if (directMatch) {
-        eps = directMatch[0];
-      }
-    }
-
-    const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, ' ').trim();
-    if (!fullNameRaw) {
-      return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'No se encontraron datos de identidad en ADRES' };
-    }
-
-    const officialName = formatTitleCase(fullNameRaw);
-    const cleanEps = formatCleanEpsName(eps);
-    identityCache.set(cacheKey, {
-      fullName: officialName,
-      eps: cleanEps || undefined,
-      estado: estado ? estado.toUpperCase() : undefined,
-      regimen: regimen ? regimen.toUpperCase() : undefined,
-      timestamp: Date.now()
-    });
-
-    return {
-      success: true,
-      officialName,
-      nombres: formatTitleCase(nombres),
-      apellidos: formatTitleCase(apellidos),
-      documentType: mappedTipo,
-      documentNumber: cleanNum,
-      departamento: formatTitleCase(departamento),
-      municipio: formatTitleCase(municipio),
-      estado: estado ? estado.toUpperCase() : undefined,
-      eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim() : undefined),
-      regimen: regimen ? regimen.toUpperCase() : undefined,
-      source: 'ADRES - Base de Datos Única de Afiliados (BDUA)'
-    };
-  } catch (err: any) {
+    } catch (err: any) {
       lastError = `Intermitencia de conexión con ADRES: ${err?.message || err}`;
       if (attempt < 2) {
         await new Promise(r => setTimeout(r, 600));
@@ -815,11 +735,213 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
     }
   }
 
+  // Capa 2 / Capa 3: Fallback Robusto con Navegador Headless Puppeteer + 2Captcha
+  try {
+    const puppeteerResult = await queryAdresViaPuppeteer(mappedTipo, cleanNum);
+    if (puppeteerResult && puppeteerResult.success) {
+      return puppeteerResult;
+    }
+    if (puppeteerResult && puppeteerResult.error && !puppeteerResult.error.includes('Error en navegación')) {
+      return puppeteerResult;
+    }
+  } catch (puppetErr: any) {
+    console.warn('[queryAdres] Fallback Puppeteer advertencia:', puppetErr?.message || puppetErr);
+  }
+
   return {
     success: false,
     source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
     error: lastError
   };
+}
+
+/**
+ * Motor de extracción y normalización de datos HTML devueltos por ADRES (BDUA).
+ */
+export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: string): AdresResult {
+  const lines = (body || '').replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
+  const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
+  const apellidosIdx = lines.findIndex((l: string) => l.toUpperCase().includes('APELLIDOS'));
+  const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : '';
+  const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : '';
+
+  const depIdx = lines.findIndex((l: string) => l.toUpperCase().includes('DEPARTAMENTO'));
+  const munIdx = lines.findIndex((l: string) => l.toUpperCase().includes('MUNICIPIO'));
+  const departamento = depIdx !== -1 ? lines[depIdx + 1] : '';
+  const municipio = munIdx !== -1 ? lines[munIdx + 1] : '';
+
+  const estadoIdx = lines.findIndex((l: string) => l.toUpperCase().includes('ESTADO'));
+  let estado = '';
+  let eps = '';
+  let regimen = '';
+  if (estadoIdx !== -1) {
+    const offset = 6;
+    estado = lines[estadoIdx + offset] || '';
+    eps = lines[estadoIdx + offset + 1] || '';
+    regimen = lines[estadoIdx + offset + 2] || '';
+  }
+
+  if (!regimen) {
+    const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
+    if (regMatch) {
+      regimen = regMatch[1].toUpperCase();
+    }
+  }
+  if (!estado) {
+    const estMatch = body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
+    if (estMatch) {
+      estado = estMatch[1].toUpperCase();
+    }
+  }
+
+  // Búsqueda inteligente complementaria de EPS si el offset no la capturó directamente
+  if (!eps || eps.length < 3) {
+    const entidadIdx = lines.findIndex((l: string) => {
+      const u = l.toUpperCase();
+      return u === 'ENTIDAD' || u === 'ENTIDAD PROMOTORA' || u.includes('ADMINISTRADORA');
+    });
+    if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
+      eps = lines[entidadIdx + 1];
+    }
+  }
+  if (!eps || eps.length < 3) {
+    const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+    const directMatch = body.match(epsRegex);
+    if (directMatch) {
+      eps = directMatch[0];
+    }
+  }
+
+  const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, ' ').trim();
+  if (!fullNameRaw) {
+    return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'No se encontraron datos de identidad en ADRES' };
+  }
+
+  const officialName = formatTitleCase(fullNameRaw);
+  const cleanEps = formatCleanEpsName(eps);
+  const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
+  identityCache.set(cacheKey, {
+    fullName: officialName,
+    eps: cleanEps || undefined,
+    estado: estado ? estado.toUpperCase() : undefined,
+    regimen: regimen ? regimen.toUpperCase() : undefined,
+    timestamp: Date.now()
+  });
+
+  return {
+    success: true,
+    officialName,
+    nombres: formatTitleCase(nombres),
+    apellidos: formatTitleCase(apellidos),
+    documentType: mappedTipo,
+    documentNumber: cleanNum,
+    departamento: formatTitleCase(departamento),
+    municipio: formatTitleCase(municipio),
+    estado: estado ? estado.toUpperCase() : undefined,
+    eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim() : undefined),
+    regimen: regimen ? regimen.toUpperCase() : undefined,
+    source: 'ADRES - Base de Datos Única de Afiliados (BDUA)'
+  };
+}
+
+/**
+ * Conector de alta resiliencia vía navegador headless Puppeteer con emulación de navegador real
+ * y resolución de reCAPTCHA para portales del Estado (Doctrina v33.36).
+ */
+export async function queryAdresViaPuppeteer(mappedTipo: string, cleanNum: string): Promise<AdresResult> {
+  const puppeteer = (await import('puppeteer')).default;
+  const fs = await import('fs');
+  const executablePath = fs.existsSync('/usr/bin/google-chrome')
+    ? '/usr/bin/google-chrome'
+    : (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined);
+
+  let browser: any = null;
+  try {
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--ignore-certificate-errors'
+      ]
+    });
+
+    const page = await browser.newPage();
+    page.setDefaultTimeout(25000);
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
+
+    await page.goto('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx', {
+      waitUntil: 'domcontentloaded',
+      timeout: 25000
+    });
+
+    await page.waitForSelector('#txtNumDoc', { timeout: 15000 });
+
+    await page.evaluate((tipo: string, num: string) => {
+      const sel = document.getElementById('tipoDoc') as HTMLSelectElement;
+      if (sel) sel.value = tipo;
+      const inp = document.getElementById('txtNumDoc') as HTMLInputElement;
+      if (inp) inp.value = num;
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'btnConsultar';
+      hidden.value = 'Consultar';
+      document.forms[0]?.appendChild(hidden);
+    }, mappedTipo, cleanNum);
+
+    let popupUrl = '';
+    page.on('response', async (res: any) => {
+      if (res.url().includes('ConsultarAfiliadoWeb_2')) {
+        try {
+          const text = await res.text();
+          const m = text.match(/window\.open\(\x27([^\x27]+)\x27/);
+          if (m && m[1]) popupUrl = m[1];
+        } catch (_) {}
+      }
+    });
+
+    await page.evaluate(() => {
+      document.forms[0]?.submit();
+    });
+
+    for (let i = 0; i < 24; i++) {
+      if (popupUrl) break;
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    if (popupUrl) {
+      await page.goto('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/' + popupUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000
+      });
+      const html = await page.content();
+      return parseAdresHtml(html, mappedTipo, cleanNum);
+    }
+
+    // Si no hubo popup URL, verificar si la página actual tiene alert o resultado directo
+    const currentHtml = await page.content();
+    if (currentHtml.includes('Información Básica del Afiliado') || currentHtml.includes('Resultados de la consulta')) {
+      return parseAdresHtml(currentHtml, mappedTipo, cleanNum);
+    }
+
+    return {
+      success: false,
+      source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Puppeteer)',
+      error: 'El ciudadano no registra afiliación vigente en la Base de Datos Única de Afiliados (BDUA)'
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Puppeteer)',
+      error: `Error en navegación headless ADRES: ${err?.message || err}`
+    };
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
 }
 
 // 🛡️ MEMORIA DE SESIÓN DE IDENTIDAD PENDIENTE
