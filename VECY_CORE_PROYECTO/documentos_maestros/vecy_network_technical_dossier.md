@@ -331,6 +331,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.37 — Octubre 2026
+
+#### [v33.37.0] — 2026-10-23: Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico
+- **Explicación de Regímenes Especiales y de Excepción en ADRES (`identityVerificationService.ts`):**
+  - **Problema:** Cuando una persona no aparecía registrada en BDUA/ADRES, el reporte solo emitía un texto genérico de "sin novedad", generando inquietud o dudas sobre la legalidad de la persona.
+  - **Solución:** Se formalizó la explicación jurídica basada en el Art. 279 de la Ley 100 de 1993: la no aparición en la BDUA general es usual y legítima para afiliados a Regímenes de Excepción (Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, Ecopetrol y Universidades Públicas), quienes cuentan con subsistemas de salud autónomos.
+- **Diálogo Maestro y Persistencia de Sondeos (`dmHandler.ts`):**
+  - **Problema:** Solicitar CTL, escritura y predial para una consulta inicial de sondeo bloqueaba la conversación o resultaba invasivo para el usuario.
+  - **Solución:** JanIA adopta su rol de Perita Avaluadora pidiendo amablemente los 3 datos físicos clave: 1) Dirección exacta con complementarios, 2) Área construida en m² y 3) Tipología de inmueble y número de alcobas o espacios. Si el usuario no responde con precisión, JanIA insiste punto por punto amablemente sin perder la meta.
+- **Honestidad Radical y Cero Engaños de Registro en DMs (`dmHandler.ts`):**
+  - **Problema:** En chats privados, JanIA le dijo a una usuaria (Carolina Z. +57 350 4374572) que había "registrado el dato clave en el sistema de VECY", haciendo creer que el inmueble ya estaba publicado, pero en el catálogo administrativo aparecían 0 inmuebles.
+  - **Solución:** Prohibición absoluta de simular o prometer que un inmueble ha sido guardado o publicado en DMs. JanIA aclara con transparencia que este chat es para sondeos y asesoría, e invita a publicar en el **Grupo 1 Oficial: VECY INMUEBLES NETWORK** (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`), donde el bot Baileys sí cuenta con el motor de ingesta automática a base de datos.
+- **Redacción Oficial Estricta del Predial Bogotá (`dmHandler.ts`, `predialService.ts`):**
+  - **Corrección:** Se actualiza la conjunción obligatoria: para descargar la factura predial en PDF ante la SDH se requieren **ambos** datos: código CHIP del predio **y** cédula o NIT del propietario.
+- **Aprendizaje Histórico sin Saturación (`valuation.ts`):**
+  - Creación de `recordSurveyInquiry` y `getSurveyInquiryHistory` en memoria persistente (últimos 500 sondeos) para registrar cada consulta y nutrir la inteligencia inmobiliaria de VECY sin saturar PostgreSQL.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **341/341 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio.
+
 ### 🔖 v33.36 — Octubre 2026
 
 #### [v33.36.0] — 2026-10-23: Astucia Inmobiliaria, Goal Tracking en Sondeos de Mercado, Documentos de Soporte (CTL, Escritura, Predial) y Acceso Multi-Capa a ADRES

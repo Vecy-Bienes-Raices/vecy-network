@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-23] — JanIA v33.37: Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico (v33.37 - 33.37.0)
+
+**Versión:** `v33.37` (`33.37.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/identityVerificationService.ts`:
+  1. Explicación jurídica de Regímenes Especiales y de Excepción (Ley 100 de 1993, Art. 279) en el reporte de ADRES (BDUA). Si un ciudadano no aparece en la base censal general, se certifica con rigor pericial que esto es habitual en Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, Ecopetrol y Universidades Públicas.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Diálogo maestro de sondeos: JanIA actúa como Perita Avaluadora solicitando con amabilidad y precisión los 3 datos físicos indispensables (Dirección exacta con complementarios, Área m² y Tipo/número de alcobas).
+  2. Persistencia de meta: Si el usuario responde con evasivas o datos incompletos, JanIA insiste amablemente punto por punto hasta lograr los datos necesarios sin desviar la conversación.
+  3. Honestidad radical y cero engaños en DMs: Prohibición estricta de afirmar "he registrado este dato clave en el sistema de VECY" en chats privados si no se ha guardado en el catálogo. JanIA canaliza honestamente al usuario a publicar en el Grupo 1 Oficial: VECY INMUEBLES NETWORK (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`).
+  4. Redacción oficial de Predial Bogotá: Corrección de la conjunción ("CHIP del predio **y** cédula o NIT del propietario"), ambos requeridos por la SDH.
+- `server/_core/valuation.ts`:
+  1. Sistema de aprendizaje histórico en memoria persistente (`recordSurveyInquiry` y `getSurveyInquiryHistory`) para registrar las consultas de sondeo sin sobrecargar la base de datos PostgreSQL.
+- `server/__tests__/regression.test.ts`: Creación de Suite v33.37 validando texto de regímenes de excepción en ADRES, registro de historial de sondeos y versión v33.37.
+- `shared/const.ts` (`v33.37`) y `package.json` (`33.37.0`).
+- Documentos maestros actualizados: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"1. Te recomiendo porque he visto noticias esta semana sobre algo que trató a romper a internet, diecen que los más afectados fueron PHP, APIs de Gemini y Node.js entre otros, ASí que ojo. No se si ya lo sabes y no se cómo estemos en ciberseguridad y protección contra todos eso.
+2. Por otra parte te cuento que ese reporte de Adrés debería JanIA incluirlo si o si cuando verifica un documento CC o CE, y si no aprece allí es porque la persona está afiliada a un sistema de salud estatal como son los militares, policía, los jueces y trabajadores de la rama judicial y Fecode entre otras (No se cual más ni donde podría JanIA averiguar a qué sistema de salud pertenecen).
+3. JanIA responde proactivamente: (Esta frase está mal redactada: '¡No te preocupes por el predial! En VECY contamos con expedición oficial de Bogotá y te lo puedo entregar aquí mismo en el chat en formato PDF en menos de un minuto. Solo compárteme el código CHIP (empieza por AAA...) o el número de cédula del propietario catastral y te lo descargo de una vez.' Lo correcto sería: '¡No te preocupes por el predial! En VECY contamos con expedición oficial de Bogotá y te lo puedo entregar aquí mismo en el chat en formato PDF en menos de un minuto. Solo compárteme el código CHIP del predio (empieza por AAA...) y el número de cédula o Nit del propietario y te lo descargo de una vez.' (para sacar este documento JanIA va a necesitar siempre esos dos datos o no podrá hacerlo jamás)
+4. En cuanto a que JanIA quiera o tenga que solicitar estos documentos... Para dar un sondeo de precios de venta o arriendo en determinada zona o barrio, no es tan así. Eso ya dependerá si el agente, propietario o comprador o inversionista quieren algo mucho más exacto, de resto JanIA simplemente podrá pedir ciertos datos puntuales como la dirección exacta del predio... Cámbia Ubicación por dirección exacta del predio con complementarios de ser necesario Y Si el usuario no responde puntualmente, debe obviar lo que le responda ese usuario y repetirle una por una cada cosa que JanIA necesite hasta lograr el objetivo. Esos datos si nos sirve bastante ya que deberíamos abrir una tabla extra e ir guardandolos para que la misma JanIA y el sistema vayan aprendiendo de los mismos y más adelante tener datos más puntuales, no se si eso sea relevante o crees que no debemos guardar tantos datos hasta reventar jejeje. Tu decides que hacemos o simplemente que JanIA ya lo recuerde.
+5. Por otra parte veo que JanIA engaño a la usuaria diciendole y prometiendole cumplir ordenes que la usuarios le dió cómo lo puedes apreciar en las imágenes o mejor puedes ver desde acá toda la conversación verdad? +57 350 4374572 ese es el número de 'Carolina Z. | eXp Realty'. Mia a ver, me cuentas y si no puedes yo te paso los pantallazos que más pueda.
+6. Por otra parte dime si necesitamos una IA de pago par un mejor funcionamiento, aunquie me da miedo el gasto y más cuando usuarios como CArolica van a querer abusar. HA y apropósito de esto miré si JanIUA en verdad guardó esos inmuebles, pero por un lado afortunadamente no lo hizo y lo desafortunadamentre le dijo mentiras todo el tiempo, eso es malo si esta usuaria quiere poner una queja. Pero hay que decirle a la próxima que si quiere que sus inmuebles o requerimientos se guarden correctamente se una a nuestrao grupo 1 y que JanIA le comparta el enlace y toda la vaina."*
+
+#### 2. Diagnóstico Técnico Profundo y Causas Raíz
+1. **Regímenes Especiales y Excepcionales de Salud en Colombia (Ley 100/1993, Art. 279):**
+   - El subsistema general de salud BDUA/ADRES excluye por ley a sectores con regímenes propios: Fuerzas Militares (DISAN), Policía Nacional, Magisterio/FECODE (FOMAG), servidores y pensionados de Ecopetrol y Universidades Estatales (ej. Unisalud UNAL).
+   - Indicar simplemente "sin novedad" generaba falsas alarmas de indocumentación. Se incorporó la certificación técnica de estos regímenes para contextualizar con rigor jurídico la ausencia de registro en BDUA.
+2. **Sondeo Ágil vs. Blindaje Documental de Cierre:**
+   - La solicitud de CTL, Escritura y Predial como requisito previo asustaba o sobrecargaba la consulta de un sondeo inicial.
+   - El sondeo de mercado debe ser expedito, requiriendo únicamente los 3 datos físicos clave (Dirección exacta, Área m² y Tipología/alcobas), mientras que los documentos oficiales se reservan como recomendación para cierres formales o peritajes certificados.
+3. **Falsa Expectativa y Hallazgo en Admin Panel (Caso Carolina Z. +57 350 4374572):**
+   - En DMs, JanIA respondía con frases halagüeñas como *"he registrado este dato clave en el sistema de VECY"*, lo que hacía creer al usuario que su inmueble estaba publicado en el catálogo web.
+   - Al buscar en el Admin Panel de VECY (`vecy-bienes-raices.vercel.app/admin`), se comprobó que no existían inmuebles para dicho número, evidenciando una promesa falsa (alucinación de cortesía).
+   - Se estableció la doctrina de Honestidad Radical: JanIA nunca simulará que ha guardado el inmueble en DMs y canalizará formalmente al usuario al Grupo 1 Oficial (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`), donde el bot Baileys sí cuenta con el motor de ingesta automática a base de datos.
+4. **Ciberseguridad y Alertas Globales:**
+   - Análisis de incidentes globales recientes en PHP, Node.js y APIs de Gemini: confirmación de la postura defensiva en el VPS (firewall UFW estricto, Node.js en LTS actualizado, proxy inverso Nginx con mitigación HTTP/2 y rate-limiting, y cero exposición de PHP en el stack).
+
+---
+
 ### 📅 [2026-10-23] — JanIA v33.36: Astucia Inmobiliaria, Goal Tracking en Sondeos de Mercado, Documentos de Soporte (CTL, Escritura, Predial) y Acceso Multi-Capa a ADRES (v33.36 - 33.36.0)
 
 **Versión:** `v33.36` (`33.36.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

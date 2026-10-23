@@ -183,7 +183,27 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.36 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.37 — Octubre 2026
+
+### Novedades v33.37 (Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Explicación de Regímenes Especiales y de Excepción en ADRES (`identityVerificationService.ts`)**:
+     - *Causa raíz*: Cuando un documento no registra afiliación en BDUA/ADRES, el reporte anterior decía simplemente "sin novedad de aseguramiento", lo que podía confundir al usuario pensando que la persona era ilegal o no tenía salud.
+     - *Solución*: Se clarifica formalmente que la no aparición en BDUA es habitual en ciudadanos pertenecientes a Regímenes Especiales o de Excepción (Ley 100 de 1993, Art. 279): Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, servidores de Ecopetrol y Universidades Públicas, quienes tienen sus propios subsistemas de salud autónomos.
+  2. **Diálogo Maestro para Iniciar Sondeos y Persistencia de Meta (`dmHandler.ts`)**:
+     - *Causa raíz*: El sondeo de precios no debe imponer de entrada la solicitud de documentos pesados (CTL, Escritura, Predial), ya que eso es para formalizaciones posteriores o avalúos certificados.
+     - *Solución*: JanIA asume el rol de Perita Avaluadora y formula el diálogo maestro solicitando los 3 datos físicos clave: 1) Dirección exacta del predio con complementarios, 2) Área construida m² y 3) Tipología/número de alcobas o espacios. Si el usuario no responde con exactitud, JanIA insiste punto por punto amablemente hasta completar los datos para calcular el valor.
+  3. **Honestidad Radical y Cero Engaños en DMs (`dmHandler.ts`)**:
+     - *Causa raíz*: En DMs, JanIA le dijo a la usuaria Carolina Z. "he registrado este dato clave en el sistema de VECY", creando la falsa expectativa de que el apartamento ya estaba publicado en el catálogo oficial de VECY cuando en realidad el catálogo en el panel admin mostraba 0 inmuebles para su número.
+     - *Solución*: Prohibición absoluta de prometer o simular que un inmueble ha sido guardado/publicado en DMs. JanIA explica con total transparencia que los DMs son para sondeos y asesoría, y que si desea publicar su propiedad para venta/arriendo y cruce de negocios, debe publicarla en el **Grupo 1 Oficial: VECY INMUEBLES NETWORK** (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`), donde el motor inteligente la captará y registrará automáticamente.
+  4. **Redacción Oficial Estricta del Servicio de Predial Bogotá (`dmHandler.ts`, `predialService.ts`)**:
+     - *Corrección*: Se actualiza la conjunción obligatoria: para expedir la factura predial en PDF ante la SDH se requieren **ambos** datos: código CHIP del predio **y** cédula o NIT del propietario.
+  5. **Aprendizaje Histórico sin Saturación (`valuation.ts`)**:
+     - Implementación de `recordSurveyInquiry` y `getSurveyInquiryHistory` en memoria persistente (últimos 500 sondeos) para que el sistema y JanIA acumulen inteligencia real de mercado sin sobrecargar PostgreSQL.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 341/341 passing (100% verde a $0 COP) ✅ | `npm run build` limpio.
+- `shared/const.ts` (`v33.37`) y `package.json` (`33.37.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.36 — Octubre 2026
 
 ### Novedades v33.36 (Astucia Inmobiliaria, Continuidad de Meta (Goal Tracking), Soporte Documental (CTL, Escritura, Predial) y Conexión Multi-Capa ADRES):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

@@ -1,11 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.36.0 — 2026-10-23)
-- **JanIA Server:** `v33.36` (`33.36.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Astucia Inmobiliaria, Continuidad de Meta (Goal Tracking), Soporte Documental (CTL, Escritura, Predial) y Conexión Multi-Capa ADRES:**
-  1. **Continuidad de Meta y Sondeo Contextual (Caso Carolina Z. / Alameda 170):** Resuelta la causa raíz de omisión de avalúos y pérdida del hilo conversacional. `isExplicitValuation` ahora rastrea la intención previa en los últimos turnos de la sesión. Si el usuario confirma afirmativamente ("Si es ese", "dale") o complementa datos ("Nov 2006", "el año de construcción", "80m2"), JanIA NO desvía la conversación a visitas técnicas o publicidad; entrega de inmediato el estudio técnico del $/m², rango comercial de venta y canon estimado.
-  2. **Astucia Comercial y Solicitud de Documentos Soporte:** Para blindar el análisis de precio al milímetro con rigor técnico, JanIA solicita diplomáticamente tres (3) soportes oficiales: 1) Certificado de Tradición y Libertad (CTL) actualizado, 2) Copia de la Escritura Pública y 3) Factura Predial vigente.
-  3. **Cross-Selling de Factura Predial Oficial en Chat:** Si el usuario indica no tener el predial a la mano, JanIA de una le ofrece expedírselo y entregárselo en formato PDF oficial en el mismo chat en un minuto con solo el CHIP o la cédula del titular catastral.
-  4. **Conexión Multi-Capa Resiliente ADRES / BDUA:** Arquitectura en 3 niveles: Nivel 1 HTTP directo ultra-rápido; Nivel 2 resolución y paso de token con 2Captcha si hay desafío de seguridad; Nivel 3 motor headless con Puppeteer Chrome (`/usr/bin/google-chrome`) con emulación de navegador real, extracción de popup y normalización limpia de EPS (`parseAdresHtml`).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 338/338 passing | Build `npm run build` limpio en 34s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.37.0 — 2026-10-23)
+- **JanIA Server:** `v33.37` (`33.37.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico:**
+  1. **Explicación de Regímenes Especiales y de Excepción (Ley 100 Art. 279):** Cuando un ciudadano no figura en BDUA/ADRES, el reporte certifica formalmente que esto es habitual en afiliados a Regímenes de Excepción (Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, Ecopetrol o Universidades Estatales).
+  2. **Diálogo Maestro y Persistencia de Sondeos:** Diálogo exacto de Perita Avaluadora solicitando los 3 datos indispensables: Dirección exacta del predio con complementarios, Área construida m² y Tipo de inmueble/espacios. Si el usuario no responde con exactitud, JanIA insiste amablemente punto por punto hasta lograr la meta sin desviar la conversación.
+  3. **Honestidad Radical y Cero Engaños de Registro en DMs:** Prohibición absoluta de prometer o fingir que un inmueble ha sido guardado/publicado en DMs. JanIA canaliza cordialmente al usuario a publicar en el Grupo 1 Oficial: VECY INMUEBLES NETWORK (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`).
+  4. **Redacción Oficial Estricta de Predial Bogotá:** Corrección de la conjunción ("CHIP del predio **y** Cédula o NIT del propietario"), ambos indispensables para consultar y descargar la factura en PDF.
+  5. **Aprendizaje Histórico sin Saturación (`recordSurveyInquiry`):** Registro de consultas y sondeos en memoria/histórico para nutrir la inteligencia inmobiliaria de VECY sin sobrecargar la base de datos.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 341/341 passing | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

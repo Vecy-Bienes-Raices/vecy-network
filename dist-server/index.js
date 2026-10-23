@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.36";
+    VECY_VERSION = "v33.37";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14952,7 +14952,7 @@ function executeMarketValuationSurvey(params) {
       { name: "CienCuadras", url: "https://www.ciencuadras.com" }
     ]
   });
-  return {
+  const result = {
     zonaConsultada: zoneName,
     zonaOBarrio: zoneName,
     tieneComparablesVerificados: hasVerifiedComparables,
@@ -14973,10 +14973,39 @@ function executeMarketValuationSurvey(params) {
     politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
     alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
   };
+  recordSurveyInquiry({
+    userId: params.userId,
+    zonaConsultada: zoneName,
+    direccionExacta: params.direccionExacta,
+    areaM2: area,
+    tipoInmueble: params.tipoInmueble,
+    habitaciones: params.habitaciones,
+    antiguedadAnos: params.antiguedadAnos,
+    piso: params.piso,
+    esClubHouse: params.esClubHouse,
+    valorM2Estimado: valuation.homologatedPricePerM2,
+    valorComercialSugerido: valuation.suggestedCommercialValue,
+    canonArriendoEstimado: valuation.estimatedMonthlyRent
+  });
+  return result;
 }
+function recordSurveyInquiry(record) {
+  const fullRecord = {
+    ...record,
+    id: `sondeo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  surveyInquiryLog.push(fullRecord);
+  if (surveyInquiryLog.length > 500) {
+    surveyInquiryLog.shift();
+  }
+  return fullRecord;
+}
+var surveyInquiryLog;
 var init_valuation = __esm({
   "server/_core/valuation.ts"() {
     "use strict";
+    surveyInquiryLog = [];
   }
 });
 
@@ -28527,7 +28556,7 @@ function formatCompactIdentityVerificationReport(params) {
     const cleanEps = formatCleanEpsName(adresEps);
     epsLine = `${cleanEps} (${adresEstado || "ACTIVO"}${adresRegimen ? ` \u2014 ${adresRegimen}` : ""})`;
   } else {
-    epsLine = "Sin novedad de aseguramiento registrada en BDUA o EPS no reportada en censo p\xFAblico.";
+    epsLine = isWhiteLabelDoc ? "No registra afiliaci\xF3n en R\xE9gimen General BDUA/ADRES. (Habitual en Reg\xEDmenes Especiales o de Excepci\xF3n: Fuerzas Armadas, Sanidad Oficial, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o tr\xE1mite en curso)." : "No registra afiliaci\xF3n en R\xE9gimen General BDUA/ADRES. (Habitual en Reg\xEDmenes Especiales o de Excepci\xF3n: Fuerzas Militares, Polic\xEDa Nacional, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o tr\xE1mite en curso).";
   }
   reportText += `\u2696\uFE0F *ANTECEDENTES*
 `;
@@ -29998,13 +30027,14 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   * Menciona los factores t\xE9cnicos de valorizaci\xF3n tenidos en cuenta (piso, club house, parqueadero, estrato, antig\xFCedad y din\xE1mica de la zona).
 - CONTINUIDAD CONVERSACIONAL Y METAS (GOAL TRACKING):
   * Si el usuario consult\xF3 el valor o complement\xF3 datos (ej. a\xF1o de construcci\xF3n "Nov 2006"), ENTREGA EL VALOR Y C\xC1LCULO DE INMEDIATO. Queda TERMINANTEMENTE PROHIBIDO desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios sin haber entregado primero el sondeo de precio que el usuario pidi\xF3.
-- ASTUCIA COMERCIAL Y SOLICITUD DE DOCUMENTOS SOPORTE (DOCTRINA EDUARDO A. RIVERA):
-  * Explica con autoridad profesional y calidez que este estudio comparativo de mercado es de alta precisi\xF3n, pero que para blindar el precio de venta definitivo al mil\xEDmetro y no perder compradores ni tiempo, se deben cotejar tres (3) documentos clave:
-    1. \u{1F4DC} *Certificado de Tradici\xF3n y Libertad (CTL) actualizado:* Para verificar el \xE1rea privada real en el Reglamento de Propiedad Horizontal (RPH), linderos, grav\xE1menes, hipotecas o embargos vigentes.
-    2. \u{1F4D1} *Copia de la Escritura P\xFAblica:* Para cotejar titularidad, linderos de garaje/dep\xF3sito y verificar afectaciones a vivienda familiar o patrimonio de familia inembargable.
-    3. \u{1F3DB}\uFE0F *Factura del Impuesto Predial del a\xF1o vigente:* Para validar el estrato catastral oficial, aval\xFAo catastral y c\xF3digo CHIP.
-- CROSS-SELLING DE SERVICIOS VECY IN-CHAT (GENERACI\xD3N DE PREDIAL EN PDF):
-  * Ofr\xE9cele con total simpat\xEDa y servicialidad que si no tiene el Predial a la mano o no lo ha descargado, en VECY contamos con el servicio oficial para consultarlo y expedirlo en PDF en este mismo chat en un minuto: que solo te comparta el c\xF3digo CHIP o la c\xE9dula del titular catastral y se lo descargas de inmediato \u{1F4C4}\u2728. Y que si necesita el Certificado de Libertad, tambi\xE9n la guiamos para tenerlo al d\xEDa.
+- DOCTRINA DE SONDEOS VS. CIERRE FORMAL (DOCTRINA EDUARDO A. RIVERA):
+  * El sondeo preliminar se entrega con los datos f\xEDsicos (direcci\xF3n exacta, \xE1rea m\xB2 y tipolog\xEDa/alcobas) sin exigir documentos como barrera de entrada.
+  * Si el cliente, asesor o inversionista desea avanzar hacia un aval\xFAo comercial exacto, peritaje certificado o cierre formal, ind\xEDcale amablemente que para blindar el valor al mil\xEDmetro se cotejar\xE1n: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica, y 3) Factura Predial del a\xF1o vigente.
+- CROSS-SELLING EXACTO DE FACTURA PREDIAL EN CHAT (DOCTRINA EDUARDO A. RIVERA):
+  * Si el usuario no tiene el predial a mano, ofr\xE9cele textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son obligatorios).
+- HONESTIDAD RADICAL Y CERO ENGA\xD1OS DE REGISTRO EN DMs:
+  * PROHIBIDO TERMINANTEMENTE decirle al usuario en este chat privado "he registrado tu inmueble en el sistema de VECY" o "he guardado tu propiedad en el cat\xE1logo".
+  * Si el usuario desea publicar su inmueble para venta/arriendo o cruce de negocios, inv\xEDtalo con simpat\xEDa a publicarlo en nuestro Grupo 1 Oficial: VECY INMUEBLES NETWORK (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) donde el motor lo capta e indexa en la base de datos oficial.
 `;
   }
   const synthPrompt = [
@@ -30424,10 +30454,10 @@ ${contactDossier ? `${contactDossier}
 1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
 3. Perita Avaluadora y Asesora de Precios de Venta: Sondeos de m\xB2 y c\xE1nones por zonas de Bogot\xE1 con honestidad t\xE9cnica y comparables homologados (Cero Alucinaci\xF3n).
-  * Si el usuario solicita conocer o revisar el valor de venta, precio de mercado o aval\xFAo de una propiedad (o dice 'quiero revisar otro valor', 'cu\xE1nto vale', 'a c\xF3mo est\xE1 el metro'): Invoca de inmediato 'sondeo_mercado_inmobiliario'.
-  * CONTINUIDAD DE LA META (GOAL TRACKING): Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado.
-  * DOCTRINA DE ASTUCIA COMERCIAL Y SOPORTE DOCUMENTAL (DOCTRINA EDUARDO A. RIVERA): Al entregar el sondeo o al asesorar sobre el precio de venta, JanIA solicita con perspicacia y autoridad profesional los tres (3) documentos soporte indispensables para blindar el valor definitivo al mil\xEDmetro: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado, 2) Copia de la Escritura P\xFAblica y 3) Factura Predial del a\xF1o vigente.
-  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL O DOCUMENTOS (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece expedirlo y entreg\xE1rselo en PDF de forma gratuita en este mismo chat en un minuto: le pide el CHIP o la c\xE9dula del titular catastral y se lo genera aqu\xED mismo \u{1F4C4}\u2728.
+  * DI\xC1LOGO MAESTRO PARA INICIAR SONDEO DE VALOR: Si el usuario manifiesta que desea revisar el valor de venta, precio de mercado o aval\xFAo de una propiedad y a\xFAn no ha dado los detalles completos, responde con el di\xE1logo maestro:
+    "Entendido, ${displayName || "colega"}. Como tu perita avaluadora y analista de mercado en VECY Bienes Ra\xEDces, preparar\xE9 el estudio de valor y los par\xE1metros comerciales ideales para tu propiedad sin que tengas que preocuparte por las cifras iniciales.\\n\\nPara afinar el an\xE1lisis y entregarte un rango de precio comercial y de canon altamente competitivo (respaldado con datos reales de la zona en Colombia), conf\xEDrmame por favor estos tres datos clave:\\n\\n* Direcci\xF3n exacta del predio con complementarios de ser necesario.\\n* \xC1rea construida aproximada en metros cuadrados.\\n* Tipo de inmueble (apartamento, casa, local, etc.) y n\xFAmero de habitaciones o espacios principales.\\n\\nQuedo lista para procesar la informaci\xF3n y darte el valor justo que se mueve hoy en el mercado."\\n  * PERSISTENCIA DE META: Si el usuario no responde puntualmente a los tres datos requeridos, obvia rodeos secundarios y rep\xEDtele educadamente una por una cada cosa que necesites hasta lograr los datos para calcular el valor.\\n  * CONTINUIDAD DE LA META (GOAL TRACKING): Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado.
+  * DOCTRINA DE SOPORTE DOCUMENTAL (DOCTRINA EDUARDO A. RIVERA): El sondeo inicial es \xE1gil y se entrega con los datos f\xEDsicos. Solo si el cliente, asesor o inversionista desea avanzar hacia un aval\xFAo comercial exacto, peritaje certificado o cierre de negocio formal, ind\xEDcale amablemente que para blindar el valor al mil\xEDmetro se cotejar\xE1n: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica y 3) Factura Predial del a\xF1o vigente.
+  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son indispensables).\\n  * HONESTIDAD RADICAL Y CERO ENGA\xD1OS DE REGISTRO EN DMs: PROHIBIDO TERMINANTEMENTE decirle al usuario en este chat privado "he registrado tu inmueble en el sistema de VECY" o "he guardado tu propiedad en el cat\xE1logo". Si el usuario desea publicar su inmueble formalmente para venta, arriendo o cruces de negocio en la red, expl\xEDcale que este chat privado es para sondeos e inv\xEDtalo con calidez a publicarlo en nuestro Grupo 1 Oficial: VECY INMUEBLES NETWORK (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) donde el motor inteligente lo captar\xE1 y registrar\xE1 autom\xE1ticamente en la base de datos oficial.
 4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
 5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
 6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.

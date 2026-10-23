@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37)\.0/);
     });
   });
 
@@ -7162,11 +7162,61 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.36");
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.36.0");
+      expect(pkg.version).toMatch(/^33\.(36|37)\.0/);
+    });
+  });
+
+  describe("Suite v33.37 — Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños y Aprendizaje Histórico", () => {
+    it("1. Explicación de Regímenes Especiales y de Excepción (Ley 100 Art. 279) en reporte ADRES", async () => {
+      const { formatCompactIdentityVerificationReport } = await import("../_core/identityVerificationService");
+      const report = formatCompactIdentityVerificationReport({
+        tipoDoc: "CC",
+        cedula: "80123456",
+        officialName: "JORGE ENRIQUE ROJAS",
+        success: true
+      });
+      expect(report).toContain("ADRES (BDUA):");
+      expect(report).toContain("Regímenes Especiales o de Excepción");
+      expect(report).toContain("Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, Ecopetrol");
+    });
+
+    it("2. Historial y registro persistente de sondeos (recordSurveyInquiry y getSurveyInquiryHistory)", async () => {
+      const { recordSurveyInquiry, getSurveyInquiryHistory } = await import("../_core/valuation");
+      expect(typeof recordSurveyInquiry).toBe("function");
+      expect(typeof getSurveyInquiryHistory).toBe("function");
+
+      const rec = recordSurveyInquiry({
+        zonaConsultada: "Alameda Cra 15 con 170",
+        direccionExacta: "Cra 15 # 170-65",
+        areaM2: 80.14,
+        tipoInmueble: "apartamento",
+        habitaciones: 3,
+        antiguedadAnos: 18,
+        piso: 9,
+        esClubHouse: true,
+        valorM2Estimado: 5200000,
+        valorComercialSugerido: 416000000,
+        canonArriendoEstimado: 2350000
+      });
+
+      expect(rec.id).toBeDefined();
+      expect(rec.zonaConsultada).toBe("Alameda Cra 15 con 170");
+      const history = getSurveyInquiryHistory(5);
+      expect(history.length).toBeGreaterThan(0);
+      expect(history[0].id).toBe(rec.id);
+    });
+
+    it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.37");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.37.0");
     });
   });
 });

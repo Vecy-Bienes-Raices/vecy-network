@@ -173,7 +173,9 @@ export function calculatePropertyValuation(input: ValuationInput): ValuationResu
  */
 export function executeMarketValuationSurvey(params: {
   zonaOBarrio: string;
+  direccionExacta?: string;
   tipoInmueble?: string;
+  habitaciones?: number;
   areaM2?: number;
   estrato?: number;
   antiguedadAnos?: number;
@@ -181,6 +183,7 @@ export function executeMarketValuationSurvey(params: {
   piso?: number;
   tieneAscensor?: boolean;
   esClubHouse?: boolean;
+  userId?: string;
 }) {
   const zonaLower = (params.zonaOBarrio || "").toLowerCase();
 
@@ -232,7 +235,7 @@ export function executeMarketValuationSurvey(params: {
     ]
   });
 
-  return {
+  const result = {
     zonaConsultada: zoneName,
     zonaOBarrio: zoneName,
     tieneComparablesVerificados: hasVerifiedComparables,
@@ -257,4 +260,57 @@ export function executeMarketValuationSurvey(params: {
       ? "POLÍTICA DE CERO ALUCINACIÓN: Sector verificado con comparables y coeficientes homologados."
       : "POLÍTICA DE CERO ALUCINACIÓN: El sector consultado no cuenta con comparables directos verificados en nuestro catálogo del norte de Bogotá. Se entrega estimación referencial basada en Bogotá promedio."
   };
+
+  recordSurveyInquiry({
+    userId: params.userId,
+    zonaConsultada: zoneName,
+    direccionExacta: params.direccionExacta,
+    areaM2: area,
+    tipoInmueble: params.tipoInmueble,
+    habitaciones: params.habitaciones,
+    antiguedadAnos: params.antiguedadAnos,
+    piso: params.piso,
+    esClubHouse: params.esClubHouse,
+    valorM2Estimado: valuation.homologatedPricePerM2,
+    valorComercialSugerido: valuation.suggestedCommercialValue,
+    canonArriendoEstimado: valuation.estimatedMonthlyRent
+  });
+
+  return result;
+}
+
+export interface SurveyInquiryRecord {
+  id: string;
+  timestamp: string;
+  userId?: string;
+  zonaConsultada: string;
+  direccionExacta?: string;
+  areaM2: number;
+  tipoInmueble?: string;
+  habitaciones?: number;
+  antiguedadAnos?: number;
+  piso?: number;
+  esClubHouse?: boolean;
+  valorM2Estimado: number;
+  valorComercialSugerido: number;
+  canonArriendoEstimado: number;
+}
+
+const surveyInquiryLog: SurveyInquiryRecord[] = [];
+
+export function recordSurveyInquiry(record: Omit<SurveyInquiryRecord, "id" | "timestamp">): SurveyInquiryRecord {
+  const fullRecord: SurveyInquiryRecord = {
+    ...record,
+    id: `sondeo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: new Date().toISOString()
+  };
+  surveyInquiryLog.push(fullRecord);
+  if (surveyInquiryLog.length > 500) {
+    surveyInquiryLog.shift();
+  }
+  return fullRecord;
+}
+
+export function getSurveyInquiryHistory(limit: number = 50): SurveyInquiryRecord[] {
+  return surveyInquiryLog.slice(-limit).reverse();
 }

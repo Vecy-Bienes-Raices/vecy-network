@@ -1627,7 +1627,9 @@ export function formatCompactIdentityVerificationReport(params: {
     const cleanEps = formatCleanEpsName(adresEps);
     epsLine = `${cleanEps} (${adresEstado || 'ACTIVO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
   } else {
-    epsLine = 'Sin novedad de aseguramiento registrada en BDUA o EPS no reportada en censo público.';
+    epsLine = isWhiteLabelDoc
+      ? 'No registra afiliación en Régimen General BDUA/ADRES. (Habitual en Regímenes Especiales o de Excepción: Fuerzas Armadas, Sanidad Oficial, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o trámite en curso).'
+      : 'No registra afiliación en Régimen General BDUA/ADRES. (Habitual en Regímenes Especiales o de Excepción: Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o trámite en curso).';
   }
 
   reportText += `⚖️ *ANTECEDENTES*\n`;
