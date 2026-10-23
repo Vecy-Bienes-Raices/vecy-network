@@ -232,3 +232,110 @@ export async function fetchWebUrlContent(
   }
 }
 
+export interface WebGroundingResult {
+  query: string;
+  source: string;
+  results: Array<{ title: string; snippet: string; url?: string }>;
+  summary: string;
+  success: boolean;
+}
+
+/**
+ * Consulta la Tasa Representativa del Mercado (TRM) oficial de Colombia en tiempo real
+ * desde la API oficial de Datos Abiertos del Gobierno Nacional (Superintendencia Financiera / BanRep).
+ */
+export async function fetchLiveTRM(): Promise<{ valor: number; fecha: string; success: boolean; fuente: string }> {
+  try {
+    const res = await axios.get('https://www.datos.gov.co/resource/32sa-8pi3.json?$limit=1&$order=vigenciadesde%20DESC', {
+      timeout: 6000
+    });
+    if (Array.isArray(res.data) && res.data[0] && res.data[0].valor) {
+      return {
+        valor: parseFloat(res.data[0].valor),
+        fecha: res.data[0].vigenciadesde?.split('T')[0] || new Date().toISOString().split('T')[0],
+        success: true,
+        fuente: 'Datos Abiertos Colombia (Superintendencia Financiera)'
+      };
+    }
+  } catch (err: any) {
+    console.warn('[TRM] Error consultando TRM oficial en datos.gov.co:', err?.message);
+  }
+  return { valor: 0, fecha: '', success: false, fuente: 'Datos Abiertos Colombia' };
+}
+
+/**
+ * Búsqueda y Validación en Línea en Tiempo Real (Web Grounding) para JanIA:
+ * Consultas sobre normativa (POT 555, Estatuto Tributario, Notarías SNR, trámites en línea VUR/Sinupot)
+ * y divisas (TRM), garantizando rigor jurídico sin alucinaciones.
+ */
+export async function searchWebGrounding(query: string, timeoutMs: number = 7000): Promise<WebGroundingResult> {
+  const cleanQ = (query || '').trim();
+  if (!cleanQ) {
+    return { query: '', source: 'none', results: [], summary: '', success: false };
+  }
+
+  // 1. Si la consulta es sobre divisas / TRM / dólar
+  const isCurrencyQuery = /\b(?:trm|d[oó]lar|divisa|tasa\s*de\s*cambio|dolares|usd|cop)\b/i.test(cleanQ);
+  if (isCurrencyQuery) {
+    const trm = await fetchLiveTRM();
+    if (trm.success && trm.valor > 0) {
+      const summary = `💵 *Tasa Representativa del Mercado (TRM Oficial de Colombia)*:\n` +
+        `• Valor Oficial: $${trm.valor.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COP\n` +
+        `• Vigencia: ${trm.fecha}\n` +
+        `• Fuente: Superintendencia Financiera de Colombia / Banco de la República (Datos Abiertos).`;
+      return {
+        query: cleanQ,
+        source: 'Superintendencia Financiera / Datos Abiertos Colombia',
+        results: [{ title: 'TRM Oficial Colombia', snippet: summary, url: 'https://www.datos.gov.co/resource/32sa-8pi3.json' }],
+        summary,
+        success: true
+      };
+    }
+  }
+
+  // 2. Búsqueda en la web mediante motor DuckDuckGo HTML sin dependencias de claves de pago
+  try {
+    const response = await axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQ)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-CO,es;q=0.9,en;q=0.8'
+      },
+      timeout: timeoutMs
+    });
+
+    const $ = cheerio.load(response.data);
+    const results: Array<{ title: string; snippet: string; url?: string }> = [];
+
+    $('.result__body').slice(0, 4).each((_i, el) => {
+      const title = $(el).find('.result__title a').text().trim();
+      const snippet = $(el).find('.result__snippet').text().trim();
+      const url = $(el).find('.result__url').text().trim();
+      if (title && snippet) {
+        results.push({ title, snippet, url: url ? `https://${url}` : undefined });
+      }
+    });
+
+    if (results.length > 0) {
+      const summary = results.map((r, i) => `[${i + 1}] ${r.title}: ${r.snippet}`).join('\n\n');
+      return {
+        query: cleanQ,
+        source: 'Web Grounding (Fuentes Oficiales y Web)',
+        results,
+        summary,
+        success: true
+      };
+    }
+  } catch (err: any) {
+    console.warn(`[WEB-GROUNDING] Error en búsqueda web para "${cleanQ}":`, err?.message);
+  }
+
+  return {
+    query: cleanQ,
+    source: 'Núcleo Cognitivo JanIA',
+    results: [],
+    summary: '',
+    success: false
+  };
+}
+

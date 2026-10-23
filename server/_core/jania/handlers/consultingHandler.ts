@@ -272,6 +272,22 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       content: userPromptContent
     });
 
+    // 🌐 VALIDACIÓN EN LÍNEA EN TIEMPO REAL (WEB GROUNDING - v33.34):
+    // Consultas sobre normativa (POT 555, Estatuto Tributario, Notarías, trámites en línea, divisas/TRM)
+    const isNormativeOrCurrencyQuery = /\b(?:pot\s*555|decreto\s*555|estatuto\s*tributario|uvt|trm|d[oó]lar|divisa|notar[ií]a|sinupot|vur|resoluci[oó]n\s*snr|supernotariado)\b/i.test(messageToProcess);
+    if (isNormativeOrCurrencyQuery) {
+      try {
+        const { searchWebGrounding } = await import('../../scraper');
+        const searchRes = await searchWebGrounding(messageToProcess);
+        if (searchRes.success && searchRes.summary) {
+          userPromptContent += `\n\n[VALIDACIÓN EN LÍNEA EN TIEMPO REAL — RIGOR JURÍDICO OFICIAL]:\n${searchRes.summary}\nUtiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con total rigor legal y sin alucinaciones.`;
+          messages[messages.length - 1].content = userPromptContent;
+        }
+      } catch (gErr: any) {
+        console.warn('[JanIA-Grounding] Error al obtener web grounding:', gErr?.message);
+      }
+    }
+
     // Activar búsqueda web en vivo SOLO si la consulta tiene términos específicos de mercado o normas
     const needsSearch = (
       cleanText.length > 25 &&
@@ -284,7 +300,7 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       imageBuffer,
       pdfBuffer,
       pdfMimeType,
-      enableSearch: needsSearch
+      enableSearch: needsSearch && !isNormativeOrCurrencyQuery
     });
 
     try {

@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.33 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.34 — Octubre 2026
+
+### Novedades v33.34 (Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding):
+- **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
+  1. **Atomicidad Estricta en CronService (Canal vs. Grupos) (`server/_core/cronService.ts`, `whatsapp-match.ts`)**:
+     - *Causa raíz*: Los mensajes trampolín a los Grupos 2 y 3 se enviaban incluso si la publicación en el Canal Oficial de WhatsApp (`@newsletter`) fallaba o no confirmaba entrega. Además, los Canales no soportan el protocolo de encuestas nativas de Baileys (`pollCreationMessageV3`).
+     - *Solución*: Implementada comprobación de entrega efectiva (`deliveryId`). Si la publicación en el Canal no retorna un ID válido, se aborta inmediatamente el envío de teasers a los grupos. En Canales, las encuestas se publican como infografía o texto formateado con opciones A, B y C, habilitando la votación interactiva nativa con `sendPollToGroup` en los Grupos 2 y 3.
+  2. **Asesor de Requerimientos y Completitud de Fichas (`prompts.ts`, `propertiesHandler.ts`, `dmHandler.ts`)**:
+     - *Causa raíz*: Requerimientos sin presupuesto, sin aclaración de cuota de administración, con zonas difusas o sin tipología clara eran procesados prematuramente, detonando sondeos de mercado o matches espurios.
+     - *Solución*: `evaluateRequirementCompleteness` y `generateFichaTecnicaRequerimientoIncompleto`. Si faltan datos clave, se bloquea el match viable (`findMatchesForRequirement` no se dispara), se marca en BD como `incompleto` y JanIA devuelve la Ficha Técnica Estandarizada con campos faltantes entre corchetes `[ ]` para guiar al colega.
+  3. **Resiliencia en Consulta ADRES (`server/_core/identityVerificationService.ts`)**:
+     - *Causa raíz*: ASP.NET BDUA (`ConsultarAfiliadoWeb_2.aspx`) bloqueaba peticiones por falta de cabeceras completas de navegador o discrepancia de `Origin`/`Referer`, arrojando "dato no encontrado" o fallos intermitentes.
+     - *Solución*: Pool rotativo `ADRES_USER_AGENTS`, cabeceras de navegación completas, `Origin: https://aplicaciones.adres.gov.co` y `Referer: https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx` en el POST, y bucle de reintento automático con backoff.
+  4. **Consultas en Línea con Web Grounding y TRM Oficial (`server/_core/scraper.ts`, `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`)**:
+     - *Causa raíz*: Consultas normativas (POT 555 de Bogotá, Estatuto Tributario, UVT, Notarías SNR, trámites gubernamentales o divisas TRM) requerían contrastación en tiempo real para evitar desactualizaciones normativas.
+     - *Solución*: `searchWebGrounding(query)` con extracción limpia a $0 COP vía DuckDuckGo HTML, y `fetchLiveTRM()` consumiendo en vivo la API de Datos Abiertos del Gobierno Nacional (`datos.gov.co/resource/32sa-8pi3.json`).
+  5. **Seguridad y Confidencialidad en el Canal (`server/_core/cronService.ts`)**:
+     - *Causa raíz*: Riesgo de divulgar datos internos del servidor, credenciales de base de datos o teléfonos personales de propietarios en publicaciones públicas.
+     - *Solución*: `sanitizeChannelContent` filtra rigurosamente direcciones IP, rutas del sistema (`/home/`), strings de conexión PostgreSQL y números telefónicos privados, canalizando cualquier contacto a la Dirección de Operaciones (+57 316 656 9719).
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | Tests `npm test` passing ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.34`) y `package.json` (`33.34.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.33 — Octubre 2026
 
 ### Novedades v33.33 (Retiro de Gemini 2.5, Modelos Gemini 3.8 / Latest, Continuidad Conversacional en DMs, Supresión de Candados Estáticos y Protocolo Comercial 40/20/40):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

@@ -3115,8 +3115,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
         }
         await delay(1000);
+        return sent || null;
       } catch (err: any) {
         console.error('[JANIA-MATCH] Error en despacho de mensaje Baileys:', err.message || err);
+        return null;
       }
     });
     return outgoingQueue;
@@ -3327,10 +3329,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         messagePayload.mentions = mentions.map(m => m.endsWith('@s.whatsapp.net') ? m : m.replace('@c.us', '@s.whatsapp.net'));
       }
 
-      await this.queuedSend(targetJid, messagePayload);
-      console.log(`[JANIA-MATCH] ✓ Mensaje enviado al destino ${targetJid}.`);
+      const sent = await this.queuedSend(targetJid, messagePayload);
+      if (sent && sent.key && sent.key.id) {
+        console.log(`[JANIA-MATCH] ✓ Mensaje enviado al destino ${targetJid} (ID: ${sent.key.id}).`);
+        return { success: true, messageId: sent.key.id };
+      }
+      return { success: false, error: 'No se obtuvo ID de confirmación de entrega en el socket de WhatsApp' };
     } catch (e: any) {
       console.error(`[JANIA-MATCH] Error enviando mensaje al destino ${groupId || this.targetGroupId}:`, e.message || e);
+      return { success: false, error: e?.message || String(e) };
     }
   }
 
@@ -3446,31 +3453,43 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
    * - Canal Oficial (Newsletter): Píldora de alto valor completa con imagen HD garantizada.
    * - Grupos 2 y 3: Micro-gancho persuasivo (teaser) con CTA al canal y pregunta detonante de debate.
    */
-  public async sendMorningPillAndGroupTeasers(channelText: string, teaserText: string, imagePath?: string) {
+  public async sendMorningPillAndGroupTeasers(channelText: string, teaserText: string, imagePath?: string): Promise<{ success: boolean; channelMessageId?: string; reason?: string }> {
     if (!this.channelNewsletterId) {
       await this.discoverAndSyncNewsletters().catch(() => { });
+    }
+
+    if (!this.channelNewsletterId) {
+      console.warn(`[JANIA-ATOMIC] 🛑 Cancelado envío: Canal Oficial no configurado. Jamás se debe anunciar contenido en grupos que no exista en el Canal.`);
+      return { success: false, reason: 'Canal Oficial no configurado' };
     }
 
     const fs = await import('fs');
     const hasImage = imagePath && fs.existsSync(imagePath);
 
     // 1. Canal Oficial: Publicación completa con imagen
-    if (this.channelNewsletterId) {
-      try {
-        if (hasImage) {
-          console.log(`[JANIA-MATCH] 📢 Despachando píldora matutina con imagen HD a Canal Oficial (${this.channelNewsletterId})...`);
-          await this.sendToGroup(channelText, imagePath, [], this.channelNewsletterId);
-        } else {
-          console.log(`[JANIA-MATCH] 📢 Despachando píldora matutina a Canal Oficial (${this.channelNewsletterId})...`);
-          await this.queuedSend(this.channelNewsletterId, channelText, { allowDirectMessage: true });
-        }
-        console.log(`[JANIA-MATCH] ✓ Píldora matutina entregada al Canal Oficial.`);
-      } catch (chanErr: any) {
-        console.error(`[JANIA-MATCH] Error despachando píldora al Canal Oficial:`, chanErr?.message);
+    let channelResult: { success: boolean; messageId?: string; error?: string } = { success: false };
+    try {
+      if (hasImage) {
+        console.log(`[JANIA-MATCH] 📢 Despachando píldora matutina con imagen HD a Canal Oficial (${this.channelNewsletterId})...`);
+        channelResult = await this.sendToGroup(channelText, imagePath, [], this.channelNewsletterId);
+      } else {
+        console.log(`[JANIA-MATCH] 📢 Despachando píldora matutina a Canal Oficial (${this.channelNewsletterId})...`);
+        const sent = await this.queuedSend(this.channelNewsletterId, channelText, { allowDirectMessage: true });
+        channelResult = sent?.key?.id ? { success: true, messageId: sent.key.id } : { success: false, error: 'Sin ID de mensaje devuelto' };
       }
-    } else {
-      console.warn(`[JANIA-MATCH] Canal Oficial no disponible al despachar píldora matutina.`);
+    } catch (chanErr: any) {
+      console.error(`[JANIA-MATCH] Error despachando píldora al Canal Oficial:`, chanErr?.message);
+      channelResult = { success: false, error: chanErr?.message };
     }
+
+    // ATOMICIDAD ESTRICTA: Si la publicación principal en el Canal falla o no confirma entrega efectiva (ID de mensaje válido),
+    // se cancela de inmediato el envío de los mensajes trampolín a los Grupos 2 y 3.
+    if (!channelResult.success || !channelResult.messageId) {
+      console.warn(`[JANIA-ATOMIC] 🛑 ABORTADO envío de trampolines a Grupos 2 y 3: La publicación principal en el Canal Oficial falló o no confirmó ID de entrega (${channelResult.error || 'Sin ID'}).`);
+      return { success: false, reason: `Fallo en Canal Oficial: ${channelResult.error || 'Sin ID de entrega válido'}` };
+    }
+
+    console.log(`[JANIA-ATOMIC] ✅ Publicación en Canal confirmada (ID: ${channelResult.messageId}). Procediendo con micro-ganchos trampolín a Grupos 2 y 3.`);
 
     // 2. Grupo 2 (Tips & Consultas): Micro-gancho persuasivo (teaser)
     const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
@@ -3495,6 +3514,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         console.error(`[JANIA-MATCH] Error despachando teaser a Grupo 3:`, grpErr?.message);
       }
     }
+
+    return { success: true, channelMessageId: channelResult.messageId };
   }
 
   /**

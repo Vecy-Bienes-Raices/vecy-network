@@ -7,6 +7,39 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-22] — JanIA v33.34: Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding (v33.34 - 33.34.0)
+
+**Versión:** `v33.34` (`33.34.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/whatsapp-match.ts`: Modificación de `queuedSend` y `sendToGroup` para retornar estado explícito de entrega (`success: boolean, messageId?: string, error?: string`). Implementación de atomicidad estricta en `sendMorningPillAndGroupTeasers`: si la publicación en el Canal Oficial de WhatsApp falla o no retorna `messageId` válido, se aborta de inmediato el envío de mensajes trampolín a los Grupos 2 y 3.
+- `server/_core/cronService.ts`:
+  1. Integración de `sanitizeChannelContent` para filtrar direcciones IP de infraestructura, rutas absolutas del servidor, connection strings de bases de datos y teléfonos personales de propietarios en contenidos dirigidos a Canales públicos de WhatsApp, redirigiendo a la Dirección de Operaciones (+57 316 656 9719).
+  2. En `publishEveningPollNow`, tratamiento de Canales (`@newsletter`): al no admitir encuestas nativas de Baileys (`pollCreationMessageV3`), se despacha una pieza visual con opciones A, B y C formateadas, y se activa la votación interactiva nativa con `sendPollToGroup` exclusivamente en los Grupos 2 y 3 comunitarios.
+  3. Verificación de confirmación de entrega en Canal antes de despachar resúmenes vespertinos a los grupos en `publishEveningServicesNow`.
+- `server/_core/jania/prompts.ts`: Creación y exportación de `evaluateRequirementCompleteness` y `generateFichaTecnicaRequerimientoIncompleto`. Si un requerimiento carece de presupuesto, aclaración de cuota de administración, tipología o zonas claras, JanIA genera la Ficha Técnica Estandarizada con campos faltantes entre corchetes `[ ]`.
+- `server/_core/jania/handlers/propertiesHandler.ts`: Integración del guardrail de completitud en `insertRequirement` y `processWhatsAppMessage`. Si el requerimiento es incompleto, se almacena con estado `incompleto`, se bloquea el disparo de `findMatchesForRequirement` (cero matches espurios) y se retorna de inmediato la guía con la Ficha Técnica Estandarizada.
+- `server/_core/jania/handlers/dmHandler.ts`: En la herramienta `registrar_inmueble_o_requerimiento`, verificación de completitud. Si es incompleto, JanIA entrega la ficha con corchetes `[ ]` en tono cordial y pedagógico. Conexión de `navegar_o_buscar_web` con `searchWebGrounding`.
+- `server/_core/scraper.ts`:
+  1. Implementación de `fetchLiveTRM()` para consultar en tiempo real la TRM oficial de Colombia desde la API de Datos Abiertos del Gobierno Nacional (`https://www.datos.gov.co/resource/32sa-8pi3.json`) a $0 COP.
+  2. Implementación de `searchWebGrounding(query)` con extracción limpia de snippets vía DuckDuckGo HTML a $0 COP sin consumo de cuotas.
+- `server/_core/jania/handlers/consultingHandler.ts` y `server/_core/jania/handlers/circuloHandler.ts`: Inyección de Web Grounding contextual en tiempo real previo a la invocación del LLM ante consultas sobre POT 555 de Bogotá, Estatuto Tributario, UVT, Notarías SNR, trámites gubernamentales o divisas TRM.
+- `server/_core/identityVerificationService.ts`: Fortalecimiento de `queryAdres` incorporando el pool `ADRES_USER_AGENTS`, cabeceras de navegación completas, `Origin: https://aplicaciones.adres.gov.co` y `Referer: https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx` en el POST ASP.NET BDUA, y bucle de reintentos automático ante intermitencias.
+- `server/__tests__/regression.test.ts`: Creación de la Suite 127 (`v33.34`) validando sanitización de canales, detección de completitud de requerimientos, web grounding / TRM oficial en vivo y consagración de versión.
+- `shared/const.ts` (`v33.34`) y `package.json` (`33.34.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"URGENTE: Corrección de sincronización Canal-Grupos, validación de encuestas, módulo ADRES y asesoría inteligente de requerimientos.*
+  *1. ATOMICIDAD EN CRONSERVICE (CANAL VS GRUPOS): En server/_core/cronService.ts: Si la publicación principal en el Canal Oficial de WhatsApp falla o no confirma entrega efectiva (ID de mensaje válido), se cancela de inmediato el envío de los mensajes trampolín a los Grupos 2 y 3. Jamás se debe anunciar un contenido en grupos que no exista en el Canal. Verifica la compatibilidad de envío de encuestas/cuestionarios de Baileys hacia JIDs de tipo @newsletter. Si el canal no admite encuestas nativas por protocolo, el despacho debe enviar una pieza visual/infografía con opciones A, B, C y habilitar la votación interactiva en los grupos.*
+  *2. ASESOR DE REQUERIMIENTOS Y COMPLETITUD DE FICHAS: Si un usuario en DMs o grupos comparte un requerimiento con información incompleta (falta presupuesto, no aclara administración, zonas difusas o sin tipología): Prohibido registrarlo como match viable o disparar avalúos. JanIA debe asumir un rol de asesora inteligente y devolver una respuesta amable y pedagógica solicitando los datos faltantes entregando la Ficha Técnica Estandarizada con campos entre corchetes [ ].*
+  *3. RESILIENCIA EN CONSULTA ADRES: Auditar queryAdres en server/_core/identityVerificationService.ts. Resolver fallos y 'dato no encontrado' rotando User-Agents, cabeceras modernas (Origin/Referer correctos para ASP.NET BDUA) y reintentos.*
+  *4. CONSULTAS EN LÍNEA (WEB GROUNDING): Asegurar validación en tiempo real en consultas normativas (POT 555, Estatuto Tributario, Notarías SNR, trámites en línea, divisas TRM oficial) sin alucinaciones.*
+  *5. SEGURIDAD Y PRIVACIDAD EN EL CANAL: Sanitizar y blindar publicaciones del canal para evitar fugas de bases de datos internas, nombres de propietarios particulares o credenciales."*
+
+---
+
 ### 📅 [2026-10-22] — JanIA v33.33: Retiro de Modelos Obsoletos (Gemini 2.5), Priorización Gemini 3.8 / Latest, Continuidad Conversacional en DMs, Supresión de Candados Estáticos y Protocolo Comercial 40/20/40 (v33.33 - 33.33.0)
 
 **Versión:** `v33.33` (`33.33.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

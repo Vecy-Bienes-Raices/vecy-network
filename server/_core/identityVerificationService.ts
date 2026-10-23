@@ -596,88 +596,133 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
     };
   }
 
-  try {
-    const ep = await getAdresEndpoint();
-    const commonHeaders = {
-      'Host': 'aplicaciones.adres.gov.co',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Referer': 'https://www.adres.gov.co/consulte-su-eps'
-    };
+  const ADRES_USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/126.0.0.0'
+  ];
 
-    // 1. GET formulario para inicializar tokens y cookies (timeout: 15000ms)
-    const r1 = await httpRequest({
-      hostname: ep.host,
-      port: ep.port,
-      path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
-      method: 'GET',
-      headers: commonHeaders,
-      timeout: 15000
-    } as any);
+  let lastError: string = 'Intermitencia o sin respuesta en el servidor ADRES';
 
-    const c1 = r1.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
-    const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || '';
-    const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || '';
-    const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const ep = await getAdresEndpoint();
+      const userAgent = ADRES_USER_AGENTS[(attempt - 1) % ADRES_USER_AGENTS.length];
 
-    if (!vs || !ev) {
-      return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'No fue posible inicializar sesión en ADRES' };
-    }
+      const getHeaders = {
+        'Host': 'aplicaciones.adres.gov.co',
+        'User-Agent': userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+        'Referer': 'https://www.adres.gov.co/consulte-su-eps',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Upgrade-Insecure-Requests': '1'
+      };
 
-    const postData = querystring.stringify({
-      __VIEWSTATE: vs,
-      __VIEWSTATEGENERATOR: vsg,
-      __EVENTVALIDATION: ev,
-      tipoDoc: mappedTipo,
-      txtNumDoc: cleanNum,
-      btnConsultar: 'Consultar'
-    });
+      // 1. GET formulario para inicializar tokens y cookies (timeout: 15000ms)
+      const r1 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
+        method: 'GET',
+        headers: getHeaders,
+        timeout: 15000
+      } as any);
 
-    // 2. POST formulario de consulta (timeout: 15000ms)
-    const r2 = await httpRequest({
-      hostname: ep.host,
-      port: ep.port,
-      path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
-      method: 'POST',
-      headers: {
-        ...commonHeaders,
+      const c1 = r1.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
+      const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+      const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+      const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+
+      if (!vs || !ev) {
+        lastError = 'No fue posible inicializar sesión en ADRES (ASP.NET tokens ausentes)';
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 600));
+          continue;
+        }
+        return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: lastError };
+      }
+
+      const postData = querystring.stringify({
+        __VIEWSTATE: vs,
+        __VIEWSTATEGENERATOR: vsg,
+        __EVENTVALIDATION: ev,
+        tipoDoc: mappedTipo,
+        txtNumDoc: cleanNum,
+        btnConsultar: 'Consultar'
+      });
+
+      // 2. POST formulario de consulta con cabeceras ASP.NET estrictas (Origin y Referer exactos)
+      const postHeaders = {
+        'Host': 'aplicaciones.adres.gov.co',
+        'User-Agent': userAgent,
+        'Origin': 'https://aplicaciones.adres.gov.co',
+        'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(postData),
-        'Cookie': c1.join('; ')
-      },
-      timeout: 15000
-    } as any, postData);
-
-    const c2 = r2.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
-    const allCookies = [...c1, ...c2].join('; ');
-
-    const m = r2.body.match(/window\.open\('([^']+)'/);
-    if (!m) {
-      const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
-      return {
-        success: false,
-        source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
-        error: alertMatch ? alertMatch[1] : 'El ciudadano no registra afiliación vigente en la Base de Datos Única de Afiliados (BDUA)'
+        'Cookie': c1.join('; '),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
       };
-    }
 
-    const popupUrl = m[1];
+      const r2 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
+        method: 'POST',
+        headers: postHeaders,
+        timeout: 15000
+      } as any, postData);
 
-    // 3. GET resultado del afiliado (timeout: 15000ms)
-    const r3 = await httpRequest({
-      hostname: ep.host,
-      port: ep.port,
-      path: '/BDUA_Internet/Pages/' + popupUrl,
-      method: 'GET',
-      headers: {
-        ...commonHeaders,
-        'Cookie': allCookies
-      },
-      timeout: 15000
-    } as any);
+      const c2 = r2.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
+      const allCookies = [...c1, ...c2].join('; ');
 
-    if (r3.statusCode !== 200 || r3.body.includes('Error de servidor')) {
-      return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'Intermitencia en el servidor ADRES' };
-    }
+      const m = r2.body.match(/window\.open\('([^']+)'/);
+      if (!m) {
+        const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+        return {
+          success: false,
+          source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
+          error: alertMatch ? alertMatch[1] : 'El ciudadano no registra afiliación vigente en la Base de Datos Única de Afiliados (BDUA)'
+        };
+      }
+
+      const popupUrl = m[1];
+
+      // 3. GET resultado del afiliado (timeout: 15000ms)
+      const r3 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: '/BDUA_Internet/Pages/' + popupUrl,
+        method: 'GET',
+        headers: {
+          'Host': 'aplicaciones.adres.gov.co',
+          'User-Agent': userAgent,
+          'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
+          'Cookie': allCookies,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+        },
+        timeout: 15000
+      } as any);
+
+      if (r3.statusCode !== 200 || r3.body.includes('Error de servidor')) {
+        lastError = 'Intermitencia en el servidor ADRES';
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 600));
+          continue;
+        }
+        return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: lastError };
+      }
 
     const lines = r3.body.replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
     const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
@@ -762,12 +807,19 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       source: 'ADRES - Base de Datos Única de Afiliados (BDUA)'
     };
   } catch (err: any) {
-    return {
-      success: false,
-      source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
-      error: `Intermitencia de conexión con ADRES: ${err?.message || err}`
-    };
+      lastError = `Intermitencia de conexión con ADRES: ${err?.message || err}`;
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 600));
+        continue;
+      }
+    }
   }
+
+  return {
+    success: false,
+    source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
+    error: lastError
+  };
 }
 
 // 🛡️ MEMORIA DE SESIÓN DE IDENTIDAD PENDIENTE

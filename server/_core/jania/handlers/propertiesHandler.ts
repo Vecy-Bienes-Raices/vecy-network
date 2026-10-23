@@ -110,6 +110,8 @@ import {
   buildSystemPrompt,
   formatColombiaDateTime,
   obtenerCamposRequeridosYPreguntas,
+  evaluateRequirementCompleteness,
+  generateFichaTecnicaRequerimientoIncompleto,
 } from "../prompts";
 import {
   cleanSessionJid,
@@ -1410,6 +1412,34 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
     console.log(`[JANIA-INGESTION-GUARD] ⛔ Requerimiento omitido por falta de ubicación explícita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
     return null;
+  }
+
+  // 🛡️ FILTRO DE COMPLETITUD Y PROHIBICIÓN DE MATCH VIABLE (v33.34)
+  const completeness = evaluateRequirementCompleteness({
+    transactionType: insertData.tipoNegocioDeseado,
+    propertyType: insertData.tipoInmuebleDeseado,
+    city: insertData.ciudadDeseada,
+    zone: insertData.zonaDeseada,
+    presupuestoMax: insertData.presupuestoMax,
+    adminFee: insertData.cuotaAdministracion,
+    rawText: insertData.rawText,
+    areaMin: insertData.areaMin,
+    habitacionesMin: insertData.habitacionesMin,
+    banosMin: insertData.banosMin,
+    garajesMin: insertData.garajesMin
+  });
+
+  if (completeness.isIncomplete) {
+    console.log(`[JANIA-REQ-INCOMPLETE] ⛔ Requerimiento incompleto (${completeness.missingReasons.join(', ')}). PROHIBIDO registrar como match viable.`);
+    const [saved] = await db.insert(requirements).values({
+      ...insertData,
+      status: 'incompleto' as any,
+      calificacion: 'incompleto',
+      fechaPrimeraPublicacion: getColombiaNow(),
+      fechaUltimaPublicacion: getColombiaNow(),
+      republicacionesCount: 0
+    }).returning();
+    return saved; // Retorna sin ejecutar findMatchesForRequirement
   }
 
   // Buscar duplicado (1. Por rawText idéntico, 2. Por parámetros comerciales del mismo broker)
@@ -2910,6 +2940,28 @@ Por lo tanto, DEBES hacer lo siguiente:
       }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
 
       if (saved) {
+        if ((saved as any).status === 'incompleto') {
+          const completeness = evaluateRequirementCompleteness({
+            transactionType: extracted.transactionType,
+            propertyType: extracted.propertyType,
+            city: extracted.ciudadDeseada || extracted.city,
+            zone: extracted.zonaDeseada || extracted.zone,
+            presupuestoMax: extracted.presupuestoMax || extracted.price,
+            adminFee: extracted.adminFee,
+            rawText: effectiveReqRawText,
+            areaMin: extracted.area,
+            habitacionesMin: extracted.bedrooms,
+            banosMin: extracted.bathrooms,
+            garajesMin: extracted.garages
+          }, realName);
+          result.inserted = false;
+          result.response = completeness.fichaTecnica || '';
+          result.dmResponse = completeness.fichaTecnica || '';
+          result.shouldSendDM = !isGroup;
+          result.reactionEmoji = '📝';
+          return result;
+        }
+
         result.inserted = true;
         result.shouldSendDM = false;
         result.dmResponse = "";

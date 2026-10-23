@@ -1,12 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.33.0 — 2026-10-22)
-- **JanIA Server:** `v33.33` (`33.33.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Retiro Gemini 2.5, Gemini 3.8 / Latest, Continuidad en DMs y Protocolo 40/20/40:**
-  1. **Actualización de Modelos:** Erradicación definitiva de la familia `gemini-2.5` (deprecada por Google con errores 404 para nuevos usuarios); priorización inmediata de `gemini-3.8-flash` y `gemini-flash-latest`.
-  2. **Continuidad Conversacional:** Supresión de saludos reiterativos ("¡Hola, [Nombre]!", "Soy JanIA...") en chats con interacción previa en el día; fluidez y trato profesional directo.
-  3. **Erradicación de Candado Estático:** Supresión del bloque "🔒 ACCESO RESTRINGIDO". Asistente de matches ahora emite reportes ejecutivos protectores de datos con canalización a la Dirección de Operaciones (+57 316 656 9719).
-  4. **Apagado de Avalúos Automáticos:** `sondeo_mercado_inmobiliario` restringido estrictamente a peticiones explícitas del usuario.
-  5. **Protocolo Comercial 40/20/40:** Explicación pedagógica de reacciones con emoji en grupos (👍/📝), compromiso ante matches ≥ 80% y filtro comercial 40/20/40 persistido en RAM, JSON y PostgreSQL.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` (327/327 passing) | Build `npm run build` limpio en 34s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.34.0 — 2026-10-22)
+- **JanIA Server:** `v33.34` (`33.34.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding:**
+  1. **Atomicidad Canal vs. Grupos:** En `cronService.ts`, cancelación estricta de mensajes trampolín a Grupos 2 y 3 si la publicación en el Canal no confirma ID de entrega válido. Manejo de encuestas en Canales (`@newsletter`) despachando infografía/texto con opciones A, B, C y activando votación nativa en grupos.
+  2. **Asesor de Requerimientos Incompletos:** JanIA detecta fichas incompletas (falta presupuesto, administración, zonas o tipología), bloquea match inviable y devuelve Ficha Técnica Estandarizada con campos entre corchetes `[ ]`.
+  3. **Resiliencia ADRES:** `queryAdres` reforzado con pool de User-Agents, cabeceras estrictas de navegador y ASP.NET BDUA (`Origin` y `Referer` exactos) y bucle de reintentos con backoff.
+  4. **Consultas en Línea (Web Grounding):** `searchWebGrounding` y `fetchLiveTRM` en `scraper.ts` consultando en tiempo real POT 555, Estatuto Tributario, UVT, Notarías y TRM oficial de Datos Abiertos a $0 COP.
+  5. **Seguridad y Confidencialidad en Canal:** `sanitizeChannelContent` filtra IPs de servidores, rutas locales, credenciales de BD y números privados de propietarios.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` passing | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

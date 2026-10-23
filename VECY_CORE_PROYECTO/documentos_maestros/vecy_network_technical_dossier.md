@@ -331,6 +331,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.34 — Octubre 2026
+
+#### [v33.34.0] — 2026-10-22: Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding
+- **Atomicidad Estricta en CronService (Canal vs. Grupos) (`cronService.ts`, `whatsapp-match.ts`):**
+  - **Problema:** En el flujo de publicación matutina y vespertina, si el Canal Oficial de WhatsApp (`@newsletter`) fallaba o no confirmaba la recepción del mensaje, se enviaban de todas formas los teasers trampolín a los Grupos 2 y 3, anunciando contenido inexistente. Asimismo, WhatsApp Newsletters rechaza encuestas nativas de Baileys (`pollCreationMessageV3`).
+  - **Solución:** `sendMorningPillAndGroupTeasers` y `cronService.ts` verifican la entrega efectiva con ID de mensaje válido antes de despachar mensajes trampolín a grupos. En Canales, las encuestas se envían como infografías/piezas de texto con opciones A, B y C formateadas, y se activa la encuesta nativa interactiva exclusivamente en los Grupos 2 y 3.
+- **Asesor de Requerimientos y Ficha Técnica Estandarizada [] (`prompts.ts`, `propertiesHandler.ts`, `dmHandler.ts`):**
+  - **Problema:** Solicitudes o demandas inmobiliarias sin presupuesto, sin aclaración de cuota de administración en arriendo, con zonas difusas o sin tipología clara eran ingresadas al motor de matching provocando falsos positivos o disparando avalúos no solicitados.
+  - **Solución:** Implementación de `evaluateRequirementCompleteness` y `generateFichaTecnicaRequerimientoIncompleto`. Si faltan campos esenciales, el requerimiento se almacena como `incompleto`, se bloquea el disparo de `findMatchesForRequirement` y JanIA devuelve de inmediato la Ficha Técnica Estandarizada con campos faltantes entre corchetes `[ ]` para guiar al asesor.
+- **Resiliencia en Consulta ADRES (`identityVerificationService.ts`):**
+  - **Problema:** El portal ASP.NET BDUA (`ConsultarAfiliadoWeb_2.aspx`) arrojaba bloqueos o "dato no encontrado" ante ráfagas de consulta o ausencia de cabeceras completas de navegador (`Origin` / `Referer`).
+  - **Solución:** Pool rotativo `ADRES_USER_AGENTS`, cabeceras de navegación completas, `Origin: https://aplicaciones.adres.gov.co` y `Referer: https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx` en el POST, y bucle de reintentos automático con backoff.
+- **Consultas en Línea con Web Grounding y TRM Oficial (`scraper.ts`, `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`):**
+  - **Problema:** Consultas sobre normas vigentes (POT 555 de Bogotá, Estatuto Tributario, UVT, Notarías SNR, trámites gubernamentales o divisas TRM) requerían contrastación en vivo para evitar alucinaciones.
+  - **Solución:** Integración de `searchWebGrounding(query)` con extracción limpia de snippets vía DuckDuckGo HTML y `fetchLiveTRM()` consumiendo en vivo la API de Datos Abiertos del Gobierno Nacional a $0 COP.
+- **Seguridad y Confidencialidad en Canal (`cronService.ts`):**
+  - **Problema:** Riesgo de publicar datos de infraestructura del servidor, credenciales de BD o números telefónicos de propietarios privados en el Canal público.
+  - **Solución:** Función `sanitizeChannelContent` que depura direcciones IP, rutas de sistema, strings de conexión PostgreSQL y números privados, canalizando cualquier contacto a la Dirección de Operaciones (+57 316 656 9719).
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **331/331 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio.
+
 ### 🔖 v33.33 — Octubre 2026
 
 #### [v33.33.0] — 2026-10-22: Retiro de Modelos Obsoletos (Gemini 2.5), Priorización Gemini 3.8 / Latest, Continuidad Conversacional en DMs, Supresión de Candados Estáticos y Protocolo Comercial 40/20/40

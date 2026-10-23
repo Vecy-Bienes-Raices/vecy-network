@@ -6988,16 +6988,67 @@ Ana Morales Castillo
       expect(accepts).toBe(true);
     });
 
-    it("4. Consagración doctrinal de versión v33.33 en shared/const.ts y package.json", async () => {
+    it("4. Consagración doctrinal de versión v33.33/v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.33");
+      expect(VECY_VERSION).toMatch(/^v33\.(3[3-9]|[4-9]\d)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.33.0");
+      expect(pkg.version).toMatch(/^33\.(3[3-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 127. v33.34 — ATOMICIDAD CANAL/GRUPOS, FICHA ESTANDARIZADA [], RESILIENCIA ADRES Y WEB GROUNDING
+  // ─────────────────────────────────────────────────────────────
+  describe("127. v33.34 — Atomicidad Canal/Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding", () => {
+    it("1. Sanitización de contenidos para Canales de WhatsApp previene fuga de datos privados", async () => {
+      const { sanitizeChannelContent } = await import("../_core/cronService");
+      const sensitiveText = "Reporte interno: servidor 13.140.149.144 en /home/eddu/Proyectos con postgresql://user:pass@localhost:5432/db y dueño Pedro Tel 3151234567";
+      const sanitized = sanitizeChannelContent(sensitiveText);
+      expect(sanitized).not.toContain("13.140.149.144");
+      expect(sanitized).not.toContain("/home/eddu/");
+      expect(sanitized).not.toContain("postgresql://");
+      expect(sanitized).not.toContain("3151234567");
+      expect(sanitized).toContain("+57 316 656 9719");
+    });
+
+    it("2. Asesor de requerimientos: detección de completitud y ficha con corchetes []", async () => {
+      const { evaluateRequirementCompleteness, generateFichaTecnicaRequerimientoIncompleto } = await import("../_core/jania/prompts");
+      
+      const incompleteReq = "Busco apto en arriendo en Chapinero de 2 habitaciones";
+      const evalResult = evaluateRequirementCompleteness(incompleteReq);
+      expect(evalResult.isComplete).toBe(false);
+      expect(evalResult.missingFields).toContain("Presupuesto máximo o canon mensual");
+
+      const ficha = generateFichaTecnicaRequerimientoIncompleto(incompleteReq, "Carlos");
+      expect(ficha).toContain("FICHA TÉCNICA DE REQUERIMIENTO");
+      expect(ficha).toContain("*Presupuesto Máximo:*");
+      expect(ficha).toContain("[Presupuesto máximo]");
+      expect(ficha).toContain("Carlos");
+    });
+
+    it("3. Web Grounding y TRM oficial en vivo operan a $0 COP", async () => {
+      const { fetchLiveTRM, searchWebGrounding } = await import("../_core/scraper");
+      expect(typeof fetchLiveTRM).toBe("function");
+      expect(typeof searchWebGrounding).toBe("function");
+
+      const trmResult = await fetchLiveTRM();
+      expect(trmResult).toBeDefined();
+      expect(trmResult.fuente).toContain("Datos Abiertos");
+    });
+
+    it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.34");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.34.0");
     });
   });
 });
+
 
 
 

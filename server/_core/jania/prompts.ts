@@ -131,6 +131,133 @@ export function buildIncompleteDataMessage(
   return `Oye *${firstName}*, ¿me podrías confirmar la ubicación o el barrio exacto para registrarlo correctamente en VECY? 🔎`;
 }
 
+/**
+ * 📋 Genera la Ficha Técnica Estandarizada para Requerimientos Incompletos (v33.34):
+ * Devuelve la plantilla estructurada con espacios entre corchetes [ ] para que el agente complete los datos indispensables.
+ */
+export function generateFichaTecnicaRequerimientoIncompleto(
+  provided: {
+    transactionType?: string;
+    propertyType?: string;
+    city?: string;
+    zone?: string;
+    budget?: number | string;
+    adminClarified?: string;
+    area?: number | string;
+    bedrooms?: number | string;
+    bathrooms?: number | string;
+    garages?: number | string;
+    notes?: string;
+  },
+  firstName?: string
+): string {
+  const greeting = firstName ? `Estimado(a) *${firstName}*` : 'Estimado colega';
+  const txFormatted = provided.transactionType ? (provided.transactionType.toLowerCase() === 'arriendo' ? 'Arriendo' : 'Venta') : 'Venta / Arriendo';
+  const propFormatted = provided.propertyType ? (provided.propertyType.charAt(0).toUpperCase() + provided.propertyType.slice(1).toLowerCase()) : 'Apartamento / Casa / Oficina / Bodega / Lote';
+  const zoneFormatted = provided.zone ? `${provided.city || 'Bogotá'} — ${provided.zone}` : (provided.city ? `${provided.city} — [Barrio]` : '[Ej. Bogotá — Chicó, Rosales, Cedritos]');
+  const budgetFormatted = provided.budget && Number(provided.budget) > 0 ? `$${Number(provided.budget).toLocaleString('es-CO')}` : '$ [Presupuesto máximo]';
+  const adminFormatted = provided.adminClarified || (provided.transactionType === 'arriendo' ? '[¿Incluida en el canon o valor por separado?]' : 'N/A');
+
+  return `¡Hola, ${greeting}! 🤝 Para que nuestro motor de VECY BIENES RAÍCES pueda registrar la búsqueda de tu cliente, buscar coincidencias precisas (matches) y conectar negocios seguros, requerimos los datos indispensables completos.\n\n` +
+    `Actualmente faltan datos clave (presupuesto, tipología, administración o barrio específico). Por favor completa o reenvía la siguiente ficha técnica diligenciando los campos entre corchetes:\n\n` +
+    `📋 *FICHA TÉCNICA DE REQUERIMIENTO — VECY BIENES RAÍCES* 🇨🇴\n` +
+    `• 🏷️ *Tipo de Negocio:* [${txFormatted}]\n` +
+    `• 🏢 *Tipo de Inmueble:* [${propFormatted}]\n` +
+    `• 📍 *Ciudad y Barrio(s) Específico(s):* [${zoneFormatted}]\n` +
+    `• 💵 *Presupuesto Máximo:* [${budgetFormatted}]\n` +
+    `• 📋 *Administración:* [${adminFormatted}]\n` +
+    `• 📐 *Área Mínima:* [${provided.area && Number(provided.area) > 0 ? `${provided.area} m²` : ' m²'}]\n` +
+    `• 🛏️ *Habitaciones Mínimas:* [${provided.bedrooms && Number(provided.bedrooms) > 0 ? provided.bedrooms : ' '}]\n` +
+    `• 🚽 *Baños Mínimos:* [${provided.bathrooms && Number(provided.bathrooms) > 0 ? provided.bathrooms : ' '}]\n` +
+    `• 🚗 *Parqueaderos Mínimos:* [${provided.garages && Number(provided.garages) > 0 ? provided.garages : ' '} (Independientes / Lineales)]\n` +
+    `• ⚡ *Requisitos No Negociables:* [${provided.notes || 'Ascensor, balcón, piso, estrato, etc.'}]\n\n` +
+    `En cuanto me envíes estos datos completos, activaremos de inmediato el cruce automático en nuestra bolsa inmobiliaria colaborativa. 🚀✨`;
+}
+
+/**
+ * Evalúa si un requerimiento cuenta con los datos indispensables para ser un match viable:
+ * 1. Presupuesto definido (presupuestoMax > 0).
+ * 2. Aclaración de administración si es arriendo.
+ * 3. Zonas específicas (no difusas ni genéricas como solo "Bogotá").
+ * 4. Tipología clara de inmueble (apartamento, casa, bodega, etc.).
+ */
+export function evaluateRequirementCompleteness(dataOrText: {
+  transactionType?: string;
+  propertyType?: string;
+  city?: string;
+  zone?: string;
+  presupuestoMax?: number | string;
+  adminFee?: number | string;
+  rawText?: string;
+  areaMin?: number | string;
+  habitacionesMin?: number | string;
+  banosMin?: number | string;
+  garajesMin?: number | string;
+} | string, firstName?: string): {
+  isComplete: boolean;
+  isIncomplete: boolean;
+  missingReasons: string[];
+  missingFields: string[];
+  fichaTecnica?: string;
+} {
+  const data = typeof dataOrText === 'string' ? { rawText: dataOrText } : (dataOrText || {});
+  const missing: string[] = [];
+  const text = (data.rawText || '').toLowerCase();
+
+  // 1. Presupuesto
+  const budgetNum = Number(data.presupuestoMax || 0);
+  const textHasBudget = /\b(?:\$|pesos|cop|millones|millon|millón|canon|presupuesto)\b/i.test(text) && /\d+/.test(text);
+  if ((!budgetNum || budgetNum <= 0) && !textHasBudget) {
+    missing.push('Presupuesto máximo o canon mensual');
+  }
+
+  // 2. Tipología de inmueble
+  const propType = (data.propertyType || '').toLowerCase().trim();
+  const textHasPropType = /\b(apartamento|apto|casa|bodega|oficina|lote|consultorio|local|edificio)\b/i.test(text);
+  const hasValidPropType = (propType && !['inmueble', 'na', 'otro', ''].includes(propType)) || textHasPropType;
+  if (!hasValidPropType) {
+    missing.push('Tipología de inmueble (apartamento, casa, bodega, etc.)');
+  }
+
+  // 3. Administración en arriendo
+  const isArriendo = (data.transactionType || '').toLowerCase().includes('arriendo') || text.includes('arriend') || text.includes('alquil');
+  if (isArriendo) {
+    const hasAdminMention = text.includes('adm') || text.includes('administra') || text.includes('admon');
+    const adminNum = Number(data.adminFee || 0);
+    if (!hasAdminMention && adminNum <= 0) {
+      missing.push('Aclaración de cuota de administración');
+    }
+  }
+
+  // 4. Zonas difusas
+  const zone = (data.zone || '').trim();
+  const isGenericZone = !zone || zone.toLowerCase() === 'na' || /^(bogota|bogotá|colombia|medellin|medellín|cali|barranquilla|norte|sur|oriente|occidente|centro|ciudad|varios)$/i.test(zone);
+  const textHasZone = /\b(chico|rosales|cedritos|chapinero|salitre|santa barbara|usaquen|teusaquillo|suba|poblado|laureles|envigado)\b/i.test(text);
+  if (isGenericZone && !textHasZone) {
+    missing.push('Zonas específicas o barrios');
+  }
+
+  const isIncomplete = missing.length > 0;
+  return {
+    isComplete: !isIncomplete,
+    isIncomplete,
+    missingReasons: missing,
+    missingFields: missing,
+    fichaTecnica: isIncomplete ? generateFichaTecnicaRequerimientoIncompleto({
+      transactionType: data.transactionType,
+      propertyType: hasValidPropType ? (propType || 'Apartamento') : undefined,
+      city: data.city,
+      zone: !isGenericZone ? zone : undefined,
+      budget: budgetNum > 0 ? budgetNum : undefined,
+      adminClarified: !missing.some(m => m.includes('administración')) ? 'Aclarada' : undefined,
+      area: data.areaMin,
+      bedrooms: data.habitacionesMin,
+      bathrooms: data.banosMin,
+      garages: data.garajesMin
+    }, firstName) : undefined
+  };
+}
+
 export function buildGroupIncompleteMessage(
   text: string,
   userId: string,

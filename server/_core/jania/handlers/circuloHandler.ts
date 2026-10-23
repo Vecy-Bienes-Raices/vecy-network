@@ -172,6 +172,20 @@ export async function processCirculoMessage(
     if (pdfBuffer) {
       userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el contenido con tu comprensión documental nativa y participa en la conversación con solvencia.]`;
     }
+    // 🌐 VALIDACIÓN EN LÍNEA EN TIEMPO REAL (WEB GROUNDING - v33.34):
+    const isNormativeOrCurrencyQuery = /\b(?:pot\s*555|decreto\s*555|estatuto\s*tributario|uvt|trm|d[oó]lar|divisa|notar[ií]a|sinupot|vur|resoluci[oó]n\s*snr|supernotariado)\b/i.test(text);
+    if (isNormativeOrCurrencyQuery) {
+      try {
+        const { searchWebGrounding } = await import('../../scraper');
+        const searchRes = await searchWebGrounding(text);
+        if (searchRes.success && searchRes.summary) {
+          userPromptContent += `\n\n[VALIDACIÓN EN LÍNEA EN TIEMPO REAL — RIGOR JURÍDICO OFICIAL]:\n${searchRes.summary}\nUtiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con total rigor legal y sin alucinaciones.`;
+        }
+      } catch (gErr: any) {
+        console.warn('[JanIA-Grounding] Error al obtener web grounding:', gErr?.message);
+      }
+    }
+
     userPromptContent += greetingInstruction;
 
     messages.push({

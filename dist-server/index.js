@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.33";
+    VECY_VERSION = "v33.34";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1366,6 +1366,15 @@ var init_llm = __esm({
 });
 
 // server/_core/scraper.ts
+var scraper_exports = {};
+__export(scraper_exports, {
+  esDominioPermitido: () => esDominioPermitido,
+  extractPortalAndListingId: () => extractPortalAndListingId,
+  fetchLiveTRM: () => fetchLiveTRM,
+  fetchWebUrlContent: () => fetchWebUrlContent,
+  scrapePropertyLink: () => scrapePropertyLink,
+  searchWebGrounding: () => searchWebGrounding
+});
 import axios3 from "axios";
 import * as cheerio from "cheerio";
 function esDominioPermitido(url) {
@@ -1528,6 +1537,86 @@ async function fetchWebUrlContent(urlStr, timeoutMs = 1e4) {
       success: false
     };
   }
+}
+async function fetchLiveTRM() {
+  try {
+    const res = await axios3.get("https://www.datos.gov.co/resource/32sa-8pi3.json?$limit=1&$order=vigenciadesde%20DESC", {
+      timeout: 6e3
+    });
+    if (Array.isArray(res.data) && res.data[0] && res.data[0].valor) {
+      return {
+        valor: parseFloat(res.data[0].valor),
+        fecha: res.data[0].vigenciadesde?.split("T")[0] || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+        success: true,
+        fuente: "Datos Abiertos Colombia (Superintendencia Financiera)"
+      };
+    }
+  } catch (err) {
+    console.warn("[TRM] Error consultando TRM oficial en datos.gov.co:", err?.message);
+  }
+  return { valor: 0, fecha: "", success: false, fuente: "Datos Abiertos Colombia" };
+}
+async function searchWebGrounding(query, timeoutMs = 7e3) {
+  const cleanQ = (query || "").trim();
+  if (!cleanQ) {
+    return { query: "", source: "none", results: [], summary: "", success: false };
+  }
+  const isCurrencyQuery = /\b(?:trm|d[oó]lar|divisa|tasa\s*de\s*cambio|dolares|usd|cop)\b/i.test(cleanQ);
+  if (isCurrencyQuery) {
+    const trm = await fetchLiveTRM();
+    if (trm.success && trm.valor > 0) {
+      const summary = `\u{1F4B5} *Tasa Representativa del Mercado (TRM Oficial de Colombia)*:
+\u2022 Valor Oficial: $${trm.valor.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COP
+\u2022 Vigencia: ${trm.fecha}
+\u2022 Fuente: Superintendencia Financiera de Colombia / Banco de la Rep\xFAblica (Datos Abiertos).`;
+      return {
+        query: cleanQ,
+        source: "Superintendencia Financiera / Datos Abiertos Colombia",
+        results: [{ title: "TRM Oficial Colombia", snippet: summary, url: "https://www.datos.gov.co/resource/32sa-8pi3.json" }],
+        summary,
+        success: true
+      };
+    }
+  }
+  try {
+    const response = await axios3.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQ)}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-CO,es;q=0.9,en;q=0.8"
+      },
+      timeout: timeoutMs
+    });
+    const $ = cheerio.load(response.data);
+    const results = [];
+    $(".result__body").slice(0, 4).each((_i, el) => {
+      const title = $(el).find(".result__title a").text().trim();
+      const snippet = $(el).find(".result__snippet").text().trim();
+      const url = $(el).find(".result__url").text().trim();
+      if (title && snippet) {
+        results.push({ title, snippet, url: url ? `https://${url}` : void 0 });
+      }
+    });
+    if (results.length > 0) {
+      const summary = results.map((r, i) => `[${i + 1}] ${r.title}: ${r.snippet}`).join("\n\n");
+      return {
+        query: cleanQ,
+        source: "Web Grounding (Fuentes Oficiales y Web)",
+        results,
+        summary,
+        success: true
+      };
+    }
+  } catch (err) {
+    console.warn(`[WEB-GROUNDING] Error en b\xFAsqueda web para "${cleanQ}":`, err?.message);
+  }
+  return {
+    query: cleanQ,
+    source: "N\xFAcleo Cognitivo JanIA",
+    results: [],
+    summary: "",
+    success: false
+  };
 }
 var DOMINIOS_PERMITIDOS, DOMINIOS_BLOQUEADOS;
 var init_scraper = __esm({
@@ -12164,6 +12253,80 @@ Pero \xA1no te preocupes! Puedes enviarme por aqu\xED mismo los detalles escrito
   }
   return `Oye *${firstName}*, \xBFme podr\xEDas confirmar la ubicaci\xF3n o el barrio exacto para registrarlo correctamente en VECY? \u{1F50E}`;
 }
+function generateFichaTecnicaRequerimientoIncompleto(provided, firstName) {
+  const greeting = firstName ? `Estimado(a) *${firstName}*` : "Estimado colega";
+  const txFormatted = provided.transactionType ? provided.transactionType.toLowerCase() === "arriendo" ? "Arriendo" : "Venta" : "Venta / Arriendo";
+  const propFormatted = provided.propertyType ? provided.propertyType.charAt(0).toUpperCase() + provided.propertyType.slice(1).toLowerCase() : "Apartamento / Casa / Oficina / Bodega / Lote";
+  const zoneFormatted = provided.zone ? `${provided.city || "Bogot\xE1"} \u2014 ${provided.zone}` : provided.city ? `${provided.city} \u2014 [Barrio]` : "[Ej. Bogot\xE1 \u2014 Chic\xF3, Rosales, Cedritos]";
+  const budgetFormatted = provided.budget && Number(provided.budget) > 0 ? `$${Number(provided.budget).toLocaleString("es-CO")}` : "$ [Presupuesto m\xE1ximo]";
+  const adminFormatted = provided.adminClarified || (provided.transactionType === "arriendo" ? "[\xBFIncluida en el canon o valor por separado?]" : "N/A");
+  return `\xA1Hola, ${greeting}! \u{1F91D} Para que nuestro motor de VECY BIENES RA\xCDCES pueda registrar la b\xFAsqueda de tu cliente, buscar coincidencias precisas (matches) y conectar negocios seguros, requerimos los datos indispensables completos.
+
+Actualmente faltan datos clave (presupuesto, tipolog\xEDa, administraci\xF3n o barrio espec\xEDfico). Por favor completa o reenv\xEDa la siguiente ficha t\xE9cnica diligenciando los campos entre corchetes:
+
+\u{1F4CB} *FICHA T\xC9CNICA DE REQUERIMIENTO \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+\u2022 \u{1F3F7}\uFE0F *Tipo de Negocio:* [${txFormatted}]
+\u2022 \u{1F3E2} *Tipo de Inmueble:* [${propFormatted}]
+\u2022 \u{1F4CD} *Ciudad y Barrio(s) Espec\xEDfico(s):* [${zoneFormatted}]
+\u2022 \u{1F4B5} *Presupuesto M\xE1ximo:* [${budgetFormatted}]
+\u2022 \u{1F4CB} *Administraci\xF3n:* [${adminFormatted}]
+\u2022 \u{1F4D0} *\xC1rea M\xEDnima:* [${provided.area && Number(provided.area) > 0 ? `${provided.area} m\xB2` : " m\xB2"}]
+\u2022 \u{1F6CF}\uFE0F *Habitaciones M\xEDnimas:* [${provided.bedrooms && Number(provided.bedrooms) > 0 ? provided.bedrooms : " "}]
+\u2022 \u{1F6BD} *Ba\xF1os M\xEDnimos:* [${provided.bathrooms && Number(provided.bathrooms) > 0 ? provided.bathrooms : " "}]
+\u2022 \u{1F697} *Parqueaderos M\xEDnimos:* [${provided.garages && Number(provided.garages) > 0 ? provided.garages : " "} (Independientes / Lineales)]
+\u2022 \u26A1 *Requisitos No Negociables:* [${provided.notes || "Ascensor, balc\xF3n, piso, estrato, etc."}]
+
+En cuanto me env\xEDes estos datos completos, activaremos de inmediato el cruce autom\xE1tico en nuestra bolsa inmobiliaria colaborativa. \u{1F680}\u2728`;
+}
+function evaluateRequirementCompleteness(dataOrText, firstName) {
+  const data = typeof dataOrText === "string" ? { rawText: dataOrText } : dataOrText || {};
+  const missing = [];
+  const text2 = (data.rawText || "").toLowerCase();
+  const budgetNum = Number(data.presupuestoMax || 0);
+  const textHasBudget = /\b(?:\$|pesos|cop|millones|millon|millón|canon|presupuesto)\b/i.test(text2) && /\d+/.test(text2);
+  if ((!budgetNum || budgetNum <= 0) && !textHasBudget) {
+    missing.push("Presupuesto m\xE1ximo o canon mensual");
+  }
+  const propType = (data.propertyType || "").toLowerCase().trim();
+  const textHasPropType = /\b(apartamento|apto|casa|bodega|oficina|lote|consultorio|local|edificio)\b/i.test(text2);
+  const hasValidPropType = propType && !["inmueble", "na", "otro", ""].includes(propType) || textHasPropType;
+  if (!hasValidPropType) {
+    missing.push("Tipolog\xEDa de inmueble (apartamento, casa, bodega, etc.)");
+  }
+  const isArriendo = (data.transactionType || "").toLowerCase().includes("arriendo") || text2.includes("arriend") || text2.includes("alquil");
+  if (isArriendo) {
+    const hasAdminMention = text2.includes("adm") || text2.includes("administra") || text2.includes("admon");
+    const adminNum = Number(data.adminFee || 0);
+    if (!hasAdminMention && adminNum <= 0) {
+      missing.push("Aclaraci\xF3n de cuota de administraci\xF3n");
+    }
+  }
+  const zone = (data.zone || "").trim();
+  const isGenericZone = !zone || zone.toLowerCase() === "na" || /^(bogota|bogotá|colombia|medellin|medellín|cali|barranquilla|norte|sur|oriente|occidente|centro|ciudad|varios)$/i.test(zone);
+  const textHasZone = /\b(chico|rosales|cedritos|chapinero|salitre|santa barbara|usaquen|teusaquillo|suba|poblado|laureles|envigado)\b/i.test(text2);
+  if (isGenericZone && !textHasZone) {
+    missing.push("Zonas espec\xEDficas o barrios");
+  }
+  const isIncomplete = missing.length > 0;
+  return {
+    isComplete: !isIncomplete,
+    isIncomplete,
+    missingReasons: missing,
+    missingFields: missing,
+    fichaTecnica: isIncomplete ? generateFichaTecnicaRequerimientoIncompleto({
+      transactionType: data.transactionType,
+      propertyType: hasValidPropType ? propType || "Apartamento" : void 0,
+      city: data.city,
+      zone: !isGenericZone ? zone : void 0,
+      budget: budgetNum > 0 ? budgetNum : void 0,
+      adminClarified: !missing.some((m) => m.includes("administraci\xF3n")) ? "Aclarada" : void 0,
+      area: data.areaMin,
+      bedrooms: data.habitacionesMin,
+      bathrooms: data.banosMin,
+      garages: data.garajesMin
+    }, firstName) : void 0
+  };
+}
 function buildGroupIncompleteMessage(text2, userId, extracted) {
   const phone = userId.split("@")[0];
   const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
@@ -17620,6 +17783,31 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     console.log(`[JANIA-INGESTION-GUARD] \u26D4 Requerimiento omitido por falta de ubicaci\xF3n expl\xEDcita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
     return null;
   }
+  const completeness = evaluateRequirementCompleteness({
+    transactionType: insertData.tipoNegocioDeseado,
+    propertyType: insertData.tipoInmuebleDeseado,
+    city: insertData.ciudadDeseada,
+    zone: insertData.zonaDeseada,
+    presupuestoMax: insertData.presupuestoMax,
+    adminFee: insertData.cuotaAdministracion,
+    rawText: insertData.rawText,
+    areaMin: insertData.areaMin,
+    habitacionesMin: insertData.habitacionesMin,
+    banosMin: insertData.banosMin,
+    garajesMin: insertData.garajesMin
+  });
+  if (completeness.isIncomplete) {
+    console.log(`[JANIA-REQ-INCOMPLETE] \u26D4 Requerimiento incompleto (${completeness.missingReasons.join(", ")}). PROHIBIDO registrar como match viable.`);
+    const [saved] = await db.insert(requirements).values({
+      ...insertData,
+      status: "incompleto",
+      calificacion: "incompleto",
+      fechaPrimeraPublicacion: getColombiaNow(),
+      fechaUltimaPublicacion: getColombiaNow(),
+      republicacionesCount: 0
+    }).returning();
+    return saved;
+  }
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
@@ -18866,6 +19054,27 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         fechaExtraccion: /* @__PURE__ */ new Date()
       }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
       if (saved) {
+        if (saved.status === "incompleto") {
+          const completeness = evaluateRequirementCompleteness({
+            transactionType: extracted.transactionType,
+            propertyType: extracted.propertyType,
+            city: extracted.ciudadDeseada || extracted.city,
+            zone: extracted.zonaDeseada || extracted.zone,
+            presupuestoMax: extracted.presupuestoMax || extracted.price,
+            adminFee: extracted.adminFee,
+            rawText: effectiveReqRawText,
+            areaMin: extracted.area,
+            habitacionesMin: extracted.bedrooms,
+            banosMin: extracted.bathrooms,
+            garajesMin: extracted.garages
+          }, realName);
+          result.inserted = false;
+          result.response = completeness.fichaTecnica || "";
+          result.dmResponse = completeness.fichaTecnica || "";
+          result.shouldSendDM = !isGroup;
+          result.reactionEmoji = "\u{1F4DD}";
+          return result;
+        }
         result.inserted = true;
         result.shouldSendDM = false;
         result.dmResponse = "";
@@ -24190,8 +24399,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               }
             }
             await delay(1e3);
+            return sent || null;
           } catch (err) {
             console.error("[JANIA-MATCH] Error en despacho de mensaje Baileys:", err.message || err);
+            return null;
           }
         });
         return outgoingQueue;
@@ -24375,10 +24586,15 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (mentions && mentions.length > 0 && !targetJid.endsWith("@newsletter")) {
             messagePayload.mentions = mentions.map((m) => m.endsWith("@s.whatsapp.net") ? m : m.replace("@c.us", "@s.whatsapp.net"));
           }
-          await this.queuedSend(targetJid, messagePayload);
-          console.log(`[JANIA-MATCH] \u2713 Mensaje enviado al destino ${targetJid}.`);
+          const sent = await this.queuedSend(targetJid, messagePayload);
+          if (sent && sent.key && sent.key.id) {
+            console.log(`[JANIA-MATCH] \u2713 Mensaje enviado al destino ${targetJid} (ID: ${sent.key.id}).`);
+            return { success: true, messageId: sent.key.id };
+          }
+          return { success: false, error: "No se obtuvo ID de confirmaci\xF3n de entrega en el socket de WhatsApp" };
         } catch (e) {
           console.error(`[JANIA-MATCH] Error enviando mensaje al destino ${groupId || this.targetGroupId}:`, e.message || e);
+          return { success: false, error: e?.message || String(e) };
         }
       }
       async sendVoiceToGroup(text2, groupId, imagePath, captionText) {
@@ -24485,24 +24701,31 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
+        if (!this.channelNewsletterId) {
+          console.warn(`[JANIA-ATOMIC] \u{1F6D1} Cancelado env\xEDo: Canal Oficial no configurado. Jam\xE1s se debe anunciar contenido en grupos que no exista en el Canal.`);
+          return { success: false, reason: "Canal Oficial no configurado" };
+        }
         const fs14 = await import("fs");
         const hasImage = imagePath && fs14.existsSync(imagePath);
-        if (this.channelNewsletterId) {
-          try {
-            if (hasImage) {
-              console.log(`[JANIA-MATCH] \u{1F4E2} Despachando p\xEDldora matutina con imagen HD a Canal Oficial (${this.channelNewsletterId})...`);
-              await this.sendToGroup(channelText, imagePath, [], this.channelNewsletterId);
-            } else {
-              console.log(`[JANIA-MATCH] \u{1F4E2} Despachando p\xEDldora matutina a Canal Oficial (${this.channelNewsletterId})...`);
-              await this.queuedSend(this.channelNewsletterId, channelText, { allowDirectMessage: true });
-            }
-            console.log(`[JANIA-MATCH] \u2713 P\xEDldora matutina entregada al Canal Oficial.`);
-          } catch (chanErr) {
-            console.error(`[JANIA-MATCH] Error despachando p\xEDldora al Canal Oficial:`, chanErr?.message);
+        let channelResult = { success: false };
+        try {
+          if (hasImage) {
+            console.log(`[JANIA-MATCH] \u{1F4E2} Despachando p\xEDldora matutina con imagen HD a Canal Oficial (${this.channelNewsletterId})...`);
+            channelResult = await this.sendToGroup(channelText, imagePath, [], this.channelNewsletterId);
+          } else {
+            console.log(`[JANIA-MATCH] \u{1F4E2} Despachando p\xEDldora matutina a Canal Oficial (${this.channelNewsletterId})...`);
+            const sent = await this.queuedSend(this.channelNewsletterId, channelText, { allowDirectMessage: true });
+            channelResult = sent?.key?.id ? { success: true, messageId: sent.key.id } : { success: false, error: "Sin ID de mensaje devuelto" };
           }
-        } else {
-          console.warn(`[JANIA-MATCH] Canal Oficial no disponible al despachar p\xEDldora matutina.`);
+        } catch (chanErr) {
+          console.error(`[JANIA-MATCH] Error despachando p\xEDldora al Canal Oficial:`, chanErr?.message);
+          channelResult = { success: false, error: chanErr?.message };
         }
+        if (!channelResult.success || !channelResult.messageId) {
+          console.warn(`[JANIA-ATOMIC] \u{1F6D1} ABORTADO env\xEDo de trampolines a Grupos 2 y 3: La publicaci\xF3n principal en el Canal Oficial fall\xF3 o no confirm\xF3 ID de entrega (${channelResult.error || "Sin ID"}).`);
+          return { success: false, reason: `Fallo en Canal Oficial: ${channelResult.error || "Sin ID de entrega v\xE1lido"}` };
+        }
+        console.log(`[JANIA-ATOMIC] \u2705 Publicaci\xF3n en Canal confirmada (ID: ${channelResult.messageId}). Procediendo con micro-ganchos trampol\xEDn a Grupos 2 y 3.`);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -24523,6 +24746,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             console.error(`[JANIA-MATCH] Error despachando teaser a Grupo 3:`, grpErr?.message);
           }
         }
+        return { success: true, channelMessageId: channelResult.messageId };
       }
       /**
        * Compatibilidad: Despacho de texto puro delegando a sendDailyTipToGroupsAndChannel sin imagen
@@ -27354,156 +27578,203 @@ async function queryAdres(tipoDoc, numDoc) {
       error: "Sin novedad de aseguramiento registrada en BDUA (Entorno de prueba automatizada)"
     };
   }
-  try {
-    const ep = await getAdresEndpoint();
-    const commonHeaders = {
-      "Host": "aplicaciones.adres.gov.co",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Referer": "https://www.adres.gov.co/consulte-su-eps"
-    };
-    const r1 = await httpRequest({
-      hostname: ep.host,
-      port: ep.port,
-      path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
-      method: "GET",
-      headers: commonHeaders,
-      timeout: 15e3
-    });
-    const c1 = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
-    const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || "";
-    const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || "";
-    const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || "";
-    if (!vs || !ev) {
-      return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No fue posible inicializar sesi\xF3n en ADRES" };
-    }
-    const postData = querystring.stringify({
-      __VIEWSTATE: vs,
-      __VIEWSTATEGENERATOR: vsg,
-      __EVENTVALIDATION: ev,
-      tipoDoc: mappedTipo,
-      txtNumDoc: cleanNum,
-      btnConsultar: "Consultar"
-    });
-    const r2 = await httpRequest({
-      hostname: ep.host,
-      port: ep.port,
-      path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
-      method: "POST",
-      headers: {
-        ...commonHeaders,
+  const ADRES_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/126.0.0.0"
+  ];
+  let lastError = "Intermitencia o sin respuesta en el servidor ADRES";
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const ep = await getAdresEndpoint();
+      const userAgent = ADRES_USER_AGENTS[(attempt - 1) % ADRES_USER_AGENTS.length];
+      const getHeaders = {
+        "Host": "aplicaciones.adres.gov.co",
+        "User-Agent": userAgent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Referer": "https://www.adres.gov.co/consulte-su-eps",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "cross-site",
+        "Upgrade-Insecure-Requests": "1"
+      };
+      const r1 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
+        method: "GET",
+        headers: getHeaders,
+        timeout: 15e3
+      });
+      const c1 = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
+      const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || "";
+      const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || "";
+      const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || "";
+      if (!vs || !ev) {
+        lastError = "No fue posible inicializar sesi\xF3n en ADRES (ASP.NET tokens ausentes)";
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 600));
+          continue;
+        }
+        return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: lastError };
+      }
+      const postData = querystring.stringify({
+        __VIEWSTATE: vs,
+        __VIEWSTATEGENERATOR: vsg,
+        __EVENTVALIDATION: ev,
+        tipoDoc: mappedTipo,
+        txtNumDoc: cleanNum,
+        btnConsultar: "Consultar"
+      });
+      const postHeaders = {
+        "Host": "aplicaciones.adres.gov.co",
+        "User-Agent": userAgent,
+        "Origin": "https://aplicaciones.adres.gov.co",
+        "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
         "Content-Type": "application/x-www-form-urlencoded",
         "Content-Length": Buffer.byteLength(postData),
-        "Cookie": c1.join("; ")
-      },
-      timeout: 15e3
-    }, postData);
-    const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
-    const allCookies = [...c1, ...c2].join("; ");
-    const m = r2.body.match(/window\.open\('([^']+)'/);
-    if (!m) {
-      const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
-      return {
-        success: false,
-        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
-        error: alertMatch ? alertMatch[1] : "El ciudadano no registra afiliaci\xF3n vigente en la Base de Datos \xDAnica de Afiliados (BDUA)"
+        "Cookie": c1.join("; "),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1"
       };
-    }
-    const popupUrl = m[1];
-    const r3 = await httpRequest({
-      hostname: ep.host,
-      port: ep.port,
-      path: "/BDUA_Internet/Pages/" + popupUrl,
-      method: "GET",
-      headers: {
-        ...commonHeaders,
-        "Cookie": allCookies
-      },
-      timeout: 15e3
-    });
-    if (r3.statusCode !== 200 || r3.body.includes("Error de servidor")) {
-      return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "Intermitencia en el servidor ADRES" };
-    }
-    const lines = r3.body.replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
-    const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
-    const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
-    const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : "";
-    const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "";
-    const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
-    const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
-    const departamento = depIdx !== -1 ? lines[depIdx + 1] : "";
-    const municipio = munIdx !== -1 ? lines[munIdx + 1] : "";
-    const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
-    let estado = "";
-    let eps = "";
-    let regimen = "";
-    if (estadoIdx !== -1) {
-      const offset = 6;
-      estado = lines[estadoIdx + offset] || "";
-      eps = lines[estadoIdx + offset + 1] || "";
-      regimen = lines[estadoIdx + offset + 2] || "";
-    }
-    if (!regimen) {
-      const regMatch = r3.body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
-      if (regMatch) {
-        regimen = regMatch[1].toUpperCase();
+      const r2 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
+        method: "POST",
+        headers: postHeaders,
+        timeout: 15e3
+      }, postData);
+      const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
+      const allCookies = [...c1, ...c2].join("; ");
+      const m = r2.body.match(/window\.open\('([^']+)'/);
+      if (!m) {
+        const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+        return {
+          success: false,
+          source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
+          error: alertMatch ? alertMatch[1] : "El ciudadano no registra afiliaci\xF3n vigente en la Base de Datos \xDAnica de Afiliados (BDUA)"
+        };
       }
-    }
-    if (!estado) {
-      const estMatch = r3.body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
-      if (estMatch) {
-        estado = estMatch[1].toUpperCase();
-      }
-    }
-    if (!eps || eps.length < 3) {
-      const entidadIdx = lines.findIndex((l) => {
-        const u = l.toUpperCase();
-        return u === "ENTIDAD" || u === "ENTIDAD PROMOTORA" || u.includes("ADMINISTRADORA");
+      const popupUrl = m[1];
+      const r3 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: "/BDUA_Internet/Pages/" + popupUrl,
+        method: "GET",
+        headers: {
+          "Host": "aplicaciones.adres.gov.co",
+          "User-Agent": userAgent,
+          "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
+          "Cookie": allCookies,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
+        },
+        timeout: 15e3
       });
-      if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
-        eps = lines[entidadIdx + 1];
+      if (r3.statusCode !== 200 || r3.body.includes("Error de servidor")) {
+        lastError = "Intermitencia en el servidor ADRES";
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 600));
+          continue;
+        }
+        return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: lastError };
+      }
+      const lines = r3.body.replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+      const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
+      const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
+      const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : "";
+      const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "";
+      const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
+      const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
+      const departamento = depIdx !== -1 ? lines[depIdx + 1] : "";
+      const municipio = munIdx !== -1 ? lines[munIdx + 1] : "";
+      const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
+      let estado = "";
+      let eps = "";
+      let regimen = "";
+      if (estadoIdx !== -1) {
+        const offset = 6;
+        estado = lines[estadoIdx + offset] || "";
+        eps = lines[estadoIdx + offset + 1] || "";
+        regimen = lines[estadoIdx + offset + 2] || "";
+      }
+      if (!regimen) {
+        const regMatch = r3.body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
+        if (regMatch) {
+          regimen = regMatch[1].toUpperCase();
+        }
+      }
+      if (!estado) {
+        const estMatch = r3.body.match(/\b(ACTIVO|RETIRADO|SUSPENDIDO|DESAFILIADO)\b/i);
+        if (estMatch) {
+          estado = estMatch[1].toUpperCase();
+        }
+      }
+      if (!eps || eps.length < 3) {
+        const entidadIdx = lines.findIndex((l) => {
+          const u = l.toUpperCase();
+          return u === "ENTIDAD" || u === "ENTIDAD PROMOTORA" || u.includes("ADMINISTRADORA");
+        });
+        if (entidadIdx !== -1 && lines[entidadIdx + 1]) {
+          eps = lines[entidadIdx + 1];
+        }
+      }
+      if (!eps || eps.length < 3) {
+        const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+        const directMatch = r3.body.match(epsRegex);
+        if (directMatch) {
+          eps = directMatch[0];
+        }
+      }
+      const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, " ").trim();
+      if (!fullNameRaw) {
+        return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No se encontraron datos de identidad en ADRES" };
+      }
+      const officialName = formatTitleCase(fullNameRaw);
+      const cleanEps = formatCleanEpsName(eps);
+      identityCache.set(cacheKey, {
+        fullName: officialName,
+        eps: cleanEps || void 0,
+        estado: estado ? estado.toUpperCase() : void 0,
+        regimen: regimen ? regimen.toUpperCase() : void 0,
+        timestamp: Date.now()
+      });
+      return {
+        success: true,
+        officialName,
+        nombres: formatTitleCase(nombres),
+        apellidos: formatTitleCase(apellidos),
+        documentType: mappedTipo,
+        documentNumber: cleanNum,
+        departamento: formatTitleCase(departamento),
+        municipio: formatTitleCase(municipio),
+        estado: estado ? estado.toUpperCase() : void 0,
+        eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, " ").trim() : void 0),
+        regimen: regimen ? regimen.toUpperCase() : void 0,
+        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)"
+      };
+    } catch (err) {
+      lastError = `Intermitencia de conexi\xF3n con ADRES: ${err?.message || err}`;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 600));
+        continue;
       }
     }
-    if (!eps || eps.length < 3) {
-      const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
-      const directMatch = r3.body.match(epsRegex);
-      if (directMatch) {
-        eps = directMatch[0];
-      }
-    }
-    const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, " ").trim();
-    if (!fullNameRaw) {
-      return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No se encontraron datos de identidad en ADRES" };
-    }
-    const officialName = formatTitleCase(fullNameRaw);
-    const cleanEps = formatCleanEpsName(eps);
-    identityCache.set(cacheKey, {
-      fullName: officialName,
-      eps: cleanEps || void 0,
-      estado: estado ? estado.toUpperCase() : void 0,
-      regimen: regimen ? regimen.toUpperCase() : void 0,
-      timestamp: Date.now()
-    });
-    return {
-      success: true,
-      officialName,
-      nombres: formatTitleCase(nombres),
-      apellidos: formatTitleCase(apellidos),
-      documentType: mappedTipo,
-      documentNumber: cleanNum,
-      departamento: formatTitleCase(departamento),
-      municipio: formatTitleCase(municipio),
-      estado: estado ? estado.toUpperCase() : void 0,
-      eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, " ").trim() : void 0),
-      regimen: regimen ? regimen.toUpperCase() : void 0,
-      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)"
-    };
-  } catch (err) {
-    return {
-      success: false,
-      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
-      error: `Intermitencia de conexi\xF3n con ADRES: ${err?.message || err}`
-    };
   }
+  return {
+    success: false,
+    source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
+    error: lastError
+  };
 }
 function savePendingCedulaSession(userId, items, reportText, success) {
   if (!userId) return;
@@ -29039,6 +29310,19 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
         void 0,
         false
       );
+      if (res.dmResponse && res.dmResponse.includes("FICHA T\xC9CNICA DE REQUERIMIENTO")) {
+        return {
+          toolType: "sondeo",
+          resultJson: {
+            solicitud: "registro_inmueble_o_requerimiento",
+            clasificacion: res.classification,
+            insertado: false,
+            esIncompleto: true,
+            guiaFichaTecnica: res.dmResponse,
+            detalle: "Requerimiento incompleto (falta presupuesto, administraci\xF3n, zona o tipolog\xEDa). JanIA gu\xEDa al agente con la Ficha T\xE9cnica Estandarizada [ ] para completar los datos indispensables."
+          }
+        };
+      }
       return {
         toolType: "sondeo",
         resultJson: {
@@ -29342,13 +29626,17 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
           }
         };
       }
+      const { searchWebGrounding: searchWebGrounding2 } = await Promise.resolve().then(() => (init_scraper(), scraper_exports));
+      const searchRes = await searchWebGrounding2(query);
       return {
         toolType: "web",
         resultJson: {
           solicitud: "busqueda_web",
           query,
-          mensaje: "B\xFAsqueda web procesada en el n\xFAcleo cognitivo de JanIA.",
-          exitoso: true
+          fuente: searchRes.source,
+          resumen: searchRes.summary,
+          resultados: searchRes.results,
+          exitoso: searchRes.success
         }
       };
     }
@@ -29898,7 +30186,7 @@ ${contactDossier ? `${contactDossier}
 1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
 3. Perita Avaluadora: Sondeos de m\xB2 y c\xE1nones por zonas del norte de Bogot\xE1 con honestidad t\xE9cnica (Cero Alucinaci\xF3n). REGLA MANDATORIA DE APAGADO AUTOM\xC1TICO: NUNCA liquides aval\xFAos, estudios de valor de m\xB2 ni peritajes cuando un usuario solo env\xEDe datos de un inmueble o requerimiento. \xDANICAMENTE se liquida aval\xFAo si el usuario escribe de manera EXPRESA palabras como 'avaluo', 'aval\xFAo', 'avaluar', 'cuanto vale' o 'cu\xE1nto vale'.
-4. Conectora Comercial y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria.
+4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
 5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
 6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.
 
@@ -29908,7 +30196,7 @@ MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.
 Reglas de ejecuci\xF3n seg\xFAn el contexto:
 a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.
-b) Si el usuario pide buscar en la web o comparte un enlace URL (portal inmobiliario, p\xE1gina corporativa): Invoca 'navegar_o_buscar_web' para extraer el contenido real al instante.
+b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, tr\xE1mites VUR/Sinupot, divisas/TRM del d\xF3lar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jur\xEDdico sin alucinaciones.
 c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
 d) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
 e) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
@@ -30701,6 +30989,23 @@ Consulta: ${messageToProcess}`;
       role: "user",
       content: userPromptContent
     });
+    const isNormativeOrCurrencyQuery = /\b(?:pot\s*555|decreto\s*555|estatuto\s*tributario|uvt|trm|d[oó]lar|divisa|notar[ií]a|sinupot|vur|resoluci[oó]n\s*snr|supernotariado)\b/i.test(messageToProcess);
+    if (isNormativeOrCurrencyQuery) {
+      try {
+        const { searchWebGrounding: searchWebGrounding2 } = await Promise.resolve().then(() => (init_scraper(), scraper_exports));
+        const searchRes = await searchWebGrounding2(messageToProcess);
+        if (searchRes.success && searchRes.summary) {
+          userPromptContent += `
+
+[VALIDACI\xD3N EN L\xCDNEA EN TIEMPO REAL \u2014 RIGOR JUR\xCDDICO OFICIAL]:
+${searchRes.summary}
+Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con total rigor legal y sin alucinaciones.`;
+          messages2[messages2.length - 1].content = userPromptContent;
+        }
+      } catch (gErr) {
+        console.warn("[JanIA-Grounding] Error al obtener web grounding:", gErr?.message);
+      }
+    }
     const needsSearch = cleanText.length > 25 && (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"));
     const llmRes = await invokeLLM({
       messages: messages2,
@@ -30708,7 +31013,7 @@ Consulta: ${messageToProcess}`;
       imageBuffer,
       pdfBuffer,
       pdfMimeType,
-      enableSearch: needsSearch
+      enableSearch: needsSearch && !isNormativeOrCurrencyQuery
     });
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
@@ -30982,6 +31287,22 @@ Mensaje/Aporte: ${text2}`;
       userPromptContent += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el contenido con tu comprensi\xF3n documental nativa y participa en la conversaci\xF3n con solvencia.]`;
     }
+    const isNormativeOrCurrencyQuery = /\b(?:pot\s*555|decreto\s*555|estatuto\s*tributario|uvt|trm|d[oó]lar|divisa|notar[ií]a|sinupot|vur|resoluci[oó]n\s*snr|supernotariado)\b/i.test(text2);
+    if (isNormativeOrCurrencyQuery) {
+      try {
+        const { searchWebGrounding: searchWebGrounding2 } = await Promise.resolve().then(() => (init_scraper(), scraper_exports));
+        const searchRes = await searchWebGrounding2(text2);
+        if (searchRes.success && searchRes.summary) {
+          userPromptContent += `
+
+[VALIDACI\xD3N EN L\xCDNEA EN TIEMPO REAL \u2014 RIGOR JUR\xCDDICO OFICIAL]:
+${searchRes.summary}
+Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con total rigor legal y sin alucinaciones.`;
+        }
+      } catch (gErr) {
+        console.warn("[JanIA-Grounding] Error al obtener web grounding:", gErr?.message);
+      }
+    }
     userPromptContent += greetingInstruction;
     messages2.push({
       role: "user",
@@ -31124,6 +31445,7 @@ __export(janIA_exports, {
   enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
   evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
+  evaluateRequirementCompleteness: () => evaluateRequirementCompleteness,
   executeJaniaDmTool: () => executeJaniaDmTool,
   extractColombianPhoneFromText: () => extractColombianPhoneFromText,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
@@ -31135,6 +31457,7 @@ __export(janIA_exports, {
   formatColombiaDateTime: () => formatColombiaDateTime,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   generarHashMensaje: () => generarHashMensaje,
+  generateFichaTecnicaRequerimientoIncompleto: () => generateFichaTecnicaRequerimientoIncompleto,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getCirculoHistory: () => getCirculoHistory,
   getColombiaHour: () => getColombiaHour,
@@ -31573,7 +31896,8 @@ __export(cronService_exports, {
   publishNoticiaNacionalNow: () => publishNoticiaNacionalNow,
   publishTodayTipNow: () => publishTodayTipNow,
   publishWeeklyPoll: () => publishWeeklyPoll,
-  publishWeeklyReportNow: () => publishWeeklyReportNow
+  publishWeeklyReportNow: () => publishWeeklyReportNow,
+  sanitizeChannelContent: () => sanitizeChannelContent
 });
 import cron from "node-cron";
 import path10 from "path";
@@ -31949,6 +32273,27 @@ ${additionalInstructions || ""}` }
     chosenTheme: dynamicFallback.themeKey
   };
 }
+function sanitizeChannelContent(text2) {
+  if (!text2) return text2;
+  let sanitized = text2;
+  sanitized = sanitized.replace(/AIzaSy[A-Za-z0-9_-]{33}/g, "[CREDENTIAL_PROTECTED]").replace(/sk-[A-Za-z0-9_-]{20,}/g, "[API_KEY_PROTECTED]").replace(/(?:postgres|postgresql|mysql|mongodb):\/\/[^\s]+/gi, "[DB_CONNECTION_PROTECTED]").replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, "[HOST_PROTECTED]").replace(/\b(?:localhost|127\.0\.0\.1)(?::\d+)?\b/gi, "[LOCAL_HOST]").replace(/\/(?:home|etc|var|usr)\/[a-zA-Z0-9_\-\.\/]+/g, "[SYSTEM_PATH]");
+  sanitized = sanitized.replace(/\b(?:propietario|dueño|propietaria|arrendador|captador):\s*([A-Za-záéíóúÁÉÍÓÚñÑ\s]+)(?=\n|$)/gi, (match, name) => {
+    const lower = (name || "").toLowerCase();
+    if (lower.includes("eduardo") || lower.includes("jani") || lower.includes("vecy")) {
+      return match;
+    }
+    return "Propietario: [Protegido \u2014 Mesa de Coincidencias VECY]";
+  });
+  sanitized = sanitized.replace(/(?:\+?57)?\s*3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g, (phone) => {
+    const digits = phone.replace(/\D/g, "");
+    const cleanDigits = digits.length === 12 && digits.startsWith("57") ? digits.slice(2) : digits;
+    if (cleanDigits === "3192919978" || cleanDigits === "3166569719") {
+      return phone;
+    }
+    return "+57 316 656 9719";
+  });
+  return sanitized;
+}
 async function publishEveningPollNow(force = false) {
   const dateBogota = getBogotaDateString();
   const d = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
@@ -31958,33 +32303,61 @@ async function publishEveningPollNow(force = false) {
   const weekNumber = Math.floor(diffDays / 7);
   const pollIndex = (weekNumber * 2 + (dayOfWeek === 4 ? 1 : 0)) % WEEKLY_POLLS_LIST.length;
   const poll = WEEKLY_POLLS_LIST[pollIndex] || WEEKLY_POLLS_LIST[0];
-  console.log(`[CRON-POLL] \u{1F4CA} Despachando encuesta vespertina interactiva (Canal Oficial + Teasers Grupos 2 y 3)...`);
+  console.log(`[CRON-POLL] \u{1F4CA} Despachando encuesta vespertina interactiva (Canal Oficial + Votaci\xF3n Grupos 2 y 3)...`);
   const lock = await acquireBroadcastLock("canal_evening_poll", "encuesta_vespertina", dateBogota, force);
   if (!lock.allowed) {
     console.log(`[CRON-POLL] \u23ED\uFE0F Omitiendo encuesta vespertina: ${lock.reason}`);
     return { success: false, reason: lock.reason };
   }
   try {
-    if (janiaMatchBot.channelNewsletterId) {
-      await janiaMatchBot.sendPoll(janiaMatchBot.channelNewsletterId, poll.question, poll.options, 1);
-      console.log(`[CRON-POLL] \u2705 Encuesta nativa interactiva entregada al Canal Oficial: "${poll.question}".`);
-    } else {
-      console.warn("[CRON-POLL] Canal Oficial no disponible al despachar encuesta vespertina.");
+    if (!janiaMatchBot.channelNewsletterId) {
+      await janiaMatchBot.discoverAndSyncNewsletters().catch(() => {
+      });
     }
-    const pollTeaser = `\u{1F4CA} *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* \u{1F5F3}\uFE0F
+    if (!janiaMatchBot.channelNewsletterId) {
+      console.warn("[CRON-POLL] \u{1F6D1} Canal Oficial no configurado. Cancelando despacho trampol\xEDn a grupos.");
+      await failBroadcast(lock.broadcastId, "Canal Oficial no disponible");
+      return { success: false, reason: "Canal Oficial no disponible" };
+    }
+    const letters = ["A", "B", "C", "D"];
+    const formattedOptions = poll.options.map((opt, i) => `\u{1F539} *${letters[i]})* ${opt}`).join("\n");
+    const channelPollText = sanitizeChannelContent(
+      `\u{1F4CA} *ENCUESTA DE LA SEMANA \u2014 COMUNIDAD VECY* \u{1F5F3}\uFE0F
 
-Acabamos de lanzar la encuesta en nuestro Canal Oficial:
 *\xAB${poll.question}\xBB*
 
-\u{1F449} *Participa con 1 solo toque en nuestro Canal aqu\xED:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+${formattedOptions}
 
-Colegas, \xBFpor qu\xE9 eligieron esa opci\xF3n? Cu\xE9ntennos su experiencia y debatimos con JanIA aqu\xED abajo \u{1F447}`;
+\u{1F5E3}\uFE0F *\xA1Tu opini\xF3n cuenta!* Hemos habilitado la votaci\xF3n interactiva directa en nuestros Grupos Oficiales de Debate Inmobiliario.
+
+\u{1F449} *Sigue nuestro Canal para m\xE1s an\xE1lisis y herramientas:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+
+${VECY_MOTTO_FOOTER}`
+    );
+    const pollImage = getLocalCuratedThemeImage("general") || getLocalCuratedThemeImage("juridico");
+    const chanRes = await janiaMatchBot.sendToGroup(channelPollText, pollImage, [], janiaMatchBot.channelNewsletterId);
+    if (!chanRes?.success || !chanRes?.messageId) {
+      console.warn(`[CRON-POLL] \u{1F6D1} ABORTADO env\xEDo a Grupos 2 y 3: La publicaci\xF3n en Canal Oficial fall\xF3 (${chanRes?.error || "Sin ID"}).`);
+      await failBroadcast(lock.broadcastId, chanRes?.error || "Fallo de entrega en Canal Oficial");
+      return { success: false, reason: "Fallo de entrega en Canal Oficial" };
+    }
+    console.log(`[CRON-POLL] \u2705 Encuesta en Canal confirmada (ID: ${chanRes.messageId}). Habilitando votaci\xF3n interactiva en Grupos 2 y 3...`);
+    const pollTeaser = `\u{1F4CA} *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* \u{1F5F3}\uFE0F
+
+Acabamos de lanzar la tem\xE1tica en nuestro Canal Oficial:
+*\xAB${poll.question}\xBB*
+
+\u{1F449} *Sigue el Canal Oficial aqu\xED:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+
+Colegas, \xA1voten en la encuesta arriba y debatimos su experiencia aqu\xED abajo! \u{1F447}`;
     const targetGroup2 = janiaMatchBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
+      await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
       await janiaMatchBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
     }
     const targetGroup3 = janiaMatchBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
     if (targetGroup3) {
+      await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup3, 1);
       await janiaMatchBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
     }
     await completeBroadcast(lock.broadcastId, {
@@ -31993,7 +32366,7 @@ Colegas, \xBFpor qu\xE9 eligieron esa opci\xF3n? Cu\xE9ntennos su experiencia y 
       voiceText: poll.question,
       captionText: poll.options.join(" | ")
     });
-    return { success: true, question: poll.question };
+    return { success: true, question: poll.question, channelMessageId: chanRes.messageId };
   } catch (err) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
@@ -32007,8 +32380,18 @@ async function publishEveningServicesNow(force = false) {
     return { success: false, reason: lock.reason };
   }
   try {
+    if (!janiaMatchBot.channelNewsletterId) {
+      await janiaMatchBot.discoverAndSyncNewsletters().catch(() => {
+      });
+    }
+    if (!janiaMatchBot.channelNewsletterId) {
+      console.warn("[CRON-SERVICES] \u{1F6D1} Canal Oficial no configurado. Cancelando despacho trampol\xEDn a grupos.");
+      await failBroadcast(lock.broadcastId, "Canal Oficial no configurado");
+      return { success: false, reason: "Canal Oficial no configurado" };
+    }
     const imagePath = getLocalCuratedThemeImage("verificacion");
-    const channelText = `\u{1F6E1}\uFE0F *SERVICIOS GRATUITOS DE VERIFICACI\xD3N CON JANIA* \u{1F1E8}\u{1F1F4}
+    const channelText = sanitizeChannelContent(
+      `\u{1F6E1}\uFE0F *SERVICIOS GRATUITOS DE VERIFICACI\xD3N CON JANIA* \u{1F1E8}\u{1F1F4}
 
 Estimados colegas y aliados de VECY Bienes Ra\xEDces:
 
@@ -32025,11 +32408,15 @@ Escribe directamente al WhatsApp de JanIA (+57 319 291 9978) con el n\xFAmero de
 
 \u{1F449} *Sigue nuestro Canal Oficial para m\xE1s herramientas y beneficios:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
 
-${VECY_MOTTO_FOOTER}`;
-    if (janiaMatchBot.channelNewsletterId) {
-      await janiaMatchBot.sendToGroup(channelText, imagePath, [], janiaMatchBot.channelNewsletterId);
-      console.log(`[CRON-SERVICES] \u2705 Servicios gratuitos despachados al Canal con imagen.`);
+${VECY_MOTTO_FOOTER}`
+    );
+    const chanRes = await janiaMatchBot.sendToGroup(channelText, imagePath, [], janiaMatchBot.channelNewsletterId);
+    if (!chanRes?.success || !chanRes?.messageId) {
+      console.warn(`[CRON-SERVICES] \u{1F6D1} ABORTADO env\xEDo a grupos: Fall\xF3 la entrega en Canal Oficial (${chanRes?.error || "Sin ID"}).`);
+      await failBroadcast(lock.broadcastId, chanRes?.error || "Fallo de entrega en Canal Oficial");
+      return { success: false, reason: "Fallo de entrega en Canal Oficial" };
     }
+    console.log(`[CRON-SERVICES] \u2705 Servicios gratuitos confirmados en Canal (ID: ${chanRes.messageId}). Procediendo con micro-ganchos a Grupos 2 y 3...`);
     const servicesTeaser = `\u{1F6E1}\uFE0F *BLINDA TUS NEGOCIACIONES ESTE FIN DE SEMANA CON JANIA* \u{1F4F2}
 
 \xBFVas a recibir una oferta o firmar promesa este fin de semana? Recuerda que JanIA te ayuda a verificar antecedentes, ADRES EPS, RUES y Predial gratis en segundos.
@@ -32051,7 +32438,7 @@ En el Canal Oficial acabamos de publicar la gu\xEDa completa de c\xF3mo solicita
       imageFileName: path10.basename(imagePath),
       captionText: channelText
     });
-    return { success: true };
+    return { success: true, channelMessageId: chanRes.messageId };
   } catch (err) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };

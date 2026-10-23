@@ -1483,6 +1483,55 @@ export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
  * - Límite estricto de 3 a 4 opciones cortas (máximo 5 a 6 palabras por opción).
  * - Cero votos con emojis en texto.
  */
+/**
+ * 🛡️ Filtro de Confidencialidad y Sanitización para Canal Oficial de WhatsApp (v33.34):
+ * Protege estrictamente bases de datos internas, nombres de propietarios y credenciales de acceso.
+ */
+export function sanitizeChannelContent(text: string): string {
+  if (!text) return text;
+
+  let sanitized = text;
+
+  // 1. Ocultar credenciales, API keys, tokens y cadenas de conexión a bases de datos
+  sanitized = sanitized
+    .replace(/AIzaSy[A-Za-z0-9_-]{33}/g, '[CREDENTIAL_PROTECTED]')
+    .replace(/sk-[A-Za-z0-9_-]{20,}/g, '[API_KEY_PROTECTED]')
+    .replace(/(?:postgres|postgresql|mysql|mongodb):\/\/[^\s]+/gi, '[DB_CONNECTION_PROTECTED]')
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[HOST_PROTECTED]')
+    .replace(/\b(?:localhost|127\.0\.0\.1)(?::\d+)?\b/gi, '[LOCAL_HOST]')
+    .replace(/\/(?:home|etc|var|usr)\/[a-zA-Z0-9_\-\.\/]+/g, '[SYSTEM_PATH]');
+
+  // 2. Proteger confidencialidad de propietarios particulares (preservando bróker oficial y JanIA)
+  sanitized = sanitized.replace(/\b(?:propietario|dueño|propietaria|arrendador|captador):\s*([A-Za-záéíóúÁÉÍÓÚñÑ\s]+)(?=\n|$)/gi, (match, name) => {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('eduardo') || lower.includes('jani') || lower.includes('vecy')) {
+      return match;
+    }
+    return 'Propietario: [Protegido — Mesa de Coincidencias VECY]';
+  });
+
+  // 3. Proteger números de teléfono privados que no sean las líneas oficiales de VECY
+  sanitized = sanitized.replace(/(?:\+?57)?\s*3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g, (phone) => {
+    const digits = phone.replace(/\D/g, '');
+    const cleanDigits = digits.length === 12 && digits.startsWith('57') ? digits.slice(2) : digits;
+    if (cleanDigits === '3192919978' || cleanDigits === '3166569719') {
+      return phone;
+    }
+    return '+57 316 656 9719';
+  });
+
+  return sanitized;
+}
+
+/**
+ * 📊 Despacha la Encuesta Vespertina en el Canal Oficial de WhatsApp y Grupos 2 y 3.
+ * Martes y Jueves (06:30 PM) — Doctrina de Atomicidad y Compatibilidad Protocolo Canal (v33.34):
+ * - El Canal Oficial (@newsletter) NO admite encuestas nativas interactivas por protocolo de WhatsApp.
+ *   Se despacha una pieza visual/infografía formateada con opciones A, B, C y CTA.
+ * - ATOMICIDAD ESTRICTA: Si la publicación principal en el Canal falla o no confirma entrega efectiva (ID válido),
+ *   se cancela de inmediato el envío a los Grupos 2 y 3.
+ * - Confirmada la entrega en el Canal, se habilita la votación interactiva nativa (sendPollToGroup) en Grupos 2 y 3.
+ */
 export async function publishEveningPollNow(force: boolean = false) {
   const dateBogota = getBogotaDateString();
   const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
@@ -1493,7 +1542,7 @@ export async function publishEveningPollNow(force: boolean = false) {
   const pollIndex = (weekNumber * 2 + (dayOfWeek === 4 ? 1 : 0)) % WEEKLY_POLLS_LIST.length;
   const poll = WEEKLY_POLLS_LIST[pollIndex] || WEEKLY_POLLS_LIST[0];
 
-  console.log(`[CRON-POLL] 📊 Despachando encuesta vespertina interactiva (Canal Oficial + Teasers Grupos 2 y 3)...`);
+  console.log(`[CRON-POLL] 📊 Despachando encuesta vespertina interactiva (Canal Oficial + Votación Grupos 2 y 3)...`);
   const lock = await acquireBroadcastLock('canal_evening_poll', 'encuesta_vespertina', dateBogota, force);
   if (!lock.allowed) {
     console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta vespertina: ${lock.reason}`);
@@ -1501,27 +1550,55 @@ export async function publishEveningPollNow(force: boolean = false) {
   }
 
   try {
-    // 1. Despachar encuesta nativa interactiva (1 sola opción, 3-4 opciones cortas) al Canal Oficial
-    if (whatsappBot.channelNewsletterId) {
-      await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
-      console.log(`[CRON-POLL] ✅ Encuesta nativa interactiva entregada al Canal Oficial: "${poll.question}".`);
-    } else {
-      console.warn('[CRON-POLL] Canal Oficial no disponible al despachar encuesta vespertina.');
+    if (!whatsappBot.channelNewsletterId) {
+      await whatsappBot.discoverAndSyncNewsletters().catch(() => {});
     }
 
-    // 2. Despachar micro-gancho trampolín a Grupo 2 y Grupo 3 invitando a votar y debatir
-    const pollTeaser = `📊 *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* 🗳️\n\n` +
-      `Acabamos de lanzar la encuesta en nuestro Canal Oficial:\n` +
+    if (!whatsappBot.channelNewsletterId) {
+      console.warn('[CRON-POLL] 🛑 Canal Oficial no configurado. Cancelando despacho trampolín a grupos.');
+      await failBroadcast(lock.broadcastId, 'Canal Oficial no disponible');
+      return { success: false, reason: 'Canal Oficial no disponible' };
+    }
+
+    // 1. Canal Oficial (@newsletter): Infografía/Pieza visual con opciones A, B, C (protocolo broadcast)
+    const letters = ['A', 'B', 'C', 'D'];
+    const formattedOptions = poll.options.map((opt, i) => `🔹 *${letters[i]})* ${opt}`).join('\n');
+    const channelPollText = sanitizeChannelContent(
+      `📊 *ENCUESTA DE LA SEMANA — COMUNIDAD VECY* 🗳️\n\n` +
       `*«${poll.question}»*\n\n` +
-      `👉 *Participa con 1 solo toque en nuestro Canal aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
-      `Colegas, ¿por qué eligieron esa opción? Cuéntennos su experiencia y debatimos con JanIA aquí abajo 👇`;
+      `${formattedOptions}\n\n` +
+      `🗣️ *¡Tu opinión cuenta!* Hemos habilitado la votación interactiva directa en nuestros Grupos Oficiales de Debate Inmobiliario.\n\n` +
+      `👉 *Sigue nuestro Canal para más análisis y herramientas:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+      `${VECY_MOTTO_FOOTER}`
+    );
+
+    const pollImage = getLocalCuratedThemeImage('general') || getLocalCuratedThemeImage('juridico');
+    const chanRes = await whatsappBot.sendToGroup(channelPollText, pollImage, [], whatsappBot.channelNewsletterId);
+
+    // ATOMICIDAD: Cancelar de inmediato si el canal falla o no confirma ID válido
+    if (!chanRes?.success || !chanRes?.messageId) {
+      console.warn(`[CRON-POLL] 🛑 ABORTADO envío a Grupos 2 y 3: La publicación en Canal Oficial falló (${chanRes?.error || 'Sin ID'}).`);
+      await failBroadcast(lock.broadcastId, chanRes?.error || 'Fallo de entrega en Canal Oficial');
+      return { success: false, reason: 'Fallo de entrega en Canal Oficial' };
+    }
+
+    console.log(`[CRON-POLL] ✅ Encuesta en Canal confirmada (ID: ${chanRes.messageId}). Habilitando votación interactiva en Grupos 2 y 3...`);
+
+    // 2. Grupos 2 y 3: Encuesta nativa interactiva de WhatsApp (1 solo toque) + Teaser
+    const pollTeaser = `📊 *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* 🗳️\n\n` +
+      `Acabamos de lanzar la temática en nuestro Canal Oficial:\n` +
+      `*«${poll.question}»*\n\n` +
+      `👉 *Sigue el Canal Oficial aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+      `Colegas, ¡voten en la encuesta arriba y debatimos su experiencia aquí abajo! 👇`;
 
     const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
+      await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
       await whatsappBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
     }
     const targetGroup3 = whatsappBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
     if (targetGroup3) {
+      await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup3, 1);
       await whatsappBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
     }
 
@@ -1532,7 +1609,7 @@ export async function publishEveningPollNow(force: boolean = false) {
       captionText: poll.options.join(' | ')
     });
 
-    return { success: true, question: poll.question };
+    return { success: true, question: poll.question, channelMessageId: chanRes.messageId };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
@@ -1542,7 +1619,7 @@ export async function publishEveningPollNow(force: boolean = false) {
 /**
  * 🛡️ Despacha la Píldora de Servicios Gratuitos de Verificación con JanIA
  * Canal Oficial (post completo con imagen) + Micro-gancho a Grupos 2 y 3.
- * Viernes (06:30 PM).
+ * Viernes (06:30 PM) — Atomicidad estricta garantizada.
  */
 export async function publishEveningServicesNow(force: boolean = false) {
   const dateBogota = getBogotaDateString();
@@ -1553,8 +1630,19 @@ export async function publishEveningServicesNow(force: boolean = false) {
   }
 
   try {
+    if (!whatsappBot.channelNewsletterId) {
+      await whatsappBot.discoverAndSyncNewsletters().catch(() => {});
+    }
+
+    if (!whatsappBot.channelNewsletterId) {
+      console.warn('[CRON-SERVICES] 🛑 Canal Oficial no configurado. Cancelando despacho trampolín a grupos.');
+      await failBroadcast(lock.broadcastId, 'Canal Oficial no configurado');
+      return { success: false, reason: 'Canal Oficial no configurado' };
+    }
+
     const imagePath = getLocalCuratedThemeImage('verificacion');
-    const channelText = `🛡️ *SERVICIOS GRATUITOS DE VERIFICACIÓN CON JANIA* 🇨🇴\n\n` +
+    const channelText = sanitizeChannelContent(
+      `🛡️ *SERVICIOS GRATUITOS DE VERIFICACIÓN CON JANIA* 🇨🇴\n\n` +
       `Estimados colegas y aliados de VECY Bienes Raíces:\n\n` +
       `¿Sabías que puedes proteger tus negociaciones y verificar a tus clientes en segundos a $0 COP antes de firmar cualquier contrato o recibir un inmueble?\n\n` +
       `JanIA, nuestra Inteligencia Artificial Oficial, te entrega al instante:\n` +
@@ -1565,13 +1653,20 @@ export async function publishEveningServicesNow(force: boolean = false) {
       `📲 *¿Cómo solicitarlo gratis?*\n` +
       `Escribe directamente al WhatsApp de JanIA (+57 319 291 9978) con el número de documento o NIT y recibe tu reporte ejecutivo inmediato.\n\n` +
       `👉 *Sigue nuestro Canal Oficial para más herramientas y beneficios:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
-      `${VECY_MOTTO_FOOTER}`;
+      `${VECY_MOTTO_FOOTER}`
+    );
 
     // 1. Despachar al Canal Oficial con imagen
-    if (whatsappBot.channelNewsletterId) {
-      await whatsappBot.sendToGroup(channelText, imagePath, [], whatsappBot.channelNewsletterId);
-      console.log(`[CRON-SERVICES] ✅ Servicios gratuitos despachados al Canal con imagen.`);
+    const chanRes = await whatsappBot.sendToGroup(channelText, imagePath, [], whatsappBot.channelNewsletterId);
+
+    // ATOMICIDAD: Cancelar despacho a grupos si la entrega en el Canal no confirma éxito
+    if (!chanRes?.success || !chanRes?.messageId) {
+      console.warn(`[CRON-SERVICES] 🛑 ABORTADO envío a grupos: Falló la entrega en Canal Oficial (${chanRes?.error || 'Sin ID'}).`);
+      await failBroadcast(lock.broadcastId, chanRes?.error || 'Fallo de entrega en Canal Oficial');
+      return { success: false, reason: 'Fallo de entrega en Canal Oficial' };
     }
+
+    console.log(`[CRON-SERVICES] ✅ Servicios gratuitos confirmados en Canal (ID: ${chanRes.messageId}). Procediendo con micro-ganchos a Grupos 2 y 3...`);
 
     // 2. Despachar micro-gancho a Grupos 2 y 3
     const servicesTeaser = `🛡️ *BLINDA TUS NEGOCIACIONES ESTE FIN DE SEMANA CON JANIA* 📲\n\n` +
@@ -1595,7 +1690,7 @@ export async function publishEveningServicesNow(force: boolean = false) {
       captionText: channelText
     });
 
-    return { success: true };
+    return { success: true, channelMessageId: chanRes.messageId };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };

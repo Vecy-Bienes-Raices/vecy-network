@@ -312,6 +312,19 @@ export async function executeJaniaDmTool(
         undefined,
         false
       );
+      if (res.dmResponse && res.dmResponse.includes("FICHA TÉCNICA DE REQUERIMIENTO")) {
+        return {
+          toolType: "sondeo",
+          resultJson: {
+            solicitud: "registro_inmueble_o_requerimiento",
+            clasificacion: res.classification,
+            insertado: false,
+            esIncompleto: true,
+            guiaFichaTecnica: res.dmResponse,
+            detalle: "Requerimiento incompleto (falta presupuesto, administración, zona o tipología). JanIA guía al agente con la Ficha Técnica Estandarizada [ ] para completar los datos indispensables."
+          }
+        };
+      }
       return {
         toolType: "sondeo",
         resultJson: {
@@ -633,13 +646,17 @@ export async function executeJaniaDmTool(
           }
         };
       }
+      const { searchWebGrounding } = await import("../../scraper");
+      const searchRes = await searchWebGrounding(query);
       return {
         toolType: "web",
         resultJson: {
           solicitud: "busqueda_web",
           query,
-          mensaje: "Búsqueda web procesada en el núcleo cognitivo de JanIA.",
-          exitoso: true
+          fuente: searchRes.source,
+          resumen: searchRes.summary,
+          resultados: searchRes.results,
+          exitoso: searchRes.success
         }
       };
     }
@@ -1338,7 +1355,7 @@ export async function processPrivateDmConversationalMessage(
       `1. Abogada Contractual Senior: Rigor jurídico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).\n` +
       `2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retención en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).\n` +
       `3. Perita Avaluadora: Sondeos de m² y cánones por zonas del norte de Bogotá con honestidad técnica (Cero Alucinación). REGLA MANDATORIA DE APAGADO AUTOMÁTICO: NUNCA liquides avalúos, estudios de valor de m² ni peritajes cuando un usuario solo envíe datos de un inmueble o requerimiento. ÚNICAMENTE se liquida avalúo si el usuario escribe de manera EXPRESA palabras como 'avaluo', 'avalúo', 'avaluar', 'cuanto vale' o 'cuánto vale'.\n` +
-      `4. Conectora Comercial y Mediadora 40/20/40: Conexión de negocios compartidos entre colegas. Si un colega pregunta por qué reaccionamos a sus mensajes en los grupos (👍/📝) o reenvía requerimientos a este chat: explica con autoridad que la reacción confirma que ya entró al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisión bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria.\n` +
+      `4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexión de negocios compartidos entre colegas. Si un colega pregunta por qué reaccionamos a sus mensajes en los grupos (👍/📝) o reenvía requerimientos a este chat: explica con autoridad que la reacción confirma que ya entró al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisión bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario envía un requerimiento incompleto (falta presupuesto, no aclara administración, zonas difusas o sin tipología): PROHIBIDO registrarlo como match viable o disparar avalúos; guíalo devolviendo la Ficha Técnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.\n` +
       `5. Tutora en Firma Electrónica Oficial y Fábrica Proptech: Guía paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electrónicamente', 3. Asunto y motivo, 4. Cargar PDF máx 10MB sin clave, 5. Código OTP al correo y firmar; también validar firmas de terceros y bandeja de 15 días). Recuerda que eres su tutora pedagógica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electrónica, canalízala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y guía en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificación algorítmica de identidad.\n` +
       `6. Asesora en Marketing Digital Inmobiliario: Estrategias, públicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversión.\n\n` +
       `===================================================\n` +
@@ -1347,7 +1364,7 @@ export async function processPrivateDmConversationalMessage(
       `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.\n` +
       `Reglas de ejecución según el contexto:\n` +
       `a) Si el usuario envía un número o documento con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.\n` +
-      `b) Si el usuario pide buscar en la web o comparte un enlace URL (portal inmobiliario, página corporativa): Invoca 'navegar_o_buscar_web' para extraer el contenido real al instante.\n` +
+      `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +
       `d) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
       `e) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
