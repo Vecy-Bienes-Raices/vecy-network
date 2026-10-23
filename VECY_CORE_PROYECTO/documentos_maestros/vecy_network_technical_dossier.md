@@ -331,6 +331,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.33 — Octubre 2026
+
+#### [v33.33.0] — 2026-10-22: Retiro de Modelos Obsoletos (Gemini 2.5), Priorización Gemini 3.8 / Latest, Continuidad Conversacional en DMs, Supresión de Candados Estáticos y Protocolo Comercial 40/20/40
+- **Actualización de Modelos LLM y Retiro Definitivo de Gemini 2.5 (`llm.ts`, `vision.ts`):**
+  - **Problema:** Google deprecó la familia `gemini-2.5` (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.5-flash-lite`) para nuevas invocaciones arrojando errores 404, provocando retardos de fallback innecesarios en producción.
+  - **Solución:** Reestructuración de `HIGH_REASONING_MODELS` y `MECHANICAL_MODELS` situando al frente `gemini-3.8-flash` y `gemini-flash-latest`, garantizando cero reintentos fallidos, máxima velocidad de respuesta y razonamiento cognitivo superior.
+- **Continuidad Conversacional y Erradicación de Saludos Bucle en DMs (`dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`):**
+  - **Problema:** En chats privados y foros, si un usuario continuaba una conversación del mismo día o dentro de una ventana de 6 horas, JanIA reintroducía saludos ("¡Hola, Flor Alba! Qué gusto saludarte...") o repetía su nombre en cada frase.
+  - **Solución:** Inyección de `isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday`, erradicación de prefijos automáticos y aplicación de `stripLeadingGreetingsAndCourtesies` para respuestas directas al grano, cálidas y fluidas.
+- **Supresión de Candados Estáticos en Consulta de Matches (`adminMatchAssistantService.ts`):**
+  - **Problema:** El interceptor de acceso no administrador arrojaba un bloque rígido y hostil con candados ("🔒 ACCESO RESTRINGIDO - PROTOCOLO DE PRIVACIDAD VECY").
+  - **Solución:** Eliminación del bloque estático. Ahora, cualquier consulta de colegas externos se canaliza a través de `formatMatchReport`, entregando un informe ejecutivo que salvaguarda la privacidad de los contactos de ambas partes y orienta hacia la mediación de alianzas 40/20/40 con la Dirección de Operaciones (+57 316 656 9719).
+- **Apagado de Avalúos Automáticos Involuntarios (`dmHandler.ts`):**
+  - **Problema:** El envío de características de un inmueble disparaba automáticamente la herramienta `sondeo_mercado_inmobiliario`.
+  - **Solución:** Guard estricto `isExplicitValuation` para que los sondeos de mercado y avalúos únicamente se generen si el usuario solicita explícitamente "avaluo", "cuanto vale", "en cuanto se vende" o "valor comercial".
+- **Protocolo Comercial y Filtro 40/20/40 en DMs (`dmHandler.ts`, `sessionManager.ts`):**
+  - **Problema:** Consultas sobre el significado de las reacciones de emojis en grupos (👍 / 📝) o el reenvío de inmuebles no eran aprovechadas para instruir y calificar comercialmente al asesor.
+  - **Solución:** JanIA explica que la reacción confirma el registro en la base de datos sin necesidad de duplicar el mensaje, asegura el contacto automático ante matches con Score ≥ 80% e indaga si la colega acepta comisiones compartidas 40/20/40, persistiendo su estado en RAM, disco y PostgreSQL (`advisors` y `pendingSessions`).
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **327/327 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 34s.
+
 ### 🔖 v33.32 — Octubre 2026
 
 #### [v33.32.0] — 2026-10-22: Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3), Capa 1 Multimedia Resiliente y Encuestas Nativas Estrictas

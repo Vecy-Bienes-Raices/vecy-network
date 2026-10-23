@@ -28,24 +28,22 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos de alto razonamiento cognitivo (Nivel ARGON — gemini-2.5-flash y gemini-2.5-pro prioritarios en DMs y síntesis de herramientas)
+// Modelos de alto razonamiento cognitivo (Nivel ARGON — gemini-3.8-flash y gemini-flash-latest prioritarios en DMs y síntesis de herramientas)
 export const HIGH_REASONING_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-flash-latest",
-  "gemini-flash-lite-latest",
-  "gemini-2.5-flash-lite",
-  "gemini-3.5-flash-lite",
   "gemini-3.8-flash",
-  "gemini-1.5-flash",
+  "gemini-flash-latest",
+  "gemini-3.1-pro-preview",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-4-argon",
 ];
 
 // Modelos mecánicos secundarios para tareas rápidas de bajo cómputo
 export const MECHANICAL_MODELS = [
   "gemini-flash-lite-latest",
-  "gemini-2.5-flash-lite",
   "gemini-flash-latest",
-  "gemini-2.5-flash",
+  "gemini-3.8-flash",
   "gemini-3.5-flash-lite",
 ];
 

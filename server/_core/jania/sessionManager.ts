@@ -802,3 +802,40 @@ export async function shouldAskForGoogleReview(userId: string): Promise<boolean>
   return session.freeServicesUsedCount >= 1;
 }
 
+/**
+ * Registra y persiste la aceptación o rechazo del modelo colaborativo 40/20/40 en la memoria perpetua y BD (v33.33)
+ */
+export async function setUser402040Agreement(userId: string, accepts: boolean): Promise<UserPerpetualSession> {
+  const session = await getUserPerpetualSession(userId);
+  session.keyFacts = session.keyFacts || {};
+  session.keyFacts.acepta_40_20_40 = accepts;
+  session.keyFacts.categoriaContacto = accepts ? "aliada_prioritaria" : "contacto_convencional";
+  session.keyFacts.updatedAt_40_20_40 = new Date().toISOString();
+  delete session.keyFacts.esperando_respuesta_40_20_40;
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const cleanPhone = cleanSessionJid(userId).replace(/\D/g, "");
+      const normPhone = cleanPhone.startsWith("57") ? cleanPhone : `57${cleanPhone}`;
+      const noteTag = accepts ? "[ALIANZA 40/20/40 ACEPTADA - ALIADA PRIORITARIA]" : "[ALIANZA 40/20/40 RECHAZADA - CONTACTO CONVENCIONAL 50/50]";
+      await db.execute(sql`
+        UPDATE advisors 
+        SET notes = COALESCE(notes, '') || ' ' || ${noteTag}, updated_at = NOW()
+        WHERE normalized_phone = ${normPhone}
+      `);
+    }
+  } catch (err: any) {
+    console.warn("[setUser402040Agreement] Error actualizando en advisors:", err?.message);
+  }
+  return session;
+}
+
+export async function getUser402040Agreement(userId: string): Promise<boolean | undefined> {
+  const session = await getUserPerpetualSession(userId);
+  return session.keyFacts?.acepta_40_20_40;
+}
+
+

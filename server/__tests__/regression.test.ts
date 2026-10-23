@@ -3841,11 +3841,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       // Pero si pregunta explícitamente por la base de matches interna, sí se detecta para blindaje
       expect(isMatchSearchQuery("Dame los matches y teléfonos", false)).toBe(true);
 
-      // 3. Blindaje de Privacidad ante No-Administradores
+      // 3. Blindaje de Privacidad y Reporte Ejecutivo ante No-Administradores
       const unauthorizedResult = await executeAdminMatchSearch("Buscar matches para apartamento en Chico", false);
       expect(unauthorizedResult.isAuthorizedAdmin).toBe(false);
-      expect(unauthorizedResult.matches.length).toBe(0);
-      expect(unauthorizedResult.formattedReport).toContain("ACCESO RESTRINGIDO — PROTOCOLO DE PRIVACIDAD VECY");
+      expect(unauthorizedResult.formattedReport).toContain("MESA DE COINCIDENCIAS VECY BIENES RAÍCES");
       expect(unauthorizedResult.formattedReport).toContain("+57 316 656 9719");
 
       // 4. Formateador COP Amigable
@@ -5794,14 +5793,14 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
   });
 
   describe("SUITE 77: JanIA v33.16 — REFORMA ARQUITECTÓNICA LLM PURO, MATCHES M-CODE Y MEMORIA 72H", () => {
-    it("1. Validación de gemini-2.5-flash como modelo prioritario principal en llaves gratuitas", async () => {
+    it("1. Validación de gemini-3.8-flash como modelo prioritario principal en llaves gratuitas", async () => {
       const fs = await import("fs");
       const llmCode = fs.readFileSync("server/_core/llm.ts", "utf-8");
-      expect(llmCode).toContain('"gemini-2.5-flash"');
-      // gemini-2.5-flash debe aparecer antes de flash-lite en FALLBACK_MODELS
-      const idx25 = llmCode.indexOf('"gemini-2.5-flash"');
+      expect(llmCode).toContain('"gemini-3.8-flash"');
+      // gemini-3.8-flash debe aparecer antes de flash-lite en HIGH_REASONING_MODELS
+      const idx38 = llmCode.indexOf('"gemini-3.8-flash"');
       const idxLite = llmCode.indexOf('"gemini-3.5-flash-lite"');
-      expect(idx25).toBeLessThan(idxLite);
+      expect(idx38).toBeLessThan(idxLite);
     });
 
     it("2. Ventana de memoria continua de 72 horas deslizante y 20 turnos en sessionManager", async () => {
@@ -6953,11 +6952,49 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.32 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.32");
+      expect(VECY_VERSION).toMatch(/^v33\.(3[2-9]|[4-9]\d)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.32.0");
+      expect(pkg.version).toMatch(/^33\.(3[2-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 126. v33.33 — RETIRO DE GEMINI 2.5, MODELOS GEMINI 3.8 / LATEST, CONTINUIDAD EN DMS Y PROTOCOLO 40/20/40
+  // ─────────────────────────────────────────────────────────────
+  describe("126. v33.33 — Retiro de Gemini 2.5, Modelos Gemini 3.8 / Latest, Continuidad en DMs y Protocolo 40/20/40", () => {
+    it("1. LLM cascada: Gemini 2.5 erradicado, gemini-3.8-flash y gemini-flash-latest encabezan", async () => {
+      const { HIGH_REASONING_MODELS, MECHANICAL_MODELS } = await import("../_core/llm");
+      expect(HIGH_REASONING_MODELS.some(m => m.includes("gemini-2.5"))).toBe(false);
+      expect(MECHANICAL_MODELS.some(m => m.includes("gemini-2.5"))).toBe(false);
+      expect(HIGH_REASONING_MODELS[0]).toBe("gemini-3.8-flash");
+      expect(HIGH_REASONING_MODELS).toContain("gemini-flash-latest");
+    });
+
+    it("2. Protocolo de continuidad y erradicación de candado estático en adminMatchAssistantService", async () => {
+      const { executeAdminMatchSearch } = await import("../_core/adminMatchAssistantService");
+      const res = await executeAdminMatchSearch("Buscar matches para apartamento en Chico", false);
+      expect(res.isAuthorizedAdmin).toBe(false);
+      expect(res.formattedReport).not.toContain("ACCESO RESTRINGIDO — PROTOCOLO DE PRIVACIDAD VECY");
+      expect(res.formattedReport).toContain("MESA DE COINCIDENCIAS VECY BIENES RAÍCES");
+    });
+
+    it("3. Protocolo comercial 40/20/40 en sessionManager registra y persiste estado", async () => {
+      const { setUser402040Agreement, getUser402040Agreement } = await import("../_core/jania/sessionManager");
+      const testJid = "573118889900@s.whatsapp.net";
+      await setUser402040Agreement(testJid, true);
+      const accepts = await getUser402040Agreement(testJid);
+      expect(accepts).toBe(true);
+    });
+
+    it("4. Consagración doctrinal de versión v33.33 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.33");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.33.0");
     });
   });
 });

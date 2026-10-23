@@ -10,6 +10,7 @@ import { checkStrictOffTopic } from "../heuristics";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
+import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
 
 
 
@@ -189,7 +190,10 @@ export async function processCirculoMessage(
 
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
-      const cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      let cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      if (isOngoingChat && cleanResponse) {
+        cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
+      }
       appendCirculoHistory(userId, "user", text);
       appendCirculoHistory(userId, "assistant", cleanResponse);
       markUserGreetedToday(userId);
@@ -200,7 +204,10 @@ export async function processCirculoMessage(
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
-      const cleanResponse = sanitizeResponseMarkdown(replyContent);
+      let cleanResponse = sanitizeResponseMarkdown(replyContent);
+      if (isOngoingChat && cleanResponse) {
+        cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
+      }
       appendCirculoHistory(userId, "user", text);
       appendCirculoHistory(userId, "assistant", cleanResponse);
       markUserGreetedToday(userId);

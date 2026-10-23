@@ -7,6 +7,56 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-22] — JanIA v33.33: Retiro de Modelos Obsoletos (Gemini 2.5), Priorización Gemini 3.8 / Latest, Continuidad Conversacional en DMs, Supresión de Candados Estáticos y Protocolo Comercial 40/20/40 (v33.33 - 33.33.0)
+
+**Versión:** `v33.33` (`33.33.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/llm.ts`: Actualización integral de cascadas `HIGH_REASONING_MODELS` y `MECHANICAL_MODELS`. Retiro definitivo de `gemini-2.5` (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.5-flash-lite`) que Google deprecó con error 404 para nuevos usuarios; priorización inmediata de `gemini-3.8-flash` y `gemini-flash-latest`, eliminando latencias y ciclos de reintento.
+- `server/_core/jania/vision.ts`: Limpieza del pool de modelos de visión, eliminando `gemini-2.5-flash` y priorizando `gemini-flash-lite-latest`, `gemini-flash-latest` y `gemini-3.8-flash`.
+- `server/_core/adminMatchAssistantService.ts`: Erradicación del interceptor estático que devolvía el bloque con candados "🔒 ACCESO RESTRINGIDO - PROTOCOLO DE PRIVACIDAD VECY". Ahora las consultas de matches por parte de agentes o colegas externos reciben una respuesta ejecutiva y conversacional mediante `formatMatchReport` que protege datos de contacto privados y deriva amablemente a la Dirección de Operaciones (+57 316 656 9719) bajo el esquema 40/20/40.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Erradicación de saludos reiterativos ("¡Hola, [Nombre]!", "Qué gusto saludarte...", "Soy JanIA...") cuando la conversación ya tenga interacción en las últimas 6 horas (`isOngoingChat`).
+  2. Apagado de sondeos de mercado/avalúos automáticos: la herramienta `sondeo_mercado_inmobiliario` solo se ejecuta si el usuario formula una petición explícita de avalúo ("avaluo", "cuanto vale", "en cuanto se vende", "valor comercial").
+  3. Implementación del protocolo comercial ante preguntas por reacciones con emojis (👍 / 📝) o reenvío duplicado de ofertas/demandas a DMs: explicación de registro en base de datos de Vecy sin necesidad de duplicar, compromiso de contacto ante match ≥ 80%, y pregunta de filtro comercial sobre aceptación del modelo 40/20/40 como aliada prioritaria en mesa de operaciones.
+- `server/_core/jania/handlers/consultingHandler.ts` y `server/_core/jania/handlers/circuloHandler.ts`: Aplicación de `stripLeadingGreetingsAndCourtesies` en respuestas continuas de foros para asegurar fluidez y cero redundancia.
+- `server/_core/jania/sessionManager.ts`: Creación y persistencia de `setUser402040Agreement` y `getUser402040Agreement` con almacenamiento en RAM, archivo en disco y base de datos (tabla `advisors` y `pendingSessions`).
+- `server/__tests__/regression.test.ts`: Creación de la Suite 126 (`v33.33`) y actualización de pruebas de regresión.
+- `shared/const.ts` (`v33.33`) y `package.json` (`33.33.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Vamos a corregir de raíz la personalidad, coherencia y reglas comerciales de JanIA en chats privados (DMs) y unificar su comportamiento con el resto del sistema:*
+  *1. ACTUALIZACIÓN DE MODELOS EN server/_core/llm.ts: Limpia la cascada de fallbacks de Gemini: retira las versiones obsoletas (gemini-2.5) y prioriza gemini-3.8-flash y gemini-flash-latest para eliminar reintentos y latencia.*
+  *2. LIMPIEZA DE DMS EN consultingHandler.ts Y dmHandler.ts:*
+  *- Elimina cualquier plantilla o función que anteponga automáticamente saludos tipo '¡Hola, [Nombre]! Qué gusto saludarte...' o 'Soy JanIA...' cuando la conversación ya tenga mensajes previos en el día. Debe responder fluido y directo al grano.*
+  *- Borra el interceptor estático que devuelve el bloque con candados '🔒 ACCESO RESTRINGIDO - PROTOCOLO DE PRIVACIDAD VECY'. Las respuestas sobre cruces deben ser conversacionales y ejecutivas.*
+  *- Apaga la generación automática de avalúos o análisis de mercado cuando un usuario envía datos de un inmueble. Los avalúos solo se generan si el usuario lo solicita explícitamente escribiendo 'avaluo' o 'cuanto vale'.*
+  *3. PROTOCOLO COMERCIAL Y FILTRO 40/20/40 EN DMS:*
+  *- Si una colega pregunta por el emoji de reacción en los grupos (👍 / 📝) o envía/reenvía un requerimiento que ya puso en el grupo:*
+  *  a) Explicar con autoridad y amabilidad que el emoji confirma que su publicación ya quedó registrada en la base de datos de Vecy (no es necesario duplicar).*
+  *  b) Indicar que apenas el sistema detecte un match compatible (Score ≥ 80%), nos comunicaremos de inmediato.*
+  *  c) Hacer la pregunta de filtro comercial: Preguntarle si está dispuesta a compartir comisión bajo el modelo 40/20/40 (aliada prioritaria en mesa de operaciones).*
+  *  d) Si acepta, registrar acepta_40_20_40 = true y categoriaContacto = 'aliada_prioritaria'. Si insiste en 50/50 o rechaza, registrar como 'contacto convencional'."*
+
+#### 2. Diagnóstico Técnico y Causas Raíz
+1. **Modelos Deprecados en Google Generative AI:** Google arrojaba `models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash`, generando 2 intentos fallidos con status 404 antes de descender al siguiente modelo.
+2. **Saludos Bucle en DMs:** Pese a contar con historial de mensajes, la ausencia de stripping exhaustivo de saludos introductorios permitía que el LLM o concatenaciones automáticas volvieran a saludar con frases prefabricadas y muletillas de presentación.
+3. **Bloque Rígido de Candados en Asistente de Matches:** El interceptor de acceso estático en `adminMatchAssistantService.ts` respondía de forma agresiva ("🔒 ACCESO RESTRINGIDO") a colegas inmobiliarios, en lugar de ofrecer un resumen ejecutivo respetuoso que protegiera la privacidad de los contactos y los invitara a negociar bajo el esquema 40/20/40 con la Dirección de Operaciones (+57 316 656 9719).
+4. **Activación Involuntaria de Avalúos:** Al compartir un inmueble, JanIA seleccionaba automáticamente la herramienta de sondeo de mercado, generando avalúos largos no solicitados.
+5. **Carencia de Filtro Comercial de Captación de Alianzas:** Cuando un asesor inmobiliario consultaba en privado sobre la reacción con emoji en los grupos, JanIA no aprovechaba el momento para aclarar el funcionamiento ni para calificarlo comercialmente mediante el modelo 40/20/40 de Vecy.
+
+#### 3. Acciones Ejecutadas
+1. Actualización de `HIGH_REASONING_MODELS` y `MECHANICAL_MODELS` en `llm.ts` y de los modelos de visión en `vision.ts`, erradicando `gemini-2.5` y situando a la cabeza `gemini-3.8-flash` y `gemini-flash-latest`.
+2. Supresión del bloque estático con candados en `adminMatchAssistantService.ts` y adopción de `formatMatchReport` que garantiza reportes ejecutivos protectores de datos con canalización hacia la mesa de operaciones.
+3. Refactorización de `dmHandler.ts`: inyección de `isOngoingChat`, filtro estricto `isExplicitValuation` para la herramienta `sondeo_mercado_inmobiliario`, y creación del protocolo comercial de preguntas por reacciones y acuerdo 40/20/40.
+4. Implementación de persistencia dual y en base de datos (`advisors` y `pendingSessions`) para `setUser402040Agreement` y `getUser402040Agreement` en `sessionManager.ts`.
+5. Incorporación de `stripLeadingGreetingsAndCourtesies` en `consultingHandler.ts` y `circuloHandler.ts`.
+6. Pruebas de regresión creadas y verificadas: `npm run check` (0 errores) | `npm test` (327/327 passing) | `npm run build` limpio en 34s.
+
+---
+
 ### 📅 [2026-10-22] — JanIA v33.32: Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3), Capa 1 Multimedia Resiliente y Encuestas Nativas Estrictas (v33.32 - 33.32.0)
 
 **Versión:** `v33.32` (`33.32.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -291,29 +291,21 @@ export async function executeAdminMatchSearch(
     reqIdCaptured ? 'requirement_id' :
     (isDemand ? 'demand_search' : 'offer_search');
 
-  // 🛡️ ACCESO A MATCHES (DOCTRINA EDUARDO A. RIVERA v33.16):
+  // 🛡️ ACCESO A MATCHES (DOCTRINA EDUARDO A. RIVERA v33.33):
   // Administradores (Eduardo y Jani): Información 100% destapada (nombres, teléfonos, enlaces directos).
-  // Usuarios y Colegas Externos: Confirmación de match, perfil del cruce SIN datos de contacto del otro colega,
-  // código #M... y derivación a la línea oficial de bróker +57 316 656 9719 para mediación 40/20/40.
-
-  if (!isAdmin && !matchIdCaptured) {
-    return {
-      isMatchQuery: true,
-      isAuthorizedAdmin: false,
-      queryType: resolvedQueryType,
-      querySummary: "Acceso restringido: Consulta de base de datos de coincidencias exclusiva para Administradores de Vecy Bienes Raíces.",
-      totalFound: 0,
-      matches: [],
-      formattedReport: `🔒 *ACCESO RESTRINGIDO — PROTOCOLO DE PRIVACIDAD VECY*\n\n` +
-        `Hola colega. La consulta directa y masiva de la base de datos de coincidencias y contactos de agentes es de uso exclusivo para la Dirección de Vecy Bienes Raíces.\n\n` +
-        `Para consultar si tenemos un cliente o inmueble compatible para tu negocio bajo el esquema colaborativo 40/20/40, comunícate directamente con nuestra Dirección de Operaciones al WhatsApp oficial de Bróker:\n` +
-        `📲 *+57 316 656 9719* (https://wa.me/573166569719) 🤝✨`,
-      adminDashboardUrl
-    };
-  }
+  // Usuarios y Colegas Externos: Confirmación de match y perfil del cruce SIN datos de contacto privados del otro colega,
+  // código #M... y derivación ejecutiva a la línea oficial de bróker +57 316 656 9719 para mediación 40/20/40.
 
   const db = injectedDb || await getDb();
   if (!db) {
+    const reportText = formatMatchReport(
+      `🎯 *VECY MATCH ENGINE — BÚSQUEDA DE COINCIDENCIAS*`,
+      `Criterio analizado (${resolvedQueryType}): *${clean}*`,
+      [],
+      isAdmin,
+      adminDashboardUrl,
+      `⚠️ La base de datos no está disponible en este momento. Intenta nuevamente en unos instantes.`
+    );
     return {
       isMatchQuery: true,
       isAuthorizedAdmin: isAdmin,
@@ -321,7 +313,7 @@ export async function executeAdminMatchSearch(
       querySummary: "Base de datos no disponible temporalmente",
       totalFound: 0,
       matches: [],
-      formattedReport: `🎯 *VECY MATCH ENGINE — BÚSQUEDA DE COINCIDENCIAS*\n\nCriterio analizado (${resolvedQueryType}): *${clean}*.\n⚠️ La base de datos no está disponible en este momento. Intenta nuevamente en unos instantes.\n👉 *Ver en Mesa de Coincidencias:*\n${adminDashboardUrl}`,
+      formattedReport: reportText,
       adminDashboardUrl
     };
   }

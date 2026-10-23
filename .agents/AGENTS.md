@@ -183,28 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.32 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.33 — Octubre 2026
 
-### Novedades v33.32 (Embudo Estratégico Trampolín Canal vs Grupos 2 y 3, Capa 1 Multimedia Resiliente y Encuestas Nativas Estrictas):
+### Novedades v33.33 (Retiro de Gemini 2.5, Modelos Gemini 3.8 / Latest, Continuidad Conversacional en DMs, Supresión de Candados Estáticos y Protocolo Comercial 40/20/40):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:
-  1. **Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3)**:
-     - *Canal Oficial*: Escenario principal con publicaciones completas, profundas, formateadas y con imagen temática HD garantizada.
-     - *Grupos 2 y 3*: Micro-ganchos persuasivos (teasers) de 3 a 4 líneas de alto impacto con Copywriting AIDA, enlace directo al Canal Oficial (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`) y pregunta detonante para abrir debates profesionales que modera JanIA.
-  2. **Frecuencia Optimizada de 2 Impactos Diarios (Sin Saturación)**:
-     - *Mañana (08:45 AM)*: Píldora de alto valor en el Canal (jurídico, tributario Art. 72/73, notarial, avalúos $/m²) con imagen HD + micro-gancho en Grupos 2 y 3.
-     - *Tarde (06:30 PM)*: Martes y Jueves (encuesta nativa interactiva en Canal + teaser de debate en grupos); Viernes (servicios gratuitos de verificación con JanIA: ADRES, Policía, Procuraduría, Contraloría, RUES, Predial, IDU).
-  3. **Encuestas Nativas Estrictas en WhatsApp**:
-     - Exclusivamente `pollCreationMessageV3` / `sendPoll` con `selectableCount: 1` obligatorio (voto único; nada de selección múltiple ni emojis simulados).
-     - Límite estricto de 3 a 4 opciones cortas (máximo 5 a 6 palabras por opción).
-  4. **Capa 1 Multimedia Resiliente Garantizada**:
-     - Banco curado local en `assets/broadcast/`, `client/public/assets/broadcast/` y `client/public/assets/jania/` (`jania_juridico.jpg`, `jania_tributario.jpg`, `jania_avaluos.jpg`, `jania_noticias.jpg`, `jania_verificacion_servicio.jpg`, `jania_matches.jpg`, `jania_marketing.jpg`).
-     - Si la búsqueda web en Openverse falla o tarda, `fetchPublicThemeImage` conmuta automáticamente a la Capa 1 local, garantizando que el Canal JAMÁS salga en texto plano.
-  5. **Despacho Especializado**:
-     - Implementación de `sendMorningPillAndGroupTeasers` en `server/_core/whatsapp-match.ts` y reconfiguración integral de `initCronScheduler` en `server/_core/cronService.ts`.
-- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm run build` limpio en 22s ✅
-- `shared/const.ts` (`v33.32`) y `package.json` (`33.32.0`).
+  1. **Retiro Definitivo de Gemini 2.5 y Priorización de Modelos Activos (`server/_core/llm.ts`, `vision.ts`)**:
+     - *Causa raíz*: Google deprecó los modelos `gemini-2.5-flash`, `gemini-2.5-pro` y `gemini-2.5-flash-lite` para nuevos usuarios arrojando errores HTTP 404, causando 2 intentos fallidos por llamada y latencias evitables.
+     - *Solución*: Erradicación total de `gemini-2.5` en `HIGH_REASONING_MODELS`, `MECHANICAL_MODELS` y `VISION_FALLBACK_MODELS`. Priorización inmediata de `gemini-3.8-flash` y `gemini-flash-latest`.
+  2. **Continuidad Conversacional sin Saludos Reiterativos en DMs y Foros (`dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`)**:
+     - *Causa raíz*: En chats con interacción en el mismo día o en una ventana de 6 horas, se anteponían saludos prefabricados ("¡Hola, Flor Alba! Qué gusto saludarte...") o muletillas de autopresentación ("Soy JanIA...").
+     - *Solución*: Determinación de `isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday`. Activación de `stripLeadingGreetingsAndCourtesies` en respuestas conversacionales para fluir directo al grano con calidez.
+  3. **Erradicación del Candado Estático en Asistente de Matches (`adminMatchAssistantService.ts`)**:
+     - *Causa raíz*: Consultas de cruces por asesores externos devolvían un bloque hostil y estático con candados ("🔒 ACCESO RESTRINGIDO - PROTOCOLO DE PRIVACIDAD VECY").
+     - *Solución*: Supresión del interceptor estático. Adopción de `formatMatchReport` para generar un reporte ejecutivo y respetuoso que preserva la privacidad de datos de contacto de ambas partes y orienta hacia la mediación colaborativa 40/20/40 con la Dirección de Operaciones (+57 316 656 9719).
+  4. **Apagado de Avalúos Automáticos Involuntarios (`dmHandler.ts`)**:
+     - *Causa raíz*: Al ingresar datos de un inmueble, el LLM seleccionaba `sondeo_mercado_inmobiliario` sin que el usuario lo pidiera.
+     - *Solución*: Guard estricto `isExplicitValuation` que restringe el uso de sondeos y avalúos únicamente a solicitudes explícitas ("avaluo", "cuanto vale", "en cuanto se vende", "valor comercial").
+  5. **Protocolo Comercial y Filtro 40/20/40 en DMs (`dmHandler.ts`, `sessionManager.ts`)**:
+     - *Causa raíz*: Preguntas privadas sobre el emoji de reacción (👍/📝) en grupos o el reenvío de inmuebles no contaban con un flujo pedagógico y de captación comercial.
+     - *Solución*: JanIA explica que el emoji confirma el registro en la base de datos de Vecy sin necesidad de duplicar el mensaje, compromete aviso inmediato ante matches ≥ 80%, y formula la pregunta de filtro sobre aceptación del esquema de comisión compartida 40/20/40, persistiendo el estado del asesor en RAM, disco y PostgreSQL (`advisors` y `pendingSessions`).
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 327/327 passing (100% verde a $0 COP sin claves de pago) ✅ | `npm run build` limpio en 34s ✅
+- `shared/const.ts` (`v33.33`) y `package.json` (`33.33.0`).
 
-## 🔖 VERSIÓN ANTERIOR: v33.31 — Octubre 2026
+## 🔖 VERSIÓN ANTERIOR: v33.32 — Octubre 2026
 
 ### Novedades v33.31 (Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica):
 - **Diagnóstico Forense y Solicitud de Eduardo A. Rivera**:

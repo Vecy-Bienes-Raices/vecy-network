@@ -11,6 +11,7 @@ import { invokeLLM } from "../../llm";
 import { JanIAResult } from "../types";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
+import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
 
 export async function processConsultingMessage(
   text: string,
@@ -310,7 +311,10 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
 
       const rawResp = parsed.response || "";
       const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
-      const finalResp = sanitizeResponseMarkdown(enrichedResp);
+      let finalResp = sanitizeResponseMarkdown(enrichedResp);
+      if (isOngoingChat && finalResp) {
+        finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
+      }
       // Guardar turno en memoria conversacional de Grupo 2
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
@@ -326,7 +330,10 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
       const enrichedResp = enhanceResponseWithCommercialFunnel(replyContent, messageToProcess);
-      const finalResp = sanitizeResponseMarkdown(enrichedResp);
+      let finalResp = sanitizeResponseMarkdown(enrichedResp);
+      if (isOngoingChat && finalResp) {
+        finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
+      }
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);

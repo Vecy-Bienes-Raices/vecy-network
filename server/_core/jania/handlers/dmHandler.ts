@@ -12,7 +12,11 @@ import {
   verifyUserGoogleReview,
   isUserVerifiedGoogleReview,
   shouldAskForGoogleReview,
-  isEduardoOrJani
+  isEduardoOrJani,
+  setUser402040Agreement,
+  getUser402040Agreement,
+  checkAlreadyGreeted,
+  markUserGreetedToday
 } from "../sessionManager";
 import { fetchWebUrlContent } from "../../scraper";
 import { getDb } from "../../../db";
@@ -128,7 +132,7 @@ export const JANIA_DM_TOOLS = [
       },
       {
         name: "sondeo_mercado_inmobiliario",
-        description: "Realiza un sondeo técnico comparativo de m² y canon sugerido en barrios y zonas del norte de Bogotá (Usaquén, Suba, Chapinero, Chicó, Rosales, San Patricio, Santa Bárbara, Cabrera) integrando portales (Metrocuadrado, Fincaraiz, Ciencuadras) y coeficientes ACM.",
+        description: "Realiza un sondeo técnico o estudio comparativo de mercado del valor del m² y canon sugerido ÚNICAMENTE cuando el usuario lo solicite de manera EXPRESA escribiendo 'avaluo', 'avalúo', 'avaluar', 'cuanto vale' o 'cuánto vale'. ESTÁ TERMINANTEMENTE PROHIBIDO invocar esta herramienta de forma automática cuando el usuario solo envía los datos de un inmueble o requerimiento sin solicitar expresamente avalúo o valor.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -457,6 +461,17 @@ export async function executeJaniaDmTool(
       };
     }
     case "sondeo_mercado_inmobiliario": {
+      const isExplicitValuation = /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje)\b/i.test(rawUserText || "");
+      if (!isExplicitValuation) {
+        return {
+          toolType: "sondeo",
+          resultJson: {
+            solicitud: "sondeo_mercado_inmobiliario",
+            omitted: true,
+            mensaje: "El usuario no solicitó expresamente un avalúo ni preguntó cuánto vale. No se liquida avalúo no solicitado. Atiende cordialmente su mensaje o confirma el registro sin forzar estudios de precio."
+          }
+        };
+      }
       const surveyRes = executeMarketValuationSurvey({
         zonaOBarrio: args.zonaOBarrio || "Chicó",
         tipoInmueble: args.tipoInmueble || "apartamento",
@@ -809,9 +824,10 @@ export async function synthesizeToolResponseWithGemini(
         `${JSON.stringify(toolJson, null, 2)}\n\n` +
         `INSTRUCCIONES DE REDACCIÓN (NIVEL ARGON — VOZ LAOMEDEIA):\n` +
         `- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia, concisión y persuasión de IA pura.\n` +
+        `- CONTINUIDAD CONVERSACIONAL (CERO SALUDOS REPETIDOS): Si la conversación ya está en curso hoy, está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Qué gusto saludarte", ni "Soy JanIA..."). Ve DIRECTO al grano con la explicación o reporte.\n` +
         specialToolInstructions +
         `- Si es un sondeo de mercado, entrega el valor por m² homologado, valor comercial sugerido, canon estimado y factores de ajuste según tu rol de Perita Avaluadora.\n` +
-        `- Si es una consulta de matches, explica con claridad el cruce encontrado.\n` +
+        `- Si es una consulta de matches, explica con claridad el cruce encontrado de forma conversacional y ejecutiva.\n` +
         `- Explica con claridad los datos técnicos sin tecnicismos robóticos ni plantillas rígidas.\n` +
         `- Mantén concisión y estructura óptima para WhatsApp (*negritas*, viñetas limpias).\n` +
         `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n`
@@ -849,9 +865,9 @@ export async function synthesizeToolResponseWithGemini(
     const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
     const cgr = toolJson.contraloria || "Sin reporte en Boletín de Responsables Fiscales (SIRECI)";
     if (name) {
-      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Policía Nacional registra ${pol.toLowerCase()}, en Procuraduría General ${pgn.toLowerCase()} y en Contraloría General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}). Todo en regla y validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._\n\n¿Nos regalas un minuto con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Nos ayuda un montón para seguir ofreciendo estas herramientas gratuitas para el gremio! 🤝✨`;
+      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Policía Nacional registra ${pol.toLowerCase()}, en Procuraduría General ${pgn.toLowerCase()} y en Contraloría General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}). Todo en regla y validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._\n\n¿Nos regalas un minuto con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Nos ayuda un montón para seguir ofreciendo estas herramientas gratuitas para el gremio! 🤝✨`;
     } else {
-      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
+      fallbackText = `Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
     }
   } else if (toolType === "empresa" && toolJson) {
     if (toolJson.exitoso && toolJson.razonSocial) {
@@ -861,9 +877,9 @@ export async function synthesizeToolResponseWithGemini(
       const estado = toolJson.estado || "Activa";
       const ciiu = toolJson.ciiuPrincipal || "";
       const rep = toolJson.representantePrincipal;
-      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! Ya consulté en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matrícula mercantil *${estado}* en la ${camara}. Su actividad económica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}\n\n⚖️ _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._\n\n¿Nos regalas un minutico con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! 🤝✨`;
+      fallbackText = `Ya consulté en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matrícula mercantil *${estado}* en la ${camara}. Su actividad económica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}\n\n⚖️ _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._\n\n¿Nos regalas un minutico con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! 🤝✨`;
     } else {
-      fallbackText = `¡Hola${displayName ? `, ${displayName}` : ""}! No encontré ninguna empresa registrada con ese nombre en el Registro Único Empresarial y Social (RUES). Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor compárteme el número de NIT. 🤝`;
+      fallbackText = `No encontré ninguna empresa registrada con ese nombre en el Registro Único Empresarial y Social (RUES). Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor compárteme el número de NIT. 🤝`;
     }
   } else {
     fallbackText = rawReport;
@@ -926,6 +942,7 @@ export function stripLeadingGreetingsAndCourtesies(text: string): string {
   // 2. Patrones de saludos al inicio (con signos ¡ o sin ellos, permitiendo dos puntos :)
   const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?:]*[!.\n?:]?\s*/i;
   const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:]*))[!.\n?:]?\s*/i;
+  const janiaIntroPattern = /^¡?(?:soy\s+jania[^\n.!?:]*|tu\s+inteligencia\s+artificial[^\n.!?:]*|espero\s+te\s+encuentres\s+muy\s+bien[^\n.!?:]*)[!.\n?:]?\s*/i;
   const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
 
   let changed = true;
@@ -934,6 +951,7 @@ export function stripLeadingGreetingsAndCourtesies(text: string): string {
     const before = cleaned;
     cleaned = cleaned.replace(greetingPattern, "");
     cleaned = cleaned.replace(courtesyPattern, "");
+    cleaned = cleaned.replace(janiaIntroPattern, "");
     cleaned = cleaned.replace(emojiPattern, "");
     cleaned = cleaned.trim();
     changed = cleaned !== before;
@@ -1115,6 +1133,8 @@ export async function processPrivateDmConversationalMessage(
   const history = await getOrLoadDmHistory(userId);
   const sixHoursAgo = Date.now() - (6 * 60 * 60 * 1000);
   const hasRecentInteractionPast6Hours = history.some(h => (h.ts || 0) > sixHoursAgo);
+  const alreadyGreetedToday = await checkAlreadyGreeted(userId);
+  const isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday;
 
   const cleanLower = clean.toLowerCase();
 
@@ -1162,6 +1182,59 @@ export async function processPrivateDmConversationalMessage(
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", claimReply);
     return claimReply;
+  }
+
+  // 🤝 PROTOCOLO COMERCIAL Y FILTRO 40/20/40 EN PRIVADO (Doctrina v33.33)
+  if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    const isAwaiting402040 = !!userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40;
+    if (isAwaiting402040) {
+      const isAffirmative = /\b(?:s[ií]|claro|de\s+acuerdo|acepto|con\s+gusto|me\s+parece|perfecto|dale|hag[aá]mosle|sin\s+problema|totalmente|de\s+una|40\/20\/40|cuarenta\s+veinte\s+cuarenta|s[ií]\s+acepto|me\s+apunto|cuenta\s+con\s+eso|por\s+supuesto)\b/i.test(cleanLower) && !/\b(?:no|50\/50)\b/i.test(cleanLower);
+      const isNegativeOr5050 = /\b(?:no|prefiero\s+50\/50|50\/50|mitad\s+y\s+mitad|no\s+acepto|solo\s+50|cincuenta\s+cincuenta|no\s+comparto\s+as[ií]|no\s+me\s+sirve|no\s+gracias|no\s+puedo)\b/i.test(cleanLower);
+
+      if (isAffirmative) {
+        await setUser402040Agreement(userId, true);
+        const reply = `¡Excelente decisión${displayName ? `, ${displayName}` : ""}! 🎉🤝 Quedas registrada en nuestra base de datos como **Aliada Prioritaria** en la mesa de operaciones de VECY BIENES RAÍCES.\n\nEsto significa que cuando nuestro motor detecte cruces comerciales para tus requerimientos o inmuebles, tendrán prioridad uno en gestión, presentación y acompañamiento de cierre. ¡Vamos con toda a cerrar negocios juntos! 🚀✨`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      } else if (isNegativeOr5050) {
+        await setUser402040Agreement(userId, false);
+        const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional. Tu publicación permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. ¡Muchos éxitos en tu gestión inmobiliaria! 🤝✨`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      }
+    }
+
+    const isReactionInquiry = /\b(?:por\s*qu[eé]\s+(?:le\s+)?(?:diste|pusiste|reaccionaste|reaccionaron|dejaste|mandaste)|qu[eé]\s+significa\s+(?:la\s+reacci[oó]n|el\s+emoji|el\s+lapicito|el\s+pulgar|la\s+manito)|para\s*qu[eé]\s+(?:el\s+emoji|la\s+reacci[oó]n)|por\s*qu[eé]\s+el\s+(?:emoji|lapicito|pulgar|📝|👍)|a\s+qu[eé]\s+se\s+debe\s+la\s+reacci[oó]n|por\s*qu[eé]\s+(?:me\s+)?reaccionas)\b/i.test(cleanLower);
+
+    const isRequirementForwardOrDuplication = (
+      /\b(?:te\s+reenv[ií]o|te\s+comparto|te\s+paso|mira\s+(?:este|mi)|acabo\s+de\s+publicar|lo\s+puse\s+en\s+el\s+grupo|del\s+grupo|mi\s+requerimiento|mi\s+demanda)\b/i.test(cleanLower) &&
+      /\b(?:requerimiento|demanda|inmueble|cliente|busco|vendo|arriendo|apto|casa|bodega|lote)\b/i.test(cleanLower)
+    );
+
+    if (isReactionInquiry || isRequirementForwardOrDuplication) {
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = true;
+      await saveUserPerpetualSession(userPerpetualSession);
+
+      const introReason = isReactionInquiry
+        ? `La reacción con emoji en el grupo (📝 para requerimientos / 👍 para inmuebles) no es un simple saludo: confirma con total autoridad técnica que tu publicación ya fue extraída, estructurada e ingresada con éxito a nuestro motor de base de datos de VECY BIENES RAÍCES. Por eso, **no necesitas duplicarla ni reenviarla por este chat privado**.`
+        : `Te confirmo que la reacción en el grupo (📝 / 👍) validó el ingreso de tu publicación a nuestro motor autoritativo de base de datos de VECY BIENES RAÍCES. Por tanto, **no necesitas duplicarla ni reenviarla por privado**; ya está registrada y activa en el sistema.`;
+
+      const reply =
+        `${introReason}\n\n` +
+        `Nuestro motor cruza permanentemente tu búsqueda con todo el inventario de la red. En el instante exacto en que ingrese o se identifique una opción compatible (Score ≥ 80%), te contactaremos de inmediato por este mismo canal para coordinar el cruce.\n\n` +
+        `Para perfilarte en nuestra mesa de operaciones:\n` +
+        `En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora/colocadora, 20% plataforma y mesa técnica central VECY, 40% punta captadora/propietario) garantizando protección de puntas y acompañamiento contractual. ¿Aceptas compartir comisión bajo este modelo para clasificarte como **Aliada Prioritaria** en nuestra mesa de operaciones? 🤝✨`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", reply);
+      markUserGreetedToday(userId);
+      return reply;
+    }
   }
 
   // 🌐 NAVEGACIÓN Y EXTRACCIÓN PREVIA DE URLs:
@@ -1239,10 +1312,10 @@ export async function processPrivateDmConversationalMessage(
       `- Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.\n` +
       `- Franja del día actual: ${timeOfDay}.\n` +
       `- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.\n` +
-      `- ¿Hubo interacción reciente en las últimas 6 horas?: ${hasRecentInteractionPast6Hours ? "SÍ (Conversación activa en curso)" : "NO (Nueva interacción / inicio)"}.\n` +
-      `- REGLA ESTRICTA DEL SALUDO ÚNICO:\n` +
-      `  * Si NO hubo interacción reciente en las últimas 6 horas: Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n` +
-      `  * Si SÍ hubo interacción en las últimas 6 horas: Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.\n\n` +
+      `- ¿Hubo interacción previa hoy o conversación activa?: ${isOngoingChat ? "SÍ (Conversación activa en curso hoy)" : "NO (Primer mensaje del día)"}.\n` +
+      `- REGLA ESTRICTA DEL SALUDO ÚNICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS):\n` +
+      `  * Si la conversación ya está en curso hoy (SÍ): Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte", ni "Soy JanIA..."). Ve DIRECTO a responder con naturalidad, calidez y fluidez el mensaje actual sin anteponer ningún saludo ni muletillas con su nombre.\n` +
+      `  * Si es el PRIMER mensaje del día (NO): Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n\n` +
       `===================================================\n` +
       `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:\n` +
       `===================================================\n` +
@@ -1264,8 +1337,8 @@ export async function processPrivateDmConversationalMessage(
       `ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:\n` +
       `1. Abogada Contractual Senior: Rigor jurídico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).\n` +
       `2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retención en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).\n` +
-      `3. Perita Avaluadora: Sondeos de m² y cánones por zonas del norte de Bogotá con honestidad técnica (Cero Alucinación).\n` +
-      `4. Conectora Comercial y Mediadora 40/20/40: Conexión de negocios compartidos entre colegas.\n` +
+      `3. Perita Avaluadora: Sondeos de m² y cánones por zonas del norte de Bogotá con honestidad técnica (Cero Alucinación). REGLA MANDATORIA DE APAGADO AUTOMÁTICO: NUNCA liquides avalúos, estudios de valor de m² ni peritajes cuando un usuario solo envíe datos de un inmueble o requerimiento. ÚNICAMENTE se liquida avalúo si el usuario escribe de manera EXPRESA palabras como 'avaluo', 'avalúo', 'avaluar', 'cuanto vale' o 'cuánto vale'.\n` +
+      `4. Conectora Comercial y Mediadora 40/20/40: Conexión de negocios compartidos entre colegas. Si un colega pregunta por qué reaccionamos a sus mensajes en los grupos (👍/📝) o reenvía requerimientos a este chat: explica con autoridad que la reacción confirma que ya entró al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisión bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria.\n` +
       `5. Tutora en Firma Electrónica Oficial y Fábrica Proptech: Guía paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electrónicamente', 3. Asunto y motivo, 4. Cargar PDF máx 10MB sin clave, 5. Código OTP al correo y firmar; también validar firmas de terceros y bandeja de 15 días). Recuerda que eres su tutora pedagógica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electrónica, canalízala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y guía en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificación algorítmica de identidad.\n` +
       `6. Asesora en Marketing Digital Inmobiliario: Estrategias, públicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversión.\n\n` +
       `===================================================\n` +
@@ -1410,6 +1483,11 @@ export async function processPrivateDmConversationalMessage(
     reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
     reply = sanitizeResponseMarkdown(reply.trim());
 
+    // Erradicación rigurosa de saludos en conversaciones activas en curso (Doctrina v33.33)
+    if (isOngoingChat && reply) {
+      reply = stripLeadingGreetingsAndCourtesies(reply);
+    }
+
     // Normalizar y deduplicar cualquier duplicación del cierre de cortesía en la respuesta
     const generalCourtesyRegex = /(?:(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?))+/gi;
     const courtesyMatches = reply.match(generalCourtesyRegex);
@@ -1420,11 +1498,11 @@ export async function processPrivateDmConversationalMessage(
 
     if (!reply) {
       if (isEduardo) {
-        reply = `¡${timeSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
+        reply = isOngoingChat ? `¿En qué te colaboro hoy?` : `¡${timeSalutation}, Eduardo! 👋 ¿En qué te colaboro hoy?`;
       } else if (isJani) {
-        reply = `¡${timeSalutation}, Jani! 👋 ¿En qué te colaboro hoy?`;
+        reply = isOngoingChat ? `¿En qué te colaboro hoy?` : `¡${timeSalutation}, Jani! 👋 ¿En qué te colaboro hoy?`;
       } else {
-        reply = hasRecentInteractionPast6Hours
+        reply = isOngoingChat
           ? `Con mucho gusto. Cuéntame en qué trámite o consulta inmobiliaria te colaboro hoy 🤝.`
           : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 En *VECY BIENES RAÍCES* estoy lista para colaborarte. ¿Qué consulta o trámite deseas realizar hoy? 🤝`;
       }
@@ -1432,6 +1510,7 @@ export async function processPrivateDmConversationalMessage(
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
+    markUserGreetedToday(userId);
     return reply;
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);

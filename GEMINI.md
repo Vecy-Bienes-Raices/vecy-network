@@ -1,12 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.32.0 — 2026-10-22)
-- **JanIA Server:** `v33.32` (`33.32.0`) desplegado y consolidado en GitHub y Contabo VPS (`13.140.149.144`).
-- **Embudo Estratégico Trampolín (Canal vs Grupos 2 y 3) & Capa 1 Multimedia Resiliente:**
-  1. **Frecuencia Optimizada de 2 Impactos Diarios:**
-     - **Mañana (08:45 AM):** Píldora de alto valor completa con imagen HD garantizada al Canal Oficial + micro-gancho persuasivo (teaser trampolín) en Grupos 2 y 3 invitando al Canal y detonando debate profesional.
-     - **Tarde (06:30 PM):** Martes y Jueves (encuesta nativa interactiva en WhatsApp con `selectableCount: 1`, 3-4 opciones cortas y cero emojis en opciones + teaser de debate en grupos); Viernes (píldora y guía de servicios gratuitos de verificación con JanIA a $0 COP).
-  2. **Capa 1 Multimedia Local 100% Garantizada:** Inclusión de banco curado local en `assets/broadcast/` y `client/public/assets/broadcast/` (jurídico, tributario, avalúos, noticias, verificación, matches, marketing) para que el Canal Oficial jamás salga en texto plano.
-  3. **Despacho Especializado:** `sendMorningPillAndGroupTeasers` en `whatsapp-match.ts` y orquestador optimizado en `cronService.ts`.
-- **Validación Limpia:** Typecheck `npm run check` (0 errores) | Build `npm run build` limpio en 22s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.33.0 — 2026-10-22)
+- **JanIA Server:** `v33.33` (`33.33.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Retiro Gemini 2.5, Gemini 3.8 / Latest, Continuidad en DMs y Protocolo 40/20/40:**
+  1. **Actualización de Modelos:** Erradicación definitiva de la familia `gemini-2.5` (deprecada por Google con errores 404 para nuevos usuarios); priorización inmediata de `gemini-3.8-flash` y `gemini-flash-latest`.
+  2. **Continuidad Conversacional:** Supresión de saludos reiterativos ("¡Hola, [Nombre]!", "Soy JanIA...") en chats con interacción previa en el día; fluidez y trato profesional directo.
+  3. **Erradicación de Candado Estático:** Supresión del bloque "🔒 ACCESO RESTRINGIDO". Asistente de matches ahora emite reportes ejecutivos protectores de datos con canalización a la Dirección de Operaciones (+57 316 656 9719).
+  4. **Apagado de Avalúos Automáticos:** `sondeo_mercado_inmobiliario` restringido estrictamente a peticiones explícitas del usuario.
+  5. **Protocolo Comercial 40/20/40:** Explicación pedagógica de reacciones con emoji en grupos (👍/📝), compromiso ante matches ≥ 80% y filtro comercial 40/20/40 persistido en RAM, JSON y PostgreSQL.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` (327/327 passing) | Build `npm run build` limpio en 34s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

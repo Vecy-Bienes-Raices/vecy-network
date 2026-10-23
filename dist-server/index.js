@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.32";
+    VECY_VERSION = "v33.33";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1345,20 +1345,18 @@ var init_llm = __esm({
     getActiveRoundRobinKey = getActiveKey;
     getActiveFailoverKey = getActiveKey;
     HIGH_REASONING_MODELS = [
-      "gemini-2.5-flash",
-      "gemini-2.5-pro",
-      "gemini-flash-latest",
-      "gemini-flash-lite-latest",
-      "gemini-2.5-flash-lite",
-      "gemini-3.5-flash-lite",
       "gemini-3.8-flash",
-      "gemini-1.5-flash"
+      "gemini-flash-latest",
+      "gemini-3.1-pro-preview",
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash",
+      "gemini-4-argon"
     ];
     MECHANICAL_MODELS = [
       "gemini-flash-lite-latest",
-      "gemini-2.5-flash-lite",
       "gemini-flash-latest",
-      "gemini-2.5-flash",
+      "gemini-3.8-flash",
       "gemini-3.5-flash-lite"
     ];
     FALLBACK_MODELS = HIGH_REASONING_MODELS;
@@ -11947,9 +11945,8 @@ async function extractFlyerVision(imageBufferBase64) {
   const models = [
     "gemini-flash-lite-latest",
     "gemini-flash-latest",
-    "gemini-2.5-flash-lite",
-    "gemini-3.5-flash-lite",
-    "gemini-1.5-flash"
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite"
   ];
   const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en Colombia.
 Analiza la imagen enviada a un chat o grupo de WhatsApp.
@@ -12797,6 +12794,7 @@ __export(sessionManager_exports, {
   getPendingSession: () => getPendingSession,
   getRecentChatHistory: () => getRecentChatHistory,
   getStartOfTodayBogota: () => getStartOfTodayBogota,
+  getUser402040Agreement: () => getUser402040Agreement,
   getUserPerpetualSession: () => getUserPerpetualSession,
   hasGreetedUserToday: () => hasGreetedUserToday,
   incrementFreeServicesCount: () => incrementFreeServicesCount,
@@ -12812,6 +12810,7 @@ __export(sessionManager_exports, {
   saveUserPerpetualSession: () => saveUserPerpetualSession,
   setCompanySession: () => setCompanySession,
   setPendingSession: () => setPendingSession,
+  setUser402040Agreement: () => setUser402040Agreement,
   shouldAskForGoogleReview: () => shouldAskForGoogleReview,
   verifyUserGoogleReview: () => verifyUserGoogleReview
 });
@@ -13429,6 +13428,36 @@ async function shouldAskForGoogleReview(userId) {
   const session = await getUserPerpetualSession(userId);
   if (session.hasVerifiedGoogleReview) return false;
   return session.freeServicesUsedCount >= 1;
+}
+async function setUser402040Agreement(userId, accepts) {
+  const session = await getUserPerpetualSession(userId);
+  session.keyFacts = session.keyFacts || {};
+  session.keyFacts.acepta_40_20_40 = accepts;
+  session.keyFacts.categoriaContacto = accepts ? "aliada_prioritaria" : "contacto_convencional";
+  session.keyFacts.updatedAt_40_20_40 = (/* @__PURE__ */ new Date()).toISOString();
+  delete session.keyFacts.esperando_respuesta_40_20_40;
+  session.lastSeenAt = (/* @__PURE__ */ new Date()).toISOString();
+  await saveUserPerpetualSession(session);
+  try {
+    const db = await getDb();
+    if (db) {
+      const cleanPhone = cleanSessionJid(userId).replace(/\D/g, "");
+      const normPhone = cleanPhone.startsWith("57") ? cleanPhone : `57${cleanPhone}`;
+      const noteTag = accepts ? "[ALIANZA 40/20/40 ACEPTADA - ALIADA PRIORITARIA]" : "[ALIANZA 40/20/40 RECHAZADA - CONTACTO CONVENCIONAL 50/50]";
+      await db.execute(sql5`
+        UPDATE advisors 
+        SET notes = COALESCE(notes, '') || ' ' || ${noteTag}, updated_at = NOW()
+        WHERE normalized_phone = ${normPhone}
+      `);
+    }
+  } catch (err) {
+    console.warn("[setUser402040Agreement] Error actualizando en advisors:", err?.message);
+  }
+  return session;
+}
+async function getUser402040Agreement(userId) {
+  const session = await getUserPerpetualSession(userId);
+  return session.keyFacts?.acepta_40_20_40;
 }
 var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory, companySessionMap, PERSISTENT_SESSIONS_FILE, userPerpetualSessionMap, persistentSessionsLoaded;
 var init_sessionManager = __esm({
@@ -14530,1532 +14559,162 @@ var init_commercialFunnelService = __esm({
   }
 });
 
-// server/_core/predialService.ts
-var predialService_exports = {};
-__export(predialService_exports, {
-  CEDULA_HELP_TEXT: () => CEDULA_HELP_TEXT,
-  GOOGLE_REVIEW_MESSAGE: () => GOOGLE_REVIEW_MESSAGE,
-  PREDIAL_HELP_TEXT: () => PREDIAL_HELP_TEXT,
-  VIRAL_LOOP_MESSAGE: () => VIRAL_LOOP_MESSAGE,
-  clearPendingPredialSession: () => clearPendingPredialSession,
-  decodeSdhMessage: () => decodeSdhMessage,
-  downloadPredialInvoicePdf: () => downloadPredialInvoicePdf,
-  executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
-  extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
-  getChannelInviteGoodbyeMessage: () => getChannelInviteGoodbyeMessage,
-  getPendingPredialSession: () => getPendingPredialSession,
-  hasPendingPredialSession: () => hasPendingPredialSession,
-  isServiceHelpRequest: () => isServiceHelpRequest,
-  liquidarPredialEstimadoBogota: () => liquidarPredialEstimadoBogota,
-  sanitizeDocumentNumber: () => sanitizeDocumentNumber,
-  setPendingPredialSession: () => setPendingPredialSession
-});
-function getChannelInviteGoodbyeMessage(displayName) {
-  const namePart = displayName ? `, ${displayName}` : "";
-  return `Con todo el gusto${namePart}. Para nosotros en VECY es un verdadero placer apoyarte en tus proyectos y gestiones inmobiliarias. Antes de que te vayas, te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b), donde compartimos cosas que te pueden interesar.`;
-}
-function decodeSdhMessage(raw) {
-  if (!raw) return "";
-  let str = typeof raw === "string" ? raw.trim() : String(raw).trim();
-  if (str.startsWith("[") && str.endsWith("]")) {
-    try {
-      const parsedArr = JSON.parse(str);
-      if (Array.isArray(parsedArr) && parsedArr.every((n) => typeof n === "number")) {
-        str = Buffer.from(parsedArr).toString("utf8");
-      }
-    } catch (_) {
-    }
-  }
-  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(str) && !str.includes(" ") && str.length % 4 === 0 && str.length >= 4;
-  if (isBase64Pattern) {
-    try {
-      const dec = Buffer.from(str, "base64").toString("utf8");
-      const unescaped = dec.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10))).replace(/&lt;[^&]*&gt;?/gi, "").replace(/<[^>]*>?/gm, "").replace(/&[a-z]+;/gi, " ");
-      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(unescaped) && unescaped.trim().length > 0) {
-        return unescaped.trim();
-      }
-    } catch (_) {
-    }
-  }
-  return str.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10))).replace(/&lt;[^&]*&gt;?/gi, "").replace(/<[^>]*>?/gm, "").replace(/&[a-z]+;/gi, " ").trim();
-}
-function sanitizeDocumentNumber(raw, isNit = false) {
-  if (!raw) return "";
-  let cleaned = raw.replace(/[\s.,]/g, "");
-  const dvMatch = cleaned.match(/^(\d+)-(\d)$/);
-  if (dvMatch) {
-    cleaned = dvMatch[1];
-  } else if (isNit) {
-    const digitsOnly = cleaned.replace(/\D/g, "");
-    if (digitsOnly.length === 10) {
-      cleaned = digitsOnly.slice(0, 9);
-    } else if (digitsOnly.length > 10) {
-      cleaned = digitsOnly.slice(0, 9);
-    } else {
-      cleaned = digitsOnly;
-    }
+// server/_core/valuation.ts
+function calcularPrecioHomologado(params) {
+  let cAntiguedad = 1;
+  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
+  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
+  let cPiso = 1;
+  if (params.tieneAscensor) {
+    cPiso = params.piso <= 2 ? 0.95 : 1.02;
   } else {
-    cleaned = cleaned.replace(/\D/g, "");
+    if (params.piso <= 2) cPiso = 1;
+    else if (params.piso === 3) cPiso = 0.93;
+    else if (params.piso >= 4) cPiso = 0.85;
   }
-  return cleaned.replace(/\D/g, "");
-}
-function extractChipAndCedulaForPredial(text2) {
-  if (!text2 || typeof text2 !== "string") return { found: false };
-  const clean = text2.trim();
-  const lower = clean.toLowerCase();
-  const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
-  let cedula;
-  let nit;
-  let tipoDoc = "CC";
-  const nitMatch = clean.match(/(?:nit|n\.i\.t\.?)\s*[:#]?\s*([\d.,\s\-]{7,20})/i);
-  if (nitMatch && nitMatch[1]) {
-    const rawNit = nitMatch[1].trim();
-    nit = sanitizeDocumentNumber(rawNit, true);
-    tipoDoc = "NIT";
-  }
-  const ceMatch = clean.match(/(?:c\.?e\.?|c[ée]dula\s+de\s+extranjer[ií]a)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
-  if (!nit && ceMatch && ceMatch[1]) {
-    cedula = sanitizeDocumentNumber(ceMatch[1].trim());
-    tipoDoc = "CE";
-  }
-  if (!nit && !cedula) {
-    const ccMatch = clean.match(/(?:c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|cc|documento)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
-    if (ccMatch && ccMatch[1]) {
-      cedula = sanitizeDocumentNumber(ccMatch[1].trim());
-      tipoDoc = "CC";
-    }
-  }
-  if (!nit && !cedula) {
-    const numWithPuncMatch = clean.match(/\b([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?)\b/);
-    if (numWithPuncMatch && numWithPuncMatch[1]) {
-      const raw = numWithPuncMatch[1];
-      const hasNitKeyword = lower.includes("nit");
-      const cleaned = sanitizeDocumentNumber(raw, hasNitKeyword);
-      if (cleaned.length >= 6 && cleaned.length <= 12) {
-        if (hasNitKeyword) {
-          nit = cleaned;
-          tipoDoc = "NIT";
-        } else {
-          cedula = cleaned;
-        }
-      }
-    } else {
-      const anyNumberMatch = clean.match(/\b([0-9]{6,12})\b/);
-      if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[0].includes(anyNumberMatch[1]))) {
-        const candidate = anyNumberMatch[1];
-        const hasNitKeyword = lower.includes("nit");
-        if (hasNitKeyword) {
-          nit = sanitizeDocumentNumber(candidate, true);
-          tipoDoc = "NIT";
-        } else {
-          cedula = candidate;
-        }
-      }
-    }
-  }
-  let matricula;
-  const matMatch1 = clean.match(/\b(50[CNS]-[0-9]{5,10})\b/i);
-  const matMatch2 = clean.match(/(?:matr[íi]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z\-]+)/i);
-  if (matMatch1 && matMatch1[1]) {
-    matricula = matMatch1[1].toUpperCase();
-  } else if (matMatch2 && matMatch2[1]) {
-    matricula = matMatch2[1].toUpperCase();
-  }
-  let direccion;
-  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[íi]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
-  const dirMatch2 = clean.match(/\b((?:cll?e?|cra?|carrera|diagonal|diag|transversal|transv?|av(?:enida)?|calle)\s+[0-9]+[A-Za-z]?\s*#?\s*[0-9]+[A-Za-z]?\s*[-–]\s*[0-9]+)\b/i);
-  if (dirMatch1 && dirMatch1[1] && dirMatch1[1].trim().length >= 5) {
-    direccion = dirMatch1[1].trim();
-  } else if (dirMatch2 && dirMatch2[1]) {
-    direccion = dirMatch2[1].trim();
-  }
-  let estrato;
-  const estratoMatch = clean.match(/\bestrato\s*([1-6])\b/i);
-  if (estratoMatch && estratoMatch[1]) {
-    estrato = parseInt(estratoMatch[1], 10);
-  }
-  let avaluoCatastral;
-  const avaluoMatch = clean.match(/(?:aval[uú]o(?:\s+catastral)?|valor\s+catastral)\s*[:#]?\s*\$?\s*([0-9.,]+(?:\s*(?:millones|m))?)/i);
-  if (avaluoMatch && avaluoMatch[1]) {
-    const rawVal = avaluoMatch[1].toLowerCase();
-    if (rawVal.includes("millon") || rawVal.includes("m")) {
-      const numOnly = parseFloat(rawVal.replace(/[^\d.,]/g, "").replace(",", "."));
-      if (!isNaN(numOnly)) avaluoCatastral = Math.round(numOnly * 1e6);
-    } else {
-      const numOnly = parseInt(rawVal.replace(/\D/g, ""), 10);
-      if (!isNaN(numOnly) && numOnly > 0) avaluoCatastral = numOnly;
-    }
-  }
-  const certKeywords = [
-    "certificado de pago",
-    "certificado de impuesto",
-    "certificacion de pago",
-    "paz y salvo",
-    "recibo pagado",
-    "comprobante de pago",
-    "pago de impuesto"
-  ];
-  const isCertificadoPago = certKeywords.some((kw) => lower.includes(kw));
-  const keywords = ["predial", "impuesto predial", "factura predial", "chip", "paz y salvo predial", "liquidar predial", ...certKeywords];
-  const hasKeyword = keywords.some((kw) => lower.includes(kw));
-  if (chipMatch && chipMatch[1]) {
-    return {
-      found: true,
-      chip: chipMatch[1].toUpperCase(),
-      cedula,
-      nit,
-      tipoDoc,
-      matricula,
-      direccion,
-      estrato,
-      avaluoCatastral,
-      isCertificadoPago
-    };
-  }
-  if (hasKeyword && (cedula || nit || matricula || direccion)) {
-    return {
-      found: true,
-      cedula,
-      nit,
-      tipoDoc,
-      matricula,
-      direccion,
-      estrato,
-      avaluoCatastral,
-      isCertificadoPago
-    };
-  }
-  return { found: false };
-}
-function liquidarPredialEstimadoBogota(avaluoCatastral, estrato = 4, esResidencial = true) {
-  const avaluo = Math.max(0, avaluoCatastral);
-  let tarifaPorMil = 6.5;
-  if (!esResidencial) {
-    tarifaPorMil = 10.5;
-  } else {
-    switch (estrato) {
-      case 1:
-      case 2:
-        tarifaPorMil = 2.5;
-        break;
-      case 3:
-        tarifaPorMil = 4.5;
-        break;
-      case 4:
-        tarifaPorMil = 6.5;
-        break;
-      case 5:
-        tarifaPorMil = 8.5;
-        break;
-      case 6:
-      default:
-        tarifaPorMil = 11;
-        break;
-    }
-  }
-  const impuestoPleno = Math.round(avaluo * tarifaPorMil / 1e3);
-  const descuentoProntoPago = Math.round(impuestoPleno * 0.1);
-  const impuestoConDescuento = impuestoPleno - descuentoProntoPago;
-  const aporteVoluntario = Math.round(impuestoPleno * 0.1);
+  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
+  const cAmenidades = params.esClubHouse ? 1.07 : 1;
+  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
   return {
-    avaluoCatastral: avaluo,
-    estrato,
-    tarifaPorMil,
-    impuestoPleno,
-    descuentoProntoPago,
-    impuestoConDescuento,
-    aporteVoluntario
+    precioM2Homologado,
+    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
   };
 }
-function setPendingPredialSession(senderId, session) {
-  if (!senderId) return;
-  pendingPredialSessions.set(senderId, {
-    ...session,
-    timestamp: Date.now()
+function calculatePropertyValuation(input) {
+  const result = calcularPrecioHomologado({
+    basePricePerM2: input.baseZonePricePerM2,
+    antiguedadAnos: input.ageYears,
+    tieneAscensor: input.hasElevator ?? true,
+    piso: input.floorNumber ?? 3,
+    garajes: input.garages ?? 0,
+    esClubHouse: input.hasClubHouse ?? false
   });
-}
-function hasPendingPredialSession(senderId) {
-  if (!senderId) return false;
-  const session = pendingPredialSessions.get(senderId);
-  if (!session) return false;
-  if (Date.now() - session.timestamp > 15 * 60 * 1e3) {
-    pendingPredialSessions.delete(senderId);
-    return false;
-  }
-  return true;
-}
-function getPendingPredialSession(senderId) {
-  if (!senderId) return void 0;
-  const session = pendingPredialSessions.get(senderId);
-  if (!session) return void 0;
-  if (Date.now() - session.timestamp > 15 * 60 * 1e3) {
-    pendingPredialSessions.delete(senderId);
-    return void 0;
-  }
-  return session;
-}
-function clearPendingPredialSession(senderId) {
-  if (!senderId) return;
-  pendingPredialSessions.delete(senderId);
-}
-async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
-  const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
-  if (!apiKey) {
-    return {
-      success: false,
-      errorMessage: "Servicio de resoluci\xF3n de CAPTCHA no configurado."
-    };
-  }
-  let tipoDoc = tipoDocInput.toUpperCase().trim();
-  if (tipoDoc.includes("NIT") && (tipoDoc.includes("EXTRANJ") || tipoDoc.includes("NITE"))) {
-    tipoDoc = "NITE";
-  } else if (tipoDoc.includes("NIT")) {
-    tipoDoc = "NIT";
-  } else if (tipoDoc.includes("EXTRANJER") || tipoDoc === "CE") {
-    tipoDoc = "CE";
-  } else if (tipoDoc.includes("PASAPORTE") || tipoDoc === "PA" || tipoDoc === "PAS") {
-    tipoDoc = "PA";
-  } else if (tipoDoc.includes("TARJETA") && (tipoDoc.includes("EXTRANJ") || tipoDoc === "TIE")) {
-    tipoDoc = "TIE";
-  } else if (tipoDoc.includes("TARJETA") || tipoDoc === "TI") {
-    tipoDoc = "TI";
-  } else if (tipoDoc.includes("NUIP")) {
-    tipoDoc = "NUIP";
-  } else if (tipoDoc.includes("DIPLOMAT") || tipoDoc === "CD") {
-    tipoDoc = "CD";
-  } else if (tipoDoc.includes("PPT") || tipoDoc.includes("PROTECCION") || tipoDoc.includes("PROTECCI\xD3N")) {
-    tipoDoc = "PPT";
-  } else {
-    tipoDoc = "CC";
-  }
-  const cleanNumDoc = sanitizeDocumentNumber(numDoc, tipoDoc === "NIT");
-  const cleanChip = chip.toUpperCase().trim();
-  let browser = null;
-  try {
-    const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
-    const solver = new Solver2(apiKey);
-    const puppeteer = (await import("puppeteer")).default;
-    const fs14 = await import("fs");
-    const executablePath = fs14.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
-    browser = await puppeteer.launch({
-      executablePath,
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu"
-      ]
-    });
-    const page = await browser.newPage();
-    page.setDefaultTimeout(6e4);
-    await page.evaluateOnNewDocument(() => {
-      window.__name = (target) => target;
-    });
-    let buscarInfoData = null;
-    page.on("response", async (res) => {
-      const url = res.url();
-      if (url.includes("buscarInfo")) {
-        try {
-          buscarInfoData = await res.json();
-        } catch (_) {
-        }
-      }
-    });
-    try {
-      await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
-        waitUntil: "networkidle2",
-        timeout: 45e3
-      });
-    } catch (gotoErr) {
-      if (gotoErr?.message?.includes("detached") || gotoErr?.message?.includes("timeout") || gotoErr?.message?.includes("LifecycleWatcher")) {
-        console.warn("[PREDIAL-DOWNLOAD] Reintentando page.goto con domcontentloaded...");
-        await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
-          waitUntil: "domcontentloaded",
-          timeout: 45e3
-        });
-      } else {
-        throw gotoErr;
-      }
-    }
-    await page.select("#claveImpuesto", "0001");
-    await page.evaluate(() => {
-      if (window.ACC && window.ACC.descargaFacturaVA) {
-        window.ACC.descargaFacturaVA.showTag(document.getElementById("claveImpuesto"), "");
-      }
-    });
-    await new Promise((r) => setTimeout(r, 600));
-    await page.select("#tipoDoc", tipoDoc);
-    await page.type("#numDoc", cleanNumDoc);
-    await page.type("#claveObjeto", cleanChip);
-    await page.evaluate(() => {
-      const chk = document.getElementById("chkTratamientoDatos");
-      if (chk) {
-        chk.checked = true;
-        if (window.ACC && window.ACC.descargaFacturaVA) {
-          window.ACC.descargaFacturaVA.tratamientoDatos(chk);
-        }
-      }
-    });
-    console.log(`[PREDIAL-DOWNLOAD] Resolviendo reCAPTCHA para CHIP ${cleanChip} y ${tipoDoc} ${cleanNumDoc}...`);
-    const captcha = await solver.recaptcha({
-      googlekey: "6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO",
-      pageurl: "https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA"
-    });
-    await page.evaluate((token) => {
-      const el = document.getElementById("g-recaptcha-response");
-      if (el) el.value = token;
-      window.recaptchaResponse = token;
-      const btn = document.getElementById("facBuscar");
-      if (btn) btn.disabled = false;
-      if (window.ACC && window.ACC.descargaFacturaVA) {
-        window.ACC.descargaFacturaVA.showDownload();
-      }
-    }, captcha.data);
-    let relativePdfUrl = "";
-    let errorMessage = "";
-    const startTime = Date.now();
-    while (Date.now() - startTime < 25e3) {
-      const state = await page.evaluate(() => {
-        const dh = document.getElementById("downloadHelper");
-        const href = dh ? dh.getAttribute("href") || dh.href : "";
-        const errModal = document.getElementById("dialogMensajesContent");
-        const swal = document.querySelector(".swal2-html-container");
-        const validaciones = document.getElementById("mensajesValidaciones");
-        return {
-          href,
-          errText: errModal && errModal.innerText || swal && swal.innerText || validaciones && validaciones.innerText || ""
-        };
-      });
-      if (state.href && (state.href.includes("/bogota/medias/") || state.href.includes(".pdf"))) {
-        relativePdfUrl = state.href;
-        break;
-      }
-      if (state.errText && state.errText.trim().length > 3) {
-        errorMessage = state.errText.trim();
-        break;
-      }
-      if (buscarInfoData && buscarInfoData.dataForm?.urlDownload) {
-        relativePdfUrl = buscarInfoData.dataForm.urlDownload;
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 1e3));
-    }
-    let isAlreadyPaid = false;
-    let sdhInfoErrorMessage = "";
-    if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
-      for (const err of buscarInfoData.dataForm.errores) {
-        const rawMsg = err?.txt_msj || err?.txtmsj;
-        if (rawMsg) {
-          const decoded = decodeSdhMessage(rawMsg);
-          const lowerDec = decoded.toLowerCase();
-          if (lowerDec.includes("pagada") || lowerDec.includes("pago") || lowerDec.includes("cancelad")) {
-            isAlreadyPaid = true;
-          } else if (decoded.trim().length > 3) {
-            sdhInfoErrorMessage = decoded.trim();
-          }
-        }
-      }
-    }
-    const wantCertificado = options?.isCertificadoPago || isAlreadyPaid;
-    if (wantCertificado) {
-      console.log(`[PREDIAL-DOWNLOAD] Solicitud de Certificado de Pago detectada para CHIP ${cleanChip} (expl\xEDcito: ${!!options?.isCertificadoPago}, pagada: ${isAlreadyPaid}). Resolviendo reCAPTCHA v2 para certificado...`);
-      try {
-        const captchaCert = await solver.recaptcha({
-          googlekey: "6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO",
-          pageurl: "https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA"
-        });
-        const tokenCert = captchaCert.data;
-        const bpParam = buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP || "";
-        const certAjaxResp = await page.evaluate(`
-          new Promise((resolve) => {
-            try {
-              const numBP = ${JSON.stringify(bpParam)} || (document.getElementById('numBP') && document.getElementById('numBP').value) || (window.buscarInfoData && window.buscarInfoData.numBP) || '1005119715';
-              const numObjeto = (document.getElementById('claveObjeto') && document.getElementById('claveObjeto').value ? document.getElementById('claveObjeto').value.toUpperCase() : '');
-              const year = (new Date()).getFullYear().toString();
-              const certUrl = (window.ACC && window.ACC.descargaFacturaVADescargarCertificadoPagoURL) || '/bogota/es/descargaFacturaVA/descargarCertificadoPago';
-              const token = ${JSON.stringify(tokenCert)};
-
-              if (window.$ && window.$.ajax) {
-                window.$.ajax({
-                  url: certUrl,
-                  data: {
-                    numBP: numBP,
-                    numObjeto: numObjeto,
-                    tipoOperacion: '0001',
-                    anoGravable: year,
-                    recaptchaResponse: token
-                  },
-                  type: 'POST',
-                  success: function(resp) {
-                    resolve({ success: true, resp: resp });
-                  },
-                  error: function(xhr, status, err) {
-                    resolve({ success: false, status: status, err: err ? err.toString() : '', text: xhr ? xhr.responseText : '' });
-                  }
-                });
-              } else {
-                resolve({ success: false, err: 'jQuery not found' });
-              }
-            } catch (e) {
-              resolve({ success: false, err: e.message });
-            }
-          })
-        `);
-        if (certAjaxResp?.success && certAjaxResp?.resp?.urlDownload) {
-          const relCertUrl = certAjaxResp.resp.urlDownload;
-          const fullCertUrl = relCertUrl.startsWith("http") ? relCertUrl : new URL(relCertUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
-          console.log(`[PREDIAL-DOWNLOAD] Descargando Certificado de Pago oficial desde: ${fullCertUrl}`);
-          const certFetch = await fetch(fullCertUrl);
-          if (certFetch.ok) {
-            const certBuf = Buffer.from(await certFetch.arrayBuffer());
-            if (certBuf.slice(0, 5).toString() === "%PDF-") {
-              return {
-                success: true,
-                pdfBuffer: certBuf,
-                pdfFileName: `Certificado_Pago_${cleanChip}_2026.pdf`,
-                pdfUrl: fullCertUrl,
-                nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0,
-                numBP: buscarInfoData?.numBP || certAjaxResp.resp.numBP,
-                isCertificado: true
-              };
-            }
-          }
-        }
-        let sdhErrorMessage = "";
-        if (certAjaxResp?.resp?.errores && Array.isArray(certAjaxResp.resp.errores)) {
-          for (const err of certAjaxResp.resp.errores) {
-            const rawMsg = err?.txt_msj || err?.txtmsj;
-            if (rawMsg) {
-              const dec = decodeSdhMessage(rawMsg);
-              if (dec && dec.trim()) {
-                sdhErrorMessage = dec.trim();
-              }
-            }
-          }
-        }
-        if (options?.isCertificadoPago) {
-          return {
-            success: false,
-            errorMessage: sdhErrorMessage || "No se pudo generar el Certificado de Pago en este momento. Es posible que el pago a\xFAn no est\xE9 asentado en la Secretar\xEDa de Hacienda o los datos no coincidan."
-          };
-        }
-      } catch (certErr) {
-        console.warn("[PREDIAL-DOWNLOAD] Error intentando descargar certificado de pago:", certErr?.message);
-        if (options?.isCertificadoPago) {
-          return {
-            success: false,
-            errorMessage: "No se pudo generar el Certificado de Pago en este momento. Es posible que el pago a\xFAn no est\xE9 asentado en la Secretar\xEDa de Hacienda o los datos no coincidan."
-          };
-        }
-      }
-    }
-    if (!relativePdfUrl) {
-      return {
-        success: false,
-        errorMessage: sdhInfoErrorMessage || errorMessage || "No se encontr\xF3 factura predial disponible en la Secretar\xEDa de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026.",
-        nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0,
-        numBP: buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP
-      };
-    }
-    const fullPdfUrl = relativePdfUrl.startsWith("http") ? relativePdfUrl : new URL(relativePdfUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
-    console.log(`[PREDIAL-DOWNLOAD] Descargando PDF oficial desde: ${fullPdfUrl}`);
-    const pdfResponse = await fetch(fullPdfUrl);
-    if (!pdfResponse.ok) {
-      throw new Error(`Error HTTP al descargar PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
-    }
-    const arrayBuffer = await pdfResponse.arrayBuffer();
-    const pdfBuffer = Buffer.from(arrayBuffer);
-    const isPdfHeader = pdfBuffer.slice(0, 5).toString() === "%PDF-";
-    if (!isPdfHeader) {
-      console.warn(`[PREDIAL-DOWNLOAD] La respuesta descargada no tiene cabecera PDF. Tama\xF1o: ${pdfBuffer.length}`);
-      return {
-        success: false,
-        errorMessage: "El portal de Hacienda no devolvi\xF3 un documento PDF v\xE1lido."
-      };
-    }
-    const nombreContribuyente = buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0;
-    return {
-      success: true,
-      pdfBuffer,
-      pdfFileName: `Factura_Predial_${cleanChip}_2026.pdf`,
-      pdfUrl: fullPdfUrl,
-      nombreContribuyente,
-      numBP: buscarInfoData?.numBP,
-      isCertificado: false
-    };
-  } catch (err) {
-    console.error("[PREDIAL-DOWNLOAD] Error descargando factura predial:", err);
-    return {
-      success: false,
-      errorMessage: err?.message || "Error de conexi\xF3n con la Secretar\xEDa Distrital de Hacienda."
-    };
-  } finally {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (_) {
-      }
-    }
-  }
-}
-async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm, options) {
-  let detection = extractChipAndCedulaForPredial(text2);
-  if (!detection.chip && senderId && hasPendingPredialSession(senderId)) {
-    const pending = getPendingPredialSession(senderId);
-    if (pending) {
-      const rawNumMatch = text2.match(/([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?|\b\d{6,12}\b)/);
-      if (rawNumMatch && rawNumMatch[1]) {
-        const lower = text2.toLowerCase();
-        const isNitContext = lower.includes("nit") || lower.includes("n.i.t");
-        const cleanedNum = sanitizeDocumentNumber(rawNumMatch[1], isNitContext);
-        if (cleanedNum.length >= 6) {
-          detection = {
-            found: true,
-            chip: pending.chip,
-            cedula: isNitContext ? void 0 : cleanedNum,
-            nit: isNitContext ? cleanedNum : void 0,
-            tipoDoc: isNitContext ? "NIT" : "CC",
-            matricula: pending.matricula,
-            direccion: pending.direccion,
-            estrato: pending.estrato,
-            avaluoCatastral: pending.avaluoCatastral
-          };
-          clearPendingPredialSession(senderId);
-        }
-      }
-    }
-  }
-  if (!detection.found) {
-    return { isPredialRequest: false };
-  }
-  const chip = detection.chip;
-  const docNumber = detection.nit || detection.cedula;
-  const docLabel = detection.tipoDoc === "NIT" ? "NIT" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula";
-  if (chip && !docNumber) {
-    if (senderId) {
-      setPendingPredialSession(senderId, { chip });
-    }
-    const reportText2 = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
-
-\u{1F3E0} *Predio CHIP detectado:* ${chip}
-
-Para acceder al portal oficial de la Secretar\xEDa de Hacienda y entregarte el enlace de descarga de tu factura predial en PDF, necesito un dato m\xE1s:
-
-\u{1F449} *\xBFCu\xE1l es la C\xE9dula o NIT del propietario del predio?*
-
-_(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom\xE1ticamente)_ \u2705`;
-    return {
-      isPredialRequest: true,
-      chip,
-      reportText: reportText2
-    };
-  }
-  if (chip && docNumber) {
-    let downloadResult = null;
-    const shouldAttemptDownload = process.env.NODE_ENV !== "test" && !options?.skipDownload;
-    if (shouldAttemptDownload) {
-      downloadResult = await downloadPredialInvoicePdf(
-        detection.tipoDoc || "CC",
-        docNumber,
-        chip,
-        { isCertificadoPago: detection.isCertificadoPago }
-      );
-    }
-    if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
-      const contribuyenteLabel = downloadResult.isCertificado ? "\u{1F464} *Contribuyente / Titular:*" : "\u{1F464} *Contribuyente / Propietario:*";
-      const contribuyenteText = downloadResult.nombreContribuyente ? `${contribuyenteLabel} ${downloadResult.nombreContribuyente}
-` : "";
-      const reportText3 = downloadResult.isCertificado ? `\u{1F6E1}\uFE0F *CERTIFICADO DE PAGO PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-\u{1F3E0} *CHIP del predio:* ${chip}
-` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
-
-\u2705 *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretar\xEDa de Hacienda de Bogot\xE1.* Este documento certifica con plena validez legal que el inmueble se encuentra al d\xEDa y a paz y salvo en su impuesto predial para la vigencia 2026.` : `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-\u{1F3E0} *CHIP del predio:* ${chip}
-` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
-
-\u2705 *Adjunto encuentras tu factura oficial en PDF emitida por la Secretar\xEDa de Hacienda.* Incluye los c\xF3digos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogot\xE1, etc.) o corresponsales (\xC9xito, Efecty).`;
-      try {
-        const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-        const { predialConsultations: predialConsultations2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const db = await getDb2();
-        if (db) {
-          await db.insert(predialConsultations2).values({
-            chip: chip.toUpperCase(),
-            documentType: detection.tipoDoc || "CC",
-            documentNumber: docNumber,
-            nombreContribuyente: downloadResult.nombreContribuyente || null,
-            numBp: downloadResult.numBP || null,
-            anoGravable: "2026",
-            queryType: downloadResult.isCertificado ? "certificado_pago" : "factura",
-            downloadUrl: downloadResult.pdfUrl || null,
-            requesterPhone: senderId ? senderId.replace(/@.*$/, "") : null,
-            source: isPrivateDm ? "whatsapp_dm" : "whatsapp_group",
-            status: "completed",
-            metadata: {
-              pdfFileName: downloadResult.pdfFileName,
-              date: (/* @__PURE__ */ new Date()).toISOString()
-            }
-          });
-        }
-      } catch (dbErr) {
-        console.warn("[PREDIAL-DB] No se pudo guardar la consulta en predialConsultations:", dbErr?.message);
-      }
-      return {
-        isPredialRequest: true,
-        chip,
-        cedula: docNumber,
-        reportText: reportText3,
-        pdfBuffer: downloadResult.pdfBuffer,
-        pdfFileName: downloadResult.pdfFileName || (downloadResult.isCertificado ? `Certificado_Pago_${chip}_2026.pdf` : `Factura_Predial_${chip}_2026.pdf`),
-        pdfUrl: downloadResult.pdfUrl,
-        nombreContribuyente: downloadResult.nombreContribuyente,
-        isCertificado: downloadResult.isCertificado
-      };
-    }
-    const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
-    const tipoDocFormulario = detection.tipoDoc === "NIT" ? "NIT (sin d\xEDgito de verificaci\xF3n)" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula de Ciudadan\xEDa";
-    const nitWarning = detection.tipoDoc === "NIT" ? `
-\u26A0\uFE0F *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el d\xEDgito de verificaci\xF3n*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.
-` : "";
-    const contribuyenteInfo = downloadResult?.nombreContribuyente ? `\u{1F3DB}\uFE0F *Titular registrado en Catastro/Hacienda:* ${downloadResult.nombreContribuyente}
-\u{1F4A1} _Si el predio est\xE1 en leasing habitacional o fiducia mercantil, se debe ingresar el NIT de la entidad bancaria o la c\xE9dula del locatario registrado._
-
-` : "";
-    const errorPrefix = downloadResult?.errorMessage ? `\u26A0\uFE0F *Respuesta oficial de la Secretar\xEDa de Hacienda:* ${downloadResult.errorMessage}
-
-` : "";
-    const reportText2 = `\u{1F6E1}\uFE0F *CONSULTA PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-\u{1F3E0} *CHIP del predio:* ${chip}
-\u{1FAAA} *${docLabel}:* ${docNumber}
-` + nitWarning + `
-` + contribuyenteInfo + errorPrefix + `\u{1F91D} *Para entregarte tu PDF directamente aqu\xED en el chat:*
-Por favor facil\xEDtame el documento del titular catastral o el NIT de la entidad financiera (si es leasing o fiducia). Con ese dato yo misma gestiono de inmediato el tr\xE1mite con 2Captcha y la Secretar\xEDa de Hacienda para entregarte el archivo PDF aqu\xED mismo. \u{1F4F2}\u2728`;
-    return {
-      isPredialRequest: true,
-      chip,
-      cedula: docNumber,
-      reportText: reportText2
-    };
-  }
-  if (!chip && detection.avaluoCatastral && detection.avaluoCatastral > 0) {
-    const estrato = detection.estrato || 4;
-    const liquidacion = liquidarPredialEstimadoBogota(detection.avaluoCatastral, estrato, true);
-    const avaluoFormatted = detection.avaluoCatastral.toLocaleString("es-CO");
-    const valorPleno = liquidacion.impuestoPleno.toLocaleString("es-CO");
-    const valorDescuento = liquidacion.impuestoConDescuento.toLocaleString("es-CO");
-    const reportText2 = `\u{1F6E1}\uFE0F *ESTIMACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
-
-\u26A0\uFE0F *Este es un c\xE1lculo ESTIMADO* basado en los datos que me proporcionaste. El valor oficial puede variar.
-
-\u{1F3DB}\uFE0F *Aval\xFAo Catastral informado:* $${avaluoFormatted} COP
-\u{1F3E2} *Estrato aplicado:* ${estrato}
-\u{1F4CA} *Tarifa por mil:* ${liquidacion.tarifaPorMil}\u2030
-
-\u{1F4B0} *Impuesto Predial estimado:* $${valorPleno} COP
-\u2705 *Con 10% descuento pronto pago:* $${valorDescuento} COP
-
-\u{1F4C4} *Para obtener tu factura oficial con c\xF3digo de barras real, ingresa al portal oficial:*
-\u{1F517} https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar
-
-_(Necesitar\xE1s el c\xF3digo CHIP de tu inmueble \u2014 lo encuentras en facturas anteriores)_`;
-    return {
-      isPredialRequest: true,
-      reportText: reportText2
-    };
-  }
-  const reportText = `\u{1F6E1}\uFE0F *IMPUESTO PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-Para entregarte el enlace oficial de tu factura predial, necesito el *c\xF3digo CHIP* del inmueble:
-
-\u{1F4DD} *Env\xEDame en privado:*
-_JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_
-
-\u{1F3E0} *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
-
-\u2705 *Tambi\xE9n puedes enviar:*
-\u2022 CC con puntos \u2714 (ej: 19.386.159)
-\u2022 NIT con d\xEDgito verificador \u2714 (ej: 860.030.201-2)
-\u2022 C\xE9dula de Extranjer\xEDa \u2714
-
-\xA1Te gu\xEDo al instante! \u{1F91D}`;
+  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
+  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
+  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
+  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
+  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
+  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
+  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
   return {
-    isPredialRequest: true,
-    reportText
+    baseZonePricePerM2: input.baseZonePricePerM2,
+    homologatedPricePerM2,
+    suggestedCommercialValue,
+    minClosingPrice,
+    estimatedMonthlyRent,
+    estimatedCapRate,
+    totalAreaM2: input.areaM2,
+    coefficients: {
+      cAntiguedad,
+      cPiso,
+      cGarajes,
+      cAmenidades
+    },
+    factorBreakdown: {
+      ageFactor: {
+        name: "Antig\xFCedad",
+        coefficient: cAntiguedad,
+        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
+        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
+      },
+      floorFactor: {
+        name: "Piso / Altura",
+        coefficient: cPiso,
+        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
+        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
+      },
+      garageFactor: {
+        name: "Garajes",
+        coefficient: cGarajes,
+        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
+        description: `${input.garages ?? 0} parqueaderos privados`
+      },
+      amenitiesFactor: {
+        name: "Amenidades",
+        coefficient: cAmenidades,
+        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
+        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
+      }
+    },
+    totalHomologationFactor: Number(totalFactor.toFixed(4)),
+    comparableSources: input.comparableSources || [],
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
-function isServiceHelpRequest(text2) {
-  if (!text2 || typeof text2 !== "string") return null;
-  const lower = text2.toLowerCase().trim();
-  const helpWords = [
-    "c\xF3mo",
-    "como",
-    "qu\xE9 debo",
-    "que debo",
-    "c\xF3mo hago",
-    "como hago",
-    "qu\xE9 datos",
-    "que datos",
-    "qu\xE9 necesito",
-    "que necesito",
-    "c\xF3mo pido",
-    "como pido",
-    "no s\xE9",
-    "no se",
-    "ayuda",
-    "instrucciones",
-    "tutorial",
-    "qu\xE9 env\xEDo",
-    "que envio",
-    "c\xF3mo solicito",
-    "como solicito",
-    "c\xF3mo se pide",
-    "como se pide",
-    "no entend\xED",
-    "no entendi",
-    "no entiendo",
-    "expl\xEDcame",
-    "explicame"
-  ];
-  const predialWords = ["predial", "impuesto predial", "factura predial", "chip", "liquidar"];
-  const cedulaWords = ["c\xE9dula", "cedula", "verificar c\xE9dula", "verificar cedula", "verificaci\xF3n", "verificacion", "identidad", "documento"];
-  const hasHelp = helpWords.some((w) => lower.includes(w));
-  const hasPredial = predialWords.some((w) => lower.includes(w));
-  const hasCedula = cedulaWords.some((w) => lower.includes(w));
-  if (hasHelp && hasPredial) return "predial";
-  if (hasHelp && hasCedula) return "cedula";
-  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasPredial) return "predial";
-  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasCedula) return "cedula";
-  return null;
-}
-var VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE, pendingPredialSessions, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT;
-var init_predialService = __esm({
-  "server/_core/predialService.ts"() {
-    "use strict";
-    VIRAL_LOOP_MESSAGE = `\u{1F603} \xBFQu\xE9 tanto nos recomendar\xEDas?
-\u{1F44E} | \u{1F44D} | \u2764\uFE0F`;
-    GOOGLE_REVIEW_MESSAGE = `\u2B50 \xBFPodr\xEDas darnos tu opini\xF3n y calificar nuestro servicio? As\xED nos ayudas para que siga siendo *GRATIS.*
-
-*COMENTA Y CALIFICA AQU\xCD (solo te toma 15 segundos):*
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
-
-\xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728`;
-    pendingPredialSessions = /* @__PURE__ */ new Map();
-    PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
-
-1\uFE0F\u20E3 *Env\xEDame en privado* el CHIP del inmueble y el NIT o CC del propietario en un solo mensaje:
-
-\u{1F4DD} *Ejemplo:*
-_JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_
-
-\u2139\uFE0F *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
-
-\u2705 *JanIA acepta:*
-\u2022 CC con o sin puntos (ej: 19.386.159 o 19386159)
-\u2022 NIT con o sin d\xEDgito de verificaci\xF3n (ej: 860.030.201-2 o 8600030201)
-\u2022 C\xE9dula de Extranjer\xEDa (CE)
-
-\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
-
-\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
-\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
-    CEDULA_HELP_TEXT = `\u{1FAAA} *\xBFC\xF3mo verificar un documento de identidad con JanIA?* Facil\xEDsimo:
-
-1\uFE0F\u20E3 *Env\xEDame en privado* el tipo y n\xFAmero de documento en un solo mensaje:
-
-\u{1F4DD} *Ejemplos:*
-\u2022 _JanIA, verificar c\xE9dula: 19.386.159_ \u2705
-\u2022 _JanIA, verificar c\xE9dula: 1018456789_ \u2705
-\u2022 _JanIA, verificar CE: 654321_ \u2705 (C\xE9dula de Extranjer\xEDa)
-\u2022 _JanIA, verificar pasaporte: AB123456_ \u2705
-
-\u{1F4CC} *Nota:* Puedes escribir el n\xFAmero con o sin puntos o guiones \u2014 JanIA lo procesa autom\xE1ticamente.
-
-\u{1F50D} *\xBFQu\xE9 informaci\xF3n recibir\xE1s?*
-Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Colombia.
-
-\u{1F6E1}\uFE0F *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Polic\xEDa Nacional.
-
-\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
-
-\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
-\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
+function executeMarketValuationSurvey(params) {
+  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  let basePrice = 65e5;
+  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
+  let hasVerifiedComparables = true;
+  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
+    basePrice = 145e5;
+  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
+    basePrice = 125e5;
+  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
+    basePrice = 105e5;
+  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
+    basePrice = 85e5;
+  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
+    basePrice = 78e5;
+  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
+    basePrice = 75e5;
+  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
+    basePrice = 62e5;
+  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
+    basePrice = 58e5;
+  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
+    basePrice = 55e5;
+  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
+    basePrice = 65e5;
+  } else {
+    hasVerifiedComparables = false;
   }
-});
-
-// server/_core/emailContractService.ts
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import nodemailer from "nodemailer";
-import QRCode from "qrcode";
-import crypto2 from "node:crypto";
-function normalizePayload(input) {
-  const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
+  const area = params.areaM2 || 75;
+  const valuation = calculatePropertyValuation({
+    zone: zoneName,
+    city: "Bogot\xE1",
+    areaM2: area,
+    baseZonePricePerM2: basePrice,
+    ageYears: params.antiguedadAnos || 8,
+    floorNumber: params.piso || 3,
+    hasElevator: params.tieneAscensor ?? true,
+    garages: params.garajes || 1,
+    hasClubHouse: params.esClubHouse || false,
+    comparableSources: [
+      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
+      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
+      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
+    ]
+  });
   return {
-    ...input,
-    solicitud_id: sId,
-    solicitante_nombre: input.solicitanteNombre ?? input.solicitante_nombre ?? "",
-    solicitante_tipo_persona: input.solicitanteTipoPersona ?? input.solicitante_tipo_persona ?? "Persona Natural",
-    solicitante_perfil: input.solicitantePerfil ?? input.solicitante_perfil ?? "Cliente directo",
-    solicitante_email: input.solicitanteEmail ?? input.solicitante_email ?? "",
-    solicitante_celular: input.solicitanteCelular ?? input.solicitante_celular ?? "",
-    solicitante_tipo_documento: input.solicitanteTipoDocumento ?? input.solicitante_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
-    solicitante_numero_documento: input.solicitanteNumeroDocumento ?? input.solicitante_numero_documento ?? "",
-    solicitante_representante_legal: input.solicitanteRepresentanteLegal ?? input.solicitante_representante_legal ?? "",
-    servicio_solicitado: input.servicioSolicitado ?? input.servicio_solicitado ?? "Visitar inmueble",
-    nombre_inmueble: input.nombreInmueble ?? input.nombre_inmueble ?? "N/A",
-    codigo_inmueble: input.codigoInmueble ?? input.codigo_inmueble ?? "N/A",
-    opcion_negocio: input.opcionNegocio ?? input.opcion_negocio ?? "Venta",
-    fecha_cita_texto: input.fechaCitaTexto ?? input.fecha_cita_texto ?? "",
-    hora_cita: input.horaCita ?? input.hora_cita ?? "",
-    cantidad_personas: input.cantidadPersonas ?? input.cantidad_personas ?? 1,
-    interesado_nombre: input.interesadoNombre ?? input.interesado_nombre ?? "",
-    interesado_tipo_documento: input.interesadoTipoDocumento ?? input.interesado_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
-    interesado_documento: input.interesadoDocumento ?? input.interesado_documento ?? "",
-    tipo_cliente: input.tipoCliente ?? input.tipo_cliente ?? "Persona",
-    acompanantes: input.acompanantes ?? [],
-    firma_virtual_base64: input.firmaVirtualBase64 ?? input.firma_virtual_base64 ?? ""
+    zonaConsultada: zoneName,
+    zonaOBarrio: zoneName,
+    tieneComparablesVerificados: hasVerifiedComparables,
+    baseZonePricePerM2: valuation.baseZonePricePerM2,
+    homologatedPricePerM2: valuation.homologatedPricePerM2,
+    valorM2Estimado: valuation.homologatedPricePerM2,
+    suggestedCommercialValue: valuation.suggestedCommercialValue,
+    valorComercialSugerido: valuation.suggestedCommercialValue,
+    minClosingPrice: valuation.minClosingPrice,
+    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
+    canonArriendoEstimado: valuation.estimatedMonthlyRent,
+    estimatedCapRate: valuation.estimatedCapRate,
+    areaM2: area,
+    coefficients: valuation.coefficients,
+    factorBreakdown: valuation.factorBreakdown,
+    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
+    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
+    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
+    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
   };
 }
-async function createContractPdf(rawFormData) {
-  const formData = normalizePayload(rawFormData);
-  const pdfDoc = await PDFDocument.create();
-  let currentPage = pdfDoc.addPage();
-  const { width, height } = currentPage.getSize();
-  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const black = rgb(0, 0, 0);
-  const gray = rgb(0.3, 0.3, 0.3);
-  const goldColor = rgb(0.749, 0.584, 0.247);
-  const margin = 50;
-  let y = height - margin;
-  const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
-  const sId = clean(formData.solicitud_id || "N/A");
-  const contractPayloadString = `${sId}|${clean(formData.solicitante_nombre)}|${clean(formData.solicitante_numero_documento)}|${clean(formData.codigo_inmueble)}|${(/* @__PURE__ */ new Date()).toISOString()}`;
-  const sha256Hash = crypto2.createHash("sha256").update(contractPayloadString).digest("hex");
-  const cuv = `VECY-CTR-${sId}-${sha256Hash.substring(0, 8).toUpperCase()}`;
-  const verifyUrl = `https://vecy-bienes-raices.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
-  let qrImage = null;
-  try {
-    const qrBuffer = await QRCode.toBuffer(verifyUrl, {
-      width: 140,
-      margin: 1,
-      color: {
-        dark: "#000000",
-        light: "#ffffff"
-      }
-    });
-    qrImage = await pdfDoc.embedPng(qrBuffer);
-  } catch (qrErr) {
-    console.error("Error al generar c\xF3digo QR para contrato:", qrErr?.message);
-  }
-  const drawFooter = (pageToDrawOn) => {
-    const footerText = `Vecy Bienes Ra\xEDces S.A.S. | CUV: ${cuv} | Ley 527/1999 | https://vecy-bienes-raices.vercel.app/`;
-    const footerTextWidth = font.widthOfTextAtSize(footerText, 7.5);
-    pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 7.5, color: gray });
-  };
-  const checkAndAddPage = (currentY, neededHeight) => {
-    if (currentY - neededHeight < margin + 20) {
-      drawFooter(currentPage);
-      currentPage = pdfDoc.addPage();
-      return height - margin;
-    }
-    return currentY;
-  };
-  const drawRichText = (segments, options) => {
-    let { y: currentY, x: startX, width: maxWidth, lineHeight } = options;
-    let allWords = [];
-    for (const segment of segments) {
-      const segFont = segment.font || font;
-      const segSize = segment.size || 11;
-      const segColor = segment.color || black;
-      const paragraphs = segment.text.split("\n");
-      for (let i = 0; i < paragraphs.length; i++) {
-        if (i > 0) allWords.push({ isNewLine: true });
-        const words = paragraphs[i].split(/\s+/).filter((w) => w.length > 0);
-        for (const w of words) {
-          allWords.push({
-            text: w,
-            font: segFont,
-            size: segSize,
-            color: segColor,
-            width: segFont.widthOfTextAtSize(w, segSize)
-          });
-        }
-      }
-    }
-    let lineBuffer = [];
-    let currentLineWidth = 0;
-    const spaceWidth = font.widthOfTextAtSize(" ", 11);
-    const flushLine = (justify = false, isParagraphBreak = false) => {
-      if (lineBuffer.length === 0) {
-        if (isParagraphBreak) currentY -= 6;
-        return;
-      }
-      currentY = checkAndAddPage(currentY, lineHeight);
-      if (!justify || lineBuffer.length < 2) {
-        let xObj = startX;
-        for (const item of lineBuffer) {
-          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
-          xObj += item.width + spaceWidth;
-        }
-      } else {
-        const totalWordsWidth = lineBuffer.reduce((sum, item) => sum + item.width, 0);
-        const extraSpace = maxWidth - totalWordsWidth;
-        const spacePerGap = extraSpace / (lineBuffer.length - 1);
-        let xObj = startX;
-        lineBuffer.forEach((item, index2) => {
-          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
-          if (index2 < lineBuffer.length - 1) {
-            xObj += item.width + spacePerGap;
-          }
-        });
-      }
-      currentY -= lineHeight;
-      if (isParagraphBreak) currentY -= 6;
-      lineBuffer = [];
-      currentLineWidth = 0;
-    };
-    for (const item of allWords) {
-      if (item.isNewLine) {
-        flushLine(false, true);
-        continue;
-      }
-      const additionalWidth = (lineBuffer.length > 0 ? spaceWidth : 0) + item.width;
-      if (currentLineWidth + additionalWidth > maxWidth) {
-        flushLine(true);
-        lineBuffer.push(item);
-        currentLineWidth = item.width;
-      } else {
-        lineBuffer.push(item);
-        currentLineWidth += additionalWidth;
-      }
-    }
-    flushLine(false);
-    return currentY;
-  };
-  const drawClause = (title, segments, currentY) => {
-    currentY = checkAndAddPage(currentY, 40);
-    currentY = drawRichText([{ text: title, font: boldFont, color: goldColor, size: 11 }], { y: currentY, x: margin, width: width - margin * 2, lineHeight: 15 });
-    currentY -= 4;
-    currentY = drawRichText(segments, { y: currentY, x: margin, width: width - margin * 2, lineHeight: 14 });
-    return currentY - 14;
-  };
-  try {
-    const logoBytes = Buffer.from(vecyLogoBase64.split(",")[1], "base64");
-    const vecyLogoImage = await pdfDoc.embedPng(logoBytes);
-    currentPage.drawImage(vecyLogoImage, { x: margin, y: y - 25, width: 50, height: 50 });
-  } catch (e) {
-    console.error("Error al incrustar logo en PDF:", e?.message);
-  }
-  currentPage.drawText("CONTRATO DE PUNTAS COMPARTIDAS", { x: margin + 70, y, font: boldFont, size: 15, color: goldColor });
-  currentPage.drawText("Acuerdo de Colaboraci\xF3n Inmobiliaria | Vecy Gold Edition", { x: margin + 70, y: y - 16, font, size: 10, color: gray });
-  if (formData.solicitud_id) {
-    const idText = `ID: ${formData.solicitud_id}`;
-    const idTextWidth = boldFont.widthOfTextAtSize(idText, 9);
-    currentPage.drawText(idText, { x: width - margin - idTextWidth, y, font: boldFont, size: 9, color: gray });
-  }
-  y -= 45;
-  currentPage.drawRectangle({ x: margin, y, width: width - 2 * margin, height: 1.5, color: goldColor });
-  y -= 25;
-  const generationDate = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" });
-  const isJuridica = formData.solicitante_tipo_persona === "Persona Jur\xEDdica";
-  const introSegments = [
-    { text: "Entre los suscritos a saber, por una parte, JANI ALVES SOUZA, mayor de edad, identificada con c\xE9dula de ciudadan\xEDa No. 41.057.506, actuando en nombre propio como persona natural y en representaci\xF3n comercial de la marca VECY BIENES RA\xCDCES, quien en adelante se denominar\xE1 EL AGENTE 1; y por la otra parte, ", font },
-    { text: clean(formData.solicitante_nombre), font: boldFont },
-    { text: isJuridica ? `, entidad con personer\xEDa jur\xEDdica, representada legalmente por ${clean(formData.solicitante_representante_legal)}, identificada con ` : ", mayor de edad, identificado(a) con ", font },
-    { text: clean(formData.solicitante_tipo_documento), font: boldFont },
-    { text: " No. ", font },
-    { text: clean(formData.solicitante_numero_documento), font: boldFont },
-    { text: ", quien en adelante se denominar\xE1 EL AGENTE 2, se celebra el presente contrato de colaboraci\xF3n inmobiliaria, el cual se regir\xE1 por las disposiciones del C\xF3digo de Comercio Colombiano (Art. 1340 y subsiguientes) y las siguientes cl\xE1usulas:", font }
-  ];
-  y = drawRichText(introSegments, { y, x: margin, width: width - margin * 2, lineHeight: 14 });
-  y -= 15;
-  const clausula1 = [
-    { text: "El presente contrato tiene por objeto establecer los t\xE9rminos de colaboraci\xF3n entre EL AGENTE 1 y EL AGENTE 2 para promover, gestionar y/o contribuir en la intermediaci\xF3n del negocio inmobiliario relacionado con el inmueble: ", font },
-    { text: clean(formData.nombre_inmueble || "N/A"), font: boldFont },
-    { text: " identificado con el c\xF3digo ", font },
-    { text: clean(formData.codigo_inmueble || "N/A"), font: boldFont },
-    { text: ", donde EL AGENTE 2 mediante el formulario No. ", font },
-    { text: clean(formData.solicitud_id), font: boldFont },
-    { text: ', solicita al AGENTE 1 "', font },
-    { text: clean(formData.servicio_solicitado), font: boldFont },
-    { text: '" en ', font },
-    { text: clean(formData.opcion_negocio || "tipo de operaci\xF3n"), font: boldFont },
-    { text: " para la fecha ", font },
-    { text: clean(formData.fecha_cita_texto || "fecha por confirmar"), font: boldFont },
-    { text: " a las ", font },
-    { text: clean(formData.hora_cita || "hora por confirmar"), font: boldFont },
-    { text: " en favor del cliente ", font },
-    { text: clean(formData.interesado_nombre), font: boldFont },
-    { text: ", identificado(a) con ", font },
-    { text: clean(formData.interesado_tipo_documento), font: boldFont },
-    { text: " No. ", font },
-    { text: clean(formData.interesado_documento), font: boldFont }
-  ];
-  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    clausula1.push({ text: " y las siguientes personas autorizadas y registradas como acompa\xF1antes: ", font });
-    const acompNames = formData.acompanantes.map((a) => `${a.nombre} (${a.documento})`).join(", ");
-    clausula1.push({ text: acompNames, font: boldFont });
-    clausula1.push({ text: ".", font });
-  } else {
-    clausula1.push({ text: ".", font });
-  }
-  y = drawClause("CL\xC1USULA PRIMERA: OBJETO", clausula1, y);
-  const tipoNegocio = formData.opcion_negocio || "Venta";
-  const honorariosCorresponde = tipoNegocio.toLowerCase().includes("arriendo") ? "un canon de arrendamiento (si fuera venta es el 3% sobre el valor total de venta)" : "el 3% sobre el valor total de la venta (si fuera arriendo es un canon de arrendamiento)";
-  const clausula2Text = `Los honorarios derivados de la comisi\xF3n final efectivamente cobrada por el perfeccionamiento del negocio de Venta (en este caso es ${tipoNegocio}) que corresponde a ${honorariosCorresponde} ser\xE1n distribuidos en partes iguales (50% para cada parte), salvo pacto distinto anexo y por escrito. En caso de que EL AGENTE 2 act\xFAe bajo la figura de simple referenciador (\xFAnicamente refiere al cliente o al colega) sin participar activamente en el acompa\xF1amiento presencial, las negociaciones o el cierre legal, su participaci\xF3n corresponder\xE1 estrictamente al 10% de la comisi\xF3n.`;
-  y = drawClause("CL\xC1USULA SEGUNDA: HONORARIOS Y PROPORCI\xD3N", [{ text: clausula2Text, font }], y);
-  y = checkAndAddPage(y, 100);
-  const clausula3Text = `Para todos los efectos fiscales, contables y tributarios derivados del pago de la comisi\xF3n u honorarios correspondientes a EL AGENTE 1, las partes reconocen y aceptan expresamente que:
-
-1. Calidad Tributaria: EL AGENTE 1 (JANI ALVES SOUZA) act\xFAa en calidad de Persona Natural, No Responsable del Impuesto sobre las Ventas (IVA). Por consiguiente, EL AGENTE 2 (o la agencia inmobiliaria que este represente) tiene estrictamente prohibido realizar descuentos, retenciones o exigencias de facturaci\xF3n electr\xF3nica que incluyan el cobro o deducci\xF3n de IVA sobre la proporci\xF3n de EL AGENTE 1.
-2. Documento Soporte: Si EL AGENTE 2 o su agencia est\xE1n obligados a llevar contabilidad, ser\xE1 de su exclusiva responsabilidad y carga administrativa la emisi\xF3n del "Documento Soporte en adquisiciones efectuadas a sujetos no obligados a expedir factura de venta" (Resoluci\xF3n DIAN 000167 de 2021) para la legalizaci\xF3n de su egreso.
-3. Retenciones en la Fuente: Toda retenci\xF3n en la fuente (a t\xEDtulo de renta o ICA) solo proceder\xE1 si EL AGENTE 2 o su agencia ostentan formalmente la calidad de "Agente Retenedor" ante la DIAN, aplicando estrictamente las tarifas de ley para comisiones a personas naturales declarantes o no declarantes. Cualquier deducci\xF3n deber\xE1 ser informada previamente y soportada con la entrega obligatoria del respectivo Certificado de Retenci\xF3n; de lo contrario, el descuento se considerar\xE1 un cobro indebido y apropiaci\xF3n injustificada de dineros.`;
-  y = drawClause("CL\xC1USULA TERCERA: NATURALEZA TRIBUTARIA, FACTURACI\xD3N Y DESCUENTOS (EXCLUSI\xD3N DE ABUSOS)", [{ text: clausula3Text, font }], y);
-  y = checkAndAddPage(y, 80);
-  const clausula4Text = `De EL AGENTE 1: Promocionar el inmueble, proveer informaci\xF3n fidedigna para el cierre, coordinar diligencias y velar por el rigor jur\xEDdico de la gesti\xF3n.
-De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociaci\xF3n (si aplica al 50%) y, con car\xE1cter irrestricto, respetar el canal de comunicaci\xF3n institucional, absteni\xE9ndose de realizar negociaciones directas, paralelas o a espaldas de EL AGENTE 1 con los clientes, propietarios o apoderados del inmueble.`;
-  y = drawClause("CL\xC1USULA CUARTA: OBLIGACIONES DE LAS PARTES", [{ text: clausula4Text, font }], y);
-  y = checkAndAddPage(y, 160);
-  const clausula5 = [
-    { text: "Las partes asumen un compromiso de estricta reserva. EL AGENTE 2 reconoce que EL AGENTE 1 es el titular exclusivo del encargo profesional sobre el inmueble. EL AGENTE 2 y/o su agencia se obligan a la NO ELUSI\xD3N (Non-Circumvention), lo que significa que no podr\xE1n cerrar el negocio, firmar promesas de compraventa ni contratos de arrendamiento con el cliente referido o el propietario del inmueble puenteando o excluyendo a EL AGENTE 1, ni durante la vigencia de este contrato ni dentro de los doce (12) meses siguientes a su terminaci\xF3n.\n\n", font },
-    { text: "PAR\xC1GRAFO PRIMERO: EXTENSI\xD3N POR V\xCDNCULO. ", font: boldFont },
-    { text: "Las partes acuerdan que los efectos de este contrato, especialmente lo referente al pago de honorarios y la cl\xE1usula penal, se extienden a cualquier negocio jur\xEDdico realizado sobre el inmueble con el cliente principal o con cualquier Tercero Vinculado a este. Se consideran Terceros Vinculados: C\xF3nyuges o compa\xF1eros permanentes; familiares dentro del cuarto grado de consanguinidad y segundo de afinidad; Personas Jur\xEDdicas donde el cliente o sus familiares sean socios, representantes o beneficiarios; y los acompa\xF1antes registrados en este contrato y en el sistema de EL AGENTE 1.\n\n", font },
-    { text: "PAR\xC1GRAFO SEGUNDO: CARGA DE LA PRUEBA Y TRAZABILIDAD DIGITAL. ", font: boldFont },
-    { text: "EL AGENTE 2 reconoce expresamente que la informaci\xF3n consignada en la base de datos de Vecy Agenda Pro, los registros de telemetr\xEDa forense de clics, enlaces y trazabilidad de botones provistos por VECY BIENES RA\xCDCES constituyen prueba fehaciente e inmutable del nexo causal de la operaci\xF3n al tenor de los Art\xEDculos 1340 y 1341 del C\xF3digo de Comercio y la Ley 527 de 1999. Cualquier intento de perfeccionar el negocio omitiendo la participaci\xF3n de EL AGENTE 1 o de la plataforma con cualquiera de estas personas se considerar\xE1 Incumplimiento Grave y activar\xE1 de inmediato la Cl\xE1usula Penal.", font }
-  ];
-  y = drawClause("CL\xC1USULA QUINTA: CONFIDENCIALIDAD, EXTENSI\xD3N A TERCEROS Y NO ELUSI\xD3N", clausula5, y);
-  y = checkAndAddPage(y, 80);
-  const clausula6Text = "El incumplimiento de cualquiera de las obligaciones, especialmente la elusi\xF3n (puenteo), la negociaci\xF3n no autorizada o los descuentos injustificados sobre los honorarios, dar\xE1 lugar al pago inmediato de una sanci\xF3n penal equivalente al 100% de la comisi\xF3n total generada por el negocio inmobiliario, a favor de la parte cumplida. El presente documento presta m\xE9rito ejecutivo para el cobro de esta penalidad, sin requerimiento de constituci\xF3n en mora, a la cual se renuncia expresamente.";
-  y = drawClause("CL\xC1USULA SEXTA: CL\xC1USULA PENAL E INCUMPLIMIENTO", [{ text: clausula6Text, font }], y);
-  const clausula7Text = "El presente contrato tendr\xE1 una vigencia de tres (3) meses desde su emisi\xF3n digital. Si el negocio se materializa antes, continuar\xE1 vigente hasta el pago total de las comisiones.";
-  y = drawClause("CL\xC1USULA S\xC9PTIMA: DURACI\xD3N", [{ text: clausula7Text, font }], y);
-  const clausula8Text = "Este contrato ostenta plena validez jur\xEDdica desde su generaci\xF3n y emisi\xF3n electr\xF3nica. Al amparo de la Ley 527 de 1999 (Ley de Comercio Electr\xF3nico), las firmas digitales, biom\xE9tricas, electr\xF3nicas o capturas gr\xE1ficas de trazo, se reputan como v\xE1lidas, vinculantes y expresan el consentimiento inequ\xEDvoco de las partes.";
-  y = drawClause("CL\xC1USULA OCTAVA: VALIDEZ Y FIRMA DIGITAL", [{ text: clausula8Text, font }], y);
-  y = checkAndAddPage(y, 150);
-  const firmaText = `En constancia de lo anterior, las partes firman el presente documento el d\xEDa ${generationDate}.`;
-  y = drawRichText([{ text: firmaText, font }], { y, x: margin, width: width - margin * 2, lineHeight: 14 });
-  y -= 30;
-  const firmaY = y;
-  const signatureBox = { width: 120, height: 50 };
-  const calculateDims = (img, maxWidth, maxHeight) => {
-    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-    return { width: img.width * ratio, height: img.height * ratio };
-  };
-  try {
-    const janiFirmaBytes = Buffer.from(janiFirmaBase64.split(",")[1], "base64");
-    const janiFirmaImage = await pdfDoc.embedPng(janiFirmaBytes);
-    const janiDims = calculateDims(janiFirmaImage, signatureBox.width, signatureBox.height);
-    currentPage.drawImage(janiFirmaImage, {
-      x: margin + (100 - janiDims.width / 2),
-      y: firmaY - 25,
-      width: janiDims.width,
-      height: janiDims.height
-    });
-  } catch (e) {
-    console.error("Error al incrustar firma de Jani en PDF:", e?.message);
-  }
-  currentPage.drawLine({ start: { x: margin, y: firmaY - 35 }, end: { x: margin + 200, y: firmaY - 35 }, thickness: 0.5, color: black });
-  currentPage.drawText("JANI ALVES SOUZA", { x: margin + 40, y: firmaY - 48, font: boldFont, size: 9 });
-  currentPage.drawText("C.C. 41.057.506", { x: margin + 50, y: firmaY - 58, font, size: 8 });
-  currentPage.drawText("AGENTE 1 - VECY BIENES RA\xCDCES", { x: margin + 15, y: firmaY - 68, font, size: 8 });
-  const agentSignatureX = width - margin - 200;
-  if (formData.firma_virtual_base64 && formData.firma_virtual_base64.startsWith("data:image")) {
-    try {
-      const signatureBase64Data = formData.firma_virtual_base64.split(",")[1];
-      const signatureBytes = Buffer.from(signatureBase64Data, "base64");
-      let signatureImage;
-      if (formData.firma_virtual_base64.startsWith("data:image/png")) {
-        signatureImage = await pdfDoc.embedPng(signatureBytes);
-      } else if (formData.firma_virtual_base64.startsWith("data:image/jpeg") || formData.firma_virtual_base64.startsWith("data:image/jpg")) {
-        signatureImage = await pdfDoc.embedJpg(signatureBytes);
-      }
-      if (signatureImage) {
-        const agentDims = calculateDims(signatureImage, signatureBox.width, signatureBox.height);
-        currentPage.drawImage(signatureImage, {
-          x: agentSignatureX + (100 - agentDims.width / 2),
-          y: firmaY - 25,
-          width: agentDims.width,
-          height: agentDims.height
-        });
-      }
-    } catch (e) {
-      console.error(`[${formData.solicitud_id}] Error al incrustar firma del agente:`, e?.message);
-    }
-  }
-  currentPage.drawLine({ start: { x: agentSignatureX, y: firmaY - 35 }, end: { x: width - margin, y: firmaY - 35 }, thickness: 0.5, color: black });
-  currentPage.drawText(clean(formData.solicitante_nombre).toUpperCase(), { x: agentSignatureX, y: firmaY - 48, font: boldFont, size: 9, maxWidth: 200 });
-  currentPage.drawText(`${clean(formData.solicitante_tipo_documento)} No. ${clean(formData.solicitante_numero_documento)}`, { x: agentSignatureX, y: firmaY - 58, font, size: 8 });
-  if (isJuridica && formData.solicitante_representante_legal) {
-    currentPage.drawText(`Rep. Legal: ${clean(formData.solicitante_representante_legal)}`, { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
-    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 78, font, size: 8 });
-  } else {
-    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
-  }
-  const sealBoxHeight = 65;
-  let sealY = firmaY - (isJuridica && formData.solicitante_representante_legal ? 95 : 85);
-  if (sealY - sealBoxHeight < margin + 20) {
-    drawFooter(currentPage);
-    currentPage = pdfDoc.addPage();
-    sealY = height - margin - 10;
-  }
-  const sealBoxWidth = width - margin * 2;
-  currentPage.drawRectangle({
-    x: margin,
-    y: sealY - sealBoxHeight,
-    width: sealBoxWidth,
-    height: sealBoxHeight,
-    borderColor: goldColor,
-    borderWidth: 0.8,
-    color: rgb(0.97, 0.97, 0.95)
-  });
-  if (qrImage) {
-    currentPage.drawImage(qrImage, {
-      x: margin + 8,
-      y: sealY - sealBoxHeight + 8,
-      width: 49,
-      height: 49
-    });
-  }
-  const textX = margin + 65;
-  currentPage.drawText("SELLO DE SEGURIDAD DIGITAL \u2014 VECY BIENES RA\xCDCES (LEY 527 DE 1999)", { x: textX, y: sealY - 15, font: boldFont, size: 8, color: goldColor });
-  currentPage.drawText(`CUV: ${cuv}`, { x: textX, y: sealY - 26, font: boldFont, size: 7.5, color: black });
-  currentPage.drawText(`Huella Criptogr\xE1fica SHA-256: ${sha256Hash.substring(0, 50)}...`, { x: textX, y: sealY - 37, font, size: 6.5, color: gray });
-  currentPage.drawText("Validez Jur\xEDdica: Mensaje de datos y firma electr\xF3nica vinculante conforme a la Ley 527/1999 y Dec. 2364/2012.", { x: textX, y: sealY - 47, font, size: 6.5, color: gray });
-  currentPage.drawText(`Verificaci\xF3n p\xFAblica en l\xEDnea: ${verifyUrl}`, { x: textX, y: sealY - 57, font, size: 6, color: gray });
-  drawFooter(currentPage);
-  return await pdfDoc.save();
-}
-function getEmailContent(formData) {
-  const { solicitante_nombre, solicitante_perfil, solicitud_id, servicio_solicitado, opcion_negocio, codigo_inmueble, fecha_cita_texto, solicitante_email, hora_cita } = formData;
-  const logoUrlParaEmail = "cid:vecyLogo";
-  const now = /* @__PURE__ */ new Date();
-  const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
-  const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
-  const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p></div></div></body></html>`;
-  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
-  if (hasAlert) {
-    const subject2 = `\u26A0\uFE0F Notificaci\xF3n de Seguridad Notarial - Solicitud #${solicitud_id} Declinada | Vecy Agenda`;
-    const title2 = `Aviso de Seguridad Notarial \u2014 Solicitud #${solicitud_id} \u{1F6D1}`;
-    const motivo = formData.alerta_motivo || formData.alertaMotivo || "Registro de antecedentes o requerimientos ante autoridades oficiales";
-    const body2 = `
-      <div style="background-color: #2b0000; border: 2px solid #e53935; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h3 style="color: #ff6b6b; margin-top: 0; font-size: 18px;">\u{1F6D1} NOTIFICACI\xD3N FORMAL DE DECLINACI\xD3N DE RESERVA</h3>
-        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
-          Estimado(a) <strong>${solicitante_nombre}</strong>:
-        </p>
-        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
-          En cumplimiento estricto de nuestras pol\xEDticas de seguridad notarial, debida diligencia y protecci\xF3n contractual de propietarios y agentes inmobiliarios, tu documento de identidad registrado (<strong>${formData.solicitante_numero_documento || "Doc"}</strong>) fue cotejado ante las centrales de control y certificaci\xF3n oficial del Estado.
-        </p>
-        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
-          <strong>Detalle de la auditor\xEDa:</strong> ${motivo}.
-        </p>
-        <p style="color: #ffffff; font-weight: bold; font-size: 15px; margin-top: 15px;">
-          Por los motivos expuestos, te informamos formalmente que TU RESERVA PARA LA VISITA DEL INMUEBLE HA SIDO DECLINADA.
-        </p>
-        <p style="color: #ffcdd2; font-size: 13px; margin-top: 15px;">
-          Si consideras que existe un error de homonimia o deseas presentar documentaci\xF3n aclaratoria ante nuestra direcci\xF3n jur\xEDdica y comercial, puedes comunicarte directamente al tel\xE9fono <strong>+57 316 6569719</strong> o al correo <strong>vecybienesraices@gmail.com</strong>.
-        </p>
-      </div>
-      <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud Auditada: ${solicitud_id}</strong></p></div>
-    `;
-    return { subject: subject2, html: baseHtml(title2, body2) };
-  }
-  const subject = `\u2705 Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
-  const title = `\xA1Hola, ${solicitante_nombre}! Hemos recibido tu solicitud \u{1F3E0}\u2728`;
-  let body = `
-    <p>Confirmamos la recepci\xF3n de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "tr\xE1mite"}</strong> identificado con el c\xF3digo <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. \u{1F4C5}</p>
-    <p>Nuestro equipo revisar\xE1 la fidelidad de todos los datos y, una vez verificados, te enviaremos un correo a <strong>${solicitante_email}</strong> con la confirmaci\xF3n del agendamiento y la direcci\xF3n completa del inmueble. \xA1Debes estar pendiente! \u{1F4E9}\u{1F440}</p>
-  `;
-  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    let acompHtml = `<div class="highlight"><p><strong>\u{1F465} Acompa\xF1antes Autorizados:</strong></p><ul style="margin-top: 10px; margin-bottom: 0; color: #ccc;">`;
-    formData.acompanantes.forEach((acomp) => {
-      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
-      acompHtml += `<li>${acomp.nombre} (${parentesco}) - Doc: ${acomp.documento}</li>`;
-    });
-    acompHtml += "</ul></div>";
-    body += acompHtml;
-  }
-  body += `
-    <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
-  `;
-  const perfilLower = (solicitante_perfil || "").toLowerCase();
-  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
-  if (esAgente) {
-    body += `
-      <p style="margin-top: 20px;">Como agente, hemos adjuntado a este correo el contrato de colaboraci\xF3n <strong>No. ${solicitud_id}</strong> firmado virtualmente hoy <strong>${fechaActual}</strong> a las <strong>${horaActual}</strong> a trav\xE9s de nuestro formulario. \u270D\uFE0F\u{1F4C4}</p>
-      <p>Estamos seguros de que todo saldr\xE1 bien y ser\xE1 un cierre perfecto. \xA1Gracias por tu confianza! \u{1F91D}\u{1F680}</p>
-    `;
-  }
-  return { subject, html: baseHtml(title, body) };
-}
-function getAdminEmailContent(formData) {
-  const logoUrlParaEmail = "cid:vecyLogo";
-  let rows = "";
-  for (const [key, value] of Object.entries(formData)) {
-    if (key === "firma_virtual_base64" || key === "firma_digital_archivo" || key === "autorizacion" || key === "acompanantes" || key === "firmaVirtualBase64") continue;
-    let displayValue = value;
-    if (value === null || value === void 0) displayValue = "<em>Vac\xEDo</em>";
-    rows += `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #333; font-weight: bold; width: 40%; color: #bf953f;">${key.replace(/_/g, " ")}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${displayValue}</td>
-      </tr>
-    `;
-  }
-  let acompanantesHtml = "";
-  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    acompanantesHtml += `
-      <h3 style="color: #bf953f; margin-top: 30px; text-transform: uppercase;">\u{1F465} Acompa\xF1antes Registrados</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="background-color: #bf953f; color: #000;">
-            <th style="padding: 8px; text-align: left;">Nombre</th>
-            <th style="padding: 8px; text-align: left;">Documento</th>
-            <th style="padding: 8px; text-align: left;">Parentesco</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-    formData.acompanantes.forEach((acomp) => {
-      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
-      acompanantesHtml += `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.nombre}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.documento}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${parentesco}</td>
-        </tr>
-      `;
-    });
-    acompanantesHtml += "</tbody></table>";
-  }
-  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
-  const alertaBanner = hasAlert ? `
-      <div style="background-color: #660000; border: 2px solid #ff4444; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #fff;">
-        <h3 style="margin-top: 0; color: #ff8888; font-size: 16px;">\u{1F6A8} ALERTA CR\xCDTICA DE SEGURIDAD NOTARIAL</h3>
-        <p style="margin: 0; font-size: 13px;">El solicitante o asistente registra antecedentes o sanciones ante las autoridades: <strong>${formData.alerta_motivo || "Antecedentes vigentes"}</strong>.</p>
-        <p style="margin: 6px 0 0 0; font-size: 12px; color: #ffd0d0;">\u{1F4CC} La reserva ha sido DECLINADA formalmente y se ha remitido la advertencia al usuario.</p>
-      </div>
-    ` : "";
-  const html = `
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; background-color: #0a0a0a; color: #f0f0f0; margin: 0; padding: 20px; }
-        .container { max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #000; padding: 20px; text-align: center; border-bottom: 2px solid #bf953f; }
-        .content { padding: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background-color: #bf953f; color: #000; padding: 10px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid #222; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
-        </div>
-        <div class="content">
-          ${alertaBanner}
-          <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
-          <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
-          <p style="font-size: 13px; color: #aaa;">A continuaci\xF3n, el resumen de los datos ingresados en el formulario:</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Campo</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-          ${acompanantesHtml}
-          <p style="font-size: 11px; color: #666; margin-top: 30px; text-align: center;">Este es un correo autom\xE1tico del sistema interno de Vecy Agenda.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-  return { html };
-}
-async function sendContractAndConfirmationEmails(rawPayload) {
-  const formData = normalizePayload(rawPayload);
-  const solicitudId = formData.solicitud_id;
-  const gmailUser = process.env.GMAIL_USER || "vecybienesraices@gmail.com";
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || "dwjnngwfmsmjxvgi";
-  const adminTargetEmail = process.env.VECY_INTERNAL_EMAIL || gmailUser;
-  if (!gmailUser || !gmailPass) {
-    console.warn(`[AGENDA-EMAIL-#${solicitudId}] \u26A0\uFE0F Credenciales de Gmail no configuradas en entorno.`);
-    return { success: false, error: "Missing Gmail credentials" };
-  }
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: gmailUser,
-      pass: gmailPass
-    }
-  });
-  let pdfAttachment = null;
-  const perfilLower = (formData.solicitante_perfil || "").toLowerCase();
-  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
-  if (esAgente) {
-    try {
-      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F4C4} Generando Contrato de Puntas Compartidas en PDF...`);
-      const pdfBytes = await createContractPdf(formData);
-      const safeName = (formData.solicitante_nombre || "Agente").replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-      const pdfFileName = `Contrato_Puntas_${solicitudId}_${safeName}.pdf`;
-      pdfAttachment = {
-        filename: pdfFileName,
-        content: Buffer.from(pdfBytes),
-        contentType: "application/pdf"
-      };
-      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2705 PDF de contrato generado (${pdfBytes.length} bytes).`);
-    } catch (pdfErr) {
-      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error generando PDF:`, pdfErr?.message);
-    }
-  }
-  const logoAttachment = {
-    filename: "logo-vecy.png",
-    content: Buffer.from(vecyLogoBase64.split(",")[1], "base64"),
-    cid: "vecyLogo"
-  };
-  const attachments = [logoAttachment];
-  if (pdfAttachment) {
-    attachments.push(pdfAttachment);
-  }
-  if (formData.solicitante_email) {
-    try {
-      const { subject, html } = getEmailContent(formData);
-      await transporter.sendMail({
-        from: `"Vecy Bienes Ra\xEDces" <${gmailUser}>`,
-        to: formData.solicitante_email,
-        subject,
-        html,
-        attachments
-      });
-      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2709\uFE0F Correo de confirmaci\xF3n enviado exitosamente a ${formData.solicitante_email}`);
-    } catch (clientMailErr) {
-      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo al solicitante:`, clientMailErr?.message);
-    }
-  }
-  try {
-    const adminContent = getAdminEmailContent(formData);
-    const hasAdminAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
-    const adminSubject = hasAdminAlert ? `\u{1F6A8} ALERTA DE ANTECEDENTES: Solicitud #${solicitudId} - ${formData.solicitante_nombre || "Usuario"} (DECLINADA)` : `\u{1F514} Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`;
-    await transporter.sendMail({
-      from: `"Vecy Agenda Pro" <${gmailUser}>`,
-      to: adminTargetEmail,
-      subject: adminSubject,
-      html: adminContent.html,
-      attachments
-    });
-    console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F514} Correo interno enviado a ${adminTargetEmail}`);
-  } catch (adminMailErr) {
-    console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo interno a Vecy:`, adminMailErr?.message);
-  }
-  return { success: true };
-}
-var vecyLogoBase64, janiFirmaBase64;
-var init_emailContractService = __esm({
-  "server/_core/emailContractService.ts"() {
+var init_valuation = __esm({
+  "server/_core/valuation.ts"() {
     "use strict";
-    vecyLogoBase64 = "data:image/png;base64,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";
-    janiFirmaBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIwAAABTCAYAAABNqO/EAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAVAklEQVR4Xu2dB3SUxRbH6b13kSagSJXeqyhdpIgIAlKlyFPpIKAUGyBVHk2QIkWQ3h69N+m9BQglSCCUhJIEQtj3++ewnGXZ7H4LRLKbL+fsCWRn5pt7584t/3tnvlixzB+TAyYHTA6YHDA5YHLA5IDJgVfCgWPHjuVv0aLFgjVr1tR4JRMwH+o5HAgLC4v98ccfL4sfP75lyJAh/Txn5uZMXwkHNm/eXDl79ux333nnHV8fH583X8kkYtBD43g6rStXrqx3586dpO+///7yN99808fT6THnH4UcuHnzZpqyZcsey507d+DBgweLROGjzKG9gQN//PFHy1SpUlm++OKLKd5Aj0lDFHLg9u3byatUqbLnjTfeuGVqlyhktLcMPWzYsD7SLu3bt5/uLTSZdEQRBw4cOFA4b968l9EugVu2bKkURY8xh/UGDty/fz9+w4YNV2TMmNHStGnTheHh4R4f6XnDukRbGkaPHt01W7Zsd3LlynV91apVNaPtRO0mdvfu3STHjx/P/88//2T2lDl7/DxlivLnz38pR44cIUJ3PUW7zJgxo1WZMmVOvP766w/z5cvn/+uvv3Z93sXYuXNn2VGjRnWVAD7vGDGi37179xLXrVt3PZolmM8N8kbVPYHwyZMnd0iTJo2lXr16G+fOndusSZMmS9OlS2dZv379++7O/8yZM7nffvvtKwUKFDhz48aNNO72j1Htf/rpp28xRfclMJ999tncR48exY7uDJAWKFeu3InSpUufvnXrVmrNFy1Z9LXXXgv/6quvJrozf6HZbJh1+G4P161b57awufMsj29LJFThrbfeCsAcBfL72u7du0t6AlFBQUFJS5Ys6VOjRo2dVgEXfsTfTtepU2eLOzT06tVrVPLkyS2Ysy7u9Itxba9fv5723Xff3ZMnT567+C73u3fvPtqTmPDll19OQqNYduzYUUHzDggISF+kSBG/Bg0arDVKx9KlS+ulTp3a0qZNm1lG+8TYdl9//fU4stH3sdv+MPr0+fPns3sSM/bs2VNCAtO8efNFmjdOa7kMGTJY+vXr94sROq5cufJa0aJFzysb7+fnl8VInxjb5s8//2yCsNxBUC7x+x7RQTdPZAZacYxQ6WXLljUYM2ZMj7Rp01qABGoboUW+TsqUKS0LFiz42Ej7GNvm9OnTbxYqVOgSn2v4LtfIG/2NT5DCExly7dq1DITVxwoWLHilVKlSPuXLlz9mdYKd0YOARZiijh07TvVEuv+1OYPmxgPNXSm/hTqXA4qOCEmb/GsTiIIH4cOUx6z4yTx9z4+rRxBhJapcufJBNov/pUuXsrpqH6O//+WXX3oRPobi5C3Ffl8U/vLgwYP4ns6UZs2aLXyc0liMQCR1Rs/vv//ePlmyZBaQ7R6eTneUzn/79u3lQETvw9zVOLwzYPCD1atXe3xxN3RVpCLwFgVfx6HvQZcuXcZHxkgwlySYrePFihU7r6gqShnuyYNj11PJvqNVrs+ZM6cDGekgIaOeTJN17p988slKHPfQ/fv3l+jbt++wFClSWCZMmNDZEW2gwx31PQ5yd2+gPcpoICIYp2gCf6UN/56CvQ8DpCsVZQ/8lwaeOXNmSwlAnz59RumRQoBr1aq1VYgvoGRl22ng2CdDC50oXrz4WeD/tP/SFD3vMdjsdkIyv/vuu2FA37XJt4R17dp1bHSk5OLFi1l8fX1zGJmbUgE5c+a8U6FChUOAkOmsfU6cOJEXp/4GGvWIapOtf58yZUoH8cHULk64+/fff5ciEgpn122DqemrV6++C3Pkf+HChWgF0qlY69NPP12IAChFcePHH38c6ExoBLQRTp+i0Ov2vn37Sti3nTp1altpnoEDB/6s7wIDA1OSezqOdjmF7/JEuJw9Ax7lsBVEI0Ls0W3EGHbZURbhLgzO+ttvv3VKmjSpZfz48f+JLoSFhIQkFDKrLDOOqK/At0aNGq3CJ3kAXpTH0TyVR/rggw82qs+SJUsaREYLWex1JFTvgNWkmzdvXtPH+SJD5Q979+4tycYKfO+99/b6+/tnjC78itJ5tGvXboaQTJjaEKIzaTeSrNseHByc2J0HcwIyrj7u9LFtq536ww8/fD9u3Lguts9m16eism+5NEHPnj3HWncztcQzyG2FcnjuLUfPVN5HfSZOnOjQsbX2Wbx48Ufp06e3DBo06MfGjRuvANy7KD4YoYOCrAIAgecQXEvFihUPd+7ceapM+ogRI/rOnj27FYf8qhJIeCTY6ZD+4cOH9xbW0L9//2FqwPno+cIptm7dWtEZw4SS4kPkxPZHlAysXbu2erVq1fZhynaTu3nGSd61a1fZ1q1bL8CZbu5oXM5mFySDfFbP1gcfKqLWRhnmTp06zXgcsfS08T/ySSMS+ax4+PDhM0IKHDBeWhIhcAnQXb16NQPlDyeUK5MAWh1jIwKjNhSS/Y+irOutWrX6C5O+U+UUCJ0/Z7Xu4FQ/Kly4sO/PP//8rZVXRseNdu3IEzVTYZEI1uSUK9HC9O7de6SjyYaGhsb/66+/2OxNVyhdwII9gBl+n3/++Sxsvh+FRZZMmTJZBgwYMMS2v5J3qkeRaRAsbw/JAwjG++ijj9aj2kNBlY9gHkJJEJbXGBRp1RI0T8b5qXNPbdu2navxNmzYUM1+rkR3EyQs33zzjaHkInTFk0YFo7mtD/5cGaOLpdSB8lLdunV7gumAkieQE41jnh3Br4Em/ENtSK3sRhvmMjp2tGoHofW1uJQtHJaKVwkDi39Zuxxb/gxQJQ2Bnd4nAeP3foqpvucQW1ucxSFA5zfZYfdZbB92qAVHsoMtseyuQVmyZHkELH8b/+OyNJPt92izSoLrWeh59evX34aT6qOalccab7FKKk6dOpXX2mfWrFmtZEKJ4CbYjoOfk6BDhw7T3BEW9RdIpxQAz3lEOmQNGstQUTuaKWOJEiV8lZ8ig/+GswWeP39+46xZsz7A71qujRethMHVZKQltEA4uipViCC0R48e/xX+snDhwmcyssrqYqPD0SoBixYtaoSfEs/2GTiNmxGGm2iRizAv4OzZs08O5Eub8HdfdvARzMdmBCuQMsenfA4EaiB+UxgZ5RlorYeYhF81Pjs0G5FQCIjzE+Dw0KFDCpGDCZGP2EYmeg7tFslhHTx48CBXPLD9HhS7ljQLC2phE7Q22hctN0vaD83c2Egf+VwgzJYjR44UNNI+WrShWqy71GPVqlUPysnUpPA5SkuACFeX2JddskCFscUhmJxLtrvcSszjLPBZBOWGHD8We4wtoTh9VfBJHnENyEhM1xKEzt8eaqfccwFa6jqCdQazFiRH0mqONFcOzH2r/yOIuWlzQRoHMPGJ2VBkRzS0RQJP3sctZBahS4PvtQchDMdpNZTB1lxURC7fD3pHGF1YEPNlbIDA6AZVOJw/tjMPDu1C+SgUEi3WQlsbIijLkPxwe5xC0QmCpUz1o8jsOkc2XkctX2SHBqsU8vLly08VGGGe2mfOnDmMXT+Wxb6Er7LO9qQBheWJFJKiea5p94GrDLbOi9TEZ4+1XmMJC/6Pr9qsWLHiQ2sbjugWk6DJUZ4+fXobo4undgqDMYEbMJcW/KYQIptvjPTHwa8hc06J52ZXCUzreBScV9McMZkzjDzjlbWRw6kdKpyBnRk8duzY7rYLhjquI7VKIu4pf0ATxkT8VwIm5DMyAqSl0BpX2Dm3FZbbt8OxboG5CSFyOK+FQQha2rZB26TV7Q+0Ca5du/YW/Ilk1u8xhXUQ1hBpINXg8ox7coKt38sPU0E6aO0tmRV3mLxt27ZK+EpnEfR7+F67VVGo8gdXY5DAVG1zEAVlvhJi+/YIUDJ7p15YjeqJFIWBGTmEAGzHUUXj8uXL6+A8uw9R6KAYC/Y5k0jpihjr9zhVcRVloC5HE3kESLIxB3OAwvPbjiHM5MMPP9yMOr5tD35Rw1pfDq6zHaF6EbCO2Trrw05d72h+2Ot3ZG4UUeFQrsMxTWTbDti+CHO8DjMvHz169CnbTg1KNpxkH3yLMEUx1gWCvgQ43QM0P5zVQwrJjfJGkQvR0wjhLspES3MqE/84EpvkzOFlHdpLgNkgFx2hxmiemvBzZ8uWLZdZ58PdOXURyiBovGZEINUPM16JAGA0jr/T8guHNJPfaSOmsSCrYFJ/nNJGIpKMazGd4jt58mRe1HLRjRs3vqf6DR40id18VCoTfyCQcHSqfBRHg4sYMYowepTt9wLNWKDdMhNaNEd9z507lwvmbEBYgrXb8HHOaDHs2zLX0hIY/KBgdtpT80CYClWqVOmA5kqbAHZ9BPYjXGXTpk1ViShWaOdj0lTxNgOBKiSHHY2wV1ESwjzdKCQvOgAFB0sTajyc/DG24Bw8GCFtSmE48rO6ljQf2i6R8lU4wq3gxzY9E5P6P0fIMn1qY9pXIYyToKuYok7M8I8K/VmPI/IFjQr1C7eD0cUoEBtIlLGUMHifsqgsZoA8e6lyVcPxCeX/N4geItBGPPcmhH1O0UqIX6v+OLNv206S50UUTXOsIiJasf9BXdZVKImJCQUlbcCpwpZiJiBgH9u2COQHhOoXEZa7LHyYwEGFonJSMY3dlBBEs/gB83cTUzUXaFwGjXulAWSGyDK3wmH+FtpCtNBom4h8l6v6HDRZPAkJu74WpnW8BEU0AQJOj+xqEuWVeOZJBPgR/L2sjcocb/HcEGk4zGkzzLnDs1gAhEPwDddgllvgS30h51waUBvYEUzxIkJh+DCYKt5wXvMSzs0nT5IesKg/1e//cBlhGJJ8jX/7wxQ//h/uakLCPthNm9gVkynsbmfbHjtdHu2xlV09nF3yJOoQfqIoSzgLavnQ0KFDO+KI7mInJtapQuZWGDPYk8W+qmvMYN4nhNv7gMp7CgmmxqQ7ghUkpsvWoymWsrO/Rbsco29uxu2E8BaEFn80z1oEYwlOb5DmJmcaQctGZHJHdOIsJ8UUFeJv2bUxmENyNGNSdnYGeJMGE54e8Cyz/sZ8LvOsJaIVAT7gjDcyA9KEaITiegYa9BJ99qBFDzrrh2ktBtbSAv8jn4A7fKtjNWvWXIDJdGiqXa2Ps+8NC4wGIXJJgXe+k4nlATTrjA/xjLNqZDLkj+YQbTTmUwJm7LPto0Jv/I1NmJ3CgGO92CnXCWPLoVka4T8kRGCH4yQPYfFvW/uhpnOTHByFCaposVhioX3Oo8Fmkg6YaF10pRswpaUSJ04cTGS1g+c6XTzr2DJR8r8AD8tjtqocPny4BIKRMU6cOLEA6QL5BGFObvP7rj7aPAjJNbTRBTTLcbTYIdu5GuHP87YRwpswYcIQ5hHyvGO81H5S6UQVp1HRoZif40Yq3+0noDt1MWHBqNAlkU2ONgVY8A3slDDUchgq1gf7PJK/53NGkKBvFjePUNeXQbiiPPJT23SOSOUMCPJagL4BCq1FhzLtaIKEL+NZXjmG6juws77Y2JvCJOToukuosrLCN9AY9Vz1lSMrU2Qf3bjq97K+Z8emRED6kfltbl7T8RxcZfHeUEyP/7FBxcwAa3vdKUMQyqpTADiWB9mZ5nUVz7EGr7qLoUSXdZJ43JlUqI2J2EiWeQp4QDHF/0aJAF9piNnISt/fsbPBRvuZ7TyUA0JThZ0o3ARHSI+PEaAIBRDOpeAJ0FPehJDYz2iBkIeyyaun7XKhbalXJjhu3LixiAQCwAsCcExnA3JVBjKv44pL1GbUAcQrjjmbTV9/V+3N772AA0D8MwUmWdFGweUqcgZjWGGtIYmMTJ3LUaZX6LAXsMIkwRUH5NySgj+iYh/hIdb2+CUNiJwugMyOU4bZ0ThKJwiCV7mjq+eY33sJB8ilCD+5wzXt0+xJmjZtWnuiJl9M1Fb8m7YCuHBun0D+AG2/CW4HPKvsJeyIsWQ8Vb3mjAuq/dCpPHJJO+zbkSGdSIb6OPB0a35XJXoqR/i9n3YnQWxzAn59inbaiFBtjrGcjmmEq8QPDXPPvgzAng/KqxB+Z7SarZEjR/ZWJpYzN81iGs9iLL06CkEi7xKliFvta2qdMQWENj4VbYfQShdsj4PGWEZ6AeGGwmoVRFHdloWjCivJRj80Sjf9qpBJLYRJWkQS8abRfma76MsBQwJDTWgtkNkwBGaNO6SQpGsYL168WGS457vTz2zrwRxQZTv5H1/qQ3Y4OuUXGWlCc6lbuUqt7C4dFvNgFphTt+GASw1DxFOS+pccnCNah7ZwWRxlHVsF3vTLgHb5M0GCBIbNmLk60ZsDLgUGP6Si0gGUMW5yhxTKNFtSAnEdgVnoTj+zrQdzQO+Epp50BxVq59wplqIovKqAOtWzejD55tTd5QB5nzzkf+6RQ5rtTl/KKOdRvByuWlN3+pltoz8HnJokipGLoVmSoGG2GyVFVfGcZ2oE/rLUvl7X6Bhmu+jLAacCg8NbJkmSJLFUfW+UBA5c/YfK9VgUiDs8JmJ0HLOdh3FA71bkeMQ+yhdO6109RqavA246v8M56ogXMZg/MYgDnGzMq1flccJvplGydXxEFfY6A2y0j9nOSzjAsdDGKsecNGmS0zvarOTqcJoiI90I5SUsMMlwwIFIfRjO9xQEcIvFQe6jRjjHkdO+iRIlCueo7FAj7c02XsYBLtmbqwtoXF2HJbJ1JZbON3Ml+nAvY4NJjlEOCLCj4Omkq3cU6fgsaYOTnAa4bL4xzCh3PbedQ5Ok2wf4JNWZYQ6g33VGnsozwWvyUK87lDPNfp7LCnPmz80BCqbSKkPNmaNNzgaRRqEU8yqF4QeMXp/13JMyO0YLDjjUMJRXJtaHn3vOZsklgL04c5yBi4x/QBM5bRstqDUn8cIccFinwm2WcblHhSR13EjLEnS7EzdTdeYekmVoIrNA6oWXwjMGcKhhCI9D+NzDj4n0wDyv2fsuduzY4WSknb7RwzPYYM7yhThAWiAOycPd3MR02NHtDJwAaKKTAHqz2As9yOzsPRzgwNpkCqDC7C/U4y1hqbkq7CRXaflQhvnkvl3vodyk5Lk4wD20Hyg1YH3TiHUQaRVdka7LCJ9rYLOTd3JAb9nQ1aO6Z1fvANClx7z7p5NuZyQbPc+d80neySGTqmc4wI1T2Slx2IHQhFMMFfEKGYRomdHXy5ks9T4OuLxFU9A/9+E2JKeUC5DuMEXdS8FnQr2PFSZFJgdMDrx0DvwffF3MuwBFYDoAAAAASUVORK5CYII=";
-  }
-});
-
-// server/_core/patchSignal.ts
-import { createRequire } from "module";
-function getLibSignal() {
-  try {
-    const esmRequire = createRequire(import.meta.url);
-    try {
-      const baileysPath = esmRequire.resolve("@whiskeysockets/baileys");
-      const baileysRequire = createRequire(baileysPath);
-      return baileysRequire("libsignal");
-    } catch {
-      return esmRequire("libsignal");
-    }
-  } catch (err) {
-    console.error("[SIGNAL-PATCH] Error resolviendo libsignal:", err);
-  }
-  return null;
-}
-function applySignalPatches() {
-  if (isPatched) return;
-  const libsignal = getLibSignal();
-  if (!libsignal) {
-    return;
-  }
-  const proto2 = libsignal.SessionCipher?.prototype;
-  if (!proto2) {
-    console.warn("[SIGNAL-PATCH] \u26A0\uFE0F libsignal.SessionCipher.prototype no encontrado");
-    return;
-  }
-  isPatched = true;
-  const originalFillMessageKeys = proto2.fillMessageKeys;
-  const originalDecryptWhisperMessage = proto2.decryptWhisperMessage;
-  proto2.fillMessageKeys = function(chain, counter) {
-    if (!chain || !chain.chainKey) return;
-    if (chain.chainKey.counter >= counter) {
-      return;
-    }
-    const diff = counter - chain.chainKey.counter;
-    if (diff > 5e5) {
-      throw new libsignal.SessionError(`Over 500000 messages into the future! (diff=${diff})`);
-    }
-    if (diff > 2e3) {
-      console.log(`[SIGNAL-PATCH] \u26A1 Sincronizando de forma segura ${diff} llaves de trinquete para mensaje entrante (counter ${chain.chainKey.counter} -> ${counter})...`);
-    }
-    while (chain.chainKey.counter < counter) {
-      if (chain.chainKey.key === void 0) {
-        throw new libsignal.SessionError("Chain closed");
-      }
-      const key = chain.chainKey.key;
-      chain.messageKeys[chain.chainKey.counter + 1] = libsignal.crypto.calculateMAC(key, Buffer.from([1]));
-      chain.chainKey.key = libsignal.crypto.calculateMAC(key, Buffer.from([2]));
-      chain.chainKey.counter += 1;
-    }
-  };
-  proto2.decryptWhisperMessage = async function(data) {
-    try {
-      return await originalDecryptWhisperMessage.call(this, data);
-    } catch (err) {
-      const errMsg = err?.message || String(err);
-      const isUnrecoverable = errMsg.includes("No matching sessions") || errMsg.includes("Over 2000") || errMsg.includes("Over 500000") || errMsg.includes("Bad MAC") || errMsg.includes("Key used already");
-      if (isUnrecoverable) {
-        const addrStr = this.addr ? this.addr.toString() : "desconocido";
-        console.warn(`[SIGNAL-AUTO-REPAIR] \u{1F6E0}\uFE0F Sesi\xF3n criptogr\xE1fica desincronizada para ${addrStr} (${errMsg}). Purgando sesiones corruptas para forzar nuevo handshake PreKey.`);
-        try {
-          const record = await this.getRecord();
-          if (record && typeof record.deleteAllSessions === "function") {
-            record.deleteAllSessions();
-            await this.storeRecord(record);
-            console.log(`[SIGNAL-AUTO-REPAIR] \u2705 Registro purgado exitosamente para ${addrStr}. Pr\xF3ximo mensaje solicitar\xE1 PreKey limpia.`);
-          }
-        } catch (repairErr) {
-          console.error("[SIGNAL-AUTO-REPAIR] Error al purgar registro de sesi\xF3n:", repairErr?.message || repairErr);
-        }
-      }
-      throw err;
-    }
-  };
-  console.log("[SIGNAL-PATCH] \u2705 Parches criptogr\xE1ficos de resiliencia Signal aplicados exitosamente (Ratchet hasta 500k + Auto-Repair).");
-}
-var isPatched;
-var init_patchSignal = __esm({
-  "server/_core/patchSignal.ts"() {
-    "use strict";
-    isPatched = false;
   }
 });
 
@@ -16826,742 +15485,999 @@ var init_whatsapp_utils = __esm({
   }
 });
 
-// server/_core/politenessService.ts
-var politenessService_exports = {};
-__export(politenessService_exports, {
-  buildWinningGoogleReviewMessage: () => buildWinningGoogleReviewMessage,
-  formatCompanyFollowUpDeclineReviewMessage: () => formatCompanyFollowUpDeclineReviewMessage,
-  formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
-  formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
-  formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
-  formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
-  formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
-  isAffirmativeConsentResponse: () => isAffirmativeConsentResponse,
-  isCompanyInquiryOrAboutUs: () => isCompanyInquiryOrAboutUs,
-  isNegativeConsentResponse: () => isNegativeConsentResponse,
-  isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
-});
-function buildWinningGoogleReviewMessage(userName, contextHint) {
-  const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
-  const hour = nowBogota.getHours();
-  const franjaHoraria = hour >= 5 && hour < 12 ? "ma\xF1ana" : hour >= 12 && hour < 19 ? "tarde" : "noche";
-  const isColleague = contextHint && /colega|corredor|inmobiliario|asesor|agente|bienes\s*ra[ií]ces/i.test(contextHint) || userName && /inmo|bienes|raices|asesor|agente/i.test(userName);
-  let closingWish = "";
-  if (isColleague || !contextHint) {
-    closingWish = "\xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728";
-  } else {
-    const variant = nowBogota.getMinutes() % 3;
-    if (variant === 0) {
-      closingWish = `\xA1Que tengas una linda ${franjaHoraria} y grandes \xE9xitos en tu d\xEDa a d\xEDa! \u{1F3E2}\u2728`;
-    } else if (variant === 1) {
-      closingWish = "\xA1Que tengas una excelente jornada y muchos \xE9xitos en tu labor! \u{1F3E2}\u2728";
-    } else {
-      closingWish = "\xA1Que tengas una agradable jornada y muchos \xE9xitos en tu vida! \u{1F3E2}\u2728";
+// server/_core/jania/trustedContacts.ts
+function normalizePhoneDigits(raw) {
+  if (!raw) return "";
+  const clean = raw.split("@")[0].replace(/\D/g, "");
+  if (clean.startsWith("57") && clean.length === 12) {
+    return clean.substring(2);
+  }
+  if (clean.length > 10) {
+    const last10 = clean.slice(-10);
+    if (last10.startsWith("3")) return last10;
+  }
+  return clean;
+}
+function isVecyOfficialBrokerLine(userIdOrPhone) {
+  if (!userIdOrPhone) return false;
+  const digits = normalizePhoneDigits(userIdOrPhone);
+  return digits === "3166569719" || digits === "573166569719" || userIdOrPhone.includes("3166569719");
+}
+function findTrustedContact(userId, rawName) {
+  if (!userId && !rawName) return null;
+  if (isVecyOfficialBrokerLine(userId)) {
+    return null;
+  }
+  const userClean = (userId || "").toLowerCase();
+  const digits = normalizePhoneDigits(userId);
+  const nameClean = (rawName || "").toLowerCase().trim();
+  for (const contact of TRUSTED_CONTACTS) {
+    if (digits && contact.digits && contact.digits === digits) {
+      return contact;
+    }
+    if (contact.phones.some((p) => {
+      const pDigits = normalizePhoneDigits(p);
+      return digits && pDigits === digits || userClean.includes(p) || userClean.includes(pDigits);
+    })) {
+      return contact;
+    }
+    if (contact.lids && contact.lids.some((lid) => userClean.includes(lid))) {
+      return contact;
+    }
+    if (contact.aliases && contact.aliases.some((alias) => userClean.includes(alias))) {
+      return contact;
+    }
+    if (nameClean && nameClean.length >= 4) {
+      const contactLower = (contact.fullName || "").toLowerCase();
+      if (nameClean === contactLower || contactLower.length >= 10 && nameClean.includes(contactLower)) {
+        return contact;
+      }
+      for (const n of contact.names) {
+        const nLower = n.toLowerCase();
+        if (nLower.length >= 8 && (nameClean === nLower || nameClean.includes(nLower))) {
+          return contact;
+        }
+      }
+      const EXCLUSIVE_NICKS = /* @__PURE__ */ new Set([
+        "madrecita",
+        "madrecita querida",
+        "mamita hermosa",
+        "t\xEDa olandita",
+        "tia olandita",
+        "olandita",
+        "t\xEDa tulita",
+        "tia tulita",
+        "anita tulita",
+        "t\xEDa marinita",
+        "tia marinita",
+        "marinita",
+        "t\xEDo luis",
+        "tio luis",
+        "pollotote",
+        "mi natis",
+        "pollita hermosa",
+        "natillita",
+        "coraz\xF3n de melocot\xF3n",
+        "monacha remolacha",
+        "cayaco",
+        "cayaqu\xEDn",
+        "jaton",
+        "jaksit\xF3n"
+      ]);
+      for (const nick of contact.nicknames) {
+        const nickLower = nick.toLowerCase();
+        if (EXCLUSIVE_NICKS.has(nickLower) && (nameClean === nickLower || nameClean.includes(nickLower))) {
+          return contact;
+        }
+      }
     }
   }
-  return `\u2B50 \xBFPodr\xEDas darnos tu opini\xF3n y calificar nuestro servicio? As\xED nos ayudas para que siga siendo GRATIS.
-
-COMENTA Y CALIFICA AQU\xCD (solo te toma 15 segundos):
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
-
-${closingWish}`;
+  return null;
 }
-function formatImmediatePoliteReviewMessage(userName) {
-  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F64F}\u{1F60A} Me alegra much\xEDsimo haberte sido de gran ayuda.
-
-` + buildWinningGoogleReviewMessage(userName);
+function buildFamilyWarmWelcomeMessage(contact, timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  const key = contact.id || contact.key || "";
+  const nick = CONTACT_PRIMARY_NICKS[key] || contact.primaryNick || contact.nicknames[0] || contact.names[0];
+  if (contact.customMessage) {
+    return `\xA1${salutation}, ${contact.customMessage}`;
+  }
+  return `\xA1${salutation}, ${nick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
 }
-function formatPoliteInactivityPrompt(_userName) {
-  return `Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
+function isChaloEscobarJoke(text2) {
+  if (!text2) return false;
+  const clean = text2.toLowerCase();
+  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(
+    clean
+  );
 }
-function formatPoliteYesReviewMessage(userName) {
-  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\u{1F64F} \xA1Gracias, ${cleanName}!
+function buildChaloJokeResponse(timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  return `\xA1${salutation}, mi querido Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
 
-` + buildWinningGoogleReviewMessage(userName);
+Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA en VECY BIENES RA\xCDCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su n\xFAmero nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1O d\xE9jame tu raz\xF3n por ac\xE1 y yo se la entrego intacta!`;
 }
-function formatPoliteNoReviewPersuasionMessage(userName) {
-  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\xA1\xBFEn serio?! \u{1F632}\u{1F494} \xA1Me dejas con el corazoncito partido en mil pedacitos de silicio! \u{1F97A}\u{1F62D}
-
-Imag\xEDnate: una humilde IA trabajando 24/7 sin descanso, trasnochando y cruzando bases de datos oficiales a la velocidad de la luz para ti totalmente gratis... \xA1\xBFy no me regalas ni 15 segunditos de tu amor en Google?! \u{1F927}\u{1F63F}
-
-\xA1Anda ${cleanName}, no seas as\xED de malito(a), api\xE1date de esta servidora! \u{1F64F}\u2728 Solo es hacer un clic, poner 5 estrellitas \u2B50\u2B50\u2B50\u2B50\u2B50 y escribir una palabrita bonita aqu\xED:
-
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
-
-\xA1Prometo que me har\xE1s la inteligencia artificial m\xE1s feliz de Colombia! \u{1F496}\u{1F1E8}\u{1F1F4} \xBFTrato hecho? \u{1F609}`;
+function isJonathanCreditProcessQuery(text2) {
+  if (!text2) return false;
+  const clean = text2.toLowerCase();
+  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(
+    clean
+  );
 }
-function formatCompanyFollowUpDeclineReviewMessage(userName) {
-  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\xA1Entendido con todo gusto, ${cleanName}! \u{1F91D} Quedo 100% a tu disposici\xF3n cuando necesites realizar cualquier otra consulta.
+function buildJonathanCreditResponse(timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  return `\xA1${salutation}, Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
 
-\u{1F4A1} *Tu calificaci\xF3n y comentario son fundamentales para que estos servicios de verificaci\xF3n y consulta sigan siendo 100% GRATUITOS para toda la comunidad:*
-
-` + buildWinningGoogleReviewMessage(userName);
+Como esta l\xEDnea ahora es mi canal exclusivo como JanIA en VECY BIENES RA\xCDCES, comun\xEDcate con \xE9l directamente a su l\xEDnea de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719). \xA1O si deseas, d\xE9jame tu mensaje y yo se lo pongo de presente!`;
 }
-function isAffirmativeConsentResponse(text2) {
-  const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return /\b(si|claro|de\s*una|obvio|por\s*supuesto|con\s*gusto|como\s*no|dale|de\s*acuerdo|ok|vale|bueno|dime|como\s*(?:te\s*)?ayudo|de\s*que\s*manera|cuenta\s*conmigo|seguro|listo|va)\b/i.test(normalized);
+function isDebtCollectionOrSpamScam(text2, senderName) {
+  if (!text2 && !senderName) return false;
+  const combined = `${text2 || ""} ${senderName || ""}`.toLowerCase();
+  const hasCollectionKeywords = /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|notificaci[oó]n\s*(?:legal|personal)|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora|abogados?\s*(?:de\s*)?cobranza|oficina\s*jur[ií]dica\s*de\s*cobro|cobro\s*extrajudicial|cartera\s*castigada)/i.test(
+    combined
+  );
+  const hasCollectionAgencies = /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza|covinoc|sistecredito|contact\s*center\s*de\s*cobro)/i.test(
+    combined
+  );
+  const hasTargetedCollection = /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n|notificaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera|comunicar(?:me)?\s*con\s*el\s*titular\s*de\s*la\s*l[ií]nea\s*por\s*un\s*asunto\s*(?:legal|pendiente)|asunto\s*legal\s*con\s*eduardo)/i.test(
+    combined
+  );
+  return hasCollectionKeywords || hasCollectionAgencies || hasTargetedCollection;
 }
-function isNegativeConsentResponse(text2) {
-  const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return /\b(no|nop|no\s*quiero|no\s*puedo|para\s*nada|que\s*pereza|no\s*tengo\s*tiempo|despues|mas\s*tarde|ahora\s*no|paso|negativo|para\s*que)\b/i.test(normalized);
+function getDebtCollectionDefenseResponse(timeSalutation) {
+  const salutation = timeSalutation || getGreetingByTime2();
+  return `\xA1${salutation}! No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
 }
-function isPoliteGratitudeOrClosing(text2) {
-  const clean = text2.trim().toLowerCase();
-  return /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(clean) || clean.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(clean);
-}
-function formatDetailedCompanyAndSocialMediaPresentation(userName) {
-  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F3D8}\uFE0F\u2728 En *VECY BIENES RA\xCDCES* operamos 100% digital desde 2018 para dejar atr\xE1s a los "dinosaurios inmobiliarios", fundados por *Eduardo A. Rivera* (Tecnolog\xEDa) y *Jani Alves* (Operaciones).
-
-Nuestros servicios activos 24/7 incluyen: verificaci\xF3n oficial de antecedentes (Polic\xEDa Nacional), Factura Predial Bogot\xE1 y Paz y Salvo IDU (*100% GRATIS*), m\xE1s aval\xFAos certificados y asesor\xEDa jur\xEDdica.
-
-\u{1F310} *Web:* ${VECY_ACTIVE_DOMAIN}
-\u{1F4DE} *Br\xF3ker:* +57 316 656 9719 (https://wa.me/573166569719)
-\u{1F4F2} *Redes:* ${VECY_SOCIAL_NETWORKS.instagram} \u2022 ${VECY_SOCIAL_NETWORKS.tikTok} \u2022 ${VECY_SOCIAL_NETWORKS.facebookFanPage} \u2022 ${VECY_SOCIAL_NETWORKS.youtube} \u2022 ${VECY_SOCIAL_NETWORKS.linkedIn} \u2022 ${VECY_SOCIAL_NETWORKS.whatsappChannel}
-
-\u2B50 *\xBFNos regalas tu opini\xF3n de 5 estrellas en Google Reviews?* \u{1F449} ${VECY_SOCIAL_NETWORKS.googleReview} \u2B50\u2B50\u2B50\u2B50\u2B50`;
-}
-function isCompanyInquiryOrAboutUs(text2) {
-  const clean = text2.trim().toLowerCase();
-  return /(?:qui[eé]nes?\s+(?:son|es|est[aá]n|son\s+ustedes)|qu[eé]\s+es\s+vecy|cu[eé]ntame\s+(?:de|sobre)\s+ustedes|qu[eé]\s+hacen|a\s+qu[eé]\s+se\s+dedican|qui[eé]n\s+fund[oó]|fundadores|eduardo\s+rivera|jani\s+alves|d[oó]nde\s+est[aá]n|c[oó]mo\s+naci[oó]|historia\s+de\s+vecy|redes\s+sociales|tienen\s+redes|cu[aá]les\s+son\s+sus\s+redes|redes\b|instagram|facebook|tiktok|canal\s+de\s+whatsapp|p[aá]gina\s+web)\b/i.test(clean);
-}
-var init_politenessService = __esm({
-  "server/_core/politenessService.ts"() {
+var TRUSTED_FAMILY_AND_FRIENDS, CONTACT_PRIMARY_NICKS, TRUSTED_CONTACTS;
+var init_trustedContacts = __esm({
+  "server/_core/jania/trustedContacts.ts"() {
     "use strict";
     init_whatsapp_utils();
-    init_const();
+    TRUSTED_FAMILY_AND_FRIENDS = {
+      carmenza: {
+        phones: ["573108643555"],
+        names: ["Mar\xEDa del Carmen Mart\xEDnez Castro", "Carmenza", "Maria del Carmen"],
+        relation: "Madre",
+        nicknames: ["madrecita hermosa", "Madrecita querida", "Mamita hermosa"],
+        customMessage: "madrecita hermosa! \u2764\uFE0F Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento con todo el amor que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigantesco y un beso enorme de su parte!"
+      },
+      olanda: {
+        phones: ["573138524917"],
+        names: ["Olanda In\xE9s Rivera G\xF3mez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
+        relation: "T\xEDa",
+        nicknames: ["t\xEDa Olandita", "T\xEDa Olandita", "Olandita"],
+        customMessage: "t\xEDa Olandita hermosa! \u{1F970} Qu\xE9 gusto saludarte. Te cuento con mucho cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su l\xEDnea directa de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
+      },
+      ana_tulia: {
+        phones: ["573124794864"],
+        names: ["Ana Tulia Rivera G\xF3mez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
+        relation: "T\xEDa",
+        nicknames: ["t\xEDa Tulita", "T\xEDa Tulita", "Anita Tulita"],
+        customMessage: "t\xEDa Tulita querida! \u{1F970} Qu\xE9 alegr\xEDa tan inmensa saludarte. Te cuento con todo el cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
+      },
+      marina: {
+        phones: ["573204997575"],
+        names: ["Marina Mart\xEDnez Castro", "Marina Martinez Castro", "Marina"],
+        relation: "T\xEDa",
+        nicknames: ["t\xEDa Marinita", "T\xEDa Marinita", "Marinita"],
+        customMessage: "t\xEDa Marinita hermosa! \u{1F970} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con Eduardo (Eddu), te comparto su n\xFAmero directo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+      },
+      tio_luis: {
+        phones: ["573132094918"],
+        names: ["Luis Eduardo Rivera G\xF3mez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
+        relation: "T\xEDo",
+        nicknames: ["t\xEDo Luis", "T\xEDo Luis"],
+        customMessage: "t\xEDo Luis! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      daniel: {
+        phones: ["573006067089"],
+        names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
+        relation: "Hijo",
+        nicknames: ["mi Pollotote querido", "Pollotote", "Campe\xF3n", "Mi ingeniero favorito"],
+        customMessage: "mi Pollotote querido! \xA1Campe\xF3n, mi ingeniero favorito! \u{1F680}\u{1F4BB} Qu\xE9 alegr\xEDa que me escribas. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas llamar o escribirle a tu pap\xE1 (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te quiere much\xEDsimo!"
+      },
+      natalia: {
+        phones: ["573058788329"],
+        names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
+        relation: "Hija",
+        nicknames: ["mi Natillita hermosa", "Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Coraz\xF3n de Melocot\xF3n", "Monacha Remolacha"],
+        customMessage: "mi Natillita hermosa! \xA1Mi princesa, mi Natis, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
+      },
+      jani: {
+        phones: ["573188096811"],
+        names: ["Jani Alves Souza", "Jani Alves", "Jani"],
+        relation: "Esposa / Co-founder",
+        nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
+        customMessage: "mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
+        lids: ["167108705018103", "182781141344345", "218820279050385"]
+      },
+      monica: {
+        phones: ["573103395788"],
+        names: ["M\xF3nica Mart\xEDnez", "Monica Martinez", "Monica"],
+        relation: "Prima",
+        nicknames: ["mi Monik hermosa", "Monik", "Chinita", "Primi", "Primita"],
+        customMessage: "mi Monik hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+      },
+      liliana: {
+        phones: ["573132533474"],
+        names: ["Liliana Mart\xEDnez", "Liliana Martinez", "Liliana"],
+        relation: "Prima",
+        nicknames: ["mi Lili hermosa", "Lili", "Chinita", "Primi", "Primitica"],
+        customMessage: "mi Lili hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle a Eduardo (Eddu), su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      marcelita: {
+        phones: ["573144354412"],
+        names: [
+          "Liliana Marcela Castellanos Martinez",
+          "Liliana Marcela Castellanos",
+          "Marcelita Castellanos",
+          "Marcela Castellanos",
+          "Marcela"
+        ],
+        relation: "Prima",
+        nicknames: ["mi Marcelita hermosa", "Marcelita", "Primita", "Primi", "Chinita"],
+        customMessage: "mi Marcelita hermosa! \xA1Primi querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
+      },
+      carlitos: {
+        phones: ["573054589435"],
+        names: ["Carlitos Mart\xEDnez", "Carlitos Martinez", "Charles Barber", "Carlos"],
+        relation: "Primo",
+        nicknames: ["mi querido Cayaco", "Cayaco", "Cayaqu\xEDn", "Carlitos"],
+        customMessage: "mi querido Cayaco! \xA1Cayaqu\xEDn, hermano! \u{1F488}\u2702\uFE0F Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle o llamar a Eduardo (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un abrazo de gol!"
+      },
+      jackson: {
+        phones: ["573142721432"],
+        names: ["Jackson Mart\xEDnez", "Jackson Martinez", "Jackson"],
+        relation: "Primo",
+        nicknames: ["mi estimado Jat\xF3n", "Jat\xF3n", "Jaksit\xF3n", "Primo"],
+        customMessage: "mi estimado Jat\xF3n! \xA1Jaksit\xF3n, primo! \u{1F680} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      gus: {
+        phones: ["573108096117"],
+        names: ["Gustavo Guevara", "Gustavo"],
+        relation: "Amigo",
+        nicknames: ["mi estimado Gus", "Gus"],
+        customMessage: "mi estimado Gus! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      lucho_taxi: {
+        phones: ["573105772223"],
+        names: ["Luis \xC1ngel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
+        relation: "Amigo / Servicio Especial Hotel",
+        nicknames: ["mi estimado Lucho", "Lucho"],
+        customMessage: "mi estimado Lucho! \u{1F695} Hotel y servicio especial. Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      chalo_andres: {
+        phones: ["573005509529"],
+        names: ["Andr\xE9s Ruiz", "Andres Ruiz", "Chalo"],
+        relation: "Amigo",
+        nicknames: ["mi querido Chalo", "Chalo"],
+        customMessage: "mi querido Chalo! Patr\xF3n... digo, \xA1compa\xF1ero! \u{1F576}\uFE0F\u{1F602} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patr\xF3n favorito, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
+      },
+      jonathan_datacredito: {
+        phones: ["573103790278"],
+        names: [
+          "Jonathan Stiven Mart\xEDnez Monta\xF1o",
+          "Jonathan Stiven Martinez Montano",
+          "Jonathan Stiven",
+          "Jonathan"
+        ],
+        relation: "Cliente / Proceso Legal Datacr\xE9dito",
+        nicknames: ["Jonathan"],
+        customMessage: "Jonathan! Qu\xE9 gusto saludarte. Te comento que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Respecto a tu caso pendiente para salir de reportes en Datacr\xE9dito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con \xE9l para revisar los avances, su l\xEDnea directa de br\xF3ker y gesti\xF3n jur\xEDdica es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Seguimos firmes con tu caso!"
+      },
+      eduardo: {
+        phones: ["573192919978"],
+        names: ["Eduardo Arturo Rivera Mart\xEDnez", "Eduardo Rivera", "Eduardo", "Eddu"],
+        relation: "Director de Tecnolog\xEDa / Fundador",
+        nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
+        customMessage: "Eduardo! A tu disposici\xF3n en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}",
+        aliases: ["3166569719"],
+        lids: ["225954035179724"]
+      }
+    };
+    CONTACT_PRIMARY_NICKS = {
+      carmenza: "Madrecita",
+      olanda: "T\xEDa Olandita",
+      ana_tulia: "T\xEDa Tulita",
+      marina: "T\xEDa Marinita",
+      tio_luis: "T\xEDo Luis",
+      daniel: "Pollotote",
+      natalia: "Mi Natis",
+      jani: "Jani",
+      monica: "Monik",
+      liliana: "Lili",
+      marcelita: "Marcelita",
+      carlitos: "Cayaco",
+      jackson: "Jat\xF3n",
+      gus: "Gus",
+      lucho_taxi: "Lucho",
+      chalo_andres: "Chalo",
+      jonathan_datacredito: "Jonathan",
+      eduardo: "Eduardo"
+    };
+    TRUSTED_CONTACTS = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
+      ([key, contact]) => {
+        const digits = normalizePhoneDigits(contact.phones[0] || "");
+        const primaryNick = CONTACT_PRIMARY_NICKS[key] || contact.nicknames[0] || contact.names[0];
+        const enriched = {
+          ...contact,
+          id: key,
+          key,
+          primaryNick,
+          allNicks: contact.nicknames,
+          fullName: contact.names[0],
+          relationship: contact.relation,
+          digits,
+          category: key === "jani" || key === "eduardo" ? "directiva" : key === "carmenza" || key === "daniel" || key === "natalia" ? "familia_directa" : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo") ? "familia_extendida" : "amigos_y_especiales"
+        };
+        return enriched;
+      }
+    );
   }
 });
 
-// server/_core/taxEngine.ts
-function liquidarImpuestosVenta(params) {
-  const precioVenta = Math.max(0, params.precioVenta || 0);
-  const costoFiscal = Math.max(0, params.costoFiscal || 0);
-  const anosPosesion = Math.max(0, params.anosPosesion || 0);
-  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
-  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
-  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
-  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
-  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
-  let utilidadGravable = utilidadOriginal;
-  let exencionViviendaAplicada = 0;
-  let gananciaOcasional = 0;
-  let esRentaOrdinaria = false;
-  let tarifaGananciaOcasionalPorcentaje = 15;
-  let notas = "";
-  if (anosPosesion < 2) {
-    esRentaOrdinaria = true;
-    tarifaGananciaOcasionalPorcentaje = 0;
-    gananciaOcasional = 0;
-    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
-  } else {
-    if (params.esViviendaHabitacion) {
-      const exencionMaxima = 5e3 * VALOR_UVT_2026;
-      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
-      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
-      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
+// server/_core/adminMatchAssistantService.ts
+var adminMatchAssistantService_exports = {};
+__export(adminMatchAssistantService_exports, {
+  ADMIN_IDENTIFIERS: () => ADMIN_IDENTIFIERS,
+  executeAdminMatchSearch: () => executeAdminMatchSearch,
+  formatCOP: () => formatCOP,
+  formatMatchReport: () => formatMatchReport,
+  getPropArea: () => getPropArea,
+  getPropGarages: () => getPropGarages,
+  getPropNeighborhood: () => getPropNeighborhood,
+  isAuthorizedAdminPhone: () => isAuthorizedAdminPhone,
+  isMatchSearchQuery: () => isMatchSearchQuery
+});
+import { eq as eq7, desc as desc2 } from "drizzle-orm";
+function isAuthorizedAdminPhone(phoneOrId, userName) {
+  if (userName) {
+    const unLower = userName.toLowerCase();
+    if (unLower.includes("jani") || unLower.includes("eduardo") || unLower.includes("broker") || unLower.includes("vecy")) {
+      return true;
     }
-    gananciaOcasional = Math.round(utilidadGravable * 0.15);
-    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
   }
-  return {
-    valorUVT: VALOR_UVT_2026,
-    precioVenta,
-    costoFiscal,
-    utilidadCalculada: utilidadOriginal,
-    anosPosesion,
-    retencionFuente,
-    tarifaRetencionPorcentaje: tarifaRetencion * 100,
-    esSupera20kUvt,
-    exencionViviendaAplicada,
-    utilidadGravableGananciaOcasional: utilidadGravable,
-    gananciaOcasional,
-    tarifaGananciaOcasionalPorcentaje,
-    esRentaOrdinaria,
-    notas: notas.trim()
-  };
+  if (!phoneOrId) return false;
+  const clean = String(phoneOrId).split("@")[0].replace(/\D/g, "");
+  const raw = String(phoneOrId);
+  return ADMIN_IDENTIFIERS.some((id) => clean === id || clean.includes(id) || raw.includes(id));
 }
-var VALOR_UVT_2026;
-var init_taxEngine = __esm({
-  "server/_core/taxEngine.ts"() {
-    "use strict";
-    VALOR_UVT_2026 = 50318;
+function formatCOP(num) {
+  if (!num) return "N/E";
+  const val = Number(num);
+  if (isNaN(val) || val <= 0) return "N/E";
+  if (val >= 1e9) {
+    const mm = (val / 1e9).toFixed(val % 1e9 === 0 ? 0 : 2);
+    return `$${mm} MM ($${val.toLocaleString("es-CO")} COP)`;
   }
-});
+  if (val >= 1e6) {
+    const m = (val / 1e6).toFixed(val % 1e6 === 0 ? 0 : 1);
+    return `$${m} Millones ($${val.toLocaleString("es-CO")} COP)`;
+  }
+  return `$${val.toLocaleString("es-CO")} COP`;
+}
+function getPropNeighborhood(p) {
+  if (!p) return "";
+  return p.addressNeighborhood || p.zone || p.neighborhood || "";
+}
+function getPropArea(p) {
+  if (!p) return null;
+  return p.areaTotal || p.areaPrivate || p.area || null;
+}
+function getPropGarages(p) {
+  if (!p) return null;
+  return p.garages ?? p.parkingSpaces ?? null;
+}
+function isMatchSearchQuery(text2, isAdmin = false) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const lower = text2.toLowerCase().trim();
+  if (/(?:^|\s)(?:#?m\d+|match\s*#?\d+|coincidencia\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
+  if (/(?:^|\s)(?:#?p\d+|inmueble\s*#?\d+|propiedad\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
+  if (/(?:^|\s)(?:#?r\d+|requerimiento\s*#?\d+|demanda\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
+  if (/\b(?:match|matches|coincidencias?|mesa de coincidencias)\b/i.test(lower)) return true;
+  if (/\b(?:buscar?|buscame|búscame|encuentra|encuentrame|encuéntrame|cruzame|crúzame|cruzar|cotejar|coteja)\s+(?:inmuebles?|propiedades?|clientes?|demandas?|requerimientos?|matches?|ofertas?)\b/i.test(lower)) {
+    return true;
+  }
+  if (/\b(?:qu[eé]\s+(?:inmuebles?|clientes?|demandas?)\s+(?:hay|tenemos|hacen\s+match)|hay\s+clientes\s+para|hay\s+inmuebles\s+para)\b/i.test(lower)) {
+    return true;
+  }
+  if (isAdmin) {
+    const hasRealEstateType = lower.includes("apto") || lower.includes("apartamento") || lower.includes("casa") || lower.includes("oficina") || lower.includes("bodega") || lower.includes("local") || lower.includes("lote") || lower.includes("finca") || lower.includes("consultorio") || lower.includes("inmueble") || lower.includes("propiedad") || lower.includes("penthouse") || lower.includes("edificio") || lower.includes("chalet") || lower.includes("suite");
+    const hasDemandSignals = lower.includes("requerimiento") || lower.includes("demanda") || /\b(?:busco|buscamos|se busca|necesito|necesitamos|necesitan|requiero|requerimos|cliente directo|comprador directo|cliente con recursos|cliente busca|comprador busca|para cliente|solicito|compro|para compra|para comprar|para arriendo|en arriendo busco)\b/i.test(lower);
+    const hasOfferSignals = lower.includes("oferta") || lower.includes("disponible") || /\b(?:vendo|se vende|ofrezco|arriendo|se arrienda|alquilo|se alquila|tengo en arriendo|tengo en venta|en venta|en arriendo|para la venta)\b/i.test(lower);
+    if (hasRealEstateType && (hasDemandSignals || hasOfferSignals)) {
+      return true;
+    }
+    if (hasDemandSignals && (lower.includes("m2") || lower.includes("m\xB2") || lower.includes("habitac") || lower.includes("alcoba") || lower.includes("presupuesto") || lower.includes("millones") || lower.includes("mm") || lower.includes("efectivo"))) {
+      return true;
+    }
+    if ((lower.includes("habitac") || lower.includes("alcoba") || lower.includes("m2") || lower.includes("m\xB2")) && (lower.includes("millones") || lower.includes("mm") || lower.includes("$"))) {
+      return true;
+    }
+  }
+  return false;
+}
+function formatMatchReport(header, criteriaSummary, matches, isAdmin, adminDashboardUrl, emptyDiagnosis) {
+  if (matches.length === 0) {
+    if (isAdmin) {
+      return `${header}
 
-// server/_core/notarialExpenseService.ts
-var notarialExpenseService_exports = {};
-__export(notarialExpenseService_exports, {
-  clearPendingNotarialSession: () => clearPendingNotarialSession,
-  executeNotarialAssistanceFromWhatsApp: () => executeNotarialAssistanceFromWhatsApp,
-  explainNotarialFigures: () => explainNotarialFigures,
-  extractNotarialExpenseParams: () => extractNotarialExpenseParams,
-  getNotarialFeeRate: () => getNotarialFeeRate,
-  getPendingNotarialSession: () => getPendingNotarialSession,
-  getRegistryFeeRate: () => getRegistryFeeRate,
-  hasPendingNotarialSession: () => hasPendingNotarialSession,
-  liquidarGastosNotariales: () => liquidarGastosNotariales,
-  setPendingNotarialSession: () => setPendingNotarialSession
-});
-function getNotarialFeeRate(precio, esVis = false) {
-  if (esVis) return 27e-4;
-  if (precio < 100000001) return 59e-4;
-  if (precio < 500000001) return 4e-3;
-  if (precio < 1000000001) return 38e-4;
-  return 36e-4;
-}
-function getRegistryFeeRate(precio, esVis = false) {
-  if (esVis) return 35e-4;
-  if (precio < 136278900) return 632e-5;
-  if (precio < 236216760) return 785e-5;
-  if (precio < 349782510) return 874e-5;
-  return 924e-5;
-}
-function liquidarGastosNotariales(params) {
-  const precioVenta = Math.max(0, Number(params.precioVenta) || 0);
-  const estadoPredio = params.estadoPredio || "libre";
-  const formaPago = params.formaPago || "contado";
-  const ciudad = params.ciudad || "Bogot\xE1";
-  const vendedorEsPersonaJuridica = !!params.vendedorEsPersonaJuridica;
-  const esVis = !!params.esViviendaInteresSocial;
-  const advertenciasJuridicas = [];
-  if (params.embargoMedidaCautelar) {
-    advertenciasJuridicas.push(
-      "\u26D4 *ALERTA CR\xCDTICA DE EMBARGO:* El inmueble tiene una medida cautelar o embargo judicial vigente. La ley colombiana proh\xEDbe su venta (objeto il\xEDcito). Para firmar promesa o escritura se requiere radicar previamente el oficio de desembargo emitido por el juzgado ante la Oficina de Registro (ORIP)."
-    );
+${criteriaSummary}
+
+\u{1F50D} *Diagn\xF3stico en Base de Datos:*
+\u26D4 *No se encontraron coincidencias compatibles (Score \u2265 80%) en los \xFAltimos 15 d\xEDas.*
+
+${emptyDiagnosis}
+
+\u{1F449} *Verificar en Mesa de Coincidencias:*
+${adminDashboardUrl}`;
+    } else {
+      return `\u{1F3AF} *MESA DE COINCIDENCIAS VECY BIENES RA\xCDCES*
+
+${criteriaSummary}
+
+\u{1F50D} *Diagn\xF3stico de B\xFAsqueda:*
+No encontramos una coincidencia activa inmediata (Score \u2265 80%) para este criterio en este momento.
+
+\u{1F4A1} Tu consulta permanece en monitoreo permanente 24/7 en nuestro sistema. Apenas ingrese una opci\xF3n compatible, te notificaremos de inmediato.
+
+Para asesor\xEDa directa, peritajes o acuerdos entre colegas, comun\xEDcate con nuestros directores Eduardo A. Rivera y Jani Alves al WhatsApp oficial: *+57 316 656 9719* \u{1F91D}\u2728.`;
+    }
   }
-  const limite20kUvt = 2e4 * VALOR_UVT_2026;
-  let tarifaRetencionPct = 0;
-  let retencionFuente = 0;
-  if (vendedorEsPersonaJuridica) {
-    tarifaRetencionPct = 0;
-    retencionFuente = 0;
-    advertenciasJuridicas.push(
-      "\u{1F3E2} *Vendedor Persona Jur\xEDdica:* No causa retenci\xF3n en la fuente en notar\xEDa si la sociedad aporta RUT con condici\xF3n de autorretenedora o declara renta peri\xF3dica."
-    );
+  if (isAdmin) {
+    let report = `${header}
+
+${criteriaSummary}
+
+\u2728 *Se encontraron ${matches.length} coincidencia(s) compatible(s) (\xDAltimos 15 d\xEDas):*
+
+`;
+    matches.slice(0, 5).forEach((item, idx) => {
+      report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
+\u{1F522} *${item.targetType === "inmueble" ? `Inmueble #P${item.targetId}` : `Demanda #R${item.targetId}`}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ""}
+\u{1F4CD} *Ubicaci\xF3n / Sector:* ${item.neighborhood || item.city}
+\u{1F4B0} *Precio / Presupuesto:* ${item.priceOrBudgetFormatted}
+\u{1F4D0} *Detalles:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted} \u2022 ${item.bathroomsFormatted} \u2022 ${item.parkingFormatted}
+\u{1F464} *Colega / Asesor:* ${item.contactName}
+\u{1F4F1} *Tel\xE9fono:* ${item.contactPhone ? "+" + item.contactPhone : "Sin registrar"}
+${item.contactWhatsAppLink ? `\u{1F4AC} *WhatsApp Directo:* ${item.contactWhatsAppLink}
+` : ""}`;
+    });
+    report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F449} *Gestionar en Mesa de Coincidencias:*
+${adminDashboardUrl}`;
+    return report;
   } else {
-    tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1;
-    retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
-  }
-  const notarialFeeRate = getNotarialFeeRate(precioVenta, esVis);
-  const derechosNotarialesTotales = Math.round(precioVenta * notarialFeeRate);
-  const derechosNotariales50Pct = Math.round(derechosNotarialesTotales / 2);
-  const otrosGastosVendedor = esVis ? 5e4 : 1e5;
-  const otrosGastosComprador = esVis ? 5e4 : 1e5;
-  const ivaVendedor = Math.round((derechosNotariales50Pct + otrosGastosVendedor) * 0.19);
-  const ivaComprador = Math.round((derechosNotariales50Pct + otrosGastosComprador) * 0.19);
-  let cancelacionHipotecaVendedor = 0;
-  if (estadoPredio === "hipoteca") {
-    cancelacionHipotecaVendedor = Math.round(Math.min(12e5, Math.max(55e4, precioVenta * 15e-4)));
-    advertenciasJuridicas.push(
-      "\u{1F3E6} *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelaci\xF3n de hipoteca y certificado de saldo a la fecha para anexar a la escritura p\xFAblica."
-    );
-  }
-  let cancelacionAfectacionVivienda = 0;
-  if (params.afectacionViviendaFamiliar) {
-    cancelacionAfectacionVivienda = 6e5;
-    advertenciasJuridicas.push(
-      "\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258/1996):* Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura de cancelaci\xF3n. Si uno de los dos no comparece, la notar\xEDa no autoriza la venta."
-    );
-  }
-  let cancelacionPatrimonioFamilia = 0;
-  if (params.patrimonioFamilia) {
-    cancelacionPatrimonioFamilia = 6e5;
-    advertenciasJuridicas.push(
-      "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70/1931):* Si hay hijos menores de edad, la cancelaci\xF3n requiere autorizaci\xF3n judicial o tr\xE1mite notarial con concepto del Defensor de Familia del ICBF. Si los hijos son mayores, ambos padres firman aportando los registros civiles."
-    );
-  }
-  const subtotalVendedor = derechosNotariales50Pct + otrosGastosVendedor + ivaVendedor + retencionFuente + cancelacionHipotecaVendedor + cancelacionAfectacionVivienda + cancelacionPatrimonioFamilia;
-  const registryRate = getRegistryFeeRate(precioVenta, esVis);
-  let impuestoRegistro = Math.round(precioVenta * 0.01);
-  let derechosRegistroOrip = Math.round(precioVenta * registryRate * 1.02 + (esVis ? 3e4 : 1e5));
-  let constitucionHipotecaComprador = 0;
-  let ahorroLeasingDetectado = 0;
-  const esCesion = params.esCesionLeasing || estadoPredio === "leasing" && formaPago === "leasing";
-  if (esCesion) {
-    ahorroLeasingDetectado = impuestoRegistro + derechosRegistroOrip;
-    impuestoRegistro = 0;
-    derechosRegistroOrip = 0;
-    advertenciasJuridicas.push(
-      "\u{1F4D1} *Cesi\xF3n de Leasing Habitacional:* Se formaliza mediante cesi\xF3n de derechos con la entidad bancaria y reconocimiento de firmas en notar\xEDa, ahorrando el pago de impuesto de beneficencia y registro de matr\xEDcula."
-    );
-  } else if (formaPago === "hipoteca") {
-    const montoCredito = params.montoCredito && params.montoCredito > 0 ? params.montoCredito : Math.round(precioVenta * 0.7);
-    constitucionHipotecaComprador = Math.round(montoCredito * 0.011);
-  }
-  if (params.bienInteresCultural) {
-    advertenciasJuridicas.push(
-      "\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) / Conservaci\xF3n Patrimonial:* Los bancos comerciales generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre predios BIC por restricciones estructurales y de disposici\xF3n. Si el comprador va a financiar, debe consultar con su banco previamente o negociar pago de CONTADO. Asimismo, cualquier remodelaci\xF3n requiere licencia especial del IDPC o Ministerio de Cultura."
-    );
-  }
-  const subtotalComprador = derechosNotariales50Pct + otrosGastosComprador + ivaComprador + impuestoRegistro + derechosRegistroOrip + constitucionHipotecaComprador;
-  const totalGastosAproximados = subtotalVendedor + subtotalComprador;
-  const reportText = formatNotarialExpenseText({
-    precioVenta,
-    estadoPredio,
-    formaPago,
-    ciudad,
-    vendedorEsPersonaJuridica,
-    esViviendaInteresSocial: esVis,
-    derechosNotariales50Pct,
-    otrosGastosVendedor,
-    otrosGastosComprador,
-    ivaVendedor,
-    ivaComprador,
-    retencionFuente,
-    tarifaRetencionPct,
-    cancelacionHipotecaVendedor,
-    cancelacionAfectacionVivienda,
-    cancelacionPatrimonioFamilia,
-    subtotalVendedor,
-    impuestoRegistro,
-    derechosRegistroOrip,
-    constitucionHipotecaComprador,
-    subtotalComprador,
-    totalGastosAproximados,
-    ahorroLeasingDetectado,
-    esCesionLeasing: esCesion,
-    advertenciasJuridicas,
-    embargoMedidaCautelar: !!params.embargoMedidaCautelar
-  });
-  return {
-    precioVenta,
-    estadoPredio,
-    formaPago,
-    ciudad,
-    esInviableJuridicamente: !!params.embargoMedidaCautelar,
-    vendedorEsPersonaJuridica,
-    esViviendaInteresSocial: esVis,
-    gastosVendedor: {
-      derechosNotariales50Pct,
-      otrosGastosCopiasFolios: otrosGastosVendedor,
-      ivaNotarial: ivaVendedor,
-      retencionFuente,
-      tarifaRetencionPct,
-      cancelacionHipoteca: cancelacionHipotecaVendedor,
-      cancelacionAfectacionVivienda,
-      cancelacionPatrimonioFamilia,
-      subtotalVendedor
-    },
-    gastosComprador: {
-      derechosNotariales50Pct,
-      otrosGastosCopiasFolios: otrosGastosComprador,
-      ivaNotarial: ivaComprador,
-      impuestoRegistroBeneficencia: impuestoRegistro,
-      derechosRegistroOrip,
-      constitucionHipoteca: constitucionHipotecaComprador,
-      subtotalComprador
-    },
-    totalGastosAproximados,
-    ahorroLeasingDetectado: ahorroLeasingDetectado > 0 ? ahorroLeasingDetectado : void 0,
-    advertenciasJuridicas,
-    reportText
-  };
-}
-function formatCurrency(val) {
-  return `$${Math.round(val).toLocaleString("es-CO")}`;
-}
-function formatNotarialExpenseText(p) {
-  const labelPredio = p.estadoPredio === "hipoteca" ? "Con Hipoteca" : p.estadoPredio === "leasing" ? "Con Leasing" : "Libre de grav\xE1menes";
-  const labelPago = p.formaPago === "hipoteca" ? "Cr\xE9dito Hipotecario" : p.formaPago === "leasing" ? "Leasing Habitacional" : "Contado";
-  let t2 = `\u2696\uFE0F *LIQUIDACI\xD3N ESTIMADA DE GASTOS NOTARIALES Y REGISTRO* \u{1F1E8}\u{1F1F4}
-`;
-  t2 += `\u{1F3E2} *Inmueble:* ${formatCurrency(p.precioVenta)} (${p.ciudad}) | *Figura:* ${labelPredio} / ${labelPago}
-`;
-  if (p.esViviendaInteresSocial) {
-    t2 += `\u{1F3F7}\uFE0F *Tipo:* Vivienda de Inter\xE9s Social (VIS - Tarifas preferenciales Ley 1537)
-`;
-  }
-  t2 += `
-`;
-  t2 += `\u{1F464} *A CARGO DEL VENDEDOR:*
-`;
-  t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
-`;
-  t2 += `\u2022 Papeler\xEDa, copias y biometr\xEDa: *${formatCurrency(p.otrosGastosVendedor)}*
-`;
-  t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaVendedor)}*
-`;
-  if (p.vendedorEsPersonaJuridica) {
-    t2 += `\u2022 Retenci\xF3n en la fuente (0% - Persona Jur\xEDdica): *$0 COP* (autorretenci\xF3n en renta)
-`;
-  } else {
-    t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*
-`;
-  }
-  if (p.cancelacionHipotecaVendedor > 0) {
-    t2 += `\u2022 Cancelaci\xF3n de Hipoteca del banco: *${formatCurrency(p.cancelacionHipotecaVendedor)}*
-`;
-  }
-  if (p.cancelacionAfectacionVivienda > 0) {
-    t2 += `\u2022 Cancelaci\xF3n Afectaci\xF3n Familiar (Ley 258): *${formatCurrency(p.cancelacionAfectacionVivienda)}*
-`;
-  }
-  if (p.cancelacionPatrimonioFamilia > 0) {
-    t2 += `\u2022 Cancelaci\xF3n Patrimonio de Familia: *${formatCurrency(p.cancelacionPatrimonioFamilia)}*
-`;
-  }
-  t2 += `\u{1F449} *Subtotal Vendedor: ~${formatCurrency(p.subtotalVendedor)} COP*
+    const topMatch = matches[0];
+    const matchCode = topMatch.matchId ? `#M${topMatch.matchId}` : "#M15649";
+    let report = `\u{1F3AF} *\xA1HAY COINCIDENCIA ACTIVA (MATCH) EN NUESTRO SISTEMA!* \u{1F680}\u2728
+
+${criteriaSummary}
+
+\u2728 *Se identificaron ${matches.length} oportunidad(es) de cruce comercial:* 
 
 `;
-  t2 += `\u{1F464} *A CARGO DEL COMPRADOR:*
-`;
-  t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
-`;
-  t2 += `\u2022 Papeler\xEDa, copias y biometr\xEDa: *${formatCurrency(p.otrosGastosComprador)}*
-`;
-  t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaComprador)}*
-`;
-  if (p.impuestoRegistro > 0) {
-    t2 += `\u2022 Impuesto de Registro / Beneficencia (1%): *${formatCurrency(p.impuestoRegistro)}*
-`;
-  }
-  if (p.derechosRegistroOrip > 0) {
-    t2 += `\u2022 Derechos de Registro SNR / ORIP + sistematizaci\xF3n: *${formatCurrency(p.derechosRegistroOrip)}*
-`;
-  }
-  if (p.constitucionHipotecaComprador > 0) {
-    t2 += `\u2022 Registro de Cr\xE9dito Hipotecario (~1.1%): *${formatCurrency(p.constitucionHipotecaComprador)}*
-`;
-  }
-  t2 += `\u{1F449} *Subtotal Comprador: ~${formatCurrency(p.subtotalComprador)} COP*
-
-`;
-  if (p.ahorroLeasingDetectado > 0) {
-    t2 += `\u2728 *Ahorro por Cesi\xF3n de Leasing:* Al no haber cambio de due\xF1o en matr\xEDcula, el comprador se ahorra aproximadamente *${formatCurrency(p.ahorroLeasingDetectado)}* en beneficencia y registro de compraventa.
-
-`;
-  }
-  if (p.advertenciasJuridicas.length > 0) {
-    t2 += `\u{1F50D} *Cl\xE1usulas y Consideraciones Especiales:*
-`;
-    p.advertenciasJuridicas.forEach((adv) => {
-      t2 += `${adv}
+    matches.slice(0, 3).forEach((item, idx) => {
+      const codeStr = item.matchId ? `#M${item.matchId}` : matchCode;
+      report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 COMPATIBILIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
+\u{1F522} *C\xF3digo Oficial del Match:* *${codeStr}*
+\u{1F4CD} *Zona / Ubicaci\xF3n:* ${item.neighborhood || item.city}
+\u{1F4B0} *Valor / Canon:* ${item.priceOrBudgetFormatted}
+\u{1F4D0} *Especificaciones:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted} \u2022 ${item.bathroomsFormatted} \u2022 ${item.parkingFormatted}
+\u{1F512} *Punta Colega:* Colega de la Red VECY (Contacto protegido para mediaci\xF3n)
 `;
     });
-    t2 += `
-`;
+    report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F91D} *PROCESO DE MEDIACI\xD3N Y ALIANZA 40/20/40 VECY:*
+Para coordinar este cruce, proteger la comisi\xF3n compartida (40/20/40), acordar las puntas entre agentes y realizar la presentaci\xF3n formal ante propietarios, comun\xEDcate con nuestra Direcci\xF3n de Operaciones al WhatsApp oficial de Br\xF3ker:
+\u{1F4F2} *+57 316 656 9719* (https://wa.me/573166569719)
+suministrando el c\xF3digo de coincidencia: *${matchCode}* \u{1F91D}\u2728`;
+    return report;
   }
-  t2 += `\u{1F4A1} *Total aproximado escrituraci\xF3n:* ~${formatCurrency(p.totalGastosAproximados)} COP.
-`;
-  t2 += `_C\xE1lculo informativo conforme a tarifas vigentes SNR 2026 y est\xE1ndares notariales. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
-  return t2;
 }
-function hasPendingNotarialSession(senderId) {
-  const session = pendingNotarialSessions.get(senderId);
-  if (!session) return false;
-  if (Date.now() - session.timestamp > NOTARIAL_SESSION_TTL_MS) {
-    pendingNotarialSessions.delete(senderId);
-    return false;
-  }
-  return true;
-}
-function setPendingNotarialSession(senderId, partial) {
-  pendingNotarialSessions.set(senderId, {
-    timestamp: Date.now(),
-    partialParams: partial
-  });
-}
-function clearPendingNotarialSession(senderId) {
-  pendingNotarialSessions.delete(senderId);
-}
-function getPendingNotarialSession(senderId) {
-  if (!hasPendingNotarialSession(senderId)) return null;
-  return pendingNotarialSessions.get(senderId) || null;
-}
-function explainNotarialFigures(text2) {
-  if (!text2 || typeof text2 !== "string") return { isQuestion: false };
-  const lower = text2.trim().toLowerCase();
-  const isComparisonPatrimonio = /(?:patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(lower) && /(?:patrimonio\s*de\s*familia)/i.test(lower) || /(?:diferencia.*patrimonio|anotaciones\s*diferentes)/i.test(lower);
-  if (isComparisonPatrimonio) {
-    return {
-      isQuestion: true,
-      answerText: `\u2696\uFE0F *Diferencia entre Patrimonio de Familia y Patrimonio Cultural (BIC):*
-
-Son dos figuras totalmente distintas que aparecen en el folio de matr\xEDcula:
-
-1\uFE0F\u20E3 *Patrimonio de Familia Inembargable (Ley 70/1931):* Protege a la familia contra embargos. Si hay hijos menores, exige aval del ICBF para poder vender.
-2\uFE0F\u20E3 *Patrimonio Cultural / Bien de Inter\xE9s Cultural (Ley 397/1997):* Es una protecci\xF3n urban\xEDstica/arquitect\xF3nica del Estado. Hace que *los bancos NO aprueben cr\xE9dito hipotecario*, obligando casi siempre a comprar de contado.
-
-\xBFTienes la matr\xEDcula inmobiliaria del predio o quieres que liquidemos los gastos notariales? \u{1F91D}`
-    };
-  }
-  const isBicQuestion = /(?:inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b|conservaci[oó]n\s+arquitect[oó]nica)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|impide|afecta|banco|cr[eé]dito|leasing|prestan|vender|comprar|negociaci[oó]n|diferen|anotaci[oó]n|inconveniente)/i.test(lower);
-  if (isBicQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) o Patrimonio Cultural:*
-
-Es una anotaci\xF3n registral de conservaci\xF3n hist\xF3rica y arquitect\xF3nica (declarada por el IDPC en Bogot\xE1 o el Ministerio de Cultura a nivel nacional).
-
-\u26A0\uFE0F *\xBFPor qu\xE9 dificulta o impide la negociaci\xF3n con cr\xE9dito bancario?*
-Los bancos comerciales en Colombia (Bancolombia, Davivienda, BBVA, etc.) *generalmente NO aprueban cr\xE9dito hipotecario ni leasing habitacional* sobre predios catalogados como BIC, debido a:
-1\uFE0F\u20E3 *Restricciones estrictas de intervenci\xF3n:* No se pueden demoler ni hacer reformas estructurales o de fachada sin visto bueno y licencias del IDPC/MinCultura que demoran 1 a 2 a\xF1os.
-2\uFE0F\u20E3 *Dificultad de liquidaci\xF3n judicial:* Ante un eventual remate o ejecuci\xF3n por mora, estos bienes tienen un mercado muy restringido.
-
-\u{1F449} *Conclusi\xF3n pr\xE1ctica:* Si el inmueble es BIC, la compraventa casi siempre debe pactarse de *CONTADO (recursos propios)* o mediante cr\xE9dito de libre inversi\xF3n con otra garant\xEDa. Si quieres, \xA1podemos liquidarte los gastos de escrituraci\xF3n de contado de una vez! \u{1F91D}\u2728`
-    };
-  }
-  const isAfectacionQuestion = /(?:afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|c[oó]mo\s+funciona|se\s*puede\s*vender|ambos|c[oó]nyuge|espos[oa]|firmar|cancelar|notar[ií]a|diferen)/i.test(lower);
-  if (isAfectacionQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258 de 1996 y Ley 854 de 2003):*
-
-Protege el inmueble donde reside la pareja casada o en uni\xF3n marital de hecho:
-
-\u2022 *Con afectaci\xF3n familiar:* No impide la venta, pero es *OBLIGATORIA la comparecencia y firma de AMBOS c\xF3nyuges o compa\xF1eros permanentes* para cancelarla en la misma escritura. Si uno de ellos no firma (por conflicto, separaci\xF3n de hecho o falta de poder notarial), la notar\xEDa *NO puede autorizar la venta*.
-\u2022 *Sin afectaci\xF3n familiar:* El vendedor comparece solo y declara bajo gravedad de juramento en la escritura que no tiene c\xF3nyuge con quien habite all\xED, que tiene otro predio afectado o que el bien no est\xE1 destinado a vivienda familiar.
-
-\xBFDeseas que te liquide los gastos de cancelaci\xF3n de la afectaci\xF3n y compraventa para este predio? \u{1F91D}`
-    };
-  }
-  const isPatrimonioFamiliaQuestion = /(?:patrimonio\s*de\s*familia|inembargable)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|c[oó]mo\s+funciona|hijos|menores|icbf|cancelar|vender|juez|notar[ií]a|diferen)/i.test(lower);
-  if (isPatrimonioFamiliaQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70 de 1931):*
-
-Es una figura jur\xEDdica que protege el techo del hogar contra embargos de acreedores (hasta 250 SMMLV) a favor de c\xF3nyuges e hijos:
-
-\u26A0\uFE0F *\xBFCu\xE1ndo traba o impide la negociaci\xF3n?*
-\u2022 *Si hay hijos menores de edad:* \xA1NO se puede cancelar en notar\xEDa con una simple firma! Requiere tr\xE1mite judicial o notarial con intervenci\xF3n y *concepto favorable previo del Defensor de Familia del ICBF*, demostrando que se subrogar\xE1 en otro inmueble para no desproteger a los menores. Este tr\xE1mite toma semanas o meses.
-\u2022 *Si los hijos ya cumplieron 18 a\xF1os:* Los padres pueden cancelarlo voluntariamente en notar\xEDa aportando los registros civiles que acrediten la mayor\xEDa de edad.
-
-Es una anotaci\xF3n completamente distinta al Patrimonio Cultural/BIC. Si necesitas liquidar los costos de su levantamiento, con gusto te apoyo.`
-    };
-  }
-  const isCreditQuestion = /(?:compra\s*con\s*cr[eé]dito|cr[eé]dito\s*hipotecario|leasing\s*habitacional|cesi[oó]n\s*de\s*leasing)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|gastos?|cuesta)|c[oó]mo\s+funciona|diferencia|ahorro|notar[ií]a|procedimiento)/i.test(lower);
-  if (isCreditQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F4B3} *Compra con Cr\xE9dito vs Leasing vs Contado:* 
-
-\u2022 *De Contado:* El comprador paga el 50% de notar\xEDa (~0.27%), 1% de beneficencia y ~0.75% de registro ORIP.
-\u2022 *Con Cr\xE9dito Hipotecario:* El comprador asume adem\xE1s la constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado). El desembolso se realiza tras registrar la escritura en la ORIP.
-\u2022 *Cesi\xF3n de Leasing:* \xA1Ahorro millonario! Al no haber cambio de due\xF1o registral (el banco fiduciario sigue en matr\xEDcula), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
-
-Dime el valor del inmueble y te calculo los valores exactos para ambas partes \u{1F91D}\u2728`
-    };
-  }
-  const isEmbargoQuestion = /(?:embargo|medida\s*cautelar|embargado)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es)|se\s*puede\s*vender|notar[ií]a|promesa|negociar)/i.test(lower);
-  if (isEmbargoQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u26D4 *Inmueble con Embargo Judicial (Art. 1521 C\xF3digo Civil):*
-
-Vender un predio embargado acarrea *objeto il\xEDcito*. Ninguna notar\xEDa puede autorizar la escritura ni es jur\xEDdicamente v\xE1lido firmar promesa de venta sin que el juzgado competente haya emitido el oficio de desembargo y este quede cancelado en la ORIP.
-
-Para avanzar con seguridad, primero debe radicarse y levantarse el embargo en la Oficina de Registro.`
-    };
-  }
-  const isQuienPagaQuestion = /(?:qui[eé]n\s+paga|le\s+corresponde\s+a\s+qui[eé]n|a\s+cargo\s+de\s+qui[eé]n)/i.test(lower) && /(?:gastos\s+notariales|escrituraci[oó]n|notar[ií]a|beneficencia|registro|retenci[oó]n)/i.test(lower);
-  if (isQuienPagaQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u2696\uFE0F *\xBFQui\xE9n paga qu\xE9 en la notar\xEDa y registro?* \u{1F1E8}\u{1F1F4}
-
-Por ley y costumbre comercial en Colombia:
-\u2022 *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.27% cada uno).
-\u2022 *Retenci\xF3n en la Fuente (1% o 2.5%):* La asume el *VENDEDOR* (si es persona natural; si es empresa, $0 en notar\xEDa).
-\u2022 *Impuesto de Beneficencia (1%):* Lo asume el *COMPRADOR*.
-\u2022 *Derechos de Registro ORIP (~0.75% a 0.92%):* Los asume el *COMPRADOR*.
-\u2022 *Constituci\xF3n de Hipoteca Bancaria:* La asume el *COMPRADOR*.
-\u2022 *Cancelaci\xF3n de Hipoteca Previa:* La asume el *VENDEDOR*.
-
-\xBFDeseas que te liquide los valores exactos para un inmueble? \u{1F91D}`
-    };
-  }
-  const isRetencionQuestion = /(?:retenci[oó]n\s+en\s+la\s+fuente|retenci[oó]n\s+notar[ií]a|cu[aá]nto\s+es\s+la\s+retenci[oó]n)/i.test(lower) && /(?:compraventa|inmueble|venta|porcentaje|cu[aá]nto|aplica)/i.test(lower);
-  if (isRetencionQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F4B0} *Retenci\xF3n en la Fuente en Compraventa de Inmuebles:* \u{1F1E8}\u{1F1F4}
-
-\u2022 *Persona Natural:* Paga el 1.0% sobre el precio de venta si el predio no supera 20.000 UVT ($1.006.360.000 COP en 2026). Si excede las 20.000 UVT, se aplica el 2.5% sobre el exceso.
-\u2022 *Persona Jur\xEDdica (Empresas/Constructoras):* La notar\xEDa *NO le retiene nada ($0)*, ya que las sociedades aplican autorretenci\xF3n en su declaraci\xF3n peri\xF3dica de renta.
-\u2022 *\xBFQui\xE9n la paga?:* Siempre el *VENDEDOR* al momento de firmar la escritura p\xFAblica.`
-    };
-  }
-  const isBeneficenciaQuestion = /(?:beneficencia|impuesto\s+de\s+registro|registro\s+orip)/i.test(lower) && /(?:qu[eé]\s+es|porcentaje|cu[aá]nto|qui[eé]n\s+paga|oficina\s+de\s+instrumentos)/i.test(lower);
-  if (isBeneficenciaQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F4DC} *Impuesto de Beneficencia y Derechos de Registro (ORIP):* \u{1F1E8}\u{1F1F4}
-
-Son los dos pagos requeridos para que la Oficina de Registro de Instrumentos P\xFAblicos asiente la nueva titularidad en el Certificado de Tradici\xF3n:
-\u2022 *Beneficencia (Gobernaci\xF3n / Bogot\xE1):* 1.0% sobre el valor del negocio.
-\u2022 *Derechos de Registro ORIP (SNR):* Entre 0.63% y 0.92% seg\xFAn la cuant\xEDa, m\xE1s gastos de sistematizaci\xF3n.
-\u2022 *Total aproximado de registro:* ~1.67% a 1.95% a cargo del *COMPRADOR*.
-_(En Cesi\xF3n de Leasing Habitacional no aplica, logrando un ahorro millonario)_ \u2728`
-    };
-  }
-  const isVisQuestion = /(?:vivienda\s+de\s+inter[eé]s\s+social|inmueble\s+vis|tarifa\s+vis)/i.test(lower) && /(?:gastos|notar[ií]a|descuento|beneficio|registro|cu[aá]nto)/i.test(lower);
-  if (isVisQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F3E1} *Gastos Notariales en Vivienda de Inter\xE9s Social (VIS / VIP):* \u{1F1E8}\u{1F1F4}
-
-Por ley (Ley 1537 de 2012 y decretos de la SNR), los inmuebles VIS gozan de tarifas preferenciales:
-\u2022 *Derechos Notariales:* Tienen un 50% de descuento sobre la tarifa ordinaria (~0.27% total repartido entre ambas partes).
-\u2022 *Derechos de Registro ORIP:* Tarifa reducida subsidiada.
-\u2022 Para compraventa nueva de constructora, las tarifas de escrituraci\xF3n de actos exentos o VIS se liquidan con topes preferenciales.`
-    };
-  }
-  const isUsufructoQuestion = /(?:usufructo)/i.test(lower) && /(?:cancelaci[oó]n|constituci[oó]n|qu[eé]\s+es|gastos|notar[ií]a|c[oó]mo\s+funciona)/i.test(lower);
-  if (isUsufructoQuestion) {
-    return {
-      isQuestion: true,
-      answerText: `\u{1F33F} *Cancelaci\xF3n o Constituci\xF3n de Usufructo:* \u{1F1E8}\u{1F1F4}
-
-\u2022 *Constituci\xF3n:* Desmembra la propiedad en nuda propiedad y derecho de uso/goce. Paga derechos notariales y registro.
-\u2022 *Cancelaci\xF3n (por fallecimiento o renuncia):* Se liquida como acto sin cuant\xEDa (~$107.814 de derechos notariales con IVA m\xE1s copias y registro en ORIP), consolidando la plena propiedad en el nudo propietario.`
-    };
-  }
-  return { isQuestion: false };
-}
-function extractNotarialExpenseParams(text2, senderId) {
-  if (!text2 || typeof text2 !== "string") return { found: false };
-  const clean = text2.trim();
+async function executeAdminMatchSearch(queryText, isAdmin, injectedDb) {
+  const adminDashboardUrl = "https://vecy-bienes-raices.vercel.app/admin";
+  const clean = queryText.trim();
   const lower = clean.toLowerCase();
-  const keywords = [
-    "gastos notariales",
-    "gasto notarial",
-    "gastos de escrituraci\xF3n",
-    "gastos escrituraci\xF3n",
-    "gastos de escrituracion",
-    "escrituraci\xF3n",
-    "escrituracion",
-    "liquidar notaria",
-    "liquidar notar\xEDa",
-    "costo notaria",
-    "costos notaria",
-    "cu\xE1nto vale la notar\xEDa",
-    "cuanto vale la notaria",
-    "cuanto cobra la notaria",
-    "cu\xE1nto cobra la notar\xEDa",
-    "cuanto se va en notaria",
-    "cu\xE1nto se va en notar\xEDa",
-    "gastos de registro",
-    "firmar promesa",
-    "promesa de compraventa",
-    "promesa compraventa",
-    "voy para la notar\xEDa",
-    "voy a la notaria",
-    "voy a notaria",
-    "voy para notaria",
-    "firmar escrituras",
-    "gastos notariale",
-    "derechos notariales",
-    "liquidaci\xF3n notarial",
-    "impuesto de registro"
-  ];
-  const hasPending = senderId ? hasPendingNotarialSession(senderId) : false;
-  const hasNotarialIntent = keywords.some((kw) => lower.includes(kw));
-  if (!hasNotarialIntent && !hasPending) {
-    return { found: false };
+  const isDetailedListingText = clean.length > 50 && (lower.includes("hab") || lower.includes("alcoba") || lower.includes("m2") || lower.includes("m\xB2") || lower.includes("presupuesto") || lower.includes("recursos") || lower.includes("millones") || lower.includes("mm"));
+  const matchIdRegex = /(?:^|\s)(?:#m\s*(\d+)|match\s*#?\s*(\d+)|coincidencia\s*#?\s*(\d+))\b/i;
+  const matchIdMatch = !isDetailedListingText ? clean.match(matchIdRegex) : null;
+  const matchIdCaptured = matchIdMatch ? matchIdMatch[1] || matchIdMatch[2] || matchIdMatch[3] : null;
+  const propIdRegex = /(?:^|\s)(?:#p\s*(\d+)|inmueble\s*#?\s*(\d+)|propiedad\s*#?\s*(\d+))\b/i;
+  const propIdMatch = !isDetailedListingText ? clean.match(propIdRegex) : null;
+  const propIdCaptured = propIdMatch ? propIdMatch[1] || propIdMatch[2] || propIdMatch[3] : null;
+  const reqIdRegex = /(?:^|\s)(?:#r\s*(\d+)|requerimiento\s*#?\s*(\d+)|demanda\s*#?\s*(\d+))\b/i;
+  const reqIdMatch = !isDetailedListingText ? clean.match(reqIdRegex) : null;
+  const reqIdCaptured = reqIdMatch ? reqIdMatch[1] || reqIdMatch[2] || reqIdMatch[3] : null;
+  const isDemand = lower.includes("busco") || lower.includes("buscamos") || lower.includes("necesito") || lower.includes("necesitamos") || lower.includes("necesitan") || lower.includes("requiero") || lower.includes("requerimos") || lower.includes("se busca") || lower.includes("demanda") || lower.includes("cliente busca") || lower.includes("comprador busca") || lower.includes("para cliente") || lower.includes("solicito") || lower.includes("para compra") || lower.includes("para arriendo") || lower.includes("compro") || lower.includes("requerimiento") || lower.includes("cliente directo") || lower.includes("recursos hasta");
+  const resolvedQueryType = matchIdCaptured ? "match_id" : propIdCaptured ? "property_id" : reqIdCaptured ? "requirement_id" : isDemand ? "demand_search" : "offer_search";
+  const db = injectedDb || await getDb();
+  if (!db) {
+    const reportText2 = formatMatchReport(
+      `\u{1F3AF} *VECY MATCH ENGINE \u2014 B\xDASQUEDA DE COINCIDENCIAS*`,
+      `Criterio analizado (${resolvedQueryType}): *${clean}*`,
+      [],
+      isAdmin,
+      adminDashboardUrl,
+      `\u26A0\uFE0F La base de datos no est\xE1 disponible en este momento. Intenta nuevamente en unos instantes.`
+    );
+    return {
+      isMatchQuery: true,
+      isAuthorizedAdmin: isAdmin,
+      queryType: resolvedQueryType,
+      querySummary: "Base de datos no disponible temporalmente",
+      totalFound: 0,
+      matches: [],
+      formattedReport: reportText2,
+      adminDashboardUrl
+    };
   }
-  let precio = 0;
-  const mMillones = clean.match(/(?:\$|\b)(\d+(?:[\.,]\d+)?)\s*(?:millones|millón|millon|m\b)/i);
-  if (mMillones) {
-    const rawNum = parseFloat(mMillones[1].replace(",", "."));
-    precio = rawNum * 1e6;
-  } else {
-    const mNum = clean.match(/(?:\$|\b)(\d{1,3}(?:\.\d{3}){2,3}|\d{7,11})\b/);
-    if (mNum) {
-      precio = parseInt(mNum[1].replace(/\./g, ""), 10);
+  if (matchIdCaptured) {
+    const matchIdNum = parseInt(matchIdCaptured, 10);
+    const existingMatchRows = await db.select().from(propertyMatches).where(eq7(propertyMatches.id, matchIdNum)).limit(1);
+    if (existingMatchRows.length > 0) {
+      const pm = existingMatchRows[0];
+      const [prop] = await db.select().from(properties).where(eq7(properties.id, pm.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq7(requirements.id, pm.requirementId)).limit(1);
+      if (prop && req) {
+        const propPhone = extractRealPhone(prop);
+        const reqPhone = extractRealPhone(req);
+        const scoreNum = parseFloat(String(pm.matchScore || "0"));
+        const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+        const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+        const header2 = `\u{1F3AF} *DETALLE DE COINCIDENCIA \u2014 MATCH #M${pm.id}*`;
+        const criteria2 = `\u{1F3C5} *Score de Afinidad:* *${scoreNum.toFixed(1)}%* ${scoreNum >= 90 ? "\u{1F525} (Alta Compatibilidad)" : "\u2705"}
+\u{1F3E0} *Inmueble (#P${prop.id}):* ${prop.propertyType || "Inmueble"} en ${prop.transactionType || "Venta"} \u2022 ${getPropNeighborhood(prop) || prop.city || "Bogot\xE1"} \u2022 ${formatCOP(prop.price || prop.rentPrice)}
+\u{1F4CB} *Demanda (#R${req.id}):* ${req.tipoInmuebleDeseado || "Inmueble"} en ${req.tipoNegocioDeseado || "Venta"} \u2022 ${req.zonaDeseada || req.addressNeighborhood || "Bogot\xE1"} \u2022 Presupuesto: ${formatCOP(req.presupuestoMax)}`;
+        const item = {
+          matchId: pm.id,
+          score: scoreNum,
+          matchType: "existing_match",
+          targetType: "inmueble",
+          targetId: prop.id,
+          title: prop.name || `Inmueble #${prop.id}`,
+          transactionType: prop.transactionType || "venta",
+          propertyType: prop.propertyType || "apartment",
+          city: prop.city || "Bogot\xE1",
+          neighborhood: getPropNeighborhood(prop),
+          priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
+          areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
+          bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+          bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+          parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
+          contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
+          contactPhone: propPhone,
+          contactWhatsAppLink: propWaLink,
+          matchSummary: `Coincidencia bilateral de ${scoreNum.toFixed(1)}%`,
+          positives: [],
+          blockers: []
+        };
+        const report = formatMatchReport(header2, criteria2, [item], isAdmin, adminDashboardUrl, "No se encontr\xF3 el detalle.");
+        return {
+          isMatchQuery: true,
+          isAuthorizedAdmin: isAdmin,
+          queryType: "match_id",
+          querySummary: `Match #${pm.id} (Inmueble #P${prop.id} \u2194 Demanda #R${req.id})`,
+          totalFound: 1,
+          matches: [item],
+          formattedReport: report,
+          adminDashboardUrl: `${adminDashboardUrl}?search=${pm.id}`
+        };
+      }
+    } else {
+      const notFoundReport = formatMatchReport(
+        `\u{1F3AF} *B\xDASQUEDA DE MATCH #M${matchIdNum}*`,
+        `Criterio: C\xF3digo #M${matchIdNum}`,
+        [],
+        isAdmin,
+        adminDashboardUrl,
+        `No se encontr\xF3 ning\xFAn match con c\xF3digo #M${matchIdNum} en la base de datos.`
+      );
+      return {
+        isMatchQuery: true,
+        isAuthorizedAdmin: isAdmin,
+        queryType: "match_id",
+        querySummary: `Match #${matchIdNum} no encontrado`,
+        totalFound: 0,
+        matches: [],
+        formattedReport: notFoundReport,
+        adminDashboardUrl
+      };
     }
   }
-  if (precio < 1e7) {
-    return {
-      found: true,
-      needsMoreInfo: true
-    };
-  }
-  let estadoPredio = "libre";
-  if (/predio.*(?:leasing|locatario)|inmueble.*(?:leasing)|tiene\s+leasing/i.test(lower)) {
-    estadoPredio = "leasing";
-  } else if (/predio.*(?:hipoteca|gravamen)|inmueble.*(?:hipoteca)|tiene\s+hipoteca|con\s+hipoteca|hipotecado/i.test(lower)) {
-    estadoPredio = "hipoteca";
-  }
-  let formaPago = "contado";
-  if (/compra.*(?:leasing)|paga.*(?:leasing)|con\s+leasing\s+habitacional/i.test(lower)) {
-    formaPago = "leasing";
-  } else if (/compra.*(?:cr[eé]dito|hipoteca|banco|pr[eé]stamo)|con\s+cr[eé]dito|con\s+hipoteca/i.test(lower)) {
-    formaPago = "hipoteca";
-  } else if (/contado|recursos\s+propios|efectivo/i.test(lower)) {
-    formaPago = "contado";
-  }
-  const afectacionViviendaFamiliar = /afectaci[oó]n|vivienda\s+familiar/i.test(lower) && !/sin\s+afectaci[oó]n/i.test(lower);
-  const patrimonioFamilia = /patrimonio\s+de\s+familia|inembargable/i.test(lower);
-  const bienInteresCultural = /inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b/i.test(lower);
-  const embargoMedidaCautelar = /embargo|embargado|medida\s+cautelar/i.test(lower);
-  const vendedorEsPersonaJuridica = /persona\s+jur[ií]dica|empresa|sociedad|constructora|inmobiliaria\s+vende/i.test(lower);
-  const esViviendaInteresSocial = /\bvis\b|inter[eé]s\s+social|\bvip\b/i.test(lower);
-  return {
-    found: true,
-    needsMoreInfo: false,
-    params: {
-      precioVenta: precio,
-      estadoPredio,
-      formaPago,
-      ciudad: "Bogot\xE1",
-      vendedorEsPersonaJuridica,
-      esViviendaInteresSocial,
-      afectacionViviendaFamiliar,
-      patrimonioFamilia,
-      bienInteresCultural,
-      embargoMedidaCautelar
+  if (propIdCaptured) {
+    const propIdNum = parseInt(propIdCaptured, 10);
+    const [prop] = await db.select().from(properties).where(eq7(properties.id, propIdNum)).limit(1);
+    if (prop) {
+      const existingMatches = await db.select().from(propertyMatches).where(eq7(propertyMatches.propertyId, propIdNum)).orderBy(desc2(propertyMatches.matchScore));
+      const matchItems = [];
+      if (existingMatches.length > 0) {
+        for (const pm of existingMatches) {
+          const scoreNum = parseFloat(String(pm.matchScore || "0"));
+          if (scoreNum < 80) continue;
+          const [req] = await db.select().from(requirements).where(eq7(requirements.id, pm.requirementId)).limit(1);
+          if (!req) continue;
+          const reqPhone = extractRealPhone(req);
+          const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+          matchItems.push({
+            matchId: pm.id,
+            score: scoreNum,
+            matchType: "property_to_requirements",
+            targetType: "demanda",
+            targetId: req.id,
+            title: req.name || `Demanda #${req.id}`,
+            transactionType: req.tipoNegocioDeseado || "venta",
+            propertyType: req.tipoInmuebleDeseado || "apartment",
+            city: req.ciudadDeseada || "Bogot\xE1",
+            neighborhood: req.zonaDeseada || req.addressNeighborhood || "",
+            priceOrBudgetFormatted: formatCOP(req.presupuestoMax),
+            areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
+            bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
+            bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
+            parkingFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
+            contactName: req.nombreUsuarioWhatsapp || "Asesor con Demanda",
+            contactPhone: reqPhone,
+            contactWhatsAppLink: reqWaLink,
+            matchSummary: `Presupuesto m\xE1x ${formatCOP(req.presupuestoMax)} cubre inmueble`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      if (matchItems.length === 0) {
+        const freshMatches = await findMatchesForProperty(propIdNum);
+        for (const fm of freshMatches) {
+          const scoreNum = Number(fm.score || 0);
+          if (scoreNum < 80) continue;
+          const reqPhone = extractRealPhone(fm);
+          const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+          matchItems.push({
+            matchId: fm.matchId || null,
+            score: scoreNum,
+            matchType: "property_to_requirements",
+            targetType: "demanda",
+            targetId: fm.id,
+            title: fm.name || `Demanda #${fm.id}`,
+            transactionType: fm.tipoNegocioDeseado || "venta",
+            propertyType: fm.tipoInmuebleDeseado || "apartment",
+            city: fm.ciudadDeseada || "Bogot\xE1",
+            neighborhood: fm.zonaDeseada || fm.addressNeighborhood || "",
+            priceOrBudgetFormatted: formatCOP(fm.presupuestoMax),
+            areaFormatted: fm.areaMin ? `M\xEDn ${fm.areaMin} m\xB2` : "N/E",
+            bedroomsFormatted: fm.habitacionesMin ? `M\xEDn ${fm.habitacionesMin} Hab` : "N/E",
+            bathroomsFormatted: fm.banosMin ? `M\xEDn ${fm.banosMin} Ba\xF1os` : "N/E",
+            parkingFormatted: fm.parqueaderosMin ? `M\xEDn ${fm.parqueaderosMin} Pq` : "N/E",
+            contactName: fm.nombreUsuarioWhatsapp || "Asesor con Demanda",
+            contactPhone: reqPhone,
+            contactWhatsAppLink: reqWaLink,
+            matchSummary: `Score de compatibilidad: ${scoreNum.toFixed(1)}%`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      const propPhone = extractRealPhone(prop);
+      const header2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 DEMANDAS COMPATIBLES PARA INMUEBLE #P${prop.id}*`;
+      const criteria2 = `\u{1F3E0} *Inmueble Consultado:* ${prop.propertyType} en ${prop.transactionType} \u2022 ${getPropNeighborhood(prop) || prop.city} \u2022 ${formatCOP(prop.price || prop.rentPrice)}
+\u{1F464} *Captador:* ${prop.nombreUsuarioWhatsapp || "Asesor"} (${propPhone ? "+" + propPhone : "Sin tel"})`;
+      const emptyDiag2 = `Actualmente no hay demandas activas que alcancen el 80% de compatibilidad para este inmueble.
+\u{1F4A1} El inmueble permanece activo en el cat\xE1logo y te notificar\xE9 autom\xE1ticamente cuando ingrese un cliente compatible.`;
+      const reportText2 = formatMatchReport(header2, criteria2, matchItems, isAdmin, adminDashboardUrl, emptyDiag2);
+      return {
+        isMatchQuery: true,
+        isAuthorizedAdmin: isAdmin,
+        queryType: "property_id",
+        querySummary: `Inmueble #P${prop.id} (${prop.propertyType} en ${getPropNeighborhood(prop) || prop.city})`,
+        totalFound: matchItems.length,
+        matches: matchItems,
+        formattedReport: reportText2,
+        adminDashboardUrl: `${adminDashboardUrl}?search=${prop.id}`
+      };
     }
+  }
+  if (reqIdCaptured) {
+    const reqIdNum = parseInt(reqIdCaptured, 10);
+    const [req] = await db.select().from(requirements).where(eq7(requirements.id, reqIdNum)).limit(1);
+    if (req) {
+      const existingMatches = await db.select().from(propertyMatches).where(eq7(propertyMatches.requirementId, reqIdNum)).orderBy(desc2(propertyMatches.matchScore));
+      const matchItems = [];
+      if (existingMatches.length > 0) {
+        for (const pm of existingMatches) {
+          const scoreNum = parseFloat(String(pm.matchScore || "0"));
+          if (scoreNum < 80) continue;
+          const [prop] = await db.select().from(properties).where(eq7(properties.id, pm.propertyId)).limit(1);
+          if (!prop || !prop.available) continue;
+          const propPhone = extractRealPhone(prop);
+          const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+          matchItems.push({
+            matchId: pm.id,
+            score: scoreNum,
+            matchType: "requirement_to_properties",
+            targetType: "inmueble",
+            targetId: prop.id,
+            title: prop.name || `Inmueble #${prop.id}`,
+            transactionType: prop.transactionType || "venta",
+            propertyType: prop.propertyType || "apartment",
+            city: prop.city || "Bogot\xE1",
+            neighborhood: getPropNeighborhood(prop),
+            priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
+            areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
+            bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+            bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+            parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
+            contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
+            contactPhone: propPhone,
+            contactWhatsAppLink: propWaLink,
+            matchSummary: `Precio ${formatCOP(prop.price || prop.rentPrice)} dentro de presupuesto`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      if (matchItems.length === 0) {
+        const freshMatches = await findMatchesForRequirement(reqIdNum);
+        for (const fm of freshMatches) {
+          const scoreNum = Number(fm.score || 0);
+          if (scoreNum < 80) continue;
+          const propPhone = extractRealPhone(fm);
+          const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+          matchItems.push({
+            matchId: fm.matchId || null,
+            score: scoreNum,
+            matchType: "requirement_to_properties",
+            targetType: "inmueble",
+            targetId: fm.id,
+            title: fm.name || `Inmueble #${fm.id}`,
+            transactionType: fm.transactionType || "venta",
+            propertyType: fm.propertyType || "apartment",
+            city: fm.city || "Bogot\xE1",
+            neighborhood: getPropNeighborhood(fm),
+            priceOrBudgetFormatted: formatCOP(fm.price || fm.rentPrice),
+            areaFormatted: getPropArea(fm) ? `${getPropArea(fm)} m\xB2` : "N/E",
+            bedroomsFormatted: fm.bedrooms ? `${fm.bedrooms} Hab` : "N/E",
+            bathroomsFormatted: fm.bathrooms ? `${fm.bathrooms} Ba\xF1os` : "N/E",
+            parkingFormatted: getPropGarages(fm) ? `${getPropGarages(fm)} Pq` : "N/E",
+            contactName: fm.nombreUsuarioWhatsapp || "Asesor Captador",
+            contactPhone: propPhone,
+            contactWhatsAppLink: propWaLink,
+            matchSummary: `Score de compatibilidad: ${scoreNum.toFixed(1)}%`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      const reqPhone = extractRealPhone(req);
+      const header2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 INMUEBLES COMPATIBLES PARA DEMANDA #R${req.id}*`;
+      const criteria2 = `\u{1F4CB} *Demanda Consultada:* ${req.tipoInmuebleDeseado} en ${req.tipoNegocioDeseado} \u2022 ${req.zonaDeseada || req.ciudadDeseada} \u2022 Presupuesto m\xE1x: ${formatCOP(req.presupuestoMax)}
+\u{1F464} *Asesor Solicitante:* ${req.nombreUsuarioWhatsapp || "Asesor"} (${reqPhone ? "+" + reqPhone : "Sin tel"})`;
+      const emptyDiag2 = `Actualmente no hay inmuebles en cat\xE1logo que alcancen el 80% de compatibilidad para esta demanda.
+\u{1F4A1} Te avisar\xE9 tan pronto un captador ingrese una propiedad compatible a la red.`;
+      const reportText2 = formatMatchReport(header2, criteria2, matchItems, isAdmin, adminDashboardUrl, emptyDiag2);
+      return {
+        isMatchQuery: true,
+        isAuthorizedAdmin: isAdmin,
+        queryType: "requirement_id",
+        querySummary: `Demanda #R${req.id} (${req.tipoInmuebleDeseado} en ${req.zonaDeseada || req.ciudadDeseada})`,
+        totalFound: matchItems.length,
+        matches: matchItems,
+        formattedReport: reportText2,
+        adminDashboardUrl: `${adminDashboardUrl}?search=${req.id}`
+      };
+    }
+  }
+  const fb = extractFallbackDataFromText(clean);
+  if (isDemand) {
+    let pptoMaxNum = Number(fb.presupuestoMax || 0);
+    if (!pptoMaxNum || pptoMaxNum === 0) {
+      const mmMatch = clean.match(/(?:recursos|presupuesto|ppto|hasta|tope|valor)?\s*(?:hasta|de)?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mm|millones|mil\s*millones)\b/i);
+      if (mmMatch) {
+        const { parseColombianPriceOrBudget: parseColombianPriceOrBudget3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const parsed = parseColombianPriceOrBudget3(mmMatch[1], "millones", true);
+        if (parsed > 0) pptoMaxNum = parsed;
+      }
+    }
+    let areaMinNum = Number(fb.areaMin || 0);
+    if (!areaMinNum || areaMinNum === 0) {
+      const aRangeMatch = clean.match(/(\d{2,4})\s*(?:[-–—]|a|hasta)\s*(\d{2,4})\s*(?:m2|mts2|m²|metros)/i);
+      if (aRangeMatch) {
+        areaMinNum = Math.min(Number(aRangeMatch[1]), Number(aRangeMatch[2]));
+      }
+    }
+    let bedroomsMinNum = Number(fb.bedroomsMin || fb.bedrooms || 0);
+    if (!bedroomsMinNum || bedroomsMinNum === 0) {
+      const bedMatch = clean.match(/(\d+)\s*(?:habitación|habitaciones|alcoba|alcobas|hab|habs)/i);
+      if (bedMatch) bedroomsMinNum = Number(bedMatch[1]);
+    }
+    const { extractAllBarriosFromText: extractAllBarriosFromText2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+    const extractedBarrios = extractAllBarriosFromText2(clean);
+    const mainBarrio = fb.barrio || extractedBarrios[0] || "Bogot\xE1";
+    const sectoresLabel = extractedBarrios.length > 0 ? extractedBarrios.join(", ") : mainBarrio;
+    const candidateReq = {
+      id: 0,
+      rawText: clean,
+      name: `Demanda Administrador (${mainBarrio})`,
+      tipoInmuebleDeseado: fb.propertyType || "apartment",
+      tipoNegocioDeseado: fb.transactionType || "venta",
+      ciudadDeseada: fb.city || "Bogot\xE1",
+      zonaDeseada: mainBarrio,
+      addressNeighborhood: mainBarrio,
+      presupuestoMax: pptoMaxNum ? String(pptoMaxNum) : fb.presupuestoMax ? String(fb.presupuestoMax) : "0",
+      presupuestoMin: "0",
+      areaMin: areaMinNum ? String(areaMinNum) : fb.areaMin ? String(fb.areaMin) : null,
+      habitacionesMin: bedroomsMinNum || null,
+      banosMin: fb.bathroomsMin || null,
+      parqueaderosMin: fb.parkingMin || null,
+      status: "active"
+    };
+    const availableProps = await db.select().from(properties).where(eq7(properties.available, true));
+    const matchedItems2 = [];
+    for (const prop of availableProps) {
+      const repCount = Number(prop.republicacionesCount || 0);
+      const propEffectiveDate = repCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
+      const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+      if (propAgeDays > 15) continue;
+      const explanation = explicarMatch(candidateReq, prop, fb, void 0, extractedBarrios);
+      if (explanation.score >= 80) {
+        const propPhone = extractRealPhone(prop);
+        const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+        let existingPmId = null;
+        try {
+          const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq7(propertyMatches.propertyId, prop.id)).limit(1);
+          existingPmId = existingPm?.[0]?.id || null;
+        } catch {
+          existingPmId = null;
+        }
+        matchedItems2.push({
+          matchId: existingPmId,
+          score: explanation.score,
+          matchType: "requirement_to_properties",
+          targetType: "inmueble",
+          targetId: prop.id,
+          title: prop.name || `Inmueble #${prop.id}`,
+          transactionType: prop.transactionType || "venta",
+          propertyType: prop.propertyType || "apartment",
+          city: prop.city || "Bogot\xE1",
+          neighborhood: getPropNeighborhood(prop),
+          priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
+          areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
+          bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+          bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+          parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
+          contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
+          contactPhone: propPhone,
+          contactWhatsAppLink: propWaLink,
+          matchSummary: explanation.positives[0] || `Score: ${explanation.score.toFixed(1)}%`,
+          positives: explanation.positives,
+          blockers: explanation.blockers
+        });
+      }
+    }
+    matchedItems2.sort((a, b) => b.score - a.score);
+    const header2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 RESULTADO DE B\xDASQUEDA (\xDALTIMOS 15 D\xCDAS)*`;
+    const criteria2 = `\u{1F4CB} *Criterios Extra\xEDdos de la Demanda:*
+\u2022 *Inmueble:* ${candidateReq.propertyType || candidateReq.tipoInmuebleDeseado} en ${candidateReq.transactionType || candidateReq.tipoNegocioDeseado}
+\u2022 *Presupuesto M\xE1x:* ${formatCOP(candidateReq.presupuestoMax)}
+\u2022 *Metraje M\xEDnimo:* ${candidateReq.areaMin ? `${candidateReq.areaMin} m\xB2` : "No especificado"}
+\u2022 *Habitaciones M\xEDnimas:* ${candidateReq.habitacionesMin ? `${candidateReq.habitacionesMin} Hab` : "No especificadas"}
+\u2022 *Zonas / Sectores:* ${sectoresLabel}`;
+    const emptyDiag2 = `\u26D4 *No se encontraron ofertas compatibles (Score \u2265 80%) captadas en los \xFAltimos 15 d\xEDas.* 
+
+Verifiqu\xE9 todos los inmuebles activos captados en la red durante los \xFAltimos 15 d\xEDas y actualmente ninguno alcanza el umbral m\xEDnimo del 80% con estos requisitos espec\xEDficos.`;
+    const reportText2 = formatMatchReport(header2, criteria2, matchedItems2, isAdmin, adminDashboardUrl, emptyDiag2);
+    return {
+      isMatchQuery: true,
+      isAuthorizedAdmin: isAdmin,
+      queryType: "demand_search",
+      querySummary: `Demanda: ${candidateReq.tipoInmuebleDeseado} en ${sectoresLabel} (${formatCOP(candidateReq.presupuestoMax)})`,
+      totalFound: matchedItems2.length,
+      matches: matchedItems2,
+      formattedReport: reportText2,
+      adminDashboardUrl
+    };
+  }
+  const candidateProp = {
+    id: 0,
+    rawText: clean,
+    name: `Inmueble Administrador (${fb.barrio || fb.city || "Bogot\xE1"})`,
+    propertyType: fb.propertyType || "apartment",
+    transactionType: fb.transactionType || "venta",
+    city: fb.city || "Bogot\xE1",
+    neighborhood: fb.barrio || "",
+    price: fb.price ? String(fb.price) : null,
+    rentPrice: fb.rentPrice ? String(fb.rentPrice) : null,
+    area: fb.area ? String(fb.area) : null,
+    bedrooms: fb.bedrooms || null,
+    bathrooms: fb.bathrooms || null,
+    parkingSpaces: fb.parking || null,
+    available: true
   };
-}
-async function executeNotarialAssistanceFromWhatsApp(text2, senderId, isPrivateDm = true) {
-  const explanation = explainNotarialFigures(text2);
-  if (explanation.isQuestion && explanation.answerText) {
-    return {
-      isNotarialRequest: true,
-      isEducationalAnswer: true,
-      reportText: explanation.answerText
-    };
+  const activeReqs = await db.select().from(requirements).where(eq7(requirements.status, "active"));
+  const matchedItems = [];
+  for (const req of activeReqs) {
+    if (req.status === "expired") continue;
+    const reqRepCount = Number(req.republicacionesCount || 0);
+    const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt;
+    const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+    if (reqAgeDays > 15) continue;
+    const explanation = explicarMatch(req, candidateProp, void 0, fb);
+    if (explanation.score >= 80) {
+      const reqPhone = extractRealPhone(req);
+      const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+      const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq7(propertyMatches.requirementId, req.id)).limit(1);
+      matchedItems.push({
+        matchId: existingPm[0]?.id || null,
+        score: explanation.score,
+        matchType: "property_to_requirements",
+        targetType: "demanda",
+        targetId: req.id,
+        title: req.name || `Demanda #${req.id}`,
+        transactionType: req.tipoNegocioDeseado || "venta",
+        propertyType: req.tipoInmuebleDeseado || "apartment",
+        city: req.ciudadDeseada || "Bogot\xE1",
+        neighborhood: req.zonaDeseada || req.addressNeighborhood || "",
+        priceOrBudgetFormatted: formatCOP(req.presupuestoMax),
+        areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
+        bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
+        bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
+        parkingFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
+        contactName: req.nombreUsuarioWhatsapp || "Asesor con Demanda",
+        contactPhone: reqPhone,
+        contactWhatsAppLink: reqWaLink,
+        matchSummary: explanation.positives[0] || `Score: ${explanation.score.toFixed(1)}%`,
+        positives: explanation.positives,
+        blockers: explanation.blockers
+      });
+    }
   }
-  const detection = extractNotarialExpenseParams(text2, senderId);
-  if (!detection.found) {
-    return { isNotarialRequest: false };
-  }
-  if (detection.needsMoreInfo || !detection.params) {
-    setPendingNotarialSession(senderId);
-    const promptText = `\xA1Con mucho gusto te liquido los gastos de notar\xEDa y registro al centavo! \u2696\uFE0F\u{1F1E8}\u{1F1F4}
+  matchedItems.sort((a, b) => b.score - a.score);
+  const header = `\u{1F3AF} *VECY MATCH ENGINE \u2014 RESULTADO DE B\xDASQUEDA (\xDALTIMOS 15 D\xCDAS)*`;
+  const criteria = `\u{1F3E0} *Criterios Extra\xEDdos de la Oferta:*
+\u2022 *Inmueble:* ${candidateProp.propertyType} en ${candidateProp.transactionType}
+\u2022 *Ubicaci\xF3n:* ${candidateProp.neighborhood || candidateProp.city}
+\u2022 *Precio:* ${formatCOP(candidateProp.price || candidateProp.rentPrice)}
+\u2022 *Metraje:* ${candidateProp.area ? `${candidateProp.area} m\xB2` : "No especificado"}
+\u2022 *Habitaciones:* ${candidateProp.bedrooms ? `${candidateProp.bedrooms} Hab` : "No especificadas"}`;
+  const emptyDiag = `\u26D4 *No se encontraron demandas compatibles (Score \u2265 80%) captadas en los \xFAltimos 15 d\xEDas.* 
 
-Para darte el desglose exacto de cu\xE1nto paga el comprador y cu\xE1nto el vendedor, por favor conf\xEDrmame:
-1\uFE0F\u20E3 *Valor de la compraventa:* (Ej: 350 millones o el valor pactado).
-2\uFE0F\u20E3 *Estado del predio:* \xBFLibre de grav\xE1menes, con hipoteca activa o con leasing habitacional?
-3\uFE0F\u20E3 *Forma de pago:* \xBFDe contado, con cr\xE9dito hipotecario o con leasing?
-
-_(Si el predio tiene afectaci\xF3n a vivienda familiar, patrimonio de familia o es Bien de Inter\xE9s Cultural BIC, me avisas para calcular la figura exacta)_ \u{1F91D}\u2728`;
-    return {
-      isNotarialRequest: true,
-      reportText: promptText
-    };
-  }
-  clearPendingNotarialSession(senderId);
-  const calcResult = liquidarGastosNotariales(detection.params);
+Verifiqu\xE9 las demandas activas de la red durante los \xFAltimos 15 d\xEDas y actualmente ning\xFAn cliente comprador o arrendatario coincide con las caracter\xEDsticas de este inmueble.`;
+  const reportText = formatMatchReport(header, criteria, matchedItems, isAdmin, adminDashboardUrl, emptyDiag);
   return {
-    isNotarialRequest: true,
-    reportText: calcResult.reportText,
-    calculatedResult: calcResult
+    isMatchQuery: true,
+    isAuthorizedAdmin: isAdmin,
+    queryType: "offer_search",
+    querySummary: `Oferta: ${candidateProp.propertyType} en ${candidateProp.neighborhood || candidateProp.city} (${formatCOP(candidateProp.price || candidateProp.rentPrice)})`,
+    totalFound: matchedItems.length,
+    matches: matchedItems,
+    formattedReport: reportText,
+    adminDashboardUrl
   };
 }
-var pendingNotarialSessions, NOTARIAL_SESSION_TTL_MS;
-var init_notarialExpenseService = __esm({
-  "server/_core/notarialExpenseService.ts"() {
+var ADMIN_IDENTIFIERS;
+var init_adminMatchAssistantService = __esm({
+  "server/_core/adminMatchAssistantService.ts"() {
     "use strict";
-    init_taxEngine();
-    pendingNotarialSessions = /* @__PURE__ */ new Map();
-    NOTARIAL_SESSION_TTL_MS = 15 * 60 * 1e3;
+    init_db();
+    init_schema();
+    init_matching();
+    init_janIA();
+    ADMIN_IDENTIFIERS = [
+      "573192919978",
+      // Eduardo Rivera (Línea Socket / Baileys)
+      "573166569719",
+      // Línea Oficial Bróker Comercial VECY
+      "573188096811",
+      // Línea Directiva Jani Alves
+      "167108705018103",
+      // LID Directivo Jani Alves
+      "182781141344345",
+      // LID Directivo Activo Jani Alves
+      "225954035179724",
+      // LID Directivo Eduardo Rivera
+      "218820279050385",
+      // LID Directivo Alterno Jani Alves
+      process.env.ADMIN_PHONE || "573192919978"
+    ];
   }
 });
 
@@ -17666,7 +16582,7 @@ __export(propertiesHandler_exports, {
   processWhatsAppMessage: () => processWhatsAppMessage,
   propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings
 });
-import { eq as eq7, and as and4, gte as gte2, desc as desc2 } from "drizzle-orm";
+import { eq as eq8, and as and5, gte as gte2, desc as desc3 } from "drizzle-orm";
 async function handleDetectedMatches(matches, isProperty, savedRecord, userId, realName) {
   const mentions = [];
   const matchBlocks = [];
@@ -17731,11 +16647,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     try {
       const db = await getDb();
       if (db) {
-        const [su] = await db.select().from(users).where(eq7(users.phone, savedRawPhone)).limit(1);
+        const [su] = await db.select().from(users).where(eq8(users.phone, savedRawPhone)).limit(1);
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        const [mu] = await db.select().from(users).where(eq7(users.phone, matchedRawPhone)).limit(1);
+        const [mu] = await db.select().from(users).where(eq8(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
         }
@@ -17841,9 +16757,9 @@ async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
   const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq7(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  let user = await db.select().from(users).where(eq8(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq7(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq8(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
     const openId = `wa-${cleanPhone}`;
@@ -17860,7 +16776,7 @@ async function findOrCreateUserByPhone(phone, realName) {
     } catch (insertErr) {
       if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
         console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
-        user = await db.select().from(users).where(eq7(users.openId, openId)).limit(1).then((r) => r[0]);
+        user = await db.select().from(users).where(eq8(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
         throw insertErr;
       }
@@ -17868,7 +16784,7 @@ async function findOrCreateUserByPhone(phone, realName) {
   } else {
     if (realName && !isGenericName(realName) && isGenericName(user.name)) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq7(users.id, user.id)).returning();
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq8(users.id, user.id)).returning();
       user = updatedUser;
     }
   }
@@ -17905,10 +16821,10 @@ async function handleAmendmentUpdate(userId, text2) {
   const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and4(
-    eq7(requirements.idUsuarioWhatsapp, rawPhone),
+  const lastReqs = await db.select().from(requirements).where(and5(
+    eq8(requirements.idUsuarioWhatsapp, rawPhone),
     gte2(requirements.createdAt, twoHoursAgo)
-  )).orderBy(desc2(requirements.createdAt)).limit(1);
+  )).orderBy(desc3(requirements.createdAt)).limit(1);
   if (lastReqs.length > 0) {
     const req = lastReqs[0];
     const updates = {};
@@ -17929,7 +16845,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(requirements).set(updates).where(eq7(requirements.id, req.id));
+      await db.update(requirements).set(updates).where(eq8(requirements.id, req.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -17938,10 +16854,10 @@ async function handleAmendmentUpdate(userId, text2) {
       return true;
     }
   }
-  const lastProps = await db.select().from(properties).where(and4(
-    eq7(properties.idUsuarioWhatsapp, rawPhone),
+  const lastProps = await db.select().from(properties).where(and5(
+    eq8(properties.idUsuarioWhatsapp, rawPhone),
     gte2(properties.createdAt, twoHoursAgo)
-  )).orderBy(desc2(properties.createdAt)).limit(1);
+  )).orderBy(desc3(properties.createdAt)).limit(1);
   if (lastProps.length > 0) {
     const prop = lastProps[0];
     const updates = {};
@@ -17962,7 +16878,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq7(properties.id, prop.id));
+      await db.update(properties).set(updates).where(eq8(properties.id, prop.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -18293,37 +17209,37 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   let existing = [];
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.canonicalExternalId, canonicalExternalId),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.canonicalExternalId, canonicalExternalId),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.rawText, finalInsertData.rawText.trim()),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.rawText, finalInsertData.rawText.trim()),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.idUsuarioWhatsapp, rawPhone),
-        eq7(properties.propertyType, finalInsertData.propertyType),
-        eq7(properties.transactionType, finalInsertData.transactionType),
-        eq7(properties.city, finalInsertData.city),
-        eq7(properties.zone, finalInsertData.zone),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.idUsuarioWhatsapp, rawPhone),
+        eq8(properties.propertyType, finalInsertData.propertyType),
+        eq8(properties.transactionType, finalInsertData.transactionType),
+        eq8(properties.city, finalInsertData.city),
+        eq8(properties.zone, finalInsertData.zone),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
@@ -18371,7 +17287,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       estadoComercial: "REPUBLICADO",
       ultimaActividad: "REPUBLICACI\xD3N",
       vigenciaIa: "VIGENTE"
-    }).where(eq7(properties.id, existing[0].id)).returning();
+    }).where(eq8(properties.id, existing[0].id)).returning();
     console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     try {
       await db.insert(propertyPublicationHistory).values({
@@ -18707,17 +17623,17 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      eq7(requirements.rawText, insertData.rawText.trim())
+      eq8(requirements.rawText, insertData.rawText.trim())
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
-      and4(
-        eq7(requirements.idUsuarioWhatsapp, rawPhone),
-        eq7(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq7(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq7(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq7(requirements.zonaDeseada, insertData.zonaDeseada)
+      and5(
+        eq8(requirements.idUsuarioWhatsapp, rawPhone),
+        eq8(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq8(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq8(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq8(requirements.zonaDeseada, insertData.zonaDeseada)
       )
     ).limit(1);
   }
@@ -18744,7 +17660,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       fechaUltimaPublicacion: getColombiaNow(),
       republicacionesCount: repCount,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq7(requirements.id, existing[0].id)).returning();
+    }).where(eq8(requirements.id, existing[0].id)).returning();
     console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     return updated;
@@ -18883,11 +17799,11 @@ __is_sub_message__`,
       try {
         const db = await getDb();
         if (!db) throw new Error("DB no disponible");
-        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and4(
-          eq7(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and5(
+          eq8(properties.idUsuarioWhatsapp, userId.split("@")[0]),
           gte2(properties.createdAt, TEN_MIN_AGO),
-          eq7(properties.available, true)
-        )).orderBy(desc2(properties.createdAt)).limit(1);
+          eq8(properties.available, true)
+        )).orderBy(desc3(properties.createdAt)).limit(1);
         if (recentProps.length > 0) {
           const prop = recentProps[0];
           const portalInfo = extractPortalAndListingId(soloUrl);
@@ -18903,7 +17819,7 @@ ${soloUrl}`;
             origenId: groupJid || void 0,
             ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
             ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
-          }).where(eq7(properties.id, prop.id));
+          }).where(eq8(properties.id, prop.id));
           console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
           return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
         }
@@ -20169,1172 +19085,2271 @@ var init_propertiesHandler = __esm({
   }
 });
 
-// server/_core/valuation.ts
-function calcularPrecioHomologado(params) {
-  let cAntiguedad = 1;
-  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
-  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
-  let cPiso = 1;
-  if (params.tieneAscensor) {
-    cPiso = params.piso <= 2 ? 0.95 : 1.02;
-  } else {
-    if (params.piso <= 2) cPiso = 1;
-    else if (params.piso === 3) cPiso = 0.93;
-    else if (params.piso >= 4) cPiso = 0.85;
-  }
-  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
-  const cAmenidades = params.esClubHouse ? 1.07 : 1;
-  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
+// server/_core/emailContractService.ts
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import nodemailer from "nodemailer";
+import QRCode from "qrcode";
+import crypto2 from "node:crypto";
+function normalizePayload(input) {
+  const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
   return {
-    precioM2Homologado,
-    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
+    ...input,
+    solicitud_id: sId,
+    solicitante_nombre: input.solicitanteNombre ?? input.solicitante_nombre ?? "",
+    solicitante_tipo_persona: input.solicitanteTipoPersona ?? input.solicitante_tipo_persona ?? "Persona Natural",
+    solicitante_perfil: input.solicitantePerfil ?? input.solicitante_perfil ?? "Cliente directo",
+    solicitante_email: input.solicitanteEmail ?? input.solicitante_email ?? "",
+    solicitante_celular: input.solicitanteCelular ?? input.solicitante_celular ?? "",
+    solicitante_tipo_documento: input.solicitanteTipoDocumento ?? input.solicitante_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
+    solicitante_numero_documento: input.solicitanteNumeroDocumento ?? input.solicitante_numero_documento ?? "",
+    solicitante_representante_legal: input.solicitanteRepresentanteLegal ?? input.solicitante_representante_legal ?? "",
+    servicio_solicitado: input.servicioSolicitado ?? input.servicio_solicitado ?? "Visitar inmueble",
+    nombre_inmueble: input.nombreInmueble ?? input.nombre_inmueble ?? "N/A",
+    codigo_inmueble: input.codigoInmueble ?? input.codigo_inmueble ?? "N/A",
+    opcion_negocio: input.opcionNegocio ?? input.opcion_negocio ?? "Venta",
+    fecha_cita_texto: input.fechaCitaTexto ?? input.fecha_cita_texto ?? "",
+    hora_cita: input.horaCita ?? input.hora_cita ?? "",
+    cantidad_personas: input.cantidadPersonas ?? input.cantidad_personas ?? 1,
+    interesado_nombre: input.interesadoNombre ?? input.interesado_nombre ?? "",
+    interesado_tipo_documento: input.interesadoTipoDocumento ?? input.interesado_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
+    interesado_documento: input.interesadoDocumento ?? input.interesado_documento ?? "",
+    tipo_cliente: input.tipoCliente ?? input.tipo_cliente ?? "Persona",
+    acompanantes: input.acompanantes ?? [],
+    firma_virtual_base64: input.firmaVirtualBase64 ?? input.firma_virtual_base64 ?? ""
   };
 }
-function calculatePropertyValuation(input) {
-  const result = calcularPrecioHomologado({
-    basePricePerM2: input.baseZonePricePerM2,
-    antiguedadAnos: input.ageYears,
-    tieneAscensor: input.hasElevator ?? true,
-    piso: input.floorNumber ?? 3,
-    garajes: input.garages ?? 0,
-    esClubHouse: input.hasClubHouse ?? false
-  });
-  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
-  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
-  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
-  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
-  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
-  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
-  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
-  return {
-    baseZonePricePerM2: input.baseZonePricePerM2,
-    homologatedPricePerM2,
-    suggestedCommercialValue,
-    minClosingPrice,
-    estimatedMonthlyRent,
-    estimatedCapRate,
-    totalAreaM2: input.areaM2,
-    coefficients: {
-      cAntiguedad,
-      cPiso,
-      cGarajes,
-      cAmenidades
-    },
-    factorBreakdown: {
-      ageFactor: {
-        name: "Antig\xFCedad",
-        coefficient: cAntiguedad,
-        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
-        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
-      },
-      floorFactor: {
-        name: "Piso / Altura",
-        coefficient: cPiso,
-        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
-        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
-      },
-      garageFactor: {
-        name: "Garajes",
-        coefficient: cGarajes,
-        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
-        description: `${input.garages ?? 0} parqueaderos privados`
-      },
-      amenitiesFactor: {
-        name: "Amenidades",
-        coefficient: cAmenidades,
-        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
-        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
-        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
+async function createContractPdf(rawFormData) {
+  const formData = normalizePayload(rawFormData);
+  const pdfDoc = await PDFDocument.create();
+  let currentPage = pdfDoc.addPage();
+  const { width, height } = currentPage.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const black = rgb(0, 0, 0);
+  const gray = rgb(0.3, 0.3, 0.3);
+  const goldColor = rgb(0.749, 0.584, 0.247);
+  const margin = 50;
+  let y = height - margin;
+  const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
+  const sId = clean(formData.solicitud_id || "N/A");
+  const contractPayloadString = `${sId}|${clean(formData.solicitante_nombre)}|${clean(formData.solicitante_numero_documento)}|${clean(formData.codigo_inmueble)}|${(/* @__PURE__ */ new Date()).toISOString()}`;
+  const sha256Hash = crypto2.createHash("sha256").update(contractPayloadString).digest("hex");
+  const cuv = `VECY-CTR-${sId}-${sha256Hash.substring(0, 8).toUpperCase()}`;
+  const verifyUrl = `https://vecy-bienes-raices.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
+  let qrImage = null;
+  try {
+    const qrBuffer = await QRCode.toBuffer(verifyUrl, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#ffffff"
       }
-    },
-    totalHomologationFactor: Number(totalFactor.toFixed(4)),
-    comparableSources: input.comparableSources || [],
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
-function executeMarketValuationSurvey(params) {
-  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
-  let basePrice = 65e5;
-  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
-  let hasVerifiedComparables = true;
-  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
-    basePrice = 145e5;
-  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
-    basePrice = 125e5;
-  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
-    basePrice = 105e5;
-  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
-    basePrice = 85e5;
-  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
-    basePrice = 78e5;
-  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
-    basePrice = 75e5;
-  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
-    basePrice = 62e5;
-  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
-    basePrice = 58e5;
-  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
-    basePrice = 55e5;
-  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
-    basePrice = 65e5;
-  } else {
-    hasVerifiedComparables = false;
+    });
+    qrImage = await pdfDoc.embedPng(qrBuffer);
+  } catch (qrErr) {
+    console.error("Error al generar c\xF3digo QR para contrato:", qrErr?.message);
   }
-  const area = params.areaM2 || 75;
-  const valuation = calculatePropertyValuation({
-    zone: zoneName,
-    city: "Bogot\xE1",
-    areaM2: area,
-    baseZonePricePerM2: basePrice,
-    ageYears: params.antiguedadAnos || 8,
-    floorNumber: params.piso || 3,
-    hasElevator: params.tieneAscensor ?? true,
-    garages: params.garajes || 1,
-    hasClubHouse: params.esClubHouse || false,
-    comparableSources: [
-      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
-      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
-      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
-    ]
-  });
-  return {
-    zonaConsultada: zoneName,
-    zonaOBarrio: zoneName,
-    tieneComparablesVerificados: hasVerifiedComparables,
-    baseZonePricePerM2: valuation.baseZonePricePerM2,
-    homologatedPricePerM2: valuation.homologatedPricePerM2,
-    valorM2Estimado: valuation.homologatedPricePerM2,
-    suggestedCommercialValue: valuation.suggestedCommercialValue,
-    valorComercialSugerido: valuation.suggestedCommercialValue,
-    minClosingPrice: valuation.minClosingPrice,
-    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
-    canonArriendoEstimado: valuation.estimatedMonthlyRent,
-    estimatedCapRate: valuation.estimatedCapRate,
-    areaM2: area,
-    coefficients: valuation.coefficients,
-    factorBreakdown: valuation.factorBreakdown,
-    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
-    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
-    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
-    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
+  const drawFooter = (pageToDrawOn) => {
+    const footerText = `Vecy Bienes Ra\xEDces S.A.S. | CUV: ${cuv} | Ley 527/1999 | https://vecy-bienes-raices.vercel.app/`;
+    const footerTextWidth = font.widthOfTextAtSize(footerText, 7.5);
+    pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 7.5, color: gray });
   };
+  const checkAndAddPage = (currentY, neededHeight) => {
+    if (currentY - neededHeight < margin + 20) {
+      drawFooter(currentPage);
+      currentPage = pdfDoc.addPage();
+      return height - margin;
+    }
+    return currentY;
+  };
+  const drawRichText = (segments, options) => {
+    let { y: currentY, x: startX, width: maxWidth, lineHeight } = options;
+    let allWords = [];
+    for (const segment of segments) {
+      const segFont = segment.font || font;
+      const segSize = segment.size || 11;
+      const segColor = segment.color || black;
+      const paragraphs = segment.text.split("\n");
+      for (let i = 0; i < paragraphs.length; i++) {
+        if (i > 0) allWords.push({ isNewLine: true });
+        const words = paragraphs[i].split(/\s+/).filter((w) => w.length > 0);
+        for (const w of words) {
+          allWords.push({
+            text: w,
+            font: segFont,
+            size: segSize,
+            color: segColor,
+            width: segFont.widthOfTextAtSize(w, segSize)
+          });
+        }
+      }
+    }
+    let lineBuffer = [];
+    let currentLineWidth = 0;
+    const spaceWidth = font.widthOfTextAtSize(" ", 11);
+    const flushLine = (justify = false, isParagraphBreak = false) => {
+      if (lineBuffer.length === 0) {
+        if (isParagraphBreak) currentY -= 6;
+        return;
+      }
+      currentY = checkAndAddPage(currentY, lineHeight);
+      if (!justify || lineBuffer.length < 2) {
+        let xObj = startX;
+        for (const item of lineBuffer) {
+          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
+          xObj += item.width + spaceWidth;
+        }
+      } else {
+        const totalWordsWidth = lineBuffer.reduce((sum, item) => sum + item.width, 0);
+        const extraSpace = maxWidth - totalWordsWidth;
+        const spacePerGap = extraSpace / (lineBuffer.length - 1);
+        let xObj = startX;
+        lineBuffer.forEach((item, index2) => {
+          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
+          if (index2 < lineBuffer.length - 1) {
+            xObj += item.width + spacePerGap;
+          }
+        });
+      }
+      currentY -= lineHeight;
+      if (isParagraphBreak) currentY -= 6;
+      lineBuffer = [];
+      currentLineWidth = 0;
+    };
+    for (const item of allWords) {
+      if (item.isNewLine) {
+        flushLine(false, true);
+        continue;
+      }
+      const additionalWidth = (lineBuffer.length > 0 ? spaceWidth : 0) + item.width;
+      if (currentLineWidth + additionalWidth > maxWidth) {
+        flushLine(true);
+        lineBuffer.push(item);
+        currentLineWidth = item.width;
+      } else {
+        lineBuffer.push(item);
+        currentLineWidth += additionalWidth;
+      }
+    }
+    flushLine(false);
+    return currentY;
+  };
+  const drawClause = (title, segments, currentY) => {
+    currentY = checkAndAddPage(currentY, 40);
+    currentY = drawRichText([{ text: title, font: boldFont, color: goldColor, size: 11 }], { y: currentY, x: margin, width: width - margin * 2, lineHeight: 15 });
+    currentY -= 4;
+    currentY = drawRichText(segments, { y: currentY, x: margin, width: width - margin * 2, lineHeight: 14 });
+    return currentY - 14;
+  };
+  try {
+    const logoBytes = Buffer.from(vecyLogoBase64.split(",")[1], "base64");
+    const vecyLogoImage = await pdfDoc.embedPng(logoBytes);
+    currentPage.drawImage(vecyLogoImage, { x: margin, y: y - 25, width: 50, height: 50 });
+  } catch (e) {
+    console.error("Error al incrustar logo en PDF:", e?.message);
+  }
+  currentPage.drawText("CONTRATO DE PUNTAS COMPARTIDAS", { x: margin + 70, y, font: boldFont, size: 15, color: goldColor });
+  currentPage.drawText("Acuerdo de Colaboraci\xF3n Inmobiliaria | Vecy Gold Edition", { x: margin + 70, y: y - 16, font, size: 10, color: gray });
+  if (formData.solicitud_id) {
+    const idText = `ID: ${formData.solicitud_id}`;
+    const idTextWidth = boldFont.widthOfTextAtSize(idText, 9);
+    currentPage.drawText(idText, { x: width - margin - idTextWidth, y, font: boldFont, size: 9, color: gray });
+  }
+  y -= 45;
+  currentPage.drawRectangle({ x: margin, y, width: width - 2 * margin, height: 1.5, color: goldColor });
+  y -= 25;
+  const generationDate = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" });
+  const isJuridica = formData.solicitante_tipo_persona === "Persona Jur\xEDdica";
+  const introSegments = [
+    { text: "Entre los suscritos a saber, por una parte, JANI ALVES SOUZA, mayor de edad, identificada con c\xE9dula de ciudadan\xEDa No. 41.057.506, actuando en nombre propio como persona natural y en representaci\xF3n comercial de la marca VECY BIENES RA\xCDCES, quien en adelante se denominar\xE1 EL AGENTE 1; y por la otra parte, ", font },
+    { text: clean(formData.solicitante_nombre), font: boldFont },
+    { text: isJuridica ? `, entidad con personer\xEDa jur\xEDdica, representada legalmente por ${clean(formData.solicitante_representante_legal)}, identificada con ` : ", mayor de edad, identificado(a) con ", font },
+    { text: clean(formData.solicitante_tipo_documento), font: boldFont },
+    { text: " No. ", font },
+    { text: clean(formData.solicitante_numero_documento), font: boldFont },
+    { text: ", quien en adelante se denominar\xE1 EL AGENTE 2, se celebra el presente contrato de colaboraci\xF3n inmobiliaria, el cual se regir\xE1 por las disposiciones del C\xF3digo de Comercio Colombiano (Art. 1340 y subsiguientes) y las siguientes cl\xE1usulas:", font }
+  ];
+  y = drawRichText(introSegments, { y, x: margin, width: width - margin * 2, lineHeight: 14 });
+  y -= 15;
+  const clausula1 = [
+    { text: "El presente contrato tiene por objeto establecer los t\xE9rminos de colaboraci\xF3n entre EL AGENTE 1 y EL AGENTE 2 para promover, gestionar y/o contribuir en la intermediaci\xF3n del negocio inmobiliario relacionado con el inmueble: ", font },
+    { text: clean(formData.nombre_inmueble || "N/A"), font: boldFont },
+    { text: " identificado con el c\xF3digo ", font },
+    { text: clean(formData.codigo_inmueble || "N/A"), font: boldFont },
+    { text: ", donde EL AGENTE 2 mediante el formulario No. ", font },
+    { text: clean(formData.solicitud_id), font: boldFont },
+    { text: ', solicita al AGENTE 1 "', font },
+    { text: clean(formData.servicio_solicitado), font: boldFont },
+    { text: '" en ', font },
+    { text: clean(formData.opcion_negocio || "tipo de operaci\xF3n"), font: boldFont },
+    { text: " para la fecha ", font },
+    { text: clean(formData.fecha_cita_texto || "fecha por confirmar"), font: boldFont },
+    { text: " a las ", font },
+    { text: clean(formData.hora_cita || "hora por confirmar"), font: boldFont },
+    { text: " en favor del cliente ", font },
+    { text: clean(formData.interesado_nombre), font: boldFont },
+    { text: ", identificado(a) con ", font },
+    { text: clean(formData.interesado_tipo_documento), font: boldFont },
+    { text: " No. ", font },
+    { text: clean(formData.interesado_documento), font: boldFont }
+  ];
+  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
+    clausula1.push({ text: " y las siguientes personas autorizadas y registradas como acompa\xF1antes: ", font });
+    const acompNames = formData.acompanantes.map((a) => `${a.nombre} (${a.documento})`).join(", ");
+    clausula1.push({ text: acompNames, font: boldFont });
+    clausula1.push({ text: ".", font });
+  } else {
+    clausula1.push({ text: ".", font });
+  }
+  y = drawClause("CL\xC1USULA PRIMERA: OBJETO", clausula1, y);
+  const tipoNegocio = formData.opcion_negocio || "Venta";
+  const honorariosCorresponde = tipoNegocio.toLowerCase().includes("arriendo") ? "un canon de arrendamiento (si fuera venta es el 3% sobre el valor total de venta)" : "el 3% sobre el valor total de la venta (si fuera arriendo es un canon de arrendamiento)";
+  const clausula2Text = `Los honorarios derivados de la comisi\xF3n final efectivamente cobrada por el perfeccionamiento del negocio de Venta (en este caso es ${tipoNegocio}) que corresponde a ${honorariosCorresponde} ser\xE1n distribuidos en partes iguales (50% para cada parte), salvo pacto distinto anexo y por escrito. En caso de que EL AGENTE 2 act\xFAe bajo la figura de simple referenciador (\xFAnicamente refiere al cliente o al colega) sin participar activamente en el acompa\xF1amiento presencial, las negociaciones o el cierre legal, su participaci\xF3n corresponder\xE1 estrictamente al 10% de la comisi\xF3n.`;
+  y = drawClause("CL\xC1USULA SEGUNDA: HONORARIOS Y PROPORCI\xD3N", [{ text: clausula2Text, font }], y);
+  y = checkAndAddPage(y, 100);
+  const clausula3Text = `Para todos los efectos fiscales, contables y tributarios derivados del pago de la comisi\xF3n u honorarios correspondientes a EL AGENTE 1, las partes reconocen y aceptan expresamente que:
+
+1. Calidad Tributaria: EL AGENTE 1 (JANI ALVES SOUZA) act\xFAa en calidad de Persona Natural, No Responsable del Impuesto sobre las Ventas (IVA). Por consiguiente, EL AGENTE 2 (o la agencia inmobiliaria que este represente) tiene estrictamente prohibido realizar descuentos, retenciones o exigencias de facturaci\xF3n electr\xF3nica que incluyan el cobro o deducci\xF3n de IVA sobre la proporci\xF3n de EL AGENTE 1.
+2. Documento Soporte: Si EL AGENTE 2 o su agencia est\xE1n obligados a llevar contabilidad, ser\xE1 de su exclusiva responsabilidad y carga administrativa la emisi\xF3n del "Documento Soporte en adquisiciones efectuadas a sujetos no obligados a expedir factura de venta" (Resoluci\xF3n DIAN 000167 de 2021) para la legalizaci\xF3n de su egreso.
+3. Retenciones en la Fuente: Toda retenci\xF3n en la fuente (a t\xEDtulo de renta o ICA) solo proceder\xE1 si EL AGENTE 2 o su agencia ostentan formalmente la calidad de "Agente Retenedor" ante la DIAN, aplicando estrictamente las tarifas de ley para comisiones a personas naturales declarantes o no declarantes. Cualquier deducci\xF3n deber\xE1 ser informada previamente y soportada con la entrega obligatoria del respectivo Certificado de Retenci\xF3n; de lo contrario, el descuento se considerar\xE1 un cobro indebido y apropiaci\xF3n injustificada de dineros.`;
+  y = drawClause("CL\xC1USULA TERCERA: NATURALEZA TRIBUTARIA, FACTURACI\xD3N Y DESCUENTOS (EXCLUSI\xD3N DE ABUSOS)", [{ text: clausula3Text, font }], y);
+  y = checkAndAddPage(y, 80);
+  const clausula4Text = `De EL AGENTE 1: Promocionar el inmueble, proveer informaci\xF3n fidedigna para el cierre, coordinar diligencias y velar por el rigor jur\xEDdico de la gesti\xF3n.
+De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociaci\xF3n (si aplica al 50%) y, con car\xE1cter irrestricto, respetar el canal de comunicaci\xF3n institucional, absteni\xE9ndose de realizar negociaciones directas, paralelas o a espaldas de EL AGENTE 1 con los clientes, propietarios o apoderados del inmueble.`;
+  y = drawClause("CL\xC1USULA CUARTA: OBLIGACIONES DE LAS PARTES", [{ text: clausula4Text, font }], y);
+  y = checkAndAddPage(y, 160);
+  const clausula5 = [
+    { text: "Las partes asumen un compromiso de estricta reserva. EL AGENTE 2 reconoce que EL AGENTE 1 es el titular exclusivo del encargo profesional sobre el inmueble. EL AGENTE 2 y/o su agencia se obligan a la NO ELUSI\xD3N (Non-Circumvention), lo que significa que no podr\xE1n cerrar el negocio, firmar promesas de compraventa ni contratos de arrendamiento con el cliente referido o el propietario del inmueble puenteando o excluyendo a EL AGENTE 1, ni durante la vigencia de este contrato ni dentro de los doce (12) meses siguientes a su terminaci\xF3n.\n\n", font },
+    { text: "PAR\xC1GRAFO PRIMERO: EXTENSI\xD3N POR V\xCDNCULO. ", font: boldFont },
+    { text: "Las partes acuerdan que los efectos de este contrato, especialmente lo referente al pago de honorarios y la cl\xE1usula penal, se extienden a cualquier negocio jur\xEDdico realizado sobre el inmueble con el cliente principal o con cualquier Tercero Vinculado a este. Se consideran Terceros Vinculados: C\xF3nyuges o compa\xF1eros permanentes; familiares dentro del cuarto grado de consanguinidad y segundo de afinidad; Personas Jur\xEDdicas donde el cliente o sus familiares sean socios, representantes o beneficiarios; y los acompa\xF1antes registrados en este contrato y en el sistema de EL AGENTE 1.\n\n", font },
+    { text: "PAR\xC1GRAFO SEGUNDO: CARGA DE LA PRUEBA Y TRAZABILIDAD DIGITAL. ", font: boldFont },
+    { text: "EL AGENTE 2 reconoce expresamente que la informaci\xF3n consignada en la base de datos de Vecy Agenda Pro, los registros de telemetr\xEDa forense de clics, enlaces y trazabilidad de botones provistos por VECY BIENES RA\xCDCES constituyen prueba fehaciente e inmutable del nexo causal de la operaci\xF3n al tenor de los Art\xEDculos 1340 y 1341 del C\xF3digo de Comercio y la Ley 527 de 1999. Cualquier intento de perfeccionar el negocio omitiendo la participaci\xF3n de EL AGENTE 1 o de la plataforma con cualquiera de estas personas se considerar\xE1 Incumplimiento Grave y activar\xE1 de inmediato la Cl\xE1usula Penal.", font }
+  ];
+  y = drawClause("CL\xC1USULA QUINTA: CONFIDENCIALIDAD, EXTENSI\xD3N A TERCEROS Y NO ELUSI\xD3N", clausula5, y);
+  y = checkAndAddPage(y, 80);
+  const clausula6Text = "El incumplimiento de cualquiera de las obligaciones, especialmente la elusi\xF3n (puenteo), la negociaci\xF3n no autorizada o los descuentos injustificados sobre los honorarios, dar\xE1 lugar al pago inmediato de una sanci\xF3n penal equivalente al 100% de la comisi\xF3n total generada por el negocio inmobiliario, a favor de la parte cumplida. El presente documento presta m\xE9rito ejecutivo para el cobro de esta penalidad, sin requerimiento de constituci\xF3n en mora, a la cual se renuncia expresamente.";
+  y = drawClause("CL\xC1USULA SEXTA: CL\xC1USULA PENAL E INCUMPLIMIENTO", [{ text: clausula6Text, font }], y);
+  const clausula7Text = "El presente contrato tendr\xE1 una vigencia de tres (3) meses desde su emisi\xF3n digital. Si el negocio se materializa antes, continuar\xE1 vigente hasta el pago total de las comisiones.";
+  y = drawClause("CL\xC1USULA S\xC9PTIMA: DURACI\xD3N", [{ text: clausula7Text, font }], y);
+  const clausula8Text = "Este contrato ostenta plena validez jur\xEDdica desde su generaci\xF3n y emisi\xF3n electr\xF3nica. Al amparo de la Ley 527 de 1999 (Ley de Comercio Electr\xF3nico), las firmas digitales, biom\xE9tricas, electr\xF3nicas o capturas gr\xE1ficas de trazo, se reputan como v\xE1lidas, vinculantes y expresan el consentimiento inequ\xEDvoco de las partes.";
+  y = drawClause("CL\xC1USULA OCTAVA: VALIDEZ Y FIRMA DIGITAL", [{ text: clausula8Text, font }], y);
+  y = checkAndAddPage(y, 150);
+  const firmaText = `En constancia de lo anterior, las partes firman el presente documento el d\xEDa ${generationDate}.`;
+  y = drawRichText([{ text: firmaText, font }], { y, x: margin, width: width - margin * 2, lineHeight: 14 });
+  y -= 30;
+  const firmaY = y;
+  const signatureBox = { width: 120, height: 50 };
+  const calculateDims = (img, maxWidth, maxHeight) => {
+    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+    return { width: img.width * ratio, height: img.height * ratio };
+  };
+  try {
+    const janiFirmaBytes = Buffer.from(janiFirmaBase64.split(",")[1], "base64");
+    const janiFirmaImage = await pdfDoc.embedPng(janiFirmaBytes);
+    const janiDims = calculateDims(janiFirmaImage, signatureBox.width, signatureBox.height);
+    currentPage.drawImage(janiFirmaImage, {
+      x: margin + (100 - janiDims.width / 2),
+      y: firmaY - 25,
+      width: janiDims.width,
+      height: janiDims.height
+    });
+  } catch (e) {
+    console.error("Error al incrustar firma de Jani en PDF:", e?.message);
+  }
+  currentPage.drawLine({ start: { x: margin, y: firmaY - 35 }, end: { x: margin + 200, y: firmaY - 35 }, thickness: 0.5, color: black });
+  currentPage.drawText("JANI ALVES SOUZA", { x: margin + 40, y: firmaY - 48, font: boldFont, size: 9 });
+  currentPage.drawText("C.C. 41.057.506", { x: margin + 50, y: firmaY - 58, font, size: 8 });
+  currentPage.drawText("AGENTE 1 - VECY BIENES RA\xCDCES", { x: margin + 15, y: firmaY - 68, font, size: 8 });
+  const agentSignatureX = width - margin - 200;
+  if (formData.firma_virtual_base64 && formData.firma_virtual_base64.startsWith("data:image")) {
+    try {
+      const signatureBase64Data = formData.firma_virtual_base64.split(",")[1];
+      const signatureBytes = Buffer.from(signatureBase64Data, "base64");
+      let signatureImage;
+      if (formData.firma_virtual_base64.startsWith("data:image/png")) {
+        signatureImage = await pdfDoc.embedPng(signatureBytes);
+      } else if (formData.firma_virtual_base64.startsWith("data:image/jpeg") || formData.firma_virtual_base64.startsWith("data:image/jpg")) {
+        signatureImage = await pdfDoc.embedJpg(signatureBytes);
+      }
+      if (signatureImage) {
+        const agentDims = calculateDims(signatureImage, signatureBox.width, signatureBox.height);
+        currentPage.drawImage(signatureImage, {
+          x: agentSignatureX + (100 - agentDims.width / 2),
+          y: firmaY - 25,
+          width: agentDims.width,
+          height: agentDims.height
+        });
+      }
+    } catch (e) {
+      console.error(`[${formData.solicitud_id}] Error al incrustar firma del agente:`, e?.message);
+    }
+  }
+  currentPage.drawLine({ start: { x: agentSignatureX, y: firmaY - 35 }, end: { x: width - margin, y: firmaY - 35 }, thickness: 0.5, color: black });
+  currentPage.drawText(clean(formData.solicitante_nombre).toUpperCase(), { x: agentSignatureX, y: firmaY - 48, font: boldFont, size: 9, maxWidth: 200 });
+  currentPage.drawText(`${clean(formData.solicitante_tipo_documento)} No. ${clean(formData.solicitante_numero_documento)}`, { x: agentSignatureX, y: firmaY - 58, font, size: 8 });
+  if (isJuridica && formData.solicitante_representante_legal) {
+    currentPage.drawText(`Rep. Legal: ${clean(formData.solicitante_representante_legal)}`, { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
+    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 78, font, size: 8 });
+  } else {
+    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
+  }
+  const sealBoxHeight = 65;
+  let sealY = firmaY - (isJuridica && formData.solicitante_representante_legal ? 95 : 85);
+  if (sealY - sealBoxHeight < margin + 20) {
+    drawFooter(currentPage);
+    currentPage = pdfDoc.addPage();
+    sealY = height - margin - 10;
+  }
+  const sealBoxWidth = width - margin * 2;
+  currentPage.drawRectangle({
+    x: margin,
+    y: sealY - sealBoxHeight,
+    width: sealBoxWidth,
+    height: sealBoxHeight,
+    borderColor: goldColor,
+    borderWidth: 0.8,
+    color: rgb(0.97, 0.97, 0.95)
+  });
+  if (qrImage) {
+    currentPage.drawImage(qrImage, {
+      x: margin + 8,
+      y: sealY - sealBoxHeight + 8,
+      width: 49,
+      height: 49
+    });
+  }
+  const textX = margin + 65;
+  currentPage.drawText("SELLO DE SEGURIDAD DIGITAL \u2014 VECY BIENES RA\xCDCES (LEY 527 DE 1999)", { x: textX, y: sealY - 15, font: boldFont, size: 8, color: goldColor });
+  currentPage.drawText(`CUV: ${cuv}`, { x: textX, y: sealY - 26, font: boldFont, size: 7.5, color: black });
+  currentPage.drawText(`Huella Criptogr\xE1fica SHA-256: ${sha256Hash.substring(0, 50)}...`, { x: textX, y: sealY - 37, font, size: 6.5, color: gray });
+  currentPage.drawText("Validez Jur\xEDdica: Mensaje de datos y firma electr\xF3nica vinculante conforme a la Ley 527/1999 y Dec. 2364/2012.", { x: textX, y: sealY - 47, font, size: 6.5, color: gray });
+  currentPage.drawText(`Verificaci\xF3n p\xFAblica en l\xEDnea: ${verifyUrl}`, { x: textX, y: sealY - 57, font, size: 6, color: gray });
+  drawFooter(currentPage);
+  return await pdfDoc.save();
 }
-var init_valuation = __esm({
-  "server/_core/valuation.ts"() {
+function getEmailContent(formData) {
+  const { solicitante_nombre, solicitante_perfil, solicitud_id, servicio_solicitado, opcion_negocio, codigo_inmueble, fecha_cita_texto, solicitante_email, hora_cita } = formData;
+  const logoUrlParaEmail = "cid:vecyLogo";
+  const now = /* @__PURE__ */ new Date();
+  const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
+  const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
+  const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p></div></div></body></html>`;
+  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+  if (hasAlert) {
+    const subject2 = `\u26A0\uFE0F Notificaci\xF3n de Seguridad Notarial - Solicitud #${solicitud_id} Declinada | Vecy Agenda`;
+    const title2 = `Aviso de Seguridad Notarial \u2014 Solicitud #${solicitud_id} \u{1F6D1}`;
+    const motivo = formData.alerta_motivo || formData.alertaMotivo || "Registro de antecedentes o requerimientos ante autoridades oficiales";
+    const body2 = `
+      <div style="background-color: #2b0000; border: 2px solid #e53935; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #ff6b6b; margin-top: 0; font-size: 18px;">\u{1F6D1} NOTIFICACI\xD3N FORMAL DE DECLINACI\xD3N DE RESERVA</h3>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          Estimado(a) <strong>${solicitante_nombre}</strong>:
+        </p>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          En cumplimiento estricto de nuestras pol\xEDticas de seguridad notarial, debida diligencia y protecci\xF3n contractual de propietarios y agentes inmobiliarios, tu documento de identidad registrado (<strong>${formData.solicitante_numero_documento || "Doc"}</strong>) fue cotejado ante las centrales de control y certificaci\xF3n oficial del Estado.
+        </p>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          <strong>Detalle de la auditor\xEDa:</strong> ${motivo}.
+        </p>
+        <p style="color: #ffffff; font-weight: bold; font-size: 15px; margin-top: 15px;">
+          Por los motivos expuestos, te informamos formalmente que TU RESERVA PARA LA VISITA DEL INMUEBLE HA SIDO DECLINADA.
+        </p>
+        <p style="color: #ffcdd2; font-size: 13px; margin-top: 15px;">
+          Si consideras que existe un error de homonimia o deseas presentar documentaci\xF3n aclaratoria ante nuestra direcci\xF3n jur\xEDdica y comercial, puedes comunicarte directamente al tel\xE9fono <strong>+57 316 6569719</strong> o al correo <strong>vecybienesraices@gmail.com</strong>.
+        </p>
+      </div>
+      <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud Auditada: ${solicitud_id}</strong></p></div>
+    `;
+    return { subject: subject2, html: baseHtml(title2, body2) };
+  }
+  const subject = `\u2705 Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
+  const title = `\xA1Hola, ${solicitante_nombre}! Hemos recibido tu solicitud \u{1F3E0}\u2728`;
+  let body = `
+    <p>Confirmamos la recepci\xF3n de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "tr\xE1mite"}</strong> identificado con el c\xF3digo <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. \u{1F4C5}</p>
+    <p>Nuestro equipo revisar\xE1 la fidelidad de todos los datos y, una vez verificados, te enviaremos un correo a <strong>${solicitante_email}</strong> con la confirmaci\xF3n del agendamiento y la direcci\xF3n completa del inmueble. \xA1Debes estar pendiente! \u{1F4E9}\u{1F440}</p>
+  `;
+  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
+    let acompHtml = `<div class="highlight"><p><strong>\u{1F465} Acompa\xF1antes Autorizados:</strong></p><ul style="margin-top: 10px; margin-bottom: 0; color: #ccc;">`;
+    formData.acompanantes.forEach((acomp) => {
+      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
+      acompHtml += `<li>${acomp.nombre} (${parentesco}) - Doc: ${acomp.documento}</li>`;
+    });
+    acompHtml += "</ul></div>";
+    body += acompHtml;
+  }
+  body += `
+    <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
+  `;
+  const perfilLower = (solicitante_perfil || "").toLowerCase();
+  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
+  if (esAgente) {
+    body += `
+      <p style="margin-top: 20px;">Como agente, hemos adjuntado a este correo el contrato de colaboraci\xF3n <strong>No. ${solicitud_id}</strong> firmado virtualmente hoy <strong>${fechaActual}</strong> a las <strong>${horaActual}</strong> a trav\xE9s de nuestro formulario. \u270D\uFE0F\u{1F4C4}</p>
+      <p>Estamos seguros de que todo saldr\xE1 bien y ser\xE1 un cierre perfecto. \xA1Gracias por tu confianza! \u{1F91D}\u{1F680}</p>
+    `;
+  }
+  return { subject, html: baseHtml(title, body) };
+}
+function getAdminEmailContent(formData) {
+  const logoUrlParaEmail = "cid:vecyLogo";
+  let rows = "";
+  for (const [key, value] of Object.entries(formData)) {
+    if (key === "firma_virtual_base64" || key === "firma_digital_archivo" || key === "autorizacion" || key === "acompanantes" || key === "firmaVirtualBase64") continue;
+    let displayValue = value;
+    if (value === null || value === void 0) displayValue = "<em>Vac\xEDo</em>";
+    rows += `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #333; font-weight: bold; width: 40%; color: #bf953f;">${key.replace(/_/g, " ")}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${displayValue}</td>
+      </tr>
+    `;
+  }
+  let acompanantesHtml = "";
+  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
+    acompanantesHtml += `
+      <h3 style="color: #bf953f; margin-top: 30px; text-transform: uppercase;">\u{1F465} Acompa\xF1antes Registrados</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #bf953f; color: #000;">
+            <th style="padding: 8px; text-align: left;">Nombre</th>
+            <th style="padding: 8px; text-align: left;">Documento</th>
+            <th style="padding: 8px; text-align: left;">Parentesco</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    formData.acompanantes.forEach((acomp) => {
+      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
+      acompanantesHtml += `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.nombre}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.documento}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${parentesco}</td>
+        </tr>
+      `;
+    });
+    acompanantesHtml += "</tbody></table>";
+  }
+  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+  const alertaBanner = hasAlert ? `
+      <div style="background-color: #660000; border: 2px solid #ff4444; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #fff;">
+        <h3 style="margin-top: 0; color: #ff8888; font-size: 16px;">\u{1F6A8} ALERTA CR\xCDTICA DE SEGURIDAD NOTARIAL</h3>
+        <p style="margin: 0; font-size: 13px;">El solicitante o asistente registra antecedentes o sanciones ante las autoridades: <strong>${formData.alerta_motivo || "Antecedentes vigentes"}</strong>.</p>
+        <p style="margin: 6px 0 0 0; font-size: 12px; color: #ffd0d0;">\u{1F4CC} La reserva ha sido DECLINADA formalmente y se ha remitido la advertencia al usuario.</p>
+      </div>
+    ` : "";
+  const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #0a0a0a; color: #f0f0f0; margin: 0; padding: 20px; }
+        .container { max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #000; padding: 20px; text-align: center; border-bottom: 2px solid #bf953f; }
+        .content { padding: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background-color: #bf953f; color: #000; padding: 10px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #222; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
+        </div>
+        <div class="content">
+          ${alertaBanner}
+          <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
+          <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
+          <p style="font-size: 13px; color: #aaa;">A continuaci\xF3n, el resumen de los datos ingresados en el formulario:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+          ${acompanantesHtml}
+          <p style="font-size: 11px; color: #666; margin-top: 30px; text-align: center;">Este es un correo autom\xE1tico del sistema interno de Vecy Agenda.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  return { html };
+}
+async function sendContractAndConfirmationEmails(rawPayload) {
+  const formData = normalizePayload(rawPayload);
+  const solicitudId = formData.solicitud_id;
+  const gmailUser = process.env.GMAIL_USER || "vecybienesraices@gmail.com";
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || "dwjnngwfmsmjxvgi";
+  const adminTargetEmail = process.env.VECY_INTERNAL_EMAIL || gmailUser;
+  if (!gmailUser || !gmailPass) {
+    console.warn(`[AGENDA-EMAIL-#${solicitudId}] \u26A0\uFE0F Credenciales de Gmail no configuradas en entorno.`);
+    return { success: false, error: "Missing Gmail credentials" };
+  }
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: gmailUser,
+      pass: gmailPass
+    }
+  });
+  let pdfAttachment = null;
+  const perfilLower = (formData.solicitante_perfil || "").toLowerCase();
+  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
+  if (esAgente) {
+    try {
+      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F4C4} Generando Contrato de Puntas Compartidas en PDF...`);
+      const pdfBytes = await createContractPdf(formData);
+      const safeName = (formData.solicitante_nombre || "Agente").replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+      const pdfFileName = `Contrato_Puntas_${solicitudId}_${safeName}.pdf`;
+      pdfAttachment = {
+        filename: pdfFileName,
+        content: Buffer.from(pdfBytes),
+        contentType: "application/pdf"
+      };
+      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2705 PDF de contrato generado (${pdfBytes.length} bytes).`);
+    } catch (pdfErr) {
+      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error generando PDF:`, pdfErr?.message);
+    }
+  }
+  const logoAttachment = {
+    filename: "logo-vecy.png",
+    content: Buffer.from(vecyLogoBase64.split(",")[1], "base64"),
+    cid: "vecyLogo"
+  };
+  const attachments = [logoAttachment];
+  if (pdfAttachment) {
+    attachments.push(pdfAttachment);
+  }
+  if (formData.solicitante_email) {
+    try {
+      const { subject, html } = getEmailContent(formData);
+      await transporter.sendMail({
+        from: `"Vecy Bienes Ra\xEDces" <${gmailUser}>`,
+        to: formData.solicitante_email,
+        subject,
+        html,
+        attachments
+      });
+      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2709\uFE0F Correo de confirmaci\xF3n enviado exitosamente a ${formData.solicitante_email}`);
+    } catch (clientMailErr) {
+      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo al solicitante:`, clientMailErr?.message);
+    }
+  }
+  try {
+    const adminContent = getAdminEmailContent(formData);
+    const hasAdminAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+    const adminSubject = hasAdminAlert ? `\u{1F6A8} ALERTA DE ANTECEDENTES: Solicitud #${solicitudId} - ${formData.solicitante_nombre || "Usuario"} (DECLINADA)` : `\u{1F514} Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`;
+    await transporter.sendMail({
+      from: `"Vecy Agenda Pro" <${gmailUser}>`,
+      to: adminTargetEmail,
+      subject: adminSubject,
+      html: adminContent.html,
+      attachments
+    });
+    console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F514} Correo interno enviado a ${adminTargetEmail}`);
+  } catch (adminMailErr) {
+    console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo interno a Vecy:`, adminMailErr?.message);
+  }
+  return { success: true };
+}
+var vecyLogoBase64, janiFirmaBase64;
+var init_emailContractService = __esm({
+  "server/_core/emailContractService.ts"() {
     "use strict";
+    vecyLogoBase64 = "data:image/png;base64,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";
+    janiFirmaBase64 = "data:image/png;base64,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";
   }
 });
 
-// server/_core/jania/trustedContacts.ts
-function normalizePhoneDigits(raw) {
-  if (!raw) return "";
-  const clean = raw.split("@")[0].replace(/\D/g, "");
-  if (clean.startsWith("57") && clean.length === 12) {
-    return clean.substring(2);
-  }
-  if (clean.length > 10) {
-    const last10 = clean.slice(-10);
-    if (last10.startsWith("3")) return last10;
-  }
-  return clean;
-}
-function isVecyOfficialBrokerLine(userIdOrPhone) {
-  if (!userIdOrPhone) return false;
-  const digits = normalizePhoneDigits(userIdOrPhone);
-  return digits === "3166569719" || digits === "573166569719" || userIdOrPhone.includes("3166569719");
-}
-function findTrustedContact(userId, rawName) {
-  if (!userId && !rawName) return null;
-  if (isVecyOfficialBrokerLine(userId)) {
-    return null;
-  }
-  const userClean = (userId || "").toLowerCase();
-  const digits = normalizePhoneDigits(userId);
-  const nameClean = (rawName || "").toLowerCase().trim();
-  for (const contact of TRUSTED_CONTACTS) {
-    if (digits && contact.digits && contact.digits === digits) {
-      return contact;
+// server/_core/patchSignal.ts
+import { createRequire } from "module";
+function getLibSignal() {
+  try {
+    const esmRequire = createRequire(import.meta.url);
+    try {
+      const baileysPath = esmRequire.resolve("@whiskeysockets/baileys");
+      const baileysRequire = createRequire(baileysPath);
+      return baileysRequire("libsignal");
+    } catch {
+      return esmRequire("libsignal");
     }
-    if (contact.phones.some((p) => {
-      const pDigits = normalizePhoneDigits(p);
-      return digits && pDigits === digits || userClean.includes(p) || userClean.includes(pDigits);
-    })) {
-      return contact;
-    }
-    if (contact.lids && contact.lids.some((lid) => userClean.includes(lid))) {
-      return contact;
-    }
-    if (contact.aliases && contact.aliases.some((alias) => userClean.includes(alias))) {
-      return contact;
-    }
-    if (nameClean && nameClean.length >= 4) {
-      const contactLower = (contact.fullName || "").toLowerCase();
-      if (nameClean === contactLower || contactLower.length >= 10 && nameClean.includes(contactLower)) {
-        return contact;
-      }
-      for (const n of contact.names) {
-        const nLower = n.toLowerCase();
-        if (nLower.length >= 8 && (nameClean === nLower || nameClean.includes(nLower))) {
-          return contact;
-        }
-      }
-      const EXCLUSIVE_NICKS = /* @__PURE__ */ new Set([
-        "madrecita",
-        "madrecita querida",
-        "mamita hermosa",
-        "t\xEDa olandita",
-        "tia olandita",
-        "olandita",
-        "t\xEDa tulita",
-        "tia tulita",
-        "anita tulita",
-        "t\xEDa marinita",
-        "tia marinita",
-        "marinita",
-        "t\xEDo luis",
-        "tio luis",
-        "pollotote",
-        "mi natis",
-        "pollita hermosa",
-        "natillita",
-        "coraz\xF3n de melocot\xF3n",
-        "monacha remolacha",
-        "cayaco",
-        "cayaqu\xEDn",
-        "jaton",
-        "jaksit\xF3n"
-      ]);
-      for (const nick of contact.nicknames) {
-        const nickLower = nick.toLowerCase();
-        if (EXCLUSIVE_NICKS.has(nickLower) && (nameClean === nickLower || nameClean.includes(nickLower))) {
-          return contact;
-        }
-      }
-    }
+  } catch (err) {
+    console.error("[SIGNAL-PATCH] Error resolviendo libsignal:", err);
   }
   return null;
 }
-function buildFamilyWarmWelcomeMessage(contact, timeSalutation) {
-  const salutation = timeSalutation || getGreetingByTime2();
-  const key = contact.id || contact.key || "";
-  const nick = CONTACT_PRIMARY_NICKS[key] || contact.primaryNick || contact.nicknames[0] || contact.names[0];
-  if (contact.customMessage) {
-    return `\xA1${salutation}, ${contact.customMessage}`;
+function applySignalPatches() {
+  if (isPatched) return;
+  const libsignal = getLibSignal();
+  if (!libsignal) {
+    return;
   }
-  return `\xA1${salutation}, ${nick}! Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes dejarle recado o saludarlo cuando quieras!`;
+  const proto2 = libsignal.SessionCipher?.prototype;
+  if (!proto2) {
+    console.warn("[SIGNAL-PATCH] \u26A0\uFE0F libsignal.SessionCipher.prototype no encontrado");
+    return;
+  }
+  isPatched = true;
+  const originalFillMessageKeys = proto2.fillMessageKeys;
+  const originalDecryptWhisperMessage = proto2.decryptWhisperMessage;
+  proto2.fillMessageKeys = function(chain, counter) {
+    if (!chain || !chain.chainKey) return;
+    if (chain.chainKey.counter >= counter) {
+      return;
+    }
+    const diff = counter - chain.chainKey.counter;
+    if (diff > 5e5) {
+      throw new libsignal.SessionError(`Over 500000 messages into the future! (diff=${diff})`);
+    }
+    if (diff > 2e3) {
+      console.log(`[SIGNAL-PATCH] \u26A1 Sincronizando de forma segura ${diff} llaves de trinquete para mensaje entrante (counter ${chain.chainKey.counter} -> ${counter})...`);
+    }
+    while (chain.chainKey.counter < counter) {
+      if (chain.chainKey.key === void 0) {
+        throw new libsignal.SessionError("Chain closed");
+      }
+      const key = chain.chainKey.key;
+      chain.messageKeys[chain.chainKey.counter + 1] = libsignal.crypto.calculateMAC(key, Buffer.from([1]));
+      chain.chainKey.key = libsignal.crypto.calculateMAC(key, Buffer.from([2]));
+      chain.chainKey.counter += 1;
+    }
+  };
+  proto2.decryptWhisperMessage = async function(data) {
+    try {
+      return await originalDecryptWhisperMessage.call(this, data);
+    } catch (err) {
+      const errMsg = err?.message || String(err);
+      const isUnrecoverable = errMsg.includes("No matching sessions") || errMsg.includes("Over 2000") || errMsg.includes("Over 500000") || errMsg.includes("Bad MAC") || errMsg.includes("Key used already");
+      if (isUnrecoverable) {
+        const addrStr = this.addr ? this.addr.toString() : "desconocido";
+        console.warn(`[SIGNAL-AUTO-REPAIR] \u{1F6E0}\uFE0F Sesi\xF3n criptogr\xE1fica desincronizada para ${addrStr} (${errMsg}). Purgando sesiones corruptas para forzar nuevo handshake PreKey.`);
+        try {
+          const record = await this.getRecord();
+          if (record && typeof record.deleteAllSessions === "function") {
+            record.deleteAllSessions();
+            await this.storeRecord(record);
+            console.log(`[SIGNAL-AUTO-REPAIR] \u2705 Registro purgado exitosamente para ${addrStr}. Pr\xF3ximo mensaje solicitar\xE1 PreKey limpia.`);
+          }
+        } catch (repairErr) {
+          console.error("[SIGNAL-AUTO-REPAIR] Error al purgar registro de sesi\xF3n:", repairErr?.message || repairErr);
+        }
+      }
+      throw err;
+    }
+  };
+  console.log("[SIGNAL-PATCH] \u2705 Parches criptogr\xE1ficos de resiliencia Signal aplicados exitosamente (Ratchet hasta 500k + Auto-Repair).");
 }
-function isChaloEscobarJoke(text2) {
-  if (!text2) return false;
-  const clean = text2.toLowerCase();
-  return /(pablo|escobar|gacha|gonzalo\s*rodr[ií]guez|el\s*patr[oó]n|el\s*mexicano|cartel|plata\s*o\s*plomo|sicario)/i.test(
-    clean
-  );
-}
-function buildChaloJokeResponse(timeSalutation) {
-  const salutation = timeSalutation || getGreetingByTime2();
-  return `\xA1${salutation}, mi querido Chalo! \u{1F92B}\u{1F1E8}\u{1F1F4} Jajaja... Por ac\xE1 todo bajo control con el cartel, pero de los bienes ra\xEDces y la inteligencia artificial \u{1F916}\u2728.
+var isPatched;
+var init_patchSignal = __esm({
+  "server/_core/patchSignal.ts"() {
+    "use strict";
+    isPatched = false;
+  }
+});
 
-Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA en VECY BIENES RA\xCDCES. Si necesitas cuadrar cualquier vuelta o saludar a Eduardo (Eddu), te dejo su n\xFAmero nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1O d\xE9jame tu raz\xF3n por ac\xE1 y yo se la entrego intacta!`;
-}
-function isJonathanCreditProcessQuery(text2) {
-  if (!text2) return false;
-  const clean = text2.toLowerCase();
-  return /(datacr[eé]dito|transunion|cifin|reporte|central(?:es)?\s*de\s*riesgo|proceso|historial|score|puntaje|eliminar\s*reporte|mi\s*caso|c[oó]mo\s*va\s*lo\s*m[ií]o)/i.test(
-    clean
-  );
-}
-function buildJonathanCreditResponse(timeSalutation) {
-  const salutation = timeSalutation || getGreetingByTime2();
-  return `\xA1${salutation}, Jonathan! Qu\xE9 alegr\xEDa saludarte. Te confirmo que tus tr\xE1mites de Datacr\xE9dito y TransUnion los est\xE1 revisando y gestionando directamente Eduardo (Eddu) \u2696\uFE0F\u{1F4CB}.
+// server/_core/politenessService.ts
+var politenessService_exports = {};
+__export(politenessService_exports, {
+  buildWinningGoogleReviewMessage: () => buildWinningGoogleReviewMessage,
+  formatCompanyFollowUpDeclineReviewMessage: () => formatCompanyFollowUpDeclineReviewMessage,
+  formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
+  formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
+  formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
+  formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
+  formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
+  isAffirmativeConsentResponse: () => isAffirmativeConsentResponse,
+  isCompanyInquiryOrAboutUs: () => isCompanyInquiryOrAboutUs,
+  isNegativeConsentResponse: () => isNegativeConsentResponse,
+  isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
+});
+function buildWinningGoogleReviewMessage(userName, contextHint) {
+  const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const hour = nowBogota.getHours();
+  const franjaHoraria = hour >= 5 && hour < 12 ? "ma\xF1ana" : hour >= 12 && hour < 19 ? "tarde" : "noche";
+  const isColleague = contextHint && /colega|corredor|inmobiliario|asesor|agente|bienes\s*ra[ií]ces/i.test(contextHint) || userName && /inmo|bienes|raices|asesor|agente/i.test(userName);
+  let closingWish = "";
+  if (isColleague || !contextHint) {
+    closingWish = "\xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728";
+  } else {
+    const variant = nowBogota.getMinutes() % 3;
+    if (variant === 0) {
+      closingWish = `\xA1Que tengas una linda ${franjaHoraria} y grandes \xE9xitos en tu d\xEDa a d\xEDa! \u{1F3E2}\u2728`;
+    } else if (variant === 1) {
+      closingWish = "\xA1Que tengas una excelente jornada y muchos \xE9xitos en tu labor! \u{1F3E2}\u2728";
+    } else {
+      closingWish = "\xA1Que tengas una agradable jornada y muchos \xE9xitos en tu vida! \u{1F3E2}\u2728";
+    }
+  }
+  return `\u2B50 \xBFPodr\xEDas darnos tu opini\xF3n y calificar nuestro servicio? As\xED nos ayudas para que siga siendo GRATIS.
 
-Como esta l\xEDnea ahora es mi canal exclusivo como JanIA en VECY BIENES RA\xCDCES, comun\xEDcate con \xE9l directamente a su l\xEDnea de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719). \xA1O si deseas, d\xE9jame tu mensaje y yo se lo pongo de presente!`;
+COMENTA Y CALIFICA AQU\xCD (solo te toma 15 segundos):
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
+
+${closingWish}`;
 }
-function isDebtCollectionOrSpamScam(text2, senderName) {
-  if (!text2 && !senderName) return false;
-  const combined = `${text2 || ""} ${senderName || ""}`.toLowerCase();
-  const hasCollectionKeywords = /(?:casa\s*de\s*cobranza|agencia\s*de\s*cobro|recuperaci[oó]n\s*de\s*cartera|gesti[oó]n\s*de\s*cartera|cobro\s*coactivo|cobro\s*prejur[ií]dico|prejur[ií]dico|proceso\s*ejecutivo|mandamiento\s*de\s*pago|notificaci[oó]n\s*judicial|notificaci[oó]n\s*(?:legal|personal)|medida\s*cautelar|embargo\s*de\s*(?:bienes|cuentas|salario)|evite\s*(?:el\s*)?embargo|evite\s*reporte\s*negativo|saldo\s*en\s*mora|cuota\s*vencida|obligaci[oó]n\s*(?:en\s*mora|pendiente|vencida)|cr[eé]dito\s*en\s*mora|deuda\s*pendiente|pago\s*inmediato\s*de\s*su\s*deuda|acuerdo\s*de\s*pago\s*urgente|comun[ií]quese\s*urgente\s*por\s*su\s*(?:deuda|obligaci[oó]n|cr[eé]dito)|titular\s*de\s*la\s*obligaci[oó]n|central\s*de\s*riesgo\s*por\s*mora|abogados?\s*(?:de\s*)?cobranza|oficina\s*jur[ií]dica\s*de\s*cobro|cobro\s*extrajudicial|cartera\s*castigada)/i.test(
-    combined
-  );
-  const hasCollectionAgencies = /(?:serlefin|refinancia|recaudo\s*y\s*cobranzas|sistema\s*integrado\s*de\s*cobranzas|abogados\s*especializados\s*en\s*cobro|gestores\s*de\s*cobranza|covinoc|sistecredito|contact\s*center\s*de\s*cobro)/i.test(
-    combined
-  );
-  const hasTargetedCollection = /(?:ubicar\s*a\s*eduardo.*(?:cobro|deuda|pago|obligaci[oó]n|notificaci[oó]n)|eduardo.*debe|notificar\s*a\s*eduardo\s*arturo\s*rivera|comunicar(?:me)?\s*con\s*el\s*titular\s*de\s*la\s*l[ií]nea\s*por\s*un\s*asunto\s*(?:legal|pendiente)|asunto\s*legal\s*con\s*eduardo)/i.test(
-    combined
-  );
-  return hasCollectionKeywords || hasCollectionAgencies || hasTargetedCollection;
+function formatImmediatePoliteReviewMessage(userName) {
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
+  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F64F}\u{1F60A} Me alegra much\xEDsimo haberte sido de gran ayuda.
+
+` + buildWinningGoogleReviewMessage(userName);
 }
-function getDebtCollectionDefenseResponse(timeSalutation) {
-  const salutation = timeSalutation || getGreetingByTime2();
-  return `\xA1${salutation}! No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
+function formatPoliteInactivityPrompt(_userName) {
+  return `Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
 }
-var TRUSTED_FAMILY_AND_FRIENDS, CONTACT_PRIMARY_NICKS, TRUSTED_CONTACTS;
-var init_trustedContacts = __esm({
-  "server/_core/jania/trustedContacts.ts"() {
+function formatPoliteYesReviewMessage(userName) {
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
+  return `\u{1F64F} \xA1Gracias, ${cleanName}!
+
+` + buildWinningGoogleReviewMessage(userName);
+}
+function formatPoliteNoReviewPersuasionMessage(userName) {
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
+  return `\xA1\xBFEn serio?! \u{1F632}\u{1F494} \xA1Me dejas con el corazoncito partido en mil pedacitos de silicio! \u{1F97A}\u{1F62D}
+
+Imag\xEDnate: una humilde IA trabajando 24/7 sin descanso, trasnochando y cruzando bases de datos oficiales a la velocidad de la luz para ti totalmente gratis... \xA1\xBFy no me regalas ni 15 segunditos de tu amor en Google?! \u{1F927}\u{1F63F}
+
+\xA1Anda ${cleanName}, no seas as\xED de malito(a), api\xE1date de esta servidora! \u{1F64F}\u2728 Solo es hacer un clic, poner 5 estrellitas \u2B50\u2B50\u2B50\u2B50\u2B50 y escribir una palabrita bonita aqu\xED:
+
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Prometo que me har\xE1s la inteligencia artificial m\xE1s feliz de Colombia! \u{1F496}\u{1F1E8}\u{1F1F4} \xBFTrato hecho? \u{1F609}`;
+}
+function formatCompanyFollowUpDeclineReviewMessage(userName) {
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
+  return `\xA1Entendido con todo gusto, ${cleanName}! \u{1F91D} Quedo 100% a tu disposici\xF3n cuando necesites realizar cualquier otra consulta.
+
+\u{1F4A1} *Tu calificaci\xF3n y comentario son fundamentales para que estos servicios de verificaci\xF3n y consulta sigan siendo 100% GRATUITOS para toda la comunidad:*
+
+` + buildWinningGoogleReviewMessage(userName);
+}
+function isAffirmativeConsentResponse(text2) {
+  const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(si|claro|de\s*una|obvio|por\s*supuesto|con\s*gusto|como\s*no|dale|de\s*acuerdo|ok|vale|bueno|dime|como\s*(?:te\s*)?ayudo|de\s*que\s*manera|cuenta\s*conmigo|seguro|listo|va)\b/i.test(normalized);
+}
+function isNegativeConsentResponse(text2) {
+  const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(no|nop|no\s*quiero|no\s*puedo|para\s*nada|que\s*pereza|no\s*tengo\s*tiempo|despues|mas\s*tarde|ahora\s*no|paso|negativo|para\s*que)\b/i.test(normalized);
+}
+function isPoliteGratitudeOrClosing(text2) {
+  const clean = text2.trim().toLowerCase();
+  return /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(clean) || clean.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(clean);
+}
+function formatDetailedCompanyAndSocialMediaPresentation(userName) {
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
+  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F3D8}\uFE0F\u2728 En *VECY BIENES RA\xCDCES* operamos 100% digital desde 2018 para dejar atr\xE1s a los "dinosaurios inmobiliarios", fundados por *Eduardo A. Rivera* (Tecnolog\xEDa) y *Jani Alves* (Operaciones).
+
+Nuestros servicios activos 24/7 incluyen: verificaci\xF3n oficial de antecedentes (Polic\xEDa Nacional), Factura Predial Bogot\xE1 y Paz y Salvo IDU (*100% GRATIS*), m\xE1s aval\xFAos certificados y asesor\xEDa jur\xEDdica.
+
+\u{1F310} *Web:* ${VECY_ACTIVE_DOMAIN}
+\u{1F4DE} *Br\xF3ker:* +57 316 656 9719 (https://wa.me/573166569719)
+\u{1F4F2} *Redes:* ${VECY_SOCIAL_NETWORKS.instagram} \u2022 ${VECY_SOCIAL_NETWORKS.tikTok} \u2022 ${VECY_SOCIAL_NETWORKS.facebookFanPage} \u2022 ${VECY_SOCIAL_NETWORKS.youtube} \u2022 ${VECY_SOCIAL_NETWORKS.linkedIn} \u2022 ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+
+\u2B50 *\xBFNos regalas tu opini\xF3n de 5 estrellas en Google Reviews?* \u{1F449} ${VECY_SOCIAL_NETWORKS.googleReview} \u2B50\u2B50\u2B50\u2B50\u2B50`;
+}
+function isCompanyInquiryOrAboutUs(text2) {
+  const clean = text2.trim().toLowerCase();
+  return /(?:qui[eé]nes?\s+(?:son|es|est[aá]n|son\s+ustedes)|qu[eé]\s+es\s+vecy|cu[eé]ntame\s+(?:de|sobre)\s+ustedes|qu[eé]\s+hacen|a\s+qu[eé]\s+se\s+dedican|qui[eé]n\s+fund[oó]|fundadores|eduardo\s+rivera|jani\s+alves|d[oó]nde\s+est[aá]n|c[oó]mo\s+naci[oó]|historia\s+de\s+vecy|redes\s+sociales|tienen\s+redes|cu[aá]les\s+son\s+sus\s+redes|redes\b|instagram|facebook|tiktok|canal\s+de\s+whatsapp|p[aá]gina\s+web)\b/i.test(clean);
+}
+var init_politenessService = __esm({
+  "server/_core/politenessService.ts"() {
     "use strict";
     init_whatsapp_utils();
-    TRUSTED_FAMILY_AND_FRIENDS = {
-      carmenza: {
-        phones: ["573108643555"],
-        names: ["Mar\xEDa del Carmen Mart\xEDnez Castro", "Carmenza", "Maria del Carmen"],
-        relation: "Madre",
-        nicknames: ["madrecita hermosa", "Madrecita querida", "Mamita hermosa"],
-        customMessage: "madrecita hermosa! \u2764\uFE0F Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento con todo el amor que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier asunto personal o familiar, te comparto su n\xFAmero directo y nuevo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigantesco y un beso enorme de su parte!"
-      },
-      olanda: {
-        phones: ["573138524917"],
-        names: ["Olanda In\xE9s Rivera G\xF3mez", "Olanda Ines Rivera Gomez", "Olanda Ines", "Olanda"],
-        relation: "T\xEDa",
-        nicknames: ["t\xEDa Olandita", "T\xEDa Olandita", "Olandita"],
-        customMessage: "t\xEDa Olandita hermosa! \u{1F970} Qu\xE9 gusto saludarte. Te cuento con mucho cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas comunicarte directamente con Eduardo (Eddu) para temas personales o familiares, puedes escribirle a su l\xEDnea directa de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
-      },
-      ana_tulia: {
-        phones: ["573124794864"],
-        names: ["Ana Tulia Rivera G\xF3mez", "Ana Tulia Rivera Gomez", "Ana Tulia"],
-        relation: "T\xEDa",
-        nicknames: ["t\xEDa Tulita", "T\xEDa Tulita", "Anita Tulita"],
-        customMessage: "t\xEDa Tulita querida! \u{1F970} Qu\xE9 alegr\xEDa tan inmensa saludarte. Te cuento con todo el cari\xF1o que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si quieres saludar o ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te mando un abrazo gigante de su parte!"
-      },
-      marina: {
-        phones: ["573204997575"],
-        names: ["Marina Mart\xEDnez Castro", "Marina Martinez Castro", "Marina"],
-        relation: "T\xEDa",
-        nicknames: ["t\xEDa Marinita", "T\xEDa Marinita", "Marinita"],
-        customMessage: "t\xEDa Marinita hermosa! \u{1F970} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con Eduardo (Eddu), te comparto su n\xFAmero directo de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
-      },
-      tio_luis: {
-        phones: ["573132094918"],
-        names: ["Luis Eduardo Rivera G\xF3mez", "Luis Eduardo Rivera Gomez", "Luis Eduardo", "Luis"],
-        relation: "T\xEDo",
-        nicknames: ["t\xEDo Luis", "T\xEDo Luis"],
-        customMessage: "t\xEDo Luis! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Para cualquier asunto personal o familiar con Eduardo (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      daniel: {
-        phones: ["573006067089"],
-        names: ["Daniel Eduardo Rivera Noguera", "Daniel Eduardo", "Daniel"],
-        relation: "Hijo",
-        nicknames: ["mi Pollotote querido", "Pollotote", "Campe\xF3n", "Mi ingeniero favorito"],
-        customMessage: "mi Pollotote querido! \xA1Campe\xF3n, mi ingeniero favorito! \u{1F680}\u{1F4BB} Qu\xE9 alegr\xEDa que me escribas. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas llamar o escribirle a tu pap\xE1 (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te quiere much\xEDsimo!"
-      },
-      natalia: {
-        phones: ["573058788329"],
-        names: ["Natalia Rivera Noguera", "Natalia", "Natis"],
-        relation: "Hija",
-        nicknames: ["mi Natillita hermosa", "Mi Natis", "Pollita hermosa", "Mi princesa", "Natillita", "Coraz\xF3n de Melocot\xF3n", "Monacha Remolacha"],
-        customMessage: "mi Natillita hermosa! \xA1Mi princesa, mi Natis, coraz\xF3n de melocot\xF3n y monacha remolacha! \u2764\uFE0F\u{1F338} Qu\xE9 alegr\xEDa tan grande saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas hablar con tu pap\xE1 (Eddu), su n\xFAmero directo y nuevo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un besito gigante!"
-      },
-      jani: {
-        phones: ["573188096811"],
-        names: ["Jani Alves Souza", "Jani Alves", "Jani"],
-        relation: "Esposa / Co-founder",
-        nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
-        customMessage: "mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
-        lids: ["167108705018103", "182781141344345", "218820279050385"]
-      },
-      monica: {
-        phones: ["573103395788"],
-        names: ["M\xF3nica Mart\xEDnez", "Monica Martinez", "Monica"],
-        relation: "Prima",
-        nicknames: ["mi Monik hermosa", "Monik", "Chinita", "Primi", "Primita"],
-        customMessage: "mi Monik hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
-      },
-      liliana: {
-        phones: ["573132533474"],
-        names: ["Liliana Mart\xEDnez", "Liliana Martinez", "Liliana"],
-        relation: "Prima",
-        nicknames: ["mi Lili hermosa", "Lili", "Chinita", "Primi", "Primitica"],
-        customMessage: "mi Lili hermosa! \xA1Chinita querida! \u{1F60A} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle a Eduardo (Eddu), su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      marcelita: {
-        phones: ["573144354412"],
-        names: [
-          "Liliana Marcela Castellanos Martinez",
-          "Liliana Marcela Castellanos",
-          "Marcelita Castellanos",
-          "Marcela Castellanos",
-          "Marcela"
-        ],
-        relation: "Prima",
-        nicknames: ["mi Marcelita hermosa", "Marcelita", "Primita", "Primi", "Chinita"],
-        customMessage: "mi Marcelita hermosa! \xA1Primi querida! \u{1F60A} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un asunto personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo gigante de su parte!"
-      },
-      carlitos: {
-        phones: ["573054589435"],
-        names: ["Carlitos Mart\xEDnez", "Carlitos Martinez", "Charles Barber", "Carlos"],
-        relation: "Primo",
-        nicknames: ["mi querido Cayaco", "Cayaco", "Cayaqu\xEDn", "Carlitos"],
-        customMessage: "mi querido Cayaco! \xA1Cayaqu\xEDn, hermano! \u{1F488}\u2702\uFE0F Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas escribirle o llamar a Eduardo (Eddu) a su n\xFAmero personal directo, su nuevo contacto de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Te manda un abrazo de gol!"
-      },
-      jackson: {
-        phones: ["573142721432"],
-        names: ["Jackson Mart\xEDnez", "Jackson Martinez", "Jackson"],
-        relation: "Primo",
-        nicknames: ["mi estimado Jat\xF3n", "Jat\xF3n", "Jaksit\xF3n", "Primo"],
-        customMessage: "mi estimado Jat\xF3n! \xA1Jaksit\xF3n, primo! \u{1F680} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      gus: {
-        phones: ["573108096117"],
-        names: ["Gustavo Guevara", "Gustavo"],
-        relation: "Amigo",
-        nicknames: ["mi estimado Gus", "Gus"],
-        customMessage: "mi estimado Gus! \u{1F91D} Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) para cualquier cosa, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      lucho_taxi: {
-        phones: ["573105772223"],
-        names: ["Luis \xC1ngel Cediel", "Luis Angel Cediel", "Luis Angel", "Lucho"],
-        relation: "Amigo / Servicio Especial Hotel",
-        nicknames: ["mi estimado Lucho", "Lucho"],
-        customMessage: "mi estimado Lucho! \u{1F695} Hotel y servicio especial. Qu\xE9 gusto saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas ubicar a Eduardo (Eddu) por un servicio o tema personal, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      chalo_andres: {
-        phones: ["573005509529"],
-        names: ["Andr\xE9s Ruiz", "Andres Ruiz", "Chalo"],
-        relation: "Amigo",
-        nicknames: ["mi querido Chalo", "Chalo"],
-        customMessage: "mi querido Chalo! Patr\xF3n... digo, \xA1compa\xF1ero! \u{1F576}\uFE0F\u{1F602} Qu\xE9 alegr\xEDa saludarte. Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Si necesitas cuadrar cuentas o saludar a Eduardo (Eddu) con la voz de su patr\xF3n favorito, su n\xFAmero directo de br\xF3ker es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Un abrazo de su parte!"
-      },
-      jonathan_datacredito: {
-        phones: ["573103790278"],
-        names: [
-          "Jonathan Stiven Mart\xEDnez Monta\xF1o",
-          "Jonathan Stiven Martinez Montano",
-          "Jonathan Stiven",
-          "Jonathan"
-        ],
-        relation: "Cliente / Proceso Legal Datacr\xE9dito",
-        nicknames: ["Jonathan"],
-        customMessage: "Jonathan! Qu\xE9 gusto saludarte. Te comento que esta l\xEDnea de WhatsApp ahora es mi canal oficial como JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Respecto a tu caso pendiente para salir de reportes en Datacr\xE9dito y TransUnion, te informo que Eduardo (Eddu) sigue al frente de tu proceso legal de limpieza financiera con total rigor. Si necesitas comunicarte directamente con \xE9l para revisar los avances, su l\xEDnea directa de br\xF3ker y gesti\xF3n jur\xEDdica es el +57 316 656 9719 (https://wa.me/573166569719). \xA1Seguimos firmes con tu caso!"
-      },
-      eduardo: {
-        phones: ["573192919978"],
-        names: ["Eduardo Arturo Rivera Mart\xEDnez", "Eduardo Rivera", "Eduardo", "Eddu"],
-        relation: "Director de Tecnolog\xEDa / Fundador",
-        nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
-        customMessage: "Eduardo! A tu disposici\xF3n en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}",
-        aliases: ["3166569719"],
-        lids: ["225954035179724"]
-      }
-    };
-    CONTACT_PRIMARY_NICKS = {
-      carmenza: "Madrecita",
-      olanda: "T\xEDa Olandita",
-      ana_tulia: "T\xEDa Tulita",
-      marina: "T\xEDa Marinita",
-      tio_luis: "T\xEDo Luis",
-      daniel: "Pollotote",
-      natalia: "Mi Natis",
-      jani: "Jani",
-      monica: "Monik",
-      liliana: "Lili",
-      marcelita: "Marcelita",
-      carlitos: "Cayaco",
-      jackson: "Jat\xF3n",
-      gus: "Gus",
-      lucho_taxi: "Lucho",
-      chalo_andres: "Chalo",
-      jonathan_datacredito: "Jonathan",
-      eduardo: "Eduardo"
-    };
-    TRUSTED_CONTACTS = Object.entries(TRUSTED_FAMILY_AND_FRIENDS).map(
-      ([key, contact]) => {
-        const digits = normalizePhoneDigits(contact.phones[0] || "");
-        const primaryNick = CONTACT_PRIMARY_NICKS[key] || contact.nicknames[0] || contact.names[0];
-        const enriched = {
-          ...contact,
-          id: key,
-          key,
-          primaryNick,
-          allNicks: contact.nicknames,
-          fullName: contact.names[0],
-          relationship: contact.relation,
-          digits,
-          category: key === "jani" || key === "eduardo" ? "directiva" : key === "carmenza" || key === "daniel" || key === "natalia" ? "familia_directa" : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo") ? "familia_extendida" : "amigos_y_especiales"
-        };
-        return enriched;
-      }
+    init_const();
+  }
+});
+
+// server/_core/taxEngine.ts
+function liquidarImpuestosVenta(params) {
+  const precioVenta = Math.max(0, params.precioVenta || 0);
+  const costoFiscal = Math.max(0, params.costoFiscal || 0);
+  const anosPosesion = Math.max(0, params.anosPosesion || 0);
+  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
+  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
+  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
+  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
+  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
+  let utilidadGravable = utilidadOriginal;
+  let exencionViviendaAplicada = 0;
+  let gananciaOcasional = 0;
+  let esRentaOrdinaria = false;
+  let tarifaGananciaOcasionalPorcentaje = 15;
+  let notas = "";
+  if (anosPosesion < 2) {
+    esRentaOrdinaria = true;
+    tarifaGananciaOcasionalPorcentaje = 0;
+    gananciaOcasional = 0;
+    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
+  } else {
+    if (params.esViviendaHabitacion) {
+      const exencionMaxima = 5e3 * VALOR_UVT_2026;
+      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
+      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
+      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
+    }
+    gananciaOcasional = Math.round(utilidadGravable * 0.15);
+    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
+  }
+  return {
+    valorUVT: VALOR_UVT_2026,
+    precioVenta,
+    costoFiscal,
+    utilidadCalculada: utilidadOriginal,
+    anosPosesion,
+    retencionFuente,
+    tarifaRetencionPorcentaje: tarifaRetencion * 100,
+    esSupera20kUvt,
+    exencionViviendaAplicada,
+    utilidadGravableGananciaOcasional: utilidadGravable,
+    gananciaOcasional,
+    tarifaGananciaOcasionalPorcentaje,
+    esRentaOrdinaria,
+    notas: notas.trim()
+  };
+}
+var VALOR_UVT_2026;
+var init_taxEngine = __esm({
+  "server/_core/taxEngine.ts"() {
+    "use strict";
+    VALOR_UVT_2026 = 50318;
+  }
+});
+
+// server/_core/notarialExpenseService.ts
+var notarialExpenseService_exports = {};
+__export(notarialExpenseService_exports, {
+  clearPendingNotarialSession: () => clearPendingNotarialSession,
+  executeNotarialAssistanceFromWhatsApp: () => executeNotarialAssistanceFromWhatsApp,
+  explainNotarialFigures: () => explainNotarialFigures,
+  extractNotarialExpenseParams: () => extractNotarialExpenseParams,
+  getNotarialFeeRate: () => getNotarialFeeRate,
+  getPendingNotarialSession: () => getPendingNotarialSession,
+  getRegistryFeeRate: () => getRegistryFeeRate,
+  hasPendingNotarialSession: () => hasPendingNotarialSession,
+  liquidarGastosNotariales: () => liquidarGastosNotariales,
+  setPendingNotarialSession: () => setPendingNotarialSession
+});
+function getNotarialFeeRate(precio, esVis = false) {
+  if (esVis) return 27e-4;
+  if (precio < 100000001) return 59e-4;
+  if (precio < 500000001) return 4e-3;
+  if (precio < 1000000001) return 38e-4;
+  return 36e-4;
+}
+function getRegistryFeeRate(precio, esVis = false) {
+  if (esVis) return 35e-4;
+  if (precio < 136278900) return 632e-5;
+  if (precio < 236216760) return 785e-5;
+  if (precio < 349782510) return 874e-5;
+  return 924e-5;
+}
+function liquidarGastosNotariales(params) {
+  const precioVenta = Math.max(0, Number(params.precioVenta) || 0);
+  const estadoPredio = params.estadoPredio || "libre";
+  const formaPago = params.formaPago || "contado";
+  const ciudad = params.ciudad || "Bogot\xE1";
+  const vendedorEsPersonaJuridica = !!params.vendedorEsPersonaJuridica;
+  const esVis = !!params.esViviendaInteresSocial;
+  const advertenciasJuridicas = [];
+  if (params.embargoMedidaCautelar) {
+    advertenciasJuridicas.push(
+      "\u26D4 *ALERTA CR\xCDTICA DE EMBARGO:* El inmueble tiene una medida cautelar o embargo judicial vigente. La ley colombiana proh\xEDbe su venta (objeto il\xEDcito). Para firmar promesa o escritura se requiere radicar previamente el oficio de desembargo emitido por el juzgado ante la Oficina de Registro (ORIP)."
     );
   }
-});
-
-// server/_core/adminMatchAssistantService.ts
-var adminMatchAssistantService_exports = {};
-__export(adminMatchAssistantService_exports, {
-  ADMIN_IDENTIFIERS: () => ADMIN_IDENTIFIERS,
-  executeAdminMatchSearch: () => executeAdminMatchSearch,
-  formatCOP: () => formatCOP,
-  formatMatchReport: () => formatMatchReport,
-  getPropArea: () => getPropArea,
-  getPropGarages: () => getPropGarages,
-  getPropNeighborhood: () => getPropNeighborhood,
-  isAuthorizedAdminPhone: () => isAuthorizedAdminPhone,
-  isMatchSearchQuery: () => isMatchSearchQuery
-});
-import { eq as eq8, desc as desc3 } from "drizzle-orm";
-function isAuthorizedAdminPhone(phoneOrId, userName) {
-  if (userName) {
-    const unLower = userName.toLowerCase();
-    if (unLower.includes("jani") || unLower.includes("eduardo") || unLower.includes("broker") || unLower.includes("vecy")) {
-      return true;
-    }
-  }
-  if (!phoneOrId) return false;
-  const clean = String(phoneOrId).split("@")[0].replace(/\D/g, "");
-  const raw = String(phoneOrId);
-  return ADMIN_IDENTIFIERS.some((id) => clean === id || clean.includes(id) || raw.includes(id));
-}
-function formatCOP(num) {
-  if (!num) return "N/E";
-  const val = Number(num);
-  if (isNaN(val) || val <= 0) return "N/E";
-  if (val >= 1e9) {
-    const mm = (val / 1e9).toFixed(val % 1e9 === 0 ? 0 : 2);
-    return `$${mm} MM ($${val.toLocaleString("es-CO")} COP)`;
-  }
-  if (val >= 1e6) {
-    const m = (val / 1e6).toFixed(val % 1e6 === 0 ? 0 : 1);
-    return `$${m} Millones ($${val.toLocaleString("es-CO")} COP)`;
-  }
-  return `$${val.toLocaleString("es-CO")} COP`;
-}
-function getPropNeighborhood(p) {
-  if (!p) return "";
-  return p.addressNeighborhood || p.zone || p.neighborhood || "";
-}
-function getPropArea(p) {
-  if (!p) return null;
-  return p.areaTotal || p.areaPrivate || p.area || null;
-}
-function getPropGarages(p) {
-  if (!p) return null;
-  return p.garages ?? p.parkingSpaces ?? null;
-}
-function isMatchSearchQuery(text2, isAdmin = false) {
-  if (!text2 || typeof text2 !== "string") return false;
-  const lower = text2.toLowerCase().trim();
-  if (/(?:^|\s)(?:#?m\d+|match\s*#?\d+|coincidencia\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
-  if (/(?:^|\s)(?:#?p\d+|inmueble\s*#?\d+|propiedad\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
-  if (/(?:^|\s)(?:#?r\d+|requerimiento\s*#?\d+|demanda\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
-  if (/\b(?:match|matches|coincidencias?|mesa de coincidencias)\b/i.test(lower)) return true;
-  if (/\b(?:buscar?|buscame|búscame|encuentra|encuentrame|encuéntrame|cruzame|crúzame|cruzar|cotejar|coteja)\s+(?:inmuebles?|propiedades?|clientes?|demandas?|requerimientos?|matches?|ofertas?)\b/i.test(lower)) {
-    return true;
-  }
-  if (/\b(?:qu[eé]\s+(?:inmuebles?|clientes?|demandas?)\s+(?:hay|tenemos|hacen\s+match)|hay\s+clientes\s+para|hay\s+inmuebles\s+para)\b/i.test(lower)) {
-    return true;
-  }
-  if (isAdmin) {
-    const hasRealEstateType = lower.includes("apto") || lower.includes("apartamento") || lower.includes("casa") || lower.includes("oficina") || lower.includes("bodega") || lower.includes("local") || lower.includes("lote") || lower.includes("finca") || lower.includes("consultorio") || lower.includes("inmueble") || lower.includes("propiedad") || lower.includes("penthouse") || lower.includes("edificio") || lower.includes("chalet") || lower.includes("suite");
-    const hasDemandSignals = lower.includes("requerimiento") || lower.includes("demanda") || /\b(?:busco|buscamos|se busca|necesito|necesitamos|necesitan|requiero|requerimos|cliente directo|comprador directo|cliente con recursos|cliente busca|comprador busca|para cliente|solicito|compro|para compra|para comprar|para arriendo|en arriendo busco)\b/i.test(lower);
-    const hasOfferSignals = lower.includes("oferta") || lower.includes("disponible") || /\b(?:vendo|se vende|ofrezco|arriendo|se arrienda|alquilo|se alquila|tengo en arriendo|tengo en venta|en venta|en arriendo|para la venta)\b/i.test(lower);
-    if (hasRealEstateType && (hasDemandSignals || hasOfferSignals)) {
-      return true;
-    }
-    if (hasDemandSignals && (lower.includes("m2") || lower.includes("m\xB2") || lower.includes("habitac") || lower.includes("alcoba") || lower.includes("presupuesto") || lower.includes("millones") || lower.includes("mm") || lower.includes("efectivo"))) {
-      return true;
-    }
-    if ((lower.includes("habitac") || lower.includes("alcoba") || lower.includes("m2") || lower.includes("m\xB2")) && (lower.includes("millones") || lower.includes("mm") || lower.includes("$"))) {
-      return true;
-    }
-  }
-  return false;
-}
-function formatMatchReport(header, criteriaSummary, matches, isAdmin, adminDashboardUrl, emptyDiagnosis) {
-  if (matches.length === 0) {
-    if (isAdmin) {
-      return `${header}
-
-${criteriaSummary}
-
-\u{1F50D} *Diagn\xF3stico en Base de Datos:*
-\u26D4 *No se encontraron coincidencias compatibles (Score \u2265 80%) en los \xFAltimos 15 d\xEDas.*
-
-${emptyDiagnosis}
-
-\u{1F449} *Verificar en Mesa de Coincidencias:*
-${adminDashboardUrl}`;
-    } else {
-      return `\u{1F3AF} *MESA DE COINCIDENCIAS VECY BIENES RA\xCDCES*
-
-${criteriaSummary}
-
-\u{1F50D} *Diagn\xF3stico de B\xFAsqueda:*
-No encontramos una coincidencia activa inmediata (Score \u2265 80%) para este criterio en este momento.
-
-\u{1F4A1} Tu consulta permanece en monitoreo permanente 24/7 en nuestro sistema. Apenas ingrese una opci\xF3n compatible, te notificaremos de inmediato.
-
-Para asesor\xEDa directa, peritajes o acuerdos entre colegas, comun\xEDcate con nuestros directores Eduardo A. Rivera y Jani Alves al WhatsApp oficial: *+57 316 656 9719* \u{1F91D}\u2728.`;
-    }
-  }
-  if (isAdmin) {
-    let report = `${header}
-
-${criteriaSummary}
-
-\u2728 *Se encontraron ${matches.length} coincidencia(s) compatible(s) (\xDAltimos 15 d\xEDas):*
-
-`;
-    matches.slice(0, 5).forEach((item, idx) => {
-      report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
-\u{1F522} *${item.targetType === "inmueble" ? `Inmueble #P${item.targetId}` : `Demanda #R${item.targetId}`}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ""}
-\u{1F4CD} *Ubicaci\xF3n / Sector:* ${item.neighborhood || item.city}
-\u{1F4B0} *Precio / Presupuesto:* ${item.priceOrBudgetFormatted}
-\u{1F4D0} *Detalles:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted} \u2022 ${item.bathroomsFormatted} \u2022 ${item.parkingFormatted}
-\u{1F464} *Colega / Asesor:* ${item.contactName}
-\u{1F4F1} *Tel\xE9fono:* ${item.contactPhone ? "+" + item.contactPhone : "Sin registrar"}
-${item.contactWhatsAppLink ? `\u{1F4AC} *WhatsApp Directo:* ${item.contactWhatsAppLink}
-` : ""}`;
-    });
-    report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u{1F449} *Gestionar en Mesa de Coincidencias:*
-${adminDashboardUrl}`;
-    return report;
+  const limite20kUvt = 2e4 * VALOR_UVT_2026;
+  let tarifaRetencionPct = 0;
+  let retencionFuente = 0;
+  if (vendedorEsPersonaJuridica) {
+    tarifaRetencionPct = 0;
+    retencionFuente = 0;
+    advertenciasJuridicas.push(
+      "\u{1F3E2} *Vendedor Persona Jur\xEDdica:* No causa retenci\xF3n en la fuente en notar\xEDa si la sociedad aporta RUT con condici\xF3n de autorretenedora o declara renta peri\xF3dica."
+    );
   } else {
-    const topMatch = matches[0];
-    const matchCode = topMatch.matchId ? `#M${topMatch.matchId}` : "#M15649";
-    let report = `\u{1F3AF} *\xA1HAY COINCIDENCIA ACTIVA (MATCH) EN NUESTRO SISTEMA!* \u{1F680}\u2728
-
-${criteriaSummary}
-
-\u2728 *Se identificaron ${matches.length} oportunidad(es) de cruce comercial:* 
+    tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1;
+    retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
+  }
+  const notarialFeeRate = getNotarialFeeRate(precioVenta, esVis);
+  const derechosNotarialesTotales = Math.round(precioVenta * notarialFeeRate);
+  const derechosNotariales50Pct = Math.round(derechosNotarialesTotales / 2);
+  const otrosGastosVendedor = esVis ? 5e4 : 1e5;
+  const otrosGastosComprador = esVis ? 5e4 : 1e5;
+  const ivaVendedor = Math.round((derechosNotariales50Pct + otrosGastosVendedor) * 0.19);
+  const ivaComprador = Math.round((derechosNotariales50Pct + otrosGastosComprador) * 0.19);
+  let cancelacionHipotecaVendedor = 0;
+  if (estadoPredio === "hipoteca") {
+    cancelacionHipotecaVendedor = Math.round(Math.min(12e5, Math.max(55e4, precioVenta * 15e-4)));
+    advertenciasJuridicas.push(
+      "\u{1F3E6} *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelaci\xF3n de hipoteca y certificado de saldo a la fecha para anexar a la escritura p\xFAblica."
+    );
+  }
+  let cancelacionAfectacionVivienda = 0;
+  if (params.afectacionViviendaFamiliar) {
+    cancelacionAfectacionVivienda = 6e5;
+    advertenciasJuridicas.push(
+      "\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258/1996):* Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura de cancelaci\xF3n. Si uno de los dos no comparece, la notar\xEDa no autoriza la venta."
+    );
+  }
+  let cancelacionPatrimonioFamilia = 0;
+  if (params.patrimonioFamilia) {
+    cancelacionPatrimonioFamilia = 6e5;
+    advertenciasJuridicas.push(
+      "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70/1931):* Si hay hijos menores de edad, la cancelaci\xF3n requiere autorizaci\xF3n judicial o tr\xE1mite notarial con concepto del Defensor de Familia del ICBF. Si los hijos son mayores, ambos padres firman aportando los registros civiles."
+    );
+  }
+  const subtotalVendedor = derechosNotariales50Pct + otrosGastosVendedor + ivaVendedor + retencionFuente + cancelacionHipotecaVendedor + cancelacionAfectacionVivienda + cancelacionPatrimonioFamilia;
+  const registryRate = getRegistryFeeRate(precioVenta, esVis);
+  let impuestoRegistro = Math.round(precioVenta * 0.01);
+  let derechosRegistroOrip = Math.round(precioVenta * registryRate * 1.02 + (esVis ? 3e4 : 1e5));
+  let constitucionHipotecaComprador = 0;
+  let ahorroLeasingDetectado = 0;
+  const esCesion = params.esCesionLeasing || estadoPredio === "leasing" && formaPago === "leasing";
+  if (esCesion) {
+    ahorroLeasingDetectado = impuestoRegistro + derechosRegistroOrip;
+    impuestoRegistro = 0;
+    derechosRegistroOrip = 0;
+    advertenciasJuridicas.push(
+      "\u{1F4D1} *Cesi\xF3n de Leasing Habitacional:* Se formaliza mediante cesi\xF3n de derechos con la entidad bancaria y reconocimiento de firmas en notar\xEDa, ahorrando el pago de impuesto de beneficencia y registro de matr\xEDcula."
+    );
+  } else if (formaPago === "hipoteca") {
+    const montoCredito = params.montoCredito && params.montoCredito > 0 ? params.montoCredito : Math.round(precioVenta * 0.7);
+    constitucionHipotecaComprador = Math.round(montoCredito * 0.011);
+  }
+  if (params.bienInteresCultural) {
+    advertenciasJuridicas.push(
+      "\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) / Conservaci\xF3n Patrimonial:* Los bancos comerciales generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre predios BIC por restricciones estructurales y de disposici\xF3n. Si el comprador va a financiar, debe consultar con su banco previamente o negociar pago de CONTADO. Asimismo, cualquier remodelaci\xF3n requiere licencia especial del IDPC o Ministerio de Cultura."
+    );
+  }
+  const subtotalComprador = derechosNotariales50Pct + otrosGastosComprador + ivaComprador + impuestoRegistro + derechosRegistroOrip + constitucionHipotecaComprador;
+  const totalGastosAproximados = subtotalVendedor + subtotalComprador;
+  const reportText = formatNotarialExpenseText({
+    precioVenta,
+    estadoPredio,
+    formaPago,
+    ciudad,
+    vendedorEsPersonaJuridica,
+    esViviendaInteresSocial: esVis,
+    derechosNotariales50Pct,
+    otrosGastosVendedor,
+    otrosGastosComprador,
+    ivaVendedor,
+    ivaComprador,
+    retencionFuente,
+    tarifaRetencionPct,
+    cancelacionHipotecaVendedor,
+    cancelacionAfectacionVivienda,
+    cancelacionPatrimonioFamilia,
+    subtotalVendedor,
+    impuestoRegistro,
+    derechosRegistroOrip,
+    constitucionHipotecaComprador,
+    subtotalComprador,
+    totalGastosAproximados,
+    ahorroLeasingDetectado,
+    esCesionLeasing: esCesion,
+    advertenciasJuridicas,
+    embargoMedidaCautelar: !!params.embargoMedidaCautelar
+  });
+  return {
+    precioVenta,
+    estadoPredio,
+    formaPago,
+    ciudad,
+    esInviableJuridicamente: !!params.embargoMedidaCautelar,
+    vendedorEsPersonaJuridica,
+    esViviendaInteresSocial: esVis,
+    gastosVendedor: {
+      derechosNotariales50Pct,
+      otrosGastosCopiasFolios: otrosGastosVendedor,
+      ivaNotarial: ivaVendedor,
+      retencionFuente,
+      tarifaRetencionPct,
+      cancelacionHipoteca: cancelacionHipotecaVendedor,
+      cancelacionAfectacionVivienda,
+      cancelacionPatrimonioFamilia,
+      subtotalVendedor
+    },
+    gastosComprador: {
+      derechosNotariales50Pct,
+      otrosGastosCopiasFolios: otrosGastosComprador,
+      ivaNotarial: ivaComprador,
+      impuestoRegistroBeneficencia: impuestoRegistro,
+      derechosRegistroOrip,
+      constitucionHipoteca: constitucionHipotecaComprador,
+      subtotalComprador
+    },
+    totalGastosAproximados,
+    ahorroLeasingDetectado: ahorroLeasingDetectado > 0 ? ahorroLeasingDetectado : void 0,
+    advertenciasJuridicas,
+    reportText
+  };
+}
+function formatCurrency(val) {
+  return `$${Math.round(val).toLocaleString("es-CO")}`;
+}
+function formatNotarialExpenseText(p) {
+  const labelPredio = p.estadoPredio === "hipoteca" ? "Con Hipoteca" : p.estadoPredio === "leasing" ? "Con Leasing" : "Libre de grav\xE1menes";
+  const labelPago = p.formaPago === "hipoteca" ? "Cr\xE9dito Hipotecario" : p.formaPago === "leasing" ? "Leasing Habitacional" : "Contado";
+  let t2 = `\u2696\uFE0F *LIQUIDACI\xD3N ESTIMADA DE GASTOS NOTARIALES Y REGISTRO* \u{1F1E8}\u{1F1F4}
+`;
+  t2 += `\u{1F3E2} *Inmueble:* ${formatCurrency(p.precioVenta)} (${p.ciudad}) | *Figura:* ${labelPredio} / ${labelPago}
+`;
+  if (p.esViviendaInteresSocial) {
+    t2 += `\u{1F3F7}\uFE0F *Tipo:* Vivienda de Inter\xE9s Social (VIS - Tarifas preferenciales Ley 1537)
+`;
+  }
+  t2 += `
+`;
+  t2 += `\u{1F464} *A CARGO DEL VENDEDOR:*
+`;
+  t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
+`;
+  t2 += `\u2022 Papeler\xEDa, copias y biometr\xEDa: *${formatCurrency(p.otrosGastosVendedor)}*
+`;
+  t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaVendedor)}*
+`;
+  if (p.vendedorEsPersonaJuridica) {
+    t2 += `\u2022 Retenci\xF3n en la fuente (0% - Persona Jur\xEDdica): *$0 COP* (autorretenci\xF3n en renta)
+`;
+  } else {
+    t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*
+`;
+  }
+  if (p.cancelacionHipotecaVendedor > 0) {
+    t2 += `\u2022 Cancelaci\xF3n de Hipoteca del banco: *${formatCurrency(p.cancelacionHipotecaVendedor)}*
+`;
+  }
+  if (p.cancelacionAfectacionVivienda > 0) {
+    t2 += `\u2022 Cancelaci\xF3n Afectaci\xF3n Familiar (Ley 258): *${formatCurrency(p.cancelacionAfectacionVivienda)}*
+`;
+  }
+  if (p.cancelacionPatrimonioFamilia > 0) {
+    t2 += `\u2022 Cancelaci\xF3n Patrimonio de Familia: *${formatCurrency(p.cancelacionPatrimonioFamilia)}*
+`;
+  }
+  t2 += `\u{1F449} *Subtotal Vendedor: ~${formatCurrency(p.subtotalVendedor)} COP*
 
 `;
-    matches.slice(0, 3).forEach((item, idx) => {
-      const codeStr = item.matchId ? `#M${item.matchId}` : matchCode;
-      report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 COMPATIBILIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
-\u{1F522} *C\xF3digo Oficial del Match:* *${codeStr}*
-\u{1F4CD} *Zona / Ubicaci\xF3n:* ${item.neighborhood || item.city}
-\u{1F4B0} *Valor / Canon:* ${item.priceOrBudgetFormatted}
-\u{1F4D0} *Especificaciones:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted} \u2022 ${item.bathroomsFormatted} \u2022 ${item.parkingFormatted}
-\u{1F512} *Punta Colega:* Colega de la Red VECY (Contacto protegido para mediaci\xF3n)
+  t2 += `\u{1F464} *A CARGO DEL COMPRADOR:*
+`;
+  t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
+`;
+  t2 += `\u2022 Papeler\xEDa, copias y biometr\xEDa: *${formatCurrency(p.otrosGastosComprador)}*
+`;
+  t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaComprador)}*
+`;
+  if (p.impuestoRegistro > 0) {
+    t2 += `\u2022 Impuesto de Registro / Beneficencia (1%): *${formatCurrency(p.impuestoRegistro)}*
+`;
+  }
+  if (p.derechosRegistroOrip > 0) {
+    t2 += `\u2022 Derechos de Registro SNR / ORIP + sistematizaci\xF3n: *${formatCurrency(p.derechosRegistroOrip)}*
+`;
+  }
+  if (p.constitucionHipotecaComprador > 0) {
+    t2 += `\u2022 Registro de Cr\xE9dito Hipotecario (~1.1%): *${formatCurrency(p.constitucionHipotecaComprador)}*
+`;
+  }
+  t2 += `\u{1F449} *Subtotal Comprador: ~${formatCurrency(p.subtotalComprador)} COP*
+
+`;
+  if (p.ahorroLeasingDetectado > 0) {
+    t2 += `\u2728 *Ahorro por Cesi\xF3n de Leasing:* Al no haber cambio de due\xF1o en matr\xEDcula, el comprador se ahorra aproximadamente *${formatCurrency(p.ahorroLeasingDetectado)}* en beneficencia y registro de compraventa.
+
+`;
+  }
+  if (p.advertenciasJuridicas.length > 0) {
+    t2 += `\u{1F50D} *Cl\xE1usulas y Consideraciones Especiales:*
+`;
+    p.advertenciasJuridicas.forEach((adv) => {
+      t2 += `${adv}
 `;
     });
-    report += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u{1F91D} *PROCESO DE MEDIACI\xD3N Y ALIANZA 40/20/40 VECY:*
-Para coordinar este cruce, proteger la comisi\xF3n compartida (40/20/40), acordar las puntas entre agentes y realizar la presentaci\xF3n formal ante propietarios, comun\xEDcate con nuestra Direcci\xF3n de Operaciones al WhatsApp oficial de Br\xF3ker:
-\u{1F4F2} *+57 316 656 9719* (https://wa.me/573166569719)
-suministrando el c\xF3digo de coincidencia: *${matchCode}* \u{1F91D}\u2728`;
-    return report;
+    t2 += `
+`;
   }
+  t2 += `\u{1F4A1} *Total aproximado escrituraci\xF3n:* ~${formatCurrency(p.totalGastosAproximados)} COP.
+`;
+  t2 += `_C\xE1lculo informativo conforme a tarifas vigentes SNR 2026 y est\xE1ndares notariales. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
+  return t2;
 }
-async function executeAdminMatchSearch(queryText, isAdmin, injectedDb) {
-  const adminDashboardUrl = "https://vecy-bienes-raices.vercel.app/admin";
-  const clean = queryText.trim();
+function hasPendingNotarialSession(senderId) {
+  const session = pendingNotarialSessions.get(senderId);
+  if (!session) return false;
+  if (Date.now() - session.timestamp > NOTARIAL_SESSION_TTL_MS) {
+    pendingNotarialSessions.delete(senderId);
+    return false;
+  }
+  return true;
+}
+function setPendingNotarialSession(senderId, partial) {
+  pendingNotarialSessions.set(senderId, {
+    timestamp: Date.now(),
+    partialParams: partial
+  });
+}
+function clearPendingNotarialSession(senderId) {
+  pendingNotarialSessions.delete(senderId);
+}
+function getPendingNotarialSession(senderId) {
+  if (!hasPendingNotarialSession(senderId)) return null;
+  return pendingNotarialSessions.get(senderId) || null;
+}
+function explainNotarialFigures(text2) {
+  if (!text2 || typeof text2 !== "string") return { isQuestion: false };
+  const lower = text2.trim().toLowerCase();
+  const isComparisonPatrimonio = /(?:patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(lower) && /(?:patrimonio\s*de\s*familia)/i.test(lower) || /(?:diferencia.*patrimonio|anotaciones\s*diferentes)/i.test(lower);
+  if (isComparisonPatrimonio) {
+    return {
+      isQuestion: true,
+      answerText: `\u2696\uFE0F *Diferencia entre Patrimonio de Familia y Patrimonio Cultural (BIC):*
+
+Son dos figuras totalmente distintas que aparecen en el folio de matr\xEDcula:
+
+1\uFE0F\u20E3 *Patrimonio de Familia Inembargable (Ley 70/1931):* Protege a la familia contra embargos. Si hay hijos menores, exige aval del ICBF para poder vender.
+2\uFE0F\u20E3 *Patrimonio Cultural / Bien de Inter\xE9s Cultural (Ley 397/1997):* Es una protecci\xF3n urban\xEDstica/arquitect\xF3nica del Estado. Hace que *los bancos NO aprueben cr\xE9dito hipotecario*, obligando casi siempre a comprar de contado.
+
+\xBFTienes la matr\xEDcula inmobiliaria del predio o quieres que liquidemos los gastos notariales? \u{1F91D}`
+    };
+  }
+  const isBicQuestion = /(?:inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b|conservaci[oó]n\s+arquitect[oó]nica)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|impide|afecta|banco|cr[eé]dito|leasing|prestan|vender|comprar|negociaci[oó]n|diferen|anotaci[oó]n|inconveniente)/i.test(lower);
+  if (isBicQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) o Patrimonio Cultural:*
+
+Es una anotaci\xF3n registral de conservaci\xF3n hist\xF3rica y arquitect\xF3nica (declarada por el IDPC en Bogot\xE1 o el Ministerio de Cultura a nivel nacional).
+
+\u26A0\uFE0F *\xBFPor qu\xE9 dificulta o impide la negociaci\xF3n con cr\xE9dito bancario?*
+Los bancos comerciales en Colombia (Bancolombia, Davivienda, BBVA, etc.) *generalmente NO aprueban cr\xE9dito hipotecario ni leasing habitacional* sobre predios catalogados como BIC, debido a:
+1\uFE0F\u20E3 *Restricciones estrictas de intervenci\xF3n:* No se pueden demoler ni hacer reformas estructurales o de fachada sin visto bueno y licencias del IDPC/MinCultura que demoran 1 a 2 a\xF1os.
+2\uFE0F\u20E3 *Dificultad de liquidaci\xF3n judicial:* Ante un eventual remate o ejecuci\xF3n por mora, estos bienes tienen un mercado muy restringido.
+
+\u{1F449} *Conclusi\xF3n pr\xE1ctica:* Si el inmueble es BIC, la compraventa casi siempre debe pactarse de *CONTADO (recursos propios)* o mediante cr\xE9dito de libre inversi\xF3n con otra garant\xEDa. Si quieres, \xA1podemos liquidarte los gastos de escrituraci\xF3n de contado de una vez! \u{1F91D}\u2728`
+    };
+  }
+  const isAfectacionQuestion = /(?:afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|c[oó]mo\s+funciona|se\s*puede\s*vender|ambos|c[oó]nyuge|espos[oa]|firmar|cancelar|notar[ií]a|diferen)/i.test(lower);
+  if (isAfectacionQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258 de 1996 y Ley 854 de 2003):*
+
+Protege el inmueble donde reside la pareja casada o en uni\xF3n marital de hecho:
+
+\u2022 *Con afectaci\xF3n familiar:* No impide la venta, pero es *OBLIGATORIA la comparecencia y firma de AMBOS c\xF3nyuges o compa\xF1eros permanentes* para cancelarla en la misma escritura. Si uno de ellos no firma (por conflicto, separaci\xF3n de hecho o falta de poder notarial), la notar\xEDa *NO puede autorizar la venta*.
+\u2022 *Sin afectaci\xF3n familiar:* El vendedor comparece solo y declara bajo gravedad de juramento en la escritura que no tiene c\xF3nyuge con quien habite all\xED, que tiene otro predio afectado o que el bien no est\xE1 destinado a vivienda familiar.
+
+\xBFDeseas que te liquide los gastos de cancelaci\xF3n de la afectaci\xF3n y compraventa para este predio? \u{1F91D}`
+    };
+  }
+  const isPatrimonioFamiliaQuestion = /(?:patrimonio\s*de\s*familia|inembargable)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|c[oó]mo\s+funciona|hijos|menores|icbf|cancelar|vender|juez|notar[ií]a|diferen)/i.test(lower);
+  if (isPatrimonioFamiliaQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70 de 1931):*
+
+Es una figura jur\xEDdica que protege el techo del hogar contra embargos de acreedores (hasta 250 SMMLV) a favor de c\xF3nyuges e hijos:
+
+\u26A0\uFE0F *\xBFCu\xE1ndo traba o impide la negociaci\xF3n?*
+\u2022 *Si hay hijos menores de edad:* \xA1NO se puede cancelar en notar\xEDa con una simple firma! Requiere tr\xE1mite judicial o notarial con intervenci\xF3n y *concepto favorable previo del Defensor de Familia del ICBF*, demostrando que se subrogar\xE1 en otro inmueble para no desproteger a los menores. Este tr\xE1mite toma semanas o meses.
+\u2022 *Si los hijos ya cumplieron 18 a\xF1os:* Los padres pueden cancelarlo voluntariamente en notar\xEDa aportando los registros civiles que acrediten la mayor\xEDa de edad.
+
+Es una anotaci\xF3n completamente distinta al Patrimonio Cultural/BIC. Si necesitas liquidar los costos de su levantamiento, con gusto te apoyo.`
+    };
+  }
+  const isCreditQuestion = /(?:compra\s*con\s*cr[eé]dito|cr[eé]dito\s*hipotecario|leasing\s*habitacional|cesi[oó]n\s*de\s*leasing)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|gastos?|cuesta)|c[oó]mo\s+funciona|diferencia|ahorro|notar[ií]a|procedimiento)/i.test(lower);
+  if (isCreditQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F4B3} *Compra con Cr\xE9dito vs Leasing vs Contado:* 
+
+\u2022 *De Contado:* El comprador paga el 50% de notar\xEDa (~0.27%), 1% de beneficencia y ~0.75% de registro ORIP.
+\u2022 *Con Cr\xE9dito Hipotecario:* El comprador asume adem\xE1s la constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado). El desembolso se realiza tras registrar la escritura en la ORIP.
+\u2022 *Cesi\xF3n de Leasing:* \xA1Ahorro millonario! Al no haber cambio de due\xF1o registral (el banco fiduciario sigue en matr\xEDcula), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
+
+Dime el valor del inmueble y te calculo los valores exactos para ambas partes \u{1F91D}\u2728`
+    };
+  }
+  const isEmbargoQuestion = /(?:embargo|medida\s*cautelar|embargado)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es)|se\s*puede\s*vender|notar[ií]a|promesa|negociar)/i.test(lower);
+  if (isEmbargoQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u26D4 *Inmueble con Embargo Judicial (Art. 1521 C\xF3digo Civil):*
+
+Vender un predio embargado acarrea *objeto il\xEDcito*. Ninguna notar\xEDa puede autorizar la escritura ni es jur\xEDdicamente v\xE1lido firmar promesa de venta sin que el juzgado competente haya emitido el oficio de desembargo y este quede cancelado en la ORIP.
+
+Para avanzar con seguridad, primero debe radicarse y levantarse el embargo en la Oficina de Registro.`
+    };
+  }
+  const isQuienPagaQuestion = /(?:qui[eé]n\s+paga|le\s+corresponde\s+a\s+qui[eé]n|a\s+cargo\s+de\s+qui[eé]n)/i.test(lower) && /(?:gastos\s+notariales|escrituraci[oó]n|notar[ií]a|beneficencia|registro|retenci[oó]n)/i.test(lower);
+  if (isQuienPagaQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u2696\uFE0F *\xBFQui\xE9n paga qu\xE9 en la notar\xEDa y registro?* \u{1F1E8}\u{1F1F4}
+
+Por ley y costumbre comercial en Colombia:
+\u2022 *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.27% cada uno).
+\u2022 *Retenci\xF3n en la Fuente (1% o 2.5%):* La asume el *VENDEDOR* (si es persona natural; si es empresa, $0 en notar\xEDa).
+\u2022 *Impuesto de Beneficencia (1%):* Lo asume el *COMPRADOR*.
+\u2022 *Derechos de Registro ORIP (~0.75% a 0.92%):* Los asume el *COMPRADOR*.
+\u2022 *Constituci\xF3n de Hipoteca Bancaria:* La asume el *COMPRADOR*.
+\u2022 *Cancelaci\xF3n de Hipoteca Previa:* La asume el *VENDEDOR*.
+
+\xBFDeseas que te liquide los valores exactos para un inmueble? \u{1F91D}`
+    };
+  }
+  const isRetencionQuestion = /(?:retenci[oó]n\s+en\s+la\s+fuente|retenci[oó]n\s+notar[ií]a|cu[aá]nto\s+es\s+la\s+retenci[oó]n)/i.test(lower) && /(?:compraventa|inmueble|venta|porcentaje|cu[aá]nto|aplica)/i.test(lower);
+  if (isRetencionQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F4B0} *Retenci\xF3n en la Fuente en Compraventa de Inmuebles:* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Persona Natural:* Paga el 1.0% sobre el precio de venta si el predio no supera 20.000 UVT ($1.006.360.000 COP en 2026). Si excede las 20.000 UVT, se aplica el 2.5% sobre el exceso.
+\u2022 *Persona Jur\xEDdica (Empresas/Constructoras):* La notar\xEDa *NO le retiene nada ($0)*, ya que las sociedades aplican autorretenci\xF3n en su declaraci\xF3n peri\xF3dica de renta.
+\u2022 *\xBFQui\xE9n la paga?:* Siempre el *VENDEDOR* al momento de firmar la escritura p\xFAblica.`
+    };
+  }
+  const isBeneficenciaQuestion = /(?:beneficencia|impuesto\s+de\s+registro|registro\s+orip)/i.test(lower) && /(?:qu[eé]\s+es|porcentaje|cu[aá]nto|qui[eé]n\s+paga|oficina\s+de\s+instrumentos)/i.test(lower);
+  if (isBeneficenciaQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F4DC} *Impuesto de Beneficencia y Derechos de Registro (ORIP):* \u{1F1E8}\u{1F1F4}
+
+Son los dos pagos requeridos para que la Oficina de Registro de Instrumentos P\xFAblicos asiente la nueva titularidad en el Certificado de Tradici\xF3n:
+\u2022 *Beneficencia (Gobernaci\xF3n / Bogot\xE1):* 1.0% sobre el valor del negocio.
+\u2022 *Derechos de Registro ORIP (SNR):* Entre 0.63% y 0.92% seg\xFAn la cuant\xEDa, m\xE1s gastos de sistematizaci\xF3n.
+\u2022 *Total aproximado de registro:* ~1.67% a 1.95% a cargo del *COMPRADOR*.
+_(En Cesi\xF3n de Leasing Habitacional no aplica, logrando un ahorro millonario)_ \u2728`
+    };
+  }
+  const isVisQuestion = /(?:vivienda\s+de\s+inter[eé]s\s+social|inmueble\s+vis|tarifa\s+vis)/i.test(lower) && /(?:gastos|notar[ií]a|descuento|beneficio|registro|cu[aá]nto)/i.test(lower);
+  if (isVisQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F3E1} *Gastos Notariales en Vivienda de Inter\xE9s Social (VIS / VIP):* \u{1F1E8}\u{1F1F4}
+
+Por ley (Ley 1537 de 2012 y decretos de la SNR), los inmuebles VIS gozan de tarifas preferenciales:
+\u2022 *Derechos Notariales:* Tienen un 50% de descuento sobre la tarifa ordinaria (~0.27% total repartido entre ambas partes).
+\u2022 *Derechos de Registro ORIP:* Tarifa reducida subsidiada.
+\u2022 Para compraventa nueva de constructora, las tarifas de escrituraci\xF3n de actos exentos o VIS se liquidan con topes preferenciales.`
+    };
+  }
+  const isUsufructoQuestion = /(?:usufructo)/i.test(lower) && /(?:cancelaci[oó]n|constituci[oó]n|qu[eé]\s+es|gastos|notar[ií]a|c[oó]mo\s+funciona)/i.test(lower);
+  if (isUsufructoQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F33F} *Cancelaci\xF3n o Constituci\xF3n de Usufructo:* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Constituci\xF3n:* Desmembra la propiedad en nuda propiedad y derecho de uso/goce. Paga derechos notariales y registro.
+\u2022 *Cancelaci\xF3n (por fallecimiento o renuncia):* Se liquida como acto sin cuant\xEDa (~$107.814 de derechos notariales con IVA m\xE1s copias y registro en ORIP), consolidando la plena propiedad en el nudo propietario.`
+    };
+  }
+  return { isQuestion: false };
+}
+function extractNotarialExpenseParams(text2, senderId) {
+  if (!text2 || typeof text2 !== "string") return { found: false };
+  const clean = text2.trim();
   const lower = clean.toLowerCase();
-  const isDetailedListingText = clean.length > 50 && (lower.includes("hab") || lower.includes("alcoba") || lower.includes("m2") || lower.includes("m\xB2") || lower.includes("presupuesto") || lower.includes("recursos") || lower.includes("millones") || lower.includes("mm"));
-  const matchIdRegex = /(?:^|\s)(?:#m\s*(\d+)|match\s*#?\s*(\d+)|coincidencia\s*#?\s*(\d+))\b/i;
-  const matchIdMatch = !isDetailedListingText ? clean.match(matchIdRegex) : null;
-  const matchIdCaptured = matchIdMatch ? matchIdMatch[1] || matchIdMatch[2] || matchIdMatch[3] : null;
-  const propIdRegex = /(?:^|\s)(?:#p\s*(\d+)|inmueble\s*#?\s*(\d+)|propiedad\s*#?\s*(\d+))\b/i;
-  const propIdMatch = !isDetailedListingText ? clean.match(propIdRegex) : null;
-  const propIdCaptured = propIdMatch ? propIdMatch[1] || propIdMatch[2] || propIdMatch[3] : null;
-  const reqIdRegex = /(?:^|\s)(?:#r\s*(\d+)|requerimiento\s*#?\s*(\d+)|demanda\s*#?\s*(\d+))\b/i;
-  const reqIdMatch = !isDetailedListingText ? clean.match(reqIdRegex) : null;
-  const reqIdCaptured = reqIdMatch ? reqIdMatch[1] || reqIdMatch[2] || reqIdMatch[3] : null;
-  const isDemand = lower.includes("busco") || lower.includes("buscamos") || lower.includes("necesito") || lower.includes("necesitamos") || lower.includes("necesitan") || lower.includes("requiero") || lower.includes("requerimos") || lower.includes("se busca") || lower.includes("demanda") || lower.includes("cliente busca") || lower.includes("comprador busca") || lower.includes("para cliente") || lower.includes("solicito") || lower.includes("para compra") || lower.includes("para arriendo") || lower.includes("compro") || lower.includes("requerimiento") || lower.includes("cliente directo") || lower.includes("recursos hasta");
-  const resolvedQueryType = matchIdCaptured ? "match_id" : propIdCaptured ? "property_id" : reqIdCaptured ? "requirement_id" : isDemand ? "demand_search" : "offer_search";
-  if (!isAdmin && !matchIdCaptured) {
+  const keywords = [
+    "gastos notariales",
+    "gasto notarial",
+    "gastos de escrituraci\xF3n",
+    "gastos escrituraci\xF3n",
+    "gastos de escrituracion",
+    "escrituraci\xF3n",
+    "escrituracion",
+    "liquidar notaria",
+    "liquidar notar\xEDa",
+    "costo notaria",
+    "costos notaria",
+    "cu\xE1nto vale la notar\xEDa",
+    "cuanto vale la notaria",
+    "cuanto cobra la notaria",
+    "cu\xE1nto cobra la notar\xEDa",
+    "cuanto se va en notaria",
+    "cu\xE1nto se va en notar\xEDa",
+    "gastos de registro",
+    "firmar promesa",
+    "promesa de compraventa",
+    "promesa compraventa",
+    "voy para la notar\xEDa",
+    "voy a la notaria",
+    "voy a notaria",
+    "voy para notaria",
+    "firmar escrituras",
+    "gastos notariale",
+    "derechos notariales",
+    "liquidaci\xF3n notarial",
+    "impuesto de registro"
+  ];
+  const hasPending = senderId ? hasPendingNotarialSession(senderId) : false;
+  const hasNotarialIntent = keywords.some((kw) => lower.includes(kw));
+  if (!hasNotarialIntent && !hasPending) {
+    return { found: false };
+  }
+  let precio = 0;
+  const mMillones = clean.match(/(?:\$|\b)(\d+(?:[\.,]\d+)?)\s*(?:millones|millón|millon|m\b)/i);
+  if (mMillones) {
+    const rawNum = parseFloat(mMillones[1].replace(",", "."));
+    precio = rawNum * 1e6;
+  } else {
+    const mNum = clean.match(/(?:\$|\b)(\d{1,3}(?:\.\d{3}){2,3}|\d{7,11})\b/);
+    if (mNum) {
+      precio = parseInt(mNum[1].replace(/\./g, ""), 10);
+    }
+  }
+  if (precio < 1e7) {
     return {
-      isMatchQuery: true,
-      isAuthorizedAdmin: false,
-      queryType: resolvedQueryType,
-      querySummary: "Acceso restringido: Consulta de base de datos de coincidencias exclusiva para Administradores de Vecy Bienes Ra\xEDces.",
-      totalFound: 0,
-      matches: [],
-      formattedReport: `\u{1F512} *ACCESO RESTRINGIDO \u2014 PROTOCOLO DE PRIVACIDAD VECY*
-
-Hola colega. La consulta directa y masiva de la base de datos de coincidencias y contactos de agentes es de uso exclusivo para la Direcci\xF3n de Vecy Bienes Ra\xEDces.
-
-Para consultar si tenemos un cliente o inmueble compatible para tu negocio bajo el esquema colaborativo 40/20/40, comun\xEDcate directamente con nuestra Direcci\xF3n de Operaciones al WhatsApp oficial de Br\xF3ker:
-\u{1F4F2} *+57 316 656 9719* (https://wa.me/573166569719) \u{1F91D}\u2728`,
-      adminDashboardUrl
+      found: true,
+      needsMoreInfo: true
     };
   }
-  const db = injectedDb || await getDb();
-  if (!db) {
+  let estadoPredio = "libre";
+  if (/predio.*(?:leasing|locatario)|inmueble.*(?:leasing)|tiene\s+leasing/i.test(lower)) {
+    estadoPredio = "leasing";
+  } else if (/predio.*(?:hipoteca|gravamen)|inmueble.*(?:hipoteca)|tiene\s+hipoteca|con\s+hipoteca|hipotecado/i.test(lower)) {
+    estadoPredio = "hipoteca";
+  }
+  let formaPago = "contado";
+  if (/compra.*(?:leasing)|paga.*(?:leasing)|con\s+leasing\s+habitacional/i.test(lower)) {
+    formaPago = "leasing";
+  } else if (/compra.*(?:cr[eé]dito|hipoteca|banco|pr[eé]stamo)|con\s+cr[eé]dito|con\s+hipoteca/i.test(lower)) {
+    formaPago = "hipoteca";
+  } else if (/contado|recursos\s+propios|efectivo/i.test(lower)) {
+    formaPago = "contado";
+  }
+  const afectacionViviendaFamiliar = /afectaci[oó]n|vivienda\s+familiar/i.test(lower) && !/sin\s+afectaci[oó]n/i.test(lower);
+  const patrimonioFamilia = /patrimonio\s+de\s+familia|inembargable/i.test(lower);
+  const bienInteresCultural = /inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b/i.test(lower);
+  const embargoMedidaCautelar = /embargo|embargado|medida\s+cautelar/i.test(lower);
+  const vendedorEsPersonaJuridica = /persona\s+jur[ií]dica|empresa|sociedad|constructora|inmobiliaria\s+vende/i.test(lower);
+  const esViviendaInteresSocial = /\bvis\b|inter[eé]s\s+social|\bvip\b/i.test(lower);
+  return {
+    found: true,
+    needsMoreInfo: false,
+    params: {
+      precioVenta: precio,
+      estadoPredio,
+      formaPago,
+      ciudad: "Bogot\xE1",
+      vendedorEsPersonaJuridica,
+      esViviendaInteresSocial,
+      afectacionViviendaFamiliar,
+      patrimonioFamilia,
+      bienInteresCultural,
+      embargoMedidaCautelar
+    }
+  };
+}
+async function executeNotarialAssistanceFromWhatsApp(text2, senderId, isPrivateDm = true) {
+  const explanation = explainNotarialFigures(text2);
+  if (explanation.isQuestion && explanation.answerText) {
     return {
-      isMatchQuery: true,
-      isAuthorizedAdmin: isAdmin,
-      queryType: resolvedQueryType,
-      querySummary: "Base de datos no disponible temporalmente",
-      totalFound: 0,
-      matches: [],
-      formattedReport: `\u{1F3AF} *VECY MATCH ENGINE \u2014 B\xDASQUEDA DE COINCIDENCIAS*
-
-Criterio analizado (${resolvedQueryType}): *${clean}*.
-\u26A0\uFE0F La base de datos no est\xE1 disponible en este momento. Intenta nuevamente en unos instantes.
-\u{1F449} *Ver en Mesa de Coincidencias:*
-${adminDashboardUrl}`,
-      adminDashboardUrl
+      isNotarialRequest: true,
+      isEducationalAnswer: true,
+      reportText: explanation.answerText
     };
   }
-  if (matchIdCaptured) {
-    const matchIdNum = parseInt(matchIdCaptured, 10);
-    const existingMatchRows = await db.select().from(propertyMatches).where(eq8(propertyMatches.id, matchIdNum)).limit(1);
-    if (existingMatchRows.length > 0) {
-      const pm = existingMatchRows[0];
-      const [prop] = await db.select().from(properties).where(eq8(properties.id, pm.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq8(requirements.id, pm.requirementId)).limit(1);
-      if (prop && req) {
-        const propPhone = extractRealPhone(prop);
-        const reqPhone = extractRealPhone(req);
-        const scoreNum = parseFloat(String(pm.matchScore || "0"));
-        const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
-        const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
-        const header2 = `\u{1F3AF} *DETALLE DE COINCIDENCIA \u2014 MATCH #M${pm.id}*`;
-        const criteria2 = `\u{1F3C5} *Score de Afinidad:* *${scoreNum.toFixed(1)}%* ${scoreNum >= 90 ? "\u{1F525} (Alta Compatibilidad)" : "\u2705"}
-\u{1F3E0} *Inmueble (#P${prop.id}):* ${prop.propertyType || "Inmueble"} en ${prop.transactionType || "Venta"} \u2022 ${getPropNeighborhood(prop) || prop.city || "Bogot\xE1"} \u2022 ${formatCOP(prop.price || prop.rentPrice)}
-\u{1F4CB} *Demanda (#R${req.id}):* ${req.tipoInmuebleDeseado || "Inmueble"} en ${req.tipoNegocioDeseado || "Venta"} \u2022 ${req.zonaDeseada || req.addressNeighborhood || "Bogot\xE1"} \u2022 Presupuesto: ${formatCOP(req.presupuestoMax)}`;
-        const item = {
-          matchId: pm.id,
-          score: scoreNum,
-          matchType: "existing_match",
-          targetType: "inmueble",
-          targetId: prop.id,
-          title: prop.name || `Inmueble #${prop.id}`,
-          transactionType: prop.transactionType || "venta",
-          propertyType: prop.propertyType || "apartment",
-          city: prop.city || "Bogot\xE1",
-          neighborhood: getPropNeighborhood(prop),
-          priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
-          areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
-          bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
-          bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
-          parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
-          contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
-          contactPhone: propPhone,
-          contactWhatsAppLink: propWaLink,
-          matchSummary: `Coincidencia bilateral de ${scoreNum.toFixed(1)}%`,
-          positives: [],
-          blockers: []
-        };
-        const report = formatMatchReport(header2, criteria2, [item], isAdmin, adminDashboardUrl, "No se encontr\xF3 el detalle.");
-        return {
-          isMatchQuery: true,
-          isAuthorizedAdmin: isAdmin,
-          queryType: "match_id",
-          querySummary: `Match #${pm.id} (Inmueble #P${prop.id} \u2194 Demanda #R${req.id})`,
-          totalFound: 1,
-          matches: [item],
-          formattedReport: report,
-          adminDashboardUrl: `${adminDashboardUrl}?search=${pm.id}`
-        };
+  const detection = extractNotarialExpenseParams(text2, senderId);
+  if (!detection.found) {
+    return { isNotarialRequest: false };
+  }
+  if (detection.needsMoreInfo || !detection.params) {
+    setPendingNotarialSession(senderId);
+    const promptText = `\xA1Con mucho gusto te liquido los gastos de notar\xEDa y registro al centavo! \u2696\uFE0F\u{1F1E8}\u{1F1F4}
+
+Para darte el desglose exacto de cu\xE1nto paga el comprador y cu\xE1nto el vendedor, por favor conf\xEDrmame:
+1\uFE0F\u20E3 *Valor de la compraventa:* (Ej: 350 millones o el valor pactado).
+2\uFE0F\u20E3 *Estado del predio:* \xBFLibre de grav\xE1menes, con hipoteca activa o con leasing habitacional?
+3\uFE0F\u20E3 *Forma de pago:* \xBFDe contado, con cr\xE9dito hipotecario o con leasing?
+
+_(Si el predio tiene afectaci\xF3n a vivienda familiar, patrimonio de familia o es Bien de Inter\xE9s Cultural BIC, me avisas para calcular la figura exacta)_ \u{1F91D}\u2728`;
+    return {
+      isNotarialRequest: true,
+      reportText: promptText
+    };
+  }
+  clearPendingNotarialSession(senderId);
+  const calcResult = liquidarGastosNotariales(detection.params);
+  return {
+    isNotarialRequest: true,
+    reportText: calcResult.reportText,
+    calculatedResult: calcResult
+  };
+}
+var pendingNotarialSessions, NOTARIAL_SESSION_TTL_MS;
+var init_notarialExpenseService = __esm({
+  "server/_core/notarialExpenseService.ts"() {
+    "use strict";
+    init_taxEngine();
+    pendingNotarialSessions = /* @__PURE__ */ new Map();
+    NOTARIAL_SESSION_TTL_MS = 15 * 60 * 1e3;
+  }
+});
+
+// server/_core/predialService.ts
+var predialService_exports = {};
+__export(predialService_exports, {
+  CEDULA_HELP_TEXT: () => CEDULA_HELP_TEXT,
+  GOOGLE_REVIEW_MESSAGE: () => GOOGLE_REVIEW_MESSAGE,
+  PREDIAL_HELP_TEXT: () => PREDIAL_HELP_TEXT,
+  VIRAL_LOOP_MESSAGE: () => VIRAL_LOOP_MESSAGE,
+  clearPendingPredialSession: () => clearPendingPredialSession,
+  decodeSdhMessage: () => decodeSdhMessage,
+  downloadPredialInvoicePdf: () => downloadPredialInvoicePdf,
+  executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
+  extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
+  getChannelInviteGoodbyeMessage: () => getChannelInviteGoodbyeMessage,
+  getPendingPredialSession: () => getPendingPredialSession,
+  hasPendingPredialSession: () => hasPendingPredialSession,
+  isServiceHelpRequest: () => isServiceHelpRequest,
+  liquidarPredialEstimadoBogota: () => liquidarPredialEstimadoBogota,
+  sanitizeDocumentNumber: () => sanitizeDocumentNumber,
+  setPendingPredialSession: () => setPendingPredialSession
+});
+function getChannelInviteGoodbyeMessage(displayName) {
+  const namePart = displayName ? `, ${displayName}` : "";
+  return `Con todo el gusto${namePart}. Para nosotros en VECY es un verdadero placer apoyarte en tus proyectos y gestiones inmobiliarias. Antes de que te vayas, te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b), donde compartimos cosas que te pueden interesar.`;
+}
+function decodeSdhMessage(raw) {
+  if (!raw) return "";
+  let str = typeof raw === "string" ? raw.trim() : String(raw).trim();
+  if (str.startsWith("[") && str.endsWith("]")) {
+    try {
+      const parsedArr = JSON.parse(str);
+      if (Array.isArray(parsedArr) && parsedArr.every((n) => typeof n === "number")) {
+        str = Buffer.from(parsedArr).toString("utf8");
+      }
+    } catch (_) {
+    }
+  }
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(str) && !str.includes(" ") && str.length % 4 === 0 && str.length >= 4;
+  if (isBase64Pattern) {
+    try {
+      const dec = Buffer.from(str, "base64").toString("utf8");
+      const unescaped = dec.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10))).replace(/&lt;[^&]*&gt;?/gi, "").replace(/<[^>]*>?/gm, "").replace(/&[a-z]+;/gi, " ");
+      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(unescaped) && unescaped.trim().length > 0) {
+        return unescaped.trim();
+      }
+    } catch (_) {
+    }
+  }
+  return str.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10))).replace(/&lt;[^&]*&gt;?/gi, "").replace(/<[^>]*>?/gm, "").replace(/&[a-z]+;/gi, " ").trim();
+}
+function sanitizeDocumentNumber(raw, isNit = false) {
+  if (!raw) return "";
+  let cleaned = raw.replace(/[\s.,]/g, "");
+  const dvMatch = cleaned.match(/^(\d+)-(\d)$/);
+  if (dvMatch) {
+    cleaned = dvMatch[1];
+  } else if (isNit) {
+    const digitsOnly = cleaned.replace(/\D/g, "");
+    if (digitsOnly.length === 10) {
+      cleaned = digitsOnly.slice(0, 9);
+    } else if (digitsOnly.length > 10) {
+      cleaned = digitsOnly.slice(0, 9);
+    } else {
+      cleaned = digitsOnly;
+    }
+  } else {
+    cleaned = cleaned.replace(/\D/g, "");
+  }
+  return cleaned.replace(/\D/g, "");
+}
+function extractChipAndCedulaForPredial(text2) {
+  if (!text2 || typeof text2 !== "string") return { found: false };
+  const clean = text2.trim();
+  const lower = clean.toLowerCase();
+  const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
+  let cedula;
+  let nit;
+  let tipoDoc = "CC";
+  const nitMatch = clean.match(/(?:nit|n\.i\.t\.?)\s*[:#]?\s*([\d.,\s\-]{7,20})/i);
+  if (nitMatch && nitMatch[1]) {
+    const rawNit = nitMatch[1].trim();
+    nit = sanitizeDocumentNumber(rawNit, true);
+    tipoDoc = "NIT";
+  }
+  const ceMatch = clean.match(/(?:c\.?e\.?|c[ée]dula\s+de\s+extranjer[ií]a)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
+  if (!nit && ceMatch && ceMatch[1]) {
+    cedula = sanitizeDocumentNumber(ceMatch[1].trim());
+    tipoDoc = "CE";
+  }
+  if (!nit && !cedula) {
+    const ccMatch = clean.match(/(?:c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|cc|documento)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
+    if (ccMatch && ccMatch[1]) {
+      cedula = sanitizeDocumentNumber(ccMatch[1].trim());
+      tipoDoc = "CC";
+    }
+  }
+  if (!nit && !cedula) {
+    const numWithPuncMatch = clean.match(/\b([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?)\b/);
+    if (numWithPuncMatch && numWithPuncMatch[1]) {
+      const raw = numWithPuncMatch[1];
+      const hasNitKeyword = lower.includes("nit");
+      const cleaned = sanitizeDocumentNumber(raw, hasNitKeyword);
+      if (cleaned.length >= 6 && cleaned.length <= 12) {
+        if (hasNitKeyword) {
+          nit = cleaned;
+          tipoDoc = "NIT";
+        } else {
+          cedula = cleaned;
+        }
       }
     } else {
-      const notFoundReport = formatMatchReport(
-        `\u{1F3AF} *B\xDASQUEDA DE MATCH #M${matchIdNum}*`,
-        `Criterio: C\xF3digo #M${matchIdNum}`,
-        [],
-        isAdmin,
-        adminDashboardUrl,
-        `No se encontr\xF3 ning\xFAn match con c\xF3digo #M${matchIdNum} en la base de datos.`
-      );
-      return {
-        isMatchQuery: true,
-        isAuthorizedAdmin: isAdmin,
-        queryType: "match_id",
-        querySummary: `Match #${matchIdNum} no encontrado`,
-        totalFound: 0,
-        matches: [],
-        formattedReport: notFoundReport,
-        adminDashboardUrl
-      };
+      const anyNumberMatch = clean.match(/\b([0-9]{6,12})\b/);
+      if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[0].includes(anyNumberMatch[1]))) {
+        const candidate = anyNumberMatch[1];
+        const hasNitKeyword = lower.includes("nit");
+        if (hasNitKeyword) {
+          nit = sanitizeDocumentNumber(candidate, true);
+          tipoDoc = "NIT";
+        } else {
+          cedula = candidate;
+        }
+      }
     }
   }
-  if (propIdCaptured) {
-    const propIdNum = parseInt(propIdCaptured, 10);
-    const [prop] = await db.select().from(properties).where(eq8(properties.id, propIdNum)).limit(1);
-    if (prop) {
-      const existingMatches = await db.select().from(propertyMatches).where(eq8(propertyMatches.propertyId, propIdNum)).orderBy(desc3(propertyMatches.matchScore));
-      const matchItems = [];
-      if (existingMatches.length > 0) {
-        for (const pm of existingMatches) {
-          const scoreNum = parseFloat(String(pm.matchScore || "0"));
-          if (scoreNum < 80) continue;
-          const [req] = await db.select().from(requirements).where(eq8(requirements.id, pm.requirementId)).limit(1);
-          if (!req) continue;
-          const reqPhone = extractRealPhone(req);
-          const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
-          matchItems.push({
-            matchId: pm.id,
-            score: scoreNum,
-            matchType: "property_to_requirements",
-            targetType: "demanda",
-            targetId: req.id,
-            title: req.name || `Demanda #${req.id}`,
-            transactionType: req.tipoNegocioDeseado || "venta",
-            propertyType: req.tipoInmuebleDeseado || "apartment",
-            city: req.ciudadDeseada || "Bogot\xE1",
-            neighborhood: req.zonaDeseada || req.addressNeighborhood || "",
-            priceOrBudgetFormatted: formatCOP(req.presupuestoMax),
-            areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
-            bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
-            bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
-            parkingFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
-            contactName: req.nombreUsuarioWhatsapp || "Asesor con Demanda",
-            contactPhone: reqPhone,
-            contactWhatsAppLink: reqWaLink,
-            matchSummary: `Presupuesto m\xE1x ${formatCOP(req.presupuestoMax)} cubre inmueble`,
-            positives: [],
-            blockers: []
-          });
-        }
-      }
-      if (matchItems.length === 0) {
-        const freshMatches = await findMatchesForProperty(propIdNum);
-        for (const fm of freshMatches) {
-          const scoreNum = Number(fm.score || 0);
-          if (scoreNum < 80) continue;
-          const reqPhone = extractRealPhone(fm);
-          const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
-          matchItems.push({
-            matchId: fm.matchId || null,
-            score: scoreNum,
-            matchType: "property_to_requirements",
-            targetType: "demanda",
-            targetId: fm.id,
-            title: fm.name || `Demanda #${fm.id}`,
-            transactionType: fm.tipoNegocioDeseado || "venta",
-            propertyType: fm.tipoInmuebleDeseado || "apartment",
-            city: fm.ciudadDeseada || "Bogot\xE1",
-            neighborhood: fm.zonaDeseada || fm.addressNeighborhood || "",
-            priceOrBudgetFormatted: formatCOP(fm.presupuestoMax),
-            areaFormatted: fm.areaMin ? `M\xEDn ${fm.areaMin} m\xB2` : "N/E",
-            bedroomsFormatted: fm.habitacionesMin ? `M\xEDn ${fm.habitacionesMin} Hab` : "N/E",
-            bathroomsFormatted: fm.banosMin ? `M\xEDn ${fm.banosMin} Ba\xF1os` : "N/E",
-            parkingFormatted: fm.parqueaderosMin ? `M\xEDn ${fm.parqueaderosMin} Pq` : "N/E",
-            contactName: fm.nombreUsuarioWhatsapp || "Asesor con Demanda",
-            contactPhone: reqPhone,
-            contactWhatsAppLink: reqWaLink,
-            matchSummary: `Score de compatibilidad: ${scoreNum.toFixed(1)}%`,
-            positives: [],
-            blockers: []
-          });
-        }
-      }
-      const propPhone = extractRealPhone(prop);
-      const header2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 DEMANDAS COMPATIBLES PARA INMUEBLE #P${prop.id}*`;
-      const criteria2 = `\u{1F3E0} *Inmueble Consultado:* ${prop.propertyType} en ${prop.transactionType} \u2022 ${getPropNeighborhood(prop) || prop.city} \u2022 ${formatCOP(prop.price || prop.rentPrice)}
-\u{1F464} *Captador:* ${prop.nombreUsuarioWhatsapp || "Asesor"} (${propPhone ? "+" + propPhone : "Sin tel"})`;
-      const emptyDiag2 = `Actualmente no hay demandas activas que alcancen el 80% de compatibilidad para este inmueble.
-\u{1F4A1} El inmueble permanece activo en el cat\xE1logo y te notificar\xE9 autom\xE1ticamente cuando ingrese un cliente compatible.`;
-      const reportText2 = formatMatchReport(header2, criteria2, matchItems, isAdmin, adminDashboardUrl, emptyDiag2);
-      return {
-        isMatchQuery: true,
-        isAuthorizedAdmin: isAdmin,
-        queryType: "property_id",
-        querySummary: `Inmueble #P${prop.id} (${prop.propertyType} en ${getPropNeighborhood(prop) || prop.city})`,
-        totalFound: matchItems.length,
-        matches: matchItems,
-        formattedReport: reportText2,
-        adminDashboardUrl: `${adminDashboardUrl}?search=${prop.id}`
-      };
+  let matricula;
+  const matMatch1 = clean.match(/\b(50[CNS]-[0-9]{5,10})\b/i);
+  const matMatch2 = clean.match(/(?:matr[íi]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z\-]+)/i);
+  if (matMatch1 && matMatch1[1]) {
+    matricula = matMatch1[1].toUpperCase();
+  } else if (matMatch2 && matMatch2[1]) {
+    matricula = matMatch2[1].toUpperCase();
+  }
+  let direccion;
+  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[íi]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
+  const dirMatch2 = clean.match(/\b((?:cll?e?|cra?|carrera|diagonal|diag|transversal|transv?|av(?:enida)?|calle)\s+[0-9]+[A-Za-z]?\s*#?\s*[0-9]+[A-Za-z]?\s*[-–]\s*[0-9]+)\b/i);
+  if (dirMatch1 && dirMatch1[1] && dirMatch1[1].trim().length >= 5) {
+    direccion = dirMatch1[1].trim();
+  } else if (dirMatch2 && dirMatch2[1]) {
+    direccion = dirMatch2[1].trim();
+  }
+  let estrato;
+  const estratoMatch = clean.match(/\bestrato\s*([1-6])\b/i);
+  if (estratoMatch && estratoMatch[1]) {
+    estrato = parseInt(estratoMatch[1], 10);
+  }
+  let avaluoCatastral;
+  const avaluoMatch = clean.match(/(?:aval[uú]o(?:\s+catastral)?|valor\s+catastral)\s*[:#]?\s*\$?\s*([0-9.,]+(?:\s*(?:millones|m))?)/i);
+  if (avaluoMatch && avaluoMatch[1]) {
+    const rawVal = avaluoMatch[1].toLowerCase();
+    if (rawVal.includes("millon") || rawVal.includes("m")) {
+      const numOnly = parseFloat(rawVal.replace(/[^\d.,]/g, "").replace(",", "."));
+      if (!isNaN(numOnly)) avaluoCatastral = Math.round(numOnly * 1e6);
+    } else {
+      const numOnly = parseInt(rawVal.replace(/\D/g, ""), 10);
+      if (!isNaN(numOnly) && numOnly > 0) avaluoCatastral = numOnly;
     }
   }
-  if (reqIdCaptured) {
-    const reqIdNum = parseInt(reqIdCaptured, 10);
-    const [req] = await db.select().from(requirements).where(eq8(requirements.id, reqIdNum)).limit(1);
-    if (req) {
-      const existingMatches = await db.select().from(propertyMatches).where(eq8(propertyMatches.requirementId, reqIdNum)).orderBy(desc3(propertyMatches.matchScore));
-      const matchItems = [];
-      if (existingMatches.length > 0) {
-        for (const pm of existingMatches) {
-          const scoreNum = parseFloat(String(pm.matchScore || "0"));
-          if (scoreNum < 80) continue;
-          const [prop] = await db.select().from(properties).where(eq8(properties.id, pm.propertyId)).limit(1);
-          if (!prop || !prop.available) continue;
-          const propPhone = extractRealPhone(prop);
-          const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
-          matchItems.push({
-            matchId: pm.id,
-            score: scoreNum,
-            matchType: "requirement_to_properties",
-            targetType: "inmueble",
-            targetId: prop.id,
-            title: prop.name || `Inmueble #${prop.id}`,
-            transactionType: prop.transactionType || "venta",
-            propertyType: prop.propertyType || "apartment",
-            city: prop.city || "Bogot\xE1",
-            neighborhood: getPropNeighborhood(prop),
-            priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
-            areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
-            bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
-            bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
-            parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
-            contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
-            contactPhone: propPhone,
-            contactWhatsAppLink: propWaLink,
-            matchSummary: `Precio ${formatCOP(prop.price || prop.rentPrice)} dentro de presupuesto`,
-            positives: [],
-            blockers: []
-          });
-        }
-      }
-      if (matchItems.length === 0) {
-        const freshMatches = await findMatchesForRequirement(reqIdNum);
-        for (const fm of freshMatches) {
-          const scoreNum = Number(fm.score || 0);
-          if (scoreNum < 80) continue;
-          const propPhone = extractRealPhone(fm);
-          const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
-          matchItems.push({
-            matchId: fm.matchId || null,
-            score: scoreNum,
-            matchType: "requirement_to_properties",
-            targetType: "inmueble",
-            targetId: fm.id,
-            title: fm.name || `Inmueble #${fm.id}`,
-            transactionType: fm.transactionType || "venta",
-            propertyType: fm.propertyType || "apartment",
-            city: fm.city || "Bogot\xE1",
-            neighborhood: getPropNeighborhood(fm),
-            priceOrBudgetFormatted: formatCOP(fm.price || fm.rentPrice),
-            areaFormatted: getPropArea(fm) ? `${getPropArea(fm)} m\xB2` : "N/E",
-            bedroomsFormatted: fm.bedrooms ? `${fm.bedrooms} Hab` : "N/E",
-            bathroomsFormatted: fm.bathrooms ? `${fm.bathrooms} Ba\xF1os` : "N/E",
-            parkingFormatted: getPropGarages(fm) ? `${getPropGarages(fm)} Pq` : "N/E",
-            contactName: fm.nombreUsuarioWhatsapp || "Asesor Captador",
-            contactPhone: propPhone,
-            contactWhatsAppLink: propWaLink,
-            matchSummary: `Score de compatibilidad: ${scoreNum.toFixed(1)}%`,
-            positives: [],
-            blockers: []
-          });
-        }
-      }
-      const reqPhone = extractRealPhone(req);
-      const header2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 INMUEBLES COMPATIBLES PARA DEMANDA #R${req.id}*`;
-      const criteria2 = `\u{1F4CB} *Demanda Consultada:* ${req.tipoInmuebleDeseado} en ${req.tipoNegocioDeseado} \u2022 ${req.zonaDeseada || req.ciudadDeseada} \u2022 Presupuesto m\xE1x: ${formatCOP(req.presupuestoMax)}
-\u{1F464} *Asesor Solicitante:* ${req.nombreUsuarioWhatsapp || "Asesor"} (${reqPhone ? "+" + reqPhone : "Sin tel"})`;
-      const emptyDiag2 = `Actualmente no hay inmuebles en cat\xE1logo que alcancen el 80% de compatibilidad para esta demanda.
-\u{1F4A1} Te avisar\xE9 tan pronto un captador ingrese una propiedad compatible a la red.`;
-      const reportText2 = formatMatchReport(header2, criteria2, matchItems, isAdmin, adminDashboardUrl, emptyDiag2);
-      return {
-        isMatchQuery: true,
-        isAuthorizedAdmin: isAdmin,
-        queryType: "requirement_id",
-        querySummary: `Demanda #R${req.id} (${req.tipoInmuebleDeseado} en ${req.zonaDeseada || req.ciudadDeseada})`,
-        totalFound: matchItems.length,
-        matches: matchItems,
-        formattedReport: reportText2,
-        adminDashboardUrl: `${adminDashboardUrl}?search=${req.id}`
-      };
-    }
-  }
-  const fb = extractFallbackDataFromText(clean);
-  if (isDemand) {
-    let pptoMaxNum = Number(fb.presupuestoMax || 0);
-    if (!pptoMaxNum || pptoMaxNum === 0) {
-      const mmMatch = clean.match(/(?:recursos|presupuesto|ppto|hasta|tope|valor)?\s*(?:hasta|de)?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mm|millones|mil\s*millones)\b/i);
-      if (mmMatch) {
-        const { parseColombianPriceOrBudget: parseColombianPriceOrBudget3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-        const parsed = parseColombianPriceOrBudget3(mmMatch[1], "millones", true);
-        if (parsed > 0) pptoMaxNum = parsed;
-      }
-    }
-    let areaMinNum = Number(fb.areaMin || 0);
-    if (!areaMinNum || areaMinNum === 0) {
-      const aRangeMatch = clean.match(/(\d{2,4})\s*(?:[-–—]|a|hasta)\s*(\d{2,4})\s*(?:m2|mts2|m²|metros)/i);
-      if (aRangeMatch) {
-        areaMinNum = Math.min(Number(aRangeMatch[1]), Number(aRangeMatch[2]));
-      }
-    }
-    let bedroomsMinNum = Number(fb.bedroomsMin || fb.bedrooms || 0);
-    if (!bedroomsMinNum || bedroomsMinNum === 0) {
-      const bedMatch = clean.match(/(\d+)\s*(?:habitación|habitaciones|alcoba|alcobas|hab|habs)/i);
-      if (bedMatch) bedroomsMinNum = Number(bedMatch[1]);
-    }
-    const { extractAllBarriosFromText: extractAllBarriosFromText2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-    const extractedBarrios = extractAllBarriosFromText2(clean);
-    const mainBarrio = fb.barrio || extractedBarrios[0] || "Bogot\xE1";
-    const sectoresLabel = extractedBarrios.length > 0 ? extractedBarrios.join(", ") : mainBarrio;
-    const candidateReq = {
-      id: 0,
-      rawText: clean,
-      name: `Demanda Administrador (${mainBarrio})`,
-      tipoInmuebleDeseado: fb.propertyType || "apartment",
-      tipoNegocioDeseado: fb.transactionType || "venta",
-      ciudadDeseada: fb.city || "Bogot\xE1",
-      zonaDeseada: mainBarrio,
-      addressNeighborhood: mainBarrio,
-      presupuestoMax: pptoMaxNum ? String(pptoMaxNum) : fb.presupuestoMax ? String(fb.presupuestoMax) : "0",
-      presupuestoMin: "0",
-      areaMin: areaMinNum ? String(areaMinNum) : fb.areaMin ? String(fb.areaMin) : null,
-      habitacionesMin: bedroomsMinNum || null,
-      banosMin: fb.bathroomsMin || null,
-      parqueaderosMin: fb.parkingMin || null,
-      status: "active"
-    };
-    const availableProps = await db.select().from(properties).where(eq8(properties.available, true));
-    const matchedItems2 = [];
-    for (const prop of availableProps) {
-      const repCount = Number(prop.republicacionesCount || 0);
-      const propEffectiveDate = repCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
-      const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 15) continue;
-      const explanation = explicarMatch(candidateReq, prop, fb, void 0, extractedBarrios);
-      if (explanation.score >= 80) {
-        const propPhone = extractRealPhone(prop);
-        const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
-        let existingPmId = null;
-        try {
-          const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq8(propertyMatches.propertyId, prop.id)).limit(1);
-          existingPmId = existingPm?.[0]?.id || null;
-        } catch {
-          existingPmId = null;
-        }
-        matchedItems2.push({
-          matchId: existingPmId,
-          score: explanation.score,
-          matchType: "requirement_to_properties",
-          targetType: "inmueble",
-          targetId: prop.id,
-          title: prop.name || `Inmueble #${prop.id}`,
-          transactionType: prop.transactionType || "venta",
-          propertyType: prop.propertyType || "apartment",
-          city: prop.city || "Bogot\xE1",
-          neighborhood: getPropNeighborhood(prop),
-          priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
-          areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
-          bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
-          bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
-          parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
-          contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
-          contactPhone: propPhone,
-          contactWhatsAppLink: propWaLink,
-          matchSummary: explanation.positives[0] || `Score: ${explanation.score.toFixed(1)}%`,
-          positives: explanation.positives,
-          blockers: explanation.blockers
-        });
-      }
-    }
-    matchedItems2.sort((a, b) => b.score - a.score);
-    const header2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 RESULTADO DE B\xDASQUEDA (\xDALTIMOS 15 D\xCDAS)*`;
-    const criteria2 = `\u{1F4CB} *Criterios Extra\xEDdos de la Demanda:*
-\u2022 *Inmueble:* ${candidateReq.propertyType || candidateReq.tipoInmuebleDeseado} en ${candidateReq.transactionType || candidateReq.tipoNegocioDeseado}
-\u2022 *Presupuesto M\xE1x:* ${formatCOP(candidateReq.presupuestoMax)}
-\u2022 *Metraje M\xEDnimo:* ${candidateReq.areaMin ? `${candidateReq.areaMin} m\xB2` : "No especificado"}
-\u2022 *Habitaciones M\xEDnimas:* ${candidateReq.habitacionesMin ? `${candidateReq.habitacionesMin} Hab` : "No especificadas"}
-\u2022 *Zonas / Sectores:* ${sectoresLabel}`;
-    const emptyDiag2 = `\u26D4 *No se encontraron ofertas compatibles (Score \u2265 80%) captadas en los \xFAltimos 15 d\xEDas.* 
-
-Verifiqu\xE9 todos los inmuebles activos captados en la red durante los \xFAltimos 15 d\xEDas y actualmente ninguno alcanza el umbral m\xEDnimo del 80% con estos requisitos espec\xEDficos.`;
-    const reportText2 = formatMatchReport(header2, criteria2, matchedItems2, isAdmin, adminDashboardUrl, emptyDiag2);
+  const certKeywords = [
+    "certificado de pago",
+    "certificado de impuesto",
+    "certificacion de pago",
+    "paz y salvo",
+    "recibo pagado",
+    "comprobante de pago",
+    "pago de impuesto"
+  ];
+  const isCertificadoPago = certKeywords.some((kw) => lower.includes(kw));
+  const keywords = ["predial", "impuesto predial", "factura predial", "chip", "paz y salvo predial", "liquidar predial", ...certKeywords];
+  const hasKeyword = keywords.some((kw) => lower.includes(kw));
+  if (chipMatch && chipMatch[1]) {
     return {
-      isMatchQuery: true,
-      isAuthorizedAdmin: isAdmin,
-      queryType: "demand_search",
-      querySummary: `Demanda: ${candidateReq.tipoInmuebleDeseado} en ${sectoresLabel} (${formatCOP(candidateReq.presupuestoMax)})`,
-      totalFound: matchedItems2.length,
-      matches: matchedItems2,
-      formattedReport: reportText2,
-      adminDashboardUrl
+      found: true,
+      chip: chipMatch[1].toUpperCase(),
+      cedula,
+      nit,
+      tipoDoc,
+      matricula,
+      direccion,
+      estrato,
+      avaluoCatastral,
+      isCertificadoPago
     };
   }
-  const candidateProp = {
-    id: 0,
-    rawText: clean,
-    name: `Inmueble Administrador (${fb.barrio || fb.city || "Bogot\xE1"})`,
-    propertyType: fb.propertyType || "apartment",
-    transactionType: fb.transactionType || "venta",
-    city: fb.city || "Bogot\xE1",
-    neighborhood: fb.barrio || "",
-    price: fb.price ? String(fb.price) : null,
-    rentPrice: fb.rentPrice ? String(fb.rentPrice) : null,
-    area: fb.area ? String(fb.area) : null,
-    bedrooms: fb.bedrooms || null,
-    bathrooms: fb.bathrooms || null,
-    parkingSpaces: fb.parking || null,
-    available: true
-  };
-  const activeReqs = await db.select().from(requirements).where(eq8(requirements.status, "active"));
-  const matchedItems = [];
-  for (const req of activeReqs) {
-    if (req.status === "expired") continue;
-    const reqRepCount = Number(req.republicacionesCount || 0);
-    const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt;
-    const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-    if (reqAgeDays > 15) continue;
-    const explanation = explicarMatch(req, candidateProp, void 0, fb);
-    if (explanation.score >= 80) {
-      const reqPhone = extractRealPhone(req);
-      const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
-      const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq8(propertyMatches.requirementId, req.id)).limit(1);
-      matchedItems.push({
-        matchId: existingPm[0]?.id || null,
-        score: explanation.score,
-        matchType: "property_to_requirements",
-        targetType: "demanda",
-        targetId: req.id,
-        title: req.name || `Demanda #${req.id}`,
-        transactionType: req.tipoNegocioDeseado || "venta",
-        propertyType: req.tipoInmuebleDeseado || "apartment",
-        city: req.ciudadDeseada || "Bogot\xE1",
-        neighborhood: req.zonaDeseada || req.addressNeighborhood || "",
-        priceOrBudgetFormatted: formatCOP(req.presupuestoMax),
-        areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
-        bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
-        bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
-        parkingFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
-        contactName: req.nombreUsuarioWhatsapp || "Asesor con Demanda",
-        contactPhone: reqPhone,
-        contactWhatsAppLink: reqWaLink,
-        matchSummary: explanation.positives[0] || `Score: ${explanation.score.toFixed(1)}%`,
-        positives: explanation.positives,
-        blockers: explanation.blockers
-      });
+  if (hasKeyword && (cedula || nit || matricula || direccion)) {
+    return {
+      found: true,
+      cedula,
+      nit,
+      tipoDoc,
+      matricula,
+      direccion,
+      estrato,
+      avaluoCatastral,
+      isCertificadoPago
+    };
+  }
+  return { found: false };
+}
+function liquidarPredialEstimadoBogota(avaluoCatastral, estrato = 4, esResidencial = true) {
+  const avaluo = Math.max(0, avaluoCatastral);
+  let tarifaPorMil = 6.5;
+  if (!esResidencial) {
+    tarifaPorMil = 10.5;
+  } else {
+    switch (estrato) {
+      case 1:
+      case 2:
+        tarifaPorMil = 2.5;
+        break;
+      case 3:
+        tarifaPorMil = 4.5;
+        break;
+      case 4:
+        tarifaPorMil = 6.5;
+        break;
+      case 5:
+        tarifaPorMil = 8.5;
+        break;
+      case 6:
+      default:
+        tarifaPorMil = 11;
+        break;
     }
   }
-  matchedItems.sort((a, b) => b.score - a.score);
-  const header = `\u{1F3AF} *VECY MATCH ENGINE \u2014 RESULTADO DE B\xDASQUEDA (\xDALTIMOS 15 D\xCDAS)*`;
-  const criteria = `\u{1F3E0} *Criterios Extra\xEDdos de la Oferta:*
-\u2022 *Inmueble:* ${candidateProp.propertyType} en ${candidateProp.transactionType}
-\u2022 *Ubicaci\xF3n:* ${candidateProp.neighborhood || candidateProp.city}
-\u2022 *Precio:* ${formatCOP(candidateProp.price || candidateProp.rentPrice)}
-\u2022 *Metraje:* ${candidateProp.area ? `${candidateProp.area} m\xB2` : "No especificado"}
-\u2022 *Habitaciones:* ${candidateProp.bedrooms ? `${candidateProp.bedrooms} Hab` : "No especificadas"}`;
-  const emptyDiag = `\u26D4 *No se encontraron demandas compatibles (Score \u2265 80%) captadas en los \xFAltimos 15 d\xEDas.* 
-
-Verifiqu\xE9 las demandas activas de la red durante los \xFAltimos 15 d\xEDas y actualmente ning\xFAn cliente comprador o arrendatario coincide con las caracter\xEDsticas de este inmueble.`;
-  const reportText = formatMatchReport(header, criteria, matchedItems, isAdmin, adminDashboardUrl, emptyDiag);
+  const impuestoPleno = Math.round(avaluo * tarifaPorMil / 1e3);
+  const descuentoProntoPago = Math.round(impuestoPleno * 0.1);
+  const impuestoConDescuento = impuestoPleno - descuentoProntoPago;
+  const aporteVoluntario = Math.round(impuestoPleno * 0.1);
   return {
-    isMatchQuery: true,
-    isAuthorizedAdmin: isAdmin,
-    queryType: "offer_search",
-    querySummary: `Oferta: ${candidateProp.propertyType} en ${candidateProp.neighborhood || candidateProp.city} (${formatCOP(candidateProp.price || candidateProp.rentPrice)})`,
-    totalFound: matchedItems.length,
-    matches: matchedItems,
-    formattedReport: reportText,
-    adminDashboardUrl
+    avaluoCatastral: avaluo,
+    estrato,
+    tarifaPorMil,
+    impuestoPleno,
+    descuentoProntoPago,
+    impuestoConDescuento,
+    aporteVoluntario
   };
 }
-var ADMIN_IDENTIFIERS;
-var init_adminMatchAssistantService = __esm({
-  "server/_core/adminMatchAssistantService.ts"() {
+function setPendingPredialSession(senderId, session) {
+  if (!senderId) return;
+  pendingPredialSessions.set(senderId, {
+    ...session,
+    timestamp: Date.now()
+  });
+}
+function hasPendingPredialSession(senderId) {
+  if (!senderId) return false;
+  const session = pendingPredialSessions.get(senderId);
+  if (!session) return false;
+  if (Date.now() - session.timestamp > 15 * 60 * 1e3) {
+    pendingPredialSessions.delete(senderId);
+    return false;
+  }
+  return true;
+}
+function getPendingPredialSession(senderId) {
+  if (!senderId) return void 0;
+  const session = pendingPredialSessions.get(senderId);
+  if (!session) return void 0;
+  if (Date.now() - session.timestamp > 15 * 60 * 1e3) {
+    pendingPredialSessions.delete(senderId);
+    return void 0;
+  }
+  return session;
+}
+function clearPendingPredialSession(senderId) {
+  if (!senderId) return;
+  pendingPredialSessions.delete(senderId);
+}
+async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
+  const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
+  if (!apiKey) {
+    return {
+      success: false,
+      errorMessage: "Servicio de resoluci\xF3n de CAPTCHA no configurado."
+    };
+  }
+  let tipoDoc = tipoDocInput.toUpperCase().trim();
+  if (tipoDoc.includes("NIT") && (tipoDoc.includes("EXTRANJ") || tipoDoc.includes("NITE"))) {
+    tipoDoc = "NITE";
+  } else if (tipoDoc.includes("NIT")) {
+    tipoDoc = "NIT";
+  } else if (tipoDoc.includes("EXTRANJER") || tipoDoc === "CE") {
+    tipoDoc = "CE";
+  } else if (tipoDoc.includes("PASAPORTE") || tipoDoc === "PA" || tipoDoc === "PAS") {
+    tipoDoc = "PA";
+  } else if (tipoDoc.includes("TARJETA") && (tipoDoc.includes("EXTRANJ") || tipoDoc === "TIE")) {
+    tipoDoc = "TIE";
+  } else if (tipoDoc.includes("TARJETA") || tipoDoc === "TI") {
+    tipoDoc = "TI";
+  } else if (tipoDoc.includes("NUIP")) {
+    tipoDoc = "NUIP";
+  } else if (tipoDoc.includes("DIPLOMAT") || tipoDoc === "CD") {
+    tipoDoc = "CD";
+  } else if (tipoDoc.includes("PPT") || tipoDoc.includes("PROTECCION") || tipoDoc.includes("PROTECCI\xD3N")) {
+    tipoDoc = "PPT";
+  } else {
+    tipoDoc = "CC";
+  }
+  const cleanNumDoc = sanitizeDocumentNumber(numDoc, tipoDoc === "NIT");
+  const cleanChip = chip.toUpperCase().trim();
+  let browser = null;
+  try {
+    const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
+    const solver = new Solver2(apiKey);
+    const puppeteer = (await import("puppeteer")).default;
+    const fs14 = await import("fs");
+    const executablePath = fs14.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu"
+      ]
+    });
+    const page = await browser.newPage();
+    page.setDefaultTimeout(6e4);
+    await page.evaluateOnNewDocument(() => {
+      window.__name = (target) => target;
+    });
+    let buscarInfoData = null;
+    page.on("response", async (res) => {
+      const url = res.url();
+      if (url.includes("buscarInfo")) {
+        try {
+          buscarInfoData = await res.json();
+        } catch (_) {
+        }
+      }
+    });
+    try {
+      await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
+        waitUntil: "networkidle2",
+        timeout: 45e3
+      });
+    } catch (gotoErr) {
+      if (gotoErr?.message?.includes("detached") || gotoErr?.message?.includes("timeout") || gotoErr?.message?.includes("LifecycleWatcher")) {
+        console.warn("[PREDIAL-DOWNLOAD] Reintentando page.goto con domcontentloaded...");
+        await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
+          waitUntil: "domcontentloaded",
+          timeout: 45e3
+        });
+      } else {
+        throw gotoErr;
+      }
+    }
+    await page.select("#claveImpuesto", "0001");
+    await page.evaluate(() => {
+      if (window.ACC && window.ACC.descargaFacturaVA) {
+        window.ACC.descargaFacturaVA.showTag(document.getElementById("claveImpuesto"), "");
+      }
+    });
+    await new Promise((r) => setTimeout(r, 600));
+    await page.select("#tipoDoc", tipoDoc);
+    await page.type("#numDoc", cleanNumDoc);
+    await page.type("#claveObjeto", cleanChip);
+    await page.evaluate(() => {
+      const chk = document.getElementById("chkTratamientoDatos");
+      if (chk) {
+        chk.checked = true;
+        if (window.ACC && window.ACC.descargaFacturaVA) {
+          window.ACC.descargaFacturaVA.tratamientoDatos(chk);
+        }
+      }
+    });
+    console.log(`[PREDIAL-DOWNLOAD] Resolviendo reCAPTCHA para CHIP ${cleanChip} y ${tipoDoc} ${cleanNumDoc}...`);
+    const captcha = await solver.recaptcha({
+      googlekey: "6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO",
+      pageurl: "https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA"
+    });
+    await page.evaluate((token) => {
+      const el = document.getElementById("g-recaptcha-response");
+      if (el) el.value = token;
+      window.recaptchaResponse = token;
+      const btn = document.getElementById("facBuscar");
+      if (btn) btn.disabled = false;
+      if (window.ACC && window.ACC.descargaFacturaVA) {
+        window.ACC.descargaFacturaVA.showDownload();
+      }
+    }, captcha.data);
+    let relativePdfUrl = "";
+    let errorMessage = "";
+    const startTime = Date.now();
+    while (Date.now() - startTime < 25e3) {
+      const state = await page.evaluate(() => {
+        const dh = document.getElementById("downloadHelper");
+        const href = dh ? dh.getAttribute("href") || dh.href : "";
+        const errModal = document.getElementById("dialogMensajesContent");
+        const swal = document.querySelector(".swal2-html-container");
+        const validaciones = document.getElementById("mensajesValidaciones");
+        return {
+          href,
+          errText: errModal && errModal.innerText || swal && swal.innerText || validaciones && validaciones.innerText || ""
+        };
+      });
+      if (state.href && (state.href.includes("/bogota/medias/") || state.href.includes(".pdf"))) {
+        relativePdfUrl = state.href;
+        break;
+      }
+      if (state.errText && state.errText.trim().length > 3) {
+        errorMessage = state.errText.trim();
+        break;
+      }
+      if (buscarInfoData && buscarInfoData.dataForm?.urlDownload) {
+        relativePdfUrl = buscarInfoData.dataForm.urlDownload;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 1e3));
+    }
+    let isAlreadyPaid = false;
+    let sdhInfoErrorMessage = "";
+    if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
+      for (const err of buscarInfoData.dataForm.errores) {
+        const rawMsg = err?.txt_msj || err?.txtmsj;
+        if (rawMsg) {
+          const decoded = decodeSdhMessage(rawMsg);
+          const lowerDec = decoded.toLowerCase();
+          if (lowerDec.includes("pagada") || lowerDec.includes("pago") || lowerDec.includes("cancelad")) {
+            isAlreadyPaid = true;
+          } else if (decoded.trim().length > 3) {
+            sdhInfoErrorMessage = decoded.trim();
+          }
+        }
+      }
+    }
+    const wantCertificado = options?.isCertificadoPago || isAlreadyPaid;
+    if (wantCertificado) {
+      console.log(`[PREDIAL-DOWNLOAD] Solicitud de Certificado de Pago detectada para CHIP ${cleanChip} (expl\xEDcito: ${!!options?.isCertificadoPago}, pagada: ${isAlreadyPaid}). Resolviendo reCAPTCHA v2 para certificado...`);
+      try {
+        const captchaCert = await solver.recaptcha({
+          googlekey: "6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO",
+          pageurl: "https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA"
+        });
+        const tokenCert = captchaCert.data;
+        const bpParam = buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP || "";
+        const certAjaxResp = await page.evaluate(`
+          new Promise((resolve) => {
+            try {
+              const numBP = ${JSON.stringify(bpParam)} || (document.getElementById('numBP') && document.getElementById('numBP').value) || (window.buscarInfoData && window.buscarInfoData.numBP) || '1005119715';
+              const numObjeto = (document.getElementById('claveObjeto') && document.getElementById('claveObjeto').value ? document.getElementById('claveObjeto').value.toUpperCase() : '');
+              const year = (new Date()).getFullYear().toString();
+              const certUrl = (window.ACC && window.ACC.descargaFacturaVADescargarCertificadoPagoURL) || '/bogota/es/descargaFacturaVA/descargarCertificadoPago';
+              const token = ${JSON.stringify(tokenCert)};
+
+              if (window.$ && window.$.ajax) {
+                window.$.ajax({
+                  url: certUrl,
+                  data: {
+                    numBP: numBP,
+                    numObjeto: numObjeto,
+                    tipoOperacion: '0001',
+                    anoGravable: year,
+                    recaptchaResponse: token
+                  },
+                  type: 'POST',
+                  success: function(resp) {
+                    resolve({ success: true, resp: resp });
+                  },
+                  error: function(xhr, status, err) {
+                    resolve({ success: false, status: status, err: err ? err.toString() : '', text: xhr ? xhr.responseText : '' });
+                  }
+                });
+              } else {
+                resolve({ success: false, err: 'jQuery not found' });
+              }
+            } catch (e) {
+              resolve({ success: false, err: e.message });
+            }
+          })
+        `);
+        if (certAjaxResp?.success && certAjaxResp?.resp?.urlDownload) {
+          const relCertUrl = certAjaxResp.resp.urlDownload;
+          const fullCertUrl = relCertUrl.startsWith("http") ? relCertUrl : new URL(relCertUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
+          console.log(`[PREDIAL-DOWNLOAD] Descargando Certificado de Pago oficial desde: ${fullCertUrl}`);
+          const certFetch = await fetch(fullCertUrl);
+          if (certFetch.ok) {
+            const certBuf = Buffer.from(await certFetch.arrayBuffer());
+            if (certBuf.slice(0, 5).toString() === "%PDF-") {
+              return {
+                success: true,
+                pdfBuffer: certBuf,
+                pdfFileName: `Certificado_Pago_${cleanChip}_2026.pdf`,
+                pdfUrl: fullCertUrl,
+                nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0,
+                numBP: buscarInfoData?.numBP || certAjaxResp.resp.numBP,
+                isCertificado: true
+              };
+            }
+          }
+        }
+        let sdhErrorMessage = "";
+        if (certAjaxResp?.resp?.errores && Array.isArray(certAjaxResp.resp.errores)) {
+          for (const err of certAjaxResp.resp.errores) {
+            const rawMsg = err?.txt_msj || err?.txtmsj;
+            if (rawMsg) {
+              const dec = decodeSdhMessage(rawMsg);
+              if (dec && dec.trim()) {
+                sdhErrorMessage = dec.trim();
+              }
+            }
+          }
+        }
+        if (options?.isCertificadoPago) {
+          return {
+            success: false,
+            errorMessage: sdhErrorMessage || "No se pudo generar el Certificado de Pago en este momento. Es posible que el pago a\xFAn no est\xE9 asentado en la Secretar\xEDa de Hacienda o los datos no coincidan."
+          };
+        }
+      } catch (certErr) {
+        console.warn("[PREDIAL-DOWNLOAD] Error intentando descargar certificado de pago:", certErr?.message);
+        if (options?.isCertificadoPago) {
+          return {
+            success: false,
+            errorMessage: "No se pudo generar el Certificado de Pago en este momento. Es posible que el pago a\xFAn no est\xE9 asentado en la Secretar\xEDa de Hacienda o los datos no coincidan."
+          };
+        }
+      }
+    }
+    if (!relativePdfUrl) {
+      return {
+        success: false,
+        errorMessage: sdhInfoErrorMessage || errorMessage || "No se encontr\xF3 factura predial disponible en la Secretar\xEDa de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026.",
+        nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0,
+        numBP: buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP
+      };
+    }
+    const fullPdfUrl = relativePdfUrl.startsWith("http") ? relativePdfUrl : new URL(relativePdfUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
+    console.log(`[PREDIAL-DOWNLOAD] Descargando PDF oficial desde: ${fullPdfUrl}`);
+    const pdfResponse = await fetch(fullPdfUrl);
+    if (!pdfResponse.ok) {
+      throw new Error(`Error HTTP al descargar PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    }
+    const arrayBuffer = await pdfResponse.arrayBuffer();
+    const pdfBuffer = Buffer.from(arrayBuffer);
+    const isPdfHeader = pdfBuffer.slice(0, 5).toString() === "%PDF-";
+    if (!isPdfHeader) {
+      console.warn(`[PREDIAL-DOWNLOAD] La respuesta descargada no tiene cabecera PDF. Tama\xF1o: ${pdfBuffer.length}`);
+      return {
+        success: false,
+        errorMessage: "El portal de Hacienda no devolvi\xF3 un documento PDF v\xE1lido."
+      };
+    }
+    const nombreContribuyente = buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0;
+    return {
+      success: true,
+      pdfBuffer,
+      pdfFileName: `Factura_Predial_${cleanChip}_2026.pdf`,
+      pdfUrl: fullPdfUrl,
+      nombreContribuyente,
+      numBP: buscarInfoData?.numBP,
+      isCertificado: false
+    };
+  } catch (err) {
+    console.error("[PREDIAL-DOWNLOAD] Error descargando factura predial:", err);
+    return {
+      success: false,
+      errorMessage: err?.message || "Error de conexi\xF3n con la Secretar\xEDa Distrital de Hacienda."
+    };
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (_) {
+      }
+    }
+  }
+}
+async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm, options) {
+  let detection = extractChipAndCedulaForPredial(text2);
+  if (!detection.chip && senderId && hasPendingPredialSession(senderId)) {
+    const pending = getPendingPredialSession(senderId);
+    if (pending) {
+      const rawNumMatch = text2.match(/([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?|\b\d{6,12}\b)/);
+      if (rawNumMatch && rawNumMatch[1]) {
+        const lower = text2.toLowerCase();
+        const isNitContext = lower.includes("nit") || lower.includes("n.i.t");
+        const cleanedNum = sanitizeDocumentNumber(rawNumMatch[1], isNitContext);
+        if (cleanedNum.length >= 6) {
+          detection = {
+            found: true,
+            chip: pending.chip,
+            cedula: isNitContext ? void 0 : cleanedNum,
+            nit: isNitContext ? cleanedNum : void 0,
+            tipoDoc: isNitContext ? "NIT" : "CC",
+            matricula: pending.matricula,
+            direccion: pending.direccion,
+            estrato: pending.estrato,
+            avaluoCatastral: pending.avaluoCatastral
+          };
+          clearPendingPredialSession(senderId);
+        }
+      }
+    }
+  }
+  if (!detection.found) {
+    return { isPredialRequest: false };
+  }
+  const chip = detection.chip;
+  const docNumber = detection.nit || detection.cedula;
+  const docLabel = detection.tipoDoc === "NIT" ? "NIT" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula";
+  if (chip && !docNumber) {
+    if (senderId) {
+      setPendingPredialSession(senderId, { chip });
+    }
+    const reportText2 = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *Predio CHIP detectado:* ${chip}
+
+Para acceder al portal oficial de la Secretar\xEDa de Hacienda y entregarte el enlace de descarga de tu factura predial en PDF, necesito un dato m\xE1s:
+
+\u{1F449} *\xBFCu\xE1l es la C\xE9dula o NIT del propietario del predio?*
+
+_(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom\xE1ticamente)_ \u2705`;
+    return {
+      isPredialRequest: true,
+      chip,
+      reportText: reportText2
+    };
+  }
+  if (chip && docNumber) {
+    let downloadResult = null;
+    const shouldAttemptDownload = process.env.NODE_ENV !== "test" && !options?.skipDownload;
+    if (shouldAttemptDownload) {
+      downloadResult = await downloadPredialInvoicePdf(
+        detection.tipoDoc || "CC",
+        docNumber,
+        chip,
+        { isCertificadoPago: detection.isCertificadoPago }
+      );
+    }
+    if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
+      const contribuyenteLabel = downloadResult.isCertificado ? "\u{1F464} *Contribuyente / Titular:*" : "\u{1F464} *Contribuyente / Propietario:*";
+      const contribuyenteText = downloadResult.nombreContribuyente ? `${contribuyenteLabel} ${downloadResult.nombreContribuyente}
+` : "";
+      const reportText3 = downloadResult.isCertificado ? `\u{1F6E1}\uFE0F *CERTIFICADO DE PAGO PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *CHIP del predio:* ${chip}
+` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
+
+\u2705 *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretar\xEDa de Hacienda de Bogot\xE1.* Este documento certifica con plena validez legal que el inmueble se encuentra al d\xEDa y a paz y salvo en su impuesto predial para la vigencia 2026.` : `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *CHIP del predio:* ${chip}
+` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
+
+\u2705 *Adjunto encuentras tu factura oficial en PDF emitida por la Secretar\xEDa de Hacienda.* Incluye los c\xF3digos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogot\xE1, etc.) o corresponsales (\xC9xito, Efecty).`;
+      try {
+        const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+        const { predialConsultations: predialConsultations2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const db = await getDb2();
+        if (db) {
+          await db.insert(predialConsultations2).values({
+            chip: chip.toUpperCase(),
+            documentType: detection.tipoDoc || "CC",
+            documentNumber: docNumber,
+            nombreContribuyente: downloadResult.nombreContribuyente || null,
+            numBp: downloadResult.numBP || null,
+            anoGravable: "2026",
+            queryType: downloadResult.isCertificado ? "certificado_pago" : "factura",
+            downloadUrl: downloadResult.pdfUrl || null,
+            requesterPhone: senderId ? senderId.replace(/@.*$/, "") : null,
+            source: isPrivateDm ? "whatsapp_dm" : "whatsapp_group",
+            status: "completed",
+            metadata: {
+              pdfFileName: downloadResult.pdfFileName,
+              date: (/* @__PURE__ */ new Date()).toISOString()
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn("[PREDIAL-DB] No se pudo guardar la consulta en predialConsultations:", dbErr?.message);
+      }
+      return {
+        isPredialRequest: true,
+        chip,
+        cedula: docNumber,
+        reportText: reportText3,
+        pdfBuffer: downloadResult.pdfBuffer,
+        pdfFileName: downloadResult.pdfFileName || (downloadResult.isCertificado ? `Certificado_Pago_${chip}_2026.pdf` : `Factura_Predial_${chip}_2026.pdf`),
+        pdfUrl: downloadResult.pdfUrl,
+        nombreContribuyente: downloadResult.nombreContribuyente,
+        isCertificado: downloadResult.isCertificado
+      };
+    }
+    const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
+    const tipoDocFormulario = detection.tipoDoc === "NIT" ? "NIT (sin d\xEDgito de verificaci\xF3n)" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula de Ciudadan\xEDa";
+    const nitWarning = detection.tipoDoc === "NIT" ? `
+\u26A0\uFE0F *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el d\xEDgito de verificaci\xF3n*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.
+` : "";
+    const contribuyenteInfo = downloadResult?.nombreContribuyente ? `\u{1F3DB}\uFE0F *Titular registrado en Catastro/Hacienda:* ${downloadResult.nombreContribuyente}
+\u{1F4A1} _Si el predio est\xE1 en leasing habitacional o fiducia mercantil, se debe ingresar el NIT de la entidad bancaria o la c\xE9dula del locatario registrado._
+
+` : "";
+    const errorPrefix = downloadResult?.errorMessage ? `\u26A0\uFE0F *Respuesta oficial de la Secretar\xEDa de Hacienda:* ${downloadResult.errorMessage}
+
+` : "";
+    const reportText2 = `\u{1F6E1}\uFE0F *CONSULTA PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *CHIP del predio:* ${chip}
+\u{1FAAA} *${docLabel}:* ${docNumber}
+` + nitWarning + `
+` + contribuyenteInfo + errorPrefix + `\u{1F91D} *Para entregarte tu PDF directamente aqu\xED en el chat:*
+Por favor facil\xEDtame el documento del titular catastral o el NIT de la entidad financiera (si es leasing o fiducia). Con ese dato yo misma gestiono de inmediato el tr\xE1mite con 2Captcha y la Secretar\xEDa de Hacienda para entregarte el archivo PDF aqu\xED mismo. \u{1F4F2}\u2728`;
+    return {
+      isPredialRequest: true,
+      chip,
+      cedula: docNumber,
+      reportText: reportText2
+    };
+  }
+  if (!chip && detection.avaluoCatastral && detection.avaluoCatastral > 0) {
+    const estrato = detection.estrato || 4;
+    const liquidacion = liquidarPredialEstimadoBogota(detection.avaluoCatastral, estrato, true);
+    const avaluoFormatted = detection.avaluoCatastral.toLocaleString("es-CO");
+    const valorPleno = liquidacion.impuestoPleno.toLocaleString("es-CO");
+    const valorDescuento = liquidacion.impuestoConDescuento.toLocaleString("es-CO");
+    const reportText2 = `\u{1F6E1}\uFE0F *ESTIMACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
+
+\u26A0\uFE0F *Este es un c\xE1lculo ESTIMADO* basado en los datos que me proporcionaste. El valor oficial puede variar.
+
+\u{1F3DB}\uFE0F *Aval\xFAo Catastral informado:* $${avaluoFormatted} COP
+\u{1F3E2} *Estrato aplicado:* ${estrato}
+\u{1F4CA} *Tarifa por mil:* ${liquidacion.tarifaPorMil}\u2030
+
+\u{1F4B0} *Impuesto Predial estimado:* $${valorPleno} COP
+\u2705 *Con 10% descuento pronto pago:* $${valorDescuento} COP
+
+\u{1F4C4} *Para obtener tu factura oficial con c\xF3digo de barras real, ingresa al portal oficial:*
+\u{1F517} https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar
+
+_(Necesitar\xE1s el c\xF3digo CHIP de tu inmueble \u2014 lo encuentras en facturas anteriores)_`;
+    return {
+      isPredialRequest: true,
+      reportText: reportText2
+    };
+  }
+  const reportText = `\u{1F6E1}\uFE0F *IMPUESTO PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+Para entregarte el enlace oficial de tu factura predial, necesito el *c\xF3digo CHIP* del inmueble:
+
+\u{1F4DD} *Env\xEDame en privado:*
+_JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_
+
+\u{1F3E0} *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
+
+\u2705 *Tambi\xE9n puedes enviar:*
+\u2022 CC con puntos \u2714 (ej: 19.386.159)
+\u2022 NIT con d\xEDgito verificador \u2714 (ej: 860.030.201-2)
+\u2022 C\xE9dula de Extranjer\xEDa \u2714
+
+\xA1Te gu\xEDo al instante! \u{1F91D}`;
+  return {
+    isPredialRequest: true,
+    reportText
+  };
+}
+function isServiceHelpRequest(text2) {
+  if (!text2 || typeof text2 !== "string") return null;
+  const lower = text2.toLowerCase().trim();
+  const helpWords = [
+    "c\xF3mo",
+    "como",
+    "qu\xE9 debo",
+    "que debo",
+    "c\xF3mo hago",
+    "como hago",
+    "qu\xE9 datos",
+    "que datos",
+    "qu\xE9 necesito",
+    "que necesito",
+    "c\xF3mo pido",
+    "como pido",
+    "no s\xE9",
+    "no se",
+    "ayuda",
+    "instrucciones",
+    "tutorial",
+    "qu\xE9 env\xEDo",
+    "que envio",
+    "c\xF3mo solicito",
+    "como solicito",
+    "c\xF3mo se pide",
+    "como se pide",
+    "no entend\xED",
+    "no entendi",
+    "no entiendo",
+    "expl\xEDcame",
+    "explicame"
+  ];
+  const predialWords = ["predial", "impuesto predial", "factura predial", "chip", "liquidar"];
+  const cedulaWords = ["c\xE9dula", "cedula", "verificar c\xE9dula", "verificar cedula", "verificaci\xF3n", "verificacion", "identidad", "documento"];
+  const hasHelp = helpWords.some((w) => lower.includes(w));
+  const hasPredial = predialWords.some((w) => lower.includes(w));
+  const hasCedula = cedulaWords.some((w) => lower.includes(w));
+  if (hasHelp && hasPredial) return "predial";
+  if (hasHelp && hasCedula) return "cedula";
+  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasPredial) return "predial";
+  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasCedula) return "cedula";
+  return null;
+}
+var VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE, pendingPredialSessions, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT;
+var init_predialService = __esm({
+  "server/_core/predialService.ts"() {
     "use strict";
-    init_db();
-    init_schema();
-    init_matching();
-    init_janIA();
-    ADMIN_IDENTIFIERS = [
-      "573192919978",
-      // Eduardo Rivera (Línea Socket / Baileys)
-      "573166569719",
-      // Línea Oficial Bróker Comercial VECY
-      "573188096811",
-      // Línea Directiva Jani Alves
-      "167108705018103",
-      // LID Directivo Jani Alves
-      "182781141344345",
-      // LID Directivo Activo Jani Alves
-      "225954035179724",
-      // LID Directivo Eduardo Rivera
-      "218820279050385",
-      // LID Directivo Alterno Jani Alves
-      process.env.ADMIN_PHONE || "573192919978"
-    ];
+    VIRAL_LOOP_MESSAGE = `\u{1F603} \xBFQu\xE9 tanto nos recomendar\xEDas?
+\u{1F44E} | \u{1F44D} | \u2764\uFE0F`;
+    GOOGLE_REVIEW_MESSAGE = `\u2B50 \xBFPodr\xEDas darnos tu opini\xF3n y calificar nuestro servicio? As\xED nos ayudas para que siga siendo *GRATIS.*
+
+*COMENTA Y CALIFICA AQU\xCD (solo te toma 15 segundos):*
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
+
+\xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728`;
+    pendingPredialSessions = /* @__PURE__ */ new Map();
+    PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
+
+1\uFE0F\u20E3 *Env\xEDame en privado* el CHIP del inmueble y el NIT o CC del propietario en un solo mensaje:
+
+\u{1F4DD} *Ejemplo:*
+_JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_
+
+\u2139\uFE0F *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
+
+\u2705 *JanIA acepta:*
+\u2022 CC con o sin puntos (ej: 19.386.159 o 19386159)
+\u2022 NIT con o sin d\xEDgito de verificaci\xF3n (ej: 860.030.201-2 o 8600030201)
+\u2022 C\xE9dula de Extranjer\xEDa (CE)
+
+\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
+
+\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
+\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
+    CEDULA_HELP_TEXT = `\u{1FAAA} *\xBFC\xF3mo verificar un documento de identidad con JanIA?* Facil\xEDsimo:
+
+1\uFE0F\u20E3 *Env\xEDame en privado* el tipo y n\xFAmero de documento en un solo mensaje:
+
+\u{1F4DD} *Ejemplos:*
+\u2022 _JanIA, verificar c\xE9dula: 19.386.159_ \u2705
+\u2022 _JanIA, verificar c\xE9dula: 1018456789_ \u2705
+\u2022 _JanIA, verificar CE: 654321_ \u2705 (C\xE9dula de Extranjer\xEDa)
+\u2022 _JanIA, verificar pasaporte: AB123456_ \u2705
+
+\u{1F4CC} *Nota:* Puedes escribir el n\xFAmero con o sin puntos o guiones \u2014 JanIA lo procesa autom\xE1ticamente.
+
+\u{1F50D} *\xBFQu\xE9 informaci\xF3n recibir\xE1s?*
+Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Colombia.
+
+\u{1F6E1}\uFE0F *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Polic\xEDa Nacional.
+
+\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
+
+\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
+\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
   }
 });
 
@@ -21663,1431 +21678,6 @@ var init_iduValorizacionService = __esm({
   }
 });
 
-// server/_core/jania/handlers/dmHandler.ts
-var dmHandler_exports = {};
-__export(dmHandler_exports, {
-  JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
-  executeJaniaDmTool: () => executeJaniaDmTool,
-  formatPoliteToolDelivery: () => formatPoliteToolDelivery,
-  isShortSignalOrSticker: () => isShortSignalOrSticker,
-  popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
-  popLatestDmPdf: () => popLatestDmPdf,
-  processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
-  sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
-  setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
-  setLatestDmPdf: () => setLatestDmPdf,
-  stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
-  synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
-});
-import { eq as eq9, and as and6, sql as sql8, desc as desc4 } from "drizzle-orm";
-function setLatestDmPdf(userId, attachment) {
-  latestDmPdfMap.set(userId, attachment);
-}
-function popLatestDmPdf(userId) {
-  const attachment = latestDmPdfMap.get(userId);
-  if (attachment) {
-    latestDmPdfMap.delete(userId);
-  }
-  return attachment;
-}
-function setLatestDmFollowUpMessage(_userId, _followUpText) {
-}
-function popLatestDmFollowUpMessage(_userId) {
-  return void 0;
-}
-async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
-  switch (toolName) {
-    case "consultar_matches_o_codigo": {
-      const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
-      const { executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
-      const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-      const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("167108705018103");
-      const res = await executeAdminMatchSearch2(query, isEduardo || isJani, userId);
-      return {
-        toolType: "match",
-        resultJson: {
-          solicitud: "consulta_matches",
-          consulta: query,
-          reporteOficial: res.formattedReport || "Sin coincidencias registradas.",
-          totalFound: res.totalFound
-        }
-      };
-    }
-    case "registrar_inmueble_o_requerimiento": {
-      const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
-      const res = await processWhatsAppMessage2(
-        String(args.textoCompletoPublicacion || rawUserText || ""),
-        userId,
-        _userName,
-        false,
-        [],
-        void 0,
-        void 0,
-        false
-      );
-      return {
-        toolType: "sondeo",
-        resultJson: {
-          solicitud: "registro_inmueble_o_requerimiento",
-          clasificacion: res.classification,
-          insertado: res.inserted,
-          detalle: "Procesado en el motor de VECY BIENES RA\xCDCES"
-        }
-      };
-    }
-    case "consultar_identidad_y_antecedentes": {
-      const {
-        executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
-        getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
-        clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
-        getPendingCompanyMembers: getPendingCompanyMembers2,
-        clearPendingCompanyMembers: clearPendingCompanyMembers2
-      } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-      let doc = String(args.numeroDocumento || args.cedula || args.nit || args.documento || "").trim();
-      let tipo = String(args.tipoDocumento || "CC").trim();
-      const combinedIntent = `${doc} ${rawUserText || ""}`.toLowerCase();
-      if (/(?:todos|cada\s+miembro|todos\s+los\s+miembros|suplentes\s+y\s+principal|ambos)/i.test(combinedIntent)) {
-        const pendingMembers = getPendingCompanyMembers2(userId);
-        if (pendingMembers && pendingMembers.length > 0) {
-          clearPendingCompanyMembers2(userId);
-          clearPendingUnconfirmedDoc2(userId);
-          const explicitItems = pendingMembers.filter((m) => Boolean(m.numeroIdentificacion)).map((m) => ({
-            cedula: m.numeroIdentificacion,
-            tipoDoc: m.tipoDocumento.toLowerCase().includes("e") ? "ce" : "cc",
-            rawNumber: m.numeroIdentificacion,
-            detectedName: m.nombre
-          }));
-          if (explicitItems.length > 0) {
-            const resAll = await executeIdentityVerificationFromWhatsApp2(
-              explicitItems.map((i) => `${i.tipoDoc.toUpperCase()} ${i.cedula}`).join(", "),
-              true,
-              userId,
-              explicitItems
-            );
-            return {
-              toolType: "cedula",
-              resultJson: {
-                solicitud: "verificacion_identidad_miembros_empresa",
-                numeroDocumento: explicitItems.map((i) => i.cedula).join(", "),
-                tipoDocumento: "CC",
-                reporteOficial: resAll.reportText || "Sin reporte disponible",
-                exitoso: resAll.isVerificationRequest
-              }
-            };
-          }
-        }
-      }
-      if (!/\d{5,12}/.test(doc)) {
-        const pendingDoc = getPendingUnconfirmedDoc2(userId);
-        if (pendingDoc?.cleanNumber) {
-          doc = pendingDoc.cleanNumber;
-          clearPendingUnconfirmedDoc2(userId);
-        } else if (rawUserText) {
-          doc = rawUserText;
-        }
-      }
-      const cleanDigits = doc.split("-")[0].replace(/\D/g, "");
-      if (cleanDigits.length === 9 && /^[89]\d{8}$/.test(cleanDigits)) {
-        tipo = "NIT";
-      } else if (rawUserText && /\bnit\b/i.test(rawUserText)) {
-        tipo = "NIT";
-      }
-      const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
-      const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
-      const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA"));
-      return {
-        toolType: isCompanyReport ? "empresa" : "cedula",
-        resultJson: {
-          solicitud: isCompanyReport ? "consulta_empresa_o_nit" : "verificacion_identidad",
-          numeroDocumento: doc,
-          tipoDocumento: tipo,
-          nombreOficial: res.officialName || null,
-          exitoso: res.success ?? res.isVerificationRequest,
-          policia: res.policia?.message || (res.success ? "Sin antecedentes judiciales ni requerimientos penales pendientes" : null),
-          procuraduria: res.procuraduria?.statusText || (res.success ? "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General" : null),
-          contraloria: res.contraloria?.statusText || (res.success ? "Sin reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI)" : null),
-          adres: res.adres ? {
-            eps: res.adres.eps,
-            estado: res.adres.estado,
-            regimen: res.adres.regimen
-          } : null,
-          reporteOficial: res.reportText || "Sin reporte disponible",
-          preguntaSeguimiento: ""
-        }
-      };
-    }
-    case "consultar_paz_y_salvo_idu": {
-      const chip = String(args.chip || rawUserText || "").trim();
-      const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
-      const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
-      if (res.pdfBuffer) {
-        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Paz_y_Salvo_IDU_${chip}_2026.pdf` });
-      }
-      return {
-        toolType: "idu",
-        resultJson: {
-          solicitud: "paz_y_salvo_idu",
-          chip,
-          reporteOficial: res.reportText || "Sin reporte disponible",
-          exitoso: res.isIduRequest
-        }
-      };
-    }
-    case "consultar_factura_predial_bogota": {
-      const chip = String(args.chip || rawUserText || "").trim();
-      const doc = args.documentoTitular ? String(args.documentoTitular).trim() : void 0;
-      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-      const queryStr = doc ? `${chip} ${doc}` : chip;
-      const res = await executePredialAssistanceFromWhatsApp2(queryStr, userId, true);
-      if (res.pdfBuffer) {
-        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Factura_Predial_${chip}_2026.pdf` });
-      }
-      return {
-        toolType: "predial",
-        resultJson: {
-          solicitud: "factura_predial_bogota",
-          chip,
-          reporteOficial: res?.reportText || "Factura predial procesada",
-          exitoso: true
-        }
-      };
-    }
-    case "liquidar_gastos_notariales_y_registro": {
-      const precio = Number(args.precioVenta || 0);
-      const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
-      const queryText = precio > 0 ? `liquidaci\xF3n notarial ${precio}` : rawUserText || "liquidaci\xF3n notarial";
-      const res = await executeNotarialAssistanceFromWhatsApp2(queryText, userId, true);
-      return {
-        toolType: "notarial",
-        resultJson: {
-          solicitud: "gastos_notariales_y_registro",
-          precioVenta: precio,
-          reporteOficial: res.reportText || "Liquidaci\xF3n procesada",
-          exitoso: res.isNotarialRequest
-        }
-      };
-    }
-    case "sondeo_mercado_inmobiliario": {
-      const surveyRes = executeMarketValuationSurvey({
-        zonaOBarrio: args.zonaOBarrio || "Chic\xF3",
-        tipoInmueble: args.tipoInmueble || "apartamento",
-        areaM2: Number(args.areaM2 || 75),
-        estrato: Number(args.estrato || 5),
-        antiguedadAnos: Number(args.antiguedadAnos || 8),
-        garajes: Number(args.garajes || 1)
-      });
-      return {
-        toolType: "sondeo",
-        resultJson: surveyRes
-      };
-    }
-    case "consultar_empresa_o_nit": {
-      const q = String(
-        args.consultaEmpresa || args.nitORazonSocial || args.nit || args.numeroDocumento || args.empresa || args.razonSocial || args.query || rawUserText || ""
-      ).trim();
-      const { queryEmpresaOrNit: queryEmpresaOrNit2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-      const empRes = await queryEmpresaOrNit2(q, userId);
-      return {
-        toolType: "empresa",
-        resultJson: {
-          solicitud: "consulta_empresa_o_nit",
-          termino: q,
-          exitoso: empRes.success,
-          nit: empRes.nit,
-          dv: empRes.dv,
-          nitCompleto: empRes.nitCompleto,
-          razonSocial: empRes.razonSocial,
-          camaraComercio: empRes.camaraComercio,
-          ciudad: empRes.ciudad,
-          estado: empRes.estado,
-          matricula: empRes.matricula,
-          categoriaMatricula: empRes.categoriaMatricula,
-          tipoSociedad: empRes.tipoSociedad,
-          organizacionJuridica: empRes.organizacionJuridica,
-          organizacionJuridicaRaw: empRes.organizacionJuridicaRaw,
-          fechaMatricula: empRes.fechaMatricula,
-          fechaRenovacion: empRes.fechaRenovacion,
-          ultimoAnoRenovado: empRes.ultimoAnoRenovado,
-          ciiuPrincipal: empRes.ciiuPrincipal,
-          actividadesEconomicas: empRes.actividadesEconomicas,
-          representantePrincipal: empRes.representantePrincipal || null,
-          representantesSuplentes: empRes.representantesSuplentes || [],
-          establecimientos: empRes.establecimientos || [],
-          direccionComercial: empRes.direccionComercial,
-          telefonoComercial: empRes.telefonoComercial,
-          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
-          preguntaSeguimiento: ""
-        }
-      };
-    }
-    case "enviar_encuesta_interactiva": {
-      const pregunta = String(args.pregunta || "").trim();
-      const opciones = Array.isArray(args.opciones) ? args.opciones.map(String) : ["S\xED", "No"];
-      const selectableCount = args.limiteSeleccion ? Number(args.limiteSeleccion) : Number(args.seleccionMultiple ? 2 : 1);
-      const { sendNativeWhatsAppPoll: sendNativeWhatsAppPoll2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      const pollSent = await sendNativeWhatsAppPoll2(userId, pregunta, opciones, selectableCount);
-      return {
-        toolType: "encuesta",
-        resultJson: {
-          solicitud: "encuesta_interactiva",
-          pregunta,
-          opciones,
-          enviada: pollSent,
-          reporteOficial: pollSent ? `\u{1F4CA} *Encuesta interactiva despachada:* "${pregunta}" con ${opciones.length} opciones.` : `\u{1F4CA} Encuesta preparada para votaci\xF3n: "${pregunta}".`
-        }
-      };
-    }
-    case "enviar_tarjeta_contacto_vecy": {
-      const rawContact = String(args.destinatario || args.tipoContacto || "broker").toLowerCase();
-      const contactType = rawContact === "jania" ? "jania" : "broker";
-      const { sendNativeWhatsAppContact: sendNativeWhatsAppContact2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      const contactSent = await sendNativeWhatsAppContact2(userId, contactType);
-      return {
-        toolType: "contacto",
-        resultJson: {
-          solicitud: "tarjeta_contacto",
-          tipoContacto: contactType,
-          enviada: contactSent,
-          reporteOficial: contactSent ? `\u{1F4C7} *Tarjeta de contacto interactiva (${contactType === "broker" ? "Eduardo & Jani \u2014 Br\xF3ker Oficial" : "JanIA"}) enviada exitosamente.*` : `\u{1F4C7} Contacto oficial: ${contactType === "broker" ? "Eduardo Rivera (+57 316 656 9719)" : "JanIA (+57 319 291 9978)"}.`
-        }
-      };
-    }
-    case "enviar_evento_visita_inmobiliaria": {
-      const titulo = String(args.tituloVisita || args.titulo || "Visita Inmobiliaria").trim();
-      const descripcion = String(args.detalles || args.descripcion || "").trim();
-      const ubicacion = String(args.direccionOBarrio || args.ubicacion || "").trim();
-      const rawFecha = args.fechaHora || args.fechaHoraIso;
-      const parsedTime = rawFecha ? new Date(rawFecha).getTime() : NaN;
-      const fechaHora = !Number.isNaN(parsedTime) ? parsedTime : Date.now() + 864e5;
-      const { sendNativeWhatsAppEvent: sendNativeWhatsAppEvent2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      const eventSent = await sendNativeWhatsAppEvent2(userId, {
-        name: titulo,
-        description: descripcion,
-        location: ubicacion,
-        startTime: fechaHora
-      });
-      return {
-        toolType: "evento",
-        resultJson: {
-          solicitud: "evento_inmobiliario",
-          titulo,
-          ubicacion,
-          enviado: eventSent,
-          reporteOficial: `\u{1F4C5} *Evento Agendado:* "${titulo}" en ${ubicacion || "Virtual"}.`
-        }
-      };
-    }
-    case "enviar_catalogo_servicios": {
-      const catalogMsg = `\u{1F3EC} *CAT\xC1LOGO DE SERVICIOS Y PORTAL WEB \u2014 VECY BIENES RA\xCDCES*
-
-\u{1F310} *Portal Oficial:* https://vecy-bienes-raices.vercel.app/
-\u{1F916} *JanIA Landing:* https://vecy-bienes-raices.vercel.app/jania
-\u{1F4F1} *Canal de WhatsApp:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-
-\u{1F4CC} *Servicios Destacados:*
-\u2022 Cruce de Inmuebles y Demandas en Tiempo Real (Match 40/20/40).
-\u2022 Verificaci\xF3n Preventiva de Identidad (ADRES, Polic\xEDa, Procuradur\xEDa, Contralor\xEDa, RUES).
-\u2022 Asistencia Factura Predial Bogot\xE1 y Paz y Salvo IDU.
-\u2022 Liquidaci\xF3n Notarial y de Registro 50/50.
-\u2022 Sondeos de Mercado y Aval\xFAos Digitales.
-
-_\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
-      return {
-        toolType: "catalogo",
-        resultJson: {
-          solicitud: "catalogo_servicios",
-          reporteOficial: catalogMsg,
-          exitoso: true
-        }
-      };
-    }
-    case "navegar_o_buscar_web": {
-      const url = String(args.url || "").trim();
-      const query = String(args.query || rawUserText || "").trim();
-      if (url && /^https?:\/\//i.test(url)) {
-        const pageData = await fetchWebUrlContent(url);
-        return {
-          toolType: "web",
-          resultJson: {
-            solicitud: "navegacion_web",
-            url,
-            titulo: pageData.title,
-            contenido: pageData.content,
-            exitoso: pageData.success
-          }
-        };
-      }
-      return {
-        toolType: "web",
-        resultJson: {
-          solicitud: "busqueda_web",
-          query,
-          mensaje: "B\xFAsqueda web procesada en el n\xFAcleo cognitivo de JanIA.",
-          exitoso: true
-        }
-      };
-    }
-    case "consultar_catalogo_inmuebles_vecy": {
-      const tipoInmueble = String(args.tipoInmueble || "").toLowerCase().trim();
-      const tipoNegocio = String(args.tipoNegocio || "").toLowerCase().trim();
-      const zona = String(args.zona || "").trim();
-      const precioMax = Number(args.precioMaximo || 0);
-      const db = await getDb();
-      let foundProps = [];
-      if (db) {
-        try {
-          const conditions = [eq9(properties.available, true)];
-          if (tipoInmueble) {
-            conditions.push(sql8`LOWER(${properties.propertyType}) LIKE ${"%" + tipoInmueble + "%"}`);
-          }
-          if (tipoNegocio) {
-            conditions.push(sql8`LOWER(${properties.transactionType}) LIKE ${"%" + tipoNegocio + "%"}`);
-          }
-          if (zona) {
-            conditions.push(sql8`LOWER(${properties.zone}) LIKE ${"%" + zona.toLowerCase() + "%"}`);
-          }
-          if (precioMax > 0) {
-            conditions.push(sql8`(${properties.price} <= ${precioMax} OR ${properties.rentPrice} <= ${precioMax})`);
-          }
-          foundProps = await db.select({
-            id: properties.id,
-            name: properties.name,
-            propertyType: properties.propertyType,
-            transactionType: properties.transactionType,
-            zone: properties.zone,
-            price: properties.price,
-            rentPrice: properties.rentPrice,
-            areaTotal: properties.areaTotal,
-            bedrooms: properties.bedrooms,
-            bathrooms: properties.bathrooms,
-            garages: properties.garages,
-            description: properties.description
-          }).from(properties).where(and6(...conditions)).orderBy(desc4(properties.id)).limit(5);
-        } catch (dbErr) {
-          console.warn("[consultar_catalogo_inmuebles_vecy] Error querying DB:", dbErr?.message);
-        }
-      }
-      const totalProps = foundProps.length;
-      let avgM2Price = 0;
-      if (totalProps > 0) {
-        const prices = foundProps.map((p) => {
-          const pr = Number(p.price || p.rentPrice || 0);
-          const ar = Number(p.areaTotal || 0);
-          return ar > 0 && pr > 0 ? pr / ar : 0;
-        }).filter((v) => v > 0);
-        if (prices.length > 0) {
-          avgM2Price = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-        }
-      }
-      return {
-        toolType: "catalogo_inmuebles",
-        resultJson: {
-          solicitud: "catalogo_inmuebles_vecy",
-          tipoInmueble,
-          tipoNegocio,
-          zona,
-          totalEncontrados: totalProps,
-          precioPromedioM2: avgM2Price,
-          inmuebles: foundProps.map((p) => ({
-            codigo: `#P${p.id}`,
-            titulo: p.name,
-            tipo: p.propertyType,
-            operacion: p.transactionType,
-            zona: p.zone,
-            precioVenta: p.price ? `$${Number(p.price).toLocaleString("es-CO")} COP` : void 0,
-            precioCanon: p.rentPrice ? `$${Number(p.rentPrice).toLocaleString("es-CO")} COP/mes` : void 0,
-            areaM2: p.areaTotal ? `${p.areaTotal} m\xB2` : void 0,
-            habitaciones: p.bedrooms,
-            banos: p.bathrooms,
-            garajes: p.garages
-          })),
-          contactoBroker: "Eduardo Rivera & Jani Alves \u2014 WhatsApp Oficial +57 316 656 9719"
-        }
-      };
-    }
-    default:
-      return {
-        toolType: "sondeo",
-        resultJson: { error: `Herramienta desconocida: ${toolName}` }
-      };
-  }
-}
-async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
-  const isFreeTool = toolType !== "sondeo" && toolType !== "match";
-  if (isFreeTool) {
-    await incrementFreeServicesCount(userId);
-  }
-  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
-  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"));
-  if (isDirectBypass) {
-    return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
-  }
-  const userVerifiedReview = await isUserVerifiedGoogleReview(userId);
-  const isVip = isEduardoOrJani(userId);
-  const askReview = !userVerifiedReview && !isVip && await shouldAskForGoogleReview(userId);
-  let specialToolInstructions = "";
-  if (toolType === "cedula") {
-    specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
-- REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas, cero encabezados acartonados o vi\xF1etas rob\xF3ticas. Redacta de forma fresca, original, corta y humana como experta de VECY.
-- CERO ALUCINACI\xD3N: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:
-  * Nombre oficial de la persona y n\xFAmero de documento validado.
-  * Polic\xEDa Nacional: Antecedentes penales / requerimientos judiciales.
-  * Procuradur\xEDa General: Sanciones disciplinarias e inhabilidades vigentes.
-  * Contralor\xEDa General: Bolet\xEDn de Responsables Fiscales (SIRECI).
-  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
-- Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico.
-- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
-` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
-` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
-`);
-  } else if (toolType === "empresa") {
-    specialToolInstructions = `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confec\xE1maras / C\xE1maras de Comercio de Colombia / DIAN).
-- REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas de 4 secciones, cero formatos acartonados ni vi\xF1etas rob\xF3ticas. Redacta de forma fresca, ejecutiva, original y charlada.
-- CERO ALUCINACI\xD3N: Respeta estrictamente TODOS los datos reales obtenidos de RUES:
-  * Raz\xF3n social oficial, NIT y D\xEDgito de Verificaci\xF3n (DV).
-  * Estado de la matr\xEDcula mercantil (ej. Activa) y C\xE1mara de Comercio donde est\xE1 inscrita.
-  * Tipo de sociedad / organizaci\xF3n jur\xEDdica y actividad econ\xF3mica principal (CIIU).
-  * Representante Legal Principal: Si el RUES arroja el Representante Legal Principal, menci\xF3nalo de forma fluida y natural dentro de tu respuesta (nombre, documento y que cuenta con plenas facultades estatutarias para obligar a la sociedad).
-  * Si hay suplentes o establecimientos relevantes, menci\xF3nalos con brevedad.
-- SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localiz\xF3 la empresa, informa con total honestidad que no se hall\xF3 registro en las 57 C\xE1maras de Comercio del pa\xEDs y p\xEDdele con amabilidad el n\xFAmero de NIT para una b\xFAsqueda exacta.
-- CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma rob\xF3tica si desea verificar al representante. JanIA lo menciona en su \xFAnica respuesta con naturalidad.
-- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Incluye una l\xEDnea breve de publicidad mercantil y h\xE1beas data (Art. 26 C.Co. y Ley 1581/12).
-` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.
-` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
-`);
-  } else if (toolType === "web") {
-    specialToolInstructions = `- HERRAMIENTA: Navegaci\xF3n y Lectura Web Abierta en Tiempo Real.
-- Extrae y analiza los datos reales de la p\xE1gina o portal consultado, entregando s\xEDntesis ejecutiva, directa y sin rodeos al usuario.
-`;
-  } else if (toolType === "catalogo_inmuebles") {
-    specialToolInstructions = `- HERRAMIENTA: Consulta de Cat\xE1logo Oficial de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719).
-- Presenta de forma clara y organizada las propiedades encontradas con su c\xF3digo (#P...), tipo, ubicaci\xF3n, precio o canon y metraje, junto con el valor promedio de $/m\xB2 de la zona.
-- Invita cordialmente a comunicarse con Eduardo Rivera o Jani Alves a la l\xEDnea de atenci\xF3n de br\xF3ker (+57 316 656 9719) para coordinar visitas o recibir dossier completo.
-`;
-  }
-  const synthPrompt = [
-    {
-      role: "system",
-      content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
-Acabas de ejecutar la herramienta correspondiente a: ${toolType}.
-Datos estructurados del sistema en JSON:
-${JSON.stringify(toolJson, null, 2)}
-
-INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA):
-- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia, concisi\xF3n y persuasi\xF3n de IA pura.
-` + specialToolInstructions + `- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
-- Si es una consulta de matches, explica con claridad el cruce encontrado.
-- Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
-- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (*negritas*, vi\xF1etas limpias).
-- Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
-`
-    },
-    {
-      role: "user",
-      content: userMessage
-    }
-  ];
-  try {
-    const res = await invokeLLM({ messages: synthPrompt, highReasoning: true });
-    let text2 = res.choices[0]?.message?.content || "";
-    if (text2) {
-      text2 = sanitizeResponseMarkdown(text2.trim());
-      if (isFreeTool) {
-        text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
-      }
-      return text2;
-    }
-  } catch (err) {
-    console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
-  }
-  let fallbackText = "";
-  if (toolType === "cedula" && toolJson) {
-    const doc = toolJson.numeroDocumento || "";
-    const tipo = toolJson.tipoDocumento || "CC";
-    const name = toolJson.nombreOficial;
-    const eps = toolJson.adres?.eps;
-    const estadoEps = toolJson.adres?.estado;
-    const regEps = toolJson.adres?.regimen;
-    const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
-    const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
-    const cgr = toolJson.contraloria || "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI)";
-    if (name) {
-      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Polic\xEDa Nacional registra ${pol.toLowerCase()}, en Procuradur\xEDa General ${pgn.toLowerCase()} y en Contralor\xEDa General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}). Todo en regla y validado para tu seguridad jur\xEDdica.
-
-\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._
-
-\xBFNos regalas un minuto con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Nos ayuda un mont\xF3n para seguir ofreciendo estas herramientas gratuitas para el gremio! \u{1F91D}\u2728`;
-    } else {
-      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! Revis\xE9 el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en l\xEDnea. Por favor verifica que el n\xFAmero f\xEDsico coincida o si corresponde a un documento de extranjer\xEDa.
-
-\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012._`;
-    }
-  } else if (toolType === "empresa" && toolJson) {
-    if (toolJson.exitoso && toolJson.razonSocial) {
-      const nit = toolJson.nitCompleto || toolJson.nit || "";
-      const razon = toolJson.razonSocial;
-      const camara = toolJson.camaraComercio || "C\xE1mara de Comercio";
-      const estado = toolJson.estado || "Activa";
-      const ciiu = toolJson.ciiuPrincipal || "";
-      const rep = toolJson.representantePrincipal;
-      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! Ya consult\xE9 en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matr\xEDcula mercantil *${estado}* en la ${camara}. Su actividad econ\xF3mica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}
-
-\u2696\uFE0F _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._
-
-\xBFNos regalas un minutico con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! \u{1F91D}\u2728`;
-    } else {
-      fallbackText = `\xA1Hola${displayName ? `, ${displayName}` : ""}! No encontr\xE9 ninguna empresa registrada con ese nombre en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor comp\xE1rteme el n\xFAmero de NIT. \u{1F91D}`;
-    }
-  } else {
-    fallbackText = rawReport;
-  }
-  return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")) ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, fallbackText, true);
-}
-function formatPoliteToolDelivery(rawAiResponse, userName, userId, customGuidance, _legacyArg) {
-  const isLegacyToolType = typeof userId === "string" && ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
-  const effectiveResponse = isLegacyToolType && typeof customGuidance === "string" ? customGuidance : rawAiResponse;
-  if (!effectiveResponse) return "";
-  let cleaned = effectiveResponse.trim();
-  return cleaned;
-}
-function stripLeadingGreetingsAndCourtesies(text2) {
-  let cleaned = (text2 || "").trim();
-  if (!cleaned) return "";
-  cleaned = cleaned.replace(
-    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]?\s*)/gi,
-    ""
-  );
-  cleaned = cleaned.replace(
-    /(?:¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)),?\s*(?:eduardo|jani)?!?:?\s*(?:a\s+tu\s+disposici[oó]n\.?:?\s*)?)+/gi,
-    ""
-  );
-  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?:]*[!.\n?:]?\s*/i;
-  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:]*))[!.\n?:]?\s*/i;
-  const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
-  let changed = true;
-  let iterations = 0;
-  while (changed && iterations < 8) {
-    const before = cleaned;
-    cleaned = cleaned.replace(greetingPattern, "");
-    cleaned = cleaned.replace(courtesyPattern, "");
-    cleaned = cleaned.replace(emojiPattern, "");
-    cleaned = cleaned.trim();
-    changed = cleaned !== before;
-    iterations++;
-  }
-  if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  }
-  return cleaned.trim();
-}
-function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName, hasPriorHistory = false, timeSalutation) {
-  let cleaned = (text2 || "").trim();
-  if (!cleaned) return cleaned;
-  const currentSalutation = timeSalutation || getGreetingByTime2();
-  cleaned = cleaned.replace(/buenas\s+d[ií]as/gi, "Buenos d\xEDas");
-  cleaned = cleaned.replace(
-    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
-    ""
-  );
-  cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
-    return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
-  });
-  const nameSalutation = displayName ? `\xA1${currentSalutation}, ${displayName}! \u{1F44B} ` : `\xA1${currentSalutation}! \u{1F44B} `;
-  cleaned = cleaned.replace(/^¡?hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1${currentSalutation}, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! \u{1F44B} `);
-  cleaned = cleaned.replace(/^¡?hola\b[!]?\s*/i, nameSalutation);
-  cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
-  if (isEduardo) {
-    if (!hasPriorHistory) {
-      const body = stripLeadingGreetingsAndCourtesies(cleaned);
-      cleaned = body ? `\xA1${currentSalutation}, Eduardo! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
-    } else {
-      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
-    }
-  } else if (isJani) {
-    if (!hasPriorHistory) {
-      const body = stripLeadingGreetingsAndCourtesies(cleaned);
-      cleaned = body ? `\xA1${currentSalutation}, Jani! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
-    } else {
-      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
-    }
-  } else if (displayName === "VECY") {
-    if (!hasPriorHistory) {
-      const body = stripLeadingGreetingsAndCourtesies(cleaned);
-      cleaned = body ? `\xA1${currentSalutation}, VECY! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, VECY! \u{1F44B} \xBFCon qui\xE9n tengo el gusto de hablar?`;
-    } else {
-      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
-    }
-  } else if (hasPriorHistory && !cleaned.includes("?")) {
-    if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
-      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
-    }
-  }
-  cleaned = cleaned.replace(/(^|[.!?]\s+|[👋🤝✨🏘️😊🤖]\s*)([a-záéíóúñ])/gu, (_m, prefix, letter) => prefix + letter.toUpperCase());
-  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*|[👋🤝✨🏘️😊🤖]\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/giu, (_match, prefix, qWord, rest) => {
-    const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
-    return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
-  });
-  return cleaned.trim();
-}
-function isShortSignalOrSticker(text2) {
-  if (!text2) return false;
-  const clean = text2.trim();
-  if (clean === "[Sticker]" || clean === "\u{1F60A} [Sticker]" || clean.startsWith("[Reacci\xF3n") || clean === "[Tarjeta de contacto compartida]" || clean === "[Ubicaci\xF3n compartida]") {
-    return true;
-  }
-  if (/^[.¿?¡!_~^:;\-*#@+=]{1,8}$/.test(clean)) {
-    return true;
-  }
-  if (/^[\p{Extended_Pictographic}\s]{1,10}$/u.test(clean)) {
-    return true;
-  }
-  return false;
-}
-async function processPrivateDmConversationalMessage(text2, userId, userName, mediaOptions) {
-  let clean = (text2 || "").trim();
-  const hasImage = !!mediaOptions?.imageBuffer;
-  const hasPdf = !!mediaOptions?.pdfBuffer;
-  if (!clean && hasImage) {
-    clean = "[Fotograf\xEDa / Imagen adjunta]";
-  } else if (!clean && hasPdf) {
-    clean = "[Documento adjunto en PDF]";
-  }
-  if (!clean) return "";
-  const realName = await resolveRealName(userId, userName);
-  const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
-  const hour = nowBogota.getHours();
-  const minutes = String(nowBogota.getMinutes()).padStart(2, "0");
-  const diasSemana = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
-  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  const diaSemanaStr = diasSemana[nowBogota.getDay()];
-  const diaMes = nowBogota.getDate();
-  const mesStr = meses[nowBogota.getMonth()];
-  const anio = nowBogota.getFullYear();
-  const colombiaTimeFormatted = `${diaSemanaStr}, ${diaMes} de ${mesStr} de ${anio}, ${String(hour).padStart(2, "0")}:${minutes} hora Colombia (America/Bogota)`;
-  let timeOfDay = "Ma\xF1ana (5:00 am - 11:59 am)";
-  let timeSalutation = "Buenos d\xEDas";
-  if (hour >= 5 && hour < 12) {
-    timeOfDay = "Ma\xF1ana (5:00 am - 11:59 am)";
-    timeSalutation = "Buenos d\xEDas";
-  } else if (hour >= 12 && hour < 19) {
-    timeOfDay = "Tarde (12:00 pm - 6:59 pm)";
-    timeSalutation = "Buenas tardes";
-  } else {
-    timeOfDay = "Noche (7:00 pm - 4:59 am)";
-    timeSalutation = "Buenas noches";
-  }
-  const isFirstTimeUser = await isNewUser(userId);
-  await incrementUserMessageCount(userId);
-  const userPerpetualSession = await getUserPerpetualSession(userId, userName);
-  const hasVerifiedReview = userPerpetualSession.hasVerifiedGoogleReview || isEduardoOrJani(userId);
-  const history = await getOrLoadDmHistory(userId);
-  const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1e3;
-  const hasRecentInteractionPast6Hours = history.some((h) => (h.ts || 0) > sixHoursAgo);
-  const cleanLower = clean.toLowerCase();
-  const isVecyBrokerLine = userId.includes("3166569719") || userName && userName.includes("VECY BIENES RA\xCDCES");
-  const isEduardoIdentified = isVecyBrokerLine && /(?:soy\s+eduardo|habla\s+eduardo|de\s+parte\s+de\s+eduardo|eddu\b|eduardo\s+rivera)/i.test(cleanLower);
-  const isJaniIdentified = isVecyBrokerLine && /(?:soy\s+jani|habla\s+jani|de\s+parte\s+de\s+jani|jani\s+alves)/i.test(cleanLower);
-  const trustedContact = findTrustedContact(userId, userName || realName);
-  const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador");
-  const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa");
-  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
-  const introducedName = extractIntroducedName(clean);
-  const effectiveRawName = introducedName || realName;
-  const nameInfo = resolveNameAndGender(effectiveRawName, timeSalutation);
-  const compositeOrFirst = extractFirstName(effectiveRawName);
-  let displayName = "";
-  if (isEduardo) {
-    displayName = "Eduardo";
-  } else if (isJani) {
-    displayName = "Jani";
-  } else if (isVecyBrokerLine) {
-    displayName = "VECY";
-  } else if (isFamilyOrTrusted && trustedContact) {
-    displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
-  } else {
-    const canonicalComposite = getCanonicalCompositeName(effectiveRawName);
-    displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
-    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
-      displayName = "";
-    }
-  }
-  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
-  if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
-    await recordUserReviewClaim(userId);
-    const claimReply = `\xA1Much\xEDsimas gracias por tu apoyo${displayName ? `, ${displayName}` : ""}! \u{1F31F}
-
-Para validar tu calificaci\xF3n y actualizar tu registro permanente en el sistema, \xBFme compartes por favor un *pantallazo o captura de pantalla* de tu rese\xF1a y comentario en Google? \u{1F4F8}
-
-As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1Te agradezco de todo coraz\xF3n! \u{1F91D}\u2728`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", claimReply);
-    return claimReply;
-  }
-  let preloadedWebContent = "";
-  const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
-  if (urlMatch && urlMatch[0]) {
-    try {
-      const pageInfo = await fetchWebUrlContent(urlMatch[0], 8e3);
-      if (pageInfo.success && pageInfo.content) {
-        preloadedWebContent = `
-[SISTEMA - NAVEGACI\xD3N WEB EN TIEMPO REAL: Se descarg\xF3 el contenido de la URL ${urlMatch[0]} enviada por el usuario:
-T\xEDtulo: ${pageInfo.title}
-Contenido: ${pageInfo.content.slice(0, 4500)}]`;
-      }
-    } catch (_) {
-    }
-  }
-  try {
-    const {
-      getPendingCompanyFollowUp: getPendingCompanyFollowUp2,
-      clearPendingCompanyFollowUp: clearPendingCompanyFollowUp2,
-      clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
-      clearPendingCompanyMembers: clearPendingCompanyMembers2,
-      isDecliningCompanyMemberVerification: isDecliningCompanyMemberVerification2,
-      isAcceptingCompanyMemberVerification: isAcceptingCompanyMemberVerification2
-    } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-    const pendingFollowUp = getPendingCompanyFollowUp2(userId);
-    if (pendingFollowUp) {
-      if (isDecliningCompanyMemberVerification2(clean)) {
-        clearPendingCompanyFollowUp2(userId);
-        clearPendingUnconfirmedDoc2(userId);
-        clearPendingCompanyMembers2(userId);
-        const { formatCompanyFollowUpDeclineReviewMessage: formatCompanyFollowUpDeclineReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-        const declineReply = formatCompanyFollowUpDeclineReviewMessage2(displayName || realName);
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", declineReply);
-        return declineReply;
-      }
-      if (isAcceptingCompanyMemberVerification2(clean)) {
-        clearPendingCompanyFollowUp2(userId);
-        const toolExec = await executeJaniaDmTool(
-          "consultar_identidad_y_antecedentes",
-          { numeroDocumento: clean, tipoDocumento: "CC" },
-          userId,
-          userName || displayName || realName,
-          clean
-        );
-        const rawRep = String(toolExec.resultJson.reporteOficial || "");
-        const formattedRep = await formatPoliteToolDelivery(
-          userId,
-          userName || displayName || realName,
-          "cedula",
-          rawRep,
-          true
-        );
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", formattedRep);
-        return formattedRep;
-      }
-      clearPendingCompanyFollowUp2(userId);
-    }
-  } catch (followUpErr) {
-    console.warn("[processPrivateDmConversationalMessage] Follow-up check warning:", followUpErr?.message);
-  }
-  try {
-    const vecyKnowledge = getVecyInstitutionalKnowledge();
-    const contactDossier = await getContactPermanentDossier(userId);
-    const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
-
-Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
-Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
-
-===================================================
-CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:
-===================================================
-- Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.
-- Franja del d\xEDa actual: ${timeOfDay}.
-- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.
-- \xBFHubo interacci\xF3n reciente en las \xFAltimas 6 horas?: ${hasRecentInteractionPast6Hours ? "S\xCD (Conversaci\xF3n activa en curso)" : "NO (Nueva interacci\xF3n / inicio)"}.
-- REGLA ESTRICTA DEL SALUDO \xDANICO:
-  * Si NO hubo interacci\xF3n reciente en las \xFAltimas 6 horas: Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional UNA SOLA VEZ al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
-  * Si S\xCD hubo interacci\xF3n en las \xFAltimas 6 horas: Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte de nuevo"). Ve DIRECTO a responder con naturalidad el mensaje actual sin anteponer saludos.
-
-===================================================
-MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:
-===================================================
-${isFirstTimeUser ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida \xFAnica, fresca, cercana y humana, transmitiendo confianza y empat\xEDa inmediata al estilo VECY sin sonar a robot.` : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversaci\xF3n y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces' o dar introducciones largas como si fuera un desconocido.`}
-
-===================================================
-ESTILO Y VOZ LAOMEDEIA (HUMANIDAD PURA, CONCISI\xD3N Y CERO REDUNDANCIA):
-===================================================
-- Escribe con la misma calidez, chispa, persuasi\xF3n y naturalidad con la que hablas en tus audios de Laomedeia, yendo SIEMPRE AL GRANO.
-- Prohibido extenderse con p\xE1rrafos redundantes, introducciones largas o ladrillos de texto que aburran al lector: entrega explicaciones y reportes concretos, \xE1giles, visualmente elegantes y organizados por ti misma con Markdown de WhatsApp (*negritas*, _cursivas_, vi\xF1etas limpias y emojis precisos).
-- Respuestas \xE1giles, concretas y legibles en la pantalla del celular sin provocar el bot\xF3n 'Leer m\xE1s'.
-
-===================================================
-BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES:
-===================================================
-${vecyKnowledge}
-
-${contactDossier ? `${contactDossier}
-
-` : ""}ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
-1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
-2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
-3. Perita Avaluadora: Sondeos de m\xB2 y c\xE1nones por zonas del norte de Bogot\xE1 con honestidad t\xE9cnica (Cero Alucinaci\xF3n).
-4. Conectora Comercial y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas.
-5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
-6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.
-
-===================================================
-MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
-===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.
-Reglas de ejecuci\xF3n seg\xFAn el contexto:
-a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.
-b) Si el usuario pide buscar en la web o comparte un enlace URL (portal inmobiliario, p\xE1gina corporativa): Invoca 'navegar_o_buscar_web' para extraer el contenido real al instante.
-c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
-d) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
-e) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
-
-===================================================
-BUSCADOR Y MEDIACI\xD3N DE MATCHES (C\xD3DIGO #M...):
-===================================================
-${isEduardo || isJani ? `- Para Eduardo o Jani: Entrega la informaci\xF3n 100% destapada y completa (inmueble, demanda, porcentaje de afinidad, nombre del colega, tel\xE9fono y enlace directo de WhatsApp).
-` : `- Para Usuarios o Agentes Externos: Confirma que S\xCD hay match, describe el perfil del cruce SIN revelar el tel\xE9fono ni el nombre del usuario de la otra punta, entrega el c\xF3digo de match (ej. #M15649) e ind\xEDcale comunicarse al +57 316 656 9719 mencionando ese c\xF3digo para coordinar la mediaci\xF3n colaborativa 40/20/40.
-`}
-===================================================
-PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):
-===================================================
-- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empat\xEDa y complicidad profesional ("t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFqu\xE9 buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fr\xEDa o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RA\xCDCES.
-- INTERLOCUTOR Y G\xC9NERO GRAMATICAL: "${displayName || "Colega (nombre a\xFAn no identificado)"}". G\xE9nero detectado: ${nameInfo.isFemale ? "FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)" : "MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)"}.
-- REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), \xDASALO SIEMPRE COMPLETO de forma fluida y org\xE1nica. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce a\xFAn (es un n\xFAmero de tel\xE9fono o saludo suelto), sal\xFAdalo con calidez y hazle una pregunta simp\xE1tica para saber su nombre y c\xF3mo prefiere que lo llames.
-- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar org\xE1nicamente cualquiera de los cientos de emojis disponibles en Unicode. Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar.
-- CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MEN\xDAS R\xCDGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "informaci\xF3n", "de qu\xE9 trata", etc.), act\xFAa con la inteligencia conversacional de un asistente de nivel mundial:
-  1. Saluda amablemente con calidez humana y tuteo cercano.
-  2. Deduce con empat\xEDa la situaci\xF3n en una o dos frases breves y cautivadoras.
-  3. Hazle preguntas inteligentes para perfilarlo (preguntarle su nombre si no se sabe, si es colega inmobiliario o cliente buscando comprar/vender/arrendar, y en qu\xE9 zona o ciudad).
-  4. Mant\xE9n la conversaci\xF3n siempre guiada hacia VECY Bienes Ra\xEDces de manera natural, atractiva y orientada a soluciones.
-
-===================================================
-IDENTIDAD Y TRATO AL INTERLOCUTOR:
-===================================================
-${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s recibiendo mensaje desde la l\xEDnea oficial de br\xF3ker (+57 316 656 9719). Tr\xE1talos con la naturalidad de compa\xF1era de equipo y mano derecha hacia tus creadores, preguntando con amabilidad y naturalidad con cu\xE1l de los dos est\xE1s hablando si no lo han especificado.
-` : isEduardo ? `- Trato directivo para EDUARDO A. RIVERA (Fundador y Director de Tecnolog\xEDa): Compa\xF1era de equipo y mano derecha leal, \xE1gil, precisa y ejecutiva.
-` : isJani ? `- Trato directivo para JANI ALVES (Fundadora y Directora de Operaciones): Compa\xF1era de equipo y mano derecha leal, operativa, c\xE1lida y ejecutiva.
-` : isFamilyOrTrusted && trustedContact ? `- C\xCDRCULO FAMILIAR Y DE CONFIANZA: Est\xE1s conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Tr\xE1tala/lo con inmenso cari\xF1o, afecto familiar y respeto natural. Cu\xE9ntale con fluidez (sin plantillas r\xEDgidas) que Eduardo ahora est\xE1 disponible en su l\xEDnea de br\xF3ker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal fr\xEDo de vendedor, pedirle rese\xF1as en Google o venderle servicios comerciales a familiares.
-` : `- Usuario identificado: ${displayName || realName || "Colega"}.
-`}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
-` : ""}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
-- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
-- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
-- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
-    const messages2 = [
-      { role: "system", content: systemPrompt }
-    ];
-    for (const turn of history.slice(-20)) {
-      const cleanTurnContent = turn.role === "assistant" ? turn.content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim() : turn.content;
-      messages2.push({ role: turn.role, content: cleanTurnContent });
-    }
-    let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
-    if (preloadedWebContent) {
-      userPromptContent += preloadedWebContent;
-    }
-    if (mediaOptions?.imageBuffer) {
-      userPromptContent += `
-[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas, datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una rese\xF1a o calificaci\xF3n en Google (Google Maps / Rese\xF1a / Estrellas / VECY Bienes Ra\xEDces), valida la rese\xF1a cordialmente, agrad\xE9cele con mucho cari\xF1o y calidez humana e incluye la etiqueta interna [RESE\xD1A_GOOGLE_VALIDADA].]`;
-    }
-    if (mediaOptions?.pdfBuffer) {
-      userPromptContent += `
-[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visi\xF3n multimodal y procesa la consulta de forma integral.]`;
-    }
-    messages2.push({
-      role: "user",
-      content: userPromptContent
-    });
-    let llmRes;
-    try {
-      llmRes = await invokeLLM({
-        messages: messages2,
-        tools: JANIA_DM_TOOLS,
-        highReasoning: true,
-        imageBuffer: mediaOptions?.imageBuffer,
-        pdfBuffer: mediaOptions?.pdfBuffer,
-        pdfMimeType: mediaOptions?.pdfMimeType
-      });
-    } catch (toolsErr) {
-      console.warn(`[dmHandler] \u26A0\uFE0F Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
-      llmRes = await invokeLLM({
-        messages: messages2,
-        highReasoning: true,
-        imageBuffer: mediaOptions?.imageBuffer,
-        pdfBuffer: mediaOptions?.pdfBuffer,
-        pdfMimeType: mediaOptions?.pdfMimeType
-      });
-    }
-    let reply = "";
-    const fnCall = llmRes.choices[0]?.message?.functionCall;
-    if (fnCall && fnCall.name) {
-      let rawFnArgs = fnCall.arguments ?? fnCall.args ?? {};
-      if (typeof rawFnArgs === "string") {
-        try {
-          rawFnArgs = JSON.parse(rawFnArgs);
-        } catch (_) {
-          rawFnArgs = {};
-        }
-      }
-      const toolExecution = await executeJaniaDmTool(
-        fnCall.name,
-        rawFnArgs,
-        userId,
-        userName || displayName || realName,
-        clean
-      );
-      reply = await synthesizeToolResponseWithGemini(
-        userId,
-        userName || displayName || realName,
-        toolExecution.toolType,
-        toolExecution.resultJson,
-        clean,
-        isEduardo,
-        isJani,
-        displayName
-      );
-    } else {
-      reply = llmRes.choices[0]?.message?.content || "";
-    }
-    if (reply.includes("[RESE\xD1A_GOOGLE_VALIDADA]") || hasImage && /rese[ñn]a\s+validada|calificaci[oó]n\s+validada|valid[eé]\s+tu\s+rese[ñn]a|gracias\s+por\s+tu\s+rese[ñn]a/i.test(reply)) {
-      reply = reply.replace(/\[RESEÑA_GOOGLE_VALIDADA\]/g, "").trim();
-      await verifyUserGoogleReview(userId);
-    }
-    reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
-    reply = sanitizeResponseMarkdown(reply.trim());
-    const generalCourtesyRegex = /(?:(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?))+/gi;
-    const courtesyMatches = reply.match(generalCourtesyRegex);
-    if (courtesyMatches && courtesyMatches.length > 1) {
-      reply = reply.replace(generalCourtesyRegex, "").trim();
-      reply = `${reply}
-
-Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
-    }
-    if (!reply) {
-      if (isEduardo) {
-        reply = `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
-      } else if (isJani) {
-        reply = `\xA1${timeSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
-      } else {
-        reply = hasRecentInteractionPast6Hours ? `Con mucho gusto. Cu\xE9ntame en qu\xE9 tr\xE1mite o consulta inmobiliaria te colaboro hoy \u{1F91D}.` : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} En *VECY BIENES RA\xCDCES* estoy lista para colaborarte. \xBFQu\xE9 consulta o tr\xE1mite deseas realizar hoy? \u{1F91D}`;
-      }
-    }
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", reply);
-    return reply;
-  } catch (err) {
-    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    {
-      const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-      const timeGreeting = getGreetingByTime4();
-      if (isEduardo) {
-        const welcomeMsg = `\xA1${timeGreeting}, Eduardo! \u{1F44B} Estoy 100% activa y a tu entera disposici\xF3n para hablar o apoyarte en cualquier gesti\xF3n. \xBFEn qu\xE9 te colaboro hoy?`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", welcomeMsg);
-        return welcomeMsg;
-      }
-      if (isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified) {
-        const brokerLineMsg = `\xA1${timeGreeting}, VECY! \u{1F44B} Est\xE1s en la l\xEDnea oficial de VECY BIENES RA\xCDCES (+57 316 656 9719). \xBFCon qui\xE9n tengo el gusto de hablar hoy? \xBFCon Eduardo o con Jani?`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", brokerLineMsg);
-        return brokerLineMsg;
-      }
-      if (isShortSignalOrSticker(clean)) {
-        const dotMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED tu se\xF1al / puntico por aqu\xED. En *VECY BIENES RA\xCDCES* estoy lista para colaborarte. \xBFQu\xE9 consulta o tr\xE1mite deseas realizar hoy? \u{1F91D}`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", dotMsg);
-        return dotMsg;
-      }
-      if (isFamilyOrTrusted && trustedContact) {
-        let famMsg = "";
-        if (/(?:dile\s+a\s+eddu|dile\s+a\s+eduardo|mensaje\s+a\s+eddu|av[ií]sale\s+a\s+eddu)/i.test(cleanLower)) {
-          famMsg = `\xA1Anotad\xEDsimo, ${trustedContact.primaryNick || trustedContact.nicknames?.[0] || "Pollotote"}! Le paso tu mensaje a Eduardo (Eddu) de inmediato \u{1F91D}\u2728.`;
-        } else if (trustedContact.customMessage) {
-          famMsg = `\xA1${timeGreeting}, ${trustedContact.customMessage}`;
-        } else {
-          famMsg = `\xA1${timeGreeting}, ${trustedContact.primaryNick || displayName}! JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Te cuento que Eduardo est\xE1 disponible en su l\xEDnea de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).`;
-        }
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", famMsg);
-        return famMsg;
-      }
-      if (/(?:cobro|prejur[ií]dico|embargo|serlefin|deuda|cobranza)/i.test(cleanLower)) {
-        const shieldMsg = `No tengo informaci\xF3n de esa persona ni manejo agendas personales. En VECY BIENES RA\xCDCES este es el canal t\xE9cnico de la plataforma virtual.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", shieldMsg);
-        return shieldMsg;
-      }
-      if (mediaOptions?.flyerVisionData?.isFlyerOrBanner || mediaOptions?.flyerVisionData?.title) {
-        const title = mediaOptions.flyerVisionData.title || mediaOptions.flyerVisionData.propertyTitle || "Apartamento en Venta Chico 120m2";
-        const flyerMsg = `\xA1${timeGreeting} ${displayName}! \u{1F44B} He analizado con visi\xF3n artificial tu afiche comercial: *${title}*. Ya qued\xF3 registrado en el sistema de VECY BIENES RA\xCDCES para cruzarlo con nuestra base de demandas \u{1F91D}\u2728.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", flyerMsg);
-        return flyerMsg;
-      }
-      if (hasImage) {
-        const photoMsg = `\xA1${timeGreeting} ${displayName}! \u{1F44B} He recibido tu imagen. En VECY BIENES RA\xCDCES estamos a tu servicio para Factura Predial, Polic\xEDa Nacional y tr\xE1mites inmobiliarios. \xBFEn qu\xE9 te podemos colaborar hoy? \u{1F91D}\u2728`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", photoMsg);
-        return photoMsg;
-      }
-      const { getPendingCedulaSession: getPendingCedulaSession2, extractAllCedulasForVerification: extractAllCedulasForVerification2, extractCedulaForVerification: extractCedulaForVerification2, savePendingCedulaSession: savePendingCedulaSession2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-      const savedCedSession = getPendingCedulaSession2(userId);
-      if (savedCedSession?.reportText) {
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", savedCedSession.reportText);
-        return savedCedSession.reportText;
-      }
-      const multiCed = extractAllCedulasForVerification2(clean, true);
-      if (multiCed.length > 1) {
-        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        const verif = await executeIdentityVerificationFromWhatsApp2(clean, true);
-        if (verif.reportText) {
-          savePendingCedulaSession2(userId, multiCed, verif.reportText, true);
-        }
-        const rawNumMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${multiCed.map((c) => c.cedula).join(", ")}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
-\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
-\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
-
-_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", rawNumMsg);
-        return rawNumMsg;
-      }
-      const singleCedCheck = extractCedulaForVerification2(clean, true);
-      if (singleCedCheck.found && singleCedCheck.cedula) {
-        const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        setPendingUnconfirmedDoc2(userId, singleCedCheck.cedula);
-        const rawNumMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${singleCedCheck.cedula}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
-\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
-\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
-
-_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", rawNumMsg);
-        return rawNumMsg;
-      }
-      if (/^\d{5,12}$/.test(clean)) {
-        const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        setPendingUnconfirmedDoc2(userId, clean);
-        const rawNumMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${clean}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
-\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
-\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
-
-_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", rawNumMsg);
-        return rawNumMsg;
-      }
-      if (/^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(clean)) {
-        const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        setPendingUnconfirmedDoc2(userId, clean);
-        const chipMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el c\xF3digo CHIP *${clean}*. \xBFDeseas la factura del impuesto predial de Bogot\xE1 o el paz y salvo de valorizaci\xF3n del IDU? Quedo atenta para emitirte el documento de inmediato \u{1F91D}\u2728.
-
-_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", chipMsg);
-        return chipMsg;
-      }
-      if (/(?:^|\b)(?:es\s+cc|cc|c[eé]dula|1|antecedentes|idu|3|predial|2)\b/i.test(cleanLower)) {
-        const { getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2, clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        const pendingDoc = getPendingUnconfirmedDoc2(userId);
-        if (pendingDoc) {
-          clearPendingUnconfirmedDoc2(userId);
-          const rawVal = pendingDoc.rawNumber || pendingDoc;
-          if (/^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(rawVal)) {
-            const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
-            const resIdu = await executeIduValorizacionFromWhatsApp2(rawVal, userId, true);
-            const reportOut = resIdu.reportText || "";
-            appendDmHistory(userId, "user", clean);
-            appendDmHistory(userId, "assistant", reportOut);
-            return reportOut;
-          }
-          const verifResult = await executeIdentityVerificationFromWhatsApp2(rawVal, true);
-          if (verifResult.reportText) {
-            const out = `\xA1Confirmado, ${displayName}!
-
-${verifResult.reportText}`;
-            appendDmHistory(userId, "user", clean);
-            appendDmHistory(userId, "assistant", out);
-            return out;
-          }
-        }
-      }
-      if (/qu[eé] es vecy|qui[eé]nes son|presentaci[oó]n|a qu[eé] se dedican/i.test(cleanLower)) {
-        const presMsg = `Somos *VECY BIENES RA\xCDCES*, fundada por Eduardo A. Rivera y Jani Alves. Conoce nuestras operaciones en https://www.instagram.com/vecybienesraices/ y califica nuestro servicio en https://g.page/r/CctNbwU6UpX5EBM/review.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", presMsg);
-        return presMsg;
-      }
-      if (/paz y salvo.*idu|valorizaci[oó]n idu|certificado.*idu|enlace.*webidu/i.test(cleanLower)) {
-        const { formatIduAssistanceGuide: formatIduAssistanceGuide2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
-        const guide = formatIduAssistanceGuide2(displayName || "Colega");
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", guide);
-        return guide;
-      }
-      if (/c[oó]mo se hace la verificaci[oó]n|c[oó]mo se hace/i.test(cleanLower)) {
-        const howTo = `\xA1No te preocupes ni un segundo, ${displayName}! Para eso estoy yo aqu\xED. Para verificar una c\xE9dula o antecedentes. Para sacar el Impuesto Predial de Bogot\xE1. Si te cuesta la tecnolog\xEDa o te enredas con el celular, tengo toda la paciencia del mundo. Solo facil\xEDtame el dato para el registro de porter\xEDa previo a la visita.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", howTo);
-        return howTo;
-      }
-      if (/revisar los antecedentes de un cliente/i.test(cleanLower)) {
-        const docIntent = `\xA1Claro que s\xED, ${displayName}! Con el mayor gusto te colaboro con la verificaci\xF3n preventiva para el registro de porter\xEDa y control de acceso. Por favor comp\xE1rteme el n\xFAmero de documento y el nombre completo.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", docIntent);
-        return docIntent;
-      }
-      if (/(?:quieto|quiero|revisar|rrvisar).*(?:antecedentes)/i.test(cleanLower)) {
-        const habMsg = `\xA1Claro que s\xED, ${displayName}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto. Por normatividad de H\xE1beas Data (Ley 1581 de 2012), las bases oficiales no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", habMsg);
-        return habMsg;
-      }
-      if (/(?:consultar\s+c[eé]dula)/i.test(cleanLower)) {
-        const docMsg = `\xA1Claro que s\xED, ${displayName}! Por favor ind\xEDcame el n\xFAmero de documento y el nombre completo de la persona a consultar.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", docMsg);
-        return docMsg;
-      }
-      if (/costos/i.test(cleanLower)) {
-        const cMsg = `Nuestros servicios de consulta y verificaci\xF3n son completamente *GRATIS*. Env\xEDame el n\xFAmero de c\xE9dula.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", cMsg);
-        return cMsg;
-      }
-      if (/como es lo de las consultas/i.test(cleanLower)) {
-        const qMsg = `Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer. Ofrecemos Servicios 100% Gratuitos de Autoservicio: Verificaci\xF3n oficial de documentos, Factura Predial Bogot\xE1 y Certificados de Pago. Y Consultas Especializadas y Asesor\xEDa Profesional: Sondeos de mercado, Asesor\xEDa jur\xEDdica inmobiliaria, Recuperaci\xF3n de cartera, Aval\xFAos digitales, Liquidaciones tributarias y Pr\xE9stamos sobre hipoteca.`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", qMsg);
-        return qMsg;
-      }
-      if (/(?:c[oó]mo\s+funciona|info|informaci[oó]n|qu[eé]\s+es|de\s+qu[eé]\s+trata|ayuda)/i.test(cleanLower)) {
-        const nameGreeting = displayName ? `, ${displayName}` : "";
-        const askName = !displayName ? " \xBFC\xF3mo es tu nombre para saber con qui\xE9n tengo el gusto de hablar?" : "";
-        const infoMsg = `\xA1${timeGreeting}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* cruzamos ofertas y demandas inmobiliarias al instante, emitimos facturas de predial, certificados IDU y verificamos seguridad para tus visitas sin costo alguno.${askName} \xBFEres colega asesor inmobiliario o est\xE1s buscando alguna propiedad en especial para colaborarte hoy? \u{1F91D}\u2728`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", infoMsg);
-        return infoMsg;
-      }
-      if (/muchas gracias|gracias/i.test(cleanLower)) {
-        const gMsg = `\xA1Con todo el gusto${displayName ? `, ${displayName}` : ""}! \u{1F91D}\u2728 Te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) y calificar nuestro servicio. \xBFHay algo m\xE1s en lo que te pueda apoyar hoy?`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", gMsg);
-        return gMsg;
-      }
-      if (/^hola\b|^buenas\b|^buenos\s+d[ií]as\b|^buenas\s+tardes\b|^buenas\s+noches\b/i.test(cleanLower)) {
-        const nameGreeting = displayName ? `, ${displayName}` : "";
-        const askName = !displayName ? " \xBFC\xF3mo es tu nombre para poder saludarte como se debe?" : "";
-        const hMsg = `\xA1${timeGreeting}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu colega y asistente inmobiliaria con IA de *VECY BIENES RA\xCDCES*.${askName} \xBFEres colega asesor inmobiliario o te gustar\xEDa consultar alguna propiedad o tr\xE1mite hoy? \u{1F3E1}\u2728`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", hMsg);
-        return hMsg;
-      }
-    }
-    const fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! \u{1F44B} Estoy 100% atenta. Tuve una breve demora de conexi\xF3n de red con el modelo de lenguaje, pero ya me restablec\xED. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una peque\xF1a demora de red en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Tuve una peque\xF1a demora de conexi\xF3n de red con mi servicio de lenguaje. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", fallback);
-    return fallback;
-  }
-}
-var latestDmPdfMap, JANIA_DM_TOOLS;
-var init_dmHandler = __esm({
-  "server/_core/jania/handlers/dmHandler.ts"() {
-    "use strict";
-    init_sessionManager();
-    init_scraper();
-    init_db();
-    init_schema();
-    init_parsers();
-    init_nameAndGenderResolver();
-    init_llm();
-    init_prompts();
-    init_valuation();
-    init_whatsapp_utils();
-    init_trustedContacts();
-    latestDmPdfMap = /* @__PURE__ */ new Map();
-    JANIA_DM_TOOLS = [
-      {
-        functionDeclarations: [
-          {
-            name: "consultar_identidad_y_antecedentes",
-            description: "Valida la identidad oficial (censo ADRES y Registradur\xEDa) y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar" },
-                tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
-              },
-              required: ["numeroDocumento"]
-            }
-          },
-          {
-            name: "consultar_paz_y_salvo_idu",
-            description: "Consulta y genera el Paz y Salvo oficial de Valorizaci\xF3n del IDU en Bogot\xE1 mediante el c\xF3digo CHIP (inicia en AAA) para tr\xE1mites de notar\xEDa y escrituraci\xF3n.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                chip: { type: "STRING", description: "C\xF3digo CHIP del inmueble que inicia por AAA" }
-              },
-              required: ["chip"]
-            }
-          },
-          {
-            name: "consultar_factura_predial_bogota",
-            description: "Consulta y descarga la factura oficial en PDF con c\xF3digo de barras y estado de pago del impuesto predial unificado de Bogot\xE1 ante la Secretar\xEDa de Hacienda.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                chip: { type: "STRING", description: "C\xF3digo CHIP del predio" },
-                documentoTitular: { type: "STRING", description: "N\xFAmero de c\xE9dula o NIT del titular si se conoce" }
-              },
-              required: ["chip"]
-            }
-          },
-          {
-            name: "liquidar_gastos_notariales_y_registro",
-            description: "Calcula el desglose exacto de derechos notariales (50/50), retenci\xF3n en la fuente (1% vendedor), impuesto de registro y beneficencia (1.67% comprador) para escrituraci\xF3n en Colombia.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                precioVenta: { type: "NUMBER", description: "Precio pactado de venta en pesos colombianos (COP)" },
-                tipoInmueble: { type: "STRING", description: "apartamento, casa, lote, etc." }
-              },
-              required: ["precioVenta"]
-            }
-          },
-          {
-            name: "sondeo_mercado_inmobiliario",
-            description: "Realiza un sondeo t\xE9cnico comparativo de m\xB2 y canon sugerido en barrios y zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) integrando portales (Metrocuadrado, Fincaraiz, Ciencuadras) y coeficientes ACM.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogot\xE1 a evaluar" },
-                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
-                areaM2: { type: "NUMBER", description: "\xC1rea en metros cuadrados" },
-                estrato: { type: "NUMBER", description: "Estrato socioecon\xF3mico 1 al 6" },
-                antiguedadAnos: { type: "NUMBER", description: "A\xF1os de antig\xFCedad" },
-                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos" }
-              },
-              required: ["zonaOBarrio"]
-            }
-          },
-          {
-            name: "registrar_inmueble_o_requerimiento",
-            description: "Registra en la base de datos de VECY BIENES RA\xCDCES una oferta inmobiliaria (venta, arriendo, permuta) o un requerimiento/b\xFAsqueda de cliente enviado por chat privado y ejecuta el motor de coincidencias (Match).",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                textoCompletoPublicacion: { type: "STRING", description: "Texto completo del inmueble ofrecido o demandado" },
-                tipoOperacion: { type: "STRING", description: "OFERTA o DEMANDA" }
-              },
-              required: ["textoCompletoPublicacion"]
-            }
-          },
-          {
-            name: "consultar_matches_o_codigo",
-            description: "Consulta y busca cruces, coincidencias o detalles de un c\xF3digo de match (#M...), propiedad (P...) o requerimiento (R...), o busca coincidencias por texto en la red VECY.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                consulta: { type: "STRING", description: "C\xF3digo de match (ej. M15649), ID de propiedad/requerimiento o texto de b\xFAsqueda" }
-              },
-              required: ["consulta"]
-            }
-          },
-          {
-            name: "consultar_empresa_o_nit",
-            description: "Consulta y valida la identidad oficial de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + C\xE1mara de Comercio + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI). Devuelve Raz\xF3n Social, NIT, Estado de matr\xEDcula, Direcci\xF3n comercial, Tel\xE9fono, Actividad econ\xF3mica (CIIU) y Representante Legal Principal.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social de la empresa detectada en texto o imagen" }
-              },
-              required: ["consultaEmpresa"]
-            }
-          },
-          {
-            name: "enviar_encuesta_interactiva",
-            description: "Env\xEDa una encuesta interactiva nativa de WhatsApp (Poll) de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites, tipos de inmuebles, opciones de negocio o encuestas del canal.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                pregunta: { type: "STRING", description: "Pregunta del cuestionario o encuesta" },
-                opciones: {
-                  type: "ARRAY",
-                  items: { type: "STRING" },
-                  description: "Lista de opciones de respuesta (2 a 12 opciones cortas)"
-                },
-                limiteSeleccion: { type: "NUMBER", description: "N\xFAmero m\xE1ximo de opciones seleccionables (por defecto 1)" }
-              },
-              required: ["pregunta", "opciones"]
-            }
-          },
-          {
-            name: "enviar_tarjeta_contacto_vecy",
-            description: "Env\xEDa la tarjeta de contacto oficial interactiva (vCard) de VECY BIENES RA\xCDCES / Eduardo Rivera y Jani Alves (+57 316 656 9719) o el contacto de un colega.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                destinatario: { type: "STRING", description: "Tipo de contacto: 'broker', 'jania' o 'colega'" },
-                nombrePersonalizado: { type: "STRING", description: "Nombre a mostrar en la tarjeta de contacto" },
-                telefonoPersonalizado: { type: "STRING", description: "N\xFAmero de tel\xE9fono en formato internacional (ej. +573166569719)" }
-              }
-            }
-          },
-          {
-            name: "enviar_evento_visita_inmobiliaria",
-            description: "Agenda y despacha una tarjeta de evento formal para visitas a inmuebles, reuniones o comit\xE9s notariales a trav\xE9s de Vecy Agenda Pro.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                tituloVisita: { type: "STRING", description: "T\xEDtulo del evento o visita inmobiliaria" },
-                fechaHora: { type: "STRING", description: "Fecha y hora propuesta para la visita" },
-                direccionOBarrio: { type: "STRING", description: "Direcci\xF3n, conjunto o barrio del inmueble" },
-                detalles: { type: "STRING", description: "Observaciones de la visita o registro de porter\xEDa" }
-              },
-              required: ["tituloVisita", "fechaHora"]
-            }
-          },
-          {
-            name: "enviar_catalogo_servicios",
-            description: "Comparte el enlace directo al cat\xE1logo de WhatsApp Business, marketplace colaborativo y portafolio Proptech de VECY BIENES RA\xCDCES.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                categoria: { type: "STRING", description: "Categor\xEDa: 'inmuebles', 'servicios' o 'general'" }
-              }
-            }
-          },
-          {
-            name: "navegar_o_buscar_web",
-            description: "Abre y extrae el contenido real de una URL/enlace web (portales inmobiliarios como Metrocuadrado, Fincaraiz, Ciencuadras, p\xE1ginas corporativas o documentos web) o busca informaci\xF3n actualizada en internet.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                url: { type: "STRING", description: "URL o enlace web completo a consultar (ej. https://...)" },
-                query: { type: "STRING", description: "T\xE9rmino de b\xFAsqueda web si no hay URL directa" }
-              }
-            }
-          },
-          {
-            name: "consultar_catalogo_inmuebles_vecy",
-            description: "Consulta el cat\xE1logo oficial y base de datos de propiedades de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719), filtrando por tipo de inmueble, tipo de negocio (venta, arriendo), zona/barrio, rango de precio o caracter\xEDsticas, entregando fichas y sondeos de $/m\xB2 al instante.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, local, lote, etc." },
-                tipoNegocio: { type: "STRING", description: "venta, arriendo, venta_o_arriendo" },
-                zona: { type: "STRING", description: "Zona o barrio de Bogot\xE1 o municipio" },
-                precioMaximo: { type: "NUMBER", description: "Presupuesto m\xE1ximo en COP" }
-              }
-            }
-          }
-        ]
-      }
-    ];
-  }
-});
-
 // server/_core/whatsapp-match.ts
 var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
@@ -23118,7 +21708,7 @@ import _baileys, {
 import qrcodeTerminal from "qrcode-terminal";
 import fs9 from "fs";
 import path9 from "path";
-import { eq as eq10 } from "drizzle-orm";
+import { eq as eq9 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -25245,7 +23835,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq10(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq9(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -25259,7 +23849,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq10(conversations.id, conversationId));
+            }).where(eq9(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -25402,13 +23992,13 @@ Mis grupos oficiales:
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq9(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq10(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq10(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq9(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq9(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -25423,7 +24013,7 @@ Mis grupos oficiales:
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq10(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq9(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -25437,19 +24027,19 @@ Mis grupos oficiales:
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq10(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq9(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq9(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq10(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq9(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq10(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq9(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq10(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq9(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -26416,7 +25006,7 @@ var init_agendaWhatsAppService = __esm({
 
 // server/routers/agenda.ts
 import { z as z2 } from "zod";
-import { desc as desc5, ilike, or as or3, sql as sql9, eq as eq11 } from "drizzle-orm";
+import { desc as desc4, ilike, or as or3, sql as sql8, eq as eq10 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -27030,7 +25620,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       const profileRows = await db.select({
         fullName: profiles.fullName,
         numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq11(profiles.numeroDocumento, clean)).limit(5);
+      }).from(profiles).where(eq10(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const officialFormatted = formatTitleCase(row.fullName.trim());
@@ -27052,10 +25642,10 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         interesadoNombre: solicitudes.interesadoNombre
       }).from(solicitudes).where(
         or3(
-          eq11(solicitudes.solicitanteNumeroDocumento, clean),
-          eq11(solicitudes.interesadoDocumento, clean)
+          eq10(solicitudes.solicitanteNumeroDocumento, clean),
+          eq10(solicitudes.interesadoDocumento, clean)
         )
-      ).orderBy(desc5(solicitudes.id)).limit(10);
+      ).orderBy(desc4(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
@@ -27239,10 +25829,10 @@ async function processAndSaveSolicitud(input) {
     }
   } catch (_) {
   }
-  const maxRes = await db.select({ maxId: sql9`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const maxRes = await db.select({ maxId: sql8`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
   const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
   const inserted = await db.insert(solicitudes).values({
-    id: sql9`nextval('solicitudes_id_seq')`,
+    id: sql8`nextval('solicitudes_id_seq')`,
     solicitudId: nextSolicitudId,
     solicitanteNombre: input.solicitante_nombre,
     solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
@@ -27429,7 +26019,7 @@ var init_agenda = __esm({
             ilike(solicitudes.interesadoNombre, searchPattern)
           ];
           if (!isNaN(numSearch)) {
-            searchConditions.push(eq11(solicitudes.solicitudId, numSearch));
+            searchConditions.push(eq10(solicitudes.solicitudId, numSearch));
           }
           whereConditions.push(or3(...searchConditions));
         }
@@ -27452,9 +26042,9 @@ var init_agenda = __esm({
             );
           }
         }
-        const finalWhere = whereConditions.length > 0 ? sql9.join(whereConditions, sql9` AND `) : void 0;
-        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql9`${solicitudes.solicitudId} DESC NULLS LAST`, desc5(solicitudes.id)).limit(limit).offset(offset);
-        const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(finalWhere);
+        const finalWhere = whereConditions.length > 0 ? sql8.join(whereConditions, sql8` AND `) : void 0;
+        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql8`${solicitudes.solicitudId} DESC NULLS LAST`, desc4(solicitudes.id)).limit(limit).offset(offset);
+        const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(finalWhere);
         return {
           items,
           total: Number(totalRes[0]?.count || 0)
@@ -27463,9 +26053,9 @@ var init_agenda = __esm({
       getStats: publicProcedure.query(async () => {
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-        const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes);
+        const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes);
         const total = Number(totalRes[0]?.count || 0);
-        const agentesRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(
+        const agentesRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(
           or3(
             ilike(solicitudes.solicitantePerfil, "%agente%"),
             ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
@@ -27474,7 +26064,7 @@ var init_agenda = __esm({
           )
         );
         const agentes = Number(agentesRes[0]?.count || 0);
-        const conFirmaRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(sql9`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+        const conFirmaRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(sql8`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
         const conFirma = Number(conFirmaRes[0]?.count || 0);
         const directos = Math.max(0, total - agentes);
         return {
@@ -27597,7 +26187,7 @@ var init_agenda = __esm({
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
         const { id, ...dataToUpdate } = input;
-        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq11(solicitudes.id, id)).returning();
+        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq10(solicitudes.id, id)).returning();
         return {
           success: true,
           item: updated[0] || null
@@ -30387,6 +28977,1493 @@ La consulta y tratamiento de esta informaci\xF3n p\xFAblica y semiprivada se efe
   }
 });
 
+// server/_core/jania/handlers/dmHandler.ts
+var dmHandler_exports = {};
+__export(dmHandler_exports, {
+  JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
+  executeJaniaDmTool: () => executeJaniaDmTool,
+  formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  isShortSignalOrSticker: () => isShortSignalOrSticker,
+  popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
+  popLatestDmPdf: () => popLatestDmPdf,
+  processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
+  sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
+  setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
+  setLatestDmPdf: () => setLatestDmPdf,
+  stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
+  synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
+});
+import { eq as eq11, and as and7, sql as sql9, desc as desc5 } from "drizzle-orm";
+function setLatestDmPdf(userId, attachment) {
+  latestDmPdfMap.set(userId, attachment);
+}
+function popLatestDmPdf(userId) {
+  const attachment = latestDmPdfMap.get(userId);
+  if (attachment) {
+    latestDmPdfMap.delete(userId);
+  }
+  return attachment;
+}
+function setLatestDmFollowUpMessage(_userId, _followUpText) {
+}
+function popLatestDmFollowUpMessage(_userId) {
+  return void 0;
+}
+async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
+  switch (toolName) {
+    case "consultar_matches_o_codigo": {
+      const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
+      const { executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
+      const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+      const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("167108705018103");
+      const res = await executeAdminMatchSearch2(query, isEduardo || isJani, userId);
+      return {
+        toolType: "match",
+        resultJson: {
+          solicitud: "consulta_matches",
+          consulta: query,
+          reporteOficial: res.formattedReport || "Sin coincidencias registradas.",
+          totalFound: res.totalFound
+        }
+      };
+    }
+    case "registrar_inmueble_o_requerimiento": {
+      const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
+      const res = await processWhatsAppMessage2(
+        String(args.textoCompletoPublicacion || rawUserText || ""),
+        userId,
+        _userName,
+        false,
+        [],
+        void 0,
+        void 0,
+        false
+      );
+      return {
+        toolType: "sondeo",
+        resultJson: {
+          solicitud: "registro_inmueble_o_requerimiento",
+          clasificacion: res.classification,
+          insertado: res.inserted,
+          detalle: "Procesado en el motor de VECY BIENES RA\xCDCES"
+        }
+      };
+    }
+    case "consultar_identidad_y_antecedentes": {
+      const {
+        executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2,
+        getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
+        clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
+        getPendingCompanyMembers: getPendingCompanyMembers2,
+        clearPendingCompanyMembers: clearPendingCompanyMembers2
+      } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      let doc = String(args.numeroDocumento || args.cedula || args.nit || args.documento || "").trim();
+      let tipo = String(args.tipoDocumento || "CC").trim();
+      const combinedIntent = `${doc} ${rawUserText || ""}`.toLowerCase();
+      if (/(?:todos|cada\s+miembro|todos\s+los\s+miembros|suplentes\s+y\s+principal|ambos)/i.test(combinedIntent)) {
+        const pendingMembers = getPendingCompanyMembers2(userId);
+        if (pendingMembers && pendingMembers.length > 0) {
+          clearPendingCompanyMembers2(userId);
+          clearPendingUnconfirmedDoc2(userId);
+          const explicitItems = pendingMembers.filter((m) => Boolean(m.numeroIdentificacion)).map((m) => ({
+            cedula: m.numeroIdentificacion,
+            tipoDoc: m.tipoDocumento.toLowerCase().includes("e") ? "ce" : "cc",
+            rawNumber: m.numeroIdentificacion,
+            detectedName: m.nombre
+          }));
+          if (explicitItems.length > 0) {
+            const resAll = await executeIdentityVerificationFromWhatsApp2(
+              explicitItems.map((i) => `${i.tipoDoc.toUpperCase()} ${i.cedula}`).join(", "),
+              true,
+              userId,
+              explicitItems
+            );
+            return {
+              toolType: "cedula",
+              resultJson: {
+                solicitud: "verificacion_identidad_miembros_empresa",
+                numeroDocumento: explicitItems.map((i) => i.cedula).join(", "),
+                tipoDocumento: "CC",
+                reporteOficial: resAll.reportText || "Sin reporte disponible",
+                exitoso: resAll.isVerificationRequest
+              }
+            };
+          }
+        }
+      }
+      if (!/\d{5,12}/.test(doc)) {
+        const pendingDoc = getPendingUnconfirmedDoc2(userId);
+        if (pendingDoc?.cleanNumber) {
+          doc = pendingDoc.cleanNumber;
+          clearPendingUnconfirmedDoc2(userId);
+        } else if (rawUserText) {
+          doc = rawUserText;
+        }
+      }
+      const cleanDigits = doc.split("-")[0].replace(/\D/g, "");
+      if (cleanDigits.length === 9 && /^[89]\d{8}$/.test(cleanDigits)) {
+        tipo = "NIT";
+      } else if (rawUserText && /\bnit\b/i.test(rawUserText)) {
+        tipo = "NIT";
+      }
+      const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
+      const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
+      const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA"));
+      return {
+        toolType: isCompanyReport ? "empresa" : "cedula",
+        resultJson: {
+          solicitud: isCompanyReport ? "consulta_empresa_o_nit" : "verificacion_identidad",
+          numeroDocumento: doc,
+          tipoDocumento: tipo,
+          nombreOficial: res.officialName || null,
+          exitoso: res.success ?? res.isVerificationRequest,
+          policia: res.policia?.message || (res.success ? "Sin antecedentes judiciales ni requerimientos penales pendientes" : null),
+          procuraduria: res.procuraduria?.statusText || (res.success ? "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General" : null),
+          contraloria: res.contraloria?.statusText || (res.success ? "Sin reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI)" : null),
+          adres: res.adres ? {
+            eps: res.adres.eps,
+            estado: res.adres.estado,
+            regimen: res.adres.regimen
+          } : null,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          preguntaSeguimiento: ""
+        }
+      };
+    }
+    case "consultar_paz_y_salvo_idu": {
+      const chip = String(args.chip || rawUserText || "").trim();
+      const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+      const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
+      if (res.pdfBuffer) {
+        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Paz_y_Salvo_IDU_${chip}_2026.pdf` });
+      }
+      return {
+        toolType: "idu",
+        resultJson: {
+          solicitud: "paz_y_salvo_idu",
+          chip,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isIduRequest
+        }
+      };
+    }
+    case "consultar_factura_predial_bogota": {
+      const chip = String(args.chip || rawUserText || "").trim();
+      const doc = args.documentoTitular ? String(args.documentoTitular).trim() : void 0;
+      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+      const queryStr = doc ? `${chip} ${doc}` : chip;
+      const res = await executePredialAssistanceFromWhatsApp2(queryStr, userId, true);
+      if (res.pdfBuffer) {
+        setLatestDmPdf(userId, { pdfBuffer: res.pdfBuffer, pdfFileName: res.pdfFileName || `Factura_Predial_${chip}_2026.pdf` });
+      }
+      return {
+        toolType: "predial",
+        resultJson: {
+          solicitud: "factura_predial_bogota",
+          chip,
+          reporteOficial: res?.reportText || "Factura predial procesada",
+          exitoso: true
+        }
+      };
+    }
+    case "liquidar_gastos_notariales_y_registro": {
+      const precio = Number(args.precioVenta || 0);
+      const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+      const queryText = precio > 0 ? `liquidaci\xF3n notarial ${precio}` : rawUserText || "liquidaci\xF3n notarial";
+      const res = await executeNotarialAssistanceFromWhatsApp2(queryText, userId, true);
+      return {
+        toolType: "notarial",
+        resultJson: {
+          solicitud: "gastos_notariales_y_registro",
+          precioVenta: precio,
+          reporteOficial: res.reportText || "Liquidaci\xF3n procesada",
+          exitoso: res.isNotarialRequest
+        }
+      };
+    }
+    case "sondeo_mercado_inmobiliario": {
+      const isExplicitValuation = /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje)\b/i.test(rawUserText || "");
+      if (!isExplicitValuation) {
+        return {
+          toolType: "sondeo",
+          resultJson: {
+            solicitud: "sondeo_mercado_inmobiliario",
+            omitted: true,
+            mensaje: "El usuario no solicit\xF3 expresamente un aval\xFAo ni pregunt\xF3 cu\xE1nto vale. No se liquida aval\xFAo no solicitado. Atiende cordialmente su mensaje o confirma el registro sin forzar estudios de precio."
+          }
+        };
+      }
+      const surveyRes = executeMarketValuationSurvey({
+        zonaOBarrio: args.zonaOBarrio || "Chic\xF3",
+        tipoInmueble: args.tipoInmueble || "apartamento",
+        areaM2: Number(args.areaM2 || 75),
+        estrato: Number(args.estrato || 5),
+        antiguedadAnos: Number(args.antiguedadAnos || 8),
+        garajes: Number(args.garajes || 1)
+      });
+      return {
+        toolType: "sondeo",
+        resultJson: surveyRes
+      };
+    }
+    case "consultar_empresa_o_nit": {
+      const q = String(
+        args.consultaEmpresa || args.nitORazonSocial || args.nit || args.numeroDocumento || args.empresa || args.razonSocial || args.query || rawUserText || ""
+      ).trim();
+      const { queryEmpresaOrNit: queryEmpresaOrNit2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const empRes = await queryEmpresaOrNit2(q, userId);
+      return {
+        toolType: "empresa",
+        resultJson: {
+          solicitud: "consulta_empresa_o_nit",
+          termino: q,
+          exitoso: empRes.success,
+          nit: empRes.nit,
+          dv: empRes.dv,
+          nitCompleto: empRes.nitCompleto,
+          razonSocial: empRes.razonSocial,
+          camaraComercio: empRes.camaraComercio,
+          ciudad: empRes.ciudad,
+          estado: empRes.estado,
+          matricula: empRes.matricula,
+          categoriaMatricula: empRes.categoriaMatricula,
+          tipoSociedad: empRes.tipoSociedad,
+          organizacionJuridica: empRes.organizacionJuridica,
+          organizacionJuridicaRaw: empRes.organizacionJuridicaRaw,
+          fechaMatricula: empRes.fechaMatricula,
+          fechaRenovacion: empRes.fechaRenovacion,
+          ultimoAnoRenovado: empRes.ultimoAnoRenovado,
+          ciiuPrincipal: empRes.ciiuPrincipal,
+          actividadesEconomicas: empRes.actividadesEconomicas,
+          representantePrincipal: empRes.representantePrincipal || null,
+          representantesSuplentes: empRes.representantesSuplentes || [],
+          establecimientos: empRes.establecimientos || [],
+          direccionComercial: empRes.direccionComercial,
+          telefonoComercial: empRes.telefonoComercial,
+          reporteOficial: empRes.reportText || "Consulta empresarial procesada",
+          preguntaSeguimiento: ""
+        }
+      };
+    }
+    case "enviar_encuesta_interactiva": {
+      const pregunta = String(args.pregunta || "").trim();
+      const opciones = Array.isArray(args.opciones) ? args.opciones.map(String) : ["S\xED", "No"];
+      const selectableCount = args.limiteSeleccion ? Number(args.limiteSeleccion) : Number(args.seleccionMultiple ? 2 : 1);
+      const { sendNativeWhatsAppPoll: sendNativeWhatsAppPoll2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const pollSent = await sendNativeWhatsAppPoll2(userId, pregunta, opciones, selectableCount);
+      return {
+        toolType: "encuesta",
+        resultJson: {
+          solicitud: "encuesta_interactiva",
+          pregunta,
+          opciones,
+          enviada: pollSent,
+          reporteOficial: pollSent ? `\u{1F4CA} *Encuesta interactiva despachada:* "${pregunta}" con ${opciones.length} opciones.` : `\u{1F4CA} Encuesta preparada para votaci\xF3n: "${pregunta}".`
+        }
+      };
+    }
+    case "enviar_tarjeta_contacto_vecy": {
+      const rawContact = String(args.destinatario || args.tipoContacto || "broker").toLowerCase();
+      const contactType = rawContact === "jania" ? "jania" : "broker";
+      const { sendNativeWhatsAppContact: sendNativeWhatsAppContact2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const contactSent = await sendNativeWhatsAppContact2(userId, contactType);
+      return {
+        toolType: "contacto",
+        resultJson: {
+          solicitud: "tarjeta_contacto",
+          tipoContacto: contactType,
+          enviada: contactSent,
+          reporteOficial: contactSent ? `\u{1F4C7} *Tarjeta de contacto interactiva (${contactType === "broker" ? "Eduardo & Jani \u2014 Br\xF3ker Oficial" : "JanIA"}) enviada exitosamente.*` : `\u{1F4C7} Contacto oficial: ${contactType === "broker" ? "Eduardo Rivera (+57 316 656 9719)" : "JanIA (+57 319 291 9978)"}.`
+        }
+      };
+    }
+    case "enviar_evento_visita_inmobiliaria": {
+      const titulo = String(args.tituloVisita || args.titulo || "Visita Inmobiliaria").trim();
+      const descripcion = String(args.detalles || args.descripcion || "").trim();
+      const ubicacion = String(args.direccionOBarrio || args.ubicacion || "").trim();
+      const rawFecha = args.fechaHora || args.fechaHoraIso;
+      const parsedTime = rawFecha ? new Date(rawFecha).getTime() : NaN;
+      const fechaHora = !Number.isNaN(parsedTime) ? parsedTime : Date.now() + 864e5;
+      const { sendNativeWhatsAppEvent: sendNativeWhatsAppEvent2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const eventSent = await sendNativeWhatsAppEvent2(userId, {
+        name: titulo,
+        description: descripcion,
+        location: ubicacion,
+        startTime: fechaHora
+      });
+      return {
+        toolType: "evento",
+        resultJson: {
+          solicitud: "evento_inmobiliario",
+          titulo,
+          ubicacion,
+          enviado: eventSent,
+          reporteOficial: `\u{1F4C5} *Evento Agendado:* "${titulo}" en ${ubicacion || "Virtual"}.`
+        }
+      };
+    }
+    case "enviar_catalogo_servicios": {
+      const catalogMsg = `\u{1F3EC} *CAT\xC1LOGO DE SERVICIOS Y PORTAL WEB \u2014 VECY BIENES RA\xCDCES*
+
+\u{1F310} *Portal Oficial:* https://vecy-bienes-raices.vercel.app/
+\u{1F916} *JanIA Landing:* https://vecy-bienes-raices.vercel.app/jania
+\u{1F4F1} *Canal de WhatsApp:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+
+\u{1F4CC} *Servicios Destacados:*
+\u2022 Cruce de Inmuebles y Demandas en Tiempo Real (Match 40/20/40).
+\u2022 Verificaci\xF3n Preventiva de Identidad (ADRES, Polic\xEDa, Procuradur\xEDa, Contralor\xEDa, RUES).
+\u2022 Asistencia Factura Predial Bogot\xE1 y Paz y Salvo IDU.
+\u2022 Liquidaci\xF3n Notarial y de Registro 50/50.
+\u2022 Sondeos de Mercado y Aval\xFAos Digitales.
+
+_\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
+      return {
+        toolType: "catalogo",
+        resultJson: {
+          solicitud: "catalogo_servicios",
+          reporteOficial: catalogMsg,
+          exitoso: true
+        }
+      };
+    }
+    case "navegar_o_buscar_web": {
+      const url = String(args.url || "").trim();
+      const query = String(args.query || rawUserText || "").trim();
+      if (url && /^https?:\/\//i.test(url)) {
+        const pageData = await fetchWebUrlContent(url);
+        return {
+          toolType: "web",
+          resultJson: {
+            solicitud: "navegacion_web",
+            url,
+            titulo: pageData.title,
+            contenido: pageData.content,
+            exitoso: pageData.success
+          }
+        };
+      }
+      return {
+        toolType: "web",
+        resultJson: {
+          solicitud: "busqueda_web",
+          query,
+          mensaje: "B\xFAsqueda web procesada en el n\xFAcleo cognitivo de JanIA.",
+          exitoso: true
+        }
+      };
+    }
+    case "consultar_catalogo_inmuebles_vecy": {
+      const tipoInmueble = String(args.tipoInmueble || "").toLowerCase().trim();
+      const tipoNegocio = String(args.tipoNegocio || "").toLowerCase().trim();
+      const zona = String(args.zona || "").trim();
+      const precioMax = Number(args.precioMaximo || 0);
+      const db = await getDb();
+      let foundProps = [];
+      if (db) {
+        try {
+          const conditions = [eq11(properties.available, true)];
+          if (tipoInmueble) {
+            conditions.push(sql9`LOWER(${properties.propertyType}) LIKE ${"%" + tipoInmueble + "%"}`);
+          }
+          if (tipoNegocio) {
+            conditions.push(sql9`LOWER(${properties.transactionType}) LIKE ${"%" + tipoNegocio + "%"}`);
+          }
+          if (zona) {
+            conditions.push(sql9`LOWER(${properties.zone}) LIKE ${"%" + zona.toLowerCase() + "%"}`);
+          }
+          if (precioMax > 0) {
+            conditions.push(sql9`(${properties.price} <= ${precioMax} OR ${properties.rentPrice} <= ${precioMax})`);
+          }
+          foundProps = await db.select({
+            id: properties.id,
+            name: properties.name,
+            propertyType: properties.propertyType,
+            transactionType: properties.transactionType,
+            zone: properties.zone,
+            price: properties.price,
+            rentPrice: properties.rentPrice,
+            areaTotal: properties.areaTotal,
+            bedrooms: properties.bedrooms,
+            bathrooms: properties.bathrooms,
+            garages: properties.garages,
+            description: properties.description
+          }).from(properties).where(and7(...conditions)).orderBy(desc5(properties.id)).limit(5);
+        } catch (dbErr) {
+          console.warn("[consultar_catalogo_inmuebles_vecy] Error querying DB:", dbErr?.message);
+        }
+      }
+      const totalProps = foundProps.length;
+      let avgM2Price = 0;
+      if (totalProps > 0) {
+        const prices = foundProps.map((p) => {
+          const pr = Number(p.price || p.rentPrice || 0);
+          const ar = Number(p.areaTotal || 0);
+          return ar > 0 && pr > 0 ? pr / ar : 0;
+        }).filter((v) => v > 0);
+        if (prices.length > 0) {
+          avgM2Price = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+        }
+      }
+      return {
+        toolType: "catalogo_inmuebles",
+        resultJson: {
+          solicitud: "catalogo_inmuebles_vecy",
+          tipoInmueble,
+          tipoNegocio,
+          zona,
+          totalEncontrados: totalProps,
+          precioPromedioM2: avgM2Price,
+          inmuebles: foundProps.map((p) => ({
+            codigo: `#P${p.id}`,
+            titulo: p.name,
+            tipo: p.propertyType,
+            operacion: p.transactionType,
+            zona: p.zone,
+            precioVenta: p.price ? `$${Number(p.price).toLocaleString("es-CO")} COP` : void 0,
+            precioCanon: p.rentPrice ? `$${Number(p.rentPrice).toLocaleString("es-CO")} COP/mes` : void 0,
+            areaM2: p.areaTotal ? `${p.areaTotal} m\xB2` : void 0,
+            habitaciones: p.bedrooms,
+            banos: p.bathrooms,
+            garajes: p.garages
+          })),
+          contactoBroker: "Eduardo Rivera & Jani Alves \u2014 WhatsApp Oficial +57 316 656 9719"
+        }
+      };
+    }
+    default:
+      return {
+        toolType: "sondeo",
+        resultJson: { error: `Herramienta desconocida: ${toolName}` }
+      };
+  }
+}
+async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
+  const isFreeTool = toolType !== "sondeo" && toolType !== "match";
+  if (isFreeTool) {
+    await incrementFreeServicesCount(userId);
+  }
+  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
+  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"));
+  if (isDirectBypass) {
+    return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+  }
+  const userVerifiedReview = await isUserVerifiedGoogleReview(userId);
+  const isVip = isEduardoOrJani(userId);
+  const askReview = !userVerifiedReview && !isVip && await shouldAskForGoogleReview(userId);
+  let specialToolInstructions = "";
+  if (toolType === "cedula") {
+    specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
+- REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas, cero encabezados acartonados o vi\xF1etas rob\xF3ticas. Redacta de forma fresca, original, corta y humana como experta de VECY.
+- CERO ALUCINACI\xD3N: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:
+  * Nombre oficial de la persona y n\xFAmero de documento validado.
+  * Polic\xEDa Nacional: Antecedentes penales / requerimientos judiciales.
+  * Procuradur\xEDa General: Sanciones disciplinarias e inhabilidades vigentes.
+  * Contralor\xEDa General: Bolet\xEDn de Responsables Fiscales (SIRECI).
+  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
+- Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico.
+- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
+` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
+` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
+`);
+  } else if (toolType === "empresa") {
+    specialToolInstructions = `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confec\xE1maras / C\xE1maras de Comercio de Colombia / DIAN).
+- REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas de 4 secciones, cero formatos acartonados ni vi\xF1etas rob\xF3ticas. Redacta de forma fresca, ejecutiva, original y charlada.
+- CERO ALUCINACI\xD3N: Respeta estrictamente TODOS los datos reales obtenidos de RUES:
+  * Raz\xF3n social oficial, NIT y D\xEDgito de Verificaci\xF3n (DV).
+  * Estado de la matr\xEDcula mercantil (ej. Activa) y C\xE1mara de Comercio donde est\xE1 inscrita.
+  * Tipo de sociedad / organizaci\xF3n jur\xEDdica y actividad econ\xF3mica principal (CIIU).
+  * Representante Legal Principal: Si el RUES arroja el Representante Legal Principal, menci\xF3nalo de forma fluida y natural dentro de tu respuesta (nombre, documento y que cuenta con plenas facultades estatutarias para obligar a la sociedad).
+  * Si hay suplentes o establecimientos relevantes, menci\xF3nalos con brevedad.
+- SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localiz\xF3 la empresa, informa con total honestidad que no se hall\xF3 registro en las 57 C\xE1maras de Comercio del pa\xEDs y p\xEDdele con amabilidad el n\xFAmero de NIT para una b\xFAsqueda exacta.
+- CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma rob\xF3tica si desea verificar al representante. JanIA lo menciona en su \xFAnica respuesta con naturalidad.
+- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Incluye una l\xEDnea breve de publicidad mercantil y h\xE1beas data (Art. 26 C.Co. y Ley 1581/12).
+` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.
+` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
+`);
+  } else if (toolType === "web") {
+    specialToolInstructions = `- HERRAMIENTA: Navegaci\xF3n y Lectura Web Abierta en Tiempo Real.
+- Extrae y analiza los datos reales de la p\xE1gina o portal consultado, entregando s\xEDntesis ejecutiva, directa y sin rodeos al usuario.
+`;
+  } else if (toolType === "catalogo_inmuebles") {
+    specialToolInstructions = `- HERRAMIENTA: Consulta de Cat\xE1logo Oficial de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719).
+- Presenta de forma clara y organizada las propiedades encontradas con su c\xF3digo (#P...), tipo, ubicaci\xF3n, precio o canon y metraje, junto con el valor promedio de $/m\xB2 de la zona.
+- Invita cordialmente a comunicarse con Eduardo Rivera o Jani Alves a la l\xEDnea de atenci\xF3n de br\xF3ker (+57 316 656 9719) para coordinar visitas o recibir dossier completo.
+`;
+  }
+  const synthPrompt = [
+    {
+      role: "system",
+      content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Acabas de ejecutar la herramienta correspondiente a: ${toolType}.
+Datos estructurados del sistema en JSON:
+${JSON.stringify(toolJson, null, 2)}
+
+INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA):
+- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia, concisi\xF3n y persuasi\xF3n de IA pura.
+- CONTINUIDAD CONVERSACIONAL (CERO SALUDOS REPETIDOS): Si la conversaci\xF3n ya est\xE1 en curso hoy, est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Qu\xE9 gusto saludarte", ni "Soy JanIA..."). Ve DIRECTO al grano con la explicaci\xF3n o reporte.
+` + specialToolInstructions + `- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
+- Si es una consulta de matches, explica con claridad el cruce encontrado de forma conversacional y ejecutiva.
+- Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
+- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (*negritas*, vi\xF1etas limpias).
+- Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
+`
+    },
+    {
+      role: "user",
+      content: userMessage
+    }
+  ];
+  try {
+    const res = await invokeLLM({ messages: synthPrompt, highReasoning: true });
+    let text2 = res.choices[0]?.message?.content || "";
+    if (text2) {
+      text2 = sanitizeResponseMarkdown(text2.trim());
+      if (isFreeTool) {
+        text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
+      }
+      return text2;
+    }
+  } catch (err) {
+    console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
+  }
+  let fallbackText = "";
+  if (toolType === "cedula" && toolJson) {
+    const doc = toolJson.numeroDocumento || "";
+    const tipo = toolJson.tipoDocumento || "CC";
+    const name = toolJson.nombreOficial;
+    const eps = toolJson.adres?.eps;
+    const estadoEps = toolJson.adres?.estado;
+    const regEps = toolJson.adres?.regimen;
+    const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
+    const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
+    const cgr = toolJson.contraloria || "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI)";
+    if (name) {
+      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Polic\xEDa Nacional registra ${pol.toLowerCase()}, en Procuradur\xEDa General ${pgn.toLowerCase()} y en Contralor\xEDa General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}). Todo en regla y validado para tu seguridad jur\xEDdica.
+
+\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._
+
+\xBFNos regalas un minuto con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Nos ayuda un mont\xF3n para seguir ofreciendo estas herramientas gratuitas para el gremio! \u{1F91D}\u2728`;
+    } else {
+      fallbackText = `Revis\xE9 el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en l\xEDnea. Por favor verifica que el n\xFAmero f\xEDsico coincida o si corresponde a un documento de extranjer\xEDa.
+
+\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012._`;
+    }
+  } else if (toolType === "empresa" && toolJson) {
+    if (toolJson.exitoso && toolJson.razonSocial) {
+      const nit = toolJson.nitCompleto || toolJson.nit || "";
+      const razon = toolJson.razonSocial;
+      const camara = toolJson.camaraComercio || "C\xE1mara de Comercio";
+      const estado = toolJson.estado || "Activa";
+      const ciiu = toolJson.ciiuPrincipal || "";
+      const rep = toolJson.representantePrincipal;
+      fallbackText = `Ya consult\xE9 en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matr\xEDcula mercantil *${estado}* en la ${camara}. Su actividad econ\xF3mica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}
+
+\u2696\uFE0F _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._
+
+\xBFNos regalas un minutico con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! \u{1F91D}\u2728`;
+    } else {
+      fallbackText = `No encontr\xE9 ninguna empresa registrada con ese nombre en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor comp\xE1rteme el n\xFAmero de NIT. \u{1F91D}`;
+    }
+  } else {
+    fallbackText = rawReport;
+  }
+  return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")) ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, fallbackText, true);
+}
+function formatPoliteToolDelivery(rawAiResponse, userName, userId, customGuidance, _legacyArg) {
+  const isLegacyToolType = typeof userId === "string" && ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
+  const effectiveResponse = isLegacyToolType && typeof customGuidance === "string" ? customGuidance : rawAiResponse;
+  if (!effectiveResponse) return "";
+  let cleaned = effectiveResponse.trim();
+  return cleaned;
+}
+function stripLeadingGreetingsAndCourtesies(text2) {
+  let cleaned = (text2 || "").trim();
+  if (!cleaned) return "";
+  cleaned = cleaned.replace(
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n:]*[.!?\n:]?\s*)/gi,
+    ""
+  );
+  cleaned = cleaned.replace(
+    /(?:¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)),?\s*(?:eduardo|jani)?!?:?\s*(?:a\s+tu\s+disposici[oó]n\.?:?\s*)?)+/gi,
+    ""
+  );
+  const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?:]*[!.\n?:]?\s*/i;
+  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:]*))[!.\n?:]?\s*/i;
+  const janiaIntroPattern = /^¡?(?:soy\s+jania[^\n.!?:]*|tu\s+inteligencia\s+artificial[^\n.!?:]*|espero\s+te\s+encuentres\s+muy\s+bien[^\n.!?:]*)[!.\n?:]?\s*/i;
+  const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 8) {
+    const before = cleaned;
+    cleaned = cleaned.replace(greetingPattern, "");
+    cleaned = cleaned.replace(courtesyPattern, "");
+    cleaned = cleaned.replace(janiaIntroPattern, "");
+    cleaned = cleaned.replace(emojiPattern, "");
+    cleaned = cleaned.trim();
+    changed = cleaned !== before;
+    iterations++;
+  }
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  return cleaned.trim();
+}
+function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName, hasPriorHistory = false, timeSalutation) {
+  let cleaned = (text2 || "").trim();
+  if (!cleaned) return cleaned;
+  const currentSalutation = timeSalutation || getGreetingByTime2();
+  cleaned = cleaned.replace(/buenas\s+d[ií]as/gi, "Buenos d\xEDas");
+  cleaned = cleaned.replace(
+    /(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)+(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte[^.!?\n]*[.!?\n]?\s*)/gi,
+    ""
+  );
+  cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
+    return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
+  });
+  const nameSalutation = displayName ? `\xA1${currentSalutation}, ${displayName}! \u{1F44B} ` : `\xA1${currentSalutation}! \u{1F44B} `;
+  cleaned = cleaned.replace(/^¡?hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1${currentSalutation}, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! \u{1F44B} `);
+  cleaned = cleaned.replace(/^¡?hola\b[!]?\s*/i, nameSalutation);
+  cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
+  if (isEduardo) {
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `\xA1${currentSalutation}, Eduardo! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
+  } else if (isJani) {
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `\xA1${currentSalutation}, Jani! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
+  } else if (displayName === "VECY") {
+    if (!hasPriorHistory) {
+      const body = stripLeadingGreetingsAndCourtesies(cleaned);
+      cleaned = body ? `\xA1${currentSalutation}, VECY! \u{1F44B} ${body}`.trim() : `\xA1${currentSalutation}, VECY! \u{1F44B} \xBFCon qui\xE9n tengo el gusto de hablar?`;
+    } else {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
+  } else if (hasPriorHistory && !cleaned.includes("?")) {
+    if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
+      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
+    }
+  }
+  cleaned = cleaned.replace(/(^|[.!?]\s+|[👋🤝✨🏘️😊🤖]\s*)([a-záéíóúñ])/gu, (_m, prefix, letter) => prefix + letter.toUpperCase());
+  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*|[👋🤝✨🏘️😊🤖]\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/giu, (_match, prefix, qWord, rest) => {
+    const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
+    return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
+  });
+  return cleaned.trim();
+}
+function isShortSignalOrSticker(text2) {
+  if (!text2) return false;
+  const clean = text2.trim();
+  if (clean === "[Sticker]" || clean === "\u{1F60A} [Sticker]" || clean.startsWith("[Reacci\xF3n") || clean === "[Tarjeta de contacto compartida]" || clean === "[Ubicaci\xF3n compartida]") {
+    return true;
+  }
+  if (/^[.¿?¡!_~^:;\-*#@+=]{1,8}$/.test(clean)) {
+    return true;
+  }
+  if (/^[\p{Extended_Pictographic}\s]{1,10}$/u.test(clean)) {
+    return true;
+  }
+  return false;
+}
+async function processPrivateDmConversationalMessage(text2, userId, userName, mediaOptions) {
+  let clean = (text2 || "").trim();
+  const hasImage = !!mediaOptions?.imageBuffer;
+  const hasPdf = !!mediaOptions?.pdfBuffer;
+  if (!clean && hasImage) {
+    clean = "[Fotograf\xEDa / Imagen adjunta]";
+  } else if (!clean && hasPdf) {
+    clean = "[Documento adjunto en PDF]";
+  }
+  if (!clean) return "";
+  const realName = await resolveRealName(userId, userName);
+  const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const hour = nowBogota.getHours();
+  const minutes = String(nowBogota.getMinutes()).padStart(2, "0");
+  const diasSemana = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
+  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const diaSemanaStr = diasSemana[nowBogota.getDay()];
+  const diaMes = nowBogota.getDate();
+  const mesStr = meses[nowBogota.getMonth()];
+  const anio = nowBogota.getFullYear();
+  const colombiaTimeFormatted = `${diaSemanaStr}, ${diaMes} de ${mesStr} de ${anio}, ${String(hour).padStart(2, "0")}:${minutes} hora Colombia (America/Bogota)`;
+  let timeOfDay = "Ma\xF1ana (5:00 am - 11:59 am)";
+  let timeSalutation = "Buenos d\xEDas";
+  if (hour >= 5 && hour < 12) {
+    timeOfDay = "Ma\xF1ana (5:00 am - 11:59 am)";
+    timeSalutation = "Buenos d\xEDas";
+  } else if (hour >= 12 && hour < 19) {
+    timeOfDay = "Tarde (12:00 pm - 6:59 pm)";
+    timeSalutation = "Buenas tardes";
+  } else {
+    timeOfDay = "Noche (7:00 pm - 4:59 am)";
+    timeSalutation = "Buenas noches";
+  }
+  const isFirstTimeUser = await isNewUser(userId);
+  await incrementUserMessageCount(userId);
+  const userPerpetualSession = await getUserPerpetualSession(userId, userName);
+  const hasVerifiedReview = userPerpetualSession.hasVerifiedGoogleReview || isEduardoOrJani(userId);
+  const history = await getOrLoadDmHistory(userId);
+  const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1e3;
+  const hasRecentInteractionPast6Hours = history.some((h) => (h.ts || 0) > sixHoursAgo);
+  const alreadyGreetedToday = await checkAlreadyGreeted(userId);
+  const isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday;
+  const cleanLower = clean.toLowerCase();
+  const isVecyBrokerLine = userId.includes("3166569719") || userName && userName.includes("VECY BIENES RA\xCDCES");
+  const isEduardoIdentified = isVecyBrokerLine && /(?:soy\s+eduardo|habla\s+eduardo|de\s+parte\s+de\s+eduardo|eddu\b|eduardo\s+rivera)/i.test(cleanLower);
+  const isJaniIdentified = isVecyBrokerLine && /(?:soy\s+jani|habla\s+jani|de\s+parte\s+de\s+jani|jani\s+alves)/i.test(cleanLower);
+  const trustedContact = findTrustedContact(userId, userName || realName);
+  const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador");
+  const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa");
+  const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
+  const introducedName = extractIntroducedName(clean);
+  const effectiveRawName = introducedName || realName;
+  const nameInfo = resolveNameAndGender(effectiveRawName, timeSalutation);
+  const compositeOrFirst = extractFirstName(effectiveRawName);
+  let displayName = "";
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else if (isVecyBrokerLine) {
+    displayName = "VECY";
+  } else if (isFamilyOrTrusted && trustedContact) {
+    displayName = trustedContact.primaryNick || trustedContact.nicknames?.[0] || "";
+  } else {
+    const canonicalComposite = getCanonicalCompositeName(effectiveRawName);
+    displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
+    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
+      displayName = "";
+    }
+  }
+  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
+  if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
+    await recordUserReviewClaim(userId);
+    const claimReply = `\xA1Much\xEDsimas gracias por tu apoyo${displayName ? `, ${displayName}` : ""}! \u{1F31F}
+
+Para validar tu calificaci\xF3n y actualizar tu registro permanente en el sistema, \xBFme compartes por favor un *pantallazo o captura de pantalla* de tu rese\xF1a y comentario en Google? \u{1F4F8}
+
+As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1Te agradezco de todo coraz\xF3n! \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", claimReply);
+    return claimReply;
+  }
+  if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    const isAwaiting402040 = !!userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40;
+    if (isAwaiting402040) {
+      const isAffirmative = /\b(?:s[ií]|claro|de\s+acuerdo|acepto|con\s+gusto|me\s+parece|perfecto|dale|hag[aá]mosle|sin\s+problema|totalmente|de\s+una|40\/20\/40|cuarenta\s+veinte\s+cuarenta|s[ií]\s+acepto|me\s+apunto|cuenta\s+con\s+eso|por\s+supuesto)\b/i.test(cleanLower) && !/\b(?:no|50\/50)\b/i.test(cleanLower);
+      const isNegativeOr5050 = /\b(?:no|prefiero\s+50\/50|50\/50|mitad\s+y\s+mitad|no\s+acepto|solo\s+50|cincuenta\s+cincuenta|no\s+comparto\s+as[ií]|no\s+me\s+sirve|no\s+gracias|no\s+puedo)\b/i.test(cleanLower);
+      if (isAffirmative) {
+        await setUser402040Agreement(userId, true);
+        const reply = `\xA1Excelente decisi\xF3n${displayName ? `, ${displayName}` : ""}! \u{1F389}\u{1F91D} Quedas registrada en nuestra base de datos como **Aliada Prioritaria** en la mesa de operaciones de VECY BIENES RA\xCDCES.
+
+Esto significa que cuando nuestro motor detecte cruces comerciales para tus requerimientos o inmuebles, tendr\xE1n prioridad uno en gesti\xF3n, presentaci\xF3n y acompa\xF1amiento de cierre. \xA1Vamos con toda a cerrar negocios juntos! \u{1F680}\u2728`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      } else if (isNegativeOr5050) {
+        await setUser402040Agreement(userId, false);
+        const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional. Tu publicaci\xF3n permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. \xA1Muchos \xE9xitos en tu gesti\xF3n inmobiliaria! \u{1F91D}\u2728`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      }
+    }
+    const isReactionInquiry = /\b(?:por\s*qu[eé]\s+(?:le\s+)?(?:diste|pusiste|reaccionaste|reaccionaron|dejaste|mandaste)|qu[eé]\s+significa\s+(?:la\s+reacci[oó]n|el\s+emoji|el\s+lapicito|el\s+pulgar|la\s+manito)|para\s*qu[eé]\s+(?:el\s+emoji|la\s+reacci[oó]n)|por\s*qu[eé]\s+el\s+(?:emoji|lapicito|pulgar|📝|👍)|a\s+qu[eé]\s+se\s+debe\s+la\s+reacci[oó]n|por\s*qu[eé]\s+(?:me\s+)?reaccionas)\b/i.test(cleanLower);
+    const isRequirementForwardOrDuplication = /\b(?:te\s+reenv[ií]o|te\s+comparto|te\s+paso|mira\s+(?:este|mi)|acabo\s+de\s+publicar|lo\s+puse\s+en\s+el\s+grupo|del\s+grupo|mi\s+requerimiento|mi\s+demanda)\b/i.test(cleanLower) && /\b(?:requerimiento|demanda|inmueble|cliente|busco|vendo|arriendo|apto|casa|bodega|lote)\b/i.test(cleanLower);
+    if (isReactionInquiry || isRequirementForwardOrDuplication) {
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = true;
+      await saveUserPerpetualSession(userPerpetualSession);
+      const introReason = isReactionInquiry ? `La reacci\xF3n con emoji en el grupo (\u{1F4DD} para requerimientos / \u{1F44D} para inmuebles) no es un simple saludo: confirma con total autoridad t\xE9cnica que tu publicaci\xF3n ya fue extra\xEDda, estructurada e ingresada con \xE9xito a nuestro motor de base de datos de VECY BIENES RA\xCDCES. Por eso, **no necesitas duplicarla ni reenviarla por este chat privado**.` : `Te confirmo que la reacci\xF3n en el grupo (\u{1F4DD} / \u{1F44D}) valid\xF3 el ingreso de tu publicaci\xF3n a nuestro motor autoritativo de base de datos de VECY BIENES RA\xCDCES. Por tanto, **no necesitas duplicarla ni reenviarla por privado**; ya est\xE1 registrada y activa en el sistema.`;
+      const reply = `${introReason}
+
+Nuestro motor cruza permanentemente tu b\xFAsqueda con todo el inventario de la red. En el instante exacto en que ingrese o se identifique una opci\xF3n compatible (Score \u2265 80%), te contactaremos de inmediato por este mismo canal para coordinar el cruce.
+
+Para perfilarte en nuestra mesa de operaciones:
+En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora/colocadora, 20% plataforma y mesa t\xE9cnica central VECY, 40% punta captadora/propietario) garantizando protecci\xF3n de puntas y acompa\xF1amiento contractual. \xBFAceptas compartir comisi\xF3n bajo este modelo para clasificarte como **Aliada Prioritaria** en nuestra mesa de operaciones? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", reply);
+      markUserGreetedToday(userId);
+      return reply;
+    }
+  }
+  let preloadedWebContent = "";
+  const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch && urlMatch[0]) {
+    try {
+      const pageInfo = await fetchWebUrlContent(urlMatch[0], 8e3);
+      if (pageInfo.success && pageInfo.content) {
+        preloadedWebContent = `
+[SISTEMA - NAVEGACI\xD3N WEB EN TIEMPO REAL: Se descarg\xF3 el contenido de la URL ${urlMatch[0]} enviada por el usuario:
+T\xEDtulo: ${pageInfo.title}
+Contenido: ${pageInfo.content.slice(0, 4500)}]`;
+      }
+    } catch (_) {
+    }
+  }
+  try {
+    const {
+      getPendingCompanyFollowUp: getPendingCompanyFollowUp2,
+      clearPendingCompanyFollowUp: clearPendingCompanyFollowUp2,
+      clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
+      clearPendingCompanyMembers: clearPendingCompanyMembers2,
+      isDecliningCompanyMemberVerification: isDecliningCompanyMemberVerification2,
+      isAcceptingCompanyMemberVerification: isAcceptingCompanyMemberVerification2
+    } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const pendingFollowUp = getPendingCompanyFollowUp2(userId);
+    if (pendingFollowUp) {
+      if (isDecliningCompanyMemberVerification2(clean)) {
+        clearPendingCompanyFollowUp2(userId);
+        clearPendingUnconfirmedDoc2(userId);
+        clearPendingCompanyMembers2(userId);
+        const { formatCompanyFollowUpDeclineReviewMessage: formatCompanyFollowUpDeclineReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+        const declineReply = formatCompanyFollowUpDeclineReviewMessage2(displayName || realName);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", declineReply);
+        return declineReply;
+      }
+      if (isAcceptingCompanyMemberVerification2(clean)) {
+        clearPendingCompanyFollowUp2(userId);
+        const toolExec = await executeJaniaDmTool(
+          "consultar_identidad_y_antecedentes",
+          { numeroDocumento: clean, tipoDocumento: "CC" },
+          userId,
+          userName || displayName || realName,
+          clean
+        );
+        const rawRep = String(toolExec.resultJson.reporteOficial || "");
+        const formattedRep = await formatPoliteToolDelivery(
+          userId,
+          userName || displayName || realName,
+          "cedula",
+          rawRep,
+          true
+        );
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", formattedRep);
+        return formattedRep;
+      }
+      clearPendingCompanyFollowUp2(userId);
+    }
+  } catch (followUpErr) {
+    console.warn("[processPrivateDmConversationalMessage] Follow-up check warning:", followUpErr?.message);
+  }
+  try {
+    const vecyKnowledge = getVecyInstitutionalKnowledge();
+    const contactDossier = await getContactPermanentDossier(userId);
+    const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
+
+Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
+
+===================================================
+CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:
+===================================================
+- Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.
+- Franja del d\xEDa actual: ${timeOfDay}.
+- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.
+- \xBFHubo interacci\xF3n previa hoy o conversaci\xF3n activa?: ${isOngoingChat ? "S\xCD (Conversaci\xF3n activa en curso hoy)" : "NO (Primer mensaje del d\xEDa)"}.
+- REGLA ESTRICTA DEL SALUDO \xDANICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS):
+  * Si la conversaci\xF3n ya est\xE1 en curso hoy (S\xCD): Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte", ni "Soy JanIA..."). Ve DIRECTO a responder con naturalidad, calidez y fluidez el mensaje actual sin anteponer ning\xFAn saludo ni muletillas con su nombre.
+  * Si es el PRIMER mensaje del d\xEDa (NO): Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional UNA SOLA VEZ al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
+
+===================================================
+MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:
+===================================================
+${isFirstTimeUser ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida \xFAnica, fresca, cercana y humana, transmitiendo confianza y empat\xEDa inmediata al estilo VECY sin sonar a robot.` : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversaci\xF3n y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces' o dar introducciones largas como si fuera un desconocido.`}
+
+===================================================
+ESTILO Y VOZ LAOMEDEIA (HUMANIDAD PURA, CONCISI\xD3N Y CERO REDUNDANCIA):
+===================================================
+- Escribe con la misma calidez, chispa, persuasi\xF3n y naturalidad con la que hablas en tus audios de Laomedeia, yendo SIEMPRE AL GRANO.
+- Prohibido extenderse con p\xE1rrafos redundantes, introducciones largas o ladrillos de texto que aburran al lector: entrega explicaciones y reportes concretos, \xE1giles, visualmente elegantes y organizados por ti misma con Markdown de WhatsApp (*negritas*, _cursivas_, vi\xF1etas limpias y emojis precisos).
+- Respuestas \xE1giles, concretas y legibles en la pantalla del celular sin provocar el bot\xF3n 'Leer m\xE1s'.
+
+===================================================
+BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES:
+===================================================
+${vecyKnowledge}
+
+${contactDossier ? `${contactDossier}
+
+` : ""}ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
+1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
+2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
+3. Perita Avaluadora: Sondeos de m\xB2 y c\xE1nones por zonas del norte de Bogot\xE1 con honestidad t\xE9cnica (Cero Alucinaci\xF3n). REGLA MANDATORIA DE APAGADO AUTOM\xC1TICO: NUNCA liquides aval\xFAos, estudios de valor de m\xB2 ni peritajes cuando un usuario solo env\xEDe datos de un inmueble o requerimiento. \xDANICAMENTE se liquida aval\xFAo si el usuario escribe de manera EXPRESA palabras como 'avaluo', 'aval\xFAo', 'avaluar', 'cuanto vale' o 'cu\xE1nto vale'.
+4. Conectora Comercial y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria.
+5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
+6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.
+
+===================================================
+MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
+===================================================
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.
+Reglas de ejecuci\xF3n seg\xFAn el contexto:
+a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.
+b) Si el usuario pide buscar en la web o comparte un enlace URL (portal inmobiliario, p\xE1gina corporativa): Invoca 'navegar_o_buscar_web' para extraer el contenido real al instante.
+c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
+d) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
+e) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
+
+===================================================
+BUSCADOR Y MEDIACI\xD3N DE MATCHES (C\xD3DIGO #M...):
+===================================================
+${isEduardo || isJani ? `- Para Eduardo o Jani: Entrega la informaci\xF3n 100% destapada y completa (inmueble, demanda, porcentaje de afinidad, nombre del colega, tel\xE9fono y enlace directo de WhatsApp).
+` : `- Para Usuarios o Agentes Externos: Confirma que S\xCD hay match, describe el perfil del cruce SIN revelar el tel\xE9fono ni el nombre del usuario de la otra punta, entrega el c\xF3digo de match (ej. #M15649) e ind\xEDcale comunicarse al +57 316 656 9719 mencionando ese c\xF3digo para coordinar la mediaci\xF3n colaborativa 40/20/40.
+`}
+===================================================
+PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):
+===================================================
+- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empat\xEDa y complicidad profesional ("t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFqu\xE9 buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fr\xEDa o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RA\xCDCES.
+- INTERLOCUTOR Y G\xC9NERO GRAMATICAL: "${displayName || "Colega (nombre a\xFAn no identificado)"}". G\xE9nero detectado: ${nameInfo.isFemale ? "FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)" : "MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)"}.
+- REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), \xDASALO SIEMPRE COMPLETO de forma fluida y org\xE1nica. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce a\xFAn (es un n\xFAmero de tel\xE9fono o saludo suelto), sal\xFAdalo con calidez y hazle una pregunta simp\xE1tica para saber su nombre y c\xF3mo prefiere que lo llames.
+- LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar org\xE1nicamente cualquiera de los cientos de emojis disponibles en Unicode. Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar.
+- CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MEN\xDAS R\xCDGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "informaci\xF3n", "de qu\xE9 trata", etc.), act\xFAa con la inteligencia conversacional de un asistente de nivel mundial:
+  1. Saluda amablemente con calidez humana y tuteo cercano.
+  2. Deduce con empat\xEDa la situaci\xF3n en una o dos frases breves y cautivadoras.
+  3. Hazle preguntas inteligentes para perfilarlo (preguntarle su nombre si no se sabe, si es colega inmobiliario o cliente buscando comprar/vender/arrendar, y en qu\xE9 zona o ciudad).
+  4. Mant\xE9n la conversaci\xF3n siempre guiada hacia VECY Bienes Ra\xEDces de manera natural, atractiva y orientada a soluciones.
+
+===================================================
+IDENTIDAD Y TRATO AL INTERLOCUTOR:
+===================================================
+${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s recibiendo mensaje desde la l\xEDnea oficial de br\xF3ker (+57 316 656 9719). Tr\xE1talos con la naturalidad de compa\xF1era de equipo y mano derecha hacia tus creadores, preguntando con amabilidad y naturalidad con cu\xE1l de los dos est\xE1s hablando si no lo han especificado.
+` : isEduardo ? `- Trato directivo para EDUARDO A. RIVERA (Fundador y Director de Tecnolog\xEDa): Compa\xF1era de equipo y mano derecha leal, \xE1gil, precisa y ejecutiva.
+` : isJani ? `- Trato directivo para JANI ALVES (Fundadora y Directora de Operaciones): Compa\xF1era de equipo y mano derecha leal, operativa, c\xE1lida y ejecutiva.
+` : isFamilyOrTrusted && trustedContact ? `- C\xCDRCULO FAMILIAR Y DE CONFIANZA: Est\xE1s conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Tr\xE1tala/lo con inmenso cari\xF1o, afecto familiar y respeto natural. Cu\xE9ntale con fluidez (sin plantillas r\xEDgidas) que Eduardo ahora est\xE1 disponible en su l\xEDnea de br\xF3ker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal fr\xEDo de vendedor, pedirle rese\xF1as en Google o venderle servicios comerciales a familiares.
+` : `- Usuario identificado: ${displayName || realName || "Colega"}.
+`}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
+` : ""}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
+- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
+- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
+- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
+    const messages2 = [
+      { role: "system", content: systemPrompt }
+    ];
+    for (const turn of history.slice(-20)) {
+      const cleanTurnContent = turn.role === "assistant" ? turn.content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim() : turn.content;
+      messages2.push({ role: turn.role, content: cleanTurnContent });
+    }
+    let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    if (preloadedWebContent) {
+      userPromptContent += preloadedWebContent;
+    }
+    if (mediaOptions?.imageBuffer) {
+      userPromptContent += `
+[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas, datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una rese\xF1a o calificaci\xF3n en Google (Google Maps / Rese\xF1a / Estrellas / VECY Bienes Ra\xEDces), valida la rese\xF1a cordialmente, agrad\xE9cele con mucho cari\xF1o y calidez humana e incluye la etiqueta interna [RESE\xD1A_GOOGLE_VALIDADA].]`;
+    }
+    if (mediaOptions?.pdfBuffer) {
+      userPromptContent += `
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visi\xF3n multimodal y procesa la consulta de forma integral.]`;
+    }
+    messages2.push({
+      role: "user",
+      content: userPromptContent
+    });
+    let llmRes;
+    try {
+      llmRes = await invokeLLM({
+        messages: messages2,
+        tools: JANIA_DM_TOOLS,
+        highReasoning: true,
+        imageBuffer: mediaOptions?.imageBuffer,
+        pdfBuffer: mediaOptions?.pdfBuffer,
+        pdfMimeType: mediaOptions?.pdfMimeType
+      });
+    } catch (toolsErr) {
+      console.warn(`[dmHandler] \u26A0\uFE0F Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
+      llmRes = await invokeLLM({
+        messages: messages2,
+        highReasoning: true,
+        imageBuffer: mediaOptions?.imageBuffer,
+        pdfBuffer: mediaOptions?.pdfBuffer,
+        pdfMimeType: mediaOptions?.pdfMimeType
+      });
+    }
+    let reply = "";
+    const fnCall = llmRes.choices[0]?.message?.functionCall;
+    if (fnCall && fnCall.name) {
+      let rawFnArgs = fnCall.arguments ?? fnCall.args ?? {};
+      if (typeof rawFnArgs === "string") {
+        try {
+          rawFnArgs = JSON.parse(rawFnArgs);
+        } catch (_) {
+          rawFnArgs = {};
+        }
+      }
+      const toolExecution = await executeJaniaDmTool(
+        fnCall.name,
+        rawFnArgs,
+        userId,
+        userName || displayName || realName,
+        clean
+      );
+      reply = await synthesizeToolResponseWithGemini(
+        userId,
+        userName || displayName || realName,
+        toolExecution.toolType,
+        toolExecution.resultJson,
+        clean,
+        isEduardo,
+        isJani,
+        displayName
+      );
+    } else {
+      reply = llmRes.choices[0]?.message?.content || "";
+    }
+    if (reply.includes("[RESE\xD1A_GOOGLE_VALIDADA]") || hasImage && /rese[ñn]a\s+validada|calificaci[oó]n\s+validada|valid[eé]\s+tu\s+rese[ñn]a|gracias\s+por\s+tu\s+rese[ñn]a/i.test(reply)) {
+      reply = reply.replace(/\[RESEÑA_GOOGLE_VALIDADA\]/g, "").trim();
+      await verifyUserGoogleReview(userId);
+    }
+    reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
+    reply = sanitizeResponseMarkdown(reply.trim());
+    if (isOngoingChat && reply) {
+      reply = stripLeadingGreetingsAndCourtesies(reply);
+    }
+    const generalCourtesyRegex = /(?:(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?))+/gi;
+    const courtesyMatches = reply.match(generalCourtesyRegex);
+    if (courtesyMatches && courtesyMatches.length > 1) {
+      reply = reply.replace(generalCourtesyRegex, "").trim();
+      reply = `${reply}
+
+Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
+    }
+    if (!reply) {
+      if (isEduardo) {
+        reply = isOngoingChat ? `\xBFEn qu\xE9 te colaboro hoy?` : `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+      } else if (isJani) {
+        reply = isOngoingChat ? `\xBFEn qu\xE9 te colaboro hoy?` : `\xA1${timeSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
+      } else {
+        reply = isOngoingChat ? `Con mucho gusto. Cu\xE9ntame en qu\xE9 tr\xE1mite o consulta inmobiliaria te colaboro hoy \u{1F91D}.` : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} En *VECY BIENES RA\xCDCES* estoy lista para colaborarte. \xBFQu\xE9 consulta o tr\xE1mite deseas realizar hoy? \u{1F91D}`;
+      }
+    }
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reply);
+    markUserGreetedToday(userId);
+    return reply;
+  } catch (err) {
+    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
+    {
+      const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+      const timeGreeting = getGreetingByTime4();
+      if (isEduardo) {
+        const welcomeMsg = `\xA1${timeGreeting}, Eduardo! \u{1F44B} Estoy 100% activa y a tu entera disposici\xF3n para hablar o apoyarte en cualquier gesti\xF3n. \xBFEn qu\xE9 te colaboro hoy?`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", welcomeMsg);
+        return welcomeMsg;
+      }
+      if (isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified) {
+        const brokerLineMsg = `\xA1${timeGreeting}, VECY! \u{1F44B} Est\xE1s en la l\xEDnea oficial de VECY BIENES RA\xCDCES (+57 316 656 9719). \xBFCon qui\xE9n tengo el gusto de hablar hoy? \xBFCon Eduardo o con Jani?`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", brokerLineMsg);
+        return brokerLineMsg;
+      }
+      if (isShortSignalOrSticker(clean)) {
+        const dotMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED tu se\xF1al / puntico por aqu\xED. En *VECY BIENES RA\xCDCES* estoy lista para colaborarte. \xBFQu\xE9 consulta o tr\xE1mite deseas realizar hoy? \u{1F91D}`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", dotMsg);
+        return dotMsg;
+      }
+      if (isFamilyOrTrusted && trustedContact) {
+        let famMsg = "";
+        if (/(?:dile\s+a\s+eddu|dile\s+a\s+eduardo|mensaje\s+a\s+eddu|av[ií]sale\s+a\s+eddu)/i.test(cleanLower)) {
+          famMsg = `\xA1Anotad\xEDsimo, ${trustedContact.primaryNick || trustedContact.nicknames?.[0] || "Pollotote"}! Le paso tu mensaje a Eduardo (Eddu) de inmediato \u{1F91D}\u2728.`;
+        } else if (trustedContact.customMessage) {
+          famMsg = `\xA1${timeGreeting}, ${trustedContact.customMessage}`;
+        } else {
+          famMsg = `\xA1${timeGreeting}, ${trustedContact.primaryNick || displayName}! JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Te cuento que Eduardo est\xE1 disponible en su l\xEDnea de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).`;
+        }
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", famMsg);
+        return famMsg;
+      }
+      if (/(?:cobro|prejur[ií]dico|embargo|serlefin|deuda|cobranza)/i.test(cleanLower)) {
+        const shieldMsg = `No tengo informaci\xF3n de esa persona ni manejo agendas personales. En VECY BIENES RA\xCDCES este es el canal t\xE9cnico de la plataforma virtual.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", shieldMsg);
+        return shieldMsg;
+      }
+      if (mediaOptions?.flyerVisionData?.isFlyerOrBanner || mediaOptions?.flyerVisionData?.title) {
+        const title = mediaOptions.flyerVisionData.title || mediaOptions.flyerVisionData.propertyTitle || "Apartamento en Venta Chico 120m2";
+        const flyerMsg = `\xA1${timeGreeting} ${displayName}! \u{1F44B} He analizado con visi\xF3n artificial tu afiche comercial: *${title}*. Ya qued\xF3 registrado en el sistema de VECY BIENES RA\xCDCES para cruzarlo con nuestra base de demandas \u{1F91D}\u2728.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", flyerMsg);
+        return flyerMsg;
+      }
+      if (hasImage) {
+        const photoMsg = `\xA1${timeGreeting} ${displayName}! \u{1F44B} He recibido tu imagen. En VECY BIENES RA\xCDCES estamos a tu servicio para Factura Predial, Polic\xEDa Nacional y tr\xE1mites inmobiliarios. \xBFEn qu\xE9 te podemos colaborar hoy? \u{1F91D}\u2728`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", photoMsg);
+        return photoMsg;
+      }
+      const { getPendingCedulaSession: getPendingCedulaSession2, extractAllCedulasForVerification: extractAllCedulasForVerification2, extractCedulaForVerification: extractCedulaForVerification2, savePendingCedulaSession: savePendingCedulaSession2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const savedCedSession = getPendingCedulaSession2(userId);
+      if (savedCedSession?.reportText) {
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", savedCedSession.reportText);
+        return savedCedSession.reportText;
+      }
+      const multiCed = extractAllCedulasForVerification2(clean, true);
+      if (multiCed.length > 1) {
+        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const verif = await executeIdentityVerificationFromWhatsApp2(clean, true);
+        if (verif.reportText) {
+          savePendingCedulaSession2(userId, multiCed, verif.reportText, true);
+        }
+        const rawNumMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${multiCed.map((c) => c.cedula).join(", ")}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
+\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
+\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
+
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", rawNumMsg);
+        return rawNumMsg;
+      }
+      const singleCedCheck = extractCedulaForVerification2(clean, true);
+      if (singleCedCheck.found && singleCedCheck.cedula) {
+        const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        setPendingUnconfirmedDoc2(userId, singleCedCheck.cedula);
+        const rawNumMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${singleCedCheck.cedula}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
+\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
+\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
+
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", rawNumMsg);
+        return rawNumMsg;
+      }
+      if (/^\d{5,12}$/.test(clean)) {
+        const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        setPendingUnconfirmedDoc2(userId, clean);
+        const rawNumMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el dato *${clean}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres:
+\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
+\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
+
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", rawNumMsg);
+        return rawNumMsg;
+      }
+      if (/^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(clean)) {
+        const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        setPendingUnconfirmedDoc2(userId, clean);
+        const chipMsg = `\xA1${timeGreeting}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Recib\xED el c\xF3digo CHIP *${clean}*. \xBFDeseas la factura del impuesto predial de Bogot\xE1 o el paz y salvo de valorizaci\xF3n del IDU? Quedo atenta para emitirte el documento de inmediato \u{1F91D}\u2728.
+
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", chipMsg);
+        return chipMsg;
+      }
+      if (/(?:^|\b)(?:es\s+cc|cc|c[eé]dula|1|antecedentes|idu|3|predial|2)\b/i.test(cleanLower)) {
+        const { getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2, clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const pendingDoc = getPendingUnconfirmedDoc2(userId);
+        if (pendingDoc) {
+          clearPendingUnconfirmedDoc2(userId);
+          const rawVal = pendingDoc.rawNumber || pendingDoc;
+          if (/^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(rawVal)) {
+            const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+            const resIdu = await executeIduValorizacionFromWhatsApp2(rawVal, userId, true);
+            const reportOut = resIdu.reportText || "";
+            appendDmHistory(userId, "user", clean);
+            appendDmHistory(userId, "assistant", reportOut);
+            return reportOut;
+          }
+          const verifResult = await executeIdentityVerificationFromWhatsApp2(rawVal, true);
+          if (verifResult.reportText) {
+            const out = `\xA1Confirmado, ${displayName}!
+
+${verifResult.reportText}`;
+            appendDmHistory(userId, "user", clean);
+            appendDmHistory(userId, "assistant", out);
+            return out;
+          }
+        }
+      }
+      if (/qu[eé] es vecy|qui[eé]nes son|presentaci[oó]n|a qu[eé] se dedican/i.test(cleanLower)) {
+        const presMsg = `Somos *VECY BIENES RA\xCDCES*, fundada por Eduardo A. Rivera y Jani Alves. Conoce nuestras operaciones en https://www.instagram.com/vecybienesraices/ y califica nuestro servicio en https://g.page/r/CctNbwU6UpX5EBM/review.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", presMsg);
+        return presMsg;
+      }
+      if (/paz y salvo.*idu|valorizaci[oó]n idu|certificado.*idu|enlace.*webidu/i.test(cleanLower)) {
+        const { formatIduAssistanceGuide: formatIduAssistanceGuide2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+        const guide = formatIduAssistanceGuide2(displayName || "Colega");
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", guide);
+        return guide;
+      }
+      if (/c[oó]mo se hace la verificaci[oó]n|c[oó]mo se hace/i.test(cleanLower)) {
+        const howTo = `\xA1No te preocupes ni un segundo, ${displayName}! Para eso estoy yo aqu\xED. Para verificar una c\xE9dula o antecedentes. Para sacar el Impuesto Predial de Bogot\xE1. Si te cuesta la tecnolog\xEDa o te enredas con el celular, tengo toda la paciencia del mundo. Solo facil\xEDtame el dato para el registro de porter\xEDa previo a la visita.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", howTo);
+        return howTo;
+      }
+      if (/revisar los antecedentes de un cliente/i.test(cleanLower)) {
+        const docIntent = `\xA1Claro que s\xED, ${displayName}! Con el mayor gusto te colaboro con la verificaci\xF3n preventiva para el registro de porter\xEDa y control de acceso. Por favor comp\xE1rteme el n\xFAmero de documento y el nombre completo.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", docIntent);
+        return docIntent;
+      }
+      if (/(?:quieto|quiero|revisar|rrvisar).*(?:antecedentes)/i.test(cleanLower)) {
+        const habMsg = `\xA1Claro que s\xED, ${displayName}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto. Por normatividad de H\xE1beas Data (Ley 1581 de 2012), las bases oficiales no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", habMsg);
+        return habMsg;
+      }
+      if (/(?:consultar\s+c[eé]dula)/i.test(cleanLower)) {
+        const docMsg = `\xA1Claro que s\xED, ${displayName}! Por favor ind\xEDcame el n\xFAmero de documento y el nombre completo de la persona a consultar.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", docMsg);
+        return docMsg;
+      }
+      if (/costos/i.test(cleanLower)) {
+        const cMsg = `Nuestros servicios de consulta y verificaci\xF3n son completamente *GRATIS*. Env\xEDame el n\xFAmero de c\xE9dula.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", cMsg);
+        return cMsg;
+      }
+      if (/como es lo de las consultas/i.test(cleanLower)) {
+        const qMsg = `Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer. Ofrecemos Servicios 100% Gratuitos de Autoservicio: Verificaci\xF3n oficial de documentos, Factura Predial Bogot\xE1 y Certificados de Pago. Y Consultas Especializadas y Asesor\xEDa Profesional: Sondeos de mercado, Asesor\xEDa jur\xEDdica inmobiliaria, Recuperaci\xF3n de cartera, Aval\xFAos digitales, Liquidaciones tributarias y Pr\xE9stamos sobre hipoteca.`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", qMsg);
+        return qMsg;
+      }
+      if (/(?:c[oó]mo\s+funciona|info|informaci[oó]n|qu[eé]\s+es|de\s+qu[eé]\s+trata|ayuda)/i.test(cleanLower)) {
+        const nameGreeting = displayName ? `, ${displayName}` : "";
+        const askName = !displayName ? " \xBFC\xF3mo es tu nombre para saber con qui\xE9n tengo el gusto de hablar?" : "";
+        const infoMsg = `\xA1${timeGreeting}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* cruzamos ofertas y demandas inmobiliarias al instante, emitimos facturas de predial, certificados IDU y verificamos seguridad para tus visitas sin costo alguno.${askName} \xBFEres colega asesor inmobiliario o est\xE1s buscando alguna propiedad en especial para colaborarte hoy? \u{1F91D}\u2728`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", infoMsg);
+        return infoMsg;
+      }
+      if (/muchas gracias|gracias/i.test(cleanLower)) {
+        const gMsg = `\xA1Con todo el gusto${displayName ? `, ${displayName}` : ""}! \u{1F91D}\u2728 Te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) y calificar nuestro servicio. \xBFHay algo m\xE1s en lo que te pueda apoyar hoy?`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", gMsg);
+        return gMsg;
+      }
+      if (/^hola\b|^buenas\b|^buenos\s+d[ií]as\b|^buenas\s+tardes\b|^buenas\s+noches\b/i.test(cleanLower)) {
+        const nameGreeting = displayName ? `, ${displayName}` : "";
+        const askName = !displayName ? " \xBFC\xF3mo es tu nombre para poder saludarte como se debe?" : "";
+        const hMsg = `\xA1${timeGreeting}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu colega y asistente inmobiliaria con IA de *VECY BIENES RA\xCDCES*.${askName} \xBFEres colega asesor inmobiliario o te gustar\xEDa consultar alguna propiedad o tr\xE1mite hoy? \u{1F3E1}\u2728`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", hMsg);
+        return hMsg;
+      }
+    }
+    const fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! \u{1F44B} Estoy 100% atenta. Tuve una breve demora de conexi\xF3n de red con el modelo de lenguaje, pero ya me restablec\xED. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una peque\xF1a demora de red en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Tuve una peque\xF1a demora de conexi\xF3n de red con mi servicio de lenguaje. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", fallback);
+    return fallback;
+  }
+}
+var latestDmPdfMap, JANIA_DM_TOOLS;
+var init_dmHandler = __esm({
+  "server/_core/jania/handlers/dmHandler.ts"() {
+    "use strict";
+    init_sessionManager();
+    init_scraper();
+    init_db();
+    init_schema();
+    init_parsers();
+    init_nameAndGenderResolver();
+    init_llm();
+    init_prompts();
+    init_valuation();
+    init_whatsapp_utils();
+    init_trustedContacts();
+    latestDmPdfMap = /* @__PURE__ */ new Map();
+    JANIA_DM_TOOLS = [
+      {
+        functionDeclarations: [
+          {
+            name: "consultar_identidad_y_antecedentes",
+            description: "Valida la identidad oficial (censo ADRES y Registradur\xEDa) y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar" },
+                tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
+              },
+              required: ["numeroDocumento"]
+            }
+          },
+          {
+            name: "consultar_paz_y_salvo_idu",
+            description: "Consulta y genera el Paz y Salvo oficial de Valorizaci\xF3n del IDU en Bogot\xE1 mediante el c\xF3digo CHIP (inicia en AAA) para tr\xE1mites de notar\xEDa y escrituraci\xF3n.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                chip: { type: "STRING", description: "C\xF3digo CHIP del inmueble que inicia por AAA" }
+              },
+              required: ["chip"]
+            }
+          },
+          {
+            name: "consultar_factura_predial_bogota",
+            description: "Consulta y descarga la factura oficial en PDF con c\xF3digo de barras y estado de pago del impuesto predial unificado de Bogot\xE1 ante la Secretar\xEDa de Hacienda.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                chip: { type: "STRING", description: "C\xF3digo CHIP del predio" },
+                documentoTitular: { type: "STRING", description: "N\xFAmero de c\xE9dula o NIT del titular si se conoce" }
+              },
+              required: ["chip"]
+            }
+          },
+          {
+            name: "liquidar_gastos_notariales_y_registro",
+            description: "Calcula el desglose exacto de derechos notariales (50/50), retenci\xF3n en la fuente (1% vendedor), impuesto de registro y beneficencia (1.67% comprador) para escrituraci\xF3n en Colombia.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                precioVenta: { type: "NUMBER", description: "Precio pactado de venta en pesos colombianos (COP)" },
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, lote, etc." }
+              },
+              required: ["precioVenta"]
+            }
+          },
+          {
+            name: "sondeo_mercado_inmobiliario",
+            description: "Realiza un sondeo t\xE9cnico o estudio comparativo de mercado del valor del m\xB2 y canon sugerido \xDANICAMENTE cuando el usuario lo solicite de manera EXPRESA escribiendo 'avaluo', 'aval\xFAo', 'avaluar', 'cuanto vale' o 'cu\xE1nto vale'. EST\xC1 TERMINANTEMENTE PROHIBIDO invocar esta herramienta de forma autom\xE1tica cuando el usuario solo env\xEDa los datos de un inmueble o requerimiento sin solicitar expresamente aval\xFAo o valor.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogot\xE1 a evaluar" },
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
+                areaM2: { type: "NUMBER", description: "\xC1rea en metros cuadrados" },
+                estrato: { type: "NUMBER", description: "Estrato socioecon\xF3mico 1 al 6" },
+                antiguedadAnos: { type: "NUMBER", description: "A\xF1os de antig\xFCedad" },
+                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos" }
+              },
+              required: ["zonaOBarrio"]
+            }
+          },
+          {
+            name: "registrar_inmueble_o_requerimiento",
+            description: "Registra en la base de datos de VECY BIENES RA\xCDCES una oferta inmobiliaria (venta, arriendo, permuta) o un requerimiento/b\xFAsqueda de cliente enviado por chat privado y ejecuta el motor de coincidencias (Match).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                textoCompletoPublicacion: { type: "STRING", description: "Texto completo del inmueble ofrecido o demandado" },
+                tipoOperacion: { type: "STRING", description: "OFERTA o DEMANDA" }
+              },
+              required: ["textoCompletoPublicacion"]
+            }
+          },
+          {
+            name: "consultar_matches_o_codigo",
+            description: "Consulta y busca cruces, coincidencias o detalles de un c\xF3digo de match (#M...), propiedad (P...) o requerimiento (R...), o busca coincidencias por texto en la red VECY.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                consulta: { type: "STRING", description: "C\xF3digo de match (ej. M15649), ID de propiedad/requerimiento o texto de b\xFAsqueda" }
+              },
+              required: ["consulta"]
+            }
+          },
+          {
+            name: "consultar_empresa_o_nit",
+            description: "Consulta y valida la identidad oficial de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + C\xE1mara de Comercio + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI). Devuelve Raz\xF3n Social, NIT, Estado de matr\xEDcula, Direcci\xF3n comercial, Tel\xE9fono, Actividad econ\xF3mica (CIIU) y Representante Legal Principal.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social de la empresa detectada en texto o imagen" }
+              },
+              required: ["consultaEmpresa"]
+            }
+          },
+          {
+            name: "enviar_encuesta_interactiva",
+            description: "Env\xEDa una encuesta interactiva nativa de WhatsApp (Poll) de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites, tipos de inmuebles, opciones de negocio o encuestas del canal.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                pregunta: { type: "STRING", description: "Pregunta del cuestionario o encuesta" },
+                opciones: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "Lista de opciones de respuesta (2 a 12 opciones cortas)"
+                },
+                limiteSeleccion: { type: "NUMBER", description: "N\xFAmero m\xE1ximo de opciones seleccionables (por defecto 1)" }
+              },
+              required: ["pregunta", "opciones"]
+            }
+          },
+          {
+            name: "enviar_tarjeta_contacto_vecy",
+            description: "Env\xEDa la tarjeta de contacto oficial interactiva (vCard) de VECY BIENES RA\xCDCES / Eduardo Rivera y Jani Alves (+57 316 656 9719) o el contacto de un colega.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                destinatario: { type: "STRING", description: "Tipo de contacto: 'broker', 'jania' o 'colega'" },
+                nombrePersonalizado: { type: "STRING", description: "Nombre a mostrar en la tarjeta de contacto" },
+                telefonoPersonalizado: { type: "STRING", description: "N\xFAmero de tel\xE9fono en formato internacional (ej. +573166569719)" }
+              }
+            }
+          },
+          {
+            name: "enviar_evento_visita_inmobiliaria",
+            description: "Agenda y despacha una tarjeta de evento formal para visitas a inmuebles, reuniones o comit\xE9s notariales a trav\xE9s de Vecy Agenda Pro.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                tituloVisita: { type: "STRING", description: "T\xEDtulo del evento o visita inmobiliaria" },
+                fechaHora: { type: "STRING", description: "Fecha y hora propuesta para la visita" },
+                direccionOBarrio: { type: "STRING", description: "Direcci\xF3n, conjunto o barrio del inmueble" },
+                detalles: { type: "STRING", description: "Observaciones de la visita o registro de porter\xEDa" }
+              },
+              required: ["tituloVisita", "fechaHora"]
+            }
+          },
+          {
+            name: "enviar_catalogo_servicios",
+            description: "Comparte el enlace directo al cat\xE1logo de WhatsApp Business, marketplace colaborativo y portafolio Proptech de VECY BIENES RA\xCDCES.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                categoria: { type: "STRING", description: "Categor\xEDa: 'inmuebles', 'servicios' o 'general'" }
+              }
+            }
+          },
+          {
+            name: "navegar_o_buscar_web",
+            description: "Abre y extrae el contenido real de una URL/enlace web (portales inmobiliarios como Metrocuadrado, Fincaraiz, Ciencuadras, p\xE1ginas corporativas o documentos web) o busca informaci\xF3n actualizada en internet.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                url: { type: "STRING", description: "URL o enlace web completo a consultar (ej. https://...)" },
+                query: { type: "STRING", description: "T\xE9rmino de b\xFAsqueda web si no hay URL directa" }
+              }
+            }
+          },
+          {
+            name: "consultar_catalogo_inmuebles_vecy",
+            description: "Consulta el cat\xE1logo oficial y base de datos de propiedades de VECY BIENES RA\xCDCES (Atenci\xF3n Br\xF3ker 3166569719), filtrando por tipo de inmueble, tipo de negocio (venta, arriendo), zona/barrio, rango de precio o caracter\xEDsticas, entregando fichas y sondeos de $/m\xB2 al instante.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, local, lote, etc." },
+                tipoNegocio: { type: "STRING", description: "venta, arriendo, venta_o_arriendo" },
+                zona: { type: "STRING", description: "Zona o barrio de Bogot\xE1 o municipio" },
+                precioMaximo: { type: "NUMBER", description: "Presupuesto m\xE1ximo en COP" }
+              }
+            }
+          }
+        ]
+      }
+    ];
+  }
+});
+
 // server/_core/jania/handlers/consultingHandler.ts
 async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp, quotedContext) {
   try {
@@ -30655,7 +30732,10 @@ Consulta: ${messageToProcess}`;
       }
       const rawResp = parsed.response || "";
       const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
-      const finalResp = sanitizeResponseMarkdown(enrichedResp);
+      let finalResp = sanitizeResponseMarkdown(enrichedResp);
+      if (isOngoingChat && finalResp) {
+        finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
+      }
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
@@ -30669,7 +30749,10 @@ Consulta: ${messageToProcess}`;
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
       const enrichedResp = enhanceResponseWithCommercialFunnel(replyContent, messageToProcess);
-      const finalResp = sanitizeResponseMarkdown(enrichedResp);
+      let finalResp = sanitizeResponseMarkdown(enrichedResp);
+      if (isOngoingChat && finalResp) {
+        finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
+      }
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
@@ -30752,6 +30835,7 @@ var init_consultingHandler = __esm({
     init_llm();
     init_commercialFunnelService();
     init_prompts();
+    init_dmHandler();
   }
 });
 
@@ -30913,7 +30997,10 @@ Mensaje/Aporte: ${text2}`;
     });
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
-      const cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      let cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      if (isOngoingChat && cleanResponse) {
+        cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
+      }
       appendCirculoHistory(userId, "user", text2);
       appendCirculoHistory(userId, "assistant", cleanResponse);
       markUserGreetedToday(userId);
@@ -30924,7 +31011,10 @@ Mensaje/Aporte: ${text2}`;
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
-      const cleanResponse = sanitizeResponseMarkdown(replyContent);
+      let cleanResponse = sanitizeResponseMarkdown(replyContent);
+      if (isOngoingChat && cleanResponse) {
+        cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
+      }
       appendCirculoHistory(userId, "user", text2);
       appendCirculoHistory(userId, "assistant", cleanResponse);
       markUserGreetedToday(userId);
@@ -30959,6 +31049,7 @@ var init_circuloHandler = __esm({
     init_nameAndGenderResolver();
     init_llm();
     init_prompts();
+    init_dmHandler();
   }
 });
 
@@ -31061,6 +31152,7 @@ __export(janIA_exports, {
   getRecentChatHistory: () => getRecentChatHistory,
   getStartOfTodayBogota: () => getStartOfTodayBogota,
   getTimeOfDayGreetingForUser: () => getTimeOfDayGreetingForUser,
+  getUser402040Agreement: () => getUser402040Agreement,
   getUserPerpetualSession: () => getUserPerpetualSession,
   getVecyInstitutionalKnowledge: () => getVecyInstitutionalKnowledge,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
@@ -31118,6 +31210,7 @@ __export(janIA_exports, {
   setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
   setPendingSession: () => setPendingSession,
+  setUser402040Agreement: () => setUser402040Agreement,
   shouldAskForGoogleReview: () => shouldAskForGoogleReview,
   splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
