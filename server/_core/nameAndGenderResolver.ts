@@ -157,7 +157,8 @@ const FEMALE_EXPLICIT_NAMES = new Set([
   "olga", "sonia", "adriana", "marcela", "carolina", "elena", "victoria", "teresa", "mercedes",
   "fabiola", "blanca", "esperanza", "dora", "yolanda", "lucero", "yamile", "leidys", "leidy",
   "yeimy", "yuliana", "yuri", "ingrid", "katherin", "katherine", "stefany", "stephanie",
-  "flor", "floralba", "florencia", "florinda"
+  "flor", "floralba", "florencia", "florinda",
+  "rosmery", "rosemary", "rosmary", "rosmeri", "rosita", "marleny", "marly", "maryuri", "yurani"
 ]);
 
 // 3. Excepciones Masculinas que terminan en 'A'
@@ -167,8 +168,8 @@ const MALE_EXCEPTIONS_ENDING_IN_A = new Set([
   "nicolás", "tomas", "tomás", "lucas"
 ]);
 
-// 4. Apellidos Colombianos Comunes (para evitar unirlos como nombres de pila)
-const COMMON_COLOMBIAN_SURNAMES = new Set([
+// 4. Apellidos Colombianos Comunes (para evitar unirlos como nombres de pila o usarlos como vocativos directos)
+export const COMMON_COLOMBIAN_SURNAMES = new Set([
   "rodriguez", "rodríguez", "gomez", "gómez", "gonzalez", "gonzález", "martinez", "martínez",
   "garcia", "garcía", "lopez", "lópez", "hernandez", "hernández", "sanchez", "sánchez",
   "ramirez", "ramírez", "perez", "pérez", "diaz", "díaz", "munoz", "muñoz",
@@ -184,7 +185,14 @@ const COMMON_COLOMBIAN_SURNAMES = new Set([
   "florez", "flórez", "buitrago", "rincon", "rincón", "soto", "rocha", "pinzon", "pinzón",
   "camargo", "beltran", "beltrán", "leal", "vergara", "calderon", "calderón", "prieto",
   "serrano", "villamizar", "aguirre", "barrera", "parra", "guzman", "guzmán", "triana",
-  "santana", "velasquez", "velásquez", "chaparro", "fonseca", "baquero", "reyes", "mesa"
+  "santana", "velasquez", "velásquez", "chaparro", "fonseca", "baquero", "reyes", "mesa",
+  // Apellidos adicionales hispanos frecuentes
+  "luna", "mora", "paz", "rios", "ríos", "solano", "vega", "roca", "sierra", "campos", "valle",
+  "cordoba", "córdoba", "navarro", "monroy", "barbosa", "cuellar", "cuéllar", "palacios",
+  "nino", "niño", "bravo", "plazas", "roldan", "roldán", "galvis", "galindo", "forero",
+  "puentes", "chacon", "chacón", "viveros", "salcedo", "lozano", "daza", "valderrama",
+  "bello", "corredor", "caicedo", "cifuentes", "hincapie", "hincapié", "ardila", "bustamante",
+  "prada", "villalba", "amador", "soler", "barreto", "polo", "castellanos", "quijano", "rueda", "perea"
 ]);
 
 // 5. Nombres de Pila Comunes en Colombia
@@ -209,7 +217,8 @@ const COMMON_FIRST_NAMES_SET = new Set([
   "alonso", "alfonso", "mercedes", "eugenia", "victoria", "andrea", "daniela",
   "camila", "valentina", "gabriela", "catalina", "juliana", "luciana", "mariana",
   "natalia", "vanessa", "lorena", "viviana", "ximena", "jimena",
-  "mario", "fabio", "hector", "héctor", "edgar", "wilmer", "freddy", "fredy"
+  "mario", "fabio", "hector", "héctor", "edgar", "wilmer", "freddy", "fredy",
+  "rosmery", "rosemary", "rosmary", "rosmeri", "rosita", "marlen", "marlene", "leidy", "leidys", "yeimy", "astrid"
 ]);
 
 export interface NameAndGenderResult {
@@ -348,8 +357,21 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
     ) {
       // ÚNICAMENTE si ambos términos son nombres de pila reconocidos (ej. Nelson Enrique, Gustavo Adolfo)
       resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (
+      parts.length >= 2 &&
+      COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase()) &&
+      !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) &&
+      !professionalTitles.has(parts[1].toLowerCase())
+    ) {
+      // Caso Apellido + Nombre invertido (ej. "Luna Rosmery", "Pérez Carlos", "Gómez Diana")
+      // Extraer SIEMPRE el nombre de pila y jamás el apellido
+      resolvedDisplayName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+    } else if (parts.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase())) {
+      // Si el contacto SOLO tiene un apellido registrado (ej. "Luna", "Pérez", "Gómez"),
+      // NUNCA llamarlo por el apellido a secas ("¡Luna!"). Retornar vacío para vocativo neutro y educado.
+      resolvedDisplayName = "";
     } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
-      // Nombre de pila único: si el segundo término es un apellido (ej. Mario Pérez), solo tomar el primer nombre
+      // Nombre de pila único: si el segundo término es un apellido (ej. Mario Pérez, Rosmery Luna), solo tomar el primer nombre
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";
@@ -367,21 +389,23 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
   if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
     isFemale = true;
   }
-  // B. Regla morfológica: termina en 'a' y no es excepción masculina
-  else if (firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean)) {
+  // B. Regla morfológica: termina en 'a' y no es excepción masculina (solo si no es un apellido suelto que terminó en 'a')
+  else if (firstWordClean && firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean) && !COMMON_COLOMBIAN_SURNAMES.has(firstWordClean)) {
     isFemale = true;
   }
   // C. Terminaciones femeninas anglo/francesas comunes (-ette, -eth, -bel, -riz, -fer, -lyn, -len, -nis)
   else if (
-    firstWordClean.endsWith("ette") ||
-    firstWordClean.endsWith("eth") ||
-    firstWordClean.endsWith("bel") ||
-    firstWordClean.endsWith("riz") ||
-    firstWordClean.endsWith("lyn") ||
-    firstWordClean.endsWith("len") ||
-    firstWordClean.endsWith("ine") ||
-    firstWordClean.endsWith("y") ||
-    firstWordClean.endsWith("ie")
+    firstWordClean && (
+      firstWordClean.endsWith("ette") ||
+      firstWordClean.endsWith("eth") ||
+      firstWordClean.endsWith("bel") ||
+      firstWordClean.endsWith("riz") ||
+      firstWordClean.endsWith("lyn") ||
+      firstWordClean.endsWith("len") ||
+      firstWordClean.endsWith("ine") ||
+      firstWordClean.endsWith("y") ||
+      firstWordClean.endsWith("ie")
+    )
   ) {
     // Verificar si no es un nombre masculino obvio en -y (ej: Henry, Anthony, Freddy, Dany)
     const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
@@ -391,9 +415,9 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
   }
 
   const courtesyWord = isFemale ? "estimada" : "estimado";
-  const genderTerm = `${courtesyWord} ${resolvedDisplayName}`;
+  const genderTerm = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
   const effectiveGreeting = timeGreeting || "Hola";
-  const fullGreeting = `${effectiveGreeting}, ${genderTerm} 👋🏻`;
+  const fullGreeting = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${effectiveGreeting}, ${genderTerm} 👋🏻` : `${effectiveGreeting} 👋🏻`;
 
   return {
     rawName,

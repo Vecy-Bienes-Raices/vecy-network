@@ -20,6 +20,7 @@ import {
   saveOrUpdateAdvisor
 } from "../advisors";
 import { CanonicalBarrioItem } from "./types";
+import { COMMON_COLOMBIAN_SURNAMES } from "../nameAndGenderResolver";
 
 export function generarHashMensaje(rawText: string, remitente: string): string {
   const normalizado = (rawText || "")
@@ -78,7 +79,8 @@ export const COMMON_FIRST_NAMES = new Set([
   "astrid", "gladys", "nohora", "raquel", "karen", "mabel", "belen", "belén",
   "rosario", "socorro", "fabiola", "dora", "lucero", "yamile", "leidy", "leidys",
   "yeimy", "ingrid", "katherine", "catherine", "stefany", "stephanie", "jeannette",
-  "jeanette", "janeth", "janet", "jenny", "jennifer"
+  "jeanette", "janeth", "janet", "jenny", "jennifer",
+  "rosmery", "rosemary", "rosmary", "rosmeri", "rosita", "marleny", "marly", "maryuri", "yurani"
 ]);
 
 export function extractFirstName(fullName: string): string {
@@ -124,6 +126,11 @@ export function extractFirstName(fullName: string): string {
     return `${first} ${second}`;
   }
 
+  // Caso Apellido + Nombre invertido (ej. "Luna Rosmery", "Pérez Carlos", "Gómez Diana")
+  if (w2 && COMMON_COLOMBIAN_SURNAMES.has(w1) && !COMMON_COLOMBIAN_SURNAMES.has(w2) && !INVALID_FIRST_NAMES.has(w2)) {
+    return filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
+  }
+
   // Si el primer nombre es largo/compuesto por concatenación de email (ej: "dianapaolap"),
   // ver si empieza con un nombre común de al menos 4 letras
   const firstWordLower = w1;
@@ -137,6 +144,11 @@ export function extractFirstName(fullName: string): string {
 
   // Si el candidato resultante es un saludo o genérico inválido, retornar vacío
   if (INVALID_FIRST_NAMES.has(candidate.toLowerCase())) {
+    return "";
+  }
+
+  // Si el candidato único es un apellido (ej. "Luna", "Pérez", "Gómez"), no usarlo como vocativo a secas
+  if (filteredWords.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(candidate.toLowerCase())) {
     return "";
   }
 

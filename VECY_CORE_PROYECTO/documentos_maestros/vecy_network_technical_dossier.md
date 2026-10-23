@@ -331,6 +331,22 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.35 — Octubre 2026
+
+#### [v33.35.0] — 2026-10-23: Unificación de Identidad Servidora de JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas
+- **Identidad Oficial de Servidora Humilde (Cero 'Directora') (`prompts.ts`, `dmHandler.ts`, `janIA.ts`):**
+  - **Problema:** JanIA se presentaba en varias instancias como "directora tecnológica virtual" de VECY BIENES RAÍCES. Dicho cargo ficticio generaba confusión, arrogancia artificial y desapego de la realidad ante usuarios y colegas. Los únicos directores de la organización son Eduardo Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones).
+  - **Solución:** JanIA se consagra en todos los canales (Chat Web, WhatsApp DMs privados y Grupos Oficiales 2 y 3) como la **agente de inteligencia artificial de VECY BIENES RAÍCES**, al servicio incondicional de los usuarios, concebida por el equipo de tecnología para brindar apoyo experto, humilde, cercano y eficiente en todas las ramas inmobiliarias. Erradicación total de la palabra "directora" atribuida a JanIA.
+- **Resolución de Nombres Invertidos y Supresión de Apellidos Únicos (`nameAndGenderResolver.ts`, `parsers.ts`):**
+  - **Problema:** En WhatsApp, cuando un contacto tiene el orden invertido ("Luna Rosmery") o cuando el contacto tiene únicamente un apellido ("Luna"), la heurística previa tomaba la primera palabra ("Luna") o forzaba el apellido como vocativo directo ("¡Luna!"), lo que resulta grosero e incómodo.
+  - **Solución:** Detección de orden invertido: si la primera palabra es apellido y la segunda es nombre de pila (ej. "Luna Rosmery" -> "Rosmery"). Si el contacto solo tiene un apellido (ej. "Luna" o "Pérez"), se suprime el apellido como vocativo directo, respondiendo con un saludo cálido y neutro ("¡Hola! 👋"). Enriquecimiento del diccionario con apellidos hispanos comunes (Luna, Mora, Paz, Ríos, Vega, etc.).
+- **Manejo Conciso y Humano de Solicitudes de Llamada (`dmHandler.ts`):**
+  - **Problema:** Ante mensajes breves solicitando una llamada ("me regalas una llamada xfa"), JanIA desplegaba una letanía de justificación recitando todo su currículum de trámites (predial, notarías, etc.), provocando una experiencia 100% robótica.
+  - **Solución:** Respuesta ultra ágil en máximo 2 a 3 renglones: confirma con gusto, entrega el canal directo de Eduardo Rivera y Jani Alves (+57 316 656 9719) y pregunta brevemente el tema a tratar para dejarles el recado listo, con prohibición estricta de soltar discursos de autopresentación.
+- **Continuidad Conversacional sin Muletillas de Nombre:**
+  - Prohibición estricta de clavar el nombre del usuario al inicio de cada frase consecutiva en conversaciones activas.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **334/334 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 32s.
+
 ### 🔖 v33.34 — Octubre 2026
 
 #### [v33.34.0] — 2026-10-22: Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding

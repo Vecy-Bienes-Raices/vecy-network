@@ -1,11 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.34.0 — 2026-10-22)
-- **JanIA Server:** `v33.34` (`33.34.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding:**
-  1. **Atomicidad Canal vs. Grupos:** En `cronService.ts`, cancelación estricta de mensajes trampolín a Grupos 2 y 3 si la publicación en el Canal no confirma ID de entrega válido. Manejo de encuestas en Canales (`@newsletter`) despachando infografía/texto con opciones A, B, C y activando votación nativa en grupos.
-  2. **Asesor de Requerimientos Incompletos:** JanIA detecta fichas incompletas (falta presupuesto, administración, zonas o tipología), bloquea match inviable y devuelve Ficha Técnica Estandarizada con campos entre corchetes `[ ]`.
-  3. **Resiliencia ADRES:** `queryAdres` reforzado con pool de User-Agents, cabeceras estrictas de navegador y ASP.NET BDUA (`Origin` y `Referer` exactos) y bucle de reintentos con backoff.
-  4. **Consultas en Línea (Web Grounding):** `searchWebGrounding` y `fetchLiveTRM` en `scraper.ts` consultando en tiempo real POT 555, Estatuto Tributario, UVT, Notarías y TRM oficial de Datos Abiertos a $0 COP.
-  5. **Seguridad y Confidencialidad en Canal:** `sanitizeChannelContent` filtra IPs de servidores, rutas locales, credenciales de BD y números privados de propietarios.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.35.0 — 2026-10-23)
+- **JanIA Server:** `v33.35` (`33.35.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Unificación de Identidad Servidora de JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas:**
+  1. **Identidad Oficial de Servidora Humilde (Cero 'Directora'):** JanIA se consagra como la agente de inteligencia artificial de VECY BIENES RAÍCES, concebida y desarrollada por Eduardo Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), al servicio incondicional de colegas y clientes. Erradicación total de títulos directivos ficticios ("directora tecnológica virtual") en Web Chat, DMs y Grupos.
+  2. **Resolución de Nombres Invertidos y Supresión de Apellidos Únicos:** En `nameAndGenderResolver.ts` y `parsers.ts`, soporte a casos invertidos (ej. "Luna Rosmery" -> "Rosmery") y supresión de apellidos únicos como vocativos directos (ej. si el usuario es "Luna" o "Pérez", se evita llamarlo por el apellido a secas, respondiendo con cortesía neutra y cálida). Diccionario enriquecido con apellidos hispanos frecuentes (Luna, Mora, Paz, Ríos, Vega, etc.).
+  3. **Manejo Conciso y Humano de Llamadas:** Cuando un usuario pide una llamada ("me regalas una llamada"), JanIA responde en máximo 2 a 3 líneas naturales canalizando a la línea de Eduardo Rivera y Jani Alves (+57 316 656 9719), con prohibición estricta de soltar discursos de autopresentación o recitar su menú de servicios.
+  4. **Continuidad Conversacional sin Muletillas de Nombre:** Prohibición estricta de clavar el nombre del usuario al inicio de cada frase consecutiva en conversaciones activas.
 - **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` passing | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

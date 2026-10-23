@@ -7045,11 +7045,57 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.34");
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.34.0");
+      expect(pkg.version).toMatch(/^33\.(34|35)\.0/);
+    });
+  });
+
+  describe("Suite v33.35 — Unificación de Identidad JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas", () => {
+    it("1. Resolución de nombres invertidos y supresión de apellidos únicos como vocativos", async () => {
+      const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
+      const { extractFirstName } = await import("../_core/jania/parsers");
+
+      // Caso Nombre + Apellido común (Rosmery Luna)
+      const resNormal = resolveNameAndGender("Rosmery Luna");
+      expect(resNormal.displayName).toBe("Rosmery");
+      expect(resNormal.isFemale).toBe(true);
+      expect(extractFirstName("Rosmery Luna")).toBe("Rosmery");
+
+      // Caso Apellido + Nombre invertido (Luna Rosmery)
+      const resInvertido = resolveNameAndGender("Luna Rosmery");
+      expect(resInvertido.displayName).toBe("Rosmery");
+      expect(resInvertido.isFemale).toBe(true);
+      expect(extractFirstName("Luna Rosmery")).toBe("Rosmery");
+
+      // Caso Apellido Único (Luna, Pérez) -> NO debe llamarlo por el apellido
+      const resSoloApellido = resolveNameAndGender("Luna");
+      expect(resSoloApellido.displayName).toBe("");
+      expect(resSoloApellido.greeting).toContain("Hola 👋🏻");
+      expect(extractFirstName("Luna")).toBe("");
+
+      const resPerez = resolveNameAndGender("Pérez");
+      expect(resPerez.displayName).toBe("");
+      expect(extractFirstName("Pérez")).toBe("");
+    });
+
+    it("2. Identidad oficial de JanIA como agente de IA de VECY (cero 'directora')", async () => {
+      const { JANIA_ARGON_COGNITIVE_CORE } = await import("../_core/jania/prompts");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("agente de inteligencia artificial");
+      expect(JANIA_ARGON_COGNITIVE_CORE).not.toContain("Directora Tecnológica Virtual");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Eduardo Rivera");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Jani Alves");
+    });
+
+    it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.35");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.35.0");
     });
   });
 });

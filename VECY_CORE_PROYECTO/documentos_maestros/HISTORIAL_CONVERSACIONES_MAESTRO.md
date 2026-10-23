@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-23] — JanIA v33.35: Unificación de Identidad Servidora de JanIA, Resolución de Nombres Invertidos y Manejo Humano de Llamadas (v33.35 - 33.35.0)
+
+**Versión:** `v33.35` (`33.35.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/nameAndGenderResolver.ts`:
+  1. Detección y soporte a nombres con orden invertido (Apellido + Nombre, ej. "Luna Rosmery" -> `displayName: "Rosmery"`).
+  2. Supresión de apellidos únicos como vocativos directos: si el usuario solo tiene un apellido (ej. "Luna", "Pérez", "Gómez"), se evita llamarlo por el apellido a secas, respondiendo con cortesía neutra y cálida ("¡Hola! 👋").
+  3. Enriquecimiento del diccionario `COMMON_COLOMBIAN_SURNAMES` con apellidos hispanos frecuentes (Luna, Mora, Paz, Ríos, Solano, Vega, Roca, Sierra, Campos, Valle, Córdoba, Navarro, etc.).
+  4. Incorporación de "Rosmery", "Rosemary", "Rosita", "Marlen", etc. en `COMMON_FIRST_NAMES_SET` y `FEMALE_EXPLICIT_NAMES`.
+- `server/_core/jania/parsers.ts`:
+  1. Importación de `COMMON_COLOMBIAN_SURNAMES` en `parsers.ts`.
+  2. En `extractFirstName`, soporte idéntico para nombres invertidos ("Luna Rosmery" -> "Rosmery") y supresión de apellidos únicos como vocativos a secas.
+  3. Enriquecimiento de `COMMON_FIRST_NAMES`.
+- `server/_core/jania/prompts.ts`:
+  1. En `JANIA_ARGON_COGNITIVE_CORE`, consagración de la identidad oficial de JanIA como la **agente de inteligencia artificial de VECY BIENES RAÍCES**, al servicio incondicional de los usuarios, concebida por Eduardo Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones).
+  2. Erradicación total del título ficticio "Directora Tecnológica Virtual" y prohibición estricta de que JanIA se atribuya cargos directivos.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Unificación de identidad de JanIA como agente servidora en DMs.
+  2. Regla estricta para solicitudes de llamadas telefónicas ("me regalas una llamada"): JanIA responde con calidez humana en máximo 2 a 3 renglones canalizando a los directores Eduardo Rivera y Jani Alves (+57 316 656 9719), con prohibición estricta de soltar discursos de autopresentación o recitar su menú de servicios.
+  3. Erradicación de muletillas de nombres: prohibición estricta de clavar el nombre del usuario al inicio de cada frase en conversaciones activas.
+- `server/routers/janIA.ts`:
+  1. Unificación de la identidad de JanIA en la consola Web Chat como agente de inteligencia artificial de VECY BIENES RAÍCES, erradicando denominaciones confusas.
+- `server/__tests__/regression.test.ts`: Creación de la Suite v33.35 validando resolución de nombres invertidos, supresión de apellidos únicos, identidad servidora de JanIA y consagración doctrinal de versión.
+- `shared/const.ts` (`v33.35`) y `package.json` (`33.35.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Según nuestros parámetros los que le hemos puesto a nuestra agente JanIA, ¿Está bien que llame a este usuario por su apellido y no por su/s nombre/s cómo lo establecimos.? Cuentame si es un error, el código etá mal compilado, hay redundacia de parámetros y órdenes, aún no es una SUper IA, es imposible hacer que hable, escriba y se comporte mejor que parezca humana, etc...??*
+  *Si y por favor, tambien dime si está bien que JanIA diga que es una directora cuando en realidad es una agente que debe estar al servicio de todos los usuarios o presentarse cómo lo que es una agente de inteligencia artificial creada por el equipo de desarrollo de VECY, la primera IA experta en temas de bienes raíces y todas sus ramas. Tambien dime si sería mejor migarar a una verdadero agente de IA pero construído con GEMA de Google o Gemini, no se de quién es pero ya estoy estudiando el tema.*
+  *Agente te quedaste atrapado en algún BUG. Por eso tuve que dtener el proceso. Continúa tu tarea y trata de que JanIA sea la misma y actúe de la misma manera en todos sus ámbitos(Chat Web, el privado de Whatsapp, Publica en los Grupos oficiales 2 y 3)."*
+
+#### 2. Diagnóstico Técnico Profundo y Causas Raíz
+1. **Discrepancia entre WhatsApp Web y el Backend de Baileys:**
+   - En WhatsApp Web, el cliente lee la libreta de Google Contacts del celular de Eduardo (donde está guardada como "Rosmery Luna").
+   - En el socket de WhatsApp (Baileys en el VPS), el servidor no tiene acceso a la agenda personal del celular, sino únicamente al `msg.pushName` que la misma usuaria configuró en su perfil de WhatsApp.
+   - Si la usuaria tiene configurado "Luna Rosmery" (orden invertido apellido + nombre) o simplemente "Luna", la heurística anterior tomaba la primera palabra (`parts[0]`) como nombre de pila porque "Luna" no estaba en `COMMON_COLOMBIAN_SURNAMES`.
+   - Cuando alguien solo tiene un apellido registrado, el sistema no debe gritarle el apellido a secas ("¡Luna!"), sino responder con un saludo cortés y educado ("¡Hola! 👋").
+2. **Sobre-Ingeniería en el Prompt y Ansiedad de Justificación:**
+   - En `dmHandler.ts` y `prompts.ts`, JanIA tenía directivas tan extensas sobre sus 6 sombreros (abogada, liquidadora, perita, etc.) y la etiqueta de "Directora Tecnológica Virtual", que ante una petición simple de llamada telefónica ("me regalas una llamada xfa"), el LLM sentía la necesidad de justificar por qué no podía llamar y auto-recitaba todo su menú de trámites ("Yo soy JanIA, tu directora tecnológica virtual, te resuelvo predial, notariales...").
+   - Esto resultaba en una respuesta 100% robótica, rompiendo la empatía humana.
+3. **Rol e Identidad Real de JanIA (Cero 'Directora'):**
+   - Eduardo y Jani son los únicos directores humanos de la inmobiliaria.
+   - JanIA es la agente de inteligencia artificial servidora, experta y cercana al servicio de todos.
+4. **Clarificación Conceptual Gemma vs. Gemini:**
+   - JanIA YA está construida sobre Google Gemini (Gemini 3.8 Flash de Google DeepMind).
+   - Gemma es la versión reducida open-weight para GPUs locales. Gemini es el modelo de frontera más potente. El comportamiento robótico no era del modelo sino de los prompts y heurísticas del código.
+
+---
+
 ### 📅 [2026-10-22] — JanIA v33.34: Atomicidad Canal-Grupos, Ficha Estandarizada [], Resiliencia ADRES y Web Grounding (v33.34 - 33.34.0)
 
 **Versión:** `v33.34` (`33.34.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

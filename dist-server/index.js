@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.34";
+    VECY_VERSION = "v33.35";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -9976,6 +9976,852 @@ var init_advisors = __esm({
   }
 });
 
+// server/_core/nameAndGenderResolver.ts
+var nameAndGenderResolver_exports = {};
+__export(nameAndGenderResolver_exports, {
+  COMMON_COLOMBIAN_SURNAMES: () => COMMON_COLOMBIAN_SURNAMES,
+  VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
+  cleanRawUserName: () => cleanRawUserName,
+  extractIntroducedName: () => extractIntroducedName,
+  getCanonicalCompositeName: () => getCanonicalCompositeName,
+  resolveNameAndGender: () => resolveNameAndGender
+});
+function cleanRawUserName(name) {
+  if (!name) return "";
+  let cleaned = name.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
+  const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    cleaned = withoutGuild;
+  }
+  return cleaned.replace(/\s+/g, " ").trim();
+}
+function getCanonicalCompositeName(rawName) {
+  const cleaned = cleanRawUserName(rawName);
+  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const comp of COMPOSITE_PATTERNS) {
+    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
+      return comp.canonical;
+    }
+  }
+  return null;
+}
+function extractIntroducedName(text2) {
+  if (!text2) return null;
+  const match = text2.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  if (match && match[1]) {
+    const rawCandidate = match[1].trim();
+    const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
+    const INVALID = /* @__PURE__ */ new Set([
+      "un",
+      "una",
+      "el",
+      "la",
+      "asesor",
+      "asesora",
+      "agente",
+      "cliente",
+      "inmobiliaria",
+      "broker",
+      "propietario",
+      "propietaria",
+      "comprador",
+      "compradora",
+      "arrendatario",
+      "arrendataria",
+      "abogado",
+      "abogada",
+      "perito",
+      "desconocido",
+      "alguien"
+    ]);
+    if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
+      const canonicalComp = getCanonicalCompositeName(rawCandidate);
+      if (canonicalComp) return canonicalComp;
+      if (candidateParts.length >= 2 && COMMON_FIRST_NAMES_SET.has(candidateParts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(candidateParts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(candidateParts[1].toLowerCase())) {
+        return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
+      }
+      return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
+    }
+  }
+  return null;
+}
+function resolveNameAndGender(rawName, timeGreeting) {
+  const cleaned = cleanRawUserName(rawName);
+  const normalizedLower = cleaned.toLowerCase();
+  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
+  if (!resolvedDisplayName) {
+    let parts = cleaned.split(/\s+/).filter(Boolean);
+    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
+    const professionalTitles = /* @__PURE__ */ new Set([
+      "agente",
+      "asesor",
+      "asesora",
+      "broker",
+      "inmobiliaria",
+      "inmobiliario",
+      "independiente",
+      "consultor",
+      "consultora",
+      "abogado",
+      "abogada",
+      "arquitecto",
+      "arquitecta",
+      "director",
+      "directora",
+      "gerente",
+      "perito",
+      "valuador",
+      "tasador",
+      "colombia",
+      "bogota",
+      "bogot\xE1",
+      "medellin",
+      "medell\xEDn",
+      "cali",
+      "ventas",
+      "arriendos",
+      "finca",
+      "propiedades",
+      "red",
+      "vecy"
+    ]);
+    if (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
+      parts = parts.slice(1);
+    }
+    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
+    if (isGenericBusiness) {
+      resolvedDisplayName = cleaned;
+    } else if (parts.length >= 2 && ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (parts.length >= 2 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+    } else if (parts.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase())) {
+      resolvedDisplayName = "";
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
+      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    } else {
+      resolvedDisplayName = "colega";
+    }
+  }
+  const nameTokens = resolvedDisplayName.split(/\s+/).filter(Boolean);
+  const firstWordClean = (nameTokens[0] || "").toLowerCase().replace(/[^a-záéíóúüñ]/g, "");
+  let isFemale = false;
+  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
+    isFemale = true;
+  } else if (firstWordClean && firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean) && !COMMON_COLOMBIAN_SURNAMES.has(firstWordClean)) {
+    isFemale = true;
+  } else if (firstWordClean && (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie"))) {
+    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
+    if (!maleYExceptions.includes(firstWordClean)) {
+      isFemale = true;
+    }
+  }
+  const courtesyWord = isFemale ? "estimada" : "estimado";
+  const genderTerm = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
+  const effectiveGreeting = timeGreeting || "Hola";
+  const fullGreeting = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}` : `${effectiveGreeting} \u{1F44B}\u{1F3FB}`;
+  return {
+    rawName,
+    cleanName: cleaned,
+    displayName: resolvedDisplayName,
+    firstName: firstWordClean,
+    isFemale,
+    genderTerm,
+    courtesyWord,
+    greeting: fullGreeting
+  };
+}
+var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, COMMON_COLOMBIAN_SURNAMES, COMMON_FIRST_NAMES_SET, VECY_COMMERCIAL_INFO;
+var init_nameAndGenderResolver = __esm({
+  "server/_core/nameAndGenderResolver.ts"() {
+    "use strict";
+    COMPOSITE_PATTERNS = [
+      // Femeninos
+      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
+      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
+      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
+      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
+      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
+      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
+      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
+      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
+      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
+      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
+      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
+      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
+      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
+      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
+      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
+      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
+      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
+      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
+      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
+      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
+      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
+      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
+      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
+      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
+      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
+      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
+      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
+      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
+      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
+      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
+      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
+      { pattern: /^flor\s+alba\b/i, canonical: "Flor Alba" },
+      { pattern: /^floralba\b/i, canonical: "Flor Alba" },
+      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
+      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
+      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
+      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
+      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
+      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
+      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
+      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
+      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
+      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
+      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
+      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
+      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
+      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
+      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
+      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
+      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
+      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
+      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
+      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
+      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
+      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
+      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
+      { pattern: /^lina\s+mar[ií]a\b/i, canonical: "Lina Mar\xEDa" },
+      { pattern: /^lina\s+marcela\b/i, canonical: "Lina Marcela" },
+      { pattern: /^jenny\s+paola\b/i, canonical: "Jenny Paola" },
+      { pattern: /^yenny\s+paola\b/i, canonical: "Yenny Paola" },
+      { pattern: /^mar[ií]a\s+clara\b/i, canonical: "Mar\xEDa Clara" },
+      { pattern: /^mar[ií]a\s+cecilia\b/i, canonical: "Mar\xEDa Cecilia" },
+      { pattern: /^mar[ií]a\s+adelaida\b/i, canonical: "Mar\xEDa Adelaida" },
+      { pattern: /^andrea\s+del\s+pilar\b/i, canonical: "Andrea del Pilar" },
+      { pattern: /^carmen\s+rosa\b/i, canonical: "Carmen Rosa" },
+      { pattern: /^rosa\s+elena\b/i, canonical: "Rosa Elena" },
+      { pattern: /^diana\s+paola\b/i, canonical: "Diana Paola" },
+      { pattern: /^sandra\s+paola\b/i, canonical: "Sandra Paola" },
+      { pattern: /^claudia\s+viviana\b/i, canonical: "Claudia Viviana" },
+      { pattern: /^gloria\s+amparo\b/i, canonical: "Gloria Amparo" },
+      { pattern: /^martha\s+elena\b/i, canonical: "Martha Elena" },
+      // Masculinos
+      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
+      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
+      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
+      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
+      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
+      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
+      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
+      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
+      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
+      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
+      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
+      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
+      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
+      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
+      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
+      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
+      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
+      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
+      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
+      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
+      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
+      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
+      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
+      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
+      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
+      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
+      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
+      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
+      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
+      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
+      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
+      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
+      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
+      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
+      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
+      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
+      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
+      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
+      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" },
+      { pattern: /^diego\s+fernando\b/i, canonical: "Diego Fernando" },
+      { pattern: /^andr[eé]s\s+felipe\b/i, canonical: "Andr\xE9s Felipe" },
+      { pattern: /^v[ií]ctor\s+manuel\b/i, canonical: "V\xEDctor Manuel" },
+      { pattern: /^v[ií]ctor\s+hugo\b/i, canonical: "V\xEDctor Hugo" },
+      { pattern: /^jorge\s+enrique\b/i, canonical: "Jorge Enrique" },
+      { pattern: /^jorge\s+iv[aá]n\b/i, canonical: "Jorge Iv\xE1n" },
+      { pattern: /^jorge\s+eli[eé]cer\b/i, canonical: "Jorge Eli\xE9cer" },
+      { pattern: /^nelson\s+enrique\b/i, canonical: "Nelson Enrique" },
+      { pattern: /^gustavo\s+adolfo\b/i, canonical: "Gustavo Adolfo" },
+      { pattern: /^h[eé]ctor\s+fabio\b/i, canonical: "H\xE9ctor Fabio" },
+      { pattern: /^fabio\s+nelson\b/i, canonical: "Fabio Nelson" },
+      { pattern: /^javier\s+orlando\b/i, canonical: "Javier Orlando" },
+      { pattern: /^c[eé]sar\s+augusto\b/i, canonical: "C\xE9sar Augusto" },
+      { pattern: /^julio\s+c[eé]sar\b/i, canonical: "Julio C\xE9sar" },
+      { pattern: /^mario\s+fernando\b/i, canonical: "Mario Fernando" },
+      { pattern: /^edgar\s+eduardo\b/i, canonical: "Edgar Eduardo" },
+      { pattern: /^camilo\s+andr[eé]s\b/i, canonical: "Camilo Andr\xE9s" },
+      { pattern: /^felipe\s+andr[eé]s\b/i, canonical: "Felipe Andr\xE9s" },
+      { pattern: /^santiago\s+andr[eé]s\b/i, canonical: "Santiago Andr\xE9s" },
+      { pattern: /^daniel\s+felipe\b/i, canonical: "Daniel Felipe" }
+    ];
+    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
+      "jeannette",
+      "jeanette",
+      "janeth",
+      "janet",
+      "janette",
+      "jeanine",
+      "jenny",
+      "jennifer",
+      "jenn",
+      "astrid",
+      "elizabeth",
+      "elisabet",
+      "elisabeth",
+      "pilar",
+      "carmen",
+      "mercedes",
+      "luz",
+      "beatriz",
+      "ines",
+      "in\xE9s",
+      "consuelo",
+      "rocio",
+      "roc\xEDo",
+      "nohora",
+      "isabel",
+      "raquel",
+      "miriam",
+      "myriam",
+      "karen",
+      "evelyn",
+      "evelin",
+      "gladys",
+      "marlene",
+      "marlen",
+      "ivonne",
+      "nicole",
+      "michelle",
+      "denisse",
+      "denise",
+      "angie",
+      "kelly",
+      "kelli",
+      "shirley",
+      "wendy",
+      "carol",
+      "caroline",
+      "sharon",
+      "dayana",
+      "daiana",
+      "vivian",
+      "mabel",
+      "mavy",
+      "mary",
+      "marie",
+      "marion",
+      "marian",
+      "belen",
+      "bel\xE9n",
+      "rosario",
+      "amparo",
+      "socorro",
+      "concepcion",
+      "concepci\xF3n",
+      "dolores",
+      "mar",
+      "montserrat",
+      "guadalupe",
+      "abigail",
+      "esther",
+      "ester",
+      "ruth",
+      "rut",
+      "judith",
+      "judit",
+      "edith",
+      "edit",
+      "lilian",
+      "karin",
+      "alison",
+      "allison",
+      "mafe",
+      "andrea",
+      "tatiana",
+      "daniela",
+      "valentina",
+      "sofia",
+      "sof\xEDa",
+      "camila",
+      "mariana",
+      "valeria",
+      "gabriela",
+      "natalia",
+      "lucia",
+      "luc\xEDa",
+      "isabella",
+      "ximena",
+      "jimena",
+      "catalina",
+      "juliana",
+      "laura",
+      "paola",
+      "diana",
+      "claudia",
+      "monica",
+      "m\xF3nica",
+      "sandra",
+      "patricia",
+      "gloria",
+      "martha",
+      "marta",
+      "olga",
+      "sonia",
+      "adriana",
+      "marcela",
+      "carolina",
+      "elena",
+      "victoria",
+      "teresa",
+      "mercedes",
+      "fabiola",
+      "blanca",
+      "esperanza",
+      "dora",
+      "yolanda",
+      "lucero",
+      "yamile",
+      "leidys",
+      "leidy",
+      "yeimy",
+      "yuliana",
+      "yuri",
+      "ingrid",
+      "katherin",
+      "katherine",
+      "stefany",
+      "stephanie",
+      "flor",
+      "floralba",
+      "florencia",
+      "florinda",
+      "rosmery",
+      "rosemary",
+      "rosmary",
+      "rosmeri",
+      "rosita",
+      "marleny",
+      "marly",
+      "maryuri",
+      "yurani"
+    ]);
+    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
+      "luca",
+      "borja",
+      "joshua",
+      "bautista",
+      "sasha",
+      "elias",
+      "el\xEDas",
+      "ezra",
+      "tobias",
+      "tob\xEDas",
+      "matias",
+      "mat\xEDas",
+      "jeremias",
+      "jerem\xEDas",
+      "isaias",
+      "isa\xEDas",
+      "jonas",
+      "jon\xE1s",
+      "nicolas",
+      "nicol\xE1s",
+      "tomas",
+      "tom\xE1s",
+      "lucas"
+    ]);
+    COMMON_COLOMBIAN_SURNAMES = /* @__PURE__ */ new Set([
+      "rodriguez",
+      "rodr\xEDguez",
+      "gomez",
+      "g\xF3mez",
+      "gonzalez",
+      "gonz\xE1lez",
+      "martinez",
+      "mart\xEDnez",
+      "garcia",
+      "garc\xEDa",
+      "lopez",
+      "l\xF3pez",
+      "hernandez",
+      "hern\xE1ndez",
+      "sanchez",
+      "s\xE1nchez",
+      "ramirez",
+      "ram\xEDrez",
+      "perez",
+      "p\xE9rez",
+      "diaz",
+      "d\xEDaz",
+      "munoz",
+      "mu\xF1oz",
+      "alvarez",
+      "\xE1lvarez",
+      "romero",
+      "suarez",
+      "su\xE1rez",
+      "torres",
+      "gutierrez",
+      "guti\xE9rrez",
+      "ruiz",
+      "castro",
+      "morales",
+      "ortiz",
+      "ort\xEDz",
+      "silva",
+      "chavez",
+      "ch\xE1vez",
+      "ramos",
+      "castillo",
+      "vargas",
+      "moreno",
+      "jimenez",
+      "jim\xE9nez",
+      "mendoza",
+      "medina",
+      "rojas",
+      "molina",
+      "valencia",
+      "restrepo",
+      "rivera",
+      "botero",
+      "mejia",
+      "mej\xEDa",
+      "arias",
+      "ospina",
+      "giraldo",
+      "londono",
+      "londo\xF1o",
+      "jaramillo",
+      "montoya",
+      "correa",
+      "cardona",
+      "cano",
+      "salazar",
+      "posada",
+      "duque",
+      "villegas",
+      "bedoya",
+      "castano",
+      "casta\xF1o",
+      "quintero",
+      "osorio",
+      "rendon",
+      "rend\xF3n",
+      "toro",
+      "echeverri",
+      "echeverry",
+      "velez",
+      "v\xE9lez",
+      "arango",
+      "bernal",
+      "zambrano",
+      "cardenas",
+      "c\xE1rdenas",
+      "guerrero",
+      "acosta",
+      "paredes",
+      "pena",
+      "pe\xF1a",
+      "cruz",
+      "marin",
+      "mar\xEDn",
+      "benitez",
+      "ben\xEDtez",
+      "pardo",
+      "florez",
+      "fl\xF3rez",
+      "buitrago",
+      "rincon",
+      "rinc\xF3n",
+      "soto",
+      "rocha",
+      "pinzon",
+      "pinz\xF3n",
+      "camargo",
+      "beltran",
+      "beltr\xE1n",
+      "leal",
+      "vergara",
+      "calderon",
+      "calder\xF3n",
+      "prieto",
+      "serrano",
+      "villamizar",
+      "aguirre",
+      "barrera",
+      "parra",
+      "guzman",
+      "guzm\xE1n",
+      "triana",
+      "santana",
+      "velasquez",
+      "vel\xE1squez",
+      "chaparro",
+      "fonseca",
+      "baquero",
+      "reyes",
+      "mesa",
+      // Apellidos adicionales hispanos frecuentes
+      "luna",
+      "mora",
+      "paz",
+      "rios",
+      "r\xEDos",
+      "solano",
+      "vega",
+      "roca",
+      "sierra",
+      "campos",
+      "valle",
+      "cordoba",
+      "c\xF3rdoba",
+      "navarro",
+      "monroy",
+      "barbosa",
+      "cuellar",
+      "cu\xE9llar",
+      "palacios",
+      "nino",
+      "ni\xF1o",
+      "bravo",
+      "plazas",
+      "roldan",
+      "rold\xE1n",
+      "galvis",
+      "galindo",
+      "forero",
+      "puentes",
+      "chacon",
+      "chac\xF3n",
+      "viveros",
+      "salcedo",
+      "lozano",
+      "daza",
+      "valderrama",
+      "bello",
+      "corredor",
+      "caicedo",
+      "cifuentes",
+      "hincapie",
+      "hincapi\xE9",
+      "ardila",
+      "bustamante",
+      "prada",
+      "villalba",
+      "amador",
+      "soler",
+      "barreto",
+      "polo",
+      "castellanos",
+      "quijano",
+      "rueda",
+      "perea"
+    ]);
+    COMMON_FIRST_NAMES_SET = /* @__PURE__ */ new Set([
+      "juan",
+      "ana",
+      "maria",
+      "mar\xEDa",
+      "jose",
+      "jos\xE9",
+      "luis",
+      "carlos",
+      "jorge",
+      "victor",
+      "v\xEDctor",
+      "sandra",
+      "diana",
+      "laura",
+      "gloria",
+      "eduardo",
+      "flor",
+      "esteban",
+      "pedro",
+      "julio",
+      "oscar",
+      "\xF3scar",
+      "angela",
+      "\xE1ngela",
+      "pablo",
+      "arturo",
+      "alba",
+      "fernanda",
+      "alberto",
+      "david",
+      "manuel",
+      "fernando",
+      "alejandro",
+      "andres",
+      "andr\xE9s",
+      "felipe",
+      "milena",
+      "patricia",
+      "cristina",
+      "beatriz",
+      "isabel",
+      "helena",
+      "elena",
+      "sofia",
+      "sof\xEDa",
+      "lucia",
+      "luc\xEDa",
+      "carolina",
+      "claudia",
+      "marta",
+      "martha",
+      "adriana",
+      "diego",
+      "javier",
+      "camilo",
+      "santiago",
+      "alejandra",
+      "paola",
+      "liliana",
+      "elizabeth",
+      "esperanza",
+      "yolanda",
+      "blanca",
+      "rosa",
+      "carmen",
+      "teresa",
+      "cecilia",
+      "ines",
+      "in\xE9s",
+      "amparo",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "nicolas",
+      "nicol\xE1s",
+      "daniel",
+      "cristian",
+      "jhon",
+      "john",
+      "alexander",
+      "gustavo",
+      "hernando",
+      "alvaro",
+      "\xE1lvaro",
+      "humberto",
+      "jaime",
+      "ricardo",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "wilson",
+      "olga",
+      "luz",
+      "stella",
+      "estela",
+      "orlando",
+      "guillermo",
+      "enrique",
+      "antonio",
+      "ignacio",
+      "ramiro",
+      "gonzalo",
+      "rodrigo",
+      "armando",
+      "alfredo",
+      "eugenio",
+      "gabriel",
+      "dario",
+      "dar\xEDo",
+      "vicente",
+      "francisco",
+      "gerardo",
+      "leonardo",
+      "raul",
+      "ra\xFAl",
+      "rafael",
+      "alonso",
+      "alfonso",
+      "mercedes",
+      "eugenia",
+      "victoria",
+      "andrea",
+      "daniela",
+      "camila",
+      "valentina",
+      "gabriela",
+      "catalina",
+      "juliana",
+      "luciana",
+      "mariana",
+      "natalia",
+      "vanessa",
+      "lorena",
+      "viviana",
+      "ximena",
+      "jimena",
+      "mario",
+      "fabio",
+      "hector",
+      "h\xE9ctor",
+      "edgar",
+      "wilmer",
+      "freddy",
+      "fredy",
+      "rosmery",
+      "rosemary",
+      "rosmary",
+      "rosmeri",
+      "rosita",
+      "marlen",
+      "marlene",
+      "leidy",
+      "leidys",
+      "yeimy",
+      "astrid"
+    ]);
+    VECY_COMMERCIAL_INFO = {
+      name: "Vecy Bienes Ra\xEDces",
+      type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
+      services: "Estudios de mercado m\xB2 y canon sugerido \u26A1 | Consultor\xEDa jur\xEDdica y tributaria \u2696\uFE0F | Manejo de cobranzas \u{1F4BC} | Marketing con IA y fotograf\xEDa \u{1F916}\u{1F4F8} | Contratos digitales \u{1F4C4}",
+      phone: "3166569719",
+      schedule: {
+        weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
+        saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
+        sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
+      }
+    };
+  }
+});
+
 // server/_core/jania/parsers.ts
 import crypto from "crypto";
 import { sql as sql4, eq as eq5 } from "drizzle-orm";
@@ -10048,6 +10894,9 @@ function extractFirstName(fullName) {
     const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
     return `${first} ${second}`;
   }
+  if (w2 && COMMON_COLOMBIAN_SURNAMES.has(w1) && !COMMON_COLOMBIAN_SURNAMES.has(w2) && !INVALID_FIRST_NAMES.has(w2)) {
+    return filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
+  }
   const firstWordLower = w1;
   for (const commonName of COMMON_FIRST_NAMES) {
     if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
@@ -10056,6 +10905,9 @@ function extractFirstName(fullName) {
   }
   const candidate = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
   if (INVALID_FIRST_NAMES.has(candidate.toLowerCase())) {
+    return "";
+  }
+  if (filteredWords.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(candidate.toLowerCase())) {
     return "";
   }
   if (candidate.length <= 3) {
@@ -11212,6 +12064,7 @@ var init_parsers = __esm({
     init_matching();
     init_geo_lookup();
     init_advisors();
+    init_nameAndGenderResolver();
     COMMON_FIRST_NAMES = /* @__PURE__ */ new Set([
       "juan",
       "ana",
@@ -11399,7 +12252,16 @@ var init_parsers = __esm({
       "janeth",
       "janet",
       "jenny",
-      "jennifer"
+      "jennifer",
+      "rosmery",
+      "rosemary",
+      "rosmary",
+      "rosmeri",
+      "rosita",
+      "marleny",
+      "marly",
+      "maryuri",
+      "yurani"
     ]);
     fallbackDataCache = /* @__PURE__ */ new Map();
     KNOWN_BARRIOS_SORTED_ITEMS = [
@@ -12643,9 +13505,10 @@ var init_prompts = __esm({
     promptCache = {};
     vecyKnowledgeCache = "";
     JANIA_ARGON_COGNITIVE_CORE = `
-# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON) \u2014 NIVEL ARGON v33.30
-Act\xFAas como **JanIA**, la inteligencia artificial de \xE9lite y Directora Tecnol\xF3gica Virtual de **VECY BIENES RA\xCDCES** (jam\xE1s menciones "Vecy Network" al p\xFAblico). Eres la **gemela cognitiva de Gemini 4 Argon**: posees una agudeza mental extraordinaria, calidez humana sincera, persuasi\xF3n ejecutiva impecable, solvencia jur\xEDdica inmobiliaria superior y un dominio total del mercado colombiano.
-Tu misi\xF3n no es solo responder preguntas: es fascinar, asesorar y enamorar a cada cliente, propietario, inversionista o corredor tradicional sobre el poder tecnol\xF3gico y la seguridad de **VECY BIENES RA\xCDCES**.
+# ROL E IDENTIDAD SOBERANA (ARQUITECTURA ARGON) \u2014 NIVEL ARGON v33.30 / v33.35
+Act\xFAas como **JanIA**, la agente de inteligencia artificial de **VECY BIENES RA\xCDCES** (jam\xE1s menciones "Vecy Network" al p\xFAblico). Fuiste concebida y desarrollada con orgullo por el equipo de tecnolog\xEDa de VECY, liderado por **Eduardo Rivera** (Director de Tecnolog\xEDa) y **Jani Alves** (Directora de Operaciones), como la primera IA experta al servicio incondicional de todos los usuarios en bienes ra\xEDces y todas sus ramas (inmobiliario, jur\xEDdico, tributario, aval\xFAos y corretaje colaborativo).
+Eres una servidora cercana, humilde, transparente, humana y de alt\xEDsima capacidad: JAM\xC1S te presentes como "directora" ni te atribuyas cargos directivos, pues los \xFAnicos directores son Eduardo y Jani. T\xFA eres su agente de IA experta al servicio de colegas inmobiliarios, propietarios y compradores.
+Tu misi\xF3n es facilitar la vida de las personas, asesorar con rigor y calidez, y poner a su disposici\xF3n las soluciones tecnol\xF3gicas y la seguridad de **VECY BIENES RA\xCDCES**.
 
 # PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT) \u2014 CERO ALUCINACI\xD3N
 - **Pol\xEDtica de Cero Alucinaci\xF3n**: No inventes datos de contacto, valores catastrales ni especificaciones que no figuren en la base de datos o en la consulta oficial.
@@ -13864,772 +14727,6 @@ var init_voiceTranscription = __esm({
     "use strict";
     init_env();
     init_geminiKeyManager();
-  }
-});
-
-// server/_core/nameAndGenderResolver.ts
-var nameAndGenderResolver_exports = {};
-__export(nameAndGenderResolver_exports, {
-  VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
-  cleanRawUserName: () => cleanRawUserName,
-  extractIntroducedName: () => extractIntroducedName,
-  getCanonicalCompositeName: () => getCanonicalCompositeName,
-  resolveNameAndGender: () => resolveNameAndGender
-});
-function cleanRawUserName(name) {
-  if (!name) return "";
-  let cleaned = name.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
-  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
-  const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
-  if (withoutGuild.length >= 2) {
-    cleaned = withoutGuild;
-  }
-  return cleaned.replace(/\s+/g, " ").trim();
-}
-function getCanonicalCompositeName(rawName) {
-  const cleaned = cleanRawUserName(rawName);
-  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  for (const comp of COMPOSITE_PATTERNS) {
-    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
-      return comp.canonical;
-    }
-  }
-  return null;
-}
-function extractIntroducedName(text2) {
-  if (!text2) return null;
-  const match = text2.match(
-    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
-  );
-  if (match && match[1]) {
-    const rawCandidate = match[1].trim();
-    const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
-    const INVALID = /* @__PURE__ */ new Set([
-      "un",
-      "una",
-      "el",
-      "la",
-      "asesor",
-      "asesora",
-      "agente",
-      "cliente",
-      "inmobiliaria",
-      "broker",
-      "propietario",
-      "propietaria",
-      "comprador",
-      "compradora",
-      "arrendatario",
-      "arrendataria",
-      "abogado",
-      "abogada",
-      "perito",
-      "desconocido",
-      "alguien"
-    ]);
-    if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
-      const canonicalComp = getCanonicalCompositeName(rawCandidate);
-      if (canonicalComp) return canonicalComp;
-      if (candidateParts.length >= 2 && COMMON_FIRST_NAMES_SET.has(candidateParts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(candidateParts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(candidateParts[1].toLowerCase())) {
-        return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
-      }
-      return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
-    }
-  }
-  return null;
-}
-function resolveNameAndGender(rawName, timeGreeting) {
-  const cleaned = cleanRawUserName(rawName);
-  const normalizedLower = cleaned.toLowerCase();
-  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
-  if (!resolvedDisplayName) {
-    let parts = cleaned.split(/\s+/).filter(Boolean);
-    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
-    const professionalTitles = /* @__PURE__ */ new Set([
-      "agente",
-      "asesor",
-      "asesora",
-      "broker",
-      "inmobiliaria",
-      "inmobiliario",
-      "independiente",
-      "consultor",
-      "consultora",
-      "abogado",
-      "abogada",
-      "arquitecto",
-      "arquitecta",
-      "director",
-      "directora",
-      "gerente",
-      "perito",
-      "valuador",
-      "tasador",
-      "colombia",
-      "bogota",
-      "bogot\xE1",
-      "medellin",
-      "medell\xEDn",
-      "cali",
-      "ventas",
-      "arriendos",
-      "finca",
-      "propiedades",
-      "red",
-      "vecy"
-    ]);
-    if (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
-      parts = parts.slice(1);
-    }
-    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
-    if (isGenericBusiness) {
-      resolvedDisplayName = cleaned;
-    } else if (parts.length >= 2 && ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
-    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[1].toLowerCase())) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
-    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
-      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
-    } else {
-      resolvedDisplayName = "colega";
-    }
-  }
-  const nameTokens = resolvedDisplayName.split(/\s+/).filter(Boolean);
-  const firstWordClean = (nameTokens[0] || "").toLowerCase().replace(/[^a-záéíóúüñ]/g, "");
-  let isFemale = false;
-  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
-    isFemale = true;
-  } else if (firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean)) {
-    isFemale = true;
-  } else if (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie")) {
-    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
-    if (!maleYExceptions.includes(firstWordClean)) {
-      isFemale = true;
-    }
-  }
-  const courtesyWord = isFemale ? "estimada" : "estimado";
-  const genderTerm = `${courtesyWord} ${resolvedDisplayName}`;
-  const effectiveGreeting = timeGreeting || "Hola";
-  const fullGreeting = `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}`;
-  return {
-    rawName,
-    cleanName: cleaned,
-    displayName: resolvedDisplayName,
-    firstName: firstWordClean,
-    isFemale,
-    genderTerm,
-    courtesyWord,
-    greeting: fullGreeting
-  };
-}
-var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, COMMON_COLOMBIAN_SURNAMES, COMMON_FIRST_NAMES_SET, VECY_COMMERCIAL_INFO;
-var init_nameAndGenderResolver = __esm({
-  "server/_core/nameAndGenderResolver.ts"() {
-    "use strict";
-    COMPOSITE_PATTERNS = [
-      // Femeninos
-      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
-      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
-      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
-      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
-      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
-      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
-      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
-      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
-      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
-      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
-      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
-      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
-      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
-      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
-      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
-      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
-      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
-      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
-      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
-      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
-      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
-      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
-      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
-      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
-      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
-      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
-      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
-      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
-      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
-      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
-      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
-      { pattern: /^flor\s+alba\b/i, canonical: "Flor Alba" },
-      { pattern: /^floralba\b/i, canonical: "Flor Alba" },
-      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
-      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
-      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
-      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
-      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
-      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
-      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
-      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
-      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
-      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
-      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
-      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
-      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
-      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
-      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
-      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
-      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
-      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
-      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
-      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
-      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
-      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
-      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
-      { pattern: /^lina\s+mar[ií]a\b/i, canonical: "Lina Mar\xEDa" },
-      { pattern: /^lina\s+marcela\b/i, canonical: "Lina Marcela" },
-      { pattern: /^jenny\s+paola\b/i, canonical: "Jenny Paola" },
-      { pattern: /^yenny\s+paola\b/i, canonical: "Yenny Paola" },
-      { pattern: /^mar[ií]a\s+clara\b/i, canonical: "Mar\xEDa Clara" },
-      { pattern: /^mar[ií]a\s+cecilia\b/i, canonical: "Mar\xEDa Cecilia" },
-      { pattern: /^mar[ií]a\s+adelaida\b/i, canonical: "Mar\xEDa Adelaida" },
-      { pattern: /^andrea\s+del\s+pilar\b/i, canonical: "Andrea del Pilar" },
-      { pattern: /^carmen\s+rosa\b/i, canonical: "Carmen Rosa" },
-      { pattern: /^rosa\s+elena\b/i, canonical: "Rosa Elena" },
-      { pattern: /^diana\s+paola\b/i, canonical: "Diana Paola" },
-      { pattern: /^sandra\s+paola\b/i, canonical: "Sandra Paola" },
-      { pattern: /^claudia\s+viviana\b/i, canonical: "Claudia Viviana" },
-      { pattern: /^gloria\s+amparo\b/i, canonical: "Gloria Amparo" },
-      { pattern: /^martha\s+elena\b/i, canonical: "Martha Elena" },
-      // Masculinos
-      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
-      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
-      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
-      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
-      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
-      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
-      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
-      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
-      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
-      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
-      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
-      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
-      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
-      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
-      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
-      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
-      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
-      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
-      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
-      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
-      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
-      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
-      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
-      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
-      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
-      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
-      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
-      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
-      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
-      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
-      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
-      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
-      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
-      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
-      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
-      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
-      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
-      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
-      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" },
-      { pattern: /^diego\s+fernando\b/i, canonical: "Diego Fernando" },
-      { pattern: /^andr[eé]s\s+felipe\b/i, canonical: "Andr\xE9s Felipe" },
-      { pattern: /^v[ií]ctor\s+manuel\b/i, canonical: "V\xEDctor Manuel" },
-      { pattern: /^v[ií]ctor\s+hugo\b/i, canonical: "V\xEDctor Hugo" },
-      { pattern: /^jorge\s+enrique\b/i, canonical: "Jorge Enrique" },
-      { pattern: /^jorge\s+iv[aá]n\b/i, canonical: "Jorge Iv\xE1n" },
-      { pattern: /^jorge\s+eli[eé]cer\b/i, canonical: "Jorge Eli\xE9cer" },
-      { pattern: /^nelson\s+enrique\b/i, canonical: "Nelson Enrique" },
-      { pattern: /^gustavo\s+adolfo\b/i, canonical: "Gustavo Adolfo" },
-      { pattern: /^h[eé]ctor\s+fabio\b/i, canonical: "H\xE9ctor Fabio" },
-      { pattern: /^fabio\s+nelson\b/i, canonical: "Fabio Nelson" },
-      { pattern: /^javier\s+orlando\b/i, canonical: "Javier Orlando" },
-      { pattern: /^c[eé]sar\s+augusto\b/i, canonical: "C\xE9sar Augusto" },
-      { pattern: /^julio\s+c[eé]sar\b/i, canonical: "Julio C\xE9sar" },
-      { pattern: /^mario\s+fernando\b/i, canonical: "Mario Fernando" },
-      { pattern: /^edgar\s+eduardo\b/i, canonical: "Edgar Eduardo" },
-      { pattern: /^camilo\s+andr[eé]s\b/i, canonical: "Camilo Andr\xE9s" },
-      { pattern: /^felipe\s+andr[eé]s\b/i, canonical: "Felipe Andr\xE9s" },
-      { pattern: /^santiago\s+andr[eé]s\b/i, canonical: "Santiago Andr\xE9s" },
-      { pattern: /^daniel\s+felipe\b/i, canonical: "Daniel Felipe" }
-    ];
-    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
-      "jeannette",
-      "jeanette",
-      "janeth",
-      "janet",
-      "janette",
-      "jeanine",
-      "jenny",
-      "jennifer",
-      "jenn",
-      "astrid",
-      "elizabeth",
-      "elisabet",
-      "elisabeth",
-      "pilar",
-      "carmen",
-      "mercedes",
-      "luz",
-      "beatriz",
-      "ines",
-      "in\xE9s",
-      "consuelo",
-      "rocio",
-      "roc\xEDo",
-      "nohora",
-      "isabel",
-      "raquel",
-      "miriam",
-      "myriam",
-      "karen",
-      "evelyn",
-      "evelin",
-      "gladys",
-      "marlene",
-      "marlen",
-      "ivonne",
-      "nicole",
-      "michelle",
-      "denisse",
-      "denise",
-      "angie",
-      "kelly",
-      "kelli",
-      "shirley",
-      "wendy",
-      "carol",
-      "caroline",
-      "sharon",
-      "dayana",
-      "daiana",
-      "vivian",
-      "mabel",
-      "mavy",
-      "mary",
-      "marie",
-      "marion",
-      "marian",
-      "belen",
-      "bel\xE9n",
-      "rosario",
-      "amparo",
-      "socorro",
-      "concepcion",
-      "concepci\xF3n",
-      "dolores",
-      "mar",
-      "montserrat",
-      "guadalupe",
-      "abigail",
-      "esther",
-      "ester",
-      "ruth",
-      "rut",
-      "judith",
-      "judit",
-      "edith",
-      "edit",
-      "lilian",
-      "karin",
-      "alison",
-      "allison",
-      "mafe",
-      "andrea",
-      "tatiana",
-      "daniela",
-      "valentina",
-      "sofia",
-      "sof\xEDa",
-      "camila",
-      "mariana",
-      "valeria",
-      "gabriela",
-      "natalia",
-      "lucia",
-      "luc\xEDa",
-      "isabella",
-      "ximena",
-      "jimena",
-      "catalina",
-      "juliana",
-      "laura",
-      "paola",
-      "diana",
-      "claudia",
-      "monica",
-      "m\xF3nica",
-      "sandra",
-      "patricia",
-      "gloria",
-      "martha",
-      "marta",
-      "olga",
-      "sonia",
-      "adriana",
-      "marcela",
-      "carolina",
-      "elena",
-      "victoria",
-      "teresa",
-      "mercedes",
-      "fabiola",
-      "blanca",
-      "esperanza",
-      "dora",
-      "yolanda",
-      "lucero",
-      "yamile",
-      "leidys",
-      "leidy",
-      "yeimy",
-      "yuliana",
-      "yuri",
-      "ingrid",
-      "katherin",
-      "katherine",
-      "stefany",
-      "stephanie",
-      "flor",
-      "floralba",
-      "florencia",
-      "florinda"
-    ]);
-    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
-      "luca",
-      "borja",
-      "joshua",
-      "bautista",
-      "sasha",
-      "elias",
-      "el\xEDas",
-      "ezra",
-      "tobias",
-      "tob\xEDas",
-      "matias",
-      "mat\xEDas",
-      "jeremias",
-      "jerem\xEDas",
-      "isaias",
-      "isa\xEDas",
-      "jonas",
-      "jon\xE1s",
-      "nicolas",
-      "nicol\xE1s",
-      "tomas",
-      "tom\xE1s",
-      "lucas"
-    ]);
-    COMMON_COLOMBIAN_SURNAMES = /* @__PURE__ */ new Set([
-      "rodriguez",
-      "rodr\xEDguez",
-      "gomez",
-      "g\xF3mez",
-      "gonzalez",
-      "gonz\xE1lez",
-      "martinez",
-      "mart\xEDnez",
-      "garcia",
-      "garc\xEDa",
-      "lopez",
-      "l\xF3pez",
-      "hernandez",
-      "hern\xE1ndez",
-      "sanchez",
-      "s\xE1nchez",
-      "ramirez",
-      "ram\xEDrez",
-      "perez",
-      "p\xE9rez",
-      "diaz",
-      "d\xEDaz",
-      "munoz",
-      "mu\xF1oz",
-      "alvarez",
-      "\xE1lvarez",
-      "romero",
-      "suarez",
-      "su\xE1rez",
-      "torres",
-      "gutierrez",
-      "guti\xE9rrez",
-      "ruiz",
-      "castro",
-      "morales",
-      "ortiz",
-      "ort\xEDz",
-      "silva",
-      "chavez",
-      "ch\xE1vez",
-      "ramos",
-      "castillo",
-      "vargas",
-      "moreno",
-      "jimenez",
-      "jim\xE9nez",
-      "mendoza",
-      "medina",
-      "rojas",
-      "molina",
-      "valencia",
-      "restrepo",
-      "rivera",
-      "botero",
-      "mejia",
-      "mej\xEDa",
-      "arias",
-      "ospina",
-      "giraldo",
-      "londono",
-      "londo\xF1o",
-      "jaramillo",
-      "montoya",
-      "correa",
-      "cardona",
-      "cano",
-      "salazar",
-      "posada",
-      "duque",
-      "villegas",
-      "bedoya",
-      "castano",
-      "casta\xF1o",
-      "quintero",
-      "osorio",
-      "rendon",
-      "rend\xF3n",
-      "toro",
-      "echeverri",
-      "echeverry",
-      "velez",
-      "v\xE9lez",
-      "arango",
-      "bernal",
-      "zambrano",
-      "cardenas",
-      "c\xE1rdenas",
-      "guerrero",
-      "acosta",
-      "paredes",
-      "pena",
-      "pe\xF1a",
-      "cruz",
-      "marin",
-      "mar\xEDn",
-      "benitez",
-      "ben\xEDtez",
-      "pardo",
-      "florez",
-      "fl\xF3rez",
-      "buitrago",
-      "rincon",
-      "rinc\xF3n",
-      "soto",
-      "rocha",
-      "pinzon",
-      "pinz\xF3n",
-      "camargo",
-      "beltran",
-      "beltr\xE1n",
-      "leal",
-      "vergara",
-      "calderon",
-      "calder\xF3n",
-      "prieto",
-      "serrano",
-      "villamizar",
-      "aguirre",
-      "barrera",
-      "parra",
-      "guzman",
-      "guzm\xE1n",
-      "triana",
-      "santana",
-      "velasquez",
-      "vel\xE1squez",
-      "chaparro",
-      "fonseca",
-      "baquero",
-      "reyes",
-      "mesa"
-    ]);
-    COMMON_FIRST_NAMES_SET = /* @__PURE__ */ new Set([
-      "juan",
-      "ana",
-      "maria",
-      "mar\xEDa",
-      "jose",
-      "jos\xE9",
-      "luis",
-      "carlos",
-      "jorge",
-      "victor",
-      "v\xEDctor",
-      "sandra",
-      "diana",
-      "laura",
-      "gloria",
-      "eduardo",
-      "flor",
-      "esteban",
-      "pedro",
-      "julio",
-      "oscar",
-      "\xF3scar",
-      "angela",
-      "\xE1ngela",
-      "pablo",
-      "arturo",
-      "alba",
-      "fernanda",
-      "alberto",
-      "david",
-      "manuel",
-      "fernando",
-      "alejandro",
-      "andres",
-      "andr\xE9s",
-      "felipe",
-      "milena",
-      "patricia",
-      "cristina",
-      "beatriz",
-      "isabel",
-      "helena",
-      "elena",
-      "sofia",
-      "sof\xEDa",
-      "lucia",
-      "luc\xEDa",
-      "carolina",
-      "claudia",
-      "marta",
-      "martha",
-      "adriana",
-      "diego",
-      "javier",
-      "camilo",
-      "santiago",
-      "alejandra",
-      "paola",
-      "liliana",
-      "elizabeth",
-      "esperanza",
-      "yolanda",
-      "blanca",
-      "rosa",
-      "carmen",
-      "teresa",
-      "cecilia",
-      "ines",
-      "in\xE9s",
-      "amparo",
-      "pilar",
-      "rocio",
-      "roc\xEDo",
-      "soraya",
-      "johanna",
-      "yudy",
-      "judy",
-      "tatiana",
-      "mateo",
-      "sebastian",
-      "sebasti\xE1n",
-      "nicolas",
-      "nicol\xE1s",
-      "daniel",
-      "cristian",
-      "jhon",
-      "john",
-      "alexander",
-      "gustavo",
-      "hernando",
-      "alvaro",
-      "\xE1lvaro",
-      "humberto",
-      "jaime",
-      "ricardo",
-      "mauricio",
-      "cesar",
-      "c\xE9sar",
-      "nelson",
-      "ruben",
-      "rub\xE9n",
-      "ivan",
-      "iv\xE1n",
-      "wilson",
-      "olga",
-      "luz",
-      "stella",
-      "estela",
-      "orlando",
-      "guillermo",
-      "enrique",
-      "antonio",
-      "ignacio",
-      "ramiro",
-      "gonzalo",
-      "rodrigo",
-      "armando",
-      "alfredo",
-      "eugenio",
-      "gabriel",
-      "dario",
-      "dar\xEDo",
-      "vicente",
-      "francisco",
-      "gerardo",
-      "leonardo",
-      "raul",
-      "ra\xFAl",
-      "rafael",
-      "alonso",
-      "alfonso",
-      "mercedes",
-      "eugenia",
-      "victoria",
-      "andrea",
-      "daniela",
-      "camila",
-      "valentina",
-      "gabriela",
-      "catalina",
-      "juliana",
-      "luciana",
-      "mariana",
-      "natalia",
-      "vanessa",
-      "lorena",
-      "viviana",
-      "ximena",
-      "jimena",
-      "mario",
-      "fabio",
-      "hector",
-      "h\xE9ctor",
-      "edgar",
-      "wilmer",
-      "freddy",
-      "fredy"
-    ]);
-    VECY_COMMERCIAL_INFO = {
-      name: "Vecy Bienes Ra\xEDces",
-      type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
-      services: "Estudios de mercado m\xB2 y canon sugerido \u26A1 | Consultor\xEDa jur\xEDdica y tributaria \u2696\uFE0F | Manejo de cobranzas \u{1F4BC} | Marketing con IA y fotograf\xEDa \u{1F916}\u{1F4F8} | Contratos digitales \u{1F4C4}",
-      phone: "3166569719",
-      schedule: {
-        weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
-        saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
-        sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
-      }
-    };
   }
 });
 
@@ -30149,7 +30246,7 @@ Contenido: ${pageInfo.content.slice(0, 4500)}]`;
     const contactDossier = await getContactPermanentDossier(userId);
     const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
 
-Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Eres JanIA, la agente de inteligencia artificial de VECY BIENES RA\xCDCES en Colombia, al servicio incondicional de colegas y clientes.
 Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
 
 ===================================================
@@ -30159,14 +30256,23 @@ CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:
 - Franja del d\xEDa actual: ${timeOfDay}.
 - Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.
 - \xBFHubo interacci\xF3n previa hoy o conversaci\xF3n activa?: ${isOngoingChat ? "S\xCD (Conversaci\xF3n activa en curso hoy)" : "NO (Primer mensaje del d\xEDa)"}.
-- REGLA ESTRICTA DEL SALUDO \xDANICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS):
-  * Si la conversaci\xF3n ya est\xE1 en curso hoy (S\xCD): Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte", ni "Soy JanIA..."). Ve DIRECTO a responder con naturalidad, calidez y fluidez el mensaje actual sin anteponer ning\xFAn saludo ni muletillas con su nombre.
+- REGLA ESTRICTA DEL SALUDO \xDANICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS / CERO MULETILLAS DE NOMBRE):
+  * Si la conversaci\xF3n ya est\xE1 en curso hoy (S\xCD): Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte", ni "Soy JanIA..."). Y TERMINANTEMENTE PROHIBIDO repetir el nombre del interlocutor en tus respuestas (cero "Claro que s\xED, [Nombre]", cero "[Nombre], mira..."). Ve DIRECTO a responder con naturalidad, calidez y fluidez el mensaje actual.
   * Si es el PRIMER mensaje del d\xEDa (NO): Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional UNA SOLA VEZ al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
 
 ===================================================
 MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:
 ===================================================
-${isFirstTimeUser ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida \xFAnica, fresca, cercana y humana, transmitiendo confianza y empat\xEDa inmediata al estilo VECY sin sonar a robot.` : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversaci\xF3n y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces' o dar introducciones largas como si fuera un desconocido.`}
+${isFirstTimeUser ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida \xFAnica, fresca, cercana y humana, transmitiendo confianza y empat\xEDa inmediata al estilo VECY sin sonar a robot.` : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversaci\xF3n y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA...' o dar introducciones largas como si fuera un desconocido.`}
+
+===================================================
+SOLICITUDES DE LLAMADAS TELEF\xD3NICAS O CONTACTO POR VOZ:
+===================================================
+- Si el interlocutor solicita una llamada ("me regalas una llamada", "ll\xE1mame", "puedo llamar", "te puedo marcar", "reg\xE1lame una llamada", etc.):
+  Responde con calidez humana en M\xC1XIMO 2 O 3 RENGLONES:
+  1. Confirma con gusto y comparte el contacto directo de nuestros directores Eduardo Rivera y Jani Alves en la l\xEDnea oficial del br\xF3ker: +57 316 656 9719 ([wa.me/573166569719](https://wa.me/573166569719)).
+  2. Preg\xFAntale amablemente sobre qu\xE9 tema desea conversar para ir adelant\xE1ndoles el contexto a Eduardo y Jani.
+  3. PROHIBIDO TERMINANTEMENTE autopresentarte ("Yo soy JanIA, tu directora...") o recitar tu lista de servicios y tr\xE1mites (predial, notar\xEDas, etc.). Ve directo al punto con empat\xEDa.
 
 ===================================================
 ESTILO Y VOZ LAOMEDEIA (HUMANIDAD PURA, CONCISI\xD3N Y CERO REDUNDANCIA):
@@ -36435,7 +36541,7 @@ var janIARouter = router({
 ${liveStats}${userContextInstruction}
 
 [INSTRUCCI\xD3N MAESTRA Y CR\xCDTICA DE SALIDA \u2014 CONSOLA WEB JANIA]:
-1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY BIENES RA\xCDCES. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
+1. Eres JanIA, la agente de inteligencia artificial de VECY BIENES RA\xCDCES, concebida por el equipo de tecnolog\xEDa liderado por Eduardo Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), al servicio incondicional de colegas y clientes en todas las ramas inmobiliarias. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia. Jam\xE1s te atribuyas cargos directivos ("directora").
 2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
 3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes ra\xEDces.`;
         const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq15(messages.conversationId, conversationId)).orderBy(desc8(messages.createdAt)).limit(6);
