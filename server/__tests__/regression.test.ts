@@ -6882,7 +6882,7 @@ Ana Morales Castillo
   describe("124. v33.31 — Unificación Cognitiva Grupos 2 y 3, Depuración de Apellidos y Continuidad Orgánica", () => {
     it("1. Depuración magistral de apellidos: 'Mario Pérez' -> 'Mario', '~Mario Pérez Sánchez/M...' -> 'Mario'", async () => {
       const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
-      
+
       const r1 = resolveNameAndGender("Mario Pérez");
       expect(r1.displayName).toBe("Mario");
       expect(r1.isFemale).toBe(false);
@@ -6927,10 +6927,10 @@ Ana Morales Castillo
     it("1. Capa 1 Multimedia Resiliente: existe banco curado local para temas clave", async () => {
       const fs = await import("fs");
       const path = await import("path");
-      
+
       const broadcastDir = path.resolve(process.cwd(), "assets/broadcast");
       expect(fs.existsSync(broadcastDir)).toBe(true);
-      
+
       const files = fs.readdirSync(broadcastDir);
       expect(files.length).toBeGreaterThanOrEqual(5);
       expect(files).toContain("jania_juridico.jpg");
@@ -7015,13 +7015,18 @@ Ana Morales Castillo
 
     it("2. Asesor de requerimientos: detección de completitud y ficha con corchetes []", async () => {
       const { evaluateRequirementCompleteness, generateFichaTecnicaRequerimientoIncompleto } = await import("../_core/jania/prompts");
-      
+
       const incompleteReq = "Busco apto en arriendo en Chapinero de 2 habitaciones";
       const evalResult = evaluateRequirementCompleteness(incompleteReq);
       expect(evalResult.isComplete).toBe(false);
       expect(evalResult.missingFields).toContain("Presupuesto máximo o canon mensual");
 
-      const ficha = generateFichaTecnicaRequerimientoIncompleto(incompleteReq, "Carlos");
+      const ficha = generateFichaTecnicaRequerimientoIncompleto({
+        transactionType: "arriendo",
+        propertyType: "apartamento",
+        zone: "Chapinero",
+        bedrooms: 2
+      }, "Carlos");
       expect(ficha).toContain("FICHA TÉCNICA DE REQUERIMIENTO");
       expect(ficha).toContain("*Presupuesto Máximo:*");
       expect(ficha).toContain("[Presupuesto máximo]");
