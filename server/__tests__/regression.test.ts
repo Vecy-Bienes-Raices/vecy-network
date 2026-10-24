@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40)\.0/);
     });
   });
 
@@ -7162,11 +7162,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37|38|39)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40)\.0/);
     });
   });
 
@@ -7212,11 +7212,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(37|38|39)\.0/);
+      expect(pkg.version).toMatch(/^33\.(37|38|39|40)\.0/);
     });
   });
 
@@ -7241,11 +7241,11 @@ Ana Morales Castillo
 
     it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(38|39)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(38|39)\.0/);
+      expect(pkg.version).toMatch(/^33\.(38|39|40)\.0/);
     });
   });
 
@@ -7276,11 +7276,36 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.39 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.39");
+      expect(VECY_VERSION).toMatch(/^v33\.(39|40)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.39.0");
+      expect(pkg.version).toMatch(/^33\.(39|40)\.0/);
+    });
+  });
+
+  describe("Suite v33.40 — Decodificación de Entidades HTML y Entrega Ineludible de EPS en Síntesis DM", () => {
+    it("1. decodeHtmlEntities decodifica correctamente tildes, eñes y entidades numéricas", async () => {
+      const { decodeHtmlEntities } = await import("../_core/identityVerificationService");
+      expect(decodeHtmlEntities("Sandra Maria Ariza Iba&#209;ez")).toBe("Sandra Maria Ariza IbaÑez");
+      expect(decodeHtmlEntities("SUSPENSI&#211;N POR MORA.")).toBe("SUSPENSIÓN POR MORA.");
+      expect(decodeHtmlEntities("BOGOT&#193; D.C.")).toBe("BOGOTÁ D.C.");
+    });
+
+    it("2. Entrega ineludible de EPS en síntesis y descripción de herramienta en dmHandler", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(content).toContain("En el sistema de salud (ADRES BDUA)");
+      expect(content).toContain("Valida la EPS a la que está afiliada la persona");
+    });
+
+    it("3. Consagración doctrinal de versión v33.40 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.40");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.40.0");
     });
   });
 });

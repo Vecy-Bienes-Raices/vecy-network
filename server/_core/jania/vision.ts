@@ -18,6 +18,17 @@ import {
 export async function extractFlyerVision(imageBufferBase64: string): Promise<FlyerVisionResult | null> {
   if (!imageBufferBase64 || imageBufferBase64.trim() === '') return null;
 
+  const cleanB64 = imageBufferBase64.replace(/\s+/g, '');
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(cleanB64);
+  if (!isBase64Pattern || cleanB64.length < 4 || cleanB64.length % 4 !== 0) {
+    return {
+      isFlyerOrBanner: false,
+      classification: "CONSULTA_GENERAL",
+      transactionType: "venta",
+      flyerVerbatimText: ""
+    };
+  }
+
   const freeKeys = geminiKeyManager.getFreeKeys();
   const paidKey = geminiKeyManager.getPaidKey();
   const candidateKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;

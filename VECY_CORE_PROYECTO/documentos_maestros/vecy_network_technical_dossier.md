@@ -330,6 +330,20 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.40 — Octubre 2026
+
+#### [v33.40.0] — 2026-10-23: Decodificación de Entidades HTML, Entrega Ineludible de EPS en Síntesis DM y Optimización Visual Base64
+- **Decodificación de Entidades HTML en ADRES (`identityVerificationService.ts`):**
+  - **Problema:** Respuestas HTML provenientes de ADRES contenían entidades numéricas (como `&#209;`, `&#211;`, `&#193;`) y códigos ISO que no eran decodificados por las expresiones regulares básicas, dejando nombres y estados con caracteres no legibles (ej. "Iba&#209;ez" en lugar de "Ibañez").
+  - **Solución:** Se integró un parser completo en `decodeHtmlEntities` que sustituye numéricamente las entidades `&#(\d+);` usando `String.fromCharCode(Number(dec))` y mapea diacríticos del castellano.
+- **Entrega Ineludible y Estructurada de EPS en DMs (`dmHandler.ts`):**
+  - **Problema:** En el flujo de mensajería directa y síntesis con Gemini, la información de EPS y antecedentes requería un orden visual limpio y emojis identificadores sin alterar la doctrina de dos turnos con Hábeas Data.
+  - **Solución:** Se optimizó `synthesizeToolResponseWithGemini` y la especificación de `consultar_identidad_y_antecedentes` para garantizar la presentación inmediata del nombre del titular, su estado de afiliación, EPS en BDUA (o pedagogía de regímenes de excepción de Ley 100 art. 279 si no figura) y antecedentes judiciales, disciplinarios y fiscales.
+- **Optimización Preventiva en Visión Multimodal (`vision.ts`):**
+  - **Problema:** Entradas con Base64 corrupto disparaban la cascada secuencial contra los modelos Gemini ocasionando retrasos y potenciales timeouts.
+  - **Solución:** Validación previa por formato y longitud matemática múltiplo de 4, retornando respuesta segura inmediata.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **349/349 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 29s.
+
 ### 🔖 v33.39 — Octubre 2026
 
 #### [v33.39.0] — 2026-10-23: Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS

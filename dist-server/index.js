@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.39";
+    VECY_VERSION = "v33.40";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -12881,6 +12881,16 @@ __export(vision_exports, {
 import axios6 from "axios";
 async function extractFlyerVision(imageBufferBase64) {
   if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
+  const cleanB64 = imageBufferBase64.replace(/\s+/g, "");
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(cleanB64);
+  if (!isBase64Pattern || cleanB64.length < 4 || cleanB64.length % 4 !== 0) {
+    return {
+      isFlyerOrBanner: false,
+      classification: "CONSULTA_GENERAL",
+      transactionType: "venta",
+      flyerVerbatimText: ""
+    };
+  }
   const freeKeys = geminiKeyManager.getFreeKeys();
   const paidKey = geminiKeyManager.getPaidKey();
   const candidateKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;
@@ -27314,6 +27324,7 @@ __export(identityVerificationService_exports, {
   clearPendingCompanyFollowUp: () => clearPendingCompanyFollowUp,
   clearPendingCompanyMembers: () => clearPendingCompanyMembers,
   clearPendingUnconfirmedDoc: () => clearPendingUnconfirmedDoc,
+  decodeHtmlEntities: () => decodeHtmlEntities,
   detectDocTypeConfirmation: () => detectDocTypeConfirmation,
   detectTramiteConfirmation: () => detectTramiteConfirmation,
   executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
@@ -27849,25 +27860,35 @@ async function queryAdres(tipoDoc, numDoc) {
     error: lastError
   };
 }
+function decodeHtmlEntities(str) {
+  if (!str) return str;
+  return str.replace(/&#209;/gi, "\xD1").replace(/&#241;/gi, "\xF1").replace(/&#193;/gi, "\xC1").replace(/&#225;/gi, "\xE1").replace(/&#201;/gi, "\xC9").replace(/&#233;/gi, "\xE9").replace(/&#205;/gi, "\xCD").replace(/&#237;/gi, "\xED").replace(/&#211;/gi, "\xD3").replace(/&#243;/gi, "\xF3").replace(/&#218;/gi, "\xDA").replace(/&#250;/gi, "\xFA").replace(/&#220;/gi, "\xDC").replace(/&#252;/gi, "\xFC").replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&apos;/gi, "'").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&#(\d+);/g, (_, dec) => {
+    try {
+      return String.fromCharCode(Number(dec));
+    } catch {
+      return _;
+    }
+  });
+}
 function parseAdresHtml(body, mappedTipo, cleanNum) {
   const lines = (body || "").replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
   const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
   const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
-  const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : "";
-  const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "";
+  const nombres = decodeHtmlEntities(nombresIdx !== -1 ? lines[nombresIdx + 1] : "");
+  const apellidos = decodeHtmlEntities(apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "");
   const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
   const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
-  const departamento = depIdx !== -1 ? lines[depIdx + 1] : "";
-  const municipio = munIdx !== -1 ? lines[munIdx + 1] : "";
+  const departamento = decodeHtmlEntities(depIdx !== -1 ? lines[depIdx + 1] : "");
+  const municipio = decodeHtmlEntities(munIdx !== -1 ? lines[munIdx + 1] : "");
   const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
   let estado = "";
   let eps = "";
   let regimen = "";
   if (estadoIdx !== -1) {
     const offset = 6;
-    estado = lines[estadoIdx + offset] || "";
-    eps = lines[estadoIdx + offset + 1] || "";
-    regimen = lines[estadoIdx + offset + 2] || "";
+    estado = decodeHtmlEntities(lines[estadoIdx + offset] || "");
+    eps = decodeHtmlEntities(lines[estadoIdx + offset + 1] || "");
+    regimen = decodeHtmlEntities(lines[estadoIdx + offset + 2] || "");
   }
   if (!regimen) {
     const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
@@ -30147,7 +30168,12 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA):
     const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
     const cgr = toolJson.contraloria || "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI)";
     if (name) {
-      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Polic\xEDa Nacional registra ${pol.toLowerCase()}, en Procuradur\xEDa General ${pgn.toLowerCase()} y en Contralor\xEDa General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}). Todo en regla y validado para tu seguridad jur\xEDdica.
+      const epsDetail = eps ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}).` : `En el censo general ADRES (BDUA) no registra afiliaci\xF3n ordinaria (habitual en reg\xEDmenes especiales o de excepci\xF3n: Fuerzas Militares, Polic\xEDa, Magisterio, etc.).`;
+      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.
+
+\u{1F3E5} ${epsDetail}
+
+\u2696\uFE0F En antecedentes: Polic\xEDa Nacional registra ${pol.toLowerCase()}, Procuradur\xEDa General ${pgn.toLowerCase()} y Contralor\xEDa General ${cgr.toLowerCase()}. Todo validado para tu seguridad jur\xEDdica.
 
 \u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._
 
@@ -30908,7 +30934,7 @@ var init_dmHandler = __esm({
         functionDeclarations: [
           {
             name: "consultar_identidad_y_antecedentes",
-            description: "Valida la identidad oficial (censo ADRES y Registradur\xEDa) y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
+            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
             parameters: {
               type: "OBJECT",
               properties: {

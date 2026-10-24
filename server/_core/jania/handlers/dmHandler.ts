@@ -85,7 +85,7 @@ export const JANIA_DM_TOOLS = [
     functionDeclarations: [
       {
         name: "consultar_identidad_y_antecedentes",
-        description: "Valida la identidad oficial (censo ADRES y Registraduría) y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT.",
+        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -940,7 +940,10 @@ export async function synthesizeToolResponseWithGemini(
     const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
     const cgr = toolJson.contraloria || "Sin reporte en Boletín de Responsables Fiscales (SIRECI)";
     if (name) {
-      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado. En Policía Nacional registra ${pol.toLowerCase()}, en Procuraduría General ${pgn.toLowerCase()} y en Contraloría General ${cgr.toLowerCase()}. En el sistema de salud (ADRES BDUA) aparece registrado en *${eps || "EPS Oficial"}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}). Todo en regla y validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._\n\n¿Nos regalas un minuto con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Nos ayuda un montón para seguir ofreciendo estas herramientas gratuitas para el gremio! 🤝✨`;
+      const epsDetail = eps
+        ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}).`
+        : `En el censo general ADRES (BDUA) no registra afiliación ordinaria (habitual en regímenes especiales o de excepción: Fuerzas Militares, Policía, Magisterio, etc.).`;
+      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.\n\n🏥 ${epsDetail}\n\n⚖️ En antecedentes: Policía Nacional registra ${pol.toLowerCase()}, Procuraduría General ${pgn.toLowerCase()} y Contraloría General ${cgr.toLowerCase()}. Todo validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._\n\n¿Nos regalas un minuto con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Nos ayuda un montón para seguir ofreciendo estas herramientas gratuitas para el gremio! 🤝✨`;
     } else {
       fallbackText = `Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
     }

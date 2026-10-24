@@ -1,15 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.39.0 — 2026-10-23)
-- **JanIA Server:** `v33.39` (`33.39.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS:**
-  1. **Diagnóstico Forense de Geobloqueo ADRES / Contabo:** Se descubrió que el firewall de `aplicaciones.adres.gov.co` descarta paquetes de IPs extranjeras (Contabo VPS), dependiendo obligatoriamente del túnel SSH reverso (`127.0.0.1:28443` hacia Colombia). El cron previo fallaba silenciosamente por falta de clave explícita (`Permission denied publickey`).
-  2. **Blindaje de Túnel 24/7 (Systemd + Cron Resiliente):**
-     • Creado servicio `vecy-tunnel.service` supervisado por `systemd --user` con reconexión automática en 5s (`Restart=always`).
-     • Activado `loginctl enable-linger eddu` para persistencia continua sin sesión gráfica activa.
-     • Actualizado `ensure-pgn-tunnel.sh` con `-i ~/.ssh/id_vps` y `BatchMode=yes` en cron cada 2 minutos como contingencia.
-  3. **Entrega Ineludible de EPS en JanIA (`dmHandler.ts`, `identityVerificationService.ts`):**
-     • `executeJaniaDmTool` y caché devuelven el objeto `adres` completo con `eps`, `estado` y `regimen`.
-     • Instrucción prioritaria al LLM: si el usuario pregunta puntualmente por la EPS o el titular, JanIA responde de inmediato en las primeras líneas identificando a quién pertenece y su EPS en ADRES / BDUA.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 346/346 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.40.0 — 2026-10-23)
+- **JanIA Server:** `v33.40` (`33.40.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Decodificación de Entidades HTML, Entrega Ineludible de EPS y Optimización Visual Base64:**
+  1. **Decodificación de Entidades HTML en ADRES (`identityVerificationService.ts`):** Motor `decodeHtmlEntities` ampliado para procesar entidades numéricas (`&#209;`, `&#211;`, etc.) e ISO-8859/HTML, garantizando que nombres como "Ibañez" o "Asociación" se muestren con ortografía impecable.
+  2. **Entrega Ineludible y Estructurada de EPS en DMs (`dmHandler.ts`):** `synthesizeToolResponseWithGemini` y la herramienta `consultar_identidad_y_antecedentes` garantizan la entrega visual inmediata de EPS (o pedagogía de regímenes especiales en caso de no registro) en los reportes de antecedentes e identidad.
+  3. **Optimización de Visión Multimodal Base64 (`vision.ts`):** Verificación matemática previa del formato base64 antes de invocar la cascada Gemini, previniendo llamadas de red y timeouts en afiches o imágenes corruptas.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 349/349 passing (100% verde) | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

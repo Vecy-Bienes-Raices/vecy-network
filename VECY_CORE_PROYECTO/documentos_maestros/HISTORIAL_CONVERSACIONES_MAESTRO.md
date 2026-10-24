@@ -7,6 +7,37 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-23] — JanIA v33.40: Decodificación de Entidades HTML, Entrega Ineludible de EPS en Síntesis DM y Optimización Visual Base64 (v33.40 - 33.40.0)
+
+**Versión:** `v33.40` (`33.40.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Retomar proceso frenado, asegurar resolución integral de consultas de identidad/EPS, corregir entidades HTML corruptas en reportes y llevar el sistema a validación limpia y despliegue a producción.
+
+**Diagnóstico Técnico:**
+1. **Entidades Numéricas HTML en ADRES (`identityVerificationService.ts`):** Las respuestas de BDUA/ADRES contienen entidades como `&#209;`, `&#211;`, `&#193;`, las cuales no eran procesadas por el decodificador previo, generando textos con formato erróneo (ej. "Iba&#209;ez").
+2. **Síntesis Ineludible de EPS en Mensajería Privada (`dmHandler.ts`):** En `synthesizeToolResponseWithGemini`, la integración del dato de salud debía presentarse de forma visible y categórica (`🏥`), distinguiendo claramente entre ciudadanos afiliados y regímenes de excepción/estatales.
+3. **Optimización Preventiva en Análisis de Visión (`vision.ts`):** Imágenes con codificación no válida Base64 ejecutaban bucles de reintentos con timeouts de 8s contra 4 modelos de Gemini.
+
+**Acciones Ejecutadas:**
+- `server/_core/identityVerificationService.ts`:
+  1. `decodeHtmlEntities`: Ampliado con parser numérico `replace(/&#(\d+);/g, ...)` tipado explícitamente y soporte completo de diacríticos españoles.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Optimización de `synthesizeToolResponseWithGemini`: entrega estructurada y nítida de salud/EPS y antecedentes con emojis sectoriales y respeto irrestricto de la doctrina de dos turnos con Hábeas Data (Ley 1581 de 2012).
+- `server/_core/jania/vision.ts`:
+  1. Verificación previa de Base64 antes de invocar la cascada Gemini, protegiendo contra sobrecarga y cancelaciones por timeout.
+- `server/__tests__/regression.test.ts`:
+  1. Adición de `Suite v33.40 — Decodificación de Entidades HTML y Entrega Ineludible de EPS en Síntesis DM` (3 tests nuevos).
+  2. Actualización de regexes en suites previas para admitir `v33.40`.
+- `shared/const.ts` (`v33.40`) y `package.json` (`33.40.0`).
+- Documentos maestros actualizados: `GEMINI.md`, `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`.
+
+**Validación:**
+- `npm run check`: 0 errores de tipado.
+- `npm test`: 349/349 tests pasando (100% verde a $0 COP).
+- `npm run build`: Compilación exitosa en 29s (cliente Vite + servidor esbuild `dist-server/index.js` 2.1 MB).
+
+---
+
 ### 📅 [2026-10-23] — JanIA v33.39: Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS (v33.39 - 33.39.0)
 
 **Versión:** `v33.39` (`33.39.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

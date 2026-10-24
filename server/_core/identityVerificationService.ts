@@ -756,19 +756,49 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
 }
 
 /**
+ * Decodifica entidades HTML comunes (numéricas y con nombre) en texto legible.
+ */
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return str;
+  return str
+    .replace(/&#209;/gi, 'Ñ')
+    .replace(/&#241;/gi, 'ñ')
+    .replace(/&#193;/gi, 'Á')
+    .replace(/&#225;/gi, 'á')
+    .replace(/&#201;/gi, 'É')
+    .replace(/&#233;/gi, 'é')
+    .replace(/&#205;/gi, 'Í')
+    .replace(/&#237;/gi, 'í')
+    .replace(/&#211;/gi, 'Ó')
+    .replace(/&#243;/gi, 'ó')
+    .replace(/&#218;/gi, 'Ú')
+    .replace(/&#250;/gi, 'ú')
+    .replace(/&#220;/gi, 'Ü')
+    .replace(/&#252;/gi, 'ü')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_: string, dec: string): string => {
+      try { return String.fromCharCode(Number(dec)); } catch { return _; }
+    });
+}
+
+/**
  * Motor de extracción y normalización de datos HTML devueltos por ADRES (BDUA).
  */
 export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: string): AdresResult {
   const lines = (body || '').replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
   const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
   const apellidosIdx = lines.findIndex((l: string) => l.toUpperCase().includes('APELLIDOS'));
-  const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : '';
-  const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : '';
+  const nombres = decodeHtmlEntities(nombresIdx !== -1 ? lines[nombresIdx + 1] : '');
+  const apellidos = decodeHtmlEntities(apellidosIdx !== -1 ? lines[apellidosIdx + 1] : '');
 
   const depIdx = lines.findIndex((l: string) => l.toUpperCase().includes('DEPARTAMENTO'));
   const munIdx = lines.findIndex((l: string) => l.toUpperCase().includes('MUNICIPIO'));
-  const departamento = depIdx !== -1 ? lines[depIdx + 1] : '';
-  const municipio = munIdx !== -1 ? lines[munIdx + 1] : '';
+  const departamento = decodeHtmlEntities(depIdx !== -1 ? lines[depIdx + 1] : '');
+  const municipio = decodeHtmlEntities(munIdx !== -1 ? lines[munIdx + 1] : '');
 
   const estadoIdx = lines.findIndex((l: string) => l.toUpperCase().includes('ESTADO'));
   let estado = '';
@@ -776,9 +806,9 @@ export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: strin
   let regimen = '';
   if (estadoIdx !== -1) {
     const offset = 6;
-    estado = lines[estadoIdx + offset] || '';
-    eps = lines[estadoIdx + offset + 1] || '';
-    regimen = lines[estadoIdx + offset + 2] || '';
+    estado = decodeHtmlEntities(lines[estadoIdx + offset] || '');
+    eps = decodeHtmlEntities(lines[estadoIdx + offset + 1] || '');
+    regimen = decodeHtmlEntities(lines[estadoIdx + offset + 2] || '');
   }
 
   if (!regimen) {

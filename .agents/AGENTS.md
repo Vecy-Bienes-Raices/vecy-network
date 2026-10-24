@@ -182,7 +182,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.39 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.40 — Octubre 2026
+
+### Novedades v33.40 (Decodificación de Entidades HTML, Entrega Ineludible de EPS en Síntesis DM y Optimización Visual Base64):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Decodificación de Entidades HTML en ADRES (`identityVerificationService.ts`)**:
+     - *Causa raíz*: El portal de ADRES retorna caracteres especiales codificados como entidades numéricas (`&#209;`, `&#211;`, `&#193;`, etc.) o ISO entities, provocando que nombres como "Iba&#209;ez" o términos como "SUSPENSI&#211;N" se mostraran con código crudo en lugar de tildes y eñes limpias.
+     - *Solución*: Se expandió `decodeHtmlEntities` integrando reemplazo universal de entidades numéricas `&#(\d+);` a través de `String.fromCharCode(Number(dec))` y mapeo estricto de diacríticos y entidades comunes (`&amp;`, `&quot;`, `&lt;`, `&gt;`).
+  2. **Entrega Ineludible y Estructurada de EPS en DMs (`dmHandler.ts`)**:
+     - *Causa raíz*: En síntesis Gemini o fallbacks de herramientas, el texto requería una estructuración visual impecable destacando la EPS del titular o la aclaración de regímenes especiales (Fuerzas Militares, Policía, Magisterio, etc.) cuando no figura en BDUA ordinario.
+     - *Solución*: `synthesizeToolResponseWithGemini` estructura la respuesta con emojis sectoriales (`🏥` para salud/EPS y `⚖️` para antecedentes policiales, disciplinarios y fiscales), y la descripción de la herramienta `consultar_identidad_y_antecedentes` fue optimizada para que Gemini siempre incluya la EPS.
+  3. **Optimización de Visión Multimodal Base64 (`vision.ts`)**:
+     - *Causa raíz*: Cadenas no conformes a Base64 generaban múltiples reintentos de red contra la API de Gemini antes de fallar por timeout.
+     - *Solución*: Verificación previa con patrón regex `/^[A-Za-z0-9+/]+={0,2}$/` y validación de longitud múltiplo de 4, retornando estructura segura inmediata sin consumo de red ni timeouts.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 349/349 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 29s ✅
+- `shared/const.ts` (`v33.40`) y `package.json` (`33.40.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.39 — Octubre 2026
 
 ### Novedades v33.39 (Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
