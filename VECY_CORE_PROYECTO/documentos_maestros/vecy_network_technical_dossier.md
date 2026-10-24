@@ -330,6 +330,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.42 — Octubre 2026
+
+#### [v33.42.0] — 2026-10-24: 10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50
+- **Suite de 10 Habilidades de Marketing Inmobiliario de Alto Rendimiento (`realEstateMarketing.ts`):**
+  - **Problema:** Los anuncios y fichas inmobiliarias en el mercado colombiano suelen adolecer de descripciones genéricas con adjetivos vacíos ("lindo apartamento", "excelente oportunidad"), sin perfilamiento del cliente ideal ni validación objetiva de la propuesta de valor y los datos técnicos mínimos indispensables.
+  - **Solución:** Se creó `server/_core/realEstateMarketing.ts`, implementando un motor algorítmico y metodológico completo con:
+    1. *Constructor de ICP (Ideal Customer Profile):* Mapeo de perfiles específicos (familia en consolidación, ejecutivo joven, inversionista de renta corta/Airbnb, empresa logística/comercial o desarrollador/constructor).
+    2. *Swap Test Inmobiliario:* Detección de clichés vacíos y reemplazo por ventajas diferenciales medibles e intercambiables con la competencia.
+    3. *Auditoría de Anuncios y Fichas (Score 0-100):* Ponderación analítica en Propuesta de Valor Diferencial (30 pts), Datos Técnicos Indispensables (30 pts: área, canon/precio, garajes, estrato, admón), Desglose Financiero (20 pts) y Llamado a la Acción / CTA (20 pts).
+    4. *Formateo Persuasivo con Markdown:* Generación de fichas optimizadas con jerarquía visual de alto impacto para WhatsApp y redes.
+    5. *Guía Doctrinal de Comisiones:* Formalización de esquemas 40/20/40 (Red Colaborativa VECY) vs 50/50 tradicional.
+- **Consagración Doctrinal de la Identidad de JanIA (`base.md`, `dmHandler.ts`):**
+  - **Problema:** JanIA era descrita de forma reducida como un "bot de inteligencia artificial", perdiendo autoridad profesional frente a clientes y colegas que requieren acompañamiento técnico especializado.
+  - **Solución:** Se consagró doctrinariamente a JanIA como la **asesora y guía especialista en cada uno de los servicios inmobiliarios, jurídicos, tributarios, notariales y de marketing de VECY BIENES RAÍCES en Colombia**.
+- **Servicio de Ingesta y Optimización Privada en Chats Privados (`dmHandler.ts`):**
+  - **Problema:** La regla previa de cero publicación directa en DMs bloqueaba a usuarios que expresamente solicitaban a JanIA ayuda para cargar y subir sus propiedades o requerimientos al sistema.
+  - **Solución:** JanIA asume el rol de Asesora de Marketing Inmobiliario: acoge con empatía al usuario, estructura u optimiza su ficha técnica aplicando el estándar VECY y ejecuta la nueva herramienta `registrar_inmueble_o_requerimiento` para indexar el inmueble o demanda en la base de datos para el motor de matching.
+- **Doctrina de Comisiones: 40/20/40 vs 50/50 (`dmHandler.ts`):**
+  - **Problema:** No existía una bifurcación clara entre propietarios directos y corredores inmobiliarios respecto a los esquemas de comisión compartida.
+  - **Solución:** JanIA consulta amablemente el rol. Para agentes inmobiliarios, pregunta con claridad si aceptan la figura colaborativa de la Red VECY 40/20/40 (Alianza 40/20/40 - Aliada Prioritaria). Si prefieren el 50/50 tradicional, el sistema lo acepta y clasifica bajo la sección `[🛡️50/50 - NO TERCERÍA]`. A los propietarios directos los canaliza explicando que la red conectará su inmueble con compradores e inquilinos calificados.
+- **Regla de Oro Inquebrantable (Confidencialidad Sagrada de Matches en Privado):**
+  - **Problema:** Revelar matches o datos de contacto en privado por WhatsApp exponía a desintermediación ("by-pass") y rompía la seguridad comercial.
+  - **Solución:** JanIA tiene prohibición absoluta de presentar contrapartes o cruces en chats privados; la central de operaciones de VECY (+57 316 656 9719) gestiona los cierres y acompaña a las partes para blindar el negocio.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **358/358 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 24s.
+
 ### 🔖 v33.41 — Octubre 2026
 
 #### [v33.41.0] — 2026-10-24: POT Decreto 555 de 2021, Visor SINUPOT, Audiencia Plural, Plantilla Grupo 1 y Canalización Proptech

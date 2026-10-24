@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-24] — JanIA v33.42: 10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50 (v33.42 - 33.42.0)
+
+**Versión:** `v33.42` (`33.42.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Perfeccionar la capacidad de JanIA en marketing y captación inmobiliaria:
+  1. Integrar una suite de habilidades de marketing inmobiliario de alto impacto para analizar anuncios, descartar clichés y construir fichas y copys persuasivos.
+  2. Consagrar formalmente la identidad de JanIA como la "asesora o guía especialista en cada uno de los servicios" que ofrece VECY BIENES RAÍCES en Colombia.
+  3. Habilitar la ingesta privada en chats privados (DMs): si el usuario pide a JanIA que le ayude a subir o publicar su oferta o requerimiento, JanIA lo asiste, optimiza la ficha y la registra en la base de datos para el motor de matching.
+  4. Doctrina de comisiones compartidas: indagar si el usuario es propietario directo o agente inmobiliario. A los agentes se les consulta si aceptan el modelo colaborativo 40/20/40 de la Red VECY. Si optan por el 50/50 tradicional, el sistema lo acepta y lo clasifica bajo `[🛡️50/50 - NO TERCERÍA]`.
+  5. Regla de Oro Inquebrantable: JanIA NUNCA revela las parejas encontradas (los MATCH) ni datos de contacto de contrapartes en privado por el chat. La central de operaciones de VECY (+57 316 656 9719) contacta a las partes y gestiona los cierres para blindar el negocio.
+
+**Diagnóstico Técnico:**
+1. **Necesidad de un Motor de Marketing Inmobiliario Especializado (`realEstateMarketing.ts`):** Las descripciones inmobiliarias adolecían de clichés vacíos sin validación analítica de la propuesta de valor. Se requería una suite estructurada con ICP, Swap Test (descarte de clichés), auditoría con score 0-100 y formateo persuasivo.
+2. **Identidad como Asesora y Guía Especialista (`base.md`, `dmHandler.ts`):** JanIA requería una consagración doctrinal que reafirme su rol integral de asesora especialista en todos los servicios inmobiliarios, jurídicos, tributarios y de avalúos de VECY.
+3. **Ingesta y Optimización Privada (`dmHandler.ts`):** La regla previa de bloqueo total de publicación en DMs requería flexibilizarse para permitir que JanIA actúe como asesora de marketing, optimice la ficha técnica del usuario y la registre en la base de datos para el motor de matching mediante la herramienta `registrar_inmueble_o_requerimiento`.
+4. **Bifurcación Doctrinal de Comisiones (40/20/40 vs 50/50):** Era indispensable distinguir entre propietarios directos y colegas agentes, y permitir a estos últimos elegir entre el modelo de red colaborativa 40/20/40 o el esquema tradicional 50/50 sin tercerías.
+5. **Confidencialidad Sagrada de Cruces en Privado:** Para evitar saltos y proteger los negocios de la red, los matches jamás se muestran en chats privados; únicamente se reportan al panel administrativo y se gestionan a través de la central de operaciones.
+
+**Acciones Ejecutadas:**
+- `server/_core/realEstateMarketing.ts`:
+  1. Creado el módulo con la suite completa de 10 habilidades de marketing inmobiliario: `buildIdealCustomerProfile`, `runSwapTest`, `auditListingQuality` (scoring 0-100), `formatPersuasiveFicha`, `getCommissionGuideline`.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Integración de la herramienta `registrar_inmueble_o_requerimiento` para registrar inmuebles o requerimientos optimizados desde chats privados.
+  2. Actualización de las directivas DM consagrando a JanIA como "asesora y guía especialista en cada uno de los servicios".
+  3. Implementación de la doctrina de comisiones 40/20/40 vs 50/50 y la Regla de Oro de Cero Revelación de Matches en privado.
+- `server/_core/prompts/base.md`:
+  1. Consagración de la identidad de JanIA como asesora y guía especialista y descripción de la suite de 10 habilidades de marketing.
+- `server/__tests__/regression.test.ts`:
+  1. Actualización de regexes en Suites de regresión.
+  2. Adición de `Suite v33.42 — 10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50` (4 tests pasando al 100%).
+- `shared/const.ts` (`v33.42`) y `package.json` (`33.42.0`).
+- Documentos maestros actualizados: `GEMINI.md`, `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`.
+
+**Validación:**
+- `npm run check`: 0 errores de tipado.
+- `npm test`: 358/358 tests pasando (100% verde a $0 COP).
+- `npm run build`: Compilación limpia en 24s.
+
+---
+
 ### 📅 [2026-10-24] — JanIA v33.41: POT Decreto 555 de 2021, Visor SINUPOT, Audiencia Plural, Plantilla Grupo 1 y Canalización Proptech (v33.41 - 33.41.0)
 
 **Versión:** `v33.41` (`33.41.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

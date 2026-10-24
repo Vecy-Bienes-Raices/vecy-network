@@ -182,7 +182,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.41 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.42 — Octubre 2026
+
+### Novedades v33.42 (10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Suite de 10 Habilidades de Marketing Inmobiliario (`realEstateMarketing.ts`)**:
+     - *Causa raíz*: Las publicaciones de ofertas y demandas inmobiliarias suelen redactarse con clichés genéricos ("hermoso apartamento", "excelente ubicación"), sin definir el perfil del cliente ideal ni estructurar la propuesta de valor con datos técnicos completos.
+     - *Solución*: Se implementó la suite completa de 10 habilidades de marketing inmobiliario de alto impacto: 1) Constructor de Perfil de Cliente Ideal (ICP: familia, ejecutivo, inversionista de renta corta, logístico, constructor), 2) Swap Test Inmobiliario (descarte de clichés y rescate de ventajas competitivas únicas y medibles), 3) Auditoría de Anuncios (Score 0-100 en propuesta de valor, datos técnicos indispensables, desgloses y CTA), 4) Fichas persuasivas estructuradas con Markdown, y 5) Guía de comisiones.
+  2. **Identidad Consagrada de JanIA (`base.md`, `dmHandler.ts`)**:
+     - *Causa raíz*: JanIA se presentaba con fórmulas genéricas de "agente de inteligencia artificial" sin explicitar su rol integral de asesora especialista en todas las líneas de servicio.
+     - *Solución*: JanIA es consagrada como la **asesora y guía especialista en cada uno de los servicios inmobiliarios, jurídicos, tributarios, notariales y de marketing de VECY BIENES RAÍCES en Colombia**.
+  3. **Ingesta y Optimización Privada en Chats Privados (`dmHandler.ts`)**:
+     - *Causa raíz*: La prohibición previa de registro en chats privados impedía a JanIA recibir propiedades o demandas de usuarios que solicitaban ayuda para cargarlas al sistema.
+     - *Solución*: JanIA asume el rol de Asesora de Marketing Inmobiliario, acoge la solicitud con entusiasmo, optimiza la ficha técnica y la registra en la base de datos para el motor de matching mediante `registrar_inmueble_o_requerimiento`.
+  4. **Doctrina de Comisiones: 40/20/40 vs 50/50 (`dmHandler.ts`)**:
+     - *Causa raíz*: Era necesario diferenciar el trato a propietarios directos vs agentes inmobiliarios y respetar la preferencia del agente respecto al esquema de comisión compartida.
+     - *Solución*: JanIA indaga cortesmente el rol. A los agentes les consulta si aceptan la figura colaborativa de la Red VECY 40/20/40 (Alianza 40/20/40 - Aliada Prioritaria). Si prefieren el 50/50 tradicional, el sistema igualmente sube el inmueble o requerimiento y lo envía a la mesa de coincidencias a la sección `[🛡️50/50 - NO TERCERÍA]`. A los propietarios directos los acompaña y explica que la red comercial los conectará con compradores e inquilinos calificados.
+  5. **Regla de Oro Inquebrantable (Confidencialidad Sagrada de Matches en Privado)**:
+     - *Causa raíz*: Presentar datos de contacto de contrapartes o cruces directamente en chats privados exponía la operación a saltos comerciales ("by-pass").
+     - *Solución*: Por más que el usuario insista, JanIA JAMÁS revela las parejas encontradas (los MATCH) ni datos de contacto de contrapartes en privado. La central de operaciones de VECY (+57 316 656 9719) gestiona los cierres y contacta a las partes para blindar el negocio.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 358/358 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 24s ✅
+- `shared/const.ts` (`v33.42`) y `package.json` (`33.42.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.41 — Octubre 2026
 
 ### Novedades v33.41 (POT Decreto 555/21, Visor SINUPOT, Audiencia Plural y Plantilla Grupo 1):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

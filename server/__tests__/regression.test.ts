@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41|42)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41|42)\.0/);
     });
   });
 
@@ -7162,11 +7162,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41|42)\.0/);
     });
   });
 
@@ -7212,11 +7212,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41|42)\.0/);
     });
   });
 
@@ -7241,11 +7241,11 @@ Ana Morales Castillo
 
     it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(38|39|40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(38|39|40|41|42)\.0/);
     });
   });
 
@@ -7276,11 +7276,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.39 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(39|40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(39|40|41|42)\.0/);
     });
   });
 
@@ -7301,11 +7301,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.40 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(40|41)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(40|41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(40|41)\.0/);
+      expect(pkg.version).toMatch(/^33\.(40|41|42)\.0/);
     });
   });
 
@@ -7388,11 +7388,90 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.41 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.41");
+      expect(VECY_VERSION).toMatch(/^v33\.(41|42)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.41.0");
+      expect(pkg.version).toMatch(/^33\.(41|42)\.0/);
+    });
+  });
+
+  describe("Suite v33.42 — 10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50", () => {
+    it("1. realEstateMarketing.ts implementa ICP, Swap Test, Auditoría 0-100 y Guía Doctrinal de Comisiones", async () => {
+      const { buildRealEstateIcp, evaluateSwapTest, auditPropertyListing, buildCommissionDoctrineGuide } = await import("../_core/realEstateMarketing");
+
+      // ICP residencial vs comercial
+      const icpResidencial = buildRealEstateIcp("apartamento", "venta", "Chicó", 600000000);
+      expect(icpResidencial.arquetipo).toContain("Comprador de Vivienda");
+      expect(icpResidencial.motivadoresPrincipales.length).toBeGreaterThan(0);
+
+      const icpLote = buildRealEstateIcp("lote", "venta", "Cedritos", 2500000000);
+      expect(icpLote.arquetipo).toContain("Constructor");
+
+      // Swap Test: detecta clichés
+      const testCliches = evaluateSwapTest("Lindo apartamento, excelente ubicación, hermosa vista");
+      expect(testCliches.passes).toBe(false);
+      expect(testCliches.clichesFound).toContain("lindo apartamento/apto");
+      expect(testCliches.clichesFound).toContain("excelente ubicación");
+
+      // Swap Test: pasa con diferenciación real
+      const testSolid = evaluateSwapTest("Apartamento con vista a los cerros, remodelado en 2023, parqueadero independiente sin servidumbre");
+      expect(testSolid.passes).toBe(true);
+
+      // Auditoría 0-100
+      const audit = auditPropertyListing("Venta apartamento en Chicó, 120 m2, 3 alcobas, 2 baños, 2 garajes, estrato 6, $850.000.000, administración $650.000, contacto 3166569719");
+      expect(audit.score).toBeGreaterThanOrEqual(70);
+      expect(audit.dimensions.claridadPropuestaValor.score).toBe(15);
+      expect(audit.dimensions.datosTecnicosCompletos.score).toBe(15);
+
+      // Guía de comisiones 40/20/40 vs 50/50
+      const guideAgentYes = buildCommissionDoctrineGuide(true, true);
+      expect(guideAgentYes).toContain("ALIANZA 40/20/40 ACEPTADA [ALIADA PRIORITARIA]");
+      expect(guideAgentYes).toContain("NO revelar datos de la contraparte en este chat privado");
+      expect(guideAgentYes).toContain("+57 316 656 9719");
+
+      const guideAgentNo = buildCommissionDoctrineGuide(true, false);
+      expect(guideAgentNo).toContain("[🛡️50/50 - NO TERCERÍA]");
+      expect(guideAgentNo).toContain("pestaña [🛡️50/50]");
+
+      const guideOwner = buildCommissionDoctrineGuide(false);
+      expect(guideOwner).toContain("USUARIO PROPIETARIO / CLIENTE DIRECTO");
+      expect(guideOwner).toContain("+57 316 656 9719");
+    });
+
+    it("2. dmHandler consagra a JanIA como 'asesora y guía especialista' y soporta ingesta privada con 40/20/40 y 50/50", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+
+      expect(content).toContain("asesora y guía especialista en cada uno de los servicios");
+      expect(content).toContain("NUEVO SERVICIO DE INGESTA, OPTIMIZACIÓN Y REGISTRO EN PRIVADO (DOCTRINA EDUARDO A. RIVERA)");
+      expect(content).toContain("Asesora y Guía Especialista en Marketing Inmobiliario de Alto Rendimiento (Metodología 10 Skills VECY)");
+      expect(content).toContain("REGLA DE ORO INQUEBRANTABLE (CERO REVELACIÓN DE MATCHES EN PRIVADO)");
+      expect(content).toContain("esPropietarioDirecto");
+      expect(content).toContain("acepta402040");
+      expect(content).toContain("comisionEsquema");
+      expect(content).toContain("[🛡️50/50 - NO TERCERÍA]");
+      expect(content).toContain("[ALIANZA 40/20/40 ACEPTADA - ALIADA PRIORITARIA]");
+    });
+
+    it("3. base.md consagra la suite de 10 habilidades de marketing y la ingesta privada", async () => {
+      const fs = await import("fs");
+      const basePrompt = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+
+      expect(basePrompt).toContain("asesora y guía especialista en cada uno de los servicios");
+      expect(basePrompt).toContain("ASESORÍA Y MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (10 SKILLS VECY)");
+      expect(basePrompt).toContain("Swap Test Inmobiliario");
+      expect(basePrompt).toContain("Servicio de Ingesta y Optimización Privada (DMs)");
+      expect(basePrompt).toContain("Confidencialidad Sagrada de Matches en Privado");
+    });
+
+    it("4. Consagración doctrinal de versión v33.42 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.42");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.42.0");
     });
   });
 });
