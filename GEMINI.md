@@ -1,10 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.40.0 — 2026-10-23)
-- **JanIA Server:** `v33.40` (`33.40.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Decodificación de Entidades HTML, Entrega Ineludible de EPS y Optimización Visual Base64:**
-  1. **Decodificación de Entidades HTML en ADRES (`identityVerificationService.ts`):** Motor `decodeHtmlEntities` ampliado para procesar entidades numéricas (`&#209;`, `&#211;`, etc.) e ISO-8859/HTML, garantizando que nombres como "Ibañez" o "Asociación" se muestren con ortografía impecable.
-  2. **Entrega Ineludible y Estructurada de EPS en DMs (`dmHandler.ts`):** `synthesizeToolResponseWithGemini` y la herramienta `consultar_identidad_y_antecedentes` garantizan la entrega visual inmediata de EPS (o pedagogía de regímenes especiales en caso de no registro) en los reportes de antecedentes e identidad.
-  3. **Optimización de Visión Multimodal Base64 (`vision.ts`):** Verificación matemática previa del formato base64 antes de invocar la cascada Gemini, previniendo llamadas de red y timeouts en afiches o imágenes corruptas.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 349/349 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.41.0 — 2026-10-24)
+- **JanIA Server:** `v33.41` (`33.41.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **POT Decreto 555 de 2021, Visor SINUPOT, Audiencia Plural y Plantilla Grupo 1:**
+  1. **Predios con Potencial Constructor y Norma Urbana POT (`valuation.ts`):** `analyzeUrbanPotPotential` evalúa lotes, bodegas, edificios y casas con potencial de densificación vertical en Bogotá bajo el Decreto 555 de 2021 (Tratamiento de Renovación Urbana o Consolidación, usos del suelo e índices de ocupación/construcción), enlazando directamente al Visor Geográfico SINUPOT (`https://www.sdp.gov.co/content/sinupot-0`) y Datos Abiertos de Ordenamiento Territorial (`https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial`).
+  2. **Doctrina de Sondeos Comerciales vs. Avalúos Certificados (`dmHandler.ts`):** El sondeo comercial inicial se calcula y entrega de inmediato con los 8 datos físicos. Solo al final de la entrega (o si el usuario insiste en un avalúo formal más profundo), JanIA sugiere cotejar los 3 documentos soporte (CTL, Escritura, Predial), ofreciendo el predial de Bogotá en PDF en el chat.
+  3. **Audiencia Plural y Universal (`base.md`, `dmHandler.ts`):** JanIA supera la exclusividad de 'colegas' y acoge a toda la comunidad (propietarios, compradores, arrendatarios, inversionistas, abogados, arquitectos, peritos, aseguradores, entidades financieras y de salud). Las oportunidades de desarrollo tecnológico Proptech e IA a la medida se canalizan con los fundadores Eduardo Rivera y Jani Alves (+57 316 656 9719).
+  4. **Cero Publicación Directa en DMs / Web y Plantilla Estandarizada al Grupo 1 Oficial (`dmHandler.ts`, `janIA.ts`):** Prohibición absoluta de prometer registro directo en chats privados o web. Se canaliza con simpatía al Grupo 1 Oficial: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` con plantillas estandarizadas de Oferta y Demanda y revisión previa de fichas.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 354/354 passing (100% verde) | Build `npm run build` limpio en 25s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

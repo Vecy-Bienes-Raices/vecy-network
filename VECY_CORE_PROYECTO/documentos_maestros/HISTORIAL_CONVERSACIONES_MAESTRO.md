@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-24] — JanIA v33.41: POT Decreto 555 de 2021, Visor SINUPOT, Audiencia Plural, Plantilla Grupo 1 y Canalización Proptech (v33.41 - 33.41.0)
+
+**Versión:** `v33.41` (`33.41.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Perfeccionar la inteligencia de JanIA en sondeos comerciales y ordenamiento urbano:
+  1. En predios con potencial de desarrollo (lotes, bodegas, edificios, casas para demolición/desarrollo), incorporar la normativa del POT de Bogotá (Decreto 555 de 2021) y el Visor Geográfico SINUPOT de Planeación Distrital.
+  2. Ajustar la doctrina de documentos soporte: el sondeo comercial inicial se hace ágilmente con los 8 datos físicos. Solo al final de la entrega (o si el usuario insiste en un avalúo formal más profundo) se sugiere cotejar CTL, Escritura y Predial, ofreciendo el predial de Bogotá en PDF en el chat.
+  3. Universalizar la audiencia de JanIA superando el sesgo exclusivo de "colegas agentes" para dirigirse con respeto y calidez a toda la comunidad inmobiliaria plural: propietarios, compradores, arrendatarios, inversionistas, abogados, arquitectos, peritos, aseguradores, entidades financieras y de salud. Canalizar oportunidades de desarrollo de software Proptech o IA a la medida con Eduardo Rivera y Jani Alves (+57 316 656 9719).
+  4. Prohibición estricta de simular o prometer que un inmueble queda registrado/publicado en chats privados o en la web. Canalizar amablemente al Grupo 1 Oficial: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` con la plantilla estandarizada de Oferta o Demanda.
+
+**Diagnóstico Técnico:**
+1. **Vacío Normativo en Predios con Potencial de Desarrollo (`valuation.ts`):** Lotes, bodegas y predios con potencial de desarrollo vertical u horizontal en Bogotá no debían valuarse únicamente como metros cuadrados ordinarios de vivienda usada. Se requería una evaluación del potencial de aprovechamiento urbanístico bajo el POT Decreto 555 de 2021 (Tratamiento de Renovación Urbana o Consolidación, usos del suelo e índices de construcción/ocupación) enlazando al Visor Geográfico SINUPOT (`https://www.sdp.gov.co/content/sinupot-0`) y a Datos Abiertos de Ordenamiento Territorial (`https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial`).
+2. **Momento Conversacional del Soporte Documental (`dmHandler.ts`):** Pedir documentos soporte pesados de entrada frustraba a usuarios que solo buscaban una orientación rápida de precios de salida. Los 8 datos físicos bastan para el sondeo inicial, dejando los documentos como recomendación al cierre.
+3. **Ampliación de Audiencia y Fábrica Proptech (`base.md`, `dmHandler.ts`):** Los prompts instruían a JanIA a hablar únicamente como "aliada del agente inmobiliario", desentonando cuando el interlocutor era propietario, abogado, perito o asegurador. Además, las solicitudes de desarrollo de IA o software deben ser captadas y referidas a los directores.
+4. **Paridad de Canalización en Router Web (`janIA.ts`):** La API de chat web aún no contenía el filtro de canalización al Grupo 1 Oficial con la plantilla estandarizada ante datos de publicación de inmuebles.
+
+**Acciones Ejecutadas:**
+- `server/_core/valuation.ts`:
+  1. Creación de la función `analyzeUrbanPotPotential`: evalúa tipologías con vocación constructiva (lote, bodega, edificio, casa de renovación) en Bogotá, clasificando tratamientos urbanísticos (Renovación Urbana, Consolidación, Desarrollo), usos del suelo principales y complementarios, y enlaces oficiales a SINUPOT y Datos Abiertos.
+  2. Integración en `executeMarketValuationSurvey`: añade `potNormaUrbana` y `portalesComparablesConsultados` (Metrocuadrado, FincaRaíz, Ciencuadras) al reporte del sondeo.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. `specialToolInstructions` de `sondeo`: directriz explícita de incluir el análisis POT y enlace SINUPOT cuando el inmueble tiene vocación de desarrollo; entrega del cálculo sin pedir documentos previos; y sugerencia de los 3 documentos soporte únicamente al final del sondeo.
+  2. Prompt del sistema DM: ampliación a audiencia universal y protocolo de canalización comercial de software Proptech / IA con Eduardo y Jani al +57 316 656 9719.
+  3. `checkPendingListingDraftReview`: canalización y revisión de fichas hacia el Grupo 1 Oficial con plantillas estandarizadas de Oferta y Demanda.
+- `server/_core/prompts/base.md`:
+  1. Sección de espíritu comercial y marketing adaptada para toda la comunidad plural e integración de la canalización de proyectos de software/IA con los directores.
+- `server/routers/janIA.ts`:
+  1. Interceptor de intenciones de publicación en chat web canalizando al Grupo 1 Oficial con la plantilla estructurada VECY.
+- `server/__tests__/regression.test.ts`:
+  1. Actualización de regexes en Suites 127 (`v33.34`), `v33.35`, `v33.36`, `v33.37`, `v33.38`, `v33.39`, `v33.40` para admitir `v33.41`.
+  2. Adición de `Suite v33.41 — POT Decreto 555/21, SINUPOT, Audiencia Plural y Plantilla Grupo 1` (5 tests nuevos pasando al 100%).
+- `shared/const.ts` (`v33.41`) y `package.json` (`33.41.0`).
+- Documentos maestros actualizados: `GEMINI.md`, `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`.
+
+**Validación:**
+- `npm run check`: 0 errores de tipado.
+- `npm test`: 354/354 tests pasando (100% verde a $0 COP).
+- `npm run build`: Compilación limpia en 25s (`dist/index.html` + `dist-server/index.js` 2.1 MB).
+
+---
+
 ### 📅 [2026-10-23] — JanIA v33.40: Decodificación de Entidades HTML, Entrega Ineludible de EPS en Síntesis DM y Optimización Visual Base64 (v33.40 - 33.40.0)
 
 **Versión:** `v33.40` (`33.40.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

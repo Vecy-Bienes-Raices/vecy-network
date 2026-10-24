@@ -182,7 +182,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.40 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.41 — Octubre 2026
+
+### Novedades v33.41 (POT Decreto 555/21, Visor SINUPOT, Audiencia Plural y Plantilla Grupo 1):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Predios con Potencial Constructor y Norma Urbana POT (`valuation.ts`)**:
+     - *Causa raíz*: Para predios como lotes, bodegas, edificios y casas o casa-lotes con vocación de desarrollo vertical/comercial, un cálculo genérico de vivienda usada omitía variables esenciales como el tratamiento urbanístico, el uso del suelo y el índice de construcción bajo el ordenamiento distrital.
+     - *Solución*: Se implementó `analyzeUrbanPotPotential`, que analiza si el predio tiene vocación de desarrollo vertical o comercial bajo el POT de Bogotá (Decreto 555 de 2021: Renovación Urbana o Consolidación, uso de suelo e índices de ocupación/construcción), enlazando directamente al Visor Geográfico SINUPOT (`https://www.sdp.gov.co/content/sinupot-0`) de la Secretaría Distrital de Planeación y datos abiertos de ordenamiento territorial (`https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial`) para cotejar la norma con el CHIP catastral.
+  2. **Doctrina de Sondeos Comerciales vs. Avalúos Certificados (`dmHandler.ts`)**:
+     - *Causa raíz*: Exigir de entrada los 3 documentos pesados (CTL, Escritura, Predial) frenaba el sondeo ágil solicitado por los usuarios.
+     - *Solución*: El sondeo comercial inicial se calcula y entrega de inmediato con los 8 datos físicos. Solo al final de la entrega (o si el usuario insiste en un avalúo formal más profundo), JanIA sugiere cotejar los documentos soporte (CTL, Escritura y Predial), ofreciendo el predial de Bogotá en PDF en el chat.
+  3. **Audiencia Plural y Universal (`base.md`, `dmHandler.ts`)**:
+     - *Causa raíz*: JanIA se dirigía por defecto al interlocutor asumiendo que siempre era un "colega corredor inmobiliario".
+     - *Solución*: Se amplió el espectro conversacional para acoger con señorío y calidez a toda la comunidad plural: propietarios, compradores, arrendatarios, inversionistas, abogados, arquitectos, peritos, agentes de seguros, entidades financieras y de salud. Oportunidades Proptech y desarrollos de IA a la medida son canalizadas con los directores Eduardo Rivera y Jani Alves (+57 316 656 9719).
+  4. **Cero Publicación Directa en DMs / Web y Plantilla Estandarizada al Grupo 1 Oficial (`dmHandler.ts`, `janIA.ts`)**:
+     - *Causa raíz*: En chats privados o web, JanIA simulaba guardar o registrar propiedades, creando falsas expectativas.
+     - *Solución*: Prohibición absoluta de prometer o simular registro directo en DMs/Web. JanIA canaliza con simpatía hacia el Grupo 1 Oficial: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` entregando las plantillas estandarizadas de Oferta o Demanda y revisando fichas previas enviadas por el usuario.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 354/354 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 25s ✅
+- `shared/const.ts` (`v33.41`) y `package.json` (`33.41.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.40 — Octubre 2026
 
 ### Novedades v33.40 (Decodificación de Entidades HTML, Entrega Ineludible de EPS en Síntesis DM y Optimización Visual Base64):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

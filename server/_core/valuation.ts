@@ -167,6 +167,87 @@ export function calculatePropertyValuation(input: ValuationInput): ValuationResu
   };
 }
 
+export interface UrbanPotAnalysis {
+  aplicaPotConstructor: boolean;
+  tipoPredio: string;
+  tratamientoEstimado: string;
+  usoSueloPrincipal: string;
+  edificabilidadPotencial: string;
+  visorSinupotUrl: string;
+  datosAbiertosUrl: string;
+  licenciasCuraduriasUrl: string;
+  recomendacionConstructora: string;
+}
+
+/**
+ * Evalúa el potencial constructor y la vocación de norma urbana según el POT de Bogotá (Decreto 555 de 2021)
+ * para predios con potencial de desarrollo vertical, bodegas, edificios, lotes y casa-lotes.
+ */
+export function analyzeUrbanPotPotential(params: {
+  tipoInmueble?: string;
+  areaM2?: number;
+  zonaOBarrio?: string;
+  ciudad?: string;
+}): UrbanPotAnalysis {
+  const tipo = (params.tipoInmueble || "").toLowerCase();
+  const ciudad = (params.ciudad || "Bogotá").toLowerCase();
+  const area = params.areaM2 || 0;
+  const isBogota = ciudad.includes("bogot") || ciudad.includes("d.c") || ciudad === "";
+
+  const esPredioConstructor =
+    tipo.includes("lote") ||
+    tipo.includes("land") ||
+    tipo.includes("bodega") ||
+    tipo.includes("warehouse") ||
+    tipo.includes("edificio") ||
+    tipo.includes("building") ||
+    tipo.includes("casa lote") ||
+    tipo.includes("casalote") ||
+    (tipo.includes("casa") && area >= 200);
+
+  if (!esPredioConstructor || !isBogota) {
+    return {
+      aplicaPotConstructor: false,
+      tipoPredio: tipo || "inmueble residencial/comercial",
+      tratamientoEstimado: "Consolidación urbana tradicional",
+      usoSueloPrincipal: "Residencial / Mixto",
+      edificabilidadPotencial: "Sujeto a RPH o volumetría predio a predio",
+      visorSinupotUrl: "https://www.sdp.gov.co/content/sinupot-0",
+      datosAbiertosUrl: "https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial",
+      licenciasCuraduriasUrl: "https://www.sdp.gov.co/transparencia/datos-abiertos/datos-abiertos",
+      recomendacionConstructora: "Inmueble de uso individual estándar."
+    };
+  }
+
+  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  let tratamiento = "Consolidación urbana con vocación de densificación moderada";
+  let edificabilidad = "Índice de ocupación 0.60 a 0.70; alturas promedio de 4 a 6 pisos sujetas al perfil vial.";
+  let usoSuelo = "Residencial y Servicios de Proximidad";
+
+  if (zonaLower.includes("toberín") || zonaLower.includes("toberin") || zonaLower.includes("puente aranda") || zonaLower.includes("fontibón") || zonaLower.includes("fontibon") || tipo.includes("bodega")) {
+    tratamiento = "Área de Actividad Económica / Mezcla de Usos (POT Dec. 555/21 Art. 248)";
+    usoSuelo = "Comercial, Industrial Liviano y Servicios Especializados";
+    edificabilidad = "Índice de ocupación hasta 0.75, índice de construcción hasta 3.5. Gran potencial para almacenamiento logístico, centros de datos o reconversión mixta.";
+  } else if (zonaLower.includes("chico") || zonaLower.includes("chicó") || zonaLower.includes("chapinero") || zonaLower.includes("usaquén") || zonaLower.includes("usaquen") || zonaLower.includes("170")) {
+    tratamiento = "Renovación Urbana / Eje Estructurante de Alta Densidad (POT Dec. 555/21)";
+    usoSuelo = "Mixto de Gran Escala (Comercio en primer piso + Vivienda multifamiliar / Oficinas)";
+    edificabilidad = "Mayor edificabilidad por incentivos de espacio público (Decreto 555/2021). Posibilidad de 8 a 15+ pisos sobre vías principales (V-1, V-2, V-3).";
+  }
+
+  return {
+    aplicaPotConstructor: true,
+    tipoPredio: tipo,
+    tratamientoEstimado: tratamiento,
+    usoSueloPrincipal: usoSuelo,
+    edificabilidadPotencial: edificabilidad,
+    visorSinupotUrl: "https://www.sdp.gov.co/content/sinupot-0",
+    datosAbiertosUrl: "https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial",
+    licenciasCuraduriasUrl: "https://www.sdp.gov.co/transparencia/datos-abiertos/datos-abiertos",
+    recomendacionConstructora:
+      "Para lotes, bodegas, edificios o casas con potencial de demolición y desarrollo constructor en Bogotá, el valor comercial por metro cuadrado residual del suelo debe contrastarse en el Visor Geográfico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) con el CHIP catastral para corroborar la cédula normativa exacta, cesiones obligatorias y m² vendibles bajo el POT Decreto 555 de 2021."
+  };
+}
+
 /**
  * Realiza un sondeo técnico comparativo de mercado para barrios del norte de Bogotá (v33.04)
  * integrando portales (Metrocuadrado, FincaRaíz, CienCuadras) y coeficientes ACM homologados.
@@ -240,6 +321,13 @@ export function executeMarketValuationSurvey(params: {
     ]
   });
 
+  const potAnalysis = analyzeUrbanPotPotential({
+    tipoInmueble: params.tipoInmueble,
+    areaM2: area,
+    zonaOBarrio: zoneName,
+    ciudad: params.ciudad
+  });
+
   const result = {
     zonaConsultada: zoneName,
     zonaOBarrio: zoneName,
@@ -258,6 +346,7 @@ export function executeMarketValuationSurvey(params: {
     factorBreakdown: valuation.factorBreakdown,
     portalesComparablesConsultados: ["Metrocuadrado", "FincaRaíz", "Ciencuadras"],
     portalesComparables: ["Metrocuadrado", "FincaRaíz", "Fincaraiz", "Ciencuadras"],
+    potNormaUrbana: potAnalysis,
     politicaCeroAlucinacion: hasVerifiedComparables
       ? "Sondeo técnico calculado mediante homologación ACM por coeficientes prediales y dinámica de portales aliados."
       : "Advertencia técnica: El sector consultado no cuenta con comparables directos verificados en nuestro catálogo del norte de Bogotá. Se entrega estimación referencial basada en Bogotá promedio.",

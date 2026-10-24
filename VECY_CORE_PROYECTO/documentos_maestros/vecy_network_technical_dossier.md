@@ -330,6 +330,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.41 — Octubre 2026
+
+#### [v33.41.0] — 2026-10-24: POT Decreto 555 de 2021, Visor SINUPOT, Audiencia Plural, Plantilla Grupo 1 y Canalización Proptech
+- **Análisis Urbanístico POT y Visor SINUPOT para Predios de Desarrollo (`valuation.ts`, `dmHandler.ts`):**
+  - **Problema:** En lotes, bodegas, edificios y predios con potencial de desarrollo en Bogotá, el cálculo de metro cuadrado ordinario de vivienda resultaba insuficiente para reflejar el valor real comercial, obviando la norma urbanística aplicable bajo el POT (Decreto Distrital 555 de 2021).
+  - **Solución:** Se implementó `analyzeUrbanPotPotential` en `valuation.ts`, la cual analiza automáticamente el tipo de inmueble y la ubicación en Bogotá para identificar tratamientos urbanísticos (Renovación Urbana, Consolidación, Desarrollo), usos del suelo principales (residencial denso, comercio y servicios, dotacional, logística) e índices de aprovechamiento, proveyendo al usuario y a JanIA los enlaces oficiales directos al Visor Geográfico SINUPOT (`https://www.sdp.gov.co/content/sinupot-0`) y a Datos Abiertos de Ordenamiento Territorial (`https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial`).
+- **Doctrina Temporal de Soporte Documental (CTL, Escritura y Predial) (`dmHandler.ts`):**
+  - **Problema:** Exigir los 3 documentos soporte antes de dar una estimación inicial generaba fricción innecesaria en usuarios que solo requerían una orientación preliminar de precios de salida.
+  - **Solución:** Se reestructuró la doctrina: los 8 datos físicos bastan para emitir el sondeo comercial y la estimación $/m²; únicamente al final del sondeo (o si el usuario solicita un dictamen pericial formal y certificado) se recomienda cotejar el Certificado de Tradición y Libertad, la Escritura Pública y la Factura Predial, ofreciendo expedir la factura predial oficial de Bogotá en PDF en el chat.
+- **Audiencia Plural y Canalización de Oportunidades Proptech / IA (`base.md`, `dmHandler.ts`):**
+  - **Problema:** El tono de JanIA estaba sesgado a hablar exclusivamente de "colega agente", generando desconexión con propietarios, compradores, inversionistas, abogados, arquitectos, peritos, aseguradores o instituciones de salud y financieras. Asimismo, no existía un protocolo para canalizar solicitudes de software inmobiliario o IA especializada.
+  - **Solución:** Se amplió el prompt de JanIA para interactuar con respeto y calidez hacia toda la comunidad inmobiliaria plural, y se fijó el protocolo de canalización para proyectos de desarrollo tecnológico refiriendo con cordialidad a la Dirección General de VECY Network (Eduardo Rivera y Jani Alves al `+57 316 656 9719`).
+- **Canalización Estandarizada al Grupo 1 Oficial con Plantillas Estructuradas (`janIA.ts`, `dmHandler.ts`):**
+  - **Problema:** Se requería garantizar paridad tanto en WhatsApp como en la interfaz Web para que ningún canal simule publicar propiedades directamente en privado, sino que guíe al usuario hacia el Grupo 1 Oficial: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` con las plantillas oficiales de Oferta y Demanda.
+  - **Solución:** Se implementó la canalización y revisión de fichas en `dmHandler.ts` y en el endpoint de chat de `server/routers/janIA.ts`.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **354/354 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 25s.
+
 ### 🔖 v33.40 — Octubre 2026
 
 #### [v33.40.0] — 2026-10-23: Decodificación de Entidades HTML, Entrega Ineludible de EPS en Síntesis DM y Optimización Visual Base64

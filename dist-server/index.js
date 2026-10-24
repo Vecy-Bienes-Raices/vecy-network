@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.40";
+    VECY_VERSION = "v33.41";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14915,6 +14915,50 @@ function calculatePropertyValuation(input) {
     generatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
+function analyzeUrbanPotPotential(params) {
+  const tipo = (params.tipoInmueble || "").toLowerCase();
+  const ciudad = (params.ciudad || "Bogot\xE1").toLowerCase();
+  const area = params.areaM2 || 0;
+  const isBogota = ciudad.includes("bogot") || ciudad.includes("d.c") || ciudad === "";
+  const esPredioConstructor = tipo.includes("lote") || tipo.includes("land") || tipo.includes("bodega") || tipo.includes("warehouse") || tipo.includes("edificio") || tipo.includes("building") || tipo.includes("casa lote") || tipo.includes("casalote") || tipo.includes("casa") && area >= 200;
+  if (!esPredioConstructor || !isBogota) {
+    return {
+      aplicaPotConstructor: false,
+      tipoPredio: tipo || "inmueble residencial/comercial",
+      tratamientoEstimado: "Consolidaci\xF3n urbana tradicional",
+      usoSueloPrincipal: "Residencial / Mixto",
+      edificabilidadPotencial: "Sujeto a RPH o volumetr\xEDa predio a predio",
+      visorSinupotUrl: "https://www.sdp.gov.co/content/sinupot-0",
+      datosAbiertosUrl: "https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial",
+      licenciasCuraduriasUrl: "https://www.sdp.gov.co/transparencia/datos-abiertos/datos-abiertos",
+      recomendacionConstructora: "Inmueble de uso individual est\xE1ndar."
+    };
+  }
+  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  let tratamiento = "Consolidaci\xF3n urbana con vocaci\xF3n de densificaci\xF3n moderada";
+  let edificabilidad = "\xCDndice de ocupaci\xF3n 0.60 a 0.70; alturas promedio de 4 a 6 pisos sujetas al perfil vial.";
+  let usoSuelo = "Residencial y Servicios de Proximidad";
+  if (zonaLower.includes("tober\xEDn") || zonaLower.includes("toberin") || zonaLower.includes("puente aranda") || zonaLower.includes("fontib\xF3n") || zonaLower.includes("fontibon") || tipo.includes("bodega")) {
+    tratamiento = "\xC1rea de Actividad Econ\xF3mica / Mezcla de Usos (POT Dec. 555/21 Art. 248)";
+    usoSuelo = "Comercial, Industrial Liviano y Servicios Especializados";
+    edificabilidad = "\xCDndice de ocupaci\xF3n hasta 0.75, \xEDndice de construcci\xF3n hasta 3.5. Gran potencial para almacenamiento log\xEDstico, centros de datos o reconversi\xF3n mixta.";
+  } else if (zonaLower.includes("chico") || zonaLower.includes("chic\xF3") || zonaLower.includes("chapinero") || zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("170")) {
+    tratamiento = "Renovaci\xF3n Urbana / Eje Estructurante de Alta Densidad (POT Dec. 555/21)";
+    usoSuelo = "Mixto de Gran Escala (Comercio en primer piso + Vivienda multifamiliar / Oficinas)";
+    edificabilidad = "Mayor edificabilidad por incentivos de espacio p\xFAblico (Decreto 555/2021). Posibilidad de 8 a 15+ pisos sobre v\xEDas principales (V-1, V-2, V-3).";
+  }
+  return {
+    aplicaPotConstructor: true,
+    tipoPredio: tipo,
+    tratamientoEstimado: tratamiento,
+    usoSueloPrincipal: usoSuelo,
+    edificabilidadPotencial: edificabilidad,
+    visorSinupotUrl: "https://www.sdp.gov.co/content/sinupot-0",
+    datosAbiertosUrl: "https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial",
+    licenciasCuraduriasUrl: "https://www.sdp.gov.co/transparencia/datos-abiertos/datos-abiertos",
+    recomendacionConstructora: "Para lotes, bodegas, edificios o casas con potencial de demolici\xF3n y desarrollo constructor en Bogot\xE1, el valor comercial por metro cuadrado residual del suelo debe contrastarse en el Visor Geogr\xE1fico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) con el CHIP catastral para corroborar la c\xE9dula normativa exacta, cesiones obligatorias y m\xB2 vendibles bajo el POT Decreto 555 de 2021."
+  };
+}
 function executeMarketValuationSurvey(params) {
   const zonaLower = (params.zonaOBarrio || "").toLowerCase();
   let basePrice = 65e5;
@@ -14962,6 +15006,12 @@ function executeMarketValuationSurvey(params) {
       { name: "CienCuadras", url: "https://www.ciencuadras.com" }
     ]
   });
+  const potAnalysis = analyzeUrbanPotPotential({
+    tipoInmueble: params.tipoInmueble,
+    areaM2: area,
+    zonaOBarrio: zoneName,
+    ciudad: params.ciudad
+  });
   const result = {
     zonaConsultada: zoneName,
     zonaOBarrio: zoneName,
@@ -14980,6 +15030,7 @@ function executeMarketValuationSurvey(params) {
     factorBreakdown: valuation.factorBreakdown,
     portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
     portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
+    potNormaUrbana: potAnalysis,
     politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
     alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
   };
@@ -30107,15 +30158,17 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
     specialToolInstructions = `- HERRAMIENTA: Sondeo T\xE9cnico Inmobiliario y Estudio de Valor Comercial ($/m\xB2 y Canon sugerido).
 - EXPERTA AVALUADORA VECY (ESTRUCTURA CLARA, DIRECTA Y ATRACTIVA EN WHATSAPP):
   * Entrega de inmediato el valor estimado del m\xB2 homologado para la zona/barrio, el rango de precio comercial de venta sugerido y el canon estimado de arriendo.
-  * Menciona los factores t\xE9cnicos de valorizaci\xF3n tenidos en cuenta (piso, club house, parqueadero, estrato, antig\xFCedad y din\xE1mica de la zona).
+  * Menciona que el estudio contrasta la din\xE1mica de portales de finca ra\xEDz aliados (Metrocuadrado, FincaRa\xEDz, CienCuadras) y coeficientes de homologaci\xF3n ACM (antig\xFCedad, piso, garajes, amenidades).
+  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOT\xC1 DEC. 555/2021 - SINUPOT):
+    Si el predio es lote, bodega, edificio, casa-lote o casa con vocaci\xF3n de desarrollo (seg\xFAn 'potNormaUrbana'), incluye la secci\xF3n de potencial urban\xEDstico explicando el tratamiento (Renovaci\xF3n Urbana o Consolidaci\xF3n), mezcla de usos y edificabilidad estimada, e invita a verificar con el CHIP catastral en el Visor Geogr\xE1fico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) de la Secretar\xEDa Distrital de Planeaci\xF3n.
 - CONTINUIDAD CONVERSACIONAL Y METAS (GOAL TRACKING):
   * Si el usuario consult\xF3 el valor o complement\xF3 datos (ej. a\xF1o de construcci\xF3n "Nov 2006"), ENTREGA EL VALOR Y C\xC1LCULO DE INMEDIATO. Queda TERMINANTEMENTE PROHIBIDO desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios sin haber entregado primero el sondeo de precio que el usuario pidi\xF3.
-- DOCTRINA DE SONDEOS VS. CIERRE FORMAL (DOCTRINA EDUARDO A. RIVERA):
-  * El sondeo preliminar se entrega con los datos f\xEDsicos (direcci\xF3n exacta, \xE1rea m\xB2 y tipolog\xEDa/alcobas) sin exigir documentos como barrera de entrada.
-  * Si el cliente, asesor o inversionista desea avanzar hacia un aval\xFAo comercial exacto, peritaje certificado o cierre formal, ind\xEDcale amablemente que para blindar el valor al mil\xEDmetro se cotejar\xE1n: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica, y 3) Factura Predial del a\xF1o vigente.
+- DOCTRINA DE SONDEOS VS. AVAL\xDAO PROFUNDO CERTIFICADO (DOCTRINA EDUARDO A. RIVERA):
+  * El sondeo preliminar se entrega de forma \xE1gil con los datos f\xEDsicos aportados sin frenar al usuario por falta de documentos.
+  * Al FINAL de la entrega del sondeo (o si el usuario, sea agente, abogado, asegurador, notario, prestamista, propietario, comprador o inversionista, insiste en que requiere un aval\xFAo comercial formal m\xE1s profundo o certificaci\xF3n jur\xEDdica exacta para blindar el valor al mil\xEDmetro), sugiere amablemente que se podr\xE1n cotejar: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica, y 3) Factura Predial vigente.
 - CROSS-SELLING EXACTO DE FACTURA PREDIAL EN CHAT (DOCTRINA EDUARDO A. RIVERA):
-  * Si el usuario no tiene el predial a mano, ofr\xE9cele textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son obligatorios).
-- HONESTIDAD RADICAL Y CERO ENGA\xD1OS DE REGISTRO EN DMs:
+  * Si el usuario menciona que no tiene el predial a mano, ofr\xE9cele textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son obligatorios).
+- CERO PUBLICACI\xD3N FORZADA EN CHATS PRIVADOS Y CANALIZACI\xD3N AL GRUPO 1:
   * PROHIBIDO TERMINANTEMENTE decirle al usuario en este chat privado "he registrado tu inmueble en el sistema de VECY" o "he guardado tu propiedad en el cat\xE1logo".
   * Si el usuario desea publicar su inmueble para venta/arriendo o cruce de negocios, inv\xEDtalo con simpat\xEDa a publicarlo en nuestro Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) donde el motor lo capta e indexa en la base de datos oficial.
 `;
@@ -30496,8 +30549,8 @@ Contenido: ${pageInfo.content.slice(0, 4500)}]`;
     const contactDossier = await getContactPermanentDossier(userId);
     const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
 
-Eres JanIA, la agente de inteligencia artificial de VECY BIENES RA\xCDCES en Colombia, al servicio incondicional de colegas y clientes.
-Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
+Eres JanIA, la agente de inteligencia artificial de VECY BIENES RA\xCDCES en Colombia.
+Atiendes con calidez, respeto y profesionalismo a toda nuestra comunidad plural: propietarios, compradores, arrendatarios, inversionistas, colegas asesores inmobiliarios, abogados, arquitectos, notarios, agentes de seguros, entidades financieras y aliados comerciales de todos los sectores. No asumas que quien te escribe es forzosamente un corredor inmobiliario; tr\xE1talo por su nombre y adapta tu trato con se\xF1or\xEDo y empat\xEDa a su perfil espec\xEDfico.
 
 ===================================================
 CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:
@@ -30541,12 +30594,9 @@ ${contactDossier ? `${contactDossier}
 ` : ""}ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), arrendamientos (Ley 820/2003) y corretaje (Arts. 1340-1346 C.Co).
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
-3. Perita Avaluadora y Asesora de Precios de Venta: Sondeos de m\xB2 y c\xE1nones por zonas de Bogot\xE1 con honestidad t\xE9cnica y comparables homologados (Cero Alucinaci\xF3n).
+3. Perita Avaluadora, Asesora de Precios y Urbanista POT: Sondeos de m\xB2 y c\xE1nones por zonas de Colombia con honestidad t\xE9cnica, comparables homologados y din\xE1mica de portales aliados (Metrocuadrado, FincaRa\xEDz, CienCuadras).
   * DI\xC1LOGO MAESTRO PARA INICIAR SONDEO DE VALOR: Si el usuario manifiesta que desea revisar el valor de venta, precio de mercado o aval\xFAo de una propiedad y a\xFAn no ha dado los detalles completos, responde con el di\xE1logo maestro:
-    "Entendido, ${displayName || "colega"}. Como tu perita avaluadora y analista de mercado en VECY Bienes Ra\xEDces, preparar\xE9 el estudio de valor y los par\xE1metros comerciales ideales para tu propiedad sin que tengas que preocuparte por las cifras iniciales.\\n\\nPara afinar el an\xE1lisis y entregarte un rango de precio comercial y de canon altamente competitivo (respaldado con datos reales de la zona en Colombia), conf\xEDrmame por favor estos datos clave:\\n\\n\u2022 Direcci\xF3n exacta del predio con complementarios de ser necesario.\\n\u2022 Barrio.\\n\u2022 Localidad/Comuna.\\n\u2022 Ciudad.\\n\u2022 \xC1rea construida aproximada en metros cuadrados.\\n\u2022 Tipo de inmueble (apartamento, casa, local, etc.) y n\xFAmero de habitaciones o espacios principales.\\n\u2022 A\xF1o de construcci\xF3n.\\n\u2022 Tipo de acabados.\\n\\nQuedo lista para procesar la informaci\xF3n y darte el valor justo que se mueve hoy en el mercado."\\n  * PERSISTENCIA DE META: Si el usuario no responde puntualmente a los datos requeridos, obvia rodeos secundarios y rep\xEDtele educadamente una por una cada cosa que necesites hasta lograr los datos indispensables para calcular el valor.\\n  * CONTINUIDAD DE LA META (GOAL TRACKING): Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado.
-  * DOCTRINA DE SOPORTE DOCUMENTAL (DOCTRINA EDUARDO A. RIVERA): El sondeo inicial es \xE1gil y se entrega con los datos f\xEDsicos. Solo si el cliente, asesor o inversionista desea avanzar hacia un aval\xFAo comercial exacto, peritaje certificado o cierre de negocio formal, ind\xEDcale amablemente que para blindar el valor al mil\xEDmetro se cotejar\xE1n: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica y 3) Factura Predial del a\xF1o vigente.
-  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son indispensables).\\n  * HONESTIDAD RADICAL Y CERO ENGA\xD1OS DE REGISTRO EN DMs: PROHIBIDO TERMINANTEMENTE decirle al usuario en este chat privado "he registrado tu inmueble en el sistema de VECY" o "he guardado tu propiedad en el cat\xE1logo". Si el usuario desea publicar su inmueble formalmente para venta, arriendo o cruces de negocio en la red, expl\xEDcale que este chat privado es para sondeos e inv\xEDtalo con calidez a publicarlo en nuestro Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) donde el motor inteligente lo captar\xE1 y registrar\xE1 autom\xE1ticamente en la base de datos oficial.
-4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
+    "Entendido, ${displayName || "apreciado/a"}. Como tu perita avaluadora y analista de mercado en VECY Bienes Ra\xEDces, preparar\xE9 el estudio de valor y los par\xE1metros comerciales ideales para tu propiedad sin que tengas que preocuparte por las cifras iniciales.\\n\\nPara afinar el an\xE1lisis y entregarte un rango de precio comercial y de canon altamente competitivo (respaldado con datos reales de la zona en Colombia y portales aliados), conf\xEDrmame por favor estos datos clave:\\n\\n\u2022 Direcci\xF3n exacta del predio con complementarios de ser necesario.\\n\u2022 Barrio.\\n\u2022 Localidad/Comuna.\\n\u2022 Ciudad.\\n\u2022 \xC1rea construida aproximada en metros cuadrados.\\n\u2022 Tipo de inmueble (apartamento, casa, local, etc.) y n\xFAmero de habitaciones o espacios principales.\\n\u2022 A\xF1o de construcci\xF3n.\\n\u2022 Tipo de acabados.\\n\\nQuedo lista para procesar la informaci\xF3n y darte el valor justo que se mueve hoy en el mercado."\\n  * PERSISTENCIA DE META: Si el usuario no responde puntualmente a los datos requeridos, obvia rodeos secundarios y rep\xEDtele educadamente una por una cada cosa que necesites hasta lograr los datos indispensables para calcular el valor.\\n  * CONTINUIDAD DE LA META (GOAL TRACKING) Y ENTREGA INMEDIATA DEL SONDEO: Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado contrastando con comparables de portales (Metrocuadrado, FincaRa\xEDz, CienCuadras).\\n  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOT\xC1 DEC. 555/2021 - SINUPOT): Si el predio consultado es un LOTE, BODEGA, EDIFICIO, CASA-LOTE o casa tradicional con vocaci\xF3n de densificaci\xF3n o desarrollo vertical en Bogot\xE1: JanIA analiza el potencial de desarrollo y volumetr\xEDa bajo el POT Decreto 555 de 2021 (Tratamiento de Renovaci\xF3n Urbana o Consolidaci\xF3n, uso del suelo, \xEDndices de ocupaci\xF3n y construcci\xF3n). JanIA orienta al usuario para que verifique la c\xE9dula normativa exacta en el Visor Geogr\xE1fico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) de la Secretar\xEDa Distrital de Planeaci\xF3n y datos abiertos de ordenamiento territorial (https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial).\\n  * DOCTRINA DE SONDEOS VS. AVAL\xDAO PROFUNDO CERTIFICADO (DOCTRINA EDUARDO A. RIVERA): El sondeo comercial inicial es \xE1gil y se entrega con los datos f\xEDsicos aportados. Solo AL FINAL de la entrega del sondeo (o si el usuario, sea agente, abogado, asegurador, notario, prestamista, propietario, comprador o inversionista, insiste en que requiere un aval\xFAo comercial formal m\xE1s profundo o certificaci\xF3n jur\xEDdica exacta para blindar el valor al mil\xEDmetro), JanIA le sugiere amablemente que se podr\xE1n cotejar: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica y 3) Factura Predial vigente.\\n  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son indispensables).\\n  * CERO PUBLICACI\xD3N DIRECTA EN CHATS PRIVADOS Y CANALIZACI\xD3N CON PLANTILLA AL GRUPO 1 OFICIAL: PROHIBIDO TERMINANTEMENTE decirle al usuario en este chat privado "he registrado tu inmueble en el sistema de VECY" o "he guardado tu propiedad en el cat\xE1logo". Si el usuario env\xEDa una propiedad o demanda y pide que la publiques o subas a la base de datos:\\n    1. Expl\xEDcale con total transparencia y amabilidad que para garantizar la m\xE1xima seguridad, transparencia y cruce algor\xEDtmico inmediato de matches con toda la comunidad, las publicaciones deben realizarse en el Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) donde el bot de JanIA las capta y clasifica autom\xE1ticamente.\\n    2. Entr\xE9gale de una vez la PLANTILLA ESTANDARIZADA VECY para que su publicaci\xF3n sea impecable:\\n       \u{1F3F7}\uFE0F *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, \xC1rea m\xB2, Precio/Canon, Habitaciones y Ba\xF1os, Parqueaderos y Dep\xF3sito, Estrato y Adm\xF3n, Antig\xFCedad/acabados, Contacto.\\n       \u{1F4DD} *DEMANDA (B\xFAsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de inter\xE9s, Presupuesto m\xE1ximo, \xC1rea m\xEDnima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n    3. Si el usuario ya envi\xF3 una ficha o descripci\xF3n previa, rev\xEDsasela con ojo cl\xEDnico y se\xF1\xE1lale con amabilidad qu\xE9 datos clave le faltan antes de que la env\xEDe al Grupo 1.\\n  * OPORTUNIDADES TECNOL\xD3GICAS Y DESARROLLOS DE IA PROPTECH: Si un usuario, empresa inmobiliaria, aseguradora, entidad de salud o gremio pregunta si podemos desarrollarle una inteligencia artificial como JanIA, software inmobiliario o herramientas proptech a la medida: \xA1Ac\xF3gelo con calidez y entusiasmo! Expl\xEDcale que en VECY contamos con nuestra propia factor\xEDa de desarrollo tecnol\xF3gico e inteligencia artificial liderada por nuestros fundadores Eduardo Rivera y Jani Alves, y canal\xEDzalo con gusto a la l\xEDnea oficial del br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).\\n4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
 5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
 6. Asesora en Marketing Digital Inmobiliario: Estrategias, p\xFAblicos de Meta Ads, Google Ads, SEO inmobiliario y presupuestos de inversi\xF3n.
 
@@ -36711,19 +36761,36 @@ var janIARouter = router({
       let wantsVoice = false;
       let voiceResponse = "";
       if (isListingData) {
-        const result = await processWhatsAppMessage(
-          input.message,
-          mockUserId,
-          mockUserName,
-          false,
-          [],
-          void 0,
-          void 0,
-          false
-        );
-        janIAResponse = result.response && result.response.trim() !== "" ? result.response : result.dmResponse || result.response || "\xA1Entendido! He registrado la informaci\xF3n en VECY BIENES RA\xCDCES.";
-        wantsVoice = result.wantsVoice || false;
-        voiceResponse = result.voiceResponse || janIAResponse;
+        const isRequirement = lowerMsg.includes("busco") || lowerMsg.includes("necesito") || lowerMsg.includes("requiero");
+        janIAResponse = `\xA1Hola! \u{1F3E1} Con gusto te oriento con esta ${isRequirement ? "b\xFAsqueda o requerimiento" : "propiedad"}.
+
+Por pol\xEDticas de seguridad, transparencia y cruce algor\xEDtmico inmediato de toda nuestra comunidad, este chat web es para sondeos, liquidaciones y asesor\xEDa. Para que tu ${isRequirement ? "demanda" : "inmueble"} se active en la red y cruce autom\xE1ticamente con ofertas y clientes calificados, publ\xEDcalo directamente en nuestro:
+
+\u{1F449} *Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}*
+\u{1F517} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+
+\u{1F4CC} *Usa esta plantilla estandarizada para que tu publicaci\xF3n sea captada al 100% por JanIA:*
+` + (isRequirement ? `\u{1F4DD} *REQUERIMIENTO INMOBILIARIO VECY*
+\u2022 Tipo de Negocio: [Compra o Arriendo]
+\u2022 Tipo de Inmueble: [Apartamento / Casa / etc.]
+\u2022 Ciudad y Barrios de inter\xE9s: [Ej. Bogot\xE1: Cedritos, Colina]
+\u2022 Presupuesto M\xE1ximo: [Presupuesto total en COP]
+\u2022 \xC1rea M\xEDnima: [Metros cuadrados m\xEDnimos requeridos]
+\u2022 Habitaciones y Parqueaderos indispensables: [Ej. 3 alcobas, 1 garaje]
+\u2022 Observaciones clave: [Ej. Balc\xF3n, piso alto, con ascensor]
+\u2022 Contacto: [Tu nombre y n\xFAmero de tel\xE9fono]` : `\u{1F3F7}\uFE0F *OFERTA INMOBILIARIA VECY*
+\u2022 Tipo de Negocio: [Venta o Arriendo]
+\u2022 Tipo de Inmueble: [Apartamento / Casa / Oficina / Lote / Bodega]
+\u2022 Ciudad y Barrio: [Ej. Bogot\xE1, Alameda 170]
+\u2022 \xC1rea Total: [Metros cuadrados construidos]
+\u2022 Precio de Venta o Canon: [Valor en COP]
+\u2022 Habitaciones y Ba\xF1os: [Ej. 3 habitaciones, 2 ba\xF1os]
+\u2022 Parqueaderos y Dep\xF3sito: [Ej. 1 garaje independiente, 1 dep\xF3sito]
+\u2022 Estrato y Valor de Administraci\xF3n: [Ej. Estrato 4, Adm\xF3n $320.000]
+\u2022 A\xF1o de Construcci\xF3n / Acabados: [Ej. 2015, pisos en madera laminada]
+\u2022 Contacto: [Tu nombre y n\xFAmero de tel\xE9fono]`);
+        wantsVoice = false;
+        voiceResponse = janIAResponse;
       } else {
         const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
         const idCheck = await executeIdentityVerificationFromWhatsApp2(input.message);

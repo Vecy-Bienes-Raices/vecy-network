@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41)\.0/);
     });
   });
 
@@ -7162,11 +7162,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41)\.0/);
     });
   });
 
@@ -7212,11 +7212,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(37|38|39|40)\.0/);
+      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41)\.0/);
     });
   });
 
@@ -7241,11 +7241,11 @@ Ana Morales Castillo
 
     it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(38|39|40)\.0/);
+      expect(pkg.version).toMatch(/^33\.(38|39|40|41)\.0/);
     });
   });
 
@@ -7276,11 +7276,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.39 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(39|40)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(39|40)\.0/);
+      expect(pkg.version).toMatch(/^33\.(39|40|41)\.0/);
     });
   });
 
@@ -7301,11 +7301,98 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.40 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.40");
+      expect(VECY_VERSION).toMatch(/^v33\.(40|41)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.40.0");
+      expect(pkg.version).toMatch(/^33\.(40|41)\.0/);
+    });
+  });
+
+  describe("Suite v33.41 — POT Decreto 555/21, SINUPOT, Audiencia Plural y Plantilla Grupo 1", () => {
+    it("1. analyzeUrbanPotPotential evalúa lotes, bodegas y edificios con POT Decreto 555/21 y enlace SINUPOT", async () => {
+      const { analyzeUrbanPotPotential } = await import("../_core/valuation");
+
+      // Caso lote en Bogotá
+      const loteBogota = analyzeUrbanPotPotential({
+        tipoInmueble: "lote",
+        areaM2: 500,
+        zonaOBarrio: "Chicó",
+        ciudad: "Bogotá"
+      });
+      expect(loteBogota.aplicaPotConstructor).toBe(true);
+      expect(loteBogota.visorSinupotUrl).toBe("https://www.sdp.gov.co/content/sinupot-0");
+      expect(loteBogota.datosAbiertosUrl).toBe("https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial");
+      expect(loteBogota.tratamientoEstimado).toContain("Renovación Urbana");
+      expect(loteBogota.recomendacionConstructora).toContain("POT Decreto 555 de 2021");
+
+      // Caso bodega en Bogotá (zona industrial / comercial Toberín)
+      const bodegaBogota = analyzeUrbanPotPotential({
+        tipoInmueble: "bodega",
+        areaM2: 1200,
+        zonaOBarrio: "Toberín",
+        ciudad: "Bogotá"
+      });
+      expect(bodegaBogota.aplicaPotConstructor).toBe(true);
+      expect(bodegaBogota.usoSueloPrincipal).toContain("Comercial, Industrial Liviano");
+
+      // Caso apartamento estándar (no constructor)
+      const aptoEstandar = analyzeUrbanPotPotential({
+        tipoInmueble: "apartamento",
+        areaM2: 70,
+        zonaOBarrio: "Cedritos",
+        ciudad: "Bogotá"
+      });
+      expect(aptoEstandar.aplicaPotConstructor).toBe(false);
+    });
+
+    it("2. executeMarketValuationSurvey integra potNormaUrbana y comparables de portales", async () => {
+      const { executeMarketValuationSurvey } = await import("../_core/valuation");
+      const surveyLote = executeMarketValuationSurvey({
+        zonaOBarrio: "Chicó",
+        tipoInmueble: "lote",
+        areaM2: 600,
+        ciudad: "Bogotá"
+      });
+
+      expect((surveyLote as any).potNormaUrbana).toBeDefined();
+      expect((surveyLote as any).potNormaUrbana.aplicaPotConstructor).toBe(true);
+      expect((surveyLote as any).portalesComparablesConsultados).toContain("Metrocuadrado");
+      expect((surveyLote as any).portalesComparablesConsultados).toContain("FincaRaíz");
+      expect((surveyLote as any).portalesComparablesConsultados).toContain("Ciencuadras");
+    });
+
+    it("3. dmHandler incorpora audiencia plural, soporte documental sugerido al final y plantilla Grupo 1", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+
+      expect(content).toContain("comunidad plural: propietarios, compradores, arrendatarios, inversionistas");
+      expect(content).toContain("POT BOGOTÁ DEC. 555/2021 - SINUPOT");
+      expect(content).toContain("https://www.sdp.gov.co/content/sinupot-0");
+      expect(content).toContain("Solo AL FINAL de la entrega del sondeo");
+      expect(content).toContain("PLANTILLA ESTANDARIZADA VECY");
+      expect(content).toContain("🏷️ *OFERTA (Venta/Arriendo):*");
+      expect(content).toContain("📝 *DEMANDA (Búsqueda):*");
+      expect(content).toContain("OPORTUNIDADES TECNOLÓGICAS Y DESARROLLOS DE IA PROPTECH");
+      expect(content).toContain("+57 316 656 9719");
+    });
+
+    it("4. router web janIA.ts canaliza isListingData al Grupo 1 Oficial con plantilla estandarizada", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/routers/janIA.ts", "utf-8");
+
+      expect(content).toContain("Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴");
+      expect(content).toContain("https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ");
+      expect(content).toContain("Usa esta plantilla estandarizada para que tu publicación sea captada al 100% por JanIA");
+    });
+
+    it("5. Consagración doctrinal de versión v33.41 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.41");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.41.0");
     });
   });
 });

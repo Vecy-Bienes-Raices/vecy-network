@@ -241,22 +241,36 @@ export const janIARouter = router({
         let voiceResponse = "";
 
         if (isListingData) {
-          // Extraction & database insertion pipeline for property listings
-          const result = await processWhatsAppMessage(
-            input.message,
-            mockUserId,
-            mockUserName,
-            false,
-            [],
-            undefined,
-            undefined,
-            false
-          );
-          janIAResponse = (result.response && result.response.trim() !== "")
-            ? result.response
-            : (result.dmResponse || result.response || "¡Entendido! He registrado la información en VECY BIENES RAÍCES.");
-          wantsVoice = result.wantsVoice || false;
-          voiceResponse = result.voiceResponse || janIAResponse;
+          const isRequirement = lowerMsg.includes("busco") || lowerMsg.includes("necesito") || lowerMsg.includes("requiero");
+          janIAResponse =
+            `¡Hola! 🏡 Con gusto te oriento con esta ${isRequirement ? "búsqueda o requerimiento" : "propiedad"}.\n\n` +
+            `Por políticas de seguridad, transparencia y cruce algorítmico inmediato de toda nuestra comunidad, este chat web es para sondeos, liquidaciones y asesoría. Para que tu ${isRequirement ? "demanda" : "inmueble"} se active en la red y cruce automáticamente con ofertas y clientes calificados, publícalo directamente en nuestro:\n\n` +
+            `👉 *Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴*\n` +
+            `🔗 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n` +
+            `📌 *Usa esta plantilla estandarizada para que tu publicación sea captada al 100% por JanIA:*\n` +
+            (isRequirement
+              ? `📝 *REQUERIMIENTO INMOBILIARIO VECY*\n` +
+                `• Tipo de Negocio: [Compra o Arriendo]\n` +
+                `• Tipo de Inmueble: [Apartamento / Casa / etc.]\n` +
+                `• Ciudad y Barrios de interés: [Ej. Bogotá: Cedritos, Colina]\n` +
+                `• Presupuesto Máximo: [Presupuesto total en COP]\n` +
+                `• Área Mínima: [Metros cuadrados mínimos requeridos]\n` +
+                `• Habitaciones y Parqueaderos indispensables: [Ej. 3 alcobas, 1 garaje]\n` +
+                `• Observaciones clave: [Ej. Balcón, piso alto, con ascensor]\n` +
+                `• Contacto: [Tu nombre y número de teléfono]`
+              : `🏷️ *OFERTA INMOBILIARIA VECY*\n` +
+                `• Tipo de Negocio: [Venta o Arriendo]\n` +
+                `• Tipo de Inmueble: [Apartamento / Casa / Oficina / Lote / Bodega]\n` +
+                `• Ciudad y Barrio: [Ej. Bogotá, Alameda 170]\n` +
+                `• Área Total: [Metros cuadrados construidos]\n` +
+                `• Precio de Venta o Canon: [Valor en COP]\n` +
+                `• Habitaciones y Baños: [Ej. 3 habitaciones, 2 baños]\n` +
+                `• Parqueaderos y Depósito: [Ej. 1 garaje independiente, 1 depósito]\n` +
+                `• Estrato y Valor de Administración: [Ej. Estrato 4, Admón $320.000]\n` +
+                `• Año de Construcción / Acabados: [Ej. 2015, pisos en madera laminada]\n` +
+                `• Contacto: [Tu nombre y número de teléfono]`);
+          wantsVoice = false;
+          voiceResponse = janIAResponse;
         } else {
           // 🛡️ Interceptor Web 1: Verificación Oficial de Cédula (Policía Nacional vía 2Captcha)
           const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
