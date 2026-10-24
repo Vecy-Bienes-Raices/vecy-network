@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.42";
+    VECY_VERSION = "v33.43";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -9288,6 +9288,21 @@ var init_matching = __esm({
 });
 
 // server/_core/advisors.ts
+var advisors_exports = {};
+__export(advisors_exports, {
+  brokerDirectoryCache: () => brokerDirectoryCache,
+  extractColombianPhoneFromText: () => extractColombianPhoneFromText,
+  getAllAdvisorJids: () => getAllAdvisorJids,
+  initAdvisorsDirectory: () => initAdvisorsDirectory,
+  isGenericName: () => isGenericName,
+  isLidIdentifier: () => isLidIdentifier,
+  lookupAdvisor: () => lookupAdvisor,
+  lookupAdvisorSync: () => lookupAdvisorSync,
+  normalizeAdvisorPhone: () => normalizeAdvisorPhone,
+  preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
+  reconcileAndBackfillAdvisors: () => reconcileAndBackfillAdvisors,
+  saveOrUpdateAdvisor: () => saveOrUpdateAdvisor
+});
 import { and as and2, eq as eq4, or, sql as sql3 } from "drizzle-orm";
 function isGenericName(n) {
   if (!n) return true;
@@ -9965,6 +9980,21 @@ async function lookupAdvisor(identifier) {
     console.warn(`[AdvisorsCore] Error consultando advisors en BD:`, err?.message);
   }
   return null;
+}
+function getAllAdvisorJids() {
+  const jids = /* @__PURE__ */ new Set();
+  for (const [_, value] of brokerDirectoryCache.entries()) {
+    if (value && value.phone) {
+      let p = value.phone.replace(/\D/g, "");
+      if (p.length === 10 && p.startsWith("3")) {
+        p = "57" + p;
+      }
+      if (p.startsWith("57") && p.length >= 12) {
+        jids.add(`${p}@s.whatsapp.net`);
+      }
+    }
+  }
+  return Array.from(jids);
 }
 var brokerDirectoryCache;
 var init_advisors = __esm({
@@ -24943,6 +24973,143 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         return { success: true, channelMessageId: channelResult.messageId };
       }
       /**
+       * 📱 Emisión a Estados Propios de WhatsApp (status@broadcast)
+       * Publica imágenes en formato vertical 9:16 o textos en el Estado de JanIA (+573192919978)
+       * distribuyendo a la lista de contactos autorizados (statusJidList).
+       */
+      async postToWhatsAppStatus(options) {
+        try {
+          if (!this.sock || !this.isReady) {
+            console.warn("[JANIA-STATUS] \u{1F6D1} Socket de WhatsApp no listo para publicar estado.");
+            return { success: false, error: "Socket no conectado" };
+          }
+          const { captionText, mediaPath, recipients } = options;
+          const targetJid = "status@broadcast";
+          let targetRecipients = recipients;
+          if (!targetRecipients || targetRecipients.length === 0) {
+            try {
+              const { getAllAdvisorJids: getAllAdvisorJids2 } = await Promise.resolve().then(() => (init_advisors(), advisors_exports));
+              targetRecipients = getAllAdvisorJids2();
+            } catch (_) {
+            }
+          }
+          let messagePayload = {};
+          if (mediaPath) {
+            const fs14 = await import("fs");
+            if (fs14.existsSync(mediaPath)) {
+              const buffer = fs14.readFileSync(mediaPath);
+              const path15 = await import("path");
+              const ext = path15.extname(mediaPath).toLowerCase();
+              if (ext === ".mp4") {
+                messagePayload = {
+                  video: buffer,
+                  caption: captionText,
+                  mimetype: "video/mp4"
+                };
+              } else {
+                messagePayload = {
+                  image: buffer,
+                  caption: captionText,
+                  mimetype: ext === ".png" ? "image/png" : "image/jpeg"
+                };
+              }
+            } else {
+              messagePayload = { text: captionText };
+            }
+          } else {
+            messagePayload = {
+              text: captionText,
+              backgroundColor: "#0a0a0a",
+              font: 1
+            };
+          }
+          const sendOptions = {};
+          if (targetRecipients && targetRecipients.length > 0) {
+            sendOptions.statusJidList = targetRecipients;
+          }
+          console.log(`[JANIA-STATUS] \u{1F4E2} Despachando Estado de WhatsApp (${mediaPath ? "Multimedia" : "Texto"}). Destinatarios: ${targetRecipients?.length || 0}...`);
+          const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+          if (sent && sent.key && sent.key.id) {
+            this.botSentMessageIds.add(sent.key.id);
+            console.log(`[JANIA-STATUS] \u2705 Estado propio de WhatsApp publicado exitosamente (ID: ${sent.key.id}).`);
+            return { success: true, messageId: sent.key.id };
+          }
+          return { success: false, error: "Sin confirmaci\xF3n de ID de estado" };
+        } catch (err) {
+          console.error("[JANIA-STATUS] \u274C Error publicando Estado en WhatsApp:", err?.message || err);
+          return { success: false, error: err?.message || String(err) };
+        }
+      }
+      /**
+       * 🌟 Despacha el Estado de WhatsApp diario rotativo según el catálogo de servicios de VECY BIENES RAÍCES
+       */
+      async postDailyServiceStatus(customImagePath, customTopic) {
+        try {
+          const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+          const dayOfWeek = nowBogota.getDay();
+          const fs14 = await import("fs");
+          const path15 = await import("path");
+          const janiaDir = path15.resolve(process.cwd(), "client/public/assets/jania");
+          const showcaseVertical = path15.join(janiaDir, "jania_status_showcase_v1.jpg");
+          const statusMap = {
+            1: {
+              // Lunes
+              title: "Sondeos Comerciales, Aval\xFAos y POT Bogot\xE1",
+              image: fs14.existsSync(showcaseVertical) ? showcaseVertical : path15.join(janiaDir, "jania_avaluos.jpg"),
+              caption: "\u{1F4CA} *\xBFVas a vender o arrendar tu inmueble?*\nCalcula el valor comercial real con 8 datos f\xEDsicos, valor de m\xB2 y norma urbana POT (Decreto 555/21 y SINUPOT).\n\n\u{1F449} Escr\xEDbeme aqu\xED al chat privado o d\xE9janos tu caso en el Grupo 2 de Soporte Legal y Aval\xFAos.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            },
+            2: {
+              // Martes
+              title: "Verificaci\xF3n Oficial de Identidad y Seguridad Notarial",
+              image: path15.join(janiaDir, "jania_cedulas_comercial.jpg"),
+              caption: "\u{1F6E1}\uFE0F *Blinda tus operaciones inmobiliarias a $0 COP*\nConsulta antecedentes de Polic\xEDa, Procuradur\xEDa SIRI, Contralor\xEDa, ADRES EPS y C\xE1mara de Comercio RUES en segundos con el n\xFAmero de c\xE9dula.\n\n\u{1F449} Escr\xEDbeme 'Verificar CC' aqu\xED al chat privado.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            },
+            3: {
+              // Miércoles
+              title: "Factura Oficial Predial Bogot\xE1 en PDF",
+              image: path15.join(janiaDir, "jania_predial_comercial.jpg"),
+              caption: "\u{1F3DB}\uFE0F *\xBFNecesitas la factura del Impuesto Predial de Bogot\xE1 en PDF?*\nExpedici\xF3n oficial distrital en menos de 1 minuto sin filas ni claves. Solo comp\xE1rteme el c\xF3digo CHIP (inicia por AAA) y la c\xE9dula del propietario.\n\n\u{1F449} Escr\xEDbeme aqu\xED al chat privado.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            },
+            4: {
+              // Jueves
+              title: "10 Habilidades de Marketing Inmobiliario & Alianza 40/20/40",
+              image: path15.join(janiaDir, "jania_marketing.jpg"),
+              caption: "\u{1F4E2} *Deja los clich\xE9s de 'hermoso apartamento'*\nDescubre la Suite de 10 Habilidades de Marketing Inmobiliario de VECY: Perfil de Cliente Ideal (ICP), Swap Test y fichas de alto impacto. \xDAnete a la Red 40/20/40 o 50/50.\n\n\u{1F449} Hablemos de c\xF3mo acelerar tus cierres en el Grupo 3 o aqu\xED en privado.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            },
+            5: {
+              // Viernes
+              title: "Casos Jur\xEDdicos, Pleitos y Saneamiento Notarial",
+              image: path15.join(janiaDir, "jania_juridico.jpg"),
+              caption: "\u2696\uFE0F *\xBFNegociaci\xF3n frenada por un problema jur\xEDdico?*\nEstudios de t\xEDtulos, promesas de compraventa, saneamiento de hipotecas, pleitos y controversias. Plantea tu caso en el Grupo 2 o en privado con JanIA.\n\n\u{1F449} Escr\xEDbeme tu consulta legal aqu\xED.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            },
+            6: {
+              // Sábado
+              title: "La Gran Bolsa Inmobiliaria Colaborativa",
+              image: path15.join(janiaDir, "jania_matches.jpg"),
+              caption: "\u{1F91D} *Bolsa Inmobiliaria VECY activa este fin de semana*\nConectamos ofertas y requerimientos calificados en toda Colombia. Publica con las plantillas estandarizadas en el Grupo 1 Oficial y acelera tus cierres.\n\n\u{1F449} \xDAnete al Grupo 1 Oficial o escr\xEDbeme para cruzar tu inmueble.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            },
+            0: {
+              // Domingo
+              title: "Educaci\xF3n Inmobiliaria & Preparaci\xF3n de Semana",
+              image: fs14.existsSync(showcaseVertical) ? showcaseVertical : path15.join(janiaDir, "jania_soporte.jpg"),
+              caption: "\u{1F31F} *Prep\xE1rate para una semana de grandes cierres*\nEn VECY BIENES RA\xCDCES te acompa\xF1amos 24/7 con aval\xFAos, seguridad notarial, predial y marketing de alto rendimiento.\n\n\u{1F449} Escr\xEDbeme cualquier consulta y empezamos a preparar tu semana.\n\n\u2728 *VECY BIENES RA\xCDCES \u{1F1E8}\u{1F1F4}*"
+            }
+          };
+          const selected = statusMap[dayOfWeek] || statusMap[1];
+          let imgToUse = customImagePath && fs14.existsSync(customImagePath) ? customImagePath : selected.image;
+          if (!imgToUse || !fs14.existsSync(imgToUse)) {
+            imgToUse = fs14.existsSync(showcaseVertical) ? showcaseVertical : void 0;
+          }
+          return await this.postToWhatsAppStatus({
+            captionText: selected.caption,
+            mediaPath: imgToUse
+          });
+        } catch (err) {
+          console.error("[JANIA-STATUS] Error despachando estado diario:", err?.message || err);
+          return { success: false, error: err?.message || String(err) };
+        }
+      }
+      /**
        * Compatibilidad: Despacho de texto puro delegando a sendDailyTipToGroupsAndChannel sin imagen
        */
       async sendDailyTipTextToGroupsAndChannel(captionText) {
@@ -32329,6 +32496,7 @@ __export(cronService_exports, {
   publishDailyPoll: () => publishDailyPoll,
   publishDailyPollNow: () => publishDailyPollNow,
   publishDailyTipForDay: () => publishDailyTipForDay,
+  publishDailyWhatsAppStatusNow: () => publishDailyWhatsAppStatusNow,
   publishEveningPollNow: () => publishEveningPollNow,
   publishEveningServicesNow: () => publishEveningServicesNow,
   publishGrupo3TipNow: () => publishGrupo3TipNow,
@@ -33222,19 +33390,28 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
 Colegas, \xBFustedes c\xF3mo est\xE1n manejando este tema en el d\xEDa a d\xEDa? Cu\xE9ntennos su experiencia y debatimos aqu\xED abajo \u{1F447}`;
   try {
     await janiaMatchBot.sendMorningPillAndGroupTeasers(content.captionText, teaserText, imagePath);
+    try {
+      console.log("[CRON-SERVICE] \u{1F4F1} Despachando Estado de WhatsApp propio con cat\xE1logo de servicios rotativo...");
+      await janiaMatchBot.postDailyServiceStatus();
+    } catch (statusErr) {
+      console.warn("[CRON-SERVICE] Advertencia en despacho de estado de WhatsApp:", statusErr?.message);
+    }
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
       imageFileName: imagePath ? path10.basename(imagePath) : void 0,
       captionText: content.captionText
     });
-    console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen + Grupos 2 y 3 con teaser trampol\xEDn): "${content.topicTitle}".`);
+    console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen + Grupos 2 y 3 con teaser trampol\xEDn + Estado WhatsApp): "${content.topicTitle}".`);
     return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText };
   } catch (err) {
     console.error(`[CRON-SERVICE] Error despachando difusi\xF3n diaria (D\xEDa ${tip.dayOfMonth}):`, err?.message);
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
   }
+}
+async function publishDailyWhatsAppStatusNow() {
+  return await janiaMatchBot.postDailyServiceStatus();
 }
 async function publishWeeklyReportNow(force = true) {
   const dateKey = getBogotaDateString();

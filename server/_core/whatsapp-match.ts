@@ -3519,6 +3519,155 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 
   /**
+   * 📱 Emisión a Estados Propios de WhatsApp (status@broadcast)
+   * Publica imágenes en formato vertical 9:16 o textos en el Estado de JanIA (+573192919978)
+   * distribuyendo a la lista de contactos autorizados (statusJidList).
+   */
+  public async postToWhatsAppStatus(options: {
+    captionText: string;
+    mediaPath?: string;
+    recipients?: string[];
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      if (!this.sock || !this.isReady) {
+        console.warn('[JANIA-STATUS] 🛑 Socket de WhatsApp no listo para publicar estado.');
+        return { success: false, error: 'Socket no conectado' };
+      }
+
+      const { captionText, mediaPath, recipients } = options;
+      const targetJid = 'status@broadcast';
+
+      let targetRecipients = recipients;
+      if (!targetRecipients || targetRecipients.length === 0) {
+        try {
+          const { getAllAdvisorJids } = await import('./advisors');
+          targetRecipients = getAllAdvisorJids();
+        } catch (_) { }
+      }
+
+      let messagePayload: any = {};
+      if (mediaPath) {
+        const fs = await import('fs');
+        if (fs.existsSync(mediaPath)) {
+          const buffer = fs.readFileSync(mediaPath);
+          const path = await import('path');
+          const ext = path.extname(mediaPath).toLowerCase();
+
+          if (ext === '.mp4') {
+            messagePayload = {
+              video: buffer,
+              caption: captionText,
+              mimetype: 'video/mp4'
+            };
+          } else {
+            messagePayload = {
+              image: buffer,
+              caption: captionText,
+              mimetype: ext === '.png' ? 'image/png' : 'image/jpeg'
+            };
+          }
+        } else {
+          messagePayload = { text: captionText };
+        }
+      } else {
+        messagePayload = {
+          text: captionText,
+          backgroundColor: '#0a0a0a',
+          font: 1
+        };
+      }
+
+      const sendOptions: any = {};
+      if (targetRecipients && targetRecipients.length > 0) {
+        sendOptions.statusJidList = targetRecipients;
+      }
+
+      console.log(`[JANIA-STATUS] 📢 Despachando Estado de WhatsApp (${mediaPath ? 'Multimedia' : 'Texto'}). Destinatarios: ${targetRecipients?.length || 0}...`);
+
+      const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+      if (sent && sent.key && sent.key.id) {
+        this.botSentMessageIds.add(sent.key.id);
+        console.log(`[JANIA-STATUS] ✅ Estado propio de WhatsApp publicado exitosamente (ID: ${sent.key.id}).`);
+        return { success: true, messageId: sent.key.id };
+      }
+
+      return { success: false, error: 'Sin confirmación de ID de estado' };
+    } catch (err: any) {
+      console.error('[JANIA-STATUS] ❌ Error publicando Estado en WhatsApp:', err?.message || err);
+      return { success: false, error: err?.message || String(err) };
+    }
+  }
+
+  /**
+   * 🌟 Despacha el Estado de WhatsApp diario rotativo según el catálogo de servicios de VECY BIENES RAÍCES
+   */
+  public async postDailyServiceStatus(customImagePath?: string, customTopic?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const nowBogota = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+      const dayOfWeek = nowBogota.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
+
+      const fs = await import('fs');
+      const path = await import('path');
+
+      // Directorio de imágenes de JanIA
+      const janiaDir = path.resolve(process.cwd(), 'client/public/assets/jania');
+      const showcaseVertical = path.join(janiaDir, 'jania_status_showcase_v1.jpg');
+
+      const statusMap: Record<number, { title: string; image: string; caption: string }> = {
+        1: { // Lunes
+          title: 'Sondeos Comerciales, Avalúos y POT Bogotá',
+          image: fs.existsSync(showcaseVertical) ? showcaseVertical : path.join(janiaDir, 'jania_avaluos.jpg'),
+          caption: '📊 *¿Vas a vender o arrendar tu inmueble?*\nCalcula el valor comercial real con 8 datos físicos, valor de m² y norma urbana POT (Decreto 555/21 y SINUPOT).\n\n👉 Escríbeme aquí al chat privado o déjanos tu caso en el Grupo 2 de Soporte Legal y Avalúos.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        },
+        2: { // Martes
+          title: 'Verificación Oficial de Identidad y Seguridad Notarial',
+          image: path.join(janiaDir, 'jania_cedulas_comercial.jpg'),
+          caption: '🛡️ *Blinda tus operaciones inmobiliarias a $0 COP*\nConsulta antecedentes de Policía, Procuraduría SIRI, Contraloría, ADRES EPS y Cámara de Comercio RUES en segundos con el número de cédula.\n\n👉 Escríbeme \'Verificar CC\' aquí al chat privado.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        },
+        3: { // Miércoles
+          title: 'Factura Oficial Predial Bogotá en PDF',
+          image: path.join(janiaDir, 'jania_predial_comercial.jpg'),
+          caption: '🏛️ *¿Necesitas la factura del Impuesto Predial de Bogotá en PDF?*\nExpedición oficial distrital en menos de 1 minuto sin filas ni claves. Solo compárteme el código CHIP (inicia por AAA) y la cédula del propietario.\n\n👉 Escríbeme aquí al chat privado.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        },
+        4: { // Jueves
+          title: '10 Habilidades de Marketing Inmobiliario & Alianza 40/20/40',
+          image: path.join(janiaDir, 'jania_marketing.jpg'),
+          caption: '📢 *Deja los clichés de \'hermoso apartamento\'*\nDescubre la Suite de 10 Habilidades de Marketing Inmobiliario de VECY: Perfil de Cliente Ideal (ICP), Swap Test y fichas de alto impacto. Únete a la Red 40/20/40 o 50/50.\n\n👉 Hablemos de cómo acelerar tus cierres en el Grupo 3 o aquí en privado.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        },
+        5: { // Viernes
+          title: 'Casos Jurídicos, Pleitos y Saneamiento Notarial',
+          image: path.join(janiaDir, 'jania_juridico.jpg'),
+          caption: '⚖️ *¿Negociación frenada por un problema jurídico?*\nEstudios de títulos, promesas de compraventa, saneamiento de hipotecas, pleitos y controversias. Plantea tu caso en el Grupo 2 o en privado con JanIA.\n\n👉 Escríbeme tu consulta legal aquí.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        },
+        6: { // Sábado
+          title: 'La Gran Bolsa Inmobiliaria Colaborativa',
+          image: path.join(janiaDir, 'jania_matches.jpg'),
+          caption: '🤝 *Bolsa Inmobiliaria VECY activa este fin de semana*\nConectamos ofertas y requerimientos calificados en toda Colombia. Publica con las plantillas estandarizadas en el Grupo 1 Oficial y acelera tus cierres.\n\n👉 Únete al Grupo 1 Oficial o escríbeme para cruzar tu inmueble.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        },
+        0: { // Domingo
+          title: 'Educación Inmobiliaria & Preparación de Semana',
+          image: fs.existsSync(showcaseVertical) ? showcaseVertical : path.join(janiaDir, 'jania_soporte.jpg'),
+          caption: '🌟 *Prepárate para una semana de grandes cierres*\nEn VECY BIENES RAÍCES te acompañamos 24/7 con avalúos, seguridad notarial, predial y marketing de alto rendimiento.\n\n👉 Escríbeme cualquier consulta y empezamos a preparar tu semana.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        }
+      };
+
+      const selected = statusMap[dayOfWeek] || statusMap[1];
+      let imgToUse: string | undefined = customImagePath && fs.existsSync(customImagePath) ? customImagePath : selected.image;
+      if (!imgToUse || !fs.existsSync(imgToUse)) {
+        imgToUse = fs.existsSync(showcaseVertical) ? showcaseVertical : undefined;
+      }
+
+      return await this.postToWhatsAppStatus({
+        captionText: selected.caption,
+        mediaPath: imgToUse
+      });
+    } catch (err: any) {
+      console.error('[JANIA-STATUS] Error despachando estado diario:', err?.message || err);
+      return { success: false, error: err?.message || String(err) };
+    }
+  }
+
+  /**
    * Compatibilidad: Despacho de texto puro delegando a sendDailyTipToGroupsAndChannel sin imagen
    */
   public async sendDailyTipTextToGroupsAndChannel(captionText: string) {

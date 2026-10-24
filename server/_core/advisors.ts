@@ -1002,3 +1002,23 @@ export async function lookupAdvisor(identifier: {
 
   return null;
 }
+
+/**
+ * Retorna todos los JIDs de asesores oficiales registrados para emisión a status@broadcast (WhatsApp Status)
+ * Formato: 573xxxxxxxxx@s.whatsapp.net
+ */
+export function getAllAdvisorJids(): string[] {
+  const jids = new Set<string>();
+  for (const [_, value] of brokerDirectoryCache.entries()) {
+    if (value && value.phone) {
+      let p = value.phone.replace(/\D/g, '');
+      if (p.length === 10 && p.startsWith('3')) {
+        p = '57' + p;
+      }
+      if (p.startsWith('57') && p.length >= 12) {
+        jids.add(`${p}@s.whatsapp.net`);
+      }
+    }
+  }
+  return Array.from(jids);
+}

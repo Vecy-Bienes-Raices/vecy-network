@@ -2180,19 +2180,35 @@ export async function publishTodayTipNow(force: boolean = true) {
   try {
     // 4. Despachar: Píldora completa con imagen al Canal Oficial, y micro-gancho persuasivo a Grupos 2 y 3
     await whatsappBot.sendMorningPillAndGroupTeasers(content.captionText, teaserText, imagePath);
+
+    // 5. Despacho automático de Estado de WhatsApp propio (status@broadcast)
+    try {
+      console.log('[CRON-SERVICE] 📱 Despachando Estado de WhatsApp propio con catálogo de servicios rotativo...');
+      await whatsappBot.postDailyServiceStatus();
+    } catch (statusErr: any) {
+      console.warn('[CRON-SERVICE] Advertencia en despacho de estado de WhatsApp:', statusErr?.message);
+    }
+
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
       imageFileName: imagePath ? path.basename(imagePath) : undefined,
       captionText: content.captionText,
     });
-    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen + Grupos 2 y 3 con teaser trampolín): "${content.topicTitle}".`);
+    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen + Grupos 2 y 3 con teaser trampolín + Estado WhatsApp): "${content.topicTitle}".`);
     return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText };
   } catch (err: any) {
     console.error(`[CRON-SERVICE] Error despachando difusión diaria (Día ${tip.dayOfMonth}):`, err?.message);
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
   }
+}
+
+/**
+ * Publica inmediatamente el Estado de WhatsApp rotativo del día
+ */
+export async function publishDailyWhatsAppStatusNow() {
+  return await whatsappBot.postDailyServiceStatus();
 }
 
 /**

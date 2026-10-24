@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-24] — JanIA v33.43: Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo Maestro de Servicios y Piezas Verticales 9:16 (v33.43 - 33.43.0)
+
+**Versión:** `v33.43` (`33.43.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Dotar a JanIA de una presencia visual y de marketing dinámico continuo en WhatsApp:
+  1. Superar la fatiga y monotonía de las 16 imágenes iniciales cuadradas mediante una fábrica visual continua con formato vertical 9:16 (historias y estados móviles), hiperrealistas, variadas, con consistencia de personaje y branding VECY Gold Edition (#0a0a0a y #d4af37).
+  2. Implementar la emisión nativa de Estados de WhatsApp a `status@broadcast` en Baileys sobre la línea bot `+57 319 291 9978`.
+  3. Establecer un directorio dirigido de asesores (`advisors.ts`) para alimentar la lista autorizada de destinatarios de estados (`statusJidList`).
+  4. Diseñar y programar un catálogo rotativo semanal de servicios en la voz oficial Laomedeia con despacho automático matutino (08:45 AM) e invitación a debatir en los Grupos 2 y 3 o consultar confidencialmente en privado.
+
+**Diagnóstico Técnico:**
+1. **Fatiga Visual y Formato Móvil 9:16:** Las 16 imágenes cuadradas previas eran estáticas y no cubrían el formato vertical 9:16 preferido por usuarios en WhatsApp Status e Historias. Se requería generar activos con la herramienta nativa respetando la fisonomía oficial de JanIA (corte bob castaño, gafas ejecutivas, blazer sastre de la paleta VECY Gold) en escenarios de lujo (penthouse bogotano) y elementos de trabajo digital (tablet con portal VECY).
+2. **Emisión de Estados en Baileys (`whatsapp-match.ts`):** En Baileys, la publicación de estados requiere enviar mensajes dirigidos al JID especial `status@broadcast` con el flag `statusJidList` poblado por los contactos que tienen permitido ver la historia.
+3. **Padrón de Asesores (`advisors.ts`):** Para poblar `statusJidList`, era necesario extraer sistemáticamente los teléfonos de los 552+ corredores registrados en el padrón de asesores de VECY hacia el formato `@s.whatsapp.net`.
+4. **Catálogo Rotativo Semanal (`cronService.ts`, `jania_innovative_status_catalog.md`):** JanIA ofrece una constelación de servicios que la audiencia desconoce si solo se habla de captación: Sondeos de mercado y POT, blindaje notarial de escrituras, predial oficial de Bogotá en PDF, marketing de 10 habilidades y comisiones 40/20/40, litigios y peritajes, bolsa inmobiliaria con fichas de Marca Blanca y formación dominical. La rotación de 7 días garantiza frescura sin saturar.
+
+**Acciones Ejecutadas:**
+- Generación de activo visual de alta definición 9:16:
+  - `client/public/assets/jania/jania_status_showcase_v1.jpg`: Pieza vertical de alta resolución con JanIA en blazer corporativo negro/dorado con tablet y vista al skyline de Bogotá.
+- `server/_core/whatsapp-match.ts`:
+  - Métodos `postToWhatsAppStatus` y `postDailyServiceStatus` con soporte para imágenes, textos con fondos institucionales y `statusJidList` dirigido.
+- `server/_core/advisors.ts`:
+  - Función `getAllAdvisorJids` para extraer los JIDs móviles oficiales de la red VECY.
+- `server/_core/cronService.ts`:
+  - `publishDailyWhatsAppStatusNow` y enlace con el cron matutino diario de las 08:45 AM.
+- Documento maestro de catálogo:
+  - `VECY_CORE_PROYECTO/documentos_maestros/jania_innovative_status_catalog.md`: Catálogo completo de los 7 días con copys persuasivos en voz Laomedeia, especificaciones de prompt visual 9:16 y llamadas a la acción directas.
+- `shared/const.ts`: Actualizado a `v33.43`.
+- `package.json`: Actualizado a `33.43.0`.
+- `server/__tests__/regression.test.ts`:
+  - Actualización de regexes en Suites anteriores.
+  - Implementación de `Suite v33.43 — Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo de Servicios y Piezas 9:16` (5 tests pasando al 100%).
+- Documentos maestros actualizados: `GEMINI.md`, `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`.
+
+**Validación:**
+- `npm run check`: 0 errores de tipado.
+- `npm test`: 363/363 tests pasando (100% verde a $0 COP).
+- `npm run build`: Compilación limpia en 24s.
+
+---
+
 ### 📅 [2026-10-24] — JanIA v33.42: 10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50 (v33.42 - 33.42.0)
 
 **Versión:** `v33.42` (`33.42.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

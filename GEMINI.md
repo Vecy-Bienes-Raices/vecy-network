@@ -1,12 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.42.0 — 2026-10-24)
-- **JanIA Server:** `v33.42` (`33.42.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Esquema 40/20/40 vs 50/50:**
-  1. **Suite de 10 Habilidades de Marketing Inmobiliario (`realEstateMarketing.ts`):** Motor de marketing inmobiliario de alto impacto con: 1) ICP Inmobiliario (comprador familiar, inversionista renta corta, logístico, constructor), 2) Swap Test Inmobiliario (descarte de clichés y rescate de ventajas competitivas únicas), 3) Auditoría de Fichas (Score 0-100 en valor, datos técnicos, precio y CTA), 4) Fichas persuasivas estructuradas con Markdown, y 5) Guía de comisiones.
-  2. **Identidad Consagrada de JanIA (`base.md`, `dmHandler.ts`):** JanIA es la asesora y guía especialista en cada uno de los servicios inmobiliarios, jurídicos, tributarios, notariales y de marketing de VECY BIENES RAÍCES en Colombia.
-  3. **Ingesta y Optimización Privada (DMs):** Si el usuario pide ayuda para subir su oferta o requerimiento por chat privado, JanIA lo acoge con entusiasmo, optimiza la ficha técnica y la registra en la base de datos para el motor de matching mediante `registrar_inmueble_o_requerimiento`.
-  4. **Doctrina de Comisiones: 40/20/40 vs 50/50 (`dmHandler.ts`):** JanIA indaga si el usuario es propietario directo o agente inmobiliario. A los agentes les consulta si aceptan el modelo colaborativo 40/20/40 de VECY (Alianza 40/20/40 - Aliada Prioritaria). Si optan por 50/50 tradicional, el sistema lo indexa en la mesa de coincidencias bajo la sección `[🛡️50/50 - NO TERCERÍA]`.
-  5. **Regla de Oro Inquebrantable (Confidencialidad de Matches):** JanIA NUNCA revela parejas encontradas ni datos de contacto de contrapartes en privado por el chat. La central de operaciones de VECY (+57 316 656 9719) contacta a las partes y gestiona los cierres para blindar el negocio.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 358/358 passing (100% verde) | Build `npm run build` limpio en 24s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.43.0 — 2026-10-24)
+- **JanIA Server:** `v33.43` (`33.43.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo Maestro de Servicios y Piezas Verticales 9:16:**
+  1. **Generación Visual de Alta Definición 9:16 (`jania_status_showcase_v1.jpg`):** Primera pieza oficial vertical de JanIA en formato 9:16 con paleta VECY Gold Edition (#0a0a0a y #d4af37), preservando su corte bob castaño, gafas ejecutivas, penthouse con vista a Bogotá y tablet con los servicios oficiales de VECY BIENES RAÍCES.
+  2. **Emisión Nativa a Estados de WhatsApp (`whatsapp-match.ts`):** Métodos `postToWhatsAppStatus` y `postDailyServiceStatus` que despachan a `status@broadcast` en Baileys sobre la línea bot `+57 319 291 9978` con direccionamiento dirigido a la lista autorizada de asesores (`statusJidList`).
+  3. **Directorio Dirigido de Asesores (`advisors.ts`):** Función `getAllAdvisorJids` que extrae los JIDs móviles oficiales de la red VECY para distribución segmentada en WhatsApp Status.
+  4. **Catálogo Rotativo Semanal en Voz Laomedeia (`cronService.ts`):** Despacho matutino (08:45 AM) integrado con el catálogo rotativo de 7 días: Lunes (Sondeos y POT), Martes (Seguridad Notarial), Miércoles (Predial PDF), Jueves (Marketing y 40/20/40), Viernes (Casos Jurídicos y Pleitos), Sábado (Bolsa Inmobiliaria) y Domingo (Cierre y Preparación), con invitación abierta a debatir en Grupos 2 y 3 o consultar confidencialmente en privado.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 363/363 passing (100% verde) | Build `npm run build` limpio en 24s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

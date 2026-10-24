@@ -330,6 +330,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.43 — Octubre 2026
+
+#### [v33.43.0] — 2026-10-24: Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo Maestro de Servicios y Piezas Verticales 9:16
+- **Generación Visual de Alta Definición 9:16 (`jania_status_showcase_v1.jpg`):**
+  - **Problema:** Las 16 imágenes iniciales cuadradas generaban fatiga visual y monotonía al repetirse. Además, el formato cuadrado (1:1) desaprovechaba el espacio vertical de los smartphones en WhatsApp Status e historias de Instagram/Facebook.
+  - **Solución:** Se generó la primera pieza oficial vertical en formato 9:16 (`client/public/assets/jania/jania_status_showcase_v1.jpg`) respetando los rasgos identitarios de JanIA (corte bob castaño, gafas de montura delgada y mirada asertiva), vistiendo blazer sastre negro con ribetes dorados corporativos (#0a0a0a y #d4af37) en un penthouse moderno con vista panorámica a Bogotá y sosteniendo una tablet digital con los servicios y sellos de VECY BIENES RAÍCES.
+- **Emisión Nativa a Estados Propios de WhatsApp (`whatsapp-match.ts`):**
+  - **Problema:** El bot no disponía de un mecanismo formal para emitir publicaciones a `status@broadcast` en Baileys sobre la línea bot `+57 319 291 9978`.
+  - **Solución:** Se implementaron los métodos `postToWhatsAppStatus` y `postDailyServiceStatus` que despachan imágenes o textos con fondo institucional y gestionan la distribución dirigida a través de la lista de destinatarios autorizados (`statusJidList`).
+- **Directorio Dirigido de Asesores (`advisors.ts`):**
+  - **Problema:** En WhatsApp, para que los estados emitidos por una cuenta empresarial o bot sean visibles sin restricciones, se requiere alimentar la lista de destinatarios autorizados (`statusJidList`).
+  - **Solución:** Se implementó `getAllAdvisorJids` que extrae y normaliza los teléfonos de los más de 552 asesores registrados en el padrón de VECY hacia el formato `@s.whatsapp.net`.
+- **Catálogo Rotativo Semanal en Voz Laomedeia (`cronService.ts`, `jania_innovative_status_catalog.md`):**
+  - **Problema:** La audiencia suele desconocer la amplitud de servicios de VECY si no se exhiben sistemáticamente.
+  - **Solución:** Se integró en el cron matutino (08:45 AM) el despacho de estados rotativos con guiones cálidos y directos al grano en la voz oficial Laomedeia (Lunes: Sondeos y POT; Martes: Verificación Notarial de Cédulas; Miércoles: Factura Predial Bogotá en PDF; Jueves: 10 Habilidades de Marketing y Alianza 40/20/40; Viernes: Casos Jurídicos y Pleitos; Sábado: Bolsa Inmobiliaria Colaborativa; Domingo: Educación y Preparación de Semana), con invitación abierta a debatir en los Grupos 2 y 3 o consultar en privado.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **363/363 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 24s.
+
 ### 🔖 v33.42 — Octubre 2026
 
 #### [v33.42.0] — 2026-10-24: 10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50

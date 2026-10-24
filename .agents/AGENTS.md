@@ -182,7 +182,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.42 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.43 — Octubre 2026
+
+### Novedades v33.43 (Publicación Dinámica de Estados de WhatsApp status@broadcast, Catálogo Maestro y Piezas 9:16):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Generación Visual de Nueva Generación en Formato Vertical 9:16 (`jania_status_showcase_v1.jpg`)**:
+     - *Causa raíz*: Las 16 imágenes estáticas cuadradas iniciales causaban fatiga visual y saturación en los usuarios al repetirse de forma idéntica. Se requería una fábrica creativa capaz de generar imágenes nuevas, hiperrealistas, variadas, con consistencia de personaje y branding oficial de VECY BIENES RAÍCES.
+     - *Solución*: Se generó la primera pieza oficial de alta resolución en formato vertical 9:16 (especial para estados e historias móviles), manteniendo el corte bob castaño, las gafas características y el carisma de JanIA, vistiendo un blazer sastre negro con ribetes dorados de la paleta VECY Gold Edition (#0a0a0a y #d4af37) en un penthouse con vista panorámica a Bogotá, sosteniendo una tablet digital con los servicios de VECY BIENES RAÍCES.
+  2. **Emisión Nativa a Estados Propios de WhatsApp (`whatsapp-match.ts`)**:
+     - *Causa raíz*: El bot no disponía de un mecanismo formal para emitir publicaciones a `status@broadcast` en Baileys sobre la línea bot `+57 319 291 9978`.
+     - *Solución*: Se implementaron los métodos `postToWhatsAppStatus` y `postDailyServiceStatus` que despachan imágenes o textos con fondo institucional y gestionan la distribución dirigida a través de la lista de destinatarios autorizados (`statusJidList`).
+  3. **Directorio Dirigido de Asesores (`advisors.ts`)**:
+     - *Causa raíz*: Para que los estados de WhatsApp de una línea comercial/bot sean visibles sin restricciones, WhatsApp requiere especificar los JIDs de los contactos autorizados.
+     - *Solución*: Se implementó `getAllAdvisorJids` que extrae y normaliza los números de celular de los 552+ asesores registrados en el directorio permanente hacia el formato `@s.whatsapp.net`.
+  4. **Catálogo Rotativo Semanal en Voz Laomedeia (`cronService.ts`, `jania_innovative_status_catalog.md`)**:
+     - *Causa raíz*: Era indispensable presentar día tras día la totalidad de servicios integrados (sondeos y POT, seguridad notarial, predial PDF, marketing 10 skills, casos jurídicos, bolsa colaborativa y educación dominical) sin aburrir a la audiencia.
+     - *Solución*: Se integró en el cron matutino (08:45 AM) el despacho de estados rotativos con guiones cálidos y directos al grano en la voz oficial Laomedeia, con invitación abierta a debatir en los Grupos 2 y 3 o consultar en privado.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 363/363 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 24s ✅
+- `shared/const.ts` (`v33.43`) y `package.json` (`33.43.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.42 — Octubre 2026
 
 ### Novedades v33.42 (10 Habilidades de Marketing Inmobiliario, Asesora Especialista, Ingesta Privada y Comisiones 40/20/40 vs 50/50):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
