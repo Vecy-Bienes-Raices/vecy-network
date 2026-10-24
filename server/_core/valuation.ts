@@ -174,11 +174,16 @@ export function calculatePropertyValuation(input: ValuationInput): ValuationResu
 export function executeMarketValuationSurvey(params: {
   zonaOBarrio: string;
   direccionExacta?: string;
+  barrio?: string;
+  localidad?: string;
+  ciudad?: string;
   tipoInmueble?: string;
   habitaciones?: number;
   areaM2?: number;
   estrato?: number;
   antiguedadAnos?: number;
+  anoConstruccion?: number | string;
+  tipoAcabados?: string;
   garajes?: number;
   piso?: number;
   tieneAscensor?: boolean;
@@ -265,10 +270,15 @@ export function executeMarketValuationSurvey(params: {
     userId: params.userId,
     zonaConsultada: zoneName,
     direccionExacta: params.direccionExacta,
+    barrio: params.barrio,
+    localidad: params.localidad,
+    ciudad: params.ciudad,
     areaM2: area,
     tipoInmueble: params.tipoInmueble,
     habitaciones: params.habitaciones,
     antiguedadAnos: params.antiguedadAnos,
+    anoConstruccion: params.anoConstruccion,
+    tipoAcabados: params.tipoAcabados,
     piso: params.piso,
     esClubHouse: params.esClubHouse,
     valorM2Estimado: valuation.homologatedPricePerM2,
@@ -285,10 +295,15 @@ export interface SurveyInquiryRecord {
   userId?: string;
   zonaConsultada: string;
   direccionExacta?: string;
+  barrio?: string;
+  localidad?: string;
+  ciudad?: string;
   areaM2: number;
   tipoInmueble?: string;
   habitaciones?: number;
   antiguedadAnos?: number;
+  anoConstruccion?: number | string;
+  tipoAcabados?: string;
   piso?: number;
   esClubHouse?: boolean;
   valorM2Estimado: number;

@@ -182,8 +182,31 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
+## 🔖 VERSIÓN ACTUAL: v33.38 — Octubre 2026
 
-## 🔖 VERSIÓN ACTUAL: v33.37 — Octubre 2026
+### Novedades v33.38 (8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Diálogo Maestro de Sondeos Físicos (8 Datos Obligatorios) (`dmHandler.ts`)**:
+     - *Causa raíz*: El sondeo previo requería solo 3 datos, lo que omitía variables críticas de mercado como barrio, localidad/comuna, ciudad, año de construcción y tipo de acabados.
+     - *Solución*: JanIA asume el rol de Perita Avaluadora y solicita con pedagogía y amabilidad los 8 datos físicos indispensables mediante viñetas claras (`•`):
+       • Dirección exacta del predio con complementarios de ser necesario.
+       • Barrio.
+       • Localidad/Comuna.
+       • Ciudad.
+       • Área construida aproximada en metros cuadrados.
+       • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.
+       • Año de construcción.
+       • Tipo de acabados.
+       Si el usuario responde con evasivas o datos incompletos, JanIA insiste punto por punto hasta completar los datos para emitir un sondeo exacto sin desviar la conversación.
+  2. **Nombre Sagrado Oficial del Grupo 1 en Respuestas y Prompts (`dmHandler.ts`)**:
+     - *Causa raíz*: Se venía usando el nombre provisional o genérico "VECY INMUEBLES NETWORK".
+     - *Solución*: JanIA consagra y utiliza con total transparencia y honestidad radical el nombre oficial exacto del grupo: `Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ)`.
+  3. **Extensión del Modelo Histórico de Sondeos (`valuation.ts`)**:
+     - `SurveyInquiryRecord`, `executeMarketValuationSurvey`, `recordSurveyInquiry` y `getSurveyInquiryHistory` integran `barrio`, `localidad`, `ciudad`, `anoConstruccion` y `tipoAcabados` en memoria persistente (últimos 500 registros) para enriquecer la inteligencia inmobiliaria a $0 COP.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 343/343 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 20s ✅
+- `shared/const.ts` (`v33.38`) y `package.json` (`33.38.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.37 — Octubre 2026
 
 ### Novedades v33.37 (Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38)\.0/);
     });
   });
 
@@ -7162,11 +7162,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38)\.0/);
     });
   });
 
@@ -7212,11 +7212,40 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.37");
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.37.0");
+      expect(pkg.version).toMatch(/^33\.(37|38)\.0/);
+    });
+  });
+
+  describe("Suite v33.38 — 8 Datos Clave de Sondeos y Nombre Oficial del Grupo 1", () => {
+    it("1. Diálogo maestro de sondeos con los 8 datos clave y nombre oficial del Grupo 1 en dmHandler", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      
+      // 8 datos clave requeridos por Eduardo A. Rivera
+      expect(content).toContain("• Dirección exacta del predio con complementarios de ser necesario.");
+      expect(content).toContain("• Barrio.");
+      expect(content).toContain("• Localidad/Comuna.");
+      expect(content).toContain("• Ciudad.");
+      expect(content).toContain("• Área construida aproximada en metros cuadrados.");
+      expect(content).toContain("• Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.");
+      expect(content).toContain("• Año de construcción.");
+      expect(content).toContain("• Tipo de acabados.");
+
+      // Nombre oficial sagrado del Grupo 1
+      expect(content).toContain("𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴");
+    });
+
+    it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.38");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.38.0");
     });
   });
 });

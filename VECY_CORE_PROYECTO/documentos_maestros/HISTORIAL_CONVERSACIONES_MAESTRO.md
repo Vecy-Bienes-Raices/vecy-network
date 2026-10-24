@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-23] — JanIA v33.38: 8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1 (v33.38 - 33.38.0)
+
+**Versión:** `v33.38` (`33.38.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `server/_core/valuation.ts`:
+  1. Extensión de la estructura de datos `SurveyInquiryRecord` y función `executeMarketValuationSurvey` para capturar e integrar 8 variables físicas de mercado: dirección exacta, barrio, localidad/comuna, ciudad, área construida m², tipo de inmueble/espacios, año de construcción y tipo de acabados.
+  2. Funciones `recordSurveyInquiry` y `getSurveyInquiryHistory` actualizadas para almacenar y devolver las 8 variables en memoria histórica (últimos 500 registros) a $0 COP.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Diálogo Maestro de Sondeos Físicos (8 Datos Obligatorios): Sustitución del requerimiento previo de 3 datos por la lista exhaustiva de 8 ítems indispensables formulados con viñetas (`•`):
+     • Dirección exacta del predio con complementarios de ser necesario.
+     • Barrio.
+     • Localidad/Comuna.
+     • Ciudad.
+     • Área construida aproximada en metros cuadrados.
+     • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.
+     • Año de construcción.
+     • Tipo de acabados.
+     JanIA mantiene la persistencia pedagógica de insistir punto por punto si el usuario no responde con exactitud.
+  2. Consagración del Nombre Oficial Sagrado de Canalización al Grupo 1: Actualización doctrinal de todas las menciones a:
+     `Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ)`.
+- `server/__tests__/regression.test.ts`:
+  1. Actualización de regexes de versión en suites históricas 127 (`v33.34`), `v33.35`, `v33.36` y `v33.37`.
+  2. Creación de Suite v33.38 validando la presencia de los 8 datos clave en el prompt de sondeo, el nombre oficial del Grupo 1 y la versión `v33.38` / `33.38.0`.
+- `shared/const.ts` (`v33.38`) y `package.json` (`33.38.0`).
+- Documentos maestros actualizados: `GEMINI.md`, `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Cambios:
+Esto:
+• Dirección exacta del predio con complementarios de ser necesario. • Área construida aproximada en metros cuadrados. • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.
+
+Por esto:
+• Dirección exacta del predio con complementarios de ser necesario. • Barrio • Localidad/Comuna. • Ciudad. • Área construida aproximada en metros cuadrados. • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales. • Año de construcción. • Tipo de acabados.
+
+---------------------------------------------------
+Este es el verdadero nombre del grupo:
+
+Canalización Oficial al Grupo 1: JanIA le explica con total transparencia que este chat privado es para sondeos y asesoría, y que si desea publicar su propiedad para venta/arriendo y cruce automático de negocios en la red, debe publicarla en el Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ)"*
+
+#### 2. Diagnóstico Técnico Profundo y Causas Raíz
+1. **Insuficiencia de 3 Parámetros para Sondeos Inmobiliarios Rigurosos:**
+   - La versión anterior v33.37 solicitaba únicamente dirección, área m² y tipo de inmueble/alcobas. Esto dejaba por fuera factores determinantes para el cálculo de $/m² como barrio, localidad/comuna, ciudad, antigüedad (año de construcción) y tipo de acabados (básico, estándar, lujo).
+   - Se estructuró el Diálogo Maestro con viñetas exactas para que JanIA exija los 8 datos con cortesía y rigor técnico.
+2. **Estandarización del Nombre Oficial del Grupo 1 de WhatsApp:**
+   - En prompts y mensajes de canalización se utilizaba "VECY INMUEBLES NETWORK", nombre genérico que no concordaba con la marca visual y nombre real del grupo en WhatsApp.
+   - Se consagró la denominación oficial `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` preservando la honestidad radical ante el usuario sobre dónde se publican realmente los inmuebles para cruce de negocios.
+
+---
+
 ### 📅 [2026-10-23] — JanIA v33.37: Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico (v33.37 - 33.37.0)
 
 **Versión:** `v33.37` (`33.37.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

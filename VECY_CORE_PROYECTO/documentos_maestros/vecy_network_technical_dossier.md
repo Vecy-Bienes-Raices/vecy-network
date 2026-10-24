@@ -330,6 +330,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.38 — Octubre 2026
+
+#### [v33.38.0] — 2026-10-23: 8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1
+- **Diálogo Maestro de Sondeos Físicos (8 Datos Obligatorios) (`dmHandler.ts`):**
+  - **Problema:** Solicitar únicamente 3 datos (dirección, área y tipología) resultaba insuficiente para estimar el valor del metro cuadrado ($/m²) y el precio comercial con exactitud, obviando barrio, localidad/comuna, ciudad, año de construcción y calidad de acabados.
+  - **Solución:** JanIA asume el rol de Perita Avaluadora y solicita de forma estructurada con viñetas (`•`) los 8 datos indispensables:
+    • Dirección exacta del predio con complementarios de ser necesario.
+    • Barrio.
+    • Localidad/Comuna.
+    • Ciudad.
+    • Área construida aproximada en metros cuadrados.
+    • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.
+    • Año de construcción.
+    • Tipo de acabados.
+    Si el usuario no responde con precisión, JanIA insiste amable y pedagógicamente punto por punto hasta completar los datos sin desviar la conversación ni inventar cifras.
+- **Nombre Sagrado Oficial del Grupo 1 en Respuestas y Prompts (`dmHandler.ts`):**
+  - **Problema:** El uso de denominaciones provisionales o genéricas ("VECY INMUEBLES NETWORK") generaba discrepancias frente a la identidad real del grupo de WhatsApp.
+  - **Solución:** Consagración del nombre oficial exacto en todos los flujos de canalización: `Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ)`.
+- **Extensión del Modelo Histórico de Sondeos (`valuation.ts`):**
+  - **Problema:** El registro histórico anterior solo almacenaba dirección, área y tipología básica.
+  - **Solución:** Ampliación de `SurveyInquiryRecord`, `executeMarketValuationSurvey`, `recordSurveyInquiry` y `getSurveyInquiryHistory` para registrar las 8 variables físicas de mercado en memoria persistente a $0 COP.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **343/343 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 20s.
 
 ### 🔖 v33.37 — Octubre 2026
 

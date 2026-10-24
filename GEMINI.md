@@ -1,12 +1,19 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.37.0 — 2026-10-23)
-- **JanIA Server:** `v33.37` (`33.37.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Regímenes Especiales ADRES, Diálogo Maestro de Sondeos, Cero Engaños en DMs y Aprendizaje Histórico:**
-  1. **Explicación de Regímenes Especiales y de Excepción (Ley 100 Art. 279):** Cuando un ciudadano no figura en BDUA/ADRES, el reporte certifica formalmente que esto es habitual en afiliados a Regímenes de Excepción (Fuerzas Militares, Policía Nacional, Magisterio/FOMAG, Ecopetrol o Universidades Estatales).
-  2. **Diálogo Maestro y Persistencia de Sondeos:** Diálogo exacto de Perita Avaluadora solicitando los 3 datos indispensables: Dirección exacta del predio con complementarios, Área construida m² y Tipo de inmueble/espacios. Si el usuario no responde con exactitud, JanIA insiste amablemente punto por punto hasta lograr la meta sin desviar la conversación.
-  3. **Honestidad Radical y Cero Engaños de Registro en DMs:** Prohibición absoluta de prometer o fingir que un inmueble ha sido guardado/publicado en DMs. JanIA canaliza cordialmente al usuario a publicar en el Grupo 1 Oficial: VECY INMUEBLES NETWORK (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`).
-  4. **Redacción Oficial Estricta de Predial Bogotá:** Corrección de la conjunción ("CHIP del predio **y** Cédula o NIT del propietario"), ambos indispensables para consultar y descargar la factura en PDF.
-  5. **Aprendizaje Histórico sin Saturación (`recordSurveyInquiry`):** Registro de consultas y sondeos en memoria/histórico para nutrir la inteligencia inmobiliaria de VECY sin sobrecargar la base de datos.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 341/341 passing | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.38.0 — 2026-10-23)
+- **JanIA Server:** `v33.38` (`33.38.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1:**
+  1. **Diálogo Maestro de Sondeos Físicos (8 Datos Obligatorios):** JanIA asume el rol de Perita Avaluadora solicitando puntualmente los 8 datos indispensables para estimar el valor del inmueble y el $/m²:
+     • Dirección exacta del predio con complementarios de ser necesario.
+     • Barrio.
+     • Localidad/Comuna.
+     • Ciudad.
+     • Área construida aproximada en metros cuadrados.
+     • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.
+     • Año de construcción.
+     • Tipo de acabados.
+     JanIA insiste amable y pedagógicamente punto por punto hasta completar los datos sin desviar la conversación ni inventar cifras.
+  2. **Nombre Oficial Sagrado de Canalización al Grupo 1:** JanIA canaliza con total transparencia y honestidad radical al usuario hacia el Grupo 1 Oficial con su nombre exacto y enlace: `Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ)`. Prohibición absoluta de usar nombres genéricos o simular registros en DMs.
+  3. **Extensión del Modelo Histórico de Sondeos (`valuation.ts`):** `recordSurveyInquiry` y `getSurveyInquiryHistory` integran `barrio`, `localidad`, `ciudad`, `anoConstruccion` y `tipoAcabados` para nutrir la memoria estadística de VECY a $0 COP.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 342/342 passing | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
