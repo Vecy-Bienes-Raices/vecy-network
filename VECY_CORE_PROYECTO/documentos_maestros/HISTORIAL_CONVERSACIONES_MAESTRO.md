@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-24] — JanIA v33.44: Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de "Coach" (v33.44 - 33.44.0)
+
+**Versión:** `v33.44` (`33.44.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Optimización y perfeccionamiento editorial y visual de la presencia de JanIA en WhatsApp:
+  1. **Fábrica Creativa y Suite 1:1 para el Canal Oficial de WhatsApp**: Las imágenes de historias 9:16 o cuadradas genéricas previas no se ajustaban con elegancia al feed de los canales de WhatsApp en desktop y móvil. Dotar a JanIA de una suite de piezas 1:1 de ultra alta calidad para acompañar los tips y análisis legales en el Canal Oficial.
+  2. **Gancho Escrito en Historias de WhatsApp (`status@broadcast`)**: En lugar de subir imágenes en los estados que colapsan en WhatsApp Web o generan redundancia con el canal, publicar textos puros institucionales con alto poder de gancho editorial y enlace ineludible al Canal Oficial: `👉 Sigue el Canal Oficial y lee la guía completa aquí: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`.
+  3. **Erradicación Doctrinal de "Coach"**: Erradicar definitivamente la palabra "coach" de los saludos, descripciones y mensajes de JanIA, sustituyéndola por términos cálidos y respetuosos como "aliada", "asesora especializada" y "anfitriona de la comunidad inmobiliaria".
+
+**Diagnóstico Técnico:**
+1. **Relación de Aspecto Cuadrada (1:1) en Canales:** En los canales de WhatsApp, las piezas cuadradas (1:1) ofrecen máxima legibilidad y no sufren recortes verticales ni franjas negras laterales en ningún dispositivo. Se requería generar 5 piezas maestras temáticas (`jania_anfitriona_cafe_1x1.jpg`, `jania_legal_due_diligence_1x1.jpg`, `jania_marketing_colaborativo_1x1.jpg`, `jania_avaluos_pot_1x1.jpg`, `jania_seguridad_notarial_1x1.jpg`) y dotar a `cronService.ts` del selector inteligente `getChannelSquareImage1x1`.
+2. **Incompatibilidad Multimedia en WhatsApp Web para Estados:** WhatsApp Web presenta fallas recurrentes de renderizado al cargar estados con imágenes pesadas desde bots de Baileys. Los estados de texto nativos se renderizan de forma instantánea y con tipografía institucional clara, actuando como el trampolín perfecto de tracción hacia el Canal Oficial.
+3. **Consonancia Lingüística y Cultural:** El término "coach" distorsiona el rol de JanIA hacia un tono de autoayuda o tecnicismo importado, cuando su valor radica en ser una asesora técnica, jurídica y comercial con profunda calidez colombiana.
+
+**Acciones Ejecutadas:**
+- **Generación Visual 1:1 en `client/public/assets/channel_1x1/`:**
+  - `jania_anfitriona_cafe_1x1.jpg`: JanIA con taza de café colombiano en un penthouse con vista a los Cerros Orientales.
+  - `jania_legal_due_diligence_1x1.jpg`: JanIA revisando expedientes y escrituras con sello notarial y tablet VECY.
+  - `jania_marketing_colaborativo_1x1.jpg`: JanIA en sala de juntas analizando la pirámide 40/20/40 y métricas de marketing.
+  - `jania_avaluos_pot_1x1.jpg`: JanIA consultando planos urbanísticos y SINUPOT frente al skyline bogotano.
+  - `jania_seguridad_notarial_1x1.jpg`: JanIA validando antecedentes de cédulas y seguridad notarial con escudo dorado.
+- **`server/_core/cronService.ts`:**
+  - Implementación de `getChannelSquareImage1x1` para mapear el tema diario a su imagen 1:1 oficial.
+  - Función `enforceJanIAIdentity` que depura cualquier mención a "coach" y la sustituye por "aliada".
+- **`server/_core/whatsapp-match.ts`:**
+  - Implementación de `postDailyHookStatus` para emitir estados de texto limpio con enlace ineludible al Canal Oficial.
+  - Redirección de `postDailyServiceStatus` hacia `postDailyHookStatus`.
+- **`server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `base.md`:**
+  - Consagración de la identidad de JanIA como "aliada, anfitriona y asesora especializada", erradicando menciones a "coach".
+- **`shared/const.ts` & `package.json`:**
+  - Incremento oficial a `v33.44` / `33.44.0`.
+- **`server/__tests__/regression.test.ts`:**
+  - Implementación de `Suite v33.44 — Fábrica 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de 'Coach'` (5 tests pasando al 100%).
+- **Validación Limpia ($0 COP):**
+  - Typecheck `npm run check` (0 errores) | Tests `npm test` 368/368 passing (100% verde) | Build `npm run build` limpio en 27s.
+
+---
+
 ### 📅 [2026-10-24] — JanIA v33.43: Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo Maestro de Servicios y Piezas Verticales 9:16 (v33.43 - 33.43.0)
 
 **Versión:** `v33.43` (`33.43.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

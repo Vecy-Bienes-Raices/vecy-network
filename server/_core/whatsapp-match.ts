@@ -3577,7 +3577,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         };
       }
 
-      const sendOptions: any = {};
+      const sendOptions: any = {
+        broadcast: true
+      };
       if (targetRecipients && targetRecipients.length > 0) {
         sendOptions.statusJidList = targetRecipients;
       }
@@ -3599,72 +3601,54 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 
   /**
-   * 🌟 Despacha el Estado de WhatsApp diario rotativo según el catálogo de servicios de VECY BIENES RAÍCES
+   * 📱 Publicación de Estados de WhatsApp (Historias/Stories) — Doctrina Eduardo A. Rivera (v33.44):
+   * A los estados SOLO se sube el gancho escrito en texto limpio de alto contraste (#0a0a0a y dorado)
+   * que jala hacia el Canal Oficial con la frase ineludible:
+   * 👉 Sigue el Canal Oficial y lee la guía completa aquí: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+   * Cero imágenes en historias para erradicar errores de incompatibilidad en WhatsApp Web.
    */
-  public async postDailyServiceStatus(customImagePath?: string, customTopic?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  public async postDailyHookStatus(teaserText?: string, topicTitle?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      const nowBogota = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
-      const dayOfWeek = nowBogota.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
+      const channelLink = 'https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b';
+      let hookContent = '';
 
-      const fs = await import('fs');
-      const path = await import('path');
+      if (teaserText && teaserText.trim()) {
+        // Limpiar preguntas o cierres de debate de grupo del teaser
+        let cleanTeaser = teaserText
+          .replace(/Colegas,\s*¿ustedes\s+c[oó]mo\s+est[aá]n\s+manejando.*$/is, '')
+          .replace(/¿Quieres\s+debatir.*$/is, '')
+          .replace(/¡?Opina\s+aqu[íi]\s+en\s+el\s+grupo.*$/is, '')
+          .trim();
 
-      // Directorio de imágenes de JanIA
-      const janiaDir = path.resolve(process.cwd(), 'client/public/assets/jania');
-      const showcaseVertical = path.join(janiaDir, 'jania_status_showcase_v1.jpg');
-
-      const statusMap: Record<number, { title: string; image: string; caption: string }> = {
-        1: { // Lunes
-          title: 'Sondeos Comerciales, Avalúos y POT Bogotá',
-          image: fs.existsSync(showcaseVertical) ? showcaseVertical : path.join(janiaDir, 'jania_avaluos.jpg'),
-          caption: '📊 *¿Vas a vender o arrendar tu inmueble?*\nCalcula el valor comercial real con 8 datos físicos, valor de m² y norma urbana POT (Decreto 555/21 y SINUPOT).\n\n👉 Escríbeme aquí al chat privado o déjanos tu caso en el Grupo 2 de Soporte Legal y Avalúos.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
-        },
-        2: { // Martes
-          title: 'Verificación Oficial de Identidad y Seguridad Notarial',
-          image: path.join(janiaDir, 'jania_cedulas_comercial.jpg'),
-          caption: '🛡️ *Blinda tus operaciones inmobiliarias a $0 COP*\nConsulta antecedentes de Policía, Procuraduría SIRI, Contraloría, ADRES EPS y Cámara de Comercio RUES en segundos con el número de cédula.\n\n👉 Escríbeme \'Verificar CC\' aquí al chat privado.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
-        },
-        3: { // Miércoles
-          title: 'Factura Oficial Predial Bogotá en PDF',
-          image: path.join(janiaDir, 'jania_predial_comercial.jpg'),
-          caption: '🏛️ *¿Necesitas la factura del Impuesto Predial de Bogotá en PDF?*\nExpedición oficial distrital en menos de 1 minuto sin filas ni claves. Solo compárteme el código CHIP (inicia por AAA) y la cédula del propietario.\n\n👉 Escríbeme aquí al chat privado.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
-        },
-        4: { // Jueves
-          title: '10 Habilidades de Marketing Inmobiliario & Alianza 40/20/40',
-          image: path.join(janiaDir, 'jania_marketing.jpg'),
-          caption: '📢 *Deja los clichés de \'hermoso apartamento\'*\nDescubre la Suite de 10 Habilidades de Marketing Inmobiliario de VECY: Perfil de Cliente Ideal (ICP), Swap Test y fichas de alto impacto. Únete a la Red 40/20/40 o 50/50.\n\n👉 Hablemos de cómo acelerar tus cierres en el Grupo 3 o aquí en privado.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
-        },
-        5: { // Viernes
-          title: 'Casos Jurídicos, Pleitos y Saneamiento Notarial',
-          image: path.join(janiaDir, 'jania_juridico.jpg'),
-          caption: '⚖️ *¿Negociación frenada por un problema jurídico?*\nEstudios de títulos, promesas de compraventa, saneamiento de hipotecas, pleitos y controversias. Plantea tu caso en el Grupo 2 o en privado con JanIA.\n\n👉 Escríbeme tu consulta legal aquí.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
-        },
-        6: { // Sábado
-          title: 'La Gran Bolsa Inmobiliaria Colaborativa',
-          image: path.join(janiaDir, 'jania_matches.jpg'),
-          caption: '🤝 *Bolsa Inmobiliaria VECY activa este fin de semana*\nConectamos ofertas y requerimientos calificados en toda Colombia. Publica con las plantillas estandarizadas en el Grupo 1 Oficial y acelera tus cierres.\n\n👉 Únete al Grupo 1 Oficial o escríbeme para cruzar tu inmueble.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
-        },
-        0: { // Domingo
-          title: 'Educación Inmobiliaria & Preparación de Semana',
-          image: fs.existsSync(showcaseVertical) ? showcaseVertical : path.join(janiaDir, 'jania_soporte.jpg'),
-          caption: '🌟 *Prepárate para una semana de grandes cierres*\nEn VECY BIENES RAÍCES te acompañamos 24/7 con avalúos, seguridad notarial, predial y marketing de alto rendimiento.\n\n👉 Escríbeme cualquier consulta y empezamos a preparar tu semana.\n\n✨ *VECY BIENES RAÍCES 🇨🇴*'
+        // Garantizar la frase obligatoria exacta con el canal
+        if (!cleanTeaser.includes(channelLink)) {
+          cleanTeaser += `\n\n👉 Sigue el Canal Oficial y lee la guía completa aquí: ${channelLink}`;
         }
-      };
-
-      const selected = statusMap[dayOfWeek] || statusMap[1];
-      let imgToUse: string | undefined = customImagePath && fs.existsSync(customImagePath) ? customImagePath : selected.image;
-      if (!imgToUse || !fs.existsSync(imgToUse)) {
-        imgToUse = fs.existsSync(showcaseVertical) ? showcaseVertical : undefined;
+        hookContent = cleanTeaser;
+      } else {
+        const title = topicTitle || 'Guía Inmobiliaria y Notarial Exclusiva';
+        hookContent = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴\n\n` +
+          `📌 *${title}*\n` +
+          `Acabamos de subir al Canal Oficial el análisis legal y técnico desglosado para blindar tus operaciones inmobiliarias.\n\n` +
+          `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${channelLink}`;
       }
 
+      console.log(`[JANIA-STATUS] 📱 Publicando gancho escrito oficial en Estado de WhatsApp (status@broadcast)...`);
       return await this.postToWhatsAppStatus({
-        captionText: selected.caption,
-        mediaPath: imgToUse
+        captionText: hookContent
       });
     } catch (err: any) {
-      console.error('[JANIA-STATUS] Error despachando estado diario:', err?.message || err);
+      console.error('[JANIA-STATUS] Error publicando gancho en Estado de WhatsApp:', err?.message || err);
       return { success: false, error: err?.message || String(err) };
     }
+  }
+
+  /**
+   * 🌟 Despacha el Estado de WhatsApp diario rotativo:
+   * Redirige al método doctrinal de gancho de texto hacia el Canal Oficial
+   */
+  public async postDailyServiceStatus(customImagePath?: string, customTopic?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    return await this.postDailyHookStatus(undefined, customTopic);
   }
 
   /**

@@ -1,11 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.43.0 — 2026-10-24)
-- **JanIA Server:** `v33.43` (`33.43.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo Maestro de Servicios y Piezas Verticales 9:16:**
-  1. **Generación Visual de Alta Definición 9:16 (`jania_status_showcase_v1.jpg`):** Primera pieza oficial vertical de JanIA en formato 9:16 con paleta VECY Gold Edition (#0a0a0a y #d4af37), preservando su corte bob castaño, gafas ejecutivas, penthouse con vista a Bogotá y tablet con los servicios oficiales de VECY BIENES RAÍCES.
-  2. **Emisión Nativa a Estados de WhatsApp (`whatsapp-match.ts`):** Métodos `postToWhatsAppStatus` y `postDailyServiceStatus` que despachan a `status@broadcast` en Baileys sobre la línea bot `+57 319 291 9978` con direccionamiento dirigido a la lista autorizada de asesores (`statusJidList`).
-  3. **Directorio Dirigido de Asesores (`advisors.ts`):** Función `getAllAdvisorJids` que extrae los JIDs móviles oficiales de la red VECY para distribución segmentada en WhatsApp Status.
-  4. **Catálogo Rotativo Semanal en Voz Laomedeia (`cronService.ts`):** Despacho matutino (08:45 AM) integrado con el catálogo rotativo de 7 días: Lunes (Sondeos y POT), Martes (Seguridad Notarial), Miércoles (Predial PDF), Jueves (Marketing y 40/20/40), Viernes (Casos Jurídicos y Pleitos), Sábado (Bolsa Inmobiliaria) y Domingo (Cierre y Preparación), con invitación abierta a debatir en Grupos 2 y 3 o consultar confidencialmente en privado.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 363/363 passing (100% verde) | Build `npm run build` limpio en 24s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.44.0 — 2026-10-24)
+- **JanIA Server:** `v33.44` (`33.44.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Estados WhatsApp y Erradicación de "Coach":**
+  1. **Suite Maestra 1:1 para el Canal Oficial de WhatsApp (`channel_1x1/`):** Generación de 5 piezas cuadradas de ultra alta fidelidad (1:1) adaptadas al feed de canales de WhatsApp (`jania_anfitriona_cafe_1x1.jpg`, `jania_legal_due_diligence_1x1.jpg`, `jania_marketing_colaborativo_1x1.jpg`, `jania_avaluos_pot_1x1.jpg`, `jania_seguridad_notarial_1x1.jpg`), resolviendo el formato óptimo para canales móviles y desktop.
+  2. **Gancho Escrito en Historias de WhatsApp (`whatsapp-match.ts`):** Método `postDailyHookStatus` que despacha textos puros institucionales hacia `status@broadcast` enlazando ineludiblemente al Canal Oficial (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`), eliminando incompatibilidades de visualización multimedia en WhatsApp Web.
+  3. **Erradicación Doctrinal del Término "Coach" (`cronService.ts`, prompts):** Eliminación total del anglicismo "coach" en favor de "aliada", "asesora especializada" y "anfitriona", afianzando la calidez y el señorío de JanIA en toda interacción.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 368/368 passing (100% verde) | Build `npm run build` limpio en 27s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

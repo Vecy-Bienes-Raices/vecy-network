@@ -330,6 +330,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.44 — Octubre 2026
+
+#### [v33.44.0] — 2026-10-24: Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de "Coach"
+- **Suite Maestra 1:1 para el Canal Oficial de WhatsApp (`client/public/assets/channel_1x1/`, `cronService.ts`):**
+  - **Problema:** Las imágenes previas cuadradas genéricas o las de formato vertical 9:16 presentaban recortes o no se adaptaban con óptima visibilidad al feed continuo y horizontalmente centrado de los canales de WhatsApp en desktop y smartphones.
+  - **Solución:** Se generaron 5 piezas maestras dedicadas en relación de aspecto 1:1 con branding VECY Gold Edition (#0a0a0a y #d4af37) y consistencia hiperrealista de JanIA (corte bob castaño, gafas de montura delgada, blazer negro con ribetes dorados y skyline de Bogotá):
+    1. `jania_anfitriona_cafe_1x1.jpg`: JanIA anfitriona disfrutando de café colombiano en un penthouse con vista panorámica.
+    2. `jania_legal_due_diligence_1x1.jpg`: JanIA en auditoría jurídica con sellos notariales, escrituras y tablet VECY.
+    3. `jania_marketing_colaborativo_1x1.jpg`: JanIA analizando la pirámide de comisiones 40/20/40 y métricas de marketing.
+    4. `jania_avaluos_pot_1x1.jpg`: JanIA consultando planos catastrales, avalúos y SINUPOT frente a la ciudad.
+    5. `jania_seguridad_notarial_1x1.jpg`: JanIA con escudo de verificación de antecedentes y blindaje de identidad.
+    Se implementó `getChannelSquareImage1x1` en `cronService.ts` para mapear dinámicamente el tema del día a la pieza 1:1 correspondiente.
+- **Gancho Escrito en Historias de WhatsApp (`whatsapp-match.ts`):**
+  - **Problema:** Las historias de WhatsApp con imágenes cargadas desde Baileys presentaban inconsistencias de renderizado en WhatsApp Web y causaban redundancia con el canal.
+  - **Solución:** Se implementó `postDailyHookStatus`, que despacha a `status@broadcast` un mensaje de texto puro institucional con fondo de alto impacto, extrayendo el gancho editorial y enlazando ineludiblemente al Canal Oficial: `👉 Sigue el Canal Oficial y lee la guía completa aquí: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`.
+- **Erradicación Doctrinal del Término "Coach" (`cronService.ts`, `prompts`):**
+  - **Problema:** El término anglosajón "coach" se percibía distante, frío o asociado a clichés de autoayuda que restaban credibilidad técnica y cercanía colombiana a JanIA.
+  - **Solución:** Se erradicó totalmente el término "coach" tanto en los prompts de base y grupos como en `enforceJanIAIdentity`, consagrando a JanIA como "aliada inmobiliaria", "asesora especializada" y "anfitriona de la comunidad inmobiliaria".
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **368/368 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 27s.
+
 ### 🔖 v33.43 — Octubre 2026
 
 #### [v33.43.0] — 2026-10-24: Publicación Dinámica de Estados de WhatsApp (status@broadcast), Catálogo Maestro de Servicios y Piezas Verticales 9:16

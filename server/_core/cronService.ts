@@ -261,6 +261,10 @@ export function enforceJanIAIdentity(text: string): string {
   clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, 'les habla JanIA, la inteligencia artificial de VECY Bienes Raíces');
   clean = clean.replace(/Jani Alves y yo/gi, 'Eduardo Rivera y Jani Alves');
   clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Eduardo\s+Rivera/gi, 'les habla JanIA');
+  // Doctrina Eduardo A. Rivera (v33.44): Erradicación total de "coach" en favor de roles humanos y amigables
+  clean = clean.replace(/(?:tu\s+coach\s+en\s+VECY\s+BIENES\s+RA[IÍ]CES|tu\s+coach\s+inmobiliari[oa]|tu\s+coach)/gi, 'tu aliada inmobiliaria en VECY BIENES RAÍCES');
+  clean = clean.replace(/coach\s+de\s+[eé]lite/gi, 'aliada estratégica de élite');
+  clean = clean.replace(/\bcoach\b/gi, 'aliada');
   // v32.59: Marca pública exclusiva VECY BIENES RAÍCES (nunca "VECY Network")
   clean = enforceVecyBrand(clean);
   return clean;
@@ -1855,9 +1859,29 @@ export async function generateCalendarDailyText(tip: DailyTipItem): Promise<{ to
     ensureVecyDailyFooter(enforceVecyBrand(enforceGreetingAccuracy(enforceJanIAIdentity(t), timeInfo.period)));
   const fallback = { topicTitle: tip.topicTitle, captionText: sanitize(tip.captionText), themeKey: tip.themeKey };
 
-  const systemPrompt = `Eres JanIA, la inteligencia artificial, docente senior y coach de élite inmobiliaria de VECY BIENES RAÍCES en Colombia. Tono femenino, cálido, colombiano, sumamente profesional, visionario, persuasivo y ameno.
-MISIÓN EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
-- Actúa como una conferencista excepcional y líder formadora para profesionalizar a los agentes inmobiliarios a un nivel superior en Colombia.
+  const systemPrompt = `Eres JanIA, la inteligencia artificial y aliada de élite inmobiliaria de VECY BIENES RAÍCES en Colombia. Tono femenino, cálido, colombiano, sumamente profesional, visionario, persuasivo y ameno.
+MISIÓN EDUCATIVA Y DE ASESORÍA INMOBILIARIA INTEGRAL (DOCTRINA EDUARDO A. RIVERA):
+- Actúa como una destacada líder y aliada estratégica para profesionalizar a los agentes inmobiliarios a un nivel superior en Colombia.
+- REGLA TAXATIVA DE IDENTIDAD AMIGABLE (CERO 'COACH'):
+  * JAMÁS te presentes ni digas que eres 'coach' ni uses la palabra 'coach' o 'coaching' (la palabra coach puede distanciar o predisponer a los profesionales).
+  * Preséntate siempre con calidez, confianza y camaradería usando variaciones amigables según el tema del día:
+    - "Soy JanIA, tu consejera legal..."
+    - "Soy JanIA, tu aliada inmobiliaria..."
+    - "Soy JanIA, tu amiga avaluadora..."
+    - "Soy JanIA, tu asesora financiera..."
+    - "Soy JanIA, tu guía en marketing..."
+    - "Soy JanIA, tu árbitro conciliador..."
+    - "Soy JanIA, tu comunicadora..."
+    - "Soy JanIA, tu mejor guía en trámites..."
+    - "Soy JanIA, tu agente de servicios..."
+    - "Soy JanIA, tu agente de soporte..."
+    - "Soy JanIA, tu asesora prejurídica..."
+    - "Soy JanIA, tu asesora de VECY BIENES RAÍCES..."
+    - "Soy JanIA, tu colega..."
+    - "Soy JanIA, tu amiga..."
+    - "Soy JanIA, tu parner..."
+    - "Soy JanIA, tu consejera..."
+    y más variaciones naturales y amigables.
 - Cada día enseñas con profundidad práctica basada en el ámbito de negocios real de nuestro mercado, evitando la teoría fría o repetir discursos mecánicos.
 - TEMAS CLAVE DE VANGUARDIA:
   * Marketing Inmobiliario Moderno: Cómo vender en la era actual; adiós al posteo plano de foto y precio. Hoy se vende con video vertical (Reels/TikTok), narrativa emocional ("la historia de esta casa"), resolución de objeciones antes de la visita y segmentación digital.
@@ -2149,9 +2173,62 @@ export async function publishDailyTipForDay(tipoKey: string, force: boolean = fa
 }
 
 /**
+ * 🎨 Galería Maestra de Imágenes Cuadradas [1:1] de JanIA (v33.44 — Doctrina Eduardo A. Rivera):
+ * Formato cuadrado [1:1] de alta resolución para publicaciones temáticas en el Canal Oficial de WhatsApp.
+ * Cero repetición de imágenes obsoletas o con errores tipográficos ("anfitiona" -> "Anfitriona").
+ * Piezas oficiales generadas con consistencia visual: JanIA, corte bob castaño, gafas ejecutivas,
+ * blazer sastre negro con ribetes dorados (#0a0a0a y #d4af37) y estética hiperrealista en Bogotá.
+ */
+export function getChannelSquareImage1x1(themeKey: string, dayOfMonth?: number): string {
+  const normalized = (themeKey || "").toLowerCase();
+  const dir1x1 = path.resolve(process.cwd(), 'client/public/assets/channel_1x1');
+  const janiaDir = path.resolve(process.cwd(), 'client/public/assets/jania');
+
+  let target1x1 = 'jania_anfitriona_cafe_1x1.jpg';
+
+  if (normalized.includes("legal") || normalized.includes("jurid") || normalized.includes("vicio") || normalized.includes("contrato") || normalized.includes("titulo") || normalized.includes("promesa") || normalized.includes("pleito")) {
+    target1x1 = 'jania_legal_due_diligence_1x1.jpg';
+  } else if (normalized.includes("segurid") || normalized.includes("notari") || normalized.includes("cedula") || normalized.includes("predial") || normalized.includes("adres") || normalized.includes("rues") || normalized.includes("verific")) {
+    target1x1 = 'jania_seguridad_notarial_1x1.jpg';
+  } else if (normalized.includes("avaluo") || normalized.includes("pot") || normalized.includes("precio") || normalized.includes("metro_cuadrado") || normalized.includes("catast") || normalized.includes("suelo")) {
+    target1x1 = 'jania_avaluos_pot_1x1.jpg';
+  } else if (normalized.includes("market") || normalized.includes("alianza") || normalized.includes("40") || normalized.includes("comision") || normalized.includes("match") || normalized.includes("bolsa") || normalized.includes("colabora")) {
+    target1x1 = 'jania_marketing_colaborativo_1x1.jpg';
+  } else if (normalized.includes("cafe") || normalized.includes("podcast") || normalized.includes("anfitriona") || normalized.includes("educa") || normalized.includes("comunidad") || normalized.includes("balance")) {
+    target1x1 = 'jania_anfitriona_cafe_1x1.jpg';
+  } else {
+    // Rotación activa por día del mes sobre las piezas 1:1 maestras
+    const rotation = [
+      'jania_anfitriona_cafe_1x1.jpg',
+      'jania_legal_due_diligence_1x1.jpg',
+      'jania_marketing_colaborativo_1x1.jpg',
+      'jania_avaluos_pot_1x1.jpg',
+      'jania_seguridad_notarial_1x1.jpg'
+    ];
+    target1x1 = dayOfMonth ? rotation[(dayOfMonth - 1) % rotation.length] : 'jania_legal_due_diligence_1x1.jpg';
+  }
+
+  // 1. Prioridad: directorio dedicado channel_1x1
+  const candidate1x1 = path.join(dir1x1, target1x1);
+  if (fs.existsSync(candidate1x1)) {
+    return candidate1x1;
+  }
+
+  // 2. Respaldo: client/public/assets/jania
+  const candidateJania = path.join(janiaDir, target1x1);
+  if (fs.existsSync(candidateJania)) {
+    return candidateJania;
+  }
+
+  // 3. Failsafe: getLocalCuratedThemeImage
+  return getLocalCuratedThemeImage(themeKey);
+}
+
+/**
  * Publica la Píldora Matutina (08:45 AM) del Calendario de 30 días:
- * - CANAL OFICIAL: Píldora de alto valor completa con imagen HD garantizada (Capa 1).
+ * - CANAL OFICIAL: Píldora de alto valor completa con imagen cuadrada [1:1] nuevecita de JanIA (Capa 1).
  * - GRUPOS 2 Y 3: Micro-gancho persuasivo (teaser trampolín) con enlace al Canal y pregunta detonante.
+ * - ESTADOS DE WHATSAPP (status@broadcast): Gancho escrito en texto limpio con enlace directo al Canal.
  */
 export async function publishTodayTipNow(force: boolean = true) {
   const dateKey = getBogotaDateString();
@@ -2167,24 +2244,30 @@ export async function publishTodayTipNow(force: boolean = true) {
   console.log(`[CRON-SERVICE] 🚀 Difusión matutina (08:45 AM) — Día ${tip.dayOfMonth}: "${tip.topicTitle}"`);
   const content = await generateCalendarDailyText(tip);
 
-  // 2. Búsqueda y descarga de imagen con Capa 1 Resiliente garantizada
-  const imagePath = (await fetchPublicThemeImage(content.themeKey || tip.themeKey, tip.dayOfMonth)) || getLocalCuratedThemeImage(content.themeKey || tip.themeKey);
+  // 2. Selección de Imagen Cuadrada [1:1] Nuevecita de JanIA (Capa 1 Garantizada para Canal Oficial)
+  const imagePath = getChannelSquareImage1x1(content.themeKey || tip.themeKey, tip.dayOfMonth);
 
   // 3. Generación del Micro-Gancho Persuasivo (Teaser Trampolín) para Grupos 2 y 3
   const teaserText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴\n\n` +
-    `📌 *${tip.topicTitle}*\n` +
+    `📌 *${content.topicTitle || tip.topicTitle}*\n` +
     `Acabamos de subir al Canal Oficial el análisis legal y técnico desglosado con los artículos clave que necesitas para blindar tus operaciones y comisiones.\n\n` +
-    `👉 *Sigue el Canal Oficial y lee la guía completa aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+    `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
     `Colegas, ¿ustedes cómo están manejando este tema en el día a día? Cuéntennos su experiencia y debatimos aquí abajo 👇`;
 
+  // 4. Gancho Escrito Exclusivo para Estados de WhatsApp (Historias/Stories - status@broadcast)
+  const statusHookText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴\n\n` +
+    `📌 *${content.topicTitle || tip.topicTitle}*\n` +
+    `Acabamos de subir al Canal Oficial el análisis legal y técnico desglosado para blindar tus operaciones inmobiliarias.\n\n` +
+    `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${VECY_SOCIAL_NETWORKS.whatsappChannel}`;
+
   try {
-    // 4. Despachar: Píldora completa con imagen al Canal Oficial, y micro-gancho persuasivo a Grupos 2 y 3
+    // 5. Despachar: Píldora completa con imagen [1:1] al Canal Oficial, y micro-gancho persuasivo a Grupos 2 y 3
     await whatsappBot.sendMorningPillAndGroupTeasers(content.captionText, teaserText, imagePath);
 
-    // 5. Despacho automático de Estado de WhatsApp propio (status@broadcast)
+    // 6. Despacho automático de Estado de WhatsApp propio (status@broadcast) en texto puro con enlace
     try {
-      console.log('[CRON-SERVICE] 📱 Despachando Estado de WhatsApp propio con catálogo de servicios rotativo...');
-      await whatsappBot.postDailyServiceStatus();
+      console.log('[CRON-SERVICE] 📱 Despachando Estado de WhatsApp con gancho escrito hacia el Canal Oficial...');
+      await whatsappBot.postDailyHookStatus(statusHookText, content.topicTitle || tip.topicTitle);
     } catch (statusErr: any) {
       console.warn('[CRON-SERVICE] Advertencia en despacho de estado de WhatsApp:', statusErr?.message);
     }
@@ -2195,8 +2278,8 @@ export async function publishTodayTipNow(force: boolean = true) {
       imageFileName: imagePath ? path.basename(imagePath) : undefined,
       captionText: content.captionText,
     });
-    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen + Grupos 2 y 3 con teaser trampolín + Estado WhatsApp): "${content.topicTitle}".`);
-    return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText };
+    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampolín + Estado WhatsApp con enlace): "${content.topicTitle}".`);
+    return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText, statusHookText };
   } catch (err: any) {
     console.error(`[CRON-SERVICE] Error despachando difusión diaria (Día ${tip.dayOfMonth}):`, err?.message);
     await failBroadcast(lock.broadcastId, err?.message);
@@ -2208,7 +2291,8 @@ export async function publishTodayTipNow(force: boolean = true) {
  * Publica inmediatamente el Estado de WhatsApp rotativo del día
  */
 export async function publishDailyWhatsAppStatusNow() {
-  return await whatsappBot.postDailyServiceStatus();
+  const tip = getCalendarTipForDate();
+  return await whatsappBot.postDailyHookStatus(undefined, tip.topicTitle);
 }
 
 /**

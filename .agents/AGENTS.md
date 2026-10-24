@@ -182,7 +182,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.43 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.44 — Octubre 2026
+
+### Novedades v33.44 (Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de 'Coach'):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Suite Maestra 1:1 para el Canal Oficial de WhatsApp (`client/public/assets/channel_1x1/`, `cronService.ts`)**:
+     - *Causa raíz*: Las imágenes cuadradas antiguas presentaban heterogeneidad y las de historias 9:16 no eran óptimas para el feed vertical continuo de los canales de WhatsApp en desktop y móvil.
+     - *Solución*: Se diseñaron y generaron 5 piezas maestras en relación de aspecto 1:1 con branding institucional VECY Gold Edition y presencia de JanIA: `jania_anfitriona_cafe_1x1.jpg` (Anfitriona y bienvenida con café), `jania_legal_due_diligence_1x1.jpg` (Due diligence legal y saneamiento), `jania_marketing_colaborativo_1x1.jpg` (Marketing 10 skills y alianza 40/20/40), `jania_avaluos_pot_1x1.jpg` (Sondeos y POT Bogotá Dec. 555/21) y `jania_seguridad_notarial_1x1.jpg` (Verificación de cédulas y seguridad notarial). `getChannelSquareImage1x1` las selecciona dinámicamente según la temática del tip.
+  2. **Gancho Escrito en Historias de WhatsApp (`whatsapp-match.ts`)**:
+     - *Causa raíz*: Las imágenes en `status@broadcast` causaban problemas de compatibilidad y carga en WhatsApp Web y generaban duplicación con los canales.
+     - *Solución*: Se implementó `postDailyHookStatus`, que despacha únicamente texto con formato institucional de gancho persuasivo e incorpora ineludiblemente el llamado de acción hacia el Canal Oficial: `👉 Sigue el Canal Oficial y lee la guía completa aquí: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`.
+  3. **Erradicación Doctrinal del Término 'Coach' (`cronService.ts`, `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `base.md`)**:
+     - *Causa raíz*: El anglicismo "coach" resultaba ajeno, frío y corporativo, no alineado con la cercanía, calidez y señorío de JanIA en Colombia.
+     - *Solución*: Se eliminó toda referencia a "coach" en prompts y lógica (`enforceJanIAIdentity`), consagrando a JanIA como "aliada", "asesora especializada" y "anfitriona de la comunidad inmobiliaria".
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 368/368 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 27s ✅
+- `shared/const.ts` (`v33.44`) y `package.json` (`33.44.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.43 — Octubre 2026
 
 ### Novedades v33.43 (Publicación Dinámica de Estados de WhatsApp status@broadcast, Catálogo Maestro y Piezas 9:16):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
