@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37|38)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39)\.0/);
     });
   });
 
@@ -7162,11 +7162,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37|38)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38|39)\.0/);
     });
   });
 
@@ -7212,11 +7212,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(37|38)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(37|38)\.0/);
+      expect(pkg.version).toMatch(/^33\.(37|38|39)\.0/);
     });
   });
 
@@ -7241,11 +7241,46 @@ Ana Morales Castillo
 
     it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.38");
+      expect(VECY_VERSION).toMatch(/^v33\.(38|39)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.38.0");
+      expect(pkg.version).toMatch(/^33\.(38|39)\.0/);
+    });
+  });
+
+  describe("Suite v33.39 — Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS", () => {
+    it("1. Script ejecutable run-pgn-tunnel.sh y ensure-pgn-tunnel.sh con clave SSH explícita", async () => {
+      const fs = await import("fs");
+      const runScript = fs.readFileSync("scripts/run-pgn-tunnel.sh", "utf-8");
+      const ensureScript = fs.readFileSync("scripts/ensure-pgn-tunnel.sh", "utf-8");
+
+      expect(runScript).toContain("18443:apps.procuraduria.gov.co:443");
+      expect(runScript).toContain("28443:aplicaciones.adres.gov.co:443");
+      expect(runScript).toContain("id_vps");
+
+      expect(ensureScript).toContain("id_vps");
+      expect(ensureScript).toContain("StrictHostKeyChecking=accept-new");
+    });
+
+    it("2. Extracción y presencia de ADRES en dmHandler y retorno estructurado de caché", async () => {
+      const fs = await import("fs");
+      const dmHandlerContent = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(dmHandlerContent).toContain("RESPUESTA PRIORITARIA Y DIRECTA A LA CONSULTA");
+      expect(dmHandlerContent).toContain("CERO OMISIÓN DE EPS");
+      expect(dmHandlerContent).toContain("adresData");
+
+      const idServiceContent = fs.readFileSync("server/_core/identityVerificationService.ts", "utf-8");
+      expect(idServiceContent).toContain("ADRES - Base de Datos Única de Afiliados (BDUA - Caché)");
+    });
+
+    it("3. Consagración doctrinal de versión v33.39 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.39");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.39.0");
     });
   });
 });

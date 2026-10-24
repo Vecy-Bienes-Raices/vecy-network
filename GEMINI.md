@@ -1,19 +1,15 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.38.0 — 2026-10-23)
-- **JanIA Server:** `v33.38` (`33.38.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1:**
-  1. **Diálogo Maestro de Sondeos Físicos (8 Datos Obligatorios):** JanIA asume el rol de Perita Avaluadora solicitando puntualmente los 8 datos indispensables para estimar el valor del inmueble y el $/m²:
-     • Dirección exacta del predio con complementarios de ser necesario.
-     • Barrio.
-     • Localidad/Comuna.
-     • Ciudad.
-     • Área construida aproximada en metros cuadrados.
-     • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.
-     • Año de construcción.
-     • Tipo de acabados.
-     JanIA insiste amable y pedagógicamente punto por punto hasta completar los datos sin desviar la conversación ni inventar cifras.
-  2. **Nombre Oficial Sagrado de Canalización al Grupo 1:** JanIA canaliza con total transparencia y honestidad radical al usuario hacia el Grupo 1 Oficial con su nombre exacto y enlace: `Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ)`. Prohibición absoluta de usar nombres genéricos o simular registros en DMs.
-  3. **Extensión del Modelo Histórico de Sondeos (`valuation.ts`):** `recordSurveyInquiry` y `getSurveyInquiryHistory` integran `barrio`, `localidad`, `ciudad`, `anoConstruccion` y `tipoAcabados` para nutrir la memoria estadística de VECY a $0 COP.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 342/342 passing | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.39.0 — 2026-10-23)
+- **JanIA Server:** `v33.39` (`33.39.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS:**
+  1. **Diagnóstico Forense de Geobloqueo ADRES / Contabo:** Se descubrió que el firewall de `aplicaciones.adres.gov.co` descarta paquetes de IPs extranjeras (Contabo VPS), dependiendo obligatoriamente del túnel SSH reverso (`127.0.0.1:28443` hacia Colombia). El cron previo fallaba silenciosamente por falta de clave explícita (`Permission denied publickey`).
+  2. **Blindaje de Túnel 24/7 (Systemd + Cron Resiliente):**
+     • Creado servicio `vecy-tunnel.service` supervisado por `systemd --user` con reconexión automática en 5s (`Restart=always`).
+     • Activado `loginctl enable-linger eddu` para persistencia continua sin sesión gráfica activa.
+     • Actualizado `ensure-pgn-tunnel.sh` con `-i ~/.ssh/id_vps` y `BatchMode=yes` en cron cada 2 minutos como contingencia.
+  3. **Entrega Ineludible de EPS en JanIA (`dmHandler.ts`, `identityVerificationService.ts`):**
+     • `executeJaniaDmTool` y caché devuelven el objeto `adres` completo con `eps`, `estado` y `regimen`.
+     • Instrucción prioritaria al LLM: si el usuario pregunta puntualmente por la EPS o el titular, JanIA responde de inmediato en las primeras líneas identificando a quién pertenece y su EPS en ADRES / BDUA.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 346/346 passing (100% verde) | Build `npm run build` limpio.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

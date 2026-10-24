@@ -182,7 +182,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.38 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.39 — Octubre 2026
+
+### Novedades v33.39 (Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Diagnóstico Forense de Geobloqueo ADRES / Contabo**:
+     - *Causa raíz*: El portal de `aplicaciones.adres.gov.co` descarta paquetes (drop/timeout) provenientes de rangos IP extranjeros de datacenters (como el VPS Contabo). El sistema depende del túnel SSH reverso (`127.0.0.1:28443` hacia Colombia). El script previo `ensure-pgn-tunnel.sh` en cron fallaba silenciosamente por falta de clave SSH explícita (`Permission denied publickey`) al no disponer de agente SSH interactivo.
+     - *Solución*: Se implementó el servicio `vecy-tunnel.service` supervisado por `systemd --user` con reconexión automática en 5s (`Restart=always`) y `loginctl enable-linger eddu` para garantizar disponibilidad ininterrumpida 24/7. Además, se dotó a `ensure-pgn-tunnel.sh` de `-i ~/.ssh/id_vps` y `BatchMode=yes` en cron cada 2 minutos como contingencia.
+  2. **Entrega Ineludible de EPS en JanIA (`dmHandler.ts`, `identityVerificationService.ts`)**:
+     - *Causa raíz*: Cuando la consulta se resolvía o se consultaba la caché de identidad, el objeto `adres` no se incluía en el payload retornado por la rama de caché, provocando que `toolJson.adres` fuera `null` en Gemini.
+     - *Solución*:
+       - `identityVerificationService.ts` retorna el objeto `adres` completo con `eps`, `estado` y `regimen` tanto en consulta en vivo como desde caché.
+       - `executeJaniaDmTool` extrae la EPS de `res.adres` o, como red de seguridad, directamente de la línea `ADRES (BDUA):` en `res.reportText`.
+       - Se instruye a Gemini con prioridad absoluta: si el usuario pregunta puntualmente por la EPS o a quién pertenece la cédula, JanIA responde de inmediato en las primeras líneas identificando el titular y su EPS en ADRES / BDUA.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 346/346 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 25s ✅
+- `shared/const.ts` (`v33.39`) y `package.json` (`33.39.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.38 — Octubre 2026
 
 ### Novedades v33.38 (8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

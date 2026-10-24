@@ -1,0 +1,13 @@
+[Unit]
+Description=Vecy Network SSH Reverse Tunnels (PGN 18443, ADRES 28443)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/eddu/Proyectos/vecy-network/scripts/run-pgn-tunnel.sh
+Restart=always
+RestartSec=5
+KillMode=process
+
+[Install]
+WantedBy=default.target

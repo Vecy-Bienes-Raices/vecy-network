@@ -330,6 +330,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.39 — Octubre 2026
+
+#### [v33.39.0] — 2026-10-23: Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS
+- **Diagnóstico Forense de Geobloqueo ADRES / Contabo:**
+  - **Problema:** La plataforma estatal `aplicaciones.adres.gov.co` (BDUA) descarta paquetes procedentes de IPs de centros de datos internacionales (VPS Contabo `13.140.149.144`). El sistema depende obligatoriamente de un túnel reverso SSH (`127.0.0.1:28443` hacia Colombia). El script anterior bajo cron fallaba silenciosamente por falta de clave SSH explícita en sesiones desatendidas (`Permission denied publickey`), provocando el cierre del túnel y fallos por timeout en la consulta de ADRES.
+  - **Solución:**
+    1. Creación del servicio `vecy-tunnel.service` bajo `systemd --user` con reconexión inmediata (`Restart=always`, `RestartSec=5`).
+    2. Activación de persistencia con `loginctl enable-linger eddu`.
+    3. Endurecimiento de `ensure-pgn-tunnel.sh` con clave explícita `-i ~/.ssh/id_vps`, `-o StrictHostKeyChecking=accept-new` y `-o BatchMode=yes` en cron cada 2 minutos como contingencia.
+- **Entrega Ineludible de EPS en JanIA (`dmHandler.ts`, `identityVerificationService.ts`):**
+  - **Problema:** En la rama de caché de `identityVerificationService.ts`, el objeto `adres` se retornaba omitido si falló previamente o no se mapeaba, causando que `toolJson.adres` fuera `null`. A su vez, Gemini no recibía directiva estricta para entregar la EPS en las primeras líneas ante preguntas explícitas del usuario.
+  - **Solución:**
+    1. Corrección del retorno de caché para incluir siempre `adres` (con EPS, estado y régimen).
+    2. Extracción de respaldo en `executeJaniaDmTool` mediante regex sobre `reportText` en caso de discrepancias de serialización.
+    3. `specialToolInstructions` para `cedula`: prioridad absoluta para responder el nombre del titular y su EPS en ADRES / BDUA en el primer párrafo si el interlocutor preguntó por ello.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **346/346 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 25s.
+
 ### 🔖 v33.38 — Octubre 2026
 
 #### [v33.38.0] — 2026-10-23: 8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1

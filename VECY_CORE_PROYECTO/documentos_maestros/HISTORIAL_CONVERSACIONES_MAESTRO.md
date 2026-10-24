@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-23] — JanIA v33.39: Persistencia de Túnel ADRES, Supervisión Systemd y Entrega Ineludible de EPS (v33.39 - 33.39.0)
+
+**Versión:** `v33.39` (`33.39.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Archivos Afectados:**
+- `scripts/vecy-tunnel.service` y `~/.config/systemd/user/vecy-tunnel.service`:
+  1. Configuración de servicio systemd para túneles inversos persistentes 24/7 (Procuraduría puerto `18443` y ADRES / BDUA puerto `28443`).
+  2. Parámetros de auto-sanación: `Restart=always` con `RestartSec=5` y activación de `loginctl enable-linger eddu` para persistir sin sesión gráfica.
+- `scripts/run-pgn-tunnel.sh`:
+  1. Script ejecutable para supervisión continua con un único proceso `ssh -N` con doble reenvío (`-R 18443:apps.procuraduria.gov.co:443 -R 28443:aplicaciones.adres.gov.co:443`), clave explícita `-i ~/.ssh/id_vps` y `BatchMode=yes`.
+- `scripts/ensure-pgn-tunnel.sh`:
+  1. Endurecimiento de la tarea periódica bajo cron con clave explícita `${HOME}/.ssh/id_vps`, `-o StrictHostKeyChecking=accept-new` y `-o BatchMode=yes`, eliminando los fallos silenciosos de `Permission denied (publickey)`.
+  2. Crontab configurado con variables de entorno completas `HOME=/home/eddu` y `PATH` cada 2 minutos.
+- `server/_core/identityVerificationService.ts`:
+  1. Retorno estructurado de objeto `adres`, `procuraduria` y `policia` en las ramas de caché de `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`.
+  2. Corrección tipológica completa para que `identityCache` devuelva objetos válidos según `SingleIdentityReport` e `IdentityVerificationReport`.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  1. Extracción resiliente de `adresData` en `executeJaniaDmTool`: si `res.adres?.eps` está ausente pero `res.reportText` contiene la línea de ADRES, se extrae mediante expresión regular la EPS, estado y régimen.
+  2. `specialToolInstructions` para `cedula`: prioridad absoluta y directa a responder el nombre del titular y su EPS si el usuario lo solicitó expresamente, con prohibición estricta de omitir el dato de EPS cuando esté en el resultado estructurado.
+- `server/__tests__/regression.test.ts`:
+  1. Actualización de regexes de versión en suites 127 (`v33.34`), `v33.35`, `v33.36`, `v33.37` y `v33.38`.
+  2. Creación de Suite v33.39 validando los scripts de túnel, la presencia de la clave SSH, las instrucciones de prioridad de EPS y la consagración de versión `v33.39` / `33.39.0`.
+- `shared/const.ts` (`v33.39`) y `package.json` (`33.39.0`).
+- Documentos maestros actualizados: `GEMINI.md`, `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`.
+
+---
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera
+- *"Algo sucede porque los cambios solicitados no han hecho efecto en JanIA y sigue sin efectuar lo que le instauramois, por ejemplo empecemos porque sigue sin poder ingresar a ADRES y dar el dato de EPS del documento solicitado."*
+
+#### 2. Diagnóstico Técnico Profundo y Causas Raíz
+1. **Geobloqueo de ADRES a IPs Extranjeras y Fallo Silencioso de Cron:**
+   - La plataforma estatal `aplicaciones.adres.gov.co` (IPs 190.60.94.163 / 204.199.80.225) descarta paquetes entrantes desde centros de datos extranjeros (como el VPS Contabo `13.140.149.144`), produciendo `curl: (28) Failed to connect ... Timeout was reached`.
+   - Por esta razón, el VPS depende obligatoriamente de un túnel SSH reverso en el puerto `28443` que enruta las solicitudes a través de la máquina local de Eduardo en Colombia.
+   - El script `ensure-pgn-tunnel.sh` estaba programado en cron, pero al correr en un entorno no interactivo sin `SSH_AUTH_SOCK` ni clave explícita (`-i ~/.ssh/id_vps`), fallaba silenciosamente con `root@13.140.149.144: Permission denied (publickey,password)`. Al cerrarse el túnel, el puerto `28443` del VPS quedaba cerrado, forzando conexión directa que moría por timeout.
+2. **Pérdida de Objeto `adres` en la Rama de Caché:**
+   - Al fallar ADRES en el primer intento y resolverse la cédula por Policía Nacional, los datos se guardaban en la caché de memoria con `eps: undefined`.
+   - Cuando luego se consultaba la caché, la rama de retorno en `executeIdentityVerificationFromWhatsApp` retornaba el reporte sin el objeto `adres: ...`, lo que provocaba que en `executeJaniaDmTool` el campo `toolJson.adres` fuera `null`.
+   - Gemini recibía `toolJson.adres: null` y, por ende, JanIA no mencionaba la EPS.
+
+#### 3. Acciones Ejecutadas
+1. **Infraestructura de Túneles Persistente (Systemd + Cron):**
+   - Creado y activado el servicio `vecy-tunnel.service` bajo `systemd --user` con reconexión inmediata (`Restart=always`, `RestartSec=5`).
+   - Activado `loginctl enable-linger eddu` para garantizar ejecución perpetua en segundo plano.
+   - Actualizado `ensure-pgn-tunnel.sh` con `-i ~/.ssh/id_vps` y `BatchMode=yes` en cron cada 2 minutos como doble salvaguarda.
+2. **Prueba Empírica en Vivo:**
+   - Verificado desde el VPS a través del túnel `127.0.0.1:28443`: la consulta a `CC 41642346` respondió exitosamente con `FLOR ALBA FALLA OTALORA`, `CAPITAL SALUD EPS-S S.A.S.`, estado `ACTIVO`, régimen `SUBSIDIADO`.
+3. **Flujo de Entrega en DM y Gemini:**
+   - Adaptada la extracción en `dmHandler.ts` para que `resultJson.adres` reciba `eps`, `estado` y `regimen` de forma ineludible.
+   - Instruido el prompt del LLM para responder de inmediato en el primer párrafo el nombre y la EPS si fue consultado expresamente.
+
+---
+
 ### 📅 [2026-10-23] — JanIA v33.38: 8 Datos Indispensables de Sondeos Físicos y Nombre Sagrado Oficial del Grupo 1 (v33.38 - 33.38.0)
 
 **Versión:** `v33.38` (`33.38.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

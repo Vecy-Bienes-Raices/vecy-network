@@ -401,6 +401,31 @@ export async function executeJaniaDmTool(
       const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp(queryStr, true, userId);
       const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACIÓN OFICIAL DE EMPRESA"));
+
+      let adresData: { eps?: string; estado?: string; regimen?: string } | null = null;
+      if (res.adres?.eps) {
+        adresData = {
+          eps: res.adres.eps,
+          estado: res.adres.estado || "ACTIVO",
+          regimen: res.adres.regimen || "CONTRIBUTIVO"
+        };
+      } else if (res.reportText) {
+        const adresLineMatch = res.reportText.match(/ADRES\s*\((?:BDUA)?\):\*\s*([^\n\r]+)/i);
+        if (adresLineMatch && adresLineMatch[1] && !adresLineMatch[1].toLowerCase().includes("no registra afiliación")) {
+          const rawMatch = adresLineMatch[1].trim();
+          const parsedEpsMatch = rawMatch.match(/^([^(]+)(?:\(([^—)]+)(?:—\s*([^)]+))?\))?/);
+          if (parsedEpsMatch) {
+            adresData = {
+              eps: parsedEpsMatch[1].trim(),
+              estado: parsedEpsMatch[2]?.trim() || "ACTIVO",
+              regimen: parsedEpsMatch[3]?.trim() || "CONTRIBUTIVO"
+            };
+          } else {
+            adresData = { eps: rawMatch };
+          }
+        }
+      }
+
       return {
         toolType: isCompanyReport ? "empresa" : "cedula",
         resultJson: {
@@ -412,11 +437,7 @@ export async function executeJaniaDmTool(
           policia: res.policia?.message || (res.success ? "Sin antecedentes judiciales ni requerimientos penales pendientes" : null),
           procuraduria: res.procuraduria?.statusText || (res.success ? "No registra sanciones ni inhabilidades vigentes ante la Procuraduría General" : null),
           contraloria: res.contraloria?.statusText || (res.success ? "Sin reporte en el Boletín de Responsables Fiscales (SIRECI)" : null),
-          adres: res.adres ? {
-            eps: res.adres.eps,
-            estado: res.adres.estado,
-            regimen: res.adres.regimen
-          } : null,
+          adres: adresData,
           reporteOficial: res.reportText || "Sin reporte disponible",
           preguntaSeguimiento: ""
         }
@@ -811,6 +832,8 @@ export async function synthesizeToolResponseWithGemini(
   if (toolType === "cedula") {
     specialToolInstructions =
       `- HERRAMIENTA: Verificación Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).\n` +
+      `- RESPUESTA PRIORITARIA Y DIRECTA A LA CONSULTA: Si el usuario preguntó expresamente por la EPS, afiliación en salud o a quién pertenece la cédula/documento, responde de inmediato y con máxima claridad desde el primer párrafo indicando el nombre completo del titular y la EPS en la que se encuentra afiliado en ADRES / BDUA.\n` +
+      `- CERO OMISIÓN DE EPS: Si en los datos estructurados figura la EPS (ej. Capital Salud EPS-S, Sanitas EPS, Sura EPS, Nueva EPS), es MANDATORIO e INDISPENSABLE nombrarla textualmente junto con su estado y régimen de afiliación.\n` +
       `- REDACCIÓN 100% LIBRE Y CONVERSACIONAL: Cero plantillas rígidas prefabricadas, cero encabezados acartonados o viñetas robóticas. Redacta de forma fresca, original, corta y humana como experta de VECY.\n` +
       `- CERO ALUCINACIÓN: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:\n` +
       `  * Nombre oficial de la persona y número de documento validado.\n` +
@@ -818,7 +841,7 @@ export async function synthesizeToolResponseWithGemini(
       `  * Procuraduría General: Sanciones disciplinarias e inhabilidades vigentes.\n` +
       `  * Contraloría General: Boletín de Responsables Fiscales (SIRECI).\n` +
       `  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y régimen.\n` +
-      `- Si el documento no aparece indexado en las bases censales en línea, indícalo con honestidad y claridad para que verifique el número físico.\n` +
+      `- Si el documento no aparece indexado en las bases censales en línea, indícalo con honestidad y claridad para que verifique el número físico, o explica que los regímenes de excepción (Fuerzas Militares, Policía, Magisterio, etc.) no figuran en el censo general BDUA.\n` +
       `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Ubica al final una línea breve y elegante de Hábeas Data (Ley 1581/12 y Art. 15 C.P.).\n` +
       (askReview
         ? `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana, simpática y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.\n`

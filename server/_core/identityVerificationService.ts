@@ -2129,7 +2129,25 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
       success: true,
       officialName,
       detectedName,
-      reportText
+      reportText,
+      adres: cachedEps ? {
+        success: true,
+        eps: cachedEps,
+        estado: cachedEstado,
+        regimen: cachedRegimen,
+        source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
+      } : undefined,
+      procuraduria: identityCache.get(pgnCacheKey) ? {
+        success: true,
+        officialName: identityCache.get(pgnCacheKey)?.fullName,
+        source: 'Procuraduría General (SIRI - Caché)'
+      } : undefined,
+      policia: identityCache.get(ponalCacheKey) ? {
+        valid: true,
+        success: true,
+        officialName: identityCache.get(ponalCacheKey)?.fullName,
+        source: 'Policía Nacional (Caché)'
+      } : undefined
     };
   }
 
@@ -2492,6 +2510,24 @@ export async function executeIdentityVerificationFromWhatsApp(
       officialName,
       source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Contraloría General + Policía Nacional - Caché)',
       reportText,
+      adres: cachedEps ? {
+        success: true,
+        eps: cachedEps,
+        estado: cachedEstado,
+        regimen: cachedRegimen,
+        source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
+      } : undefined,
+      procuraduria: identityCache.get(pgnCacheKey) ? {
+        success: true,
+        officialName: identityCache.get(pgnCacheKey)?.fullName,
+        source: 'Procuraduría General (SIRI - Caché)'
+      } : undefined,
+      policia: identityCache.get(ponalCacheKey) ? {
+        valid: true,
+        success: true,
+        officialName: identityCache.get(ponalCacheKey)?.fullName,
+        source: 'Policía Nacional (Caché)'
+      } : undefined,
       items
     };
   }

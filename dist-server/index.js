@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.38";
+    VECY_VERSION = "v33.39";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -28971,7 +28971,25 @@ async function verifySingleDocumentInternal(item) {
       success: true,
       officialName,
       detectedName,
-      reportText
+      reportText,
+      adres: cachedEps ? {
+        success: true,
+        eps: cachedEps,
+        estado: cachedEstado,
+        regimen: cachedRegimen,
+        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Cach\xE9)"
+      } : void 0,
+      procuraduria: identityCache.get(pgnCacheKey) ? {
+        success: true,
+        officialName: identityCache.get(pgnCacheKey)?.fullName,
+        source: "Procuradur\xEDa General (SIRI - Cach\xE9)"
+      } : void 0,
+      policia: identityCache.get(ponalCacheKey) ? {
+        valid: true,
+        success: true,
+        officialName: identityCache.get(ponalCacheKey)?.fullName,
+        source: "Polic\xEDa Nacional (Cach\xE9)"
+      } : void 0
     };
   }
   const isProcuraduriaSupported = ["cc", "ce", "cx", "pep", "ppt", "nit"].includes(tipoDoc.toLowerCase());
@@ -29284,6 +29302,24 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       officialName,
       source: "Central Multifuente Notarial VECY (ADRES BDUA + Procuradur\xEDa General + Contralor\xEDa General + Polic\xEDa Nacional - Cach\xE9)",
       reportText,
+      adres: cachedEps ? {
+        success: true,
+        eps: cachedEps,
+        estado: cachedEstado,
+        regimen: cachedRegimen,
+        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Cach\xE9)"
+      } : void 0,
+      procuraduria: identityCache.get(pgnCacheKey) ? {
+        success: true,
+        officialName: identityCache.get(pgnCacheKey)?.fullName,
+        source: "Procuradur\xEDa General (SIRI - Cach\xE9)"
+      } : void 0,
+      policia: identityCache.get(ponalCacheKey) ? {
+        valid: true,
+        success: true,
+        officialName: identityCache.get(ponalCacheKey)?.fullName,
+        source: "Polic\xEDa Nacional (Cach\xE9)"
+      } : void 0,
       items
     };
   }
@@ -29626,6 +29662,29 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       const queryStr = doc.toUpperCase().startsWith(tipo.toUpperCase()) ? doc : `${tipo} ${doc}`;
       const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
       const isCompanyReport = tipo === "NIT" || Boolean(res.reportText?.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA"));
+      let adresData = null;
+      if (res.adres?.eps) {
+        adresData = {
+          eps: res.adres.eps,
+          estado: res.adres.estado || "ACTIVO",
+          regimen: res.adres.regimen || "CONTRIBUTIVO"
+        };
+      } else if (res.reportText) {
+        const adresLineMatch = res.reportText.match(/ADRES\s*\((?:BDUA)?\):\*\s*([^\n\r]+)/i);
+        if (adresLineMatch && adresLineMatch[1] && !adresLineMatch[1].toLowerCase().includes("no registra afiliaci\xF3n")) {
+          const rawMatch = adresLineMatch[1].trim();
+          const parsedEpsMatch = rawMatch.match(/^([^(]+)(?:\(([^—)]+)(?:—\s*([^)]+))?\))?/);
+          if (parsedEpsMatch) {
+            adresData = {
+              eps: parsedEpsMatch[1].trim(),
+              estado: parsedEpsMatch[2]?.trim() || "ACTIVO",
+              regimen: parsedEpsMatch[3]?.trim() || "CONTRIBUTIVO"
+            };
+          } else {
+            adresData = { eps: rawMatch };
+          }
+        }
+      }
       return {
         toolType: isCompanyReport ? "empresa" : "cedula",
         resultJson: {
@@ -29637,11 +29696,7 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
           policia: res.policia?.message || (res.success ? "Sin antecedentes judiciales ni requerimientos penales pendientes" : null),
           procuraduria: res.procuraduria?.statusText || (res.success ? "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General" : null),
           contraloria: res.contraloria?.statusText || (res.success ? "Sin reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI)" : null),
-          adres: res.adres ? {
-            eps: res.adres.eps,
-            estado: res.adres.estado,
-            regimen: res.adres.regimen
-          } : null,
+          adres: adresData,
           reporteOficial: res.reportText || "Sin reporte disponible",
           preguntaSeguimiento: ""
         }
@@ -29989,6 +30044,8 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   let specialToolInstructions = "";
   if (toolType === "cedula") {
     specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
+- RESPUESTA PRIORITARIA Y DIRECTA A LA CONSULTA: Si el usuario pregunt\xF3 expresamente por la EPS, afiliaci\xF3n en salud o a qui\xE9n pertenece la c\xE9dula/documento, responde de inmediato y con m\xE1xima claridad desde el primer p\xE1rrafo indicando el nombre completo del titular y la EPS en la que se encuentra afiliado en ADRES / BDUA.
+- CERO OMISI\xD3N DE EPS: Si en los datos estructurados figura la EPS (ej. Capital Salud EPS-S, Sanitas EPS, Sura EPS, Nueva EPS), es MANDATORIO e INDISPENSABLE nombrarla textualmente junto con su estado y r\xE9gimen de afiliaci\xF3n.
 - REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas, cero encabezados acartonados o vi\xF1etas rob\xF3ticas. Redacta de forma fresca, original, corta y humana como experta de VECY.
 - CERO ALUCINACI\xD3N: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:
   * Nombre oficial de la persona y n\xFAmero de documento validado.
@@ -29996,7 +30053,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   * Procuradur\xEDa General: Sanciones disciplinarias e inhabilidades vigentes.
   * Contralor\xEDa General: Bolet\xEDn de Responsables Fiscales (SIRECI).
   * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
-- Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico.
+- Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico, o explica que los reg\xEDmenes de excepci\xF3n (Fuerzas Militares, Polic\xEDa, Magisterio, etc.) no figuran en el censo general BDUA.
 - NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
 ` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
 ` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
