@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-25] — JanIA v33.45: Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp (v33.45 - 33.45.0)
+
+**Versión:** `v33.45` (`33.45.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Fortalecimiento de la inteligencia, astucia y calidad de respuesta de JanIA en chats privados:
+  1. **Detección y Neutralización de Respuestas Crudas con Identificadores Internos**: En una conversación analizada, se evidenció que en ciertos momentos o ante errores en el flujo de herramientas, JanIA emitía cadenas técnicas como `110758461710505@lid` o números de teléfono sueltos, lo que degrada la percepción de astucia e inteligencia de JanIA como asesora de primer nivel.
+  2. **Blindaje de la Experiencia Conversacional Humana**: JanIA debe responder SIEMPRE con naturalidad, calidez, señorío y astucia resolutiva, ofreciendo soluciones como el predial en PDF, sondeos comerciales completos y asesoría especializada sin dejar escapar detalles técnicos de transporte o socket.
+  3. **Seguridad y Anti-Baneo**: Mantener y reforzar los protocolos de seguridad anti-baneo en WhatsApp y protección del socket.
+
+**Diagnóstico Técnico:**
+1. **Fuga de Identificadores Internos de Baileys en Handlers (`dmHandler.ts`):** Cuando una herramienta devuelve un valor crudo o cuando el modelo LLM no retorna un mensaje de texto explícito y se tomaba por fallback el remitente o JID/LID, se despachaba una cadena como `110758461710505@lid` o números de teléfono directos al usuario.
+2. **Carencia de Filtro Centinela en Capa de Transporte (`whatsapp-match.ts`):** `queuedSend` aceptaba cualquier texto sin validar si el contenido era en realidad un identificador interno de WhatsApp o un número telefónico aislado emitido por error como cuerpo del mensaje.
+3. **Consistencia en Respuestas Asistidas:** Toda herramienta o flujo en chats privados debe tener un envoltorio cordial y asertivo que contextualice el servicio entregado.
+
+**Acciones Ejecutadas:**
+- **`server/_core/jania/handlers/dmHandler.ts`:**
+  - Implementación de `formatPoliteToolDelivery` con sanitización estricta que neutraliza cualquier JID o LID que intente filtrarse como texto y entrega en su lugar una respuesta cordial y profesional orientada a la acción.
+  - Intercepción centinela en `processPrivateDmConversationalMessage` que evalúa si la respuesta generada consiste en un JID, LID o número aislado, sustituyéndola de inmediato por un mensaje cálido y resolutivo de JanIA.
+- **`server/_core/whatsapp-match.ts`:**
+  - Guarda centinela en `queuedSend` y en el despachador privado que bloquea envíos accidentales de JIDs/LIDs crudos a chats de usuarios.
+- **`shared/const.ts` & `package.json`:**
+  - Incremento oficial a `v33.45` / `33.45.0`.
+- **`server/__tests__/regression.test.ts`:**
+  - Creación de la `Suite v33.45 — Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp` con 3 pruebas automatizadas dedicadas.
+  - Actualización de los regexes de versiones en todas las suites de regresión (v33.34 a v33.44) para admitir `v33.45`.
+- **Validación Limpia ($0 COP):**
+  - Typecheck `npm run check` (0 errores) | Tests `npm test` 371/371 passing (100% verde a $0 COP) | Build `npm run build` limpio en 25s.
+
+---
+
 ### 📅 [2026-10-24] — JanIA v33.44: Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de "Coach" (v33.44 - 33.44.0)
 
 **Versión:** `v33.44` (`33.44.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -1495,7 +1495,28 @@ export class JaniaMatchBot {
           const latestPdf = popLatestDmPdf(senderId);
           const pdfBuffer = (reply as any)?.pdfBuffer || latestPdf?.pdfBuffer;
           const pdfFileName = (reply as any)?.pdfFileName || latestPdf?.pdfFileName;
-          const replyText = String(reply);
+          const isSenderAdmin = /eduardo/i.test(userName || "") ||
+            /jani/i.test(userName || "") ||
+            senderId.includes("3192919978") ||
+            senderId.includes("225954035179724") ||
+            senderId.includes("3118536968") ||
+            senderId.includes("3166569719");
+
+          let replyText = String(reply || "").trim();
+
+          // 🛡️ BLINDAJE INMUTABLE ANTI-FUGA DE JID/LID EN DMs (v33.45):
+          const isIdentifierLeak =
+            replyText.includes("@lid") ||
+            replyText.includes("@s.whatsapp.net") ||
+            replyText.includes("@g.us") ||
+            /^\+?\d{8,18}$/.test(replyText);
+
+          if (isIdentifierLeak) {
+            console.error(`[JANIA-MATCH] [CRITICAL] Intento de emitir identificador raw (${replyText}) en lugar de texto conversacional a ${senderId}. Bloqueando y saneando.`);
+            replyText = isSenderAdmin
+              ? "¿En qué te colaboro hoy? Estoy 100% atenta para apoyarte 🤝."
+              : "¡Listo! Ya procesé tu solicitud en nuestro sistema de VECY BIENES RAÍCES 🤝✨. ¿Deseas consultar o tramitar algo más?";
+          }
 
           if (pdfBuffer && Buffer.isBuffer(pdfBuffer)) {
             console.log(`[JANIA-MATCH] [DM] Despachando documento PDF oficial (${pdfFileName || 'documento.pdf'}, ${pdfBuffer.length} bytes) a ${senderId}`);
@@ -1510,14 +1531,6 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
           }
           await this.logToDb(senderId, 'janIA', replyText);
-
-          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre genuino (v33.24)
-          const isSenderAdmin = /eduardo/i.test(userName || "") ||
-            /jani/i.test(userName || "") ||
-            senderId.includes("3192919978") ||
-            senderId.includes("225954035179724") ||
-            senderId.includes("3118536968") ||
-            senderId.includes("3166569719");
 
           const isLongQueryOrQuestion = cleanLower.includes("?") ||
             cleanLower.split(/\s+/).filter(Boolean).length > 15 ||
@@ -3023,6 +3036,14 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // Si es un string
         if (typeof content === 'string') {
+          const rawText = content.trim();
+          if (
+            !targetJid.endsWith('@newsletter') &&
+            (rawText.endsWith('@lid') || rawText.endsWith('@s.whatsapp.net') || /^\+?\d{9,18}$/.test(rawText))
+          ) {
+            console.error(`[JANIA-MATCH] [CENTINELA] Detectado intento de enviar mensaje de texto que es un identificador raw ("${rawText}"). Bloqueando despacho erróneo.`);
+            return null;
+          }
           messagePayload = { text: content };
           if (options.mentions) {
             messagePayload.mentions = options.mentions;

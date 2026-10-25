@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.44";
+    VECY_VERSION = "v33.45";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -23256,7 +23256,13 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
               const latestPdf = popLatestDmPdf2(senderId);
               const pdfBuffer2 = reply?.pdfBuffer || latestPdf?.pdfBuffer;
               const pdfFileName = reply?.pdfFileName || latestPdf?.pdfFileName;
-              const replyText = String(reply);
+              const isSenderAdmin = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
+              let replyText = String(reply || "").trim();
+              const isIdentifierLeak = replyText.includes("@lid") || replyText.includes("@s.whatsapp.net") || replyText.includes("@g.us") || /^\+?\d{8,18}$/.test(replyText);
+              if (isIdentifierLeak) {
+                console.error(`[JANIA-MATCH] [CRITICAL] Intento de emitir identificador raw (${replyText}) en lugar de texto conversacional a ${senderId}. Bloqueando y saneando.`);
+                replyText = isSenderAdmin ? "\xBFEn qu\xE9 te colaboro hoy? Estoy 100% atenta para apoyarte \u{1F91D}." : "\xA1Listo! Ya proces\xE9 tu solicitud en nuestro sistema de VECY BIENES RA\xCDCES \u{1F91D}\u2728. \xBFDeseas consultar o tramitar algo m\xE1s?";
+              }
               if (pdfBuffer2 && Buffer.isBuffer(pdfBuffer2)) {
                 console.log(`[JANIA-MATCH] [DM] Despachando documento PDF oficial (${pdfFileName || "documento.pdf"}, ${pdfBuffer2.length} bytes) a ${senderId}`);
                 await this.queuedSend(senderId, {
@@ -23271,7 +23277,6 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                 await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
               }
               await this.logToDb(senderId, "janIA", replyText);
-              const isSenderAdmin = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
               const isLongQueryOrQuestion = cleanLower.includes("?") || cleanLower.split(/\s+/).filter(Boolean).length > 15 || /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
               const isErrorReply = typeof replyText === "string" && (replyText.includes("intermitencia temporal") || replyText.includes("error") || replyText.includes("fallo en la matrix"));
               const isGratitudeOrClosing = !isSenderAdmin && !isLongQueryOrQuestion && !isErrorReply && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
@@ -24540,6 +24545,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
             let messagePayload = {};
             if (typeof content === "string") {
+              const rawText = content.trim();
+              if (!targetJid.endsWith("@newsletter") && (rawText.endsWith("@lid") || rawText.endsWith("@s.whatsapp.net") || /^\+?\d{9,18}$/.test(rawText))) {
+                console.error(`[JANIA-MATCH] [CENTINELA] Detectado intento de enviar mensaje de texto que es un identificador raw ("${rawText}"). Bloqueando despacho err\xF3neo.`);
+                return null;
+              }
               messagePayload = { text: content };
               if (options.mentions) {
                 messagePayload.mentions = options.mentions;
@@ -29736,6 +29746,7 @@ La consulta y tratamiento de esta informaci\xF3n p\xFAblica y semiprivada se efe
 // server/_core/jania/handlers/dmHandler.ts
 var dmHandler_exports = {};
 __export(dmHandler_exports, {
+  ALL_DM_TOOL_TYPES: () => ALL_DM_TOOL_TYPES,
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   executeJaniaDmTool: () => executeJaniaDmTool,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
@@ -30422,17 +30433,48 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA):
     } else {
       fallbackText = `No encontr\xE9 ninguna empresa registrada con ese nombre en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor comp\xE1rteme el n\xFAmero de NIT. \u{1F91D}`;
     }
+  } else if (toolType === "registro_inmueble" && toolJson) {
+    if (toolJson.esIncompleto && toolJson.guiaFichaTecnica) {
+      fallbackText = toolJson.guiaFichaTecnica;
+    } else {
+      fallbackText = `\xA1Listo! Qued\xF3 estructurada e ingresada con \xE9xito a nuestra base de datos para participar en el motor de coincidencias de VECY BIENES RA\xCDCES. En el instante exacto en que detectemos una opci\xF3n compatible en la red, te avisamos de inmediato para coordinar el cruce \u{1F680}\u{1F3E0}\u2728.`;
+    }
+  } else if (toolType === "web" && toolJson) {
+    if (toolJson.titulo || toolJson.contenido) {
+      fallbackText = `He consultado el enlace web *${toolJson.titulo || "compartido"}*. ${toolJson.contenido ? toolJson.contenido.slice(0, 280) + "..." : ""} \xBFDeseas que analice alg\xFAn aspecto en particular? \u{1F310}\u2728`;
+    } else {
+      fallbackText = `Revis\xE9 el enlace web compartido, pero no pude acceder a todo su contenido p\xFAblico. Comp\xE1rteme los datos clave o cu\xE9ntame de qu\xE9 se trata para colaborarte con todo el gusto \u{1F91D}.`;
+    }
+  } else if (toolType === "catalogo_inmuebles" && toolJson) {
+    fallbackText = `He consultado nuestro cat\xE1logo oficial de VECY BIENES RA\xCDCES. Para recibir el portafolio completo con fotograf\xEDas y fichas de la zona, tambi\xE9n puedes comunicarte directamente con nuestra l\xEDnea de atenci\xF3n br\xF3ker al +57 316 656 9719 \u{1F3E2}\u2728.`;
   } else {
-    fallbackText = rawReport;
+    fallbackText = rawReport || `Con mucho gusto, ya proces\xE9 tu solicitud en nuestro sistema de VECY BIENES RA\xCDCES \u{1F91D}\u2728.`;
   }
   return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")) ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, fallbackText, true);
 }
-function formatPoliteToolDelivery(rawAiResponse, userName, userId, customGuidance, _legacyArg) {
-  const isLegacyToolType = typeof userId === "string" && ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
-  const effectiveResponse = isLegacyToolType && typeof customGuidance === "string" ? customGuidance : rawAiResponse;
-  if (!effectiveResponse) return "";
-  let cleaned = effectiveResponse.trim();
-  return cleaned;
+function isKnownToolType(val) {
+  return ALL_DM_TOOL_TYPES.includes(val.toLowerCase());
+}
+function formatPoliteToolDelivery(arg1, arg2, arg3, arg4, _legacyArg) {
+  const isIdentifier = (val) => {
+    if (!val || typeof val !== "string") return false;
+    const trimmed = val.trim();
+    return trimmed.includes("@lid") || trimmed.includes("@s.whatsapp.net") || trimmed.includes("@g.us") || trimmed.includes("@broadcast") || /^\+?\d{8,18}$/.test(trimmed);
+  };
+  let effectiveResponse = "";
+  if (typeof arg4 === "string" && arg4.trim().length > 0 && !isIdentifier(arg4)) {
+    effectiveResponse = arg4;
+  } else if (typeof arg1 === "string" && arg1.trim().length > 0 && !isIdentifier(arg1)) {
+    effectiveResponse = arg1;
+  } else if (typeof arg4 === "string" && arg4.trim().length > 0) {
+    effectiveResponse = arg4;
+  } else if (typeof arg3 === "string" && arg3.trim().length > 0 && !isIdentifier(arg3) && !isKnownToolType(arg3)) {
+    effectiveResponse = arg3;
+  }
+  if (isIdentifier(effectiveResponse)) {
+    return "";
+  }
+  return (effectiveResponse || "").trim();
 }
 function stripLeadingGreetingsAndCourtesies(text2) {
   let cleaned = (text2 || "").trim();
@@ -30905,6 +30947,11 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 
 Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
     }
+    const isJidOrPhoneReply = typeof reply === "string" && (reply.includes("@lid") || reply.includes("@s.whatsapp.net") || reply.includes("@g.us") || reply.includes("@broadcast") || /^\+?\d{8,18}$/.test(reply.trim()));
+    if (isJidOrPhoneReply) {
+      console.warn(`[dmHandler] \u26A0\uFE0F Detectada respuesta corrupta con identificador de WhatsApp ("${reply}"). Regenerando respuesta natural...`);
+      reply = "";
+    }
     if (!reply) {
       if (isEduardo) {
         reply = isOngoingChat ? `\xBFEn qu\xE9 te colaboro hoy?` : `\xA1${timeSalutation}, Eduardo! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
@@ -31134,7 +31181,7 @@ ${verifResult.reportText}`;
     return fallback;
   }
 }
-var latestDmPdfMap, JANIA_DM_TOOLS;
+var latestDmPdfMap, JANIA_DM_TOOLS, ALL_DM_TOOL_TYPES;
 var init_dmHandler = __esm({
   "server/_core/jania/handlers/dmHandler.ts"() {
     "use strict";
@@ -31332,6 +31379,22 @@ var init_dmHandler = __esm({
           }
         ]
       }
+    ];
+    ALL_DM_TOOL_TYPES = [
+      "cedula",
+      "predial",
+      "idu",
+      "notarial",
+      "sondeo",
+      "match",
+      "empresa",
+      "encuesta",
+      "contacto",
+      "evento",
+      "catalogo",
+      "web",
+      "catalogo_inmuebles",
+      "registro_inmueble"
     ];
   }
 });
@@ -31980,6 +32043,7 @@ var init_jania = __esm({
 // server/_core/janIA.ts
 var janIA_exports = {};
 __export(janIA_exports, {
+  ALL_DM_TOOL_TYPES: () => ALL_DM_TOOL_TYPES,
   COMMON_FIRST_NAMES: () => COMMON_FIRST_NAMES,
   CONTACT_PRIMARY_NICKS: () => CONTACT_PRIMARY_NICKS,
   GREETED_TODAY: () => GREETED_TODAY,

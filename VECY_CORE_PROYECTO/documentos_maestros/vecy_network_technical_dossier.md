@@ -330,6 +330,17 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.45 — Octubre 2026
+
+#### [v33.45.0] — 2026-10-25: Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp
+- **Neutralización y Sanitización de Identificadores Internos (`dmHandler.ts`):**
+  - **Problema:** En situaciones donde una herramienta devolvía un resultado de fallback o el modelo LLM no generaba un cuerpo textual explícito, existía el riesgo de que el remitente o JID/LID del usuario (como `110758461710505@lid` o números telefónicos directos) fuera devuelto y emitido en el chat, degradando la experiencia conversacional y la percepción de astucia e inteligencia de JanIA.
+  - **Solución:** Se implementó una lógica de sanitización y centinela rigurosa en `formatPoliteToolDelivery` y `processPrivateDmConversationalMessage` que detecta y neutraliza cualquier intento de emitir cadenas con `@lid`, `@s.whatsapp.net` o números aislados, entregando en su lugar una respuesta cálida, atenta y orientada a la acción.
+- **Centinela en Capa de Transporte Baileys (`whatsapp-match.ts`):**
+  - **Problema:** `queuedSend` y el despachador de mensajes privados no contaban con una guarda que verificara si el mensaje a enviar era un identificador crudo de WhatsApp.
+  - **Solución:** Se implementó una guarda centinela en `queuedSend` y en el flujo saliente de DMs que bloquea y alerta sobre cualquier intento erróneo de enviar identificadores crudos como si fuesen mensajes de texto a chats privados.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **371/371 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 25s.
+
 ### 🔖 v33.44 — Octubre 2026
 
 #### [v33.44.0] — 2026-10-24: Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de "Coach"

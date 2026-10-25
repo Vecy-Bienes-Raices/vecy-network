@@ -993,8 +993,22 @@ export async function synthesizeToolResponseWithGemini(
     } else {
       fallbackText = `No encontré ninguna empresa registrada con ese nombre en el Registro Único Empresarial y Social (RUES). Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor compárteme el número de NIT. 🤝`;
     }
+  } else if (toolType === "registro_inmueble" && toolJson) {
+    if (toolJson.esIncompleto && toolJson.guiaFichaTecnica) {
+      fallbackText = toolJson.guiaFichaTecnica;
+    } else {
+      fallbackText = `¡Listo! Quedó estructurada e ingresada con éxito a nuestra base de datos para participar en el motor de coincidencias de VECY BIENES RAÍCES. En el instante exacto en que detectemos una opción compatible en la red, te avisamos de inmediato para coordinar el cruce 🚀🏠✨.`;
+    }
+  } else if (toolType === "web" && toolJson) {
+    if (toolJson.titulo || toolJson.contenido) {
+      fallbackText = `He consultado el enlace web *${toolJson.titulo || 'compartido'}*. ${toolJson.contenido ? toolJson.contenido.slice(0, 280) + '...' : ''} ¿Deseas que analice algún aspecto en particular? 🌐✨`;
+    } else {
+      fallbackText = `Revisé el enlace web compartido, pero no pude acceder a todo su contenido público. Compárteme los datos clave o cuéntame de qué se trata para colaborarte con todo el gusto 🤝.`;
+    }
+  } else if (toolType === "catalogo_inmuebles" && toolJson) {
+    fallbackText = `He consultado nuestro catálogo oficial de VECY BIENES RAÍCES. Para recibir el portafolio completo con fotografías y fichas de la zona, también puedes comunicarte directamente con nuestra línea de atención bróker al +57 316 656 9719 🏢✨.`;
   } else {
-    fallbackText = rawReport;
+    fallbackText = rawReport || `Con mucho gusto, ya procesé tu solicitud en nuestro sistema de VECY BIENES RAÍCES 🤝✨.`;
   }
 
   return rawReport && (rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"))
@@ -1002,34 +1016,76 @@ export async function synthesizeToolResponseWithGemini(
     : await formatPoliteToolDelivery(userId, userName, toolType as any, fallbackText, true);
 }
 
+export const ALL_DM_TOOL_TYPES = [
+  "cedula",
+  "predial",
+  "idu",
+  "notarial",
+  "sondeo",
+  "match",
+  "empresa",
+  "encuesta",
+  "contacto",
+  "evento",
+  "catalogo",
+  "web",
+  "catalogo_inmuebles",
+  "registro_inmueble"
+] as const;
+
+function isKnownToolType(val: string): boolean {
+  return ALL_DM_TOOL_TYPES.includes(val.toLowerCase() as any);
+}
+
 /**
- * Envuelve la entrega de cualquier herramienta (cédula o predial) con cortesía,
- * saludo personalizado por hora, nombre compuesto y género gramatical,
- * evitando que JanIA suene como un bot frío o robótico y educando con el ejemplo.
+ * Envuelve la entrega de cualquier herramienta con cortesía,
+ * asegurando compatibilidad bi-direccional con:
+ * - Firma histórica: formatPoliteToolDelivery(userId, userName, toolType, contentText, isFreeTool)
+ * - Firma directa: formatPoliteToolDelivery(contentText, userName, userId)
+ * Garantiza de forma incondicional que NUNCA se devuelva un ID de usuario, teléfono o JID (@lid/@s.whatsapp.net).
  */
 export function formatPoliteToolDelivery(
-  rawAiResponse: string,
-  userName?: string,
-  userId?: string,
-  customGuidance?: string,
+  arg1: string,
+  arg2?: string,
+  arg3?: string,
+  arg4?: string,
   _legacyArg?: any
 ): string {
-  // Retornamos estrictamente la redacción original y fluida provista por el LLM,
-  // eliminando cualquier concatenación forzada de plantillas rígidas, bloques de cierre o coletillas automáticas.
-  const isLegacyToolType =
-    typeof userId === "string" &&
-    ["cedula", "predial", "idu", "notarial", "empresa", "sondeo", "match", "evento", "contacto", "catalogo", "encuesta"].includes(userId);
-  const effectiveResponse = (isLegacyToolType && typeof customGuidance === "string")
-    ? customGuidance
-    : rawAiResponse;
+  const isIdentifier = (val?: string): boolean => {
+    if (!val || typeof val !== "string") return false;
+    const trimmed = val.trim();
+    return (
+      trimmed.includes("@lid") ||
+      trimmed.includes("@s.whatsapp.net") ||
+      trimmed.includes("@g.us") ||
+      trimmed.includes("@broadcast") ||
+      /^\+?\d{8,18}$/.test(trimmed)
+    );
+  };
 
-  if (!effectiveResponse) return "";
+  let effectiveResponse = "";
 
-  let cleaned = effectiveResponse.trim();
+  // 1. Si arg4 contiene texto y no es un identificador de usuario, es el payload textual de la herramienta
+  if (typeof arg4 === "string" && arg4.trim().length > 0 && !isIdentifier(arg4)) {
+    effectiveResponse = arg4;
+  }
+  // 2. Si arg1 no es un identificador, es el texto directo provisto (firma moderna)
+  else if (typeof arg1 === "string" && arg1.trim().length > 0 && !isIdentifier(arg1)) {
+    effectiveResponse = arg1;
+  }
+  // 3. Fallbacks secundarios de extracción
+  else if (typeof arg4 === "string" && arg4.trim().length > 0) {
+    effectiveResponse = arg4;
+  } else if (typeof arg3 === "string" && arg3.trim().length > 0 && !isIdentifier(arg3) && !isKnownToolType(arg3)) {
+    effectiveResponse = arg3;
+  }
 
-  // Opcional: si deseas mantener algún saludo personalizado o toque sutil, lo dejamos orgánico,
-  // pero sin incrustar bloques de texto prefabricados obligatorios.
-  return cleaned;
+  // 4. Blindaje estricto: Si tras toda la resolución el texto sigue siendo un identificador o JID/LID crudo, se neutraliza
+  if (isIdentifier(effectiveResponse)) {
+    return "";
+  }
+
+  return (effectiveResponse || "").trim();
 }
 
 /**
@@ -1635,6 +1691,20 @@ export async function processPrivateDmConversationalMessage(
     if (courtesyMatches && courtesyMatches.length > 1) {
       reply = reply.replace(generalCourtesyRegex, '').trim();
       reply = `${reply}\n\nUn servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
+    }
+
+    // 🛡️ BLINDAJE INMUTABLE ANTI-FUGA DE JID/LID EN DMs (v33.45):
+    const isJidOrPhoneReply =
+      typeof reply === "string" && (
+        reply.includes("@lid") ||
+        reply.includes("@s.whatsapp.net") ||
+        reply.includes("@g.us") ||
+        reply.includes("@broadcast") ||
+        /^\+?\d{8,18}$/.test(reply.trim())
+      );
+    if (isJidOrPhoneReply) {
+      console.warn(`[dmHandler] ⚠️ Detectada respuesta corrupta con identificador de WhatsApp ("${reply}"). Regenerando respuesta natural...`);
+      reply = "";
     }
 
     if (!reply) {

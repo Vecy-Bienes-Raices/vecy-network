@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.44.0 — 2026-10-24)
-- **JanIA Server:** `v33.44` (`33.44.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Estados WhatsApp y Erradicación de "Coach":**
-  1. **Suite Maestra 1:1 para el Canal Oficial de WhatsApp (`channel_1x1/`):** Generación de 5 piezas cuadradas de ultra alta fidelidad (1:1) adaptadas al feed de canales de WhatsApp (`jania_anfitriona_cafe_1x1.jpg`, `jania_legal_due_diligence_1x1.jpg`, `jania_marketing_colaborativo_1x1.jpg`, `jania_avaluos_pot_1x1.jpg`, `jania_seguridad_notarial_1x1.jpg`), resolviendo el formato óptimo para canales móviles y desktop.
-  2. **Gancho Escrito en Historias de WhatsApp (`whatsapp-match.ts`):** Método `postDailyHookStatus` que despacha textos puros institucionales hacia `status@broadcast` enlazando ineludiblemente al Canal Oficial (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`), eliminando incompatibilidades de visualización multimedia en WhatsApp Web.
-  3. **Erradicación Doctrinal del Término "Coach" (`cronService.ts`, prompts):** Eliminación total del anglicismo "coach" en favor de "aliada", "asesora especializada" y "anfitriona", afianzando la calidez y el señorío de JanIA en toda interacción.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 368/368 passing (100% verde) | Build `npm run build` limpio en 27s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.45.0 — 2026-10-25)
+- **JanIA Server:** `v33.45` (`33.45.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp:**
+  1. **Neutralización y Sanitización de Identificadores Internos (`dmHandler.ts`):** `formatPoliteToolDelivery` y `processPrivateDmConversationalMessage` interceptan y neutralizan cualquier respuesta o ejecución de herramienta que intente emitir identificadores raw de WhatsApp (`@lid`, `@s.whatsapp.net` o números telefónicos crudos como texto de respuesta), garantizando que JanIA siempre responda con calidez, elegancia y señorío conversacional.
+  2. **Centinela en Capa de Transporte Baileys (`whatsapp-match.ts`):** Validación estricta en `queuedSend` y en el despachador de mensajes privados que bloquea de raíz el envío de mensajes de texto que consistan en JIDs o números crudos, evitando fugas de identidad o bugs de visualización.
+  3. **Preservación Doctrinal de la Experiencia Conversacional Humana:** Blindaje total de la percepción de JanIA como una asistente astuta, resolutiva y natural sin fallos mecánicos de socket.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 371/371 passing (100% verde) | Build `npm run build` limpio en 25s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

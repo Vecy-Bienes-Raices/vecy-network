@@ -182,7 +182,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.44 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.45 — Octubre 2026
+
+### Novedades v33.45 (Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Neutralización y Sanitización de Identificadores Internos (`dmHandler.ts`)**:
+     - *Causa raíz*: En ciertas ejecuciones de herramientas en chats privados o al procesar mensajes sin respuesta textual del LLM, el sistema podía llegar a emitir el JID, LID o número de teléfono del usuario (ej. `110758461710505@lid` o números crudos) directamente en el chat, afectando la percepción de astucia e inteligencia de JanIA.
+     - *Solución*: Se reforzó `formatPoliteToolDelivery` y `processPrivateDmConversationalMessage` con un centinela estricto que detecta si el texto a enviar termina en `@lid`, `@s.whatsapp.net` o es un número puro. En tales casos, se neutraliza la fuga y se genera de inmediato una respuesta cálida, atenta y resolutiva acorde a la identidad de JanIA.
+  2. **Centinela en Capa de Transporte Baileys (`whatsapp-match.ts`)**:
+     - *Causa raíz*: No existía un filtro a nivel de socket (`queuedSend`) que impidiera despachar como texto plano un identificador interno de WhatsApp.
+     - *Solución*: Se incorporó una guarda centinela en `queuedSend` que rechaza cualquier string que coincida con patrones de JID/LID o teléfono puro hacia chats no-newsletter, previniendo emisiones accidentales por errores lógicos aguas arriba.
+  3. **Preservación de la Inteligencia y Naturalidad Orgánica de JanIA**:
+     - *Causa raíz*: La interacción con los usuarios debe ser impecable, respondiendo con calidez y resolviendo con astucia sus inquietudes inmobiliarias, notariales y tributarias sin vestigios de código ni respuestas mecánicas.
+     - *Solución*: Se afianzó la personalidad de JanIA en toda la cadena de procesamiento de mensajes privados.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 371/371 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 25s ✅
+- `shared/const.ts` (`v33.45`) y `package.json` (`33.45.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.44 — Octubre 2026
 
 ### Novedades v33.44 (Fábrica Creativa 1:1 para Canal Oficial, Gancho Escrito en Historias WhatsApp y Erradicación de 'Coach'):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
