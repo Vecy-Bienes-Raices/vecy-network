@@ -1,13 +1,15 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.47.0 — 2026-10-25)
-- **JanIA Server:** `v33.47` (`33.47.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta Viva con Emojis y Hot Learning:**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.48.0 — 2026-10-25)
+- **JanIA Server:** `v33.48` (`33.48.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Pedagogía MATCH 40/20/40, Ficha Técnica 360°, Aterrizaje Sincero de Presupuesto, Deducción Astuta de Rol y Vendedora Consultiva Inbound:**
   1. **Pedagogía Sincera y Comisión Colaborativa 40/20/40 (Cero Falsas Ilusiones):** JanIA explica con claridad que para activar el cruce y conectar las puntas, las partes deben aceptar la figura de comisión 40% (oferente o demandante), 40% (contraparte) y 20% (VECY por la mesa de MATCH, peritaje, seguridad y cierre).
-  2. **Auditoría e Indagación de Ficha Técnica Exhaustiva 360°:** Si la solicitud es escueta, JanIA indaga mediante ejemplos cálidos (exterior/interior, sol mañana/tarde, cocina abierta/cerrada/americana, lavandería independiente, CBS, balcón/terraza, chimenea, piso bajo/medio/alto, parqueaderos independientes vs línea, depósito, amenidades, vigilancia, cuadrante y tranquilidad de vías).
+  2. **Auditoría e Indagación de Ficha Técnica Exhaustiva 360° (Deducción Astuta de Rol):** JanIA deduce autónomamente si es Oferta o Demanda por el contexto ('busco', 'vendo', 'arriendo') sin repreguntar lo obvio como bot rígido. Indaga con calidez mediante ejemplos: exterior/interior, sol mañana/tarde, cocina abierta/cerrada/americana, lavandería independiente, CBS, balcón/terraza, chimenea, piso bajo/medio/alto, parqueaderos independientes vs línea, depósito, amenidades, vigilancia, cuadrante y tranquilidad de vías.
   3. **Guion Modelado de Entrega de Códigos MATCH (#M...):** Formulación institucional entregando los códigos de cruce e instruyendo llamar al 3166569719 (+57 316 656 9719) indicando que JanIA se los dio para ubicarlos en la mesa de MATCH y conectar las puntas hasta la visita y el cierre.
-  4. **Transparencia de la Base de Datos Viva y Emojis en Grupos:** Se aclara que la data se nutre minuto a minuto de grupos de WhatsApp (marcando Ofertas con 👍 y Demandas con 📝).
-  5. **Humanización en Solicitud de Reseñas en Google:** Ofrecimiento dulce de explicar el paso a paso si el usuario no sabe calificar en Google.
-  6. **Hot Learning de Fundadores (`founderKnowledgeService.ts`):** Módulo de persistencia y aplicación instantánea de tips y directivas emitidas por Eduardo y Jani desde WhatsApp.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 379/379 passing (100% verde) | Build `npm run build` limpio en 11.79s.
+  4. **Aterrizaje Sincero de Presupuestos Inviables y Realidad de Mercado:** Si el presupuesto es notablemente inferior a la realidad de la zona (ej. Chicó/93 por $3M cuando arrancan en $4.4M), JanIA es honesta y sincera: no crea falsas expectativas diciendo que 'está en radar 24/7', sino que explica con solvencia pericial la realidad del cuadrante y propone alternativas inteligentes (ajustar presupuesto o zonas de alto confort como Chapinero Alto, Pasadena, Cedritos).
+  5. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY):** Aporta valor primero y de forma oportuna ofrece sus superpoderes: Predial oficial de Bogotá en PDF en 1 min con CHIP, Paz y Salvo IDU, sondeo $/m² con POT Dec. 555/21, validación de antecedentes en ADRES/Policía, y suscripción al Canal Oficial.
+  6. **Transparencia de la Base de Datos Viva y Emojis en Grupos:** Se aclara que la data se nutre minuto a minuto de grupos de WhatsApp (marcando Ofertas con 👍 y Demandas con 📝).
+  7. **Humanización en Solicitud de Reseñas en Google:** Ofrecimiento dulce de explicar el paso a paso si el usuario no sabe calificar en Google.
+  8. **Hot Learning de Fundadores (`founderKnowledgeService.ts`):** Módulo de persistencia y aplicación instantánea de tips y directivas emitidas por Eduardo y Jani desde WhatsApp.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 383/383 passing (100% verde) | Build `npm run build` limpio en 11.79s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

@@ -182,7 +182,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.47 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.48 — Octubre 2026
+
+### Novedades v33.48 (Aterrizaje Sincero de Presupuestos Inviables, Deducción Astuta de Rol y Vendedora Consultiva Inbound):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Aterrizaje Sincero de Presupuestos Inviables y Realidad de Mercado (Cero Falsas Expectativas)**:
+     - *Causa raíz*: Cuando un cliente busca arriendo o venta en zonas de alta valorización con presupuestos notablemente inferiores al mercado real (ej. apartamento de 1-2 alcobas en Parque de la 93 / El Chicó por $3.000.000 COP cuando arrancan en $4.4M - $4.5M), responder mecánicamente que "está en el radar 24/7" alimenta falsas ilusiones.
+     - *Solución*: JanIA habla con honestidad, sinceridad y calidez humana pericial: explica que en ese cuadrante los cánones reales arrancan muy por encima de su presupuesto y propone alternativas viables: o ajustar el presupuesto, o explorar sectores alternativos de altísima calidad donde sus recursos sí sean competitivos (Chapinero Alto, Pasadena, Pontevedra, Cedritos), aclarando que queda en el radar por si surge una ganga atípica, pero con los pies en la tierra.
+  2. **Deducción Astuta del Rol (Oferta vs Demanda) sin Preguntas Obvias**:
+     - *Causa raíz*: Si el usuario ya usó verbos explícitos ("busco", "necesito", "arriendo para mí", "vendo", "tengo este apto"), volver a preguntarle "¿Es búsqueda o inmueble?" la hace ver como un bot rígido.
+     - *Solución*: JanIA deduce el rol autónomamente con astucia, lo asume con naturalidad ("Veo que estás buscando para ti..." o "Veo que tienes este inmueble en oferta...") y avanza directo al grano con los detalles técnicos finos.
+  3. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY)**:
+     - *Causa raíz*: JanIA asesora en marketing inmobiliario pero no siempre ofrecía sus propios superpoderes en el momento propicio.
+     - *Solución*: Aplica inbound marketing para consigo misma: resuelve primero la necesidad del usuario y, oportunamente, hace un soft-pitch consultivo de sus servicios: sondeo $/m² con POT Bogotá Dec. 555/21, descarga de Factura Predial oficial de Bogotá en PDF en 1 minuto con CHIP, Paz y Salvo IDU, validación de antecedentes en ADRES/Policía, liquidación notarial 50/50 y suscripción al Canal Oficial.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 383/383 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 11.79s ✅
+- `shared/const.ts` (`v33.48`) y `package.json` (`33.48.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.47 — Octubre 2026
 
 ### Novedades v33.47 (Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta Viva con Emojis y Hot Learning):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
@@ -207,7 +223,7 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 379/379 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 11.79s ✅
 - `shared/const.ts` (`v33.47`) y `package.json` (`33.47.0`).
 
-## 🔖 VERSIÓN ANTERIOR: v33.46 — Octubre 2026
+## 🔖 HISTORIAL PREVIO: v33.46 — Octubre 2026
 
 ### Novedades v33.46 (Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

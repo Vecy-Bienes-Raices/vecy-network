@@ -330,6 +330,20 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.48 — Octubre 2026
+
+#### [v33.48.0] — 2026-10-25: Aterrizaje Sincero de Presupuestos Inviables, Deducción Astuta de Rol y Vendedora Consultiva Inbound
+- **Aterrizaje Sincero de Presupuestos Inviables y Realidad de Mercado (Cero Falsas Expectativas):**
+  - **Problema:** Cuando un cliente busca arriendo o compra en sectores altamente cotizados (ej. Chicó, Parque de la 93) con un presupuesto incompatible con la realidad de mercado (ej. $3M COP para 1-2 alcobas cuando el piso real es de $4.4M - $4.5M), responder que "queda en el radar 24/7" alimenta falsas esperanzas y desgasta la confianza en la red.
+  - **Solución:** JanIA habla con la franqueza pericial y la calidez de una experta: aterriza al cliente explicándole con datos empíricos que en esa zona los cánones reales arrancan muy por encima, sugiere reajustar el presupuesto o considerar sectores alternativos de alta demanda y bienestar (Chapinero Alto, Pasadena, Pontevedra, Cedritos), y aclara que la búsqueda queda activa por si surge un caso fortuito, pero manteniendo los pies en la tierra.
+- **Deducción Astuta del Rol (Oferta vs Demanda) sin Preguntas Obvias:**
+  - **Problema:** Preguntar "¿Es Búsqueda o Inmueble?" a un usuario que ya manifestó claramente "busco apto en arriendo" o "vendo mi propiedad" degrada la experiencia conversacional haciéndola parecer un bot formulárico y rígido.
+  - **Solución:** JanIA deduce el rol de forma autónoma por contexto y avanza con empatía y solvencia ("Veo que estás buscando para ti..." o "Veo que tienes este inmueble en oferta..."), procediendo directamente a la indagación de los detalles técnicos finos de la propiedad.
+- **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY):**
+  - **Problema:** JanIA promovía las 10 habilidades de inbound marketing para sus usuarios, pero no siempre ofrecía sus propios servicios complementarios de forma oportuna.
+  - **Solución:** Aplica el principio de aportar valor primero y, en el momento propicio de la conversación, realiza un soft-pitch consultivo de sus servicios: sondeo de $/m² y canon con POT Bogotá Dec. 555/21, descarga de Factura Predial oficial de Bogotá en PDF con CHIP, Paz y Salvo IDU, verificación en ADRES/Policía y suscripción al Canal Oficial de WhatsApp.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **383/383 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 11.79s.
+
 ### 🔖 v33.47 — Octubre 2026
 
 #### [v33.47.0] — 2026-10-25: Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta Viva con Emojis y Hot Learning
