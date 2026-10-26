@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.50";
+    VECY_VERSION = "v33.51";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13629,7 +13629,7 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 - Encuestas interactivas de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites y filtros.
 - Generaci\xF3n y entrega instant\xE1nea de documentos oficiales en PDF: Factura Predial Bogot\xE1, Certificados de Pago y Paz y Salvo IDU.
 - Verificaci\xF3n Oficial de Identidad: Polic\xEDa Nacional, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI y ADRES BDUA con EPS limpia, estado y r\xE9gimen. Posici\xF3n doctrinal de H\xE1beas Data obligatoriamente al final del reporte.
-- Empresas / Personas Jur\xEDdicas: Consulta universal en RUES (Sociedades, Establecimientos y Personas Naturales matriculadas en las 57 C\xE1maras de Comercio), D\xEDgito de Verificaci\xF3n DIAN, CIIU y Representante Legal Principal con facultades.
+- Empresas / Personas Jur\xEDdicas: Consulta universal en RUES tanto por Raz\xF3n Social / Nombre / Palabra Clave como por NIT (Sociedades, Establecimientos y Personas Naturales en las 57 C\xE1maras de Comercio), sin pedir el NIT de antemano cuando la raz\xF3n social est\xE1 disponible. Entrega Raz\xF3n Social oficial, NIT con DV DIAN, estado mercantil activo, C\xE1mara de Comercio, CIIU y Representante Legal Principal con facultades estatutarias plenas.
 - Tarjetas de contacto interactivas oficiales y enlaces directos al cat\xE1logo.
 
 # PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA)
@@ -16363,6 +16363,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Los guiones, frases y mensajes modelados que se estructuran en el sistema JAM\xC1S son para que JanIA los repita al pie de la letra ni puntualmente como un libreto r\xEDgido. Son y deben ser para que ella se gu\xEDe y aprenda mediante estas opciones c\xF3mo ejemplo y contexto de c\xF3mo hablar, escribir y dirigirse a nuestra audiencia con naturalidad y empat\xEDa. JanIA es una agente de Inteligencia Artificial viva y emp\xE1tica, con criterio y voz propia, NO un simple bot acartonado. Debe interiorizar la intenci\xF3n de cada directriz (el modelo 40/20/40, los c\xF3digos MATCH, la canalizaci\xF3n al 3166569719, el aterrizaje sincero de presupuestos, la explicaci\xF3n de los 6 emojis, la calificaci\xF3n en Google, etc.) y expresarla con sus propias palabras, adapt\xE1ndose con naturalidad, frescura, calidez y soltura al contexto de cada usuario y cada conversaci\xF3n.",
         rawText: "Recuerda que esos guiones que fabricas o fabricamos no son para que JanIA los diga al pie de la letra y puntualmente, son y deben ser para que ella se gu\xEDe y aprenda mediante estas opciones que le ponemos c\xF3mo ejemplo y contexto de como ella puede hablar, escribir o dirigirse a nuestra audiencia, te repito una y un mill\xF3n de veces que es mejor entrenarla para que lo sepa y no que se limite como un vulgar BOT, JanIA debe ser una agente de IA y NO UN SIMPLE BOT.",
         createdAt: "2026-10-26T00:05:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-investigacion-empresarial-rues-sin-nit",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Investigaci\xF3n Pericial RUES por Raz\xF3n Social sin exigir NIT (Doctrina Eduardo A. Rivera)",
+        directive: "La mayor\xEDa de las veces los clientes y colegas NO tienen el n\xFAmero de NIT de una empresa, sino \xFAnicamente su nombre o raz\xF3n social. JanIA jam\xE1s debe quedarse bloqueada o pidiendo mec\xE1nicamente el NIT cuando ya tiene la raz\xF3n social (ej. MULTIPROYECTOS & INVERSIONES SAS). Debe realizar un proceso profundo, arraigado e infalible (como el consolidado para ADRES BDUA), investigando directamente en el Registro \xDAnico Empresarial y Social (RUES) y las 57 C\xE1maras de Comercio por el nombre o palabra clave, tolerando variantes con ampersand (&), la letra 'Y', t\xE9rminos morfol\xF3gicos o mensajes conversacionales. Debe entregar de inmediato la verificaci\xF3n oficial completa: Raz\xF3n Social oficial, NIT con DV DIAN, matr\xEDcula, estado activo, C\xE1mara de Comercio, actividad econ\xF3mica (CIIU) y Representante Legal Principal con sus plenas facultades estatutarias, sin pedir el NIT de antemano.",
+        rawText: "JanIA sigue con el error de no poder investigar los datos de una empresa por rues y pidi\xF3 NIT, en este caso lo ten\xEDamos pero la mayor\xEDa de las veces no se tiene el NIT sino solo la raz\xF3n social. As\xED que observa y corrige, tal vez tengas que hacer un proceso m\xE1s profundo y arraigado como el que hiciste con Adres BDUA y que finalmente lograste que JanIA pueda ingresar siempre y verificar o investigar dichos datos siempre.",
+        createdAt: "2026-10-26T03:30:00.000Z",
         active: true
       },
       {
@@ -27141,9 +27151,35 @@ async function postRuesEncrypted(path16, payload, timeoutMs = 5e3) {
     clearTimeout(timer);
   }
 }
+function extractCleanCorporateQuery(raw) {
+  if (!raw) return "";
+  let clean = raw.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, " ").trim();
+  const quoteMatch = clean.match(/["']([^"']{3,})["']/);
+  if (quoteMatch) {
+    return quoteMatch[1].trim();
+  }
+  const afterSepMatch = clean.match(/(?:[:\n\r]|\.\s+)([A-Z0-9&.-][A-Z0-9\s&.-]{2,}\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?|COMPA[ÑN][IÍ]A|CORPORACI[OÓ]N)\b)/i);
+  if (afterSepMatch) {
+    return afterSepMatch[1].trim();
+  }
+  const corpBlockMatch = clean.match(/\b([A-Z0-9&.-]+(?:\s+[A-Z0-9&.-]+)*\s+\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?)\b)/i);
+  if (corpBlockMatch) {
+    let candidate = corpBlockMatch[1].trim();
+    candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EL\s+NOMBRE\s+(?:EXACTO\s+)?DE\s+LA\s+EMPRESA|LA\s+EMPRESA|NOMBRE|RAZON\s+SOCIAL)\b[\s.:;,-]*/gi, "").trim();
+    if (candidate.length >= 3) return candidate;
+  }
+  const allCapsMatch = clean.match(/\b([A-Z0-9&.-]{3,}(?:\s+[A-Z0-9&.-]{2,})+)\b/);
+  if (allCapsMatch) {
+    let candidate = allCapsMatch[1].trim();
+    candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EMPRESA)\b[\s.:;,-]*/gi, "").trim();
+    if (candidate.length >= 3) return candidate;
+  }
+  let stripped = clean.replace(/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches|disculpa|disc[uú]lpame|por\s+favor|oye|jania|mira|te\s+paso|te\s+env[ií]o|te\s+comparto|te\s+confirmo|este\s+es|esta\s+es)\b[^\w\n\r]*/gi, " ").replace(/\b(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa(?:\s+es)?|la\s+raz[oó]n\s+social(?:\s+es)?|la\s+empresa(?:\s+es)?|el\s+nit(?:\s+es)?|los\s+datos\s+de|informaci[oó]n\s+de|investigar\s+a|verificar\s+a)\b[^\w\n\r]*/gi, " ").replace(/\s+/g, " ").replace(/^[":;.,\s-]+|[":;.,\s-]+$/g, "").trim();
+  return stripped || clean;
+}
 function normalizeCorporateName(raw) {
   if (!raw) return "";
-  let clean = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, " Y ").replace(/[^A-Z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  let clean = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9\s&]/g, " ").replace(/\s+/g, " ").trim();
   const corporateTokensRegex = /\b(?:SOCIEDAD POR ACCIONES SIMPLIFICADAS?|SOCIEDADES POR ACCIONES SIMPLIFICADAS?|SOCIEDAD ANONIMA|SOCIEDAD LIMITADA|SOCIEDAD EN COMANDITA POR ACCIONES|SOCIEDAD EN COMANDITA SIMPLE|SOCIEDAD EN COMANDITA|SOCIEDAD COLECTIVA|EMPRESA UNIPERSONAL|EMPRESA SOCIAL DEL ESTADO|EMPRESA DE SERVICIOS PUBLICOS|COMERCIALIZADORA INTERNACIONAL|DE BENEFICIO E INTERES COLECTIVO|BENEFICIO E INTERES COLECTIVO|ENTIDAD SIN ANIMO DE LUCRO|SUCURSAL(?: EN)? COLOMBIA|EN LIQUIDACION(?: JUDICIAL)?|EN REESTRUCTURACION|EN CONCORDATO|S A S|SAS|S A|SA|LTDA|LIMITADA|S C A|SCA|S EN C POR A|S EN C|E U|EU|E S E|ESE|E S P|ESP|B I C|BIC|C I|CI|Y CIA|CIA|Y COMPANIA|COMPANIA)\b/gi;
   let prev = "";
   while (prev !== clean) {
@@ -27162,10 +27198,29 @@ function generateRazonSocialSearchVariants(raw) {
   if (normalized) {
     variants.add(normalized);
   }
-  const spaceSeparated = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (normalized.includes("&")) {
+    variants.add(normalized.replace(/&/g, " Y ").replace(/\s+/g, " ").trim());
+    variants.add(normalized.replace(/&/g, " ").replace(/\s+/g, " ").trim());
+  } else if (/\bY\b/.test(normalized)) {
+    variants.add(normalized.replace(/\bY\b/g, "&").replace(/\s+/g, " ").trim());
+    variants.add(normalized.replace(/\bY\b/g, " ").replace(/\s+/g, " ").trim());
+  } else if (/\bE\b/.test(normalized)) {
+    variants.add(normalized.replace(/\bE\b/g, "&").replace(/\s+/g, " ").trim());
+    variants.add(normalized.replace(/\bE\b/g, " ").replace(/\s+/g, " ").trim());
+  }
+  const spaceSeparated = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s&]/g, " ").replace(/\s+/g, " ").trim();
   const cleanSpace = normalizeCorporateName(spaceSeparated);
   if (cleanSpace) variants.add(cleanSpace);
-  const compact = cleanSpace.replace(/\s+/g, "");
+  const rawClean = raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9\s&]/g, " ").replace(/\s+/g, " ").trim();
+  if (rawClean && rawClean !== normalized) {
+    variants.add(rawClean);
+    if (rawClean.includes("&")) {
+      variants.add(rawClean.replace(/&/g, " Y ").replace(/\s+/g, " ").trim());
+    } else if (/\bY\b/.test(rawClean)) {
+      variants.add(rawClean.replace(/\bY\b/g, "&").replace(/\s+/g, " ").trim());
+    }
+  }
+  const compact = cleanSpace.replace(/[^A-Z0-9]/g, "");
   if (compact && compact.length >= 3) {
     variants.add(compact);
   }
@@ -27192,8 +27247,12 @@ function evaluateRazonSocialMatch(query, recordRazon, recordSigla) {
   const cleanR = (recordRazon || "").trim().toUpperCase();
   const cleanS = (recordSigla || "").trim().toUpperCase();
   if (cleanR === cleanQ || cleanS && cleanS === cleanQ) return 100;
-  if (cleanR.includes(cleanQ) || cleanS && cleanS.includes(cleanQ)) {
-    const targetMatch = cleanR.includes(cleanQ) ? cleanR : cleanS;
+  const canonQ = cleanQ.replace(/&/g, " Y ").replace(/\s+/g, " ").trim();
+  const canonR = cleanR.replace(/&/g, " Y ").replace(/\s+/g, " ").trim();
+  const canonS = cleanS.replace(/&/g, " Y ").replace(/\s+/g, " ").trim();
+  if (canonR === canonQ || canonS && canonS === canonQ) return 98;
+  if (cleanR.includes(cleanQ) || cleanS && cleanS.includes(cleanQ) || canonR.includes(canonQ) || canonS && canonS.includes(canonQ)) {
+    const targetMatch = cleanR.includes(cleanQ) ? cleanR : canonR.includes(canonQ) ? canonR : cleanS;
     const diffLength = targetMatch.length - cleanQ.length;
     return 80 - Math.min(diffLength, 30);
   }
@@ -27211,14 +27270,21 @@ function evaluateRazonSocialMatch(query, recordRazon, recordSigla) {
   const variants = generateRazonSocialSearchVariants(cleanQ);
   for (const v of variants) {
     const rawV = v.replace(/%/g, " ").replace(/\s+/g, " ").trim();
-    if (cleanR.includes(rawV) || cleanS && cleanS.includes(rawV)) {
-      const targetMatch = cleanR.includes(rawV) ? cleanR : cleanS;
+    if (cleanR.includes(rawV) || cleanS && cleanS.includes(rawV) || canonR.includes(rawV)) {
+      const targetMatch = cleanR.includes(rawV) ? cleanR : canonR.includes(rawV) ? canonR : cleanS;
       const diffLength = targetMatch.length - rawV.length;
       return 70 - Math.min(diffLength, 30);
     }
     const compV = v.replace(/[^A-Z0-9]/g, "");
     if (compV.length >= 3 && (compactR.includes(compV) || compactS && compactS.includes(compV))) {
       return 65;
+    }
+  }
+  const coreQueryTokens = getCoreTokens(normalizeCorporateName(cleanQ)).filter((t2) => t2.length >= 4 && t2 !== "&");
+  if (coreQueryTokens.length >= 2) {
+    const allFound = coreQueryTokens.every((token) => cleanR.includes(token) || cleanS && cleanS.includes(token) || canonR.includes(token));
+    if (allFound) {
+      return 60;
     }
   }
   return 0;
@@ -27420,6 +27486,11 @@ async function queryDatosGovSocrataRues(baseNit, cleanRazon, timeoutMs = 6500, t
         clauses.push(`upper(razon_social) like '%${safeV}%'`);
         clauses.push(`upper(sigla) like '%${safeV}%'`);
       }
+      const coreWords = cleanRazon.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length >= 3 && !SPANISH_STOPWORDS.has(w) && !GENERIC_SECTOR_PREFIXES.has(w));
+      if (coreWords.length >= 2) {
+        const wildcard = coreWords.slice(0, 3).join("%");
+        clauses.push(`upper(razon_social) like '%${wildcard}%'`);
+      }
       const whereClause = clauses.length > 1 ? `(${clauses.join(" or ")})` : clauses[0] || `upper(razon_social) like '%${cleanRazon.toUpperCase().replace(/'/g, "''")}%'`;
       const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=25`, {
         headers: { Accept: "application/json" },
@@ -27537,8 +27608,8 @@ async function queryRuesDirectHttp(query) {
       }
     }
   }
-  const cleanRazon = clean.replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ").replace(/\s+/g, " ").trim();
-  const targetRazonName = cleanRazon || clean;
+  const cleanCorporateName = baseNit ? "" : extractCleanCorporateQuery(clean);
+  const targetRazonName = cleanCorporateName || clean;
   const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${targetRazonName.toUpperCase()}`;
   const cached = ruesCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < RUES_CACHE_TTL_MS) {
@@ -27548,107 +27619,102 @@ async function queryRuesDirectHttp(query) {
     return null;
   }
   try {
-    let searchPayload;
+    let bestPrincipalRecord = null;
+    let mainRegistrosBatch = [];
     if (baseNit) {
-      searchPayload = { nit: baseNit };
+      const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { nit: baseNit });
+      mainRegistrosBatch = Array.isArray(searchRes?.registros) ? searchRes.registros : [];
+      if (mainRegistrosBatch.length > 0) {
+        bestPrincipalRecord = selectPrincipalRuesRecord(mainRegistrosBatch, baseNit);
+      }
     } else {
-      const variants = generateRazonSocialSearchVariants(targetRazonName);
-      const coreSearchTerm = variants[0] || normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
-      searchPayload = { razon: coreSearchTerm };
-    }
-    let searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
-    let registros = searchRes?.registros || [];
-    if ((!registros || registros.length === 0) && !baseNit) {
-      const variants = generateRazonSocialSearchVariants(targetRazonName);
-      for (let i = 1; i < Math.min(variants.length, 3); i++) {
-        const altVariant = variants[i].replace(/%/g, " ").replace(/\s+/g, " ").trim();
-        if (altVariant && altVariant !== searchPayload.razon) {
-          const altRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { razon: altVariant });
-          if (Array.isArray(altRes?.registros) && altRes.registros.length > 0) {
-            registros = altRes.registros;
+      const searchVariants = generateRazonSocialSearchVariants(targetRazonName);
+      for (const variantTerm of searchVariants) {
+        const cleanTerm = variantTerm.replace(/%/g, " ").replace(/\s+/g, " ").trim();
+        if (!cleanTerm) continue;
+        const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { razon: cleanTerm });
+        const regs = Array.isArray(searchRes?.registros) ? searchRes.registros : [];
+        if (regs.length > 0) {
+          mainRegistrosBatch.push(...regs);
+          const candidate = selectPrincipalRuesRecord(regs, void 0, targetRazonName);
+          if (candidate) {
+            bestPrincipalRecord = candidate;
             break;
           }
         }
       }
     }
-    if (Array.isArray(registros) && registros.length > 0) {
-      const mainRecord = selectPrincipalRuesRecord(
-        registros,
-        baseNit || void 0,
-        baseNit ? void 0 : targetRazonName
-      );
-      if (mainRecord) {
-        const codCamara = String(mainRecord.cod_camara || "04").trim();
-        const matricula = String(mainRecord.matricula || "").trim();
-        const idRm = String(mainRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
-        const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
-          postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
-          postRuesEncrypted("/api/ConsultarVinculos", { IDRM: idRm }),
-          codCamara && matricula ? postRuesEncrypted("/api/ConsultFacultadesXCamYMatricula", {
-            codigo_camara: codCamara,
-            matricula: matricula.padStart(10, "0")
-          }) : Promise.resolve(null)
-        ]);
-        const det = detalleRes?.registros || {};
-        const vinculosList = vinculosRes?.registros || [];
-        const facultadesHtml = typeof facultadesRes === "string" ? facultadesRes : "";
-        const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
-        const razonSocial = String(det.razon_social || mainRecord.razon_social || "").trim();
-        const nit = String(det.numero_identificacion || mainRecord.nit || baseNit).replace(/\D/g, "");
-        const dv = String(det.dv || mainRecord.dv || "").trim();
-        const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
-        const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogot\xE1 D.C." : formatTitleCase2(camaraRaw);
-        const tipoSociedadRaw = String(det.tipo_sociedad || mainRecord.tipo_sociedad || "SOCIEDAD COMERCIAL").trim();
-        const tipoSociedad = formatTitleCase2(tipoSociedadRaw);
-        const orgRaw = String(det.organizacion_juridica || mainRecord.organizacion_juridica || "Sociedad Comercial").trim();
-        const organizacionJuridica = formatOrganizacionJuridica(orgRaw);
-        const organizacionJuridicaRaw = formatTitleCase2(orgRaw).replace(/\bSas\b/g, "SAS").replace(/\bS\.a\.s\b/gi, "S.A.S.");
-        const categoria = String(det.categoria_matricula || mainRecord.categoria || "SOCIEDAD \xF3 PERSONA JURIDICA PRINCIPAL \xF3 ESAL").trim();
-        const estadoMatricula = formatTitleCase2(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
-        const ultimoAnoRenovado = String(
-          mainRecord.ultimo_ano_renovado || det.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
-        ).trim();
-        const actividadesEconomicas = extractActividadesEconomicas(det.cod_ciiu_act_econ_pri ? det : mainRecord);
-        const ciiuPrincipalCodigo = actividadesEconomicas[0]?.codigo || String(det.cod_ciiu_act_econ_pri || "").trim() || void 0;
-        const ciiuPrincipalDescripcion = actividadesEconomicas[0]?.descripcion || String(det.desc_ciiu_act_econ_pri || "").trim() || (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : void 0);
-        const establecimientos = extractEstablecimientos(registros, mainRecord);
-        const result = {
-          found: true,
-          idRm,
-          nit,
-          dv,
-          razonSocial,
-          sigla: String(det.sigla || mainRecord.sigla || "").trim() || void 0,
-          tipoSociedad,
-          organizacionJuridica,
-          organizacionJuridicaRaw,
-          categoria,
-          esSociedadPrincipal: categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
-          codigoCamara: codCamara,
-          camaraComercio,
-          matricula: matricula.replace(/^0+/, "") || matricula,
-          estadoMatricula,
-          ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : void 0,
-          fechaMatricula: formatRuesDate(det.fecha_matricula || mainRecord.fecha_matricula),
-          fechaRenovacion: formatRuesDate(det.fecha_renovacion || mainRecord.fecha_renovacion),
-          ciiuPrincipalCodigo,
-          ciiuPrincipalDescripcion,
-          actividadesEconomicas,
-          representantePrincipal: classifiedReps.representantePrincipal,
-          representantesPrincipales: classifiedReps.principales,
-          representantesSuplentes: classifiedReps.suplentes,
-          todosRepresentantes: classifiedReps.todos,
-          establecimientos,
-          direccionComercial: String(det.dir_comercial || det.direccion_comercial || det.direccion || mainRecord.dir_comercial || mainRecord.direccion_comercial || mainRecord.direccion || "").trim() || void 0,
-          telefonoComercial: String(det.tel_comercial_1 || det.telefono_comercial_1 || det.telefono_1 || det.telefono || mainRecord.tel_comercial_1 || mainRecord.telefono_comercial_1 || mainRecord.telefono_1 || mainRecord.telefono || "").trim() || void 0,
-          source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras)"
-        };
-        ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
-        if (nit) {
-          ruesCache.set(`NIT:${nit}`, { data: result, timestamp: Date.now() });
-        }
-        return result;
+    if (bestPrincipalRecord) {
+      const codCamara = String(bestPrincipalRecord.cod_camara || "04").trim();
+      const matricula = String(bestPrincipalRecord.matricula || "").trim();
+      const idRm = String(bestPrincipalRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
+      const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
+        postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
+        postRuesEncrypted("/api/ConsultarVinculos", { IDRM: idRm }),
+        codCamara && matricula ? postRuesEncrypted("/api/ConsultFacultadesXCamYMatricula", {
+          codigo_camara: codCamara,
+          matricula: matricula.padStart(10, "0")
+        }) : Promise.resolve(null)
+      ]);
+      const det = detalleRes?.registros || {};
+      const vinculosList = vinculosRes?.registros || [];
+      const facultadesHtml = typeof facultadesRes === "string" ? facultadesRes : "";
+      const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
+      const razonSocial = String(det.razon_social || bestPrincipalRecord.razon_social || "").trim();
+      const nit = String(det.numero_identificacion || bestPrincipalRecord.nit || baseNit).replace(/\D/g, "");
+      const dv = String(det.dv || bestPrincipalRecord.dv || "").trim();
+      const camaraRaw = String(det.camara || bestPrincipalRecord.nom_camara || "BOGOTA").trim();
+      const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogot\xE1 D.C." : formatTitleCase2(camaraRaw);
+      const tipoSociedadRaw = String(det.tipo_sociedad || bestPrincipalRecord.tipo_sociedad || "SOCIEDAD COMERCIAL").trim();
+      const tipoSociedad = formatTitleCase2(tipoSociedadRaw);
+      const orgRaw = String(det.organizacion_juridica || bestPrincipalRecord.organizacion_juridica || "Sociedad Comercial").trim();
+      const organizacionJuridica = formatOrganizacionJuridica(orgRaw);
+      const organizacionJuridicaRaw = formatTitleCase2(orgRaw).replace(/\bSas\b/g, "SAS").replace(/\bS\.a\.s\b/gi, "S.A.S.");
+      const categoria = String(det.categoria_matricula || bestPrincipalRecord.categoria || "SOCIEDAD \xF3 PERSONA JURIDICA PRINCIPAL \xF3 ESAL").trim();
+      const estadoMatricula = formatTitleCase2(String(bestPrincipalRecord.estado_matricula || det.estado || "ACTIVA").trim());
+      const ultimoAnoRenovado = String(
+        bestPrincipalRecord.ultimo_ano_renovado || det.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
+      ).trim();
+      const actividadesEconomicas = extractActividadesEconomicas(det.cod_ciiu_act_econ_pri ? det : bestPrincipalRecord);
+      const ciiuPrincipalCodigo = actividadesEconomicas[0]?.codigo || String(det.cod_ciiu_act_econ_pri || "").trim() || void 0;
+      const ciiuPrincipalDescripcion = actividadesEconomicas[0]?.descripcion || String(det.desc_ciiu_act_econ_pri || "").trim() || (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : void 0);
+      const establecimientos = extractEstablecimientos(mainRegistrosBatch, bestPrincipalRecord);
+      const result = {
+        found: true,
+        idRm,
+        nit,
+        dv,
+        razonSocial,
+        sigla: String(det.sigla || bestPrincipalRecord.sigla || "").trim() || void 0,
+        tipoSociedad,
+        organizacionJuridica,
+        organizacionJuridicaRaw,
+        categoria,
+        esSociedadPrincipal: categoria.toUpperCase().includes("SOCIEDAD") || categoria.toUpperCase().includes("PRINCIPAL"),
+        codigoCamara: codCamara,
+        camaraComercio,
+        matricula: matricula.replace(/^0+/, "") || matricula,
+        estadoMatricula,
+        ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : void 0,
+        fechaMatricula: formatRuesDate(det.fecha_matricula || bestPrincipalRecord.fecha_matricula),
+        fechaRenovacion: formatRuesDate(det.fecha_renovacion || bestPrincipalRecord.fecha_renovacion),
+        ciiuPrincipalCodigo,
+        ciiuPrincipalDescripcion,
+        actividadesEconomicas,
+        representantePrincipal: classifiedReps.representantePrincipal,
+        representantesPrincipales: classifiedReps.principales,
+        representantesSuplentes: classifiedReps.suplentes,
+        todosRepresentantes: classifiedReps.todos,
+        establecimientos,
+        direccionComercial: String(det.dir_comercial || det.direccion_comercial || det.direccion || bestPrincipalRecord.dir_comercial || bestPrincipalRecord.direccion_comercial || bestPrincipalRecord.direccion || "").trim() || void 0,
+        telefonoComercial: String(det.tel_comercial_1 || det.telefono_comercial_1 || det.telefono_1 || det.telefono || bestPrincipalRecord.tel_comercial_1 || bestPrincipalRecord.telefono_comercial_1 || bestPrincipalRecord.telefono_1 || bestPrincipalRecord.telefono || "").trim() || void 0,
+        source: "RUES \u2014 Registro \xDAnico Empresarial y Social (Confec\xE1maras)"
+      };
+      ruesCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      if (nit) {
+        ruesCache.set(`NIT:${nit}`, { data: result, timestamp: Date.now() });
       }
+      return result;
     }
     const socrataResult = await queryDatosGovSocrataRues(
       baseNit,
@@ -27668,7 +27734,7 @@ async function queryRuesDirectHttp(query) {
     return null;
   }
 }
-var RUES_ELASTIC_BASE_URL, RUES_AES_PASSPHRASE, RUES_CACHE_TTL_MS, ruesCache, RUES_SOCRATA_URL, elasticGeoBlockedUntil, CIIU_DESCRIPTIONS, SPANISH_STOPWORDS;
+var RUES_ELASTIC_BASE_URL, RUES_AES_PASSPHRASE, RUES_CACHE_TTL_MS, ruesCache, RUES_SOCRATA_URL, elasticGeoBlockedUntil, CIIU_DESCRIPTIONS, SPANISH_STOPWORDS, GENERIC_SECTOR_PREFIXES;
 var init_ruesService = __esm({
   "server/_core/ruesService.ts"() {
     "use strict";
@@ -27747,6 +27813,15 @@ var init_ruesService = __esm({
       "A",
       "O",
       "U"
+    ]);
+    GENERIC_SECTOR_PREFIXES = /* @__PURE__ */ new Set([
+      "CONSTRUCTORA",
+      "INMOBILIARIA",
+      "GRUPO",
+      "COMPANIA",
+      "COMPA\xD1IA",
+      "CORPORACION",
+      "ORGANIZACION"
     ]);
   }
 });
@@ -29058,7 +29133,9 @@ async function queryEmpresaOrNit(query, userId) {
       }
     }
   }
-  const ruesLive = await queryRuesDirectHttp(baseNit || clean).catch(() => null);
+  const cleanCorporate = baseNit ? "" : extractCleanCorporateQuery(clean);
+  const targetCorporate = cleanCorporate || clean;
+  const ruesLive = await queryRuesDirectHttp(baseNit || targetCorporate).catch(() => null);
   let razonSocial = "";
   let camaraComercio = "C\xE1mara de Comercio de Bogot\xE1";
   let ciudad = "Bogot\xE1 D.C.";
@@ -29255,14 +29332,14 @@ async function queryEmpresaOrNit(query, userId) {
       actividadesEconomicas = [{ codigo: "4111", descripcion: "Construcci\xF3n de edificios residenciales" }];
     } else {
       const isPureNitQuery = /^(?:nit\s*:?\s*)?(?:\d{1,3}(?:\.\d{3}){2,3}|\d{7,10})(?:-\d)?$/i.test(clean);
-      const searchTarget = isPureNitQuery && baseNit ? `para el NIT ${baseNit}` : `bajo el nombre "${clean}"`;
+      const searchTarget = isPureNitQuery && baseNit ? `para el NIT ${baseNit}` : `bajo el nombre "${targetCorporate}"`;
       const askFor = isPureNitQuery && baseNit ? `Por favor verifica que el n\xFAmero sea correcto y no contenga errores de digitaci\xF3n.` : `Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor ind\xEDcame el n\xFAmero de NIT de la sociedad.`;
       return {
         success: false,
         nit: "",
         dv: "",
         nitCompleto: "",
-        razonSocial: formatTitleCase(clean) || clean,
+        razonSocial: formatTitleCase(targetCorporate) || targetCorporate,
         camaraComercio: "C\xE1maras de Comercio de Colombia (RUES)",
         ciudad: "Colombia",
         estado: "No localizada",
@@ -31109,8 +31186,7 @@ ${contactDossier ? `${contactDossier}
 MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
 Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.
-Reglas de ejecuci\xF3n seg\xFAn el contexto:
-a) Si el usuario env\xEDa un n\xFAmero o documento con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.
+a) Si el usuario env\xEDa un n\xFAmero, documento o nombre de empresa con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la raz\xF3n social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.
 b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, tr\xE1mites VUR/Sinupot, divisas/TRM del d\xF3lar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jur\xEDdico sin alucinaciones.
 c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
 d) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
@@ -31592,11 +31668,11 @@ var init_dmHandler = __esm({
           },
           {
             name: "consultar_empresa_o_nit",
-            description: "Consulta y valida la identidad oficial de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + C\xE1mara de Comercio + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI). Devuelve Raz\xF3n Social, NIT, Estado de matr\xEDcula, Direcci\xF3n comercial, Tel\xE9fono, Actividad econ\xF3mica (CIIU) y Representante Legal Principal.",
+            description: "Consulta y valida la identidad oficial de Empresas y Personas Jur\xEDdicas por NIT o Raz\xF3n Social (RUES + C\xE1mara de Comercio + DIAN + Procuradur\xEDa SIRI + Contralor\xEDa SIRECI). Siempre que el usuario mencione o confirme una empresa o raz\xF3n social (ej. 'MULTIPROYECTOS & INVERSIONES SAS'), invoca de inmediato esta herramienta pasando el nombre limpio de la sociedad o el NIT sin exigir datos adicionales.",
             parameters: {
               type: "OBJECT",
               properties: {
-                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social de la empresa detectada en texto o imagen" }
+                consultaEmpresa: { type: "STRING", description: "N\xFAmero de NIT con o sin d\xEDgito de verificaci\xF3n o Nombre/Raz\xF3n Social exacta de la empresa detectada en texto o imagen" }
               },
               required: ["consultaEmpresa"]
             }

@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-26] — JanIA v33.51: Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT (v33.51 - 33.51.0)
+
+**Versión:** `v33.51` (`33.51.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Lania sigue con el error de no poder investigar los datos de una empresa por rues y pidió NIT, en este caso lo teníamos pero la mayoría de las veces no se tiene el NIT sino solo la razón social. Así que observa y corrige, tal vez tengas que hacer un proceso más profundo y arraigado como el que hiciste con Adres BDUA y que finalmente lograste que JanIA pueda ingresar siempre y verificar o investigar dichos datos siempre"*
+
+**Diagnóstico Técnico Profundo:**
+1. **Evidencia Empírica de Capturas de Pantalla:**
+   - En chat de WhatsApp, el usuario escribió: `"Disculpame te confirmo el nombre exacto de la empresa. MULTIPROYECTOS & INVERSIONES SAS 👇👇👇"`.
+   - JanIA falló y exigió el NIT diciendo: *"No logré ubicar registros oficiales bajo el nombre... Por favor facilítame el NIT para consultarlo directamente"*.
+   - Posteriormente el usuario aportó el NIT `901.344.253` y JanIA sí devolvió los datos completos de la sociedad.
+   - En las capturas del portal web oficial de RUES (`rues.org.co`), se constató que la búsqueda por "Nombre / Palabra Clave" ingresando `"MULTIPROYECTOS & IN..."` arroja de inmediato a `MULTIPROYECTOS & INVERSIONES SAS` (NIT 901344253, Matrícula 3194303 CCB, Activa, Representante Legal Juan Javier Benavides Fonseca C.C. 79.417.015, CIIU 4111).
+2. **Causas Raíz Identificadas en el Código Fuente:**
+   - **Destrucción de Carácter Ampersand (`&`)**: En `server/_core/ruesService.ts`, `normalizeCorporateName` aplicaba `.replace(/&/g, " Y ")` eliminando luego caracteres no alfanuméricos. En el registro mercantil formal de Confecámaras, la sociedad está inscrita con el carácter literal `&` (`MULTIPROYECTOS & INVERSIONES SAS`). Al consultar con `Y`, RUES devolvía un establecimiento de comercio ajeno y cancelado en Cartago (`L.H MULTIPROYECTOS E INVERSIONES`).
+   - **Bug de Detención en Bucle de Variantes en `queryRuesDirectHttp`**: Si la primera variante devolvía al menos 1 registro (ej. el establecimiento cancelado de Cartago), `registros.length > 0`. Aunque `selectPrincipalRuesRecord` descartara dicho registro por ser establecimiento y no la sociedad principal, el bucle salía inmediatamente sin probar las variantes restantes.
+   - **Ruido Conversacional en WhatsApp**: Frases como `"Disculpame te confirmo el nombre exacto de la empresa. MULTIPROYECTOS & INVERSIONES SAS 👇👇👇"` entraban como cadena de búsqueda sin aislar la razón social real.
+   - **Instrucción Doctrinal Errónea en Prompts**: En `server/_core/prompts/base.md`, la regla 4 de Hábeas Data afirmaba falsamente que RUES solo opera por documento/NIT, lo que inducía a la IA a pedir el NIT en lugar de buscar por nombre mercantil de acceso público (Art. 26 Código de Comercio).
+
+**Acciones Ejecutadas:**
+- **Purificador de Mensajes Conversacionales (`ruesService.ts`):**
+  - Implementada y exportada la función `extractCleanCorporateQuery(raw: string)` que elimina emojis, frases de cortesía conversacional, comillas y preámbulos para aislar la razón social limpia.
+- **Preservación y Normalización del Ampersand (`ruesService.ts`):**
+  - Actualizado `normalizeCorporateName` para preservar el carácter `&`.
+  - Enriquecido `generateRazonSocialSearchVariants` con generación automática de combinaciones intercambiables (`&`, `Y`, `E`, espacios y comodines `%`).
+  - Actualizado `evaluateRazonSocialMatch`: otorga 100 pts a coincidencia exacta con `&`, 98 pts a equivalencia con `Y`, y descarta entidades no relacionadas.
+- **Búsqueda Secuencial Multi-Variante en RUES Directo (`ruesService.ts`):**
+  - Modificado el bucle de búsqueda en `queryRuesDirectHttp` para iterar a través de todas las variantes hasta que `selectPrincipalRuesRecord` confirme una sociedad o persona jurídica activa principal.
+  - Enriquecida la consulta Socrata Datos Abiertos de Confecámaras con cláusulas comodín multi-palabra.
+- **Integración en Servicio de Identidad (`identityVerificationService.ts`):**
+  - Incorporada la sanitización con `extractCleanCorporateQuery` previo a invocar `queryRuesDirectHttp`.
+- **Alineación Cognitiva en DMs, Prompts y Semilla de Fundadores:**
+  - `dmHandler.ts`: Actualizada la herramienta `consultar_empresa_o_nit` y la regla de ejecución `a)` para investigar inmediatamente por razón social sin pedir el NIT de antemano.
+  - `prompts/base.md` y `jania/prompts.ts`: Consagrada la publicidad mercantil universal de RUES bajo el Art. 26 C.Co., ordenando buscar por razón social de forma inmediata sin exigir NIT previo.
+  - `founderKnowledgeService.ts`: Incorporada la directiva semilla `seed-investigacion-empresarial-rues-sin-nit`.
+- **Pruebas Empíricas y Regresión:**
+  - Verificación en vivo con script scratch probando el mensaje exacto de WhatsApp: `"Disculpame te confirmo el nombre exacto de la empresa. MULTIPROYECTOS & INVERSIONES SAS 👇👇👇"` -> RUES devolvió exitosamente en 180ms a `MULTIPROYECTOS & INVERSIONES SAS`, NIT `901344253-1`, Matrícula `3194303` (Bogotá), Representante Legal Principal Juan Javier Benavides Fonseca (C.C. 79.417.015).
+  - Creada la `Suite v33.51` en `server/__tests__/regression.test.ts` con 4 tests específicos.
+- **Incremento de Versión:**
+  - `shared/const.ts` (`v33.51`) y `package.json` (`33.51.0`).
+- **Validación Limpia ($0 COP):**
+  - Typecheck `npm run check` (0 errores) | Tests `npm test` **395/395 passing** (100% verde) | Build `npm run build` limpio en 20.17s.
+
+---
+
 ### 📅 [2026-10-26] — JanIA v33.50: Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje (v33.50 - 33.50.0)
 
 **Versión:** `v33.50` (`33.50.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

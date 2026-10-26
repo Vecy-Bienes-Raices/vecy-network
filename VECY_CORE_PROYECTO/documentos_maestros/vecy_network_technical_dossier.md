@@ -330,6 +330,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.51 — Octubre 2026
+
+#### [v33.51.0] — 2026-10-26: Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT (Doctrina Eduardo A. Rivera)
+- **Investigación Empresarial RUES Robusta y Profunda (Análoga a ADRES BDUA):**
+  - **Problema:** En chats de WhatsApp, ante mensajes conversacionales como `"Disculpame te confirmo el nombre exacto de la empresa. MULTIPROYECTOS & INVERSIONES SAS 👇👇👇"`, JanIA no lograba ubicar a la sociedad por su razón social y exigía repetidamente el NIT. Al suministrar el NIT `901.344.253`, la consulta funcionaba de inmediato. En el portal web oficial `rues.org.co`, la búsqueda por "Nombre / Palabra Clave" arroja directamente el registro oficial con Representante Legal, matrícula y cámara.
+  - **Causas Raíz Identificadas:**
+    1. *Destrucción del Ampersand (`&`)*: `normalizeCorporateName` en `ruesService.ts` sustituía indiscriminadamente `&` por ` Y ` y eliminaba caracteres no alfanuméricos. En RUES, `MULTIPROYECTOS & INVERSIONES SAS` está matriculada con `&`. Al buscar con `Y`, RUES devolvía un establecimiento cancelado en Cartago (`L.H MULTIPROYECTOS E INVERSIONES`).
+    2. *Parada Prematura en Bucle de Variantes (`queryRuesDirectHttp`)*: Cuando una variante devolvía cualquier registro (incluso un establecimiento cancelado descartado por `selectPrincipalRuesRecord`), el bucle salía porque `registros.length > 0` sin probar las variantes morfológicas restantes.
+    3. *Ruido Conversacional*: Frases largas con cortesías y emojis entraban directamente al query de búsqueda sin purificación.
+    4. *Doctrina Errónea en Prompts*: En `base.md`, la regla 4 de Hábeas Data afirmaba falsamente que RUES solo opera por documento/NIT, confundiendo a la IA.
+  - **Solución Arquitectónica:**
+    1. *Purificación Inteligente (`extractCleanCorporateQuery`)*: Elimina frases conversacionales, preámbulos, comillas y emojis para aislar la razón social limpia.
+    2. *Preservación Mercantil del Ampersand*: Se preserva `&` en `normalizeCorporateName` y `generateRazonSocialSearchVariants` genera combinaciones intercambiables (`&`, `Y`, `E`, sin conectores y con comodín `%`).
+    3. *Evaluación Semántica (`evaluateRazonSocialMatch`)*: 100 pts para coincidencia exacta con `&`, 98 pts para equivalencia con `Y`, y descarte de homónimos distantes.
+    4. *Búsqueda Secuencial Multi-Variante en RUES Directo*: El bucle continúa probando variantes hasta que `selectPrincipalRuesRecord` confirme una sociedad o persona jurídica activa principal.
+    5. *Alineación Cognitiva en DMs, Prompts y Semilla de Fundadores*: Se corrigió `base.md` (declarando la publicidad mercantil universal del Art. 26 C.Co.), `prompts.ts`, `dmHandler.ts` (orden de invocar de inmediato `consultar_empresa_o_nit`) y se agregó la semilla `seed-investigacion-empresarial-rues-sin-nit` en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **395/395 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 20.17s.
+
 ### 🔖 v33.50 — Octubre 2026
 
 #### [v33.50.0] — 2026-10-26: Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje (Doctrina Eduardo A. Rivera)

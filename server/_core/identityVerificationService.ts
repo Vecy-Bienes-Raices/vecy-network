@@ -13,6 +13,7 @@ import * as agendaRouter from '../routers/agenda';
 import { parsePoliceAntecedentesFullName, formatTitleCase, identityCache } from '../routers/agenda';
 import {
   queryRuesDirectHttp,
+  extractCleanCorporateQuery,
   RepresentanteLegalInfo,
   RuesActividadEconomica,
   RuesEstablecimientoInfo
@@ -1734,8 +1735,12 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
     }
   }
 
+  // Extraer quirúrgicamente la razón social si no es NIT puro
+  const cleanCorporate = baseNit ? "" : extractCleanCorporateQuery(clean);
+  const targetCorporate = cleanCorporate || clean;
+
   // 1° Intentar consulta en vivo vía conector HTTP directo a RUES (Confecámaras + Datos Abiertos)
-  const ruesLive = await queryRuesDirectHttp(baseNit || clean).catch(() => null);
+  const ruesLive = await queryRuesDirectHttp(baseNit || targetCorporate).catch(() => null);
 
   let razonSocial = "";
   let camaraComercio = "Cámara de Comercio de Bogotá";
@@ -1939,7 +1944,7 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
       // Jamás inventar ni devolver un NIT sintético o empresa ficticia en Cámara de Bogotá.
       // Si la empresa o NIT no aparecen en RUES ni Datos Abiertos, reportar con honestidad que no se encontró coincidencia.
       const isPureNitQuery = /^(?:nit\s*:?\s*)?(?:\d{1,3}(?:\.\d{3}){2,3}|\d{7,10})(?:-\d)?$/i.test(clean);
-      const searchTarget = (isPureNitQuery && baseNit) ? `para el NIT ${baseNit}` : `bajo el nombre "${clean}"`;
+      const searchTarget = (isPureNitQuery && baseNit) ? `para el NIT ${baseNit}` : `bajo el nombre "${targetCorporate}"`;
       const askFor = (isPureNitQuery && baseNit)
         ? `Por favor verifica que el número sea correcto y no contenga errores de digitación.`
         : `Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor indícame el número de NIT de la sociedad.`;
@@ -1949,7 +1954,7 @@ export async function queryEmpresaOrNit(query: string, userId?: string): Promise
         nit: "",
         dv: "",
         nitCompleto: "",
-        razonSocial: formatTitleCase(clean) || clean,
+        razonSocial: formatTitleCase(targetCorporate) || targetCorporate,
         camaraComercio: "Cámaras de Comercio de Colombia (RUES)",
         ciudad: "Colombia",
         estado: "No localizada",

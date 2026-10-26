@@ -64,6 +64,17 @@ const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-investigacion-empresarial-rues-sin-nit",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Investigación Pericial RUES por Razón Social sin exigir NIT (Doctrina Eduardo A. Rivera)",
+    directive:
+      "La mayoría de las veces los clientes y colegas NO tienen el número de NIT de una empresa, sino únicamente su nombre o razón social. JanIA jamás debe quedarse bloqueada o pidiendo mecánicamente el NIT cuando ya tiene la razón social (ej. MULTIPROYECTOS & INVERSIONES SAS). Debe realizar un proceso profundo, arraigado e infalible (como el consolidado para ADRES BDUA), investigando directamente en el Registro Único Empresarial y Social (RUES) y las 57 Cámaras de Comercio por el nombre o palabra clave, tolerando variantes con ampersand (&), la letra 'Y', términos morfológicos o mensajes conversacionales. Debe entregar de inmediato la verificación oficial completa: Razón Social oficial, NIT con DV DIAN, matrícula, estado activo, Cámara de Comercio, actividad económica (CIIU) y Representante Legal Principal con sus plenas facultades estatutarias, sin pedir el NIT de antemano.",
+    rawText: "JanIA sigue con el error de no poder investigar los datos de una empresa por rues y pidió NIT, en este caso lo teníamos pero la mayoría de las veces no se tiene el NIT sino solo la razón social. Así que observa y corrige, tal vez tengas que hacer un proceso más profundo y arraigado como el que hiciste con Adres BDUA y que finalmente lograste que JanIA pueda ingresar siempre y verificar o investigar dichos datos siempre.",
+    createdAt: "2026-10-26T03:30:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

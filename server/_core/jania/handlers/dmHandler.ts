@@ -179,11 +179,11 @@ export const JANIA_DM_TOOLS = [
       },
       {
         name: "consultar_empresa_o_nit",
-        description: "Consulta y valida la identidad oficial de Empresas y Personas Jurídicas por NIT o Razón Social (RUES + Cámara de Comercio + DIAN + Procuraduría SIRI + Contraloría SIRECI). Devuelve Razón Social, NIT, Estado de matrícula, Dirección comercial, Teléfono, Actividad económica (CIIU) y Representante Legal Principal.",
+        description: "Consulta y valida la identidad oficial de Empresas y Personas Jurídicas por NIT o Razón Social (RUES + Cámara de Comercio + DIAN + Procuraduría SIRI + Contraloría SIRECI). Siempre que el usuario mencione o confirme una empresa o razón social (ej. 'MULTIPROYECTOS & INVERSIONES SAS'), invoca de inmediato esta herramienta pasando el nombre limpio de la sociedad o el NIT sin exigir datos adicionales.",
         parameters: {
           type: "OBJECT",
           properties: {
-            consultaEmpresa: { type: "STRING", description: "Número de NIT con o sin dígito de verificación o Nombre/Razón Social de la empresa detectada en texto o imagen" }
+            consultaEmpresa: { type: "STRING", description: "Número de NIT con o sin dígito de verificación o Nombre/Razón Social exacta de la empresa detectada en texto o imagen" }
           },
           required: ["consultaEmpresa"]
         }
@@ -1666,8 +1666,7 @@ export async function processPrivateDmConversationalMessage(
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
       `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.\n` +
-      `Reglas de ejecución según el contexto:\n` +
-      `a) Si el usuario envía un número o documento con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa Inversiones SAS", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente sin repreguntar y entrega el reporte oficial.\n` +
+      `a) Si el usuario envía un número, documento o nombre de empresa con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la razón social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.\n` +
       `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +
       `d) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +

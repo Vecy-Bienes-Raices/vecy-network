@@ -182,7 +182,27 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.50 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.51 — Octubre 2026
+
+### Novedades v33.51 (Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Investigación Empresarial RUES Profunda y Robusta (Análoga a ADRES BDUA)**:
+     - *Causa raíz*: JanIA no lograba investigar empresas por su razón social cuando el usuario no suministraba el NIT, pidiéndolo repetidamente ("necesito el NIT"). Al suministrar el NIT `901.344.253` sí encontraba a `MULTIPROYECTOS & INVERSIONES SAS`. En RUES web oficial (`rues.org.co`), la búsqueda por "Nombre / Palabra Clave" arroja directamente el registro con Representante Legal, matrícula y cámara.
+     - *Diagnóstico técnico profundo*:
+       a) **Destrucción de Carácter Ampersand (`&`)**: `normalizeCorporateName` en `ruesService.ts` sustituía indiscriminadamente `&` por ` Y ` y eliminaba signos de puntuación. En RUES, `MULTIPROYECTOS & INVERSIONES SAS` está matriculada formalmente con `&`. Al convertirlo a `Y`, la consulta arrojaba un establecimiento cancelado en Cartago (`L.H MULTIPROYECTOS E INVERSIONES`).
+       b) **Detención Prematura de Variantes en `queryRuesDirectHttp`**: Si la primera variante devolvía al menos un resultado (aunque fuera cancelado o establecimiento descartado por `selectPrincipalRuesRecord`), el bucle de variantes no continuaba probando las demás porque `registros.length > 0`.
+       c) **Ruido Conversacional de WhatsApp**: Mensajes largos como `"Disculpame te confirmo el nombre exacto de la empresa. MULTIPROYECTOS & INVERSIONES SAS 👇👇👇"` entraban crudos a la consulta si no se extraía la razón social limpia.
+       d) **Doctrina Errónea en Prompts**: En `base.md` existía una regla en Hábeas Data afirmando erróneamente que las consultas en RUES solo operaban por documento/NIT, confundiendo a la IA.
+     - *Soluciones implementadas*:
+       a) **Extractor Quirúrgico (`extractCleanCorporateQuery`)**: Purifica mensajes de chat eliminando fórmulas de cortesía ("te confirmo...", "el nombre es..."), comillas y emojis, aislando la razón social mercantil limpia.
+       b) **Preservación y Variantes Morfológicas del Ampersand**: Se conservó `&` en `normalizeCorporateName` y se enriqueció `generateRazonSocialSearchVariants` con combinaciones intercambiables (`&`, `Y`, `E`, sin conectores y con comodín `%`).
+       c) **Búsqueda Secuencial hasta Hallar Sociedad Activa**: `queryRuesDirectHttp` ahora evalúa variantes secuencialmente y continúa buscando hasta que `selectPrincipalRuesRecord` confirme una sociedad o persona jurídica activa principal.
+       d) **Ponderación Semántica de Alta Fidelidad (`evaluateRazonSocialMatch`)**: Coincidencia exacta con `&` otorga 100 pts, equivalencia con `Y` 98 pts, descartando falsos positivos.
+       e) **Doctrina en Prompts, DMs y Semilla Maestra**: Se corrigió `base.md` (declarando la publicidad mercantil universal del Art. 26 C.Co.), `prompts.ts`, `dmHandler.ts` (orden de invocar de inmediato `consultar_empresa_o_nit`) y se agregó la semilla `seed-investigacion-empresarial-rues-sin-nit` en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 395/395 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 20.17s ✅
+- `shared/const.ts` (`v33.51`) y `package.json` (`33.51.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.50 — Octubre 2026
 
 ### Novedades v33.50 (Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

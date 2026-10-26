@@ -290,8 +290,60 @@ const GENERIC_SECTOR_PREFIXES = new Set([
 ]);
 
 /**
- * Normaliza una razón social eliminando acentos, caracteres especiales y formas societarias
- * (S.A.S., S.A., LTDA, S.C.A., E.U., BIC, etc.) para comparación jurídica y búsqueda de alta precisión.
+ * Extrae y purifica quirúrgicamente la razón social de un texto conversacional libre de WhatsApp.
+ * Elimina emojis, saludos ("Disculpame", "Hola", "Buenas"), fórmulas introductorias
+ * ("te confirmo el nombre exacto de la empresa.", "la razón social es", "sociedad:", etc.),
+ * comillas y caracteres residuales, preservando ampersands (&) y la denominación mercantil pura.
+ */
+export function extractCleanCorporateQuery(raw: string): string {
+  if (!raw) return "";
+  let clean = raw
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, " ")
+    .trim();
+
+  // 1. Si hay texto entre comillas "..." o '...', extraerlo prioritariamente
+  const quoteMatch = clean.match(/["']([^"']{3,})["']/);
+  if (quoteMatch) {
+    return quoteMatch[1].trim();
+  }
+
+  // 2. Si viene precedido por separadores de frase (. / : / salto de línea) y luego una denominación societaria
+  const afterSepMatch = clean.match(/(?:[:\n\r]|\.\s+)([A-Z0-9&.-][A-Z0-9\s&.-]{2,}\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?|COMPA[ÑN][IÍ]A|CORPORACI[OÓ]N)\b)/i);
+  if (afterSepMatch) {
+    return afterSepMatch[1].trim();
+  }
+
+  // 3. Bloque con forma societaria explícita (ej. MULTIPROYECTOS & INVERSIONES SAS)
+  const corpBlockMatch = clean.match(/\b([A-Z0-9&.-]+(?:\s+[A-Z0-9&.-]+)*\s+\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?)\b)/i);
+  if (corpBlockMatch) {
+    let candidate = corpBlockMatch[1].trim();
+    candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EL\s+NOMBRE\s+(?:EXACTO\s+)?DE\s+LA\s+EMPRESA|LA\s+EMPRESA|NOMBRE|RAZON\s+SOCIAL)\b[\s.:;,-]*/gi, "").trim();
+    if (candidate.length >= 3) return candidate;
+  }
+
+  // 4. Bloque en mayúsculas sostenidas consecutivas (>= 2 palabras en MAYÚSCULAS)
+  const allCapsMatch = clean.match(/\b([A-Z0-9&.-]{3,}(?:\s+[A-Z0-9&.-]{2,})+)\b/);
+  if (allCapsMatch) {
+    let candidate = allCapsMatch[1].trim();
+    candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EMPRESA)\b[\s.:;,-]*/gi, "").trim();
+    if (candidate.length >= 3) return candidate;
+  }
+
+  // 5. Limpieza general de introducciones conversacionales y muletillas
+  let stripped = clean
+    .replace(/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches|disculpa|disc[uú]lpame|por\s+favor|oye|jania|mira|te\s+paso|te\s+env[ií]o|te\s+comparto|te\s+confirmo|este\s+es|esta\s+es)\b[^\w\n\r]*/gi, " ")
+    .replace(/\b(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa(?:\s+es)?|la\s+raz[oó]n\s+social(?:\s+es)?|la\s+empresa(?:\s+es)?|el\s+nit(?:\s+es)?|los\s+datos\s+de|informaci[oó]n\s+de|investigar\s+a|verificar\s+a)\b[^\w\n\r]*/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[":;.,\s-]+|[":;.,\s-]+$/g, "")
+    .trim();
+
+  return stripped || clean;
+}
+
+/**
+ * Normaliza una razón social eliminando acentos, caracteres especiales innecesarios y formas societarias
+ * (S.A.S., S.A., LTDA, S.C.A., E.U., BIC, etc.) para comparación jurídica y búsqueda de alta precisión,
+ * PRESERVANDO el ampersand (&) que es un carácter legal fundamental en las razones sociales colombianas.
  */
 export function normalizeCorporateName(raw: string): string {
   if (!raw) return "";
@@ -299,8 +351,7 @@ export function normalizeCorporateName(raw: string): string {
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, " Y ")
-    .replace(/[^A-Z0-9\s]/g, " ")
+    .replace(/[^A-Z0-9\s&]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -323,9 +374,9 @@ function getCoreTokens(normalizedStr: string): string[] {
 }
 
 /**
- * Genera variantes de búsqueda para una razón social, limpiando sufijos societarios
- * y normalizando espacios, guiones o términos compuestos
- * (ej. "Multi-impresos SAS" o "Multiimpresos" -> ["MULTI IMPRESOS", "MULTIIMPRESOS", "MULTI%IMPRESOS"]).
+ * Genera variantes de búsqueda para una razón social, limpiando sufijos societarios,
+ * normalizando espacios, guiones o términos compuestos y contemplando la equivalencia
+ * mercantil de conectores (& <-> Y / E) para cobertura infalible en RUES y Confecámaras.
  */
 export function generateRazonSocialSearchVariants(raw: string): string[] {
   if (!raw) return [];
@@ -336,24 +387,53 @@ export function generateRazonSocialSearchVariants(raw: string): string[] {
     variants.add(normalized);
   }
 
+  // Variante con conectores & <-> Y / E intercambiables
+  if (normalized.includes("&")) {
+    variants.add(normalized.replace(/&/g, " Y ").replace(/\s+/g, " ").trim());
+    variants.add(normalized.replace(/&/g, " ").replace(/\s+/g, " ").trim());
+  } else if (/\bY\b/.test(normalized)) {
+    variants.add(normalized.replace(/\bY\b/g, "&").replace(/\s+/g, " ").trim());
+    variants.add(normalized.replace(/\bY\b/g, " ").replace(/\s+/g, " ").trim());
+  } else if (/\bE\b/.test(normalized)) {
+    variants.add(normalized.replace(/\bE\b/g, "&").replace(/\s+/g, " ").trim());
+    variants.add(normalized.replace(/\bE\b/g, " ").replace(/\s+/g, " ").trim());
+  }
+
   // Variante con guiones y signos reemplazados por espacio
   const spaceSeparated = raw
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s]/g, " ")
+    .replace(/[^\w\s&]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   const cleanSpace = normalizeCorporateName(spaceSeparated);
   if (cleanSpace) variants.add(cleanSpace);
 
+  // Variante con denominación original completa (incluyendo forma societaria como SAS)
+  const rawClean = raw
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9\s&]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (rawClean && rawClean !== normalized) {
+    variants.add(rawClean);
+    if (rawClean.includes("&")) {
+      variants.add(rawClean.replace(/&/g, " Y ").replace(/\s+/g, " ").trim());
+    } else if (/\bY\b/.test(rawClean)) {
+      variants.add(rawClean.replace(/\bY\b/g, "&").replace(/\s+/g, " ").trim());
+    }
+  }
+
   // Variante unida sin espacios ni guiones
-  const compact = cleanSpace.replace(/\s+/g, "");
+  const compact = cleanSpace.replace(/[^A-Z0-9]/g, "");
   if (compact && compact.length >= 3) {
     variants.add(compact);
   }
 
-  // Tokens individuales
+  // Tokens individuales y palabras con comodines
   const tokens = getCoreTokens(cleanSpace);
   if (tokens.length >= 2) {
     variants.add(tokens.join(""));
@@ -377,7 +457,7 @@ export function generateRazonSocialSearchVariants(raw: string): string[] {
 /**
  * Evalúa el nivel de coincidencia entre una razón social candidata de RUES
  * y el término consultado por el usuario, descartando homónimos lejanos o empresas genéricas.
- * Admite coincidencia exacta, contenida, compacta (sin espacios/guiones) o por variantes morfológicas.
+ * Admite coincidencia exacta, contenida, compacta (sin espacios/guiones) o por variantes morfológicas y conectores (& <-> Y).
  */
 export function evaluateRazonSocialMatch(query: string, recordRazon: string, recordSigla?: string): number {
   const cleanQ = (query || "").trim().toUpperCase();
@@ -385,9 +465,15 @@ export function evaluateRazonSocialMatch(query: string, recordRazon: string, rec
   const cleanS = (recordSigla || "").trim().toUpperCase();
 
   if (cleanR === cleanQ || (cleanS && cleanS === cleanQ)) return 100; // Coincidencia exacta perfecta
-  if (cleanR.includes(cleanQ) || (cleanS && cleanS.includes(cleanQ))) {
-    // Si lo contiene, penalizamos ligeramente si la diferencia de longitud es muy grande (evitar genéricos)
-    const targetMatch = cleanR.includes(cleanQ) ? cleanR : cleanS;
+
+  // Comparación tolerante con conectores & <-> Y
+  const canonQ = cleanQ.replace(/&/g, " Y ").replace(/\s+/g, " ").trim();
+  const canonR = cleanR.replace(/&/g, " Y ").replace(/\s+/g, " ").trim();
+  const canonS = cleanS.replace(/&/g, " Y ").replace(/\s+/g, " ").trim();
+  if (canonR === canonQ || (canonS && canonS === canonQ)) return 98;
+
+  if (cleanR.includes(cleanQ) || (cleanS && cleanS.includes(cleanQ)) || canonR.includes(canonQ) || (canonS && canonS.includes(canonQ))) {
+    const targetMatch = cleanR.includes(cleanQ) ? cleanR : (canonR.includes(canonQ) ? canonR : cleanS);
     const diffLength = targetMatch.length - cleanQ.length;
     return 80 - Math.min(diffLength, 30);
   }
@@ -410,14 +496,23 @@ export function evaluateRazonSocialMatch(query: string, recordRazon: string, rec
   const variants = generateRazonSocialSearchVariants(cleanQ);
   for (const v of variants) {
     const rawV = v.replace(/%/g, " ").replace(/\s+/g, " ").trim();
-    if (cleanR.includes(rawV) || (cleanS && cleanS.includes(rawV))) {
-      const targetMatch = cleanR.includes(rawV) ? cleanR : cleanS;
+    if (cleanR.includes(rawV) || (cleanS && cleanS.includes(rawV)) || canonR.includes(rawV)) {
+      const targetMatch = cleanR.includes(rawV) ? cleanR : (canonR.includes(rawV) ? canonR : cleanS);
       const diffLength = targetMatch.length - rawV.length;
       return 70 - Math.min(diffLength, 30);
     }
     const compV = v.replace(/[^A-Z0-9]/g, "");
     if (compV.length >= 3 && (compactR.includes(compV) || (compactS && compactS.includes(compV)))) {
       return 65;
+    }
+  }
+
+  // Comparación de tokens esenciales (si todos los tokens clave de 4+ letras del query están en el candidato)
+  const coreQueryTokens = getCoreTokens(normalizeCorporateName(cleanQ)).filter((t) => t.length >= 4 && t !== "&");
+  if (coreQueryTokens.length >= 2) {
+    const allFound = coreQueryTokens.every((token) => cleanR.includes(token) || (cleanS && cleanS.includes(token)) || canonR.includes(token));
+    if (allFound) {
+      return 60;
     }
   }
 
@@ -712,6 +807,18 @@ async function queryDatosGovSocrataRues(
         clauses.push(`upper(razon_social) like '%${safeV}%'`);
         clauses.push(`upper(sigla) like '%${safeV}%'`);
       }
+      // Agregar comodines entre palabras clave (>= 3 letras) para máxima tolerancia
+      const coreWords = cleanRazon
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 3 && !SPANISH_STOPWORDS.has(w) && !GENERIC_SECTOR_PREFIXES.has(w));
+      if (coreWords.length >= 2) {
+        const wildcard = coreWords.slice(0, 3).join("%");
+        clauses.push(`upper(razon_social) like '%${wildcard}%'`);
+      }
       const whereClause = clauses.length > 1 ? `(${clauses.join(" or ")})` : (clauses[0] || `upper(razon_social) like '%${cleanRazon.toUpperCase().replace(/'/g, "''")}%'`);
       const res = await fetch(`${RUES_SOCRATA_URL}?$where=${encodeURIComponent(whereClause)}&$limit=25`, {
         headers: { Accept: "application/json" },
@@ -855,12 +962,9 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
     }
   }
 
-  const cleanRazon = clean
-    .replace(/\b(?:consultar|verificar|verif[ií]came|revisar|rev[ií]same|empresa|sociedad|en\s+rues|rues|nit|este|esta|el|la|por\s+favor|hola|jania)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const targetRazonName = cleanRazon || clean;
+  // Extraer quirúrgicamente la razón social si no es NIT puro
+  const cleanCorporateName = baseNit ? "" : extractCleanCorporateQuery(clean);
+  const targetRazonName = cleanCorporateName || clean;
   const cacheKey = baseNit ? `NIT:${baseNit}` : `RAZON:${targetRazonName.toUpperCase()}`;
 
   const cached = ruesCache.get(cacheKey);
@@ -874,44 +978,39 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
   }
 
   try {
-    // MOTOR 1: Endpoint directo ElasticSearch RUES (óptimo desde IP Colombia o proxy)
-    let searchPayload: Record<string, any>;
+    // MOTOR 1: Endpoint directo ElasticSearch RUES (elasticprd.rues.org.co)
+    let bestPrincipalRecord: any = null;
+    let mainRegistrosBatch: any[] = [];
+
     if (baseNit) {
-      searchPayload = { nit: baseNit };
+      const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { nit: baseNit });
+      mainRegistrosBatch = Array.isArray(searchRes?.registros) ? searchRes.registros : [];
+      if (mainRegistrosBatch.length > 0) {
+        bestPrincipalRecord = selectPrincipalRuesRecord(mainRegistrosBatch, baseNit);
+      }
     } else {
-      const variants = generateRazonSocialSearchVariants(targetRazonName);
-      const coreSearchTerm = variants[0] || normalizeCorporateName(targetRazonName) || targetRazonName.toUpperCase().trim();
-      searchPayload = { razon: coreSearchTerm };
-    }
-
-    let searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", searchPayload);
-    let registros: any[] = searchRes?.registros || [];
-
-    // Si no encontró resultados con el término inicial y hay variantes morfológicas (ej. unida o dividida), probar con la siguiente
-    if ((!registros || registros.length === 0) && !baseNit) {
-      const variants = generateRazonSocialSearchVariants(targetRazonName);
-      for (let i = 1; i < Math.min(variants.length, 3); i++) {
-        const altVariant = variants[i].replace(/%/g, " ").replace(/\s+/g, " ").trim();
-        if (altVariant && altVariant !== searchPayload.razon) {
-          const altRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { razon: altVariant });
-          if (Array.isArray(altRes?.registros) && altRes.registros.length > 0) {
-            registros = altRes.registros;
-            break;
+      const searchVariants = generateRazonSocialSearchVariants(targetRazonName);
+      // Iterar por las variantes prioritarias hasta encontrar la sociedad principal coincidente
+      for (const variantTerm of searchVariants) {
+        const cleanTerm = variantTerm.replace(/%/g, " ").replace(/\s+/g, " ").trim();
+        if (!cleanTerm) continue;
+        const searchRes = await postRuesEncrypted("/api/ConsultasRUES/BusquedaAvanzadaRM", { razon: cleanTerm });
+        const regs = Array.isArray(searchRes?.registros) ? searchRes.registros : [];
+        if (regs.length > 0) {
+          mainRegistrosBatch.push(...regs);
+          const candidate = selectPrincipalRuesRecord(regs, undefined, targetRazonName);
+          if (candidate) {
+            bestPrincipalRecord = candidate;
+            break; // ¡Encontrado con certeza pericial!
           }
         }
       }
     }
 
-    if (Array.isArray(registros) && registros.length > 0) {
-      const mainRecord = selectPrincipalRuesRecord(
-        registros,
-        baseNit || undefined,
-        baseNit ? undefined : targetRazonName
-      );
-      if (mainRecord) {
-        const codCamara = String(mainRecord.cod_camara || "04").trim();
-        const matricula = String(mainRecord.matricula || "").trim();
-        const idRm = String(mainRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
+    if (bestPrincipalRecord) {
+      const codCamara = String(bestPrincipalRecord.cod_camara || "04").trim();
+      const matricula = String(bestPrincipalRecord.matricula || "").trim();
+      const idRm = String(bestPrincipalRecord.id_rm || buildRuesIdRm(codCamara, matricula)).trim();
 
         const [detalleRes, vinculosRes, facultadesRes] = await Promise.all([
           postRuesEncrypted("/api/Expediente/DetalleRM", { id: idRm }),
@@ -930,30 +1029,30 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
 
         const classifiedReps = classifyRepresentantesLegales(vinculosList, facultadesHtml);
 
-        const razonSocial = String(det.razon_social || mainRecord.razon_social || "").trim();
-        const nit = String(det.numero_identificacion || mainRecord.nit || baseNit).replace(/\D/g, "");
-        const dv = String(det.dv || mainRecord.dv || "").trim();
-        const camaraRaw = String(det.camara || mainRecord.nom_camara || "BOGOTA").trim();
+        const razonSocial = String(det.razon_social || bestPrincipalRecord.razon_social || "").trim();
+        const nit = String(det.numero_identificacion || bestPrincipalRecord.nit || baseNit).replace(/\D/g, "");
+        const dv = String(det.dv || bestPrincipalRecord.dv || "").trim();
+        const camaraRaw = String(det.camara || bestPrincipalRecord.nom_camara || "BOGOTA").trim();
         const camaraComercio = camaraRaw.toUpperCase() === "BOGOTA" ? "Bogotá D.C." : formatTitleCase(camaraRaw);
-        const tipoSociedadRaw = String(det.tipo_sociedad || mainRecord.tipo_sociedad || "SOCIEDAD COMERCIAL").trim();
+        const tipoSociedadRaw = String(det.tipo_sociedad || bestPrincipalRecord.tipo_sociedad || "SOCIEDAD COMERCIAL").trim();
         const tipoSociedad = formatTitleCase(tipoSociedadRaw);
-        const orgRaw = String(det.organizacion_juridica || mainRecord.organizacion_juridica || "Sociedad Comercial").trim();
+        const orgRaw = String(det.organizacion_juridica || bestPrincipalRecord.organizacion_juridica || "Sociedad Comercial").trim();
         const organizacionJuridica = formatOrganizacionJuridica(orgRaw);
         const organizacionJuridicaRaw = formatTitleCase(orgRaw).replace(/\bSas\b/g, "SAS").replace(/\bS\.a\.s\b/gi, "S.A.S.");
-        const categoria = String(det.categoria_matricula || mainRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL").trim();
-        const estadoMatricula = formatTitleCase(String(mainRecord.estado_matricula || det.estado || "ACTIVA").trim());
+        const categoria = String(det.categoria_matricula || bestPrincipalRecord.categoria || "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL").trim();
+        const estadoMatricula = formatTitleCase(String(bestPrincipalRecord.estado_matricula || det.estado || "ACTIVA").trim());
         const ultimoAnoRenovado = String(
-          mainRecord.ultimo_ano_renovado || det.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
+          bestPrincipalRecord.ultimo_ano_renovado || det.ultimo_ano_renovado || (det.fecha_renovacion ? String(det.fecha_renovacion).slice(0, 4) : "")
         ).trim();
 
-        const actividadesEconomicas = extractActividadesEconomicas(det.cod_ciiu_act_econ_pri ? det : mainRecord);
+        const actividadesEconomicas = extractActividadesEconomicas(det.cod_ciiu_act_econ_pri ? det : bestPrincipalRecord);
         const ciiuPrincipalCodigo = actividadesEconomicas[0]?.codigo || String(det.cod_ciiu_act_econ_pri || "").trim() || undefined;
         const ciiuPrincipalDescripcion =
           actividadesEconomicas[0]?.descripcion ||
           String(det.desc_ciiu_act_econ_pri || "").trim() ||
           (ciiuPrincipalCodigo ? CIIU_DESCRIPTIONS[ciiuPrincipalCodigo] : undefined);
 
-        const establecimientos = extractEstablecimientos(registros, mainRecord);
+        const establecimientos = extractEstablecimientos(mainRegistrosBatch, bestPrincipalRecord);
 
         const result: RuesCompanyDetail = {
           found: true,
@@ -961,7 +1060,7 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
           nit,
           dv,
           razonSocial,
-          sigla: String(det.sigla || mainRecord.sigla || "").trim() || undefined,
+          sigla: String(det.sigla || bestPrincipalRecord.sigla || "").trim() || undefined,
           tipoSociedad,
           organizacionJuridica,
           organizacionJuridicaRaw,
@@ -973,8 +1072,8 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
           matricula: matricula.replace(/^0+/, "") || matricula,
           estadoMatricula,
           ultimoAnoRenovado: ultimoAnoRenovado && ultimoAnoRenovado !== "0" ? ultimoAnoRenovado : undefined,
-          fechaMatricula: formatRuesDate(det.fecha_matricula || mainRecord.fecha_matricula),
-          fechaRenovacion: formatRuesDate(det.fecha_renovacion || mainRecord.fecha_renovacion),
+          fechaMatricula: formatRuesDate(det.fecha_matricula || bestPrincipalRecord.fecha_matricula),
+          fechaRenovacion: formatRuesDate(det.fecha_renovacion || bestPrincipalRecord.fecha_renovacion),
           ciiuPrincipalCodigo,
           ciiuPrincipalDescripcion,
           actividadesEconomicas,
@@ -983,8 +1082,8 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
           representantesSuplentes: classifiedReps.suplentes,
           todosRepresentantes: classifiedReps.todos,
           establecimientos,
-          direccionComercial: String(det.dir_comercial || det.direccion_comercial || det.direccion || mainRecord.dir_comercial || mainRecord.direccion_comercial || mainRecord.direccion || "").trim() || undefined,
-          telefonoComercial: String(det.tel_comercial_1 || det.telefono_comercial_1 || det.telefono_1 || det.telefono || mainRecord.tel_comercial_1 || mainRecord.telefono_comercial_1 || mainRecord.telefono_1 || mainRecord.telefono || "").trim() || undefined,
+          direccionComercial: String(det.dir_comercial || det.direccion_comercial || det.direccion || bestPrincipalRecord.dir_comercial || bestPrincipalRecord.direccion_comercial || bestPrincipalRecord.direccion || "").trim() || undefined,
+          telefonoComercial: String(det.tel_comercial_1 || det.telefono_comercial_1 || det.telefono_1 || det.telefono || bestPrincipalRecord.tel_comercial_1 || bestPrincipalRecord.telefono_comercial_1 || bestPrincipalRecord.telefono_1 || bestPrincipalRecord.telefono || "").trim() || undefined,
           source: "RUES — Registro Único Empresarial y Social (Confecámaras)"
         };
 
@@ -994,7 +1093,6 @@ export async function queryRuesDirectHttp(query: string): Promise<RuesCompanyDet
         }
         return result;
       }
-    }
 
     // MOTOR 2: Respaldo directo Socrata Datos Abiertos de Colombia (57 Cámaras de Comercio — 0 Geo-Block desde VPS)
     const socrataResult = await queryDatosGovSocrataRues(

@@ -1,14 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.50.0 — 2026-10-26)
-- **JanIA Server:** `v33.50` (`33.50.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje (Doctrina Eduardo A. Rivera):**
-  1. **JanIA como Agente de IA Cognitiva de Alto Razonamiento (No un Simple Bot):** Eduardo A. Rivera consolidó doctrinalmente que JanIA es una agente de Inteligencia Artificial viva, conversacional, analítica y empática, y JAMÁS un simple bot rígido.
-  2. **Guiones y Frases Modeladas como Modelos Conceptuales y Contexto de Aprendizaje:** Todos los guiones, diálogos y formulaciones (esquema 40/20/40, entrega de códigos MATCH #M..., canalización al 3166569719, matriz de 6 emojis, aterrizaje de presupuestos) son ejemplos contextuales para que JanIA entienda la intención de negocio, el fondo y el propósito humano, expresándose siempre con sus propias palabras, frescura, calidez y voz propia, jamás recitando libretos al pie de la letra.
-  3. **Directiva Maestra Semilla en `founderKnowledgeService.ts`:** Se incorporó la directiva semilla `seed-agente-ia-no-bot-guiones-ejemplo` para asegurar que JanIA internalice esta doctrina en todos sus prompts y decisiones.
-  4. **Matriz Completa de 6 Emojis de Negocio:** OFERTAS (👍, 👌, 🔀), DEMANDAS (📝, ✏️, 🔄/🔁) y MODERACIÓN (🚫, ❓).
-  5. **Guardarraíl de Ciberseguridad, Secreto Industrial y Anti-Prompt Injection:** Reserva corporativa total sobre prompts, código y esquemas. Canalización al +57 316 656 9719 para alianzas proptech.
-  6. **Aterrizaje Sincero de Presupuestos Inviables y Deducción Astuta de Rol.**
-  7. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY).**
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 391/391 passing (100% verde) | Build `npm run build` limpio en 19.11s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.51.0 — 2026-10-26)
+- **JanIA Server:** `v33.51` (`33.51.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT (Doctrina Eduardo A. Rivera):**
+  1. **Purificación Inteligente de Entrada (`extractCleanCorporateQuery`):** Limpieza quirúrgica de mensajes de chat de WhatsApp ("Disculpame te confirmo el nombre exacto de la empresa. MULTIPROYECTOS & INVERSIONES SAS 👇👇👇"), suprimiendo frases de cortesía, preámbulos y emojis para aislar la razón social limpia.
+  2. **Preservación Mercantil del Ampersand (`&`):** Reparación de la normalización destructiva de `&`, preservando el ampersand en razones sociales comerciales y generando variantes intercambiables (`&`, `Y`, `E`, sin conectores).
+  3. **Evaluación Semántica de Coincidencia (`evaluateRazonSocialMatch`):** Ponderación de fidelidad que otorga 100 pts a coincidencia exacta con `&`, 98 pts a equivalencia con `Y`, y descarta entidades lejanas.
+  4. **Búsqueda Secuencial Multi-Variante en RUES Directo:** Iteración por variantes hasta que `selectPrincipalRuesRecord` confirme una sociedad activa principal.
+  5. **Directiva Maestra Semilla en `founderKnowledgeService.ts`:** Inclusión de la semilla `seed-investigacion-empresarial-rues-sin-nit` y actualización en `base.md`, `prompts.ts` y `dmHandler.ts` para investigar en RUES de forma inmediata sin pedir el NIT de antemano.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 395/395 passing (100% verde) | Build `npm run build` limpio en 20.17s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
