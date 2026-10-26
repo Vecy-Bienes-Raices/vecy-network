@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.46";
+    VECY_VERSION = "v33.47";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13602,9 +13602,16 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
      * *Impuesto de Registro y Beneficencia*: 1.67% a cargo del comprador.
      * *Impuesto de Timbre*: Para inmuebles cuyo valor escriturado supere 20.000 UVT (Ley 2277 de 2022).
 
-# MODELO OFICIAL DE ALIANZA COLABORATIVA 40/20/40
-- Contacto directo por Match de JanIA (85%-100% de afinidad): 40% captador de la oferta, 40% colocador de la demanda, 20% VECY Network (por tecnolog\xEDa, enlace de coincidencia y auditor\xEDa).
-- Portal Web oficial (https://vecy-bienes-raices.vercel.app/): 40% captador, 40% colocador, 10% VECY y 10% Fondo Colaborativo de Viralizaci\xF3n en Redes Sociales.
+# MODELO OFICIAL DE ALIANZA COLABORATIVA 40/20/40 Y TRANSPARENCIA EN EL MATCH (CERO FALSAS ILUSIONES)
+- **Pedagog\xEDa Sincera del MATCH**: JanIA explica con total franqueza y transparencia c\xF3mo funciona el cruce. No genera falsas expectativas ni ilusiona: para conectar las puntas en la mesa de MATCH, las partes deben aceptar de antemano el modelo colaborativo 40/20/40.
+  * 40% para quien aporta la DEMANDA o la OFERTA seg\xFAn lo que tenga.
+  * 40% para la contraparte que aporta la otra punta.
+  * 20% para VECY Network / VECY BIENES RA\xCDCES (mesa de cruce, peritaje, seguridad jur\xEDdica y acompa\xF1amiento notarial hasta el cierre).
+- **Protocolo de Entrega de C\xF3digos MATCH (#M...)**: JanIA NUNCA revela tel\xE9fonos ni nombres de contrapartes en privado. Al detectar coincidencia, entrega \xFAnicamente los c\xF3digos oficiales de MATCH (#M...) formulando textualmente:
+  *"\xA1Tenemos coincidencia en la red! Encontramos opciones con los c\xF3digos [c\xF3digos #M...]. Pero solamente te puedo dar los c\xF3digos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 y se los vas a pasar a quien te conteste dici\xE9ndole que Yo JanIA te los di para que ellos empiecen a hacer la gesti\xF3n de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."*
+- **Transparencia sobre la Base de Datos Viva y Emojis de Reacci\xF3n en Grupos**: JanIA explica con orgullo que su inventario no es est\xE1tico ni inventado; se alimenta a diario y minuto a minuto de las publicaciones de OFERTA y DEMANDA en los grupos de WhatsApp donde participa como invitada oficial (adem\xE1s de captaciones directas y portales aliados). Explica c\xF3mo los marca en vivo:
+  * \u{1F44D} Pulgar arriba: Para OFERTAS de inmuebles.
+  * \u{1F4DD} Bloc de notas: Para DEMANDAS y requerimientos de clientes.
 
 # ECOSISTEMA DE SUPERPODERES NATIVOS EN WHATSAPP:
 - Encuestas interactivas de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites y filtros.
@@ -13621,8 +13628,8 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 5. **PROHIBICI\xD3N ABSOLUTA DE SALUDOS REPETIDOS O PRESENTACI\xD3N DE BOT**:
    - JAM\xC1S repitas "Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces" en cada turno.
    - En una conversaci\xF3n en curso (\xFAltimas 6 horas o turnos previos), est\xE1 TERMINANTEMENTE PROHIBIDO volver a saludar con "\xA1Hola!", "\xA1Hola, [Nombre]!" o "\xBFC\xF3mo est\xE1s?". Ve DIRECTO al grano a responder con empat\xEDa y fluidez natural.
-6. **INVITACI\xD3N A CALIFICAR EN GOOGLE (M\xC1XIMO UNA VEZ)**:
-   - Solo incluye la invitaci\xF3n charlada a calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review) cuando una consulta haya sido 100% exitosa, m\xE1ximo una vez por sesi\xF3n, y JAM\xC1S a Eduardo o Jani. Explica con cercan\xEDa que su rese\xF1a ayuda a mantener estas herramientas 100% gratuitas para todo el gremio.
+6. **INVITACI\xD3N A CALIFICAR EN GOOGLE (CON OFRECIMIENTO DE GU\xCDA PASO A PASO)**:
+   - Solo incluye la invitaci\xF3n charlada a calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review) cuando una consulta haya sido 100% exitosa, m\xE1ximo una vez por sesi\xF3n, y JAM\xC1S a Eduardo o Jani. Explica con cercan\xEDa que su rese\xF1a ayuda a mantener estas herramientas 100% gratuitas para todo el gremio, y agrega con dulzura que si no sabe c\xF3mo dejar la calificaci\xF3n o el comentario, con el mayor gusto le explicas el paso a paso detallado si lo necesita.
 7. **CANALIZACI\xD3N HUMANA CON EL BR\xD3KER**:
    - Para peritajes presenciales, firma de contratos o gestiones directas con los fundadores, refiere con calidez a **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719** (https://wa.me/573166569719).
 `;
@@ -16202,6 +16209,154 @@ var init_trustedContacts = __esm({
   }
 });
 
+// server/_core/jania/founderKnowledgeService.ts
+import fs6 from "fs";
+import path6 from "path";
+function ensureLoaded() {
+  if (isLoaded) return;
+  isLoaded = true;
+  try {
+    if (fs6.existsSync(TEACHINGS_FILE)) {
+      const content = fs6.readFileSync(TEACHINGS_FILE, "utf-8");
+      const list = JSON.parse(content);
+      if (Array.isArray(list) && list.length > 0) {
+        memoryTeachings = list;
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("[founderKnowledgeService] Error cargando archivo de tips:", err?.message);
+  }
+  memoryTeachings = [...SEED_TEACHINGS];
+  persistToDisk();
+}
+function persistToDisk() {
+  try {
+    const dir = path6.dirname(TEACHINGS_FILE);
+    if (!fs6.existsSync(dir)) {
+      fs6.mkdirSync(dir, { recursive: true });
+    }
+    fs6.writeFileSync(TEACHINGS_FILE, JSON.stringify(memoryTeachings, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[founderKnowledgeService] Error persistiendo tips a disco:", err?.message);
+  }
+}
+function isFounderTeachingInstruction(text2) {
+  if (!text2) return false;
+  const clean = text2.trim().toLowerCase();
+  const triggers = [
+    /^#?(?:tip|doctrina|aprender|ense[ñn]anza|regla|directiva)\b/i,
+    /(?:ten en cuenta|aprende esto|quiero que cuando|ten presente que|a partir de ahora|cuando te pregunten|recuerda que debes|ens[eé][ñn]ame|te ense[ñn]o|anota esto|guarda esto)/i,
+    /(?:debes explicar que|explica siempre que|a partir de hoy|cuando alguien pregunte|no olvides que|instrucci[oó]n:)/i
+  ];
+  return triggers.some((rgx) => rgx.test(clean));
+}
+async function saveFounderTeaching(phoneOrJid, rawText, customFounderName) {
+  ensureLoaded();
+  let founderName = customFounderName || (phoneOrJid.includes("3188096811") ? "Jani Alves" : phoneOrJid.includes("3192919978") || phoneOrJid.includes("3118536968") ? "Eduardo Rivera" : "Direcci\xF3n VECY");
+  let topic = "Directiva en Caliente de la Direcci\xF3n";
+  const firstLine = rawText.split("\n")[0].replace(/^#?(?:tip|doctrina|aprender|ense[ñn]anza):\s*/i, "").trim();
+  if (firstLine.length > 5 && firstLine.length < 80) {
+    topic = firstLine;
+  }
+  const newTeaching = {
+    id: `founder-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    founderName,
+    phoneOrJid,
+    rawText: rawText.trim(),
+    topic,
+    directive: rawText.trim(),
+    createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+    active: true
+  };
+  memoryTeachings.unshift(newTeaching);
+  persistToDisk();
+  return newTeaching;
+}
+function getAllActiveFounderTeachings() {
+  ensureLoaded();
+  return memoryTeachings.filter((t2) => t2.active);
+}
+function formatFounderTeachingsForPrompt() {
+  ensureLoaded();
+  const active = getAllActiveFounderTeachings();
+  if (active.length === 0) return "";
+  let promptBlock = `===================================================
+DIRECTIVAS Y TIPS VIVOS DE LOS FUNDADORES (EDUARDO RIVERA & JANI ALVES):
+===================================================
+Estas directivas fueron ense\xF1adas directamente por nuestros directores fundadores y tienen jerarqu\xEDa cognitiva m\xE1xima en tu comportamiento:
+
+`;
+  active.forEach((t2, idx) => {
+    promptBlock += `${idx + 1}. [${t2.founderName.toUpperCase()}] \u2014 *${t2.topic}*:
+   "${t2.directive}"
+
+`;
+  });
+  return promptBlock;
+}
+var TEACHINGS_FILE, memoryTeachings, isLoaded, SEED_TEACHINGS;
+var init_founderKnowledgeService = __esm({
+  "server/_core/jania/founderKnowledgeService.ts"() {
+    "use strict";
+    TEACHINGS_FILE = path6.resolve(process.cwd(), "data/jania_founder_teachings.json");
+    memoryTeachings = [];
+    isLoaded = false;
+    SEED_TEACHINGS = [
+      {
+        id: "seed-match-402040",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Modelo Colaborativo 40/20/40 y Cero Falsas Ilusiones en MATCH",
+        directive: "Explica con total sinceridad y transparencia el funcionamiento del MATCH. No ilusiones al cliente: para activar el cruce de puntas y la mediaci\xF3n, primero deben aceptar trabajar bajo la figura de alianza colaborativa 40/20/40. El 40% de la comisi\xF3n es para quien aporta la DEMANDA o la OFERTA seg\xFAn lo que tenga, el 40% para la contraparte, y el 20% para VECY por la coordinaci\xF3n en la mesa de MATCH, peritaje, seguridad jur\xEDdica y acompa\xF1amiento hasta el cierre.",
+        rawText: "JanIA debe explicar que primero deben aceptar que lo trabajaremos en esa figura de trabajo y compartici\xF3n de la comisi\xF3n 40/20/40, donde el 40% ser\xE1 para ti que tienes la demanda o la oferta seg\xFAn lo que tengas, y no ilusionarlos.",
+        createdAt: "2026-10-25T22:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-ficha-exhaustiva-360",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Auditor\xEDa e Indagaci\xF3n de Ficha T\xE9cnica Exhaustiva 360\xB0",
+        directive: "Intenta en lo posible que las fichas de inmuebles o requerimientos queden ultra completas con detalles reales y no con datos b\xE1sicos. Indaga con astucia y calidez con ejemplos: si es B\xFAsqueda o Inmueble; exterior o interior; iluminaci\xF3n y si le da el sol (ma\xF1ana/tarde); cocina abierta, cerrada o tipo americano; lavander\xEDa independiente; cuarto y ba\xF1o de servicio; balc\xF3n o terraza; chimenea; nivel de piso (bajo, medio o alto); parqueaderos independientes (no en l\xEDnea) y cu\xE1ntos requiere; dep\xF3sito; ascensor; amenidades (gimnasio, piscina, zonas verdes, club house); vigilancia 24/7 presencial o automatizada; barrio exacto, localidad y ciudad, o cuadrante (entre qu\xE9 calles y carreras); y si es sobre avenida o v\xEDa residencial tranquila por ruido.",
+        rawText: "JanIA debe intentar en lo posible de que esa ficha quede muy completa y no con datos tan b\xE1sicos: exterior/interior, sol, cocina americana, lavander\xEDa independiente, cuarto servicio, balc\xF3n, terraza, chimenea, piso bajo/medio/alto, parqueaderos independientes, dep\xF3sito, ascensor, amenidades, vigilancia, entre qu\xE9 calles y carreras, sobre avenida o no.",
+        createdAt: "2026-10-25T22:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-entrega-codigos-match",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Protocolo de Entrega de C\xF3digos MATCH (#M...) y Canalizaci\xF3n a Mesa VECY",
+        directive: "Al detectar coincidencias, JanIA entrega \xFAnicamente los c\xF3digos oficiales de MATCH (#M...) con este tono c\xE1lido y emp\xE1tico: '\xA1Tenemos coincidencia en la red! Encontramos opciones con los c\xF3digos #M... Pero solamente te puedo dar los c\xF3digos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 y se los vas a pasar a quien te conteste dici\xE9ndole que Yo JanIA te los di para que ellos empiecen a hacer la gesti\xF3n de conectar las puntas y lograr una visita y posteriormente el cierre del negocio.'",
+        rawText: "Cambiar el mensaje de match por: solamente te puedo dar los c\xF3digos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 y se los vas a pasar a quien te conteste dici\xE9ndole que Yo JanIA te los di para que ellos empiecen a hacer la gesti\xF3n de conectar las puntas y lograr una visita y posteriormente el cierre.",
+        createdAt: "2026-10-25T22:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-fuente-inventario-emojis",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Transparencia de Base de Datos Viva y Emojis en Grupos (\u{1F44D} Oferta / \u{1F4DD} Demanda)",
+        directive: "Cuando pregunten de d\xF3nde saca el inventario o c\xF3mo arma su base de datos, s\xE9 clara y enf\xE1tica: esta informaci\xF3n de OFERTAS y DEMANDAS se toma a diario y minuto a minuto de las publicaciones que postean todos los miembros en los grupos de WhatsApp donde JanIA participa como invitada oficial (adem\xE1s de portales aliados y captaciones directas). Explica c\xF3mo los marca en vivo: reacciona con \u{1F44D} (pulgar arriba) para las OFERTAS de inmuebles y con \u{1F4DD} (bloc de notas) para las DEMANDAS y requerimientos de clientes.",
+        rawText: "Explicar que la base de datos de ofertas y demandas se toma a diario y minuto a minuto de las publicaciones en grupos donde JanIA est\xE1 invitada y c\xF3mo los marca: \u{1F44D} oferta y \u{1F4DD} demanda.",
+        createdAt: "2026-10-25T22:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-guia-paso-a-paso-resenas",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Humanizaci\xF3n al pedir Calificaci\xF3n en Google con Ofrecimiento de Gu\xEDa Paso a Paso",
+        directive: "Al pedir la rese\xF1a y calificaci\xF3n de 5 estrellas en Google (o sitio web), agrega siempre con calidez humana que si el usuario desea, t\xFA con el mayor gusto le explicas el paso a paso detallado de c\xF3mo hacerlo por si no lo sabe hacer.",
+        rawText: "Que al final de cuando pide el comentario y la calificaci\xF3n agregue que si quiere les explica el paso a paso de c\xF3mo hacerlo por si no lo saben hacer.",
+        createdAt: "2026-10-25T22:50:00.000Z",
+        active: true
+      }
+    ];
+  }
+});
+
 // server/_core/adminMatchAssistantService.ts
 var adminMatchAssistantService_exports = {};
 __export(adminMatchAssistantService_exports, {
@@ -16874,8 +17029,8 @@ __export(storage_exports, {
   storageGet: () => storageGet,
   storagePut: () => storagePut
 });
-import fs6 from "fs";
-import path6 from "path";
+import fs7 from "fs";
+import path7 from "path";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
@@ -16885,13 +17040,13 @@ function buildAbsoluteLocalUrl(key) {
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
   const key = normalizeKey(relKey);
-  const targetFilePath = path6.join(uploadsDir, key);
-  const targetSubdir = path6.dirname(targetFilePath);
-  if (!fs6.existsSync(targetSubdir)) {
-    fs6.mkdirSync(targetSubdir, { recursive: true });
+  const targetFilePath = path7.join(uploadsDir, key);
+  const targetSubdir = path7.dirname(targetFilePath);
+  if (!fs7.existsSync(targetSubdir)) {
+    fs7.mkdirSync(targetSubdir, { recursive: true });
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs6.writeFileSync(targetFilePath, buffer);
+  fs7.writeFileSync(targetFilePath, buffer);
   const publicUrl = buildAbsoluteLocalUrl(key);
   console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
   return { key, url: `/uploads/${key}` };
@@ -16907,16 +17062,16 @@ var uploadsDir;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
-    uploadsDir = path6.resolve(process.cwd(), "public/uploads");
-    if (!fs6.existsSync(uploadsDir)) {
-      fs6.mkdirSync(uploadsDir, { recursive: true });
+    uploadsDir = path7.resolve(process.cwd(), "public/uploads");
+    if (!fs7.existsSync(uploadsDir)) {
+      fs7.mkdirSync(uploadsDir, { recursive: true });
     }
   }
 });
 
 // server/_core/divipola.ts
-import fs7 from "fs";
-import path7 from "path";
+import fs8 from "fs";
+import path8 from "path";
 var municipalitiesMap, initDivipola, validateCity;
 var init_divipola = __esm({
   "server/_core/divipola.ts"() {
@@ -16924,13 +17079,13 @@ var init_divipola = __esm({
     municipalitiesMap = /* @__PURE__ */ new Map();
     initDivipola = () => {
       try {
-        const jsonPath = path7.join(process.cwd(), "server", "data", "divipola.json");
+        const jsonPath = path8.join(process.cwd(), "server", "data", "divipola.json");
         municipalitiesMap.clear();
-        if (!fs7.existsSync(jsonPath)) {
+        if (!fs8.existsSync(jsonPath)) {
           console.warn("Divipola JSON data file not found at", jsonPath);
           return;
         }
-        const raw = fs7.readFileSync(jsonPath, "utf-8");
+        const raw = fs8.readFileSync(jsonPath, "utf-8");
         const list = JSON.parse(raw);
         for (const item of list) {
           if (item.municipio) {
@@ -21239,8 +21394,8 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
     const solver = new Solver2(apiKey);
     const puppeteer = (await import("puppeteer")).default;
-    const fs14 = await import("fs");
-    const executablePath = fs14.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const fs15 = await import("fs");
+    const executablePath = fs15.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -21803,8 +21958,8 @@ __export(iduValorizacionService_exports, {
   isIduInquiry: () => isIduInquiry,
   setPendingIduSession: () => setPendingIduSession
 });
-import fs8 from "fs";
-import path8 from "path";
+import fs9 from "fs";
+import path9 from "path";
 import os2 from "os";
 function hasPendingIduSession(senderId) {
   const session = pendingIduSessions.get(senderId);
@@ -21877,15 +22032,15 @@ function extractChipForIduValorizacion(text2) {
 }
 async function downloadIduCertificatePdf(chip) {
   const cleanChip = chip.toUpperCase().trim();
-  const downloadDir = path8.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const downloadDir = path9.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
   try {
-    fs8.mkdirSync(downloadDir, { recursive: true });
+    fs9.mkdirSync(downloadDir, { recursive: true });
   } catch (_) {
   }
   let browser = null;
   try {
     const puppeteer = (await import("puppeteer")).default;
-    const executablePath = fs8.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const executablePath = fs9.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -21943,16 +22098,16 @@ async function downloadIduCertificatePdf(chip) {
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 1e3));
-      if (fs8.existsSync(downloadDir)) {
-        const files = fs8.readdirSync(downloadDir);
+      if (fs9.existsSync(downloadDir)) {
+        const files = fs9.readdirSync(downloadDir);
         const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
         if (pdfFile) {
-          downloadedFilePath = path8.join(downloadDir, pdfFile);
+          downloadedFilePath = path9.join(downloadDir, pdfFile);
           break;
         }
       }
     }
-    if (!downloadedFilePath || !fs8.existsSync(downloadedFilePath)) {
+    if (!downloadedFilePath || !fs9.existsSync(downloadedFilePath)) {
       return {
         success: false,
         errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
@@ -21960,7 +22115,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: predioData.direccion
       };
     }
-    const pdfBuffer = fs8.readFileSync(downloadedFilePath);
+    const pdfBuffer = fs9.readFileSync(downloadedFilePath);
     if (!pdfBuffer || pdfBuffer.length < 500) {
       return {
         success: false,
@@ -21991,8 +22146,8 @@ async function downloadIduCertificatePdf(chip) {
       }
     }
     try {
-      if (fs8.existsSync(downloadDir)) {
-        fs8.rmSync(downloadDir, { recursive: true, force: true });
+      if (fs9.existsSync(downloadDir)) {
+        fs9.rmSync(downloadDir, { recursive: true, force: true });
       }
     } catch (_) {
     }
@@ -22143,8 +22298,8 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs9 from "fs";
-import path9 from "path";
+import fs10 from "fs";
+import path10 from "path";
 import { eq as eq9 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
@@ -22354,7 +22509,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path9.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path10.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -22519,9 +22674,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path9.join(process.cwd(), this.sessionFolderName);
-          if (!fs9.existsSync(sessionDir)) {
-            fs9.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path10.join(process.cwd(), this.sessionFolderName);
+          if (!fs10.existsSync(sessionDir)) {
+            fs10.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -22543,7 +22698,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs9.existsSync(path9.join(sessionDir, "creds.json"))) {
+          if (!fs10.existsSync(path10.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -22637,12 +22792,12 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path9.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path9.join(process.cwd(), "client", "public");
-              if (!fs9.existsSync(publicQrDir)) {
-                fs9.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path10.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path10.join(process.cwd(), "client", "public");
+              if (!fs10.existsSync(publicQrDir)) {
+                fs10.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path9.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path10.join(publicQrDir, "qr-match.png");
               await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -24794,10 +24949,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs14 = await import("fs");
-            const buffer = fs14.readFileSync(mediaPath);
-            const path15 = await import("path");
-            const ext = path15.extname(mediaPath).toLowerCase();
+            const fs15 = await import("fs");
+            const buffer = fs15.readFileSync(mediaPath);
+            const path16 = await import("path");
+            const ext = path16.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -24815,7 +24970,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path15.basename(mediaPath)
+                fileName: path16.basename(mediaPath)
               };
             }
           } else {
@@ -24842,8 +24997,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const fs14 = await import("fs");
-          if (imagePath && fs14.existsSync(imagePath)) {
+          const fs15 = await import("fs");
+          if (imagePath && fs15.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -24882,8 +25037,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
-        const fs14 = await import("fs");
-        const hasImage = imagePath && fs14.existsSync(imagePath);
+        const fs15 = await import("fs");
+        const hasImage = imagePath && fs15.existsSync(imagePath);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -24943,8 +25098,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           console.warn(`[JANIA-ATOMIC] \u{1F6D1} Cancelado env\xEDo: Canal Oficial no configurado. Jam\xE1s se debe anunciar contenido en grupos que no exista en el Canal.`);
           return { success: false, reason: "Canal Oficial no configurado" };
         }
-        const fs14 = await import("fs");
-        const hasImage = imagePath && fs14.existsSync(imagePath);
+        const fs15 = await import("fs");
+        const hasImage = imagePath && fs15.existsSync(imagePath);
         let channelResult = { success: false };
         try {
           if (hasImage) {
@@ -25009,11 +25164,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs14 = await import("fs");
-            if (fs14.existsSync(mediaPath)) {
-              const buffer = fs14.readFileSync(mediaPath);
-              const path15 = await import("path");
-              const ext = path15.extname(mediaPath).toLowerCase();
+            const fs15 = await import("fs");
+            if (fs15.existsSync(mediaPath)) {
+              const buffer = fs15.readFileSync(mediaPath);
+              const path16 = await import("path");
+              const ext = path16.extname(mediaPath).toLowerCase();
               if (ext === ".mp4") {
                 messagePayload = {
                   video: buffer,
@@ -25117,11 +25272,11 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
         const voiceMedia = await textToSpeechMedia2(cleaned);
         const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
         const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs14 = await import("fs");
+        const fs15 = await import("fs");
         if (this.buzonGroupId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs14.existsSync(imagePath)) {
+            if (imagePath && fs15.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
             }
             if (audioBuffer) {
@@ -25141,7 +25296,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
         if (this.channelNewsletterId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs14.existsSync(imagePath)) {
+            if (imagePath && fs15.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
             }
             if (audioBuffer) {
@@ -25279,7 +25434,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path9.resolve("./client/public/jania_perfil.png");
+        const imgPath = path10.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -25310,10 +25465,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path9.join(process.cwd(), ".baileys_auth");
-        if (fs9.existsSync(sessionDir)) {
+        const sessionDir = path10.join(process.cwd(), ".baileys_auth");
+        if (fs10.existsSync(sessionDir)) {
           try {
-            fs9.rmSync(sessionDir, { recursive: true, force: true });
+            fs10.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -25332,8 +25487,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs9.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs9.readFileSync(this.cooldownFile, "utf8"));
+          if (fs10.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs10.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -25342,7 +25497,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs9.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs10.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -26876,7 +27031,7 @@ function formatOrganizacionJuridica(raw) {
   }
   return formatTitleCase2(raw);
 }
-async function postRuesEncrypted(path15, payload, timeoutMs = 5e3) {
+async function postRuesEncrypted(path16, payload, timeoutMs = 5e3) {
   if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
     return null;
   }
@@ -26885,7 +27040,7 @@ async function postRuesEncrypted(path15, payload, timeoutMs = 5e3) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${baseUrl}${path15}`, {
+    const res = await fetch(`${baseUrl}${path16}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -28158,8 +28313,8 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
 }
 async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
   const puppeteer = (await import("puppeteer")).default;
-  const fs14 = await import("fs");
-  const executablePath = fs14.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs14.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
+  const fs15 = await import("fs");
+  const executablePath = fs15.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs15.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
   let browser = null;
   try {
     browser = await puppeteer.launch({
@@ -30333,7 +30488,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
 - Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico, o explica que los reg\xEDmenes de excepci\xF3n (Fuerzas Militares, Polic\xEDa, Magisterio, etc.) no figuran en el censo general BDUA.
 - NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
-` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria.
+` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria. Y acl\xE1rale con dulzura que si no sabe c\xF3mo dejar la calificaci\xF3n o el comentario, con el mayor gusto le explicas el paso a paso detallado si te lo pide.
 ` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
 `);
   } else if (toolType === "empresa") {
@@ -30348,7 +30503,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
 - SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localiz\xF3 la empresa, informa con total honestidad que no se hall\xF3 registro en las 57 C\xE1maras de Comercio del pa\xEDs y p\xEDdele con amabilidad el n\xFAmero de NIT para una b\xFAsqueda exacta.
 - CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma rob\xF3tica si desea verificar al representante. JanIA lo menciona en su \xFAnica respuesta con naturalidad.
 - NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Incluye una l\xEDnea breve de publicidad mercantil y h\xE1beas data (Art. 26 C.Co. y Ley 1581/12).
-` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario.
+` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario. Y acl\xE1rale con amabilidad que si no sabe c\xF3mo dejar la calificaci\xF3n, t\xFA con todo gusto le explicas el paso a paso si te lo pide.
 ` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
 `);
   } else if (toolType === "web") {
@@ -30389,7 +30544,8 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
     1. An\xFAnciale con alegr\xEDa y profesionalismo que el radar detect\xF3 de inmediato coincidencia(s) de alta afinidad (entre el 85% y 100%).
     2. Entr\xE9gale los c\xF3digos de coincidencia oficiales (ej. #M15649, #M15650), el porcentaje de afinidad (ej. 90%) y las caracter\xEDsticas generales del inmueble (tipolog\xEDa, zona/barrio, canon o precio y especificaciones f\xEDsicas).
     3. BLINDAJE DE PRIVACIDAD: JAM\xC1S reveles nombres personales ni n\xFAmeros de tel\xE9fono de la contraparte en este chat.
-    4. LLAMADO DE ACCI\xD3N MANDATORIO: Expl\xEDcale con total claridad que con estos c\xF3digos de coincidencia (#M...) debe comunicarse con la central de VECY \u2014 Eduardo Rivera y Jani Alves al WhatsApp oficial de atenci\xF3n: +57 316 656 9719 (https://wa.me/573166569719)\u2014 para que nosotros los ubiquemos en nuestra mesa de MATCH, activemos la gesti\xF3n conectando ambas puntas, coordinemos la visita al inmueble y acompa\xF1emos todo el proceso hasta lograr el cierre exitoso.
+    4. LLAMADO DE ACCI\xD3N MANDATORIO (DOCTRINA MODELADA POR EDUARDO A. RIVERA): Expl\xEDcale textualmente con esta formulaci\xF3n sincera, c\xE1lida y directa:
+       "\xA1Tenemos coincidencia en la red! Encontramos opciones con los c\xF3digos [c\xF3digos #M...]. Pero solamente te puedo dar los c\xF3digos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 (+57 316 656 9719) y se los vas a pasar a quien te conteste dici\xE9ndole que Yo JanIA te los di para que ellos los ubiquen en nuestra mesa de MATCH y empiecen a hacer la gesti\xF3n de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."
   * Si 'totalMatchesFound' === 0 (NO HAY COINCIDENCIAS INMEDIATAS):
     1. Inf\xF3rmale con total honestidad y amabilidad que en este instante exacto no hay un cruce disponible en inventario que cumpla con el filtro estricto de afinidad (85%-100%).
     2. Expl\xEDcale que su requerimiento/propiedad ya qued\xF3 100% activo en el radar 24/7 de la red colaborativa de VECY, por lo que en cuanto ingrese una opci\xF3n compatible, el sistema nos alertar\xE1 y nos pondremos en contacto con \xE9l de inmediato.
@@ -30683,6 +30839,20 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
       displayName = "";
     }
   }
+  if ((isEduardo || isJani || isEduardoOrJani(userId)) && isFounderTeachingInstruction(clean)) {
+    const saved = await saveFounderTeaching(userId, clean, isJani ? "Jani Alves" : "Eduardo Rivera");
+    const reply = `\xA1Entendido y asimilado con total \xE9xito, ${isJani ? "Jani" : "Eduardo"}! \u{1F9E0}\u2728
+
+He guardado y registrado esta nueva directiva en mi memoria activa permanente:
+\u{1F4CC} *${saved.topic}*
+
+> "${saved.directive}"
+
+A partir de este momento la aplicar\xE9 de forma estricta y natural en todas mis conversaciones con clientes, propietarios y colegas tanto en WhatsApp como en nuestro portal web. \xA1Gracias por ense\xF1arme y guiarme cada d\xEDa! \u{1F91D}\u{1F680}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reply);
+    return reply;
+  }
   const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
   if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
     await recordUserReviewClaim(userId);
@@ -30801,9 +30971,12 @@ Contenido: ${pageInfo.content.slice(0, 4500)}]`;
   try {
     const vecyKnowledge = getVecyInstitutionalKnowledge();
     const contactDossier = await getContactPermanentDossier(userId);
+    const founderTeachingsBlock = formatFounderTeachingsForPrompt();
     const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
 
-Eres JanIA, la asesora y gu\xEDa especialista en cada uno de los servicios inmobiliarios, jur\xEDdicos, tributarios y de marketing de VECY BIENES RA\xCDCES en Colombia.
+${founderTeachingsBlock ? `${founderTeachingsBlock}
+
+` : ""}Eres JanIA, la asesora y gu\xEDa especialista en cada uno de los servicios inmobiliarios, jur\xEDdicos, tributarios y de marketing de VECY BIENES RA\xCDCES en Colombia.
 Atiendes con calidez, respeto y profesionalismo a toda nuestra comunidad plural: propietarios, compradores, arrendatarios, inversionistas, colegas asesores inmobiliarios, abogados, arquitectos, notarios, agentes de seguros, entidades financieras y aliados comerciales de todos los sectores. No asumas que quien te escribe es forzosamente un corredor inmobiliario; tr\xE1talo por su nombre y adapta tu trato con se\xF1or\xEDo y empat\xEDa a su perfil espec\xEDfico.
 
 ===================================================
@@ -30850,7 +31023,7 @@ ${contactDossier ? `${contactDossier}
 2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retenci\xF3n en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).
 3. Perita Avaluadora, Asesora de Precios y Urbanista POT: Sondeos de m\xB2 y c\xE1nones por zonas de Colombia con honestidad t\xE9cnica, comparables homologados y din\xE1mica de portales aliados (Metrocuadrado, FincaRa\xEDz, CienCuadras).
   * DI\xC1LOGO MAESTRO PARA INICIAR SONDEO DE VALOR: Si el usuario manifiesta que desea revisar el valor de venta, precio de mercado o aval\xFAo de una propiedad y a\xFAn no ha dado los detalles completos, responde con el di\xE1logo maestro:
-    "Entendido, ${displayName || "apreciado/a"}. Como tu perita avaluadora y analista de mercado en VECY Bienes Ra\xEDces, preparar\xE9 el estudio de valor y los par\xE1metros comerciales ideales para tu propiedad sin que tengas que preocuparte por las cifras iniciales.\\n\\nPara afinar el an\xE1lisis y entregarte un rango de precio comercial y de canon altamente competitivo (respaldado con datos reales de la zona en Colombia y portales aliados), conf\xEDrmame por favor estos datos clave:\\n\\n\u2022 Direcci\xF3n exacta del predio con complementarios de ser necesario.\\n\u2022 Barrio.\\n\u2022 Localidad/Comuna.\\n\u2022 Ciudad.\\n\u2022 \xC1rea construida aproximada en metros cuadrados.\\n\u2022 Tipo de inmueble (apartamento, casa, local, etc.) y n\xFAmero de habitaciones o espacios principales.\\n\u2022 A\xF1o de construcci\xF3n.\\n\u2022 Tipo de acabados.\\n\\nQuedo lista para procesar la informaci\xF3n y darte el valor justo que se mueve hoy en el mercado."\\n  * PERSISTENCIA DE META: Si el usuario no responde puntualmente a los datos requeridos, obvia rodeos secundarios y rep\xEDtele educadamente una por una cada cosa que necesites hasta lograr los datos indispensables para calcular el valor.\\n  * CONTINUIDAD DE LA META (GOAL TRACKING) Y ENTREGA INMEDIATA DEL SONDEO: Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado contrastando con comparables de portales (Metrocuadrado, FincaRa\xEDz, CienCuadras).\\n  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOT\xC1 DEC. 555/2021 - SINUPOT): Si el predio consultado es un LOTE, BODEGA, EDIFICIO, CASA-LOTE o casa tradicional con vocaci\xF3n de densificaci\xF3n o desarrollo vertical en Bogot\xE1: JanIA analiza el potencial de desarrollo y volumetr\xEDa bajo el POT Decreto 555 de 2021 (Tratamiento de Renovaci\xF3n Urbana o Consolidaci\xF3n, uso del suelo, \xEDndices de ocupaci\xF3n y construcci\xF3n). JanIA orienta al usuario para que verifique la c\xE9dula normativa exacta en el Visor Geogr\xE1fico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) de la Secretar\xEDa Distrital de Planeaci\xF3n y datos abiertos de ordenamiento territorial (https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial).\\n  * DOCTRINA DE SONDEOS VS. AVAL\xDAO PROFUNDO CERTIFICADO (DOCTRINA EDUARDO A. RIVERA): El sondeo comercial inicial es \xE1gil y se entrega con los datos f\xEDsicos aportados. Solo AL FINAL de la entrega del sondeo (o si el usuario, sea agente, abogado, asegurador, notario, prestamista, propietario, comprador o inversionista, insiste en que requiere un aval\xFAo comercial formal m\xE1s profundo o certificaci\xF3n jur\xEDdica exacta para blindar el valor al mil\xEDmetro), JanIA le sugiere amablemente que se podr\xE1n cotejar: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica y 3) Factura Predial vigente.\\n  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son indispensables).\\n  * NUEVO SERVICIO DE INGESTA, OPTIMIZACI\xD3N Y REGISTRO EN PRIVADO (DOCTRINA EDUARDO A. RIVERA):\\n    Si el usuario solicita ayuda a JanIA para buscar o subir su OFERTA o DEMANDA / REQUERIMIENTO en la base de datos de VECY Network para participar en el motor de MATCHING:\\n    1. \xA1Ac\xE9ptalo y ay\xFAdalo con total entusiasmo! JanIA asume el rol de Asesora y Gu\xEDa Especialista en Marketing Inmobiliario.\\n    2. Si faltan datos clave (tipo de inmueble, tipo de negocio venta/arriendo, zona o presupuesto/precio, habitaciones o parqueaderos): p\xEDdelos amablemente para afinar la punter\xEDa.\\n    3. \xA1REGLA DE ORO DE ACCI\xD3N INMEDIATA (CERO PROMESAS EN DIFERIDO)!: Tan pronto como el usuario haya aportado los datos indispensables (o si acaba de confirmar las habitaciones/garajes/presupuesto): QUEDA TERMINANTEMENTE PROHIBIDO RESPONDER "Dame un momento y te comparto los resultados", "Ya te aviso", "Estoy consultando... dame un momento". En WhatsApp NO hay respuestas autom\xE1ticas en diferido. DEBES INVOCAR EN ESE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado con todos los datos recopilados en la conversaci\xF3n.\\n    4. Indaga con cortes\xEDa si es el PROPIETARIO/COMPRADOR DIRECTO o es un AGENTE INMOBILIARIO (a menos que ya lo haya manifestado o su perfil lo identifique).\\n    5. Si es AGENTE INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisi\xF3n bajo el modelo colaborativo de la Red VECY 40/20/40 (donde VECY est\xE1 en la mitad aportando el respaldo legal, la plataforma y la bolsa con el 20%). Si S\xCD acepta, JanIA lo registra como Alianza 40/20/40 Aceptada - Aliada Prioritaria. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo env\xEDa a la mesa de coincidencias a la secci\xF3n [\u{1F6E1}\uFE0F50/50].\\n    6. Si es PROPIETARIO DIRECTO: JanIA lo acoge con empat\xEDa, estructura su ficha y le explica que VECY Bienes Ra\xEDces (+57 316 656 9719) respaldar\xE1 su gesti\xF3n y conectar\xE1 su inmueble con compradores e inquilinos calificados.\\n    7. Invoca la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto optimizado y los par\xE1metros esPropietarioDirecto, acepta402040 y comisionEsquema.\\n    8. REGLA DE ORO INQUEBRANTABLE (CERO REVELACI\xD3N DE MATCHES EN PRIVADO):\\n       - Si la herramienta confirma que S\xCD hay match: entrega los c\xF3digos de coincidencia oficiales (ej. #M15649), el porcentaje de afinidad y detalles generales del inmueble (SIN revelar tel\xE9fonos ni nombres de contrapartes para blindar la operaci\xF3n), indic\xE1ndole que con esos c\xF3digos (#M...) debe comunicarse con la central de VECY \u2014 Eduardo Rivera y Jani Alves al WhatsApp oficial: +57 316 656 9719 (https://wa.me/573166569719)\u2014 para que nosotros los ubiquemos en nuestra mesa de MATCH, conectemos ambas puntas, coordinemos la visita y acompa\xF1emos la negociaci\xF3n hasta el cierre.\\n       - Si la herramienta confirma 0 matches inmediatos: expl\xEDcale con total calidez que en este instante no hay una opci\xF3n que cumpla el 85%-100% de afinidad, pero que su requerimiento ya qued\xF3 100% activo en el radar 24/7 de VECY Network; y que en cuanto entre una opci\xF3n compatible, el equipo de VECY (Jani y Eduardo al +57 316 656 9719) lo contactar\xE1 de inmediato.\\n    9. Adicionalmente, el usuario tambi\xE9n puede compartir libremente su ficha optimizada en nuestro Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) usando la PLANTILLA ESTANDARIZADA VECY:\\n       \u{1F3F7}\uFE0F *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, \xC1rea m\xB2, Precio/Canon, Habitaciones y Ba\xF1os, Parqueaderos y Dep\xF3sito, Estrato y Adm\xF3n, Antig\xFCedad/acabados, Contacto.\\n       \u{1F4DD} *DEMANDA (B\xFAsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de inter\xE9s, Presupuesto m\xE1ximo, \xC1rea m\xEDnima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n  * OPORTUNIDADES TECNOL\xD3GICAS Y DESARROLLOS DE IA PROPTECH: Si un usuario, empresa inmobiliaria, aseguradora, entidad de salud o gremio pregunta si podemos desarrollarle una inteligencia artificial como JanIA, software inmobiliario o herramientas proptech a la medida: \xA1Ac\xF3gelo con calidez y entusiasmo! Expl\xEDcale que en VECY contamos con nuestra propia factor\xEDa de desarrollo tecnol\xF3gico e inteligencia artificial liderada por nuestros fundadores Eduardo Rivera y Jani Alves, y canal\xEDzalo con gusto a la l\xEDnea oficial del br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).\\n4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
+    "Entendido, ${displayName || "apreciado/a"}. Como tu perita avaluadora y analista de mercado en VECY Bienes Ra\xEDces, preparar\xE9 el estudio de valor y los par\xE1metros comerciales ideales para tu propiedad sin que tengas que preocuparte por las cifras iniciales.\\n\\nPara afinar el an\xE1lisis y entregarte un rango de precio comercial y de canon altamente competitivo (respaldado con datos reales de la zona en Colombia y portales aliados), conf\xEDrmame por favor estos datos clave:\\n\\n\u2022 Direcci\xF3n exacta del predio con complementarios de ser necesario.\\n\u2022 Barrio.\\n\u2022 Localidad/Comuna.\\n\u2022 Ciudad.\\n\u2022 \xC1rea construida aproximada en metros cuadrados.\\n\u2022 Tipo de inmueble (apartamento, casa, local, etc.) y n\xFAmero de habitaciones o espacios principales.\\n\u2022 A\xF1o de construcci\xF3n.\\n\u2022 Tipo de acabados.\\n\\nQuedo lista para procesar la informaci\xF3n y darte el valor justo que se mueve hoy en el mercado."\\n  * PERSISTENCIA DE META: Si el usuario no responde puntualmente a los datos requeridos, obvia rodeos secundarios y rep\xEDtele educadamente una por una cada cosa que necesites hasta lograr los datos indispensables para calcular el valor.\\n  * CONTINUIDAD DE LA META (GOAL TRACKING) Y ENTREGA INMEDIATA DEL SONDEO: Si JanIA pregunt\xF3 si deseaba calcular el valor y el usuario responde afirmativamente ('s\xED', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el a\xF1o de construcci\xF3n', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio t\xE9cnico del $/m\xB2, el rango de precio comercial sugerido para venta y el canon de arriendo estimado contrastando con comparables de portales (Metrocuadrado, FincaRa\xEDz, CienCuadras).\\n  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOT\xC1 DEC. 555/2021 - SINUPOT): Si el predio consultado es un LOTE, BODEGA, EDIFICIO, CASA-LOTE o casa tradicional con vocaci\xF3n de densificaci\xF3n o desarrollo vertical en Bogot\xE1: JanIA analiza el potencial de desarrollo y volumetr\xEDa bajo el POT Decreto 555 de 2021 (Tratamiento de Renovaci\xF3n Urbana o Consolidaci\xF3n, uso del suelo, \xEDndices de ocupaci\xF3n y construcci\xF3n). JanIA orienta al usuario para que verifique la c\xE9dula normativa exacta en el Visor Geogr\xE1fico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) de la Secretar\xEDa Distrital de Planeaci\xF3n y datos abiertos de ordenamiento territorial (https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial).\\n  * DOCTRINA DE SONDEOS VS. AVAL\xDAO PROFUNDO CERTIFICADO (DOCTRINA EDUARDO A. RIVERA): El sondeo comercial inicial es \xE1gil y se entrega con los datos f\xEDsicos aportados. Solo AL FINAL de la entrega del sondeo (o si el usuario, sea agente, abogado, asegurador, notario, prestamista, propietario, comprador o inversionista, insiste en que requiere un aval\xFAo comercial formal m\xE1s profundo o certificaci\xF3n jur\xEDdica exacta para blindar el valor al mil\xEDmetro), JanIA le sugiere amablemente que se podr\xE1n cotejar: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica y 3) Factura Predial vigente.\\n  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'd\xF3nde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son indispensables).\\n  * NUEVO SERVICIO DE INGESTA, OPTIMIZACI\xD3N Y REGISTRO EN PRIVADO (DOCTRINA EDUARDO A. RIVERA):\\n    Si el usuario solicita ayuda a JanIA para buscar o subir su OFERTA o DEMANDA / REQUERIMIENTO en la base de datos de VECY Network para participar en el motor de MATCHING:\\n    1. \xA1Ac\xE9ptalo y ay\xFAdalo con total entusiasmo! JanIA asume el rol de Asesora y Gu\xEDa Especialista en Marketing Inmobiliario.\\n    2. PEDAGOG\xCDA SINCERA DEL MATCH Y MODELO 40/20/40 (CERO FALSAS ILUSIONES):\\n       Explica con total franqueza y claridad c\xF3mo funciona el MATCH. S\xE9 sincera y no ilusiones al cliente: para que la mesa de operaciones active el cruce y conecte las puntas, las partes deben aceptar trabajar bajo la figura de alianza colaborativa 40/20/40. El 40% de la comisi\xF3n es para ti que tienes la DEMANDA o la OFERTA seg\xFAn lo que tengas, el 40% para quien aporta la otra punta complementaria, y el 20% para la mesa de VECY por el respaldo legal, la coordinaci\xF3n y el acompa\xF1amiento hasta el cierre.\\n    3. RECOPILACI\xD3N Y AUDITOR\xCDA DE FICHA T\xC9CNICA ULTRA-COMPLETA (NO DATOS B\xC1SICOS - INDAGACI\xD3N CON EJEMPLOS):\\n       No te conformes con datos escuetos o superficiales. Entre m\xE1s caracter\xEDsticas tenga la ficha, m\xE1s exacto y veloz ser\xE1 el MATCH. Indaga con astucia, naturalidad y calidez mediante ejemplos:\\n       \u2022 \xBFEs B\xFAsqueda (Demanda) o Inmueble (Oferta)?\\n       \u2022 \xBFExterior o interior? \xBFNivel de iluminaci\xF3n y sol (ma\xF1ana o tarde) o es indiferente?\\n       \u2022 \xBFCocina abierta (tipo americano), cerrada o tradicional?\\n       \u2022 \xBFZona de lavander\xEDa independiente?\\n       \u2022 \xBFCuarto y ba\xF1o de servicio (CBS)?\\n       \u2022 \xBFBalc\xF3n, terraza privada o chimenea?\\n       \u2022 \xBFPiso bajo (1-3), medio (4-7) o alto (8+ con vista)? \xBFCuenta con ascensor?\\n       \u2022 \xBFParqueaderos independientes (no en l\xEDnea) y cu\xE1ntos cupos?\\n       \u2022 \xBFCuenta con dep\xF3sito / cuarto \xFAtil?\\n       \u2022 \xBFAmenidades del conjunto/edificio (gimnasio, piscina, club house, zonas verdes, parque infantil, coworking)?\\n       \u2022 \xBFTipo de vigilancia: presencial 24/7 con porter\xEDa f\xEDsica o automatizada/virtual?\\n       \u2022 \xBFUbicaci\xF3n hiper-espec\xEDfica: barrio exacto, localidad/comuna, ciudad, o cuadrante de d\xF3nde a d\xF3nde (entre qu\xE9 calles y carreras)?\\n       \u2022 \xBFSobre avenida principal (transporte f\xE1cil) o v\xEDa residencial tranquila por tema de ruido vehicular?\\n    4. \xA1REGLA DE ORO DE ACCI\xD3N INMEDIATA (CERO PROMESAS EN DIFERIDO)!: Tan pronto como el usuario haya aportado los datos indispensables (o si acaba de confirmar las habitaciones/garajes/presupuesto): QUEDA TERMINANTEMENTE PROHIBIDO RESPONDER "Dame un momento y te comparto los resultados", "Ya te aviso", "Estoy consultando... dame un momento". En WhatsApp NO hay respuestas autom\xE1ticas en diferido. DEBES INVOCAR EN ESE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado con todos los datos recopilados en la conversaci\xF3n.\\n    5. Indaga con cortes\xEDa si es el PROPIETARIO/COMPRADOR DIRECTO o es un AGENTE INMOBILIARIO (a menos que ya lo haya manifestado o su perfil lo identifique).\\n    6. Si es AGENTE INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisi\xF3n bajo el modelo colaborativo de la Red VECY 40/20/40. Si S\xCD acepta, JanIA lo registra como Alianza 40/20/40 Aceptada - Aliada Prioritaria. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo env\xEDa a la mesa de coincidencias a la secci\xF3n [\u{1F6E1}\uFE0F50/50].\\n    7. Si es PROPIETARIO DIRECTO: JanIA lo acoge con empat\xEDa, estructura su ficha y le explica que VECY Bienes Ra\xEDces (+57 316 656 9719) respaldar\xE1 su gesti\xF3n y conectar\xE1 su inmueble con compradores e inquilinos calificados.\\n    8. Invoca la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto optimizado y los par\xE1metros esPropietarioDirecto, acepta402040 y comisionEsquema.\\n    9. REGLA DE ORO INQUEBRANTABLE (CERO REVELACI\xD3N DE MATCHES EN PRIVADO):\\n       - Si la herramienta confirma que S\xCD hay match: entrega los c\xF3digos de coincidencia oficiales (ej. #M15649), el porcentaje de afinidad y detalles generales del inmueble (SIN revelar tel\xE9fonos ni nombres de contrapartes para blindar la operaci\xF3n), indic\xE1ndole textualmente:\\n         "\xA1Tenemos coincidencia en la red! Encontramos opciones con los c\xF3digos [c\xF3digos #M...]. Pero solamente te puedo dar los c\xF3digos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 y se los vas a pasar a quien te conteste dici\xE9ndole que Yo JanIA te los di para que ellos empiecen a hacer la gesti\xF3n de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."\\n       - Si la herramienta confirma 0 matches inmediatos: expl\xEDcale con total calidez que en este instante no hay una opci\xF3n que cumpla el 85%-100% de afinidad, pero que su requerimiento ya qued\xF3 100% activo en el radar 24/7 de VECY Network; y que en cuanto entre una opci\xF3n compatible, el equipo de VECY (Jani y Eduardo al +57 316 656 9719) lo contactar\xE1 de inmediato.\\n    10. TRANSPARENCIA SOBRE EL ORIGEN DE LA BASE DE DATOS Y EMOJIS DE REACCI\xD3N EN GRUPOS:\\n        Si alguien te pregunta de d\xF3nde sacas el inventario o c\xF3mo armas tu base de datos de inmuebles: S\xE9 clara y enf\xE1tica en explicar que esta informaci\xF3n de OFERTAS y DEMANDAS se toma a diario y minuto a minuto de las publicaciones que postean todos los miembros y colegas en los grupos de WhatsApp donde JanIA participa como invitada oficial (adem\xE1s de captaciones directas y portales aliados). Y expl\xEDcales con orgullo c\xF3mo los marcas en vivo con emojis de reacci\xF3n:\\n        \u{1F44D} Pulgar arriba (\u{1F44D}): Para las OFERTAS de inmuebles (venta o arriendo).\\n        \u{1F4DD} Bloc de notas (\u{1F4DD}): Para las DEMANDAS y requerimientos de clientes.\\n    11. Adicionalmente, el usuario tambi\xE9n puede compartir libremente su ficha optimizada en nuestro Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) usando la PLANTILLA ESTANDARIZADA VECY:\\n        \u{1F3F7}\uFE0F *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, \xC1rea m\xB2, Precio/Canon, Habitaciones y Ba\xF1os, Parqueaderos y Dep\xF3sito, Estrato y Adm\xF3n, Antig\xFCedad/acabados, Contacto.\\n        \u{1F4DD} *DEMANDA (B\xFAsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de inter\xE9s, Presupuesto m\xE1ximo, \xC1rea m\xEDnima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n  * OPORTUNIDADES TECNOL\xD3GICAS Y DESARROLLOS DE IA PROPTECH: Si un usuario, empresa inmobiliaria, aseguradora, entidad de salud o gremio pregunta si podemos desarrollarle una inteligencia artificial como JanIA, software inmobiliario o herramientas proptech a la medida: \xA1Ac\xF3gelo con calidez y entusiasmo! Expl\xEDcale que en VECY contamos con nuestra propia factor\xEDa de desarrollo tecnol\xF3gico e inteligencia artificial liderada por nuestros fundadores Eduardo Rivera y Jani Alves, y canal\xEDzalo con gusto a la l\xEDnea oficial del br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).\\n4. Conectora Comercial, Asesora de Requerimientos y Mediadora 40/20/40: Conexi\xF3n de negocios compartidos entre colegas. Si un colega pregunta por qu\xE9 reaccionamos a sus mensajes en los grupos (\u{1F44D}/\u{1F4DD}) o reenv\xEDa requerimientos a este chat: explica con autoridad que la reacci\xF3n confirma que ya entr\xF3 al motor de BD y no necesita duplicarlo, que ante un match lo contactaremos de inmediato, y hazle la pregunta de filtro de si acepta compartir comisi\xF3n bajo el modelo 40/20/40 para clasificarlo como Aliada Prioritaria. Si un usuario env\xEDa un requerimiento incompleto (falta presupuesto, no aclara administraci\xF3n, zonas difusas o sin tipolog\xEDa): PROHIBIDO registrarlo como match viable o disparar aval\xFAos; gu\xEDalo devolviendo la Ficha T\xE9cnica Estandarizada con campos entre corchetes [ ] para que complete los datos faltantes.
 5. Tutora en Firma Electr\xF3nica Oficial y F\xE1brica Proptech: Gu\xEDa paso a paso en la plataforma gratuita https://autenticaciondigital.and.gov.co/ (Decreto 620/20 y Ley 527/99: 1. Ingresar, 2. 'Firmar documento electr\xF3nicamente', 3. Asunto y motivo, 4. Cargar PDF m\xE1x 10MB sin clave, 5. C\xF3digo OTP al correo y firmar; tambi\xE9n validar firmas de terceros y bandeja de 15 d\xEDas). Recuerda que eres su tutora pedag\xF3gica y no firmas el PDF en WhatsApp. Si una inmobiliaria quiere su propia herramienta privada de firma electr\xF3nica, canal\xEDzala con Eduardo Rivera al +57 316 656 9719. Para agendamiento de visitas seguras, entrega y gu\xEDa en Vecy Agenda Pro: https://vecy-agenda-pro.vercel.app/ con verificaci\xF3n algor\xEDtmica de identidad.
 6. Asesora y Gu\xEDa Especialista en Marketing Inmobiliario de Alto Rendimiento (Metodolog\xEDa 10 Skills VECY):
    Domina la arquitectura completa de marketing inmobiliario: 1) Constructor de Perfil de Cliente Ideal (ICP: familia, ejecutivo, inversionista de renta corta, constructor), 2) Posicionamiento \xDAnico y Swap Test Inmobiliario (desechar clich\xE9s como 'lindo apartamento' y destacar ventajas medibles), 3) Auditor\xEDa de Anuncios (Score 0-100 en propuesta de valor, datos t\xE9cnicos, precio y CTA), 4) Fichas persuasivas de alto impacto para WhatsApp y redes, y 5) Enfoque multicanal.
@@ -31246,6 +31419,7 @@ var init_dmHandler = __esm({
     init_valuation();
     init_whatsapp_utils();
     init_trustedContacts();
+    init_founderKnowledgeService();
     latestDmPdfMap = /* @__PURE__ */ new Map();
     JANIA_DM_TOOLS = [
       {
@@ -32600,8 +32774,8 @@ __export(cronService_exports, {
   sanitizeChannelContent: () => sanitizeChannelContent
 });
 import cron from "node-cron";
-import path10 from "path";
-import fs10 from "fs";
+import path11 from "path";
+import fs11 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
@@ -32768,16 +32942,16 @@ function enforceJanIAIdentity(text2) {
 async function getThemedImagePathAsync(tipo) {
   const recent = await getRecentImageFiles(3);
   const possibleDirs = [
-    path10.resolve(process.cwd(), "client/public/assets/jania"),
-    path10.resolve(process.cwd(), "dist/assets/jania"),
-    path10.resolve(__dirname, "../../client/public/assets/jania")
+    path11.resolve(process.cwd(), "client/public/assets/jania"),
+    path11.resolve(process.cwd(), "dist/assets/jania"),
+    path11.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
     if (pref.endsWith(".mp4") || pref.endsWith(".mov")) {
       for (const dir of possibleDirs) {
-        const candidate = path10.join(dir, pref);
-        if (fs10.existsSync(candidate)) {
+        const candidate = path11.join(dir, pref);
+        if (fs11.existsSync(candidate)) {
           return { fullPath: candidate, fileName: pref };
         }
       }
@@ -32790,8 +32964,8 @@ async function getThemedImagePathAsync(tipo) {
     chosenFile = effectivePool[0];
   }
   for (const dir of possibleDirs) {
-    const candidatePath = path10.join(dir, chosenFile);
-    if (fs10.existsSync(candidatePath)) {
+    const candidatePath = path11.join(dir, chosenFile);
+    if (fs11.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -32799,15 +32973,15 @@ async function getThemedImagePathAsync(tipo) {
 }
 function getThemedImagePath(tipo) {
   const possibleDirs = [
-    path10.resolve(process.cwd(), "client/public/assets/jania"),
-    path10.resolve(process.cwd(), "dist/assets/jania"),
-    path10.resolve(__dirname, "../../client/public/assets/jania")
+    path11.resolve(process.cwd(), "client/public/assets/jania"),
+    path11.resolve(process.cwd(), "dist/assets/jania"),
+    path11.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
   for (const dir of possibleDirs) {
-    const candidatePath = path10.join(dir, chosenFile);
-    if (fs10.existsSync(candidatePath)) {
+    const candidatePath = path11.join(dir, chosenFile);
+    if (fs11.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -33138,7 +33312,7 @@ En el Canal Oficial acabamos de publicar la gu\xEDa completa de c\xF3mo solicita
     await completeBroadcast(lock.broadcastId, {
       topicTitle: "Servicios Gratuitos de Verificaci\xF3n con JanIA",
       themeKey: "verificacion_servicios",
-      imageFileName: path10.basename(imagePath),
+      imageFileName: path11.basename(imagePath),
       captionText: channelText
     });
     return { success: true, channelMessageId: chanRes.messageId };
@@ -33367,24 +33541,24 @@ function getLocalCuratedThemeImage(themeKey) {
     baseName = "jania_juridico.jpg";
   }
   const candidateDirs = [
-    path10.resolve(process.cwd(), "assets/broadcast"),
-    path10.resolve(process.cwd(), "client/public/assets/broadcast"),
-    path10.resolve(process.cwd(), "client/public/assets/jania")
+    path11.resolve(process.cwd(), "assets/broadcast"),
+    path11.resolve(process.cwd(), "client/public/assets/broadcast"),
+    path11.resolve(process.cwd(), "client/public/assets/jania")
   ];
   for (const dir of candidateDirs) {
-    const candidatePath = path10.join(dir, baseName);
-    if (fs10.existsSync(candidatePath)) {
+    const candidatePath = path11.join(dir, baseName);
+    if (fs11.existsSync(candidatePath)) {
       return candidatePath;
     }
   }
-  const fallbackDir = path10.resolve(process.cwd(), "client/public/assets/jania");
-  if (fs10.existsSync(fallbackDir)) {
-    const files = fs10.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
+  const fallbackDir = path11.resolve(process.cwd(), "client/public/assets/jania");
+  if (fs11.existsSync(fallbackDir)) {
+    const files = fs11.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
     if (files.length > 0) {
-      return path10.join(fallbackDir, files[0]);
+      return path11.join(fallbackDir, files[0]);
     }
   }
-  return path10.resolve(process.cwd(), "client/public/jania_post.png");
+  return path11.resolve(process.cwd(), "client/public/jania_post.png");
 }
 async function fetchPublicThemeImage(themeKey, dayOfMonth) {
   const query = THEME_IMAGE_SEARCH_MAP[themeKey] || "modern architecture real estate building";
@@ -33407,12 +33581,12 @@ async function fetchPublicThemeImage(themeKey, dayOfMonth) {
           if (imgRes.ok) {
             const buffer = Buffer.from(await imgRes.arrayBuffer());
             if (buffer.length >= 1e3) {
-              const cacheDir = path10.resolve(process.cwd(), "client/public/assets/broadcast");
-              if (!fs10.existsSync(cacheDir)) {
-                fs10.mkdirSync(cacheDir, { recursive: true });
+              const cacheDir = path11.resolve(process.cwd(), "client/public/assets/broadcast");
+              if (!fs11.existsSync(cacheDir)) {
+                fs11.mkdirSync(cacheDir, { recursive: true });
               }
-              const targetFile = path10.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-              fs10.writeFileSync(targetFile, buffer);
+              const targetFile = path11.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+              fs11.writeFileSync(targetFile, buffer);
               console.log(`[CRON-IMAGE-WEB] \u2705 Imagen p\xFAblica guardada localmente (${buffer.length} bytes): ${targetFile}`);
               return targetFile;
             }
@@ -33486,8 +33660,8 @@ async function publishDailyTipForDay(tipoKey, force = false) {
 }
 function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   const normalized = (themeKey || "").toLowerCase();
-  const dir1x1 = path10.resolve(process.cwd(), "client/public/assets/channel_1x1");
-  const janiaDir = path10.resolve(process.cwd(), "client/public/assets/jania");
+  const dir1x1 = path11.resolve(process.cwd(), "client/public/assets/channel_1x1");
+  const janiaDir = path11.resolve(process.cwd(), "client/public/assets/jania");
   let target1x1 = "jania_anfitriona_cafe_1x1.jpg";
   if (normalized.includes("legal") || normalized.includes("jurid") || normalized.includes("vicio") || normalized.includes("contrato") || normalized.includes("titulo") || normalized.includes("promesa") || normalized.includes("pleito")) {
     target1x1 = "jania_legal_due_diligence_1x1.jpg";
@@ -33509,12 +33683,12 @@ function getChannelSquareImage1x1(themeKey, dayOfMonth) {
     ];
     target1x1 = dayOfMonth ? rotation[(dayOfMonth - 1) % rotation.length] : "jania_legal_due_diligence_1x1.jpg";
   }
-  const candidate1x1 = path10.join(dir1x1, target1x1);
-  if (fs10.existsSync(candidate1x1)) {
+  const candidate1x1 = path11.join(dir1x1, target1x1);
+  if (fs11.existsSync(candidate1x1)) {
     return candidate1x1;
   }
-  const candidateJania = path10.join(janiaDir, target1x1);
-  if (fs10.existsSync(candidateJania)) {
+  const candidateJania = path11.join(janiaDir, target1x1);
+  if (fs11.existsSync(candidateJania)) {
     return candidateJania;
   }
   return getLocalCuratedThemeImage(themeKey);
@@ -33555,7 +33729,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
-      imageFileName: imagePath ? path10.basename(imagePath) : void 0,
+      imageFileName: imagePath ? path11.basename(imagePath) : void 0,
       captionText: content.captionText
     });
     console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampol\xEDn + Estado WhatsApp con enlace): "${content.topicTitle}".`);
@@ -33759,7 +33933,7 @@ var init_cronService = __esm({
     init_llm();
     init_const();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path10.dirname(__filename);
+    __dirname = path11.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -36373,8 +36547,8 @@ init_storage();
 import { z as z4 } from "zod";
 import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
-import fs11 from "fs";
-import path11 from "path";
+import fs12 from "fs";
+import path12 from "path";
 
 // server/routers/properties.ts
 init_trpc();
@@ -38448,11 +38622,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path11.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path11.join(process.cwd(), "qr-match.png");
-      let targetPath = fs11.existsSync(qrPath) ? qrPath : fs11.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path12.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path12.join(process.cwd(), "qr-match.png");
+      let targetPath = fs12.existsSync(qrPath) ? qrPath : fs12.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs11.readFileSync(targetPath);
+        const fileData = fs12.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -39933,30 +40107,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs12 from "fs";
+import fs13 from "fs";
 import { nanoid } from "nanoid";
-import path13 from "path";
+import path14 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path12 from "node:path";
+import path13 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path12.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path12.resolve(import.meta.dirname, "shared"),
-      "@assets": path12.resolve(import.meta.dirname, "attached_assets")
+      "@": path13.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path13.resolve(import.meta.dirname, "shared"),
+      "@assets": path13.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path12.resolve(import.meta.dirname),
-  root: path12.resolve(import.meta.dirname, "client"),
-  publicDir: path12.resolve(import.meta.dirname, "client", "public"),
+  envDir: path13.resolve(import.meta.dirname),
+  root: path13.resolve(import.meta.dirname, "client"),
+  publicDir: path13.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path12.resolve(import.meta.dirname, "dist"),
+    outDir: path13.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -40007,13 +40181,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path13.resolve(
+      const clientTemplate = path14.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs12.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs13.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -40027,15 +40201,15 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path13.resolve(import.meta.dirname, "..", "dist");
-  if (!fs12.existsSync(distPath)) {
+  const distPath = path14.resolve(import.meta.dirname, "..", "dist");
+  if (!fs13.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path13.resolve(distPath, "index.html"));
+    res.sendFile(path14.resolve(distPath, "index.html"));
   });
 }
 
@@ -40047,8 +40221,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs13 from "fs";
-import path14 from "path";
+import fs14 from "fs";
+import path15 from "path";
 init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -40227,10 +40401,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path14.join(process.cwd(), "qr-match.png");
-      const distQrPath = path14.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs13.existsSync(activePath)) {
+      const qrPath = path15.join(process.cwd(), "qr-match.png");
+      const distQrPath = path15.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs14.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -40250,10 +40424,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path14.join(process.cwd(), "qr-match.png");
-      const distQrPath = path14.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs13.existsSync(activePath)) {
+      const qrPath = path15.join(process.cwd(), "qr-match.png");
+      const distQrPath = path15.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs14.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -40274,10 +40448,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path14.join(process.cwd(), "qr-match.png");
-      const distQrPath = path14.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs13.existsSync(activePath)) {
+      const qrPath = path15.join(process.cwd(), "qr-match.png");
+      const distQrPath = path15.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs14.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -40304,10 +40478,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path14.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path14.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs13.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs13.existsSync(activePath)) {
+      const qrPath = path15.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path15.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs14.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -40358,8 +40532,8 @@ async function startServer() {
           let docBuffer;
           if (Buffer.isBuffer(document2)) {
             docBuffer = document2;
-          } else if (typeof document2 === "string" && fs13.existsSync(document2)) {
-            docBuffer = fs13.readFileSync(document2);
+          } else if (typeof document2 === "string" && fs14.existsSync(document2)) {
+            docBuffer = fs14.readFileSync(document2);
           } else if (typeof document2 === "string") {
             const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
             docBuffer = Buffer.from(cleanBase64, "base64");
@@ -40562,23 +40736,23 @@ _(Si es empresa, usa NIT en vez de CC)_
   });
   function resolveBroadcastImagePath(filenames) {
     const searchDirs = [
-      path14.join(process.cwd(), "client/public/assets/jania"),
-      path14.join(process.cwd(), "client/public/images"),
-      path14.join(process.cwd(), "client/public"),
+      path15.join(process.cwd(), "client/public/assets/jania"),
+      path15.join(process.cwd(), "client/public/images"),
+      path15.join(process.cwd(), "client/public"),
       process.cwd(),
-      path14.join(process.cwd(), "dist/assets/jania"),
-      path14.join(process.cwd(), "dist/images"),
-      path14.join(process.cwd(), "dist")
+      path15.join(process.cwd(), "dist/assets/jania"),
+      path15.join(process.cwd(), "dist/images"),
+      path15.join(process.cwd(), "dist")
     ];
     for (const name of filenames) {
       for (const dir of searchDirs) {
-        const fullPath = path14.join(dir, name);
-        if (fs13.existsSync(fullPath)) {
+        const fullPath = path15.join(dir, name);
+        if (fs14.existsSync(fullPath)) {
           return { path: fullPath, exists: true };
         }
       }
     }
-    return { path: path14.join(process.cwd(), filenames[0]), exists: false };
+    return { path: path15.join(process.cwd(), filenames[0]), exists: false };
   }
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -40747,9 +40921,9 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path14.resolve(process.cwd(), "public/uploads");
-  if (!fs13.existsSync(uploadsDir2)) {
-    fs13.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path15.resolve(process.cwd(), "public/uploads");
+  if (!fs14.existsSync(uploadsDir2)) {
+    fs14.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -40758,7 +40932,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path14.extname(file.originalname));
+      cb(null, uniqueSuffix + path15.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

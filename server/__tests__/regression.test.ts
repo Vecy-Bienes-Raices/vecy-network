@@ -7045,11 +7045,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7091,11 +7091,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7162,11 +7162,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7212,11 +7212,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7241,11 +7241,11 @@ Ana Morales Castillo
 
     it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(38|39|40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(38|39|40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7276,11 +7276,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.39 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(39|40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(39|40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7301,11 +7301,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.40 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(40|41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(40|41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(40|41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(40|41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7388,11 +7388,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.41 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(41|42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(41|42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(41|42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(41|42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7467,11 +7467,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.42 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(42|43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(42|43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(42|43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(42|43|44|45|46|47)\.0/);
     });
   });
 
@@ -7509,11 +7509,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.43 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(43|44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(43|44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(43|44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(43|44|45|46|47)\.0/);
     });
   });
 
@@ -7575,11 +7575,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.44 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(44|45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(44|45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(44|45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(44|45|46|47)\.0/);
     });
   });
 
@@ -7606,11 +7606,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.45 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(45|46)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(45|46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(45|46)\.0/);
+      expect(pkg.version).toMatch(/^33\.(45|46|47)\.0/);
     });
   });
 
@@ -7649,11 +7649,69 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.46 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.46");
+      expect(VECY_VERSION).toMatch(/^v33\.(46|47)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.46.0");
+      expect(pkg.version).toMatch(/^33\.(46|47)\.0/);
+    });
+  });
+
+  describe("Suite v33.47 — Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta con Emojis 👍/📝 y Enseñanza en Caliente", () => {
+    it("1. founderKnowledgeService permite registrar, persistir y formatear tips de los fundadores (Eduardo y Jani)", async () => {
+      const {
+        isFounderTeachingInstruction,
+        saveFounderTeaching,
+        getAllActiveFounderTeachings,
+        formatFounderTeachingsForPrompt
+      } = await import("../_core/jania/founderKnowledgeService");
+
+      expect(isFounderTeachingInstruction("JanIA, ten en cuenta que el cliente debe aceptar 40/20/40")).toBe(true);
+      expect(isFounderTeachingInstruction("#tip: cuando pregunten por cocina indagar si es americana")).toBe(true);
+      expect(isFounderTeachingInstruction("hola qué tal")).toBe(false);
+
+      const teaching = await saveFounderTeaching("+573192919978", "Doctrina de prueba: siempre verificar ascensor y depósito");
+      expect(teaching.id).toBeDefined();
+      expect(teaching.founderName).toBe("Eduardo Rivera");
+
+      const all = getAllActiveFounderTeachings();
+      expect(all.length).toBeGreaterThanOrEqual(5);
+
+      const formatted = formatFounderTeachingsForPrompt();
+      expect(formatted).toContain("DIRECTIVAS Y TIPS VIVOS DE LOS FUNDADORES");
+      expect(formatted).toContain("EDUARDO RIVERA");
+    });
+
+    it("2. dmHandler intercepta tips de fundadores y responde con agradecimiento y confirmación de asimilación", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+
+      expect(content).toContain("isFounderTeachingInstruction");
+      expect(content).toContain("saveFounderTeaching");
+      expect(content).toContain("formatFounderTeachingsForPrompt");
+      expect(content).toContain("¡Entendido y asimilado con total éxito");
+    });
+
+    it("3. dmHandler incorpora el guion modelado de entrega de códigos MATCH, ficha 360°, transparencia en grupos y humanización de reseñas", async () => {
+      const fs = await import("fs");
+      const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+
+      expect(content).toContain("Yo JanIA te los di para que ellos empiecen a hacer la gestión de conectar las puntas");
+      expect(content).toContain("PEDAGOGÍA SINCERA DEL MATCH Y MODELO 40/20/40 (CERO FALSAS ILUSIONES)");
+      expect(content).toContain("RECOPILACIÓN Y AUDITORÍA DE FICHA TÉCNICA ULTRA-COMPLETA (NO DATOS BÁSICOS - INDAGACIÓN CON EJEMPLOS)");
+      expect(content).toContain("TRANSPARENCIA SOBRE EL ORIGEN DE LA BASE DE DATOS Y EMOJIS DE REACCIÓN EN GRUPOS");
+      expect(content).toContain("Pulgar arriba (👍): Para las OFERTAS");
+      expect(content).toContain("Bloc de notas (📝): Para las DEMANDAS");
+      expect(content).toContain("paso a paso");
+    });
+
+    it("4. Consagración doctrinal de versión v33.47 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.47");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.47.0");
     });
   });
 });

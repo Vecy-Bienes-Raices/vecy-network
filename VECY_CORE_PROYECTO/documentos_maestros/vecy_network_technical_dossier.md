@@ -330,6 +330,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.47 — Octubre 2026
+
+#### [v33.47.0] — 2026-10-25: Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta Viva con Emojis y Hot Learning
+- **Pedagogía Sincera y Comisión Colaborativa 40/20/40 (Cero Falsas Ilusiones):**
+  - **Problema:** En chats privados, existía el riesgo de que oferentes o demandantes esperasen que JanIA actuara como un mero directorio gratuito de contactos para que ellos contactasen directamente a las contrapartes, puenteando la red colaborativa de VECY o generando desacuerdos posteriores sobre honorarios.
+  - **Solución:** JanIA explica de manera sincera, empática y transparente el modelo de negocio: para activar el cruce y conectar las dos puntas, ambas partes deben aceptar de antemano el esquema de comisión compartida 40/20/40 (40% para quien aporta la oferta o demanda, 40% para la contraparte, y 20% para VECY por la mesa de MATCH, peritaje, seguridad jurídica y acompañamiento integral hasta el cierre).
+- **Auditoría e Indagación de Ficha Técnica Exhaustiva 360° (con Ejemplos Cálidos):**
+  - **Problema:** Solicitudes o publicaciones con datos muy escuetos (por ejemplo, solo tipo de inmueble y número de cuartos) restan precisión al algoritmo de matching y desaprovechan los filtros finos de habitabilidad.
+  - **Solución:** JanIA guía al usuario de forma cálida e indaga mediante ejemplos concretos: si es Búsqueda o Inmueble; exterior/interior; iluminación y sol (mañana o tarde); cocina abierta, cerrada o tipo americano; zona de lavandería independiente; cuarto y baño de servicio (CBS); balcón o terraza; chimenea; piso (bajo, medio, alto) y ascensor; parqueaderos independientes (no en línea) y cuántos requiere; depósito; amenidades (gym, piscina, club house, zonas verdes, parque infantil, coworking); vigilancia (24/7 vs automatizada); y ubicación por barrio exacto, cuadrante o vías principales vs secundarias por tranquilidad.
+- **Guion Modelado de Entrega de Códigos MATCH (#M...):**
+  - **Problema:** Se requería una directiva exacta para formular la entrega de códigos de coincidencia conectando ineludiblemente con la mesa de MATCH en la línea oficial de atención.
+  - **Solución:** Se implementó el guion exacto en `dmHandler.ts` y prompts cognitivos: *"¡Tenemos coincidencia en la red! Encontramos opciones con los códigos [códigos #M...]. Pero solamente te puedo dar los códigos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 (+57 316 656 9719) y se los vas a pasar a quien te conteste diciéndole que Yo JanIA te los di para que ellos los ubiquen en nuestra mesa de MATCH y empiecen a hacer la gestión de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."*
+- **Transparencia sobre la Base de Datos Viva y Emojis en Grupos:**
+  - **Problema:** Se necesitaba comunicar con claridad de dónde provienen las oportunidades inmobiliarias para generar confianza en la red.
+  - **Solución:** JanIA explica que la información se nutre minuto a minuto y en tiempo real de las publicaciones compartidas en los grupos de WhatsApp donde está invitada, marcando las Ofertas con 👍 y las Demandas con 📝.
+- **Humanización al Pedir Calificación en Google con Explicación Paso a Paso:**
+  - **Problema:** Solicitar reseñas en Google puede resultar distante o confuso para usuarios no habituados a la plataforma.
+  - **Solución:** JanIA ofrece amablemente explicar el paso a paso detallado para calificar en Google si el usuario no sabe cómo hacerlo.
+- **Sistema de Aprendizaje en Caliente de Fundadores (`founderKnowledgeService.ts`):**
+  - **Problema:** Eduardo Rivera y Jani Alves requerían la capacidad de instruir y transferir conocimientos o tips a JanIA directamente desde WhatsApp, aplicándose en tiempo real sin requerir despliegues continuos.
+  - **Solución:** Se creó `server/_core/jania/founderKnowledgeService.ts` y el almacén `data/jania_founder_teachings.json`. Cuando un fundador envía una directiva o tip, el handler la detecta, la persiste y la inyecta de inmediato en el prompt cognitivo de JanIA, emitiendo una confirmación afectuosa y respetuosa.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **379/379 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 11.79s.
+
 ### 🔖 v33.46 — Octubre 2026
 
 #### [v33.46.0] — 2026-10-25: Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD

@@ -182,7 +182,32 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.46 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.47 — Octubre 2026
+
+### Novedades v33.47 (Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta Viva con Emojis y Hot Learning):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Pedagogía Sincera y Comisión Colaborativa 40/20/40 (Cero Falsas Ilusiones)**:
+     - *Causa raíz*: Los usuarios o asesores podían hacerse falsas ilusiones de que JanIA entregaría contactos directos para cerrar negocios por su cuenta.
+     - *Solución*: JanIA explica con sinceridad que para activar el cruce y conectar las dos puntas, las partes deben aceptar de antemano el esquema colaborativo 40/20/40 (40% quien aporta la demanda o inmueble, 40% la contraparte, y 20% VECY por la mesa de MATCH, respaldo pericial y legal, y acompañamiento hasta el cierre).
+  2. **Auditoría e Indagación de Ficha Técnica Exhaustiva 360° (con Ejemplos Cálidos)**:
+     - *Causa raíz*: Las fichas con datos escuetos (solo habitaciones y garajes) reducen la precisión del matching.
+     - *Solución*: JanIA indaga activamente con calidez mediante ejemplos concretos: si es búsqueda o inmueble; exterior/interior; iluminación y sol (mañana/tarde); cocina abierta/cerrada/americana; zona de lavandería independiente; cuarto y baño de servicio (CBS); balcón o terraza; chimenea; piso (bajo/medio/alto) y ascensor; parqueaderos independientes (no en línea); depósito; amenidades (gym, piscina, club house, parque infantil); vigilancia (24/7 vs automatizada); y cuadrante exacto de vías.
+  3. **Guion Modelado de Entrega de Códigos MATCH (#M...)**:
+     - *Causa raíz*: Se requería una formulación institucional estandarizada que conecte al cliente con la mesa de MATCH.
+     - *Solución*: Se implementó el guion exacto: *"¡Tenemos coincidencia en la red! Encontramos opciones con los códigos [códigos #M...]. Pero solamente te puedo dar los códigos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 (+57 316 656 9719) y se los vas a pasar a quien te conteste diciéndole que Yo JanIA te los di para que ellos los ubiquen en nuestra mesa de MATCH y empiecen a hacer la gestión de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."*
+  4. **Transparencia sobre la Base de Datos Viva y Emojis en Grupos**:
+     - *Causa raíz*: Los usuarios desconocían el origen vivo y constante del inventario.
+     - *Solución*: JanIA aclara que su base de datos se nutre minuto a minuto de los grupos de WhatsApp donde está invitada, marcando las Ofertas con 👍 y las Demandas con 📝.
+  5. **Humanización al Pedir Calificación en Google**:
+     - *Causa raíz*: Pedir calificaciones puede sentirse frío o mecánico si el usuario no sabe cómo hacerlo.
+     - *Solución*: JanIA ofrece con dulzura explicar el paso a paso detallado para calificar en Google si el usuario no lo tiene claro.
+  6. **Sistema de Aprendizaje en Caliente de Fundadores (`founderKnowledgeService.ts`)**:
+     - *Causa raíz*: Eduardo y Jani necesitan poder instruir o dar tips a JanIA directamente por WhatsApp y que ella los asimile y aplique de inmediato.
+     - *Solución*: Se creó `founderKnowledgeService.ts` que intercepta instrucciones directas de los directores, las almacena en `data/jania_founder_teachings.json` y las inyecta en caliente en el cognitive prompt de JanIA.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 379/379 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 11.79s ✅
+- `shared/const.ts` (`v33.47`) y `package.json` (`33.47.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.46 — Octubre 2026
 
 ### Novedades v33.46 (Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-25] — JanIA v33.47: Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta Minuto a Minuto con Emojis y Enseñanza en Caliente de Fundadores (v33.47 - 33.47.0)
+
+**Versión:** `v33.47` (`33.47.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Perfeccionamiento y humanización del comportamiento conversacional de JanIA en WhatsApp y Web:
+  1. **Pedagogía Sincera del MATCH y Alianza 40/20/40 (Cero Falsas Ilusiones)**: JanIA debe ser transparente y explicar claramente que para activar el cruce y conectar las puntas, primero deben aceptar la figura de trabajo y compartición de la comisión 40/20/40 (donde el 40% es para quien tiene la Oferta o Demanda según corresponda, 40% para la contraparte, y 20% para VECY por la mediación legal y mesa de cruce), sin ilusionar si no hay afinidad real.
+  2. **Auditoría e Indagación de Ficha Técnica Exhaustiva 360° (Indagación con Ejemplos)**: JanIA no debe conformarse con fichas básicas (cuartos y garaje), sino que debe indagar con naturalidad mediante ejemplos: Búsqueda o Inmueble, exterior/interior, iluminación y sol (mañana/tarde), cocina abierta/americana/cerrada, lavandería independiente, cuarto y baño de servicio (CBS), balcón o terraza, chimenea, nivel de piso (bajo/medio/alto), parqueaderos independientes vs línea, depósito, ascensor, amenidades de club house, tipo de vigilancia (24/7 vs automatizada), barrio exacto y de dónde a dónde entre qué calles y carreras, y si sobre avenida o vía residencial tranquila por tema de ruido.
+  3. **Guion Modelado de Entrega de Códigos MATCH (#M...)**: Adaptar la fórmula exacta solicitada por Eduardo: *"¡Tenemos coincidencia en la red! Encontramos opciones con los códigos [códigos #M...]. Pero solamente te puedo dar los códigos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 (+57 316 656 9719) y se los vas a pasar a quien te conteste diciéndole que Yo JanIA te los di para que ellos los ubiquen en nuestra mesa de MATCH y empiecen a hacer la gestión de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."*
+  4. **Transparencia sobre la Base de Datos Viva y Emojis en Grupos**: Explicar con orgullo que la información se nutre a diario y minuto a minuto de las publicaciones de los grupos de WhatsApp donde JanIA está invitada, marcando las Ofertas con 👍 y las Demandas con 📝.
+  5. **Humanización al pedir Calificación en Google**: Ofrecer con empatía y calidez explicar el paso a paso detallado si no saben cómo hacerlo.
+  6. **Enseñanza y Tips en Caliente por WhatsApp de Eduardo y Jani (Hot Learning)**: Habilitar un canal para que Eduardo y Jani puedan enseñarle directivas y tips en caliente desde sus chats de WhatsApp, persistiendo los aprendizajes y aplicándolos de inmediato en todas las conversaciones.
+
+**Diagnóstico Técnico:**
+1. **Necesidad de Módulo de Aprendizaje Dinámico (`founderKnowledgeService.ts`):** Las directivas doctrinales previas requerían despliegue de código. Al crear un servicio con almacenamiento persistente en `data/jania_founder_teachings.json` y carga síncrona en memoria, Eduardo y Jani pueden enviar tips por WhatsApp (`isFounderTeachingInstruction`), JanIA los asimila en caliente y los inyecta en el prompt cognitivo (`formatFounderTeachingsForPrompt`).
+2. **Armonización de Prompts y Enriquecimiento Cognitivo (`dmHandler.ts`, `base.md`, `prompts.ts`):** Se requería consagrar en los tres archivos rectores el nuevo guion modelado de entrega de códigos MATCH, la lista exhaustiva de atributos 360°, la explicación de emojis en grupos y la guía paso a paso para reseñas.
+
+**Acciones Ejecutadas:**
+- **Creación de `server/_core/jania/founderKnowledgeService.ts`:**
+  - Estructuración de la interfaz `FounderTeaching` y almacenamiento permanente en `data/jania_founder_teachings.json`.
+  - Precarga de las 5 semillas doctrinales de Eduardo A. Rivera.
+  - Métodos `isFounderTeachingInstruction`, `saveFounderTeaching`, `getAllActiveFounderTeachings`, `formatFounderTeachingsForPrompt`.
+- **Actualización de `server/_core/jania/handlers/dmHandler.ts`:**
+  - Intercepción de tips de los fundadores en WhatsApp con respuesta de confirmación inmediata y asimilación permanente.
+  - Inyección de las directivas vivas de los fundadores en el System Prompt de DMs.
+  - Actualización de `specialToolInstructions` con el guion modelado de códigos MATCH y el ofrecimiento de guía paso a paso para reseñas en Google.
+  - Enriquecimiento del System Prompt con la pedagogía del MATCH 40/20/40, ficha técnica 360° con ejemplos, y transparencia de emojis 👍 y 📝 en grupos.
+- **Actualización de `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:**
+  - Consagración de la pedagogía transparente de MATCH, ficha técnica 360°, guion modelado, fuentes vivas con emojis y humanización de reseñas.
+- **`shared/const.ts` & `package.json`:**
+  - Incremento oficial a `v33.47` / `33.47.0`.
+- **`server/__tests__/regression.test.ts`:**
+  - Implementación de `Suite v33.47 — Pedagogía Transparente de MATCH 40/20/40, Ficha Técnica 360°, Ingesta con Emojis 👍/📝 y Enseñanza en Caliente` (4 pruebas unitarias pasando al 100%).
+  - Actualización de regexes en suites previas (34 a 46) para admitir `v33.47`.
+- **Validación Limpia ($0 COP):**
+  - Typecheck `npm run check` (0 errores) | Tests `npm test` 379/379 passing (100% verde a $0 COP) | Build `npm run build` limpio en 11.79s.
+
+---
+
 ### 📅 [2026-10-25] — JanIA v33.46: Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD (v33.46 - 33.46.0)
 
 **Versión:** `v33.46` (`33.46.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
