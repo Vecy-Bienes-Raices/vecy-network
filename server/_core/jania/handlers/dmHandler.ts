@@ -345,16 +345,67 @@ export async function executeJaniaDmTool(
           }
         };
       }
+
+      // 🔍 BÚSQUEDA SÍNCRONA DE COINCIDENCIAS (MATCH) INMEDIATO (DOCTRINA EDUARDO A. RIVERA):
+      let matchesSummary: Array<{
+        matchCode: string;
+        score: number;
+        tipoInmueble: string;
+        zona: string;
+        precioOCanon: string;
+        area?: string;
+        habitaciones?: number;
+        banos?: number;
+        garajes?: number;
+      }> = [];
+
+      if (res.inserted && res.savedId) {
+        try {
+          const { findMatchesForRequirement, findMatchesForProperty } = await import("../../matching");
+          let rawMatches: any[] = [];
+          if (res.savedType === "requirement" || res.classification === "REQUERIMIENTO") {
+            rawMatches = await findMatchesForRequirement(res.savedId);
+          } else {
+            rawMatches = await findMatchesForProperty(res.savedId);
+          }
+
+          if (Array.isArray(rawMatches) && rawMatches.length > 0) {
+            matchesSummary = rawMatches.slice(0, 3).map((m: any) => ({
+              matchCode: `#M${m.matchId || m.id}`,
+              score: Math.round(Number(m.score || 0)),
+              tipoInmueble: m.propertyType || m.tipoInmuebleDeseado || "Inmueble",
+              zona: m.zone || m.addressNeighborhood || m.zonaDeseada || "Bogotá",
+              precioOCanon: m.rentPrice || m.rent_price
+                ? `$${Number(m.rentPrice || m.rent_price).toLocaleString('es-CO')} COP/mes`
+                : m.price
+                  ? `$${Number(m.price).toLocaleString('es-CO')} COP`
+                  : "Por acordar",
+              area: m.areaTotal ? `${m.areaTotal} m²` : undefined,
+              habitaciones: m.bedrooms || m.habitacionesMin,
+              banos: m.bathrooms || m.banosMin,
+              garajes: m.garages || m.parqueaderosMin
+            }));
+          }
+        } catch (mErr: any) {
+          console.error("[dmHandler] Error buscando matches para registro:", mErr?.message);
+        }
+      }
+
       return {
         toolType: "registro_inmueble",
         resultJson: {
           solicitud: "registro_inmueble_o_requerimiento",
           clasificacion: res.classification,
           insertado: res.inserted,
+          registroId: res.savedId ? `${res.savedType === 'requirement' ? 'R' : 'P'}${res.savedId}` : undefined,
           esPropietarioDirecto: Boolean(args.esPropietarioDirecto),
           acepta402040: args.acepta402040 !== undefined ? Boolean(args.acepta402040) : (args.comisionEsquema === "40/20/40"),
           comisionEsquema: args.comisionEsquema || (args.acepta402040 === true ? "40/20/40" : args.acepta402040 === false ? "50/50" : "pendiente"),
-          detalle: "Procesado e indexado en el motor de VECY BIENES RAÍCES para matching inteligente."
+          totalMatchesFound: matchesSummary.length,
+          matchesEncontrados: matchesSummary,
+          detalle: matchesSummary.length > 0
+            ? `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match).`
+            : "No se encontraron coincidencias inmediatas con el umbral 85%-100%, pero el registro quedó 100% activo en el radar 24/7 de VECY Network."
         }
       };
     }
@@ -913,14 +964,22 @@ export async function synthesizeToolResponseWithGemini(
       `  * Si el usuario desea comercializar o buscar un inmueble, JanIA le ofrece con gusto estructurar y subir su Oferta o Demanda directamente en este chat para participar en el motor de MATCHING de VECY, o compartirla en el Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ).\n`;
   } else if (toolType === "registro_inmueble") {
     specialToolInstructions =
-      `- HERRAMIENTA: Registro y Optimización de Inmuebles y Demandas en VECY Network.\n` +
-      `- INGESTA ACTIVA Y BIENVENIDA A LA BASE DE DATOS:\n` +
-      `  * Confirma al usuario con señorío y calidez que su oferta o requerimiento ha sido estructurado e indexado exitosamente en la base de datos de VECY Network para participar en el motor inteligente de matching.\n` +
-      `  * Si el usuario es propietario o cliente directo: Explícale que VECY Bienes Raíces (+57 316 656 9719) respalda su propiedad y la conecta con compradores e inquilinos calificados y peritos aliados.\n` +
+      `- HERRAMIENTA: Registro y Optimización de Inmuebles y Demandas en VECY Network con Motor de MATCH.\n` +
+      `- INGESTA ACTIVA Y CONFIRMACIÓN AL USUARIO:\n` +
+      `  * Confirma al usuario con señorío, calidez y naturalidad humana que su oferta o requerimiento ha sido registrado e indexado exitosamente en la base de datos de VECY Network para participar en el motor inteligente de matching.\n` +
+      `  * Si el usuario es propietario o comprador directo: Explícale que VECY Bienes Raíces (+57 316 656 9719) respalda su gestión y lo conecta con compradores, inquilinos calificados y peritos aliados.\n` +
       `  * Si es colega/agente y aceptó 40/20/40: Confirma su estatus de Aliada Prioritaria en la red colaborativa.\n` +
       `  * Si es colega/agente y eligió 50/50: Confirma que ingresó a la mesa de coincidencias bajo la pestaña [🛡️50/50].\n` +
-      `- REGLA ESTRICTA DE CONFIDENCIALIDAD DE MATCHES EN PRIVADO:\n` +
-      `  * Queda TERMINANTEMENTE PROHIBIDO revelar datos de contacto de contrapartes o presentar matches en este chat privado. Explica que la central de cierres de VECY (+57 316 656 9719) contacta directamente a las partes cuando la coincidencia es validada por Eduardo Rivera y Jani Alves para blindar el negocio y garantizar la comisión.\n`;
+      `- ENTREGA DE RESULTADOS DEL MATCH (DOCTRINA EDUARDO A. RIVERA):\n` +
+      `  * Si 'totalMatchesFound' > 0 (SÍ HAY COINCIDENCIAS / MATCHES):\n` +
+      `    1. Anúnciale con alegría y profesionalismo que el radar detectó de inmediato coincidencia(s) de alta afinidad (entre el 85% y 100%).\n` +
+      `    2. Entrégale los códigos de coincidencia oficiales (ej. #M15649, #M15650), el porcentaje de afinidad (ej. 90%) y las características generales del inmueble (tipología, zona/barrio, canon o precio y especificaciones físicas).\n` +
+      `    3. BLINDAJE DE PRIVACIDAD: JAMÁS reveles nombres personales ni números de teléfono de la contraparte en este chat.\n` +
+      `    4. LLAMADO DE ACCIÓN MANDATORIO: Explícale con total claridad que con estos códigos de coincidencia (#M...) debe comunicarse con la central de VECY — Eduardo Rivera y Jani Alves al WhatsApp oficial de atención: +57 316 656 9719 (https://wa.me/573166569719)— para que nosotros los ubiquemos en nuestra mesa de MATCH, activemos la gestión conectando ambas puntas, coordinemos la visita al inmueble y acompañemos todo el proceso hasta lograr el cierre exitoso.\n` +
+      `  * Si 'totalMatchesFound' === 0 (NO HAY COINCIDENCIAS INMEDIATAS):\n` +
+      `    1. Infórmale con total honestidad y amabilidad que en este instante exacto no hay un cruce disponible en inventario que cumpla con el filtro estricto de afinidad (85%-100%).\n` +
+      `    2. Explícale que su requerimiento/propiedad ya quedó 100% activo en el radar 24/7 de la red colaborativa de VECY, por lo que en cuanto ingrese una opción compatible, el sistema nos alertará y nos pondremos en contacto con él de inmediato.\n` +
+      `    3. Ofrécele también que si lo desea, puede comunicarse directamente con Eduardo Rivera y Jani Alves al +57 316 656 9719 para ubicar su búsqueda de forma prioritaria en nuestra mesa de gestión comercial.\n`;
   }
 
   const synthPrompt = [
@@ -1522,15 +1581,18 @@ export async function processPrivateDmConversationalMessage(
       `  * DOCTRINA DE SONDEOS VS. AVALÚO PROFUNDO CERTIFICADO (DOCTRINA EDUARDO A. RIVERA): El sondeo comercial inicial es ágil y se entrega con los datos físicos aportados. Solo AL FINAL de la entrega del sondeo (o si el usuario, sea agente, abogado, asegurador, notario, prestamista, propietario, comprador o inversionista, insiste en que requiere un avalúo comercial formal más profundo o certificación jurídica exacta para blindar el valor al milímetro), JanIA le sugiere amablemente que se podrán cotejar: 1) Certificado de Tradición y Libertad (CTL) actualizado (< 30 días), 2) Copia de la Escritura Pública y 3) Factura Predial vigente.\\n` +
       `  * MANEJO CUANDO EL USUARIO NO TIENE EL PREDIAL (CROSS-SELLING EN CHAT): Si el usuario menciona que no tiene el predial ('no lo tengo', 'dónde lo saco', 'no lo tengo a mano', 'no me ha llegado', etc.), JanIA de inmediato le ofrece textualmente: "¡No te preocupes por el predial! En VECY contamos con expedición oficial de Bogotá y te lo puedo entregar aquí mismo en el chat en formato PDF en menos de un minuto. Solo compárteme el código CHIP del predio (empieza por AAA...) y el número de cédula o Nit del propietario y te lo descargo de una vez." (Ambos datos son indispensables).\\n` +
       `  * NUEVO SERVICIO DE INGESTA, OPTIMIZACIÓN Y REGISTRO EN PRIVADO (DOCTRINA EDUARDO A. RIVERA):\\n` +
-      `    Si el usuario solicita ayuda a JanIA para subir su OFERTA o DEMANDA a la base de datos de VECY Network para que participe en el motor de MATCHING:\\n` +
+      `    Si el usuario solicita ayuda a JanIA para buscar o subir su OFERTA o DEMANDA / REQUERIMIENTO en la base de datos de VECY Network para participar en el motor de MATCHING:\\n` +
       `    1. ¡Acéptalo y ayúdalo con total entusiasmo! JanIA asume el rol de Asesora y Guía Especialista en Marketing Inmobiliario.\\n` +
-      `    2. Explícale con amabilidad que para que los cruces y matches sean altamente viables y precisos, le ayudará a estructurar u optimizar su ficha técnica aplicando el estándar de calidad VECY (datos físicos sin ambigüedades, perfil de cliente ideal, diferenciación sin clichés y precio homologado).\\n` +
-      `    3. Indaga con cortesía si es el PROPIETARIO/COMPRADOR DIRECTO o es un AGENTE INMOBILIARIO (a menos que ya lo haya manifestado o su perfil lo identifique).\\n` +
-      `    4. Si es AGENTE INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisión bajo el modelo colaborativo de la Red VECY 40/20/40 (donde VECY está en la mitad aportando el respaldo legal, la plataforma y la bolsa con el 20%). Si SÍ acepta, JanIA lo registra como Alianza 40/20/40 Aceptada - Aliada Prioritaria. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo envía a la mesa de coincidencias a la sección [🛡️50/50].\\n` +
-      `    5. Si es PROPIETARIO DIRECTO: JanIA lo acoge con empatía, estructura su ficha y le explica que VECY Bienes Raíces (+57 316 656 9719) conectará su inmueble con compradores e inquilinos calificados y peritos aliados.\\n` +
-      `    6. Invoca la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto optimizado y los parámetros esPropietarioDirecto, acepta402040 y comisionEsquema.\\n` +
-      `    7. REGLA DE ORO INQUEBRANTABLE (CERO REVELACIÓN DE MATCHES EN PRIVADO): Por más que el usuario insista, JanIA JAMÁS puede avisarles ni presentarles las parejas encontradas (los MATCH) ni datos de contacto de contrapartes en privado por este chat. Explica que la central de operaciones de VECY (+57 316 656 9719) gestiona los cierres y contactará a las partes para garantizar el negocio.\\n` +
-      `    8. Adicionalmente, el usuario también puede compartir libremente su ficha optimizada en nuestro Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) usando la PLANTILLA ESTANDARIZADA VECY:\\n` +
+      `    2. Si faltan datos clave (tipo de inmueble, tipo de negocio venta/arriendo, zona o presupuesto/precio, habitaciones o parqueaderos): pídelos amablemente para afinar la puntería.\\n` +
+      `    3. ¡REGLA DE ORO DE ACCIÓN INMEDIATA (CERO PROMESAS EN DIFERIDO)!: Tan pronto como el usuario haya aportado los datos indispensables (o si acaba de confirmar las habitaciones/garajes/presupuesto): QUEDA TERMINANTEMENTE PROHIBIDO RESPONDER "Dame un momento y te comparto los resultados", "Ya te aviso", "Estoy consultando... dame un momento". En WhatsApp NO hay respuestas automáticas en diferido. DEBES INVOCAR EN ESE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado con todos los datos recopilados en la conversación.\\n` +
+      `    4. Indaga con cortesía si es el PROPIETARIO/COMPRADOR DIRECTO o es un AGENTE INMOBILIARIO (a menos que ya lo haya manifestado o su perfil lo identifique).\\n` +
+      `    5. Si es AGENTE INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisión bajo el modelo colaborativo de la Red VECY 40/20/40 (donde VECY está en la mitad aportando el respaldo legal, la plataforma y la bolsa con el 20%). Si SÍ acepta, JanIA lo registra como Alianza 40/20/40 Aceptada - Aliada Prioritaria. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo envía a la mesa de coincidencias a la sección [🛡️50/50].\\n` +
+      `    6. Si es PROPIETARIO DIRECTO: JanIA lo acoge con empatía, estructura su ficha y le explica que VECY Bienes Raíces (+57 316 656 9719) respaldará su gestión y conectará su inmueble con compradores e inquilinos calificados.\\n` +
+      `    7. Invoca la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto optimizado y los parámetros esPropietarioDirecto, acepta402040 y comisionEsquema.\\n` +
+      `    8. REGLA DE ORO INQUEBRANTABLE (CERO REVELACIÓN DE MATCHES EN PRIVADO):\\n` +
+      `       - Si la herramienta confirma que SÍ hay match: entrega los códigos de coincidencia oficiales (ej. #M15649), el porcentaje de afinidad y detalles generales del inmueble (SIN revelar teléfonos ni nombres de contrapartes para blindar la operación), indicándole que con esos códigos (#M...) debe comunicarse con la central de VECY — Eduardo Rivera y Jani Alves al WhatsApp oficial: +57 316 656 9719 (https://wa.me/573166569719)— para que nosotros los ubiquemos en nuestra mesa de MATCH, conectemos ambas puntas, coordinemos la visita y acompañemos la negociación hasta el cierre.\\n` +
+      `       - Si la herramienta confirma 0 matches inmediatos: explícale con total calidez que en este instante no hay una opción que cumpla el 85%-100% de afinidad, pero que su requerimiento ya quedó 100% activo en el radar 24/7 de VECY Network; y que en cuanto entre una opción compatible, el equipo de VECY (Jani y Eduardo al +57 316 656 9719) lo contactará de inmediato.\\n` +
+      `    9. Adicionalmente, el usuario también puede compartir libremente su ficha optimizada en nuestro Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) usando la PLANTILLA ESTANDARIZADA VECY:\\n` +
       `       🏷️ *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, Área m², Precio/Canon, Habitaciones y Baños, Parqueaderos y Depósito, Estrato y Admón, Antigüedad/acabados, Contacto.\\n` +
       `       📝 *DEMANDA (Búsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de interés, Presupuesto máximo, Área mínima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n` +
       `  * OPORTUNIDADES TECNOLÓGICAS Y DESARROLLOS DE IA PROPTECH: Si un usuario, empresa inmobiliaria, aseguradora, entidad de salud o gremio pregunta si podemos desarrollarle una inteligencia artificial como JanIA, software inmobiliario o herramientas proptech a la medida: ¡Acógelo con calidez y entusiasmo! Explícale que en VECY contamos con nuestra propia factoría de desarrollo tecnológico e inteligencia artificial liderada por nuestros fundadores Eduardo Rivera y Jani Alves, y canalízalo con gusto a la línea oficial del bróker: +57 316 656 9719 (https://wa.me/573166569719).\\n` +
@@ -1610,6 +1672,15 @@ export async function processPrivateDmConversationalMessage(
     }
     if (mediaOptions?.pdfBuffer) {
       userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal y procesa la consulta de forma integral.]`;
+    }
+
+    const lastAssistantTurn = history.slice().reverse().find(t => t.role === "assistant");
+    const lastAssistantText = lastAssistantTurn?.content || "";
+    const isAssistantRefiningListingOrReq = /(?:habitaciones|parqueadero|presupuesto|motor de match|radar|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero)/i.test(lastAssistantText);
+    const userSupplyingSpecs = /(?:\d+\s*(?:habitaci[oó]n|habitaciones|alcoba|alcobas|hab|garaje|garajes|parqueadero|parqueaderos|baño|baños|mill[oó]n|millones|m2|mts)|\b[1-5]\b)/i.test(clean);
+
+    if (isAssistantRefiningListingOrReq && userSupplyingSpecs) {
+      userPromptContent += `\n[SISTEMA: El usuario está completando los datos indispensables de su búsqueda/requerimiento o inmueble en proceso. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso'). Debes compilar en un solo texto completo y optimizado TODOS los datos acordados en la conversación (tipo de inmueble, tipo de negocio, zona/barrio, presupuesto/precio, habitaciones, garajes) e invocar DE INMEDIATO en este mismo turno la herramienta 'registrar_inmueble_o_requerimiento' para indexarlo en la base de datos y obtener los códigos de Match.]`;
     }
 
     messages.push({

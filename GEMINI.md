@@ -1,10 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.45.0 — 2026-10-25)
-- **JanIA Server:** `v33.45` (`33.45.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp:**
-  1. **Neutralización y Sanitización de Identificadores Internos (`dmHandler.ts`):** `formatPoliteToolDelivery` y `processPrivateDmConversationalMessage` interceptan y neutralizan cualquier respuesta o ejecución de herramienta que intente emitir identificadores raw de WhatsApp (`@lid`, `@s.whatsapp.net` o números telefónicos crudos como texto de respuesta), garantizando que JanIA siempre responda con calidez, elegancia y señorío conversacional.
-  2. **Centinela en Capa de Transporte Baileys (`whatsapp-match.ts`):** Validación estricta en `queuedSend` y en el despachador de mensajes privados que bloquea de raíz el envío de mensajes de texto que consistan en JIDs o números crudos, evitando fugas de identidad o bugs de visualización.
-  3. **Preservación Doctrinal de la Experiencia Conversacional Humana:** Blindaje total de la percepción de JanIA como una asistente astuta, resolutiva y natural sin fallos mecánicos de socket.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 371/371 passing (100% verde) | Build `npm run build` limpio en 25s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.46.0 — 2026-10-25)
+- **JanIA Server:** `v33.46` (`33.46.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Entrega de Códigos de Match #M..., Canalización a Mesa VECY y Guardarraíl Anti-Promesas en Diferido:**
+  1. **Búsqueda Síncrona y Entrega de Códigos de Match (`dmHandler.ts`):** `registrar_inmueble_o_requerimiento` ejecuta el motor de matching de forma síncrona inmediata y sintetiza el reporte entregando códigos oficiales de coincidencia (`#M...`) y afinidad ≥85% sin divulgar contactos directos de contrapartes.
+  2. **Canalización Sagrada a la Mesa de Operaciones VECY (+57 316 656 9719):** Conexión ineludible del usuario con Eduardo Rivera y Jani Alves en el número de atención oficial de brókers para ubicar los códigos en la mesa de MATCH y conectar las puntas hasta lograr la visita y el cierre.
+  3. **Guardarraíl Anti-Promesas en Diferido:** Eliminación de bloqueos de silencio; cuando el usuario complementa especificaciones técnicas, queda prohibido responder prometiendo acciones futuras ("dame un momento"), forzando la compilación y ejecución instantánea del registro.
+  4. **Reparación Estructural DDL en PostgreSQL:** Migración física de columnas faltantes `acepta_terceria` y `stand_by_directo_vecy` en tablas `requirements` y `properties`. Requerimiento de Turbo (+57 324 6326836) persistido con ID `1306` y activo 24/7 en el radar.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 375/375 passing (100% verde) | Build `npm run build` limpio en 14s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

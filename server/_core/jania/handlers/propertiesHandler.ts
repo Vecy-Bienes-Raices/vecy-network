@@ -2829,6 +2829,8 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       if (saved) {
         result.inserted = true;
+        result.savedId = saved.id;
+        result.savedType = "property";
         result.shouldSendDM = false;
         result.dmResponse = "";
         result.response = "";
@@ -2963,6 +2965,8 @@ Por lo tanto, DEBES hacer lo siguiente:
         }
 
         result.inserted = true;
+        result.savedId = saved.id;
+        result.savedType = "requirement";
         result.shouldSendDM = false;
         result.dmResponse = "";
         result.response = "";

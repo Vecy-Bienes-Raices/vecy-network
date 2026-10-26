@@ -330,6 +330,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.46 — Octubre 2026
+
+#### [v33.46.0] — 2026-10-25: Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD
+- **Búsqueda Síncrona y Entrega de Códigos de Coincidencia (#M...) (`dmHandler.ts`):**
+  - **Problema:** En chats privados, cuando un usuario completaba los datos de su requerimiento o inmueble, JanIA no realizaba una entrega de resultados inmediata ni informaba si existía un match. La búsqueda se hacía en segundo plano (`findMatchesForRequirement` fire-and-forget), por lo cual el modelo no disponía de los identificadores `#M...` para entregarlos al usuario ni orientarlo sobre cómo avanzar.
+  - **Solución:** Se transformó `registrar_inmueble_o_requerimiento` para que ejecute `findMatchesForRequirement` o `findMatchesForProperty` de forma síncrona inmediata antes de sintetizar la respuesta. Se computa el total de matches con afinidad ≥85%, sus códigos `#M...` y sus características principales. En la síntesis final:
+    - *Si hay Matches*: Se entregan los códigos `#M...`, el nivel de afinidad (%) y las características generales del inmueble (sin divulgar teléfonos de contrapartes ni vulnerar la confidencialidad), instruyendo al cliente que con estos códigos debe comunicarse con Eduardo Rivera y Jani Alves al **+57 316 656 9719** para ubicarlos en la mesa de MATCH y conectar las dos puntas hasta lograr la visita y el cierre de la operación.
+    - *Si no hay Matches (0 Matches)*: Se confirma con cordialidad que no hay cruce inmediato en inventario, pero que su requerimiento ya quedó 100% activo en el radar 24/7 de la red colaborativa de VECY y se le notificará de inmediato apenas ingrese una opción compatible.
+- **Guardarraíl Anti-Promesas en Diferido en Arquitecturas de Socket Reactivo (`dmHandler.ts`):**
+  - **Problema:** En la conversación con el usuario Turbo (+57 324 6326836), tras preguntar por habitaciones y parqueadero, Turbo respondió: *"1 o 2 habitaciones, 1 parqueadero"*. JanIA respondió: *"Dame un momentico y te comparto los resultados del match. 🚀✨"*, pero no ejecutó ninguna herramienta. En Baileys/WhatsApp el ciclo de mensaje concluyó y el bot quedó en silencio a la espera de un nuevo evento, dejando a Turbo esperando indefinidamente.
+  - **Solución:** Se implementó un guardarraíl cognitivo en System Prompt y User Prompt de `dmHandler.ts` que detecta cuando el usuario suministra especificaciones técnicas complementarias tras una solicitud previa de JanIA. **Queda terminantemente prohibido responder con promesas a futuro ("dame un momento")**; JanIA está obligada a compilar todos los datos acumulados y llamar de inmediato a `registrar_inmueble_o_requerimiento`.
+- **Reparación Estructural DDL en Base de Datos PostgreSQL:**
+  - **Problema:** Las columnas `acepta_terceria` y `stand_by_directo_vecy` existían en el esquema Drizzle TypeScript (`drizzle/schema.ts`), pero no se habían creado físicamente en las tablas `requirements` ni `properties` en PostgreSQL del servidor. Esto generaba un fallo crítico `PostgresError: column "acepta_terceria" does not exist` al intentar registrar o consultar cualquier requerimiento.
+  - **Solución:** Se ejecutaron las migraciones DDL (`ALTER TABLE requirements ADD COLUMN IF NOT EXISTS ...`, `ALTER TABLE properties ADD COLUMN IF NOT EXISTS ...`).
+- **Persistencia del Requerimiento de Turbo:**
+  - Se guardó exitosamente el requerimiento con ID `1306` en PostgreSQL (Arriendo, Apartamento, El Chicó / Parque de la 93, máx $3.000.000 COP, 1 alcoba, 1 parqueadero, teléfono `573246326836`). Se ejecutó el matching arrojando 0 matches inmediatos (el inventario disponible en Parque de la 93 oscila entre $4.4M y $8.5M en arriendo o es venta), quedando activo en el radar 24/7.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **375/375 passing** (100% verde a $0 COP sin claves de pago) | Build `npm run build` limpio en 14s.
+
 ### 🔖 v33.45 — Octubre 2026
 
 #### [v33.45.0] — 2026-10-25: Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp

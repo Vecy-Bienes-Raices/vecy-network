@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-25] — JanIA v33.46: Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD (v33.46 - 33.46.0)
+
+**Versión:** `v33.46` (`33.46.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- Análisis a fondo del caso conversacional con "Turbo" (+57 324 6326836) en WhatsApp:
+  1. **Por qué se frenó JanIA a lo último**: Explicar la causa raíz de por qué JanIA respondió *"Dame un momentico y te comparto los resultados del match. 🚀✨"* y se detuvo en silencio sin volver a hablar.
+  2. **Verificación del requerimiento en BD**: Verificar si el requerimiento de Turbo (*"Arriendo de apartamento cerca al parque de la 93 hasta 3 millones, 1 o 2 habitaciones, 1 parqueadero"*) quedó debidamente guardado en la base de datos con todos los datos necesarios para salir a encontrar un MATCH.
+  3. **Doctrina Ineludible de Entrega de Matches y Mesa de Operaciones VECY**: Consagrar que JanIA debió responderle al cliente diciéndole si encontró o no match, entregarle los códigos de cruce oficiales (`#M...`) y explicarle con total claridad que con estos códigos debe comunicarse con VECY (Jani Alves y Eduardo Rivera al número oficial de atención de brókers **+57 316 656 9719**) para que los ubiquemos en nuestra mesa de MATCH y empecemos la gestión conectando las dos puntas hasta lograr la visita y el cierre de la operación.
+
+**Diagnóstico Técnico:**
+1. **Deadlock Conversacional por Promesa en Diferido en Arquitecturas de Socket Reactivo:** Los bots de WhatsApp operan síncronamente por evento de mensaje recibido. Al devolver texto prometiendo volver en diferido (*"Dame un momentico y te comparto los resultados..."*), el ciclo del mensaje concluyó sin disparar ninguna herramienta. JanIA quedó a la espera de un nuevo mensaje del usuario y Turbo quedó esperando la respuesta prometida.
+2. **Falla Estructural de Esquema en Base de Datos PostgreSQL:** Las columnas `acepta_terceria` y `stand_by_directo_vecy` habían sido añadidas al schema de TypeScript (`drizzle/schema.ts`), pero no se había corrido la migración DDL en la base de datos PostgreSQL del servidor. Cualquier llamada a insertar en `requirements` o consultar `properties` en `matching.ts` crasheaba con: `PostgresError: column "acepta_terceria" does not exist`.
+3. **Ausencia de Retorno Síncrono de Matches en DMs (`dmHandler.ts`):** `registrar_inmueble_o_requerimiento` despachaba la búsqueda de coincidencias en segundo plano (`findMatchesForRequirement` fire-and-forget), por lo cual el modelo generador de la respuesta no tenía acceso a los códigos `#M...` ni al número de coincidencias para informarlas al usuario.
+
+**Acciones Ejecutadas:**
+- **Migración DDL en PostgreSQL del Servidor:**
+  - `ALTER TABLE requirements ADD COLUMN IF NOT EXISTS acepta_terceria BOOLEAN DEFAULT true, ADD COLUMN IF NOT EXISTS stand_by_directo_vecy BOOLEAN DEFAULT false;`
+  - `ALTER TABLE properties ADD COLUMN IF NOT EXISTS acepta_terceria BOOLEAN DEFAULT true, ADD COLUMN IF NOT EXISTS stand_by_directo_vecy BOOLEAN DEFAULT false;`
+- **Persistencia y Cruce del Requerimiento de Turbo:**
+  - Requerimiento insertado con éxito en PostgreSQL con ID `1306`: Tipo `apartment`, Negocio `arriendo`, Zona `El Chicó` / Parque de la 93, Presupuesto Max `$3.000.000 COP`, Habitaciones `1`, Garajes `1`, Teléfono `573246326836`, Nombre `Turbo`, Status `active`.
+  - Búsqueda de matches ejecutada: **0 matches inmediatos** (los apartamentos en arriendo disponibles en Parque de la 93 / Chicó oscilan entre $4.4M y $8.5M o son en venta). Requerimiento 100% activo en el radar 24/7.
+- **`server/_core/jania/types.ts` & `propertiesHandler.ts`:**
+  - Incorporación de `savedId` y `savedType` en la interfaz `JanIAResult` para transferir el ID del registro guardado de forma transparente.
+- **`server/_core/jania/handlers/dmHandler.ts`:**
+  - `registrar_inmueble_o_requerimiento`: Búsqueda síncrona inmediata con `findMatchesForRequirement` o `findMatchesForProperty`, retornando `totalMatchesFound`, `matchesEncontrados` (con `matchCode` `#M...`, score de afinidad, zona, canon y características) y `registroId`.
+  - `synthesizeToolResponseWithGemini`: Nueva doctrina de entrega de Match dictada por Eduardo A. Rivera:
+    - *Con Matches*: Entrega de códigos `#M...`, porcentaje de afinidad y resumen de características (sin dar teléfonos de contrapartes), indicando al usuario que con esos códigos debe comunicarse con Eduardo Rivera y Jani Alves al **+57 316 656 9719** para que los ubiquemos en la mesa de MATCH y conectemos las dos puntas hasta lograr la visita y el posterior cierre.
+    - *Con 0 Matches*: Confirmación cálida y transparente de que no hay cruce inmediato en inventario, pero que su requerimiento ya quedó 100% activo en el radar 24/7 de la red colaborativa de VECY y se le notificará de inmediato apenas entre una opción compatible.
+  - Guardarraíl estricto en System Prompt y User Prompt: Detecta cuando el usuario suministra especificaciones técnicas tras una pregunta de JanIA y **prohíbe terminantemente responder prometiendo acciones futuras**, forzando la compilación e invocación inmediata de `registrar_inmueble_o_requerimiento`.
+- **`shared/const.ts` & `package.json`:**
+  - Incremento oficial a `v33.46` / `33.46.0`.
+- **`server/__tests__/regression.test.ts`:**
+  - Creación de la `Suite v33.46 — Entrega de Códigos de Match #M..., Canalización a VECY y Guardarraíl Anti-Promesas en Diferido` con 4 tests unitarios pasando al 100%.
+  - Actualización de regexes en suites 34 a 41 para soportar `v33.46`.
+- **Validación Limpia ($0 COP):**
+  - Typecheck `npm run check` (0 errores) | Tests `npm test` 375/375 passing (100% verde a $0 COP) | Build `npm run build` limpio en 14s.
+
+---
+
 ### 📅 [2026-10-25] — JanIA v33.45: Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp (v33.45 - 33.45.0)
 
 **Versión:** `v33.45` (`33.45.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

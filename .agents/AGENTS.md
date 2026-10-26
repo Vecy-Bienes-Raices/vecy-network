@@ -182,7 +182,28 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.45 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.46 — Octubre 2026
+
+### Novedades v33.46 (Entrega de Códigos de Match #M..., Canalización a Mesa VECY, Guardarraíl Anti-Promesas en Diferido y Reparación Estructural de BD):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Causa Raíz del Congelamiento en DMs ("Dame un momentico...")**:
+     - *Causa raíz*: En arquitecturas de socket reactivas como WhatsApp/Baileys, el procesamiento de mensajes ocurre por turnos de eventos síncronos. JanIA respondió con una promesa en diferido sin invocar la herramienta `registrar_inmueble_o_requerimiento`. Al terminar la emisión de texto, el ciclo concluyó y el bot quedó en silencio a la espera de un nuevo mensaje del usuario, mientras Turbo (+57 324 6326836) quedó esperando la respuesta prometida.
+     - *Solución*: Se instaló un guardarraíl cognitivo en System Prompt y User Prompt de `dmHandler.ts` que detecta cuando el usuario suministra especificaciones técnicas complementarias (habitaciones, garajes, presupuesto) y **prohíbe terminantemente responder prometiendo acciones futuras ("dame un momento")**, forzando la compilación inmediata e invocación directa de `registrar_inmueble_o_requerimiento`.
+  2. **Reparación Estructural DDL en Base de Datos PostgreSQL**:
+     - *Causa raíz*: Las columnas `acepta_terceria` y `stand_by_directo_vecy` existían en `drizzle/schema.ts` pero no se habían migrado físicamente a las tablas `requirements` y `properties` en PostgreSQL del servidor. Esto ocasionaba un fallo catastrófico silencioso al intentar insertar o consultar propiedades en el motor de matching (`PostgresError: column "acepta_terceria" does not exist`).
+     - *Solución*: Se ejecutaron las migraciones DDL con `ALTER TABLE requirements ADD COLUMN IF NOT EXISTS ...` y `ALTER TABLE properties ADD COLUMN IF NOT EXISTS ...`, normalizando el esquema a perpetuidad.
+  3. **Persistencia y Estado del Requerimiento de Turbo**:
+     - *Causa raíz*: Se verificó si el requerimiento de Turbo había quedado guardado. Debido al error DDL previo, no se había almacenado.
+     - *Solución*: Se insertó el requerimiento con ID `1306`: Apartamento en arriendo cerca al Parque de la 93 / El Chicó, presupuesto máximo $3.000.000 COP, 1-2 habitaciones, 1 parqueadero, teléfono `573246326836`. Al correr el motor de cruce arrojó **0 matches inmediatos** (los inmuebles disponibles en arriendo en la zona arrancan en $4.4M o son venta). El requerimiento quedó 100% activo en el radar 24/7.
+  4. **Doctrina Ineludible de Entrega de Códigos de Match (#M...) y Canalización a VECY (+57 316 656 9719)**:
+     - *Causa raíz*: Anteriormente el matching se ejecutaba en segundo plano (fire-and-forget), impidiendo informar al usuario de los resultados o entregar los códigos de cruce.
+     - *Solución*: `registrar_inmueble_o_requerimiento` ejecuta `findMatchesForRequirement` de manera síncrona inmediata y sintetiza el reporte:
+       - *Si hay Matches*: Entrega los códigos de coincidencia oficiales (`#M...`), el porcentaje de afinidad y las especificaciones generales (sin revelar teléfonos directos ni nombres de contrapartes), explicando al cliente que con estos códigos debe comunicarse con Eduardo Rivera y Jani Alves al **+57 316 656 9719** para ubicarlos en la mesa de MATCH y conectar las dos puntas hasta lograr la visita y el posterior cierre.
+       - *Si no hay Matches (0 Matches)*: Confirmación cálida y transparente de que no hay cruce inmediato en inventario, pero que su requerimiento ya quedó 100% activo en el radar 24/7 de la red colaborativa de VECY y se le notificará de inmediato apenas entre una opción compatible.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 375/375 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 14s ✅
+- `shared/const.ts` (`v33.46`) y `package.json` (`33.46.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.45 — Octubre 2026
 
 ### Novedades v33.45 (Blindaje Centinela Anti-Fuga de JID/LID en Mensajes DMs y WhatsApp):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

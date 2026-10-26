@@ -18,6 +18,8 @@ export type JanIAResult = {
   voiceResponse?: string;
   sendReputationHook?: boolean;
   inserted?: boolean;
+  savedId?: number;
+  savedType?: "property" | "requirement";
   isFlyerOrBanner?: boolean;
   flyerVerbatimText?: string;
   document?: Buffer;
