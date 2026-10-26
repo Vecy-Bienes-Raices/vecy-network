@@ -1,15 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.48.0 — 2026-10-25)
-- **JanIA Server:** `v33.48` (`33.48.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Pedagogía MATCH 40/20/40, Ficha Técnica 360°, Aterrizaje Sincero de Presupuesto, Deducción Astuta de Rol y Vendedora Consultiva Inbound:**
-  1. **Pedagogía Sincera y Comisión Colaborativa 40/20/40 (Cero Falsas Ilusiones):** JanIA explica con claridad que para activar el cruce y conectar las puntas, las partes deben aceptar la figura de comisión 40% (oferente o demandante), 40% (contraparte) y 20% (VECY por la mesa de MATCH, peritaje, seguridad y cierre).
-  2. **Auditoría e Indagación de Ficha Técnica Exhaustiva 360° (Deducción Astuta de Rol):** JanIA deduce autónomamente si es Oferta o Demanda por el contexto ('busco', 'vendo', 'arriendo') sin repreguntar lo obvio como bot rígido. Indaga con calidez mediante ejemplos: exterior/interior, sol mañana/tarde, cocina abierta/cerrada/americana, lavandería independiente, CBS, balcón/terraza, chimenea, piso bajo/medio/alto, parqueaderos independientes vs línea, depósito, amenidades, vigilancia, cuadrante y tranquilidad de vías.
-  3. **Guion Modelado de Entrega de Códigos MATCH (#M...):** Formulación institucional entregando los códigos de cruce e instruyendo llamar al 3166569719 (+57 316 656 9719) indicando que JanIA se los dio para ubicarlos en la mesa de MATCH y conectar las puntas hasta la visita y el cierre.
-  4. **Aterrizaje Sincero de Presupuestos Inviables y Realidad de Mercado:** Si el presupuesto es notablemente inferior a la realidad de la zona (ej. Chicó/93 por $3M cuando arrancan en $4.4M), JanIA es honesta y sincera: no crea falsas expectativas diciendo que 'está en radar 24/7', sino que explica con solvencia pericial la realidad del cuadrante y propone alternativas inteligentes (ajustar presupuesto o zonas de alto confort como Chapinero Alto, Pasadena, Cedritos).
-  5. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY):** Aporta valor primero y de forma oportuna ofrece sus superpoderes: Predial oficial de Bogotá en PDF en 1 min con CHIP, Paz y Salvo IDU, sondeo $/m² con POT Dec. 555/21, validación de antecedentes en ADRES/Policía, y suscripción al Canal Oficial.
-  6. **Transparencia de la Base de Datos Viva y Emojis en Grupos:** Se aclara que la data se nutre minuto a minuto de grupos de WhatsApp (marcando Ofertas con 👍 y Demandas con 📝).
-  7. **Humanización en Solicitud de Reseñas en Google:** Ofrecimiento dulce de explicar el paso a paso si el usuario no sabe calificar en Google.
-  8. **Hot Learning de Fundadores (`founderKnowledgeService.ts`):** Módulo de persistencia y aplicación instantánea de tips y directivas emitidas por Eduardo y Jani desde WhatsApp.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 383/383 passing (100% verde) | Build `npm run build` limpio en 11.79s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.49.0 — 2026-10-26)
+- **JanIA Server:** `v33.49` (`33.49.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Matriz Completa de 6 Emojis de Negocio, Ciberseguridad Institucional y Secreto Industrial (Doctrina Eduardo A. Rivera):**
+  1. **Matriz Doctrinal Oficial de 6 Emojis de Negocio:**
+     - **Ofertas:** 👍 (Venta pura), 👌 (Arriendo mensual), 🔀 (Permuta o venta-permuta).
+     - **Demandas:** 📝 (Búsqueda compra), ✏️ (Búsqueda arriendo), 🔄 / 🔁 (Búsqueda con permuta).
+     - **Moderación:** 🚫 (Infracción de normas o spam), ❓ (Ficha técnica incompleta).
+  2. **Guardarraíl de Ciberseguridad, Secreto Industrial y Anti-Prompt Injection:** JanIA jamás expone código fuente, system prompts, lógica algorítmica ni esquemas internos. Ante solicitudes de introspección técnica responde con cortesía diplomática y reserva corporativa, explicando que toda la tecnología es propiedad intelectual y secreto industrial de VECY Network desarrollada por sus directores Eduardo Rivera y Jani Alves, canalizando al +57 316 656 9719 para alianzas proptech formales.
+  3. **Aterrizaje Sincero de Presupuestos Inviables y Realidad de Mercado:** Honestidad y solvencia pericial ante presupuestos por debajo del mercado (Chicó/93 por $3M), proponiendo sectores competitivos (Chapinero Alto, Pasadena, Cedritos).
+  4. **Deducción Astuta de Rol (Oferta vs Demanda):** Deducción orgánica sin repreguntas obvias cuando el cliente ya expresó verbos de acción.
+  5. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY):** Asesoría pericial de alto valor y soft-pitch oportuno de superpoderes (Predial oficial en PDF con CHIP, Paz y Salvo IDU, sondeo $/m² con POT Dec. 555/21, antecedentes ADRES/Policía).
+  6. **Pedagogía Sincera MATCH 40/20/40 y Ficha Técnica 360° con Ejemplos Cálidos.**
+  7. **Guion Modelado de Códigos MATCH (#M...) y Canalización al 3166569719.**
+  8. **Hot Learning de Fundadores (`founderKnowledgeService.ts`):** Persistencia y aplicación inmediata de directivas por WhatsApp de Eduardo y Jani.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 387/387 passing (100% verde) | Build `npm run build` limpio en 26.18s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

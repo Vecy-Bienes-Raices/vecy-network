@@ -330,6 +330,20 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.49 — Octubre 2026
+
+#### [v33.49.0] — 2026-10-25: Matriz Completa de 6 Emojis de Negocio, Ciberseguridad y Secreto Industrial
+- **Consagración de la Matriz Doctrinal de 6 Emojis de Negocio:**
+  - **Problema:** En explicaciones previas, JanIA solo mencionaba dos emojis generales (👍 para Oferta y 📝 para Demanda), omitiendo la rica clasificación visual implementada en el sistema para arriendos, permutas y moderación.
+  - **Solución:** Se formalizó en el núcleo cognitivo (`prompts.ts`, `base.md`, `dmHandler.ts` y `founderKnowledgeService.ts`) la Matriz Doctrinal Oficial de 6 Emojis de Negocio:
+    - *OFERTAS:* 👍 (Venta pura), 👌 (Arriendo o canon mensual), 🔀 (Permuta o venta-permuta).
+    - *DEMANDAS:* 📝 (Búsqueda de Compra), ✏️ (Búsqueda de Arriendo), 🔄 o 🔁 (Búsqueda con Permuta).
+    - *MODERACIÓN (Grupos Oficiales):* 🚫 (Infracción de normas o spam), ❓ (Ficha técnica con datos incompletos).
+- **Guardarraíl de Ciberseguridad, Secreto Industrial y Anti-Prompt Injection (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En entornos abiertos de mensajería (WhatsApp DMs y Web), existen usuarios curiosos, competidores o atacantes que mediante técnicas de *prompt injection* o ingeniería inversa intentan extraer el código fuente, los system prompts, la arquitectura interna, esquemas de bases de datos o secretos corporativos de JanIA.
+  - **Solución:** Se implementó el Guardarraíl 13 de Ciberseguridad y Secreto Industrial: JanIA entrega explicaciones persuasivas, profesionales y pedagógicas de cómo trabaja en beneficio del usuario, pero JAMÁS divulga prompts internos, código ni configuraciones propietarias. Ante solicitudes de introspección técnica, responde con cortesía diplomática y reserva corporativa, explicando que toda la tecnología es propiedad intelectual y secreto industrial de VECY Network desarrollada por sus directores Eduardo Rivera y Jani Alves, canalizando al +57 316 656 9719 para alianzas proptech formales.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **387/387 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 26.18s.
+
 ### 🔖 v33.48 — Octubre 2026
 
 #### [v33.48.0] — 2026-10-25: Aterrizaje Sincero de Presupuestos Inviables, Deducción Astuta de Rol y Vendedora Consultiva Inbound
