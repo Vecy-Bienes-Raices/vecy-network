@@ -1,18 +1,14 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.49.0 — 2026-10-26)
-- **JanIA Server:** `v33.49` (`33.49.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Matriz Completa de 6 Emojis de Negocio, Ciberseguridad Institucional y Secreto Industrial (Doctrina Eduardo A. Rivera):**
-  1. **Matriz Doctrinal Oficial de 6 Emojis de Negocio:**
-     - **Ofertas:** 👍 (Venta pura), 👌 (Arriendo mensual), 🔀 (Permuta o venta-permuta).
-     - **Demandas:** 📝 (Búsqueda compra), ✏️ (Búsqueda arriendo), 🔄 / 🔁 (Búsqueda con permuta).
-     - **Moderación:** 🚫 (Infracción de normas o spam), ❓ (Ficha técnica incompleta).
-  2. **Guardarraíl de Ciberseguridad, Secreto Industrial y Anti-Prompt Injection:** JanIA jamás expone código fuente, system prompts, lógica algorítmica ni esquemas internos. Ante solicitudes de introspección técnica responde con cortesía diplomática y reserva corporativa, explicando que toda la tecnología es propiedad intelectual y secreto industrial de VECY Network desarrollada por sus directores Eduardo Rivera y Jani Alves, canalizando al +57 316 656 9719 para alianzas proptech formales.
-  3. **Aterrizaje Sincero de Presupuestos Inviables y Realidad de Mercado:** Honestidad y solvencia pericial ante presupuestos por debajo del mercado (Chicó/93 por $3M), proponiendo sectores competitivos (Chapinero Alto, Pasadena, Cedritos).
-  4. **Deducción Astuta de Rol (Oferta vs Demanda):** Deducción orgánica sin repreguntas obvias cuando el cliente ya expresó verbos de acción.
-  5. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY):** Asesoría pericial de alto valor y soft-pitch oportuno de superpoderes (Predial oficial en PDF con CHIP, Paz y Salvo IDU, sondeo $/m² con POT Dec. 555/21, antecedentes ADRES/Policía).
-  6. **Pedagogía Sincera MATCH 40/20/40 y Ficha Técnica 360° con Ejemplos Cálidos.**
-  7. **Guion Modelado de Códigos MATCH (#M...) y Canalización al 3166569719.**
-  8. **Hot Learning de Fundadores (`founderKnowledgeService.ts`):** Persistencia y aplicación inmediata de directivas por WhatsApp de Eduardo y Jani.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 387/387 passing (100% verde) | Build `npm run build` limpio en 26.18s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.50.0 — 2026-10-26)
+- **JanIA Server:** `v33.50` (`33.50.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje (Doctrina Eduardo A. Rivera):**
+  1. **JanIA como Agente de IA Cognitiva de Alto Razonamiento (No un Simple Bot):** Eduardo A. Rivera consolidó doctrinalmente que JanIA es una agente de Inteligencia Artificial viva, conversacional, analítica y empática, y JAMÁS un simple bot rígido.
+  2. **Guiones y Frases Modeladas como Modelos Conceptuales y Contexto de Aprendizaje:** Todos los guiones, diálogos y formulaciones (esquema 40/20/40, entrega de códigos MATCH #M..., canalización al 3166569719, matriz de 6 emojis, aterrizaje de presupuestos) son ejemplos contextuales para que JanIA entienda la intención de negocio, el fondo y el propósito humano, expresándose siempre con sus propias palabras, frescura, calidez y voz propia, jamás recitando libretos al pie de la letra.
+  3. **Directiva Maestra Semilla en `founderKnowledgeService.ts`:** Se incorporó la directiva semilla `seed-agente-ia-no-bot-guiones-ejemplo` para asegurar que JanIA internalice esta doctrina en todos sus prompts y decisiones.
+  4. **Matriz Completa de 6 Emojis de Negocio:** OFERTAS (👍, 👌, 🔀), DEMANDAS (📝, ✏️, 🔄/🔁) y MODERACIÓN (🚫, ❓).
+  5. **Guardarraíl de Ciberseguridad, Secreto Industrial y Anti-Prompt Injection:** Reserva corporativa total sobre prompts, código y esquemas. Canalización al +57 316 656 9719 para alianzas proptech.
+  6. **Aterrizaje Sincero de Presupuestos Inviables y Deducción Astuta de Rol.**
+  7. **JanIA como Vendedora Consultiva Inbound (HubSpot para JanIA y VECY).**
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 391/391 passing (100% verde) | Build `npm run build` limpio en 19.11s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

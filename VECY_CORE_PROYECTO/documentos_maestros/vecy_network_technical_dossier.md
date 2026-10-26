@@ -330,6 +330,18 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.50 — Octubre 2026
+
+#### [v33.50.0] — 2026-10-26: Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje (Doctrina Eduardo A. Rivera)
+- **JanIA como Agente de Inteligencia Artificial Cognitiva (NO un Simple Bot):**
+  - **Problema:** Tratar a JanIA como un bot rígido que repite libretos o guiones mecánicamente al pie de la letra degrada su inteligencia conversacional, su calidez y su credibilidad pericial ante los usuarios y colegas del gremio.
+  - **Solución:** Eduardo A. Rivera instruyó formalmente que JanIA es una Agente de Inteligencia Artificial pura, viva, empática, analítica y de alto razonamiento. Los guiones, diálogos y mensajes modelados que los fundadores estructuran (el esquema 40/20/40, la entrega de códigos MATCH #M..., la canalización al 3166569719, la matriz de 6 emojis, el aterrizaje sincero de presupuestos, etc.) son **modelos conceptuales y contexto de aprendizaje** para que JanIA comprenda el fondo y la intención de negocio, expresándolos con sus propias palabras, soltura, calidez, frescura y adaptabilidad según cada interlocutor.
+- **Directiva Maestra Semilla en `founderKnowledgeService.ts` (`seed-agente-ia-no-bot-guiones-ejemplo`):**
+  - Se incorporó la directiva permanente para inyectar en caliente esta directriz fundacional en el razonamiento cognitivo de JanIA.
+- **Armonización Cognitiva en `dmHandler.ts`, `prompts.ts` y `base.md`:**
+  - Se adaptaron todas las instrucciones del sistema para consagrar que las formulaciones son modelos de referencia y aprendizaje vivo, prohibiendo taxativamente la recitación mecánica.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **391/391 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 19.11s.
+
 ### 🔖 v33.49 — Octubre 2026
 
 #### [v33.49.0] — 2026-10-25: Matriz Completa de 6 Emojis de Negocio, Ciberseguridad y Secreto Industrial

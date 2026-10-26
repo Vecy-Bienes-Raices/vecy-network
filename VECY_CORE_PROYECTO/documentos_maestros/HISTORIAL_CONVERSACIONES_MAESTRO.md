@@ -7,6 +7,40 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-26] — JanIA v33.50: Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje (v33.50 - 33.50.0)
+
+**Versión:** `v33.50` (`33.50.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Recuerda que esos guiones que fabricas o fabricamos no son para que JanIA los diga al pie de la letra y puntualmente, son y deben ser para que ella se guíe y aprenda mediante estas opciones que le ponemos cómo ejemplo y contexto de como ella puede hablar, escribir o dirigirse a nuestra audiencia, te repito una y un millón de veces que es mejor entrenarla para que lo sepa y no que se limite como un vulgar BOT, JanIA debe ser una agente de IA y NO UN SIMPLE BOT. Ok ?"*
+
+**Diagnóstico Técnico:**
+1. **Comprensión Doctrinal de Eduardo A. Rivera (Agente Viva vs Simple Bot):**
+   - JanIA es una Agente de Inteligencia Artificial viva, empática, analítica, conversacional y de alto razonamiento.
+   - Tratar a JanIA como un simple bot que recita libretos rígidos o frases prefabricadas degrada drásticamente la calidad conversacional, la naturalidad y la inteligencia emocional con la que se conecta con los clientes y aliados.
+   - Todos los guiones, frases modeladas, formulaciones y diálogos suministrados (el esquema colaborativo 40/20/40, la entrega de códigos MATCH #M..., la canalización al 3166569719, el aterrizaje sincero de presupuestos, la explicación de los 6 emojis o la calificación en Google) son **modelos conceptuales y ejemplos de aprendizaje de contexto** para que JanIA entienda la intención de negocio, el fondo y el objetivo humano, expresándolos con sus propias palabras, frescura, calidez, dinamismo y adaptabilidad a cada situación.
+2. **Causas Raíz y Necesidad de Consagración Arquitectónica:**
+   - En el `systemPrompt` de DMs y en las instrucciones de herramientas existían cláusulas redactadas con verbos directos que podían interpretarse como obligación de recitar el texto textual ("JanIA debe decir exactamente...", "usa este guion exacto").
+   - En `founderKnowledgeService.ts` faltaba una directiva semilla maestra de fundadores que instruyera expresamente a JanIA a internalizar esta doctrina fundacional.
+   - En `base.md` y `prompts.ts` no estaba formalizada la sección doctrinal de "Agente de IA Cognitiva vs. Simple Bot".
+
+**Acciones Ejecutadas:**
+- **Módulo de Hot Learning de Fundadores (`founderKnowledgeService.ts`):**
+  - Creada e incorporada la directiva semilla maestra `seed-agente-ia-no-bot-guiones-ejemplo` ("Doctrina de Agente de IA Cognitiva vs. Simple Bot: Guiones como Aprendizaje y Contexto, Cero Repetición al Pie de la Letra").
+  - Actualizadas las directivas existentes (`seed-entrega-codigos-match`, etc.) para clarificar que los guiones son modelos de referencia para expresarse con voz propia y naturalidad.
+- **Manejador de Mensajes Privados DMs (`dmHandler.ts`):**
+  - Consagrada la sección `AGENTE DE IA, NO UN SIMPLE BOT: GUIONES Y FRASES MODELADAS SON APRENDIZAJE Y CONTEXTO, NO RECITACIÓN AL PIE DE LA LETRA`: JanIA asimila el fondo y se expresa con sus propias palabras, calidez y soltura.
+  - Ajustadas las instrucciones de herramientas (`specialToolInstructions`) para que las directivas de MATCH, comisiones y calificaciones se entiendan como modelos conceptuales y no como libretos forzados.
+- **Cognitive Core y Prompts Maestros (`prompts.ts` y `base.md`):**
+  - Incorporada la sección `# 🧠 DOCTRINA FUNDACIONAL DE AGENTE DE IA COGNITIVA VS. SIMPLE BOT (DOCTRINA EDUARDO A. RIVERA)` en `prompts.ts` y en `base.md`.
+- **Suite de Pruebas de Regresión (`server/__tests__/regression.test.ts`):**
+  - Creada la `Suite v33.50` con 4 tests unitarios dedicados validando la incorporación en `founderKnowledgeService`, `dmHandler`, `prompts.ts`/`base.md`, y el incremento oficial a `v33.50` (`33.50.0`).
+- **Incremento de Versión:**
+  - `shared/const.ts` (`v33.50`) y `package.json` (`33.50.0`).
+- **Validación Limpia ($0 COP):**
+  - Typecheck `npm run check` (0 errores) | Tests `npm test` **391/391 passing** (100% verde) | Build `npm run build` limpio en 22.03s.
+
+---
+
 ### 📅 [2026-10-25] — JanIA v33.49: Matriz Completa de 6 Emojis de Negocio, Ciberseguridad y Secreto Industrial (v33.49 - 33.49.0)
 
 **Versión:** `v33.49` (`33.49.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

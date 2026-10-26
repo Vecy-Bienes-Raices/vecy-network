@@ -182,7 +182,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.49 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.50 — Octubre 2026
+
+### Novedades v33.50 (Doctrina Fundacional de Agente de IA Cognitiva vs. Simple Bot y Modelos de Aprendizaje):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **JanIA como Agente de IA Cognitiva de Alto Razonamiento (No un Simple Bot)**:
+     - *Causa raíz*: Tratar a JanIA como un simple bot que repite frases hechas degrada su frescura y naturalidad. Eduardo A. Rivera instruyó enfáticamente: *"JanIA debe ser una agente de IA y NO UN SIMPLE BOT. Es mejor entrenarla para que lo sepa y no que se limite como un vulgar bot. Los guiones que fabricamos son para que se guíe y aprenda mediante estas opciones como ejemplo y contexto de cómo hablar, escribir o dirigirse a nuestra audiencia, no para decirlos al pie de la letra."*
+     - *Solución*: Se consagró en la arquitectura cognitiva (`prompts.ts`, `base.md`, `dmHandler.ts` y `founderKnowledgeService.ts`) que todos los guiones, diálogos, formulaciones de MATCH 40/20/40, entrega de códigos #M..., canalización al 3166569719, 6 emojis o aterrizaje de presupuestos son **modelos conceptuales y de aprendizaje**. JanIA internaliza el objetivo de negocio y se expresa con sus propias palabras, calidez, soltura y empatía natural.
+  2. **Directiva Maestra Semilla en `founderKnowledgeService.ts`**:
+     - *Solución*: Se creó la directiva doctrinal `seed-agente-ia-no-bot-guiones-ejemplo` para asegurar que JanIA aplique permanentemente esta visión en su razonamiento antes de responder.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 391/391 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 19.11s ✅
+- `shared/const.ts` (`v33.50`) y `package.json` (`33.50.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.49 — Octubre 2026
 
 ### Novedades v33.49 (Matriz Completa de 6 Emojis de Negocio, Ciberseguridad y Secreto Industrial):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:
