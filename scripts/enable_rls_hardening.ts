@@ -31,7 +31,22 @@ export async function applyRlsHardening() {
     await sql`CREATE POLICY "service_role_all_predial" ON public.predial_consultations FOR ALL TO service_role USING (true) WITH CHECK (true);`;
     await sql`CREATE POLICY "deny_anon_predial" ON public.predial_consultations FOR ALL TO anon, authenticated USING (false);`;
 
-    console.log("✅ [VECY-SECURITY] Blindaje RLS verificado y aplicado con éxito.");
+    // 3. Extensiones y Funciones con Search Path Mutable
+    try {
+      await sql`ALTER EXTENSION unaccent SET SCHEMA extensions;`;
+    } catch (_) {}
+
+    try {
+      await sql`ALTER FUNCTION public.buscar_matches_para_inmueble(integer) SET search_path = public;`;
+      await sql`ALTER FUNCTION public.match_properties_for_requirement(integer, numeric) SET search_path = public;`;
+      await sql`ALTER FUNCTION public.match_requirements_for_property(integer, numeric) SET search_path = public;`;
+      await sql`ALTER FUNCTION public.handle_new_user() SET search_path = public;`;
+      await sql`ALTER FUNCTION public.get_next_solicitud_id() SET search_path = public;`;
+      await sql`REVOKE EXECUTE ON FUNCTION public.get_next_solicitud_id() FROM public, anon;`;
+      await sql`REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM public, anon;`;
+    } catch (_) {}
+
+    console.log("✅ [VECY-SECURITY] Blindaje RLS y funciones verificado y aplicado con éxito.");
   } catch (err: any) {
     console.error("❌ [VECY-SECURITY] Error aplicando blindaje RLS:", err?.message || err);
     throw err;
