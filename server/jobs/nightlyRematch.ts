@@ -202,7 +202,7 @@ export async function runNightlyRematch() {
           if (
             req.habitacionesMin &&
             prop.bedrooms &&
-            Number(prop.bedrooms) < Number(req.habitacionesMin)
+            Number(prop.bedrooms) !== Number(req.habitacionesMin)
           )
             continue;
 

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.56";
+    VECY_VERSION = "v33.57";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -7459,6 +7459,7 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   let reqAreaMax = 0;
   let pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
   let reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
+  let reqBedroomsMax = requirement.habitacionesMax != null ? Number(requirement.habitacionesMax) : -1;
   let pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
   let reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
   let pGarages = property.garages != null ? Number(property.garages) : -1;
@@ -7477,6 +7478,9 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     }
     if (reqBedrooms <= 0 && fbReq.bedroomsMin) {
       reqBedrooms = fbReq.bedroomsMin;
+    }
+    if (reqBedroomsMax <= 0 && fbReq.bedroomsMax) {
+      reqBedroomsMax = fbReq.bedroomsMax;
     }
     if (reqBathrooms <= 0 && fbReq.bathrooms) {
       reqBathrooms = fbReq.bathrooms;
@@ -7955,9 +7959,21 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     }
   }
   let effectiveReqBeds = reqBedrooms;
+  let effectiveReqBedsMax = reqBedroomsMax;
   if (effectiveReqBeds <= 0) {
-    const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-    if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
+    const rangeB = reqTextLow.match(/(\d+)\s*(?:a|-|o|hasta)\s*(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (rangeB) {
+      effectiveReqBeds = parseInt(rangeB[1], 10);
+      effectiveReqBedsMax = parseInt(rangeB[2], 10);
+    } else {
+      const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
+    }
+  } else if (effectiveReqBedsMax <= 0) {
+    const rangeB = reqTextLow.match(/(\d+)\s*(?:a|-|o|hasta)\s*(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (rangeB) {
+      effectiveReqBedsMax = parseInt(rangeB[2], 10);
+    }
   }
   let effectiveReqBaths = reqBathrooms;
   const socialBathInReq = reqTextLow.match(/(\d+|un|una|dos|tres|cuatro|cinco)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
@@ -8037,25 +8053,19 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   }
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
   const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
+  if (effectiveReqBeds <= 0 && isReqSingleRoomSubtype) {
+    effectiveReqBeds = 1;
+  }
   if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
-      if (effectiveReqBeds === 1 || isReqSingleRoomSubtype) {
-        if (pBedrooms !== 1) {
-          blockers.push(`Regla Doctrinal de 1 Alcoba (Tolerancia Cero): La demanda busca estrictamente 1 habitaci\xF3n / apartaestudio y la oferta tiene ${pBedrooms} habitaciones. Match Inviable (0%).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else {
-          positives.push(`Habitaciones exactas (1 alcoba) para apartaestudio / apartasuite \u2014 Cumplimiento Perfecto`);
-        }
+      const hasBedRange = effectiveReqBedsMax > effectiveReqBeds;
+      const isMatch = hasBedRange ? pBedrooms >= effectiveReqBeds && pBedrooms <= effectiveReqBedsMax : pBedrooms === effectiveReqBeds;
+      if (!isMatch) {
+        const reqDesc = hasBedRange ? `entre ${effectiveReqBeds} y ${effectiveReqBedsMax}` : `exactamente ${effectiveReqBeds}`;
+        blockers.push(`Guillotina Estricta de Habitaciones (Coincidencia Exacta Obligatoria): La demanda exige ${reqDesc} habitaci\xF3n(es) y la oferta tiene ${pBedrooms}. Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       } else {
-        if (pBedrooms < effectiveReqBeds) {
-          blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else if (pBedrooms > effectiveReqBeds + 1) {
-          blockers.push(`Desborde de Escala en Habitaciones: La demanda busca ${effectiveReqBeds} habitaciones y la oferta tiene ${pBedrooms} habitaciones (m\xE1ximo permitido ${effectiveReqBeds + 1} de confort). Match Inviable (0%).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else {
-          positives.push(`Habitaciones ofrecidas (${pBedrooms}) compatibles con las exigidas (${effectiveReqBeds}) dentro del margen de confort \u2014 Cumplimiento`);
-        }
+        positives.push(`Habitaciones exactas (${pBedrooms} habs): coincidencia exacta con lo solicitado \u2014 Cumplimiento Perfecto`);
       }
     } else {
       blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de informaci\xF3n en la oferta.`);
@@ -8420,10 +8430,11 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   } else {
     earnedPoints += 7;
   }
-  if (reqBedrooms > 0) {
+  const targetReqBeds = effectiveReqBeds > 0 ? effectiveReqBeds : reqBedrooms;
+  if (targetReqBeds > 0) {
     if (pBedrooms >= 0) {
-      if (pBedrooms >= reqBedrooms) earnedPoints += 10;
-      else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
+      if (pBedrooms === targetReqBeds) earnedPoints += 10;
+      else negatives.push(`Habitaciones (${pBedrooms}) no coinciden exactamente con las requeridas (${targetReqBeds})`);
     } else {
       negatives.push("Habitaciones no especificadas en la oferta (N/E)");
     }
@@ -16498,6 +16509,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Los datos de asesores, clientes, requerimientos, consultas catastrales y tributarias son estrictamente sagrados y confidenciales (Ley 1581 de H\xE1beas Data). Todas las tablas de PostgreSQL / Supabase operan bajo el principio de Zero-Trust con Row Level Security (RLS) habilitado y pol\xEDticas de aislamiento que bloquean cualquier lectura o modificaci\xF3n an\xF3nima desde el exterior. Jam\xE1s se expone informaci\xF3n de la red a consultas p\xFAblicas no autenticadas.",
         rawText: "Blindar de inmediato cualquier tabla en Supabase que no tenga RLS activado, como advisors o predial_consultations. Nadie del exterior puede tener acceso no autorizado a los datos de la red.",
         createdAt: "2026-10-27T14:00:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-guillotina-estricta-habitaciones-coincidencia-exacta",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Guillotina Estricta de Habitaciones y Coincidencia Exacta Obligatoria (Doctrina Eduardo A. Rivera)",
+        directive: "En el motor de MATCH y la mesa de coincidencias, la coincidencia entre habitaciones es OBLIGATORIAMENTE EXACTA. Si el cliente busca 1 habitaci\xF3n = 1 debe ser; si busca 2 = 2 debe ser; si busca 3 = 3 debe ser; y as\xED sucesivamente. Queda terminantemente erradicada cualquier tolerancia aproximada, sugerida o margen de confort (+1). Si la oferta tiene un n\xFAmero de alcobas diferente (m\xE1s o menos) al solicitado, se aplica guillotina inmediata del 0% (Match Inviable). Es exacto o NO hay MATCH.",
+        rawText: "En habitaciones debe haber guillotina: si el cliente pide 1 = 1 debe ser, si pide lo que pida debe ser exacto y 'Coincidir' no puede ser aproximado, ni sugerido, ni nada, es exacto o no hay MATCH.",
+        createdAt: "2026-10-27T16:55:00.000Z",
         active: true
       },
       {
@@ -32907,7 +32928,7 @@ async function runNightlyRematch() {
           if (transScore === false) continue;
           if (req.areaMin && prop.areaTotal && Number(prop.areaTotal) < Number(req.areaMin))
             continue;
-          if (req.habitacionesMin && prop.bedrooms && Number(prop.bedrooms) < Number(req.habitacionesMin))
+          if (req.habitacionesMin && prop.bedrooms && Number(prop.bedrooms) !== Number(req.habitacionesMin))
             continue;
           let exp;
           try {

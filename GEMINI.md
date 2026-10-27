@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.56.0 — 2026-10-27)
-- **JanIA Server:** `v33.56` (`33.56.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Regla de Oro de Enlaces Limpios en WhatsApp, Erradicación de Enlaces Dobles y Saneamiento Universal de Markdown (Doctrina Eduardo A. Rivera):**
-  1. **Resolución de Enlaces Dobles y Erradicación de Sintaxis Markdown:** Eliminación definitiva de la duplicación `[URL](URL)` provocada por la sintaxis Markdown en WhatsApp mediante el pipeline de post-procesamiento en `parsers.ts` (`sanitizeResponseMarkdown`) aplicado a todo mensaje saliente en `whatsapp-match.ts` (`queuedSend`). Conversión de anchors genéricos `[aquí](URL)` a `URL`, anchors descriptivos `[Texto](URL)` a `Texto: URL`, deduplicación de URLs adyacentes y erradicación de sufijos `(ejemplo)`.
-  2. **Corrección Inteligente de Enlaces de Grupos Oficiales:** Mapeo y sustitución contextual automática de hashes alucinados o placeholders de WhatsApp hacia los enlaces de invitación oficiales de los tres grupos de la Red Vecy (`GzMbjNs1P2tHI7D0V4h8wZ` para Inmuebles, `J4u1h7NUL1i1B1wAIyTUN6` para Jurídico/Buzón, `CSzrKR6Cr56HAieEhAuqyU` para Círculo).
-  3. **Blindaje Doctrinal y Contextual en Prompts:** Inyección de enlaces oficiales de grupos, canal, consola web y bróker en `dmHandler.ts`, `base.md` y `founderKnowledgeService.ts` (`seed-enlaces-limpios-cero-enlaces-dobles-whatsapp`) con directiva estricta anti-markdown link.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 417/417 passing (100% verde) | Build `npm run build` limpio en 20.08s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.57.0 — 2026-10-27)
+- **JanIA Server:** `v33.57` (`33.57.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Guillotina Estricta de Habitaciones — Coincidencia Exacta Obligatoria (Doctrina Eduardo A. Rivera):**
+  1. **Erradicación de Tolerancia Aproximada y Confort (+1):** En la mesa de coincidencias (`matching.ts` - Filtro Duro 8 y `AdminMatches.tsx`), la coincidencia de alcobas pasa a ser terminante y exacta: si el cliente busca 1 habitación = 1 debe ser; si busca 2 = 2 debe ser; si busca 3 = 3 debe ser. Se elimina la regla previa que permitía ofertas de +1 alcoba por confort. Si la oferta tiene un número distinto (más o menos) al solicitado, se aplica guillotina inmediata del 0% (Match Inviable).
+  2. **Preservación de Rangos Explícitos:** Cuando la demanda declara explícitamente un rango (ej: "2 o 3 alcobas"), el sistema acepta únicamente las opciones dentro de dicho intervalo declarado (2 o 3), bloqueando tajantemente cualquier valor fuera de él.
+  3. **Sincronización Total Backend y Frontend:** Sincronización en `server/_core/matching.ts` (`explicarMatch`), `client/src/components/admin/AdminMatches.tsx` (`scoreRows` con estado `missing` ante discordancia), `server/jobs/nightlyRematch.ts` y registro como directiva viva en `server/_core/jania/founderKnowledgeService.ts` (`seed-guillotina-estricta-habitaciones-coincidencia-exacta`).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 424/424 passing (100% verde) | Build `npm run build` limpio en 29.10s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

@@ -330,6 +330,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.57 — Octubre 2026
+
+#### [v33.57.0] — 2026-10-27: Motor de Matching — Guillotina Estricta de Habitaciones por Coincidencia Exacta Obligatoria
+- **Guillotina Estricta en Habitaciones (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En el motor de matching (Filtro Duro 8), existía una regla de confort que permitía tolerancias de hasta `+1` alcoba respecto a lo solicitado por el cliente (ej. si buscaba 1 alcoba, se le mostraban ofertas de 1 o 2; si buscaba 2, se mostraban de 2 o 3; si buscaba 3, se mostraban de 3 o 4). El cliente y los agentes en mesa de corretaje no deseaban ofertas aproximadas que distorsionaran el presupuesto o la distribución del espacio.
+  - **Diagnóstico y Causas Raíz:**
+    1. *Regla de confort no deseada:* El diseño anterior premiaba el "excedente de confort" asumiendo que más habitaciones eran siempre deseables. En el mercado real, un cliente que busca 1 alcoba descarta activamente inmuebles de 2 o más alcobas por costo de expensas, mantenimiento y precio.
+    2. *Inconsistencia visual:* En `AdminMatches.tsx`, la discrepancia se marcaba como parcial o informativa en vez de aplicar guillotina inmediata del 0%.
+  - **Solución y Modificaciones de Código:**
+    1. *Filtro Duro 8 en `server/_core/matching.ts`:* Eliminación del margen de confort `+1`. Si `effectiveReqBeds > 0`, se exige coincidencia exacta con `targetReqBeds` (o dentro de `effectiveReqBeds` .. `effectiveReqBedsMax` si el cliente declaró explícitamente un rango como "2 o 3 alcobas"). Si la oferta tiene un número distinto, se emite blocker de guillotina inmediata y score `0%` (`isViableMatch: false`).
+    2. *Puntuación de 10 Puntos en Habitaciones:* Se otorgan los 10 puntos únicamente ante coincidencia exacta; cualquier discrepancia anula los puntos y activa el bloqueo.
+    3. *Frontend `client/src/components/admin/AdminMatches.tsx`:* La fila de habitaciones pasa a estado `"missing"` ("No Coincide" en rojo) si la oferta no es idéntica a lo solicitado, provocando que la interfaz refleje `autoScore = 0%`.
+    4. *Job Nocturno `server/jobs/nightlyRematch.ts`:* Pre-filtro rápido actualizado para descartar de inmediato discrepancias en `prop.bedrooms !== req.habitacionesMin`.
+    5. *Base de Conocimiento y Prompts:* Directiva `seed-guillotina-estricta-habitaciones-coincidencia-exacta` en `founderKnowledgeService.ts` y actualización en `server/_core/prompts/base.md`.
+- **Validación Exhaustiva ($0 COP):**
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **424/424 passing** (Suite 143 creada con 6 tests exhaustivos, 100% verde).
+  - Build: `npm run build` limpio en 29.10s.
+
 ### 🔖 v33.56 — Octubre 2026
 
 #### [v33.56.0] — 2026-10-27: Regla de Oro de Enlaces Limpios en WhatsApp, Erradicación de Enlaces Dobles y Saneamiento Universal de Markdown

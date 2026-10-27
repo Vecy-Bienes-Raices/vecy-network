@@ -1677,11 +1677,18 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
 
   const SPANISH_NUM_MAP: Record<string, number> = { "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6 };
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
-  if (bedR <= 0 && reqTextLower) {
+  let bedRMax = 0;
+  if (reqTextLower) {
     const bedMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+)?\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
     if (bedMatchR) {
-      const w = bedMatchR[1].toLowerCase();
-      bedR = SPANISH_NUM_MAP[w] || parseInt(w, 10) || 0;
+      if (bedR <= 0) {
+        const w = bedMatchR[1].toLowerCase();
+        bedR = SPANISH_NUM_MAP[w] || parseInt(w, 10) || 0;
+      }
+      if (bedMatchR[2]) {
+        const w2 = bedMatchR[2].toLowerCase();
+        bedRMax = SPANISH_NUM_MAP[w2] || parseInt(w2, 10) || 0;
+      }
     }
   }
 
@@ -1700,12 +1707,11 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
 
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
-    if (bedP < bedR) {
-      bedS = "missing"; // 🔴 Oferta menor a demanda -> Bloqueo Doctrinal Inmediato (Doctrina v22.4 / v27.4)
-    } else if (bedP === bedR) {
-      bedS = "exact";
+    const isExactMatch = bedRMax > bedR ? (bedP >= bedR && bedP <= bedRMax) : (bedP === bedR);
+    if (!isExactMatch) {
+      bedS = "missing"; // 🔴 Guillotina Doctrinal: Coincidencia Exacta Obligatoria (1=1, 2=2, 3=3... cero tolerancia) (Doctrina Eduardo A. Rivera v33.57)
     } else {
-      bedS = "plus";
+      bedS = "exact";
     }
   } else if (bedR === 0 && bedP > 0) {
     bedS = "neutral";

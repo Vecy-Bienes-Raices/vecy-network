@@ -714,13 +714,15 @@ Debes comprender con total claridad la lógica asimétrica del mercado inmobilia
 - `"Admon máxima 1.200.000"`, `"admon hasta 800 mil"`, `"admon max 500.000"` → `adminFeeMax`.
 - Si la oferta tiene una administración menor a la máxima, **es 100% compatible y positivo**.
 
-### 3. 📐 ÁREAS, HABITACIONES, BAÑOS Y PARQUEADEROS = LÍMITE INFERIOR (PISO MÍNIMO):
-- En requerimientos, el cliente define su **ESPACIO MÍNIMO TOLERABLE**.
-- **Frases de Piso**:
-  - `"mínimo 150m2"`, `"min 3 alcobas"`, `"desde 2 baños"`, `"mínimo 2 garajes independientes"`, `"más de 120 mts"`.
+### 3. 📐 ESPECIFICACIONES FÍSICAS (ÁREAS, BAÑOS, PARQUEADEROS vs HABITACIONES):
+- En requerimientos, el cliente define su espacio tolerable y distribución deseada.
+- **Frases de Extracción**:
+  - `"mínimo 150m2"`, `"2 alcobas"`, `"desde 2 baños"`, `"mínimo 2 garajes independientes"`, `"más de 120 mts"`.
 - **Asignación Obligatoria**:
   - `areaMin`, `habitacionesMin`, `banosMin`, `parqueaderosMin`.
-- **Regla de Cotejo (Filtro Duro 6 y Regla Doctrinal v22.4)**: La oferta **DEBE ser IGUAL O MAYOR al requerimiento** (`prop >= req`). Si la oferta tiene menos espacio, el match es 0%. Si tiene más espacio (ej. 4 alcobas cuando pedían 3, o 180m² cuando pedían 150m²), **es 100% confort y satisfacción total**.
+- **Regla de Cotejo para Áreas, Baños y Garajes (Confort Doctrinal)**: La oferta **DEBE ser IGUAL O MAYOR al requerimiento** (`prop >= req`). Si la oferta tiene menos espacio o dotación, el match es 0%. Si tiene más espacio o dotación (ej. 3 baños cuando pedían 2, o 180m² cuando pedían 150m²), es satisfacción y confort total.
+- **🛡️ REGLA DE ORO DE HABITACIONES — GUILLOTINA ESTRICTA (Doctrina Eduardo A. Rivera v33.57)**:
+  En habitaciones la coincidencia **DEBE SER EXACTA O NO HAY MATCH (0% Guillotina Inmediata)**. Si el cliente busca 1 habitación = 1 debe ser (apartaestudio/loft); si busca 2 = 2 debe ser; si busca 3 = 3 debe ser; y así sucesivamente. **Cero tolerancia de confort (+1), cero aproximaciones y cero opciones sugeridas**. Es exacto o se descarta de raíz en la mesa de coincidencias.
 
 
 

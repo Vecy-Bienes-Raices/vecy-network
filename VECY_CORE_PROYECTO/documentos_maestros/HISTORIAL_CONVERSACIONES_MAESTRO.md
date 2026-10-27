@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.57: Motor de Matching — Guillotina Estricta de Habitaciones por Coincidencia Exacta Obligatoria (v33.57 - 33.57.0)
+
+**Versión:** `v33.57` (`33.57.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + Supabase Pooler (`knzmpoprlmbonejshfys`) + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Quiero que hagas unas cuantas correcciones a nuestro motor de MATCHES para la mesa de coincidencias:
+1. Recuerdas que alguna vez te dije que las coincidencias entre habitaciones debería quedar por ejemplo que si el cliente buscaba con 1 habitación le podríamos mostrar opciones de 1 o 2 máximo y así sucesivamente como por ejemplos; Si buscaba 2 entonces mostrarle de esas mismas 2 o 3 máximo; si eran 3 mostarle de 3 o de 4 máximo?? Pues ya no quiero que sea así, necesito que tenga gillotina como tu lo llamas, si el cliente pide 1 = 1 debe ser, si pide lo que pida debe ser exacto y 'Coincidir' no puede ser aproximado, ni sugerido, ni nada, es exacto o no hay MATCH.
+Ya te iré dando los otros cambios despues de que vayas arreglando cada cosa. ¿Me entendiste?"*
+
+**Diagnóstico Técnico Profundo:**
+1. **Regla de Confort Anterior vs. Nueva Doctrina de Coincidencia Exacta:**
+   - En versiones previas (desde v22.8), el Filtro Duro 8 en `server/_core/matching.ts` operaba bajo un esquema de confort familiar: permitía que una oferta tuviera hasta `effectiveReqBeds + 1` habitaciones (ej. si pedía 1 permitía 1 o 2; si pedía 2 permitía 2 o 3; si pedía 3 permitía 3 o 4) asignando puntaje parcial o completo con notas informativas de confort.
+   - En la práctica operativa de la mesa de corretaje, los clientes que piden 1 alcoba requieren específicamente 1 alcoba (por presupuesto, administración o practicidad), y quienes piden 2 o 3 no desean inmuebles con diferente distribución que encarezcan o distorsionen el requerimiento.
+2. **Impacto en Frontend y Componente AdminMatches:**
+   - En `client/src/components/admin/AdminMatches.tsx`, la columna visual de habitaciones (`bedS`) marcaba `"partial"` si la oferta superaba las habitaciones requeridas sin desbordar el confort, manteniendo la coincidencia visible en verde o ámbar con score superior a 0%.
+3. **Manejo de Rangos Explícitos Declarados por el Cliente:**
+   - Cuando un cliente escribe expresamente un rango (ej: *"busco de 2 o 3 alcobas"*), el extractor `extractFallbackDataFromText` en `parsers.ts` extrae `bedroomsMin: 2` y `bedroomsMax: 3`. El motor debe respetar que tanto 2 como 3 alcobas son coincidencias exactas válidas solicitadas por el cliente, mientras que cualquier inmueble de 1 o de 4 alcobas queda guillotinado a 0%.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Refactorización de Filtro Duro 8 en `server/_core/matching.ts`:**
+  - Erradicado el margen de confort de +1 habitación. Si `effectiveReqBeds > 0`, se verifica que la oferta cumpla exactamente con `targetReqBeds` (o se encuentre dentro del rango explícito `effectiveReqBeds` .. `effectiveReqBedsMax` si el cliente declaró un rango). Si difiere, se emite de inmediato el blocker:
+    `"❌ Guillotina Estricta de Habitaciones (Coincidencia Exacta Obligatoria): El cliente busca exactamente N alcobas y la oferta tiene M. No se admiten aproximaciones (Score: 0%)."` y se fuerza score final a `0%` (`isViableMatch: false`).
+  - En la distribución de puntaje (10 pts de habitaciones), únicamente se otorgan los 10 puntos si hay coincidencia exacta con el objetivo solicitado.
+- **Sincronización en Consola Web `client/src/components/admin/AdminMatches.tsx`:**
+  - Actualizada la lógica de visualización de la fila de habitaciones (`bedS`): si `bedP !== bedR` (o fuera del rango explícito `bedR` a `bedRMax`), el estado pasa a `"missing"` ("No Coincide" en rojo), activando de inmediato la guillotina total visual (`autoScore = 0`) para garantizar paridad perfecta 1:1 entre backend y UI.
+- **Sincronización en Job Nocturno `server/jobs/nightlyRematch.ts`:**
+  - Actualizado el pre-filtro rápido en `server/jobs/nightlyRematch.ts` para descartar de inmediato ofertas donde `Number(prop.bedrooms) !== Number(req.habitacionesMin)`.
+- **Actualización Doctrinal en Prompts y Base de Conocimiento:**
+  - Actualizada la Sección 3 en `server/_core/prompts/base.md` formalizando la *REGLA DE ORO DE HABITACIONES — GUILLOTINA ESTRICTA (Doctrina Eduardo A. Rivera v33.57)*: distinción clara entre atributos físicos acumulativos (`prop >= req` -> confort en área, baños y garajes) vs. habitaciones (coincidencia exacta 1=1, 2=2, 3=3... o 0% match).
+  - Registrada la directiva permanente `seed-guillotina-estricta-habitaciones-coincidencia-exacta` en `server/_core/jania/founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la **Suite 143** en `server/__tests__/regression.test.ts` con 6 tests específicos validando guillotina estricta en 1, 2 y 3 habitaciones, aprobación en coincidencia exacta, seed de fundadores y versión `v33.57`.
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **424/424 passing** (100% verde) a $0 COP.
+  - Build: `npm run build` limpio en 29.10s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.57` (`33.57.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.56: Regla de Oro de Enlaces Limpios en WhatsApp y Erradicación de Enlaces Dobles (v33.56 - 33.56.0)
 
 **Versión:** `v33.56` (`33.56.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + Supabase Pooler (`knzmpoprlmbonejshfys`) + WhatsApp Baileys Socket (`+573192919978`)

@@ -142,8 +142,9 @@ TOTAL          → 100 pts ✅
 - `propertyType` incompatible → ❌ 0%
 - Barrio incompatible → ❌ 0%
 - Precio supera presupuesto máximo → ❌ 0%
-- **Especificaciones Físicas Mínimas (REGLA DOCTRINAL v22.4 / v27.4)**:
-  `Habitaciones`, `Baños`, `Parqueaderos`, `Depósitos`, `Balcones` y `Terrazas` **JAMÁS pueden ser menores en la Oferta que en lo Demandado (`prop < req` → ❌ 0% Match Inviable / Bloqueo Absoluto)**. Sin embargo, **SIEMPRE se aceptan cuando en la Oferta son IGUALES O MAYORES que en la Demanda (`prop >= req` → ✅ 100% Cumplimiento / Confort)**.
+- **Especificaciones Físicas Mínimas (REGLA DOCTRINAL v22.4 / v27.4 / v33.57)**:
+  - **Habitaciones (REGLA DE ORO DE COINCIDENCIA EXACTA v33.57 — Doctrina Eduardo A. Rivera)**: **GUILLOTINA ESTRICTA OBLIGATORIA (1=1, 2=2, 3=3...)**. Si la oferta tiene una cantidad distinta (más o menos) de alcobas que las solicitadas por el cliente, **JAMÁS hay match (`prop !== req` → ❌ 0% Match Inviable / Bloqueo Inmediato)**. Se erradica toda aproximación o margen de confort en alcobas; únicamente se admiten opciones dentro del rango si el cliente declaró expresamente un intervalo (ej: "2 o 3 alcobas").
+  - **Baños, Parqueaderos, Depósitos, Balcones y Terrazas**: **JAMÁS pueden ser menores en la Oferta que en lo Demandado (`prop < req` → ❌ 0% Match Inviable / Bloqueo Absoluto)**. Sin embargo, **SIEMPRE se aceptan cuando en la Oferta son IGUALES O MAYORES que en la Demanda (`prop >= req` → ✅ 100% Cumplimiento / Confort)**.
 
 ### Campana de Tolerancia de Área (v27.4)
 - `< reqMin`                     → Bloqueo 0% (Tolerancia 0% por debajo del piso exigido)
@@ -182,7 +183,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.56 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.57 — Octubre 2026
+
+### Novedades v33.57 (Motor de Matching — Guillotina Estricta de Habitaciones por Coincidencia Exacta Obligatoria):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Guillotina Estricta en Habitaciones (Coincidencia Exacta 1=1, 2=2, 3=3...)**:
+     - *Causa raíz*: En versiones previas (v22.8), el Filtro Duro 8 en `matching.ts` operaba bajo un esquema de confort familiar: permitía ofertas con hasta `effectiveReqBeds + 1` habitaciones (si buscaba 1 permitía 1 o 2; si buscaba 2 permitía 2 o 3; si buscaba 3 permitía 3 o 4) asignando confort y score parcial/total.
+     - *Solución*: Erradicación absoluta de la tolerancia aproximada y del confort en alcobas. Si el cliente busca N habitaciones, la oferta DEBE tener exactamente N habitaciones (`prop !== req` → ❌ 0% Match Inviable / Bloqueo Inmediato).
+  2. **Preservación de Rangos Declarados por el Cliente**:
+     - Si la demanda contiene explícitamente un rango (ej: "2 o 3 alcobas"), el sistema acepta únicamente las opciones dentro de dicho rango declarado (2 o 3), bloqueando tajantemente cualquier valor fuera del mismo (1 o 4).
+  3. **Sincronización Total Backend y Frontend**:
+     - Actualización en `server/_core/matching.ts` (Filtro Duro 8 y distribución de 10 pts), `client/src/components/admin/AdminMatches.tsx` (`scoreRows` con estado `missing` -> autoScore = 0 ante discrepancia), `server/jobs/nightlyRematch.ts` y registro en SEED_TEACHINGS (`seed-guillotina-estricta-habitaciones-coincidencia-exacta`) en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **424/424 passing** (Suite 143 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio en 29.10s ✅
+- `shared/const.ts` (`v33.57`) y `package.json` (`33.57.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.56 — Octubre 2026
 
 ### Novedades v33.56 (Regla de Oro de Enlaces Limpios en WhatsApp y Erradicación de Enlaces Dobles):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

@@ -130,6 +130,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-guillotina-estricta-habitaciones-coincidencia-exacta",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Guillotina Estricta de Habitaciones y Coincidencia Exacta Obligatoria (Doctrina Eduardo A. Rivera)",
+    directive:
+      "En el motor de MATCH y la mesa de coincidencias, la coincidencia entre habitaciones es OBLIGATORIAMENTE EXACTA. Si el cliente busca 1 habitación = 1 debe ser; si busca 2 = 2 debe ser; si busca 3 = 3 debe ser; y así sucesivamente. Queda terminantemente erradicada cualquier tolerancia aproximada, sugerida o margen de confort (+1). Si la oferta tiene un número de alcobas diferente (más o menos) al solicitado, se aplica guillotina inmediata del 0% (Match Inviable). Es exacto o NO hay MATCH.",
+    rawText: "En habitaciones debe haber guillotina: si el cliente pide 1 = 1 debe ser, si pide lo que pida debe ser exacto y 'Coincidir' no puede ser aproximado, ni sugerido, ni nada, es exacto o no hay MATCH.",
+    createdAt: "2026-10-27T16:55:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

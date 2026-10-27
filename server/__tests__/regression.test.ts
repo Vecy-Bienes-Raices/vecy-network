@@ -842,7 +842,7 @@ Disponible para finales de nov.`;
       expect(allBlockers).toMatch(/Parqueadero|lineal/i);
     });
 
-    it("debe ACEPTAR y premiar con plus/confort cuando la oferta tiene IGUAL O MÁS alcobas, baños o área", () => {
+    it("debe ACEPTAR y premiar con plus/confort cuando la oferta tiene IGUAL número de alcobas y MÁS baños, garajes o área", () => {
       const req = {
         id: 105,
         propertyType: "apartment",
@@ -861,16 +861,47 @@ Disponible para finales de nov.`;
         transactionType: "venta",
         price: 880_000_000,
         areaTotal: 92,
-        bedrooms: 3, // Más de lo pedido -> Confort
+        bedrooms: 2, // Coincidencia exacta obligatoria (Doctrina Eduardo A. Rivera v33.57)
         bathrooms: 3, // Más de lo pedido -> Confort
         garages: 2,   // Más de lo pedido -> Confort
         antiguedadAnos: 5,
-        rawText: "Excelente apto en Cedritos $880M, 92m2, 3 alcobas amplias, 3 baños, 2 garajes independientes, 5 años."
+        rawText: "Excelente apto en Cedritos $880M, 92m2, 2 alcobas amplias, 3 baños, 2 garajes independientes, 5 años."
       };
 
       const res = explicarMatch(req, prop);
       expect(res.score).toBeGreaterThanOrEqual(85);
       expect(res.blockers.length).toBe(0);
+    });
+
+    it("GUILLOTINA ESTRICTA DE HABITACIONES (Doctrina Eduardo A. Rivera v33.57): Si oferta tiene diferente número de habitaciones (ej. pide 2 y ofrece 3) -> 0% Match Inviable", () => {
+      const req = {
+        id: 105,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 900_000_000,
+        areaMin: 80,
+        habitacionesMin: 2,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        rawText: "Busco apto en Cedritos, min 80m2, 2 alcobas, 2 baños, 1 parqueadero."
+      };
+
+      const propMasHabs = {
+        id: 205,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 880_000_000,
+        areaTotal: 92,
+        bedrooms: 3, // Pide 2 y ofrece 3 -> Antes confort +1, ahora Guillotina Estricta 0%
+        bathrooms: 2,
+        garages: 1,
+        antiguedadAnos: 5,
+        rawText: "Excelente apto en Cedritos $880M, 92m2, 3 alcobas amplias, 2 baños, 1 garaje."
+      };
+
+      const res = explicarMatch(req, propMasHabs);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Guillotina Estricta de Habitaciones") || b.includes("habitación"))).toBe(true);
     });
   });
 
@@ -7045,11 +7076,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.34 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7091,11 +7122,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.35 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7162,11 +7193,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.36 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7212,11 +7243,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.37 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7241,11 +7272,11 @@ Ana Morales Castillo
 
     it("2. Consagración doctrinal de versión v33.38 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7276,11 +7307,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.39 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7301,11 +7332,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.40 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7388,11 +7419,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.41 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7467,11 +7498,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.42 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(42|43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7509,11 +7540,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.43 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(43|44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(43|44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(43|44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7575,11 +7606,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.44 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(44|45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(44|45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(44|45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(44|45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7606,11 +7637,11 @@ Ana Morales Castillo
 
     it("3. Consagración doctrinal de versión v33.45 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(45|46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(45|46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(45|46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(45|46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7649,11 +7680,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.46 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(46|47|48|49|50|51|52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(46|47|48|49|50|51|52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(46|47|48|49|50|51|52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(46|47|48|49|50|51|52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -7707,11 +7738,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.47 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(?:47|48|49|50|51|52|53|54|55|56)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(?:47|48|49|50|51|52|53|54|55|56|57)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:47|48|49|50|51|52|53|54|55|56)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:47|48|49|50|51|52|53|54|55|56|57)\.0$/);
     });
   });
 
@@ -7766,11 +7797,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.48 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(?:48|49|50|51|52|53|54|55|56)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(?:48|49|50|51|52|53|54|55|56|57)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:48|49|50|51|52|53|54|55|56)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:48|49|50|51|52|53|54|55|56|57)\.0$/);
     });
   });
 
@@ -7839,11 +7870,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.49 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(?:49|50|51|52|53|54|55|56)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(?:49|50|51|52|53|54|55|56|57)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(?:49|50|51|52|53|54|55|56)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(?:49|50|51|52|53|54|55|56|57)\.0$/);
     });
   });
 
@@ -7965,7 +7996,7 @@ Ana Morales Castillo
     it("4. Consagración doctrinal de versión v33.51 en shared/const.ts y package.json", async () => {
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(51|52|53|54|55|56)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(51|52|53|54|55|56|57)\.0$/);
     });
   });
 
@@ -8045,11 +8076,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.52 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(52|53|54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(52|53|54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(52|53|54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(52|53|54|55|56|57)\.0/);
     });
   });
 
@@ -8162,11 +8193,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.54 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(54|55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(54|55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(54|55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(54|55|56|57)\.0/);
     });
   });
 
@@ -8201,11 +8232,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.55 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(55|56)/);
+      expect(VECY_VERSION).toMatch(/^v33\.(55|56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(55|56)\.0/);
+      expect(pkg.version).toMatch(/^33\.(55|56|57)\.0/);
     });
   });
 
@@ -8278,11 +8309,123 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.56 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.56");
+      expect(VECY_VERSION).toMatch(/^v33\.(56|57)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.56.0");
+      expect(pkg.version).toMatch(/^33\.(56|57)\.0/);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 143. SUITE v33.57 — GUILLOTINA ESTRICTA DE HABITACIONES (COINCIDENCIA EXACTA OBLIGATORIA)
+  // Doctrina Eduardo A. Rivera: Si pide 1=1, 2=2, 3=3... cero tolerancia (+1), cero aproximaciones
+  // ─────────────────────────────────────────────────────────────
+  describe("143. Suite v33.57 — Guillotina Estricta de Habitaciones (Coincidencia Exacta Obligatoria 1=1, 2=2, 3=3...) (Doctrina Eduardo A. Rivera)", () => {
+    const baseReqHabs = {
+      id: 9001,
+      propertyType: "apartment",
+      transactionType: "venta",
+      price: 900_000_000,
+      presupuestoMax: 900_000_000,
+      areaMin: 80,
+      habitacionesMin: 2,
+      banosMin: 2,
+      parqueaderosMin: 1,
+      city: "Bogotá",
+      neighborhood: "Chicó",
+      zonaDeseada: "Chicó, Bogotá",
+      status: "active",
+      rawText: "Busco apartamento en venta en Chicó, Bogotá. Presupuesto 900 millones, 80 m2, 2 alcobas, 2 baños, 1 garaje."
+    };
+
+    const basePropHabs = {
+      id: 9002,
+      propertyType: "apartment",
+      transactionType: "venta",
+      price: 880_000_000,
+      rentPrice: null,
+      area: 90,
+      bedrooms: 2,
+      bathrooms: 2,
+      garages: 1,
+      city: "Bogotá",
+      neighborhood: "Chicó",
+      status: "active",
+      rawText: "Vendo apartamento en Chicó, Bogotá. 90 m2, 2 alcobas, 2 baños, 1 garaje. Precio $880 millones."
+    };
+
+    it("1. Si la demanda pide 2 habitaciones y la oferta tiene 3 (antiguo confort +1) -> GUILLOTINA 0% (Match Inviable)", () => {
+      const prop3Habs = {
+        ...basePropHabs,
+        bedrooms: 3,
+        rawText: "Vendo apartamento en Chicó, Bogotá. 90 m2, 3 alcobas, 2 baños, 1 garaje. Precio $880 millones."
+      };
+      const res = explicarMatch(baseReqHabs, prop3Habs);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Guillotina Estricta de Habitaciones") && b.includes("exige exactamente 2"))).toBe(true);
+    });
+
+    it("2. Si la demanda pide 1 habitación y la oferta tiene 2 -> GUILLOTINA 0% (Match Inviable)", () => {
+      const req1Hab = {
+        ...baseReqHabs,
+        habitacionesMin: 1,
+        rawText: "Busco apartamento en venta en Chicó, Bogotá. Presupuesto 900 millones, 1 alcoba, 1 baño."
+      };
+      const prop2Habs = {
+        ...basePropHabs,
+        bedrooms: 2,
+        rawText: "Vendo apartamento en Chicó, Bogotá. 2 alcobas, 2 baños, 1 garaje. Precio $880 millones."
+      };
+      const res = explicarMatch(req1Hab, prop2Habs);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Guillotina Estricta de Habitaciones"))).toBe(true);
+    });
+
+    it("3. Si la demanda pide 3 habitaciones y la oferta tiene 4 -> GUILLOTINA 0% (Match Inviable)", () => {
+      const req3Habs = {
+        ...baseReqHabs,
+        habitacionesMin: 3,
+        rawText: "Busco apartamento en venta en Chicó, Bogotá. Presupuesto 900 millones, 3 alcobas, 2 baños."
+      };
+      const prop4Habs = {
+        ...basePropHabs,
+        bedrooms: 4,
+        rawText: "Vendo apartamento en Chicó, Bogotá. 4 alcobas, 2 baños, 1 garaje. Precio $880 millones."
+      };
+      const res = explicarMatch(req3Habs, prop4Habs);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Guillotina Estricta de Habitaciones"))).toBe(true);
+    });
+
+    it("4. Si la oferta coincide EXACTAMENTE en habitaciones (2=2) -> MATCH Aprobado (>= 85%)", () => {
+      const res = explicarMatch(baseReqHabs, basePropHabs);
+      expect(res.score).toBeGreaterThanOrEqual(85);
+      expect(res.blockers.length).toBe(0);
+      expect(res.positives.some(p => p.includes("Habitaciones exactas (2 habs)"))).toBe(true);
+    });
+
+    it("5. SEED_TEACHINGS y base.md consagran la directiva de Guillotina Estricta de Habitaciones", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(s => s.id === "seed-guillotina-estricta-habitaciones-coincidencia-exacta");
+      expect(seed).toBeDefined();
+      expect(seed?.active).toBe(true);
+      expect(seed?.directive).toContain("la coincidencia entre habitaciones es OBLIGATORIAMENTE EXACTA");
+      expect(seed?.rawText).toContain("En habitaciones debe haber guillotina");
+
+      const fs = await import("fs");
+      const baseContent = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+      expect(baseContent).toContain("REGLA DE ORO DE HABITACIONES — GUILLOTINA ESTRICTA (Doctrina Eduardo A. Rivera v33.57)");
+      expect(baseContent).toContain("DEBE SER EXACTA O NO HAY MATCH (0% Guillotina Inmediata)");
+    });
+
+    it("6. Consagración doctrinal de versión v33.57 en shared/const.ts y package.json", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.57");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.57.0");
     });
   });
 });

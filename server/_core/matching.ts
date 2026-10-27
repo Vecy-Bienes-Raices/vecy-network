@@ -2007,6 +2007,7 @@ export function explicarMatch(
   let reqAreaMax = 0;
   let pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
   let reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
+  let reqBedroomsMax = requirement.habitacionesMax != null ? Number(requirement.habitacionesMax) : -1;
   let pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
   let reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
   let pGarages = property.garages != null ? Number(property.garages) : -1;
@@ -2026,6 +2027,9 @@ export function explicarMatch(
     }
     if (reqBedrooms <= 0 && fbReq.bedroomsMin) {
       reqBedrooms = fbReq.bedroomsMin;
+    }
+    if (reqBedroomsMax <= 0 && fbReq.bedroomsMax) {
+      reqBedroomsMax = fbReq.bedroomsMax;
     }
     if (reqBathrooms <= 0 && fbReq.bathrooms) {
       reqBathrooms = fbReq.bathrooms;
@@ -2680,9 +2684,21 @@ export function explicarMatch(
 
   // ── INFERENCIA DE ESPECIFICACIONES MÍNIMAS EN LA DEMANDA DESDE RAWTEXT ──
   let effectiveReqBeds = reqBedrooms;
+  let effectiveReqBedsMax = reqBedroomsMax;
   if (effectiveReqBeds <= 0) {
-    const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-    if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
+    const rangeB = reqTextLow.match(/(\d+)\s*(?:a|-|o|hasta)\s*(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (rangeB) {
+      effectiveReqBeds = parseInt(rangeB[1], 10);
+      effectiveReqBedsMax = parseInt(rangeB[2], 10);
+    } else {
+      const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
+    }
+  } else if (effectiveReqBedsMax <= 0) {
+    const rangeB = reqTextLow.match(/(\d+)\s*(?:a|-|o|hasta)\s*(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (rangeB) {
+      effectiveReqBedsMax = parseInt(rangeB[2], 10);
+    }
   }
 
   let effectiveReqBaths = reqBathrooms;
@@ -2780,31 +2796,26 @@ export function explicarMatch(
 
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
   const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
+  if (effectiveReqBeds <= 0 && isReqSingleRoomSubtype) {
+    effectiveReqBeds = 1;
+  }
 
-  // ── FILTRO DURO 8: Habitaciones (REGLA DOCTRINAL v22.8: DOS BRAZOS ESTRICTOS) ──
+  // ── FILTRO DURO 8: Habitaciones (GUILLOTINA ESTRICTA DOCTRINAL v33.57 — COINCIDENCIA EXACTA OBLIGATORIA) ──
+  // Doctrina Eduardo A. Rivera: Si el cliente pide 1 = 1, si pide 2 = 2, si pide 3 = 3...
+  // Cero tolerancia de confort (+1), cero aproximaciones, cero sugerencias. Es exacto o NO hay MATCH (0%).
   if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
-      if (effectiveReqBeds === 1 || isReqSingleRoomSubtype) {
-        // BRAZO A: Búsqueda Estricta de 1 Habitación / Apartaestudio / Aparta Suite / Loft
-        // Solo se permite exactamente 1 habitación (o 1 habitación con estudio si no es un apto familiar de múltiples alcobas)
-        if (pBedrooms !== 1) {
-          blockers.push(`Regla Doctrinal de 1 Alcoba (Tolerancia Cero): La demanda busca estrictamente 1 habitación / apartaestudio y la oferta tiene ${pBedrooms} habitaciones. Match Inviable (0%).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else {
-          positives.push(`Habitaciones exactas (1 alcoba) para apartaestudio / apartasuite — Cumplimiento Perfecto`);
-        }
+      const hasBedRange = effectiveReqBedsMax > effectiveReqBeds;
+      const isMatch = hasBedRange
+        ? (pBedrooms >= effectiveReqBeds && pBedrooms <= effectiveReqBedsMax)
+        : (pBedrooms === effectiveReqBeds);
+
+      if (!isMatch) {
+        const reqDesc = hasBedRange ? `entre ${effectiveReqBeds} y ${effectiveReqBedsMax}` : `exactamente ${effectiveReqBeds}`;
+        blockers.push(`Guillotina Estricta de Habitaciones (Coincidencia Exacta Obligatoria): La demanda exige ${reqDesc} habitación(es) y la oferta tiene ${pBedrooms}. Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       } else {
-        // BRAZO B: Búsqueda Familiar (a partir de 2 Habitaciones)
-        if (pBedrooms < effectiveReqBeds) {
-          blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else if (pBedrooms > effectiveReqBeds + 1) {
-          // Si supera por más de 1 habitación (ej. pide 2 y la oferta tiene 4 o 5) -> Desborde de escala
-          blockers.push(`Desborde de Escala en Habitaciones: La demanda busca ${effectiveReqBeds} habitaciones y la oferta tiene ${pBedrooms} habitaciones (máximo permitido ${effectiveReqBeds + 1} de confort). Match Inviable (0%).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else {
-          positives.push(`Habitaciones ofrecidas (${pBedrooms}) compatibles con las exigidas (${effectiveReqBeds}) dentro del margen de confort — Cumplimiento`);
-        }
+        positives.push(`Habitaciones exactas (${pBedrooms} habs): coincidencia exacta con lo solicitado — Cumplimiento Perfecto`);
       }
     } else {
       blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de información en la oferta.`);
@@ -3377,11 +3388,12 @@ export function explicarMatch(
   }
 
 
-  // 6. Habitaciones (10 pts)
-  if (reqBedrooms > 0) {
+  // 6. Habitaciones (10 pts — Guillotina Estricta v33.57)
+  const targetReqBeds = effectiveReqBeds > 0 ? effectiveReqBeds : reqBedrooms;
+  if (targetReqBeds > 0) {
     if (pBedrooms >= 0) {
-      if (pBedrooms >= reqBedrooms) earnedPoints += 10;
-      else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
+      if (pBedrooms === targetReqBeds) earnedPoints += 10;
+      else negatives.push(`Habitaciones (${pBedrooms}) no coinciden exactamente con las requeridas (${targetReqBeds})`);
     } else {
       negatives.push("Habitaciones no especificadas en la oferta (N/E)");
     }
