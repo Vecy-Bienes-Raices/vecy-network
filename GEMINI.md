@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.54.0 — 2026-10-27)
-- **JanIA Server:** `v33.54` (`33.54.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Guardarropa Dinámico de Alta Costura, Reemplazo Integral de Galería 1:1 y Blindaje de Estados de WhatsApp (Doctrina Eduardo A. Rivera):**
-  1. **Reemplazo Integral de la Galería 1:1 y Vertical 9:16:** Generación y reemplazo en `channel_1x1/` y `jania/` de las 5 piezas maestras 1:1 y la vertical 9:16 bajo el canon sagrado inmutable: rostro 3D Pixar/Disney, cabello estrictamente negro profundo brillante (`deep glossy jet-black`), corte bob corto voluminoso, gafas translúcidas lila, aretes de diamantes y el broche oficial circular dorado de VECY en el pecho.
-  2. **Guardarropa de Alta Costura y Variedad Estética (5 Diseños Clave):** Incorporación de 5 estilos de alta costura para rotación temática: 1) Oro Líquido & Negro Carbón Fluido (Café/podcast); 2) Púrpura / Violeta Imperial en Degradé a Negro (comunidad/empatía); 3) Traje Sastre Blanco Marfil con Cuello Mao Bordado en Oro (notarial/títulos); 4) Vestido Volcánico / Magma Incandescente (proptech/primicias); 5) Seda Marmoleada Verde Esmeralda & Oro Líquido (inversión/sostenibilidad). Semilla `seed-guardarropa-alta-costura-variedad-estilos-jania` en `founderKnowledgeService.ts`.
-  3. **Blindaje de Estados de WhatsApp (status@broadcast) en Texto Limpio (Cero Pantallas Negras):** Supresión total de imágenes en historias de WhatsApp en Baileys para evitar fallos de transcodificación y descifrado. Despacho exclusivo de texto limpio con `backgroundColor: '#1B2A4A'` (azul marino corporativo VECY), `font: 1` y distribución exhaustiva de destinatarios autorizados en `statusJidList`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 409/409 passing (100% verde) | Build `npm run build` limpio en 31.47s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.55.0 — 2026-10-27)
+- **JanIA Server:** `v33.55` (`33.55.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Blindaje de Ciberseguridad Supabase Security Advisor (rls_disabled_in_public) y Zero-Trust RLS (Doctrina Eduardo A. Rivera):**
+  1. **Resolución Crítica de Vulnerabilidad `rls_disabled_in_public`:** Corrección y blindaje inmediato ante la alerta de seguridad del Asesor de Supabase en el proyecto `Red Vecy` (`knzmpoprlmbonejshfys`). Habilitación estricta de Row Level Security (RLS) en las tablas `public.advisors` y `public.predial_consultations`.
+  2. **Políticas de Aislamiento Estricto Zero-Trust:** Bloqueo absoluto de acceso anónimo/público (`deny_anon_advisors`, `deny_anon_predial` para roles `anon` y `authenticated` con `qual: false`), erradicando la vulnerabilidad de lectura, edición o supresión no autorizada de los directorios de asesores y registros catastrales a través de la API REST pública de Supabase. Acceso garantizado exclusivamente a `service_role` y conexión interna del backend (`postgres` con `BYPASSRLS`).
+  3. **DDL y Automatización CI/CD:** Inscripción de la migración `drizzle/0012_rls_security_advisor_hardening.sql`, script ejecutable `scripts/enable_rls_hardening.ts` y directiva doctrinal `seed-seguridad-blindaje-rls-supabase-zero-trust` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 413/413 passing (100% verde) | Build `npm run build` limpio en 34.12s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

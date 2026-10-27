@@ -330,6 +330,27 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.55 — Octubre 2026
+
+#### [v33.55.0] — 2026-10-27: Blindaje de Seguridad Supabase Security Advisor (rls_disabled_in_public) y Zero-Trust RLS
+- **Resolución de Vulnerabilidad Crítica Supabase Security Advisor (`rls_disabled_in_public`):**
+  - **Problema:** El asesor de seguridad automatizado de Supabase notificó una vulnerabilidad crítica ("Mesa de acceso público" / `rls_disabled_in_public`) en el proyecto `Red Vecy` (`knzmpoprlmbonejshfys`), advirtiendo que cualquier usuario con la URL del proyecto podía consultar, editar o borrar registros de tablas sin Row Level Security.
+  - **Diagnóstico Forense:** La inspección del catálogo `pg_tables` reveló que las tablas recientemente migradas `public.advisors` (directorio de 356 asesores inmobiliarios con teléfonos y LIDs) y `public.predial_consultations` (consultas catastrales históricas y datos prediales) tenían `rowsecurity = false`. Debido a los privilegios predeterminados de Supabase para PostgREST, la anon key pública (`VITE_SUPABASE_ANON_KEY`) permitía descargar todo el directorio de asesores (`/rest/v1/advisors?select=id` devolvía `[{"id":1}]`).
+  - **Solución y Blindaje Zero-Trust:**
+    1. *Habilitación Inmediata de RLS:* `ALTER TABLE public.advisors ENABLE ROW LEVEL SECURITY;` y `ALTER TABLE public.predial_consultations ENABLE ROW LEVEL SECURITY;`.
+    2. *Políticas de Bloqueo Anónimo Total:* `deny_anon_advisors` y `deny_anon_predial` para roles `anon` y `authenticated` con condición `USING (false)`, cerrando cualquier vector de consulta o mutación no autorizada desde el exterior.
+    3. *Políticas de Acceso para Procesos Internos:* `service_role_all_advisors` y `service_role_all_predial` con acceso total irrestricto para `service_role`.
+    4. *Cero Fricción en Backend:* La conexión del backend Node.js (`DATABASE_URL`) opera bajo el superusuario `postgres` que posee `rolbypassrls = true`, por lo que JanIA, parsers y microservicios continúan operando con 100% de normalidad y cero latencia.
+  - **Verificación Empírica Post-Blindaje:**
+    - Petición `GET /rest/v1/advisors` con anon key: Retorna `[]` (0 registros expuestos).
+    - Petición `POST /rest/v1/advisors` con anon key: Rechazada con `PostgresError 42501 (new row violates row-level security policy)`.
+    - Petición `POST /rest/v1/predial_consultations` con anon key: Rechazada con `PostgresError 42501`.
+  - **Inscripción DDL y CI/CD:**
+    - Creado archivo de migración `drizzle/0012_rls_security_advisor_hardening.sql`.
+    - Creado script ejecutable `scripts/enable_rls_hardening.ts` para despliegues CI/CD.
+    - Añadida directiva doctrinal `seed-seguridad-blindaje-rls-supabase-zero-trust` en `server/_core/jania/founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **413/413 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 34.12s.
+
 ### 🔖 v33.54 — Octubre 2026
 
 #### [v33.54.0] — 2026-10-27: Guardarropa de Alta Costura, Variedad Estética, Reemplazo Integral de Galería 1:1 y Blindaje de Estados de WhatsApp

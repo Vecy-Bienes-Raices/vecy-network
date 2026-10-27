@@ -108,6 +108,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-seguridad-blindaje-rls-supabase-zero-trust",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Blindaje de Ciberseguridad RLS y Confidencialidad Absoluta de Datos (Doctrina Eduardo A. Rivera)",
+    directive:
+      "Los datos de asesores, clientes, requerimientos, consultas catastrales y tributarias son estrictamente sagrados y confidenciales (Ley 1581 de Hábeas Data). Todas las tablas de PostgreSQL / Supabase operan bajo el principio de Zero-Trust con Row Level Security (RLS) habilitado y políticas de aislamiento que bloquean cualquier lectura o modificación anónima desde el exterior. Jamás se expone información de la red a consultas públicas no autenticadas.",
+    rawText: "Blindar de inmediato cualquier tabla en Supabase que no tenga RLS activado, como advisors o predial_consultations. Nadie del exterior puede tener acceso no autorizado a los datos de la red.",
+    createdAt: "2026-10-27T14:00:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

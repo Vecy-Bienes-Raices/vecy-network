@@ -182,7 +182,24 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.54 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.55 — Octubre 2026
+
+### Novedades v33.55 (Blindaje de Ciberseguridad Supabase Security Advisor rls_disabled_in_public y Zero-Trust RLS):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Alerta Crítica de Seguridad del Asesor de Supabase (`rls_disabled_in_public`)**:
+     - *Diagnóstico y Causa raíz*: Eduardo recibió un correo de Supabase Security Advisor advirtiendo de vulnerabilidad crítica en el proyecto `Red Vecy` (`knzmpoprlmbonejshfys`) por tablas en el esquema `public` sin Row Level Security (RLS) habilitado. La inspección técnica con PostgreSQL confirmó que las tablas `public.advisors` y `public.predial_consultations` tenían `rowsecurity = false`. Debido a los privilegios predeterminados de Supabase para PostgREST, cualquier persona en internet con la anon key pública (`VITE_SUPABASE_ANON_KEY`) podía leer, insertar, editar o borrar registros de asesores y consultas catastrales confidenciales (`/rest/v1/advisors` retornaba `[{"id":1}]`).
+     - *Solución*:
+       a) **Habilitación Inmediata de RLS**: `ALTER TABLE public.advisors ENABLE ROW LEVEL SECURITY;` y `ALTER TABLE public.predial_consultations ENABLE ROW LEVEL SECURITY;`.
+       b) **Políticas Estrictas de Aislamiento Zero-Trust**:
+          - `deny_anon_advisors` y `deny_anon_predial`: Bloqueo total para roles `anon` y `authenticated` (`USING (false)`), impidiendo cualquier lectura o mutación anónima vía REST API.
+          - `service_role_all_advisors` y `service_role_all_predial`: Acceso irrestricto reservado exclusivamente a `service_role`.
+          - Conexión interna de Node.js / backend (`DATABASE_URL` con usuario `postgres`) opera con `rolbypassrls = true`, garantizando funcionamiento al 100% sin latencia ni bloqueos internos.
+       c) **Verificación Empírica Inmediata**: Pruebas con `curl` a `/rest/v1/advisors` y `/rest/v1/predial_consultations` con anon key retornan `[]` en lecturas y `error 42501 (new row violates row-level security policy)` en intentos de escritura.
+       d) **DDL y Automatización**: Creación de la migración `drizzle/0012_rls_security_advisor_hardening.sql`, script ejecutable `scripts/enable_rls_hardening.ts` y registro en SEED_TEACHINGS (`seed-seguridad-blindaje-rls-supabase-zero-trust`).
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 413/413 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 34.12s ✅
+- `shared/const.ts` (`v33.55`) y `package.json` (`33.55.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.54 — Octubre 2026
 
 ### Novedades v33.54 (Guardarropa Dinámico de Alta Costura, Reemplazo de Galería 1:1 y Blindaje de Estados de WhatsApp):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

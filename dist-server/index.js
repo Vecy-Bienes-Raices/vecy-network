@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.54";
+    VECY_VERSION = "v33.55";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16418,6 +16418,16 @@ var init_founderKnowledgeService = __esm({
         directive: "JanIA debe cambiar y rotar continuamente el dise\xF1o y color de sus trajes y vestidos en sus publicaciones diarias, piezas visuales y canales para erradicar por completo la monoton\xEDa visual. No debe vestir siempre el mismo traje negro. Debe alternar entre una colecci\xF3n de alta costura ejecutiva y futurista inspirada en sus dise\xF1os de cabecera: 1) Oro L\xEDquido & Negro Carb\xF3n Fluido: Vestido con degrad\xE9 y ondas de oro met\xE1lico sobre negro carb\xF3n (Caf\xE9 Inmobiliario, podcast, cierres exitosos y balances); 2) P\xFArpura / Violeta Imperial en Degrad\xE9 a Negro: Vestido entallado chic (empat\xEDa, comunidad, coraz\xF3n y relaciones humanas); 3) Traje Sastre Blanco Marfil con Cuello Mao Bordado en Oro: Chaqueta y cuello alto con arabescos dorados (cumbre notarial, estudios de t\xEDtulos de \xE9lite y solemnidad jur\xEDdica); 4) Textura Volc\xE1nica / Magma Incandescente: Vestido negro mate con energ\xEDa y grietas de lava naranja/dorada (innovaci\xF3n proptech, primicias y noticias de \xFAltima hora); 5) Seda Marmoleada Verde Esmeralda & Oro L\xEDquido: Vestido largo fluido en tonos esmeralda colombiano, oliva y vetas doradas (inversi\xF3n en finca ra\xEDz, sostenibilidad biof\xEDlica, POT y aval\xFAos). Todo ello preservando INMUTABLE su rostro 3D Pixar/Disney, cabello estrictamente negro profundo brillante (cero casta\xF1o), gafas transl\xFAcidas tono lila, corte bob voluminoso y el broche oficial circular dorado de VECY en el pecho.",
         rawText: "Procura siempre cambiar los dise\xF1os de sus trajes, que no sea el mismo siempre, ojal\xE1 dise\xF1os y colores como los que te comparto. Los que ya dise\xF1aste hoy y creaste me encantaron, si te paso im\xE1genes con estos dise\xF1os de trajes es porque me encantaron es para que trates a copiarlos o crear a partir de ellos unos muy parecidos con estos dise\xF1os y colores y as\xED var\xEDes su vestuario solamente y siempre tengas ejemplos para basarte y crear im\xE1genes nuevas y alusivas a cada servicio que Jania ofrece.",
         createdAt: "2026-10-27T13:13:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-seguridad-blindaje-rls-supabase-zero-trust",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Blindaje de Ciberseguridad RLS y Confidencialidad Absoluta de Datos (Doctrina Eduardo A. Rivera)",
+        directive: "Los datos de asesores, clientes, requerimientos, consultas catastrales y tributarias son estrictamente sagrados y confidenciales (Ley 1581 de H\xE1beas Data). Todas las tablas de PostgreSQL / Supabase operan bajo el principio de Zero-Trust con Row Level Security (RLS) habilitado y pol\xEDticas de aislamiento que bloquean cualquier lectura o modificaci\xF3n an\xF3nima desde el exterior. Jam\xE1s se expone informaci\xF3n de la red a consultas p\xFAblicas no autenticadas.",
+        rawText: "Blindar de inmediato cualquier tabla en Supabase que no tenga RLS activado, como advisors o predial_consultations. Nadie del exterior puede tener acceso no autorizado a los datos de la red.",
+        createdAt: "2026-10-27T14:00:00.000Z",
         active: true
       },
       {

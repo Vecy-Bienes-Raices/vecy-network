@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.55: Blindaje de Seguridad Supabase Security Advisor (rls_disabled_in_public) y Zero-Trust RLS (v33.55 - 33.55.0)
+
+**Versión:** `v33.55` (`33.55.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + Supabase Pooler (`knzmpoprlmbonejshfys`) + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Me llegó este correo, ¿puedes arreglarlo, repararlo o corregirlo?*
+  *Estos problemas requieren su atención inmediata. Hemos detectado vulnerabilidades de seguridad en los proyectos que se enumeran a continuación que podrían exponer sus datos a accesos no autorizados. Revíselas y corríjalas antes de que sus datos se vean comprometidos . Problemas detectados al 25 de octubre de 2026: Cuestión crítica. Mesa de acceso público. Cualquier persona que tenga la URL de tu proyecto puede leer, editar y eliminar todos los datos de esta tabla porque la seguridad a nivel de fila no está habilitada. rls_disabled_in_public. Proyecto [Red Vecy] knzmpoprlmbonejshfys"*
+
+**Diagnóstico Técnico Profundo:**
+1. **Traducción y Significado del Aviso de Seguridad de Supabase:**
+   - La advertencia *"Mesa de acceso público"* corresponde a la traducción automática al español de *"Public access table"*, alertando que una o más tablas dentro del esquema `public` carecían de seguridad a nivel de fila (*Row Level Security — RLS*).
+   - En la arquitectura de Supabase, la API REST automática (PostgREST) expone todas las tablas del esquema `public`. Si una tabla no tiene RLS habilitado, los privilegios por defecto concedidos al rol `anon` permiten que cualquier persona con la URL del proyecto (`https://knzmpoprlmbonejshfys.supabase.co`) y la llave anónima pública (`VITE_SUPABASE_ANON_KEY`) pueda consultar, insertar, modificar o borrar registros completos sin necesidad de autenticarse.
+2. **Inspección Forense de Tablas en PostgreSQL / Supabase:**
+   - Mediante consulta directa al catálogo del sistema (`pg_tables` y `pg_class`), se examinaron todas las 29 tablas del esquema `public`.
+   - Se identificó con precisión quirúrgica que 2 tablas maestras de datos sensibles tenían `rowsecurity = false` (deshabilitado) y 0 políticas de protección:
+     a) `public.advisors`: Directorio de 356 asesores inmobiliarios con teléfonos, nombres y LIDs.
+     b) `public.predial_consultations`: Registros históricos de consultas catastrales, CHIPs, avalúos y datos de propietarios.
+   - *(Nota: la tabla `spatial_ref_sys` de PostGIS es un catálogo estándar de proyecciones geográficas de solo lectura perteneciente al sistema y no representa riesgo de exposición de datos de negocio)*.
+3. **Comprobación Empírica de la Fuga (Prueba de Vulnerabilidad):**
+   - Una petición curl directa con la anon key pública a `https://knzmpoprlmbonejshfys.supabase.co/rest/v1/advisors?select=id&limit=1` devolvió `[{"id":1}]`, confirmando que la tabla estaba expuesta al público antes de la intervención.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Habilitación Inmediata de RLS en Base de Datos de Producción:**
+  - `ALTER TABLE public.advisors ENABLE ROW LEVEL SECURITY;`
+  - `ALTER TABLE public.predial_consultations ENABLE ROW LEVEL SECURITY;`
+- **Configuración de Políticas de Aislamiento Estricto Zero-Trust:**
+  - **Bloqueo Público Total (`anon` y `authenticated`):**
+    - `CREATE POLICY "deny_anon_advisors" ON public.advisors FOR ALL TO anon, authenticated USING (false);`
+    - `CREATE POLICY "deny_anon_predial" ON public.predial_consultations FOR ALL TO anon, authenticated USING (false);`
+  - **Acceso Exclusivo para Procesos Internos Autorizados (`service_role`):**
+    - `CREATE POLICY "service_role_all_advisors" ON public.advisors FOR ALL TO service_role USING (true) WITH CHECK (true);`
+    - `CREATE POLICY "service_role_all_predial" ON public.predial_consultations FOR ALL TO service_role USING (true) WITH CHECK (true);`
+  - **Cero Impacto en el Backend Node.js:**
+    - La conexión del servidor backend (`DATABASE_URL`) utiliza el rol `postgres`, el cual posee nativamente la propiedad `rolbypassrls = true` en PostgreSQL. Por tanto, JanIA y todos los microservicios siguen leyendo y escribiendo en `advisors` (356 registros) y `predial_consultations` con 100% de normalidad y cero latencia.
+- **Validación Forense Post-Blindaje:**
+  - Consulta GET anónima a `/rest/v1/advisors`: Retorna `[]` (acceso denegado / 0 registros expuestos).
+  - Intento POST anónimo de inserción: Rechazado inmediatamente con `PostgresError 42501: new row violates row-level security policy for table "advisors"`.
+  - Intento POST anónimo en `predial_consultations`: Rechazado con `PostgresError 42501`.
+- **Inscripción de DDL, Automatización y Gobernanza Doctrinal:**
+  - Creado el archivo de migración formal: `drizzle/0012_rls_security_advisor_hardening.sql`.
+  - Creado el script automatizado para despliegues CI/CD: `scripts/enable_rls_hardening.ts`.
+  - Incorporada la directiva permanente en la memoria de JanIA: `seed-seguridad-blindaje-rls-supabase-zero-trust` en `server/_core/jania/founderKnowledgeService.ts`.
+- **Suite de Regresión y Validación Exhaustiva:**
+  - Creada la Suite 141 en `server/__tests__/regression.test.ts`.
+  - `npm test`: **413/413 passing** (100% verde a $0 COP).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio en 34.12s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.55` (`33.55.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.54: Guardarropa de Alta Costura, Variedad Estética, Reemplazo de Galería 1:1 y Blindaje de Estados de WhatsApp (v33.54 - 33.54.0)
 
 **Versión:** `v33.54` (`33.54.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
