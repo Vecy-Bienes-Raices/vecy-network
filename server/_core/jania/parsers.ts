@@ -1768,7 +1768,126 @@ export function sanitizeGeoString(val: any): string {
 }
 
 export function sanitizeResponseMarkdown(text: string): string {
-  if (!text) return "";
-  // Reemplazar dobles asteriscos "**" por un solo asterisco "*" para cumplir con el formato de WhatsApp
-  return text.replace(/\*\*/g, "*");
+  if (!text || typeof text !== "string") return "";
+
+  let clean = text;
+
+  // 1. Reemplazar dobles asteriscos "**" por un solo asterisco "*" para cumplir con el formato nativo de WhatsApp
+  clean = clean.replace(/\*\*/g, "*");
+
+  // 2. Erradicar coletillas de ejemplo pegadas a URLs o texto de enlaces (ej. "(ejemplo)", "(link de ejemplo)")
+  clean = clean.replace(
+    /\s*\((?:ejemplo|link\s+de\s+ejemplo|enlace\s+de\s+ejemplo|ejemplo\s+de\s+enlace)\)/gi,
+    ""
+  );
+
+  // 3. Erradicar enlaces Markdown dobles donde tanto el texto como el destino son URLs:
+  // Ej: [https://chat.whatsapp.com/xyz](https://chat.whatsapp.com/xyz) -> https://chat.whatsapp.com/xyz
+  // O con espacios entre corchete y paréntesis: [https://... ] ( https://... )
+  clean = clean.replace(
+    /\[\s*(https?:\/\/[^\s\]]+)\s*\]\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi,
+    (_match, url1, url2) => {
+      return url2 || url1;
+    }
+  );
+
+  // 4. Erradicar enlaces Markdown donde el anchor text es genérico o repetitivo:
+  // Ej: [aquí](https://...), [únete aquí](https://...), [enlace](https://...), [link](https://...)
+  clean = clean.replace(
+    /\[\s*(?:aqu[ií]|link|enlace|haz\s+clic\s+aqu[ií]|click\s+aqu[ií]|clic\s+aqu[ií]|únete\s+aqu[ií]|unete\s+aqu[ií]|ver\s+aqu[ií]|visitar|ingresar|aquí\s+mismo|aqui\s+mismo)\s*\]\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi,
+    "$1"
+  );
+
+  // 5. Normalizar enlaces Markdown con texto descriptivo:
+  // Ej: [Canal Oficial de WhatsApp](https://whatsapp.com/...) -> Canal Oficial de WhatsApp: https://whatsapp.com/...
+  clean = clean.replace(
+    /\[\s*([^\]]+?)\s*\]\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi,
+    (_match, anchorText, url) => {
+      const trimmedAnchor = anchorText.trim();
+      if (/^https?:\/\//i.test(trimmedAnchor) || trimmedAnchor === url) {
+        return url;
+      }
+      return `${trimmedAnchor}: ${url}`;
+    }
+  );
+
+  // 6. Erradicar duplicidades adyacentes de URLs (doble enlace idéntico consecutivo):
+  // Ej: "https://chat.whatsapp.com/xyz (https://chat.whatsapp.com/xyz)"
+  // Ej: "https://chat.whatsapp.com/xyz [https://chat.whatsapp.com/xyz]"
+  // Ej: "https://chat.whatsapp.com/xyz https://chat.whatsapp.com/xyz"
+  clean = clean.replace(
+    /(https?:\/\/[^\s\)\]]+)(?:[\s,]*[\(\[]?\s*\1\s*[\)\]]?)+/gi,
+    "$1"
+  );
+
+  // 7. Limpiar URLs envueltas innecesariamente en corchetes aislados:
+  // Ej: "[https://chat.whatsapp.com/xyz]" -> "https://chat.whatsapp.com/xyz"
+  clean = clean.replace(/\[\s*(https?:\/\/[^\s\]]+)\s*\]/gi, "$1");
+
+  // 8. Limpiar paréntesis redundantes cuando una URL está precedida inmediatamente por ":" o un emoji:
+  // Ej: "Únete aquí: (https://...)" -> "Únete aquí: https://..."
+  // Ej: "👉 (https://...)" -> "👉 https://..."
+  clean = clean.replace(/((?::|👉|🔗)\s*)\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi, "$1$2");
+
+  // 9. Corrección de enlaces de grupos de WhatsApp alucinados o ficticios:
+  // Si JanIA generó un enlace como "https://chat.whatsapp.com/KxL8w3Z92m61v29Q4jKxL8" (código inexistente):
+  // Detectar por contexto del párrafo y reemplazar por el enlace oficial de VECY correspondiente.
+  const OFFICIAL_GROUP_CODES = new Set([
+    "GzMbjNs1P2tHI7D0V4h8wZ", // Grupo 1
+    "J4u1h7NUL1i1B1wAIyTUN6", // Grupo 2
+    "CSzrKR6Cr56HAieEhAuqyU"  // Grupo 3
+  ]);
+
+  clean = clean.replace(
+    /https:\/\/chat\.whatsapp\.com\/([a-zA-Z0-9_-]+)/gi,
+    (fullMatch, code) => {
+      if (OFFICIAL_GROUP_CODES.has(code)) {
+        return fullMatch;
+      }
+      // Código de grupo no oficial / alucinado por el LLM:
+      const cleanLower = clean.toLowerCase();
+      if (
+        cleanLower.includes("tip") ||
+        cleanLower.includes("noticia") ||
+        cleanLower.includes("consulta") ||
+        cleanLower.includes("legal") ||
+        cleanLower.includes("tributari") ||
+        cleanLower.includes("leasing") ||
+        cleanLower.includes("davivienda") ||
+        cleanLower.includes("avaluo") ||
+        cleanLower.includes("avalúo") ||
+        cleanLower.includes("soporte") ||
+        cleanLower.includes("vecy tips")
+      ) {
+        return "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6"; // Grupo 2
+      }
+      if (
+        cleanLower.includes("oferta") ||
+        cleanLower.includes("demanda") ||
+        cleanLower.includes("inmueble") ||
+        cleanLower.includes("corretaje") ||
+        cleanLower.includes("venta") ||
+        cleanLower.includes("arriendo") ||
+        cleanLower.includes("captad")
+      ) {
+        return "https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ"; // Grupo 1
+      }
+      if (
+        cleanLower.includes("proyecto") ||
+        cleanLower.includes("comunidad") ||
+        cleanLower.includes("debate") ||
+        cleanLower.includes("red colaborativa") ||
+        cleanLower.includes("40/20/40")
+      ) {
+        return "https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU"; // Grupo 3
+      }
+      return "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6";
+    }
+  );
+
+  // 10. Limpieza final de espacios antes de URLs precedidas por viñetas/emojis
+  clean = clean.replace(/([:👉🔗])\s{2,}(https?:\/\/)/g, "$1 $2");
+
+  return clean;
 }
+

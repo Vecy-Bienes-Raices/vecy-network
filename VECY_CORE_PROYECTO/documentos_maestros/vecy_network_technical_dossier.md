@@ -330,6 +330,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.56 — Octubre 2026
+
+#### [v33.56.0] — 2026-10-27: Regla de Oro de Enlaces Limpios en WhatsApp, Erradicación de Enlaces Dobles y Saneamiento Universal de Markdown
+- **Resolución de Enlaces Dobles y Erradicación de Sintaxis Markdown (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En chats de WhatsApp (ej. caso Yeimy Villamizar sobre leasing Davivienda), JanIA generaba respuestas con enlaces dobles o sintaxis rota de Markdown como:
+    `🔗 Únete aquí: [https://chat.whatsapp.com/KxL8w3Z92m61v29Q4jKxL8](https://chat.whatsapp.com/KxL8w3Z92m61v29Q4jKxL8) (ejemplo)`
+    Esto confundía a los usuarios y degradaba la imagen profesional del sistema.
+  - **Diagnóstico y Causas Raíz:**
+    1. *Incompatibilidad de WhatsApp con Markdown Links:* Los LLMs emiten naturalmente `[URL](URL)` o `[Texto](URL)`. WhatsApp no interpreta hipervínculos Markdown; muestra el texto literal y su autolinker convierte ambas URLs en enlaces azules separados por `](`.
+    2. *Etiquetas no profesionales:* El LLM agregaba la coletilla `(ejemplo)` porque en el contexto del prompt de DM no disponía de los enlaces oficiales del Grupo 2 ni de los demás grupos de la red.
+    3. *Hashes alucinados:* Al no tener los enlaces reales de los 3 grupos, el modelo inventaba códigos temporales (`KxL8w3Z92m61v29Q4jKxL8`).
+  - **Solución Arquitectónica Multi-Capa:**
+    1. *Saneador Universal en `server/_core/jania/parsers.ts` (`sanitizeResponseMarkdown`):*
+       - Conversión de `[URL](URL)` a una única `URL`.
+       - Conversión de anchors genéricos `[aquí](URL)` a `URL`.
+       - Conversión de anchors descriptivos `[Texto](URL)` a `Texto: URL`.
+       - Erradicación global de sufijos `(ejemplo)`, `(link de ejemplo)`, `(ejemplo de enlace)`.
+       - Deduplicación de URLs contiguas idénticas (`URL (URL)`, `URL [URL]`, `URL URL`).
+       - Limpieza de corchetes aislados `[URL]` -> `URL`.
+       - Corrección inteligente de hashes alucinados o placeholders de WhatsApp: Si el enlace contiene un hash no oficial (distinto a `GzMbjNs1P2tHI7D0V4h8wZ`, `J4u1h7NUL1i1B1wAIyTUN6` o `CSzrKR6Cr56HAieEhAuqyU`), se mapea automáticamente al grupo correspondiente según el contexto del mensaje (legal/tributario/avalúos/leasing -> Grupo 2 `J4u1h7NUL1i1B1wAIyTUN6`; inmuebles/oferta/demanda -> Grupo 1 `GzMbjNs1P2tHI7D0V4h8wZ`; en cualquier otro caso -> Grupo 3 `CSzrKR6Cr56HAieEhAuqyU`).
+    2. *Filtro Centinela en Despacho Baileys (`server/_core/whatsapp-match.ts`):*
+       - Integración obligatoria de `sanitizeResponseMarkdown` en `queuedSend` tanto para mensajes de texto puro como para captions multimedia. Ningún mensaje sale hacia WhatsApp sin ser saneado.
+    3. *Blindaje de Prompts y Contexto (`dmHandler.ts`, `base.md`):*
+       - Se agregaron los enlaces oficiales canónicos de los 3 grupos de WhatsApp, el Canal de Difusión, la consola web y la línea de Bróker en el prompt de sistema y en las instrucciones de síntesis.
+       - Se añadió la "Regla de Oro de Enlaces en WhatsApp": prohibición taxativa de usar sintaxis Markdown en URLs y exigencia de escribir la URL desnuda precedida de emoji.
+    4. *Directiva Doctrinal Semilla:*
+       - Registrada la directiva `seed-enlaces-limpios-cero-enlaces-dobles-whatsapp` en `server/_core/jania/founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):**
+  - Typecheck `npm run check`: 0 errores.
+  - Tests unitarios y de regresión `npm test`: **417/417 passing** (Suite 142 creada con 10 pruebas exhaustivas de sanitización, erradicación de `(ejemplo)` y mapeo de hashes).
+  - Build `npm run build`: Limpio en 20.08s (Client en 19.76s, Server en 322ms).
+
 ### 🔖 v33.55 — Octubre 2026
 
 #### [v33.55.0] — 2026-10-27: Blindaje de Seguridad Supabase Security Advisor (rls_disabled_in_public) y Zero-Trust RLS

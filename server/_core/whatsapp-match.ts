@@ -37,6 +37,7 @@ import { extractFirstName, getGreetingByTime, startContinuousPresence } from './
 import { transcribeAudioBuffer } from './voiceTranscription';
 import { isNonRealEstateText } from './matching';
 import { VECY_OFFICIAL_GROUPS, VECY_BRAND } from '../../shared/const';
+import { sanitizeResponseMarkdown } from './jania/parsers';
 
 
 // Tiempo de arranque para omitir mensajes históricos (con 2 min de margen por desfase de reloj)
@@ -3053,7 +3054,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // Si es un string
         if (typeof content === 'string') {
-          const rawText = content.trim();
+          const sanitizedText = sanitizeResponseMarkdown(content);
+          const rawText = sanitizedText.trim();
           if (
             !targetJid.endsWith('@newsletter') &&
             (rawText.endsWith('@lid') || rawText.endsWith('@s.whatsapp.net') || /^\+?\d{9,18}$/.test(rawText))
@@ -3061,7 +3063,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             console.error(`[JANIA-MATCH] [CENTINELA] Detectado intento de enviar mensaje de texto que es un identificador raw ("${rawText}"). Bloqueando despacho erróneo.`);
             return null;
           }
-          messagePayload = { text: content };
+          messagePayload = { text: sanitizedText };
           if (options.mentions) {
             messagePayload.mentions = options.mentions;
           }
@@ -3069,6 +3071,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         // Si ya es un payload directo de Baileys
         else if (content && (content.text || content.audio || content.image || content.video || content.document)) {
           messagePayload = content;
+          if (typeof messagePayload.text === 'string') {
+            messagePayload.text = sanitizeResponseMarkdown(messagePayload.text);
+          }
+          if (typeof messagePayload.caption === 'string') {
+            messagePayload.caption = sanitizeResponseMarkdown(messagePayload.caption);
+          }
           if (options.mentions) {
             messagePayload.mentions = options.mentions;
           }

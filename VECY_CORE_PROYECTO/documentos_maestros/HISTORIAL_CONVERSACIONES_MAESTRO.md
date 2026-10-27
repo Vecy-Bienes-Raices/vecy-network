@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.56: Regla de Oro de Enlaces Limpios en WhatsApp y Erradicación de Enlaces Dobles (v33.56 - 33.56.0)
+
+**Versión:** `v33.56` (`33.56.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + Supabase Pooler (`knzmpoprlmbonejshfys`) + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Quiero que corrijas esto que JanIA siempre da los enlaces dobles en vez de que solo salga un enlace y ya, esto creo que puede confundir a los usuarios."* (Adjunta captura de pantalla real de WhatsApp donde JanIA emitió a Yeimy Villamizar: `🔗 Únete aquí: [https://chat.whatsapp.com/KxL8w3Z92m61v29Q4jKxL8](https://chat.whatsapp.com/KxL8w3Z92m61v29Q4jKxL8) (ejemplo)`).
+
+**Diagnóstico Técnico Profundo:**
+1. **Causa Raíz Principal (Sintaxis Markdown de Enlaces `[URL](URL)` en WhatsApp):**
+   - Los modelos de lenguaje están pre-entrenados en sintaxis Markdown estándar `[anchor](url)`. Cuando el modelo intenta que el texto visible sea la propia URL, emite `[https://...](https://...)`.
+   - A diferencia de un navegador web, **WhatsApp NO procesa hipervínculos Markdown** `<a href="...">`. En su lugar, WhatsApp imprime literalmente los corchetes y paréntesis. Como el motor de texto de WhatsApp convierte automáticamente cualquier URL en un enlace clickable azul, el usuario ve dos enlaces activos pegados: `[https://...]` y `(https://...)`, generando duplicidad visual y desconfianza.
+2. **Causa Raíz Secundaria (Carencia de Enlaces Oficiales en Prompts de DMs y Alucinación de Hash con `(ejemplo)`):**
+   - En `server/_core/jania/handlers/dmHandler.ts`, el prompt del sistema solo incluía explícitamente el Grupo 1 y el Canal de WhatsApp. Al responder una consulta jurídica o de arrendamiento (como la cesión de leasing habitacional con Davivienda planteada por Yeimy Villamizar), JanIA quiso invitarla al Grupo 2 (*VECY TIPS / NOTICIAS / CONSULTAS INMOBILIARIAS*).
+   - Al no tener el enlace oficial de Grupo 2 inyectado en su contexto inmediato, el LLM alucinó un código de invitación ficticio (`KxL8w3Z92m61v29Q4jKxL8`) y le añadió la coletilla aclaratoria `(ejemplo)` dentro de la sintaxis Markdown `[url](url)`.
+3. **Sintaxis Inductora Previa en `base.md`:**
+   - En `server/_core/prompts/base.md` (líneas 161, 164, 166), las instrucciones de moderación inter-grupos utilizaban formato con corchetes y paréntesis: `**[Grupo 1: ...]** (https://...)`, induciendo al modelo a imitar esa estructura en sus respuestas.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Blindaje del Sanitizador en `parsers.ts` (`sanitizeResponseMarkdown`):**
+  1. *Erradicación de Coletillas:* Remueve automáticamente `(ejemplo)`, `(link de ejemplo)`, `(enlace de ejemplo)` asociados a enlaces.
+  2. *Deduplicación de Enlaces Markdown Dobles:* Transforma `[https://...](https://...)` en un único enlace limpio `https://...`.
+  3. *Saneamiento de Anchors Genéricos:* Convierte `[aquí](url)`, `[únete aquí](url)`, `[enlace](url)` directamente a `url`.
+  4. *Normalización de Anchors Descriptivos:* Convierte `[Texto](URL)` a `Texto: URL` sin corchetes rotos.
+  5. *Deduplicación Adyacente:* Detecta URLs idénticas consecutivas en texto plano (`url (url)`, `url [url]`, `url url`) y conserva una sola.
+  6. *Supresión de Corchetes Aislados:* Elimina `[` y `]` alrededor de enlaces.
+  7. *Corrector Inteligente de Grupos de WhatsApp:* Si el LLM emite un enlace de grupo con código no oficial o alucinado (distinto a los 3 códigos oficiales de VECY: `GzMbjNs1P2tHI7D0V4h8wZ`, `J4u1h7NUL1i1B1wAIyTUN6`, `CSzrKR6Cr56HAieEhAuqyU`), analiza el contexto semántico del párrafo y lo sustituye por el grupo oficial correspondiente (ej. consultas/tips -> Grupo 2; ofertas/demandas -> Grupo 1; debate/proyecto -> Grupo 3).
+- **Centinela en `whatsapp-match.ts` (`queuedSend`):**
+  - Todo mensaje de texto o caption que se despache a través de Baileys pasa obligatoriamente por `sanitizeResponseMarkdown`, garantizando que ningún mensaje saliente de JanIA contenga jamás enlaces dobles ni sintaxis Markdown rota en WhatsApp.
+- **Inyección Doctrinal y Enlaces Oficiales en Prompts (`dmHandler.ts` y `base.md`):**
+  - Incorporados explícitamente en el prompt de `dmHandler.ts` los enlaces limpios y oficiales de los 3 grupos, el canal, la web y la atención de bróker.
+  - Consagrada la *REGLA DE ORO DE ENLACES EN WHATSAPP (CERO ENLACES DOBLES Y CERO SINTAXIS MARKDOWN [URL](URL))* en `base.md`, `dmHandler.ts` y `founderKnowledgeService.ts` (`seed-enlaces-limpios-cero-enlaces-dobles-whatsapp`).
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la Suite 142 en `server/__tests__/regression.test.ts`.
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **417/417 passing** (100% verde).
+  - Build: `npm run build` limpio en 19.76s (cliente) y 322ms (servidor).
+- **Incremento de Versión:**
+  - Actualizado a `v33.56` (`33.56.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.55: Blindaje de Seguridad Supabase Security Advisor (rls_disabled_in_public) y Zero-Trust RLS (v33.55 - 33.55.0)
 
 **Versión:** `v33.55` (`33.55.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + Supabase Pooler (`knzmpoprlmbonejshfys`) + WhatsApp Baileys Socket (`+573192919978`)

@@ -108,6 +108,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-enlaces-limpios-cero-enlaces-dobles-whatsapp",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Regla de Oro de Enlaces Limpios en WhatsApp y Erradicación de Enlaces Dobles (Doctrina Eduardo A. Rivera)",
+    directive:
+      "WhatsApp NO soporta hipervínculos en Markdown como [texto](url) ni [url](url). Emitir enlaces en formato Markdown provoca que WhatsApp detecte y muestre dos enlaces repetidos uno al lado del otro, confundiendo a los usuarios. JanIA tiene PROHIBICIÓN ABSOLUTA de usar corchetes o paréntesis para enlaces [URL](URL). Debe emitir siempre un único enlace limpio y directo, precedido de un emoji o texto natural (ej. '👉 https://...'). Asimismo, queda terminantemente prohibido inventar enlaces de WhatsApp o agregar coletillas de relleno como '(ejemplo)'. Siempre debe usar los enlaces oficiales reales provistos por los fundadores.",
+    rawText: "Quiero que corrijas esto que JanIA siempre da los enlaces dobles en vez de que solo salga un enlace y ya, esto creo que puede confundir a los usuarios.",
+    createdAt: "2026-10-27T15:35:00.000Z",
+    active: true
+  },
+  {
     id: "seed-seguridad-blindaje-rls-supabase-zero-trust",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

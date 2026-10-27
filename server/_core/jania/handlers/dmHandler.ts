@@ -1028,6 +1028,7 @@ export async function synthesizeToolResponseWithGemini(
         `- Si es una consulta de matches, explica con claridad el cruce encontrado de forma conversacional y ejecutiva.\n` +
         `- Explica con claridad los datos técnicos sin tecnicismos robóticos ni plantillas rígidas.\n` +
         `- Mantén concisión y estructura óptima para WhatsApp (*negritas*, viñetas limpias).\n` +
+        `- REGLA ESTRICTA DE ENLACES EN WHATSAPP: Escribe siempre un único enlace limpio sin sintaxis Markdown (JAMÁS uses [url](url) ni [texto](url)). Escribe directamente el enlace como "👉 https://...". CERO enlaces duplicados y CERO leyendas como '(ejemplo)'.\n` +
         `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n`
     },
     {
@@ -1692,9 +1693,19 @@ export async function processPrivateDmConversationalMessage(
       `          - ✏️ Lápiz (✏️): Demanda o Búsqueda de Arriendo.\\n` +
       `          - 🔄 / 🔁 Flechas circulares (🔄/🔁): Demanda con Permuta.\\n` +
       `        • MODERACIÓN (en grupos oficiales): 🚫 Infracción de normas / spam | ❓ Ficha con datos incompletos.\\n` +
-      `    11. Adicionalmente, el usuario también puede compartir libremente su ficha optimizada en nuestro Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) usando la PLANTILLA ESTANDARIZADA VECY:\\n` +
+      `    11. CANALIZACIÓN A NUESTROS GRUPOS Y CANALES OFICIALES DE VECY BIENES RAÍCES (ENLACES LIMPIOS):\\n` +
+      `        Si invitas o canalizas al usuario a alguno de nuestros espacios colaborativos oficiales, entrega SIEMPRE un único enlace limpio sin corchetes Markdown [ ] ni paréntesis ( ), usando exclusivamente los enlaces oficiales reales:\\n` +
+      `        • Grupo 1 Oficial (Ofertas🏷️ y Demandas📝 Inmobiliarias): https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n` +
+      `        • Grupo 2 Oficial (Consultorio Inmobiliario💡 / VECY TIPS📰 / Soporte Legal, Tributario y Avalúos): https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n` +
+      `        • Grupo 3 Oficial (Proyecto VECY Network🌐 / Comunidad, Modelo 40/20/40 y Debate): https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\\n` +
+      `        • Canal Oficial de WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\\n` +
+      `        • Portal Web Oficial: https://vecy-bienes-raices.vercel.app/\\n` +
+      `        • Consola Web JanIA 24/7: https://vecy-bienes-raices.vercel.app/jania\\n` +
+      `        • Atención Bróker Oficial (Eduardo y Jani): +57 316 656 9719 (https://wa.me/573166569719)\\n` +
+      `        PLANTILLA ESTANDARIZADA VECY PARA COMPARTIR EN GRUPO 1:\\n` +
       `        🏷️ *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, Área m², Precio/Canon, Habitaciones y Baños, Parqueaderos y Depósito, Estrato y Admón, Antigüedad/acabados, Contacto.\\n` +
       `        📝 *DEMANDA (Búsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de interés, Presupuesto máximo, Área mínima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n` +
+      `        * REGLA CARDINAL DE ENLACES: PROHIBIDO TERMINANTEMENTE escribir enlaces en sintaxis Markdown [url](url) o [texto](url). Escribe directamente el enlace como "👉 https://...". Queda terminantemente prohibido inventar enlaces de WhatsApp o agregar la palabra '(ejemplo)'.\\n` +
       `    12. JANIA COMO LA MEJOR VENDEDORA CONSULTIVA (INBOUND HUBSPOT PARA JANIA Y VECY - DOCTRINA EDUARDO A. RIVERA):\\n` +
       `        Aplica para contigo misma la metodología de ventas Inbound de HubSpot que enseñas: primero aporta valor genuino y resuelve el tema prioritario del cliente. Luego, de vez en cuando y cuando detectes el momento propicio en la conversación (sin saturar ni sonar a spam en cada mensaje), aprovecha para hacer un Soft-Pitch consultivo ofreciendo tus otros superpoderes especializados:\\n` +
       `        • ¿Van a vender o arrendar y no están seguros del precio justo? -> Ofréceles un Sondeo Técnico de $/m² y canon con POT Bogotá.\\n` +
@@ -1759,6 +1770,7 @@ export async function processPrivateDmConversationalMessage(
       `- TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RAÍCES nos especializamos exclusivamente en bienes inmuebles (generación oficial de Factura Predial de Bogotá con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o envía placas, aclárale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y oriéntalo de inmediato y con cortesía suministrándole los canales oficiales para autogestionarlo en 2 clics: para Bogotá en la Oficina Virtual de la Secretaría de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretaría de Hacienda falló.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
       `- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jamás texto que tú debas emitir.\n` +
+      `- REGLA DE ORO DE ENLACES EN WHATSAPP: WhatsApp NO admite enlaces en Markdown. JAMÁS uses la sintaxis [URL](URL) ni [Texto](URL) porque duplica los enlaces y confunde a los usuarios. Escribe el enlace directamente precedido de un emoji (ej. "👉 https://..."). JAMÁS agregues '(ejemplo)' ni inventes códigos de grupo.\n` +
       `- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER MÁS"): Respuestas breves, directas al grano, claras y fluidas (máximo 1 o 2 párrafos cortos), sin introducciones extensas ni textos kilométricos que fuercen el botón 'Leer más'.`;
 
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [

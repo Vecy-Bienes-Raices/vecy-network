@@ -182,7 +182,22 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.55 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.56 — Octubre 2026
+
+### Novedades v33.56 (Regla de Oro de Enlaces Limpios en WhatsApp y Erradicación de Enlaces Dobles):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Erradicación de Enlaces Dobles y Sintaxis Markdown en WhatsApp**:
+     - *Causa raíz*: Los modelos de lenguaje formatean enlaces como Markdown `[URL](URL)`. WhatsApp no renderiza hipervínculos HTML/Markdown y deja el texto crudo. Como WhatsApp detecta automáticamente cualquier URL y la convierte en azul clickable, el usuario recibía dos enlaces clickables idénticos pegados: `[https://...]` y `(https://...)`.
+     - *Solución*: Se reforzó `sanitizeResponseMarkdown` en `parsers.ts` para deduplicar enlaces Markdown dobles a una sola URL limpia, remover corchetes `[...]`, sanear anchors genéricos (`[aquí]`, `[únete aquí]`) y normalizar anchors descriptivos a `Texto: URL`. Además, en `whatsapp-match.ts` (`queuedSend`), todo mensaje o caption saliente pasa por este filtro antes del despacho.
+  2. **Inyección de Canales Oficiales y Purga de Alucinaciones con `(ejemplo)`**:
+     - *Causa raíz*: En `dmHandler.ts` faltaban los enlaces de Grupo 2 y Grupo 3. Al responder a Yeimy Villamizar sobre un caso legal/arrendamiento (cesión de leasing Davivienda), JanIA invitó a Grupo 2 pero alucinó un hash inexistente (`KxL8w3Z92m61v29Q4jKxL8`) con la coletilla `(ejemplo)`.
+     - *Solución*: Se incorporaron en `dmHandler.ts` los 3 grupos oficiales (Grupo 1: `GzMbjNs1P2tHI7D0V4h8wZ`, Grupo 2: `J4u1h7NUL1i1B1wAIyTUN6`, Grupo 3: `CSzrKR6Cr56HAieEhAuqyU`), canal oficial, web y línea bróker. Se implementó auto-corrección de hashes inventados en `parsers.ts` enrutando al grupo oficial real por contexto. Se prohíbe tajantemente la coletilla `(ejemplo)`.
+  3. **Directiva Doctrinal en Prompts y Base de Conocimiento**:
+     - Consagración de la *REGLA DE ORO DE ENLACES EN WHATSAPP (CERO ENLACES DOBLES Y CERO SINTAXIS MARKDOWN [URL](URL))* en `base.md`, `dmHandler.ts` y en SEED_TEACHINGS (`seed-enlaces-limpios-cero-enlaces-dobles-whatsapp`) en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 417/417 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 19.76s ✅
+- `shared/const.ts` (`v33.56`) y `package.json` (`33.56.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.55 — Octubre 2026
 
 ### Novedades v33.55 (Blindaje de Ciberseguridad Supabase Security Advisor rls_disabled_in_public y Zero-Trust RLS):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.55.0 — 2026-10-27)
-- **JanIA Server:** `v33.55` (`33.55.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje de Ciberseguridad Supabase Security Advisor (rls_disabled_in_public) y Zero-Trust RLS (Doctrina Eduardo A. Rivera):**
-  1. **Resolución Crítica de Vulnerabilidad `rls_disabled_in_public`:** Corrección y blindaje inmediato ante la alerta de seguridad del Asesor de Supabase en el proyecto `Red Vecy` (`knzmpoprlmbonejshfys`). Habilitación estricta de Row Level Security (RLS) en las tablas `public.advisors` y `public.predial_consultations`.
-  2. **Políticas de Aislamiento Estricto Zero-Trust:** Bloqueo absoluto de acceso anónimo/público (`deny_anon_advisors`, `deny_anon_predial` para roles `anon` y `authenticated` con `qual: false`), erradicando la vulnerabilidad de lectura, edición o supresión no autorizada de los directorios de asesores y registros catastrales a través de la API REST pública de Supabase. Acceso garantizado exclusivamente a `service_role` y conexión interna del backend (`postgres` con `BYPASSRLS`).
-  3. **DDL y Automatización CI/CD:** Inscripción de la migración `drizzle/0012_rls_security_advisor_hardening.sql`, script ejecutable `scripts/enable_rls_hardening.ts` y directiva doctrinal `seed-seguridad-blindaje-rls-supabase-zero-trust` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 413/413 passing (100% verde) | Build `npm run build` limpio en 34.12s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.56.0 — 2026-10-27)
+- **JanIA Server:** `v33.56` (`33.56.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
+- **Regla de Oro de Enlaces Limpios en WhatsApp, Erradicación de Enlaces Dobles y Saneamiento Universal de Markdown (Doctrina Eduardo A. Rivera):**
+  1. **Resolución de Enlaces Dobles y Erradicación de Sintaxis Markdown:** Eliminación definitiva de la duplicación `[URL](URL)` provocada por la sintaxis Markdown en WhatsApp mediante el pipeline de post-procesamiento en `parsers.ts` (`sanitizeResponseMarkdown`) aplicado a todo mensaje saliente en `whatsapp-match.ts` (`queuedSend`). Conversión de anchors genéricos `[aquí](URL)` a `URL`, anchors descriptivos `[Texto](URL)` a `Texto: URL`, deduplicación de URLs adyacentes y erradicación de sufijos `(ejemplo)`.
+  2. **Corrección Inteligente de Enlaces de Grupos Oficiales:** Mapeo y sustitución contextual automática de hashes alucinados o placeholders de WhatsApp hacia los enlaces de invitación oficiales de los tres grupos de la Red Vecy (`GzMbjNs1P2tHI7D0V4h8wZ` para Inmuebles, `J4u1h7NUL1i1B1wAIyTUN6` para Jurídico/Buzón, `CSzrKR6Cr56HAieEhAuqyU` para Círculo).
+  3. **Blindaje Doctrinal y Contextual en Prompts:** Inyección de enlaces oficiales de grupos, canal, consola web y bróker en `dmHandler.ts`, `base.md` y `founderKnowledgeService.ts` (`seed-enlaces-limpios-cero-enlaces-dobles-whatsapp`) con directiva estricta anti-markdown link.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 417/417 passing (100% verde) | Build `npm run build` limpio en 20.08s.
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 
