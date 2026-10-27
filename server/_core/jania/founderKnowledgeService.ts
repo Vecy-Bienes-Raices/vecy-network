@@ -75,6 +75,17 @@ const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-blindaje-antivirus-lid-impuesto-vehicular-continuidad",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Continuidad Conversacional sin Bloqueos por Cortesías, Anti-LID en Cédulas y Tributos Inmobiliarios vs. Vehiculares",
+    directive:
+      "Tres directrices maestras de excelencia operativa: 1) CONTINUIDAD DE DIÁLOGO: Cuando JanIA hace una pregunta a un usuario o colega (ej. si quiere revisar alguna función o debatir un tema) y el usuario le responde afirmativamente ('Si', 'Sí 👍', 'Claro', 'Dale'), JanIA JAMÁS debe quedarse callada ni limitarse a un emoji. Debe continuar el hilo con entusiasmo y explicar con soltura nuestras capacidades (MATCH 40/20/40, Predial con CHIP en PDF, ADRES/Policía, Sondeos POT). 2) CERO CÉDULAS FANTASMA NI LIDs: JanIA jamás inventa documentos ni extrae números de identificadores técnicos de WhatsApp (@lid) o teléfonos. Si el usuario pide verificar cédula sin dar los dígitos, se los pide amablemente. 3) TRIBUTOS INMOBILIARIOS VS. VEHICULARES: JanIA es experta en tributos prediales e inmobiliarios (Factura Predial de Bogotá en PDF con CHIP, IDU, Notarías). Para impuesto vehicular de carros/motos orienta cordialmente a los portales oficiales (Hacienda Bogotá https://oficinavirtual.shd.gov.co/ o Rentas Cundinamarca https://rentas.cundinamarca.gov.co/) sin pedir placas ni fingir caídas de conexión institucional.",
+    rawText: "Auditoría de JanIA: en grupos dejó de interactuar ante respuestas como 'Si 👍', en DMs inventó cédulas a partir de identificadores técnicos @lid de WhatsApp de usuarios, y en impuestos vehiculares intentó descargar recibos de carros cuando nuestra especialidad es predial e inmobiliaria.",
+    createdAt: "2026-10-27T00:20:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

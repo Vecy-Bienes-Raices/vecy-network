@@ -90,11 +90,11 @@ export const JANIA_DM_TOOLS = [
     functionDeclarations: [
       {
         name: "consultar_identidad_y_antecedentes",
-        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT.",
+        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT. REGLA INMUTABLE: El número de documento DEBE estar explícitamente escrito en el mensaje del usuario. Está TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o teléfonos del usuario como si fueran cédulas. Si el usuario pide verificar cédula pero NO incluyó el número en su texto, NO invoques esta herramienta y solicítale el número.",
         parameters: {
           type: "OBJECT",
           properties: {
-            numeroDocumento: { type: "STRING", description: "Número de cédula, NIT o documento a verificar" },
+            numeroDocumento: { type: "STRING", description: "Número de cédula, NIT o documento a verificar provisto explícitamente por el usuario en su mensaje" },
             tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
           },
           required: ["numeroDocumento"]
@@ -460,10 +460,12 @@ export async function executeJaniaDmTool(
         }
       }
 
+      let wasPendingDoc = false;
       if (!/\d{5,12}/.test(doc)) {
         const pendingDoc = getPendingUnconfirmedDoc(userId);
         if (pendingDoc?.cleanNumber) {
           doc = pendingDoc.cleanNumber;
+          wasPendingDoc = true;
           clearPendingUnconfirmedDoc(userId);
         } else if (rawUserText) {
           doc = rawUserText;
@@ -471,6 +473,27 @@ export async function executeJaniaDmTool(
       }
 
       const cleanDigits = doc.split("-")[0].replace(/\D/g, "");
+      const isFromPending = wasPendingDoc;
+      const rawOnlyDigits = (rawUserText || "").replace(/\D/g, "");
+      const isFromRawText = Boolean(cleanDigits.length >= 5 && rawOnlyDigits.includes(cleanDigits));
+
+      // 🛡️ GUARDARRAÍL ANTI-ALUCINACIÓN Y ANTI-FUGA DE LID / TELÉFONO TÉCNICO (Doctrina v33.52):
+      // Si el número enviado a verificar no está en el texto del usuario ni en una sesión pendiente,
+      // o si coincide con el LID / teléfono técnico del usuario en WhatsApp, abortar de inmediato.
+      const isUserLidOrPhone = Boolean(userId && cleanDigits.length >= 6 && userId.includes(cleanDigits));
+      if ((!isFromRawText && !isFromPending) || isUserLidOrPhone || cleanDigits.length < 5) {
+        return {
+          toolType: "cedula",
+          resultJson: {
+            solicitud: "verificacion_identidad",
+            numeroDocumento: "",
+            tipoDocumento: tipo,
+            reporteOficial: "Para realizar la verificación oficial de antecedentes y aseguramiento en salud (ADRES / Policía Nacional / Procuraduría / Contraloría), es indispensable contar con el número de cédula o documento de identidad exacto. Por favor compárteme los dígitos del documento y el nombre completo de la persona a consultar para traerte el reporte completo de inmediato 🤝✨.\n\n_⚖️ Consulta procesada bajo principios de finalidad legítima y Ley 1581 de 2012 de Hábeas Data._",
+            exitoso: false
+          }
+        };
+      }
+
       if (cleanDigits.length === 9 && /^[89]\d{8}$/.test(cleanDigits)) {
         tipo = "NIT";
       } else if (rawUserText && /\bnit\b/i.test(rawUserText)) {
@@ -1191,13 +1214,21 @@ export function stripLeadingGreetingsAndCourtesies(text: string): string {
     cleaned = cleaned.replace(courtesyPattern, "");
     cleaned = cleaned.replace(janiaIntroPattern, "");
     cleaned = cleaned.replace(emojiPattern, "");
+    cleaned = cleaned.replace(/^[,;:\-–—\s]+/, "");
     cleaned = cleaned.trim();
     changed = cleaned !== before;
     iterations++;
   }
 
+  // Purgar de forma rigurosa cualquier signo de puntuación huérfano al inicio (, ; : - – —)
+  cleaned = cleaned.replace(/^[,;:\-–—\s]+/, "").trim();
+
   if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    if (/^[¡¿]/.test(cleaned)) {
+      cleaned = cleaned.charAt(0) + (cleaned.length > 1 ? (cleaned.charAt(1).toUpperCase() + cleaned.slice(2)) : "");
+    } else {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
   }
   return cleaned.trim();
 }
@@ -1484,6 +1515,26 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
+  // 🚗 INTERCEPTOR DOCTRINAL: IMPUESTO VEHICULAR VS. TRIBUTOS PREDIALES / INMOBILIARIOS (Doctrina v33.52)
+  const isVehicularTaxQuery =
+    /(?:impuesto\s+(?:de\s+)?veh[íi]cul|liquidar\s+(?:el\s+)?veh[íi]cul|sacar\s+(?:un\s+|el\s+)?impuesto\s+veh[íi]cul|placa\s+[a-z]{3}\s*\d{2,3}|impuesto\s+del?\s+(?:carro|moto|veh[íi]culo))/i.test(clean);
+
+  if (isVehicularTaxQuery) {
+    const targetSalutation = displayName || realName || "";
+    const namePart = targetSalutation ? `¡Hola ${targetSalutation}! 👋 ` : `¡Hola! 👋 `;
+    const vehicularReply =
+      `${namePart}En VECY BIENES RAÍCES nos especializamos 100% en el sector inmobiliario y tributario predial (generamos en menos de un minuto la Factura Oficial del Impuesto Predial de Bogotá en PDF con el código CHIP, Estado de Cuenta y Paz y Salvo IDU, y liquidación notarial de inmuebles) 🏢📄.\n\n` +
+      `Para el **Impuesto Vehicular** (carros y motos), no lo gestionamos directamente en nuestra plataforma inmobiliaria, pero lo puedes liquidar y pagar de forma inmediata y oficial en los siguientes enlaces autorizados:\n\n` +
+      `🚗 *Bogotá D.C.:* Oficina Virtual de la Secretaría Distrital de Hacienda:\n👉 https://oficinavirtual.shd.gov.co/\n\n` +
+      `🚙 *Cundinamarca y otros departamentos:* Portal de Rentas Departamentales:\n👉 https://rentas.cundinamarca.gov.co/\n\n` +
+      `Si tienes algún inmueble (casa, apartamento, lote u oficina) del cual requieras la Factura Predial oficial de Bogotá en PDF o acompañamiento notarial, ¡con todo el gusto te ayudo de inmediato! 🤝✨`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", vehicularReply);
+    markUserGreetedToday(userId);
+    return vehicularReply;
+  }
+
   // 🌐 NAVEGACIÓN Y EXTRACCIÓN PREVIA DE URLs:
   let preloadedWebContent = "";
   const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
@@ -1708,6 +1759,8 @@ export async function processPrivateDmConversationalMessage(
         : ""
       }` +
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
+      `- BLINDAJE DE IDENTIFICACIÓN Y DOCUMENTOS (CERO ALUCINACIÓN): NUNCA inventes números de documento ni tomes números de identificadores de sesión de WhatsApp o LIDs (@lid). Si el usuario pide verificar cédula, antecedentes o persona pero NO incluyó los dígitos en su mensaje ni en la conversación inmediata, solicítale con calidez y cortesía el número exacto y nombre completo para traerle el reporte.\n` +
+      `- TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RAÍCES nos especializamos exclusivamente en bienes inmuebles (generación oficial de Factura Predial de Bogotá con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o envía placas, aclárale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y oriéntalo de inmediato y con cortesía suministrándole los canales oficiales para autogestionarlo en 2 clics: para Bogotá en la Oficina Virtual de la Secretaría de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretaría de Hacienda falló.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
       `- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jamás texto que tú debas emitir.\n` +
       `- MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER MÁS"): Respuestas breves, directas al grano, claras y fluidas (máximo 1 o 2 párrafos cortos), sin introducciones extensas ni textos kilométricos que fuercen el botón 'Leer más'.`;
@@ -1724,7 +1777,8 @@ export async function processPrivateDmConversationalMessage(
       messages.push({ role: turn.role, content: cleanTurnContent });
     }
 
-    let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    const senderLabel = displayName || realName || "Usuario";
+    let userPromptContent = `Mensaje de ${senderLabel}: "${clean}"`;
     if (preloadedWebContent) {
       userPromptContent += preloadedWebContent;
     }

@@ -330,6 +330,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.52 — Octubre 2026
+
+#### [v33.52.0] — 2026-10-27: Auditoría Integral de Comportamiento, Continuidad Grupal, Anti-LID en Cédulas y Delimitación de Tributos Inmobiliarios vs. Vehiculares
+- **Auditoría Integral de Comportamiento y Corrección de 3 Incidentes en Producción:**
+  - **Incidente 1 (Continuidad Conversacional ante Afirmaciones en Grupos):**
+    - *Problema:* JanIA cerraba su interacción en el Grupo 3 preguntando al usuario (Miguel Arbelaez) si quería conocer una función de la tecnología colaborativa de VECY. El usuario respondió *"Si 👍"*, y JanIA únicamente reaccionó con un emoji 👍 sin contestar nada más, dejando la conversación congelada.
+    - *Causa raíz:* En `server/_core/whatsapp-match.ts`, `textClean.length < 6` evaluaba `"si 👍"` y `"si"` como `isShortCourtesy = true`, forzando `hasMeaningfulQuery = false` y `shouldRespond = false`.
+    - *Solución:* Implementación de `isConversationalContinuation` en `whatsapp-match.ts` que reconoce respuestas afirmativas (`isAffirmativeFollowUp`) o citas a JanIA en `circuloGroup` y `buzonGroup`. Instrucción en `circuloHandler.ts` y `consultingHandler.ts` para que JanIA continúe el diálogo con entusiasmo y presente las capacidades de la red (MATCH 40/20/40, Factura Predial con CHIP en PDF, Verificación de Seguridad y Antecedentes con Policía/ADRES, o Sondeos POT).
+  - **Incidente 2A (Purga de Puntuación Huérfana y Comas Colgantes):**
+    - *Problema:* En DMs, JanIA saludaba con coma colgante: `", ¡aquí estoy! ¿En qué te puedo colaborar en este nuevo día? 🌟🚀"`.
+    - *Causa raíz:* `stripLeadingGreetingsAndCourtesies` en `dmHandler.ts` suprimía el saludo pero dejaba intactos los signos de puntuación huérfanos posteriores (`^[,;:\-–—\s]+`).
+    - *Solución:* Purga exhaustiva de signos de puntuación huérfanos iniciales y corrección de capitalización tras caracteres de apertura (`¡`, `¿`).
+  - **Incidente 2B (Delimitación de Tributos Inmobiliarios vs. Impuesto Vehicular):**
+    - *Problema:* Al preguntar Eduardo *"Qué necesito para que me ayudes a sacra un impuesto Vehicular?"*, JanIA prometió generar y liquidar el recibo vehicular pidiendo placa y cédula, intentó hacer scraping a `shd.gov.co` y luego alucinó una caída de los servidores de la Secretaría de Hacienda.
+    - *Causa raíz:* Falta de delimitación de alcance entre tributos prediales e impuestos automotrices.
+    - *Solución:* Interceptor en `dmHandler.ts` y directivas en `base.md`, `prompts.ts` y `founderKnowledgeService.ts` que aclaran que VECY se especializa 100% en tributos prediales e inmuebles (Predial con CHIP en PDF, IDU, Notarías) y suministran los enlaces oficiales para autogestionar el impuesto de vehículos en 2 clics (Oficina Virtual SHD Bogotá y Rentas Cundinamarca), erradicando pedidos de placas y alucinaciones de servidores caídos.
+  - **Incidente 3 (Blindaje Anti-LID y Cédulas Fantasma):**
+    - *Problema:* Victoria Tovar envió *"Verificar esta cedula"*. JanIA respondió emitiendo un reporte para el documento `2.099.036.752` (número que Victoria jamás escribió).
+    - *Causa raíz:* El identificador técnico de Victoria es `209903675252976@lid`. En `dmHandler.ts`, el prompt inyectaba `(${userId})`. Al no ver números en el texto, Gemini extrajo los primeros 10 dígitos del LID (`2099036752`), los tomó como cédula y los formateó como `2.099.036.752`.
+    - *Solución:* Supresión de `(${userId})` en el contenido inyectado al LLM en `dmHandler.ts`, guardarraíl en `executeJaniaDmTool` que aborta y exige el documento explícito si los dígitos coinciden con el LID o teléfono del usuario y no aparecen en su texto, y directiva `seed-blindaje-antivirus-lid-impuesto-vehicular-continuidad` en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **400/400 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 14.28s.
+
 ### 🔖 v33.51 — Octubre 2026
 
 #### [v33.51.0] — 2026-10-26: Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT (Doctrina Eduardo A. Rivera)

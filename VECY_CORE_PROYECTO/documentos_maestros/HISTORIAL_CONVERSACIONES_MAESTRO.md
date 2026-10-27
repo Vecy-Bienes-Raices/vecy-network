@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.52: Auditoría Integral de Comportamiento, Continuidad Grupal ante Afirmaciones, Purga de Comas Colgantes, Delimitación de Impuesto Vehicular y Blindaje Anti-LID en Cédulas (v33.52 - 33.52.0)
+
+**Versión:** `v33.52` (`33.52.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Agente he notado ciertos comportamientos extraños de JanIA, será que algo está fallando en sus funcionalidades, podrías revisar, auditar y darme un reporte completo de si todo está bien, por ejemplo en esta primera imagen no siguió interactuando a pesar de que el usuario le respondió que SI, en la segunda me respondió de manera rara y vi que a una usuaria no le entendía esta mañana, hasta que ella le repitió varias veces, esa es la tercera imagen y fue una conversación bastante rara, como si JanIA estuviese perdida en el tema, eso me indica que puede haber algún fallo en sus funcionalidades o en algo la pudo haber afectado los últimos cambios que realizaste. No lo se!!"*
+
+**Diagnóstico Técnico Profundo (3 Incidentes Auditados con Causa Raíz Comprobada):**
+1. **Incidente 1 (Imagen 1 — Grupo 3: PROYECTO: "VECYBIENESRAICES" 🚀):**
+   - *Evidencia:* JanIA cerró su respuesta preguntando a Miguel Arbelaez: *"¿Te gustaría que revisemos alguna función en particular de nuestra tecnología colaborativa para agilizar tus cierres?"*. Miguel respondió *"Si 👍"* (18:36). JanIA únicamente colocó una reacción emoji 👍 en el mensaje y se quedó completamente en silencio, sin responder.
+   - *Causa raíz:* En `server/_core/whatsapp-match.ts` (líneas 1060-1096), la regla `textClean.length < 6` evaluaba `"si 👍"` y `"si"` como `isShortCourtesy = true`. Como consecuencia, `hasMeaningfulQuery = false` y `shouldRespond = false`. El sistema ejecutaba el bloque de cortesía superficial (`this.sock.sendMessage(chatId, { react: { text: "👍", key: msg.key } })`) y saltaba con `continue;` sin invocar jamás a `handleDirectGroupQuestion`.
+2. **Incidente 2A (Imagen 2 — Chat Privado con Eduardo Rivera: Saludo con Coma Colgante):**
+   - *Evidencia:* JanIA envió: `", ¡aquí estoy! ¿En qué te puedo colaborar en este nuevo día? 🌟🚀"`.
+   - *Causa raíz:* En `server/_core/jania/handlers/dmHandler.ts`, la función `stripLeadingGreetingsAndCourtesies` suprimía expresiones como `"¡Buenas tardes, Eduardo!"` del inicio del mensaje generado por el LLM, pero no limpiaba signos de puntuación huérfanos residuales (`^[,;:\-–—\s]+`), dejando una coma inicial aislada antes del signo `¡`.
+3. **Incidente 2B (Imagen 2 — Chat Privado con Eduardo Rivera: Alucinación de Impuesto Vehicular):**
+   - *Evidencia:* Eduardo preguntó: *"Qué necesito para que me ayudes a sacra un impuesto Vehicular?"*. JanIA prometió generar y liquidar el recibo vehicular, pidiendo placas y cédula. Al enviarle *"Placa NPU483, CC 1030674994, mi cédula es 11189781"*, JanIA intentó hacer web scraping a `shd.gov.co`, falló y respondió: *"Eduardo, el enlace institucional al que intenté acceder para consultar el impuesto vehicular ( shd.gov.co ) no se encuentra disponible en este momento debido a un error de conexión en el servidor oficial de la Secretaría de Hacienda"*.
+   - *Causa raíz:* JanIA carecía de una regla de delimitación de alcance tributario. Vecy es una plataforma especializada en bienes raíces (Factura Predial oficial de Bogotá en PDF con CHIP, Paz y Salvo IDU, Derechos Notariales), pero no procesa impuestos vehiculares automotrices ni cuenta con scrapers para placas de carros/motos. Al no tener la directiva, el LLM alucinaba un servicio inexistente y fingía caídas de servidores estatales.
+4. **Incidente 3 (Imágenes 3 y 4 — Chat Privado con Victoria Tovar +57 301 5418405: Cédula Fantasma "2.099.036.752"):**
+   - *Evidencia:* Victoria envió: *"Verificar esta cedula"*. JanIA respondió emitiendo un reporte oficial de antecedentes para el documento `2.099.036.752` (número que Victoria jamás escribió). Luego Victoria repitió *"80068677 luis armando callejas"*, JanIA se perdió buscando a "Luis armando callejas", Victoria volvió a enviar *"Luis armando callejas \n 80068677"*, y JanIA repitió el reporte para `2.099.036.752`.
+   - *Causa raíz (Descubrimiento en logs PM2 del VPS):* El identificador técnico de WhatsApp de Victoria es el LID `209903675252976@lid`. En `dmHandler.ts` (línea 1757), el prompt inyectaba al LLM: `Mensaje de ${realName} (${userId}): "${clean}"`. Al recibir `Mensaje de Victoria Tovar (209903675252976@lid): "Verificar esta cedula"`, Gemini vio los primeros 10 dígitos del LID (`2099036752`), los tomó como la cédula a consultar y ejecutó `consultar_identidad_y_antecedentes({ numeroDocumento: "2099036752" })`. Luego, ese número quedó anclado en el historial de conversación, provocando un bucle de desorientación.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Continuidad Conversacional ante Respuestas Afirmativas en Grupos (`whatsapp-match.ts`, `circuloHandler.ts`, `consultingHandler.ts`):**
+  - Implementado `isConversationalContinuation`: en `circuloGroup` y `buzonGroup`, las respuestas afirmativas (`"Si"`, `"Sí"`, `"Si 👍"`, `"Claro"`, `"Dale"`, `"De una"`, `"Por favor"`) o citas a JanIA se excluyen de `isShortCourtesy` y activan `shouldRespond = true`.
+  - En `circuloHandler.ts` y `consultingHandler.ts`, ante respuestas afirmativas a preguntas de JanIA, se instruye presentar con entusiasmo y solvencia las herramientas de VECY (Mesa de MATCH 40/20/40, Factura Predial con CHIP en PDF, Verificación de Seguridad y Antecedentes con Policía/ADRES, o Sondeos POT).
+- **Purga Quirúrgica de Puntuación Huérfana (`dmHandler.ts`):**
+  - Actualizado `stripLeadingGreetingsAndCourtesies` con purga iterativa y terminal de signos huérfanos (`^[,;:\-–—\s]+`) y corrección de capitalización tras caracteres de apertura (`¡`, `¿`), eliminando definitivamente las comas colgantes.
+- **Interceptor y Delimitación Doctrinal de Impuesto Vehicular (`dmHandler.ts`, `base.md`, `prompts.ts`, `founderKnowledgeService.ts`):**
+  - Creado interceptor en `dmHandler.ts` ante consultas de impuesto vehicular o placas automotrices. JanIA explica con calidez que VECY se especializa 100% en tributos prediales e inmuebles (Predial con CHIP en PDF, IDU, Notarías) y suministra los enlaces oficiales directos para autogestionar el impuesto vehicular en 2 clics (Oficina Virtual SHD Bogotá y Rentas Cundinamarca), erradicando pedidos de placas y alucinaciones de servidores caídos.
+- **Blindaje Centinela Anti-LID y Cédulas Fantasma (`dmHandler.ts`, `prompts.ts`, `base.md`):**
+  - Eliminada la inyección del `userId` técnico en `userPromptContent` en `dmHandler.ts`.
+  - Agregado guardarraíl estricto en `executeJaniaDmTool`: si los dígitos del documento coinciden con el LID o teléfono del usuario o no provienen del texto explícito del usuario ni de una sesión confirmada, la herramienta aborta de inmediato y solicita cordialmente los dígitos exactos.
+  - Agregada la directiva semilla `seed-blindaje-antivirus-lid-impuesto-vehicular-continuidad` en `founderKnowledgeService.ts`.
+- **Suite de Regresión y Validación Exhaustiva:**
+  - Creada la Suite 138 en `server/__tests__/regression.test.ts` con 5 tests específicos validando cada corrección.
+  - Corregidas las aserciones de versión históricas.
+  - `npm test`: **400/400 passing** (100% verde a $0 COP).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio en 14.28s.
+- **Incremento de Versión:**
+  - `shared/const.ts` (`v33.52`) y `package.json` (`33.52.0`).
+
 ### 📅 [2026-10-26] — JanIA v33.51: Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT (v33.51 - 33.51.0)
 
 **Versión:** `v33.51` (`33.51.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

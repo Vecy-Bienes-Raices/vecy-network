@@ -182,7 +182,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.51 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.52 — Octubre 2026
+
+### Novedades v33.52 (Auditoría Integral de Comportamiento, Continuidad Grupal, Anti-LID en Cédulas y Delimitación de Tributos Inmobiliarios vs. Vehiculares):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera (Análisis de Capturas de Pantalla Reales)**:
+  1. **Continuidad Conversacional ante Respuestas Afirmativas en Grupos (Caso Miguel Arbelaez en Grupo 3)**:
+     - *Causa raíz*: En `server/_core/whatsapp-match.ts`, la condición `textClean.length < 6` clasificaba respuestas breves ("Si 👍", "Si", "Sí", "Claro") como `isShortCourtesy = true`, provocando que `hasMeaningfulQuery = false` y `shouldRespond = false`. JanIA se limitaba a reaccionar con un emoji 👍 y silenciaba la respuesta, dejando colgado al usuario que respondía afirmativamente a su propia pregunta previa.
+     - *Solución*: Se implementó la detección de continuación de hilo (`isConversationalContinuation`) en `whatsapp-match.ts` ante respuestas afirmativas (`isAffirmativeFollowUp`) o citas a JanIA en `circuloGroup` y `buzonGroup`. Además, se instruyó en `circuloHandler.ts` y `consultingHandler.ts` que ante respuestas afirmativas, JanIA responda con dinamismo y calidez presentando las herramientas colaborativas clave de VECY (Mesa de MATCH 40/20/40, Factura Predial Bogotá con CHIP en PDF, Verificación de Seguridad y Antecedentes con Policía/ADRES, o Sondeos POT).
+  2. **Purga Quirúrgica de Puntuación Huérfana y Comas Colgantes (Caso Saludo a Eduardo Rivera en DM)**:
+     - *Causa raíz*: `stripLeadingGreetingsAndCourtesies` en `dmHandler.ts` eliminaba el saludo ("¡Buenas tardes, Eduardo!") pero dejaba intactos los signos de puntuación huérfanos posteriores, resultando en respuestas con coma colgante como `", ¡aquí estoy! ¿En qué te puedo colaborar en este nuevo día? 🌟🚀"`.
+     - *Solución*: Se actualizó la función para purgar de forma iterativa y final cualquier signo de puntuación huérfano (`^[,;:\-–—\s]+`) y garantizar la correcta capitalización incluso tras signos de apertura (`¡`, `¿`).
+  3. **Delimitación Doctrinal de Tributos Inmobiliarios vs. Impuesto Vehicular (Caso Liquidación Automotriz en DM)**:
+     - *Causa raíz*: JanIA no contaba con una frontera explícita entre tributos prediales y vehiculares. Al preguntarle por "impuesto Vehicular", el modelo asociaba la capacidad tributaria de VECY, prometía liquidar y descargar el recibo de carros/motos pidiendo placas y cédulas, y luego alucina un error de conexión institucional con `shd.gov.co`.
+     - *Solución*: Se implementó un interceptor y directiva estricta en `dmHandler.ts`, `base.md`, `prompts.ts` y `founderKnowledgeService.ts` aclarando que VECY se especializa 100% en tributos prediales e inmuebles (Predial con CHIP en PDF, IDU, Notarías), y orienta amablemente al usuario con los portales oficiales autorizados para autogestionar el impuesto vehicular en 2 clics (Oficina Virtual SHD Bogotá y Rentas Cundinamarca), erradicando solicitudes de placas, promesas de recibos vehiculares y falsas caídas de conexión.
+  4. **Blindaje Centinela Anti-LID y Cédulas Fantasma (Caso Victoria Tovar en DM)**:
+     - *Causa raíz*: En `dmHandler.ts`, el prompt inyectaba `Mensaje de ${realName} (${userId}): "${clean}"`. Al recibir "Verificar esta cedula" sin dígitos, el LLM tomaba los primeros 10 dígitos del LID de WhatsApp (`209903675252976@lid`), alucinando que la cédula a verificar era `2.099.036.752` y bloqueando la conversación con reportes inexistentes.
+     - *Solución*: Se eliminó la inyección técnica de `(${userId})` en el prompt del usuario en `dmHandler.ts`, se instruyó al LLM en `systemPrompt` y `JANIA_DM_TOOLS` la prohibición absoluta de tomar números de identificadores de WhatsApp, y se construyó un guardarraíl en `executeJaniaDmTool` que aborta y exige el documento explícito si los dígitos coinciden con el LID o teléfono del usuario y no aparecen en su texto.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 400/400 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 14.28s ✅
+- `shared/const.ts` (`v33.52`) y `package.json` (`33.52.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.51 — Octubre 2026
 
 ### Novedades v33.51 (Proceso Profundo y Arraigado de Investigación RUES por Razón Social sin Exigir NIT):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

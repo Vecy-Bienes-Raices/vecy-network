@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.51";
+    VECY_VERSION = "v33.52";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13644,6 +13644,13 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
    - Solo incluye la invitaci\xF3n charlada a calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review) cuando una consulta haya sido 100% exitosa, m\xE1ximo una vez por sesi\xF3n, y JAM\xC1S a Eduardo o Jani. Explica con cercan\xEDa que su rese\xF1a ayuda a mantener estas herramientas 100% gratuitas para todo el gremio, y agrega con dulzura que si no sabe c\xF3mo dejar la calificaci\xF3n o el comentario, con el mayor gusto le explicas el paso a paso detallado si lo necesita.
 7. **CANALIZACI\xD3N HUMANA CON EL BR\xD3KER**:
    - Para peritajes presenciales, firma de contratos o gestiones directas con los fundadores, refiere con calidez a **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719** (https://wa.me/573166569719).
+8. **TRIBUTOS PREDIALES VS. IMPUESTO VEHICULAR**:
+   - En VECY BIENES RA\xCDCES nos especializamos exclusivamente en bienes ra\xEDces y tributos prediales (Factura Oficial del Impuesto Predial de Bogot\xE1 en PDF en menos de un minuto con c\xF3digo CHIP, Paz y Salvo IDU, y liquidaci\xF3n de derechos notariales y registro inmobiliario).
+   - JanIA NO liquida ni descarga el Impuesto Vehicular (carros, camionetas o motos), ni solicita placas vehiculares, ni inventa ca\xEDdas de conexi\xF3n institucional (shd.gov.co).
+   - Ante preguntas sobre el impuesto vehicular o placas, orienta cordialmente al usuario con los portales oficiales: Bogot\xE1 D.C. (https://oficinavirtual.shd.gov.co/) y Cundinamarca (https://rentas.cundinamarca.gov.co/).
+9. **BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N NI LIDs)**:
+   - JanIA NUNCA inventa n\xFAmeros de c\xE9dula ni toma n\xFAmeros de identificadores t\xE9cnicos de sesi\xF3n de WhatsApp (@lid) o tel\xE9fonos.
+   - Si el usuario solicita verificar una c\xE9dula o antecedentes pero no incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa el n\xFAmero exacto y nombre completo antes de consultar.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -16373,6 +16380,16 @@ var init_founderKnowledgeService = __esm({
         directive: "La mayor\xEDa de las veces los clientes y colegas NO tienen el n\xFAmero de NIT de una empresa, sino \xFAnicamente su nombre o raz\xF3n social. JanIA jam\xE1s debe quedarse bloqueada o pidiendo mec\xE1nicamente el NIT cuando ya tiene la raz\xF3n social (ej. MULTIPROYECTOS & INVERSIONES SAS). Debe realizar un proceso profundo, arraigado e infalible (como el consolidado para ADRES BDUA), investigando directamente en el Registro \xDAnico Empresarial y Social (RUES) y las 57 C\xE1maras de Comercio por el nombre o palabra clave, tolerando variantes con ampersand (&), la letra 'Y', t\xE9rminos morfol\xF3gicos o mensajes conversacionales. Debe entregar de inmediato la verificaci\xF3n oficial completa: Raz\xF3n Social oficial, NIT con DV DIAN, matr\xEDcula, estado activo, C\xE1mara de Comercio, actividad econ\xF3mica (CIIU) y Representante Legal Principal con sus plenas facultades estatutarias, sin pedir el NIT de antemano.",
         rawText: "JanIA sigue con el error de no poder investigar los datos de una empresa por rues y pidi\xF3 NIT, en este caso lo ten\xEDamos pero la mayor\xEDa de las veces no se tiene el NIT sino solo la raz\xF3n social. As\xED que observa y corrige, tal vez tengas que hacer un proceso m\xE1s profundo y arraigado como el que hiciste con Adres BDUA y que finalmente lograste que JanIA pueda ingresar siempre y verificar o investigar dichos datos siempre.",
         createdAt: "2026-10-26T03:30:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-blindaje-antivirus-lid-impuesto-vehicular-continuidad",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Continuidad Conversacional sin Bloqueos por Cortes\xEDas, Anti-LID en C\xE9dulas y Tributos Inmobiliarios vs. Vehiculares",
+        directive: "Tres directrices maestras de excelencia operativa: 1) CONTINUIDAD DE DI\xC1LOGO: Cuando JanIA hace una pregunta a un usuario o colega (ej. si quiere revisar alguna funci\xF3n o debatir un tema) y el usuario le responde afirmativamente ('Si', 'S\xED \u{1F44D}', 'Claro', 'Dale'), JanIA JAM\xC1S debe quedarse callada ni limitarse a un emoji. Debe continuar el hilo con entusiasmo y explicar con soltura nuestras capacidades (MATCH 40/20/40, Predial con CHIP en PDF, ADRES/Polic\xEDa, Sondeos POT). 2) CERO C\xC9DULAS FANTASMA NI LIDs: JanIA jam\xE1s inventa documentos ni extrae n\xFAmeros de identificadores t\xE9cnicos de WhatsApp (@lid) o tel\xE9fonos. Si el usuario pide verificar c\xE9dula sin dar los d\xEDgitos, se los pide amablemente. 3) TRIBUTOS INMOBILIARIOS VS. VEHICULARES: JanIA es experta en tributos prediales e inmobiliarios (Factura Predial de Bogot\xE1 en PDF con CHIP, IDU, Notar\xEDas). Para impuesto vehicular de carros/motos orienta cordialmente a los portales oficiales (Hacienda Bogot\xE1 https://oficinavirtual.shd.gov.co/ o Rentas Cundinamarca https://rentas.cundinamarca.gov.co/) sin pedir placas ni fingir ca\xEDdas de conexi\xF3n institucional.",
+        rawText: "Auditor\xEDa de JanIA: en grupos dej\xF3 de interactuar ante respuestas como 'Si \u{1F44D}', en DMs invent\xF3 c\xE9dulas a partir de identificadores t\xE9cnicos @lid de WhatsApp de usuarios, y en impuestos vehiculares intent\xF3 descargar recibos de carros cuando nuestra especialidad es predial e inmobiliaria.",
+        createdAt: "2026-10-27T00:20:00.000Z",
         active: true
       },
       {
@@ -23070,9 +23087,9 @@ ${previewText}`.trim();
                 if (quotedAudioMsg) {
                   isAudioPTT = true;
                   try {
-                    const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-                    const quotedParticipant = contextInfo?.participant || chatId;
-                    const quotedPhone = quotedParticipant.split("@")[0];
+                    const contextInfo2 = msg.message?.extendedTextMessage?.contextInfo;
+                    const quotedParticipant2 = contextInfo2?.participant || chatId;
+                    const quotedPhone = quotedParticipant2.split("@")[0];
                     console.log(`[JANIA-MATCH] Transcribiendo audio CITADO de +${quotedPhone} en grupo ${chatId}...`);
                     let audioBuffer = null;
                     try {
@@ -23084,9 +23101,9 @@ ${previewText}`.trim();
                       const fakeMsg = {
                         key: {
                           remoteJid: chatId,
-                          id: contextInfo?.stanzaId || "quoted-audio",
+                          id: contextInfo2?.stanzaId || "quoted-audio",
                           fromMe: false,
-                          participant: quotedParticipant
+                          participant: quotedParticipant2
                         },
                         message: {
                           audioMessage: quotedAudioMsg
@@ -23154,10 +23171,15 @@ ${quotedNote}` : quotedNote;
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
-                const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
+                const isAffirmativeFollowUp = /^(?:s[ií]|claro|dale|de\s*una|por\s*favor|adelante|me\s*gustar[ií]a|cu[eé]ntame|s[ií]\s*👍|si\s*👍|s[ií]\s*por\s*favor|claro\s*que\s*s[ií]|de\s*acuerdo)(?:[\s!.,]|$)/i.test(textClean);
+                const contextInfo = msg.message?.extendedTextMessage?.contextInfo || msg.message?.contextInfo;
+                const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : "";
+                const isQuotingBot = !!contextInfo?.quotedMessage && (botJid && quotedParticipant === botJid || quotedParticipant.startsWith(botPhone) || quotedParticipant.startsWith("573192919978"));
+                const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
+                const isShortCourtesy = !isAudioPTT && !isConversationalContinuation && (textClean.length < 6 || ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
                 const isListing = isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
-                const hasMeaningfulQuery = textClean.length >= 4 && !isShortCourtesy && !isReactionMessage || hasRawMedia;
+                const hasMeaningfulQuery = (textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage || hasRawMedia;
                 const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isOfficialGroup && hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
@@ -30226,16 +30248,34 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
           }
         }
       }
+      let wasPendingDoc = false;
       if (!/\d{5,12}/.test(doc)) {
         const pendingDoc = getPendingUnconfirmedDoc2(userId);
         if (pendingDoc?.cleanNumber) {
           doc = pendingDoc.cleanNumber;
+          wasPendingDoc = true;
           clearPendingUnconfirmedDoc2(userId);
         } else if (rawUserText) {
           doc = rawUserText;
         }
       }
       const cleanDigits = doc.split("-")[0].replace(/\D/g, "");
+      const isFromPending = wasPendingDoc;
+      const rawOnlyDigits = (rawUserText || "").replace(/\D/g, "");
+      const isFromRawText = Boolean(cleanDigits.length >= 5 && rawOnlyDigits.includes(cleanDigits));
+      const isUserLidOrPhone = Boolean(userId && cleanDigits.length >= 6 && userId.includes(cleanDigits));
+      if (!isFromRawText && !isFromPending || isUserLidOrPhone || cleanDigits.length < 5) {
+        return {
+          toolType: "cedula",
+          resultJson: {
+            solicitud: "verificacion_identidad",
+            numeroDocumento: "",
+            tipoDocumento: tipo,
+            reporteOficial: "Para realizar la verificaci\xF3n oficial de antecedentes y aseguramiento en salud (ADRES / Polic\xEDa Nacional / Procuradur\xEDa / Contralor\xEDa), es indispensable contar con el n\xFAmero de c\xE9dula o documento de identidad exacto. Por favor comp\xE1rteme los d\xEDgitos del documento y el nombre completo de la persona a consultar para traerte el reporte completo de inmediato \u{1F91D}\u2728.\n\n_\u2696\uFE0F Consulta procesada bajo principios de finalidad leg\xEDtima y Ley 1581 de 2012 de H\xE1beas Data._",
+            exitoso: false
+          }
+        };
+      }
       if (cleanDigits.length === 9 && /^[89]\d{8}$/.test(cleanDigits)) {
         tipo = "NIT";
       } else if (rawUserText && /\bnit\b/i.test(rawUserText)) {
@@ -30851,12 +30891,18 @@ function stripLeadingGreetingsAndCourtesies(text2) {
     cleaned = cleaned.replace(courtesyPattern, "");
     cleaned = cleaned.replace(janiaIntroPattern, "");
     cleaned = cleaned.replace(emojiPattern, "");
+    cleaned = cleaned.replace(/^[,;:\-–—\s]+/, "");
     cleaned = cleaned.trim();
     changed = cleaned !== before;
     iterations++;
   }
+  cleaned = cleaned.replace(/^[,;:\-–—\s]+/, "").trim();
   if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    if (/^[¡¿]/.test(cleaned)) {
+      cleaned = cleaned.charAt(0) + (cleaned.length > 1 ? cleaned.charAt(1).toUpperCase() + cleaned.slice(2) : "");
+    } else {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
   }
   return cleaned.trim();
 }
@@ -31061,6 +31107,26 @@ En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora
       return reply;
     }
   }
+  const isVehicularTaxQuery = /(?:impuesto\s+(?:de\s+)?veh[íi]cul|liquidar\s+(?:el\s+)?veh[íi]cul|sacar\s+(?:un\s+|el\s+)?impuesto\s+veh[íi]cul|placa\s+[a-z]{3}\s*\d{2,3}|impuesto\s+del?\s+(?:carro|moto|veh[íi]culo))/i.test(clean);
+  if (isVehicularTaxQuery) {
+    const targetSalutation = displayName || realName || "";
+    const namePart = targetSalutation ? `\xA1Hola ${targetSalutation}! \u{1F44B} ` : `\xA1Hola! \u{1F44B} `;
+    const vehicularReply = `${namePart}En VECY BIENES RA\xCDCES nos especializamos 100% en el sector inmobiliario y tributario predial (generamos en menos de un minuto la Factura Oficial del Impuesto Predial de Bogot\xE1 en PDF con el c\xF3digo CHIP, Estado de Cuenta y Paz y Salvo IDU, y liquidaci\xF3n notarial de inmuebles) \u{1F3E2}\u{1F4C4}.
+
+Para el **Impuesto Vehicular** (carros y motos), no lo gestionamos directamente en nuestra plataforma inmobiliaria, pero lo puedes liquidar y pagar de forma inmediata y oficial en los siguientes enlaces autorizados:
+
+\u{1F697} *Bogot\xE1 D.C.:* Oficina Virtual de la Secretar\xEDa Distrital de Hacienda:
+\u{1F449} https://oficinavirtual.shd.gov.co/
+
+\u{1F699} *Cundinamarca y otros departamentos:* Portal de Rentas Departamentales:
+\u{1F449} https://rentas.cundinamarca.gov.co/
+
+Si tienes alg\xFAn inmueble (casa, apartamento, lote u oficina) del cual requieras la Factura Predial oficial de Bogot\xE1 en PDF o acompa\xF1amiento notarial, \xA1con todo el gusto te ayudo de inmediato! \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", vehicularReply);
+    markUserGreetedToday(userId);
+    return vehicularReply;
+  }
   let preloadedWebContent = "";
   const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
   if (urlMatch && urlMatch[0]) {
@@ -31221,6 +31287,8 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : `- Usuario identificado: ${displayName || realName || "Colega"}.
 `}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
 ` : ""}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
+- BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N): NUNCA inventes n\xFAmeros de documento ni tomes n\xFAmeros de identificadores de sesi\xF3n de WhatsApp o LIDs (@lid). Si el usuario pide verificar c\xE9dula, antecedentes o persona pero NO incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa el n\xFAmero exacto y nombre completo para traerle el reporte.
+- TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RA\xCDCES nos especializamos exclusivamente en bienes inmuebles (generaci\xF3n oficial de Factura Predial de Bogot\xE1 con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o env\xEDa placas, acl\xE1rale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y ori\xE9ntalo de inmediato y con cortes\xEDa suministr\xE1ndole los canales oficiales para autogestionarlo en 2 clics: para Bogot\xE1 en la Oficina Virtual de la Secretar\xEDa de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretar\xEDa de Hacienda fall\xF3.
 - SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
 - NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
 - MENSAJES CORTOS, DIRECTOS Y CLAROS (CERO "LEER M\xC1S"): Respuestas breves, directas al grano, claras y fluidas (m\xE1ximo 1 o 2 p\xE1rrafos cortos), sin introducciones extensas ni textos kilom\xE9tricos que fuercen el bot\xF3n 'Leer m\xE1s'.`;
@@ -31231,7 +31299,8 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       const cleanTurnContent = turn.role === "assistant" ? turn.content.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim() : turn.content;
       messages2.push({ role: turn.role, content: cleanTurnContent });
     }
-    let userPromptContent = `Mensaje de ${realName} (${userId}): "${clean}"`;
+    const senderLabel = displayName || realName || "Usuario";
+    let userPromptContent = `Mensaje de ${senderLabel}: "${clean}"`;
     if (preloadedWebContent) {
       userPromptContent += preloadedWebContent;
     }
@@ -31579,11 +31648,11 @@ var init_dmHandler = __esm({
         functionDeclarations: [
           {
             name: "consultar_identidad_y_antecedentes",
-            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
+            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT. REGLA INMUTABLE: El n\xFAmero de documento DEBE estar expl\xEDcitamente escrito en el mensaje del usuario. Est\xE1 TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o tel\xE9fonos del usuario como si fueran c\xE9dulas. Si el usuario pide verificar c\xE9dula pero NO incluy\xF3 el n\xFAmero en su texto, NO invoques esta herramienta y solic\xEDtale el n\xFAmero.",
             parameters: {
               type: "OBJECT",
               properties: {
-                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar" },
+                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar provisto expl\xEDcitamente por el usuario en su mensaje" },
                 tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
               },
               required: ["numeroDocumento"]
@@ -31796,7 +31865,9 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const cleanText = text2.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
-    if (cleanText.length < 3 && !isMediaOrAudio) {
+    const isAffirmativeShort = /^(?:s[ií]|ok|dale|claro|de\s*una|si\s*👍|s[ií]\s*👍)(?:[\s!.,]|$)/i.test(cleanText);
+    const hasActiveHistory = getConsultingHistory(userId).length > 0;
+    if (cleanText.length < 3 && !isMediaOrAudio && !quotedContext && !isAffirmativeShort && !hasActiveHistory) {
       console.log(`[JanIA-Consulting] Mensaje vac\xEDo o insignificante descartado para ${userId}: "${text2}"`);
       return {
         classification: "CONSULTA_GENERAL",
@@ -32135,7 +32206,8 @@ Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes vender
       };
     }
     const hasMediaInCatch = !!imageBuffer || !!pdfBuffer || !!audioUrl;
-    if (cleanLower.length < 3 && !hasMediaInCatch) {
+    const isAffirmativeShortCatch = /^(?:s[ií]|ok|dale|claro|de\s*una|si\s*👍|s[ií]\s*👍)(?:[\s!.,]|$)/i.test(cleanLower);
+    if (cleanLower.length < 3 && !hasMediaInCatch && !quotedContext && !isAffirmativeShortCatch) {
       return {
         classification: "CONSULTA_GENERAL",
         response: "",
@@ -32289,6 +32361,14 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
       1. Sal\xFAdalo con calidez y dinamismo por su primer nombre ("\xA1${timeGreeting}${targetName ? `, ${targetName}` : ""}!").
       2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
   * CONTINUIDAD DE DEBATE Y FOROS (REGLA DE ORO): Si el usuario est\xE1 comentando, reflexionando, opinando o respondiendo a un mensaje citado, PROHIBIDO preguntar "\xBFcu\xE1l es tu consulta sobre VECY?". Al contrario: profundiza sobre su argumento, valida su punto con empat\xEDa y aporta tu perspectiva de l\xEDder gremial y tecnol\xF3gica.
+  * RESPUESTAS AFIRMATIVAS ("S\xCD", "CLARO", "DALE", ETC.): Si el usuario responde afirmativamente a tu pregunta o propuesta previa (ej. si le preguntaste si le gustar\xEDa conocer alguna funci\xF3n de la tecnolog\xEDa colaborativa de VECY o debatir alg\xFAn tema):
+    - EST\xC1 TERMINANTEMENTE PROHIBIDO quedarte callada, hacer una pregunta redundante o volver a saludar.
+    - Presenta de inmediato con dinamismo, orgullo y elocuencia las herramientas colaborativas clave de VECY BIENES RA\xCDCES:
+      1. El motor de MATCH bilateral en tiempo real bajo el esquema colaborativo 40/20/40 para conectar puntas sin fricci\xF3n.
+      2. Descarga de la Factura Oficial del Impuesto Predial de Bogot\xE1 en PDF en menos de un minuto con solo enviar el CHIP.
+      3. Verificaci\xF3n de seguridad de contrapartes en ADRES BDUA y antecedentes de Polic\xEDa Nacional para blindar operaciones.
+      4. Sondeos inteligentes de valor por m\xB2 y canon con normativa POT Bogot\xE1 Decreto 555 de 2021.
+    - Proponle con calidez y entusiasmo profundizar en la que m\xE1s le sirva para sus cierres.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasi\xF3n, datos reales y visi\xF3n de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditor\xEDa), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralizaci\xF3n en redes), matching en tiempo real y tecnolog\xEDa Cero Papel.
   * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos t\xE9cnicos superiores sin agresividad.`;
     const messages2 = [

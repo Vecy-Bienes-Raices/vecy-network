@@ -1057,10 +1057,27 @@ export class JaniaMatchBot {
             // Los audios PTT nunca se consideran cortesía corta (aunque fallen la transcripción)
             const textClean = body.toLowerCase().trim();
             const isAudioFailed = body === '[audio-vacío]' || body === '[audio-sin-buffer]' || body === '[audio-error]';
+
+            // Detección de continuación de hilo o respuesta afirmativa en grupos conversacionales (Grupo 2 y 3)
+            const isAffirmativeFollowUp = /^(?:s[ií]|claro|dale|de\s*una|por\s*favor|adelante|me\s*gustar[ií]a|cu[eé]ntame|s[ií]\s*👍|si\s*👍|s[ií]\s*por\s*favor|claro\s*que\s*s[ií]|de\s*acuerdo)(?:[\s!.,]|$)/i.test(textClean);
+
+            const contextInfo = (msg.message as any)?.extendedTextMessage?.contextInfo
+              || (msg.message as any)?.contextInfo;
+            const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : '';
+            const isQuotingBot = !!contextInfo?.quotedMessage && (
+              (botJid && quotedParticipant === botJid) ||
+              quotedParticipant.startsWith(botPhone) ||
+              quotedParticipant.startsWith('573192919978')
+            );
+
+            // En grupos conversacionales (Soporte Legal y Proyecto Vecy / Círculo Cero),
+            // si el usuario responde afirmativamente o cita a JanIA, NUNCA es cortesía corta sino continuación activa:
+            const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
+
             const isShortCourtesy =
-              !isAudioPTT && (
+              !isAudioPTT && !isConversationalContinuation && (
                 textClean.length < 6 ||
-                ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
+                ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
               );
 
             // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
@@ -1068,11 +1085,11 @@ export class JaniaMatchBot {
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
             const isListing = isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
 
-            // En Soporte Legal (Buzón) y Círculo Cero, solo responder a consultas o preguntas legítimas:
+            // En Soporte Legal (Buzón) y Círculo Cero, responder a consultas legítimas o continuaciones de conversación:
             // - NO responder a reacciones de emojis (reacciones a mensajes ajenos)
-            // - NO responder a monosílabos de cortesía pura (ok, gracias, 👍, etc.)
-            // - Exigir texto sustancial (longitud >= 4 sin ser cortesía) O mensaje multimedia/audio PTT
-            const hasMeaningfulQuery = (textClean.length >= 4 && !isShortCourtesy && !isReactionMessage) || hasRawMedia;
+            // - NO responder a monosílabos de cortesía aislada descontextualizada (ok, gracias, 👍, etc.)
+            // - Admitir texto con intención (>= 4 caracteres o continuación conversacional/afirmativa) O multimedia/PTT
+            const hasMeaningfulQuery = ((textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage) || hasRawMedia;
             const shouldRespond = (isBuzonGroup || isCirculoGroup)
               ? hasMeaningfulQuery
               : (isOfficialGroup && hasDirectMention);

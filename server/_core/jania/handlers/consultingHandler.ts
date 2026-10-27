@@ -45,7 +45,9 @@ export async function processConsultingMessage(
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
 
     // 🛡️ BLINDAJE DE MENSAJES VACÍOS O SIN CONTENIDO SUSTANCIAL:
-    if (cleanText.length < 3 && !isMediaOrAudio) {
+    const isAffirmativeShort = /^(?:s[ií]|ok|dale|claro|de\s*una|si\s*👍|s[ií]\s*👍)(?:[\s!.,]|$)/i.test(cleanText);
+    const hasActiveHistory = getConsultingHistory(userId).length > 0;
+    if (cleanText.length < 3 && !isMediaOrAudio && !quotedContext && !isAffirmativeShort && !hasActiveHistory) {
       console.log(`[JanIA-Consulting] Mensaje vacío o insignificante descartado para ${userId}: "${text}"`);
       return {
         classification: "CONSULTA_GENERAL",
@@ -402,7 +404,8 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
 
     // 🛡️ BLINDAJE DE FALLBACK ANTE MENSAJES INSIGNIFICANTES O VACÍOS:
     const hasMediaInCatch = !!imageBuffer || !!pdfBuffer || !!audioUrl;
-    if (cleanLower.length < 3 && !hasMediaInCatch) {
+    const isAffirmativeShortCatch = /^(?:s[ií]|ok|dale|claro|de\s*una|si\s*👍|s[ií]\s*👍)(?:[\s!.,]|$)/i.test(cleanLower);
+    if (cleanLower.length < 3 && !hasMediaInCatch && !quotedContext && !isAffirmativeShortCatch) {
       return {
         classification: "CONSULTA_GENERAL",
         response: "",
