@@ -197,6 +197,8 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
      - *Solución*: Se consolidaron 4 roles de autoridad en `prompts.ts` (Asesora Jurídico-Notarial Ley 675/820, Máster en Ventas y Marketing AIDA, Coach de Comunidad y Herramientas WhatsApp, Guía de Procesos Digitales). Respuestas concisas con viñetas limpias y negritas tempranas. Manejo ágil y simpático de consultas casuales (deportes/Millonarios, clima) en una sola línea antes de reencauzar al contexto inmobiliario con elegancia.
   4. **Herramientas Interactivas del Canal de WhatsApp (`channelInteractiveService.ts`)**:
      - *Solución*: Se estructuró el flujo en dos capas: toma de decisiones vía Structured Output / Tool Calling (`publicar_encuesta`, `publicar_cuestionario`, `publicar_pregunta`, `publicar_post_multimedia`) y ejecución técnica híbrida (Baileys para multimedia y texto instantáneo, Puppeteer para menús interactivos del clip en canales).
+  5. **Canon Visual Sagrado de JanIA (Doctrina Eduardo A. Rivera)**:
+     - Facciones faciales inmutables de estilo 3D Pixar/Disney, cabello estrictamente negro profundo brillante (`deep glossy jet-black hair`, cero castaño claro), corte bob corto y voluminoso, gafas translúcidas tono lila, aretes de diamantes y el botón circular oficial dorado y negro con el logo de VECY (`media_1793086777026.jpg`) en el pecho.
 - **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 405/405 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 31.38s ✅
 - `shared/const.ts` (`v33.53`) y `package.json` (`33.53.0`).
 

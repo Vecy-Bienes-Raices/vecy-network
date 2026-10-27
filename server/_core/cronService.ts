@@ -2176,8 +2176,8 @@ export async function publishDailyTipForDay(tipoKey: string, force: boolean = fa
  * 🎨 Galería Maestra de Imágenes Cuadradas [1:1] de JanIA (v33.44 — Doctrina Eduardo A. Rivera):
  * Formato cuadrado [1:1] de alta resolución para publicaciones temáticas en el Canal Oficial de WhatsApp.
  * Cero repetición de imágenes obsoletas o con errores tipográficos ("anfitiona" -> "Anfitriona").
- * Piezas oficiales generadas con consistencia visual: JanIA, corte bob castaño, gafas ejecutivas,
- * blazer sastre negro con ribetes dorados (#0a0a0a y #d4af37) y estética hiperrealista en Bogotá.
+ * Piezas oficiales generadas con consistencia visual inmutable: JanIA, corte bob estilizado negro profundo (cero castaño claro),
+ * gafas translúcidas tono lila, broche oficial circular dorado Vecy en el pecho, y vestuario ejecutivo/futurista con ribetes dorados (#0a0a0a y #d4af37).
  */
 export function getChannelSquareImage1x1(themeKey: string, dayOfMonth?: number): string {
   const normalized = (themeKey || "").toLowerCase();

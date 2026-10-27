@@ -343,8 +343,8 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - **JanIA como Agente de IA Multi-Rol y Razonamiento Autónomo:**
     - *Problema:* Percepción de bot rígido ante textos mecánicos o evasivas en preguntas informales.
     - *Solución:* Consolidación de 4 roles dinámicos en `prompts.ts` (Asesora Jurídico-Notarial Ley 675/820, Máster en Ventas y Marketing AIDA, Coach de Comunidad y Herramientas WhatsApp, Guía de Procesos Digitales). Respuestas concisas con viñetas cortas. Resolución chispeante y natural de consultas casuales (deportes/Millonarios, clima) en una línea antes de reencauzar al contexto inmobiliario.
-  - **Herramientas Interactivas de Canal (`channelInteractiveService.ts`):**
-    - *Arquitectura Híbrida:* Servicio dedicado que declara los esquemas de Function Calling (`publicar_encuesta`, `publicar_cuestionario`, `publicar_pregunta`, `publicar_post_multimedia`) para decisión cognitiva del LLM y ejecución técnica híbrida (Baileys para multimedia y texto instantáneo, Puppeteer para menús interactivos del clip en canales).
+  - **Canon Visual Inmutable de JanIA (Doctrina Eduardo A. Rivera):**
+    - Consagración de identidad gráfica inmutable: facciones faciales estilo 3D Pixar/Disney, cabello estrictamente negro profundo brillante (`deep glossy jet-black hair`, sin tonos claros o castaños), corte bob corto con volumen, gafas translúcidas lila, aretes de diamantes y el botón/broche oficial circular de VECY (`media_1793086777026.jpg`) con fondo negro, ribete dorado, techo de casa y tipografía dorada en el pecho.
 - **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **405/405 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 31.38s.
 
 ### 🔖 v33.52 — Octubre 2026

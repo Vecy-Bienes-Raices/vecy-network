@@ -40,9 +40,14 @@
 - **Servicio de Herramientas Interactivas del Canal (`channelInteractiveService.ts`):**
   - Creado nuevo servicio declarando los esquemas formales de tool calling: `publicar_post_multimedia`, `publicar_encuesta`, `publicar_cuestionario` y `publicar_pregunta`.
   - Implementada la validación de payloads interactivos y la arquitectura híbrida (Baileys para multimedia y texto instantáneo, Puppeteer para menús interactivos del clip en canales).
-- **Generación de Activos Visuales:**
-  - Generada pieza de JanIA en traje futurista blanco y dorado con cuello mao y tablet holográfica (`jania_futuristic_proptech_1793086698196.jpg`).
-  - Generada infografía 3D isométrica de Propiedad Horizontal Ley 675 diferenciando parqueaderos comunales y privados (`infografia_ley675_ph_1793086722589.jpg`).
+- **Canon Visual Sagrado y Generación de Activos de JanIA (Doctrina Eduardo A. Rivera):**
+  - **Identidad Visual Inmutable:** Facciones faciales exactas (estilo 3D Pixar/Disney, ojos marrones avellana grandes y cálidos, sonrisa radiante empática con dientes blancos, gafas translúcidas modernas con reflejos lila/lavanda, aretes discretos de diamantes).
+  - **Cabello Negro Profundo:** Cabello estrictamente negro profundo brillante (`deep glossy jet-black hair`), erradicando tonos castaños claros, con su corte bob moderno corto y voluminoso característico.
+  - **Broche Oficial Circular Dorado de VECY:** Botón circular metálico negro pulido con borde dorado grueso, icono de techo de casa, tipografía 'Vecy' en 3D dorado y curva de sonrisa dorada con destellos (`media_1793086777026.jpg`).
+  - **Nuevas Piezas Generadas y Registradas:**
+    * `jania_official_portrait_1793088656862.jpg`: Retrato frontal con cabello negro profundo, traje sastre negro con ribetes dorados y broche oficial Vecy.
+    * `jania_tech_presentation_1793088685127.jpg`: Presentación tecnológica con tablet holográfica, blazer blanco y dorado con cuello mao, cabello negro profundo y broche oficial Vecy.
+    * `infografia_ley675_ph_1793086722589.jpg`: Infografía 3D isométrica de la Ley 675 (parqueaderos comunes vs. privados).
 - **Suite de Regresión y Validación Exhaustiva:**
   - Creada la Suite 139 en `server/__tests__/regression.test.ts` con 5 tests específicos validando cada una de las nuevas directivas.
   - `npm test`: **405/405 passing** (100% verde a $0 COP).
