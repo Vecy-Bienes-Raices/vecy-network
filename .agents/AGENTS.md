@@ -182,7 +182,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.53 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.54 — Octubre 2026
+
+### Novedades v33.54 (Guardarropa Dinámico de Alta Costura, Reemplazo de Galería 1:1 y Blindaje de Estados de WhatsApp):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Reemplazo Integral de la Galería 1:1 y Vertical 9:16**:
+     - *Causa raíz*: El cron matutino de las 8:45 AM despachó una imagen previa del 24 de octubre con cabello castaño claro y sin el broche oficial de Vecy.
+     - *Solución*: Sustitución completa de las 5 piezas maestras 1:1 en `channel_1x1/` y `jania/` (`jania_legal_due_diligence_1x1.jpg`, `jania_seguridad_notarial_1x1.jpg`, `jania_avaluos_pot_1x1.jpg`, `jania_marketing_colaborativo_1x1.jpg`, `jania_anfitriona_cafe_1x1.jpg`) y la vertical 9:16 (`jania_status_showcase_v1.jpg`) bajo el canon sagrado: rostro 3D Pixar/Disney, cabello estrictamente negro profundo brillante (`deep glossy jet-black`), gafas translúcidas tono lila, aretes de diamantes y el broche oficial circular dorado de VECY en el pecho.
+  2. **Guardarropa de Alta Costura y Variedad Estética (5 Diseños de Cabecera)**:
+     - Eduardo instruyó no repetir siempre el mismo traje sastre negro, compartiendo 5 diseños emblemáticos para rotar según el servicio: 1) Oro Líquido & Negro Carbón Fluido (Café Inmobiliario, podcast, cierres); 2) Púrpura / Violeta Imperial en Degradé a Negro (comunidad, empatía, corazón); 3) Traje Sastre Blanco Marfil con Cuello Mao Bordado en Oro (cumbre notarial, solemnidad jurídica); 4) Vestido Volcánico / Magma Incandescente (disrupción proptech, primicias); 5) Seda Marmoleada Verde Esmeralda & Oro Líquido (inversión inmobiliaria, biofilia, POT).
+     - Incorporados como activos permanentes en `client/public/assets/channel_1x1/` y añadida la directiva semilla `seed-guardarropa-alta-costura-variedad-estilos-jania` en `founderKnowledgeService.ts`.
+  3. **Blindaje de Estados de WhatsApp (status@broadcast) en Texto Limpio (Cero Pantallas Negras)**:
+     - *Causa raíz*: WhatsApp multi-device en Baileys falla al descifrar y renderizar imágenes subidas a historias por falta de transcodificación nativa y distribución incompleta de llaves Signal, produciendo pantallas negras en móviles.
+     - *Solución*: Se desistió de subir imágenes a historias; se publica el mismo gancho persuasivo de alto impacto de los grupos 2 y 3 en texto limpio con `backgroundColor: '#1B2A4A'` (azul marino corporativo VECY) y `font: 1` en `sendOptions`, ampliando `statusJidList` con todos los asesores y fundadores para garantizar descifrado universal.
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 409/409 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 31.47s ✅
+- `shared/const.ts` (`v33.54`) y `package.json` (`33.54.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.53 — Octubre 2026
 
 ### Novedades v33.53 (Verificación Exclusiva por Número de Documento Sin Nombres, Desacoplamiento de Calificación, Roles Dinámicos Cognitivos y Herramientas Interactivas del Canal):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

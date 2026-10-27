@@ -330,6 +330,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.54 — Octubre 2026
+
+#### [v33.54.0] — 2026-10-27: Guardarropa de Alta Costura, Variedad Estética, Reemplazo Integral de Galería 1:1 y Blindaje de Estados de WhatsApp
+- **Guardarropa Dinámico de Alta Costura y Variedad Estética (Doctrina Eduardo A. Rivera):**
+  - **Problema:** JanIA vestía repetitivamente el mismo traje sastre negro, causando fatiga visual y monotonía en los canales y redes.
+  - **Solución:** Incorporación de 5 estilos de alta costura ejecutiva y futurista inspirados en los diseños aportados por Eduardo A. Rivera:
+    1. *Oro Líquido & Negro Carbón Fluido (`jania_couture_oro_liquido_1x1.png`):* Para Café Inmobiliario, podcast, anfitriona y cierres.
+    2. *Degradé Púrpura / Violeta Imperial a Negro (`jania_couture_purpura_imperial_1x1.jpg`):* Para comunidad, empatía, corazón y relaciones humanas.
+    3. *Traje Sastre Blanco Marfil con Cuello Mao Bordado en Oro (`jania_couture_blanco_mao_oro_1x1.jpg`):* Para cumbre notarial, solemnidad jurídica y estudios de títulos.
+    4. *Vestido Volcánico / Magma Incandescente (`jania_couture_magma_volcanico_1x1.jpg`):* Para disrupción proptech, lanzamientos tecnológicos y primicias.
+    5. *Seda Marmoleada Verde Esmeralda & Oro Líquido (`jania_couture_esmeralda_seda_1x1.jpg`):* Para inversión inmobiliaria, biofilia, POT y avalúos.
+  - Se formalizó la directiva semilla `seed-guardarropa-alta-costura-variedad-estilos-jania` en `founderKnowledgeService.ts`, preservando inmutable su canon facial (3D Pixar/Disney, cabello estrictamente negro profundo brillante `deep glossy jet-black`, gafas translúcidas lila, aretes de diamantes y el broche oficial circular dorado de VECY).
+- **Reemplazo Integral de la Galería 1:1 y Pieza Vertical 9:16:**
+  - Se sustituyeron todas las piezas en `client/public/assets/channel_1x1/` y `client/public/assets/jania/` (`jania_legal_due_diligence_1x1.jpg`, `jania_seguridad_notarial_1x1.jpg`, `jania_avaluos_pot_1x1.jpg`, `jania_marketing_colaborativo_1x1.jpg`, `jania_anfitriona_cafe_1x1.jpg` y `jania_status_showcase_v1.jpg`) erradicando las piezas antiguas con cabello castaño o sin broche.
+- **Blindaje de Estados de WhatsApp (status@broadcast) en Texto Limpio (Cero Pantallas Negras):**
+  - **Problema:** Los estados de WhatsApp con imágenes cargadas desde Baileys salían completamente negros en teléfonos móviles debido a incompatibilidades de transcodificación y falta de distribución de llaves Signal en clientes multi-device.
+  - **Solución:** Se desistió de subir imágenes a historias de WhatsApp; se despacha exclusivamente el gancho escrito en texto limpio hacia el Canal Oficial con `backgroundColor: '#1B2A4A'` (azul marino corporativo VECY) y `font: 1` en `sendOptions`, enriqueciendo la lista `statusJidList` con todos los asesores y teléfonos fundadores autorizados para garantizar descifrado universal.
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **409/409 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 31.47s.
+
 ### 🔖 v33.53 — Octubre 2026
 
 #### [v33.53.0] — 2026-10-27: Verificación Exclusiva por Número de Documento (Sin Nombres), Desacoplamiento de Calificación, Roles Dinámicos Cognitivos y Herramientas Interactivas del Canal

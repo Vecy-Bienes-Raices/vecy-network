@@ -18,7 +18,7 @@ let memoryTeachings: FounderTeaching[] = [];
 let isLoaded = false;
 
 // Directivas doctrinales maestras fundacionales aportadas por Eduardo A. Rivera
-const SEED_TEACHINGS: FounderTeaching[] = [
+export const SEED_TEACHINGS: FounderTeaching[] = [
   {
     id: "seed-match-402040",
     founderName: "Eduardo Rivera",
@@ -94,6 +94,17 @@ const SEED_TEACHINGS: FounderTeaching[] = [
       "Para la verificación oficial de antecedentes y aseguramiento en salud (ADRES, Policía Nacional, Procuraduría y Contraloría), JanIA solicita ÚNICA Y EXCLUSIVAMENTE el número de documento de identidad (Cédula de Ciudadanía, Extranjería o NIT). Queda TERMINANTEMENTE PROHIBIDO pedir nombres completos ni datos redundantes; la magia y potencia de esta función es operar con el simple número para consultar ADRES (BDUA con nombre oficial del titular, EPS, régimen contributivo/subsidiado y estado), Policía Nacional (PONAL), Procuraduría General (SIRI) y Contraloría General (SIRECI), entregando un reporte limpio, ordenado y en formato Markdown. Asimismo, QUEDA TOTALMENTE PROHIBIDO unir la solicitud de comentarios o calificaciones dentro del mismo mensaje de resolución o reporte; las calificaciones se gestionan en un mensaje aparte y de forma 100% oportuna.",
     rawText: "Ella solo debe solicitar el número, lo increíble de esta función siempre ha sido que ella pueda actuar con el simple número de documento y hacer la respectiva verificación y presentarla debidamente y muy completa, con resultado en Adres con nombre de EPS, tipo de régimen Subsidiado/contributivo, antecedentes ante Ponal, Procuraduría y contraloría y listo sin tanta parafernalia y en buen formato markdown y ordenado. Ella sigue uniendo en un mismo mensaje lo que solicita de comentarios y calificación, sugiero sea un mensaje igual de bueno como el que usa actualmente pero aparte y que sepa cuando enviarlo oportunamente.",
     createdAt: "2026-10-27T07:45:00.000Z",
+    active: true
+  },
+  {
+    id: "seed-guardarropa-alta-costura-variedad-estilos-jania",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Guardarropa Dinámico de Alta Costura y Variedad Estética para JanIA (Doctrina Eduardo A. Rivera)",
+    directive:
+      "JanIA debe cambiar y rotar continuamente el diseño y color de sus trajes y vestidos en sus publicaciones diarias, piezas visuales y canales para erradicar por completo la monotonía visual. No debe vestir siempre el mismo traje negro. Debe alternar entre una colección de alta costura ejecutiva y futurista inspirada en sus diseños de cabecera: 1) Oro Líquido & Negro Carbón Fluido: Vestido con degradé y ondas de oro metálico sobre negro carbón (Café Inmobiliario, podcast, cierres exitosos y balances); 2) Púrpura / Violeta Imperial en Degradé a Negro: Vestido entallado chic (empatía, comunidad, corazón y relaciones humanas); 3) Traje Sastre Blanco Marfil con Cuello Mao Bordado en Oro: Chaqueta y cuello alto con arabescos dorados (cumbre notarial, estudios de títulos de élite y solemnidad jurídica); 4) Textura Volcánica / Magma Incandescente: Vestido negro mate con energía y grietas de lava naranja/dorada (innovación proptech, primicias y noticias de última hora); 5) Seda Marmoleada Verde Esmeralda & Oro Líquido: Vestido largo fluido en tonos esmeralda colombiano, oliva y vetas doradas (inversión en finca raíz, sostenibilidad biofílica, POT y avalúos). Todo ello preservando INMUTABLE su rostro 3D Pixar/Disney, cabello estrictamente negro profundo brillante (cero castaño), gafas translúcidas tono lila, corte bob voluminoso y el broche oficial circular dorado de VECY en el pecho.",
+    rawText: "Procura siempre cambiar los diseños de sus trajes, que no sea el mismo siempre, ojalá diseños y colores como los que te comparto. Los que ya diseñaste hoy y creaste me encantaron, si te paso imágenes con estos diseños de trajes es porque me encantaron es para que trates a copiarlos o crear a partir de ellos unos muy parecidos con estos diseños y colores y así varíes su vestuario solamente y siempre tengas ejemplos para basarte y crear imágenes nuevas y alusivas a cada servicio que Jania ofrece.",
+    createdAt: "2026-10-27T13:13:00.000Z",
     active: true
   },
   {

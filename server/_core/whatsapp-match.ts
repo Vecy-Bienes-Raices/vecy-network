@@ -3572,57 +3572,44 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return { success: false, error: 'Socket no conectado' };
       }
 
-      const { captionText, mediaPath, recipients } = options;
+      const { captionText, recipients } = options;
       const targetJid = 'status@broadcast';
 
-      let targetRecipients = recipients;
-      if (!targetRecipients || targetRecipients.length === 0) {
-        try {
-          const { getAllAdvisorJids } = await import('./advisors');
-          targetRecipients = getAllAdvisorJids();
-        } catch (_) { }
+      // 1. Desistir completamente de imágenes en status@broadcast (Doctrina Eduardo A. Rivera v33.54):
+      // En WhatsApp multi-device, subir imágenes a historias produce pantallas negras debido a restricciones de transcodificación
+      // y distribución de llaves de cifrado en clientes móviles. Se publica EXCLUSIVAMENTE el gancho escrito en texto limpio hacia el Canal Oficial.
+      const messagePayload = {
+        text: captionText
+      };
+
+      // 2. Construir lista exhaustiva de destinatarios autorizados para statusJidList
+      const recipientSet = new Set<string>();
+      if (Array.isArray(recipients) && recipients.length > 0) {
+        recipients.forEach(r => recipientSet.add(r));
       }
 
-      let messagePayload: any = {};
-      if (mediaPath) {
-        const fs = await import('fs');
-        if (fs.existsSync(mediaPath)) {
-          const buffer = fs.readFileSync(mediaPath);
-          const path = await import('path');
-          const ext = path.extname(mediaPath).toLowerCase();
+      try {
+        const { getAllAdvisorJids } = await import('./advisors');
+        const advisors = getAllAdvisorJids();
+        advisors.forEach(a => recipientSet.add(a));
+      } catch (_) { }
 
-          if (ext === '.mp4') {
-            messagePayload = {
-              video: buffer,
-              caption: captionText,
-              mimetype: 'video/mp4'
-            };
-          } else {
-            messagePayload = {
-              image: buffer,
-              caption: captionText,
-              mimetype: ext === '.png' ? 'image/png' : 'image/jpeg'
-            };
-          }
-        } else {
-          messagePayload = { text: captionText };
-        }
-      } else {
-        messagePayload = {
-          text: captionText,
-          backgroundColor: '#0a0a0a',
-          font: 1
-        };
-      }
+      // Incluir contactos oficiales clave para garantizar distribución de llaves Signal
+      recipientSet.add('573192919978@s.whatsapp.net'); // Eduardo Rivera (JanIA Socket)
+      recipientSet.add('573166569719@s.whatsapp.net'); // Vecy Bienes Raíces Bróker
+
+      const targetRecipients = Array.from(recipientSet);
 
       const sendOptions: any = {
-        broadcast: true
+        broadcast: true,
+        backgroundColor: '#1B2A4A', // Azul marino corporativo VECY de alto contraste y legibilidad
+        font: 1
       };
-      if (targetRecipients && targetRecipients.length > 0) {
+      if (targetRecipients.length > 0) {
         sendOptions.statusJidList = targetRecipients;
       }
 
-      console.log(`[JANIA-STATUS] 📢 Despachando Estado de WhatsApp (${mediaPath ? 'Multimedia' : 'Texto'}). Destinatarios: ${targetRecipients?.length || 0}...`);
+      console.log(`[JANIA-STATUS] 📢 Despachando Estado de WhatsApp (Texto Limpio / Cero Pantalla Negra). Destinatarios: ${targetRecipients.length}...`);
 
       const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
       if (sent && sent.key && sent.key.id) {

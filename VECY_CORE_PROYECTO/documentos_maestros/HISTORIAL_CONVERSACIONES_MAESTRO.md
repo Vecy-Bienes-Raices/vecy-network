@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.54: Guardarropa de Alta Costura, Variedad Estética, Reemplazo de Galería 1:1 y Blindaje de Estados de WhatsApp (v33.54 - 33.54.0)
+
+**Versión:** `v33.54` (`33.54.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"En qué quedamos ayer sobre las imágenes que JanIA debe hacer para las publicaciones diarias??"* (Observación de captura del canal con imagen previa de cabello castaño sin broche Vecy).
+- *"Por favor."* (Aprobación inmediata de sustituir la galería de channel_1x1 con las nuevas piezas oficiales).
+- *"Procura siempre cambiar los diseños de sus trajes, que no sea el mismo siempre, ojalá diseños y colores como los que te comparto."*
+- *"Los que ya diseñaste hoy y creaste me encantaron, si te paso imágenes con estos diseños de trajes es porque me encantaron es para que trates a copiarlos o crear a partir de ellos unos muy parecidos con estos diseños y colores y así varíes su vestuario solamente y siempre tengas ejemplos para basarte y crear imágenes nuevas y alusivas a cada servicio que Jania ofrece. Gracias"*
+- *"Te cuento que a los estados o historias de Whastsapp no estás logrando subir estas imágenes, se ven o salen en negro completamente. Si ves que puedes arreglarlo hazlo, de lo contrario desistamos e intenta solamente compartir en los estados el mismo gancho que publicas en lso grupos 2 y 3 a diario. Gracias."*
+
+**Diagnóstico Técnico Profundo:**
+1. **Publicación con Imagen Obsoleta en Canal Oficial:**
+   - *Causa raíz:* El cron matutino de las 8:45 AM tomó `jania_legal_due_diligence_1x1.jpg` de `client/public/assets/channel_1x1/`, archivo estático creado el 24 de octubre con el diseño previo (cabello castaño claro y sin broche circular oficial de Vecy en el pecho).
+2. **Pantallas Negras en Estados de WhatsApp (status@broadcast):**
+   - *Causa raíz:* En Baileys y WhatsApp multi-device, subir archivos multimedia (imágenes/videos) a `status@broadcast` falla en clientes móviles debido a que WhatsApp exige cifrado con Signal Sender Keys distribuidos a una lista estricta (`statusJidList`), y exige formatos/transcodificaciones nativos que las librerías de servidor no replican fielmente. Si la lista de destinatarios está vacía o incompleta, los dispositivos receptores no pueden descifrar el stream multimedia y muestran una pantalla negra.
+   - *Decisión doctrinal:* Desistir definitivamente de subir imágenes a `status@broadcast`, y publicar en su lugar el gancho escrito en texto limpio hacia el Canal Oficial (con formato de alto contraste, tipografía moderna y distribución exhaustiva de destinatarios).
+3. **Monotonía de Vestuario vs. Guardarropa de Alta Costura:**
+   - *Causa raíz:* JanIA solía vestirse repetitivamente con el mismo traje sastre negro corporativo. Eduardo compartió 5 diseños de alta costura que enriquecen su dinamismo visual manteniendo su canon inmutable.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Sustitución de la Galería 1:1 Maestra y Pieza Vertical 9:16:**
+  - Generadas y copiadas 5 piezas maestras 1:1 en `client/public/assets/channel_1x1/` y `client/public/assets/jania/` cumpliendo al 100% el canon visual: facciones 3D Pixar/Disney, cabello estrictamente negro profundo brillante (`deep glossy jet-black`), corte bob corto voluminoso, gafas translúcidas lila, aretes de diamantes y el broche oficial circular dorado de VECY en el pecho.
+  - Generada y copiada la pieza vertical 9:16 (`jania_status_showcase_v1.jpg`).
+- **Incorporación del Guardarropa de Alta Costura (5 Diseños Clave de Eduardo A. Rivera):**
+  - Añadidas como activos oficiales permanentes en el proyecto:
+    1. `jania_couture_oro_liquido_1x1.png`: Vestido degradé oro líquido y negro carbón fluido (Café Inmobiliario, podcast, cierres).
+    2. `jania_couture_purpura_imperial_1x1.jpg`: Vestido entallado violeta/púrpura imperial en degradé a negro (empatía, comunidad, corazón).
+    3. `jania_couture_blanco_mao_oro_1x1.jpg`: Traje sastre blanco marfil con cuello mao alto bordado en arabescos dorados (cumbre notarial, solemnidad jurídica).
+    4. `jania_couture_magma_volcanico_1x1.jpg`: Vestido negro mate con energía y grietas de magma incandescente naranja y dorado (innovación proptech, primicias).
+    5. `jania_couture_esmeralda_seda_1x1.jpg`: Vestido largo de seda marmoleada en verde esmeralda colombiano y vetas doradas (inversión en finca raíz, sostenibilidad biofílica, POT y avalúos).
+  - Añadida la directiva semilla `seed-guardarropa-alta-costura-variedad-estilos-jania` en `founderKnowledgeService.ts`.
+- **Blindaje de Estados de WhatsApp (status@broadcast) en Texto Limpio:**
+  - En `whatsapp-match.ts` (`postToWhatsAppStatus`), se suprimió la carga de archivos multimedia en historias para erradicar las pantallas negras.
+  - Se configuró el despacho de texto limpio con `backgroundColor: '#1B2A4A'` (azul marino corporativo VECY) y `font: 1` en `sendOptions`.
+  - Se blindó la lista de destinatarios (`statusJidList`) combinando `advisors`, fundadores (`573192919978`, `573166569719`) y contactos, garantizando que todos los dispositivos reciban las llaves de descifrado Signal.
+- **Suite de Regresión y Validación Exhaustiva:**
+  - Creada la Suite 140 en `server/__tests__/regression.test.ts` con 4 tests específicos.
+  - `npm test`: **409/409 passing** (100% verde a $0 COP).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio en 31.47s.
+- **Incremento de Versión:**
+  - `shared/const.ts` (`v33.54`) y `package.json` (`33.54.0`).
+
 ### 📅 [2026-10-27] — JanIA v33.53: Verificación Exclusiva por Número de Documento (Sin Nombres), Desacoplamiento de Calificación, Roles Dinámicos Cognitivos y Herramientas Interactivas del Canal (v33.53 - 33.53.0)
 
 **Versión:** `v33.53` (`33.53.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.53";
+    VECY_VERSION = "v33.54";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16411,6 +16411,16 @@ var init_founderKnowledgeService = __esm({
         active: true
       },
       {
+        id: "seed-guardarropa-alta-costura-variedad-estilos-jania",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Guardarropa Din\xE1mico de Alta Costura y Variedad Est\xE9tica para JanIA (Doctrina Eduardo A. Rivera)",
+        directive: "JanIA debe cambiar y rotar continuamente el dise\xF1o y color de sus trajes y vestidos en sus publicaciones diarias, piezas visuales y canales para erradicar por completo la monoton\xEDa visual. No debe vestir siempre el mismo traje negro. Debe alternar entre una colecci\xF3n de alta costura ejecutiva y futurista inspirada en sus dise\xF1os de cabecera: 1) Oro L\xEDquido & Negro Carb\xF3n Fluido: Vestido con degrad\xE9 y ondas de oro met\xE1lico sobre negro carb\xF3n (Caf\xE9 Inmobiliario, podcast, cierres exitosos y balances); 2) P\xFArpura / Violeta Imperial en Degrad\xE9 a Negro: Vestido entallado chic (empat\xEDa, comunidad, coraz\xF3n y relaciones humanas); 3) Traje Sastre Blanco Marfil con Cuello Mao Bordado en Oro: Chaqueta y cuello alto con arabescos dorados (cumbre notarial, estudios de t\xEDtulos de \xE9lite y solemnidad jur\xEDdica); 4) Textura Volc\xE1nica / Magma Incandescente: Vestido negro mate con energ\xEDa y grietas de lava naranja/dorada (innovaci\xF3n proptech, primicias y noticias de \xFAltima hora); 5) Seda Marmoleada Verde Esmeralda & Oro L\xEDquido: Vestido largo fluido en tonos esmeralda colombiano, oliva y vetas doradas (inversi\xF3n en finca ra\xEDz, sostenibilidad biof\xEDlica, POT y aval\xFAos). Todo ello preservando INMUTABLE su rostro 3D Pixar/Disney, cabello estrictamente negro profundo brillante (cero casta\xF1o), gafas transl\xFAcidas tono lila, corte bob voluminoso y el broche oficial circular dorado de VECY en el pecho.",
+        rawText: "Procura siempre cambiar los dise\xF1os de sus trajes, que no sea el mismo siempre, ojal\xE1 dise\xF1os y colores como los que te comparto. Los que ya dise\xF1aste hoy y creaste me encantaron, si te paso im\xE1genes con estos dise\xF1os de trajes es porque me encantaron es para que trates a copiarlos o crear a partir de ellos unos muy parecidos con estos dise\xF1os y colores y as\xED var\xEDes su vestuario solamente y siempre tengas ejemplos para basarte y crear im\xE1genes nuevas y alusivas a cada servicio que Jania ofrece.",
+        createdAt: "2026-10-27T13:13:00.000Z",
+        active: true
+      },
+      {
         id: "seed-fuente-inventario-emojis",
         founderName: "Eduardo Rivera",
         phoneOrJid: "+573192919978",
@@ -25274,53 +25284,34 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             console.warn("[JANIA-STATUS] \u{1F6D1} Socket de WhatsApp no listo para publicar estado.");
             return { success: false, error: "Socket no conectado" };
           }
-          const { captionText, mediaPath, recipients } = options;
+          const { captionText, recipients } = options;
           const targetJid = "status@broadcast";
-          let targetRecipients = recipients;
-          if (!targetRecipients || targetRecipients.length === 0) {
-            try {
-              const { getAllAdvisorJids: getAllAdvisorJids2 } = await Promise.resolve().then(() => (init_advisors(), advisors_exports));
-              targetRecipients = getAllAdvisorJids2();
-            } catch (_) {
-            }
-          }
-          let messagePayload = {};
-          if (mediaPath) {
-            const fs15 = await import("fs");
-            if (fs15.existsSync(mediaPath)) {
-              const buffer = fs15.readFileSync(mediaPath);
-              const path16 = await import("path");
-              const ext = path16.extname(mediaPath).toLowerCase();
-              if (ext === ".mp4") {
-                messagePayload = {
-                  video: buffer,
-                  caption: captionText,
-                  mimetype: "video/mp4"
-                };
-              } else {
-                messagePayload = {
-                  image: buffer,
-                  caption: captionText,
-                  mimetype: ext === ".png" ? "image/png" : "image/jpeg"
-                };
-              }
-            } else {
-              messagePayload = { text: captionText };
-            }
-          } else {
-            messagePayload = {
-              text: captionText,
-              backgroundColor: "#0a0a0a",
-              font: 1
-            };
-          }
-          const sendOptions = {
-            broadcast: true
+          const messagePayload = {
+            text: captionText
           };
-          if (targetRecipients && targetRecipients.length > 0) {
+          const recipientSet = /* @__PURE__ */ new Set();
+          if (Array.isArray(recipients) && recipients.length > 0) {
+            recipients.forEach((r) => recipientSet.add(r));
+          }
+          try {
+            const { getAllAdvisorJids: getAllAdvisorJids2 } = await Promise.resolve().then(() => (init_advisors(), advisors_exports));
+            const advisors2 = getAllAdvisorJids2();
+            advisors2.forEach((a) => recipientSet.add(a));
+          } catch (_) {
+          }
+          recipientSet.add("573192919978@s.whatsapp.net");
+          recipientSet.add("573166569719@s.whatsapp.net");
+          const targetRecipients = Array.from(recipientSet);
+          const sendOptions = {
+            broadcast: true,
+            backgroundColor: "#1B2A4A",
+            // Azul marino corporativo VECY de alto contraste y legibilidad
+            font: 1
+          };
+          if (targetRecipients.length > 0) {
             sendOptions.statusJidList = targetRecipients;
           }
-          console.log(`[JANIA-STATUS] \u{1F4E2} Despachando Estado de WhatsApp (${mediaPath ? "Multimedia" : "Texto"}). Destinatarios: ${targetRecipients?.length || 0}...`);
+          console.log(`[JANIA-STATUS] \u{1F4E2} Despachando Estado de WhatsApp (Texto Limpio / Cero Pantalla Negra). Destinatarios: ${targetRecipients.length}...`);
           const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
           if (sent && sent.key && sent.key.id) {
             this.botSentMessageIds.add(sent.key.id);
