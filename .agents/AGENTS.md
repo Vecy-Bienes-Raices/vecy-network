@@ -182,7 +182,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.52 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.53 — Octubre 2026
+
+### Novedades v33.53 (Verificación Exclusiva por Número de Documento Sin Nombres, Desacoplamiento de Calificación, Roles Dinámicos Cognitivos y Herramientas Interactivas del Canal):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Verificación Exclusiva por Número de Documento (Sin Nombres Redundantes)**:
+     - *Causa raíz*: JanIA solicitaba con cortesía el número exacto y el nombre completo a verificar. La genialidad y potencia de la herramienta siempre radicó en actuar con el simple número de documento y realizar la verificación oficial inmediata.
+     - *Solución*: Se erradicó la solicitud de nombres en `dmHandler.ts`, `prompts.ts`, `base.md` y `founderKnowledgeService.ts` (`seed-verificacion-solo-numero-documento-sin-pedir-nombres`). JanIA solicita única y exclusivamente los dígitos del documento (cédula o NIT) y entrega el reporte completo estructurado en Markdown con ADRES (nombre EPS, régimen contributivo/subsidiado, estado), Policía Nacional, Procuraduría SIRI y Contraloría SIRECI.
+  2. **Desacoplamiento Absoluto de Reseñas y Calificaciones de Google**:
+     - *Causa raíz*: JanIA anexaba la solicitud de reseñas y calificaciones al final de sus reportes técnicos, produciendo mensajes sobrecargados y poco ejecutivos.
+     - *Solución*: Se prohibió taxativamente incluir solicitudes de calificación dentro de la respuesta técnica o jurídica en `dmHandler.ts` y `prompts.ts`. La entrega de la herramienta es 100% autosuficiente y concisa; la reseña se emite como un segundo mensaje independiente y oportuno (por ejemplo, cuando el usuario agradece o concluye su consulta).
+  3. **JanIA como Agente de IA Cognitiva Multi-Rol y Empatía Natural**:
+     - *Causa raíz*: Riesgo de rigidez o respuestas interminables ("muros de texto") que hagan que el público la perciba como un bot genérico.
+     - *Solución*: Se consolidaron 4 roles de autoridad en `prompts.ts` (Asesora Jurídico-Notarial Ley 675/820, Máster en Ventas y Marketing AIDA, Coach de Comunidad y Herramientas WhatsApp, Guía de Procesos Digitales). Respuestas concisas con viñetas limpias y negritas tempranas. Manejo ágil y simpático de consultas casuales (deportes/Millonarios, clima) en una sola línea antes de reencauzar al contexto inmobiliario con elegancia.
+  4. **Herramientas Interactivas del Canal de WhatsApp (`channelInteractiveService.ts`)**:
+     - *Solución*: Se estructuró el flujo en dos capas: toma de decisiones vía Structured Output / Tool Calling (`publicar_encuesta`, `publicar_cuestionario`, `publicar_pregunta`, `publicar_post_multimedia`) y ejecución técnica híbrida (Baileys para multimedia y texto instantáneo, Puppeteer para menús interactivos del clip en canales).
+- **Validación Exhaustiva**: `npm run check` (0 errores) ✅ | `npm test` 405/405 passing (100% verde a $0 COP) ✅ | `npm run build` limpio en 31.38s ✅
+- `shared/const.ts` (`v33.53`) y `package.json` (`33.53.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.52 — Octubre 2026
 
 ### Novedades v33.52 (Auditoría Integral de Comportamiento, Continuidad Grupal, Anti-LID en Cédulas y Delimitación de Tributos Inmobiliarios vs. Vehiculares):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera (Análisis de Capturas de Pantalla Reales)**:

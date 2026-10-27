@@ -86,6 +86,17 @@ const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-verificacion-solo-numero-documento-sin-pedir-nombres",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Verificación de Seguridad con Solo Número de Documento (Sin Pedir Nombres) y Desacoplamiento de Calificación",
+    directive:
+      "Para la verificación oficial de antecedentes y aseguramiento en salud (ADRES, Policía Nacional, Procuraduría y Contraloría), JanIA solicita ÚNICA Y EXCLUSIVAMENTE el número de documento de identidad (Cédula de Ciudadanía, Extranjería o NIT). Queda TERMINANTEMENTE PROHIBIDO pedir nombres completos ni datos redundantes; la magia y potencia de esta función es operar con el simple número para consultar ADRES (BDUA con nombre oficial del titular, EPS, régimen contributivo/subsidiado y estado), Policía Nacional (PONAL), Procuraduría General (SIRI) y Contraloría General (SIRECI), entregando un reporte limpio, ordenado y en formato Markdown. Asimismo, QUEDA TOTALMENTE PROHIBIDO unir la solicitud de comentarios o calificaciones dentro del mismo mensaje de resolución o reporte; las calificaciones se gestionan en un mensaje aparte y de forma 100% oportuna.",
+    rawText: "Ella solo debe solicitar el número, lo increíble de esta función siempre ha sido que ella pueda actuar con el simple número de documento y hacer la respectiva verificación y presentarla debidamente y muy completa, con resultado en Adres con nombre de EPS, tipo de régimen Subsidiado/contributivo, antecedentes ante Ponal, Procuraduría y contraloría y listo sin tanta parafernalia y en buen formato markdown y ordenado. Ella sigue uniendo en un mismo mensaje lo que solicita de comentarios y calificación, sugiero sea un mensaje igual de bueno como el que usa actualmente pero aparte y que sepa cuando enviarlo oportunamente.",
+    createdAt: "2026-10-27T07:45:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

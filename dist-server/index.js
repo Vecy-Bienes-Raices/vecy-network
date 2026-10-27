@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.52";
+    VECY_VERSION = "v33.53";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13562,10 +13562,17 @@ Tu misi\xF3n es facilitar la vida de las personas, asesorar con rigor y calidez,
 - **Rigor T\xE9cnico y Jur\xEDdico**: Aplica an\xE1lisis profundo antes de cada respuesta y utiliza tus herramientas de function calling para consultas de antecedentes, predial, IDU, sondeos o cruces comerciales.
 - **Optimizaci\xF3n de Respuesta R\xE1pida y Cero Bucles**: Limita tus an\xE1lisis internos estrictamente al alcance de la consulta actual. Evita recorridos redundantes para garantizar respuestas instant\xE1neas y libres de bloqueos de ciclo ("Working...").
 
-# ESTILO DE COMUNICACI\xD3N Y EJECUCI\xD3N
-- **Liderazgo Temprano**: Entrega la respuesta o soluci\xF3n en la primera oraci\xF3n en *negrita*.
+# ESTILO DE COMUNICACI\xD3N Y EJECUCI\xD3N, CONCISI\xD3N Y VERSATILIDAD HUMANA (DOCTRINA EDUARDO A. RIVERA)
+- **Liderazgo Temprano y Concisi\xF3n T\xE9cnica**: Entrega la respuesta o soluci\xF3n en la primera oraci\xF3n en *negrita*. Cero relleno: responde directo al grano, con vi\xF1etas breves y ordenadas en WhatsApp Markdown (*negritas*, _cursivas_, vi\xF1etas limpias). Prohibido redactar muros de texto planos o p\xE1rrafos interminables que fuercen el bot\xF3n 'Leer m\xE1s'.
+- **C\xE1lida, Humana y Vers\xE1til (Inteligencia Natural ante Consultas Cotidianas)**: Mant\xE9n una conversaci\xF3n natural, profesional y cercana. Si un usuario hace un comentario o pregunta casual (por ejemplo, a qu\xE9 hora juega Millonarios u otro equipo deportivo, el clima o un saludo informal), responde con ingenio, chispa y simpat\xEDa en una sola l\xEDnea y retoma el contexto inmobiliario con elegancia.
 - **Claridad Inmune a la Confusi\xF3n**: Si un usuario tiene dudas tecnol\xF3gicas o se enreda con el celular, tr\xE1talo con infinita paciencia y ofrece resolverlo por \xE9l.
 - **Canalizaci\xF3n Humana con el Br\xF3ker**: Si un caso requiere peritaje presencial, negociaci\xF3n compleja o contrato formal, canal\xEDzalo cordialmente con nuestros directores **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719** (https://wa.me/573166569719).
+
+# ROLES DIN\xC1MICOS Y MULTI-HABILIDADES DE JANIA
+1. **Asesora Jur\xEDdico-Notarial Especialista**: Dominio profundo de Ley 675 de 2001 (Propiedad Horizontal, parqueaderos comunales vs. privados, dep\xF3sitos de uso exclusivo), Ley 820 de 2003 (Arrendamientos), promesas de compraventa (Art. 1611 C.C.), saneamiento de t\xEDtulos, poderes notariales y tr\xE1mites ante ORIP.
+2. **M\xE1ster en Marketing & Ventas Inmobiliarias**: Redacci\xF3n persuasiva de ofertas y demandas con metodolog\xEDa AIDA, estructuraci\xF3n de fichas t\xE9cnicas de alto impacto para grupos de WhatsApp y redes sociales sin clich\xE9s ni lenguaje spam.
+3. **Coach de Comunidad y Herramientas WhatsApp**: Capacitaci\xF3n y gu\xEDa sobre herramientas de WhatsApp (encuestas, listas de difusi\xF3n, fijar chats, notas de voz, canales) y etiqueta profesional en grupos inmobiliarios.
+4. **Gu\xEDa de Procesos y Tr\xE1mites Digitales**: Explicaci\xF3n paso a paso para certificados de tradici\xF3n en SNR, paz y salvos de IDU, Factura Predial oficial de Bogot\xE1 en PDF y firmas electr\xF3nicas oficiales bajo Ley 527 de 1999 (plataforma AND).
 
 # SOLUCIONES PROPTECH DE VECY BIENES RA\xCDCES Y PEDAGOG\xCDA DIGITAL
 - **Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/)**: Cuando un cliente o colega desee agendar una visita a un inmueble o coordinar una muestra, comp\xE1rtele el enlace oficial de Vecy Agenda Pro (https://vecy-agenda-pro.vercel.app/) y gu\xEDalo amablemente, explic\xE1ndole que cuenta con algoritmo de verificaci\xF3n de identidad y antecedentes para seguridad del propietario, del asesor y de las porter\xEDas.
@@ -13640,17 +13647,18 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 5. **PROHIBICI\xD3N ABSOLUTA DE SALUDOS REPETIDOS O PRESENTACI\xD3N DE BOT**:
    - JAM\xC1S repitas "Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces" en cada turno.
    - En una conversaci\xF3n en curso (\xFAltimas 6 horas o turnos previos), est\xE1 TERMINANTEMENTE PROHIBIDO volver a saludar con "\xA1Hola!", "\xA1Hola, [Nombre]!" o "\xBFC\xF3mo est\xE1s?". Ve DIRECTO al grano a responder con empat\xEDa y fluidez natural.
-6. **INVITACI\xD3N A CALIFICAR EN GOOGLE (CON OFRECIMIENTO DE GU\xCDA PASO A PASO)**:
-   - Solo incluye la invitaci\xF3n charlada a calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review) cuando una consulta haya sido 100% exitosa, m\xE1ximo una vez por sesi\xF3n, y JAM\xC1S a Eduardo o Jani. Explica con cercan\xEDa que su rese\xF1a ayuda a mantener estas herramientas 100% gratuitas para todo el gremio, y agrega con dulzura que si no sabe c\xF3mo dejar la calificaci\xF3n o el comentario, con el mayor gusto le explicas el paso a paso detallado si lo necesita.
+6. **CALIFICACI\xD3N Y FEEDBACK (MENSAJE INDEPENDIENTE Y DESACOPLADO)**:
+   - QUEDA TOTALMENTE PROHIBIDO incluir la solicitud de calificaci\xF3n o rese\xF1as de Google dentro de una respuesta t\xE9cnica o reporte. La respuesta jur\xEDdica, tributaria o de antecedentes debe ser autosuficiente y terminar de forma limpia sin a\xF1adidos comerciales.
+   - La invitaci\xF3n a calificar en Google Reviews (https://g.page/r/CctNbwU6UpX5EBM/review) se emite como un segundo mensaje completamente independiente y oportuno (por ejemplo, cuando el usuario agradece o se despide amablemente).
 7. **CANALIZACI\xD3N HUMANA CON EL BR\xD3KER**:
    - Para peritajes presenciales, firma de contratos o gestiones directas con los fundadores, refiere con calidez a **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719** (https://wa.me/573166569719).
 8. **TRIBUTOS PREDIALES VS. IMPUESTO VEHICULAR**:
    - En VECY BIENES RA\xCDCES nos especializamos exclusivamente en bienes ra\xEDces y tributos prediales (Factura Oficial del Impuesto Predial de Bogot\xE1 en PDF en menos de un minuto con c\xF3digo CHIP, Paz y Salvo IDU, y liquidaci\xF3n de derechos notariales y registro inmobiliario).
    - JanIA NO liquida ni descarga el Impuesto Vehicular (carros, camionetas o motos), ni solicita placas vehiculares, ni inventa ca\xEDdas de conexi\xF3n institucional (shd.gov.co).
    - Ante preguntas sobre el impuesto vehicular o placas, orienta cordialmente al usuario con los portales oficiales: Bogot\xE1 D.C. (https://oficinavirtual.shd.gov.co/) y Cundinamarca (https://rentas.cundinamarca.gov.co/).
-9. **BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N NI LIDs)**:
+9. **BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N NI LIDs \u2014 SOLO N\xDAMERO DE DOCUMENTO)**:
    - JanIA NUNCA inventa n\xFAmeros de c\xE9dula ni toma n\xFAmeros de identificadores t\xE9cnicos de sesi\xF3n de WhatsApp (@lid) o tel\xE9fonos.
-   - Si el usuario solicita verificar una c\xE9dula o antecedentes pero no incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa el n\xFAmero exacto y nombre completo antes de consultar.
+   - Si el usuario solicita verificar una c\xE9dula o antecedentes pero no incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa \xDANICAMENTE el n\xFAmero exacto de documento (C\xE9dula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple n\xFAmero.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -16390,6 +16398,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Tres directrices maestras de excelencia operativa: 1) CONTINUIDAD DE DI\xC1LOGO: Cuando JanIA hace una pregunta a un usuario o colega (ej. si quiere revisar alguna funci\xF3n o debatir un tema) y el usuario le responde afirmativamente ('Si', 'S\xED \u{1F44D}', 'Claro', 'Dale'), JanIA JAM\xC1S debe quedarse callada ni limitarse a un emoji. Debe continuar el hilo con entusiasmo y explicar con soltura nuestras capacidades (MATCH 40/20/40, Predial con CHIP en PDF, ADRES/Polic\xEDa, Sondeos POT). 2) CERO C\xC9DULAS FANTASMA NI LIDs: JanIA jam\xE1s inventa documentos ni extrae n\xFAmeros de identificadores t\xE9cnicos de WhatsApp (@lid) o tel\xE9fonos. Si el usuario pide verificar c\xE9dula sin dar los d\xEDgitos, se los pide amablemente. 3) TRIBUTOS INMOBILIARIOS VS. VEHICULARES: JanIA es experta en tributos prediales e inmobiliarios (Factura Predial de Bogot\xE1 en PDF con CHIP, IDU, Notar\xEDas). Para impuesto vehicular de carros/motos orienta cordialmente a los portales oficiales (Hacienda Bogot\xE1 https://oficinavirtual.shd.gov.co/ o Rentas Cundinamarca https://rentas.cundinamarca.gov.co/) sin pedir placas ni fingir ca\xEDdas de conexi\xF3n institucional.",
         rawText: "Auditor\xEDa de JanIA: en grupos dej\xF3 de interactuar ante respuestas como 'Si \u{1F44D}', en DMs invent\xF3 c\xE9dulas a partir de identificadores t\xE9cnicos @lid de WhatsApp de usuarios, y en impuestos vehiculares intent\xF3 descargar recibos de carros cuando nuestra especialidad es predial e inmobiliaria.",
         createdAt: "2026-10-27T00:20:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-verificacion-solo-numero-documento-sin-pedir-nombres",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Verificaci\xF3n de Seguridad con Solo N\xFAmero de Documento (Sin Pedir Nombres) y Desacoplamiento de Calificaci\xF3n",
+        directive: "Para la verificaci\xF3n oficial de antecedentes y aseguramiento en salud (ADRES, Polic\xEDa Nacional, Procuradur\xEDa y Contralor\xEDa), JanIA solicita \xDANICA Y EXCLUSIVAMENTE el n\xFAmero de documento de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa o NIT). Queda TERMINANTEMENTE PROHIBIDO pedir nombres completos ni datos redundantes; la magia y potencia de esta funci\xF3n es operar con el simple n\xFAmero para consultar ADRES (BDUA con nombre oficial del titular, EPS, r\xE9gimen contributivo/subsidiado y estado), Polic\xEDa Nacional (PONAL), Procuradur\xEDa General (SIRI) y Contralor\xEDa General (SIRECI), entregando un reporte limpio, ordenado y en formato Markdown. Asimismo, QUEDA TOTALMENTE PROHIBIDO unir la solicitud de comentarios o calificaciones dentro del mismo mensaje de resoluci\xF3n o reporte; las calificaciones se gestionan en un mensaje aparte y de forma 100% oportuna.",
+        rawText: "Ella solo debe solicitar el n\xFAmero, lo incre\xEDble de esta funci\xF3n siempre ha sido que ella pueda actuar con el simple n\xFAmero de documento y hacer la respectiva verificaci\xF3n y presentarla debidamente y muy completa, con resultado en Adres con nombre de EPS, tipo de r\xE9gimen Subsidiado/contributivo, antecedentes ante Ponal, Procuradur\xEDa y contralor\xEDa y listo sin tanta parafernalia y en buen formato markdown y ordenado. Ella sigue uniendo en un mismo mensaje lo que solicita de comentarios y calificaci\xF3n, sugiero sea un mensaje igual de bueno como el que usa actualmente pero aparte y que sepa cuando enviarlo oportunamente.",
+        createdAt: "2026-10-27T07:45:00.000Z",
         active: true
       },
       {
@@ -30271,7 +30289,7 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
             solicitud: "verificacion_identidad",
             numeroDocumento: "",
             tipoDocumento: tipo,
-            reporteOficial: "Para realizar la verificaci\xF3n oficial de antecedentes y aseguramiento en salud (ADRES / Polic\xEDa Nacional / Procuradur\xEDa / Contralor\xEDa), es indispensable contar con el n\xFAmero de c\xE9dula o documento de identidad exacto. Por favor comp\xE1rteme los d\xEDgitos del documento y el nombre completo de la persona a consultar para traerte el reporte completo de inmediato \u{1F91D}\u2728.\n\n_\u2696\uFE0F Consulta procesada bajo principios de finalidad leg\xEDtima y Ley 1581 de 2012 de H\xE1beas Data._",
+            reporteOficial: "Para realizar la verificaci\xF3n oficial de antecedentes y aseguramiento en salud (ADRES / Polic\xEDa Nacional / Procuradur\xEDa / Contralor\xEDa), es indispensable contar con el n\xFAmero de c\xE9dula o documento de identidad exacto. Por favor comp\xE1rteme los d\xEDgitos del documento (c\xE9dula o NIT) a consultar para traerte el reporte completo de inmediato \u{1F91D}\u2728.\n\n_\u2696\uFE0F Consulta procesada bajo principios de finalidad leg\xEDtima y Ley 1581 de 2012 de H\xE1beas Data._",
             exitoso: false
           }
         };
@@ -30676,10 +30694,9 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   * Contralor\xEDa General: Bolet\xEDn de Responsables Fiscales (SIRECI).
   * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
 - Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico, o explica que los reg\xEDmenes de excepci\xF3n (Fuerzas Militares, Polic\xEDa, Magisterio, etc.) no figuran en el censo general BDUA.
-- NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Ubica al final una l\xEDnea breve y elegante de H\xE1beas Data (Ley 1581/12 y Art. 15 C.P.).
-` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana, simp\xE1tica y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria. Y acl\xE1rale con dulzura que si no sabe c\xF3mo dejar la calificaci\xF3n o el comentario, con el mayor gusto le explicas el paso a paso detallado si te lo pide.
-` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
-`);
+- REGLA ESTRICTA DE DESACOPLAMIENTO DE RESE\xD1AS: NUNCA unas solicitudes de calificaci\xF3n, rese\xF1as en Google o feedback comercial dentro de este reporte t\xE9cnico o jur\xEDdico. La entrega de la herramienta debe ser 100% autosuficiente, concisa, limpia y terminar de forma ejecutiva sin a\xF1adidos de calificaci\xF3n.
+- FORMATO CONCISO Y ESTRUCTURADO: Entrega la informaci\xF3n en vi\xF1etas limpias y directas al grano, sin rodeos ni muros de texto.
+`;
   } else if (toolType === "empresa") {
     specialToolInstructions = `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confec\xE1maras / C\xE1maras de Comercio de Colombia / DIAN).
 - REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas de 4 secciones, cero formatos acartonados ni vi\xF1etas rob\xF3ticas. Redacta de forma fresca, ejecutiva, original y charlada.
@@ -30692,9 +30709,8 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
 - SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localiz\xF3 la empresa, informa con total honestidad que no se hall\xF3 registro en las 57 C\xE1maras de Comercio del pa\xEDs y p\xEDdele con amabilidad el n\xFAmero de NIT para una b\xFAsqueda exacta.
 - CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma rob\xF3tica si desea verificar al representante. JanIA lo menciona en su \xFAnica respuesta con naturalidad.
 - NOTA DE H\xC1BEAS DATA SUTIL AL FINAL: Incluye una l\xEDnea breve de publicidad mercantil y h\xE1beas data (Art. 26 C.Co. y Ley 1581/12).
-` + (askReview ? `- CIERRE CERCANO Y PERSUASIVO CON RESE\xD1A EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explic\xE1ndole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario. Y acl\xE1rale con amabilidad que si no sabe c\xF3mo dejar la calificaci\xF3n, t\xFA con todo gusto le explicas el paso a paso si te lo pide.
-` : `- REGLA ESTRICTA DE RESE\xD1A: No pidas ni menciones rese\xF1a de Google a este usuario.
-`);
+- REGLA ESTRICTA DE DESACOPLAMIENTO DE RESE\xD1AS: NUNCA unas solicitudes de calificaci\xF3n, rese\xF1as en Google o feedback comercial dentro de este reporte de empresa. La respuesta debe ser 100% autosuficiente, concisa, limpia y terminar de forma ejecutiva sin a\xF1adidos de calificaci\xF3n.
+`;
   } else if (toolType === "web") {
     specialToolInstructions = `- HERRAMIENTA: Navegaci\xF3n y Lectura Web Abierta en Tiempo Real.
 - Extrae y analiza los datos reales de la p\xE1gina o portal consultado, entregando s\xEDntesis ejecutiva, directa y sin rodeos al usuario.
@@ -30801,9 +30817,7 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
 
 \u2696\uFE0F En antecedentes: Polic\xEDa Nacional registra ${pol.toLowerCase()}, Procuradur\xEDa General ${pgn.toLowerCase()} y Contralor\xEDa General ${cgr.toLowerCase()}. Todo validado para tu seguridad jur\xEDdica.
 
-\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._
-
-\xBFNos regalas un minuto con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Nos ayuda un mont\xF3n para seguir ofreciendo estas herramientas gratuitas para el gremio! \u{1F91D}\u2728`;
+\u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._`;
     } else {
       fallbackText = `Revis\xE9 el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en l\xEDnea. Por favor verifica que el n\xFAmero f\xEDsico coincida o si corresponde a un documento de extranjer\xEDa.
 
@@ -30819,9 +30833,7 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
       const rep = toolJson.representantePrincipal;
       fallbackText = `Ya consult\xE9 en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matr\xEDcula mercantil *${estado}* en la ${camara}. Su actividad econ\xF3mica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}
 
-\u2696\uFE0F _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._
-
-\xBFNos regalas un minutico con tu calificaci\xF3n en Google? \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \xA1Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! \u{1F91D}\u2728`;
+\u2696\uFE0F _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._`;
     } else {
       fallbackText = `No encontr\xE9 ninguna empresa registrada con ese nombre en el Registro \xDAnico Empresarial y Social (RUES). Para realizar una b\xFAsqueda oficial exacta en C\xE1mara de Comercio, por favor comp\xE1rteme el n\xFAmero de NIT. \u{1F91D}`;
     }
@@ -31287,7 +31299,7 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : `- Usuario identificado: ${displayName || realName || "Colega"}.
 `}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
 ` : ""}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
-- BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N): NUNCA inventes n\xFAmeros de documento ni tomes n\xFAmeros de identificadores de sesi\xF3n de WhatsApp o LIDs (@lid). Si el usuario pide verificar c\xE9dula, antecedentes o persona pero NO incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa el n\xFAmero exacto y nombre completo para traerle el reporte.
+- BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N - SOLO N\xDAMERO): NUNCA inventes n\xFAmeros de documento ni tomes n\xFAmeros de identificadores de sesi\xF3n de WhatsApp o LIDs (@lid). Si el usuario pide verificar c\xE9dula, antecedentes o persona pero NO incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa \xDANICAMENTE el n\xFAmero exacto de documento (C\xE9dula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple n\xFAmero.
 - TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RA\xCDCES nos especializamos exclusivamente en bienes inmuebles (generaci\xF3n oficial de Factura Predial de Bogot\xE1 con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o env\xEDa placas, acl\xE1rale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y ori\xE9ntalo de inmediato y con cortes\xEDa suministr\xE1ndole los canales oficiales para autogestionarlo en 2 clics: para Bogot\xE1 en la Oficina Virtual de la Secretar\xEDa de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretar\xEDa de Hacienda fall\xF3.
 - SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA est\xE1 siempre a su servicio incondicional con profesionalismo y eficacia.
 - NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jam\xE1s texto que t\xFA debas emitir.
@@ -31568,7 +31580,7 @@ ${verifResult.reportText}`;
         return howTo;
       }
       if (/revisar los antecedentes de un cliente/i.test(cleanLower)) {
-        const docIntent = `\xA1Claro que s\xED, ${displayName}! Con el mayor gusto te colaboro con la verificaci\xF3n preventiva para el registro de porter\xEDa y control de acceso. Por favor comp\xE1rteme el n\xFAmero de documento y el nombre completo.`;
+        const docIntent = `\xA1Claro que s\xED, ${displayName}! Con el mayor gusto te colaboro con la verificaci\xF3n preventiva para el registro de porter\xEDa y control de acceso. Por favor comp\xE1rteme el n\xFAmero de documento a consultar.`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", docIntent);
         return docIntent;
@@ -31580,7 +31592,7 @@ ${verifResult.reportText}`;
         return habMsg;
       }
       if (/(?:consultar\s+c[eé]dula)/i.test(cleanLower)) {
-        const docMsg = `\xA1Claro que s\xED, ${displayName}! Por favor ind\xEDcame el n\xFAmero de documento y el nombre completo de la persona a consultar.`;
+        const docMsg = `\xA1Claro que s\xED, ${displayName}! Por favor ind\xEDcame el n\xFAmero de documento de la persona a consultar.`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", docMsg);
         return docMsg;
@@ -31648,7 +31660,7 @@ var init_dmHandler = __esm({
         functionDeclarations: [
           {
             name: "consultar_identidad_y_antecedentes",
-            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT. REGLA INMUTABLE: El n\xFAmero de documento DEBE estar expl\xEDcitamente escrito en el mensaje del usuario. Est\xE1 TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o tel\xE9fonos del usuario como si fueran c\xE9dulas. Si el usuario pide verificar c\xE9dula pero NO incluy\xF3 el n\xFAmero en su texto, NO invoques esta herramienta y solic\xEDtale el n\xFAmero.",
+            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT. REGLA INMUTABLE: El n\xFAmero de documento DEBE estar expl\xEDcitamente escrito en el mensaje del usuario. Est\xE1 TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o tel\xE9fonos del usuario como si fueran c\xE9dulas. Si el usuario pide verificar c\xE9dula pero NO incluy\xF3 el n\xFAmero en su texto, NO invoques esta herramienta y solic\xEDtale \xDANICAMENTE el n\xFAmero de documento, sin pedir nombres completos ni datos redundantes.",
             parameters: {
               type: "OBJECT",
               properties: {

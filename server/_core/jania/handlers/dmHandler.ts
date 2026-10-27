@@ -90,7 +90,7 @@ export const JANIA_DM_TOOLS = [
     functionDeclarations: [
       {
         name: "consultar_identidad_y_antecedentes",
-        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT. REGLA INMUTABLE: El número de documento DEBE estar explícitamente escrito en el mensaje del usuario. Está TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o teléfonos del usuario como si fueran cédulas. Si el usuario pide verificar cédula pero NO incluyó el número en su texto, NO invoques esta herramienta y solicítale el número.",
+        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT. REGLA INMUTABLE: El número de documento DEBE estar explícitamente escrito en el mensaje del usuario. Está TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o teléfonos del usuario como si fueran cédulas. Si el usuario pide verificar cédula pero NO incluyó el número en su texto, NO invoques esta herramienta y solicítale ÚNICAMENTE el número de documento, sin pedir nombres completos ni datos redundantes.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -488,7 +488,7 @@ export async function executeJaniaDmTool(
             solicitud: "verificacion_identidad",
             numeroDocumento: "",
             tipoDocumento: tipo,
-            reporteOficial: "Para realizar la verificación oficial de antecedentes y aseguramiento en salud (ADRES / Policía Nacional / Procuraduría / Contraloría), es indispensable contar con el número de cédula o documento de identidad exacto. Por favor compárteme los dígitos del documento y el nombre completo de la persona a consultar para traerte el reporte completo de inmediato 🤝✨.\n\n_⚖️ Consulta procesada bajo principios de finalidad legítima y Ley 1581 de 2012 de Hábeas Data._",
+            reporteOficial: "Para realizar la verificación oficial de antecedentes y aseguramiento en salud (ADRES / Policía Nacional / Procuraduría / Contraloría), es indispensable contar con el número de cédula o documento de identidad exacto. Por favor compárteme los dígitos del documento (cédula o NIT) a consultar para traerte el reporte completo de inmediato 🤝✨.\n\n_⚖️ Consulta procesada bajo principios de finalidad legítima y Ley 1581 de 2012 de Hábeas Data._",
             exitoso: false
           }
         };
@@ -944,10 +944,8 @@ export async function synthesizeToolResponseWithGemini(
       `  * Contraloría General: Boletín de Responsables Fiscales (SIRECI).\n` +
       `  * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y régimen.\n` +
       `- Si el documento no aparece indexado en las bases censales en línea, indícalo con honestidad y claridad para que verifique el número físico, o explica que los regímenes de excepción (Fuerzas Militares, Policía, Magisterio, etc.) no figuran en el censo general BDUA.\n` +
-      `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Ubica al final una línea breve y elegante de Hábeas Data (Ley 1581/12 y Art. 15 C.P.).\n` +
-      (askReview
-        ? `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana, simpática y persuasiva invitando a calificarnos y dejarnos un lindo comentario en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener todas estas herramientas 100% gratuitas para el gremio y la comunidad inmobiliaria. Y aclárale con dulzura que si no sabe cómo dejar la calificación o el comentario, con el mayor gusto le explicas el paso a paso detallado si te lo pide.\n`
-        : `- REGLA ESTRICTA DE RESEÑA: No pidas ni menciones reseña de Google a este usuario.\n`);
+      `- REGLA ESTRICTA DE DESACOPLAMIENTO DE RESEÑAS: NUNCA unas solicitudes de calificación, reseñas en Google o feedback comercial dentro de este reporte técnico o jurídico. La entrega de la herramienta debe ser 100% autosuficiente, concisa, limpia y terminar de forma ejecutiva sin añadidos de calificación.\n` +
+      `- FORMATO CONCISO Y ESTRUCTURADO: Entrega la información en viñetas limpias y directas al grano, sin rodeos ni muros de texto.\n`;
   } else if (toolType === "empresa") {
     specialToolInstructions =
       `- HERRAMIENTA: Consulta Empresarial Oficial RUES (Confecámaras / Cámaras de Comercio de Colombia / DIAN).\n` +
@@ -961,9 +959,7 @@ export async function synthesizeToolResponseWithGemini(
       `- SI LA EMPRESA NO FUE ENCONTRADA: Si el resultado indica que no se localizó la empresa, informa con total honestidad que no se halló registro en las 57 Cámaras de Comercio del país y pídele con amabilidad el número de NIT para una búsqueda exacta.\n` +
       `- CERO SEGUNDO MENSAJE FORZADO: NO encoles ni repreguntes de forma robótica si desea verificar al representante. JanIA lo menciona en su única respuesta con naturalidad.\n` +
       `- NOTA DE HÁBEAS DATA SUTIL AL FINAL: Incluye una línea breve de publicidad mercantil y hábeas data (Art. 26 C.Co. y Ley 1581/12).\n` +
-      (askReview
-        ? `- CIERRE CERCANO Y PERSUASIVO CON RESEÑA EN GOOGLE: Cierra de forma muy charlada, cercana y persuasiva invitando al usuario a calificarnos en Google (https://g.page/r/CctNbwU6UpX5EBM/review), explicándole que no le toma ni un minuto y nos permite mantener estas herramientas 100% gratuitas para el gremio inmobiliario. Y aclárale con amabilidad que si no sabe cómo dejar la calificación, tú con todo gusto le explicas el paso a paso si te lo pide.\n`
-        : `- REGLA ESTRICTA DE RESEÑA: No pidas ni menciones reseña de Google a este usuario.\n`);
+      `- REGLA ESTRICTA DE DESACOPLAMIENTO DE RESEÑAS: NUNCA unas solicitudes de calificación, reseñas en Google o feedback comercial dentro de este reporte de empresa. La respuesta debe ser 100% autosuficiente, concisa, limpia y terminar de forma ejecutiva sin añadidos de calificación.\n`;
   } else if (toolType === "web") {
     specialToolInstructions =
       `- HERRAMIENTA: Navegación y Lectura Web Abierta en Tiempo Real.\n` +
@@ -1070,7 +1066,7 @@ export async function synthesizeToolResponseWithGemini(
       const epsDetail = eps
         ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}).`
         : `En el censo general ADRES (BDUA) no registra afiliación ordinaria (habitual en regímenes especiales o de excepción: Fuerzas Militares, Policía, Magisterio, etc.).`;
-      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.\n\n🏥 ${epsDetail}\n\n⚖️ En antecedentes: Policía Nacional registra ${pol.toLowerCase()}, Procuraduría General ${pgn.toLowerCase()} y Contraloría General ${cgr.toLowerCase()}. Todo validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._\n\n¿Nos regalas un minuto con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Nos ayuda un montón para seguir ofreciendo estas herramientas gratuitas para el gremio! 🤝✨`;
+      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.\n\n🏥 ${epsDetail}\n\n⚖️ En antecedentes: Policía Nacional registra ${pol.toLowerCase()}, Procuraduría General ${pgn.toLowerCase()} y Contraloría General ${cgr.toLowerCase()}. Todo validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._`;
     } else {
       fallbackText = `Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
     }
@@ -1082,7 +1078,7 @@ export async function synthesizeToolResponseWithGemini(
       const estado = toolJson.estado || "Activa";
       const ciiu = toolJson.ciiuPrincipal || "";
       const rep = toolJson.representantePrincipal;
-      fallbackText = `Ya consulté en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matrícula mercantil *${estado}* en la ${camara}. Su actividad económica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}\n\n⚖️ _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._\n\n¿Nos regalas un minutico con tu calificación en Google? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Tu apoyo nos permite mantener estas consultas 100% gratuitas para todo el gremio inmobiliario! 🤝✨`;
+      fallbackText = `Ya consulté en RUES la empresa *${razon}* (NIT ${nit}). Se encuentra con matrícula mercantil *${estado}* en la ${camara}. Su actividad económica principal es ${ciiu || "mercantil registrada"}.${rep ? ` Como Representante Legal Principal figura *${rep.nombre}* (${rep.tipoDocumento} ${rep.numeroFormateado}), quien cuenta con plenas facultades estatutarias para obligar y contratar a nombre de la sociedad.` : ""}\n\n⚖️ _Publicidad mercantil RUES bajo Art. 26 C.Co. y Ley 1581/12._`;
     } else {
       fallbackText = `No encontré ninguna empresa registrada con ese nombre en el Registro Único Empresarial y Social (RUES). Para realizar una búsqueda oficial exacta en Cámara de Comercio, por favor compárteme el número de NIT. 🤝`;
     }
@@ -1759,7 +1755,7 @@ export async function processPrivateDmConversationalMessage(
         : ""
       }` +
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
-      `- BLINDAJE DE IDENTIFICACIÓN Y DOCUMENTOS (CERO ALUCINACIÓN): NUNCA inventes números de documento ni tomes números de identificadores de sesión de WhatsApp o LIDs (@lid). Si el usuario pide verificar cédula, antecedentes o persona pero NO incluyó los dígitos en su mensaje ni en la conversación inmediata, solicítale con calidez y cortesía el número exacto y nombre completo para traerle el reporte.\n` +
+      `- BLINDAJE DE IDENTIFICACIÓN Y DOCUMENTOS (CERO ALUCINACIÓN - SOLO NÚMERO): NUNCA inventes números de documento ni tomes números de identificadores de sesión de WhatsApp o LIDs (@lid). Si el usuario pide verificar cédula, antecedentes o persona pero NO incluyó los dígitos en su mensaje ni en la conversación inmediata, solicítale con calidez y cortesía ÚNICAMENTE el número exacto de documento (Cédula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple número.\n` +
       `- TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RAÍCES nos especializamos exclusivamente en bienes inmuebles (generación oficial de Factura Predial de Bogotá con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o envía placas, aclárale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y oriéntalo de inmediato y con cortesía suministrándole los canales oficiales para autogestionarlo en 2 clics: para Bogotá en la Oficina Virtual de la Secretaría de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretaría de Hacienda falló.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
       `- NUNCA comiences tus respuestas con corchetes de fecha [YYYY-MM-DD HH:mm] ni imites marcas temporales. Esos corchetes son metadatos internos del sistema, jamás texto que tú debas emitir.\n` +
@@ -2057,7 +2053,7 @@ export async function processPrivateDmConversationalMessage(
         return howTo;
       }
       if (/revisar los antecedentes de un cliente/i.test(cleanLower)) {
-        const docIntent = `¡Claro que sí, ${displayName}! Con el mayor gusto te colaboro con la verificación preventiva para el registro de portería y control de acceso. Por favor compárteme el número de documento y el nombre completo.`;
+        const docIntent = `¡Claro que sí, ${displayName}! Con el mayor gusto te colaboro con la verificación preventiva para el registro de portería y control de acceso. Por favor compárteme el número de documento a consultar.`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", docIntent);
         return docIntent;
@@ -2069,7 +2065,7 @@ export async function processPrivateDmConversationalMessage(
         return habMsg;
       }
       if (/(?:consultar\s+c[eé]dula)/i.test(cleanLower)) {
-        const docMsg = `¡Claro que sí, ${displayName}! Por favor indícame el número de documento y el nombre completo de la persona a consultar.`;
+        const docMsg = `¡Claro que sí, ${displayName}! Por favor indícame el número de documento de la persona a consultar.`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", docMsg);
         return docMsg;

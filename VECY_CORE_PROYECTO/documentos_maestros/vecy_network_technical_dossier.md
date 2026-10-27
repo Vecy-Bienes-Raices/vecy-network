@@ -330,6 +330,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.53 — Octubre 2026
+
+#### [v33.53.0] — 2026-10-27: Verificación Exclusiva por Número de Documento (Sin Nombres), Desacoplamiento de Calificación, Roles Dinámicos Cognitivos y Herramientas Interactivas del Canal
+- **Reforma Doctrinal de Agente de IA, Verificación Directa y Concisión Resolutiva:**
+  - **Verificación Exclusiva por Número de Documento (Sin Nombres Redundantes):**
+    - *Problema:* JanIA exigía número exacto y nombre completo. Pedir nombres completos rompe la propuesta de valor y agilidad de la herramienta, ya que las bases de datos oficiales (ADRES BDUA, Policía Nacional, Procuraduría SIRI y Contraloría SIRECI) devuelven el nombre oficial completo y estado con solo el documento.
+    - *Solución:* Modificación de `dmHandler.ts`, `prompts.ts`, `base.md` y `founderKnowledgeService.ts` (`seed-verificacion-solo-numero-documento-sin-pedir-nombres`) para solicitar única y exclusivamente los dígitos del documento (cédula o NIT). Entrega inmediata en Markdown con estado EPS, régimen, y antecedentes limpios.
+  - **Desacoplamiento Absoluto de Reseñas y Calificaciones:**
+    - *Problema:* El enlace de reseña de Google Reviews se anexaba forzosamente en el mismo turno de la respuesta técnica, generando textos interminables ("muros de texto") que deterioraban la experiencia.
+    - *Solución:* Desacoplamiento total: la respuesta técnica o jurídica es autosuficiente, concisa y termina sin añadidos comerciales. La solicitud de calificación se despacha como un segundo mensaje independiente y oportuno ante agradecimientos o cierres.
+  - **JanIA como Agente de IA Multi-Rol y Razonamiento Autónomo:**
+    - *Problema:* Percepción de bot rígido ante textos mecánicos o evasivas en preguntas informales.
+    - *Solución:* Consolidación de 4 roles dinámicos en `prompts.ts` (Asesora Jurídico-Notarial Ley 675/820, Máster en Ventas y Marketing AIDA, Coach de Comunidad y Herramientas WhatsApp, Guía de Procesos Digitales). Respuestas concisas con viñetas cortas. Resolución chispeante y natural de consultas casuales (deportes/Millonarios, clima) en una línea antes de reencauzar al contexto inmobiliario.
+  - **Herramientas Interactivas de Canal (`channelInteractiveService.ts`):**
+    - *Arquitectura Híbrida:* Servicio dedicado que declara los esquemas de Function Calling (`publicar_encuesta`, `publicar_cuestionario`, `publicar_pregunta`, `publicar_post_multimedia`) para decisión cognitiva del LLM y ejecución técnica híbrida (Baileys para multimedia y texto instantáneo, Puppeteer para menús interactivos del clip en canales).
+- **Validación Exhaustiva ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **405/405 passing** (100% verde a $0 COP) | Build `npm run build` limpio en 31.38s.
+
 ### 🔖 v33.52 — Octubre 2026
 
 #### [v33.52.0] — 2026-10-27: Auditoría Integral de Comportamiento, Continuidad Grupal, Anti-LID en Cédulas y Delimitación de Tributos Inmobiliarios vs. Vehiculares

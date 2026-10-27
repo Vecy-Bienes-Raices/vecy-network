@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.53: Verificación Exclusiva por Número de Documento (Sin Nombres), Desacoplamiento de Calificación, Roles Dinámicos Cognitivos y Herramientas Interactivas del Canal (v33.53 - 33.53.0)
+
+**Versión:** `v33.53` (`33.53.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"No estoy de acuerdo con esta mención de la IA: 'y solicita con cortesía el número exacto y nombre completo a verificar.' Ella solo debe solicitar el número, lo increíble de esta función siempre ha sido que ella pueda actuar con el simple número de documento y hacer la respectiva verificación y presentarla debidamente y muy completa, con resultado en Adres con nombre de EPS, tipo de régimen Subsidiado/contributivo, antecedentes ante Ponal, Procuraduría y contraloría y listo sin tanta parafernalia y en buen formato markdown y ordenado. Ella sigue uniendo en un mismo mensaje lo que solicita de comentarios y calificación, sugiero sea un mensaje igual de bueno como el que usa actualmente pero aparte y que sepa cuando enviarlo oportunamente... que no ponga mensajes tan extremadamente largos y difíciles de leer, entre más resumida, concretas, claras y técnicas pero humanizadas sean sus respuestas hará que las personas la entiendan de mejor manera... ayer vi que lo hizo perfecto cuando un usuario le pidió que le dijera a qué hora jugaba Millos y ella le supo responder correctamente, fue genial... yo pienso que deberíamos mirar muy bien su funcionamiento y dejar uno solo donde ella pueda actuar como una verdadera AGENTE IA y no como un simple bot preprogramado en sus respuestas. Y que tenga la debida consciencia y razonamiento propio... según cada pregunta que el usuario le haga (Consejera, maestra, asesora y experta especialista en derecho inmobiliario, notarial... marqueting... ventas inmobiliarias... arriendos... coach de redacción... trámites... WhatsApp...)"*
+- Integrar visión pedagógica para el canal de WhatsApp (Encuesta, Cuestionario, Preguntar, Multimedia) con arquitectura híbrida (Structured Output + Baileys / Puppeteer).
+- Suministrar paquete de publicaciones listo para redes/WhatsApp sobre los superpoderes de JanIA.
+
+**Diagnóstico Técnico Profundo:**
+1. **Solicitud Redundante de Nombres en Verificación de Documentos:**
+   - *Causa raíz:* En las instrucciones y guardarraíles de `dmHandler.ts`, `prompts.ts` y `base.md`, se había introducido la directiva de solicitar "el número exacto y nombre completo". Esto rompía la magia y propuesta de valor de JanIA, ya que con solo los dígitos de la cédula o NIT el sistema consulta oficialmente las 4 bases de datos (ADRES BDUA, Policía Nacional, Procuraduría SIRI y Contraloría SIRECI), extrayendo automáticamente el nombre oficial y estado.
+2. **Acoplamiento de Solicitudes de Calificación/Reseñas de Google:**
+   - *Causa raíz:* En `synthesizeToolResponseWithGemini` y fallbacks de `dmHandler.ts`, el enlace de Google Review (`https://g.page/r/CctNbwU6UpX5EBM/review`) se inyectaba obligatoriamente en el mismo turno de la respuesta técnica. Esto producía mensajes excesivamente extensos ("muros de texto") que restaban ejecutividad y hacían sentir la interacción forzada o robótica.
+3. **Equilibrio de Prompts (Armonización Opción A vs Opción B):**
+   - *Causa raíz:* Fragmentación y ambigüedad entre esquemas de respuesta. La Opción B aportaba mejor concisión y protocolo tabular, mientras que la Opción A aportaba detalles sobre la Ley 675 y trámites notariales. Se requería una síntesis maestra aditiva sin contradicciones.
+4. **Herramientas Interactivas del Canal de WhatsApp:**
+   - *Diagnóstico arquitectónico:* Las funciones interactivas del canal (Encuesta de sondeo, Cuestionario con respuesta correcta/quiz, y buzón de Preguntas) tienen soporte parcial/experimental en Baileys debido a las recientes modificaciones de Meta en newsletters. La solución óptima es un esquema de dos capas: toma de decisiones estructurada (Tool Calling) en el backend + ejecución híbrida (Baileys para texto/imágenes y Puppeteer sobre WhatsApp Web para clics automatizados en el menú contextual del clip).
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Verificación Exclusiva por Número de Documento (`dmHandler.ts`, `prompts.ts`, `base.md`, `founderKnowledgeService.ts`):**
+  - Actualizada la herramienta `consultar_identidad_y_antecedentes`: solicita ÚNICA Y EXCLUSIVAMENTE los dígitos del documento (Cédula o NIT). NUNCA solicita nombres completos ni datos redundantes.
+  - El reporte oficial se entrega de forma limpia y estructurada en Markdown: ADRES (EPS, régimen contributivo/subsidiado, estado activo/inactivo), Policía Nacional, Procuraduría SIRI y Contraloría SIRECI.
+  - Añadida la directiva semilla `seed-verificacion-solo-numero-documento-sin-pedir-nombres` en `founderKnowledgeService.ts`.
+- **Desacoplamiento Absoluto de Calificaciones y Reseñas (`dmHandler.ts`, `prompts.ts`):**
+  - Prohibida taxativamente la inclusión de solicitudes de calificación dentro de reportes técnicos o resoluciones jurídicas.
+  - La respuesta técnica es 100% autosuficiente y concisa. La invitación a calificar en Google Reviews se reserva como un segundo mensaje independiente y oportuno (ante gratitud, despedida o turno posterior).
+- **Consagración de Multi-Roles Dinámicos y Versatilidad Conversacional (`prompts.ts`, `base.md`):**
+  - Consagrados los 4 roles dinámicos de autoridad: Asesora Jurídico-Notarial Ley 675/820, Máster en Marketing y Ventas AIDA, Coach de Comunidad y Herramientas WhatsApp, y Guía de Procesos Digitales.
+  - Regla de concisión técnica: liderazgo temprano en negrita, viñetas cortas, cero relleno.
+  - Manejo orgánico y simpático de consultas cotidianas (deportes/Millonarios, clima, saludos) en una sola línea antes de reencauzar al contexto inmobiliario con elegancia.
+- **Servicio de Herramientas Interactivas del Canal (`channelInteractiveService.ts`):**
+  - Creado nuevo servicio declarando los esquemas formales de tool calling: `publicar_post_multimedia`, `publicar_encuesta`, `publicar_cuestionario` y `publicar_pregunta`.
+  - Implementada la validación de payloads interactivos y la arquitectura híbrida (Baileys para multimedia y texto instantáneo, Puppeteer para menús interactivos del clip en canales).
+- **Generación de Activos Visuales:**
+  - Generada pieza de JanIA en traje futurista blanco y dorado con cuello mao y tablet holográfica (`jania_futuristic_proptech_1793086698196.jpg`).
+  - Generada infografía 3D isométrica de Propiedad Horizontal Ley 675 diferenciando parqueaderos comunales y privados (`infografia_ley675_ph_1793086722589.jpg`).
+- **Suite de Regresión y Validación Exhaustiva:**
+  - Creada la Suite 139 en `server/__tests__/regression.test.ts` con 5 tests específicos validando cada una de las nuevas directivas.
+  - `npm test`: **405/405 passing** (100% verde a $0 COP).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio en 31.38s.
+- **Incremento de Versión:**
+  - `shared/const.ts` (`v33.53`) y `package.json` (`33.53.0`).
+
 ### 📅 [2026-10-27] — JanIA v33.52: Auditoría Integral de Comportamiento, Continuidad Grupal ante Afirmaciones, Purga de Comas Colgantes, Delimitación de Impuesto Vehicular y Blindaje Anti-LID en Cédulas (v33.52 - 33.52.0)
 
 **Versión:** `v33.52` (`33.52.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
