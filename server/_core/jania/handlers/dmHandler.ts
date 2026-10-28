@@ -76,6 +76,27 @@ export function popLatestDmPdf(userId: string): LatestDmPdfAttachment | undefine
   return attachment;
 }
 
+export function hasLatestDmPdf(userId: string): boolean {
+  return latestDmPdfMap.has(userId);
+}
+
+export {
+  setLatestDmSticker,
+  popLatestDmSticker,
+  getJaniaStickerByKey,
+  listAvailableJaniaStickers,
+  selectContextualStickerForDm,
+  JANIA_STICKER_CATALOG
+} from "../stickerService";
+
+export {
+  detectLegalDocumentTypeFromText,
+  isExplicitLegalPdfRequest,
+  generateLegalPdfForDmRequest,
+  processAndQueueDmSticker,
+  buildSessionOnboardingDirectives
+} from "./dmOnboardingAndDocsHelper";
+
 const latestDmFollowUpMap = new Map<string, string>();
 
 export function setLatestDmFollowUpMessage(_userId: string, _followUpText: string): void {
@@ -268,6 +289,27 @@ export const JANIA_DM_TOOLS = [
             precioMaximo: { type: "NUMBER", description: "Presupuesto máximo en COP" }
           }
         }
+      },
+      {
+        name: "generar_documento_legal_pdf",
+        description: "Genera y adjunta en archivo PDF oficial membretado de VECY BIENES RAÍCES (con código QR y guía de firma electrónica en https://autenticaciondigital.and.gov.co/) cualquier carta, contrato o minuta inmobiliaria: carta de terminación de contrato de arriendo (Ley 820/2003), carta de solicitud de entrega o restitución de inmueble, carta de presentación formal de cliente, contrato de arrendamiento de vivienda o comercial, minuta de promesa de compraventa, cesión de leasing habitacional/comercial, compraventa con pacto de retroventa (Art. 1939 C.C.) o contrato de corretaje.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            tipoDocumento: {
+              type: "STRING",
+              description: "Valores permitidos: carta_terminacion_arriendo, carta_restitucion_inmueble, carta_presentacion_cliente, contrato_arrendamiento_vivienda, contrato_arrendamiento_comercial, promesa_compraventa, cesion_leasing, pacto_retroventa, contrato_corretaje, minuta_general"
+            },
+            tituloPersonalizado: { type: "STRING", description: "Título formal del documento legal" },
+            nombreRemitente: { type: "STRING", description: "Nombre del arrendador, vendedor, corredor o remitente" },
+            nombreDestinatario: { type: "STRING", description: "Nombre del arrendatario, comprador o destinatario" },
+            direccionInmueble: { type: "STRING", description: "Dirección e identificación del inmueble" },
+            ciudad: { type: "STRING", description: "Ciudad de suscripción (ej. Bogotá, D.C.)" },
+            valorNegocioOCanon: { type: "STRING", description: "Precio de venta, canon de arriendo o cuantía en COP" },
+            clausulasEspeciales: { type: "STRING", description: "Cláusulas o condiciones particulares indicadas por el usuario" }
+          },
+          required: ["tipoDocumento"]
+        }
       }
     ]
   }
@@ -287,7 +329,8 @@ export type JaniaDmToolType =
   | "catalogo"
   | "web"
   | "catalogo_inmuebles"
-  | "registro_inmueble";
+  | "registro_inmueble"
+  | "documento_legal_pdf";
 
 export async function executeJaniaDmTool(
   toolName: string,
@@ -901,6 +944,36 @@ export async function executeJaniaDmTool(
             garajes: p.garages
           })),
           contactoBroker: "Eduardo Rivera & Jani Alves — WhatsApp Oficial +57 316 656 9719"
+        }
+      };
+    }
+    case "generar_documento_legal_pdf": {
+      const { generateLegalDocumentPdf } = await import("../legalDocumentPdfService");
+      const { detectLegalDocumentTypeFromText } = await import("./dmOnboardingAndDocsHelper");
+      const rawTipo = String(args.tipoDocumento || "").trim() as any;
+      const validType = detectLegalDocumentTypeFromText(`${rawTipo} ${rawUserText || ""}`) || rawTipo || "minuta_general";
+      const pdfRes = await generateLegalDocumentPdf({
+        tipoDocumento: validType,
+        tituloPersonalizado: args.tituloPersonalizado ? String(args.tituloPersonalizado) : undefined,
+        nombreRemitente: args.nombreRemitente ? String(args.nombreRemitente) : undefined,
+        nombreDestinatario: args.nombreDestinatario ? String(args.nombreDestinatario) : undefined,
+        direccionInmueble: args.direccionInmueble ? String(args.direccionInmueble) : undefined,
+        ciudad: args.ciudad ? String(args.ciudad) : undefined,
+        valorNegocioOCanon: args.valorNegocioOCanon ? String(args.valorNegocioOCanon) : undefined,
+        clausulasEspeciales: args.clausulasEspeciales ? String(args.clausulasEspeciales) : undefined
+      });
+      setLatestDmPdf(userId, { pdfBuffer: pdfRes.pdfBuffer, pdfFileName: pdfRes.fileName });
+      return {
+        toolType: "documento_legal_pdf",
+        resultJson: {
+          solicitud: "generar_documento_legal_pdf",
+          archivoAdjuntado: pdfRes.fileName,
+          codigoVerificacion: pdfRes.verificationCode,
+          tituloDocumento: pdfRes.title,
+          marcoNormativo: pdfRes.normativeFramework,
+          tutorialFirmaElectronica: "https://autenticaciondigital.and.gov.co/",
+          exitoso: true,
+          reporteOficial: `📄 *DOCUMENTO OFICIAL EN PDF GENERADO:* ${pdfRes.title}\n• *Archivo adjunto:* ${pdfRes.fileName}\n• *Marco normativo:* ${pdfRes.normativeFramework}\n• *Radicado VECY:* ${pdfRes.verificationCode}\n• *Guía Firma Electrónica (Ley 527/1999):* https://autenticaciondigital.and.gov.co/`
         }
       };
     }
@@ -2112,6 +2185,21 @@ export async function processPrivateDmConversationalMessage(
         }
       }
     }
+
+    const { isExplicitLegalPdfRequest, generateLegalPdfForDmRequest, processAndQueueDmSticker } = await import("./dmOnboardingAndDocsHelper");
+    if (isExplicitLegalPdfRequest(clean) && !hasLatestDmPdf(userId)) {
+      try {
+        const autoPdf = await generateLegalPdfForDmRequest(clean, {
+          cuerpoDocumento: reply.length > 180 ? reply : undefined
+        });
+        setLatestDmPdf(userId, { pdfBuffer: autoPdf.pdfBuffer, pdfFileName: autoPdf.fileName });
+      } catch (pdfErr: any) {
+        console.warn("[dmHandler] Error generando PDF legal automático:", pdfErr?.message);
+      }
+    }
+
+    const stickerProcessed = processAndQueueDmSticker(userId, clean, reply);
+    reply = stickerProcessed.cleanReply || reply;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);

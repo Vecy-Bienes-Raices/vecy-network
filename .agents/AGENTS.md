@@ -183,7 +183,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.65 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.66 — Octubre 2026
+
+### Novedades v33.66 (Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA en Baileys, Generador Instantáneo de Cartas y Minutas en PDF Membretado, Modularización de DM y Particionado de Bundles — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA (`server/_core/jania/stickerService.ts`):**
+     - Conversión e integración de las 14 piezas 3D originales de JanIA desde `/home/eddu/Imágenes/STIKERS` a formato oficial de sticker WhatsApp `.webp` (`512x512 px`, RGBA fondo transparente, `< 91 KB` c/u) en `client/public/assets/stickers/` y `assets/stickers/`:
+       `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`, `ok`, `mmm`, `jajaja`, `jajaja_fuerte`, `juajuajua`, `queee`, `oh_por_dios`, `ush`, `nooo_por_que`.
+     - Motor contextual `selectContextualStickerForDm` con rotación de variantes (`gracias_*` y `jajaja*`), control de frecuencia por usuario (anti-saturación) y limpieza de etiquetas opcionales `[STICKER:...]`.
+     - Despacho nativo en `server/_core/whatsapp-match.ts` (`queuedSend` con soporte para `content.sticker` y `popLatestDmSticker`).
+  2. **Generador Instantáneo de Cartas, Contratos y Minutas Inmobiliarias en PDF Membretado (`server/_core/jania/legalDocumentPdfService.ts`):**
+     - Generación dinámica con `pdf-lib` y `qrcode` de documentos oficiales en PDF con membrete corporativo de **VECY BIENES RAÍCES**, código único de verificación (`DOC-VECY-...`), código QR verificable y guía paso a paso de firma electrónica oficial en `https://autenticaciondigital.and.gov.co/`.
+     - Soporta: Cartas de terminación y no prórroga de arriendo (Ley 820/2003), Cartas de solicitud de entrega o restitución de inmueble, Cartas de presentación formal de cliente, Contratos de arrendamiento (vivienda/comercial), Promesas de compraventa, Cesiones de leasing habitacional/comercial, Pacto de retroventa (Art. 1939 C.C.) y Contratos de corretaje (`generar_documento_legal_pdf`).
+  3. **Modularización de DM (`server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts`) y Particionado de Bundles (`vite.config.ts`):**
+     - Extracción de lógica de detección de documentos PDF, orquestación de stickers y directivas de onboarding en `dmOnboardingAndDocsHelper.ts`.
+     - Particionado quirúrgico de `manualChunks` en `vite.config.ts` (`icons-vendor`, `motion-vendor`, `radix-vendor`, `charts-vendor`, `maps-vendor`, `supabase-vendor`, `trpc-vendor`, `react-vendor`) y migración de `overrides` a `package.json` eliminando warnings de `npm`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **466/466 passing** (Suite 152 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.66`) y `package.json` (`33.66.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.65 — Octubre 2026
 
 ### Novedades v33.65 (Conocimiento Inmobiliario Enciclopédico Integral vs. Foco Operacional VECY, Detección de Nombres Reales sin Siglas de Profesión `Arq.`, Limpieza de Punto Huérfano y Rotación de 10 Imágenes 1:1 en Canal — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

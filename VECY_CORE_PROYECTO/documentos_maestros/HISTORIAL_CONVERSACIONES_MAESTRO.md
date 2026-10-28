@@ -7,6 +7,34 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-28] — JanIA v33.66: Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA en Baileys, Generador Instantáneo de Cartas y Minutas en PDF Membretado, Modularización de DM y Particionado de Bundles (v33.66 - 33.66.0)
+
+**Versión:** `v33.66` (`33.66.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Diagnóstico de por qué la carpeta `STIKERS` mostró `"Invalid Media"` y cortó la sesión previa (`34a95e8b-40e3-4362-bea1-e6ee471b6ae3`):**
+   - La interfaz de chat no admite subir carpetas completas directamente, y cuando el agente anterior intentó leer de golpe los 14 archivos PNG sin comprimir (`1254x1254`, ~2.2 MB c/u = ~30.5 MB en total) desde `/home/eddu/Imágenes/STIKERS`, saturó el payload de contexto de la sesión en el paso 206.
+   - Solución aplicada: Inspección mediante hoja de contacto ligera (`stickers_grid.jpg`, 173 KB) y conversión automatizada con Python Pillow a formato oficial de sticker WhatsApp `.webp` (`512x512` RGBA con fondo transparente, `54 KB` a `90 KB` c/u).
+2. **Ejecución Integral de los 4 Pilares de Potenciación de VECY Network y JanIA:**
+   - **Pilar 1 (Particionado de Bundles en `vite.config.ts` y Limpieza de `.npmrc`):** Separación quirúrgica de `manualChunks` (`icons-vendor`, `motion-vendor`, `radix-vendor`, `charts-vendor`, `maps-vendor`, `supabase-vendor`, `trpc-vendor`, `react-vendor`) y migración de `overrides` a `package.json` para erradicar el warning de `npm` y el chunk de `600 kB`.
+   - **Pilar 2 (Modularización de `dmHandler.ts`):** Creación de `server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts` para desacoplar la detección de documentos legales PDF, la orquestación de stickers 3D y la construcción de directivas de onboarding.
+   - **Pilar 3 (Generador Instantáneo de Cartas, Contratos y Minutas en PDF Membretado — `server/_core/jania/legalDocumentPdfService.ts`):** Generación de PDFs corporativos con membrete oficial VECY BIENES RAÍCES, código de trazabilidad (`DOC-VECY-...`), código QR verificable y guía paso a paso de firma electrónica en `https://autenticaciondigital.and.gov.co/` para cartas de terminación y restitución de arriendo (Ley 820/2003), cartas de presentación de clientes, contratos de arriendo, promesas de compraventa, cesiones de leasing, pactos de retroventa (Art. 1939 C.C.) y contratos de corretaje (`generar_documento_legal_pdf`).
+   - **Pilar 4 (Pack Oficial de 14 Stickers 3D de JanIA en WhatsApp Baileys — `server/_core/jania/stickerService.ts`):** Catálogo completo de 14 stickers `.webp` (`ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`, `ok`, `mmm`, `jajaja`, `jajaja_fuerte`, `juajuajua`, `queee`, `oh_por_dios`, `ush`, `nooo_por_que`), selector contextual con rotación y cooldown humano, y despacho nativo en `whatsapp-match.ts`.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Conversión y Almacenamiento de Stickers (`client/public/assets/stickers/`, `assets/stickers/`):** 14 stickers 3D `.webp` (`512x512` RGBA) generados y verificados.
+- **Motor de Stickers (`server/_core/jania/stickerService.ts`) y Baileys (`server/_core/whatsapp-match.ts`):** Implementados `getJaniaStickerByKey`, `listAvailableJaniaStickers`, `extractStickerTagFromReply`, `selectContextualStickerForDm`, `setLatestDmSticker`, `popLatestDmSticker` y soporte de `content.sticker` en `queuedSend`.
+- **Motor de PDFs Legales (`server/_core/jania/legalDocumentPdfService.ts`) y Herramienta DM (`dmHandler.ts`):** Implementado `generateLegalDocumentPdf` y la herramienta `generar_documento_legal_pdf` en `JANIA_DM_TOOLS`.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada **Suite 152** en `server/__tests__/regression.test.ts` con 6 pruebas unitarias automatizadas.
+  - Tests: `npm test` **466/466 passing** (100% verde a $0 COP).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio y sin warnings de chunks mayores a 600 kB.
+- **Incremento de Versión Oficial:**
+  - `shared/const.ts`: `v33.66`
+  - `package.json`: `33.66.0`
+
+---
+
 ### 📅 [2026-10-28] — JanIA v33.65: Conocimiento Inmobiliario Enciclopédico Integral vs. Foco Operacional VECY, Detección de Nombres Reales sin Siglas de Profesión (`Arq.`), Limpieza de Punto Huérfano y Rotación de 10 Imágenes 1:1 en Canal (v33.65 - 33.65.0)
 
 **Versión:** `v33.65` (`33.65.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

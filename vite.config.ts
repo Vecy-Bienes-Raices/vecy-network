@@ -23,17 +23,33 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('wouter')) {
-              return 'react-vendor';
+            const pkgPath = id.split('node_modules/').pop() || id;
+            if (pkgPath.startsWith('@supabase')) {
+              return 'supabase-vendor';
             }
-            if (id.includes('@trpc') || id.includes('@tanstack') || id.includes('superjson')) {
+            if (pkgPath.startsWith('@trpc') || pkgPath.startsWith('@tanstack') || pkgPath.startsWith('superjson')) {
               return 'trpc-vendor';
             }
-            if (id.includes('lucide-react') || id.includes('framer-motion') || id.includes('date-fns')) {
+            if (pkgPath.startsWith('lucide-react') || pkgPath.startsWith('react-icons')) {
+              return 'icons-vendor';
+            }
+            if (pkgPath.startsWith('framer-motion') || pkgPath.startsWith('motion-')) {
+              return 'motion-vendor';
+            }
+            if (pkgPath.startsWith('@radix-ui') || pkgPath.startsWith('cmdk') || pkgPath.startsWith('vaul') || pkgPath.startsWith('sonner')) {
+              return 'radix-vendor';
+            }
+            if (pkgPath.startsWith('recharts') || pkgPath.startsWith('d3-')) {
+              return 'charts-vendor';
+            }
+            if (pkgPath.startsWith('leaflet')) {
+              return 'maps-vendor';
+            }
+            if (pkgPath.startsWith('date-fns')) {
               return 'ui-vendor';
             }
-            if (id.includes('@supabase')) {
-              return 'supabase-vendor';
+            if (pkgPath.startsWith('react/') || pkgPath.startsWith('react-dom/') || pkgPath.startsWith('scheduler/') || pkgPath.startsWith('wouter')) {
+              return 'react-vendor';
             }
           }
         },

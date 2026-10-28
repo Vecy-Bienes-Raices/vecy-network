@@ -1509,8 +1509,9 @@ export class JaniaMatchBot {
             }
           }
 
-          const { popLatestDmPdf } = await import('./jania/handlers/dmHandler');
+          const { popLatestDmPdf, popLatestDmSticker } = await import('./jania/handlers/dmHandler');
           const latestPdf = popLatestDmPdf(senderId);
+          const latestSticker = popLatestDmSticker(senderId);
           const pdfBuffer = (reply as any)?.pdfBuffer || latestPdf?.pdfBuffer;
           const pdfFileName = (reply as any)?.pdfFileName || latestPdf?.pdfFileName;
           const isSenderAdmin = /eduardo/i.test(userName || "") ||
@@ -1549,6 +1550,14 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
           }
           await this.logToDb(senderId, 'janIA', replyText);
+
+          // 🎨 Despacho Contextual de Stickers 3D Oficiales de JanIA (v33.66 — Doctrina Eduardo A. Rivera)
+          if (latestSticker && Buffer.isBuffer(latestSticker.buffer)) {
+            console.log(`[JANIA-MATCH] [DM-STICKER] Despachando sticker 3D oficial de JanIA (${latestSticker.filename}) a ${senderId}`);
+            await this.queuedSend(senderId, {
+              sticker: latestSticker.buffer
+            }, { allowDirectMessage: true, skipDelay: true });
+          }
 
           const isLongQueryOrQuestion = cleanLower.includes("?") ||
             cleanLower.split(/\s+/).filter(Boolean).length > 15 ||
@@ -3069,7 +3078,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
         }
         // Si ya es un payload directo de Baileys
-        else if (content && (content.text || content.audio || content.image || content.video || content.document)) {
+        else if (content && (content.text || content.audio || content.image || content.video || content.document || content.sticker)) {
           messagePayload = content;
           if (typeof messagePayload.text === 'string') {
             messagePayload.text = sanitizeResponseMarkdown(messagePayload.text);

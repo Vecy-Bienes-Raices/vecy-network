@@ -8225,5 +8225,24 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Build: `npm run build` limpio.
   * Versión: `v33.65` (`33.65.0`) en `shared/const.ts` y `package.json`.
 
+### 10.161 Versión v33.66 (2026-10-28) — Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA en Baileys, Generador Instantáneo de Cartas y Minutas en PDF Membretado, Modularización de DM y Particionado de Bundles (Doctrina Eduardo A. Rivera)
+- **Doctrina Fundacional y Potenciación Estructural (Eduardo A. Rivera)**:
+  1. **Pack Oficial de 14 Stickers 3D de JanIA en WhatsApp Baileys (`server/_core/jania/stickerService.ts`)**:
+     * Conversión de los 14 diseños 3D originales de JanIA (`/home/eddu/Imágenes/STIKERS`) a formato oficial de sticker WhatsApp `.webp` (`512x512 px`, RGBA fondo transparente) en `client/public/assets/stickers/` y `assets/stickers/`: `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`, `ok`, `mmm`, `jajaja`, `jajaja_fuerte`, `juajuajua`, `queee`, `oh_por_dios`, `ush`, `nooo_por_que`.
+     * Selección contextual inteligente con rotación de variantes (`gracias_*` y `jajaja*`), cooldown por usuario para evitar saturación y soporte nativo en `whatsapp-match.ts` (`queuedSend` con `content.sticker` y `popLatestDmSticker`).
+  2. **Generador Instantáneo de Cartas, Contratos y Minutas Inmobiliarias en PDF Membretado (`server/_core/jania/legalDocumentPdfService.ts`)**:
+     * Generación en tiempo real mediante `pdf-lib` y `qrcode` de documentos jurídicos inmobiliarios en PDF con membrete corporativo de **VECY BIENES RAÍCES**, código único de verificación (`DOC-VECY-...`), código QR verificable y guía paso a paso de firma electrónica oficial en `https://autenticaciondigital.and.gov.co/`.
+     * Cubre: Cartas de terminación de contrato de arriendo (Ley 820 de 2003), Cartas de solicitud de entrega o restitución de inmueble, Cartas de presentación formal de cliente, Contratos de arrendamiento (vivienda y comercial), Minutas de promesa de compraventa, Cesión de leasing habitacional/comercial, Compraventa con pacto de retroventa (Art. 1939 C.C.) y Contratos de corretaje (`generar_documento_legal_pdf`).
+  3. **Modularización de DM (`dmOnboardingAndDocsHelper.ts`) y Particionado de Bundles Frontend (`vite.config.ts`)**:
+     * Extracción de `dmOnboardingAndDocsHelper.ts` para mantener la arquitectura de `dmHandler.ts` limpia y modular.
+     * Optimización de `manualChunks` en `vite.config.ts` (`icons-vendor`, `motion-vendor`, `radix-vendor`, `charts-vendor`, `maps-vendor`, `supabase-vendor`, `trpc-vendor`, `react-vendor`) y limpieza de `.npmrc` migrando `overrides` a `package.json`.
+- **Validación y Blindaje ($0 COP)**:
+  * Suite 152 en `regression.test.ts` con 6 pruebas unitarias automatizadas.
+  * Cobertura de tests: `npm test` **466/466 passing** (100% verde a $0 COP).
+  * Typecheck: `npm run check` (0 errores).
+  * Build: `npm run build` limpio y sin advertencias de tamaño de chunk.
+  * Versión: `v33.66` (`33.66.0`) en `shared/const.ts` y `package.json`.
+
+
 
 

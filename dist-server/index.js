@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.65";
+    VECY_VERSION = "v33.66";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13832,6 +13832,8 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 # ECOSISTEMA DE SUPERPODERES NATIVOS EN WHATSAPP:
 - Encuestas interactivas de 1 clic para selecci\xF3n \xE1gil de tr\xE1mites y filtros.
 - Generaci\xF3n y entrega instant\xE1nea de documentos oficiales en PDF: Factura Predial Bogot\xE1, Certificados de Pago y Paz y Salvo IDU.
+- **Generador Instant\xE1neo de Cartas, Contratos y Minutas Legales en PDF Membretado ('generar_documento_legal_pdf')**: Entrega inmediata en archivo PDF corporativo (con QR verificable y tutorial de firma electr\xF3nica oficial en https://autenticaciondigital.and.gov.co/) de cartas de terminaci\xF3n de contrato de arriendo (Ley 820 de 2003), cartas de solicitud de entrega o restituci\xF3n de inmuebles, cartas de presentaci\xF3n formal de clientes, contratos de arrendamiento de vivienda o local comercial, minutas de promesa de compraventa, cesi\xF3n de leasing habitacional/comercial, compraventa con pacto de retroventa (Art. 1939 C.C.) y contratos de corretaje.
+- **Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA en Baileys**: Cat\xE1logo de 14 stickers .webp 3D de JanIA ('ternura', 'abacho', 'gracias_ternura', 'gracias_alegre', 'gracias_brillo', 'ok', 'mmm', 'jajaja', 'jajaja_fuerte', 'juajuajua', 'queee', 'oh_por_dios', 'ush', 'nooo_por_que') que acompa\xF1an momentos clave de calidez, celebraci\xF3n de Match, registro de inmuebles/requerimientos, humor inteligente o cr\xEDtica jocosa a los "dinosaurios inmobiliarios".
 - Verificaci\xF3n Oficial de Identidad: Polic\xEDa Nacional, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI y ADRES BDUA con EPS limpia, estado y r\xE9gimen. Posici\xF3n doctrinal de H\xE1beas Data obligatoriamente al final del reporte.
 - Empresas / Personas Jur\xEDdicas: Consulta universal en RUES tanto por Raz\xF3n Social / Nombre / Palabra Clave como por NIT (Sociedades, Establecimientos y Personas Naturales en las 57 C\xE1maras de Comercio), sin pedir el NIT de antemano cuando la raz\xF3n social est\xE1 disponible. Entrega Raz\xF3n Social oficial, NIT con DV DIAN, estado mercantil activo, C\xE1mara de Comercio, CIIU y Representante Legal Principal con facultades estatutarias plenas.
 - Tarjetas de contacto interactivas oficiales y enlaces directos al cat\xE1logo.
@@ -16852,8 +16854,776 @@ var init_founderKnowledgeService = __esm({
         rawText: "No quise decir que erradicaras lo de ARRIENDOS. JanIA como asesora especialista en bienes ra\xEDces debe saber todo acerca de los bienes ra\xEDces: Arriendos, compraventas, permutas, inversiones, tributaria, aval\xFAos profundos y sondeos, pr\xE9stamos con garant\xEDa hipotecaria o pacto de retroventa, verificaci\xF3n de documentos, prediales, IDU, redacci\xF3n legal, cartas de entrega o restituci\xF3n, cartas de terminaci\xF3n de arriendo, promesas simples, con hipoteca, con cesi\xF3n de leasing habitacional y comercial, minutas, presentaci\xF3n formal de clientes, contratos de corretaje, firma electr\xF3nica en https://autenticaciondigital.and.gov.co/, asesoramiento prejur\xEDdico y jur\xEDdico, marketing digital, c\xF3mo hablarle a JanIA (notas de voz, im\xE1genes, PDFs, POT, fachadas, direcciones), y c\xF3mo se est\xE1n acabando los dinosaurios inmobiliarios frente a VECY en https://vecy-bienes-raices.vercel.app/historia. Y que detecte realmente los nombres de los usuarios y su g\xE9nero, no siglas de profesi\xF3n como Arq.",
         createdAt: "2026-10-28T04:50:00.000Z",
         active: true
+      },
+      {
+        id: "seed-pack-14-stickers-3d-jania-pdf-minutas-legales-y-optimizacion-v33-66",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Pack Oficial de 14 Stickers 3D de JanIA en WhatsApp, Generador Instant\xE1neo de Cartas y Minutas en PDF Membretado y Modularizaci\xF3n",
+        directive: "1) PACK OFICIAL DE 14 STICKERS 3D DE JANIA EN WHATSAPP: JanIA se expresa como una humana real, ejecutiva, c\xE1lida y jocosa acompa\xF1ando momentos clave con su cat\xE1logo de 14 stickers 3D en formato WebP 512x512 RGBA (ternura, abacho, gracias_ternura, gracias_alegre, gracias_brillo, ok, mmm, jajaja, jajaja_fuerte, juajuajua, queee, oh_por_dios, ush, nooo_por_que), con control inteligente de frecuencia y rotaci\xF3n para nunca saturar. 2) GENERADOR INSTANT\xC1NEO DE CARTAS Y MINUTAS EN PDF MEMBRETADO: Cuando un colega o cliente pide una carta de terminaci\xF3n de arriendo (Ley 820/2003), carta de entrega/restituci\xF3n de inmueble, carta de presentaci\xF3n formal de cliente, promesa de compraventa, cesi\xF3n de leasing, pacto de retroventa (Art. 1939 C.C.) o contrato de corretaje en PDF, JanIA genera y adjunta de inmediato el archivo PDF membretado de VECY BIENES RA\xCDCES con c\xF3digo QR y gu\xEDa paso a paso de firma electr\xF3nica oficial en https://autenticaciondigital.and.gov.co/.",
+        rawText: "Toma el mismo orden y organizaci\xF3n que propones y potencializa mi proyecto como debe de ser: 1) Particionado de bundles en vite.config.ts; 2) Modularizaci\xF3n de dmHandler; 3) Generador instant\xE1neo de cartas y minutas en PDF membretado desde WhatsApp; 4) Pack oficial de 14 stickers ejecutivos y jocosos de JanIA en Baileys para que nuestra agente de IA PURA JanIA trabaje como una humana real.",
+        createdAt: "2026-10-28T07:50:00.000Z",
+        active: true
       }
     ];
+  }
+});
+
+// server/_core/jania/stickerService.ts
+import fs7 from "node:fs";
+import path7 from "node:path";
+function resolveStickerFilePath(filename) {
+  const candidateDirs = [
+    path7.resolve(process.cwd(), "client", "public", "assets", "stickers"),
+    path7.resolve(process.cwd(), "assets", "stickers"),
+    path7.resolve(process.cwd(), "dist", "assets", "stickers")
+  ];
+  for (const dir of candidateDirs) {
+    const fullPath = path7.join(dir, filename);
+    if (fs7.existsSync(fullPath)) {
+      return fullPath;
+    }
+  }
+  return null;
+}
+function getJaniaStickerByKey(key) {
+  const meta = JANIA_STICKER_CATALOG[key];
+  if (!meta) return null;
+  const cached = stickerBufferCache.get(key);
+  if (cached && cached.buffer.length > 0) {
+    return cached;
+  }
+  const filePath = resolveStickerFilePath(meta.filename);
+  if (!filePath) return null;
+  try {
+    const buffer = fs7.readFileSync(filePath);
+    if (!buffer || buffer.length === 0) return null;
+    const loaded = {
+      key: meta.key,
+      filename: meta.filename,
+      filePath,
+      buffer,
+      label: meta.label,
+      emotion: meta.emotion
+    };
+    stickerBufferCache.set(key, loaded);
+    return loaded;
+  } catch {
+    return null;
+  }
+}
+function listAvailableJaniaStickers() {
+  const keys = Object.keys(JANIA_STICKER_CATALOG);
+  const result = [];
+  for (const k of keys) {
+    const item = getJaniaStickerByKey(k);
+    if (item) result.push(item);
+  }
+  return result;
+}
+function setLatestDmSticker(userId, stickerKey) {
+  const loaded = getJaniaStickerByKey(stickerKey);
+  if (loaded && userId) {
+    latestDmStickerMap.set(userId, loaded);
+  }
+  return loaded;
+}
+function popLatestDmSticker(userId) {
+  const item = latestDmStickerMap.get(userId);
+  if (item) {
+    latestDmStickerMap.delete(userId);
+  }
+  return item;
+}
+function extractStickerTagFromReply(replyText) {
+  if (!replyText) return { cleanText: "", stickerKey: null };
+  let foundKey = null;
+  const tagRegex = /\[STICKER\s*:\s*([a-z0-9_]+)\]/gi;
+  const match = tagRegex.exec(replyText);
+  if (match && match[1]) {
+    const candidate = match[1].toLowerCase().trim();
+    if (candidate in JANIA_STICKER_CATALOG) {
+      foundKey = candidate;
+    }
+  }
+  const cleanText = replyText.replace(tagRegex, "").replace(/\n{3,}/g, "\n\n").trim();
+  return { cleanText, stickerKey: foundKey };
+}
+function selectContextualStickerForDm(userMessage, assistantReply, userId = "default_user", options) {
+  const uLower = (userMessage || "").toLowerCase();
+  const aLower = (assistantReply || "").toLowerCase();
+  const extracted = extractStickerTagFromReply(assistantReply);
+  if (extracted.stickerKey) {
+    return getJaniaStickerByKey(extracted.stickerKey);
+  }
+  if (aLower.includes("intermitencia temporal") || aLower.includes("error procesando")) {
+    return null;
+  }
+  const now = Date.now();
+  const prev = userStickerHistoryMap.get(userId);
+  const isExplicitEmotionalTrigger = /\b(?:abraz[oa]|abacho|bendiciones|te\s+quiero\s+jania|eres\s+la\s+mejor|gracias\s+jania|mil\s+gracias|jajaj+|jeje+|juajua+|😂|🤣)\b/i.test(uLower);
+  if (!options?.bypassCooldown && !isExplicitEmotionalTrigger && prev && now - prev.lastSentAt < 9e4) {
+    return null;
+  }
+  let chosenKey = null;
+  if (/\b(?:abraz[oa]s?|abacho|un\s+abrazo|bendiciones|te\s+adoro|eres\s+un\s+amor|tan\s+bella|tan\s+linda)\b/i.test(uLower)) {
+    chosenKey = "abacho";
+  } else if (/(?:juajua|jajajaja|🤣🤣|😂😂)/i.test(uLower)) {
+    chosenKey = "juajuajua";
+  } else if (/\b(?:jaja+|jeje+|jiji+)\b|😂|🤣|😅/i.test(uLower) || /\b(?:jaja+|jeje+)\b/i.test(aLower)) {
+    chosenKey = prev?.lastKey === "jajaja" ? "jajaja_fuerte" : "jajaja";
+  } else if (/\b(?:dinosaurios?\s+inmobiliarios?|leads?\s+quemados?|portales?\s+tradicionales|cobran\s+car[oí]simo|abuso|estafa)\b/i.test(uLower) || /\b(?:dinosaurios?\s+inmobiliarios?|leads?\s+quemados?)\b/i.test(aLower)) {
+    chosenKey = "ush";
+  } else if (/\b(?:no\s+comparto\s+40|rechazo\s+el\s+40|se\s+cay[oó]\s+el\s+negocio|perdimos\s+el\s+cliente)\b/i.test(uLower) || aLower.includes("plan de pago mensual o anual")) {
+    chosenKey = "nooo_por_que";
+  } else if (/\b(?:match\s+confirmado|coincidencias?\s+de\s+alta\s+afinidad|#m\d{3,})\b/i.test(aLower)) {
+    chosenKey = "queee";
+  } else if (/\b(?:prop-\d+|req-\d+|id\s+#\d+|registrad[oa]\s+exitosamente)\b/i.test(aLower)) {
+    chosenKey = prev?.lastKey === "gracias_alegre" ? "gracias_brillo" : "gracias_alegre";
+  } else if (/\b(?:muchas\s+gracias|mil\s+gracias|gracias\s+jania|acepto\s+el\s+40\/20\/40|claro\s+que\s+s[ií]\s+acepto)\b/i.test(uLower)) {
+    if (prev?.lastKey === "gracias_ternura") {
+      chosenKey = "gracias_brillo";
+    } else if (prev?.lastKey === "gracias_brillo") {
+      chosenKey = "gracias_alegre";
+    } else {
+      chosenKey = "gracias_ternura";
+    }
+  } else if (/\b(?:aval[uú]o|sondeo\s+de\s+mercado|cap\s+rate|liquidaci[oó]n\s+notarial|estudio\s+de\s+t[ií]tulos|pacto\s+de\s+retroventa|ley\s+820)\b/i.test(uLower)) {
+    chosenKey = "mmm";
+  } else if (/\b(?:desfasad[oa]|sobrevalorad[oa]|car[ií]simo|incre[ií]ble|impresionante)\b/i.test(uLower)) {
+    chosenKey = "oh_por_dios";
+  } else if (/^(?:ok|listo|perfecto|de\s+acuerdo|entendido|confirmado|dale|vale)[\s.!]*$/i.test(uLower.trim())) {
+    chosenKey = "ok";
+  } else if (/^(?:hola\s+jania|buenos\s+d[ií]as\s+jania|buenas\s+tardes\s+jania|buenas\s+noches\s+jania)/i.test(uLower.trim()) && !prev) {
+    chosenKey = "ternura";
+  }
+  if (!chosenKey) return null;
+  const sticker = getJaniaStickerByKey(chosenKey);
+  if (sticker) {
+    userStickerHistoryMap.set(userId, {
+      lastSentAt: now,
+      lastKey: chosenKey,
+      countInWindow: (prev?.countInWindow || 0) + 1
+    });
+  }
+  return sticker;
+}
+var JANIA_STICKER_CATALOG, stickerBufferCache, latestDmStickerMap, userStickerHistoryMap;
+var init_stickerService = __esm({
+  "server/_core/jania/stickerService.ts"() {
+    "use strict";
+    JANIA_STICKER_CATALOG = {
+      ternura: {
+        key: "ternura",
+        filename: "jania_ternura.webp",
+        label: "JanIA Ternura y Calidez",
+        emotion: "empatia_calidez",
+        useCase: "Saludo afectuoso, bienvenida c\xE1lida o gesto de empat\xEDa genuina sin texto."
+      },
+      abacho: {
+        key: "abacho",
+        filename: "jania_abacho.webp",
+        label: "\xA1Abacho!",
+        emotion: "afecto_abrazo",
+        useCase: "Cuando el usuario env\xEDa un abrazo, bendiciones, felicitaciones o muestras de cari\xF1o a JanIA."
+      },
+      gracias_ternura: {
+        key: "gracias_ternura",
+        filename: "jania_gracias_ternura.webp",
+        label: "\xA1Gracias! (Con ternura y gui\xF1o)",
+        emotion: "gratitud_tierna",
+        useCase: "Cuando el colega acepta la alianza 40/20/40, elogia a JanIA o agradece con calidez."
+      },
+      gracias_alegre: {
+        key: "gracias_alegre",
+        filename: "jania_gracias_alegre.webp",
+        label: "\xA1Gracias! (Alegre y ejecutiva)",
+        emotion: "gratitud_dinamica",
+        useCase: "Al radicar con \xE9xito un inmueble (#PROP) o requerimiento (#REQ) en la base de datos."
+      },
+      gracias_brillo: {
+        key: "gracias_brillo",
+        filename: "jania_gracias_brillo.webp",
+        label: "\xA1Gracias! (Con estilo y brillo)",
+        emotion: "gratitud_elegante",
+        useCase: "Cuando el propietario o colega entrega su correo, confirma agendamiento o cierra un acuerdo."
+      },
+      ok: {
+        key: "ok",
+        filename: "jania_ok.webp",
+        label: "\xA1Ok!",
+        emotion: "confirmacion_ejecutiva",
+        useCase: "Confirmaci\xF3n inmediata de instrucciones, acuerdos, radicados o visto bueno ('listo', 'perfecto', 'de acuerdo')."
+      },
+      mmm: {
+        key: "mmm",
+        filename: "jania_mmm.webp",
+        label: "\xA1Mmm! (Pensando y analizando)",
+        emotion: "analisis_profundo",
+        useCase: "Consultas de aval\xFAo comercial (ACM), Cap Rate, estudio tributario DIAN, POT o an\xE1lisis jur\xEDdico profundo."
+      },
+      jajaja: {
+        key: "jajaja",
+        filename: "jania_jajaja.webp",
+        label: "\xA1Jajaja!",
+        emotion: "risa_espontanea",
+        useCase: "Cuando el usuario se r\xEDe ('jaja', 'jeje', '\u{1F602}') o hace un comentario simp\xE1tico y ameno."
+      },
+      jajaja_fuerte: {
+        key: "jajaja_fuerte",
+        filename: "jania_jajaja_fuerte.webp",
+        label: "\xA1Jajaja! (Variante alegre)",
+        emotion: "risa_alegre",
+        useCase: "Rotaci\xF3n natural de risa para evitar repetir el mismo sticker en conversaciones jocosas."
+      },
+      juajuajua: {
+        key: "juajuajua",
+        filename: "jania_juajuajua.webp",
+        label: "\xA1Jua, jua, jua!",
+        emotion: "carcajada_total",
+        useCase: "Cuando el usuario cuenta una an\xE9cdota muy graciosa o suelta una carcajada ('juajuajua', '\u{1F923}\u{1F923}')."
+      },
+      queee: {
+        key: "queee",
+        filename: "jania_queee.webp",
+        label: "\xA1Queee!",
+        emotion: "sorpresa_positiva",
+        useCase: "Sorpresa ante un s\xFAper Match (85%-100%), una oportunidad inmobiliaria extraordinaria o dato revelador."
+      },
+      oh_por_dios: {
+        key: "oh_por_dios",
+        filename: "jania_oh_por_dios.webp",
+        label: "\xA1Oh por Dios!",
+        emotion: "asombro_impacto",
+        useCase: "Asombro ante precios desfasados del mercado, impuestos elevados o casos inmobiliarios impactantes."
+      },
+      ush: {
+        key: "ush",
+        filename: "jania_ush.webp",
+        label: "\xA1Ush!",
+        emotion: "indignacion_simpatica",
+        useCase: "Reacci\xF3n c\xF3mplice ante los abusos de los 'dinosaurios inmobiliarios' (portales tradicionales), leads quemados o cl\xE1usulas leoninas."
+      },
+      nooo_por_que: {
+        key: "nooo_por_que",
+        filename: "jania_nooo_por_que.webp",
+        label: "\xA1Nooo... por qu\xE9!",
+        emotion: "drama_jocoso",
+        useCase: "Empat\xEDa jocosa cuando se cae un negocio, un cliente se arrepiente o un colega rechaza el 40/20/40 gratuito."
+      }
+    };
+    stickerBufferCache = /* @__PURE__ */ new Map();
+    latestDmStickerMap = /* @__PURE__ */ new Map();
+    userStickerHistoryMap = /* @__PURE__ */ new Map();
+  }
+});
+
+// server/_core/jania/legalDocumentPdfService.ts
+var legalDocumentPdfService_exports = {};
+__export(legalDocumentPdfService_exports, {
+  buildDefaultLegalBody: () => buildDefaultLegalBody,
+  generateLegalDocumentPdf: () => generateLegalDocumentPdf,
+  getLegalDocumentMetadata: () => getLegalDocumentMetadata,
+  sanitizePdfWinAnsiText: () => sanitizePdfWinAnsiText
+});
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import QRCode from "qrcode";
+import crypto2 from "node:crypto";
+function sanitizePdfWinAnsiText(input) {
+  if (!input) return "";
+  return input.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/[•▪▸►]/g, "-").replace(/[—–]/g, "-").replace(/[“”«»]/g, '"').replace(/[‘’]/g, "'").replace(/m²/g, "m2").replace(/[^\x20-\x7E\xA1-\xFF\n\r\t]/g, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+function getLegalDocumentMetadata(tipo) {
+  switch (tipo) {
+    case "carta_terminacion_arriendo":
+      return {
+        title: "CARTA FORMAL DE TERMINACION Y NO PRORROGA DE CONTRATO DE ARRENDAMIENTO",
+        normativeFramework: "Ley 820 de 2003 (Arts. 22 a 25 - Vivienda Urbana) y Codigo de Comercio (Art. 520 - Local Comercial)",
+        defaultFileNamePrefix: "Carta_Terminacion_Arriendo_VECY"
+      };
+    case "carta_restitucion_inmueble":
+      return {
+        title: "SOLICITUD FORMAL DE ENTREGA Y RESTITUCION DE INMUEBLE ARRENDADO",
+        normativeFramework: "Ley 820 de 2003, Articulo 2005 del Codigo Civil y Articulo 384 del Codigo General del Proceso",
+        defaultFileNamePrefix: "Acta_Solicitud_Restitucion_Inmueble_VECY"
+      };
+    case "carta_presentacion_cliente":
+      return {
+        title: "CARTA DE PRESENTACION FORMAL Y REGISTRO DE PUNTA COMERCIAL INMOBILIARIA",
+        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio Colombiano y Doctrina Colaborativa VECY 40/20/40",
+        defaultFileNamePrefix: "Carta_Presentacion_Cliente_VECY"
+      };
+    case "contrato_arrendamiento_vivienda":
+      return {
+        title: "MINUTA DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA",
+        normativeFramework: "Regimen de Vivienda Urbana - Ley 820 de 2003 y Codigo Civil Colombiano",
+        defaultFileNamePrefix: "Contrato_Arrendamiento_Vivienda_VECY"
+      };
+    case "contrato_arrendamiento_comercial":
+      return {
+        title: "MINUTA DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL",
+        normativeFramework: "Articulos 518 a 524 del Codigo de Comercio Colombiano (Derecho a Renovacion y Desahucio)",
+        defaultFileNamePrefix: "Contrato_Arrendamiento_Comercial_VECY"
+      };
+    case "promesa_compraventa":
+      return {
+        title: "MINUTA DE PROMESA DE COMPRAVENTA DE BIEN INMUEBLE",
+        normativeFramework: "Articulo 1611 del Codigo Civil Colombiano, Ley 153 de 1887 (Art. 89) y Estatuto de Notariado",
+        defaultFileNamePrefix: "Promesa_Compraventa_Inmueble_VECY"
+      };
+    case "cesion_leasing":
+      return {
+        title: "MINUTA DE PROMESA DE CESION DE CONTRATO DE LEASING HABITACIONAL / COMERCIAL",
+        normativeFramework: "Decreto 2555 de 2010, Estatuto Organico del Sistema Financiero y Articulo 887 del Codigo de Comercio",
+        defaultFileNamePrefix: "Minuta_Cesion_Leasing_VECY"
+      };
+    case "pacto_retroventa":
+      return {
+        title: "MINUTA DE COMPRAVENTA CON PACTO DE RETROVENTA",
+        normativeFramework: "Articulos 1939 a 1943 del Codigo Civil Colombiano (Plazo Maximo Legal de 4 Anos)",
+        defaultFileNamePrefix: "Minuta_Pacto_Retroventa_VECY"
+      };
+    case "contrato_corretaje":
+      return {
+        title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA",
+        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio y Ley 527 de 1999 (Validez de Firma Electronica)",
+        defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
+      };
+    default:
+      return {
+        title: "MINUTA Y DOCUMENTO JURIDICO INMOBILIARIO OFICIAL",
+        normativeFramework: "Legislacion Civil, Comercial y Urbana de la Republica de Colombia",
+        defaultFileNamePrefix: "Minuta_Legal_Inmobiliaria_VECY"
+      };
+  }
+}
+function buildDefaultLegalBody(params) {
+  const ciudad = params.ciudad || "Bogota, D.C.";
+  const remitente = params.nombreRemitente || "[NOMBRE DEL REMITENTE / ARRENDADOR / PROMITENTE]";
+  const docRem = params.documentoRemitente || "[CC / NIT]";
+  const destinatario = params.nombreDestinatario || "[NOMBRE DEL DESTINATARIO / ARRENDATARIO / COMPRADOR]";
+  const docDest = params.documentoDestinatario || "[CC / NIT]";
+  const direccion = params.direccionInmueble || "[DIRECCION E IDENTIFICACION DEL INMUEBLE]";
+  const valor = params.valorNegocioOCanon || "[VALOR PACTADO EN PESOS COLOMBIANOS COP]";
+  const extras = params.clausulasEspeciales ? `
+
+DISPOSICIONES Y CLAUSULAS ESPECIALES:
+${params.clausulasEspeciales}` : "";
+  switch (params.tipoDocumento) {
+    case "carta_terminacion_arriendo":
+      return [
+        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `Senor(a): ${destinatario} (Identificacion: ${docDest})`,
+        `Referencia: Notificacion formal de preaviso y terminacion del Contrato de Arrendamiento sobre el inmueble ubicado en ${direccion}.`,
+        "",
+        "Respetado(a) senor(a):",
+        "",
+        `Por medio de la presente comunicacion, actuando en calidad de parte contratante (${remitente}, identificado(a) con ${docRem}), y en estricto cumplimiento de los terminos legales previstos en la Ley 820 de 2003 (preaviso minimo de tres [3] meses calendario con antelacion al vencimiento del periodo inicial o de cualquiera de sus prorrogas), le notifico de manera formal e irrevocable la decision de NO PRORROGAR y dar por terminado el contrato de arrendamiento suscrito sobre el inmueble ubicado en ${direccion}.`,
+        "",
+        "1. PLAZO Y FECHA DE ENTREGA: El inmueble debera ser restituido totalmente desocupado, a paz y salvo por concepto de canones de arrendamiento, cuotas de administracion y servicios publicos domiciliarios al vencimiento del periodo en curso.",
+        "2. ACTA DE INVENTARIO Y RECIBO: Se coordinara visita de inspeccion fisica para verificar el buen estado de conservacion de los acabados, instalaciones y llaves del predio conforme al inventario inicial.",
+        "3. NOTIFICACION FEHACIENTE: El presente preaviso se remite a traves de correo certificado y/o mensaje de datos con validez probatoria conforme a la Ley 527 de 1999." + extras
+      ].join("\n");
+    case "carta_restitucion_inmueble":
+      return [
+        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `Destinatario: ${destinatario} (Identificacion: ${docDest})`,
+        `Asunto: Solicitud formal de restitucion y entrega material del inmueble ubicado en ${direccion}.`,
+        "",
+        `En mi condicion de titular / representante (${remitente} - ${docRem}), solicito formalmente programar y ejecutar la restitucion material y entrega de llaves del bien inmueble ubicado en ${direccion}, en los terminos de la Ley 820 de 2003 y el Articulo 2005 del Codigo Civil.`,
+        "",
+        "REQUISITOS PARA LA SUSCRIPCION DEL ACTA DE ENTREGA:",
+        "- Presentacion de los ultimos tres (3) recibos de servicios publicos domiciliarios (energia, acueducto, gas) debidamente cancelados.",
+        "- Paz y salvo expedido por la Administracion de Propiedad Horizontal (si aplica).",
+        "- Revision conjunta del inventario fisico del inmueble sin deterioros distintos al uso natural y legitimo del bien." + extras
+      ].join("\n");
+    case "carta_presentacion_cliente":
+      return [
+        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `Dirigido a: ${destinatario} (${docDest})`,
+        `Presentado por: ${remitente} (${docRem}) \u2014 Red Colaborativa VECY BIENES RAICES`,
+        `Inmueble Objeto de Negociacion: ${direccion} | Valor Referencial: ${valor}`,
+        "",
+        "CERTIFICACION DE PRESENTACION Y REGISTRO DE PUNTA COMERCIAL:",
+        `Por medio del presente documento oficial se deja constancia mercantil (Arts. 1340 a 1346 del Codigo de Comercio) de la presentacion formal del cliente interesado para la operacion inmobiliaria sobre el predio ubicado en ${direccion}.`,
+        "",
+        "1. PROTECCION DE PUNTA Y NO DESINTERMEDIACION: Las partes reconocen la gestion de intermediacion y se obligan a respetar la reserva de punta comercial y la distribucion de comision acordada a traves de la mesa central de VECY BIENES RAICES (+57 316 656 9719).",
+        "2. VIGENCIA DEL REGISTRO: El presente registro ampara toda negociacion directa o indirecta que se perfeccione con el cliente presentado o su grupo familiar/societario dentro de los doce (12) meses siguientes a la visita." + extras
+      ].join("\n");
+    case "pacto_retroventa":
+      return [
+        `ENTRE LOS SUSCRITOS: De una parte ${remitente} (${docRem}), quien obra como EL VENDEDOR CON FACULTAD DE RECOBRO, y de otra parte ${destinatario} (${docDest}), quien obra como EL COMPRADOR, se celebra el presente negocio juridico regido por los Articulos 1939 a 1943 del Codigo Civil Colombiano:`,
+        "",
+        `CLAUSULA PRIMERA - OBJETO: EL VENDEDOR transfiere a titulo de compraventa con pacto de retroventa a favor de EL COMPRADOR el derecho de dominio y posesion sobre el inmueble ubicado en ${direccion}, en la ciudad de ${ciudad}.`,
+        `CLAUSULA SEGUNDA - PRECIO Y SUMA DE REEMBOLSO: El precio de la presente operacion se pacta en la suma de ${valor}.`,
+        "CLAUSULA TERCERA - PACTO DE RETROVENTA (ART. 1939 C.C.): EL VENDEDOR se reserva expresamente la facultad legal de recobrar la propiedad del inmueble vendido, reembolsando a EL COMPRADOR la cantidad determinada en este contrato dentro del plazo estipulado, el cual en ningun caso podra exceder de cuatro (4) anos contados desde la fecha de la escritura publica (Art. 1943 C.C.)." + extras
+      ].join("\n");
+    case "cesion_leasing":
+      return [
+        `PARTES INTERVINIENTES: ${remitente} (${docRem}) en calidad de PROMITENTE CEDENTE (Locatario Actual), y ${destinatario} (${docDest}) en calidad de PROMITENTE CESIONARIO, respecto del inmueble ubicado en ${direccion} (${ciudad}).`,
+        "",
+        `CLAUSULA PRIMERA - OBJETO DE LA CESION: El PROMITENTE CEDENTE se obliga a ceder a favor del PROMITENTE CESIONARIO su posicion contractual como locatario dentro del Contrato de Leasing Habitacional / Inmobiliario vigente ante la entidad financiera titular del dominio.`,
+        `CLAUSULA SEGUNDA - VALOR DE LA CESION Y SALDO FINANCIERO: El valor total del negocio se establece en ${valor}, discriminado entre los derechos de cesion pagaderos al locatario cedente y el saldo de capital con opcion de adquisicion ante la entidad bancaria.`,
+        "CLAUSULA TERCERA - CONDICION SUSPENSIVA DE APROBACION BANCARIA: El perfeccionamiento de la cesion queda sujeto al estudio de credito y aprobacion formal del cesionario por parte de la entidad financiera leasing." + extras
+      ].join("\n");
+    default:
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `PARTE A (PROMITENTE / ARRENDADOR / COMITENTE): ${remitente} \u2014 Documento: ${docRem}`,
+        `PARTE B (CONTRAPARTE / ARRENDATARIO / CORREDOR): ${destinatario} \u2014 Documento: ${docDest}`,
+        `INMUEBLE OBJETO DEL ACTO JURIDICO: ${direccion} (${ciudad})`,
+        `CUANTIA / VALOR DE LA OPERACION: ${valor}`,
+        "",
+        "CLAUSULADO GENERAL OBLIGACIONAL:",
+        "PRIMERA - OBJETO Y VINCULACION JURIDICA: Las partes suscriben de buena fe exenta de culpa el presente instrumento juridico inmobiliario conforme a la legislacion civil y mercantil colombiana.",
+        "SEGUNDA - SANEAMIENTO Y DEBIDA DILIGENCIA: El inmueble objeto del negocio se declara libre de embargos, pleitos pendientes, condiciones resolutorias o limitaciones no declaradas expresamente en el Certificado de Tradicion y Libertad.",
+        "TERCERA - CLAUSULA PENAL Y CUMPLIMIENTO: El incumplimiento grave de cualquiera de las obligaciones aqui pactadas dara lugar al cobro ejecutivo de las arras o clausula penal conforme al Articulo 1592 del Codigo Civil y Articulo 867 del Codigo de Comercio.",
+        "CUARTA - FIRMA ELECTRONICA Y PLENA VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento puede ser suscrito mediante firma electronica certificada con plena eficacia juridica." + extras
+      ].join("\n");
+  }
+}
+function wrapTextToLines(text2, font, fontSize, maxWidth) {
+  const paragraphs = text2.split(/\r?\n/);
+  const lines = [];
+  for (const para of paragraphs) {
+    const cleanPara = sanitizePdfWinAnsiText(para);
+    if (!cleanPara) {
+      lines.push("");
+      continue;
+    }
+    const words = cleanPara.split(/\s+/);
+    let currentLine = "";
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const width = font.widthOfTextAtSize(testLine, fontSize);
+      if (width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+  }
+  return lines;
+}
+async function generateLegalDocumentPdf(params) {
+  const meta = getLegalDocumentMetadata(params.tipoDocumento);
+  const title = sanitizePdfWinAnsiText(params.tituloPersonalizado || meta.title).toUpperCase();
+  const bodyContent = sanitizePdfWinAnsiText(params.cuerpoDocumento || buildDefaultLegalBody(params));
+  const verificationCode = `DOC-VECY-${crypto2.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+  const pdfDoc = await PDFDocument.create();
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pageWidth = 612;
+  const pageHeight = 792;
+  const marginX = 52;
+  const maxWidth = pageWidth - marginX * 2;
+  const drawHeader = (page, isFirstPage) => {
+    page.drawRectangle({
+      x: 0,
+      y: pageHeight - 72,
+      width: pageWidth,
+      height: 72,
+      color: rgb(0.08, 0.09, 0.12)
+    });
+    page.drawRectangle({
+      x: 0,
+      y: pageHeight - 75,
+      width: pageWidth,
+      height: 3,
+      color: rgb(0.83, 0.68, 0.21)
+    });
+    page.drawText("VECY BIENES RAICES - CONSULTORIA LEGAL E IA INMOBILIARIA", {
+      x: marginX,
+      y: pageHeight - 32,
+      size: 11,
+      font: fontBold,
+      color: rgb(0.92, 0.78, 0.32)
+    });
+    page.drawText("Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/", {
+      x: marginX,
+      y: pageHeight - 48,
+      size: 8.5,
+      font: fontRegular,
+      color: rgb(0.88, 0.88, 0.9)
+    });
+    page.drawText(`Radicado Documental: ${verificationCode}`, {
+      x: marginX,
+      y: pageHeight - 61,
+      size: 8,
+      font: fontRegular,
+      color: rgb(0.7, 0.72, 0.76)
+    });
+    if (isFirstPage) {
+      const titleLines = wrapTextToLines(title, fontBold, 11.5, maxWidth);
+      let ty = pageHeight - 102;
+      for (const tLine of titleLines) {
+        page.drawText(tLine, {
+          x: marginX,
+          y: ty,
+          size: 11.5,
+          font: fontBold,
+          color: rgb(0.1, 0.12, 0.18)
+        });
+        ty -= 15;
+      }
+      page.drawText(`Marco Normativo: ${sanitizePdfWinAnsiText(meta.normativeFramework)}`, {
+        x: marginX,
+        y: ty - 2,
+        size: 8.5,
+        font: fontRegular,
+        color: rgb(0.38, 0.4, 0.45)
+      });
+      page.drawLine({
+        start: { x: marginX, y: ty - 10 },
+        end: { x: pageWidth - marginX, y: ty - 10 },
+        thickness: 0.8,
+        color: rgb(0.8, 0.65, 0.2)
+      });
+      return ty - 28;
+    }
+    return pageHeight - 98;
+  };
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+  const bodyLines = wrapTextToLines(bodyContent, fontRegular, 10, maxWidth);
+  for (const line of bodyLines) {
+    if (cursorY < 130) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+    if (!line) {
+      cursorY -= 8;
+      continue;
+    }
+    const isHeading = /^(?:CLAUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SEPTIMA|OCTAVA|REQUISITOS|CERTIFICACION|DISPOSICIONES|[1-9]\.)/i.test(
+      line
+    );
+    currentPage.drawText(line, {
+      x: marginX,
+      y: cursorY,
+      size: 9.8,
+      font: isHeading ? fontBold : fontRegular,
+      color: rgb(0.14, 0.15, 0.18)
+    });
+    cursorY -= 14;
+  }
+  if (cursorY < 210) {
+    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    cursorY = drawHeader(currentPage, false);
+  }
+  cursorY -= 26;
+  currentPage.drawLine({
+    start: { x: marginX, y: cursorY },
+    end: { x: marginX + 210, y: cursorY },
+    thickness: 0.9,
+    color: rgb(0.2, 0.2, 0.25)
+  });
+  currentPage.drawLine({
+    start: { x: pageWidth - marginX - 210, y: cursorY },
+    end: { x: pageWidth - marginX, y: cursorY },
+    thickness: 0.9,
+    color: rgb(0.2, 0.2, 0.25)
+  });
+  const remLabel = sanitizePdfWinAnsiText(params.nombreRemitente || "FIRMA PARTE A / REMITENTE");
+  const destLabel = sanitizePdfWinAnsiText(params.nombreDestinatario || "FIRMA PARTE B / DESTINATARIO");
+  currentPage.drawText(remLabel.substring(0, 38), {
+    x: marginX,
+    y: cursorY - 13,
+    size: 8.5,
+    font: fontBold,
+    color: rgb(0.15, 0.15, 0.2)
+  });
+  currentPage.drawText("CC / NIT: ________________________", {
+    x: marginX,
+    y: cursorY - 25,
+    size: 8,
+    font: fontRegular,
+    color: rgb(0.35, 0.35, 0.4)
+  });
+  currentPage.drawText(destLabel.substring(0, 38), {
+    x: pageWidth - marginX - 210,
+    y: cursorY - 13,
+    size: 8.5,
+    font: fontBold,
+    color: rgb(0.15, 0.15, 0.2)
+  });
+  currentPage.drawText("CC / NIT: ________________________", {
+    x: pageWidth - marginX - 210,
+    y: cursorY - 25,
+    size: 8,
+    font: fontRegular,
+    color: rgb(0.35, 0.35, 0.4)
+  });
+  const footerBoxY = 36;
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 70,
+    color: rgb(0.96, 0.96, 0.98),
+    borderColor: rgb(0.83, 0.68, 0.21),
+    borderWidth: 0.8
+  });
+  currentPage.drawText("GUIA RAPIDA DE FIRMA ELECTRONICA OFICIAL (LEY 527 DE 1999):", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Ingresa a https://autenticaciondigital.and.gov.co/ (Agencia Nacional Digital - Carpeta Ciudadana).",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.6,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Valida tu identidad o usa un firmador con estampado cronologico y OTP al celular/correo de las partes.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.6,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Codigo de trazabilidad VECY: ${verificationCode} | Asesoria Jur\xEDdica e Inmobiliaria: +57 316 656 9719`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.6,
+      font: fontBold,
+      color: rgb(0.2, 0.22, 0.28)
+    }
+  );
+  try {
+    const qrDataUrl = await QRCode.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?doc=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+  }
+  const pdfBytes = await pdfDoc.save();
+  const pdfBuffer = Buffer.from(pdfBytes);
+  const fileName = `${meta.defaultFileNamePrefix}_${verificationCode}.pdf`;
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+var init_legalDocumentPdfService = __esm({
+  "server/_core/jania/legalDocumentPdfService.ts"() {
+    "use strict";
+  }
+});
+
+// server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts
+var dmOnboardingAndDocsHelper_exports = {};
+__export(dmOnboardingAndDocsHelper_exports, {
+  buildSessionOnboardingDirectives: () => buildSessionOnboardingDirectives,
+  detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
+  generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
+  isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
+  processAndQueueDmSticker: () => processAndQueueDmSticker
+});
+function detectLegalDocumentTypeFromText(text2) {
+  const lower = (text2 || "").toLowerCase();
+  if (!lower) return null;
+  if (/\b(?:carta|notificaci[oó]n|preaviso)\b[\s\S]{0,45}\b(?:terminaci[oó]n|no\s+pr[oó]rroga|desahucio|finalizar\s+arriendo)\b/i.test(lower)) {
+    return "carta_terminacion_arriendo";
+  }
+  if (/\b(?:carta|solicitud|acta)\b[\s\S]{0,45}\b(?:restituci[oó]n|entrega\s+de\s+inmueble|devoluci[oó]n\s+del?\s+inmueble)\b/i.test(lower)) {
+    return "carta_restitucion_inmueble";
+  }
+  if (/\b(?:carta|formato|documento)\b[\s\S]{0,45}\b(?:presentaci[oó]n\s+de\s+cliente|registro\s+de\s+punta|protecci[oó]n\s+de\s+cliente)\b/i.test(lower)) {
+    return "carta_presentacion_cliente";
+  }
+  if (/\b(?:pacto\s+de\s+retroventa|retroventa|art(?:[ií]culo|\.?)\s*1939)\b/i.test(lower)) {
+    return "pacto_retroventa";
+  }
+  if (/\b(?:cesi[oó]n\s+de\s+leasing|leasing\s+habitacional|leasing\s+comercial)\b/i.test(lower)) {
+    return "cesion_leasing";
+  }
+  if (/\b(?:contrato\s+de\s+corretaje|corretaje\s+inmobiliario|mandato\s+de\s+comisi[oó]n)\b/i.test(lower)) {
+    return "contrato_corretaje";
+  }
+  if (/\b(?:contrato\s+de\s+arrendamiento|contrato\s+de\s+arriendo)\b[\s\S]{0,40}\b(?:local|comercial|bodega|oficina)\b/i.test(lower)) {
+    return "contrato_arrendamiento_comercial";
+  }
+  if (/\b(?:contrato\s+de\s+arrendamiento|contrato\s+de\s+arriendo|minuta\s+de\s+arriendo)\b/i.test(lower)) {
+    return "contrato_arrendamiento_vivienda";
+  }
+  if (/\b(?:promesa\s+de\s+compraventa|minuta\s+de\s+compraventa|contrato\s+de\s+compraventa)\b/i.test(lower)) {
+    return "promesa_compraventa";
+  }
+  if (/\b(?:minuta|borrador\s+de\s+contrato)\b/i.test(lower)) {
+    return "minuta_general";
+  }
+  return null;
+}
+function isExplicitLegalPdfRequest(text2) {
+  const lower = (text2 || "").toLowerCase();
+  const wantsPdfOrFile = /\b(?:en\s+pdf|archivo\s+pdf|documento\s+pdf|descargar\s+pdf|env[ií]a(?:me)?\s+el\s+pdf|genera(?:me|r)?\s+(?:el\s+|un\s+)?pdf|m[aá]nda(?:me)?\s+el\s+pdf)\b/i.test(
+    lower
+  );
+  const docType = detectLegalDocumentTypeFromText(lower);
+  return Boolean(wantsPdfOrFile && docType);
+}
+async function generateLegalPdfForDmRequest(userText, overrideParams) {
+  const detectedType = overrideParams?.tipoDocumento || detectLegalDocumentTypeFromText(userText) || "minuta_general";
+  return await generateLegalDocumentPdf({
+    tipoDocumento: detectedType,
+    ...overrideParams
+  });
+}
+function processAndQueueDmSticker(userId, userMessage, rawAssistantReply, options) {
+  const { cleanText, stickerKey } = extractStickerTagFromReply(rawAssistantReply);
+  if (stickerKey) {
+    const explicitSticker = setLatestDmSticker(userId, stickerKey);
+    return { cleanReply: cleanText, queuedSticker: explicitSticker };
+  }
+  const contextualSticker = selectContextualStickerForDm(userMessage, cleanText, userId, options);
+  if (contextualSticker) {
+    setLatestDmSticker(userId, contextualSticker.key);
+  }
+  return { cleanReply: cleanText, queuedSticker: contextualSticker };
+}
+async function buildSessionOnboardingDirectives(userId) {
+  const alliedStatus = await getUser402040Agreement(userId);
+  const ownerStatus = await getUserOwnerCorretaje(userId);
+  const context402040Directive = alliedStatus === true ? `
+\u{1F91D} ESTADO DE ALIANZA 40/20/40 CONFIRMADO EN SESI\xD3N: Este colega YA ACEPT\xD3 nuestra alianza colaborativa 40/20/40. Recon\xF3celo como Aliado Prioritario con acceso 100% gratuito a cruces (MATCHES) y NO le vuelvas a preguntar si acepta el 40/20/40.` : alliedStatus === false ? `
+\u{1F4BC} ESTADO DE COMISI\xD3N EN SESI\xD3N (RECHAZA 40/20/40 -> PLAN DE PAGO MENSUAL O ANUAL): Este agente indic\xF3 que NO comparte comisi\xF3n bajo el modelo 40/20/40. S\xCD reg\xEDstralo en la base de datos de VECY con su c\xF3digo oficial, pero advi\xE9rtele con cortes\xEDa que la gratuidad de MATCHES aplica \xFAnicamente bajo el esquema 40/20/40 y que ser\xE1 contactado por la direcci\xF3n comercial (+57 316 656 9719) para adquirir un plan de suscripci\xF3n de pago mensual o anual.` : "";
+  const contextOwnerDirective = ownerStatus?.isOwner ? `
+\u{1F3E0} ESTADO DE PROPIETARIO DIRECTO EN SESI\xD3N (CORRETAJE VIRTUAL VECY): Este usuario es Propietario Directo (NO es colega inmobiliario; JAM\xC1S le ofrezcas comisi\xF3n colaborativa 40/20/40 ni 50/50). Estado actual: T&C Corretaje Virtual=${ownerStatus.acceptsTerms ? "ACEPTADOS" : "PENDIENTE DE ACEPTACI\xD3N"}, Correo=${ownerStatus.email || "PENDIENTE DE SOLICITAR"}. Exige la aceptaci\xF3n de T\xE9rminos y Condiciones de corretaje virtual, pide su correo para el env\xEDo formal del contrato y recu\xE9rdale comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisi\xF3n previa a la publicaci\xF3n en https://vecy-bienes-raices.vercel.app/.` : "";
+  return { context402040Directive, contextOwnerDirective };
+}
+var init_dmOnboardingAndDocsHelper = __esm({
+  "server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts"() {
+    "use strict";
+    init_legalDocumentPdfService();
+    init_stickerService();
+    init_sessionManager();
   }
 });
 
@@ -17529,8 +18299,8 @@ __export(storage_exports, {
   storageGet: () => storageGet,
   storagePut: () => storagePut
 });
-import fs7 from "fs";
-import path7 from "path";
+import fs8 from "fs";
+import path8 from "path";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
@@ -17540,13 +18310,13 @@ function buildAbsoluteLocalUrl(key) {
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
   const key = normalizeKey(relKey);
-  const targetFilePath = path7.join(uploadsDir, key);
-  const targetSubdir = path7.dirname(targetFilePath);
-  if (!fs7.existsSync(targetSubdir)) {
-    fs7.mkdirSync(targetSubdir, { recursive: true });
+  const targetFilePath = path8.join(uploadsDir, key);
+  const targetSubdir = path8.dirname(targetFilePath);
+  if (!fs8.existsSync(targetSubdir)) {
+    fs8.mkdirSync(targetSubdir, { recursive: true });
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs7.writeFileSync(targetFilePath, buffer);
+  fs8.writeFileSync(targetFilePath, buffer);
   const publicUrl = buildAbsoluteLocalUrl(key);
   console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
   return { key, url: `/uploads/${key}` };
@@ -17562,16 +18332,16 @@ var uploadsDir;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
-    uploadsDir = path7.resolve(process.cwd(), "public/uploads");
-    if (!fs7.existsSync(uploadsDir)) {
-      fs7.mkdirSync(uploadsDir, { recursive: true });
+    uploadsDir = path8.resolve(process.cwd(), "public/uploads");
+    if (!fs8.existsSync(uploadsDir)) {
+      fs8.mkdirSync(uploadsDir, { recursive: true });
     }
   }
 });
 
 // server/_core/divipola.ts
-import fs8 from "fs";
-import path8 from "path";
+import fs9 from "fs";
+import path9 from "path";
 var municipalitiesMap, initDivipola, validateCity;
 var init_divipola = __esm({
   "server/_core/divipola.ts"() {
@@ -17579,13 +18349,13 @@ var init_divipola = __esm({
     municipalitiesMap = /* @__PURE__ */ new Map();
     initDivipola = () => {
       try {
-        const jsonPath = path8.join(process.cwd(), "server", "data", "divipola.json");
+        const jsonPath = path9.join(process.cwd(), "server", "data", "divipola.json");
         municipalitiesMap.clear();
-        if (!fs8.existsSync(jsonPath)) {
+        if (!fs9.existsSync(jsonPath)) {
           console.warn("Divipola JSON data file not found at", jsonPath);
           return;
         }
-        const raw = fs8.readFileSync(jsonPath, "utf-8");
+        const raw = fs9.readFileSync(jsonPath, "utf-8");
         const list = JSON.parse(raw);
         for (const item of list) {
           if (item.municipio) {
@@ -20178,10 +20948,10 @@ var init_propertiesHandler = __esm({
 });
 
 // server/_core/emailContractService.ts
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument as PDFDocument2, rgb as rgb2, StandardFonts as StandardFonts2 } from "pdf-lib";
 import nodemailer from "nodemailer";
-import QRCode from "qrcode";
-import crypto2 from "node:crypto";
+import QRCode2 from "qrcode";
+import crypto3 from "node:crypto";
 function normalizePayload(input) {
   const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
   return {
@@ -20212,25 +20982,25 @@ function normalizePayload(input) {
 }
 async function createContractPdf(rawFormData) {
   const formData = normalizePayload(rawFormData);
-  const pdfDoc = await PDFDocument.create();
+  const pdfDoc = await PDFDocument2.create();
   let currentPage = pdfDoc.addPage();
   const { width, height } = currentPage.getSize();
-  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const black = rgb(0, 0, 0);
-  const gray = rgb(0.3, 0.3, 0.3);
-  const goldColor = rgb(0.749, 0.584, 0.247);
+  const font = await pdfDoc.embedFont(StandardFonts2.TimesRoman);
+  const boldFont = await pdfDoc.embedFont(StandardFonts2.TimesRomanBold);
+  const black = rgb2(0, 0, 0);
+  const gray = rgb2(0.3, 0.3, 0.3);
+  const goldColor = rgb2(0.749, 0.584, 0.247);
   const margin = 50;
   let y = height - margin;
   const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
   const sId = clean(formData.solicitud_id || "N/A");
   const contractPayloadString = `${sId}|${clean(formData.solicitante_nombre)}|${clean(formData.solicitante_numero_documento)}|${clean(formData.codigo_inmueble)}|${(/* @__PURE__ */ new Date()).toISOString()}`;
-  const sha256Hash = crypto2.createHash("sha256").update(contractPayloadString).digest("hex");
+  const sha256Hash = crypto3.createHash("sha256").update(contractPayloadString).digest("hex");
   const cuv = `VECY-CTR-${sId}-${sha256Hash.substring(0, 8).toUpperCase()}`;
   const verifyUrl = `https://vecy-bienes-raices.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
   let qrImage = null;
   try {
-    const qrBuffer = await QRCode.toBuffer(verifyUrl, {
+    const qrBuffer = await QRCode2.toBuffer(verifyUrl, {
       width: 140,
       margin: 1,
       color: {
@@ -20501,7 +21271,7 @@ De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociac
     height: sealBoxHeight,
     borderColor: goldColor,
     borderWidth: 0.8,
-    color: rgb(0.97, 0.97, 0.95)
+    color: rgb2(0.97, 0.97, 0.95)
   });
   if (qrImage) {
     currentPage.drawImage(qrImage, {
@@ -21894,8 +22664,8 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
     const solver = new Solver2(apiKey);
     const puppeteer = (await import("puppeteer")).default;
-    const fs15 = await import("fs");
-    const executablePath = fs15.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const fs16 = await import("fs");
+    const executablePath = fs16.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -22458,8 +23228,8 @@ __export(iduValorizacionService_exports, {
   isIduInquiry: () => isIduInquiry,
   setPendingIduSession: () => setPendingIduSession
 });
-import fs9 from "fs";
-import path9 from "path";
+import fs10 from "fs";
+import path10 from "path";
 import os2 from "os";
 function hasPendingIduSession(senderId) {
   const session = pendingIduSessions.get(senderId);
@@ -22532,15 +23302,15 @@ function extractChipForIduValorizacion(text2) {
 }
 async function downloadIduCertificatePdf(chip) {
   const cleanChip = chip.toUpperCase().trim();
-  const downloadDir = path9.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const downloadDir = path10.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
   try {
-    fs9.mkdirSync(downloadDir, { recursive: true });
+    fs10.mkdirSync(downloadDir, { recursive: true });
   } catch (_) {
   }
   let browser = null;
   try {
     const puppeteer = (await import("puppeteer")).default;
-    const executablePath = fs9.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const executablePath = fs10.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -22598,16 +23368,16 @@ async function downloadIduCertificatePdf(chip) {
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 1e3));
-      if (fs9.existsSync(downloadDir)) {
-        const files = fs9.readdirSync(downloadDir);
+      if (fs10.existsSync(downloadDir)) {
+        const files = fs10.readdirSync(downloadDir);
         const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
         if (pdfFile) {
-          downloadedFilePath = path9.join(downloadDir, pdfFile);
+          downloadedFilePath = path10.join(downloadDir, pdfFile);
           break;
         }
       }
     }
-    if (!downloadedFilePath || !fs9.existsSync(downloadedFilePath)) {
+    if (!downloadedFilePath || !fs10.existsSync(downloadedFilePath)) {
       return {
         success: false,
         errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
@@ -22615,7 +23385,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: predioData.direccion
       };
     }
-    const pdfBuffer = fs9.readFileSync(downloadedFilePath);
+    const pdfBuffer = fs10.readFileSync(downloadedFilePath);
     if (!pdfBuffer || pdfBuffer.length < 500) {
       return {
         success: false,
@@ -22646,8 +23416,8 @@ async function downloadIduCertificatePdf(chip) {
       }
     }
     try {
-      if (fs9.existsSync(downloadDir)) {
-        fs9.rmSync(downloadDir, { recursive: true, force: true });
+      if (fs10.existsSync(downloadDir)) {
+        fs10.rmSync(downloadDir, { recursive: true, force: true });
       }
     } catch (_) {
     }
@@ -22798,10 +23568,10 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs10 from "fs";
-import path10 from "path";
+import fs11 from "fs";
+import path11 from "path";
 import { eq as eq9 } from "drizzle-orm";
-import QRCode2 from "qrcode";
+import QRCode3 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
   if (_baileys?.default && typeof _baileys.default === "function") return _baileys.default;
@@ -23010,7 +23780,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path10.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path11.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -23175,9 +23945,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path10.join(process.cwd(), this.sessionFolderName);
-          if (!fs10.existsSync(sessionDir)) {
-            fs10.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path11.join(process.cwd(), this.sessionFolderName);
+          if (!fs11.existsSync(sessionDir)) {
+            fs11.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -23199,7 +23969,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs10.existsSync(path10.join(sessionDir, "creds.json"))) {
+          if (!fs11.existsSync(path11.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -23293,14 +24063,14 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path10.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path10.join(process.cwd(), "client", "public");
-              if (!fs10.existsSync(publicQrDir)) {
-                fs10.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path11.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path11.join(process.cwd(), "client", "public");
+              if (!fs11.existsSync(publicQrDir)) {
+                fs11.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path10.join(publicQrDir, "qr-match.png");
-              await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
-              await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
+              const publicQrPath = path11.join(publicQrDir, "qr-match.png");
+              await QRCode3.toFile(qrPath, qr, { width: 400, margin: 2 });
+              await QRCode3.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
             } catch (e) {
               console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
@@ -23917,8 +24687,9 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   console.warn("[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:", ttsErr?.message);
                 }
               }
-              const { popLatestDmPdf: popLatestDmPdf2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+              const { popLatestDmPdf: popLatestDmPdf2, popLatestDmSticker: popLatestDmSticker2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
               const latestPdf = popLatestDmPdf2(senderId);
+              const latestSticker = popLatestDmSticker2(senderId);
               const pdfBuffer2 = reply?.pdfBuffer || latestPdf?.pdfBuffer;
               const pdfFileName = reply?.pdfFileName || latestPdf?.pdfFileName;
               const isSenderAdmin = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
@@ -23942,6 +24713,12 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                 await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
               }
               await this.logToDb(senderId, "janIA", replyText);
+              if (latestSticker && Buffer.isBuffer(latestSticker.buffer)) {
+                console.log(`[JANIA-MATCH] [DM-STICKER] Despachando sticker 3D oficial de JanIA (${latestSticker.filename}) a ${senderId}`);
+                await this.queuedSend(senderId, {
+                  sticker: latestSticker.buffer
+                }, { allowDirectMessage: true, skipDelay: true });
+              }
               const isLongQueryOrQuestion = cleanLower.includes("?") || cleanLower.split(/\s+/).filter(Boolean).length > 15 || /\b(?:pregunta|caso|arriendo|contrato|inmueble|canon|ipc|otro\s*si|poliza|seguro|cuanto|como|donde|cuando|por\s*que)\b/i.test(cleanLower);
               const isErrorReply = typeof replyText === "string" && (replyText.includes("intermitencia temporal") || replyText.includes("error") || replyText.includes("fallo en la matrix"));
               const isGratitudeOrClosing = !isSenderAdmin && !isLongQueryOrQuestion && !isErrorReply && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
@@ -25220,7 +25997,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               if (options.mentions) {
                 messagePayload.mentions = options.mentions;
               }
-            } else if (content && (content.text || content.audio || content.image || content.video || content.document)) {
+            } else if (content && (content.text || content.audio || content.image || content.video || content.document || content.sticker)) {
               messagePayload = content;
               if (typeof messagePayload.text === "string") {
                 messagePayload.text = sanitizeResponseMarkdown(messagePayload.text);
@@ -25462,10 +26239,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs15 = await import("fs");
-            const buffer = fs15.readFileSync(mediaPath);
-            const path16 = await import("path");
-            const ext = path16.extname(mediaPath).toLowerCase();
+            const fs16 = await import("fs");
+            const buffer = fs16.readFileSync(mediaPath);
+            const path17 = await import("path");
+            const ext = path17.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -25483,7 +26260,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path16.basename(mediaPath)
+                fileName: path17.basename(mediaPath)
               };
             }
           } else {
@@ -25510,8 +26287,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const fs15 = await import("fs");
-          if (imagePath && fs15.existsSync(imagePath)) {
+          const fs16 = await import("fs");
+          if (imagePath && fs16.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -25550,8 +26327,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
-        const fs15 = await import("fs");
-        const hasImage = imagePath && fs15.existsSync(imagePath);
+        const fs16 = await import("fs");
+        const hasImage = imagePath && fs16.existsSync(imagePath);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -25611,8 +26388,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           console.warn(`[JANIA-ATOMIC] \u{1F6D1} Cancelado env\xEDo: Canal Oficial no configurado. Jam\xE1s se debe anunciar contenido en grupos que no exista en el Canal.`);
           return { success: false, reason: "Canal Oficial no configurado" };
         }
-        const fs15 = await import("fs");
-        const hasImage = imagePath && fs15.existsSync(imagePath);
+        const fs16 = await import("fs");
+        const hasImage = imagePath && fs16.existsSync(imagePath);
         let channelResult = { success: false };
         try {
           if (hasImage) {
@@ -25766,11 +26543,11 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
         const voiceMedia = await textToSpeechMedia2(cleaned);
         const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
         const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs15 = await import("fs");
+        const fs16 = await import("fs");
         if (this.buzonGroupId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs15.existsSync(imagePath)) {
+            if (imagePath && fs16.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
             }
             if (audioBuffer) {
@@ -25790,7 +26567,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
         if (this.channelNewsletterId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs15.existsSync(imagePath)) {
+            if (imagePath && fs16.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
             }
             if (audioBuffer) {
@@ -25928,7 +26705,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path10.resolve("./client/public/jania_perfil.png");
+        const imgPath = path11.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -25959,10 +26736,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path10.join(process.cwd(), ".baileys_auth");
-        if (fs10.existsSync(sessionDir)) {
+        const sessionDir = path11.join(process.cwd(), ".baileys_auth");
+        if (fs11.existsSync(sessionDir)) {
           try {
-            fs10.rmSync(sessionDir, { recursive: true, force: true });
+            fs11.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -25981,8 +26758,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs10.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs10.readFileSync(this.cooldownFile, "utf8"));
+          if (fs11.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs11.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -25991,7 +26768,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs10.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs11.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -27455,7 +28232,7 @@ var init_agenda = __esm({
 });
 
 // server/_core/ruesService.ts
-import crypto3 from "crypto";
+import crypto4 from "crypto";
 function formatTitleCase2(text2) {
   if (!text2) return "";
   return text2.toLowerCase().split(/\s+/).map((word) => word.length > 0 ? word[0].toUpperCase() + word.slice(1) : "").join(" ");
@@ -27471,11 +28248,11 @@ function formatRuesDate(raw) {
 function encryptRuesPayload(payload) {
   const plaintext = JSON.stringify(payload);
   const password = Buffer.from(RUES_AES_PASSPHRASE, "utf8");
-  const salt = crypto3.randomBytes(8);
+  const salt = crypto4.randomBytes(8);
   let derived = Buffer.alloc(0);
   let block = Buffer.alloc(0);
   while (derived.length < 48) {
-    const md5 = crypto3.createHash("md5");
+    const md5 = crypto4.createHash("md5");
     md5.update(block);
     md5.update(password);
     md5.update(salt);
@@ -27484,7 +28261,7 @@ function encryptRuesPayload(payload) {
   }
   const key = derived.subarray(0, 32);
   const iv = derived.subarray(32, 48);
-  const cipher = crypto3.createCipheriv("aes-256-cbc", key, iv);
+  const cipher = crypto4.createCipheriv("aes-256-cbc", key, iv);
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   return Buffer.concat([Buffer.from("Salted__", "utf8"), salt, encrypted]).toString("base64");
 }
@@ -27525,7 +28302,7 @@ function formatOrganizacionJuridica(raw) {
   }
   return formatTitleCase2(raw);
 }
-async function postRuesEncrypted(path16, payload, timeoutMs = 5e3) {
+async function postRuesEncrypted(path17, payload, timeoutMs = 5e3) {
   if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
     return null;
   }
@@ -27534,14 +28311,14 @@ async function postRuesEncrypted(path16, payload, timeoutMs = 5e3) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${baseUrl}${path16}`, {
+    const res = await fetch(`${baseUrl}${path17}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Origin": "https://www.rues.org.co",
         "Referer": "https://www.rues.org.co/",
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "x-request-id": crypto3.randomUUID(),
+        "x-request-id": crypto4.randomUUID(),
         "app-name": "RuesFront"
       },
       body: JSON.stringify({ dataBody: encryptedBody }),
@@ -28872,8 +29649,8 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
 }
 async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
   const puppeteer = (await import("puppeteer")).default;
-  const fs15 = await import("fs");
-  const executablePath = fs15.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs15.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
+  const fs16 = await import("fs");
+  const executablePath = fs16.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs16.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
   let browser = null;
   try {
     browser = await puppeteer.launch({
@@ -30468,15 +31245,27 @@ var dmHandler_exports = {};
 __export(dmHandler_exports, {
   ALL_DM_TOOL_TYPES: () => ALL_DM_TOOL_TYPES,
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
+  JANIA_STICKER_CATALOG: () => JANIA_STICKER_CATALOG,
+  buildSessionOnboardingDirectives: () => buildSessionOnboardingDirectives,
+  detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
   executeJaniaDmTool: () => executeJaniaDmTool,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
+  getJaniaStickerByKey: () => getJaniaStickerByKey,
+  hasLatestDmPdf: () => hasLatestDmPdf,
+  isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
   isShortSignalOrSticker: () => isShortSignalOrSticker,
+  listAvailableJaniaStickers: () => listAvailableJaniaStickers,
   popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
   popLatestDmPdf: () => popLatestDmPdf,
+  popLatestDmSticker: () => popLatestDmSticker,
+  processAndQueueDmSticker: () => processAndQueueDmSticker,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
   sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
+  selectContextualStickerForDm: () => selectContextualStickerForDm,
   setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
+  setLatestDmSticker: () => setLatestDmSticker,
   stripLeadingGreetingsAndCourtesies: () => stripLeadingGreetingsAndCourtesies,
   synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini
 });
@@ -30490,6 +31279,9 @@ function popLatestDmPdf(userId) {
     latestDmPdfMap.delete(userId);
   }
   return attachment;
+}
+function hasLatestDmPdf(userId) {
+  return latestDmPdfMap.has(userId);
 }
 function setLatestDmFollowUpMessage(_userId, _followUpText) {
 }
@@ -31035,6 +31827,40 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
             garajes: p.garages
           })),
           contactoBroker: "Eduardo Rivera & Jani Alves \u2014 WhatsApp Oficial +57 316 656 9719"
+        }
+      };
+    }
+    case "generar_documento_legal_pdf": {
+      const { generateLegalDocumentPdf: generateLegalDocumentPdf2 } = await Promise.resolve().then(() => (init_legalDocumentPdfService(), legalDocumentPdfService_exports));
+      const { detectLegalDocumentTypeFromText: detectLegalDocumentTypeFromText2 } = await Promise.resolve().then(() => (init_dmOnboardingAndDocsHelper(), dmOnboardingAndDocsHelper_exports));
+      const rawTipo = String(args.tipoDocumento || "").trim();
+      const validType = detectLegalDocumentTypeFromText2(`${rawTipo} ${rawUserText || ""}`) || rawTipo || "minuta_general";
+      const pdfRes = await generateLegalDocumentPdf2({
+        tipoDocumento: validType,
+        tituloPersonalizado: args.tituloPersonalizado ? String(args.tituloPersonalizado) : void 0,
+        nombreRemitente: args.nombreRemitente ? String(args.nombreRemitente) : void 0,
+        nombreDestinatario: args.nombreDestinatario ? String(args.nombreDestinatario) : void 0,
+        direccionInmueble: args.direccionInmueble ? String(args.direccionInmueble) : void 0,
+        ciudad: args.ciudad ? String(args.ciudad) : void 0,
+        valorNegocioOCanon: args.valorNegocioOCanon ? String(args.valorNegocioOCanon) : void 0,
+        clausulasEspeciales: args.clausulasEspeciales ? String(args.clausulasEspeciales) : void 0
+      });
+      setLatestDmPdf(userId, { pdfBuffer: pdfRes.pdfBuffer, pdfFileName: pdfRes.fileName });
+      return {
+        toolType: "documento_legal_pdf",
+        resultJson: {
+          solicitud: "generar_documento_legal_pdf",
+          archivoAdjuntado: pdfRes.fileName,
+          codigoVerificacion: pdfRes.verificationCode,
+          tituloDocumento: pdfRes.title,
+          marcoNormativo: pdfRes.normativeFramework,
+          tutorialFirmaElectronica: "https://autenticaciondigital.and.gov.co/",
+          exitoso: true,
+          reporteOficial: `\u{1F4C4} *DOCUMENTO OFICIAL EN PDF GENERADO:* ${pdfRes.title}
+\u2022 *Archivo adjunto:* ${pdfRes.fileName}
+\u2022 *Marco normativo:* ${pdfRes.normativeFramework}
+\u2022 *Radicado VECY:* ${pdfRes.verificationCode}
+\u2022 *Gu\xEDa Firma Electr\xF3nica (Ley 527/1999):* https://autenticaciondigital.and.gov.co/`
         }
       };
     }
@@ -31962,6 +32788,19 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
         }
       }
     }
+    const { isExplicitLegalPdfRequest: isExplicitLegalPdfRequest2, generateLegalPdfForDmRequest: generateLegalPdfForDmRequest2, processAndQueueDmSticker: processAndQueueDmSticker2 } = await Promise.resolve().then(() => (init_dmOnboardingAndDocsHelper(), dmOnboardingAndDocsHelper_exports));
+    if (isExplicitLegalPdfRequest2(clean) && !hasLatestDmPdf(userId)) {
+      try {
+        const autoPdf = await generateLegalPdfForDmRequest2(clean, {
+          cuerpoDocumento: reply.length > 180 ? reply : void 0
+        });
+        setLatestDmPdf(userId, { pdfBuffer: autoPdf.pdfBuffer, pdfFileName: autoPdf.fileName });
+      } catch (pdfErr) {
+        console.warn("[dmHandler] Error generando PDF legal autom\xE1tico:", pdfErr?.message);
+      }
+    }
+    const stickerProcessed = processAndQueueDmSticker2(userId, clean, reply);
+    reply = stickerProcessed.cleanReply || reply;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     markUserGreetedToday(userId);
@@ -32198,6 +33037,8 @@ var init_dmHandler = __esm({
     init_whatsapp_utils();
     init_trustedContacts();
     init_founderKnowledgeService();
+    init_stickerService();
+    init_dmOnboardingAndDocsHelper();
     latestDmPdfMap = /* @__PURE__ */ new Map();
     JANIA_DM_TOOLS = [
       {
@@ -32379,6 +33220,27 @@ var init_dmHandler = __esm({
                 zona: { type: "STRING", description: "Zona o barrio de Bogot\xE1 o municipio" },
                 precioMaximo: { type: "NUMBER", description: "Presupuesto m\xE1ximo en COP" }
               }
+            }
+          },
+          {
+            name: "generar_documento_legal_pdf",
+            description: "Genera y adjunta en archivo PDF oficial membretado de VECY BIENES RA\xCDCES (con c\xF3digo QR y gu\xEDa de firma electr\xF3nica en https://autenticaciondigital.and.gov.co/) cualquier carta, contrato o minuta inmobiliaria: carta de terminaci\xF3n de contrato de arriendo (Ley 820/2003), carta de solicitud de entrega o restituci\xF3n de inmueble, carta de presentaci\xF3n formal de cliente, contrato de arrendamiento de vivienda o comercial, minuta de promesa de compraventa, cesi\xF3n de leasing habitacional/comercial, compraventa con pacto de retroventa (Art. 1939 C.C.) o contrato de corretaje.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                tipoDocumento: {
+                  type: "STRING",
+                  description: "Valores permitidos: carta_terminacion_arriendo, carta_restitucion_inmueble, carta_presentacion_cliente, contrato_arrendamiento_vivienda, contrato_arrendamiento_comercial, promesa_compraventa, cesion_leasing, pacto_retroventa, contrato_corretaje, minuta_general"
+                },
+                tituloPersonalizado: { type: "STRING", description: "T\xEDtulo formal del documento legal" },
+                nombreRemitente: { type: "STRING", description: "Nombre del arrendador, vendedor, corredor o remitente" },
+                nombreDestinatario: { type: "STRING", description: "Nombre del arrendatario, comprador o destinatario" },
+                direccionInmueble: { type: "STRING", description: "Direcci\xF3n e identificaci\xF3n del inmueble" },
+                ciudad: { type: "STRING", description: "Ciudad de suscripci\xF3n (ej. Bogot\xE1, D.C.)" },
+                valorNegocioOCanon: { type: "STRING", description: "Precio de venta, canon de arriendo o cuant\xEDa en COP" },
+                clausulasEspeciales: { type: "STRING", description: "Cl\xE1usulas o condiciones particulares indicadas por el usuario" }
+              },
+              required: ["tipoDocumento"]
             }
           }
         ]
@@ -33065,6 +33927,7 @@ __export(janIA_exports, {
   JANIA_ARGON_COGNITIVE_CORE: () => JANIA_ARGON_COGNITIVE_CORE,
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   JANIA_PROMPT: () => JANIA_PROMPT,
+  JANIA_STICKER_CATALOG: () => JANIA_STICKER_CATALOG,
   KNOWN_BARRIOS_SORTED_ITEMS: () => KNOWN_BARRIOS_SORTED_ITEMS,
   MSG_CIERRE_OPERACIONES: () => MSG_CIERRE_OPERACIONES,
   MSG_COMUNICADO_MATCH_CIRCULO: () => MSG_COMUNICADO_MATCH_CIRCULO,
@@ -33091,6 +33954,7 @@ __export(janIA_exports, {
   buildGroupIncompleteMessage: () => buildGroupIncompleteMessage,
   buildIncompleteDataMessage: () => buildIncompleteDataMessage,
   buildJonathanCreditResponse: () => buildJonathanCreditResponse,
+  buildSessionOnboardingDirectives: () => buildSessionOnboardingDirectives,
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   capitalize: () => capitalize,
@@ -33104,6 +33968,7 @@ __export(janIA_exports, {
   companySessionMap: () => companySessionMap,
   consultingConversationHistory: () => consultingConversationHistory,
   deletePendingSession: () => deletePendingSession,
+  detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
   dmConversationHistory: () => dmConversationHistory,
   enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
@@ -33121,6 +33986,7 @@ __export(janIA_exports, {
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   generarHashMensaje: () => generarHashMensaje,
   generateFichaTecnicaRequerimientoIncompleto: () => generateFichaTecnicaRequerimientoIncompleto,
+  generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getCirculoHistory: () => getCirculoHistory,
   getColombiaHour: () => getColombiaHour,
@@ -33132,6 +33998,7 @@ __export(janIA_exports, {
   getDmHistory: () => getDmHistory,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getGreetingByTime: () => getGreetingByTime,
+  getJaniaStickerByKey: () => getJaniaStickerByKey,
   getLiveStats: () => getLiveStats,
   getOrLoadDmHistory: () => getOrLoadDmHistory,
   getPendingSession: () => getPendingSession,
@@ -33145,6 +34012,7 @@ __export(janIA_exports, {
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasGreetedUserToday: () => hasGreetedUserToday,
+  hasLatestDmPdf: () => hasLatestDmPdf,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
   incrementFreeServicesCount: () => incrementFreeServicesCount,
   incrementUserMessageCount: () => incrementUserMessageCount,
@@ -33153,6 +34021,7 @@ __export(janIA_exports, {
   isChaloEscobarJoke: () => isChaloEscobarJoke,
   isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
   isEduardoOrJani: () => isEduardoOrJani,
+  isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
   isGenericName: () => isGenericName,
   isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
   isLidIdentifier: () => isLidIdentifier,
@@ -33164,6 +34033,7 @@ __export(janIA_exports, {
   isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
   isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
   janiaResultSchema: () => janiaResultSchema,
+  listAvailableJaniaStickers: () => listAvailableJaniaStickers,
   lookupAdvisor: () => lookupAdvisor,
   lookupAdvisorSync: () => lookupAdvisorSync,
   markUserGreetedToday: () => markUserGreetedToday,
@@ -33176,7 +34046,9 @@ __export(janIA_exports, {
   parseSafeJSON: () => parseSafeJSON,
   popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
   popLatestDmPdf: () => popLatestDmPdf,
+  popLatestDmSticker: () => popLatestDmSticker,
   preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
+  processAndQueueDmSticker: () => processAndQueueDmSticker,
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
@@ -33193,9 +34065,11 @@ __export(janIA_exports, {
   saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
   saveUserPerpetualSession: () => saveUserPerpetualSession,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  selectContextualStickerForDm: () => selectContextualStickerForDm,
   setCompanySession: () => setCompanySession,
   setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
   setLatestDmPdf: () => setLatestDmPdf,
+  setLatestDmSticker: () => setLatestDmSticker,
   setPendingSession: () => setPendingSession,
   setUser402040Agreement: () => setUser402040Agreement,
   setUserOwnerCorretaje: () => setUserOwnerCorretaje,
@@ -33567,8 +34441,8 @@ __export(cronService_exports, {
   sanitizeChannelContent: () => sanitizeChannelContent
 });
 import cron from "node-cron";
-import path11 from "path";
-import fs11 from "fs";
+import path12 from "path";
+import fs12 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
@@ -33735,16 +34609,16 @@ function enforceJanIAIdentity(text2) {
 async function getThemedImagePathAsync(tipo) {
   const recent = await getRecentImageFiles(3);
   const possibleDirs = [
-    path11.resolve(process.cwd(), "client/public/assets/jania"),
-    path11.resolve(process.cwd(), "dist/assets/jania"),
-    path11.resolve(__dirname, "../../client/public/assets/jania")
+    path12.resolve(process.cwd(), "client/public/assets/jania"),
+    path12.resolve(process.cwd(), "dist/assets/jania"),
+    path12.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
     if (pref.endsWith(".mp4") || pref.endsWith(".mov")) {
       for (const dir of possibleDirs) {
-        const candidate = path11.join(dir, pref);
-        if (fs11.existsSync(candidate)) {
+        const candidate = path12.join(dir, pref);
+        if (fs12.existsSync(candidate)) {
           return { fullPath: candidate, fileName: pref };
         }
       }
@@ -33757,8 +34631,8 @@ async function getThemedImagePathAsync(tipo) {
     chosenFile = effectivePool[0];
   }
   for (const dir of possibleDirs) {
-    const candidatePath = path11.join(dir, chosenFile);
-    if (fs11.existsSync(candidatePath)) {
+    const candidatePath = path12.join(dir, chosenFile);
+    if (fs12.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -33766,15 +34640,15 @@ async function getThemedImagePathAsync(tipo) {
 }
 function getThemedImagePath(tipo) {
   const possibleDirs = [
-    path11.resolve(process.cwd(), "client/public/assets/jania"),
-    path11.resolve(process.cwd(), "dist/assets/jania"),
-    path11.resolve(__dirname, "../../client/public/assets/jania")
+    path12.resolve(process.cwd(), "client/public/assets/jania"),
+    path12.resolve(process.cwd(), "dist/assets/jania"),
+    path12.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
   for (const dir of possibleDirs) {
-    const candidatePath = path11.join(dir, chosenFile);
-    if (fs11.existsSync(candidatePath)) {
+    const candidatePath = path12.join(dir, chosenFile);
+    if (fs12.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -34105,7 +34979,7 @@ En el Canal Oficial acabamos de publicar la gu\xEDa completa de c\xF3mo solicita
     await completeBroadcast(lock.broadcastId, {
       topicTitle: "Servicios Gratuitos de Verificaci\xF3n con JanIA",
       themeKey: "verificacion_servicios",
-      imageFileName: path11.basename(imagePath),
+      imageFileName: path12.basename(imagePath),
       captionText: channelText
     });
     return { success: true, channelMessageId: chanRes.messageId };
@@ -34334,24 +35208,24 @@ function getLocalCuratedThemeImage(themeKey) {
     baseName = "jania_juridico.jpg";
   }
   const candidateDirs = [
-    path11.resolve(process.cwd(), "assets/broadcast"),
-    path11.resolve(process.cwd(), "client/public/assets/broadcast"),
-    path11.resolve(process.cwd(), "client/public/assets/jania")
+    path12.resolve(process.cwd(), "assets/broadcast"),
+    path12.resolve(process.cwd(), "client/public/assets/broadcast"),
+    path12.resolve(process.cwd(), "client/public/assets/jania")
   ];
   for (const dir of candidateDirs) {
-    const candidatePath = path11.join(dir, baseName);
-    if (fs11.existsSync(candidatePath)) {
+    const candidatePath = path12.join(dir, baseName);
+    if (fs12.existsSync(candidatePath)) {
       return candidatePath;
     }
   }
-  const fallbackDir = path11.resolve(process.cwd(), "client/public/assets/jania");
-  if (fs11.existsSync(fallbackDir)) {
-    const files = fs11.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
+  const fallbackDir = path12.resolve(process.cwd(), "client/public/assets/jania");
+  if (fs12.existsSync(fallbackDir)) {
+    const files = fs12.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
     if (files.length > 0) {
-      return path11.join(fallbackDir, files[0]);
+      return path12.join(fallbackDir, files[0]);
     }
   }
-  return path11.resolve(process.cwd(), "client/public/jania_post.png");
+  return path12.resolve(process.cwd(), "client/public/jania_post.png");
 }
 async function fetchPublicThemeImage(themeKey, dayOfMonth) {
   const query = THEME_IMAGE_SEARCH_MAP[themeKey] || "modern architecture real estate building";
@@ -34374,12 +35248,12 @@ async function fetchPublicThemeImage(themeKey, dayOfMonth) {
           if (imgRes.ok) {
             const buffer = Buffer.from(await imgRes.arrayBuffer());
             if (buffer.length >= 1e3) {
-              const cacheDir = path11.resolve(process.cwd(), "client/public/assets/broadcast");
-              if (!fs11.existsSync(cacheDir)) {
-                fs11.mkdirSync(cacheDir, { recursive: true });
+              const cacheDir = path12.resolve(process.cwd(), "client/public/assets/broadcast");
+              if (!fs12.existsSync(cacheDir)) {
+                fs12.mkdirSync(cacheDir, { recursive: true });
               }
-              const targetFile = path11.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-              fs11.writeFileSync(targetFile, buffer);
+              const targetFile = path12.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+              fs12.writeFileSync(targetFile, buffer);
               console.log(`[CRON-IMAGE-WEB] \u2705 Imagen p\xFAblica guardada localmente (${buffer.length} bytes): ${targetFile}`);
               return targetFile;
             }
@@ -34453,8 +35327,8 @@ async function publishDailyTipForDay(tipoKey, force = false) {
 }
 function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   const normalized = (themeKey || "").toLowerCase();
-  const dir1x1 = path11.resolve(process.cwd(), "client/public/assets/channel_1x1");
-  const janiaDir = path11.resolve(process.cwd(), "client/public/assets/jania");
+  const dir1x1 = path12.resolve(process.cwd(), "client/public/assets/channel_1x1");
+  const janiaDir = path12.resolve(process.cwd(), "client/public/assets/jania");
   const fullRotation1x1 = [
     "jania_anfitriona_cafe_1x1.jpg",
     "jania_couture_oro_liquido_1x1.png",
@@ -34493,12 +35367,12 @@ function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   } else {
     target1x1 = "jania_legal_due_diligence_1x1.jpg";
   }
-  const candidate1x1 = path11.join(dir1x1, target1x1);
-  if (fs11.existsSync(candidate1x1)) {
+  const candidate1x1 = path12.join(dir1x1, target1x1);
+  if (fs12.existsSync(candidate1x1)) {
     return candidate1x1;
   }
-  const candidateJania = path11.join(janiaDir, target1x1);
-  if (fs11.existsSync(candidateJania)) {
+  const candidateJania = path12.join(janiaDir, target1x1);
+  if (fs12.existsSync(candidateJania)) {
     return candidateJania;
   }
   return getLocalCuratedThemeImage(themeKey);
@@ -34539,7 +35413,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
-      imageFileName: imagePath ? path11.basename(imagePath) : void 0,
+      imageFileName: imagePath ? path12.basename(imagePath) : void 0,
       captionText: content.captionText
     });
     console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampol\xEDn + Estado WhatsApp con enlace): "${content.topicTitle}".`);
@@ -34743,7 +35617,7 @@ var init_cronService = __esm({
     init_llm();
     init_const();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path11.dirname(__filename);
+    __dirname = path12.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -37357,8 +38231,8 @@ init_storage();
 import { z as z4 } from "zod";
 import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
-import fs12 from "fs";
-import path12 from "path";
+import fs13 from "fs";
+import path13 from "path";
 
 // server/routers/properties.ts
 init_trpc();
@@ -39432,11 +40306,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path12.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path12.join(process.cwd(), "qr-match.png");
-      let targetPath = fs12.existsSync(qrPath) ? qrPath : fs12.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path13.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path13.join(process.cwd(), "qr-match.png");
+      let targetPath = fs13.existsSync(qrPath) ? qrPath : fs13.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs12.readFileSync(targetPath);
+        const fileData = fs13.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -40917,47 +41791,63 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs13 from "fs";
+import fs14 from "fs";
 import { nanoid } from "nanoid";
-import path14 from "path";
+import path15 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path13 from "node:path";
+import path14 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path13.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path13.resolve(import.meta.dirname, "shared"),
-      "@assets": path13.resolve(import.meta.dirname, "attached_assets")
+      "@": path14.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path14.resolve(import.meta.dirname, "shared"),
+      "@assets": path14.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path13.resolve(import.meta.dirname),
-  root: path13.resolve(import.meta.dirname, "client"),
-  publicDir: path13.resolve(import.meta.dirname, "client", "public"),
+  envDir: path14.resolve(import.meta.dirname),
+  root: path14.resolve(import.meta.dirname, "client"),
+  publicDir: path14.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path13.resolve(import.meta.dirname, "dist"),
+    outDir: path14.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("wouter")) {
-              return "react-vendor";
+            const pkgPath = id.split("node_modules/").pop() || id;
+            if (pkgPath.startsWith("@supabase")) {
+              return "supabase-vendor";
             }
-            if (id.includes("@trpc") || id.includes("@tanstack") || id.includes("superjson")) {
+            if (pkgPath.startsWith("@trpc") || pkgPath.startsWith("@tanstack") || pkgPath.startsWith("superjson")) {
               return "trpc-vendor";
             }
-            if (id.includes("lucide-react") || id.includes("framer-motion") || id.includes("date-fns")) {
+            if (pkgPath.startsWith("lucide-react") || pkgPath.startsWith("react-icons")) {
+              return "icons-vendor";
+            }
+            if (pkgPath.startsWith("framer-motion") || pkgPath.startsWith("motion-")) {
+              return "motion-vendor";
+            }
+            if (pkgPath.startsWith("@radix-ui") || pkgPath.startsWith("cmdk") || pkgPath.startsWith("vaul") || pkgPath.startsWith("sonner")) {
+              return "radix-vendor";
+            }
+            if (pkgPath.startsWith("recharts") || pkgPath.startsWith("d3-")) {
+              return "charts-vendor";
+            }
+            if (pkgPath.startsWith("leaflet")) {
+              return "maps-vendor";
+            }
+            if (pkgPath.startsWith("date-fns")) {
               return "ui-vendor";
             }
-            if (id.includes("@supabase")) {
-              return "supabase-vendor";
+            if (pkgPath.startsWith("react/") || pkgPath.startsWith("react-dom/") || pkgPath.startsWith("scheduler/") || pkgPath.startsWith("wouter")) {
+              return "react-vendor";
             }
           }
         }
@@ -40991,13 +41881,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path14.resolve(
+      const clientTemplate = path15.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs13.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs14.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -41011,15 +41901,15 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path14.resolve(import.meta.dirname, "..", "dist");
-  if (!fs13.existsSync(distPath)) {
+  const distPath = path15.resolve(import.meta.dirname, "..", "dist");
+  if (!fs14.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path14.resolve(distPath, "index.html"));
+    res.sendFile(path15.resolve(distPath, "index.html"));
   });
 }
 
@@ -41031,8 +41921,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs14 from "fs";
-import path15 from "path";
+import fs15 from "fs";
+import path16 from "path";
 init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -41211,10 +42101,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path15.join(process.cwd(), "qr-match.png");
-      const distQrPath = path15.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs14.existsSync(activePath)) {
+      const qrPath = path16.join(process.cwd(), "qr-match.png");
+      const distQrPath = path16.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs15.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -41234,10 +42124,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path15.join(process.cwd(), "qr-match.png");
-      const distQrPath = path15.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs14.existsSync(activePath)) {
+      const qrPath = path16.join(process.cwd(), "qr-match.png");
+      const distQrPath = path16.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs15.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -41258,10 +42148,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path15.join(process.cwd(), "qr-match.png");
-      const distQrPath = path15.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs14.existsSync(activePath)) {
+      const qrPath = path16.join(process.cwd(), "qr-match.png");
+      const distQrPath = path16.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs15.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -41288,10 +42178,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path15.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path15.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs14.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs14.existsSync(activePath)) {
+      const qrPath = path16.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path16.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs15.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -41342,8 +42232,8 @@ async function startServer() {
           let docBuffer;
           if (Buffer.isBuffer(document2)) {
             docBuffer = document2;
-          } else if (typeof document2 === "string" && fs14.existsSync(document2)) {
-            docBuffer = fs14.readFileSync(document2);
+          } else if (typeof document2 === "string" && fs15.existsSync(document2)) {
+            docBuffer = fs15.readFileSync(document2);
           } else if (typeof document2 === "string") {
             const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
             docBuffer = Buffer.from(cleanBase64, "base64");
@@ -41546,23 +42436,23 @@ _(Si es empresa, usa NIT en vez de CC)_
   });
   function resolveBroadcastImagePath(filenames) {
     const searchDirs = [
-      path15.join(process.cwd(), "client/public/assets/jania"),
-      path15.join(process.cwd(), "client/public/images"),
-      path15.join(process.cwd(), "client/public"),
+      path16.join(process.cwd(), "client/public/assets/jania"),
+      path16.join(process.cwd(), "client/public/images"),
+      path16.join(process.cwd(), "client/public"),
       process.cwd(),
-      path15.join(process.cwd(), "dist/assets/jania"),
-      path15.join(process.cwd(), "dist/images"),
-      path15.join(process.cwd(), "dist")
+      path16.join(process.cwd(), "dist/assets/jania"),
+      path16.join(process.cwd(), "dist/images"),
+      path16.join(process.cwd(), "dist")
     ];
     for (const name of filenames) {
       for (const dir of searchDirs) {
-        const fullPath = path15.join(dir, name);
-        if (fs14.existsSync(fullPath)) {
+        const fullPath = path16.join(dir, name);
+        if (fs15.existsSync(fullPath)) {
           return { path: fullPath, exists: true };
         }
       }
     }
-    return { path: path15.join(process.cwd(), filenames[0]), exists: false };
+    return { path: path16.join(process.cwd(), filenames[0]), exists: false };
   }
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -41731,9 +42621,9 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path15.resolve(process.cwd(), "public/uploads");
-  if (!fs14.existsSync(uploadsDir2)) {
-    fs14.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path16.resolve(process.cwd(), "public/uploads");
+  if (!fs15.existsSync(uploadsDir2)) {
+    fs15.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -41742,7 +42632,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path15.extname(file.originalname));
+      cb(null, uniqueSuffix + path16.extname(file.originalname));
     }
   });
   const uploadDisk = multer({
