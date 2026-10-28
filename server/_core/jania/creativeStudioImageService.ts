@@ -89,6 +89,7 @@ export interface UserCreativeImageInput {
   priceOrHighlight?: string;
   priceOrValue?: string;
   price?: string;
+  precio?: string;
   ubicacion?: string;
   locationOrZone?: string;
   bulletPoints?: string[];
@@ -549,6 +550,7 @@ export async function generateCustomUserCreativeImage(
     input.priceOrHighlight?.trim() ||
     input.priceOrValue?.trim() ||
     input.price?.trim() ||
+    input.precio?.trim() ||
     extractPriceOrAreaHighlight(cleanPrompt);
 
   const customBullets = input.bulletPoints || input.specs || input.puntosClave;
