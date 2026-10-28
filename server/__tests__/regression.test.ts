@@ -8751,7 +8751,7 @@ Ana Morales Castillo
       expect(corretaje.acceptsTerms).toBe(true);
 
       const session = await setUser402040Agreement("test-owner-onboarding-session", false);
-      expect(session.keyFacts.categoriaContacto).toBe("plan_pago_requerido");
+      expect(session.keyFacts?.categoriaContacto).toBe("plan_pago_requerido");
     });
 
     it("5. Consagración doctrinal de versión v33.63 en shared/const.ts y package.json", async () => {
