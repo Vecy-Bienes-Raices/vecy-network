@@ -146,3 +146,8 @@ server/data/*.geojson
 
 # Uploaded files and media cache
 public/uploads/
+assets/creative_studio/
+client/public/assets/broadcast/jania_creativo_*.jpg
+client/public/assets/broadcast/editorial_canal_*.jpg
+assets/broadcast/jania_creativo_*.jpg
+assets/broadcast/editorial_canal_*.jpg
