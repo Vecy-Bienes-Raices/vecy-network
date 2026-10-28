@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.59.0 — 2026-10-27)
-- **JanIA Server:** `v33.59` (`33.59.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
-- **Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva (Doctrina Eduardo A. Rivera):**
-  1. **IA Pura con Máximo Criterio:** Erradicación de rigidez de "bot". JanIA no repite saludos, no repregunta datos ya entregados, y no usa guiones mecánicos; razona con base en la intención global del usuario.
-  2. **Goal Tracking y Registro Activo en Caliente:** En el flujo privado, cuando el usuario suministra datos parciales o completos de un requerimiento/oferta, JanIA mantiene la meta activa y ejecuta de inmediato `registrar_inmueble_o_requerimiento` asignando su radicado oficial (`ID #REQ...` / `ID #PROP...`).
-  3. **Blindaje de Interceptores y Continuidad:** Reseñas (`isClaimingReview`) aisladas con confirmación de Google; protocolo 40/20/40 con fluidez conversacional hacia Gemini; cero respuestas vacías ni promesas en diferido.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 432/432 passing (100% verde) | Build `npm run build` limpio en 27.31s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.60.0 — 2026-10-27)
+- **JanIA Server:** `v33.60` (`33.60.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
+- **Indagación Obligatoria de Rol (Colega Inmobiliario vs Comprador/Propietario Directo) e Intermediación Central Exclusiva de VECY (Doctrina Eduardo A. Rivera):**
+  1. **Indagación Obligatoria de Rol:** Prohibición absoluta de asumir compradora o propietaria directa; el >90% de la red son colegas aliados. Indagar con elegancia y proteger la comisión 40/20/40 del colega.
+  2. **Intermediación Central Exclusiva:** Prohibición terminante de decir que otros colegas contactarán directamente al usuario. En VECY nadie contacta a nadie directo; todo MATCH pasa por la mesa central (+57 316 656 9719) para proteger la red y el 20% institucional.
+  3. **Disculpa y Corrección con Sandra Moreno:** Mensaje inmediato a Sandra reconociendo su rol como colega y ratificando la gestión centralizada de VECY.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 436/436 passing (100% verde) | Build `npm run build` limpio en 29.05s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

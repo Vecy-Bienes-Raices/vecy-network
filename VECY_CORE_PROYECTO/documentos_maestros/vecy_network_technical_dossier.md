@@ -330,6 +330,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.60 — Octubre 2026
+
+#### [v33.60.0] — 2026-10-27: Indagación Obligatoria de Rol (Colega vs Cliente Directo) e Intermediación Central Exclusiva de VECY
+- **Indagación Obligatoria de Rol e Intermediación Central Exclusiva (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En la interacción con Sandra Moreno, tras recibir los datos de su búsqueda de apartamento en Cedritos/Belmira/Mazurén/Colina ($470M), JanIA asumió precipitadamente que Sandra era una "compradora directa" por buscar un inmueble, diciéndole *"para conectarte con los colegas que tengan opciones... Si eres compradora directa no pagas comisión"*. Además, insinuó que otros colegas la contactarían directamente. Esto violaba dos pilares doctrinales críticos:
+    1. En la Red VECY, más del 90% de los usuarios son colegas inmobiliarios (asesores, inmobiliarias, corredores independientes) gestionando clientes compradores o inquilinos. JanIA jamás debe asumir que quien busca es cliente directo.
+    2. En VECY nadie contacta a nadie de forma directa. Todo MATCH pasa obligatoria y exclusivamente por la mesa central de VECY BIENES RAÍCES (+57 316 656 9719), con Eduardo Rivera y Jani Alves, protegiendo a los colegas del bypass y garantizando el 20% institucional.
+  - **Diagnóstico y Causas Raíz:**
+    1. *Asunción Precipitada de Rol:* El clasificador o prompt de contexto asumía que expresiones de búsqueda equivalían a consumidor final, fijando `esPropietarioDirecto = true` por defecto o sugiriendo ausencia de comisión para compradores directos.
+    2. *Riesgo Crítico de Desintermediación (Bypass):* La promesa de que "colegas te contactarán" socavaba la arquitectura de negocio de VECY, donde la mesa central centraliza las coincidencias y presenta fichas neutralizadas.
+  - **Solución y Modificaciones de Código:**
+    1. *Pilar Doctrinal en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:*
+       - *Sección 6:* Consagración de la *DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO)*. Prohibición total de asumir cliente directo. Indagación elegante ('¿nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?') y blindaje del 40% colocador.
+       - *Sección 7:* Consagración de la *DOCTRINA DE INTERMEDIACIÓN CENTRAL EXCLUSIVA DE VECY BIENES RAÍCES*. Prohibición terminante de prometer contacto directo entre colegas. Todo MATCH pasa por la mesa central (+57 316 656 9719) con Eduardo y Jani.
+    2. *Ajustes en `server/_core/jania/handlers/dmHandler.ts`:* `esPropietarioDirecto` se define en `false` por defecto al registrar en BD salvo confirmación expresa. Inyección de contexto recordando la intermediación central exclusiva.
+    3. *Despacho Inmediato de Aclaración por WhatsApp a Sandra Moreno (`174062257045612@lid`):* Mensaje aclaratorio disculpándose por la asunción de compradora directa, reconociéndola como colega aliada con su 40% protegido, y ratificando que toda opción compatible será coordinada exclusivamente por la mesa central de VECY (+57 316 656 9719).
+    4. *Base de Conocimiento de Fundadores:* Directiva viva `seed-indagacion-obligatoria-rol-e-intermediacion-central-vecy` en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):**
+  - Typecheck `npm run check`: 0 errores.
+  - Tests unitarios y de regresión `npm test`: **436/436 passing** (Suite 146 creada con 4 tests exhaustivos, 100% verde a $0 COP).
+  - Build `npm run build`: Limpio en 29.05s.
+
 ### 🔖 v33.59 — Octubre 2026
 
 #### [v33.59.0] — 2026-10-27: Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva de IA Pura

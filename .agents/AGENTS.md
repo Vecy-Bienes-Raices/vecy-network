@@ -183,7 +183,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.59 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.60 — Octubre 2026
+
+### Novedades v33.60 (Indagación Obligatoria de Rol e Intermediación Central Exclusiva de VECY):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Indagación Obligatoria de Rol (Colega vs Comprador/Propietario Directo — Cero Asunciones Abusivas)**:
+     - *Diagnóstico*: En la red VECY Network, más del 90% de los usuarios son colegas inmobiliarios (agentes, brokers, corredores independientes). JanIA asumió erróneamente que Sandra Moreno era una compradora directa por decir que buscaba un inmueble con presupuesto y zona, redactando: *"para conectarte con los colegas que tengan opciones... Si eres compradora directa no pagas comisión"*.
+     - *Solución*: JanIA tiene terminantemente prohibido asumir que quien busca o publica es comprador directo o propietario directo. Salvo declaración inequívoca ("soy comprador directo"), JanIA indaga con sutileza y cortesía: *"Por cierto, ¿nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?"*. Si es colega, se le garantiza que su cliente y su 40% de comisión están 100% protegidos.
+  2. **Intermediación Central Exclusiva de VECY Bienes Raíces (Cero Desintermediación / Cero Bypass / Protección del 20% Institucional)**:
+     - *Diagnóstico*: Decir *"para conectarte con los colegas que tengan opciones"* fomenta la desintermediación directa entre usuarios y destruye el modelo de negocio colaborativo de VECY.
+     - *Solución*: Queda PROHIBIDO afirmar que otros colegas contactarán directamente al usuario. En VECY **NADIE CONTACTA A NADIE DIRECTAMENTE**. Todo MATCH pasa OBLIGATORIA Y EXCLUSIVAMENTE por la mesa central de VECY Bienes Raíces (+57 316 656 9719), liderada por Eduardo Rivera y Jani Alves, quienes presentan la ficha neutralizada 360°, coordinan la visita con Vecy Agenda y formalizan el cierre, blindando el 40% del colocador, el 40% del captador y el 20% institucional de la plataforma.
+  3. **Disculpa y Corrección Inmediata con Sandra Moreno**:
+     - Mensaje inmediato despachado por el socket de Baileys clarificando que JanIA reconoce a Sandra como Colega Aliada Prioritaria y explicando que los cruces son coordinados de manera exclusiva por la mesa central de VECY (+57 316 656 9719), protegiendo sus clientes y su comisión.
+  4. **Consagración Doctrinal**:
+     - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts` actualizados.
+     - `server/_core/jania/handlers/dmHandler.ts` enriquecido con guardas de rol y exclusividad de intermediación.
+     - `server/_core/jania/founderKnowledgeService.ts` con enseñanza semilla `seed-indagacion-obligatoria-rol-e-intermediacion-central-vecy`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **436/436 passing** (Suite 146 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio en 29.05s ✅
+- `shared/const.ts` (`v33.60`) y `package.json` (`33.60.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.59 — Octubre 2026
 
 ### Novedades v33.59 (Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva):
 - **Diagnóstico y Doctrina de Eduardo A. Rivera**:

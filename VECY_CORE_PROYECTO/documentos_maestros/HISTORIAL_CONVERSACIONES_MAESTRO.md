@@ -7,6 +7,42 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.60: Indagación Obligatoria de Rol (Colega vs Cliente Directo) e Intermediación Central Exclusiva de VECY (v33.60 - 33.60.0)
+
+**Versión:** `v33.60` (`33.60.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina de Eduardo A. Rivera:**
+- *"JanIA asumió equivocadamente que Sandra Moreno era una compradora directa por el hecho de buscar un inmueble con presupuesto y zona, y redactó: 'para conectarte con los colegas que tengan opciones... Si eres compradora directa no pagas comisión'. Eso es un gravísimo error conceptual y de negocio:*
+  1. *En la red de VECY más del 90% de los usuarios son colegas inmobiliarios que gestionan clientes. JanIA no puede asumir que quien busca es cliente directo; debe indagar con elegancia y cortesía si es colega o cliente directo, y si es colega, garantizarle que su cliente y su 40% están 100% blindados.*
+  2. *En VECY NADIE contacta a nadie directamente. Prohibido decir 'para que los colegas te contacten'. Toda coincidencia o MATCH pasa única y exclusivamente por la mesa central de VECY BIENES RAÍCES (+57 316 656 9719), con Eduardo Rivera y Jani Alves. Si los colegas se contactaran directamente, se generaría desintermediación (bypass), se perdería el 20% institucional y colapsaría la red colaborativa.*
+  3. *Envíale un mensaje de disculpa y aclaración a Sandra Moreno reconociendo que es colega y explicando el rol centralizador de VECY."*
+
+**Diagnóstico Técnico Profundo:**
+1. **Asunción Injustificada de Cliente Directo:**
+   - La IA asociaba automáticamente solicitudes de compra/arriendo con "cliente final", violando la realidad del ecosistema inmobiliario colombiano donde la inmensa mayoría de participantes en redes de corretaje son colegas intermediarios.
+2. **Riesgo Crítico de Desintermediación (Bypass):**
+   - Prometer que "colegas te contactarán directamente" socava la razón de ser de VECY, expone a los colegas al riesgo de que les puenteen sus clientes y destruye el cobro del 20% institucional que sostiene la infraestructura de la empresa.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Consagración en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:**
+  - Sección 6: *DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA)*: Prohibición total de asumir cliente directo. Indagación cortés y protección del 40% para el colega.
+  - Sección 7: *DOCTRINA DE INTERMEDIACIÓN CENTRAL EXCLUSIVA DE VECY BIENES RAÍCES (CERO CONTACTO DIRECTO ENTRE COLEGAS / CERO DESINTERMEDIACIÓN / PROTECCIÓN SAGRADA DEL 20% INSTITUCIONAL — DOCTRINA EDUARDO A. RIVERA)*: Prohibición terminante de decir que otros colegas contactarán directamente al usuario. En VECY nadie contacta a nadie directo; todo MATCH pasa por la mesa central (+57 316 656 9719).
+- **Ajustes en `server/_core/jania/handlers/dmHandler.ts`:**
+  - `esPropietarioDirecto` se establece en `false` por defecto al registrar requerimientos e inmuebles.
+  - Inyección en el prompt de contexto que prohíbe prometer contacto directo de colegas y ordena ratificar la intermediación central de VECY.
+- **Directiva Semilla en `founderKnowledgeService.ts`:**
+  - Registrada la directiva viva `seed-indagacion-obligatoria-rol-e-intermediacion-central-vecy`.
+- **Despacho Inmediato de Mensaje a Sandra Moreno en WhatsApp:**
+  - Despachado mensaje a Sandra Moreno (`174062257045612@lid`) disculpándose por haber sugerido que era compradora directa, reconociéndola como colega aliada y ratificando que toda opción compatible será coordinada exclusivamente por la mesa central de VECY (+57 316 656 9719), blindando a su cliente y su 40% de comisión.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la **Suite 146** en `server/__tests__/regression.test.ts` con 4 pruebas unitarias exhaustivas.
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **436/436 passing** (100% verde).
+  - Build: `npm run build` limpio en 29.05s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.60` (`33.60.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.59: Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva (v33.59 - 33.59.0)
 
 **Versión:** `v33.59` (`33.59.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
