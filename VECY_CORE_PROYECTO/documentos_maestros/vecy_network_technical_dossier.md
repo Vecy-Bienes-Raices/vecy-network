@@ -330,6 +330,27 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.61 — Octubre 2026
+
+#### [v33.61.0] — 2026-10-27: Contacto Exclusivo por Parte de VECY (Eduardo Rivera o Jani Alves) y Cero Contacto Directo de Terceros (Doctrina Eduardo A. Rivera)
+- **Contacto Exclusivo por Eduardo Rivera o Jani Alves y Erradicación de Contacto de Terceros (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En el flujo de atención y captura de requerimientos/inmuebles en privado, existía la ambigüedad de prometer al usuario que *"propietarios directos te contactarán"* o que *"compradores directos o inversionistas te escribirán"*, o que *"colegas te contactarán"*. Esto constituía una distorsión inadmisible ("gran mentira") y amenazaba con generar desintermediación o falsas expectativas en los clientes y colegas.
+  - **Diagnóstico y Postulados Doctrinales Inviolables de Eduardo A. Rivera:**
+    1. *SÍ van a ser contactados:* Todo usuario que registre una oferta o demanda SÍ será contactado oportunamente al presentarse un MATCH formal o validación de mesa técnica.
+    2. *Contacto Exclusivo de Eduardo Rivera o Jani Alves (+57 316 656 9719):* Quienes contactan directamente al usuario son ÚNICA Y EXCLUSIVAMENTE Eduardo Rivera o Jani Alves desde la mesa directiva y central de VECY Bienes Raíces.
+    3. *Jamás un Propietario Directo (Gran Mentira):* Ningún propietario directo contacta solicitantes de requerimiento. VECY presenta la ficha 360° neutralizada y coordina la visita.
+    4. *Jamás un Comprador Directo, Inversionista ni Colega Externo:* Ningún tercero contacta de forma desordenada a los captadores.
+    5. *VECY Hace la Conexión Centralizada:* Si en la mesa técnica de VECY se capta o tiene a un propietario, comprador o inversionista, son Eduardo o Jani quienes contactan al usuario para articular la operación, coordinar la visita con Vecy Agenda y formalizar el cierre blindando la comisión 40/20/40.
+  - **Solución y Modificaciones de Código:**
+    1. *Pilar Doctrinal en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:* Sección 7 consagrada como *DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS*.
+    2. *Ajustes en `server/_core/jania/handlers/dmHandler.ts`:* Instrucción explícita de contacto exclusivo por Eduardo o Jani y prohibición de prometer contacto de terceros.
+    3. *Base de Conocimiento de Fundadores:* Directiva viva `seed-contacto-exclusivo-mesa-central-eduardo-jani-cero-terceros` en `founderKnowledgeService.ts`.
+  - **Validación Exhaustiva ($0 COP):**
+    - Typecheck `npm run check`: 0 errores.
+    - Tests `npm test`: **440/440 passing** (Suite 147 creada, 100% verde a $0 COP).
+    - Build `npm run build`: Limpio.
+    - Incremento oficial a `v33.61` (`33.61.0`) en `shared/const.ts` y `package.json`.
+
 ### 🔖 v33.60 — Octubre 2026
 
 #### [v33.60.0] — 2026-10-27: Indagación Obligatoria de Rol (Colega vs Cliente Directo) e Intermediación Central Exclusiva de VECY

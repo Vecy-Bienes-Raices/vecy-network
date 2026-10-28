@@ -1,10 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.60.0 — 2026-10-27)
-- **JanIA Server:** `v33.60` (`33.60.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
-- **Indagación Obligatoria de Rol (Colega Inmobiliario vs Comprador/Propietario Directo) e Intermediación Central Exclusiva de VECY (Doctrina Eduardo A. Rivera):**
-  1. **Indagación Obligatoria de Rol:** Prohibición absoluta de asumir compradora o propietaria directa; el >90% de la red son colegas aliados. Indagar con elegancia y proteger la comisión 40/20/40 del colega.
-  2. **Intermediación Central Exclusiva:** Prohibición terminante de decir que otros colegas contactarán directamente al usuario. En VECY nadie contacta a nadie directo; todo MATCH pasa por la mesa central (+57 316 656 9719) para proteger la red y el 20% institucional.
-  3. **Disculpa y Corrección con Sandra Moreno:** Mensaje inmediato a Sandra reconociendo su rol como colega y ratificando la gestión centralizada de VECY.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 436/436 passing (100% verde) | Build `npm run build` limpio en 29.05s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.61.0 — 2026-10-27)
+- **JanIA Server:** `v33.61` (`33.61.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
+- **Contacto Exclusivo por Parte de VECY (Eduardo Rivera o Jani Alves) y Cero Contacto Directo de Terceros (Doctrina Eduardo A. Rivera):**
+  1. **SÍ van a ser contactados:** Todo usuario que registre oferta o demanda a través de JanIA SÍ será contactado al presentarse un MATCH.
+  2. **Contacto Exclusivo de Eduardo Rivera o Jani Alves (+57 316 656 9719):** Quienes contactan directamente al usuario son exclusivamente Eduardo o Jani desde la mesa central de VECY Bienes Raíces.
+  3. **Cero Propietarios Directos (Gran Mentira):** Queda terminantemente prohibido afirmar que propietarios directos contactarán al usuario.
+  4. **Cero Compradores, Inversionistas o Colegas Externos Directos:** Nadie contacta directo a nadie; VECY centraliza y presenta fichas 360°, protegiendo la red y el 40/20/40.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 440/440 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

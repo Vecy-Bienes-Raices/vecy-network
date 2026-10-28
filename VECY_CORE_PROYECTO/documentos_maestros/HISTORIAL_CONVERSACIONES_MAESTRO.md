@@ -7,6 +7,38 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.61: Contacto Exclusivo por Parte de VECY (Eduardo o Jani) y Cero Contacto Directo de Terceros (v33.61 - 33.61.0)
+
+**Versión:** `v33.61` (`33.61.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"A cualquiera que suba directamente a través de JanIA una OFERTA (inmueble) o una DEMANDA (requerimiento): SÍ LO VAMOS A CONTACTAR. Pero serán contactados ÚNICA Y EXCLUSIVAMENTE POR NOSOTROS DIRECTAMENTE (Eduardo Rivera o Jani Alves desde VECY al +57 316 656 9719). Queda estrictamente prohibido afirmar o insinuar que un propietario directo contactará al usuario (eso es una gran mentira), o que un comprador o inversionista lo contactará directamente. En VECY nosotros hacemos la conexión formal; y si en la mesa de VECY captamos o tenemos directamente un propietario, comprador o inversionista, somos nosotros (Eduardo o Jani) quienes contactamos al usuario para coordinar la visita y formalizar la operación protegiendo la red y el 40/20/40."*
+
+**Los 5 Postulados Doctrinales Inviolables de Eduardo A. Rivera:**
+1. **SÍ VAN A SER CONTACTADOS:** A todo usuario que radique una OFERTA (inmueble) o una DEMANDA (requerimiento), VECY SÍ lo va a contactar tan pronto exista una coincidencia (MATCH) o validación en la mesa técnica.
+2. **CONTACTO EXCLUSIVO POR EDUARDO RIVERA O JANI ALVES (+57 316 656 9719):** El contacto es realizado ÚNICA Y EXCLUSIVAMENTE por la directiva de VECY Bienes Raíces (Eduardo o Jani). Ningún tercero, asesor externo o colega no autorizado contacta al usuario.
+3. **JAMÁS UN PROPIETARIO DIRECTO (GRAN MENTIRA):** Si el usuario busca un inmueble, queda terminantemente prohibido afirmar que 'propietarios directos lo contactarán'. En el corretaje profesional, los propietarios no contactan solicitantes directos; VECY presenta la ficha 360° neutralizada y coordina la visita.
+4. **JAMÁS UN COMPRADOR DIRECTO NI UN INVERSIONISTA:** Si el usuario publica un inmueble, queda terminantemente prohibido afirmar que 'compradores o inversionistas directos lo contactarán directamente'. VECY canaliza los prospectos calificados y gestiona las citas mediante Vecy Agenda.
+5. **VECY HACE LA CONEXIÓN CENTRALIZADA:** Si en la mesa técnica central de VECY se tiene o capta directamente a un propietario, comprador o inversionista, son Eduardo o Jani quienes contactan al usuario para articular la operación, coordinar el negocio y garantizar el pago de honorarios (40% colocador, 40% captador y 20% institucional para VECY).
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Consagración en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:**
+  - Sección 7 renombrada y enriquecida con los 5 postulados: *DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA)*.
+  - Prohibición explícita de mentir sobre propietarios directos, compradores o inversionistas.
+- **Ajustes en `server/_core/jania/handlers/dmHandler.ts`:**
+  - Directiva 6 en el contexto de registro y atención privada actualizada con la doctrina de contacto exclusivo por Eduardo o Jani (+57 316 656 9719).
+- **Directiva Semilla en `founderKnowledgeService.ts`:**
+  - Registrada la directiva viva `seed-contacto-exclusivo-mesa-central-eduardo-jani-cero-terceros`.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la **Suite 147** en `server/__tests__/regression.test.ts` con 4 pruebas unitarias exhaustivas.
+  - Actualizados patrones históricos de versión en tests de regresión (`(59|60|61)`).
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **440/440 passing** (100% verde).
+  - Build: `npm run build` limpio en 24.96s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.61` (`33.61.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.60: Indagación Obligatoria de Rol (Colega vs Cliente Directo) e Intermediación Central Exclusiva de VECY (v33.60 - 33.60.0)
 
 **Versión:** `v33.60` (`33.60.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -229,6 +229,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-contacto-exclusivo-mesa-central-eduardo-jani-cero-terceros",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Contacto Exclusivo por Parte de VECY (Eduardo o Jani) y Cero Contacto Directo de Terceros (Doctrina Eduardo A. Rivera)",
+    directive:
+      "A cualquiera que suba directamente a través de JanIA una OFERTA (inmueble) o una DEMANDA (requerimiento): SÍ LO VAMOS A CONTACTAR. Pero serán contactados ÚNICA Y EXCLUSIVAMENTE POR NOSOTROS DIRECTAMENTE (Eduardo Rivera o Jani Alves desde VECY al +57 316 656 9719). Queda estrictamente prohibido afirmar o insinuar que un propietario directo contactará al usuario (eso es una gran mentira), o que un comprador o inversionista lo contactará directamente. En VECY nosotros hacemos la conexión formal; y si en la mesa de VECY captamos o tenemos directamente un propietario, comprador o inversionista, somos nosotros (Eduardo o Jani) quienes contactamos al usuario para coordinar la visita y formalizar la operación protegiendo la red y el 40/20/40.",
+    rawText: "Si los van a contactar (a cualquiera que suba directamente a través de JanIA una OFERTA o una DEMANDA) pero serán contactados por nosotros directamente quienes seremos los que contactemos a ese usuario (Eduardo o Jani), pero jamás un propietario directo eso sí es una gran mentira, igualmente si registra un inmueble, jamás la va a contactar tampoco un comprador ni inversionista, seremos nosotros para hacer la conexión, y pues si nosotros llegamos a tener un propietario o un comprador directo pues también la contactaremos, eso se sobreentiende.",
+    createdAt: "2026-10-28T01:05:00.000Z",
+    active: true
+  },
+  {
     id: "seed-vendedora-consultiva-inbound-servicios-vecy",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

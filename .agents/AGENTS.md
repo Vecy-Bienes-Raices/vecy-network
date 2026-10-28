@@ -183,7 +183,28 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.60 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.61 — Octubre 2026
+
+### Novedades v33.61 (Contacto Exclusivo por Parte de VECY — Eduardo Rivera o Jani Alves — y Cero Contacto Directo de Terceros):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **SÍ van a ser contactados:**
+     - A todo usuario (colega inmobiliario o cliente) que suba o registre directamente a través de JanIA una OFERTA (inmueble) o una DEMANDA (requerimiento de compra o arriendo): **SÍ LO VAMOS A CONTACTAR**. Jamás se deja al usuario en la incertidumbre.
+  2. **Contacto Exclusivo de Eduardo Rivera o Jani Alves (+57 316 656 9719):**
+     - Quienes contactan directamente a ese usuario somos **NOSOTROS PERSONALMENTE (Eduardo Rivera o Jani Alves)** desde la mesa directiva y central de VECY BIENES RAÍCES.
+  3. **Jamás un Propietario Directo (Gran Mentira):**
+     - Si el usuario registra una DEMANDA (requerimiento), **JAMÁS lo va a contactar directamente un propietario directo**. Decirle a un colega o cliente *"en cuanto un propietario te contacte"* o *"los propietarios te escribirán"* es una GRAN MENTIRA y una distorsión inadmisible.
+  4. **Jamás un Comprador Directo, Inversionista ni Colega Externo:**
+     - Igualmente, si el usuario registra una OFERTA (inmueble en venta o arriendo), **JAMÁS lo contacta directamente un comprador directo ni un inversionista**. En VECY no existen contactos externos desordenados ni desintermediación.
+  5. **VECY Hace la Conexión Centralizada:**
+     - En VECY somos nosotros (Eduardo o Jani) quienes hacemos la conexión formal y segura. Si en VECY captamos directamente a un propietario directo, comprador directo o inversionista que coincida, **también somos nosotros directamente (Eduardo Rivera o Jani Alves al +57 316 656 9719) quienes contactamos al usuario** para presentar la opción formal, coordinar la visita con Vecy Agenda y formalizar el cierre blindando la operación y garantizando el modelo colaborativo 40/20/40.
+- **Consagración Doctrinal**:
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts` actualizados con la *DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS*.
+  - `server/_core/jania/handlers/dmHandler.ts` instruye contacto exclusivo por Eduardo o Jani y prohíbe prometer contacto de terceros.
+  - `server/_core/jania/founderKnowledgeService.ts` enriquecido con `seed-contacto-exclusivo-mesa-central-eduardo-jani-cero-terceros`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **440/440 passing** (Suite 147 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.61`) y `package.json` (`33.61.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.60 — Octubre 2026
 
 ### Novedades v33.60 (Indagación Obligatoria de Rol e Intermediación Central Exclusiva de VECY):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
