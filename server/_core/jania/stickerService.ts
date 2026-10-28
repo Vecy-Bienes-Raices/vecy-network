@@ -365,3 +365,4 @@ export function selectContextualStickerForDm(
   }
   return sticker;
 }
+

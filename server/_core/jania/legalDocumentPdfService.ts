@@ -500,3 +500,4 @@ export async function generateLegalDocumentPdf(
     normativeFramework: meta.normativeFramework
   };
 }
+
