@@ -183,7 +183,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.57 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.58 — Octubre 2026
+
+### Novedades v33.58 (Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos):
+- **Diagnóstico y Solicitud de Eduardo A. Rivera**:
+  1. **Reparación Inmediata de Comunicación con Sandra Moreno**:
+     - *Diagnóstico*: Sandra Moreno escribió por privado: *"Hola JanIA, quiero registrar mi requerimiento y unirme al grupo de Demandas y Ofertas"*. Debido a un regex rígido en `isRequirementForwardOrDuplication`, el sistema asumió equivocadamente que ella estaba duplicando una publicación previa del grupo y disparó la plantilla: *"Te confirmo que la reacción en el grupo validó el ingreso... ya está registrada y activa en el sistema"*. Sandra aceptó el 40/20/40, pero su requerimiento nunca había sido compartido ni registrado en BD.
+     - *Acción Inmediata*: JanIA le envió mensaje inmediato por WhatsApp disculpándose cordialmente por la asunción precipitada, explicándole que como Aliada Prioritaria se le radicará de inmediato su requerimiento, solicitándole los 5 puntos clave de su búsqueda, entregándole el enlace limpio de invitación al Grupo 1 (Demandas y Ofertas) e indicándole que al aportar los datos recibirá su código oficial de radicado (ID #REQ).
+  2. **Blindaje de Interceptor en `dmHandler.ts` (Cero Falsos Positivos)**:
+     - Se eliminó la presencia de términos sueltos como `mi requerimiento` o `mi demanda` del primer regex de forward.
+     - Se creó la guarda `isExplicitRegistrationOrJoinIntent`: si el usuario dice "quiero registrar", "cómo registro", "para publicar", "unirme al grupo", "tengo un requerimiento", etc., JAMÁS se intercepta con plantillas de duplicación; la conversación fluye hacia la IA pura para solicitar datos o indexar.
+  3. **Radicado Oficial Estructurado (ID #REQ... / ID #PROP...)**:
+     - La herramienta `registrar_inmueble_o_requerimiento` formatea el `registroId` oficial con prefijos claros (`REQ-` / `PROP-` e `ID #`) y Gemini entrega obligatoriamente este identificador formal al usuario al confirmar la indexación en base de datos.
+     - Consagración en SEED_TEACHINGS (`seed-radicado-oficial-requerimientos-cero-falsos-positivos-duplicacion`) en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **427/427 passing** (Suite 144 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio en 21.24s ✅
+- `shared/const.ts` (`v33.58`) y `package.json` (`33.58.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.57 — Octubre 2026
 
 ### Novedades v33.57 (Motor de Matching — Guillotina Estricta de Habitaciones por Coincidencia Exacta Obligatoria):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

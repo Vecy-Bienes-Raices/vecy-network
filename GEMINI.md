@@ -1,10 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.57.0 — 2026-10-27)
-- **JanIA Server:** `v33.57` (`33.57.0`) consolidado y validado en local para despliegue en Contabo VPS (`13.140.149.144`).
-- **Guillotina Estricta de Habitaciones — Coincidencia Exacta Obligatoria (Doctrina Eduardo A. Rivera):**
-  1. **Erradicación de Tolerancia Aproximada y Confort (+1):** En la mesa de coincidencias (`matching.ts` - Filtro Duro 8 y `AdminMatches.tsx`), la coincidencia de alcobas pasa a ser terminante y exacta: si el cliente busca 1 habitación = 1 debe ser; si busca 2 = 2 debe ser; si busca 3 = 3 debe ser. Se elimina la regla previa que permitía ofertas de +1 alcoba por confort. Si la oferta tiene un número distinto (más o menos) al solicitado, se aplica guillotina inmediata del 0% (Match Inviable).
-  2. **Preservación de Rangos Explícitos:** Cuando la demanda declara explícitamente un rango (ej: "2 o 3 alcobas"), el sistema acepta únicamente las opciones dentro de dicho intervalo declarado (2 o 3), bloqueando tajantemente cualquier valor fuera de él.
-  3. **Sincronización Total Backend y Frontend:** Sincronización en `server/_core/matching.ts` (`explicarMatch`), `client/src/components/admin/AdminMatches.tsx` (`scoreRows` con estado `missing` ante discordancia), `server/jobs/nightlyRematch.ts` y registro como directiva viva en `server/_core/jania/founderKnowledgeService.ts` (`seed-guillotina-estricta-habitaciones-coincidencia-exacta`).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 424/424 passing (100% verde) | Build `npm run build` limpio en 29.10s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.58.0 — 2026-10-27)
+- **JanIA Server:** `v33.58` (`33.58.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
+- **Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos (Doctrina Eduardo A. Rivera):**
+  1. **Despacho Inmediato y Reparación con Sandra Moreno:** JanIA le envió mensaje inmediato por WhatsApp disculpándose por la asunción precipitada, explicándole que como Aliada Prioritaria se le radicará de inmediato su requerimiento, solicitándole los 5 puntos clave de su búsqueda, entregándole el enlace limpio de invitación al Grupo 1 (Demandas y Ofertas) e indicándole que al aportar los datos recibirá su código oficial de radicado (ID #REQ).
+  2. **Blindaje de Interceptor en `dmHandler.ts`:** Se erradicó el falso positivo en `isRequirementForwardOrDuplication` eliminando palabras sueltas como `mi requerimiento` y condicionando la detección a menciones explícitas de haberlo publicado previamente en el grupo. Se introdujo `isExplicitRegistrationOrJoinIntent` para que jamás se bloquee ni se asuma duplicación cuando un usuario diga "quiero registrar", "cómo registro", "unirme al grupo", "tengo un requerimiento", etc.
+  3. **Radicado Oficial Estructurado (ID #REQ... / ID #PROP...):** `registrar_inmueble_o_requerimiento` formatea el `registroId` oficial con prefijos claros (`REQ-` / `PROP-` e `ID #`) y Gemini entrega obligatoriamente este identificador formal al usuario al confirmar la indexación en base de datos.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 427/427 passing (100% verde) | Build `npm run build` limpio en 21.24s.
+
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
 

@@ -141,6 +141,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-radicado-oficial-requerimientos-cero-falsos-positivos-duplicacion",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Radicado Oficial de Requerimientos y Cero Falsos Positivos de Duplicación (Doctrina Eduardo A. Rivera)",
+    directive:
+      "Cuando un usuario manifieste en privado su intención de registrar o ingresar un requerimiento o inmueble nuevo, o de unirse a los grupos de WhatsApp, JanIA tiene PROHIBICIÓN ABSOLUTA de asumir que ya está registrado en el sistema o de responder con plantillas de duplicación. JanIA debe acogerlo con entusiasmo, solicitarle los datos indispensables de su búsqueda (tipo de inmueble, negocio, zona, presupuesto y distribución), facilitarle el enlace oficial del grupo de Demandas y Ofertas (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) y, tan pronto el usuario aporte los datos, radicarlo de inmediato en el motor autoritativo entregándole su respectivo código oficial de radicado (ID #REQ... o ID #P...).",
+    rawText: "Si alguien dice que quiere registrar su requerimiento o unirse al grupo, no le digas que ya lo tienes ni asumas que es adivina; pídele el requerimiento para subirlo y guardarlo en la base de datos dándole el respectivo código o ID de guardado.",
+    createdAt: "2026-10-27T18:35:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.58: Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos (v33.58 - 33.58.0)
+
+**Versión:** `v33.58` (`33.58.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Solicitud de Eduardo A. Rivera:**
+- *"Cómo sabe JanIA cual requerimiento o de qué requerimiento de tantos le habla Sandra y cómo es que le dice que ya lo tiene??, JanIA se volvió adinina??"*
+- *"Entonces por favor corrige esa parte y has que JanIA le escriba de inmediato disculpándose y pidiéndole el requerimiento para subirlo y guardarlo en la base de datos dándole el respectivo código o ID de guardado."*
+(Adjunta captura de pantalla real de WhatsApp donde Sandra Moreno escribe: *"Hola JanIA, quiero registrar mi requerimiento y unirme al grupo de Demandas y Ofertas"*, y JanIA le responde con la plantilla estática: *"Te confirmo que la reacción en el grupo (📝 / 👍) validó el ingreso de tu publicación... no necesitas duplicarla ni reenviarla por privado; ya está registrada y activa en el sistema..."* y le propone el acuerdo 40/20/40; Sandra responde *"Si"* y JanIA la clasifica como Aliada Prioritaria, pero el requerimiento de Sandra nunca fue enviado ni guardado en BD).
+
+**Diagnóstico Técnico Profundo:**
+1. **Falso Positivo en Interceptor de Duplicación (`isRequirementForwardOrDuplication`):**
+   - En la Doctrina v33.33 se había implementado un interceptor en `dmHandler.ts` para evitar que colegas que ya publicaron en los grupos duplicaran innecesariamente sus publicaciones por privado.
+   - Sin embargo, la expresión regular contenía `mi\s+requerimiento` y `mi\s+demanda` como detonadores de reenvío en el primer bloque, y `requerimiento|demanda|...` en el segundo. Cualquier mensaje en español que contuviera la frase natural *"mi requerimiento"* o *"mi demanda"* hacía coincidir ambos bloques en seco, interceptando el flujo conversacional antes de que el modelo de lenguaje (Gemini) o las herramientas pudieran analizar la intención real del usuario.
+2. **Vacío Operativo en la Interacción con Sandra Moreno:**
+   - Sandra no estaba duplicando nada; estaba expresando el deseo de: 1) registrar por primera vez un requerimiento que aún no había especificado, y 2) unirse al grupo de Demandas y Ofertas.
+   - Al responderle que su requerimiento "ya estaba registrado y activo", Sandra asumió erróneamente que la red ya conocía su búsqueda y aceptó el 40/20/40, pero su requerimiento quedó completamente vacío en la base de datos.
+3. **Falta de Entrega Explícita de Código Oficial de Radicado en Respuestas Directas:**
+   - Para que el usuario tenga plena certeza jurídica y trazabilidad de que su ficha ingresó a la base de datos, el sistema debe confirmar el radicado asignando y entregando su código oficial estructurado (`ID #REQ...` para demandas y `ID #PROP...` para ofertas).
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Despacho Inmediato de Reparación por WhatsApp a Sandra Moreno (`174062257045612@lid`):**
+  - Se despachó mensaje en vivo a Sandra a través del socket activo en el servidor (`/api/send-whatsapp-notification` -> Baileys `queuedSend`): disculpándose calurosamente por la asunción precipitada, explicándole que como Aliada Prioritaria se le radicará de inmediato su requerimiento, solicitándole los 5 puntos indispensables (tipo de inmueble/negocio, ubicación, presupuesto, distribución y área), facilitándole el enlace oficial limpio para unirse al Grupo 1 (Demandas y Ofertas: `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`) e informándole que al remitir los datos se le entregará su código oficial de radicado (ID #REQ) y comenzará el cruce en tiempo real.
+  - Sincronización en la base de datos PostgreSQL nativa de producción (`conversations` id 2336 y tabla `messages`).
+- **Blindaje Estricto de Interceptores en `server/_core/jania/handlers/dmHandler.ts`:**
+  - Se erradicaron los falsos positivos eliminando palabras sueltas como `mi requerimiento` y exigiendo frases explícitas de haber publicado previamente en el grupo (`lo puse en el grupo`, `acabo de publicar en el grupo`, `te reenvío lo del grupo`, etc.).
+  - Se implementó la guarda `isExplicitRegistrationOrJoinIntent`: si el mensaje incluye intenciones como *"quiero registrar"*, *"cómo registro"*, *"para publicar"*, *"unirme al grupo"*, *"tengo un requerimiento"*, etc., queda terminantemente prohibido considerarlo duplicado.
+  - Se reforzó la inyección contextual en `userPromptContent` para que Gemini solicite los datos faltantes o invoque inmediatamente `registrar_inmueble_o_requerimiento` y entregue el enlace de Grupo 1.
+- **Estructuración de Radicado Oficial en `registrar_inmueble_o_requerimiento`:**
+  - Se actualizó el resultado de la herramienta para formatear `registroId` con los prefijos oficiales `REQ-[id]` o `PROP-[id]` (con `ID #[id]`) y se instruyó a Gemini en el prompt para entregar siempre este radicado con total claridad y señorío corporativo.
+- **Registro en Directivas de Fundadores (`founderKnowledgeService.ts`):**
+  - Incorporada la directiva `seed-radicado-oficial-requerimientos-cero-falsos-positivos-duplicacion`.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la **Suite 144** en `server/__tests__/regression.test.ts` validando la erradicación de falsos positivos y radicado oficial.
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **427/427 passing** (100% verde).
+  - Build: `npm run build` limpio en 21.24s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.58` (`33.58.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.57: Motor de Matching — Guillotina Estricta de Habitaciones por Coincidencia Exacta Obligatoria (v33.57 - 33.57.0)
 
 **Versión:** `v33.57` (`33.57.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + Supabase Pooler (`knzmpoprlmbonejshfys`) + WhatsApp Baileys Socket (`+573192919978`)

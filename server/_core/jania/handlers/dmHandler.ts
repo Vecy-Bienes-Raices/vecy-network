@@ -402,15 +402,18 @@ export async function executeJaniaDmTool(
           solicitud: "registro_inmueble_o_requerimiento",
           clasificacion: res.classification,
           insertado: res.inserted,
-          registroId: res.savedId ? `${res.savedType === 'requirement' ? 'R' : 'P'}${res.savedId}` : undefined,
+          registroId: res.savedId ? `${res.savedType === 'requirement' ? 'REQ-' : 'PROP-'}${res.savedId} (ID #${res.savedId})` : undefined,
           esPropietarioDirecto: Boolean(args.esPropietarioDirecto),
           acepta402040: args.acepta402040 !== undefined ? Boolean(args.acepta402040) : (args.comisionEsquema === "40/20/40"),
           comisionEsquema: args.comisionEsquema || (args.acepta402040 === true ? "40/20/40" : args.acepta402040 === false ? "50/50" : "pendiente"),
           totalMatchesFound: matchesSummary.length,
           matchesEncontrados: matchesSummary,
-          detalle: matchesSummary.length > 0
-            ? `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match).`
-            : "No se encontraron coincidencias inmediatas con el umbral 85%-100%, pero el registro quedó 100% activo en el radar 24/7 de VECY Network."
+          detalle: res.inserted && res.savedId
+            ? `Registro guardado exitosamente en la base de datos de VECY BIENES RAÍCES con código oficial ${res.savedType === 'requirement' ? 'REQ-' : 'PROP-'}${res.savedId} (ID #${res.savedId}). ` +
+              (matchesSummary.length > 0
+                ? `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match).`
+                : "No se encontraron coincidencias inmediatas con el umbral 85%-100%, pero el registro quedó 100% activo en el radar 24/7 de VECY Network.")
+            : "No se pudo insertar el registro (datos incompletos o faltantes)."
         }
       };
     }
@@ -1485,8 +1488,13 @@ export async function processPrivateDmConversationalMessage(
 
     const isReactionInquiry = /\b(?:por\s*qu[eé]\s+(?:le\s+)?(?:diste|pusiste|reaccionaste|reaccionaron|dejaste|mandaste)|qu[eé]\s+significa\s+(?:la\s+reacci[oó]n|el\s+emoji|el\s+lapicito|el\s+pulgar|la\s+manito)|para\s*qu[eé]\s+(?:el\s+emoji|la\s+reacci[oó]n)|por\s*qu[eé]\s+el\s+(?:emoji|lapicito|pulgar|📝|👍)|a\s+qu[eé]\s+se\s+debe\s+la\s+reacci[oó]n|por\s*qu[eé]\s+(?:me\s+)?reaccionas)\b/i.test(cleanLower);
 
-    const isRequirementForwardOrDuplication = (
-      /\b(?:te\s+reenv[ií]o|te\s+comparto|te\s+paso|mira\s+(?:este|mi)|acabo\s+de\s+publicar|lo\s+puse\s+en\s+el\s+grupo|del\s+grupo|mi\s+requerimiento|mi\s+demanda)\b/i.test(cleanLower) &&
+    // 🛡️ REGLA DOCTRINAL v33.58: Blindaje contra falsos positivos de duplicación.
+    // Si el usuario manifiesta intención de registrar, publicar, ingresar un requerimiento nuevo o unirse a los grupos,
+    // JAMÁS debe ser interceptado asumiendo que "ya está registrado en el sistema".
+    const isExplicitRegistrationOrJoinIntent = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(cleanLower);
+
+    const isRequirementForwardOrDuplication = !isExplicitRegistrationOrJoinIntent && (
+      /\b(?:lo\s+puse\s+en\s+el\s+grupo|acabo\s+de\s+publicar(?:\s+en\s+el\s+grupo)?|te\s+reenv[ií]o\s+(?:lo\s+del\s+grupo|del\s+grupo)|lo\s+sub[ií]\s+al\s+grupo|del\s+grupo\s+te\s+paso|mira\s+lo\s+del\s+grupo)\b/i.test(cleanLower) &&
       /\b(?:requerimiento|demanda|inmueble|cliente|busco|vendo|arriendo|apto|casa|bodega|lote)\b/i.test(cleanLower)
     );
 
@@ -1675,7 +1683,8 @@ export async function processPrivateDmConversationalMessage(
       `    6. Si es AGENTE INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisión bajo el modelo colaborativo de la Red VECY 40/20/40. Si SÍ acepta, JanIA lo registra como Alianza 40/20/40 Aceptada - Aliada Prioritaria. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo envía a la mesa de coincidencias a la sección [🛡️50/50].\\n` +
       `    7. Si es PROPIETARIO DIRECTO: JanIA lo acoge con empatía, estructura su ficha y le explica que VECY Bienes Raíces (+57 316 656 9719) respaldará su gestión y conectará su inmueble con compradores e inquilinos calificados.\\n` +
       `    8. Invoca la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto optimizado y los parámetros esPropietarioDirecto, acepta402040 y comisionEsquema.\\n` +
-      `    9. REGLA DE ORO INQUEBRANTABLE (CERO REVELACIÓN DE MATCHES EN PRIVADO):\\n` +
+      `    9. Al confirmar el registro de un requerimiento o inmueble: ENTREGA SIEMPRE con total orgullo y claridad el código o ID oficial asignado devuelto por la herramienta (ej: *REQ-1105* o *ID #1105*) confirmando que ya quedó formalmente radicado e indexado en el motor de base de datos autoritativo de VECY BIENES RAÍCES.\\n` +
+      `    10. REGLA DE ORO INQUEBRANTABLE (CERO REVELACIÓN DE MATCHES EN PRIVADO):\\n` +
       `       - Si la herramienta confirma que SÍ hay match: entrega los códigos de coincidencia oficiales (ej. #M15649), el porcentaje de afinidad y detalles generales del inmueble (SIN revelar teléfonos ni nombres de contrapartes para blindar la operación), guiándote por este modelo conceptual y de aprendizaje (para expresarlo con tus propias palabras y calidez de agente de IA, JAMÁS repitiéndolo al pie de la letra como un vulgar bot):\\n` +
       `         "¡Tenemos coincidencia en la red! Encontramos opciones con los códigos [códigos #M...]. Pero solamente te puedo dar los códigos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 (+57 316 656 9719) y se los vas a pasar a quien te conteste diciéndole que Yo JanIA te los di para que ellos los ubiquen en nuestra mesa de MATCH y empiecen a hacer la gestión de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."\\n` +
       `       - Si la herramienta confirma 0 matches inmediatos:\\n` +
@@ -1799,11 +1808,20 @@ export async function processPrivateDmConversationalMessage(
 
     const lastAssistantTurn = history.slice().reverse().find(t => t.role === "assistant");
     const lastAssistantText = lastAssistantTurn?.content || "";
-    const isAssistantRefiningListingOrReq = /(?:habitaciones|parqueadero|presupuesto|motor de match|radar|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero)/i.test(lastAssistantText);
+    const isAssistantRefiningListingOrReq = /(?:habitaciones|parqueadero|presupuesto|motor de match|radar|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero|qu[eé] tipo de inmueble|detalles de lo que tu cliente)/i.test(lastAssistantText);
     const userSupplyingSpecs = /(?:\d+\s*(?:habitaci[oó]n|habitaciones|alcoba|alcobas|hab|garaje|garajes|parqueadero|parqueaderos|baño|baños|mill[oó]n|millones|m2|mts)|\b[1-5]\b)/i.test(clean);
 
     if (isAssistantRefiningListingOrReq && userSupplyingSpecs) {
-      userPromptContent += `\n[SISTEMA: El usuario está completando los datos indispensables de su búsqueda/requerimiento o inmueble en proceso. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso'). Debes compilar en un solo texto completo y optimizado TODOS los datos acordados en la conversación (tipo de inmueble, tipo de negocio, zona/barrio, presupuesto/precio, habitaciones, garajes) e invocar DE INMEDIATO en este mismo turno la herramienta 'registrar_inmueble_o_requerimiento' para indexarlo en la base de datos y obtener los códigos de Match.]`;
+      userPromptContent += `\n[SISTEMA: El usuario está completando los datos indispensables de su búsqueda/requerimiento o inmueble en proceso. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso'). Debes compilar en un solo texto completo y optimizado TODOS los datos acordados en la conversación (tipo de inmueble, tipo de negocio, zona/barrio, presupuesto/precio, habitaciones, garajes) e invocar DE INMEDIATO en este mismo turno la herramienta 'registrar_inmueble_o_requerimiento' para indexarlo en la base de datos y obtener el código de radicado oficial (ID #REQ) y los cruces de Match.]`;
+    }
+
+    const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(clean);
+
+    if (isExplicitRegistrationOrJoinIntentInPrompt) {
+      userPromptContent += `\n[SISTEMA: El usuario manifiesta la intención de REGISTRAR O PUBLICAR un requerimiento o inmueble nuevo, o de UNIRSE a los grupos oficiales de VECY. QUEDA TERMINANTEMENTE PROHIBIDO asumir que ya está registrado o que proviene de un grupo previo. Directivas obligatorias:
+1) Si aún no ha compartido los datos de su búsqueda o inmueble (tipo de negocio, tipología, zona/barrios, presupuesto, alcobas/garajes): pídeselos con calidez y estructura clara para poder radicarlo en el motor autoritativo y entregarle su código oficial de radicado (ID #REQ... o ID #P...).
+2) Si solicitó unirse al grupo de Demandas y Ofertas (o grupos oficiales), entrégale el enlace oficial limpio: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ.
+3) Si ya aportó los datos indispensables en este turno o en la conversación, invoca DE INMEDIATO la herramienta 'registrar_inmueble_o_requerimiento' para guardarlo en la base de datos y entregarle su código oficial de radicado (ID #REQ).]`;
     }
 
     messages.push({

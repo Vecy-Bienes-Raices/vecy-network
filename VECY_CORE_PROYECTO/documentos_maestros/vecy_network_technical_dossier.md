@@ -330,6 +330,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.58 — Octubre 2026
+
+#### [v33.58.0] — 2026-10-27: Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos
+- **Resolución de Falsos Positivos en Captación de Requerimientos Privados (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En chats privados de WhatsApp (ej. Sandra Moreno), cuando un usuario escribía *"Hola JanIA, quiero registrar mi requerimiento y unirme al grupo de Demandas y Ofertas"*, el sistema disparaba mecánicamente una respuesta estática indicando que su requerimiento ya estaba registrado y activo gracias a la reacción en el grupo (📝/👍), impidiendo que el usuario proporcionara los datos de su búsqueda y dejándolo sin enlace de acceso al grupo ni registro real en la base de datos.
+  - **Diagnóstico y Causas Raíz:**
+    1. *Falso Positivo en Expresión Regular (`isRequirementForwardOrDuplication`):* El regex interceptaba frases con `mi requerimiento` o `mi demanda` asumiendo que el usuario estaba reenviando o duplicando por privado un mensaje que ya había publicado en el grupo.
+    2. *Ausencia de Guardia para Intenciones de Registro Nuevo o Unión a Grupos:* Frases como "quiero registrar", "cómo registro", "para publicar", "unirme al grupo", "tengo un cliente" quedaban atrapadas en la trampa de duplicación antes de que Gemini o las herramientas pudieran procesar la intención.
+    3. *Falta de Identificador de Radicado Explícito:* Al confirmar la indexación de un requerimiento o inmueble, el sistema no formateaba con claridad el código oficial de radicado (ID #REQ... / ID #PROP...).
+  - **Solución y Modificaciones de Código:**
+    1. *Despacho Inmediato de Reparación por WhatsApp a Sandra Moreno (`174062257045612@lid`):* Notificación oficial despachada a través de Baileys socket (`/api/send-whatsapp-notification`) disculpándose por la asunción precipitada, solicitando los 5 parámetros de búsqueda (tipo, zona, presupuesto, distribución, área), entregando el enlace limpio de invitación a Grupo 1 (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`) e indicándole que al remitir los datos se le entregará su código oficial de radicado (ID #REQ). Sincronizado en la tabla `messages` y `conversations` (id 2336) de la BD.
+    2. *Blindaje de Interceptor en `server/_core/jania/handlers/dmHandler.ts`:* Eliminadas palabras sueltas como `mi requerimiento` e incorporada la guarda `isExplicitRegistrationOrJoinIntent`. `isRequirementForwardOrDuplication` solo se activa si hay mención explícita de haberlo publicado antes en el grupo y NO existe intención de registro nuevo.
+    3. *Estructuración de Radicado Oficial:* Formateo estandarizado de `registroId` con `REQ-[id]` o `PROP-[id]` (con `ID #[id]`) en `registrar_inmueble_o_requerimiento` y exigencia en prompt a Gemini de entregar este código de radicado con total claridad al usuario.
+    4. *Base de Conocimiento de Fundadores:* Inclusión de la directiva viva `seed-radicado-oficial-requerimientos-cero-falsos-positivos-duplicacion` en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):**
+  - Typecheck `npm run check`: 0 errores.
+  - Tests unitarios y de regresión `npm test`: **427/427 passing** (Suite 144 creada, 100% verde a $0 COP).
+  - Build `npm run build`: Limpio en 21.24s.
+
 ### 🔖 v33.57 — Octubre 2026
 
 #### [v33.57.0] — 2026-10-27: Motor de Matching — Guillotina Estricta de Habitaciones por Coincidencia Exacta Obligatoria
