@@ -275,15 +275,15 @@ export function selectContextualStickerForDm(
 
   const now = Date.now();
   const prev = userStickerHistoryMap.get(userId);
-  // Cooldown natural humano: mínimo 90 segundos entre stickers automáticos al mismo usuario (salvo bypass o risa/abrazo explícito)
+  // Cooldown natural humano: 25 segundos entre stickers automáticos al mismo usuario (salvo bypass o disparador explícito)
   const isExplicitEmotionalTrigger =
-    /\b(?:abraz[oa]|abacho|bendiciones|te\s+quiero\s+jania|eres\s+la\s+mejor|gracias\s+jania|mil\s+gracias|jajaj+|jeje+|juajua+|😂|🤣)\b/i.test(uLower);
+    /\b(?:abraz[oa]s?|abacho|bendiciones|te\s+quiero|eres\s+la\s+mejor|gracias|mil\s+gracias|muchas\s+gracias|jajaj+|jeje+|juajua+|ok|listo|perfecto|excelente|de\s+una|dale|vale|😂|🤣|👏|🙌|🤝)\b/i.test(uLower);
 
   if (
     !options?.bypassCooldown &&
     !isExplicitEmotionalTrigger &&
     prev &&
-    now - prev.lastSentAt < 90_000
+    now - prev.lastSentAt < 25_000
   ) {
     return null;
   }
@@ -324,8 +324,8 @@ export function selectContextualStickerForDm(
   else if (/\b(?:prop-\d+|req-\d+|id\s+#\d+|registrad[oa]\s+exitosamente)\b/i.test(aLower)) {
     chosenKey = prev?.lastKey === "gracias_alegre" ? "gracias_brillo" : "gracias_alegre";
   }
-  // Regla H: Agradecimiento del usuario o aceptación de alianza 40/20/40 -> Gracias con ternura / brillo
-  else if (/\b(?:muchas\s+gracias|mil\s+gracias|gracias\s+jania|acepto\s+el\s+40\/20\/40|claro\s+que\s+s[ií]\s+acepto)\b/i.test(uLower)) {
+  // Regla H: Agradecimiento del usuario o aceptación de alianza 40/20/40 -> Gracias con ternura / brillo / alegre
+  else if (/\b(?:muchas\s+gracias|mil\s+gracias|gracias|agradecid[ao]|excelente|genial|buen[ií]simo|s[uú]per|acepto\s+el\s+40\/20\/40|claro\s+que\s+s[ií]\s+acepto)\b/i.test(uLower)) {
     if (prev?.lastKey === "gracias_ternura") {
       chosenKey = "gracias_brillo";
     } else if (prev?.lastKey === "gracias_brillo") {
@@ -344,12 +344,12 @@ export function selectContextualStickerForDm(
   else if (/\b(?:desfasad[oa]|sobrevalorad[oa]|car[ií]simo|incre[ií]ble|impresionante)\b/i.test(uLower)) {
     chosenKey = "oh_por_dios";
   }
-  // Regla K: Confirmación ejecutiva ('ok', 'listo', 'perfecto', 'de acuerdo') -> ¡Ok!
-  else if (/^(?:ok|listo|perfecto|de\s+acuerdo|entendido|confirmado|dale|vale)[\s.!]*$/i.test(uLower.trim())) {
+  // Regla K: Confirmación ejecutiva ('ok', 'listo', 'perfecto', 'de acuerdo', 'de una') -> ¡Ok!
+  else if (/\b(?:ok|listo|perfecto|de\s+acuerdo|entendido|confirmado|dale|vale|de\s+una)\b/i.test(uLower.trim()) && uLower.trim().length <= 35) {
     chosenKey = "ok";
   }
   // Regla L: Primer saludo cálido y afectuoso -> Ternura
-  else if (/^(?:hola\s+jania|buenos\s+d[ií]as\s+jania|buenas\s+tardes\s+jania|buenas\s+noches\s+jania)/i.test(uLower.trim()) && !prev) {
+  else if (/\b(?:hola\s+jania|buenos\s+d[ií]as\s+jania|buenas\s+tardes\s+jania|buenas\s+noches\s+jania|hola\s+amiga|hola\s+linda)/i.test(uLower.trim()) && (!prev || now - prev.lastSentAt > 120_000)) {
     chosenKey = "ternura";
   }
 

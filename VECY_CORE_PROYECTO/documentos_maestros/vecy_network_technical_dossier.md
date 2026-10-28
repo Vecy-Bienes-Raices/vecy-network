@@ -330,6 +330,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.70 — Octubre 2026
+
+#### [v33.70.0] — 2026-10-28: Estructuración Notarial Superior en Minutas PDF (Texto Justificado, Logo VECY, Paginación, Encabezado Negro) y Dinamismo Desatado de Stickers 3D (Doctrina Eduardo A. Rivera)
+- **Estructuración Notarial Superior de Minutas en PDF (`server/_core/jania/legalDocumentPdfService.ts`):**
+  - **Problema:** Los documentos PDF generados previamente carecían de justificación tipográfica (alineados a la izquierda), usaban un encabezado azul oscuro que no correspondía con la identidad de marca negra/dorada, carecían del logotipo oficial incrustado, la tipografía era un poco pequeña para lectura ejecutiva y faltaba foliado oficial numerado por páginas.
+  - **Solución Doctrinal:**
+    1. **Algoritmo de Justificación Tipográfica (`drawJustifiedLine`):** Cálculo dinámico de ancho de palabras y distribución armónica de espacios en el renglón para justificar ambos márgenes con factores de umbral de 0.7x a 2.6x, manteniendo la última línea del párrafo alineada a la izquierda.
+    2. **Logotipo Institucional VECY Embebido:** Creación de `assets/logo_vecy_header.png` (256x256 px, 90 KB) embebido en la cabecera superior izquierda del documento sin impacto perceptible en el tiempo de renderizado ni en el peso del PDF.
+    3. **Encabezado Negro Profundo:** Membrete corporativo en Negro Carbón Mate (`#0A0A0A` / `rgb(0.04, 0.04, 0.05)`) con tipografía en Oro Imperial (`#D4AF37`) y blanco.
+    4. **Jerarquía Tipográfica Mejorada:** Título a 13pt negrita con pleca dorada, subtítulos y cláusulas en 10.8pt negrita, cuerpo en 10.2pt con interlineado de 15.2pt y mayor respiro entre cláusulas.
+    5. **Paginación Oficial:** Pie de página foliado `Página X de Y | Minuta Legal Inmobiliaria VECY BIENES RAÍCES | Radicado: DOC-VECY-...` con línea de seguridad.
+    6. **Plantillas Notariales Robustas sin Datos:** Se garantizó que si el usuario pide una minuta sin datos personales, JanIA genere siempre el clausulado formal completo con placeholders (`[NOMBRE]`, `[C.C.]`, `[MATRÍCULA SNR]`).
+- **Dinamismo Desatado de Stickers 3D en WhatsApp Baileys (`server/_core/jania/stickerService.ts`, `dmHandler.ts`, `prompts.ts`, `base.md`):**
+  - **Problema:** En las conversaciones con JanIA (como en el caso de Amanda Mendoza), el bot solo despachaba un sticker una sola vez y no volvía a emitir más stickers a lo largo de la charla, haciendo creer a Eduardo que a JanIA le costaba trabajo o que requería guardar los stickers en los favoritos del WhatsApp de su celular.
+  - **Causa Raíz:** 1) Guardar stickers en el WhatsApp móvil de Eduardo no afecta a JanIA (corre en el VPS con Baileys leyendo `.webp` desde disco); 2) Cooldown de 90 segundos que bloqueaba nuevos stickers durante intercambios rápidos; 3) Disparadores regex restrictivos que omitían "gracias", "ok" o "listo" simples; 4) Falta de instrucción explícita en el system prompt para que el LLM sugiera `[STICKER:clave]`.
+  - **Solución Doctrinal:**
+    1. Cooldown humano reducido a **25 segundos** (frente a 90s).
+    2. Ampliación de disparadores emocionales ("gracias", "mil gracias", "muchas gracias", "ok", "listo", "de una", "excelente", "abacho").
+    3. Instrucción activa en `base.md` y `prompts.ts` capacitando a JanIA para añadir `[STICKER:clave]` al final de su mensaje cuando lo juzgue oportuno, siendo limpiada del texto y despachada como sticker nativo por Baileys.
+- **Validación ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **482/482 passing** (Suite 156 creada, 100% verde a $0 COP) | Build `npm run build` limpio en Vite y esbuild.
+- Consagración de versión: `shared/const.ts` (`v33.70`) y `package.json` (`33.70.0`).
+
 ### 🔖 v33.69 — Octubre 2026
 
 #### [v33.69.0] — 2026-10-28: Límite Sagrado de Borradores Jurídicos, Robustecimiento Notarial Multinivel en Minutas PDF, Canalización a Contratos 'Con Todas las de la Ley' con Eduardo Rivera y Reciprocidad de 5 Estrellas con Pantallazos en Grupos (Doctrina Eduardo A. Rivera)

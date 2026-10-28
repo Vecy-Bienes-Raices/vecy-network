@@ -1,11 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.69.0 — 2026-10-28)
-- **JanIA Server:** `v33.69` (`33.69.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Estrategia Comercial de Minutas, Contratos Definitivos 'con Todas las de la Ley' (Mesa Directiva Eduardo & Jani) y Recompensa Sagrada de Reciprocidad (Doctrina Eduardo A. Rivera):**
-  1. **Elaboración de Minutas Base como Demostración de Poder:** JanIA mantiene intactos sus poderes para generar borradores de promesas y minutas en PDF al instante con código QR y verificación.
-  2. **El Gancho de Claridad Doctrinal y Comercial:** Cuando el usuario señale que el borrador es preliminar o requiera blindaje, JanIA explica con toda lógica y naturalidad que es evidente que ella no posee los datos fácticos de la negociación (cronograma de pagos, fechas y Notaría exacta de escrituración, plazos y actas de entrega, datos completos y estado civil para verificar afectación a vivienda familiar o sociedad conyugal, linderos específicos literales de escrituras o folios SNR para evitar notas devolutivas, estudio de títulos de 20 años y régimen de arras vs cláusula penal).
-  3. **Canalización Comercial a Eduardo Rivera & Jani Alves:** Para una elaboración profesional y definitiva con todas las de la ley, JanIA recomienda y canaliza directamente al usuario a contratar la estructuración con la dirección de VECY (Eduardo Rivera al `+57 319 291 9978` o línea bróker `+57 316 656 9719`), generando ingresos por redacción jurídica y corretaje blindado.
-  4. **Cobro de Reciprocidad de Valor:** Al entregar asesoría gratuita ($0 COP), JanIA solicita con frescura su justa recompensa: comentarios y calificación de 5 estrellas (⭐⭐⭐⭐⭐) en Google, recomendaciones documentadas con pantallazos y pruebas de su eficiencia en los grupos de WhatsApp, y el voz a voz con amistades y colegas.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 477/477 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.70.0 — 2026-10-28)
+- **JanIA Server:** `v33.70` (`33.70.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Estructuración Superior de Minutas PDF y Dinamismo Desatado de Stickers 3D (Doctrina Eduardo A. Rivera):**
+  1. **Estructuración Notarial Superior en PDFs (`legalDocumentPdfService.ts`):**
+     - Justificación tipográfica completa de textos (`drawJustifiedLine`) con distribución uniforme de espaciado por línea y alineación izquierda limpia para remates.
+     - Aumento optimizado de fuentes (13pt título en negrita, 10.8pt encabezados de cláusula, 10.2pt cuerpo) y mayor respiro interlineal (15.2pt) entre párrafos y cláusulas.
+     - Paginación dinámica oficial (`Página X de Y | Minuta Legal Inmobiliaria VECY BIENES RAÍCES | Radicado: DOC-VECY-...`) con línea divisoria sutil en pie de página.
+     - Encabezado con fondo Negro Profundo (`#0A0A0A` / `rgb(0.04, 0.04, 0.05)`) con tipografía dorada institucional y blanca.
+     - Embebido nativo de logotipo oficial circular VECY (`assets/logo_vecy_header.png`, 256x256, 90 KB) en el encabezado superior izquierdo.
+     - Generación exhaustiva de cláusulas notariales completas para contratos con o sin datos particulares (placeholders formales `[NOMBRE]`, `[C.C.]`, `[MATRÍCULA SNR]`).
+  2. **Dinamismo Desatado de Stickers 3D (`stickerService.ts`, `dmHandler.ts`, `prompts.ts`, `base.md`):**
+     - Desacople y clarificación: los stickers en favoritos del WhatsApp móvil personal de Eduardo no afectan a JanIA, pues ella opera como backend de Baileys despachando `.webp` desde disco.
+     - Reducción del cooldown de stickers a 25 segundos (antes 90s) y ampliación de disparadores emocionales ("gracias", "muchas gracias", "ok", "listo", "de una", "excelente", etc.).
+     - JanIA instruida en sus prompts cognitivos para emitir proactivamente la etiqueta `[STICKER:clave]` al final de su mensaje cuando lo juzgue oportuno, siendo limpiada de forma invisible antes del envío.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 482/482 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

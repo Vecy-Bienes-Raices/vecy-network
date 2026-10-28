@@ -1,6 +1,8 @@
 import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont } from "pdf-lib";
 import QRCode from "qrcode";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 /**
  * 📑 GENERADOR INSTANTÁNEO DE CARTAS, CONTRATOS Y MINUTAS INMOBILIARIAS EN PDF MEMBRETADO (v33.66 — Doctrina Eduardo A. Rivera)
@@ -357,33 +359,85 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
 }
 
 function wrapTextToLines(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
-  const paragraphs = text.split(/\r?\n/);
+  const cleanPara = sanitizePdfWinAnsiText(text);
+  if (!cleanPara) return [];
+  const words = cleanPara.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
+  let currentLine = "";
 
-  for (const para of paragraphs) {
-    const cleanPara = sanitizePdfWinAnsiText(para);
-    if (!cleanPara) {
-      lines.push("");
-      continue;
-    }
-    const words = cleanPara.split(/\s+/);
-    let currentLine = "";
-
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      const width = font.widthOfTextAtSize(testLine, fontSize);
-      if (width > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    if (currentLine) {
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const width = font.widthOfTextAtSize(testLine, fontSize);
+    if (width > maxWidth && currentLine) {
       lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
     }
   }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
   return lines;
+}
+
+function drawJustifiedLine(
+  page: PDFPage,
+  line: string,
+  font: PDFFont,
+  fontSize: number,
+  startX: number,
+  y: number,
+  maxWidth: number,
+  isJustified = true,
+  textColor = rgb(0.12, 0.13, 0.16)
+) {
+  const words = line.split(/\s+/).filter(Boolean);
+  const normalSpaceWidth = font.widthOfTextAtSize(" ", fontSize);
+
+  if (words.length <= 1 || !isJustified) {
+    page.drawText(line, {
+      x: startX,
+      y,
+      size: fontSize,
+      font,
+      color: textColor
+    });
+    return;
+  }
+
+  let totalWordsWidth = 0;
+  for (const w of words) {
+    totalWordsWidth += font.widthOfTextAtSize(w, fontSize);
+  }
+  const numGaps = words.length - 1;
+  const extraSpace = maxWidth - totalWordsWidth;
+  const calculatedSpace = extraSpace / numGaps;
+
+  // Si el cálculo de espacio se desborda o se comprime de forma antinatural, dibujar a la izquierda
+  if (calculatedSpace > normalSpaceWidth * 2.6 || calculatedSpace < normalSpaceWidth * 0.7) {
+    page.drawText(line, {
+      x: startX,
+      y,
+      size: fontSize,
+      font,
+      color: textColor
+    });
+    return;
+  }
+
+  let curX = startX;
+  for (let wIdx = 0; wIdx < words.length; wIdx++) {
+    const w = words[wIdx];
+    page.drawText(w, {
+      x: curX,
+      y,
+      size: fontSize,
+      font,
+      color: textColor
+    });
+    curX += font.widthOfTextAtSize(w, fontSize) + calculatedSpace;
+  }
 }
 
 /**
@@ -406,103 +460,240 @@ export async function generateLegalDocumentPdf(
   const marginX = 52;
   const maxWidth = pageWidth - marginX * 2;
 
+  // Cargar logotipo oficial VECY para el encabezado (versión optimizada en disco)
+  let logoImage: any = null;
+  const logoCandidates = [
+    path.resolve(process.cwd(), "client/public/assets/logo_vecy_header.png"),
+    path.resolve(process.cwd(), "assets/logo_vecy_header.png"),
+    path.resolve(process.cwd(), "client/public/logo-vecy.png")
+  ];
+  for (const lp of logoCandidates) {
+    if (fs.existsSync(lp)) {
+      try {
+        const logoBuf = fs.readFileSync(lp);
+        logoImage = await pdfDoc.embedPng(logoBuf);
+        break;
+      } catch {
+        // Intenta el siguiente candidato
+      }
+    }
+  }
+
   const drawHeader = (page: PDFPage, isFirstPage: boolean) => {
-    // Franja superior oscura ejecutiva VECY
+    // Franja superior en NEGRO PROFUNDO (#0A0A0A)
     page.drawRectangle({
       x: 0,
-      y: pageHeight - 72,
+      y: pageHeight - 74,
       width: pageWidth,
-      height: 72,
-      color: rgb(0.08, 0.09, 0.12)
+      height: 74,
+      color: rgb(0.04, 0.04, 0.05)
     });
-    // Línea dorada institucional
+    // Línea dorada imperial (#D4AF37)
     page.drawRectangle({
       x: 0,
-      y: pageHeight - 75,
+      y: pageHeight - 77,
       width: pageWidth,
       height: 3,
       color: rgb(0.83, 0.68, 0.21)
     });
 
+    let textStartX = marginX;
+    if (logoImage) {
+      page.drawImage(logoImage, {
+        x: marginX,
+        y: pageHeight - 68,
+        width: 44,
+        height: 44
+      });
+      textStartX = marginX + 54;
+    }
+
     page.drawText("VECY BIENES RAICES - CONSULTORIA LEGAL E IA INMOBILIARIA", {
-      x: marginX,
-      y: pageHeight - 32,
-      size: 11,
+      x: textStartX,
+      y: pageHeight - 31,
+      size: 11.2,
       font: fontBold,
       color: rgb(0.92, 0.78, 0.32)
     });
     page.drawText("Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/", {
-      x: marginX,
-      y: pageHeight - 48,
+      x: textStartX,
+      y: pageHeight - 46,
       size: 8.5,
       font: fontRegular,
-      color: rgb(0.88, 0.88, 0.9)
+      color: rgb(0.88, 0.9, 0.94)
     });
-    page.drawText(`Radicado Documental: ${verificationCode}`, {
-      x: marginX,
-      y: pageHeight - 61,
-      size: 8,
+    page.drawText(`Radicado Documental: ${verificationCode} | Validez Notarial y Registral`, {
+      x: textStartX,
+      y: pageHeight - 59,
+      size: 7.8,
       font: fontRegular,
-      color: rgb(0.7, 0.72, 0.76)
+      color: rgb(0.72, 0.74, 0.78)
     });
 
     if (isFirstPage) {
-      // Bloque de título del documento
-      const titleLines = wrapTextToLines(title, fontBold, 11.5, maxWidth);
-      let ty = pageHeight - 102;
+      // Bloque de título del documento en tamaño 13pt bold con color distinguido
+      const titleLines = wrapTextToLines(title, fontBold, 12.8, maxWidth);
+      let ty = pageHeight - 104;
       for (const tLine of titleLines) {
         page.drawText(tLine, {
           x: marginX,
           y: ty,
-          size: 11.5,
+          size: 12.8,
           font: fontBold,
-          color: rgb(0.1, 0.12, 0.18)
+          color: rgb(0.08, 0.09, 0.12)
         });
-        ty -= 15;
+        ty -= 16;
       }
       page.drawText(`Marco Normativo: ${sanitizePdfWinAnsiText(meta.normativeFramework)}`, {
         x: marginX,
         y: ty - 2,
-        size: 8.5,
+        size: 8.8,
         font: fontRegular,
-        color: rgb(0.38, 0.4, 0.45)
+        color: rgb(0.35, 0.38, 0.44)
       });
       page.drawLine({
         start: { x: marginX, y: ty - 10 },
         end: { x: pageWidth - marginX, y: ty - 10 },
-        thickness: 0.8,
-        color: rgb(0.8, 0.65, 0.2)
+        thickness: 0.9,
+        color: rgb(0.83, 0.68, 0.21)
       });
-      return ty - 28;
+      return ty - 26;
     }
-    return pageHeight - 98;
+    return pageHeight - 96;
   };
 
   let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
   let cursorY = drawHeader(currentPage, true);
 
-  const bodyLines = wrapTextToLines(bodyContent, fontRegular, 10, maxWidth);
-  for (const line of bodyLines) {
-    if (cursorY < 130) {
-      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-      cursorY = drawHeader(currentPage, false);
-    }
-    if (!line) {
+  const rawParagraphs = bodyContent.split(/\r?\n/);
+
+  for (let pIdx = 0; pIdx < rawParagraphs.length; pIdx++) {
+    const rawP = rawParagraphs[pIdx].trim();
+    if (!rawP) {
       cursorY -= 8;
       continue;
     }
-    const isHeading =
-      /^(?:CLAUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SEPTIMA|OCTAVA|NOVENA|DECIMA|DECIMAPRIMERA|DECIMASEGUNDA|DECIMATERCERA|DECIMACUARTA|DÉCIMA|REQUISITOS|CERTIFICACION|DISPOSICIONES|ADVERTENCIA|LUGAR|PROMITENTE|ARRENDADOR|ARRENDATARIO|EL\s+COMITENTE|EL\s+CORREDOR|PARTES\s+INTERVINIENTES|ENTRE\s+LOS\s+SUSCRITOS|[1-9]\.)/i.test(
-        line
+
+    // A) Detectar encabezados principales de sección
+    const isSectionHeader = /^(?:CLAUSULADO|DISPOSICIONES|ADVERTENCIA|REQUISITOS|CERTIFICACION)/i.test(rawP);
+    if (isSectionHeader) {
+      if (cursorY < 140) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      cursorY -= 8;
+      currentPage.drawText(rawP, {
+        x: marginX,
+        y: cursorY,
+        size: 11,
+        font: fontBold,
+        color: rgb(0.06, 0.07, 0.1)
+      });
+      cursorY -= 16;
+      continue;
+    }
+
+    // B) Detectar cláusulas con título integrado (ej: "CLAUSULA PRIMERA - OBJETO: Cuerpo...")
+    const clauseInlineMatch = rawP.match(/^(CLAUSULA\s+[A-ZÁÉÍÓÚ]+(?:\s*-\s*[^:]+)?:)\s*(.*)$/i);
+    if (clauseInlineMatch) {
+      const headingPart = clauseInlineMatch[1].trim();
+      const bodyPart = clauseInlineMatch[2].trim();
+
+      if (cursorY < 140) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      cursorY -= 8;
+      currentPage.drawText(headingPart, {
+        x: marginX,
+        y: cursorY,
+        size: 10.5,
+        font: fontBold,
+        color: rgb(0.06, 0.07, 0.1)
+      });
+      cursorY -= 15;
+
+      if (bodyPart) {
+        const pLines = wrapTextToLines(bodyPart, fontRegular, 10.2, maxWidth);
+        for (let lIdx = 0; lIdx < pLines.length; lIdx++) {
+          if (cursorY < 130) {
+            currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+            cursorY = drawHeader(currentPage, false);
+          }
+          const isLastLine = lIdx === pLines.length - 1;
+          drawJustifiedLine(currentPage, pLines[lIdx], fontRegular, 10.2, marginX, cursorY, maxWidth, !isLastLine);
+          cursorY -= 15.2;
+        }
+      }
+      continue;
+    }
+
+    // C) Detectar líneas de metadata (ej: "LUGAR Y FECHA DE SUSCRIPCION: Bogotá...")
+    const metaMatch = rawP.match(/^([A-ZÁÉÍÓÚ\s/()—-]+:)\s*(.*)$/);
+    if (metaMatch && metaMatch[1].length < 50 && !rawP.startsWith("- ")) {
+      if (cursorY < 130) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      const label = metaMatch[1];
+      const val = metaMatch[2];
+      const labelWidth = fontBold.widthOfTextAtSize(label, 10);
+
+      currentPage.drawText(label, {
+        x: marginX,
+        y: cursorY,
+        size: 10,
+        font: fontBold,
+        color: rgb(0.12, 0.14, 0.18)
+      });
+
+      if (val) {
+        const valStartX = marginX + labelWidth + 4;
+        const availableWidth = maxWidth - labelWidth - 4;
+        const valLines = wrapTextToLines(val, fontRegular, 10, availableWidth);
+        for (let vIdx = 0; vIdx < valLines.length; vIdx++) {
+          if (vIdx > 0) {
+            cursorY -= 14.5;
+            if (cursorY < 130) {
+              currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+              cursorY = drawHeader(currentPage, false);
+            }
+          }
+          currentPage.drawText(valLines[vIdx], {
+            x: vIdx === 0 ? valStartX : marginX + 16,
+            y: cursorY,
+            size: 10,
+            font: fontRegular,
+            color: rgb(0.15, 0.16, 0.2)
+          });
+        }
+      }
+      cursorY -= 15;
+      continue;
+    }
+
+    // D) Párrafos de texto regular (justificados) o ítems de lista
+    const isListItem = /^[-•*]\s+|\d+\.\s+/.test(rawP);
+    const pLines = wrapTextToLines(rawP, fontRegular, 10.2, maxWidth);
+    for (let lIdx = 0; lIdx < pLines.length; lIdx++) {
+      if (cursorY < 130) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      const isLastLine = lIdx === pLines.length - 1;
+      const shouldJustify = !isListItem && !isLastLine;
+      drawJustifiedLine(
+        currentPage,
+        pLines[lIdx],
+        fontRegular,
+        10.2,
+        isListItem ? marginX + 8 : marginX,
+        cursorY,
+        isListItem ? maxWidth - 8 : maxWidth,
+        shouldJustify
       );
-    currentPage.drawText(line, {
-      x: marginX,
-      y: cursorY,
-      size: 9.8,
-      font: isHeading ? fontBold : fontRegular,
-      color: rgb(0.14, 0.15, 0.18)
-    });
-    cursorY -= 14;
+      cursorY -= 15.2;
+    }
   }
 
   // Espacio para firmas y guía de firma electrónica AND
@@ -626,14 +817,20 @@ export async function generateLegalDocumentPdf(
     // Si falla el QR en un entorno restringido, el PDF continúa limpio
   }
 
-  // Foliado oficial en pie de página (Página X de Y)
+  // Foliado oficial en pie de página (Página X de Y) con línea sutil en TODAS las páginas
   const allPages = pdfDoc.getPages();
   const totalPages = allPages.length;
   allPages.forEach((p, idx) => {
-    p.drawText(`Pagina ${idx + 1} de ${totalPages} - Radicado Oficial: ${verificationCode}`, {
+    p.drawLine({
+      start: { x: marginX, y: 28 },
+      end: { x: pageWidth - marginX, y: 28 },
+      thickness: 0.5,
+      color: rgb(0.82, 0.84, 0.88)
+    });
+    p.drawText(`Pagina ${idx + 1} de ${totalPages} - Minuta Legal Inmobiliaria VECY BIENES RAICES - Radicado: ${verificationCode}`, {
       x: marginX,
-      y: 18,
-      size: 7.2,
+      y: 16,
+      size: 7.4,
       font: fontRegular,
       color: rgb(0.45, 0.47, 0.52)
     });

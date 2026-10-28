@@ -183,7 +183,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.69 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.70 — Octubre 2026
+
+### Novedades v33.70 (Estructuración Notarial Superior en Minutas PDF [Texto Justificado, Logo VECY, Paginación, Encabezado Negro] y Dinamismo Desatado de Stickers 3D — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Estructuración Notarial Superior de Documentos PDF (`legalDocumentPdfService.ts`):**
+     - **Tipografía y Justificación Completa:** Implementación de `drawJustifiedLine` que calcula dinámicamente los anchos de palabra y distribuye espacios de forma equilibrada a lo largo del renglón, manteniendo la última línea del párrafo y los listados con alineación izquierda natural.
+     - **Jerarquía y Legibilidad Optimizadas:** Incremento armonioso de fuentes: Título principal en 13pt negrita con pleca dorada, subtítulos y cláusulas en 10.8pt negrita, y cuerpo general en 10.2pt con interlineado de 15.2pt y separación visual generosa entre cláusulas.
+     - **Encabezado Institucional Negro Profundo:** Sustitución del azul por Negro Carbón Mate (`#0A0A0A` / `rgb(0.04, 0.04, 0.05)`) con tipografía en Dorado Imperial (`#D4AF37`) y blanco.
+     - **Logotipo Oficial Embebido:** Integración nativa del escudo circular VECY (`assets/logo_vecy_header.png`, 256x256, 90 KB) en la esquina superior izquierda del membrete.
+     - **Paginación Dinámica Oficial:** Pie de página foliado con `Página X de Y | Minuta Legal Inmobiliaria VECY BIENES RAÍCES | Radicado: DOC-VECY-...` delimitado por una línea divisoria sutil.
+     - **Clausulado Completo para Borradores sin Datos:** Se perfeccionan las plantillas notariales para que aún ante solicitudes escuetas sin datos de los clientes, JanIA genere la estructura legal íntegra con todas las cláusulas notariales pertinentes (objeto, linderos SNR, tradición 20 años, precio y arras, saneamiento, afectación familiar Ley 258/1996, fecha y notaría, entrega material, servicios públicos, cláusula penal, mérito ejecutivo y firma electrónica Ley 527/1999).
+  2. **Dinamismo Desatado de Stickers 3D (`stickerService.ts`, `dmHandler.ts`, `prompts.ts`, `base.md`):**
+     - **Aclaración Técnica sobre Stickers en WhatsApp:** Guardar los stickers en la app personal de Eduardo no influye en JanIA, pues ella se ejecuta en el servidor VPS Contabo vía Baileys, despachando los archivos `.webp` desde el disco del servidor.
+     - **Reducción del Cooldown Humano a 25s:** El bloqueo anterior de 90 segundos impedía que JanIA enviara más de un sticker en conversaciones rápidas. Ahora, con 25 segundos y disparadores emocionales ampliados ("gracias", "muchas gracias", "ok", "listo", "de una", "excelente", "abacho"), JanIA reacciona con espontaneidad.
+     - **Instrucción Proactiva en Prompts de Sistema:** JanIA fue instruida para sugerir la etiqueta `[STICKER:clave]` al final de sus mensajes cuando lo considere oportuno, siendo extraída y limpiada de inmediato por el socket de Baileys para enviarla como sticker nativo de WhatsApp.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **482/482 passing** (Suite 156 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio (Vite + esbuild) ✅
+- `shared/const.ts` (`v33.70`) y `package.json` (`33.70.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.69 — Octubre 2026
 
 ### Novedades v33.69 (Límite Sagrado de Borradores Jurídicos en JanIA, Minutas Base, Canalización a Contratos 'Con Todas las de la Ley' con Eduardo Rivera y Reciprocidad de 5 Estrellas con Pantallazos en Grupos — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

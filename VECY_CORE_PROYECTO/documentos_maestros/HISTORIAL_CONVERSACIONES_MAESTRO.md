@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-28] — JanIA v33.70: Estructuración Notarial Superior en Minutas PDF (Texto Justificado, Logo VECY, Paginación, Encabezado Negro) y Dinamismo Desatado de Stickers 3D (v33.70 - 33.70.0)
+
+**Versión:** `v33.70` (`33.70.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Perfeccionamiento Notarial y Visual de Minutas PDF (`legalDocumentPdfService.ts`):**
+   - Eduardo solicitó: *"Necesito que Jania corrija y mejore potencialmente la estructuración de archivos PDF cuando fabrique o crée los contratos y que así le pidan un simple borrador sin datos solo con las cláusulas y estructura legal que debe llevar determinado contrato según su tipo, ella siempre lo sepa elaborar y crear de la mejor manera y correctamente... aumento en el tamaño de la letra, mejorar el espaciado entre párrafos y cláusulado, cuerpo más ordenado, texto en general justificado, ponerle paginación y de ser posible nuestra marca y logo en los encabezados. Preferiblemente cambia en el encabezado el azul profundo por negro profundo, solo eso sería."*
+2. **Dinamismo de Stickers 3D de JanIA en WhatsApp:**
+   - Eduardo consultó: *"Voy a guardar los STIKERS de JanIA en la herramienta Stikers de Whatsapp para que tal vez le quede más fácil usarlos de manera más dinámica a JanIA, qué dices sería mejor, es que veo que solo lo pudo hacer una vez y no volvió a colocar stickers, creo que le está quedando difícil será?"*.
+3. **Alerta de Fallo en GitHub Actions CI/CD en el VPS:**
+   - Eduardo compartió captura de email informando error en el workflow `Deploy to Contabo VPS` (`Run failed: Deploy to Contabo VPS - main (9e4d12e)` con mensaje en consola: `fatal: Need to specify how to reconcile divergent branches`).
+
+**Diagnóstico Técnico Profundo:**
+1. **Generador de Minutas Notariales en PDF (`legalDocumentPdfService.ts`):**
+   - Las librerías como `pdf-lib` solo dibujan cadenas rígidas a partir de una coordenada `(x, y)` fija (alineación izquierda pura). Para lograr un texto completamente justificado con estándar de imprenta jurídica, se implementó el algoritmo `drawJustifiedLine`, el cual calcula el ancho real ocupado por las palabras, distribuye el espacio sobrante equitativamente entre los espacios intermedios y pinta cada palabra en su coordenada exacta, preservando la alineación izquierda natural para remates de párrafo y viñetas.
+   - Para no engordar el tamaño del archivo PDF con imágenes pesadas de varios megabytes, se generó un archivo optimizado de alta resolución `assets/logo_vecy_header.png` (256x256 px, 90 KB) a partir del logo vectorial circular institucional, incrustándolo en la esquina superior izquierda del membrete.
+   - Se transformó la paleta del encabezado del azul oscuro anterior a **Negro Carbón Mate Profundo (`#0A0A0A` / `rgb(0.04, 0.04, 0.05)`)**, combinando letras en Dorado Imperial (`#D4AF37`) y blanco.
+   - Se aumentaron las fuentes: Título principal en 13pt negrita con línea de acento dorada; subtítulos y títulos de cláusulas en 10.8pt negrita; cuerpo de párrafos en 10.2pt con interlineado de 15.2pt y márgenes de respiro entre cláusulas.
+   - Se implementó paginación automática foliada (`Página X de Y | Minuta Legal Inmobiliaria VECY BIENES RAÍCES | Radicado: DOC-VECY-...`) en la base de cada hoja, separada por una línea divisoria de seguridad.
+   - Las plantillas de contratos (promesas de compraventa, arrendamientos, corretajes, cesiones de leasing, pactos de retroventa) fueron robustecidas para que, incluso si el usuario no suministra datos completos, se elabore la estructura notarial completa con todas sus cláusulas legales y marcadores de posición oficiales (`[NOMBRE]`, `[C.C.]`, `[MATRÍCULA SNR]`).
+2. **Dinamismo y Comportamiento de Stickers en WhatsApp:**
+   - **Desacople Arquitectónico:** Guardar los stickers en la app móvil personal de WhatsApp de Eduardo no tiene impacto en el bot. JanIA corre de forma headless y autónoma en el VPS mediante el socket de Baileys, leyendo los archivos binarios `.webp` de 512x512 directamente desde el disco duro del servidor.
+   - **Causa Raíz de la Baja Frecuencia:**
+     1. El cooldown humano estaba fijado en 90 segundos. En una conversación fluida, cualquier mensaje del usuario enviado antes de ese minuto y medio era descartado para stickers.
+     2. Las expresiones regulares de coincidencia eran excesivamente restringidas (por ejemplo, requerían "muchas gracias" o frases exactas; no capturaban un simple "gracias", "ok" o "listo" en frases cortas).
+     3. El prompt de sistema de JanIA no tenía una directiva explícita instruyéndola a usar etiquetas como `[STICKER:ok]` o `[STICKER:gracias_alegre]`.
+   - **Solución Doctrinal:**
+     - Cooldown reducido de 90s a **25 segundos**.
+     - Ampliación de disparadores emocionales para abarcar agradecimientos simples ("gracias", "mil gracias", "muchas gracias", "excelente", "genial"), confirmaciones ejecutivas ("ok", "listo", "de una", "perfecto", "vale") y saludos iniciales ("hola").
+     - Instrucción activa en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts` permitiendo que el LLM añada al final de sus respuestas la etiqueta `[STICKER:clave]`, la cual es interceptada por el socket de Baileys, eliminada del texto visible y despachada como sticker nativo de WhatsApp.
+3. **GitHub Actions CI/CD VPS Reconciliación:**
+   - La colisión ocurrió porque se ejecutó un `git pull` manual en el VPS al mismo tiempo que GitHub Actions ejecutaba el job de despliegue.
+   - Se blindó `.github/workflows/deploy.yml` configurando explícitamente `git config pull.rebase false` y `git pull origin main --ff-only || git pull origin main --no-rebase`, garantizando auto-despliegue desatendido sin bloqueos.
+
+**Validación Exhaustiva ($0 COP):**
+- Creada **Suite 156** en `server/__tests__/regression.test.ts` con 4 pruebas automatizadas.
+- Typecheck: `npm run check` (0 errores).
+- Tests: `npm test` **482/482 passing** (100% verde a $0 COP).
+- Build: `npm run build` limpio en 18.96s (cliente Vite) + 191ms (servidor esbuild).
+- Consagración de versión: `shared/const.ts` (`v33.70`) y `package.json` (`33.70.0`).
+
 ### 📅 [2026-10-28] — JanIA v33.69: Límite Sagrado de Borradores Jurídicos, Robustecimiento Notarial Multinivel en Minutas PDF, Canalización a Contratos 'Con Todas las de la Ley' con Eduardo Rivera y Reciprocidad de 5 Estrellas con Pantallazos en Grupos (v33.69 - 33.69.0)
 
 **Versión:** `v33.69` (`33.69.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
