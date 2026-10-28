@@ -8148,5 +8148,21 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **444/444 passing** ($0 COP) | Build `npm run build` limpio.
 
+### 10.158 Versión v33.63 (2026-10-27) — Reglas de Onboarding en dmHandler.ts y prompts.ts (Agentes sin 40/20/40 y Propietarios Directos con Corretaje Virtual)
+- **Doctrina Fundacional Consagrada (Eduardo A. Rivera)**:
+  1. **Agente inmobiliario que rechaza el modelo 40/20/40**: Se registra en el sistema asignándole su código radicado oficial (`ID #REQ...` / `ID #PROP...`), pero se le advierte que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado por la dirección comercial para adquirir un plan de pago mensual o anual.
+  2. **Propietario directo (venta/arriendo)**: Exigir aceptación de Términos y Condiciones de corretaje virtual, pedir su correo para el envío formal, y recordarle comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisión previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).
+- **Implementación Técnica en Backend**:
+  * `server/_core/jania/prompts.ts`: Sección oficial `# REGLAS DE ONBOARDING DE JANIA (DOCTRINA EDUARDO A. RIVERA)`.
+  * `server/_core/prompts/base.md`: Sincronización doctrinal de la sección 8 y corrección de byte UTF-8.
+  * `server/_core/jania/handlers/dmHandler.ts`: Interceptores de respuesta rápida para rechazos de 40/20/40 (`isExplicit402040Rejection`), flujo de captura de correo y T&C de corretaje para propietarios directos, y directivas inyectadas al prompt cognitivo (`contextOwnerDirective`, `context402040Directive`).
+  * `server/_core/jania/sessionManager.ts`: Helpers `setUserOwnerCorretaje` y `getUserOwnerCorretaje` para persistencia en sesión perpetua de usuario.
+- **Validación y Blindaje**:
+  * Suite 149 en `regression.test.ts` con 5 pruebas unitarias.
+  * Cobertura de tests: `npm test` **448/448 passing** (100% verde a $0 COP).
+  * Typecheck: `npm run check` (0 errores).
+  * Build: `npm run build` limpio.
+  * Versión: `v33.63` (`33.63.0`) en `shared/const.ts` y `package.json`.
+
 
 

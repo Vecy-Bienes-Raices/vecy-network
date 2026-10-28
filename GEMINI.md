@@ -1,10 +1,9 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.62.0 — 2026-10-27)
-- **JanIA Server:** `v33.62` (`33.62.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Colegas sin 40/20/40 (Planes de Pago) y Propietarios Directos (Corretaje Virtual — Doctrina Eduardo A. Rivera):**
-  1. **Colegas que NO aceptan el 40/20/40:** SÍ se registran en la base de datos de VECY. Se les advierte que serán contactados para adquirir un plan de suscripción de pago (mensual o anual) para notificaciones/cruces, pues el 40/20/40 es la única vía 100% gratuita.
-  2. **Propietarios Directos (Cero Comisión Colaborativa):** Aceptación obligatoria de Términos y Condiciones para corretaje virtual, solicitud de correo electrónico para envío de contrato y canalización enfática con Jani Alves o Eduardo Rivera (+57 316 656 9719) para acordar publicación web y comisión por venta/arriendo.
-  3. **Contacto Exclusivo por Eduardo Rivera o Jani Alves (+57 316 656 9719):** Cero contacto de terceros (ni propietarios, ni compradores, ni inversionistas, ni colegas externos).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 444/444 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.63.0 — 2026-10-27)
+- **JanIA Server:** `v33.63` (`33.63.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Reglas de Onboarding en dmHandler.ts y prompts.ts (Doctrina Eduardo A. Rivera):**
+  1. **Agente Inmobiliario que rechaza el modelo 40/20/40:** Se registra en el sistema, pero se le advierte que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado para adquirir un plan de pago mensual o anual.
+  2. **Propietario Directo (Venta/Arriendo):** JanIA exige aceptación de Términos y Condiciones de corretaje virtual, solicita su correo para el envío formal, y le recuerda comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisión previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 448/448 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

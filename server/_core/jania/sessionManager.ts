@@ -809,7 +809,10 @@ export async function setUser402040Agreement(userId: string, accepts: boolean): 
   const session = await getUserPerpetualSession(userId);
   session.keyFacts = session.keyFacts || {};
   session.keyFacts.acepta_40_20_40 = accepts;
-  session.keyFacts.categoriaContacto = accepts ? "aliada_prioritaria" : "contacto_convencional";
+  session.keyFacts.categoriaContacto = accepts ? "aliada_prioritaria" : "plan_pago_requerido";
+  if (!accepts) {
+    session.keyFacts.rechaza_402040_requiere_plan_pago = true;
+  }
   session.keyFacts.updatedAt_40_20_40 = new Date().toISOString();
   delete session.keyFacts.esperando_respuesta_40_20_40;
   session.lastSeenAt = new Date().toISOString();
@@ -820,7 +823,7 @@ export async function setUser402040Agreement(userId: string, accepts: boolean): 
     if (db) {
       const cleanPhone = cleanSessionJid(userId).replace(/\D/g, "");
       const normPhone = cleanPhone.startsWith("57") ? cleanPhone : `57${cleanPhone}`;
-      const noteTag = accepts ? "[ALIANZA 40/20/40 ACEPTADA - ALIADA PRIORITARIA]" : "[ALIANZA 40/20/40 RECHAZADA - CONTACTO CONVENCIONAL 50/50]";
+      const noteTag = accepts ? "[ALIANZA 40/20/40 ACEPTADA - ALIADA PRIORITARIA]" : "[RECHAZA 40/20/40 - REQUIERE PLAN DE PAGO MENSUAL/ANUAL]";
       await db.execute(sql`
         UPDATE advisors 
         SET notes = COALESCE(notes, '') || ' ' || ${noteTag}, updated_at = NOW()
@@ -836,6 +839,36 @@ export async function setUser402040Agreement(userId: string, accepts: boolean): 
 export async function getUser402040Agreement(userId: string): Promise<boolean | undefined> {
   const session = await getUserPerpetualSession(userId);
   return session.keyFacts?.acepta_40_20_40;
+}
+
+export async function setUserOwnerCorretaje(
+  userId: string,
+  data: { acceptsTerms?: boolean; email?: string }
+): Promise<UserPerpetualSession> {
+  const session = await getUserPerpetualSession(userId);
+  session.keyFacts = session.keyFacts || {};
+  session.keyFacts.es_propietario_directo = true;
+  session.keyFacts.rol_identificado = "propietario_directo";
+  if (data.acceptsTerms !== undefined) {
+    session.keyFacts.acepta_terminos_corretaje = data.acceptsTerms;
+    if (data.acceptsTerms) session.keyFacts.esperando_terminos_corretaje = false;
+  }
+  if (data.email) {
+    session.keyFacts.correo_propietario = data.email.toLowerCase();
+    session.keyFacts.esperando_correo_propietario = false;
+  }
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+  return session;
+}
+
+export async function getUserOwnerCorretaje(userId: string): Promise<{ isOwner?: boolean; acceptsTerms?: boolean; email?: string }> {
+  const session = await getUserPerpetualSession(userId);
+  return {
+    isOwner: session.keyFacts?.es_propietario_directo,
+    acceptsTerms: session.keyFacts?.acepta_terminos_corretaje,
+    email: session.keyFacts?.correo_propietario
+  };
 }
 
 

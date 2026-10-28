@@ -7,6 +7,38 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.63: Reglas de Onboarding en dmHandler.ts y prompts.ts — Agentes sin 40/20/40 y Propietarios Directos con Corretaje Virtual (v33.63 - 33.63.0)
+
+**Versión:** `v33.63` (`33.63.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Agente Inmobiliario que rechaza el modelo 40/20/40:**
+   - Registrarlo en el sistema, pero advertirle que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado para adquirir un plan de pago mensual o anual.
+2. **Propietario Directo (Venta/Arriendo):**
+   - Exigir aceptación de Términos y Condiciones de corretaje virtual, pedir su correo para el envío formal, y recordarle comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisión previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Consagración en `server/_core/jania/prompts.ts`:**
+  - Sección consagrada: `# REGLAS DE ONBOARDING DE JANIA (DOCTRINA EDUARDO A. RIVERA)` con las dos directivas explícitas e inquebrantables.
+- **Armonización en `server/_core/prompts/base.md`:**
+  - Actualización limpia de la sección 8 con las dos reglas textuales de onboarding y corrección de byte UTF-8 previo.
+- **Implementación Integral en `server/_core/jania/handlers/dmHandler.ts`:**
+  - Intercepción y manejo de agentes que rechazan el modelo 40/20/40 (`isExplicit402040Rejection`): se confirma su radicación en el sistema asignando ID oficial, se marca la sesión como `plan_pago_requerido` con nota `[RECHAZA 40/20/40 - REQUIERE PLAN DE PAGO MENSUAL/ANUAL]` y se entrega la advertencia de que la gratuidad de cruces opera exclusivamente bajo el 40/20/40 y que será contactado para un plan de pago.
+  - Flujo de onboarding para propietarios directos (`isExplicitOwnerStatement` / `es_propietario_directo`): se exige la aceptación de Términos y Condiciones de corretaje virtual, se solicita el correo electrónico para el envío formal, se radica su inmueble con ID #PROP... y se enfatiza comunicarse al 3166569719 con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisión antes de la publicación web.
+  - Persistencia de estado de corretaje virtual en `server/_core/jania/sessionManager.ts` mediante `setUserOwnerCorretaje` y `getUserOwnerCorretaje`.
+  - Inyección de directivas cognitivas de onboarding (`context402040Directive` y `contextOwnerDirective`) al prompt de Gemini para evitar amnesia o desvíos conversacionales.
+- **Enseñanza Semilla en `founderKnowledgeService.ts`:**
+  - Actualizada `seed-colegas-sin-402040-plan-pago-y-propietarios-corretaje-virtual` con las directivas textuales de onboarding.
+- **Validación Limpia ($0 COP):**
+  - Creada **Suite 149** en `server/__tests__/regression.test.ts` con 5 pruebas unitarias exhaustivas.
+  - Tests: `npm test` **448/448 passing** (100% verde).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio.
+- **Incremento de Versión Oficial:**
+  - `shared/const.ts`: `v33.63`
+  - `package.json`: `33.63.0`
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.62: Doctrina de Colegas sin 40/20/40 (Planes de Pago) y Propietarios Directos (Corretaje Virtual — v33.62 - 33.62.0)
 
 **Versión:** `v33.62` (`33.62.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

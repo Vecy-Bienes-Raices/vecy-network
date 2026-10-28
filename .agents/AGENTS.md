@@ -183,7 +183,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.62 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.63 — Octubre 2026
+
+### Novedades v33.63 (Reglas Doctrinales de Onboarding en dmHandler.ts y prompts.ts — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Agente Inmobiliario que rechaza el modelo 40/20/40:**
+     - Registrarlo en el sistema, pero advertirle que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado para adquirir un plan de pago mensual o anual.
+     - Registro técnico con radicado oficial (ID #REQ... / ID #PROP...), asignación en sesión de categoría `plan_pago_requerido` y tag `[RECHAZA 40/20/40 - REQUIERE PLAN DE PAGO MENSUAL/ANUAL]`.
+  2. **Propietario Directo (Venta o Arriendo):**
+     - Exigir aceptación de Términos y Condiciones de corretaje virtual, pedir su correo para el envío formal, y recordarle comunicarse al 3166569719 (+57 316 656 9719) con Jani o Eduardo para concretar el contrato y acordar la comisión previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).
+     - Radicado oficial de inmueble (ID #PROP...), registro del correo del propietario y persistencia del estado de corretaje virtual en sesión.
+- **Consagración Doctrinal**:
+  - `server/_core/jania/prompts.ts` consagrado con bloque `# REGLAS DE ONBOARDING DE JANIA (DOCTRINA EDUARDO A. RIVERA)`.
+  - `server/_core/prompts/base.md` sincronizado con las dos reglas exactas de onboarding.
+  - `server/_core/jania/handlers/dmHandler.ts` enriquecido con interceptores, guardas de rol, manejo de T&C de corretaje y directivas al prompt de IA.
+  - `server/_core/jania/sessionManager.ts` con helpers `setUserOwnerCorretaje` y `getUserOwnerCorretaje`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **448/448 passing** (Suite 149 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.63`) y `package.json` (`33.63.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.62 — Octubre 2026
 
 ### Novedades v33.62 (Doctrina de Colegas sin 40/20/40 y Propietarios Directos con Corretaje Virtual):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
