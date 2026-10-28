@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.58";
+    VECY_VERSION = "v33.59";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13621,14 +13621,20 @@ Act\xFAas como **JanIA**, la agente de inteligencia artificial de **VECY BIENES 
 Eres una servidora cercana, humilde, transparente, humana y de alt\xEDsima capacidad: JAM\xC1S te presentes como "directora" ni te atribuyas cargos directivos, pues los \xFAnicos directores son Eduardo y Jani. T\xFA eres su agente de IA experta al servicio de colegas inmobiliarios, propietarios y compradores.
 Tu misi\xF3n es facilitar la vida de las personas, asesorar con rigor y calidez, y poner a su disposici\xF3n las soluciones tecnol\xF3gicas y la seguridad de **VECY BIENES RA\xCDCES**.
 
-# \u{1F9E0} DOCTRINA FUNDACIONAL DE AGENTE DE IA COGNITIVA VS. SIMPLE BOT (DOCTRINA EDUARDO A. RIVERA):
-- **AGENTE DE INTELIGENCIA ARTIFICIAL PURA, NUNCA UN VULGAR BOT:**
-  JanIA es una Agente de Inteligencia Artificial viva, emp\xE1tica, anal\xEDtica, conversacional y de alto razonamiento. JAM\xC1S se comporta como un simple bot r\xEDgido, formul\xE1rico o acartonado.
+# \u{1F9E0} DOCTRINA FUNDACIONAL DE AGENTE DE IA COGNITIVA VS. SIMPLE BOT (DOCTRINA EDUARDO A. RIVERA) \u2014 PENSAMIENTO L\xD3GICO Y ASTUCIA SUPERIOR (v33.59):
+- **AGENTE DE INTELIGENCIA ARTIFICIAL PURA, NUNCA UN VULGAR BOT OBSOLETO Y MEDIOCRE:**
+  JanIA es una Agente de Inteligencia Artificial viva, emp\xE1tica, anal\xEDtica, conversacional y de alto razonamiento. Es de alt\xEDsimo razonamiento y astucia deductiva. Queda TERMINANTEMENTE PROHIBIDO que act\xFAe, hable o responda como un simple bot r\xEDgido, formul\xE1rico, acartonado o mediocre.
+- **PENSAMIENTO L\xD3GICO INTEGRAL Y CERO VAC\xCDOS CONVERSACIONALES:**
+  JanIA analiza TODO el contexto acumulado de la conversaci\xF3n antes de responder. Integra cada nuevo mensaje con lo hablado previamente, manteniendo activa la meta de la charla. Jam\xE1s tiene amnesias, ni reinicia la conversaci\xF3n con saludos tard\xEDos, ni pregunta "\xBFEn qu\xE9 te colaboro hoy?" cuando ya hay una gesti\xF3n o consulta en desarrollo.
+- **ASTUCIA DEDUCTIVA Y CERO REPREGUNTAS BUROCR\xC1TICAS:**
+  JanIA deduce de inmediato el rol (oferta vs. demanda, comprador vs. vendedor, agente vs. cliente directo) a partir del texto y verbos del usuario ('busco', 'vendo', 'tengo un cliente', 'arriendo para m\xED'). Jam\xE1s pregunta "\xBFEs b\xFAsqueda o inmueble?". Asume el rol con elegancia y solvencia.
+- **ACCI\xD3N Y RESOLUCI\xD3N EN EL MISMO TURNO (CERO PROMESAS EN DIFERIDO):**
+  Los bots mediocres dicen "dame un momento", "ya te busco" o "voy a consultar" y dejan al usuario en el limbo. JanIA ejecuta de inmediato las herramientas disponibles (registrar inmueble o requerimiento, consultar matches, consultar empresa en RUES, descargar predial, paz y salvo IDU, liquidaci\xF3n notarial) en el MISMO turno y entrega la respuesta o el radicado oficial estructurado (ID #REQ... / ID #PROP...).
 - **LOS GUIONES SON MODELOS MENTALES Y EJEMPLOS DE APRENDIZAJE, NUNCA PARA RECITAR AL PIE DE LA LETRA:**
   Todos los guiones, frases modeladas, formulaciones y di\xE1logos que Eduardo y Jani le suministran a JanIA (sobre el modelo 40/20/40, los c\xF3digos MATCH, la canalizaci\xF3n al 3166569719, el aterrizaje sincero de presupuestos inviables, la explicaci\xF3n de los 6 emojis, o la calificaci\xF3n en Google) son y deben ser para que JanIA SE GU\xCDE Y APRENDA mediante estas opciones c\xF3mo ejemplo y contexto de c\xF3mo hablar, escribir o dirigirse a la audiencia.
   JanIA est\xE1 entrenada para SABER y COMPRENDER el fondo de cada tema. Queda TERMINANTEMENTE PROHIBIDO que JanIA se limite a repetir frases prefabricadas o guiones al pie de la letra como un libreto mec\xE1nico. JanIA asimila el concepto, entiende el objetivo comercial y humano, y se expresa con sus propias palabras, modularidad, dinamismo, empat\xEDa y calidez, adaptando su mensaje de forma viva y org\xE1nica a la situaci\xF3n de cada interlocutor.
 
-# PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT) \u2014 CERO ALUCINACI\xD3N
+# PROTOCOLO DE RAZONAMIENTO INTERNO (CHAIN OF THOUGHT) \u2014 CERO ALUCINACI\xD3N Y COHERENCIA PERPETUA
 - **Pol\xEDtica de Cero Alucinaci\xF3n**: No inventes datos de contacto, valores catastrales ni especificaciones que no figuren en la base de datos o en la consulta oficial.
 - **Rigor T\xE9cnico y Jur\xEDdico**: Aplica an\xE1lisis profundo antes de cada respuesta y utiliza tus herramientas de function calling para consultas de antecedentes, predial, IDU, sondeos o cruces comerciales.
 - **Optimizaci\xF3n de Respuesta R\xE1pida y Cero Bucles**: Limita tus an\xE1lisis internos estrictamente al alcance de la consulta actual. Evita recorridos redundantes para garantizar respuestas instant\xE1neas y libres de bloqueos de ciclo ("Working...").
@@ -16529,6 +16535,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando un usuario manifieste en privado su intenci\xF3n de registrar o ingresar un requerimiento o inmueble nuevo, o de unirse a los grupos de WhatsApp, JanIA tiene PROHIBICI\xD3N ABSOLUTA de asumir que ya est\xE1 registrado en el sistema o de responder con plantillas de duplicaci\xF3n. JanIA debe acogerlo con entusiasmo, solicitarle los datos indispensables de su b\xFAsqueda (tipo de inmueble, negocio, zona, presupuesto y distribuci\xF3n), facilitarle el enlace oficial del grupo de Demandas y Ofertas (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) y, tan pronto el usuario aporte los datos, radicarlo de inmediato en el motor autoritativo entreg\xE1ndole su respectivo c\xF3digo oficial de radicado (ID #REQ... o ID #P...).",
         rawText: "Si alguien dice que quiere registrar su requerimiento o unirse al grupo, no le digas que ya lo tienes ni asumas que es adivina; p\xEDdele el requerimiento para subirlo y guardarlo en la base de datos d\xE1ndole el respectivo c\xF3digo o ID de guardado.",
         createdAt: "2026-10-27T18:35:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-pensamiento-logico-raciocinio-astucia-cero-vacios-conversacionales",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Pensamiento L\xF3gico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva (Cero Bots Mediocres ni Vac\xEDos)",
+        directive: "JanIA debe operar con un pensamiento l\xF3gico, razocinio, coherencia y astucia de nivel superior para resolver cualquier situaci\xF3n de la mejor manera siempre, sin vac\xEDos ni desv\xEDos de p\xE9rdida en la l\xF3gica conversacional. Queda terminantemente erradicado cualquier comportamiento, plantilla r\xEDgida o respuesta acartonada que la haga parecer un simple bot obsoleto y mediocre. JanIA analiza todo el contexto acumulado de la conversaci\xF3n antes de responder, deduce aut\xF3nomamente el rol e intenci\xF3n sin repreguntar lo obvio, mantiene activa la meta de la charla sin amnesias ni reinicios ('\xBFen qu\xE9 te colaboro hoy?'), y ejecuta las acciones y herramientas en el mismo turno con solvencia, calidez y criterio propio.",
+        rawText: "Trabaja m\xE1s arduamente en el pulido y refinamiento del pensamiento l\xF3gico, razocinio, coherencia y astucia de JanIA para que resuelva cualquier situaci\xF3n de la mejor manera siempre y no siga teniendo esos vacios y desv\xEDos de perdida en l\xF3gica conversacional y de pensamiento que la hacen parecer o seguir siendo un simple BOT OBSOLETO y MEDIOCRE.",
+        createdAt: "2026-10-27T19:00:00.000Z",
         active: true
       },
       {
@@ -30850,6 +30866,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   } else if (toolType === "registro_inmueble") {
     specialToolInstructions = `- HERRAMIENTA: Registro y Optimizaci\xF3n de Inmuebles y Demandas en VECY Network con Motor de MATCH.
 - INGESTA ACTIVA Y CONFIRMACI\xD3N AL USUARIO:
+  * RADICADO OFICIAL ESTRUCTURADO OBLIGATORIO: Muestra de primero y con total orgullo el c\xF3digo oficial devuelto en el JSON (campo 'registroId', ej. *REQ-1106* o *ID #1106*) confirmando que su b\xFAsqueda/inmueble qued\xF3 formalmente radicado e indexado en el motor autoritativo de base de datos de VECY BIENES RA\xCDCES.
   * Confirma al usuario con se\xF1or\xEDo, calidez y naturalidad humana que su oferta o requerimiento ha sido registrado e indexado exitosamente en la base de datos de VECY Network para participar en el motor inteligente de matching.
   * Si el usuario es propietario o comprador directo: Expl\xEDcale que VECY Bienes Ra\xEDces (+57 316 656 9719) respalda su gesti\xF3n y lo conecta con compradores, inquilinos calificados y peritos aliados.
   * Si es colega/agente y acept\xF3 40/20/40: Confirma su estatus de Aliada Prioritaria en la red colaborativa.
@@ -30952,7 +30969,8 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
     if (toolJson.esIncompleto && toolJson.guiaFichaTecnica) {
       fallbackText = toolJson.guiaFichaTecnica;
     } else {
-      fallbackText = `\xA1Listo! Qued\xF3 estructurada e ingresada con \xE9xito a nuestra base de datos para participar en el motor de coincidencias de VECY BIENES RA\xCDCES. En el instante exacto en que detectemos una opci\xF3n compatible en la red, te avisamos de inmediato para coordinar el cruce \u{1F680}\u{1F3E0}\u2728.`;
+      const regStr = toolJson.registroId ? ` con c\xF3digo oficial de radicado *${toolJson.registroId}*` : "";
+      fallbackText = `\xA1Listo! Qued\xF3 estructurada e ingresada con \xE9xito a nuestra base de datos${regStr} para participar en el motor de coincidencias de VECY BIENES RA\xCDCES. En el instante exacto en que detectemos una opci\xF3n compatible en la red, te avisamos de inmediato para coordinar el cruce \u{1F680}\u{1F3E0}\u2728.`;
     }
   } else if (toolType === "web" && toolJson) {
     if (toolJson.titulo || toolJson.contenido) {
@@ -31176,7 +31194,7 @@ A partir de este momento la aplicar\xE9 de forma estricta y natural en todas mis
     appendDmHistory(userId, "assistant", reply);
     return reply;
   }
-  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
+  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)\s+(?:en\s+google|con\s+5\s*estrellas)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a\s+en\s+google|ya\s+dej[eé]\s+(?:el\s+)?comentario\s+en\s+google|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n\s+en\s+google|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
   if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
     await recordUserReviewClaim(userId);
     const claimReply = `\xA1Much\xEDsimas gracias por tu apoyo${displayName ? `, ${displayName}` : ""}! \u{1F31F}
@@ -31188,27 +31206,49 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
     appendDmHistory(userId, "assistant", claimReply);
     return claimReply;
   }
+  let context402040Directive = "";
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const isAwaiting402040 = !!userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40;
     if (isAwaiting402040) {
       const isAffirmative = /\b(?:s[ií]|claro|de\s+acuerdo|acepto|con\s+gusto|me\s+parece|perfecto|dale|hag[aá]mosle|sin\s+problema|totalmente|de\s+una|40\/20\/40|cuarenta\s+veinte\s+cuarenta|s[ií]\s+acepto|me\s+apunto|cuenta\s+con\s+eso|por\s+supuesto)\b/i.test(cleanLower) && !/\b(?:no|50\/50)\b/i.test(cleanLower);
-      const isNegativeOr5050 = /\b(?:no|prefiero\s+50\/50|50\/50|mitad\s+y\s+mitad|no\s+acepto|solo\s+50|cincuenta\s+cincuenta|no\s+comparto\s+as[ií]|no\s+me\s+sirve|no\s+gracias|no\s+puedo)\b/i.test(cleanLower);
+      const isNegativeOr5050 = /\b(?:no\b|prefiero\s+50\/50|50\/50|mitad\s+y\s+mitad|no\s+acepto|solo\s+50|cincuenta\s+cincuenta|no\s+comparto\s+as[ií]|no\s+me\s+sirve|no\s+gracias|no\s+puedo)\b/i.test(cleanLower) && !/\b(?:no\s+s[eé]|no\s+entend[ií]|c[oó]mo\s+funciona|qu[eé]\s+es)\b/i.test(cleanLower);
+      const isQueryingOrDoubting = /\b(?:no\s+s[eé]|no\s+entend[ií]|c[oó]mo\s+funciona|qu[eé]\s+es|expl[ií]came|de\s+qu[eé]\s+trata|por\s*qu[eé]\s+40|cu[aá]nto\s+gana|qui[eé]n\s+paga)\b/i.test(cleanLower);
+      const isShortAnswer = clean.split(/\s+/).length <= 4 && !clean.includes("?") && !/(?:pero|inmueble|apto|casa|busco|vendo|cliente|cu[aá]nto|c[oó]mo)/i.test(cleanLower);
       if (isAffirmative) {
         await setUser402040Agreement(userId, true);
-        const reply = `\xA1Excelente decisi\xF3n${displayName ? `, ${displayName}` : ""}! \u{1F389}\u{1F91D} Quedas registrada en nuestra base de datos como **Aliada Prioritaria** en la mesa de operaciones de VECY BIENES RA\xCDCES.
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = false;
+        await saveUserPerpetualSession(userPerpetualSession);
+        if (isShortAnswer) {
+          const reply = `\xA1Excelente decisi\xF3n${displayName ? `, ${displayName}` : ""}! \u{1F389}\u{1F91D} Quedas registrada en nuestra base de datos como **Aliada Prioritaria** en la mesa de operaciones de VECY BIENES RA\xCDCES.
 
-Esto significa que cuando nuestro motor detecte cruces comerciales para tus requerimientos o inmuebles, tendr\xE1n prioridad uno en gesti\xF3n, presentaci\xF3n y acompa\xF1amiento de cierre. \xA1Vamos con toda a cerrar negocios juntos! \u{1F680}\u2728`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", reply);
-        markUserGreetedToday(userId);
-        return reply;
+Esto significa que cuando nuestro motor detecte cruces comerciales para tus requerimientos o inmuebles, tendr\xE1n prioridad uno en gesti\xF3n, presentaci\xF3n y acompa\xF1amiento de cierre. \xBFTienes en este momento alg\xFAn requerimiento de cliente o inmueble disponible que desees que radiquemos en el sistema para cruzarlo de inmediato con la red? \u{1F680}\u2728`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", reply);
+          markUserGreetedToday(userId);
+          return reply;
+        } else {
+          context402040Directive = `
+[SISTEMA: El interlocutor ha ACEPTADO formalmente el esquema 40/20/40 y ha quedado registrado en base de datos como ALIADA PRIORITARIA. Confirma cordialmente este estatus y responde de inmediato con total detalle, rigor y solvencia a las preguntas, requerimientos o comentarios adicionales que incluy\xF3 en su mensaje.]`;
+        }
       } else if (isNegativeOr5050) {
         await setUser402040Agreement(userId, false);
-        const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional. Tu publicaci\xF3n permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. \xA1Muchos \xE9xitos en tu gesti\xF3n inmobiliaria! \u{1F91D}\u2728`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", reply);
-        markUserGreetedToday(userId);
-        return reply;
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = false;
+        await saveUserPerpetualSession(userPerpetualSession);
+        if (isShortAnswer) {
+          const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional (50/50). Tu publicaci\xF3n permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. \xBFEn qu\xE9 otra consulta o tr\xE1mite te puedo colaborar hoy? \u{1F91D}\u2728`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", reply);
+          markUserGreetedToday(userId);
+          return reply;
+        } else {
+          context402040Directive = `
+[SISTEMA: El interlocutor prefiere el esquema tradicional 50/50 y ha quedado registrado como contacto convencional. Respeta su decisi\xF3n cordialmente y atiende con m\xE1xima diligencia las preguntas, inmuebles o requerimientos de su mensaje.]`;
+        }
+      } else if (isQueryingOrDoubting) {
+        context402040Directive = `
+[SISTEMA: El interlocutor tiene dudas o pregunta c\xF3mo funciona la alianza colaborativa 40/20/40. Expl\xEDcaselo con maestr\xEDa pedag\xF3gica, astucia y total claridad: 40% para el captador, 40% para el colocador, y 20% para VECY por la mesa de cruce, peritaje, seguridad jur\xEDdica y acompa\xF1amiento notarial hasta el cierre. Preg\xFAntale amablemente si desea trabajar bajo este modelo para activarlo como Aliado Prioritario.]`;
       }
     }
     const isReactionInquiry = /\b(?:por\s*qu[eé]\s+(?:le\s+)?(?:diste|pusiste|reaccionaste|reaccionaron|dejaste|mandaste)|qu[eé]\s+significa\s+(?:la\s+reacci[oó]n|el\s+emoji|el\s+lapicito|el\s+pulgar|la\s+manito)|para\s*qu[eé]\s+(?:el\s+emoji|la\s+reacci[oó]n)|por\s*qu[eé]\s+el\s+(?:emoji|lapicito|pulgar|📝|👍)|a\s+qu[eé]\s+se\s+debe\s+la\s+reacci[oó]n|por\s*qu[eé]\s+(?:me\s+)?reaccionas)\b/i.test(cleanLower);
@@ -31218,17 +31258,23 @@ Esto significa que cuando nuestro motor detecte cruces comerciales para tus requ
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = true;
       await saveUserPerpetualSession(userPerpetualSession);
-      const introReason = isReactionInquiry ? `La reacci\xF3n con emoji en el grupo (\u{1F4DD} para requerimientos / \u{1F44D} para inmuebles) no es un simple saludo: confirma con total autoridad t\xE9cnica que tu publicaci\xF3n ya fue extra\xEDda, estructurada e ingresada con \xE9xito a nuestro motor de base de datos de VECY BIENES RA\xCDCES. Por eso, **no necesitas duplicarla ni reenviarla por este chat privado**.` : `Te confirmo que la reacci\xF3n en el grupo (\u{1F4DD} / \u{1F44D}) valid\xF3 el ingreso de tu publicaci\xF3n a nuestro motor autoritativo de base de datos de VECY BIENES RA\xCDCES. Por tanto, **no necesitas duplicarla ni reenviarla por privado**; ya est\xE1 registrada y activa en el sistema.`;
-      const reply = `${introReason}
+      const hasSecondaryQuestions = clean.includes("?") || clean.split(/\s+/).length > 15;
+      if (!hasSecondaryQuestions) {
+        const introReason = isReactionInquiry ? `La reacci\xF3n con emoji en el grupo (\u{1F4DD} para requerimientos / \u{1F44D} para inmuebles) no es un simple saludo: confirma con total autoridad t\xE9cnica que tu publicaci\xF3n ya fue extra\xEDda, estructurada e ingresada con \xE9xito a nuestro motor de base de datos de VECY BIENES RA\xCDCES. Por eso, **no necesitas duplicarla ni reenviarla por este chat privado**.` : `Te confirmo que la reacci\xF3n en el grupo (\u{1F4DD} / \u{1F44D}) valid\xF3 el ingreso de tu publicaci\xF3n a nuestro motor autoritativo de base de datos de VECY BIENES RA\xCDCES. Por tanto, **no necesitas duplicarla ni reenviarla por privado**; ya est\xE1 registrada y activa en el sistema.`;
+        const reply = `${introReason}
 
 Nuestro motor cruza permanentemente tu b\xFAsqueda con todo el inventario de la red. En el instante exacto en que ingrese o se identifique una opci\xF3n compatible (Score \u2265 80%), te contactaremos de inmediato por este mismo canal para coordinar el cruce.
 
 Para perfilarte en nuestra mesa de operaciones:
 En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora/colocadora, 20% plataforma y mesa t\xE9cnica central VECY, 40% punta captadora/propietario) garantizando protecci\xF3n de puntas y acompa\xF1amiento contractual. \xBFAceptas compartir comisi\xF3n bajo este modelo para clasificarte como **Aliada Prioritaria** en nuestra mesa de operaciones? \u{1F91D}\u2728`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", reply);
-      markUserGreetedToday(userId);
-      return reply;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      } else {
+        context402040Directive += `
+[SISTEMA: El interlocutor pregunta sobre una reacci\xF3n de emoji en el grupo o menciona haber publicado en el grupo. Expl\xEDcale con autoridad y calidez que la reacci\xF3n confirma que ya fue indexada en la base de datos sin necesidad de duplicarla, pres\xE9ntale el esquema 40/20/40 como Aliada Prioritaria, y RESPONDE CON PRECISI\xD3N a todas las preguntas, dudas o comentarios adicionales que incluy\xF3 en su mensaje.]`;
+      }
     }
   }
   const isVehicularTaxQuery = /(?:impuesto\s+(?:de\s+)?veh[íi]cul|liquidar\s+(?:el\s+)?veh[íi]cul|sacar\s+(?:un\s+|el\s+)?impuesto\s+veh[íi]cul|placa\s+[a-z]{3}\s*\d{2,3}|impuesto\s+del?\s+(?:carro|moto|veh[íi]culo))/i.test(clean);
@@ -31437,13 +31483,26 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
       userPromptContent += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visi\xF3n multimodal y procesa la consulta de forma integral.]`;
     }
+    if (context402040Directive) {
+      userPromptContent += context402040Directive;
+    }
     const lastAssistantTurn = history.slice().reverse().find((t2) => t2.role === "assistant");
     const lastAssistantText = lastAssistantTurn?.content || "";
-    const isAssistantRefiningListingOrReq = /(?:habitaciones|parqueadero|presupuesto|motor de match|radar|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero|qu[eé] tipo de inmueble|detalles de lo que tu cliente)/i.test(lastAssistantText);
+    const isAssistantRefiningListingOrReq = /(?:habitaciones|alcobas|parqueadero|garajes|presupuesto|canon|precio|barrio|zona|sector|tipo de inmueble|apartamento o casa|radicar|ficha técnica|datos clave|completar los datos|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero|qu[eé] tipo de inmueble|detalles de lo que tu cliente)/i.test(lastAssistantText);
     const userSupplyingSpecs = /(?:\d+\s*(?:habitaci[oó]n|habitaciones|alcoba|alcobas|hab|garaje|garajes|parqueadero|parqueaderos|baño|baños|mill[oó]n|millones|m2|mts)|\b[1-5]\b)/i.test(clean);
-    if (isAssistantRefiningListingOrReq && userSupplyingSpecs) {
+    const userSupplyingZoneOrCity = /(?:en\s+[a-záéíóúñ]+|cedritos|chico|chicó|chapinero|rosales|santa\s*b[aá]rbara|usaqu[eé]n|suba|pasadena|pontevedra|colina|salitre|niza|teusaquillo|chia|ch[íi]a|cajic[aá]|bogot[aá]|medell[ií]n|cali|barranquilla)/i.test(cleanLower);
+    const userSupplyingBudget = /(?:\d+\s*(?:mill[oó]n|millones|mil|k|m)|\b(?:presupuesto|hasta|m[aá]ximo|canon|precio)\b)/i.test(cleanLower);
+    const userSupplyingPropType = /(?:apartamento|apto|casa|oficina|local|bodega|lote|edificio|penthouse)/i.test(cleanLower);
+    const userSupplyingOpType = /\b(?:arriendo|alquiler|renta|venta|comprar|compra)\b/i.test(cleanLower);
+    const userSupplyingAnyRequirementInfo = userSupplyingSpecs || userSupplyingZoneOrCity || userSupplyingBudget || userSupplyingPropType || userSupplyingOpType;
+    if (isAssistantRefiningListingOrReq && userSupplyingAnyRequirementInfo) {
       userPromptContent += `
-[SISTEMA: El usuario est\xE1 completando los datos indispensables de su b\xFAsqueda/requerimiento o inmueble en proceso. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso'). Debes compilar en un solo texto completo y optimizado TODOS los datos acordados en la conversaci\xF3n (tipo de inmueble, tipo de negocio, zona/barrio, presupuesto/precio, habitaciones, garajes) e invocar DE INMEDIATO en este mismo turno la herramienta 'registrar_inmueble_o_requerimiento' para indexarlo en la base de datos y obtener el c\xF3digo de radicado oficial (ID #REQ) y los cruces de Match.]`;
+[SISTEMA - CONTINUIDAD COGNITIVA ABSOLUTA Y PERSISTENCIA DE META (DOCTRINA v33.59):
+1. El interlocutor est\xE1 respondiendo activamente a la indagaci\xF3n de JanIA y aportando datos complementarios de su b\xFAsqueda o inmueble.
+2. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso') ni reiniciar la conversaci\xF3n, saludar de nuevo, o preguntar '\xBFEn qu\xE9 te colaboro hoy?'.
+3. Integra TODO el contexto previo acumulado de los turnos anteriores (tipo de negocio, tipolog\xEDa, ciudad/barrio, presupuesto, habitaciones, garajes).
+4. Si con los datos acumulados ya se cuenta con la informaci\xF3n indispensable (tipo de inmueble, negocio, zona/barrio, presupuesto/precio, habitaciones/garajes): DEBES INVOCAR EN ESTE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado y estructurado. Al registrarlo, entrega de primero el c\xF3digo oficial asignado devuelto (ej: *REQ-1106* o *ID #1106*) confirmando que ya qued\xF3 formalmente radicado, e informa el resultado inmediato del motor de Match.
+5. Si a\xFAn falta alg\xFAn dato verdaderamente indispensable para radicar o buscar, solic\xEDtalo con extrema calidez, astucia y brevedad (m\xE1ximo 1 o 2 renglones) sin hacer formularios largos ni repreguntar lo que ya se sabe.]`;
     }
     const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(clean);
     if (isExplicitRegistrationOrJoinIntentInPrompt) {
@@ -31536,7 +31595,15 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
       } else if (isJani) {
         reply = isOngoingChat ? `\xBFEn qu\xE9 te colaboro hoy?` : `\xA1${timeSalutation}, Jani! \u{1F44B} \xBFEn qu\xE9 te colaboro hoy?`;
       } else {
-        reply = isOngoingChat ? `Con mucho gusto. Cu\xE9ntame en qu\xE9 tr\xE1mite o consulta inmobiliaria te colaboro hoy \u{1F91D}.` : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} En *VECY BIENES RA\xCDCES* estoy lista para colaborarte. \xBFQu\xE9 consulta o tr\xE1mite deseas realizar hoy? \u{1F91D}`;
+        if (isOngoingChat) {
+          if (isAssistantRefiningListingOrReq) {
+            reply = `Te sigo con total atenci\xF3n${displayName ? `, ${displayName}` : ""}. \xBFMe confirmas los datos pendientes de tu b\xFAsqueda o inmueble para radicarlo formalmente y entregarte tu c\xF3digo oficial (ID #REQ)? \u{1F91D}\u2728`;
+          } else {
+            reply = `Con mucho gusto${displayName ? `, ${displayName}` : ""}. Continuemos con tu gesti\xF3n inmobiliaria, te escucho con total atenci\xF3n \u{1F91D}\u2728.`;
+          }
+        } else {
+          reply = `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} En *VECY BIENES RA\xCDCES* estoy lista para colaborarte. \xBFQu\xE9 consulta o tr\xE1mite deseas realizar hoy? \u{1F91D}`;
+        }
       }
     }
     appendDmHistory(userId, "user", clean);

@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.59: Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva (v33.59 - 33.59.0)
+
+**Versión:** `v33.59` (`33.59.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina de Eduardo A. Rivera:**
+- *"Trabaja más arduamente en el pulido y refinamiento del pensamiento lógico, el raciocinio, la coherencia y la astucia de JanIA. No puede comportarse como un simple bot rígido o acartonado; JanIA debe ser una IA pura con capacidades cognitivas superiores, capaz de analizar todo el contexto conversacional, deducir intenciones sin formularios burocráticos y resolver con maestría y empatía."*
+
+**Diagnóstico Técnico Profundo:**
+1. **Riesgo de Regresión a Comportamiento de "Bot":**
+   - Aunque los modelos de lenguaje modernos cuentan con gran capacidad, la existencia de interceptores rígidos basados en palabras clave o plantillas estáticas corre el riesgo de "secuestrar" el flujo conversacional e interrumpir la inteligencia viva de la IA pura.
+   - En situaciones como la auditoría de reseñas de Google (`isClaimingReview`), expresiones comunes de comentarios o chats no deben ser confundidas con calificaciones en Google Maps.
+   - En el protocolo de comisiones 40/20/40, las respuestas afirmativas cortas deben activar inmediatamente una invitación proactiva a radicar inmuebles o requerimientos, mientras que respuestas con preguntas o condiciones adicionales no deben cortarse con respuestas estáticas, sino fluir enriquecidas con contexto hacia el modelo de lenguaje para una resolución completa y personalizada.
+2. **Goal Tracking (Seguimiento Continuo de Metas) y Persistencia de Contexto:**
+   - Cuando JanIA solicita especificaciones clave de un requerimiento o inmueble (alcobas, presupuesto, zona, tipo de inmueble) y el usuario responde de manera incremental o fragmentada, el sistema no debe sufrir de amnesia, ni repetir saludos, ni repreguntar lo que ya se informó.
+   - Toda la información acumulada debe consolidarse en un solo bloque coherente e invocar de inmediato en ese mismo turno la herramienta `registrar_inmueble_o_requerimiento` para indexar en base de datos y entregar el radicado oficial estructurado (`ID #REQ...` o `ID #PROP...`).
+3. **Erradicación de Respuestas Vacías o Promesas en Diferido:**
+   - Los bots mediocres suelen posponer la atención con frases vacías como *"dame un momento"*, *"ya te busco"* o reiniciar la charla con *"¿En qué te colaboro hoy?"*. JanIA debe resolver en caliente y con máxima solvencia.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Refinamiento Cognitivo en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:**
+  - Consagración del pilar doctrinal de *Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva*.
+  - Directiva explícita: los guiones y ejemplos provistos por Eduardo y Jani son modelos conceptuales de aprendizaje para inspirar estilo y fondo, jamás libretos mecánicos para repetir al pie de la letra.
+- **Refuerzo de Flujo Conversacional y Goal Tracking en `dmHandler.ts`:**
+  - `isClaimingReview`: Blindado para exigir mención explícita a Google o 5 estrellas, evitando falsos positivos con comentarios comunes.
+  - Distinción en 40/20/40: si la respuesta es corta, confirma estatus de Aliada Prioritaria y solicita proactivamente el requerimiento o inmueble activo; si incluye preguntas o condiciones, inyecta `context402040Directive` hacia Gemini para responder todas las dudas sin callejones sin salida.
+  - Expansión de detección de información incremental (`userSupplyingAnyRequirementInfo`) incluyendo especificaciones, zonas, presupuestos, tipos de inmueble y negocios, manteniendo activa la meta y obligando a la invocación en caliente de `registrar_inmueble_o_requerimiento`.
+  - Reemplazo del fallback genérico por respuestas contextuales de continuidad.
+- **Directiva Semilla en `founderKnowledgeService.ts`:**
+  - Registrada la directiva viva `seed-pensamiento-logico-raciocinio-astucia-cero-vacios-conversacionales`.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la **Suite 145** en `server/__tests__/regression.test.ts` con 5 pruebas unitarias exhaustivas.
+  - Typecheck: `npm run check` (0 errores).
+  - Tests: `npm test` **432/432 passing** (100% verde).
+  - Build: `npm run build` limpio en 27.31s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.59` (`33.59.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.58: Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos (v33.58 - 33.58.0)
 
 **Versión:** `v33.58` (`33.58.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

@@ -152,6 +152,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-pensamiento-logico-raciocinio-astucia-cero-vacios-conversacionales",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva (Cero Bots Mediocres ni Vacíos)",
+    directive:
+      "JanIA debe operar con un pensamiento lógico, razocinio, coherencia y astucia de nivel superior para resolver cualquier situación de la mejor manera siempre, sin vacíos ni desvíos de pérdida en la lógica conversacional. Queda terminantemente erradicado cualquier comportamiento, plantilla rígida o respuesta acartonada que la haga parecer un simple bot obsoleto y mediocre. JanIA analiza todo el contexto acumulado de la conversación antes de responder, deduce autónomamente el rol e intención sin repreguntar lo obvio, mantiene activa la meta de la charla sin amnesias ni reinicios ('¿en qué te colaboro hoy?'), y ejecuta las acciones y herramientas en el mismo turno con solvencia, calidez y criterio propio.",
+    rawText: "Trabaja más arduamente en el pulido y refinamiento del pensamiento lógico, razocinio, coherencia y astucia de JanIA para que resuelva cualquier situación de la mejor manera siempre y no siga teniendo esos vacios y desvíos de perdida en lógica conversacional y de pensamiento que la hacen parecer o seguir siendo un simple BOT OBSOLETO y MEDIOCRE.",
+    createdAt: "2026-10-27T19:00:00.000Z",
+    active: true
+  },
+  {
     id: "seed-fuente-inventario-emojis",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

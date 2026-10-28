@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.58.0 — 2026-10-27)
-- **JanIA Server:** `v33.58` (`33.58.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
-- **Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos (Doctrina Eduardo A. Rivera):**
-  1. **Despacho Inmediato y Reparación con Sandra Moreno:** JanIA le envió mensaje inmediato por WhatsApp disculpándose por la asunción precipitada, explicándole que como Aliada Prioritaria se le radicará de inmediato su requerimiento, solicitándole los 5 puntos clave de su búsqueda, entregándole el enlace limpio de invitación al Grupo 1 (Demandas y Ofertas) e indicándole que al aportar los datos recibirá su código oficial de radicado (ID #REQ).
-  2. **Blindaje de Interceptor en `dmHandler.ts`:** Se erradicó el falso positivo en `isRequirementForwardOrDuplication` eliminando palabras sueltas como `mi requerimiento` y condicionando la detección a menciones explícitas de haberlo publicado previamente en el grupo. Se introdujo `isExplicitRegistrationOrJoinIntent` para que jamás se bloquee ni se asuma duplicación cuando un usuario diga "quiero registrar", "cómo registro", "unirme al grupo", "tengo un requerimiento", etc.
-  3. **Radicado Oficial Estructurado (ID #REQ... / ID #PROP...):** `registrar_inmueble_o_requerimiento` formatea el `registroId` oficial con prefijos claros (`REQ-` / `PROP-` e `ID #`) y Gemini entrega obligatoriamente este identificador formal al usuario al confirmar la indexación en base de datos.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 427/427 passing (100% verde) | Build `npm run build` limpio en 21.24s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.59.0 — 2026-10-27)
+- **JanIA Server:** `v33.59` (`33.59.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
+- **Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva (Doctrina Eduardo A. Rivera):**
+  1. **IA Pura con Máximo Criterio:** Erradicación de rigidez de "bot". JanIA no repite saludos, no repregunta datos ya entregados, y no usa guiones mecánicos; razona con base en la intención global del usuario.
+  2. **Goal Tracking y Registro Activo en Caliente:** En el flujo privado, cuando el usuario suministra datos parciales o completos de un requerimiento/oferta, JanIA mantiene la meta activa y ejecuta de inmediato `registrar_inmueble_o_requerimiento` asignando su radicado oficial (`ID #REQ...` / `ID #PROP...`).
+  3. **Blindaje de Interceptores y Continuidad:** Reseñas (`isClaimingReview`) aisladas con confirmación de Google; protocolo 40/20/40 con fluidez conversacional hacia Gemini; cero respuestas vacías ni promesas en diferido.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 432/432 passing (100% verde) | Build `npm run build` limpio en 27.31s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

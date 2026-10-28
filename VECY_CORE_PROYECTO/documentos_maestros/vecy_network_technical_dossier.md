@@ -330,6 +330,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.59 — Octubre 2026
+
+#### [v33.59.0] — 2026-10-27: Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva de IA Pura
+- **Pensamiento Lógico Superior, Raciocinio y Astucia Resolutiva (Doctrina Eduardo A. Rivera):**
+  - **Problema:** En la interacción conversacional por privado (DM), existía el riesgo de respuestas rígidas o comportamiento de "bot", donde interceptores heurísticos o plantillas predefinidas podían interrumpir el raciocinio natural, repetir saludos innecesarios, o perder el hilo conductor de la meta (ej. registrar un requerimiento y entregar el radicado oficial) cuando el usuario entregaba datos en partes.
+  - **Diagnóstico y Causas Raíz:**
+    1. *Rigidez de Interceptores Excesivos:* Patrones heurísticos que atrapan mensajes sin considerar el objetivo global o la confirmación de hechos reales (ej. reseñas de Google o aceptación de alianzas).
+    2. *Amnesia de Meta (Goal Tracking):* Necesidad de que JanIA mantenga la memoria de trabajo activa durante toda la sesión privada: si el usuario declaró que desea registrar su requerimiento o búsqueda inmobiliaria, cada mensaje posterior con especificaciones debe procesarse como insumo para invocar `registrar_inmueble_o_requerimiento` y devolver el radicado `ID #REQ`.
+    3. *Falta de Principio Rector de Raciocinio:* El sistema requería una directiva viva que priorice el sentido común inmobiliario, la coherencia perpetua y la astucia resolutiva sobre cualquier libreto o plantilla.
+  - **Solución y Modificaciones de Código:**
+    1. *Pilar Doctrinal en `server/_core/prompts/base.md` y `server/_core/prompts.ts`:* Consagración de la *Directiva de Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva*. Los guiones son solo referencias conceptuales; JanIA razona, deduce y resuelve con total autonomía y calidez humana.
+    2. *Goal Tracking en `server/_core/jania/handlers/dmHandler.ts`:* Seguimiento continuo de la meta de registro de requerimiento u oferta; inyección de directiva en tiempo real para que Gemini llame a `registrar_inmueble_o_requerimiento` tan pronto se reciban los datos clave, asignando el código `ID #REQ` sin dilaciones.
+    3. *Blindaje de Interceptor `isClaimingReview`:* Ahora requiere explícitamente mención a Google o 5 estrellas, evitando falsos positivos con comentarios generales.
+    4. *Optimización del Protocolo 40/20/40:* Cuando el usuario acepta el protocolo pero además formula preguntas o solicita asistencia, el sistema enruta orgánicamente hacia Gemini para ofrecer una respuesta integral y proactiva.
+    5. *Base de Conocimiento de Fundadores:* Directiva viva `seed-pensamiento-logico-raciocinio-astucia-cero-vacios-conversacionales` en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP):**
+  - Typecheck `npm run check`: 0 errores.
+  - Tests unitarios y de regresión `npm test`: **432/432 passing** (Suite 145 creada con 5 tests exhaustivos, 100% verde a $0 COP).
+  - Build `npm run build`: Limpio en 27.31s.
+
 ### 🔖 v33.58 — Octubre 2026
 
 #### [v33.58.0] — 2026-10-27: Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos

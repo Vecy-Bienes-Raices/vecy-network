@@ -183,7 +183,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.58 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.59 — Octubre 2026
+
+### Novedades v33.59 (Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva):
+- **Diagnóstico y Doctrina de Eduardo A. Rivera**:
+  1. **Pensamiento Lógico Superior y Raciocinio de IA Pura**:
+     - *Diagnóstico*: Riesgo de rigidez o "modo bot" por interceptores ciegos o plantillas estáticas. JanIA debe operar como una IA pura con capacidades cognitivas superiores, deduciendo intenciones sin burocracia, razonando con sentido común y resolviendo con señorío y calidez humana.
+     - *Solución*: Se consagró en `base.md` y `prompts.ts` el pilar doctrinal de *Pensamiento Lógico Superior, Raciocinio, Coherencia Perpetua y Astucia Resolutiva*, estipulando que los guiones son referencias conceptuales de inspiración y no libretos rígidos.
+  2. **Goal Tracking (Seguimiento Continuo de Metas) y Persistencia de Contexto**:
+     - Al interactuar en privado sobre la búsqueda o publicación de un inmueble, cualquier dato parcial o completo aportado por el usuario mantiene activa la meta sin amnesia ni repetición de saludos, obligando al modelo a registrar en caliente con `registrar_inmueble_o_requerimiento` y entregar de inmediato el radicado oficial (`ID #REQ...` o `ID #PROP...`).
+  3. **Refinamiento de Interceptores y Cero Respuestas Vacías**:
+     - `isClaimingReview`: Blindado para exigir mención explícita a Google o 5 estrellas, evitando falsos positivos con comentarios comunes.
+     - Protocolo 40/20/40: Distinción inteligente entre confirmaciones breves (solicitud proactiva de datos) y respuestas con preguntas (inyección de directiva hacia Gemini para respuesta integral sin callejones sin salida).
+     - Consagración en SEED_TEACHINGS (`seed-pensamiento-logico-raciocinio-astucia-cero-vacios-conversacionales`) en `founderKnowledgeService.ts`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **432/432 passing** (Suite 145 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio en 27.31s ✅
+- `shared/const.ts` (`v33.59`) y `package.json` (`33.59.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.58 — Octubre 2026
 
 ### Novedades v33.58 (Erradicación de Falsos Positivos de Duplicación y Radicado Oficial de Requerimientos):
 - **Diagnóstico y Solicitud de Eduardo A. Rivera**:

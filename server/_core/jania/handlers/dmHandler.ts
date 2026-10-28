@@ -993,6 +993,7 @@ export async function synthesizeToolResponseWithGemini(
     specialToolInstructions =
       `- HERRAMIENTA: Registro y Optimización de Inmuebles y Demandas en VECY Network con Motor de MATCH.\n` +
       `- INGESTA ACTIVA Y CONFIRMACIÓN AL USUARIO:\n` +
+      `  * RADICADO OFICIAL ESTRUCTURADO OBLIGATORIO: Muestra de primero y con total orgullo el código oficial devuelto en el JSON (campo 'registroId', ej. *REQ-1106* o *ID #1106*) confirmando que su búsqueda/inmueble quedó formalmente radicado e indexado en el motor autoritativo de base de datos de VECY BIENES RAÍCES.\n` +
       `  * Confirma al usuario con señorío, calidez y naturalidad humana que su oferta o requerimiento ha sido registrado e indexado exitosamente en la base de datos de VECY Network para participar en el motor inteligente de matching.\n` +
       `  * Si el usuario es propietario o comprador directo: Explícale que VECY Bienes Raíces (+57 316 656 9719) respalda su gestión y lo conecta con compradores, inquilinos calificados y peritos aliados.\n` +
       `  * Si es colega/agente y aceptó 40/20/40: Confirma su estatus de Aliada Prioritaria en la red colaborativa.\n` +
@@ -1090,7 +1091,8 @@ export async function synthesizeToolResponseWithGemini(
     if (toolJson.esIncompleto && toolJson.guiaFichaTecnica) {
       fallbackText = toolJson.guiaFichaTecnica;
     } else {
-      fallbackText = `¡Listo! Quedó estructurada e ingresada con éxito a nuestra base de datos para participar en el motor de coincidencias de VECY BIENES RAÍCES. En el instante exacto en que detectemos una opción compatible en la red, te avisamos de inmediato para coordinar el cruce 🚀🏠✨.`;
+      const regStr = toolJson.registroId ? ` con código oficial de radicado *${toolJson.registroId}*` : "";
+      fallbackText = `¡Listo! Quedó estructurada e ingresada con éxito a nuestra base de datos${regStr} para participar en el motor de coincidencias de VECY BIENES RAÍCES. En el instante exacto en que detectemos una opción compatible en la red, te avisamos de inmediato para coordinar el cruce 🚀🏠✨.`;
     }
   } else if (toolType === "web" && toolJson) {
     if (toolJson.titulo || toolJson.contenido) {
@@ -1452,7 +1454,7 @@ export async function processPrivateDmConversationalMessage(
 
   // 🌟 AUDITORÍA INTELIGENTE DE RESEÑA EN GOOGLE (Nivel ARGON — v33.30):
   // Si el usuario afirma que ya calificó o comentó en Google y no adjuntó imagen, solicitar amablemente el pantallazo
-  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a|ya\s+dej[eé]\s+(?:el\s+)?comentario|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
+  const isClaimingReview = /(?:ya\s+(?:los\s+)?califi(?:qu[eé]|que)\s+(?:en\s+google|con\s+5\s*estrellas)|ya\s+dej[eé]\s+(?:la\s+)?rese[ñn]a\s+en\s+google|ya\s+dej[eé]\s+(?:el\s+)?comentario\s+en\s+google|ya\s+dej[eé]\s+(?:mis\s+)?5\s*estrellas|ya\s+(?:les\s+)?puse\s+5\s*estrellas|ya\s+est[aá]\s+(?:la\s+)?calificaci[oó]n\s+en\s+google|ya\s+opin[eé]\s+en\s+google|ya\s+califiqu[eé]\s+en\s+google)/i.test(cleanLower);
 
   if (isClaimingReview && !hasImage && !isEduardoOrJani(userId) && !hasVerifiedReview) {
     await recordUserReviewClaim(userId);
@@ -1462,33 +1464,55 @@ export async function processPrivateDmConversationalMessage(
     return claimReply;
   }
 
-  // 🤝 PROTOCOLO COMERCIAL Y FILTRO 40/20/40 EN PRIVADO (Doctrina v33.33)
+  // 🤝 PROTOCOLO COMERCIAL Y FILTRO 40/20/40 EN PRIVADO (Doctrina v33.33 / v33.59)
+  let context402040Directive = "";
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const isAwaiting402040 = !!userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40;
     if (isAwaiting402040) {
       const isAffirmative = /\b(?:s[ií]|claro|de\s+acuerdo|acepto|con\s+gusto|me\s+parece|perfecto|dale|hag[aá]mosle|sin\s+problema|totalmente|de\s+una|40\/20\/40|cuarenta\s+veinte\s+cuarenta|s[ií]\s+acepto|me\s+apunto|cuenta\s+con\s+eso|por\s+supuesto)\b/i.test(cleanLower) && !/\b(?:no|50\/50)\b/i.test(cleanLower);
-      const isNegativeOr5050 = /\b(?:no|prefiero\s+50\/50|50\/50|mitad\s+y\s+mitad|no\s+acepto|solo\s+50|cincuenta\s+cincuenta|no\s+comparto\s+as[ií]|no\s+me\s+sirve|no\s+gracias|no\s+puedo)\b/i.test(cleanLower);
+      const isNegativeOr5050 = /\b(?:no\b|prefiero\s+50\/50|50\/50|mitad\s+y\s+mitad|no\s+acepto|solo\s+50|cincuenta\s+cincuenta|no\s+comparto\s+as[ií]|no\s+me\s+sirve|no\s+gracias|no\s+puedo)\b/i.test(cleanLower) && !/\b(?:no\s+s[eé]|no\s+entend[ií]|c[oó]mo\s+funciona|qu[eé]\s+es)\b/i.test(cleanLower);
+      const isQueryingOrDoubting = /\b(?:no\s+s[eé]|no\s+entend[ií]|c[oó]mo\s+funciona|qu[eé]\s+es|expl[ií]came|de\s+qu[eé]\s+trata|por\s*qu[eé]\s+40|cu[aá]nto\s+gana|qui[eé]n\s+paga)\b/i.test(cleanLower);
+
+      const isShortAnswer = clean.split(/\s+/).length <= 4 && !clean.includes("?") && !/(?:pero|inmueble|apto|casa|busco|vendo|cliente|cu[aá]nto|c[oó]mo)/i.test(cleanLower);
 
       if (isAffirmative) {
         await setUser402040Agreement(userId, true);
-        const reply = `¡Excelente decisión${displayName ? `, ${displayName}` : ""}! 🎉🤝 Quedas registrada en nuestra base de datos como **Aliada Prioritaria** en la mesa de operaciones de VECY BIENES RAÍCES.\n\nEsto significa que cuando nuestro motor detecte cruces comerciales para tus requerimientos o inmuebles, tendrán prioridad uno en gestión, presentación y acompañamiento de cierre. ¡Vamos con toda a cerrar negocios juntos! 🚀✨`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", reply);
-        markUserGreetedToday(userId);
-        return reply;
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = false;
+        await saveUserPerpetualSession(userPerpetualSession);
+
+        if (isShortAnswer) {
+          const reply = `¡Excelente decisión${displayName ? `, ${displayName}` : ""}! 🎉🤝 Quedas registrada en nuestra base de datos como **Aliada Prioritaria** en la mesa de operaciones de VECY BIENES RAÍCES.\n\nEsto significa que cuando nuestro motor detecte cruces comerciales para tus requerimientos o inmuebles, tendrán prioridad uno en gestión, presentación y acompañamiento de cierre. ¿Tienes en este momento algún requerimiento de cliente o inmueble disponible que desees que radiquemos en el sistema para cruzarlo de inmediato con la red? 🚀✨`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", reply);
+          markUserGreetedToday(userId);
+          return reply;
+        } else {
+          context402040Directive = `\n[SISTEMA: El interlocutor ha ACEPTADO formalmente el esquema 40/20/40 y ha quedado registrado en base de datos como ALIADA PRIORITARIA. Confirma cordialmente este estatus y responde de inmediato con total detalle, rigor y solvencia a las preguntas, requerimientos o comentarios adicionales que incluyó en su mensaje.]`;
+        }
       } else if (isNegativeOr5050) {
         await setUser402040Agreement(userId, false);
-        const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional. Tu publicación permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. ¡Muchos éxitos en tu gestión inmobiliaria! 🤝✨`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", reply);
-        markUserGreetedToday(userId);
-        return reply;
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = false;
+        await saveUserPerpetualSession(userPerpetualSession);
+
+        if (isShortAnswer) {
+          const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional (50/50). Tu publicación permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. ¿En qué otra consulta o trámite te puedo colaborar hoy? 🤝✨`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", reply);
+          markUserGreetedToday(userId);
+          return reply;
+        } else {
+          context402040Directive = `\n[SISTEMA: El interlocutor prefiere el esquema tradicional 50/50 y ha quedado registrado como contacto convencional. Respeta su decisión cordialmente y atiende con máxima diligencia las preguntas, inmuebles o requerimientos de su mensaje.]`;
+        }
+      } else if (isQueryingOrDoubting) {
+        context402040Directive = `\n[SISTEMA: El interlocutor tiene dudas o pregunta cómo funciona la alianza colaborativa 40/20/40. Explícaselo con maestría pedagógica, astucia y total claridad: 40% para el captador, 40% para el colocador, y 20% para VECY por la mesa de cruce, peritaje, seguridad jurídica y acompañamiento notarial hasta el cierre. Pregúntale amablemente si desea trabajar bajo este modelo para activarlo como Aliado Prioritario.]`;
       }
     }
 
     const isReactionInquiry = /\b(?:por\s*qu[eé]\s+(?:le\s+)?(?:diste|pusiste|reaccionaste|reaccionaron|dejaste|mandaste)|qu[eé]\s+significa\s+(?:la\s+reacci[oó]n|el\s+emoji|el\s+lapicito|el\s+pulgar|la\s+manito)|para\s*qu[eé]\s+(?:el\s+emoji|la\s+reacci[oó]n)|por\s*qu[eé]\s+el\s+(?:emoji|lapicito|pulgar|📝|👍)|a\s+qu[eé]\s+se\s+debe\s+la\s+reacci[oó]n|por\s*qu[eé]\s+(?:me\s+)?reaccionas)\b/i.test(cleanLower);
 
-    // 🛡️ REGLA DOCTRINAL v33.58: Blindaje contra falsos positivos de duplicación.
+    // 🛡️ REGLA DOCTRINAL v33.58 / v33.59: Blindaje contra falsos positivos de duplicación.
     // Si el usuario manifiesta intención de registrar, publicar, ingresar un requerimiento nuevo o unirse a los grupos,
     // JAMÁS debe ser interceptado asumiendo que "ya está registrado en el sistema".
     const isExplicitRegistrationOrJoinIntent = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(cleanLower);
@@ -1503,20 +1527,25 @@ export async function processPrivateDmConversationalMessage(
       userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = true;
       await saveUserPerpetualSession(userPerpetualSession);
 
-      const introReason = isReactionInquiry
-        ? `La reacción con emoji en el grupo (📝 para requerimientos / 👍 para inmuebles) no es un simple saludo: confirma con total autoridad técnica que tu publicación ya fue extraída, estructurada e ingresada con éxito a nuestro motor de base de datos de VECY BIENES RAÍCES. Por eso, **no necesitas duplicarla ni reenviarla por este chat privado**.`
-        : `Te confirmo que la reacción en el grupo (📝 / 👍) validó el ingreso de tu publicación a nuestro motor autoritativo de base de datos de VECY BIENES RAÍCES. Por tanto, **no necesitas duplicarla ni reenviarla por privado**; ya está registrada y activa en el sistema.`;
+      const hasSecondaryQuestions = clean.includes("?") || clean.split(/\s+/).length > 15;
+      if (!hasSecondaryQuestions) {
+        const introReason = isReactionInquiry
+          ? `La reacción con emoji en el grupo (📝 para requerimientos / 👍 para inmuebles) no es un simple saludo: confirma con total autoridad técnica que tu publicación ya fue extraída, estructurada e ingresada con éxito a nuestro motor de base de datos de VECY BIENES RAÍCES. Por eso, **no necesitas duplicarla ni reenviarla por este chat privado**.`
+          : `Te confirmo que la reacción en el grupo (📝 / 👍) validó el ingreso de tu publicación a nuestro motor autoritativo de base de datos de VECY BIENES RAÍCES. Por tanto, **no necesitas duplicarla ni reenviarla por privado**; ya está registrada y activa en el sistema.`;
 
-      const reply =
-        `${introReason}\n\n` +
-        `Nuestro motor cruza permanentemente tu búsqueda con todo el inventario de la red. En el instante exacto en que ingrese o se identifique una opción compatible (Score ≥ 80%), te contactaremos de inmediato por este mismo canal para coordinar el cruce.\n\n` +
-        `Para perfilarte en nuestra mesa de operaciones:\n` +
-        `En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora/colocadora, 20% plataforma y mesa técnica central VECY, 40% punta captadora/propietario) garantizando protección de puntas y acompañamiento contractual. ¿Aceptas compartir comisión bajo este modelo para clasificarte como **Aliada Prioritaria** en nuestra mesa de operaciones? 🤝✨`;
+        const reply =
+          `${introReason}\n\n` +
+          `Nuestro motor cruza permanentemente tu búsqueda con todo el inventario de la red. En el instante exacto en que ingrese o se identifique una opción compatible (Score ≥ 80%), te contactaremos de inmediato por este mismo canal para coordinar el cruce.\n\n` +
+          `Para perfilarte en nuestra mesa de operaciones:\n` +
+          `En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora/colocadora, 20% plataforma y mesa técnica central VECY, 40% punta captadora/propietario) garantizando protección de puntas y acompañamiento contractual. ¿Aceptas compartir comisión bajo este modelo para clasificarte como **Aliada Prioritaria** en nuestra mesa de operaciones? 🤝✨`;
 
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", reply);
-      markUserGreetedToday(userId);
-      return reply;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      } else {
+        context402040Directive += `\n[SISTEMA: El interlocutor pregunta sobre una reacción de emoji en el grupo o menciona haber publicado en el grupo. Explícale con autoridad y calidez que la reacción confirma que ya fue indexada en la base de datos sin necesidad de duplicarla, preséntale el esquema 40/20/40 como Aliada Prioritaria, y RESPONDE CON PRECISIÓN a todas las preguntas, dudas o comentarios adicionales que incluyó en su mensaje.]`;
+      }
     }
   }
 
@@ -1806,13 +1835,29 @@ export async function processPrivateDmConversationalMessage(
       userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal y procesa la consulta de forma integral.]`;
     }
 
+    if (context402040Directive) {
+      userPromptContent += context402040Directive;
+    }
+
     const lastAssistantTurn = history.slice().reverse().find(t => t.role === "assistant");
     const lastAssistantText = lastAssistantTurn?.content || "";
-    const isAssistantRefiningListingOrReq = /(?:habitaciones|parqueadero|presupuesto|motor de match|radar|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero|qu[eé] tipo de inmueble|detalles de lo que tu cliente)/i.test(lastAssistantText);
-    const userSupplyingSpecs = /(?:\d+\s*(?:habitaci[oó]n|habitaciones|alcoba|alcobas|hab|garaje|garajes|parqueadero|parqueaderos|baño|baños|mill[oó]n|millones|m2|mts)|\b[1-5]\b)/i.test(clean);
+    const isAssistantRefiningListingOrReq = /(?:habitaciones|alcobas|parqueadero|garajes|presupuesto|canon|precio|barrio|zona|sector|tipo de inmueble|apartamento o casa|radicar|ficha técnica|datos clave|completar los datos|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero|qu[eé] tipo de inmueble|detalles de lo que tu cliente)/i.test(lastAssistantText);
 
-    if (isAssistantRefiningListingOrReq && userSupplyingSpecs) {
-      userPromptContent += `\n[SISTEMA: El usuario está completando los datos indispensables de su búsqueda/requerimiento o inmueble en proceso. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso'). Debes compilar en un solo texto completo y optimizado TODOS los datos acordados en la conversación (tipo de inmueble, tipo de negocio, zona/barrio, presupuesto/precio, habitaciones, garajes) e invocar DE INMEDIATO en este mismo turno la herramienta 'registrar_inmueble_o_requerimiento' para indexarlo en la base de datos y obtener el código de radicado oficial (ID #REQ) y los cruces de Match.]`;
+    const userSupplyingSpecs = /(?:\d+\s*(?:habitaci[oó]n|habitaciones|alcoba|alcobas|hab|garaje|garajes|parqueadero|parqueaderos|baño|baños|mill[oó]n|millones|m2|mts)|\b[1-5]\b)/i.test(clean);
+    const userSupplyingZoneOrCity = /(?:en\s+[a-záéíóúñ]+|cedritos|chico|chicó|chapinero|rosales|santa\s*b[aá]rbara|usaqu[eé]n|suba|pasadena|pontevedra|colina|salitre|niza|teusaquillo|chia|ch[íi]a|cajic[aá]|bogot[aá]|medell[ií]n|cali|barranquilla)/i.test(cleanLower);
+    const userSupplyingBudget = /(?:\d+\s*(?:mill[oó]n|millones|mil|k|m)|\b(?:presupuesto|hasta|m[aá]ximo|canon|precio)\b)/i.test(cleanLower);
+    const userSupplyingPropType = /(?:apartamento|apto|casa|oficina|local|bodega|lote|edificio|penthouse)/i.test(cleanLower);
+    const userSupplyingOpType = /\b(?:arriendo|alquiler|renta|venta|comprar|compra)\b/i.test(cleanLower);
+
+    const userSupplyingAnyRequirementInfo = userSupplyingSpecs || userSupplyingZoneOrCity || userSupplyingBudget || userSupplyingPropType || userSupplyingOpType;
+
+    if (isAssistantRefiningListingOrReq && userSupplyingAnyRequirementInfo) {
+      userPromptContent += `\n[SISTEMA - CONTINUIDAD COGNITIVA ABSOLUTA Y PERSISTENCIA DE META (DOCTRINA v33.59):
+1. El interlocutor está respondiendo activamente a la indagación de JanIA y aportando datos complementarios de su búsqueda o inmueble.
+2. QUEDA TERMINANTEMENTE PROHIBIDO responder prometiendo acciones futuras ('dame un momento', 'ya te busco', 'ya te aviso') ni reiniciar la conversación, saludar de nuevo, o preguntar '¿En qué te colaboro hoy?'.
+3. Integra TODO el contexto previo acumulado de los turnos anteriores (tipo de negocio, tipología, ciudad/barrio, presupuesto, habitaciones, garajes).
+4. Si con los datos acumulados ya se cuenta con la información indispensable (tipo de inmueble, negocio, zona/barrio, presupuesto/precio, habitaciones/garajes): DEBES INVOCAR EN ESTE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado y estructurado. Al registrarlo, entrega de primero el código oficial asignado devuelto (ej: *REQ-1106* o *ID #1106*) confirmando que ya quedó formalmente radicado, e informa el resultado inmediato del motor de Match.
+5. Si aún falta algún dato verdaderamente indispensable para radicar o buscar, solicítalo con extrema calidez, astucia y brevedad (máximo 1 o 2 renglones) sin hacer formularios largos ni repreguntar lo que ya se sabe.]`;
     }
 
     const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(clean);
@@ -1925,9 +1970,15 @@ export async function processPrivateDmConversationalMessage(
       } else if (isJani) {
         reply = isOngoingChat ? `¿En qué te colaboro hoy?` : `¡${timeSalutation}, Jani! 👋 ¿En qué te colaboro hoy?`;
       } else {
-        reply = isOngoingChat
-          ? `Con mucho gusto. Cuéntame en qué trámite o consulta inmobiliaria te colaboro hoy 🤝.`
-          : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 En *VECY BIENES RAÍCES* estoy lista para colaborarte. ¿Qué consulta o trámite deseas realizar hoy? 🤝`;
+        if (isOngoingChat) {
+          if (isAssistantRefiningListingOrReq) {
+            reply = `Te sigo con total atención${displayName ? `, ${displayName}` : ""}. ¿Me confirmas los datos pendientes de tu búsqueda o inmueble para radicarlo formalmente y entregarte tu código oficial (ID #REQ)? 🤝✨`;
+          } else {
+            reply = `Con mucho gusto${displayName ? `, ${displayName}` : ""}. Continuemos con tu gestión inmobiliaria, te escucho con total atención 🤝✨.`;
+          }
+        } else {
+          reply = `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 En *VECY BIENES RAÍCES* estoy lista para colaborarte. ¿Qué consulta o trámite deseas realizar hoy? 🤝`;
+        }
       }
     }
 
