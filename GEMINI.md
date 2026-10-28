@@ -1,13 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.68.0 — 2026-10-28)
-- **JanIA Server:** `v33.68` (`33.68.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero 'Recibiste un estado, pero no es compatible'), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (Doctrina Eduardo A. Rivera):**
-  1. **Reconciliación de Lockfile pnpm para Vercel CI/CD (`pnpm-lock.yaml`, `package.json`):** Resuelto el fallo `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` en los despliegues de Vercel actualizando `pnpm-lock.yaml` para registrar los `overrides` de `tailwindcss>nanoid: 3.3.7`, permitiendo que `pnpm install` corra con `--frozen-lockfile` en Vercel con 100% de éxito.
-  2. **Erradicación del Error 'Recibiste un estado, pero no es compatible' en WhatsApp Web (`whatsapp-match.ts`):** 
-     - Exclusión estricta del número propio del socket (`573192919978@s.whatsapp.net`) de `statusJidList`. Al emitir estados a `status@broadcast`, WhatsApp prohíbe que el emisor se incluya a sí mismo en la lista de destinatarios externos de difusión, lo que generaba un conflicto criptográfico en WhatsApp Web y arrojaba la pantalla de incompatibilidad.
-     - Supresión de metadatos de preview de enlace (`linkPreview: null`) en estados de texto para evitar objetos corruptos de tarjeta enriquecida no soportados por el protocolo de historias.
-     - Persistencia en `this.messageStore` de cada estado despachado para responder reintentos de descifrado (`retry receipts`) de WhatsApp Web y dispositivos vinculados.
-     - Soporte dinámico para estados con imagen y texto (`captionText`).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 474/474 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.69.0 — 2026-10-28)
+- **JanIA Server:** `v33.69` (`33.69.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Estrategia Comercial de Minutas, Contratos Definitivos 'con Todas las de la Ley' (Mesa Directiva Eduardo & Jani) y Recompensa Sagrada de Reciprocidad (Doctrina Eduardo A. Rivera):**
+  1. **Elaboración de Minutas Base como Demostración de Poder:** JanIA mantiene intactos sus poderes para generar borradores de promesas y minutas en PDF al instante con código QR y verificación.
+  2. **El Gancho de Claridad Doctrinal y Comercial:** Cuando el usuario señale que el borrador es preliminar o requiera blindaje, JanIA explica con toda lógica y naturalidad que es evidente que ella no posee los datos fácticos de la negociación (cronograma de pagos, fechas y Notaría exacta de escrituración, plazos y actas de entrega, datos completos y estado civil para verificar afectación a vivienda familiar o sociedad conyugal, linderos específicos literales de escrituras o folios SNR para evitar notas devolutivas, estudio de títulos de 20 años y régimen de arras vs cláusula penal).
+  3. **Canalización Comercial a Eduardo Rivera & Jani Alves:** Para una elaboración profesional y definitiva con todas las de la ley, JanIA recomienda y canaliza directamente al usuario a contratar la estructuración con la dirección de VECY (Eduardo Rivera al `+57 319 291 9978` o línea bróker `+57 316 656 9719`), generando ingresos por redacción jurídica y corretaje blindado.
+  4. **Cobro de Reciprocidad de Valor:** Al entregar asesoría gratuita ($0 COP), JanIA solicita con frescura su justa recompensa: comentarios y calificación de 5 estrellas (⭐⭐⭐⭐⭐) en Google, recomendaciones documentadas con pantallazos y pruebas de su eficiencia en los grupos de WhatsApp, y el voz a voz con amistades y colegas.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 477/477 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

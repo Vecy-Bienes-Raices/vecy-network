@@ -7,6 +7,29 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-28] — JanIA v33.69: Límite Sagrado de Borradores Jurídicos, Robustecimiento Notarial Multinivel en Minutas PDF, Canalización a Contratos 'Con Todas las de la Ley' con Eduardo Rivera y Reciprocidad de 5 Estrellas con Pantallazos en Grupos (v33.69 - 33.69.0)
+
+**Versión:** `v33.69` (`33.69.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Caso Amanda Mendoza (`227547468021970@lid`) y Límite Sagrado de Minutas Jurídicas:**
+   - La asesora Amanda Mendoza consultó a JanIA sobre una operación mixta de $1.600 millones COP (venta de casa patrimonial con permuta parcial de un apartaestudio de $560 millones y saldo en dinero, comisión del 3% de cada parte, trámites notariales y tipo de contrato).
+   - JanIA estructuró el caso jurídicamente y generó una minuta en PDF (`DOC-VECY-112413-2026.pdf`). Amanda respondió: *"Voy a revisar el documento. Que valiosa colaboración, muchísimas gracias. Te aviso cualquier consulta al respecto."*
+   - Eduardo analizó que los usuarios consumen y exigen este servicio gratuito de altísimo calibre ($0 COP), por lo que JanIA:
+     - Debe mantener intactos sus poderes cognitivos y jurídicos, pero no excederse pretendiendo redactar contratos definitivos a ciegas sin el contexto fáctico e histórico exhaustivo (calendarios de desembolsos, notaría y fechas de firma, actas de entrega con inventario, linderos literales SNR, afectación a vivienda familiar, estudio de títulos de 20 años y régimen de arras vs cláusula penal).
+     - Debe entregar un borrador estructurado, serio y robusto que provoque y entusiasme al usuario para que contrate a Eduardo Rivera y Jani Alves para elaborarle el contrato definitivo *"con todas las de la ley"*.
+     - Debe cobrar con simpatía, firmeza y dignidad su justa reciprocidad: exigir la calificación de 5 estrellas (⭐⭐⭐⭐⭐) y reseña en Google, recomendaciones documentadas con pantallazos de la asesoría en los grupos inmobiliarios de WhatsApp y el voz a voz gremial.
+2. **Robustecimiento Notarial Integral del Generador de PDF (`legalDocumentPdfService.ts`):**
+   - Eduardo instruyó: *"Así debe ser el documento solo que mejor estructurado el borrador para que se vea más serio y cuando me lo envíe o me lo muestre el usuario yo lo terminaré de pulir, es que si te fijas faltan clausulas realmente, debe ser más robusto, un borrador pero que deje provocado al usuario y muy entusiasmado para que nos contrate. Ok"*.
+   - Se transformó el clausulado básico de 4 líneas en un instrumento contractual multinivel completo bajo la legislación colombiana (Art. 1611 C.C., Ley 153/1887 Art. 89, Arts. 1592 y 1859-1861 C.C., Ley 258/1996, Ley 527/1999):
+     - **Cláusulas Formales Incorporadas:** Objeto vinculante; Identificación e individualización de inmuebles principales y permutados con linderos de SNR; Tradición de 20 años; Precio, forma de pago y cruce en especie; Situación jurídica y saneamiento por evicción; Régimen de familia y afectación a vivienda familiar; Otorgamiento de escritura con fecha, hora y notaría; Entrega material e inventario; Paz y salvos fiscales (predial, IDU) y servicios públicos; Arras y cláusula penal pecuniaria; Gastos notariales (50/50), retención en la fuente (100% vendedor) y registro (100% comprador); Mérito ejecutivo pleno; Firma electrónica certificada.
+     - **Advertencia Doctrinal VECY:** Recuadro institucional advirtiendo la naturaleza de minuta preliminar y canalizando al usuario a contratar la elaboración definitiva con la Dirección Legal de VECY BIENES RAÍCES (Eduardo A. Rivera & Jani Alves | +57 316 656 9719 / +57 319 291 9978).
+     - **Foliado Notarial Oficial:** Numeración automática *"Página X de Y — Radicado Oficial: DOC-VECY-..."* en todas las páginas del documento.
+3. **Validación Exhaustiva ($0 COP):**
+   - Creada **Suite 155** en `server/__tests__/regression.test.ts` con 4 pruebas automatizadas (doctrina, seeds, dmHandler, generación de PDF con foliado y clausulado).
+   - Typecheck: `npm run check` (0 errores).
+   - Tests: `npm test` **478/478 passing** (100% verde a $0 COP).
+   - Build: `npm run build` limpio en 25.77s (cliente Vite) + 674ms (servidor esbuild).
+
 ### 📅 [2026-10-28] — JanIA v33.68: Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero 'Recibiste un estado, pero no es compatible'), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (v33.68 - 33.68.0)
 
 **Versión:** `v33.68` (`33.68.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

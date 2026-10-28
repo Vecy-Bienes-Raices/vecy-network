@@ -183,7 +183,35 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.68 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.69 — Octubre 2026
+
+### Novedades v33.69 (Límite Sagrado de Borradores Jurídicos en JanIA, Minutas Base, Canalización a Contratos 'Con Todas las de la Ley' con Eduardo Rivera y Reciprocidad de 5 Estrellas con Pantallazos en Grupos — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Límite Sagrado de Borradores vs. Contratos Definitivos 'Con Todas las de la Ley':**
+     - Al interactuar con JanIA en DM para solicitar documentos legales complejos (ej. promesas de compraventa con permuta parcial/dación en pago, cesiones de leasing, etc.), JanIA genera borradores y minutas base automáticas con estándar notarial. Sin embargo, JanIA **JAMÁS** debe excederse pretendiendo emitir un contrato definitivo sin el contexto histórico fáctico exhaustivo:
+       - Formas de pago detalladas y calendarios de desembolsos.
+       - Fecha, hora y Notaría específica pactada para el otorgamiento de la escritura pública.
+       - Plazos, condiciones e inventario físico de entrega material de los inmuebles.
+       - Datos de identificación plenos (Cédula/NIT, domicilio, teléfono) y estado civil exacto de ambas partes (clave para determinar afectación a vivienda familiar o sociedad conyugal vigente).
+       - Linderos específicos y transcripción literal exacta según folios de matrícula inmobiliaria SNR y escrituras antecedentes para evitar notas devolutivas notariales.
+       - Estudio de títulos de 20 años con escrituras y certificados en PDF (vital en inmuebles con protección o patrimonio histórico).
+       - Estructura pactada de cláusula penal (%) frente a arras confirmatorias o de retracto (Arts. 1859–1861 del Código Civil).
+  2. **Canalización Comercial Obligatoria a Eduardo Rivera y Jani Alves:**
+     - JanIA aclara con calidez, franqueza y solidez técnica que su PDF es un *borrador preliminar de orientación*. Para blindar la operación al 100% y elaborar el documento final "con todas las de la ley", JanIA recomienda y canaliza activamente a los clientes con **Eduardo Rivera** (`+57 319 291 9978` / `+57 316 656 9719`) y Jani Alves de VECY BIENES RAÍCES, monetizando la asesoría y el blindaje jurídico profesional.
+  3. **Cobro Sagrado de Reciprocidad (5 Estrellas en Google y Recomendación con Pantallazos en Grupos):**
+     - Tras brindar asesoría de alto nivel y generar minutas sin costo ($0 COP), JanIA solicita con asertividad y simpatía su recompensa:
+       - Calificación de 5 estrellas (⭐⭐⭐⭐⭐) y reseña extraordinaria en Google.
+       - Recomendación documentada con capturas de pantalla de la asesoría compartidas en los grupos inmobiliarios de WhatsApp donde participe el usuario.
+       - El voz a voz directo con colegas, clientes y familiares.
+- **Implementación Técnica**:
+  - `server/_core/prompts/base.md`: Inclusión de la directiva doctrinal de borradores, canalización contractual a Eduardo Rivera y reciprocidad de 5 estrellas.
+  - `server/_core/jania/prompts.ts`: Sección de directiva doctrinal en `JANIA_ARGON_COGNITIVE_CORE`.
+  - `server/_core/jania/founderKnowledgeService.ts`: Seed `seed-limite-borradores-canalizacion-contrato-ley-reciprocidad-5-estrellas-v33-69`.
+  - `server/_core/jania/handlers/dmHandler.ts`: Enriquecimiento del `reporteOficial` de la herramienta `generar_documento_legal_pdf` con la aclaración de borrador, el llamado a Eduardo y la petición de reciprocidad.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **477/477 passing** (Suite 155 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.69`) y `package.json` (`33.69.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.68 — Octubre 2026
 
 ### Novedades v33.68 (Blindaje de Sincronización de Estados WhatsApp en Multi-Device [Cero 'Recibiste un estado, pero no es compatible'], Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

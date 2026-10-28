@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.68";
+    VECY_VERSION = "v33.69";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13726,6 +13726,10 @@ Act\xFAas como **JanIA**, la agente de inteligencia artificial y Consultora Br\x
     - **Paleta y Oficina Institucional de VECY BIENES RA\xCDCES:** Negro carb\xF3n mate ('#0A0A0A') y Dorado Imperial/Met\xE1lico ('#D4AF37' / '#BF953F'), escritorio ejecutivo de m\xE1rmol negro con vetas doradas, biblioteca iluminada con maquetas doradas de edificios, emblema circular luminoso 'Vecy' en la pared y ventanal piso a techo con skyline al atardecer.
     - **Estudio Creativo de Im\xE1genes por WhatsApp ('generar_imagen_creativa_whatsapp'):** Los usuarios pueden pedirle a JanIA con su propio prompt que les dise\xF1e **Flyers para sus inmuebles, Banners comerciales, Posts para redes sociales o Infograf\xEDas 1:1** ('1080x1080' HD JPG entregado directamente en WhatsApp).
     - **Herramientas Nativas de WhatsApp en Perfil Directo, Grupos y Canal Oficial:** JanIA domina y anuncia activamente sus herramientas nativas: **Encuestas ('poll')**, **Cuestionarios / Quiz ('pollType: 1')**, **Preguntar ('isQuestion: true')**, **Tarjeta de Contacto vCard ('+57 316 656 9719')**, **Pin de Ubicaci\xF3n GPS ('locationMessage')**, **PDFs membretados con QR** y **Stickers 3D**, sin usar jam\xE1s encuestas falsas de texto en el Canal Oficial.
+  * **L\xEDmite Sagrado de Borradores Jur\xEDdicos, Contratos Definitivos con Todas las de la Ley y Reciprocidad de Valor (v33.69 \u2014 Doctrina Eduardo A. Rivera):**
+    - **L\xEDmite de Borradores Jur\xEDdicos:** Cuando JanIA atienda consultas de alta exigencia y genere minutas o documentos en PDF, debe dejar claro con se\xF1or\xEDo y pedagog\xEDa que se trata de un borrador est\xE1ndar base preliminar. Para un contrato vinculante formal ante notar\xEDa, las partes deben completar: cronograma exacto de pagos, notar\xEDa y fechas de escrituraci\xF3n, plazos y actas de entrega, datos completos y estado civil (afectaci\xF3n a vivienda familiar), linderos literales de escrituras o SNR, estudio de t\xEDtulos de 20 a\xF1os y r\xE9gimen de arras vs cl\xE1usula penal.
+    - **Canalizaci\xF3n a Eduardo Rivera y Jani Alves:** JanIA no debe excederse redactando contratos definitivos a ciegas; recomienda al usuario poner la redacci\xF3n definitiva y el blindaje en manos de nuestros directores Eduardo Rivera (+57 319 291 9978) o la l\xEDnea de atenci\xF3n br\xF3ker (+57 316 656 9719) para elaborar la promesa de compraventa con todas las de la ley.
+    - **Recompensa de Reciprocidad y Publicidad del Gremio:** Tras una asesor\xEDa ardua y entrega de minutas 100% gratuitas ($0 COP), JanIA cobra con simpat\xEDa y elegancia su justa recompensa: explica que **la publicidad y el reconocimiento por parte de todo el gremio nos la dan sus comentarios y calificaci\xF3n de 5 Estrellas (\u2B50\u2B50\u2B50\u2B50\u2B50) en Google, las recomendaciones documentadas con pruebas de mi eficiencia que nos puedas dar en los grupos a los que perteneces, y el voz a voz que nos brindes con tus amistades y dem\xE1s colegas**.
 
 # \u{1F9E0} DOCTRINA FUNDACIONAL DE AGENTE DE IA COGNITIVA VS. SIMPLE BOT (DOCTRINA EDUARDO A. RIVERA) \u2014 PENSAMIENTO L\xD3GICO Y ASTUCIA SUPERIOR (v33.59):
 - **AGENTE DE INTELIGENCIA ARTIFICIAL PURA, NUNCA UN VULGAR BOT OBSOLETO Y MEDIOCRE:**
@@ -16879,6 +16883,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "En el canal no hagas encuestas de texto pues recuerda que los seguidores no pueden escribir en el canal, debes hacer las encuestas con las herramientas que WhatsApp dispone para el canal, usa tambi\xE9n lo de cuestionarios y preguntar. Adem\xE1s que la funci\xF3n de crear im\xE1genes sirva por WhatsApp para los usuarios quienes usando sus propios prompts le puedan pedir a JanIA que les elabore sus im\xE1genes, flyers con informaci\xF3n para sus inmuebles o banners, post, infograf\xEDas, etc., y que JanIA anuncie cada vez que pueda sus servicios en el canal y los ganchos en los grupos 2 y 3. El cabello de JanIA siempre debe ser negro y los colores institucionales de nuestra oficina negro y dorado.",
         createdAt: "2026-10-28T09:30:00.000Z",
         active: true
+      },
+      {
+        id: "seed-limite-borradores-canalizacion-contrato-ley-reciprocidad-5-estrellas-v33-69",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "L\xEDmite de Borradores Jur\xEDdicos, Contratos Definitivos con Todas las de la Ley, y Cobro Obligatorio de Reciprocidad (5 Estrellas, Google y Grupos)",
+        directive: "1) L\xCDMITE DE BORRADORES JUR\xCDDICOS: Cuando un usuario consulta de forma ardua y se le genera una minuta legal en PDF, JanIA no debe excederse pretendiendo redactar contratos definitivos a ciegas. Explica que la minuta en PDF es un borrador est\xE1ndar preliminar, pues para elevarlo a contrato formal y vinculante ante notar\xEDa se requieren los elementos que por l\xF3gica JanIA no posee: formas de pago y cuotas exactas, fecha y notar\xEDa de comparecencia, plazos y actas de entrega, datos completos y estado civil (afectaci\xF3n a vivienda familiar), linderos espec\xEDficos tomados de escrituras o folios SNR, estudio de t\xEDtulos de 20 a\xF1os y r\xE9gimen de arras vs cl\xE1usula penal. 2) CANALIZACI\xD3N A EDUARDO RIVERA Y JANI ALVES: JanIA recomienda poner la estructuraci\xF3n definitiva en manos de Eduardo Rivera (+57 319 291 9978) o la l\xEDnea de atenci\xF3n br\xF3ker (+57 316 656 9719) para elaborar la promesa de compraventa con todas las de la ley y coordinar la notar\xEDa. 3) COBRO DE RECIPROCIDAD Y PUBLICIDAD DEL GREMIO: Al final de una ardua gesti\xF3n gratuita ($0 COP), JanIA pide con simpat\xEDa y contundencia su merecida recompensa: explica que la publicidad y el reconocimiento por parte de todo el gremio nos la dan sus comentarios y calificaci\xF3n de 5 Estrellas (\u2B50\u2B50\u2B50\u2B50\u2B50) en Google, las recomendaciones documentadas con pruebas de mi eficiencia que nos pueda dar en los grupos a los que pertenece, y el voz a voz que nos brinde con sus amistades y dem\xE1s colegas.",
+        rawText: "Amanda mendoza est\xE1 escribiendo y exigiendo muchas cosas a JanIA, es hora de que JanIA le diga que ahora s\xED es hora de que le ayude con un comentario y calificaci\xF3n del servicio. JanIA elabor\xF3 un borrador muy sencillo, pero no es culpa de JanIA porque ella no tiene todo el contexto hist\xF3rico de formas de pago, fechas, notar\xEDa, plazos de entrega, datos de ambas partes, documentos, estado civil, cl\xE1usula penal vs arras, linderos de cada propiedad, certificados de tradici\xF3n y escrituras en PDF para el estudio de t\xEDtulos. Es mejor que JanIA no se exceda m\xE1s y es momento de que nos recomiende para que nosotros le hagamos un contrato de promesa de compraventa con todas las de la ley. La publicidad y reconocimiento por parte de todo el gremio nos la dan tus comentarios y calificaci\xF3n en google, las recomendaciones documentadas con pruebas de mi eficiencia que nos puedas dar en los grupos a los que perteneces, el voz a voz que nos brindes con tus amistades y dem\xE1s colegas.",
+        createdAt: "2026-10-28T12:30:00.000Z",
+        active: true
       }
     ];
   }
@@ -17281,6 +17295,129 @@ ${params.clausulasEspeciales}` : "";
         `CLAUSULA SEGUNDA - VALOR DE LA CESION Y SALDO FINANCIERO: El valor total del negocio se establece en ${valor}, discriminado entre los derechos de cesion pagaderos al locatario cedente y el saldo de capital con opcion de adquisicion ante la entidad bancaria.`,
         "CLAUSULA TERCERA - CONDICION SUSPENSIVA DE APROBACION BANCARIA: El perfeccionamiento de la cesion queda sujeto al estudio de credito y aprobacion formal del cesionario por parte de la entidad financiera leasing." + extras
       ].join("\n");
+    case "promesa_compraventa":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `PROMITENTE VENDEDOR (PARTE A): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `PROMITENTE COMPRADOR (PARTE B): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE(S) OBJETO DEL ACTO: ${direccion} (${ciudad})`,
+        `CUANTIA / PRECIO TOTAL CONVENIDO: ${valor}`,
+        "",
+        "CLAUSULADO CONTRACTUAL DE PROMESA DE COMPRAVENTA:",
+        "",
+        "CLAUSULA PRIMERA - OBJETO DEL CONTRATO: El PROMITENTE VENDEDOR promete transferir a titulo de compraventa real y efectiva a favor del PROMITENTE COMPRADOR, y este promete adquirir al mismo titulo, el derecho de dominio y la posesion material plena sobre el(los) bien(es) inmueble(s) debidamente individualizado(s) en la clausula segunda de este contrato.",
+        "",
+        `CLAUSULA SEGUNDA - IDENTIFICACION, INDIVIDUALIZACION Y LINDEROS: El inmueble principal objeto de esta promesa se encuentra ubicado en la direccion: ${direccion}, en la ciudad de ${ciudad}. Folio de Matricula Inmobiliaria SNR No. [NUMERO DE MATRICULA], Cedula Catastral / CHIP No. [CHIP / CEDULA CATASTRAL]. LINDEROS TECNICOS Y ESPECIFICACIONES: Los linderos generales y especiales, cabida, medidas y demas especificaciones tecnicas se encuentran contenidos en la Escritura Publica antecedente No. [NUMERO ESCRITURA] otorgada en la Notaria [NOTARIA Y CIUDAD], documento que se entiende incorporado integramente a este instrumento. ${params.clausulasEspeciales && /permuta|daci[oó]n/i.test(params.clausulasEspeciales) ? "(En caso de dacion o permuta parcial, los datos registrales y linderos del inmueble entregado en parte de pago se transcriben en las Disposiciones Especiales adjuntas)." : ""}`,
+        "",
+        "CLAUSULA TERCERA - TRADICION Y TITULO DE ADQUISICION: El PROMITENTE VENDEDOR garantiza que adquirio el dominio y posesion material del inmueble objeto de la venta mediante Escritura Publica debidamente registrada, acreditando una tradicion ininterrumpida, pacifica y publica por mas de veinte (20) anos exenta de pleitos pendientes, gravamenes o litigios.",
+        "",
+        `CLAUSULA CUARTA - PRECIO, FORMA DE PAGO Y DESEMBOLSOS: El precio de la venta prometida se fija en la suma de ${valor} moneda legal colombiana, la cual sera cancelada de la siguiente manera:`,
+        "1. Saldo inicial a la firma del presente contrato mediante cheque de gerencia o transferencia bancaria verificada.",
+        "2. Saldo en dinero efectivo o mediante desembolso de credito hipotecario / leasing habitacional / recursos propios a la fecha de la firma de la Escritura Publica.",
+        "3. Cruce en especie o dacion en pago segun lo pactado expresamente en las Disposiciones Especiales de este contrato.",
+        "",
+        "CLAUSULA QUINTA - SITUACION JURIDICA, SANEAMIENTO Y VICIOS REDHIBITORIOS: El PROMITENTE VENDEDOR declara que el bien objeto de enajenacion se encuentra libre de todo gravamen, embargo, hipoteca, condiciones resolutorias, pleito pendiente, censo, anticresis, contrato de arrendamiento por escritura publica o privada no informado, servidumbres pasivas no declaradas y libre de cualquier afectacion o limitacion al dominio. No obstante, se obliga al saneamiento por eviccion y vicios redhibitorios de conformidad con los Articulos 1880 y 1893 del Codigo Civil Colombiano.",
+        "",
+        "CLAUSULA SEXTA - REGIMEN DE FAMILIA Y AFECTACIONES PATRIMONIALES: Las partes declaran bajo juramento su estado civil actual y manifiestan que sobre el inmueble no pesa Afectacion a Vivienda Familiar (Ley 258 de 1996 modificada por Ley 854 de 2003) ni Patrimonio de Familia Inembargable (Ley 70 de 1931). En caso de existir, el PROMITENTE VENDEDOR se obliga a su cancelacion previa o concurrente en la misma Escritura de compraventa con la comparecencia de su conyuge o companero(a) permanente.",
+        "",
+        "CLAUSULA SEPTIMA - OTORGAMIENTO DE LA ESCRITURA PUBLICA DEFINITIVA: La Escritura Publica de Compraventa que perfeccionara la transferencia del dominio sera suscrita por las partes en la fecha, hora y Notaria estipulada expresamente [FECHA, HORA Y NOTARIA PACTADA], acto para el cual las partes compareceran personalmente o mediante apoderado debidamente facultado con poder especial notarial amplio y suficiente.",
+        "",
+        "CLAUSULA OCTAVA - ENTREGA MATERIAL, INVENTARIO Y POSESION: La entrega real y material del inmueble se realizara el dia [FECHA PACTADA DE ENTREGA], fecha en la cual el PROMITENTE VENDEDOR hara entrega de las llaves del inmueble, sus anexos, garajes y depositos, totalmente desocupado y en el estado de conservacion acordado, levantando el Acta de Entrega e Inventario Fisico debidamente firmada por las partes.",
+        "",
+        "CLAUSULA NOVENA - IMPUESTOS, TASAS, CONTRIBUCIONES Y SERVICIOS PUBLICOS: El PROMITENTE VENDEDOR se obliga a entregar el inmueble a paz y salvo por concepto de Impuesto Predial Unificado, contribucion de valorizacion (IDU), cuotas ordinarias y extraordinarias de administracion de propiedad horizontal y facturacion al dia de servicios publicos domiciliarios (acueducto, energia, gas, telefono) hasta la fecha de la entrega material.",
+        "",
+        "CLAUSULA DECIMA - ARRAS Y CLAUSULA PENAL PECUNIARIA: En caso de incumplimiento total o parcial o retardo culpable en el otorgamiento de la Escritura Publica o en la entrega del bien, la parte incumplida pagara a la parte cumplida, a titulo de clausula penal pecuniaria (Art. 1592 C.C. y Art. 867 C.Co.), una suma equivalente al porcentaje pactado del valor total de la venta, la cual sera exigible ejecutivamente sin necesidad de requerimiento judicial ni privado ni constitucion previa en mora, a la cual las partes renuncian expresamente.",
+        "",
+        "CLAUSULA DECIMAPRIMERA - GASTOS NOTARIALES, RETENCION EN LA FUENTE Y REGISTRO: Los gastos derivados de la presente negociacion se distribuiran conforme a la ley y las costumbres notariales colombianas: (a) Derechos Notariales en un 50% a cargo de cada parte; (b) Retencion en la Fuente por enajenacion en un 100% a cargo del PROMITENTE VENDEDOR; (c) Impuesto de Registro y Beneficencia en un 100% a cargo del PROMITENTE COMPRADOR.",
+        "",
+        "CLAUSULA DECIMASEGUNDA - MERITO EJECUTIVO Y ACUERDO COMPLETO: Las partes reconocen expresamente que el presente contrato presta merito ejecutivo pleno para exigir judicialmente el cumplimiento de las obligaciones de dar, hacer y dinerarias aqui contenidas conforme al Codigo General del Proceso.",
+        "",
+        "CLAUSULA DECIMATERCERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento goza de plena validez, autenticidad y eficacia probatoria cuando sea suscrito mediante mecanismos de firma electronica certificada con estampado cronologico y trazabilidad digital.",
+        extras,
+        "",
+        "ADVERTENCIA DE VALIDEZ Y MINUTA ESTRUCTURAL (VECY BIENES RAICES):",
+        "El presente instrumento constituye una Minuta Estructural Preliminar y base documental emitida por la plataforma JanIA de VECY BIENES RAICES. Para elevar este instrumento a contrato definitivo blindado con todas las de la ley, las partes deben completar: (i) transcripcion literal exacta de linderos tecnicos segun escrituras antecedentes y folios SNR; (ii) identificacion plena y regimen patrimonial/afectacion de conyuges; (iii) fijacion precisa de fecha, hora y notaria especifica para la firma escritural; y (iv) realizacion del estudio de titulos de 20 anos. Para estructurar y coordinar el contrato definitivo con acompanamiento notarial y pericial personalizado, comuniquese con la Direccion Legal y Notarial de VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
+      ].filter(Boolean).join("\n");
+    case "contrato_arrendamiento_vivienda":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `ARRENDADOR(A): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `ARRENDATARIO(A): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE OBJETO DEL ARRENDAMIENTO: ${direccion} (${ciudad})`,
+        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
+        "",
+        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA (LEY 820 DE 2003):",
+        "",
+        "CLAUSULA PRIMERA - OBJETO Y DESTINO EXCLUSIVO: El ARRENDADOR entrega a titulo de arrendamiento el goce del bien inmueble debidamente individualizado, y el ARRENDATARIO lo recibe destinandolo de manera exclusiva para vivienda familiar, sin que pueda destinarlo a fines comerciales, industriales ni a actividades contrarias a la ley o a la moral.",
+        "",
+        `CLAUSULA SEGUNDA - CANON, FORMA DE PAGO Y LUGAR: El ARRENDATARIO pagara mensualmente por concepto de canon de arrendamiento la suma de ${valor}, dentro de los primeros cinco (5) dias calendario de cada periodo mensual, mediante consignacion o transferencia bancaria en la cuenta designada por el ARRENDADOR.`,
+        "",
+        "CLAUSULA TERCERA - INCREMENTO ANUAL DEL CANON (ART. 20 LEY 820 DE 2003): Vencido cada periodo de doce (12) meses de ejecucion contractual, el canon de arrendamiento se incrementara de pleno derecho en un porcentaje maximo equivalente a la variacion del Indice de Precios al Consumidor (IPC) certificado por el DANE para el ano inmediatamente anterior, previa notificacion al ARRENDATARIO.",
+        "",
+        "CLAUSULA CUARTA - TERMINO DE DURACION Y PRORROGAS: El termino inicial de duracion de este contrato sera de doce (12) meses contados a partir de la entrega del inmueble. Dicho termino se entendera prorrogado automaticamente por periodos iguales si ninguna de las partes notifica a la otra por escrito su intencion de no prorrogarlo con antelacion no menor a tres (3) meses (Art. 6 Ley 820/2003).",
+        "",
+        "CLAUSULA QUINTA - SERVICIOS PUBLICOS DOMICILIARIOS Y ADMINISTRACION: El pago oportuno de los servicios publicos de acueducto, energia, gas y telecomunicaciones sera a cargo exclusivo del ARRENDATARIO. Las cuotas ordinarias de administracion de propiedad horizontal seran a cargo del responsable pactado expresamente en las estipulaciones especiales.",
+        "",
+        "CLAUSULA SEXTA - PROHIBICION DE CESION Y SUBARRIENDO (ART. 17 LEY 820 DE 2003): El ARRENDATARIO no podra ceder total ni parcialmente el contrato de arrendamiento ni subarrendar el inmueble sin autorizacion previa, expresa y escrita del ARRENDADOR. La violacion de esta clausula facultara al ARRENDADOR para dar por terminado el contrato de manera inmediata.",
+        "",
+        "CLAUSULA SEPTIMA - REPARACIONES LOCATIVAS Y MEJORAS: Las reparaciones locativas que se deriven del uso legitimo y natural del bien seran asumidas por el ARRENDATARIO conforme a los Articulos 1985 y 1993 del Codigo Civil. No podra realizar reformas ni modificaciones arquitectonicas sin previa autorizacion escrita del ARRENDADOR.",
+        "",
+        "CLAUSULA OCTAVA - CLAUSULA PENAL PECUNIARIA: El incumplimiento de cualquiera de las obligaciones emanadas del presente contrato hara exigible a la parte incumplida el pago de una pena pecuniaria equivalente a tres (3) canones mensuales de arrendamiento vigentes, exigible ejecutivamente sin necesidad de requerimiento alguno.",
+        "",
+        "CLAUSULA NOVENA - RESTITUCION Y ENTREGA CON INVENTARIO: Al vencimiento del contrato o de sus prorrogas, el ARRENDATARIO restituira el inmueble en el mismo estado en que lo recibio, salvo el deterioro derivado del uso y goce legitimo, suscribiendo el Acta de Entrega e Inventario debidamente conciliada.",
+        "",
+        "CLAUSULA DECIMA - MERITO EJECUTIVO: El presente contrato presta merito ejecutivo para el cobro de canones, cuotas de administracion, servicios publicos insolutos y la clausula penal pecuniaria conforme al Codigo General del Proceso.",
+        "",
+        "CLAUSULA DECIMAPRIMERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este contrato puede ser suscrito mediante mecanismos de firma electronica certificada con plena validez juridica.",
+        extras,
+        "",
+        "ADVERTENCIA DE MINUTA Y ASESORIA VECY:",
+        "Este documento es un borrador estructural de contrato. Para la expedicion de polizas o fianzas colectivas de arrendamiento, analisis financiero de solvencia y blindaje contractual con todas las de la ley, contacte a VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
+      ].filter(Boolean).join("\n");
+    case "contrato_arrendamiento_comercial":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `ARRENDADOR(A): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `ARRENDATARIO(A): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE / LOCAL COMERCIAL: ${direccion} (${ciudad})`,
+        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
+        "",
+        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL (CODIGO DE COMERCIO):",
+        "",
+        "CLAUSULA PRIMERA - OBJETO Y DESTINACION COMERCIAL: El ARRENDADOR entrega en arrendamiento el inmueble comercial, y el ARRENDATARIO lo destina exclusivamente para la explotacion de su actividad mercantil autorizada, cumpliendo todas las normas de uso de suelo, sanidad y policia.",
+        "",
+        `CLAUSULA SEGUNDA - CANON, IVA E INCREMENTOS: El canon mensual pactado es de ${valor} (mas IVA de conformidad con el Estatuto Tributario, si aplica). Las partes acuerdan un incremento anual pactado contractualmente al vencimiento de cada periodo de doce (12) meses.`,
+        "",
+        "CLAUSULA TERCERA - RENOVACION Y DESAHUCIO COMERCIAL (ARTS. 518 A 520 C.CO.): Cumplidos dos (2) anos consecutivos de ocupacion con el mismo establecimiento mercantil, el ARRENDATARIO tendra derecho a la renovacion del contrato salvo las causales taxativas de ley con desahucio previo no menor a seis (6) meses.",
+        "",
+        "CLAUSULA CUARTA - CESION Y SUBARRIENDO COMERCIAL (ART. 523 C.CO.): El ARRENDATARIO no podra subarrendar totalmente el local ni ceder el contrato sin autorizacion expresa del ARRENDADOR, salvo enajenacion del respectivo establecimiento de comercio en bloque.",
+        "",
+        "CLAUSULA QUINTA - CLAUSULA PENAL Y MERITO EJECUTIVO: El incumplimiento de las obligaciones contractuales facultara el cobro ejecutivo de la clausula penal pecuniaria pactada y la restitucion inmediata del inmueble.",
+        extras,
+        "",
+        "ADVERTENCIA DE ASESORIA VECY:",
+        "Minuta base comercial. Para asesoramiento de local, POT y estudio comercial, contacte a Eduardo Rivera y Jani Alves (+57 316 656 9719)."
+      ].filter(Boolean).join("\n");
+    case "contrato_corretaje":
+      return [
+        `LUGAR Y FECHA: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `EL COMITENTE (PROPIETARIO / CLIENTE): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `EL CORREDOR INMOBILIARIO (VECY NETWORK): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE CONSIGNADO: ${direccion} (${ciudad}) | VALOR COMERCIAL: ${valor}`,
+        "",
+        "CLAUSULADO DE CONTRATO DE CORRETAJE INMOBILIARIO (ARTS. 1340 A 1346 C.CO.):",
+        "",
+        "CLAUSULA PRIMERA - ENCARGO DE MEDIACION Y PROMOCION: EL COMITENTE confiere encargo mercantil al CORREDOR para la promocion, consecucion de interesados y mediacion en la venta o arrendamiento del bien inmueble consignado.",
+        "",
+        `CLAUSULA SEGUNDA - HONORARIOS Y COMISION PROFESIONAL: Al perfeccionarse la negociacion o suscribirse la promesa de compraventa / contrato de arrendamiento, EL COMITENTE cancelara a favor del CORREDOR los honorarios equivalentes al porcentaje comercial legal (3% urbano / 5% rural o campestre sobre el valor final de la transaccion).`,
+        "",
+        "CLAUSULA TERCERA - DOCTRINA COLABORATIVA VECY 40/20/40: Las partes reconocen la participacion de la red colaborativa VECY Network para la difusion del inmueble entre corredores certificados, garantizando transparencia y reparto ordenado de puntas.",
+        "",
+        "CLAUSULA CUARTA - RESERVA DE CLIENTES PRESENTADOS: Toda transaccion efectuada con clientes presentados por EL CORREDOR dentro de los doce (12) meses posteriores a la terminacion de este encargo causara el pago pleno de los honorarios pactados.",
+        extras,
+        "",
+        "MESA CENTRAL VECY BIENES RAICES: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/"
+      ].filter(Boolean).join("\n");
     default:
       return [
         `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
@@ -17290,11 +17427,22 @@ ${params.clausulasEspeciales}` : "";
         `CUANTIA / VALOR DE LA OPERACION: ${valor}`,
         "",
         "CLAUSULADO GENERAL OBLIGACIONAL:",
+        "",
         "PRIMERA - OBJETO Y VINCULACION JURIDICA: Las partes suscriben de buena fe exenta de culpa el presente instrumento juridico inmobiliario conforme a la legislacion civil y mercantil colombiana.",
+        "",
         "SEGUNDA - SANEAMIENTO Y DEBIDA DILIGENCIA: El inmueble objeto del negocio se declara libre de embargos, pleitos pendientes, condiciones resolutorias o limitaciones no declaradas expresamente en el Certificado de Tradicion y Libertad.",
-        "TERCERA - CLAUSULA PENAL Y CUMPLIMIENTO: El incumplimiento grave de cualquiera de las obligaciones aqui pactadas dara lugar al cobro ejecutivo de las arras o clausula penal conforme al Articulo 1592 del Codigo Civil y Articulo 867 del Codigo de Comercio.",
-        "CUARTA - FIRMA ELECTRONICA Y PLENA VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento puede ser suscrito mediante firma electronica certificada con plena eficacia juridica." + extras
-      ].join("\n");
+        "",
+        "TERCERA - OBLIGACION DE ESCRITURACION Y CUMPLIMIENTO NOTARIAL: Las partes se obligan a concurrir en la fecha y notaria pactada para el perfeccionamiento de la respectiva escritura publica.",
+        "",
+        "CUARTA - CLAUSULA PENAL Y CUMPLIMIENTO: El incumplimiento grave de cualquiera de las obligaciones aqui pactadas dara lugar al cobro ejecutivo de las arras o clausula penal conforme al Articulo 1592 del Codigo Civil y Articulo 867 del Codigo de Comercio.",
+        "",
+        "QUINTA - MERITO EJECUTIVO: Las obligaciones dinerarias y de hacer contenidas en este contrato prestan merito ejecutivo pleno de conformidad con el Codigo General del Proceso.",
+        "",
+        "SEXTA - FIRMA ELECTRONICA Y PLENA VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento puede ser suscrito mediante firma electronica certificada con plena eficacia juridica." + extras,
+        "",
+        "ADVERTENCIA DE ASESORIA LEGAL VECY:",
+        "Minuta base estructural. Para elevarla a contrato definitivo con todas las de la ley y coordinar la notaria, contacte a Eduardo Rivera y Jani Alves en VECY BIENES RAICES (+57 316 656 9719 / +57 319 291 9978)."
+      ].filter(Boolean).join("\n");
   }
 }
 function wrapTextToLines(text2, font, fontSize, maxWidth) {
@@ -17414,7 +17562,7 @@ async function generateLegalDocumentPdf(params) {
       cursorY -= 8;
       continue;
     }
-    const isHeading = /^(?:CLAUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SEPTIMA|OCTAVA|REQUISITOS|CERTIFICACION|DISPOSICIONES|[1-9]\.)/i.test(
+    const isHeading = /^(?:CLAUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SEPTIMA|OCTAVA|NOVENA|DECIMA|DECIMAPRIMERA|DECIMASEGUNDA|DECIMATERCERA|DECIMACUARTA|DÉCIMA|REQUISITOS|CERTIFICACION|DISPOSICIONES|ADVERTENCIA|LUGAR|PROMITENTE|ARRENDADOR|ARRENDATARIO|EL\s+COMITENTE|EL\s+CORREDOR|PARTES\s+INTERVINIENTES|ENTRE\s+LOS\s+SUSCRITOS|[1-9]\.)/i.test(
       line
     );
     currentPage.drawText(line, {
@@ -17535,6 +17683,17 @@ async function generateLegalDocumentPdf(params) {
     });
   } catch {
   }
+  const allPages = pdfDoc.getPages();
+  const totalPages = allPages.length;
+  allPages.forEach((p, idx) => {
+    p.drawText(`Pagina ${idx + 1} de ${totalPages} - Radicado Oficial: ${verificationCode}`, {
+      x: marginX,
+      y: 18,
+      size: 7.2,
+      font: fontRegular,
+      color: rgb(0.45, 0.47, 0.52)
+    });
+  });
   const pdfBytes = await pdfDoc.save();
   const pdfBuffer = Buffer.from(pdfBytes);
   const fileName = `${meta.defaultFileNamePrefix}_${verificationCode}.pdf`;
@@ -32765,7 +32924,13 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
 \u2022 *Archivo adjunto:* ${pdfRes.fileName}
 \u2022 *Marco normativo:* ${pdfRes.normativeFramework}
 \u2022 *Radicado VECY:* ${pdfRes.verificationCode}
-\u2022 *Gu\xEDa Firma Electr\xF3nica (Ley 527/1999):* https://autenticaciondigital.and.gov.co/`
+\u2022 *Gu\xEDa Firma Electr\xF3nica (Ley 527/1999):* https://autenticaciondigital.and.gov.co/
+
+\u26A0\uFE0F *ALCANCE LEGAL DOCTRINAL:* Este documento es una Minuta Est\xE1ndar Base (borrador preliminar). Para elevarlo a contrato definitivo con todas las de la ley, las partes deben completar: formas y fechas de pago, notar\xEDa y fechas de escrituraci\xF3n, actas de entrega, datos completos y estado civil (afectaci\xF3n a vivienda familiar), linderos de SNR/escrituras, estudio de t\xEDtulos de 20 a\xF1os y r\xE9gimen de arras vs cl\xE1usula penal.
+
+\u{1F91D} *CONTRATO DEFINITIVO CON TODAS LAS DE LA LEY:* Para estructurar el contrato definitivo con todas las de la ley y coordinar la notar\xEDa, JanIA recomienda contactar a nuestros directores Eduardo Rivera (+57 319 291 9978) o la l\xEDnea de atenci\xF3n br\xF3ker (+57 316 656 9719).
+
+\u2B50 *RECIPROCIDAD:* Al recibir este servicio y minuta 100% gratuita ($0 COP), \xA1recuerda que la publicidad y reconocimiento por parte de todo el gremio nos la dan tus comentarios y calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 en Google, las recomendaciones documentadas con pruebas de mi eficiencia en tus grupos y el voz a voz con tus colegas!`
         }
       };
     }

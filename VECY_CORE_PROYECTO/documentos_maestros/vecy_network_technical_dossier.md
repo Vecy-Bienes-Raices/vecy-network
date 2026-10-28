@@ -330,6 +330,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.69 — Octubre 2026
+
+#### [v33.69.0] — 2026-10-28: Límite Sagrado de Borradores Jurídicos, Robustecimiento Notarial Multinivel en Minutas PDF, Canalización a Contratos 'Con Todas las de la Ley' con Eduardo Rivera y Reciprocidad de 5 Estrellas con Pantallazos en Grupos (Doctrina Eduardo A. Rivera)
+- **Límite Sagrado de Borradores Jurídicos en JanIA y Canalización Comercial a Eduardo Rivera:**
+  - **Problema:** En el chat privado de WhatsApp (DM), los usuarios (como el caso de Amanda Mendoza en la negociación de $1.600 millones) exigen y reciben minutas y asesorías notariales de gran complejidad técnica, consumiendo el servicio 100% gratuito sin dar retorno a la empresa ni percatarse de que una minuta automática es solo un borrador preliminar que no puede emitirse como contrato definitivo sin el contexto fáctico exhaustivo.
+  - **Causa Raíz:** Falta de límites explícitos en los prompts y en el generador de documentos que delimitaran el alcance de la minuta frente al contrato definitivo con todas las de la ley, y ausencia de una directiva activa de reciprocidad gremial y canalización a los fundadores (Eduardo A. Rivera y Jani Alves).
+  - **Solución Doctrinal:**
+    1. Consagración en `base.md`, `prompts.ts` y `founderKnowledgeService.ts` de la doctrina: JanIA entrega minutas estructurales de base, pero aclara que para blindar el negocio y otorgar la escritura pública sin notas devolutivas notariales, el usuario debe contratar a Eduardo Rivera y Jani Alves (+57 319 291 9978 / +57 316 656 9719) para elaborar el contrato definitivo *"con todas las de la ley"*.
+    2. Cobro de reciprocidad gremial: JanIA exige amablemente la calificación de 5 estrellas (⭐⭐⭐⭐⭐) en Google, la recomendación documentada con capturas de pantalla de la asesoría en los grupos inmobiliarios de WhatsApp y el voz a voz.
+- **Robustecimiento Notarial Integral en Generador de PDFs (`server/_core/jania/legalDocumentPdfService.ts`):**
+  - **Problema:** Las minutas generadas previamente contenían un clausulado básico de solo 4 líneas, lo que reducía el impacto persuasivo y técnico ante clientes corporativos y corredores de alto nivel.
+  - **Solución:**
+    1. Implementación de un clausulado contractual multinivel completo (13-14 cláusulas) para `promesa_compraventa` (objeto, linderos técnicos y SNR, tradición de 20 años, precio y cruce de especies/dación, saneamiento por evicción, afectación a vivienda familiar Ley 258/1996, otorgamiento de escritura con fecha/hora/notaría, entrega material e inventario, paz y salvos tributarios/IDU/PH, arras y cláusula penal pecuniaria Arts. 1592 y 1859-1861 C.C., gastos notariales 50/50 y retención, mérito ejecutivo y firma electrónica Ley 527/1999).
+    2. Enriquecimiento análogo para `contrato_arrendamiento_vivienda` (Ley 820/2003), `contrato_arrendamiento_comercial` (Código de Comercio Arts. 518-524) y `contrato_corretaje` (Arts. 1340-1346 C.Co.).
+    3. Foliado notarial oficial automático: *"Pagina X de Y - Radicado Oficial: DOC-VECY-..."* en todas las páginas.
+    4. Advertencia institucional VECY al pie canalizando la elaboración del instrumento definitivo hacia Eduardo Rivera y Jani Alves.
+- **Validación ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 478/478 passing (Suite 155 creada, 100% verde a $0 COP) | Build `npm run build` limpio en Vite y esbuild.
+
 ### 🔖 v33.68 — Octubre 2026
 
 #### [v33.68.0] — 2026-10-28: Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero 'Recibiste un estado, pero no es compatible'), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (Doctrina Eduardo A. Rivera)
