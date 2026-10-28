@@ -12,6 +12,12 @@ import { JanIAResult } from "../types";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
+import {
+  maybeGenerateLegalDocPdfForDm,
+  isExplicitCreativeImageRequest,
+  generateCustomUserCreativeImage,
+  queueCreativeImageForDm,
+} from "./dmOnboardingAndDocsHelper";
 
 export async function processConsultingMessage(
   text: string,
@@ -333,6 +339,17 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       if (isOngoingChat && finalResp) {
         finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
       }
+      // Si el usuario solicitó explícitamente una minuta/carta PDF o una pieza del Estudio Creativo de Imágenes
+      const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
+      if (isExplicitCreativeImageRequest(messageToProcess)) {
+        const imgAsset = await generateCustomUserCreativeImage({
+          userPrompt: messageToProcess,
+          userName: targetName || realName,
+        }).catch(() => null);
+        if (imgAsset) {
+          queueCreativeImageForDm(userId, imgAsset);
+        }
+      }
       // Guardar turno en memoria conversacional de Grupo 2
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
@@ -343,7 +360,9 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
         response: finalResp,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "🚫" : "👌"),
         wantsVoice: parsed.wantsVoice || false,
-        voiceResponse: parsed.voiceResponse || ""
+        voiceResponse: parsed.voiceResponse || "",
+        document: legalPdfDoc?.pdfBuffer,
+        fileName: legalPdfDoc?.fileName,
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";

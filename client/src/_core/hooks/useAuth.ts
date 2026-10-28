@@ -9,6 +9,16 @@ type UseAuthOptions = {
   redirectPath?: string;
 };
 
+const ADMIN_EMAILS = [
+  'vecybienesraices@gmail.com',
+  'edduinnova@gmail.com',
+  'edduainnova@gmail.com',
+  'jani79alves@gmail.com',
+  'eduardoariveram@gmail.com',
+  'eddu.mendoza@gmail.com',
+  'mejorpontealdia@gmail.com'
+];
+
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
     options ?? {};
@@ -71,11 +81,13 @@ export function useAuth(options?: UseAuthOptions) {
   const activeUser = useMemo(() => {
     if (meQuery.data) return meQuery.data;
     if (sbUser) {
+      const emailLower = (sbUser.email || '').toLowerCase();
+      const isTeamAdmin = ADMIN_EMAILS.includes(emailLower);
       return {
         id: 1,
-        name: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || sbUser.email?.split('@')[0] || 'Administrador',
+        name: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || sbUser.email?.split('@')[0] || 'Usuario',
         email: sbUser.email,
-        role: 'admin',
+        role: isTeamAdmin ? 'admin' : 'user',
         openId: sbUser.id,
         loginMethod: 'supabase',
         createdAt: new Date(),

@@ -13,10 +13,14 @@ export default function Login() {
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.loginWithSupabaseToken.useMutation();
 
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const redirectQuery = searchParams.get('redirect') || '';
+  const initialModeRegister = searchParams.get('mode') === 'register';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isRegister, setIsRegister] = useState(false);
+  const [isRegister, setIsRegister] = useState(initialModeRegister);
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const isExchangingRef = React.useRef(false);
@@ -24,11 +28,28 @@ export default function Login() {
   const ADMIN_EMAILS = [
     'vecybienesraices@gmail.com',
     'edduinnova@gmail.com',
+    'edduainnova@gmail.com',
     'jani79alves@gmail.com',
     'eduardoariveram@gmail.com',
     'eddu.mendoza@gmail.com',
     'mejorpontealdia@gmail.com'
   ];
+
+  const resolveDestination = (userEmail: string, userRole?: string): string => {
+    let savedReturn = '';
+    try {
+      savedReturn = localStorage.getItem('vecy_login_return_url') || '';
+    } catch (_) {}
+    const targetRedirect = redirectQuery || savedReturn;
+    if (targetRedirect && targetRedirect.startsWith('/') && !targetRedirect.startsWith('/login')) {
+      try {
+        localStorage.removeItem('vecy_login_return_url');
+      } catch (_) {}
+      return targetRedirect;
+    }
+    const isAdmin = ADMIN_EMAILS.includes((userEmail || '').toLowerCase()) || userRole === 'admin' || userRole === 'agent';
+    return isAdmin ? '/admin' : '/jania';
+  };
 
   // Exchange Supabase token with backend session
   const exchangeToken = async (accessToken: string, isSilent = false) => {
@@ -51,7 +72,7 @@ export default function Login() {
         utils.auth.me.setData(undefined, res.user);
       }
 
-      // Validar si el usuario tiene rol admin/agent
+      // Validar si el usuario tiene rol admin/agent o si viene desde /jania
       const { data: { user: sbUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       const userEmail = (res?.user?.email || sbUser?.email || '').toLowerCase();
       const isAdmin = ADMIN_EMAILS.includes(userEmail) || res?.user?.role === 'admin' || res?.user?.role === 'agent';
@@ -60,13 +81,13 @@ export default function Login() {
       
       if (isAdmin || res?.user || sbUser) {
         toast.success('Sesión iniciada correctamente');
-        navigate('/admin');
+        navigate(resolveDestination(userEmail, res?.user?.role));
       }
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
       const { data: { user: sbUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       if (sbUser) {
-        navigate('/admin');
+        navigate(resolveDestination(sbUser.email || '', undefined));
       } else if (!isSilent) {
         toast.error('Error al iniciar sesión. Intenta nuevamente.');
       }
@@ -108,18 +129,26 @@ export default function Login() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && (ADMIN_EMAILS.includes((user.email || '').toLowerCase()) || ['admin', 'agent'].includes(user.role as string))) {
-      navigate('/admin');
+    if (user) {
+      navigate(resolveDestination(user.email || '', user.role as string));
     }
   }, [user]);
 
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     try {
       setLoading(true);
+      if (redirectQuery) {
+        try {
+          localStorage.setItem('vecy_login_return_url', redirectQuery);
+        } catch (_) {}
+      }
+      const redirectUrl = redirectQuery
+        ? `${window.location.origin}/login?redirect=${encodeURIComponent(redirectQuery)}`
+        : `${window.location.origin}/login`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/login`,
+          redirectTo: redirectUrl,
         },
       });
       if (error) throw error;
@@ -139,11 +168,14 @@ export default function Login() {
     setLoading(true);
     try {
       if (isRegister) {
+        const redirectUrl = redirectQuery
+          ? `${window.location.origin}/login?redirect=${encodeURIComponent(redirectQuery)}`
+          : `${window.location.origin}/login`;
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/login`,
+            emailRedirectTo: redirectUrl,
             data: { full_name: fullName },
           },
         });
@@ -170,19 +202,21 @@ export default function Login() {
     }
   };
 
+  const isFromJania = redirectQuery.includes('/jania');
+
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-yellow-900/10 via-black to-black pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
-        {/* Back to Home link */}
+        {/* Back to Home or JanIA link */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate(isFromJania ? '/jania' : '/')}
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-accent transition-colors mb-8 group"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          VOLVER AL INICIO
+          {isFromJania ? 'VOLVER A JANIA WEB' : 'VOLVER AL INICIO'}
         </button>
 
         <div className="panel-card p-8 border border-white/10 shadow-2xl backdrop-blur-md">
@@ -199,7 +233,9 @@ export default function Login() {
               VECY BIENES RAÍCES
             </h1>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
-              {isRegister ? 'Registro de Colegas' : 'Iniciar Sesión'}
+              {isFromJania
+                ? (isRegister ? 'Crear Cuenta Gratuita en JanIA Web' : 'Iniciar Sesión en JanIA Web')
+                : (isRegister ? 'Registro de Colegas y Clientes' : 'Iniciar Sesión')}
             </p>
           </div>
 

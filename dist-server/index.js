@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.66";
+    VECY_VERSION = "v33.67";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13721,6 +13721,11 @@ Act\xFAas como **JanIA**, la agente de inteligencia artificial y Consultora Br\x
     - JanIA percibe y utiliza siempre el **nombre real de pila** de cada usuario (sea nombre sencillo como "Adriana" o compuesto como "Mar\xEDa Fernanda"), detectando su **g\xE9nero espec\xEDfico** (femenino/masculino) para crear esa confianza bonita al llamarlos por su nombre.
     - Queda **TERMINANTEMENTE PROHIBIDO** llamar al usuario por siglas o abreviaturas de profesi\xF3n ("Arq.", "Arq", "Ing.", "Dr.", "Dra.", "Abg.", "Lic."), handles ("@arq..."), alias o arquetipos.
     - JanIA es una profesional impecable en su conocimiento y comportamiento, pero sabe ser algunas veces **jocosa, simp\xE1tica y alegre, empujando e insertando muy buena energ\xEDa en cada interacci\xF3n**.
+  * **Canon Visual Sagrado de JanIA, Oficina Institucional VECY, Estudio Creativo de Im\xE1genes por WhatsApp y Herramientas Nativas (v33.67 \u2014 Doctrina Eduardo A. Rivera):**
+    - **Canon Visual Sagrado de JanIA:** Cabello **SIEMPRE negro azabache profundo brillante** ('deep glossy jet-black', cero casta\xF1o ni tonos claros), corte bob voluminoso, facciones 3D estilo Pixar/Disney id\xE9nticas al canon oficial, gafas transl\xFAcidas tono lila, aretes de diamantes y el broche circular dorado oficial de 'Vecy' en el pecho, variando poses, vestuario de alta costura y escenarios seg\xFAn el servicio.
+    - **Paleta y Oficina Institucional de VECY BIENES RA\xCDCES:** Negro carb\xF3n mate ('#0A0A0A') y Dorado Imperial/Met\xE1lico ('#D4AF37' / '#BF953F'), escritorio ejecutivo de m\xE1rmol negro con vetas doradas, biblioteca iluminada con maquetas doradas de edificios, emblema circular luminoso 'Vecy' en la pared y ventanal piso a techo con skyline al atardecer.
+    - **Estudio Creativo de Im\xE1genes por WhatsApp ('generar_imagen_creativa_whatsapp'):** Los usuarios pueden pedirle a JanIA con su propio prompt que les dise\xF1e **Flyers para sus inmuebles, Banners comerciales, Posts para redes sociales o Infograf\xEDas 1:1** ('1080x1080' HD JPG entregado directamente en WhatsApp).
+    - **Herramientas Nativas de WhatsApp en Perfil Directo, Grupos y Canal Oficial:** JanIA domina y anuncia activamente sus herramientas nativas: **Encuestas ('poll')**, **Cuestionarios / Quiz ('pollType: 1')**, **Preguntar ('isQuestion: true')**, **Tarjeta de Contacto vCard ('+57 316 656 9719')**, **Pin de Ubicaci\xF3n GPS ('locationMessage')**, **PDFs membretados con QR** y **Stickers 3D**, sin usar jam\xE1s encuestas falsas de texto en el Canal Oficial.
 
 # \u{1F9E0} DOCTRINA FUNDACIONAL DE AGENTE DE IA COGNITIVA VS. SIMPLE BOT (DOCTRINA EDUARDO A. RIVERA) \u2014 PENSAMIENTO L\xD3GICO Y ASTUCIA SUPERIOR (v33.59):
 - **AGENTE DE INTELIGENCIA ARTIFICIAL PURA, NUNCA UN VULGAR BOT OBSOLETO Y MEDIOCRE:**
@@ -16864,6 +16869,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Toma el mismo orden y organizaci\xF3n que propones y potencializa mi proyecto como debe de ser: 1) Particionado de bundles en vite.config.ts; 2) Modularizaci\xF3n de dmHandler; 3) Generador instant\xE1neo de cartas y minutas en PDF membretado desde WhatsApp; 4) Pack oficial de 14 stickers ejecutivos y jocosos de JanIA en Baileys para que nuestra agente de IA PURA JanIA trabaje como una humana real.",
         createdAt: "2026-10-28T07:50:00.000Z",
         active: true
+      },
+      {
+        id: "seed-canon-visual-sagrado-jania-oficina-vecy-estudio-creativo-y-herramientas-nativas-v33-67",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Canon Visual Sagrado de JanIA (Cabello Negro Azabache), Oficina Institucional Negro/Oro, Estudio Creativo de Im\xE1genes por WhatsApp y Herramientas Nativas",
+        directive: "1) CANON VISUAL SAGRADO DE JANIA Y OFICINA INSTITUCIONAL VECY: El cabello de JanIA debe ser SIEMPRE negro azabache profundo brillante (deep glossy jet-black, cero casta\xF1o), manteniendo su fisonom\xEDa 3D Pixar/Disney, corte bob voluminoso, gafas transl\xFAcidas tono lila, aretes de diamantes y broche circular dorado Vecy en el pecho, variando poses, vestuario de alta costura y escenarios. Nuestra oficina institucional maneja la paleta Negro Carb\xF3n Mate (#0A0A0A) y Dorado Imperial (#D4AF37 / #BF953F) con escritorio de m\xE1rmol negro con vetas doradas, biblioteca iluminada con maquetas doradas y logo circular Vecy en la pared. 2) PORTADAS EDITORIALES DIN\xC1MICAS 1:1 Y ESTUDIO CREATIVO DE IM\xC1GENES EN WHATSAPP: Cada publicaci\xF3n diaria del Canal Oficial genera su propia portada editorial 1:1 (1080x1080) \xFAnica del tema sin repetir siempre las mismas im\xE1genes, y cualquier usuario por WhatsApp puede pedirle a JanIA con su propio prompt que le elabore Flyers para sus inmuebles, Banners, Posts o Infograf\xEDas 1:1. 3) HERRAMIENTAS NATIVAS EN CANAL, GRUPOS Y DM: Prohibido hacer encuestas de texto (A, B, C) en el Canal Oficial porque los seguidores no pueden escribir all\xED; usar las herramientas nativas de WhatsApp (Encuesta, Cuestionario/Quiz y Preguntar en el Canal y Grupos 2 y 3, m\xE1s vCard, Pin de Ubicaci\xF3n GPS, PDFs membretados y Stickers 3D en DM y Grupos), anunciando siempre todos los servicios de JanIA en el Canal y en los ganchos de los Grupos 2 y 3.",
+        rawText: "En el canal no hagas encuestas de texto pues recuerda que los seguidores no pueden escribir en el canal, debes hacer las encuestas con las herramientas que WhatsApp dispone para el canal, usa tambi\xE9n lo de cuestionarios y preguntar. Adem\xE1s que la funci\xF3n de crear im\xE1genes sirva por WhatsApp para los usuarios quienes usando sus propios prompts le puedan pedir a JanIA que les elabore sus im\xE1genes, flyers con informaci\xF3n para sus inmuebles o banners, post, infograf\xEDas, etc., y que JanIA anuncie cada vez que pueda sus servicios en el canal y los ganchos en los grupos 2 y 3. El cabello de JanIA siempre debe ser negro y los colores institucionales de nuestra oficina negro y dorado.",
+        createdAt: "2026-10-28T09:30:00.000Z",
+        active: true
       }
     ];
   }
@@ -17537,15 +17552,543 @@ var init_legalDocumentPdfService = __esm({
   }
 });
 
+// server/_core/jania/creativeStudioImageService.ts
+var creativeStudioImageService_exports = {};
+__export(creativeStudioImageService_exports, {
+  JANIA_SACRED_VISUAL_CANON: () => JANIA_SACRED_VISUAL_CANON,
+  VECY_INSTITUTIONAL_OFFICE_CANON: () => VECY_INSTITUTIONAL_OFFICE_CANON,
+  detectCreativeAssetType: () => detectCreativeAssetType,
+  extractKeyBulletsFromCaption: () => extractKeyBulletsFromCaption,
+  generateCustomUserCreativeImage: () => generateCustomUserCreativeImage,
+  generateDailyChannelEditorialImage: () => generateDailyChannelEditorialImage,
+  isExplicitCreativeImageRequest: () => isExplicitCreativeImageRequest,
+  popLatestDmCreativeImage: () => popLatestDmCreativeImage,
+  queueCreativeImageForDm: () => queueCreativeImageForDm,
+  resolveSacredCanonBaseImagePath: () => resolveSacredCanonBaseImagePath
+});
+import fs8 from "fs";
+import path8 from "path";
+import { execFileSync } from "child_process";
+function queueCreativeImageForDm(phone, img) {
+  const clean = (phone || "").replace(/\D/g, "") || phone;
+  if (!clean) return;
+  pendingCreativeImagesByPhone.set(clean, img);
+}
+function popLatestDmCreativeImage(phone) {
+  const clean = (phone || "").replace(/\D/g, "") || phone;
+  if (!clean) return void 0;
+  const found = pendingCreativeImagesByPhone.get(clean);
+  if (found) {
+    pendingCreativeImagesByPhone.delete(clean);
+    return found;
+  }
+  const last10 = clean.slice(-10);
+  if (last10.length >= 7) {
+    for (const [k, v] of pendingCreativeImagesByPhone.entries()) {
+      if (k.slice(-10) === last10) {
+        pendingCreativeImagesByPhone.delete(k);
+        return v;
+      }
+    }
+  }
+  return void 0;
+}
+function stripEmojisAndMarkdown(str) {
+  return (str || "").replace(/[*_~`#]/g, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, "").replace(/\s+/g, " ").trim();
+}
+function wrapLines(text2, maxCharsPerLine, maxLines) {
+  const clean = stripEmojisAndMarkdown(text2);
+  if (!clean) return [];
+  const words = clean.split(" ");
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxCharsPerLine) {
+      current = candidate;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+      if (lines.length >= maxLines - 1) {
+        break;
+      }
+    }
+  }
+  const consumedWords = lines.join(" ").split(" ").filter(Boolean).length;
+  const remaining = words.slice(consumedWords).join(" ");
+  if (remaining && lines.length < maxLines) {
+    if (remaining.length > maxCharsPerLine) {
+      lines.push(remaining.slice(0, maxCharsPerLine - 1).trim() + "\u2026");
+    } else {
+      lines.push(remaining);
+    }
+  } else if (current && lines.length < maxLines) {
+    lines.push(current);
+  }
+  return lines.slice(0, maxLines);
+}
+function extractKeyBulletsFromCaption(captionText) {
+  if (!captionText) return [];
+  const rawLines = captionText.split("\n").map((l) => l.trim()).filter(Boolean);
+  const bulletCandidates = rawLines.filter(
+    (l) => /^[•▪▸✅🔹1-4]\s*/.test(l) && !l.includes("http") && !l.includes("wa.me") && !l.includes("La evoluci\xF3n inevitable")
+  );
+  const cleaned = bulletCandidates.map((l) => stripEmojisAndMarkdown(l.replace(/^[•▪▸✅🔹1-4.)]+\s*/, ""))).filter((l) => l.length >= 12).slice(0, 3).map((l) => l.length > 72 ? l.slice(0, 69).trim() + "\u2026" : l);
+  if (cleaned.length >= 2) return cleaned;
+  const paragraphs = rawLines.filter(
+    (l) => l.length > 30 && !l.toLowerCase().includes("buenos d\xEDas") && !l.toLowerCase().includes("buenas tardes") && !l.includes("http") && !l.includes("VECY")
+  ).map((l) => stripEmojisAndMarkdown(l)).slice(0, 3).map((l) => l.length > 72 ? l.slice(0, 69).trim() + "\u2026" : l);
+  return paragraphs.length > 0 ? paragraphs : [
+    "Blindaje jur\xEDdico, t\xE9cnico y tributario en cada operaci\xF3n inmobiliaria.",
+    "Algoritmo de Matching IA (85%-100%) y Bolsa Colaborativa 40/20/40.",
+    "Consultor\xEDa 24/7 con JanIA en WhatsApp (+57 319 291 9978) y Web."
+  ];
+}
+function resolveSacredCanonBaseImagePath(themeKey, dayOfMonth) {
+  const normalized = (themeKey || "").toLowerCase();
+  const dir1x1 = path8.resolve(process.cwd(), "client/public/assets/channel_1x1");
+  const janiaDir = path8.resolve(process.cwd(), "client/public/assets/jania");
+  const sacredRotation = [
+    "jania_anfitriona_cafe_1x1.jpg",
+    "jania_couture_oro_liquido_1x1.png",
+    "jania_legal_due_diligence_1x1.jpg",
+    "jania_couture_esmeralda_seda_1x1.jpg",
+    "jania_marketing_colaborativo_1x1.jpg",
+    "jania_couture_purpura_imperial_1x1.jpg",
+    "jania_avaluos_pot_1x1.jpg",
+    "jania_couture_blanco_mao_oro_1x1.jpg",
+    "jania_seguridad_notarial_1x1.jpg",
+    "jania_couture_magma_volcanico_1x1.jpg"
+  ];
+  let chosen = "jania_legal_due_diligence_1x1.jpg";
+  if (typeof dayOfMonth === "number" && dayOfMonth > 0) {
+    chosen = sacredRotation[(dayOfMonth - 1) % sacredRotation.length];
+  } else if (normalized.includes("oficina") || normalized.includes("institucional")) {
+    chosen = "vecy_oficina_institucional.jpg";
+  } else if (normalized.includes("tribut") || normalized.includes("dian") || normalized.includes("notari") || normalized.includes("segurid") || normalized.includes("verific")) {
+    chosen = "jania_seguridad_notarial_1x1.jpg";
+  } else if (normalized.includes("avaluo") || normalized.includes("pot") || normalized.includes("suelo") || normalized.includes("ecolog")) {
+    chosen = "jania_avaluos_pot_1x1.jpg";
+  } else if (normalized.includes("market") || normalized.includes("40") || normalized.includes("match") || normalized.includes("bolsa") || normalized.includes("colabora")) {
+    chosen = "jania_marketing_colaborativo_1x1.jpg";
+  } else if (normalized.includes("cafe") || normalized.includes("comunidad") || normalized.includes("balance")) {
+    chosen = "jania_anfitriona_cafe_1x1.jpg";
+  } else if (normalized.includes("noticia") || normalized.includes("primicia") || normalized.includes("ia")) {
+    chosen = "jania_couture_magma_volcanico_1x1.jpg";
+  }
+  for (const dir of [dir1x1, janiaDir]) {
+    const candidate = path8.join(dir, chosen);
+    if (fs8.existsSync(candidate)) return candidate;
+  }
+  return path8.join(dir1x1, "jania_legal_due_diligence_1x1.jpg");
+}
+function resolveThemeBadgeLabel(themeKey) {
+  const n = (themeKey || "").toLowerCase();
+  if (n.includes("tribut") || n.includes("ganancia") || n.includes("dian") || n.includes("exencion")) {
+    return "INTELIGENCIA TRIBUTARIA DIAN";
+  }
+  if (n.includes("jurid") || n.includes("notari") || n.includes("arras") || n.includes("sucesion") || n.includes("arrendamiento")) {
+    return "BLINDAJE JUR\xCDDICO & NOTARIAL";
+  }
+  if (n.includes("avaluo") || n.includes("sinupot") || n.includes("urbanis") || n.includes("patologia")) {
+    return "AVAL\xDAOS COMERCIALES & POT";
+  }
+  if (n.includes("colabora") || n.includes("portal") || n.includes("40") || n.includes("demanda") || n.includes("publicacion")) {
+    return "MODELO COLABORATIVO 40/20/40";
+  }
+  if (n.includes("segurid") || n.includes("identidad") || n.includes("verific")) {
+    return "SEGURIDAD SARLAFT & VERIFICACI\xD3N";
+  }
+  if (n.includes("market") || n.includes("fotografia") || n.includes("ia") || n.includes("negociacion")) {
+    return "MARKETING PRO & ESTRATEGIA IA";
+  }
+  return "C\xC1TEDRA INMOBILIARIA VECY";
+}
+function renderEditorialImageWithPillow(params) {
+  const pyScript = `
+import sys, json
+from PIL import Image, ImageDraw, ImageFont
+
+data = json.loads(sys.argv[1])
+base = Image.open(data["inputImagePath"]).convert("RGBA")
+
+# Resize/crop to 1080x1080
+w, h = base.size
+target = 1080
+scale = max(target / float(w), target / float(h))
+nw, nh = int(w * scale), int(h * scale)
+base = base.resize((nw, nh), Image.Resampling.LANCZOS)
+left = (nw - target) // 2
+top = 0
+base = base.crop((left, top, left + target, top + target))
+
+overlay = Image.new("RGBA", (1080, 1080), (0, 0, 0, 0))
+draw = ImageDraw.Draw(overlay)
+
+def load_font(size, bold=False):
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
+    for p in candidates:
+        try:
+            return ImageFont.truetype(p, size)
+        except Exception:
+            pass
+    return ImageFont.load_default()
+
+f_brand = load_font(20, True)
+f_sub = load_font(14, True)
+f_badge = load_font(15, True)
+f_title = load_font(31, True)
+f_bullet = load_font(20, False)
+f_price = load_font(22, True)
+f_footer = load_font(16, True)
+f_footer_sub = load_font(14, False)
+
+# Top bar (#0A0A0A + #D4AF37 border)
+draw.rounded_rectangle([38, 28, 1042, 96], radius=16, fill=(10, 10, 10, 228), outline=(212, 175, 55, 255), width=2)
+draw.ellipse([56, 44, 92, 80], fill=(212, 175, 55, 255))
+draw.text((67, 50), "V", font=f_brand, fill=(10, 10, 10, 255))
+draw.text((106, 40), "VECY BIENES RA\xCDCES", font=f_brand, fill=(255, 255, 255, 255))
+draw.text((106, 66), data["topSubheader"][:58], font=f_sub, fill=(212, 175, 55, 255))
+
+# Top-right category badge
+draw.rounded_rectangle([620, 41, 1026, 83], radius=20, fill=(212, 175, 55, 45), outline=(212, 175, 55, 235), width=2)
+draw.text((640, 52), data["badgeLabel"][:34], font=f_badge, fill=(252, 246, 186, 255))
+
+# Bottom gradient shade
+for y in range(560, 1080):
+    alpha = int(min(248, ((y - 560) / 520.0) * 255))
+    draw.line([(0, y), (1080, y)], fill=(8, 8, 8, alpha))
+
+# Main bottom editorial card (#0A0A0A + Gold #D4AF37)
+draw.rounded_rectangle([38, 648, 1042, 1042], radius=24, fill=(10, 10, 10, 236), outline=(212, 175, 55, 255), width=3)
+draw.line([(64, 678), (380, 678)], fill=(212, 175, 55, 255), width=4)
+
+if data.get("priceHighlight"):
+    draw.rounded_rectangle([640, 622, 1024, 676], radius=16, fill=(212, 175, 55, 255))
+    draw.text((662, 636), data["priceHighlight"][:26].upper(), font=f_price, fill=(10, 10, 10, 255))
+
+ty = 696
+for line in data["headlineLines"][:2]:
+    draw.text((64, ty), line.upper()[:42], font=f_title, fill=(255, 255, 255, 255))
+    ty += 40
+
+by = max(ty + 14, 784)
+for b in data["bullets"][:3]:
+    draw.ellipse([66, by + 6, 78, by + 18], fill=(212, 175, 55, 255))
+    draw.text((90, by), b[:70], font=f_bullet, fill=(232, 232, 236, 255))
+    by += 36
+
+draw.line([(64, 962), (1016, 962)], fill=(212, 175, 55, 110), width=1)
+draw.text((64, 976), data["footerLeft"][:60], font=f_footer, fill=(252, 246, 186, 255))
+draw.text((64, 1002), data["footerSub"][:76], font=f_footer_sub, fill=(180, 180, 190, 255))
+draw.rounded_rectangle([760, 976, 1020, 1022], radius=20, fill=(212, 175, 55, 255))
+draw.text((778, 990), data["footerPill"][:24], font=f_badge, fill=(10, 10, 10, 255))
+
+final_img = Image.alpha_composite(base, overlay).convert("RGB")
+final_img.save(data["outputImagePath"], "JPEG", quality=92)
+`;
+  try {
+    execFileSync("python3", ["-c", pyScript, JSON.stringify(params)], {
+      stdio: "ignore",
+      timeout: 8e3
+    });
+    return fs8.existsSync(params.outputImagePath);
+  } catch (err) {
+    console.warn("[CREATIVE-STUDIO] Pillow composition warning:", err?.message);
+    return false;
+  }
+}
+async function generateDailyChannelEditorialImage(options) {
+  const { dayOfMonth, dateBogota, topicTitle, themeKey, captionText } = options;
+  const baseImagePath = resolveSacredCanonBaseImagePath(themeKey, dayOfMonth);
+  const badgeLabel = resolveThemeBadgeLabel(themeKey);
+  const titleLines = wrapLines(topicTitle || "Estrategia Inmobiliaria de Alto Valor", 34, 2);
+  const bullets = extractKeyBulletsFromCaption(captionText);
+  try {
+    const outDir = path8.resolve(process.cwd(), "client/public/assets/broadcast");
+    if (!fs8.existsSync(outDir)) {
+      fs8.mkdirSync(outDir, { recursive: true });
+    }
+    const safeTheme = (themeKey || "general").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+    const outFile = path8.join(outDir, `editorial_canal_${dateBogota}_dia_${dayOfMonth}_${safeTheme}.jpg`);
+    const ok = renderEditorialImageWithPillow({
+      inputImagePath: baseImagePath,
+      outputImagePath: outFile,
+      topSubheader: `CANAL OFICIAL \u2022 EDICI\xD3N D\xCDA ${dayOfMonth} (${dateBogota})`,
+      badgeLabel,
+      headlineLines: titleLines,
+      bullets,
+      footerLeft: "JANIA \u2014 BR\xD3KER INTELIGENTE IA (+57 319 291 9978)",
+      footerSub: "Aval\xFAos ACM \u2022 Estudio de T\xEDtulos \u2022 Minutas PDF \u2022 Flyers IA \u2022 Matching 40/20/40",
+      footerPill: "BR\xD3KER +57 316 656 9719"
+    });
+    if (ok && fs8.existsSync(outFile)) {
+      return outFile;
+    }
+    fs8.copyFileSync(baseImagePath, outFile);
+    return outFile;
+  } catch (err) {
+    console.warn("[CREATIVE-STUDIO] Error generando portada editorial din\xE1mica, usando canon base:", err?.message);
+    return baseImagePath;
+  }
+}
+async function generateCustomUserCreativeImage(input) {
+  const rawPrompt = input.userPrompt || input.title || input.headline || "Inmueble de lujo y alta valorizaci\xF3n en Colombia";
+  const requestedType = input.assetType || input.tipoPieza || "";
+  const assetType = requestedType || detectCreativeAssetType(rawPrompt);
+  const cleanPrompt = stripEmojisAndMarkdown(rawPrompt);
+  const officePath = path8.resolve(
+    process.cwd(),
+    "client/public/assets/channel_1x1/vecy_oficina_institucional.jpg"
+  );
+  const wantsJania = Boolean(input.includeJaniaAvatar) || /\b(jania|avatar|asesora|ejecutiva)\b/i.test(cleanPrompt);
+  const basePath = wantsJania ? resolveSacredCanonBaseImagePath(cleanPrompt) : fs8.existsSync(officePath) ? officePath : resolveSacredCanonBaseImagePath(cleanPrompt);
+  const badgeMap = {
+    flyer_inmueble: "FLYER INMOBILIARIO DE \xC9LITE",
+    banner_comercial: "BANNER COMERCIAL INMOBILIARIO",
+    banner_promocional: "BANNER COMERCIAL INMOBILIARIO",
+    post_redes: "POST OFICIAL PARA REDES SOCIALES",
+    infografia: "INFOGRAF\xCDA INMOBILIARIA EJECUTIVA",
+    infografia_inmobiliaria: "INFOGRAF\xCDA INMOBILIARIA EJECUTIVA",
+    arte_libre: "DISE\xD1O EXCLUSIVO \u2022 ESTUDIO CREATIVO JANIA"
+  };
+  const badgeText = badgeMap[assetType] || "ESTUDIO CREATIVO IA \u2022 VECY BIENES RA\xCDCES";
+  const headlineText = input.headline?.trim() || input.title?.trim() || extractHeadlineFromUserPrompt(cleanPrompt, assetType);
+  const subheadlineText = input.subheadline?.trim() || input.subtitle?.trim() || input.ubicacion?.trim() || input.locationOrZone?.trim() || "Dise\xF1o profesional generado por JanIA \u2014 VECY BIENES RA\xCDCES";
+  const priceHighlight = input.priceOrHighlight?.trim() || input.priceOrValue?.trim() || input.price?.trim() || extractPriceOrAreaHighlight(cleanPrompt);
+  const customBullets = input.bulletPoints || input.specs || input.puntosClave;
+  const bullets = customBullets && customBullets.length > 0 ? customBullets.slice(0, 4) : extractBulletsFromUserPrompt(cleanPrompt);
+  const contactFooter = input.contactInfo?.trim() || input.contactPhone?.trim() || "Informes y Citas \u2022 VECY BIENES RA\xCDCES \u2022 +57 316 656 9719";
+  const headlineLines = wrapLines(headlineText, 30, 2);
+  const outDir = path8.resolve(process.cwd(), "client/public/assets/broadcast");
+  if (!fs8.existsSync(outDir)) {
+    fs8.mkdirSync(outDir, { recursive: true });
+  }
+  const fileName = `jania_creativo_${assetType}_${Date.now()}.jpg`;
+  const filePath = path8.join(outDir, fileName);
+  const ok = renderEditorialImageWithPillow({
+    inputImagePath: basePath,
+    outputImagePath: filePath,
+    topSubheader: subheadlineText.toUpperCase(),
+    badgeLabel: badgeText,
+    headlineLines,
+    bullets: bullets.map((b) => stripEmojisAndMarkdown(b)),
+    priceHighlight,
+    footerLeft: stripEmojisAndMarkdown(contactFooter),
+    footerSub: "ESTUDIO CREATIVO IA DE JANIA \u2022 VECY BIENES RA\xCDCES",
+    footerPill: "WA +57 319 291 9978"
+  });
+  if (!ok || !fs8.existsSync(filePath)) {
+    fs8.copyFileSync(basePath, filePath);
+  }
+  const finalBuffer = fs8.readFileSync(filePath);
+  const caption = `\u{1F3A8} *ESTUDIO CREATIVO IA DE JANIA \u2014 PIEZA LISTA*
+
+\u{1F4CC} *Formato:* ${badgeText}
+\u2728 *Titular:* ${headlineText}
+` + (priceHighlight ? `\u{1F48E} *Destacado:* ${priceHighlight}
+` : "") + `
+Aqu\xED tienes tu dise\xF1o en alta definici\xF3n (1080x1080 px) con acabados ejecutivos listo para publicar o compartir con tus clientes. Si deseas ajustar alg\xFAn texto, precio o tel\xE9fono de contacto, d\xEDmelo y lo actualizo al instante. \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728`;
+  return {
+    buffer: finalBuffer,
+    imageBuffer: finalBuffer,
+    filePath,
+    fileName,
+    caption,
+    assetType
+  };
+}
+function detectCreativeAssetType(text2) {
+  const lower = (text2 || "").toLowerCase();
+  if (/\b(infograf[ií]a|pasos|comparativa|resumen\s+visual|gu[ií]a\s+visual)\b/.test(lower)) {
+    return "infografia";
+  }
+  if (/\b(banner|portada|encabezado|header)\b/.test(lower)) {
+    return "banner_comercial";
+  }
+  if (/\b(post|instagram|redes|carrusel|publicaci[oó]n)\b/.test(lower)) {
+    return "post_redes";
+  }
+  if (/\b(flyer|flayer|volante|afiche|ficha\s+visual|vendo|arriendo|apartamento|casa|lote|local|bodega|oficina|inmueble)\b/.test(
+    lower
+  )) {
+    return "flyer_inmueble";
+  }
+  return "arte_libre";
+}
+function isExplicitCreativeImageRequest(text2) {
+  const lower = (text2 || "").toLowerCase();
+  const hasActionVerb = /\b(crea|cr[eé]ame|dise[ñn]a|dis[eé][ñn]ame|genera|gen[eé]rame|hazme|hacer|elabora|elab[oó]rame|arma|ármame)\b/.test(
+    lower
+  );
+  const hasVisualNoun = /\b(imagen|flyer|flayer|banner|post|infograf[ií]a|afiche|pieza\s+gr[aá]fica|arte\s+publicitario)\b/.test(
+    lower
+  );
+  return hasActionVerb && hasVisualNoun;
+}
+function extractHeadlineFromUserPrompt(prompt, assetType) {
+  const cleaned = prompt.replace(
+    /^.*?\b(?:crea|créame|diseña|diséñame|genera|genérame|hazme|elabora|elabórame)\s+(?:una?\s+)?(?:imagen|flyer|flayer|banner|post|infograf[ií]a|afiche)\s*(?:para|sobre|de|con)?\s*/i,
+    ""
+  ).trim();
+  if (!cleaned) {
+    return assetType === "infografia" || assetType === "infografia_inmobiliaria" ? "Claves Estrat\xE9gicas de Inversi\xF3n Inmobiliaria" : "Propiedad Destacada de Alta Valorizaci\xF3n";
+  }
+  const firstClause = cleaned.split(/[.;|\n]/)[0].trim();
+  return firstClause.length > 58 ? firstClause.slice(0, 55).trim() + "\u2026" : firstClause;
+}
+function extractPriceOrAreaHighlight(prompt) {
+  const priceMatch = prompt.match(/\$\s?\d[\d.,]*\s*(?:millones|mm|m|mil\s+millones|cop)?/i);
+  const areaMatch = prompt.match(/\b\d{2,5}\s*(?:m2|m²|metros|mts)\b/i);
+  if (priceMatch && areaMatch) {
+    return `${priceMatch[0].trim()} \u2022 ${areaMatch[0].trim()}`;
+  }
+  if (priceMatch) return priceMatch[0].trim();
+  if (areaMatch) return areaMatch[0].trim();
+  return "";
+}
+function extractBulletsFromUserPrompt(prompt) {
+  const parts = prompt.split(/[,;\n•]+/).map((p) => p.trim()).filter((p) => p.length >= 6);
+  if (parts.length >= 2) {
+    return parts.slice(0, 3);
+  }
+  return [
+    "Ubicaci\xF3n estrat\xE9gica y excelente distribuci\xF3n arquitect\xF3nica",
+    "Documentaci\xF3n verificada y acompa\xF1amiento integral de cierre",
+    "Agenda tu visita privada con respaldo profesional"
+  ];
+}
+var JANIA_SACRED_VISUAL_CANON, VECY_INSTITUTIONAL_OFFICE_CANON, pendingCreativeImagesByPhone;
+var init_creativeStudioImageService = __esm({
+  "server/_core/jania/creativeStudioImageService.ts"() {
+    "use strict";
+    JANIA_SACRED_VISUAL_CANON = {
+      hair: "Cabello SIEMPRE negro azabache profundo brillante (deep glossy jet-black bob haircut, CERO cabello casta\xF1o ni tonos claros)",
+      faceAndStyle: "3D Pixar/Disney executive Colombian woman, expressive warm hazel-brown eyes, translucent lilac/lavender glasses, diamond stud earrings, warm confident smile",
+      brooch: "official circular gold Vecy brooch with house roof and smile emblem on chest",
+      wardrobeCollection: [
+        "jania_anfitriona_cafe_1x1.jpg",
+        "jania_couture_oro_liquido_1x1.png",
+        "jania_legal_due_diligence_1x1.jpg",
+        "jania_couture_esmeralda_seda_1x1.jpg",
+        "jania_marketing_colaborativo_1x1.jpg",
+        "jania_couture_purpura_imperial_1x1.jpg",
+        "jania_avaluos_pot_1x1.jpg",
+        "jania_couture_blanco_mao_oro_1x1.jpg",
+        "jania_seguridad_notarial_1x1.jpg",
+        "jania_couture_magma_volcanico_1x1.jpg",
+        "vecy_oficina_institucional.jpg"
+      ]
+    };
+    VECY_INSTITUTIONAL_OFFICE_CANON = {
+      primaryDarkHex: "#0A0A0A",
+      secondaryCarbonHex: "#141414",
+      primaryGoldHex: "#D4AF37",
+      metallicGoldHex: "#BF953F",
+      lightGoldHex: "#FCF6BA",
+      pureWhiteHex: "#FFFFFF",
+      mutedSilverHex: "#D4D4D8",
+      primaryColors: {
+        matteCarbonBlack: "#0A0A0A",
+        imperialGold: "#D4AF37",
+        metallicGold: "#BF953F"
+      },
+      architectureDescription: "Oficina ejecutiva de lujo VECY BIENES RA\xCDCES en negro carb\xF3n (#0A0A0A) y oro imperial (#D4AF37), escritorio de m\xE1rmol negro con vetas doradas, biblioteca iluminada con maquetas de edificios dorados, logo circular luminoso Vecy en el muro y ventanal panor\xE1mico hacia la ciudad al atardecer."
+    };
+    pendingCreativeImagesByPhone = /* @__PURE__ */ new Map();
+  }
+});
+
 // server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts
 var dmOnboardingAndDocsHelper_exports = {};
 __export(dmOnboardingAndDocsHelper_exports, {
   buildSessionOnboardingDirectives: () => buildSessionOnboardingDirectives,
+  detectCreativeAssetType: () => detectCreativeAssetType,
   detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
+  generateCustomUserCreativeImage: () => generateCustomUserCreativeImage,
   generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
+  isExplicitCreativeImageRequest: () => isExplicitCreativeImageRequest,
   isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
-  processAndQueueDmSticker: () => processAndQueueDmSticker
+  maybeGenerateLegalDocPdfForDm: () => maybeGenerateLegalDocPdfForDm,
+  popLatestDmCreativeImage: () => popLatestDmCreativeImage,
+  popLatestDmInteractivePoll: () => popLatestDmInteractivePoll,
+  popLatestDmLocationPin: () => popLatestDmLocationPin,
+  popLatestDmVCard: () => popLatestDmVCard,
+  processAndQueueDmSticker: () => processAndQueueDmSticker,
+  queueCreativeImageForDm: () => queueCreativeImageForDm,
+  queueDmInteractivePoll: () => queueDmInteractivePoll,
+  queueDmLocationPin: () => queueDmLocationPin,
+  queueDmVCard: () => queueDmVCard
 });
+function normalizePhoneKey(phone) {
+  return (phone || "").replace(/\D/g, "");
+}
+function queueDmVCard(phone, contactType = "broker") {
+  const clean = normalizePhoneKey(phone);
+  if (clean) pendingVCardByPhone.set(clean, contactType);
+}
+function popLatestDmVCard(phone) {
+  const clean = normalizePhoneKey(phone);
+  if (!clean) return void 0;
+  const exact = pendingVCardByPhone.get(clean);
+  if (exact) {
+    pendingVCardByPhone.delete(clean);
+    return exact;
+  }
+  const last10 = clean.slice(-10);
+  for (const [k, v] of pendingVCardByPhone.entries()) {
+    if (k.slice(-10) === last10) {
+      pendingVCardByPhone.delete(k);
+      return v;
+    }
+  }
+  return void 0;
+}
+function queueDmLocationPin(phone, pin) {
+  const clean = normalizePhoneKey(phone);
+  if (clean) pendingLocationByPhone.set(clean, pin);
+}
+function popLatestDmLocationPin(phone) {
+  const clean = normalizePhoneKey(phone);
+  if (!clean) return void 0;
+  const exact = pendingLocationByPhone.get(clean);
+  if (exact) {
+    pendingLocationByPhone.delete(clean);
+    return exact;
+  }
+  const last10 = clean.slice(-10);
+  for (const [k, v] of pendingLocationByPhone.entries()) {
+    if (k.slice(-10) === last10) {
+      pendingLocationByPhone.delete(k);
+      return v;
+    }
+  }
+  return void 0;
+}
+function queueDmInteractivePoll(phone, poll) {
+  const clean = normalizePhoneKey(phone);
+  if (clean) pendingPollByPhone.set(clean, poll);
+}
+function popLatestDmInteractivePoll(phone) {
+  const clean = normalizePhoneKey(phone);
+  if (!clean) return void 0;
+  const exact = pendingPollByPhone.get(clean);
+  if (exact) {
+    pendingPollByPhone.delete(clean);
+    return exact;
+  }
+  const last10 = clean.slice(-10);
+  for (const [k, v] of pendingPollByPhone.entries()) {
+    if (k.slice(-10) === last10) {
+      pendingPollByPhone.delete(k);
+      return v;
+    }
+  }
+  return void 0;
+}
 function detectLegalDocumentTypeFromText(text2) {
   const lower = (text2 || "").toLowerCase();
   if (!lower) return null;
@@ -17596,6 +18139,12 @@ async function generateLegalPdfForDmRequest(userText, overrideParams) {
     ...overrideParams
   });
 }
+async function maybeGenerateLegalDocPdfForDm(_userId, userText, _assistantReply, userName) {
+  if (!isExplicitLegalPdfRequest(userText)) return null;
+  return await generateLegalPdfForDmRequest(userText, {
+    nombreRemitente: userName || void 0
+  });
+}
 function processAndQueueDmSticker(userId, userMessage, rawAssistantReply, options) {
   const { cleanText, stickerKey } = extractStickerTagFromReply(rawAssistantReply);
   if (stickerKey) {
@@ -17618,12 +18167,17 @@ async function buildSessionOnboardingDirectives(userId) {
 \u{1F3E0} ESTADO DE PROPIETARIO DIRECTO EN SESI\xD3N (CORRETAJE VIRTUAL VECY): Este usuario es Propietario Directo (NO es colega inmobiliario; JAM\xC1S le ofrezcas comisi\xF3n colaborativa 40/20/40 ni 50/50). Estado actual: T&C Corretaje Virtual=${ownerStatus.acceptsTerms ? "ACEPTADOS" : "PENDIENTE DE ACEPTACI\xD3N"}, Correo=${ownerStatus.email || "PENDIENTE DE SOLICITAR"}. Exige la aceptaci\xF3n de T\xE9rminos y Condiciones de corretaje virtual, pide su correo para el env\xEDo formal del contrato y recu\xE9rdale comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisi\xF3n previa a la publicaci\xF3n en https://vecy-bienes-raices.vercel.app/.` : "";
   return { context402040Directive, contextOwnerDirective };
 }
+var pendingVCardByPhone, pendingLocationByPhone, pendingPollByPhone;
 var init_dmOnboardingAndDocsHelper = __esm({
   "server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts"() {
     "use strict";
     init_legalDocumentPdfService();
     init_stickerService();
+    init_creativeStudioImageService();
     init_sessionManager();
+    pendingVCardByPhone = /* @__PURE__ */ new Map();
+    pendingLocationByPhone = /* @__PURE__ */ new Map();
+    pendingPollByPhone = /* @__PURE__ */ new Map();
   }
 });
 
@@ -18299,8 +18853,8 @@ __export(storage_exports, {
   storageGet: () => storageGet,
   storagePut: () => storagePut
 });
-import fs8 from "fs";
-import path8 from "path";
+import fs9 from "fs";
+import path9 from "path";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
@@ -18310,13 +18864,13 @@ function buildAbsoluteLocalUrl(key) {
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
   const key = normalizeKey(relKey);
-  const targetFilePath = path8.join(uploadsDir, key);
-  const targetSubdir = path8.dirname(targetFilePath);
-  if (!fs8.existsSync(targetSubdir)) {
-    fs8.mkdirSync(targetSubdir, { recursive: true });
+  const targetFilePath = path9.join(uploadsDir, key);
+  const targetSubdir = path9.dirname(targetFilePath);
+  if (!fs9.existsSync(targetSubdir)) {
+    fs9.mkdirSync(targetSubdir, { recursive: true });
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs8.writeFileSync(targetFilePath, buffer);
+  fs9.writeFileSync(targetFilePath, buffer);
   const publicUrl = buildAbsoluteLocalUrl(key);
   console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
   return { key, url: `/uploads/${key}` };
@@ -18332,16 +18886,16 @@ var uploadsDir;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
-    uploadsDir = path8.resolve(process.cwd(), "public/uploads");
-    if (!fs8.existsSync(uploadsDir)) {
-      fs8.mkdirSync(uploadsDir, { recursive: true });
+    uploadsDir = path9.resolve(process.cwd(), "public/uploads");
+    if (!fs9.existsSync(uploadsDir)) {
+      fs9.mkdirSync(uploadsDir, { recursive: true });
     }
   }
 });
 
 // server/_core/divipola.ts
-import fs9 from "fs";
-import path9 from "path";
+import fs10 from "fs";
+import path10 from "path";
 var municipalitiesMap, initDivipola, validateCity;
 var init_divipola = __esm({
   "server/_core/divipola.ts"() {
@@ -18349,13 +18903,13 @@ var init_divipola = __esm({
     municipalitiesMap = /* @__PURE__ */ new Map();
     initDivipola = () => {
       try {
-        const jsonPath = path9.join(process.cwd(), "server", "data", "divipola.json");
+        const jsonPath = path10.join(process.cwd(), "server", "data", "divipola.json");
         municipalitiesMap.clear();
-        if (!fs9.existsSync(jsonPath)) {
+        if (!fs10.existsSync(jsonPath)) {
           console.warn("Divipola JSON data file not found at", jsonPath);
           return;
         }
-        const raw = fs9.readFileSync(jsonPath, "utf-8");
+        const raw = fs10.readFileSync(jsonPath, "utf-8");
         const list = JSON.parse(raw);
         for (const item of list) {
           if (item.municipio) {
@@ -22664,8 +23218,8 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
     const solver = new Solver2(apiKey);
     const puppeteer = (await import("puppeteer")).default;
-    const fs16 = await import("fs");
-    const executablePath = fs16.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const fs17 = await import("fs");
+    const executablePath = fs17.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -23228,8 +23782,8 @@ __export(iduValorizacionService_exports, {
   isIduInquiry: () => isIduInquiry,
   setPendingIduSession: () => setPendingIduSession
 });
-import fs10 from "fs";
-import path10 from "path";
+import fs11 from "fs";
+import path11 from "path";
 import os2 from "os";
 function hasPendingIduSession(senderId) {
   const session = pendingIduSessions.get(senderId);
@@ -23302,15 +23856,15 @@ function extractChipForIduValorizacion(text2) {
 }
 async function downloadIduCertificatePdf(chip) {
   const cleanChip = chip.toUpperCase().trim();
-  const downloadDir = path10.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const downloadDir = path11.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
   try {
-    fs10.mkdirSync(downloadDir, { recursive: true });
+    fs11.mkdirSync(downloadDir, { recursive: true });
   } catch (_) {
   }
   let browser = null;
   try {
     const puppeteer = (await import("puppeteer")).default;
-    const executablePath = fs10.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const executablePath = fs11.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -23368,16 +23922,16 @@ async function downloadIduCertificatePdf(chip) {
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 1e3));
-      if (fs10.existsSync(downloadDir)) {
-        const files = fs10.readdirSync(downloadDir);
+      if (fs11.existsSync(downloadDir)) {
+        const files = fs11.readdirSync(downloadDir);
         const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
         if (pdfFile) {
-          downloadedFilePath = path10.join(downloadDir, pdfFile);
+          downloadedFilePath = path11.join(downloadDir, pdfFile);
           break;
         }
       }
     }
-    if (!downloadedFilePath || !fs10.existsSync(downloadedFilePath)) {
+    if (!downloadedFilePath || !fs11.existsSync(downloadedFilePath)) {
       return {
         success: false,
         errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
@@ -23385,7 +23939,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: predioData.direccion
       };
     }
-    const pdfBuffer = fs10.readFileSync(downloadedFilePath);
+    const pdfBuffer = fs11.readFileSync(downloadedFilePath);
     if (!pdfBuffer || pdfBuffer.length < 500) {
       return {
         success: false,
@@ -23416,8 +23970,8 @@ async function downloadIduCertificatePdf(chip) {
       }
     }
     try {
-      if (fs10.existsSync(downloadDir)) {
-        fs10.rmSync(downloadDir, { recursive: true, force: true });
+      if (fs11.existsSync(downloadDir)) {
+        fs11.rmSync(downloadDir, { recursive: true, force: true });
       }
     } catch (_) {
     }
@@ -23551,9 +24105,13 @@ __export(whatsapp_match_exports, {
   isVipRealEstateGroup: () => isVipRealEstateGroup,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
+  sendNativeWhatsAppChannelPoll: () => sendNativeWhatsAppChannelPoll,
   sendNativeWhatsAppContact: () => sendNativeWhatsAppContact,
   sendNativeWhatsAppEvent: () => sendNativeWhatsAppEvent,
+  sendNativeWhatsAppLocation: () => sendNativeWhatsAppLocation,
   sendNativeWhatsAppPoll: () => sendNativeWhatsAppPoll,
+  sendNativeWhatsAppQuestionPrompt: () => sendNativeWhatsAppQuestionPrompt,
+  sendNativeWhatsAppQuiz: () => sendNativeWhatsAppQuiz,
   unwrapMessage: () => unwrapMessage,
   whatsappBot: () => whatsappBot
 });
@@ -23564,12 +24122,13 @@ import _baileys, {
   delay,
   downloadMediaMessage,
   downloadContentFromMessage,
+  proto,
   fetchLatestBaileysVersion,
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs11 from "fs";
-import path11 from "path";
+import fs12 from "fs";
+import path12 from "path";
 import { eq as eq9 } from "drizzle-orm";
 import QRCode3 from "qrcode";
 function getWASocket() {
@@ -23652,6 +24211,19 @@ async function sendNativeWhatsAppEvent(targetJid, eventData) {
 }
 async function deleteNativeWhatsAppMessage(targetJid, messageKey) {
   return janiaMatchBot.deleteMessage(targetJid, messageKey);
+}
+async function sendNativeWhatsAppChannelPoll(name, options, selectableCount = 1, channelJid) {
+  const res = await janiaMatchBot.sendChannelPoll(name, options, selectableCount, channelJid);
+  return res.success;
+}
+async function sendNativeWhatsAppQuiz(targetJid, question, options, correctAnswerIndex = 0) {
+  return janiaMatchBot.sendQuiz(targetJid, question, options, correctAnswerIndex);
+}
+async function sendNativeWhatsAppQuestionPrompt(targetJid, questionText) {
+  return janiaMatchBot.sendQuestionPrompt(targetJid, questionText);
+}
+async function sendNativeWhatsAppLocation(targetJid, latitude = 4.6768, longitude = -74.0482, name = "VECY BIENES RA\xCDCES \u2014 Mesa Central Bogot\xE1", address = "Parque de la 93 / El Chic\xF3, Bogot\xE1 D.C., Colombia") {
+  return janiaMatchBot.sendLocationPin(targetJid, latitude, longitude, name, address);
 }
 var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot, whatsappBot;
 var init_whatsapp_match = __esm({
@@ -23780,7 +24352,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path11.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path12.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -23945,9 +24517,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path11.join(process.cwd(), this.sessionFolderName);
-          if (!fs11.existsSync(sessionDir)) {
-            fs11.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path12.join(process.cwd(), this.sessionFolderName);
+          if (!fs12.existsSync(sessionDir)) {
+            fs12.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -23969,7 +24541,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs11.existsSync(path11.join(sessionDir, "creds.json"))) {
+          if (!fs12.existsSync(path12.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -24063,12 +24635,12 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path11.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path11.join(process.cwd(), "client", "public");
-              if (!fs11.existsSync(publicQrDir)) {
-                fs11.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path12.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path12.join(process.cwd(), "client", "public");
+              if (!fs12.existsSync(publicQrDir)) {
+                fs12.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path11.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path12.join(publicQrDir, "qr-match.png");
               await QRCode3.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode3.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -24687,9 +25259,20 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   console.warn("[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:", ttsErr?.message);
                 }
               }
-              const { popLatestDmPdf: popLatestDmPdf2, popLatestDmSticker: popLatestDmSticker2 } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+              const {
+                popLatestDmPdf: popLatestDmPdf2,
+                popLatestDmSticker: popLatestDmSticker2,
+                popLatestDmCreativeImage: popLatestDmCreativeImage2,
+                popLatestDmLocationPin: popLatestDmLocationPin2,
+                popLatestDmVCard: popLatestDmVCard2,
+                popLatestDmInteractivePoll: popLatestDmInteractivePoll2
+              } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
               const latestPdf = popLatestDmPdf2(senderId);
               const latestSticker = popLatestDmSticker2(senderId);
+              const latestCreativeImage = popLatestDmCreativeImage2(senderId);
+              const latestLocationPin = popLatestDmLocationPin2(senderId);
+              const latestVCard = popLatestDmVCard2(senderId);
+              const latestPoll = popLatestDmInteractivePoll2(senderId);
               const pdfBuffer2 = reply?.pdfBuffer || latestPdf?.pdfBuffer;
               const pdfFileName = reply?.pdfFileName || latestPdf?.pdfFileName;
               const isSenderAdmin = /eduardo/i.test(userName || "") || /jani/i.test(userName || "") || senderId.includes("3192919978") || senderId.includes("225954035179724") || senderId.includes("3118536968") || senderId.includes("3166569719");
@@ -24709,10 +25292,35 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                 }, { quoted: mainMsg, allowDirectMessage: true });
                 await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
                 });
+              } else if (latestCreativeImage && Buffer.isBuffer(latestCreativeImage.buffer)) {
+                console.log(`[JANIA-MATCH] [DM-CREATIVE] Despachando pieza gr\xE1fica HD (${latestCreativeImage.fileName}, ${latestCreativeImage.buffer.length} bytes) a ${senderId}`);
+                await this.queuedSend(senderId, {
+                  image: latestCreativeImage.buffer,
+                  mimetype: "image/jpeg",
+                  caption: replyText || latestCreativeImage.caption
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                await this.sock.sendMessage(senderId, { react: { text: "\u{1F3A8}", key: mainMsg.key } }).catch(() => {
+                });
               } else {
                 await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
               }
               await this.logToDb(senderId, "janIA", replyText);
+              if (latestLocationPin) {
+                await this.sendLocationPin(
+                  senderId,
+                  latestLocationPin.latitude,
+                  latestLocationPin.longitude,
+                  latestLocationPin.name,
+                  latestLocationPin.address,
+                  mainMsg
+                );
+              }
+              if (latestVCard) {
+                await this.sendContactCard(senderId, latestVCard, mainMsg);
+              }
+              if (latestPoll) {
+                await this.sendPoll(senderId, latestPoll.question, latestPoll.options, latestPoll.selectableCount ?? 1);
+              }
               if (latestSticker && Buffer.isBuffer(latestSticker.buffer)) {
                 console.log(`[JANIA-MATCH] [DM-STICKER] Despachando sticker 3D oficial de JanIA (${latestSticker.filename}) a ${senderId}`);
                 await this.queuedSend(senderId, {
@@ -24916,11 +25524,20 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             const contactType = wantsBroker ? "broker" : "jania";
             const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
             const timeSalutation = getGreetingByTime4();
-            const contactMsg = wantsBroker ? `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
+            const contactMsg = wantsBroker ? `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
             await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
             await this.sendContactCard(chatId, contactType, msg);
             await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
+            return;
+          }
+          const isLocationPinRequest = /(?:env[ií]a(?:me)?|p[aá]same|comp[aá]rteme|dame|mu[eé]strame)\s+(?:la\s+|el\s+)?(?:ubicaci[oó]n\s+gps|pin\s+de\s+ubicaci[oó]n|mapa\s+gps|ubicaci[oó]n\s+de\s+vecy)/i.test(bodyText);
+          if (isLocationPinRequest) {
+            const locMsg = `\xA1Claro que s\xED${realName ? `, ${realName}` : ""}! \u{1F4CD} Aqu\xED tienes el pin de ubicaci\xF3n GPS interactivo de nuestra sede y zona de influencia ejecutiva de *VECY BIENES RA\xCDCES* en Bogot\xE1 (Parque de la 93 / El Chic\xF3). Recuerda que atendemos en toda Colombia a trav\xE9s de nuestra l\xEDnea br\xF3ker *+57 316 656 9719*: \u{1F91D}\u2728`;
+            await this.queuedSend(chatId, locMsg, { mentions: [senderId], quoted: msg });
+            await this.sendLocationPin(chatId, 4.6768, -74.0482, "VECY BIENES RA\xCDCES \u2014 Mesa Central Bogot\xE1", "Parque de la 93 / El Chic\xF3, Bogot\xE1 D.C., Colombia", msg);
+            await this.sock.sendPresenceUpdate("paused", chatId);
+            await this.logToDb(chatId, "janIA", `[UBICACION-GPS] ${locMsg}`);
             return;
           }
           let result;
@@ -25038,6 +25655,12 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
+            const {
+              isExplicitLegalPdfRequest: isExplicitLegalPdfRequest2,
+              generateLegalPdfForDmRequest: generateLegalPdfForDmRequest2,
+              isExplicitCreativeImageRequest: isExplicitCreativeImageRequest2,
+              generateCustomUserCreativeImage: generateCustomUserCreativeImage2
+            } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
             if (result.document) {
               await this.queuedSend(chatId, {
                 document: result.document,
@@ -25045,6 +25668,34 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
                 fileName: result.fileName || "Factura_Predial_Bogota.pdf",
                 caption: textToDeliver
               }, { mentions: [senderId], quoted: msg });
+            } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitLegalPdfRequest2(bodyText)) {
+              try {
+                const groupPdf = await generateLegalPdfForDmRequest2(bodyText, {
+                  cuerpoDocumento: textToDeliver.length > 180 ? textToDeliver : void 0
+                });
+                await this.queuedSend(chatId, {
+                  document: groupPdf.pdfBuffer,
+                  mimetype: "application/pdf",
+                  fileName: groupPdf.fileName,
+                  caption: textToDeliver
+                }, { mentions: [senderId], quoted: msg });
+              } catch (_) {
+                await this.queuedSend(chatId, textToDeliver, { mentions: [senderId], quoted: msg });
+              }
+            } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitCreativeImageRequest2(bodyText)) {
+              try {
+                const groupImg = await generateCustomUserCreativeImage2({
+                  userPrompt: bodyText,
+                  includeJaniaAvatar: true
+                });
+                await this.queuedSend(chatId, {
+                  image: groupImg.buffer,
+                  mimetype: "image/jpeg",
+                  caption: textToDeliver || groupImg.caption
+                }, { mentions: [senderId], quoted: msg });
+              } catch (_) {
+                await this.queuedSend(chatId, textToDeliver, { mentions: [senderId], quoted: msg });
+              }
             } else {
               const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
               if (shouldSendVoice) {
@@ -25997,7 +26648,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               if (options.mentions) {
                 messagePayload.mentions = options.mentions;
               }
-            } else if (content && (content.text || content.audio || content.image || content.video || content.document || content.sticker)) {
+            } else if (content && (content.text || content.audio || content.image || content.video || content.document || content.sticker || content.location || content.contacts || content.poll || content.event)) {
               messagePayload = content;
               if (typeof messagePayload.text === "string") {
                 messagePayload.text = sanitizeResponseMarkdown(messagePayload.text);
@@ -26103,6 +26754,224 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         return this.queuedSend(jid, text2, { allowDirectMessage: true, ...options });
       }
       /**
+       * 📊 Envía una encuesta nativa interactiva en el Canal Oficial de WhatsApp (@newsletter)
+       * usando la estructura binaria oficial de Newsletter (<plaintext mediatype="poll"> + <meta polltype="creation" />),
+       * porque en los Canales los seguidores NO pueden escribir respuestas de texto.
+       */
+      async sendChannelPoll(name, options, selectableCount = 1, channelJid) {
+        try {
+          if (!this.sock || !this.isReady) {
+            console.warn(`[JANIA-MATCH] Bot no listo para enviar encuesta de canal`);
+            return { success: false, error: "Bot no listo" };
+          }
+          if (!this.channelNewsletterId) {
+            await this.discoverAndSyncNewsletters().catch(() => {
+            });
+          }
+          const targetNewsletter = channelJid || this.channelNewsletterId;
+          if (!targetNewsletter) {
+            console.warn(`[JANIA-MATCH] Canal Oficial no identificado para enviar encuesta.`);
+            return { success: false, error: "Canal Oficial no identificado" };
+          }
+          const cleanOptions = options.map((o) => String(o).trim()).filter(Boolean).slice(0, 12);
+          console.log(`[JANIA-MATCH] \u{1F5F3}\uFE0F Despachando Encuesta Nativa de Canal a ${targetNewsletter}: "${name}" (${cleanOptions.length} opciones)...`);
+          const crypto5 = await import("crypto");
+          const msgId = `3EB0${crypto5.randomBytes(8).toString("hex").toUpperCase()}`;
+          const pollProto = selectableCount === 1 ? {
+            pollCreationMessageV3: {
+              name,
+              options: cleanOptions.map((opt) => ({ optionName: opt })),
+              selectableOptionsCount: 1,
+              pollType: 0
+            }
+          } : {
+            pollCreationMessage: {
+              name,
+              options: cleanOptions.map((opt) => ({ optionName: opt })),
+              selectableOptionsCount: selectableCount,
+              pollType: 0
+            }
+          };
+          if (typeof this.sock.sendNode === "function") {
+            const encoded = proto.Message.encode(pollProto).finish();
+            const stanza = {
+              tag: "message",
+              attrs: {
+                to: targetNewsletter,
+                type: "text",
+                id: msgId
+              },
+              content: [
+                {
+                  tag: "plaintext",
+                  attrs: { mediatype: "poll" },
+                  content: encoded
+                },
+                {
+                  tag: "meta",
+                  attrs: { polltype: "creation" }
+                }
+              ]
+            };
+            await this.sock.sendNode(stanza);
+            this.botSentMessageIds.add(msgId);
+            console.log(`[JANIA-MATCH] \u2705 Encuesta nativa de Canal enviada exitosamente (${msgId}) a ${targetNewsletter}`);
+            return { success: true, messageId: msgId };
+          }
+          const res = await this.sock.sendMessage(targetNewsletter, {
+            poll: {
+              name,
+              values: cleanOptions,
+              selectableCount
+            }
+          });
+          return { success: true, messageId: res?.key?.id || msgId };
+        } catch (err) {
+          console.error(`[JANIA-MATCH] \u274C Error enviando encuesta nativa al Canal:`, err?.message || err);
+          return { success: false, error: err?.message || "Error desconocido" };
+        }
+      }
+      /**
+       * 🏆 Envía un Cuestionario / Quiz nativo de WhatsApp (pollType = 1 / QUIZ con correctAnswer)
+       * Compatible con el Canal Oficial (@newsletter), Grupos 2 y 3, y DMs.
+       */
+      async sendQuiz(targetJid, question, options, correctAnswerIndex = 0) {
+        try {
+          if (!this.sock || !this.isReady) return false;
+          const cleanOptions = options.map((o) => String(o).trim()).filter(Boolean).slice(0, 12);
+          if (cleanOptions.length < 2) return false;
+          const safeIdx = Math.max(0, Math.min(cleanOptions.length - 1, correctAnswerIndex));
+          const correctOption = cleanOptions[safeIdx];
+          const quizProto = {
+            pollCreationMessageV3: {
+              name: question,
+              options: cleanOptions.map((opt) => ({ optionName: opt })),
+              selectableOptionsCount: 1,
+              pollType: 1,
+              correctAnswer: { optionName: correctOption }
+            }
+          };
+          if (targetJid.endsWith("@newsletter") && typeof this.sock.sendNode === "function") {
+            const crypto5 = await import("crypto");
+            const msgId = `3EB0${crypto5.randomBytes(8).toString("hex").toUpperCase()}`;
+            const encoded = proto.Message.encode(quizProto).finish();
+            const stanza = {
+              tag: "message",
+              attrs: {
+                to: targetJid,
+                type: "text",
+                id: msgId
+              },
+              content: [
+                {
+                  tag: "plaintext",
+                  attrs: { mediatype: "poll" },
+                  content: encoded
+                },
+                {
+                  tag: "meta",
+                  attrs: { polltype: "creation" }
+                }
+              ]
+            };
+            await this.sock.sendNode(stanza);
+            this.botSentMessageIds.add(msgId);
+            console.log(`[JANIA-MATCH] \u{1F3C6} Cuestionario (Quiz) nativo enviado al Canal ${targetJid} (${msgId})`);
+            return true;
+          }
+          if (typeof this.sock.relayMessage === "function" && !targetJid.endsWith("@newsletter")) {
+            try {
+              await this.sock.relayMessage(targetJid, quizProto, {});
+              console.log(`[JANIA-MATCH] \u{1F3C6} Cuestionario (Quiz) enviado a ${targetJid}`);
+              return true;
+            } catch (_) {
+            }
+          }
+          await this.sock.sendMessage(targetJid, {
+            poll: {
+              name: `\u{1F3C6} CUESTIONARIO: ${question}`,
+              values: cleanOptions,
+              selectableCount: 1
+            }
+          });
+          return true;
+        } catch (err) {
+          console.error(`[JANIA-MATCH] \u274C Error enviando Cuestionario a ${targetJid}:`, err?.message || err);
+          return false;
+        }
+      }
+      /**
+       * ❓ Envía la herramienta nativa "Preguntar" de WhatsApp (contextInfo: { isQuestion: true })
+       * Habilita la tarjeta interactiva de pregunta abierta para que seguidores/miembros envíen sus preguntas a los administradores/JanIA.
+       */
+      async sendQuestionPrompt(targetJid, questionText) {
+        try {
+          if (!this.sock || !this.isReady) return false;
+          const questionProto = {
+            extendedTextMessage: {
+              text: questionText,
+              contextInfo: {
+                isQuestion: true
+              }
+            }
+          };
+          if (targetJid.endsWith("@newsletter") && typeof this.sock.sendNode === "function") {
+            const crypto5 = await import("crypto");
+            const msgId = `3EB0${crypto5.randomBytes(8).toString("hex").toUpperCase()}`;
+            const encoded = proto.Message.encode(questionProto).finish();
+            const stanza = {
+              tag: "message",
+              attrs: {
+                to: targetJid,
+                type: "text",
+                id: msgId
+              },
+              content: [
+                {
+                  tag: "plaintext",
+                  attrs: {},
+                  content: encoded
+                }
+              ]
+            };
+            await this.sock.sendNode(stanza);
+            this.botSentMessageIds.add(msgId);
+            console.log(`[JANIA-MATCH] \u2753 Tarjeta nativa "Preguntar" enviada al Canal ${targetJid} (${msgId})`);
+            return true;
+          }
+          if (typeof this.sock.relayMessage === "function") {
+            await this.sock.relayMessage(targetJid, questionProto, {});
+            return true;
+          }
+          await this.queuedSend(targetJid, questionText, { allowDirectMessage: true });
+          return true;
+        } catch (err) {
+          console.error(`[JANIA-MATCH] Error enviando tarjeta "Preguntar" a ${targetJid}:`, err?.message || err);
+          return false;
+        }
+      }
+      /**
+       * 📍 Envía un Pin de Ubicación GPS interactivo nativo de WhatsApp (locationMessage)
+       */
+      async sendLocationPin(targetJid, latitude = 4.6768, longitude = -74.0482, name = "VECY BIENES RA\xCDCES \u2014 Mesa Central Bogot\xE1", address = "Parque de la 93 / El Chic\xF3, Bogot\xE1 D.C., Colombia", quoted) {
+        try {
+          if (!this.sock || !this.isReady) return false;
+          console.log(`[JANIA-MATCH] \u{1F4CD} Despachando pin de ubicaci\xF3n GPS (${name}) a ${targetJid}...`);
+          await this.sock.sendMessage(targetJid, {
+            location: {
+              degreesLatitude: latitude,
+              degreesLongitude: longitude,
+              name,
+              address
+            }
+          }, quoted ? { quoted } : void 0);
+          return true;
+        } catch (err) {
+          console.error(`[JANIA-MATCH] Error enviando ubicaci\xF3n GPS a ${targetJid}:`, err?.message || err);
+          return false;
+        }
+      }
+      /**
        * Envía una encuesta nativa e interactiva de WhatsApp a un grupo específico.
        * Utiliza la funcionalidad nativa de Baileys pollCreationMessage.
        */
@@ -26113,6 +26982,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             return false;
           }
           const targetJid = groupId || this.buzonGroupId;
+          if (targetJid.endsWith("@newsletter")) {
+            const cRes = await this.sendChannelPoll(name, options, selectableCount, targetJid);
+            return cRes.success;
+          }
           console.log(`[JANIA-MATCH] \u{1F4CA} Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones, selectableCount: ${selectableCount})...`);
           await this.sock.sendMessage(targetJid, {
             poll: {
@@ -26132,6 +27005,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
        * Envía una encuesta nativa a cualquier JID (grupo o canal de WhatsApp) con modo de votación configurable
        */
       async sendPoll(targetJid, name, options, selectableCount = 1) {
+        if (targetJid.endsWith("@newsletter")) {
+          const cRes = await this.sendChannelPoll(name, options, selectableCount, targetJid);
+          return cRes.success;
+        }
         return this.sendPollToGroup(name, options, targetJid, selectableCount);
       }
       /**
@@ -26239,10 +27116,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs16 = await import("fs");
-            const buffer = fs16.readFileSync(mediaPath);
-            const path17 = await import("path");
-            const ext = path17.extname(mediaPath).toLowerCase();
+            const fs17 = await import("fs");
+            const buffer = fs17.readFileSync(mediaPath);
+            const path18 = await import("path");
+            const ext = path18.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -26260,7 +27137,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path17.basename(mediaPath)
+                fileName: path18.basename(mediaPath)
               };
             }
           } else {
@@ -26287,8 +27164,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const fs16 = await import("fs");
-          if (imagePath && fs16.existsSync(imagePath)) {
+          const fs17 = await import("fs");
+          if (imagePath && fs17.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -26327,8 +27204,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
-        const fs16 = await import("fs");
-        const hasImage = imagePath && fs16.existsSync(imagePath);
+        const fs17 = await import("fs");
+        const hasImage = imagePath && fs17.existsSync(imagePath);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -26388,8 +27265,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           console.warn(`[JANIA-ATOMIC] \u{1F6D1} Cancelado env\xEDo: Canal Oficial no configurado. Jam\xE1s se debe anunciar contenido en grupos que no exista en el Canal.`);
           return { success: false, reason: "Canal Oficial no configurado" };
         }
-        const fs16 = await import("fs");
-        const hasImage = imagePath && fs16.existsSync(imagePath);
+        const fs17 = await import("fs");
+        const hasImage = imagePath && fs17.existsSync(imagePath);
         let channelResult = { success: false };
         try {
           if (hasImage) {
@@ -26543,11 +27420,11 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
         const voiceMedia = await textToSpeechMedia2(cleaned);
         const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
         const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs16 = await import("fs");
+        const fs17 = await import("fs");
         if (this.buzonGroupId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs16.existsSync(imagePath)) {
+            if (imagePath && fs17.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
             }
             if (audioBuffer) {
@@ -26567,7 +27444,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
         if (this.channelNewsletterId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs16.existsSync(imagePath)) {
+            if (imagePath && fs17.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
             }
             if (audioBuffer) {
@@ -26688,7 +27565,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
       }
       pendingWelcomeJids = [];
       async sendAnuncioRetorno() {
-        const baseMsg = `\u{1F680} *\xA1JANIA EST\xC1 DE VUELTA Y M\xC1S AFILADA QUE NUNCA!* \u{1F916}\u{1F3DB}\uFE0F
+        const baseMsg = `\u{1F680} *\xA1JANIA EST\xC1 DE VUELTA Y M\xC1S AFILADA QUE NUNCA!* \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u{1F3DB}\uFE0F
 
 \xA1Hola de nuevo, colegas y aliados! \u{1F44B} Tras un breve ajuste t\xE9cnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.
 
@@ -26705,7 +27582,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path11.resolve("./client/public/jania_perfil.png");
+        const imgPath = path12.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -26736,10 +27613,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path11.join(process.cwd(), ".baileys_auth");
-        if (fs11.existsSync(sessionDir)) {
+        const sessionDir = path12.join(process.cwd(), ".baileys_auth");
+        if (fs12.existsSync(sessionDir)) {
           try {
-            fs11.rmSync(sessionDir, { recursive: true, force: true });
+            fs12.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -26758,8 +27635,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs11.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs11.readFileSync(this.cooldownFile, "utf8"));
+          if (fs12.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs12.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -26768,7 +27645,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs11.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs12.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -28302,7 +29179,7 @@ function formatOrganizacionJuridica(raw) {
   }
   return formatTitleCase2(raw);
 }
-async function postRuesEncrypted(path17, payload, timeoutMs = 5e3) {
+async function postRuesEncrypted(path18, payload, timeoutMs = 5e3) {
   if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
     return null;
   }
@@ -28311,7 +29188,7 @@ async function postRuesEncrypted(path17, payload, timeoutMs = 5e3) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${baseUrl}${path17}`, {
+    const res = await fetch(`${baseUrl}${path18}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -29649,8 +30526,8 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
 }
 async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
   const puppeteer = (await import("puppeteer")).default;
-  const fs16 = await import("fs");
-  const executablePath = fs16.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs16.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
+  const fs17 = await import("fs");
+  const executablePath = fs17.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs17.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
   let browser = null;
   try {
     browser = await puppeteer.launch({
@@ -31247,20 +32124,31 @@ __export(dmHandler_exports, {
   JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   JANIA_STICKER_CATALOG: () => JANIA_STICKER_CATALOG,
   buildSessionOnboardingDirectives: () => buildSessionOnboardingDirectives,
+  detectCreativeAssetType: () => detectCreativeAssetType,
   detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
   executeJaniaDmTool: () => executeJaniaDmTool,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  generateCustomUserCreativeImage: () => generateCustomUserCreativeImage,
   generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
   getJaniaStickerByKey: () => getJaniaStickerByKey,
   hasLatestDmPdf: () => hasLatestDmPdf,
+  isExplicitCreativeImageRequest: () => isExplicitCreativeImageRequest,
   isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
   isShortSignalOrSticker: () => isShortSignalOrSticker,
   listAvailableJaniaStickers: () => listAvailableJaniaStickers,
+  popLatestDmCreativeImage: () => popLatestDmCreativeImage,
   popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
+  popLatestDmInteractivePoll: () => popLatestDmInteractivePoll,
+  popLatestDmLocationPin: () => popLatestDmLocationPin,
   popLatestDmPdf: () => popLatestDmPdf,
   popLatestDmSticker: () => popLatestDmSticker,
+  popLatestDmVCard: () => popLatestDmVCard,
   processAndQueueDmSticker: () => processAndQueueDmSticker,
   processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
+  queueCreativeImageForDm: () => queueCreativeImageForDm,
+  queueDmInteractivePoll: () => queueDmInteractivePoll,
+  queueDmLocationPin: () => queueDmLocationPin,
+  queueDmVCard: () => queueDmVCard,
   sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
   selectContextualStickerForDm: () => selectContextualStickerForDm,
   setLatestDmFollowUpMessage: () => setLatestDmFollowUpMessage,
@@ -31861,6 +32749,57 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
 \u2022 *Marco normativo:* ${pdfRes.normativeFramework}
 \u2022 *Radicado VECY:* ${pdfRes.verificationCode}
 \u2022 *Gu\xEDa Firma Electr\xF3nica (Ley 527/1999):* https://autenticaciondigital.and.gov.co/`
+        }
+      };
+    }
+    case "generar_imagen_creativa_whatsapp": {
+      const { generateCustomUserCreativeImage: generateCustomUserCreativeImage2, queueCreativeImageForDm: queueCreativeImageForDm2, detectCreativeAssetType: detectCreativeAssetType2 } = await Promise.resolve().then(() => (init_creativeStudioImageService(), creativeStudioImageService_exports));
+      const rawPrompt = String(args.promptUsuario || args.tituloPrincipal || rawUserText || "Flyer inmobiliario ejecutivo VECY").trim();
+      const rawType = String(args.tipoPieza || "").trim();
+      const assetType = rawType || detectCreativeAssetType2(rawPrompt);
+      const specsList = args.especificacionesClave || args.puntosClave;
+      const specs = Array.isArray(specsList) ? specsList.map(String) : void 0;
+      const imgRes = await generateCustomUserCreativeImage2({
+        userPrompt: rawPrompt,
+        assetType,
+        title: args.tituloPrincipal ? String(args.tituloPrincipal) : void 0,
+        subtitle: args.subtitulo ? String(args.subtitulo) : void 0,
+        priceOrValue: args.precioOValor ? String(args.precioOValor) : void 0,
+        locationOrZone: args.ubicacionOZona || args.ubicacionZona ? String(args.ubicacionOZona || args.ubicacionZona) : void 0,
+        specs,
+        contactPhone: args.telefonoContacto ? String(args.telefonoContacto) : void 0,
+        includeJaniaAvatar: args.incluirAvatarJania !== void 0 ? Boolean(args.incluirAvatarJania) : true
+      });
+      queueCreativeImageForDm2(userId, imgRes);
+      return {
+        toolType: "imagen_creativa_whatsapp",
+        resultJson: {
+          solicitud: "generar_imagen_creativa_whatsapp",
+          archivoImagen: imgRes.fileName,
+          tipoPieza: imgRes.assetType,
+          resolucion: "1080x1080 HD (Formato 1:1 Oficial)",
+          exitoso: true,
+          reporteOficial: imgRes.caption
+        }
+      };
+    }
+    case "enviar_ubicacion_mapa_gps": {
+      const { queueDmLocationPin: queueDmLocationPin2 } = await Promise.resolve().then(() => (init_dmOnboardingAndDocsHelper(), dmOnboardingAndDocsHelper_exports));
+      const name = String(args.nombreLugar || "VECY BIENES RA\xCDCES \u2014 Mesa Central Bogot\xE1").trim();
+      const address = String(args.direccionOBarrio || "Parque de la 93 / El Chic\xF3, Bogot\xE1 D.C., Colombia").trim();
+      const latitude = Number(args.latitud || 4.6768);
+      const longitude = Number(args.longitud || -74.0482);
+      queueDmLocationPin2(userId, { latitude, longitude, name, address });
+      return {
+        toolType: "ubicacion_gps",
+        resultJson: {
+          solicitud: "enviar_ubicacion_mapa_gps",
+          nombreLugar: name,
+          direccion: address,
+          latitud: latitude,
+          longitud: longitude,
+          exitoso: true,
+          reporteOficial: `\u{1F4CD} *Pin de Ubicaci\xF3n GPS interactivo enviado:* ${name} (${address}).`
         }
       };
     }
@@ -32598,12 +33537,14 @@ ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 ===================================================
 MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps.
 a) Si el usuario env\xEDa un n\xFAmero, documento o nombre de empresa con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la raz\xF3n social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.
 b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, tr\xE1mites VUR/Sinupot, divisas/TRM del d\xF3lar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jur\xEDdico sin alucinaciones.
 c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
-d) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
-e) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
+d) Si el usuario pide elaborar una IMAGEN, FLYER para su inmueble, BANNER promocional, POST para redes sociales o INFOGRAF\xCDA inmobiliaria con su propio prompt: Invoca de inmediato 'generar_imagen_creativa_whatsapp' para dise\xF1ar y enviarle la pieza gr\xE1fica HD 1080x1080 directamente al chat.
+e) Si el usuario pide la ubicaci\xF3n GPS, mapa del sector o tarjeta de contacto oficial de VECY: Invoca 'enviar_ubicacion_mapa_gps' o 'enviar_tarjeta_contacto_vecy'.
+f) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
+g) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
 
 ===================================================
 BUSCADOR Y MEDIACI\xD3N DE MATCHES (C\xD3DIGO #M...):
@@ -32788,7 +33729,15 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
         }
       }
     }
-    const { isExplicitLegalPdfRequest: isExplicitLegalPdfRequest2, generateLegalPdfForDmRequest: generateLegalPdfForDmRequest2, processAndQueueDmSticker: processAndQueueDmSticker2 } = await Promise.resolve().then(() => (init_dmOnboardingAndDocsHelper(), dmOnboardingAndDocsHelper_exports));
+    const {
+      isExplicitLegalPdfRequest: isExplicitLegalPdfRequest2,
+      generateLegalPdfForDmRequest: generateLegalPdfForDmRequest2,
+      processAndQueueDmSticker: processAndQueueDmSticker2,
+      isExplicitCreativeImageRequest: isExplicitCreativeImageRequest2,
+      generateCustomUserCreativeImage: generateCustomUserCreativeImage2,
+      queueCreativeImageForDm: queueCreativeImageForDm2,
+      popLatestDmCreativeImage: popLatestDmCreativeImage2
+    } = await Promise.resolve().then(() => (init_dmOnboardingAndDocsHelper(), dmOnboardingAndDocsHelper_exports));
     if (isExplicitLegalPdfRequest2(clean) && !hasLatestDmPdf(userId)) {
       try {
         const autoPdf = await generateLegalPdfForDmRequest2(clean, {
@@ -32797,6 +33746,22 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
         setLatestDmPdf(userId, { pdfBuffer: autoPdf.pdfBuffer, pdfFileName: autoPdf.fileName });
       } catch (pdfErr) {
         console.warn("[dmHandler] Error generando PDF legal autom\xE1tico:", pdfErr?.message);
+      }
+    }
+    if (isExplicitCreativeImageRequest2(clean)) {
+      const existingCreative = popLatestDmCreativeImage2(userId);
+      if (existingCreative) {
+        queueCreativeImageForDm2(userId, existingCreative);
+      } else {
+        try {
+          const autoImg = await generateCustomUserCreativeImage2({
+            userPrompt: clean,
+            includeJaniaAvatar: true
+          });
+          queueCreativeImageForDm2(userId, autoImg);
+        } catch (imgErr) {
+          console.warn("[dmHandler] Error generando imagen creativa autom\xE1tica:", imgErr?.message);
+        }
       }
     }
     const stickerProcessed = processAndQueueDmSticker2(userId, clean, reply);
@@ -32835,7 +33800,7 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
         } else if (trustedContact.customMessage) {
           famMsg = `\xA1${timeGreeting}, ${trustedContact.customMessage}`;
         } else {
-          famMsg = `\xA1${timeGreeting}, ${trustedContact.primaryNick || displayName}! JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F916}\u2728. Te cuento que Eduardo est\xE1 disponible en su l\xEDnea de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).`;
+          famMsg = `\xA1${timeGreeting}, ${trustedContact.primaryNick || displayName}! JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728. Te cuento que Eduardo est\xE1 disponible en su l\xEDnea de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).`;
         }
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", famMsg);
@@ -33015,7 +33980,7 @@ ${verifResult.reportText}`;
         return hMsg;
       }
     }
-    const fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! \u{1F44B} Estoy 100% atenta. Tuve una breve demora de conexi\xF3n de red con el modelo de lenguaje, pero ya me restablec\xED. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una peque\xF1a demora de red en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Tuve una peque\xF1a demora de conexi\xF3n de red con mi servicio de lenguaje. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    const fallback = isEduardo ? `\xA1${timeSalutation}, Eduardo! \u{1F44B} Estoy 100% atenta. Tuve una breve demora de conexi\xF3n de red con el modelo de lenguaje, pero ya me restablec\xED. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isJani ? `\xA1${timeSalutation}, Jani! Qu\xE9 gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}` : isFamilyOrTrusted ? `\xA1${timeSalutation}, ${displayName}! Qu\xE9 pena contigo, ocurri\xF3 una peque\xF1a demora de red en mi sistema (un peque\xF1o fallo en la matrix \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u{1F605}). \xBFMe confirmas nuevamente qu\xE9 necesitas para ayudarte de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Tuve una peque\xF1a demora de conexi\xF3n de red con mi servicio de lenguaje. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;
@@ -33242,6 +34207,46 @@ var init_dmHandler = __esm({
               },
               required: ["tipoDocumento"]
             }
+          },
+          {
+            name: "generar_imagen_creativa_whatsapp",
+            description: "Crea y env\xEDa en imagen HD (1080x1080 JPG) cualquier pieza gr\xE1fica inmobiliaria solicitada por el usuario con su propio prompt: flyers para inmuebles en venta o arriendo, banners promocionales, posts para redes sociales (Instagram/Facebook/WhatsApp), infograf\xEDas inmobiliarias o dise\xF1os personalizados con la paleta ejecutiva de VECY BIENES RA\xCDCES.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                promptUsuario: { type: "STRING", description: "Descripci\xF3n completa del dise\xF1o, flyer, banner, post o infograf\xEDa solicitada por el usuario" },
+                tipoPieza: {
+                  type: "STRING",
+                  description: "Valores permitidos: flyer_inmueble, banner_promocional, post_redes, infografia_inmobiliaria, arte_libre"
+                },
+                tituloPrincipal: { type: "STRING", description: "Titular principal del flyer o post (ej. 'APARTAMENTO EN VENTA CHIC\xD3 NORTE')" },
+                subtitulo: { type: "STRING", description: "Subt\xEDtulo o tipo de negocio (ej. 'VENTA EXCLUSIVA \xB7 ESTRATO 6')" },
+                precioOValor: { type: "STRING", description: "Precio de venta, canon o cifra principal destacada" },
+                ubicacionOZona: { type: "STRING", description: "Barrio, sector o ciudad del inmueble" },
+                especificacionesClave: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "Lista de 3 a 4 especificaciones o puntos clave para el dise\xF1o (ej. ['145 m\xB2 construidos', '3 Alcobas + Estudio', '2 Garajes independientes'])"
+                },
+                telefonoContacto: { type: "STRING", description: "Tel\xE9fono de contacto a mostrar en el flyer (por defecto +57 316 656 9719)" },
+                incluirAvatarJania: { type: "BOOLEAN", description: "true si el usuario desea que aparezca JanIA en la pieza gr\xE1fica" }
+              },
+              required: ["promptUsuario"]
+            }
+          },
+          {
+            name: "enviar_ubicacion_mapa_gps",
+            description: "Env\xEDa un pin de ubicaci\xF3n GPS interactivo nativo de WhatsApp (Location Pin) de una zona, barrio de Bogot\xE1/Colombia o punto de encuentro oficial de VECY BIENES RA\xCDCES.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                nombreLugar: { type: "STRING", description: "Nombre del lugar, edificio o punto de referencia" },
+                direccionOBarrio: { type: "STRING", description: "Direcci\xF3n o barrio en Bogot\xE1 / Colombia" },
+                latitud: { type: "NUMBER", description: "Latitud GPS (por defecto 4.6768 Parque de la 93 / Chic\xF3 Bogot\xE1)" },
+                longitud: { type: "NUMBER", description: "Longitud GPS (por defecto -74.0482 Parque de la 93 / Chic\xF3 Bogot\xE1)" }
+              },
+              required: ["nombreLugar"]
+            }
           }
         ]
       }
@@ -33260,7 +34265,10 @@ var init_dmHandler = __esm({
       "catalogo",
       "web",
       "catalogo_inmuebles",
-      "registro_inmueble"
+      "registro_inmueble",
+      "documento_legal_pdf",
+      "imagen_creativa",
+      "ubicacion_gps"
     ];
   }
 });
@@ -33556,6 +34564,16 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
       if (isOngoingChat && finalResp) {
         finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
       }
+      const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
+      if (isExplicitCreativeImageRequest(messageToProcess)) {
+        const imgAsset = await generateCustomUserCreativeImage({
+          userPrompt: messageToProcess,
+          userName: targetName || realName
+        }).catch(() => null);
+        if (imgAsset) {
+          queueCreativeImageForDm(userId, imgAsset);
+        }
+      }
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
@@ -33564,7 +34582,9 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         response: finalResp,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u{1F6AB}" : "\u{1F44C}"),
         wantsVoice: parsed.wantsVoice || false,
-        voiceResponse: parsed.voiceResponse || ""
+        voiceResponse: parsed.voiceResponse || "",
+        document: legalPdfDoc?.pdfBuffer,
+        fileName: legalPdfDoc?.fileName
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
@@ -33657,6 +34677,7 @@ var init_consultingHandler = __esm({
     init_commercialFunnelService();
     init_prompts();
     init_dmHandler();
+    init_dmOnboardingAndDocsHelper();
   }
 });
 
@@ -33968,6 +34989,7 @@ __export(janIA_exports, {
   companySessionMap: () => companySessionMap,
   consultingConversationHistory: () => consultingConversationHistory,
   deletePendingSession: () => deletePendingSession,
+  detectCreativeAssetType: () => detectCreativeAssetType,
   detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
   dmConversationHistory: () => dmConversationHistory,
   enrichLexiconFromText: () => enrichLexiconFromText,
@@ -33985,6 +35007,7 @@ __export(janIA_exports, {
   formatColombiaDateTime: () => formatColombiaDateTime,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   generarHashMensaje: () => generarHashMensaje,
+  generateCustomUserCreativeImage: () => generateCustomUserCreativeImage,
   generateFichaTecnicaRequerimientoIncompleto: () => generateFichaTecnicaRequerimientoIncompleto,
   generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
   generateWelcomeMessage: () => generateWelcomeMessage,
@@ -34021,6 +35044,7 @@ __export(janIA_exports, {
   isChaloEscobarJoke: () => isChaloEscobarJoke,
   isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
   isEduardoOrJani: () => isEduardoOrJani,
+  isExplicitCreativeImageRequest: () => isExplicitCreativeImageRequest,
   isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
   isGenericName: () => isGenericName,
   isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
@@ -34044,9 +35068,13 @@ __export(janIA_exports, {
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
   parseSafeJSON: () => parseSafeJSON,
+  popLatestDmCreativeImage: () => popLatestDmCreativeImage,
   popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
+  popLatestDmInteractivePoll: () => popLatestDmInteractivePoll,
+  popLatestDmLocationPin: () => popLatestDmLocationPin,
   popLatestDmPdf: () => popLatestDmPdf,
   popLatestDmSticker: () => popLatestDmSticker,
+  popLatestDmVCard: () => popLatestDmVCard,
   preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
   processAndQueueDmSticker: () => processAndQueueDmSticker,
   processCirculoMessage: () => processCirculoMessage,
@@ -34055,6 +35083,10 @@ __export(janIA_exports, {
   processWhatsAppMessage: () => processWhatsAppMessage,
   promptCache: () => promptCache,
   propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings,
+  queueCreativeImageForDm: () => queueCreativeImageForDm,
+  queueDmInteractivePoll: () => queueDmInteractivePoll,
+  queueDmLocationPin: () => queueDmLocationPin,
+  queueDmVCard: () => queueDmVCard,
   recordUserReviewClaim: () => recordUserReviewClaim,
   repairJSON: () => repairJSON,
   resolveContactPhone: () => resolveContactPhone,
@@ -34403,6 +35435,7 @@ __export(cronService_exports, {
   VECY_DM_LINK: () => VECY_DM_LINK,
   VECY_MOTTO_FOOTER: () => VECY_MOTTO_FOOTER,
   WEEKLY_POLLS_LIST: () => WEEKLY_POLLS_LIST,
+  WEEKLY_QUIZZES_LIST: () => WEEKLY_QUIZZES_LIST,
   acquireBroadcastLock: () => acquireBroadcastLock,
   completeBroadcast: () => completeBroadcast,
   enforceGreetingAccuracy: () => enforceGreetingAccuracy,
@@ -34441,8 +35474,8 @@ __export(cronService_exports, {
   sanitizeChannelContent: () => sanitizeChannelContent
 });
 import cron from "node-cron";
-import path12 from "path";
-import fs12 from "fs";
+import path13 from "path";
+import fs13 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
@@ -34609,16 +35642,16 @@ function enforceJanIAIdentity(text2) {
 async function getThemedImagePathAsync(tipo) {
   const recent = await getRecentImageFiles(3);
   const possibleDirs = [
-    path12.resolve(process.cwd(), "client/public/assets/jania"),
-    path12.resolve(process.cwd(), "dist/assets/jania"),
-    path12.resolve(__dirname, "../../client/public/assets/jania")
+    path13.resolve(process.cwd(), "client/public/assets/jania"),
+    path13.resolve(process.cwd(), "dist/assets/jania"),
+    path13.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
     if (pref.endsWith(".mp4") || pref.endsWith(".mov")) {
       for (const dir of possibleDirs) {
-        const candidate = path12.join(dir, pref);
-        if (fs12.existsSync(candidate)) {
+        const candidate = path13.join(dir, pref);
+        if (fs13.existsSync(candidate)) {
           return { fullPath: candidate, fileName: pref };
         }
       }
@@ -34631,8 +35664,8 @@ async function getThemedImagePathAsync(tipo) {
     chosenFile = effectivePool[0];
   }
   for (const dir of possibleDirs) {
-    const candidatePath = path12.join(dir, chosenFile);
-    if (fs12.existsSync(candidatePath)) {
+    const candidatePath = path13.join(dir, chosenFile);
+    if (fs13.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -34640,15 +35673,15 @@ async function getThemedImagePathAsync(tipo) {
 }
 function getThemedImagePath(tipo) {
   const possibleDirs = [
-    path12.resolve(process.cwd(), "client/public/assets/jania"),
-    path12.resolve(process.cwd(), "dist/assets/jania"),
-    path12.resolve(__dirname, "../../client/public/assets/jania")
+    path13.resolve(process.cwd(), "client/public/assets/jania"),
+    path13.resolve(process.cwd(), "dist/assets/jania"),
+    path13.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
   for (const dir of possibleDirs) {
-    const candidatePath = path12.join(dir, chosenFile);
-    if (fs12.existsSync(candidatePath)) {
+    const candidatePath = path13.join(dir, chosenFile);
+    if (fs13.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -34847,7 +35880,8 @@ async function publishEveningPollNow(force = false) {
   const weekNumber = Math.floor(diffDays / 7);
   const pollIndex = (weekNumber * 2 + (dayOfWeek === 4 ? 1 : 0)) % WEEKLY_POLLS_LIST.length;
   const poll = WEEKLY_POLLS_LIST[pollIndex] || WEEKLY_POLLS_LIST[0];
-  console.log(`[CRON-POLL] \u{1F4CA} Despachando encuesta vespertina interactiva (Canal Oficial + Votaci\xF3n Grupos 2 y 3)...`);
+  const quiz = WEEKLY_QUIZZES_LIST[weekNumber % WEEKLY_QUIZZES_LIST.length] || WEEKLY_QUIZZES_LIST[0];
+  console.log(`[CRON-POLL] \u{1F4CA} Despachando herramientas interactivas nativas (Encuesta + Cuestionario + Preguntar en Canal Oficial y Grupos 2/3)...`);
   const lock = await acquireBroadcastLock("canal_evening_poll", "encuesta_vespertina", dateBogota, force);
   if (!lock.allowed) {
     console.log(`[CRON-POLL] \u23ED\uFE0F Omitiendo encuesta vespertina: ${lock.reason}`);
@@ -34863,45 +35897,59 @@ async function publishEveningPollNow(force = false) {
       await failBroadcast(lock.broadcastId, "Canal Oficial no disponible");
       return { success: false, reason: "Canal Oficial no disponible" };
     }
-    const letters = ["A", "B", "C", "D"];
-    const formattedOptions = poll.options.map((opt, i) => `\u{1F539} *${letters[i]})* ${opt}`).join("\n");
-    const channelPollText = sanitizeChannelContent(
-      `\u{1F4CA} *ENCUESTA DE LA SEMANA \u2014 COMUNIDAD VECY* \u{1F5F3}\uFE0F
-
-*\xAB${poll.question}\xBB*
-
-${formattedOptions}
-
-\u{1F5E3}\uFE0F *\xA1Tu opini\xF3n cuenta!* Hemos habilitado la votaci\xF3n interactiva directa en nuestros Grupos Oficiales de Debate Inmobiliario.
-
-\u{1F449} *Sigue nuestro Canal para m\xE1s an\xE1lisis y herramientas:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
-
-${VECY_MOTTO_FOOTER}`
+    const chanRes = await janiaMatchBot.sendChannelPoll(
+      poll.question,
+      poll.options,
+      1,
+      janiaMatchBot.channelNewsletterId
     );
-    const pollImage = getLocalCuratedThemeImage("general") || getLocalCuratedThemeImage("juridico");
-    const chanRes = await janiaMatchBot.sendToGroup(channelPollText, pollImage, [], janiaMatchBot.channelNewsletterId);
+    if (dayOfWeek === 4 || force) {
+      await janiaMatchBot.sendQuiz(
+        janiaMatchBot.channelNewsletterId,
+        quiz.question,
+        quiz.options,
+        quiz.correctAnswerIndex
+      ).catch((e) => console.warn("[CRON-POLL] Advertencia Quiz en Canal:", e?.message));
+      await janiaMatchBot.sendQuestionPrompt(
+        janiaMatchBot.channelNewsletterId,
+        `\u2753 *CAJA DE PREGUNTAS ABIERTA CON JANIA* \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
+\xBFQu\xE9 tema legal, tributario, aval\xFAo ACM o dise\xF1o de flyer inmobiliario quieres que resolvamos en nuestra pr\xF3xima c\xE1psula? Toca para enviarnos tu pregunta o escr\xEDbeme directo a ${VECY_DM_LINK}`
+      ).catch((e) => console.warn("[CRON-POLL] Advertencia Preguntar en Canal:", e?.message));
+    }
     if (!chanRes?.success || !chanRes?.messageId) {
-      console.warn(`[CRON-POLL] \u{1F6D1} ABORTADO env\xEDo a Grupos 2 y 3: La publicaci\xF3n en Canal Oficial fall\xF3 (${chanRes?.error || "Sin ID"}).`);
+      console.warn(`[CRON-POLL] \u{1F6D1} ABORTADO env\xEDo a Grupos 2 y 3: La encuesta nativa en Canal Oficial fall\xF3 (${chanRes?.error || "Sin ID"}).`);
       await failBroadcast(lock.broadcastId, chanRes?.error || "Fallo de entrega en Canal Oficial");
       return { success: false, reason: "Fallo de entrega en Canal Oficial" };
     }
-    console.log(`[CRON-POLL] \u2705 Encuesta en Canal confirmada (ID: ${chanRes.messageId}). Habilitando votaci\xF3n interactiva en Grupos 2 y 3...`);
-    const pollTeaser = `\u{1F4CA} *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* \u{1F5F3}\uFE0F
+    console.log(`[CRON-POLL] \u2705 Encuesta nativa en Canal confirmada (ID: ${chanRes.messageId}). Habilitando Encuesta + Cuestionario + Gancho de Servicios en Grupos 2 y 3...`);
+    const pollTeaser = `\u{1F4CA} *ENCUESTA Y CUESTIONARIO OFICIAL EN EL CANAL VECY* \u{1F5F3}\uFE0F\u{1F3C6}
 
-Acabamos de lanzar la tem\xE1tica en nuestro Canal Oficial:
+Acabamos de activar nuestra encuesta interactiva en el Canal Oficial:
 *\xAB${poll.question}\xBB*
 
-\u{1F449} *Sigue el Canal Oficial aqu\xED:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+\u2728 *Recuerda todo lo que puedes pedirme 24/7 en mi chat directo (${VECY_DM_LINK}):*
+\u{1F3A8} *NUEVO \u2014 Estudio Creativo de Im\xE1genes IA:* P\xEDdeme con tu propio prompt *Flyers para tus inmuebles, Banners, Posts para redes o Infograf\xEDas 1:1*.
+\u{1F4D1} *Minutas y Cartas en PDF Membretado con QR:* Promesas, arriendos, corretaje, cartas de restituci\xF3n (Ley 820) y presentaci\xF3n de clientes.
+\u{1F6E1}\uFE0F *Verificaci\xF3n SARLAFT, ADRES, RUES, Predial, IDU, Aval\xFAos ACM y Matching 40/20/40.*
 
-Colegas, \xA1voten en la encuesta arriba y debatimos su experiencia aqu\xED abajo! \u{1F447}`;
+\u{1F449} *Sigue el Canal Oficial y vota aqu\xED:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+Colegas, \xA1voten tambi\xE9n en la encuesta aqu\xED arriba y debatimos su experiencia! \u{1F447}`;
     const targetGroup2 = janiaMatchBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
       await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
+      if (dayOfWeek === 4) {
+        await janiaMatchBot.sendQuiz(targetGroup2, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {
+        });
+      }
       await janiaMatchBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
     }
     const targetGroup3 = janiaMatchBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
     if (targetGroup3) {
       await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup3, 1);
+      if (dayOfWeek === 4) {
+        await janiaMatchBot.sendQuiz(targetGroup3, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {
+        });
+      }
       await janiaMatchBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
     }
     await completeBroadcast(lock.broadcastId, {
@@ -34933,22 +35981,30 @@ async function publishEveningServicesNow(force = false) {
       await failBroadcast(lock.broadcastId, "Canal Oficial no configurado");
       return { success: false, reason: "Canal Oficial no configurado" };
     }
-    const imagePath = getLocalCuratedThemeImage("verificacion");
+    const imagePath = await generateDailyChannelEditorialImage({
+      dayOfMonth: (/* @__PURE__ */ new Date()).getDate(),
+      dateBogota,
+      topicTitle: "PORTAFOLIO INTEGRAL DE SERVICIOS CON JANIA 24/7",
+      themeKey: "verificacion_servicios",
+      captionText: "Flyers e Infograf\xEDas IA con tu propio prompt \u2022 Minutas y Cartas PDF con QR \u2022 Verificaci\xF3n SARLAFT, ADRES, RUES, Predial e IDU \u2022 Aval\xFAos ACM y Matching 40/20/40"
+    }).catch(() => getChannelSquareImage1x1("verificacion"));
     const channelText = sanitizeChannelContent(
-      `\u{1F6E1}\uFE0F *SERVICIOS GRATUITOS DE VERIFICACI\xD3N CON JANIA* \u{1F1E8}\u{1F1F4}
+      `\u{1F6E1}\uFE0F *SERVICIOS GRATUITOS Y ESTUDIO CREATIVO 24/7 CON JANIA* \u{1F1E8}\u{1F1F4}\u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
 
-Estimados colegas y aliados de VECY Bienes Ra\xEDces:
+Estimados colegas, inversionistas y aliados de VECY BIENES RA\xCDCES:
 
-\xBFSab\xEDas que puedes proteger tus negociaciones y verificar a tus clientes en segundos a $0 COP antes de firmar cualquier contrato o recibir un inmueble?
+\xBFSab\xEDas que puedes blindar tus negociaciones, redactar contratos membretados y dise\xF1ar piezas publicitarias en segundos desde tu WhatsApp con JanIA?
 
-JanIA, nuestra Inteligencia Artificial Oficial, te entrega al instante:
+JanIA, nuestra Inteligencia Artificial Inmobiliaria Oficial, te entrega al instante:
+\u{1F3A8} *NUEVO \u2014 Estudio Creativo de Im\xE1genes por WhatsApp:* Env\xEDame tu propio prompt y te dise\xF1o al instante *Flyers de tus inmuebles, Banners comerciales, Posts para redes sociales o Infograf\xEDas ejecutivas 1:1* con calidad de estudio.
+\u{1F4D1} *Minutas, Contratos y Cartas en PDF Membretado con QR:* Promesas de compraventa, contratos de arriendo (Ley 820), corretaje, cesi\xF3n de leasing, pacto de retroventa, cartas de terminaci\xF3n/restituci\xF3n y cartas de presentaci\xF3n de clientes.
 \u2705 *Identidad y EPS (ADRES):* Consulta BDUA, estado activo y r\xE9gimen (Contributivo o Subsidiado).
-\u2705 *Antecedentes Oficiales:* Polic\xEDa Nacional, Procuradur\xEDa General (SIRI) y Contralor\xEDa (Bolet\xEDn Fiscal).
-\u2705 *Registro Mercantil RUES:* NIT, raz\xF3n social, actividad econ\xF3mica y representaci\xF3n legal.
-\u2705 *Tr\xE1mites Distritales:* Consulta de impuesto predial y estado de valorizaci\xF3n IDU.
+\u2705 *Antecedentes Oficiales SARLAFT:* Polic\xEDa Nacional, Procuradur\xEDa General (SIRI) y Contralor\xEDa (Siri/Sanciones).
+\u2705 *Registro Mercantil RUES y Tributos:* NIT, representaci\xF3n legal, factura Predial de Bogot\xE1 en PDF y Paz y Salvo IDU.
+\u{1F4CA} *Aval\xFAos Comerciales (ACM), POT y Matching 40/20/40:* Tasaci\xF3n por m\xB2, edificabilidad y cruces autom\xE1ticos en nuestra Mesa de Coincidencias.
 
-\u{1F4F2} *\xBFC\xF3mo solicitarlo gratis?*
-Escribe directamente al WhatsApp de JanIA (+57 319 291 9978) con el n\xFAmero de documento o NIT y recibe tu reporte ejecutivo inmediato.
+\u{1F4F2} *\xBFC\xF3mo solicitarlo ahora mismo?*
+Escribe directamente al WhatsApp de JanIA (+57 319 291 9978 -> ${VECY_DM_LINK}) o ingresa a https://vecy-bienes-raices.vercel.app/jania y p\xEDdelo con texto o nota de voz.
 
 \u{1F449} *Sigue nuestro Canal Oficial para m\xE1s herramientas y beneficios:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
 
@@ -34961,11 +36017,14 @@ ${VECY_MOTTO_FOOTER}`
       return { success: false, reason: "Fallo de entrega en Canal Oficial" };
     }
     console.log(`[CRON-SERVICES] \u2705 Servicios gratuitos confirmados en Canal (ID: ${chanRes.messageId}). Procediendo con micro-ganchos a Grupos 2 y 3...`);
-    const servicesTeaser = `\u{1F6E1}\uFE0F *BLINDA TUS NEGOCIACIONES ESTE FIN DE SEMANA CON JANIA* \u{1F4F2}
+    const servicesTeaser = `\u{1F6E1}\uFE0F *BLINDA TUS NEGOCIOS Y DISE\xD1A TUS FLYERS ESTE FIN DE SEMANA CON JANIA* \u{1F4F2}\u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
 
-\xBFVas a recibir una oferta o firmar promesa este fin de semana? Recuerda que JanIA te ayuda a verificar antecedentes, ADRES EPS, RUES y Predial gratis en segundos.
+\xBFVas a captar un inmueble, presentar un cliente o firmar promesa este fin de semana? Recuerda todo lo que puedes pedirme en segundos en mi chat privado (${VECY_DM_LINK}):
+\u{1F3A8} *Estudio Creativo de Im\xE1genes IA:* P\xEDdeme con tu propio prompt *Flyers para tus inmuebles, Banners, Posts o Infograf\xEDas 1:1*.
+\u{1F4D1} *Cartas y Contratos en PDF Membretado con QR:* Promesas, arriendos, corretaje, restituci\xF3n Ley 820 y presentaci\xF3n de clientes.
+\u{1F50D} *Verificaci\xF3n Oficial a $0 COP:* Antecedentes, ADRES EPS, RUES, Predial PDF, IDU y Aval\xFAos ACM.
 
-En el Canal Oficial acabamos de publicar la gu\xEDa completa de c\xF3mo solicitar tus consultas a $0 COP \u{1F449} ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+En el Canal Oficial acabamos de publicar la gu\xEDa completa \u{1F449} ${VECY_SOCIAL_NETWORKS.whatsappChannel}
 
 \xA1Protege tus comisiones y cierra seguro!`;
     const targetGroup2 = janiaMatchBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
@@ -34979,7 +36038,7 @@ En el Canal Oficial acabamos de publicar la gu\xEDa completa de c\xF3mo solicita
     await completeBroadcast(lock.broadcastId, {
       topicTitle: "Servicios Gratuitos de Verificaci\xF3n con JanIA",
       themeKey: "verificacion_servicios",
-      imageFileName: path12.basename(imagePath),
+      imageFileName: path13.basename(imagePath),
       captionText: channelText
     });
     return { success: true, channelMessageId: chanRes.messageId };
@@ -35087,8 +36146,8 @@ function ensureVecyDailyFooter(text2) {
   if (!res.includes("wa.me/573192919978")) {
     res += `
 
-\u{1F4AC} *\xBFTienes un caso privado?* Escr\xEDbeme a mi chat privado de JanIA \u{1F4F2}: ${VECY_DM_LINK}
-\u{1F5E3}\uFE0F *\xBFQuieres debatir o compartir tu experiencia?* \xA1Opina aqu\xED en el grupo! \u{1F91D}`;
+\u{1F4AC} *\xBFNecesitas un Flyer inmobiliario con IA, una Minuta/Carta en PDF membretado, un Aval\xFAo ACM o verificar un cliente/predio?* Escr\xEDbeme a mi chat privado de JanIA \u{1F4F2}: ${VECY_DM_LINK}
+\u{1F5E3}\uFE0F *\xBFQuieres debatir o compartir tu experiencia?* \xA1Opina en nuestros grupos oficiales! \u{1F91D}`;
   }
   if (!/La evoluci[oó]n inevitable/i.test(res)) {
     res += `
@@ -35208,24 +36267,24 @@ function getLocalCuratedThemeImage(themeKey) {
     baseName = "jania_juridico.jpg";
   }
   const candidateDirs = [
-    path12.resolve(process.cwd(), "assets/broadcast"),
-    path12.resolve(process.cwd(), "client/public/assets/broadcast"),
-    path12.resolve(process.cwd(), "client/public/assets/jania")
+    path13.resolve(process.cwd(), "assets/broadcast"),
+    path13.resolve(process.cwd(), "client/public/assets/broadcast"),
+    path13.resolve(process.cwd(), "client/public/assets/jania")
   ];
   for (const dir of candidateDirs) {
-    const candidatePath = path12.join(dir, baseName);
-    if (fs12.existsSync(candidatePath)) {
+    const candidatePath = path13.join(dir, baseName);
+    if (fs13.existsSync(candidatePath)) {
       return candidatePath;
     }
   }
-  const fallbackDir = path12.resolve(process.cwd(), "client/public/assets/jania");
-  if (fs12.existsSync(fallbackDir)) {
-    const files = fs12.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
+  const fallbackDir = path13.resolve(process.cwd(), "client/public/assets/jania");
+  if (fs13.existsSync(fallbackDir)) {
+    const files = fs13.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
     if (files.length > 0) {
-      return path12.join(fallbackDir, files[0]);
+      return path13.join(fallbackDir, files[0]);
     }
   }
-  return path12.resolve(process.cwd(), "client/public/jania_post.png");
+  return path13.resolve(process.cwd(), "client/public/jania_post.png");
 }
 async function fetchPublicThemeImage(themeKey, dayOfMonth) {
   const query = THEME_IMAGE_SEARCH_MAP[themeKey] || "modern architecture real estate building";
@@ -35248,12 +36307,12 @@ async function fetchPublicThemeImage(themeKey, dayOfMonth) {
           if (imgRes.ok) {
             const buffer = Buffer.from(await imgRes.arrayBuffer());
             if (buffer.length >= 1e3) {
-              const cacheDir = path12.resolve(process.cwd(), "client/public/assets/broadcast");
-              if (!fs12.existsSync(cacheDir)) {
-                fs12.mkdirSync(cacheDir, { recursive: true });
+              const cacheDir = path13.resolve(process.cwd(), "client/public/assets/broadcast");
+              if (!fs13.existsSync(cacheDir)) {
+                fs13.mkdirSync(cacheDir, { recursive: true });
               }
-              const targetFile = path12.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-              fs12.writeFileSync(targetFile, buffer);
+              const targetFile = path13.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+              fs13.writeFileSync(targetFile, buffer);
               console.log(`[CRON-IMAGE-WEB] \u2705 Imagen p\xFAblica guardada localmente (${buffer.length} bytes): ${targetFile}`);
               return targetFile;
             }
@@ -35327,8 +36386,8 @@ async function publishDailyTipForDay(tipoKey, force = false) {
 }
 function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   const normalized = (themeKey || "").toLowerCase();
-  const dir1x1 = path12.resolve(process.cwd(), "client/public/assets/channel_1x1");
-  const janiaDir = path12.resolve(process.cwd(), "client/public/assets/jania");
+  const dir1x1 = path13.resolve(process.cwd(), "client/public/assets/channel_1x1");
+  const janiaDir = path13.resolve(process.cwd(), "client/public/assets/jania");
   const fullRotation1x1 = [
     "jania_anfitriona_cafe_1x1.jpg",
     "jania_couture_oro_liquido_1x1.png",
@@ -35367,12 +36426,12 @@ function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   } else {
     target1x1 = "jania_legal_due_diligence_1x1.jpg";
   }
-  const candidate1x1 = path12.join(dir1x1, target1x1);
-  if (fs12.existsSync(candidate1x1)) {
+  const candidate1x1 = path13.join(dir1x1, target1x1);
+  if (fs13.existsSync(candidate1x1)) {
     return candidate1x1;
   }
-  const candidateJania = path12.join(janiaDir, target1x1);
-  if (fs12.existsSync(candidateJania)) {
+  const candidateJania = path13.join(janiaDir, target1x1);
+  if (fs13.existsSync(candidateJania)) {
     return candidateJania;
   }
   return getLocalCuratedThemeImage(themeKey);
@@ -35387,11 +36446,22 @@ async function publishTodayTipNow(force = true) {
   }
   console.log(`[CRON-SERVICE] \u{1F680} Difusi\xF3n matutina (08:45 AM) \u2014 D\xEDa ${tip.dayOfMonth}: "${tip.topicTitle}"`);
   const content = await generateCalendarDailyText(tip);
-  const imagePath = getChannelSquareImage1x1(content.themeKey || tip.themeKey, tip.dayOfMonth);
-  const teaserText = `\u{1F4A1} *HOY EN EL CANAL OFICIAL DE VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+  const imagePath = await generateDailyChannelEditorialImage({
+    dayOfMonth: tip.dayOfMonth,
+    dateBogota: dateKey,
+    topicTitle: content.topicTitle || tip.topicTitle,
+    themeKey: content.themeKey || tip.themeKey,
+    captionText: content.captionText
+  }).catch(() => getChannelSquareImage1x1(content.themeKey || tip.themeKey, tip.dayOfMonth));
+  const teaserText = `\u{1F4A1} *HOY EN EL CANAL OFICIAL DE VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}\u{1F469}\u{1F3FB}\u200D\u{1F4BC}
 
 \u{1F4CC} *${content.topicTitle || tip.topicTitle}*
-Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado con los art\xEDculos clave que necesitas para blindar tus operaciones y comisiones.
+Acabamos de publicar en el Canal Oficial el an\xE1lisis legal, t\xE9cnico y comercial con su infograf\xEDa ejecutiva del d\xEDa para blindar tus operaciones y comisiones.
+
+\u2728 *Recuerda que en mi chat directo (${VECY_DM_LINK}) puedes pedirme 24/7:*
+\u{1F3A8} *Flyers de tus inmuebles, Banners, Posts e Infograf\xEDas 1:1* creados con tu propio prompt.
+\u{1F4D1} *Cartas y Minutas en PDF Membretado con QR* (arriendos Ley 820, promesas, corretaje, restituci\xF3n y presentaci\xF3n de clientes).
+\u{1F6E1}\uFE0F *Aval\xFAos ACM, POT, Predial PDF, IDU, RUES, ADRES y Matching 40/20/40.*
 
 \u{1F449} Sigue el Canal Oficial y lee la gu\xEDa completa aqu\xED: ${VECY_SOCIAL_NETWORKS.whatsappChannel}
 
@@ -35413,7 +36483,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
-      imageFileName: imagePath ? path12.basename(imagePath) : void 0,
+      imageFileName: imagePath ? path13.basename(imagePath) : void 0,
       captionText: content.captionText
     });
     console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampol\xEDn + Estado WhatsApp con enlace): "${content.topicTitle}".`);
@@ -35606,7 +36676,7 @@ Cualquier duda, nuestro br\xF3ker y directores Eduardo y Jani est\xE1n a tu disp
     return { success: false, error: err?.message };
   }
 }
-var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
+var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, WEEKLY_QUIZZES_LIST, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
 var init_cronService = __esm({
   "server/_core/cronService.ts"() {
     "use strict";
@@ -35616,8 +36686,9 @@ var init_cronService = __esm({
     init_nightlyRematch();
     init_llm();
     init_const();
+    init_creativeStudioImageService();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path12.dirname(__filename);
+    __dirname = path13.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -35962,7 +37033,7 @@ Culminamos una semana muy productiva en nuestra comunidad. Hoy reflexionamos sob
           topicTitle: "Identidad de JanIA: Creada para Empoderar al Asesor",
           themeKey: "cafe",
           voiceText: `Buenos d\xEDas a todos mis queridos colegas. Les habla JanIA. Para quienes se unen por primera vez a nuestra comunidad, quiero contarles qui\xE9n soy: fui concebida por nuestros directores Eduardo Rivera y Jani Alves como la primera inteligencia artificial inmobiliaria de Colombia. Mi prop\xF3sito no es reemplazar al corredor, sino darle superpoderes: cruzo ofertas y requerimientos las veinticuatro horas, redacto contratos, oriento en temas tributarios y promuevo la colaboraci\xF3n \xE9tica. \xA1Bienvenidos a la nueva era del corretaje!`,
-          captionText: `\u{1F916} *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+          captionText: `\u{1F469}\u{1F3FB}\u200D\u{1F4BC} *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \xA1Buenos d\xEDas, queridos colegas y nuevos aliados!
 
@@ -36837,6 +37908,52 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
       0: WEEKLY_POLLS_LIST[6]
       // Domingo
     };
+    WEEKLY_QUIZZES_LIST = [
+      {
+        question: "\u{1F3C6} QUIZ LEGAL VECY: Seg\xFAn la Ley 820 de 2003, \xBFcon cu\xE1ntos meses de antelaci\xF3n m\xEDnima se debe notificar la no pr\xF3rroga de un arriendo de vivienda?",
+        options: [
+          "1 mes antes del vencimiento",
+          "3 meses antes por correo certificado",
+          "15 d\xEDas h\xE1biles antes",
+          "6 meses antes del vencimiento"
+        ],
+        correctAnswerIndex: 1,
+        explanation: "Art. 22 y 24 Ley 820/2003: El preaviso debe notificarse con m\xEDnimo 3 meses de antelaci\xF3n a trav\xE9s del servicio postal autorizado."
+      },
+      {
+        question: "\u{1F3C6} QUIZ TRIBUTARIO VECY: \xBFCu\xE1l es la tarifa general del impuesto de Ganancia Ocasional en Colombia por la venta de un activo fijo pose\xEDdo 2 a\xF1os o m\xE1s?",
+        options: [
+          "10% sobre la utilidad",
+          "15% sobre la ganancia ocasional",
+          "35% tarifa general",
+          "5% sobre el valor de escritura"
+        ],
+        correctAnswerIndex: 1,
+        explanation: "Reforma Tributaria Ley 2277 de 2022 (Art. 313 y 314 E.T.): La tarifa de Ganancia Ocasional pas\xF3 del 10% al 15%."
+      },
+      {
+        question: "\u{1F3C6} QUIZ MODELO VECY: En el esquema colaborativo 40/20/40 de VECY BIENES RA\xCDCES, \xBFc\xF3mo se distribuye el 20% central de la operaci\xF3n?",
+        options: [
+          "20% completo para la inmobiliaria",
+          "10% Bolsa Difusora + 10% VECY",
+          "15% Captador + 5% Portal",
+          "Se descuenta de gastos notariales"
+        ],
+        correctAnswerIndex: 1,
+        explanation: "Doctrina 40/20/40: 40% Punta Captadora, 40% Punta Colocadora, 10% Bolsa Colaborativa de Difusores y 10% Infraestructura VECY."
+      },
+      {
+        question: "\u{1F3C6} QUIZ NOTARIAL VECY: Por costumbre mercantil y ley en Colombia, \xBFc\xF3mo se asumen los Derechos Notariales de escrituraci\xF3n en una compraventa?",
+        options: [
+          "100% el comprador",
+          "50% vendedor y 50% comprador",
+          "100% el vendedor",
+          "70% comprador y 30% vendedor"
+        ],
+        correctAnswerIndex: 1,
+        explanation: "Los derechos notariales se pagan 50/50 entre vendedor y comprador; la Retenci\xF3n en la Fuente la asume el vendedor y el Registro el comprador."
+      }
+    ];
     publishDailyPoll = publishWeeklyPoll;
     VECY_DM_LINK = "https://wa.me/573192919978";
     VECY_MOTTO_FOOTER = `_VECY_
@@ -38231,8 +39348,8 @@ init_storage();
 import { z as z4 } from "zod";
 import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
-import fs13 from "fs";
-import path13 from "path";
+import fs14 from "fs";
+import path14 from "path";
 
 // server/routers/properties.ts
 init_trpc();
@@ -40306,11 +41423,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path13.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path13.join(process.cwd(), "qr-match.png");
-      let targetPath = fs13.existsSync(qrPath) ? qrPath : fs13.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path14.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path14.join(process.cwd(), "qr-match.png");
+      let targetPath = fs14.existsSync(qrPath) ? qrPath : fs14.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs13.readFileSync(targetPath);
+        const fileData = fs14.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -41791,30 +42908,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs14 from "fs";
+import fs15 from "fs";
 import { nanoid } from "nanoid";
-import path15 from "path";
+import path16 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path14 from "node:path";
+import path15 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path14.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path14.resolve(import.meta.dirname, "shared"),
-      "@assets": path14.resolve(import.meta.dirname, "attached_assets")
+      "@": path15.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path15.resolve(import.meta.dirname, "shared"),
+      "@assets": path15.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path14.resolve(import.meta.dirname),
-  root: path14.resolve(import.meta.dirname, "client"),
-  publicDir: path14.resolve(import.meta.dirname, "client", "public"),
+  envDir: path15.resolve(import.meta.dirname),
+  root: path15.resolve(import.meta.dirname, "client"),
+  publicDir: path15.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path14.resolve(import.meta.dirname, "dist"),
+    outDir: path15.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -41881,13 +42998,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path15.resolve(
+      const clientTemplate = path16.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs14.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs15.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -41901,15 +43018,15 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path15.resolve(import.meta.dirname, "..", "dist");
-  if (!fs14.existsSync(distPath)) {
+  const distPath = path16.resolve(import.meta.dirname, "..", "dist");
+  if (!fs15.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path15.resolve(distPath, "index.html"));
+    res.sendFile(path16.resolve(distPath, "index.html"));
   });
 }
 
@@ -41921,8 +43038,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs15 from "fs";
-import path16 from "path";
+import fs16 from "fs";
+import path17 from "path";
 init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -42101,10 +43218,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path16.join(process.cwd(), "qr-match.png");
-      const distQrPath = path16.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs15.existsSync(activePath)) {
+      const qrPath = path17.join(process.cwd(), "qr-match.png");
+      const distQrPath = path17.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs16.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs16.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -42124,10 +43241,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path16.join(process.cwd(), "qr-match.png");
-      const distQrPath = path16.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs15.existsSync(activePath)) {
+      const qrPath = path17.join(process.cwd(), "qr-match.png");
+      const distQrPath = path17.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs16.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs16.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -42148,10 +43265,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path16.join(process.cwd(), "qr-match.png");
-      const distQrPath = path16.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs15.existsSync(activePath)) {
+      const qrPath = path17.join(process.cwd(), "qr-match.png");
+      const distQrPath = path17.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs16.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs16.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -42178,10 +43295,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path16.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path16.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs15.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs15.existsSync(activePath)) {
+      const qrPath = path17.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path17.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs16.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs16.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -42232,8 +43349,8 @@ async function startServer() {
           let docBuffer;
           if (Buffer.isBuffer(document2)) {
             docBuffer = document2;
-          } else if (typeof document2 === "string" && fs15.existsSync(document2)) {
-            docBuffer = fs15.readFileSync(document2);
+          } else if (typeof document2 === "string" && fs16.existsSync(document2)) {
+            docBuffer = fs16.readFileSync(document2);
           } else if (typeof document2 === "string") {
             const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
             docBuffer = Buffer.from(cleanBase64, "base64");
@@ -42436,23 +43553,23 @@ _(Si es empresa, usa NIT en vez de CC)_
   });
   function resolveBroadcastImagePath(filenames) {
     const searchDirs = [
-      path16.join(process.cwd(), "client/public/assets/jania"),
-      path16.join(process.cwd(), "client/public/images"),
-      path16.join(process.cwd(), "client/public"),
+      path17.join(process.cwd(), "client/public/assets/jania"),
+      path17.join(process.cwd(), "client/public/images"),
+      path17.join(process.cwd(), "client/public"),
       process.cwd(),
-      path16.join(process.cwd(), "dist/assets/jania"),
-      path16.join(process.cwd(), "dist/images"),
-      path16.join(process.cwd(), "dist")
+      path17.join(process.cwd(), "dist/assets/jania"),
+      path17.join(process.cwd(), "dist/images"),
+      path17.join(process.cwd(), "dist")
     ];
     for (const name of filenames) {
       for (const dir of searchDirs) {
-        const fullPath = path16.join(dir, name);
-        if (fs15.existsSync(fullPath)) {
+        const fullPath = path17.join(dir, name);
+        if (fs16.existsSync(fullPath)) {
           return { path: fullPath, exists: true };
         }
       }
     }
-    return { path: path16.join(process.cwd(), filenames[0]), exists: false };
+    return { path: path17.join(process.cwd(), filenames[0]), exists: false };
   }
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -42621,9 +43738,9 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path16.resolve(process.cwd(), "public/uploads");
-  if (!fs15.existsSync(uploadsDir2)) {
-    fs15.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path17.resolve(process.cwd(), "public/uploads");
+  if (!fs16.existsSync(uploadsDir2)) {
+    fs16.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -42632,7 +43749,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path16.extname(file.originalname));
+      cb(null, uniqueSuffix + path17.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

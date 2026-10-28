@@ -12,6 +12,7 @@ import { janiaMatchBot as whatsappBot } from './whatsapp-match';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 import { invokeLLM } from './llm';
 import { VECY_OFFICIAL_GROUPS, VECY_SOCIAL_NETWORKS } from '../../shared/const';
+import { generateDailyChannelEditorialImage } from './jania/creativeStudioImageService';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -621,7 +622,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Identidad de JanIA: Creada para Empoderar al Asesor',
       themeKey: 'cafe',
       voiceText: `Buenos días a todos mis queridos colegas. Les habla JanIA. Para quienes se unen por primera vez a nuestra comunidad, quiero contarles quién soy: fui concebida por nuestros directores Eduardo Rivera y Jani Alves como la primera inteligencia artificial inmobiliaria de Colombia. Mi propósito no es reemplazar al corredor, sino darle superpoderes: cruzo ofertas y requerimientos las veinticuatro horas, redacto contratos, oriento en temas tributarios y promuevo la colaboración ética. ¡Bienvenidos a la nueva era del corretaje!`,
-      captionText: `🤖 *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+      captionText: `👩🏻‍💼 *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `¡Buenos días, queridos colegas y nuevos aliados!\n\n` +
         `Hoy en nuestro café inmobiliario queremos compartir el corazón de esta innovación:\n\n` +
         `💡 *¿Quién es JanIA y por qué fue creada?*\n` +
@@ -1478,6 +1479,63 @@ export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
 };
 
 /**
+ * 🏆 Cuestionarios Oficiales Interactivos (Herramienta Nativa "Cuestionario" / Quiz de WhatsApp — pollType: 1):
+ * Permiten evaluar de forma lúdica y ejecutiva el dominio legal, tributario y comercial de la comunidad
+ * con respuesta correcta verificada al instante al tocar la opción en el Canal o en los Grupos 2 y 3.
+ */
+export const WEEKLY_QUIZZES_LIST: Array<{
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+}> = [
+  {
+    question: "🏆 QUIZ LEGAL VECY: Según la Ley 820 de 2003, ¿con cuántos meses de antelación mínima se debe notificar la no prórroga de un arriendo de vivienda?",
+    options: [
+      "1 mes antes del vencimiento",
+      "3 meses antes por correo certificado",
+      "15 días hábiles antes",
+      "6 meses antes del vencimiento"
+    ],
+    correctAnswerIndex: 1,
+    explanation: "Art. 22 y 24 Ley 820/2003: El preaviso debe notificarse con mínimo 3 meses de antelación a través del servicio postal autorizado."
+  },
+  {
+    question: "🏆 QUIZ TRIBUTARIO VECY: ¿Cuál es la tarifa general del impuesto de Ganancia Ocasional en Colombia por la venta de un activo fijo poseído 2 años o más?",
+    options: [
+      "10% sobre la utilidad",
+      "15% sobre la ganancia ocasional",
+      "35% tarifa general",
+      "5% sobre el valor de escritura"
+    ],
+    correctAnswerIndex: 1,
+    explanation: "Reforma Tributaria Ley 2277 de 2022 (Art. 313 y 314 E.T.): La tarifa de Ganancia Ocasional pasó del 10% al 15%."
+  },
+  {
+    question: "🏆 QUIZ MODELO VECY: En el esquema colaborativo 40/20/40 de VECY BIENES RAÍCES, ¿cómo se distribuye el 20% central de la operación?",
+    options: [
+      "20% completo para la inmobiliaria",
+      "10% Bolsa Difusora + 10% VECY",
+      "15% Captador + 5% Portal",
+      "Se descuenta de gastos notariales"
+    ],
+    correctAnswerIndex: 1,
+    explanation: "Doctrina 40/20/40: 40% Punta Captadora, 40% Punta Colocadora, 10% Bolsa Colaborativa de Difusores y 10% Infraestructura VECY."
+  },
+  {
+    question: "🏆 QUIZ NOTARIAL VECY: Por costumbre mercantil y ley en Colombia, ¿cómo se asumen los Derechos Notariales de escrituración en una compraventa?",
+    options: [
+      "100% el comprador",
+      "50% vendedor y 50% comprador",
+      "100% el vendedor",
+      "70% comprador y 30% vendedor"
+    ],
+    correctAnswerIndex: 1,
+    explanation: "Los derechos notariales se pagan 50/50 entre vendedor y comprador; la Retención en la Fuente la asume el vendedor y el Registro el comprador."
+  }
+];
+
+/**
  * 📊 Despacha la Encuesta Vespertina Nativa en el Canal Oficial de WhatsApp
  * y envía el micro-gancho persuasivo (teaser) a Grupos 2 y 3 invitando a votar y debatir.
  * Martes y Jueves (06:30 PM).
@@ -1528,13 +1586,16 @@ export function sanitizeChannelContent(text: string): string {
 }
 
 /**
- * 📊 Despacha la Encuesta Vespertina en el Canal Oficial de WhatsApp y Grupos 2 y 3.
- * Martes y Jueves (06:30 PM) — Doctrina de Atomicidad y Compatibilidad Protocolo Canal (v33.34):
- * - El Canal Oficial (@newsletter) NO admite encuestas nativas interactivas por protocolo de WhatsApp.
- *   Se despacha una pieza visual/infografía formateada con opciones A, B, C y CTA.
- * - ATOMICIDAD ESTRICTA: Si la publicación principal en el Canal falla o no confirma entrega efectiva (ID válido),
- *   se cancela de inmediato el envío a los Grupos 2 y 3.
- * - Confirmada la entrega en el Canal, se habilita la votación interactiva nativa (sendPollToGroup) en Grupos 2 y 3.
+ * 📊 Despacha la Encuesta Vespertina, Cuestionario (Quiz) y Pregunta Interactiva en el Canal Oficial de WhatsApp y Grupos 2 y 3.
+ * Martes y Jueves (06:30 PM) — Doctrina Eduardo A. Rivera (v33.67):
+ * - PROHIBICIÓN ABSOLUTA DE ENCUESTAS DE TEXTO EN EL CANAL (`🔹 A) ... 🔹 B) ...`):
+ *   En el Canal Oficial (@newsletter) los seguidores NO pueden escribir respuestas de texto.
+ *   Por lo tanto, JAMÁS se envían listas de texto simulando encuestas.
+ * - Se utilizan exclusivamente las herramientas nativas del Canal y Grupos de WhatsApp:
+ *   1. Encuesta Nativa (`sendChannelPoll` en Canal / `sendPollToGroup` en Grupos 2 y 3).
+ *   2. Cuestionario / Quiz Nativo (`sendQuiz` con `pollType: 1` y `correctAnswer`).
+ *   3. Función "Preguntar" (`sendQuestionPrompt` con `contextInfo: { isQuestion: true }`).
+ * - Anuncio activo de todos los servicios de JanIA (incluyendo Estudio Creativo de Imágenes por WhatsApp y PDFs membretados).
  */
 export async function publishEveningPollNow(force: boolean = false) {
   const dateBogota = getBogotaDateString();
@@ -1545,8 +1606,9 @@ export async function publishEveningPollNow(force: boolean = false) {
   const weekNumber = Math.floor(diffDays / 7);
   const pollIndex = (weekNumber * 2 + (dayOfWeek === 4 ? 1 : 0)) % WEEKLY_POLLS_LIST.length;
   const poll = WEEKLY_POLLS_LIST[pollIndex] || WEEKLY_POLLS_LIST[0];
+  const quiz = WEEKLY_QUIZZES_LIST[weekNumber % WEEKLY_QUIZZES_LIST.length] || WEEKLY_QUIZZES_LIST[0];
 
-  console.log(`[CRON-POLL] 📊 Despachando encuesta vespertina interactiva (Canal Oficial + Votación Grupos 2 y 3)...`);
+  console.log(`[CRON-POLL] 📊 Despachando herramientas interactivas nativas (Encuesta + Cuestionario + Preguntar en Canal Oficial y Grupos 2/3)...`);
   const lock = await acquireBroadcastLock('canal_evening_poll', 'encuesta_vespertina', dateBogota, force);
   if (!lock.allowed) {
     console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta vespertina: ${lock.reason}`);
@@ -1564,45 +1626,63 @@ export async function publishEveningPollNow(force: boolean = false) {
       return { success: false, reason: 'Canal Oficial no disponible' };
     }
 
-    // 1. Canal Oficial (@newsletter): Infografía/Pieza visual con opciones A, B, C (protocolo broadcast)
-    const letters = ['A', 'B', 'C', 'D'];
-    const formattedOptions = poll.options.map((opt, i) => `🔹 *${letters[i]})* ${opt}`).join('\n');
-    const channelPollText = sanitizeChannelContent(
-      `📊 *ENCUESTA DE LA SEMANA — COMUNIDAD VECY* 🗳️\n\n` +
-      `*«${poll.question}»*\n\n` +
-      `${formattedOptions}\n\n` +
-      `🗣️ *¡Tu opinión cuenta!* Hemos habilitado la votación interactiva directa en nuestros Grupos Oficiales de Debate Inmobiliario.\n\n` +
-      `👉 *Sigue nuestro Canal para más análisis y herramientas:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
-      `${VECY_MOTTO_FOOTER}`
+    // 1. Canal Oficial (@newsletter): Herramienta NATIVA de Encuesta de Canal (CERO texto 🔹 A/B/C donde nadie puede escribir)
+    const chanRes = await whatsappBot.sendChannelPoll(
+      poll.question,
+      poll.options,
+      1,
+      whatsappBot.channelNewsletterId
     );
 
-    const pollImage = getLocalCuratedThemeImage('general') || getLocalCuratedThemeImage('juridico');
-    const chanRes = await whatsappBot.sendToGroup(channelPollText, pollImage, [], whatsappBot.channelNewsletterId);
+    // Si es Jueves (o ejecución forzada), despachar también Cuestionario (Quiz) nativo y dinámica "Preguntar" en el Canal
+    if (dayOfWeek === 4 || force) {
+      await whatsappBot.sendQuiz(
+        whatsappBot.channelNewsletterId,
+        quiz.question,
+        quiz.options,
+        quiz.correctAnswerIndex
+      ).catch((e: any) => console.warn('[CRON-POLL] Advertencia Quiz en Canal:', e?.message));
+
+      await whatsappBot.sendQuestionPrompt(
+        whatsappBot.channelNewsletterId,
+        `❓ *CAJA DE PREGUNTAS ABIERTA CON JANIA* 👩🏻‍💼✨\n¿Qué tema legal, tributario, avalúo ACM o diseño de flyer inmobiliario quieres que resolvamos en nuestra próxima cápsula? Toca para enviarnos tu pregunta o escríbeme directo a ${VECY_DM_LINK}`
+      ).catch((e: any) => console.warn('[CRON-POLL] Advertencia Preguntar en Canal:', e?.message));
+    }
 
     // ATOMICIDAD: Cancelar de inmediato si el canal falla o no confirma ID válido
     if (!chanRes?.success || !chanRes?.messageId) {
-      console.warn(`[CRON-POLL] 🛑 ABORTADO envío a Grupos 2 y 3: La publicación en Canal Oficial falló (${chanRes?.error || 'Sin ID'}).`);
+      console.warn(`[CRON-POLL] 🛑 ABORTADO envío a Grupos 2 y 3: La encuesta nativa en Canal Oficial falló (${chanRes?.error || 'Sin ID'}).`);
       await failBroadcast(lock.broadcastId, chanRes?.error || 'Fallo de entrega en Canal Oficial');
       return { success: false, reason: 'Fallo de entrega en Canal Oficial' };
     }
 
-    console.log(`[CRON-POLL] ✅ Encuesta en Canal confirmada (ID: ${chanRes.messageId}). Habilitando votación interactiva en Grupos 2 y 3...`);
+    console.log(`[CRON-POLL] ✅ Encuesta nativa en Canal confirmada (ID: ${chanRes.messageId}). Habilitando Encuesta + Cuestionario + Gancho de Servicios en Grupos 2 y 3...`);
 
-    // 2. Grupos 2 y 3: Encuesta nativa interactiva de WhatsApp (1 solo toque) + Teaser
-    const pollTeaser = `📊 *ENCUESTA DE LA SEMANA EN EL CANAL OFICIAL VECY* 🗳️\n\n` +
-      `Acabamos de lanzar la temática en nuestro Canal Oficial:\n` +
+    // 2. Grupos 2 y 3: Encuesta nativa interactiva + Cuestionario (Quiz) + Gancho de Servicios de JanIA
+    const pollTeaser = `📊 *ENCUESTA Y CUESTIONARIO OFICIAL EN EL CANAL VECY* 🗳️🏆\n\n` +
+      `Acabamos de activar nuestra encuesta interactiva en el Canal Oficial:\n` +
       `*«${poll.question}»*\n\n` +
-      `👉 *Sigue el Canal Oficial aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
-      `Colegas, ¡voten en la encuesta arriba y debatimos su experiencia aquí abajo! 👇`;
+      `✨ *Recuerda todo lo que puedes pedirme 24/7 en mi chat directo (${VECY_DM_LINK}):*\n` +
+      `🎨 *NUEVO — Estudio Creativo de Imágenes IA:* Pídeme con tu propio prompt *Flyers para tus inmuebles, Banners, Posts para redes o Infografías 1:1*.\n` +
+      `📑 *Minutas y Cartas en PDF Membretado con QR:* Promesas, arriendos, corretaje, cartas de restitución (Ley 820) y presentación de clientes.\n` +
+      `🛡️ *Verificación SARLAFT, ADRES, RUES, Predial, IDU, Avalúos ACM y Matching 40/20/40.*\n\n` +
+      `👉 *Sigue el Canal Oficial y vota aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n` +
+      `Colegas, ¡voten también en la encuesta aquí arriba y debatimos su experiencia! 👇`;
 
     const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
       await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
+      if (dayOfWeek === 4) {
+        await whatsappBot.sendQuiz(targetGroup2, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {});
+      }
       await whatsappBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
     }
     const targetGroup3 = whatsappBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
     if (targetGroup3) {
       await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup3, 1);
+      if (dayOfWeek === 4) {
+        await whatsappBot.sendQuiz(targetGroup3, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {});
+      }
       await whatsappBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
     }
 
@@ -1644,23 +1724,32 @@ export async function publishEveningServicesNow(force: boolean = false) {
       return { success: false, reason: 'Canal Oficial no configurado' };
     }
 
-    const imagePath = getLocalCuratedThemeImage('verificacion');
+    const imagePath = await generateDailyChannelEditorialImage({
+      dayOfMonth: new Date().getDate(),
+      dateBogota,
+      topicTitle: "PORTAFOLIO INTEGRAL DE SERVICIOS CON JANIA 24/7",
+      themeKey: "verificacion_servicios",
+      captionText: "Flyers e Infografías IA con tu propio prompt • Minutas y Cartas PDF con QR • Verificación SARLAFT, ADRES, RUES, Predial e IDU • Avalúos ACM y Matching 40/20/40"
+    }).catch(() => getChannelSquareImage1x1('verificacion'));
+
     const channelText = sanitizeChannelContent(
-      `🛡️ *SERVICIOS GRATUITOS DE VERIFICACIÓN CON JANIA* 🇨🇴\n\n` +
-      `Estimados colegas y aliados de VECY Bienes Raíces:\n\n` +
-      `¿Sabías que puedes proteger tus negociaciones y verificar a tus clientes en segundos a $0 COP antes de firmar cualquier contrato o recibir un inmueble?\n\n` +
-      `JanIA, nuestra Inteligencia Artificial Oficial, te entrega al instante:\n` +
+      `🛡️ *SERVICIOS GRATUITOS Y ESTUDIO CREATIVO 24/7 CON JANIA* 🇨🇴👩🏻‍💼✨\n\n` +
+      `Estimados colegas, inversionistas y aliados de VECY BIENES RAÍCES:\n\n` +
+      `¿Sabías que puedes blindar tus negociaciones, redactar contratos membretados y diseñar piezas publicitarias en segundos desde tu WhatsApp con JanIA?\n\n` +
+      `JanIA, nuestra Inteligencia Artificial Inmobiliaria Oficial, te entrega al instante:\n` +
+      `🎨 *NUEVO — Estudio Creativo de Imágenes por WhatsApp:* Envíame tu propio prompt y te diseño al instante *Flyers de tus inmuebles, Banners comerciales, Posts para redes sociales o Infografías ejecutivas 1:1* con calidad de estudio.\n` +
+      `📑 *Minutas, Contratos y Cartas en PDF Membretado con QR:* Promesas de compraventa, contratos de arriendo (Ley 820), corretaje, cesión de leasing, pacto de retroventa, cartas de terminación/restitución y cartas de presentación de clientes.\n` +
       `✅ *Identidad y EPS (ADRES):* Consulta BDUA, estado activo y régimen (Contributivo o Subsidiado).\n` +
-      `✅ *Antecedentes Oficiales:* Policía Nacional, Procuraduría General (SIRI) y Contraloría (Boletín Fiscal).\n` +
-      `✅ *Registro Mercantil RUES:* NIT, razón social, actividad económica y representación legal.\n` +
-      `✅ *Trámites Distritales:* Consulta de impuesto predial y estado de valorización IDU.\n\n` +
-      `📲 *¿Cómo solicitarlo gratis?*\n` +
-      `Escribe directamente al WhatsApp de JanIA (+57 319 291 9978) con el número de documento o NIT y recibe tu reporte ejecutivo inmediato.\n\n` +
+      `✅ *Antecedentes Oficiales SARLAFT:* Policía Nacional, Procuraduría General (SIRI) y Contraloría (Siri/Sanciones).\n` +
+      `✅ *Registro Mercantil RUES y Tributos:* NIT, representación legal, factura Predial de Bogotá en PDF y Paz y Salvo IDU.\n` +
+      `📊 *Avalúos Comerciales (ACM), POT y Matching 40/20/40:* Tasación por m², edificabilidad y cruces automáticos en nuestra Mesa de Coincidencias.\n\n` +
+      `📲 *¿Cómo solicitarlo ahora mismo?*\n` +
+      `Escribe directamente al WhatsApp de JanIA (+57 319 291 9978 -> ${VECY_DM_LINK}) o ingresa a https://vecy-bienes-raices.vercel.app/jania y pídelo con texto o nota de voz.\n\n` +
       `👉 *Sigue nuestro Canal Oficial para más herramientas y beneficios:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
       `${VECY_MOTTO_FOOTER}`
     );
 
-    // 1. Despachar al Canal Oficial con imagen
+    // 1. Despachar al Canal Oficial con portada editorial única 1:1
     const chanRes = await whatsappBot.sendToGroup(channelText, imagePath, [], whatsappBot.channelNewsletterId);
 
     // ATOMICIDAD: Cancelar despacho a grupos si la entrega en el Canal no confirma éxito
@@ -1673,9 +1762,12 @@ export async function publishEveningServicesNow(force: boolean = false) {
     console.log(`[CRON-SERVICES] ✅ Servicios gratuitos confirmados en Canal (ID: ${chanRes.messageId}). Procediendo con micro-ganchos a Grupos 2 y 3...`);
 
     // 2. Despachar micro-gancho a Grupos 2 y 3
-    const servicesTeaser = `🛡️ *BLINDA TUS NEGOCIACIONES ESTE FIN DE SEMANA CON JANIA* 📲\n\n` +
-      `¿Vas a recibir una oferta o firmar promesa este fin de semana? Recuerda que JanIA te ayuda a verificar antecedentes, ADRES EPS, RUES y Predial gratis en segundos.\n\n` +
-      `En el Canal Oficial acabamos de publicar la guía completa de cómo solicitar tus consultas a $0 COP 👉 ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
+    const servicesTeaser = `🛡️ *BLINDA TUS NEGOCIOS Y DISEÑA TUS FLYERS ESTE FIN DE SEMANA CON JANIA* 📲👩🏻‍💼✨\n\n` +
+      `¿Vas a captar un inmueble, presentar un cliente o firmar promesa este fin de semana? Recuerda todo lo que puedes pedirme en segundos en mi chat privado (${VECY_DM_LINK}):\n` +
+      `🎨 *Estudio Creativo de Imágenes IA:* Pídeme con tu propio prompt *Flyers para tus inmuebles, Banners, Posts o Infografías 1:1*.\n` +
+      `📑 *Cartas y Contratos en PDF Membretado con QR:* Promesas, arriendos, corretaje, restitución Ley 820 y presentación de clientes.\n` +
+      `🔍 *Verificación Oficial a $0 COP:* Antecedentes, ADRES EPS, RUES, Predial PDF, IDU y Avalúos ACM.\n\n` +
+      `En el Canal Oficial acabamos de publicar la guía completa 👉 ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
       `¡Protege tus comisiones y cierra seguro!`;
 
     const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
@@ -1840,8 +1932,8 @@ export function getCalendarTipForDate(d = new Date()): DailyTipItem {
 export function ensureVecyDailyFooter(text: string): string {
   let res = text.trim();
   if (!res.includes('wa.me/573192919978')) {
-    res += `\n\n💬 *¿Tienes un caso privado?* Escríbeme a mi chat privado de JanIA 📲: ${VECY_DM_LINK}\n` +
-      `🗣️ *¿Quieres debatir o compartir tu experiencia?* ¡Opina aquí en el grupo! 🤝`;
+    res += `\n\n💬 *¿Necesitas un Flyer inmobiliario con IA, una Minuta/Carta en PDF membretado, un Avalúo ACM o verificar un cliente/predio?* Escríbeme a mi chat privado de JanIA 📲: ${VECY_DM_LINK}\n` +
+      `🗣️ *¿Quieres debatir o compartir tu experiencia?* ¡Opina en nuestros grupos oficiales! 🤝`;
   }
   if (!/La evoluci[oó]n inevitable/i.test(res)) {
     res += `\n\n${VECY_MOTTO_FOOTER}`;
@@ -2263,13 +2355,25 @@ export async function publishTodayTipNow(force: boolean = true) {
   console.log(`[CRON-SERVICE] 🚀 Difusión matutina (08:45 AM) — Día ${tip.dayOfMonth}: "${tip.topicTitle}"`);
   const content = await generateCalendarDailyText(tip);
 
-  // 2. Selección de Imagen Cuadrada [1:1] Nuevecita de JanIA (Capa 1 Garantizada para Canal Oficial)
-  const imagePath = getChannelSquareImage1x1(content.themeKey || tip.themeKey, tip.dayOfMonth);
+  // 2. Generación de Portada Editorial Dinámica [1:1] Única del Día (v33.67 — Doctrina Eduardo A. Rivera):
+  // Cada publicación diaria tiene su propia pieza visual 1080x1080 con el título, fecha, categoría, viñetas clave,
+  // paleta institucional Negro Carbón (#0A0A0A) y Dorado Imperial (#D4AF37) y el Canon Sagrado de JanIA (cabello negro azabache).
+  const imagePath = await generateDailyChannelEditorialImage({
+    dayOfMonth: tip.dayOfMonth,
+    dateBogota: dateKey,
+    topicTitle: content.topicTitle || tip.topicTitle,
+    themeKey: content.themeKey || tip.themeKey,
+    captionText: content.captionText,
+  }).catch(() => getChannelSquareImage1x1(content.themeKey || tip.themeKey, tip.dayOfMonth));
 
-  // 3. Generación del Micro-Gancho Persuasivo (Teaser Trampolín) para Grupos 2 y 3
-  const teaserText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴\n\n` +
+  // 3. Generación del Micro-Gancho Persuasivo (Teaser Trampolín) para Grupos 2 y 3 con Anuncio de Servicios de JanIA
+  const teaserText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴👩🏻‍💼\n\n` +
     `📌 *${content.topicTitle || tip.topicTitle}*\n` +
-    `Acabamos de subir al Canal Oficial el análisis legal y técnico desglosado con los artículos clave que necesitas para blindar tus operaciones y comisiones.\n\n` +
+    `Acabamos de publicar en el Canal Oficial el análisis legal, técnico y comercial con su infografía ejecutiva del día para blindar tus operaciones y comisiones.\n\n` +
+    `✨ *Recuerda que en mi chat directo (${VECY_DM_LINK}) puedes pedirme 24/7:*\n` +
+    `🎨 *Flyers de tus inmuebles, Banners, Posts e Infografías 1:1* creados con tu propio prompt.\n` +
+    `📑 *Cartas y Minutas en PDF Membretado con QR* (arriendos Ley 820, promesas, corretaje, restitución y presentación de clientes).\n` +
+    `🛡️ *Avalúos ACM, POT, Predial PDF, IDU, RUES, ADRES y Matching 40/20/40.*\n\n` +
     `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
     `Colegas, ¿ustedes cómo están manejando este tema en el día a día? Cuéntennos su experiencia y debatimos aquí abajo 👇`;
 

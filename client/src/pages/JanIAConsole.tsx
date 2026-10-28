@@ -648,14 +648,17 @@ export default function JanIAConsole() {
               if (isAuthenticated) {
                 logout();
               } else {
-                window.location.href = '/login';
+                try {
+                  localStorage.setItem('vecy_login_return_url', '/jania');
+                } catch (_) {}
+                navigate('/login?redirect=/jania');
               }
               setIsProfileMenuOpen(false);
             }}
             className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 text-xs text-red-400 flex items-center gap-3 transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            <span>{isAuthenticated ? "Cerrar sesión" : "Iniciar sesión"}</span>
+            <span>{isAuthenticated ? "Cerrar sesión" : "Iniciar sesión en JanIA"}</span>
           </button>
           
           <div className="border-t border-white/5 my-1" />
@@ -863,17 +866,34 @@ export default function JanIAConsole() {
             <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] px-2 mb-2">Recientes</p>
             
             {!isAuthenticated ? (
-              <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-center space-y-3">
-                <p className="text-[11px] text-zinc-500 leading-relaxed font-sans">
-                  Inicia sesión o regístrate para conservar tu historial de chat.
+              <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-center space-y-2.5">
+                <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                  Inicia sesión o regístrate gratis en JanIA para conservar tu historial de conversaciones.
                 </p>
                 <Button 
                   size="sm" 
-                  className="w-full text-[10px] uppercase font-bold py-1 bg-primary text-black rounded-full hover:scale-105 transition-transform"
-                  onClick={() => navigate('/login')}
+                  className="w-full text-[10px] uppercase font-bold py-1.5 bg-primary text-black rounded-full hover:scale-105 transition-transform"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('vecy_login_return_url', '/jania');
+                    } catch (_) {}
+                    navigate('/login?redirect=/jania&mode=register');
+                  }}
                 >
-                  Registrarse
+                  Registrarse Gratis
                 </Button>
+                <button
+                  type="button"
+                  className="w-full text-[10px] uppercase font-semibold py-1 text-zinc-400 hover:text-primary transition-colors"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('vecy_login_return_url', '/jania');
+                    } catch (_) {}
+                    navigate('/login?redirect=/jania');
+                  }}
+                >
+                  Ya tengo cuenta · Iniciar sesión
+                </button>
               </div>
             ) : conversationsData && conversationsData.length > 0 ? (
               <div className="space-y-1">
@@ -920,14 +940,20 @@ export default function JanIAConsole() {
             >
               <div className="flex items-center gap-3 truncate">
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-primary/20 shrink-0 bg-primary/10 flex items-center justify-center font-bold text-primary">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'V'}
+                  {isAuthenticated && user?.name ? user.name.charAt(0).toUpperCase() : 'I'}
                 </div>
                 <div className="truncate">
                   <p className="text-xs font-semibold text-zinc-200 truncate leading-none">
-                    {user?.name || "Vecy Bienes Raíces"}
+                    {isAuthenticated && user?.name ? user.name : "Visitante Invitado"}
                   </p>
                   <p className="text-[10px] text-zinc-500 truncate mt-1">
-                    {user?.role === 'admin' ? 'Administrador' : user?.role === 'agent' ? 'Agente Pro' : 'Invitado'}
+                    {!isAuthenticated
+                      ? 'Sesión sin registrar'
+                      : user?.role === 'admin'
+                        ? 'Administrador VECY'
+                        : user?.role === 'agent'
+                          ? 'Agente Pro'
+                          : 'Cuenta JanIA Activa'}
                   </p>
                 </div>
               </div>
@@ -940,9 +966,9 @@ export default function JanIAConsole() {
             <button 
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               className="w-8 h-8 rounded-full overflow-hidden border border-primary/20 bg-primary/10 flex items-center justify-center font-bold text-primary text-xs shrink-0 cursor-pointer"
-              title={user?.name || "Vecy Bienes Raíces"}
+              title={isAuthenticated && user?.name ? user.name : "Visitante Invitado"}
             >
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'V'}
+              {isAuthenticated && user?.name ? user.name.charAt(0).toUpperCase() : 'I'}
             </button>
             {renderProfilePopover()}
           </div>
@@ -994,7 +1020,7 @@ export default function JanIAConsole() {
             <div className="w-full max-w-2xl text-center space-y-8 z-10">
               <h1 className="font-['Audiowide'] text-3xl sm:text-4xl md:text-5xl uppercase tracking-wider text-white/90 leading-tight">
                 Manos a la obra, <span className="text-gradient-gold">
-                  {user?.name ? user.name.split(' ')[0] : 'Vecy'}
+                  {isAuthenticated && user?.name ? user.name.split(' ')[0] : 'Colega'}
                 </span>
               </h1>
               

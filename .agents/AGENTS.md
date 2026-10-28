@@ -183,7 +183,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.66 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.67 — Octubre 2026
+
+### Novedades v33.67 (Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Separación y Corrección del Login/Registro en `/jania` vs `/admin` (`useAuth.ts`, `JanIAConsole.tsx`, `Login.tsx`, `Admin.tsx`):**
+     - Eliminado el nombre quemado `"Vecy Bienes Raíces"` / `"VECY"` cuando el visitante entra sin sesión a `/jania`; ahora muestra `"Visitante Invitado"` (`"Sesión sin registrar"`) y saluda `"Manos a la obra, Vecino"`.
+     - Desacoplado el login/registro público del panel `/admin`: los usuarios que se registran o inician sesión en `/jania` regresan directamente a `/jania` con su nombre real y su historial de chats guardado, sin ser enviados a la pantalla de acceso denegado de `/admin`.
+  2. **Canon Visual Sagrado de JanIA (Cabello Negro Azabache) y Oficina Institucional VECY (`creativeStudioImageService.ts`):**
+     - Cabello de JanIA **SIEMPRE negro azabache profundo y brillante** (`deep glossy jet-black`, cero cabello castaño), facciones 3D Pixar/Disney, corte bob voluminoso, gafas lila translúcidas, aretes de diamante y broche circular dorado `Vecy`.
+     - Oficina institucional VECY en **Negro Carbón Mate (`#0A0A0A`) y Oro Imperial (`#D4AF37`)**, escritorio de mármol negro con vetas doradas, biblioteca con maquetas doradas y logo circular luminoso `Vecy` (`vecy_oficina_institucional.jpg`).
+     - **Portadas Editoriales Dinámicas 1:1 (`generateDailyChannelEditorialImage`):** Cada publicación diaria del Canal Oficial genera una pieza visual `1080x1080` única con la fecha, categoría, titular y puntos clave del tema del día.
+     - **Estudio Creativo de Imágenes por WhatsApp (`generateCustomUserCreativeImage` / `crear_imagen_creativa_whatsapp`):** Los usuarios pueden pedirle a JanIA por WhatsApp con su propio prompt que les cree flyers de inmuebles, banners, posts o infografías `1:1` HD.
+  3. **Herramientas Nativas de WhatsApp en Canal Oficial, Grupos 2 y 3, y DM (`whatsapp-match.ts`, `cronService.ts`, `dmHandler.ts`, `consultingHandler.ts`):**
+     - Erradicadas las encuestas falsas de texto (`🔹 A)... 🔹 B)...`) en el Canal Oficial (donde los seguidores no pueden escribir). Se implementan **Encuestas Nativas (`sendChannelPoll`, `pollType: 0`)**, **Cuestionarios / Quizzes Nativos (`sendQuiz`, `pollType: 1`)** y tarjetas **Preguntar (`sendQuestionPrompt`, `contextInfo: { isQuestion: true }`)**.
+     - En DM y Grupos 2/3 se habilitan tarjetas `vCard` oficiales (`+573166569719` y `+573192919978`), pines de ubicación GPS nativa (`sendLocationPin` / `enviar_ubicacion_gps_whatsapp`), encuestas/cuestionarios, PDFs membretados y stickers 3D, anunciando el portafolio de servicios en el Canal y en los ganchos de los Grupos 2 y 3.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **471/471 passing** (Suite 153 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.67`) y `package.json` (`33.67.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.66 — Octubre 2026
 
 ### Novedades v33.66 (Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA en Baileys, Generador Instantáneo de Cartas y Minutas en PDF Membretado, Modularización de DM y Particionado de Bundles — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

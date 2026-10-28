@@ -10,7 +10,118 @@ import {
   setLatestDmSticker,
   type LoadedJaniaSticker
 } from "../stickerService";
+import {
+  generateCustomUserCreativeImage,
+  detectCreativeAssetType,
+  isExplicitCreativeImageRequest,
+  queueCreativeImageForDm,
+  popLatestDmCreativeImage,
+  type UserCreativeImageInput,
+  type GeneratedCreativeImageResult
+} from "../creativeStudioImageService";
 import { getUser402040Agreement, getUserOwnerCorretaje } from "../sessionManager";
+
+export {
+  generateCustomUserCreativeImage,
+  detectCreativeAssetType,
+  isExplicitCreativeImageRequest,
+  queueCreativeImageForDm,
+  popLatestDmCreativeImage,
+  type UserCreativeImageInput,
+  type GeneratedCreativeImageResult
+};
+
+export interface QueuedLocationPin {
+  latitude: number;
+  longitude: number;
+  name: string;
+  address: string;
+}
+
+export interface QueuedInteractivePoll {
+  question: string;
+  options: string[];
+  selectableCount?: number;
+  isQuiz?: boolean;
+  correctAnswerIndex?: number;
+}
+
+const pendingVCardByPhone = new Map<string, "broker" | "jania">();
+const pendingLocationByPhone = new Map<string, QueuedLocationPin>();
+const pendingPollByPhone = new Map<string, QueuedInteractivePoll>();
+
+function normalizePhoneKey(phone: string): string {
+  return (phone || "").replace(/\D/g, "");
+}
+
+export function queueDmVCard(phone: string, contactType: "broker" | "jania" = "broker"): void {
+  const clean = normalizePhoneKey(phone);
+  if (clean) pendingVCardByPhone.set(clean, contactType);
+}
+
+export function popLatestDmVCard(phone: string): "broker" | "jania" | undefined {
+  const clean = normalizePhoneKey(phone);
+  if (!clean) return undefined;
+  const exact = pendingVCardByPhone.get(clean);
+  if (exact) {
+    pendingVCardByPhone.delete(clean);
+    return exact;
+  }
+  const last10 = clean.slice(-10);
+  for (const [k, v] of pendingVCardByPhone.entries()) {
+    if (k.slice(-10) === last10) {
+      pendingVCardByPhone.delete(k);
+      return v;
+    }
+  }
+  return undefined;
+}
+
+export function queueDmLocationPin(phone: string, pin: QueuedLocationPin): void {
+  const clean = normalizePhoneKey(phone);
+  if (clean) pendingLocationByPhone.set(clean, pin);
+}
+
+export function popLatestDmLocationPin(phone: string): QueuedLocationPin | undefined {
+  const clean = normalizePhoneKey(phone);
+  if (!clean) return undefined;
+  const exact = pendingLocationByPhone.get(clean);
+  if (exact) {
+    pendingLocationByPhone.delete(clean);
+    return exact;
+  }
+  const last10 = clean.slice(-10);
+  for (const [k, v] of pendingLocationByPhone.entries()) {
+    if (k.slice(-10) === last10) {
+      pendingLocationByPhone.delete(k);
+      return v;
+    }
+  }
+  return undefined;
+}
+
+export function queueDmInteractivePoll(phone: string, poll: QueuedInteractivePoll): void {
+  const clean = normalizePhoneKey(phone);
+  if (clean) pendingPollByPhone.set(clean, poll);
+}
+
+export function popLatestDmInteractivePoll(phone: string): QueuedInteractivePoll | undefined {
+  const clean = normalizePhoneKey(phone);
+  if (!clean) return undefined;
+  const exact = pendingPollByPhone.get(clean);
+  if (exact) {
+    pendingPollByPhone.delete(clean);
+    return exact;
+  }
+  const last10 = clean.slice(-10);
+  for (const [k, v] of pendingPollByPhone.entries()) {
+    if (k.slice(-10) === last10) {
+      pendingPollByPhone.delete(k);
+      return v;
+    }
+  }
+  return undefined;
+}
 
 /**
  * 🧩 SUBMÓDULO ESPECIALIZADO DE DM HANDLER (v33.66 — Doctrina Eduardo A. Rivera)
@@ -75,6 +186,18 @@ export async function generateLegalPdfForDmRequest(
   return await generateLegalDocumentPdf({
     tipoDocumento: detectedType,
     ...overrideParams
+  });
+}
+
+export async function maybeGenerateLegalDocPdfForDm(
+  _userId: string,
+  userText: string,
+  _assistantReply?: string,
+  userName?: string
+): Promise<GeneratedLegalPdfResult | null> {
+  if (!isExplicitLegalPdfRequest(userText)) return null;
+  return await generateLegalPdfForDmRequest(userText, {
+    nombreRemitente: userName || undefined
   });
 }
 

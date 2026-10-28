@@ -7,6 +7,34 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-28] — JanIA v33.67: Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1 en Canal, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM (v33.67 - 33.67.0)
+
+**Versión:** `v33.67` (`33.67.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Separación y Corrección del Login/Registro Público en `/jania` (`https://vecy-bienes-raices.vercel.app/jania`) frente a `/admin`:**
+   - Eliminar el texto quemado `"Vecy Bienes Raíces"` / `"VECY"` cuando el visitante entra como invitado sin sesión en `/jania`, mostrando `"Visitante Invitado"` (`"Sesión sin registrar"`) y el saludo `"Manos a la obra, Vecino"`.
+   - Desacoplar el flujo de registro e inicio de sesión de los usuarios públicos del panel `/admin`: cualquier usuario que se registre o inicie sesión desde `/jania` regresa directamente a `/jania` con su nombre real y su historial de conversaciones guardado, mientras que `/admin` permanece exclusivo para los fundadores y el equipo directivo de VECY.
+2. **Canon Visual Sagrado de JanIA (Cabello Negro Azabache) y Colores Institucionales de la Oficina VECY:**
+   - El cabello de JanIA debe ser **SIEMPRE negro azabache profundo y brillante** (`deep glossy jet-black`, cero tonos castaños o cafés). Conserva sus facciones 3D estilo Pixar/Disney, corte bob voluminoso, gafas translúcidas lila, aretes de diamante y el broche circular dorado `Vecy` en el pecho, variando sus poses, vestuario de Alta Costura y escenarios según el tema.
+   - Colores institucionales oficiales de la oficina de **VECY BIENES RAÍCES**: Negro Carbón Mate (`#0A0A0A`) y Oro Imperial Metálico (`#D4AF37` / `#BF953F`), escritorio en mármol negro con vetas doradas, biblioteca iluminada con maquetas arquitectónicas doradas, logo circular luminoso `Vecy` en pared y ventanal panorámico al atardecer (`vecy_oficina_institucional.jpg`).
+3. **Generador de Portadas Editoriales Dinámicas 1:1 para el Canal Oficial + Estudio Creativo de Imágenes por WhatsApp para Usuarios (`creativeStudioImageService.ts`):**
+   - Cada publicación diaria del Canal Oficial genera su propia portada editorial `1080x1080` (`1:1`) única con la fecha del día, sello de categoría, titular principal, bullets clave y pie institucional sobre el lienzo del Canon Sagrado de JanIA y la Oficina VECY.
+   - Nuevo **Estudio Creativo de Imágenes por WhatsApp** (`crear_imagen_creativa_whatsapp` / `generateCustomUserCreativeImage`): los usuarios y colegas pueden pedirle a JanIA por WhatsApp con su propio prompt que les diseñe flyers inmobiliarios, banners, posts o infografías `1:1` HD listas para publicar.
+4. **Herramientas Nativas de WhatsApp en Canal Oficial, Grupos 2 y 3, y Perfil Directo (DM):**
+   - **Prohibición Absoluta de Encuestas Falsas de Texto en el Canal Oficial (`120363399889853806@newsletter`):** En los Canales los seguidores no pueden escribir texto; por tanto, se erradican las encuestas de texto (`🔹 A)... 🔹 B)...`) y se reemplazan por **Encuestas Nativas Interactivas (`sendChannelPoll`, `pollType: 0`)**, **Cuestionarios / Quizzes Nativos (`sendQuiz`, `pollType: 1`, `correctAnswer`)** y tarjetas **Preguntar (`sendQuestionPrompt`, `contextInfo: { isQuestion: true }`)**.
+   - En DM y Grupos 2 y 3 se habilitan tarjetas de contacto oficial (`vCard` de `+573166569719` y `+573192919978`), pines de ubicación GPS nativa (`sendLocationPin`, `enviar_ubicacion_gps_whatsapp`), encuestas/cuestionarios nativos, PDFs legales membretados y stickers 3D.
+   - JanIA anuncia activamente todo su portafolio de servicios (incluyendo el Estudio Creativo de Imágenes por WhatsApp) en el Canal Oficial y en los ganchos de los Grupos 2 y 3.
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Frontend (`useAuth.ts`, `JanIAConsole.tsx`, `Login.tsx`, `Admin.tsx`):** Separación de roles (`admin` vs `user`), eliminación del fallback `"Vecy Bienes Raíces"` para invitados, redirección inteligente a `/jania` tras registro/login y botón directo `"Ir al Chat de JanIA Web"` en `/admin`.
+- **Estudio Creativo y Portadas Editoriales (`server/_core/jania/creativeStudioImageService.ts`):** Implementados `JANIA_SACRED_VISUAL_CANON`, `VECY_INSTITUTIONAL_OFFICE_CANON`, `generateDailyChannelEditorialImage`, `generateCustomUserCreativeImage` y `detectCreativeImageRequestFromText` con motor gráfico `1080x1080` (`1:1`).
+- **Herramientas Nativas en Baileys (`whatsapp-match.ts`, `cronService.ts`, `dmHandler.ts`, `consultingHandler.ts`, `dmOnboardingAndDocsHelper.ts`):** Implementados `sendChannelPoll`, `sendQuiz`, `sendQuestionPrompt`, `sendLocationPin`, `enviar_ubicacion_gps_whatsapp`, `crear_imagen_creativa_whatsapp` y anuncio permanente de servicios en Canal y Grupos 2/3.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada **Suite 153** en `server/__tests__/regression.test.ts` con 5 pruebas integrales automatizadas.
+  - Tests: `npm test` **471/471 passing** (100% verde a $0 COP).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio.
+
 ### 📅 [2026-10-28] — JanIA v33.66: Pack Oficial de 14 Stickers 3D Ejecutivos y Jocosos de JanIA en Baileys, Generador Instantáneo de Cartas y Minutas en PDF Membretado, Modularización de DM y Particionado de Bundles (v33.66 - 33.66.0)
 
 **Versión:** `v33.66` (`33.66.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

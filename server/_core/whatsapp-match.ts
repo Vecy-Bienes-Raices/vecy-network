@@ -1509,9 +1509,20 @@ export class JaniaMatchBot {
             }
           }
 
-          const { popLatestDmPdf, popLatestDmSticker } = await import('./jania/handlers/dmHandler');
+          const {
+            popLatestDmPdf,
+            popLatestDmSticker,
+            popLatestDmCreativeImage,
+            popLatestDmLocationPin,
+            popLatestDmVCard,
+            popLatestDmInteractivePoll
+          } = await import('./jania/handlers/dmHandler');
           const latestPdf = popLatestDmPdf(senderId);
           const latestSticker = popLatestDmSticker(senderId);
+          const latestCreativeImage = popLatestDmCreativeImage(senderId);
+          const latestLocationPin = popLatestDmLocationPin(senderId);
+          const latestVCard = popLatestDmVCard(senderId);
+          const latestPoll = popLatestDmInteractivePoll(senderId);
           const pdfBuffer = (reply as any)?.pdfBuffer || latestPdf?.pdfBuffer;
           const pdfFileName = (reply as any)?.pdfFileName || latestPdf?.pdfFileName;
           const isSenderAdmin = /eduardo/i.test(userName || "") ||
@@ -1546,10 +1557,35 @@ export class JaniaMatchBot {
               caption: replyText
             }, { quoted: mainMsg, allowDirectMessage: true });
             await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => { });
+          } else if (latestCreativeImage && Buffer.isBuffer(latestCreativeImage.buffer)) {
+            console.log(`[JANIA-MATCH] [DM-CREATIVE] Despachando pieza gráfica HD (${latestCreativeImage.fileName}, ${latestCreativeImage.buffer.length} bytes) a ${senderId}`);
+            await this.queuedSend(senderId, {
+              image: latestCreativeImage.buffer,
+              mimetype: 'image/jpeg',
+              caption: replyText || latestCreativeImage.caption
+            }, { quoted: mainMsg, allowDirectMessage: true });
+            await this.sock.sendMessage(senderId, { react: { text: '🎨', key: mainMsg.key } }).catch(() => { });
           } else {
             await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
           }
           await this.logToDb(senderId, 'janIA', replyText);
+
+          if (latestLocationPin) {
+            await this.sendLocationPin(
+              senderId,
+              latestLocationPin.latitude,
+              latestLocationPin.longitude,
+              latestLocationPin.name,
+              latestLocationPin.address,
+              mainMsg
+            );
+          }
+          if (latestVCard) {
+            await this.sendContactCard(senderId, latestVCard, mainMsg);
+          }
+          if (latestPoll) {
+            await this.sendPoll(senderId, latestPoll.question, latestPoll.options, latestPoll.selectableCount ?? 1);
+          }
 
           // 🎨 Despacho Contextual de Stickers 3D Oficiales de JanIA (v33.66 — Doctrina Eduardo A. Rivera)
           if (latestSticker && Buffer.isBuffer(latestSticker.buffer)) {
@@ -1781,12 +1817,23 @@ export class JaniaMatchBot {
         const timeSalutation = getGreetingByTime();
         const contactMsg = wantsBroker
           ? `¡${timeSalutation}${realName ? `, ${realName}` : ""}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial personalizada de VECY BIENES RAÍCES: 📲`
-          : `¡${timeSalutation}${realName ? `, ${realName}` : ""}! 👋 Con gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tus contactos para consultarme siempre que lo necesites.`;
+          : `¡${timeSalutation}${realName ? `, ${realName}` : ""}! 👋 Con gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 👩🏻‍💼✨ Guárdame en tus contactos para consultarme siempre que lo necesites.`;
 
         await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
         await this.sendContactCard(chatId, contactType, msg);
         await this.sock.sendPresenceUpdate('paused', chatId);
         await this.logToDb(chatId, 'janIA', `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
+        return;
+      }
+
+      // 📍 INTERCEPTOR DIRECTO: SOLICITUD DE PIN DE UBICACIÓN GPS EN GRUPOS 2 Y 3 (v33.67)
+      const isLocationPinRequest = /(?:env[ií]a(?:me)?|p[aá]same|comp[aá]rteme|dame|mu[eé]strame)\s+(?:la\s+|el\s+)?(?:ubicaci[oó]n\s+gps|pin\s+de\s+ubicaci[oó]n|mapa\s+gps|ubicaci[oó]n\s+de\s+vecy)/i.test(bodyText);
+      if (isLocationPinRequest) {
+        const locMsg = `¡Claro que sí${realName ? `, ${realName}` : ""}! 📍 Aquí tienes el pin de ubicación GPS interactivo de nuestra sede y zona de influencia ejecutiva de *VECY BIENES RAÍCES* en Bogotá (Parque de la 93 / El Chicó). Recuerda que atendemos en toda Colombia a través de nuestra línea bróker *+57 316 656 9719*: 🤝✨`;
+        await this.queuedSend(chatId, locMsg, { mentions: [senderId], quoted: msg });
+        await this.sendLocationPin(chatId, 4.6768, -74.0482, 'VECY BIENES RAÍCES — Mesa Central Bogotá', 'Parque de la 93 / El Chicó, Bogotá D.C., Colombia', msg);
+        await this.sock.sendPresenceUpdate('paused', chatId);
+        await this.logToDb(chatId, 'janIA', `[UBICACION-GPS] ${locMsg}`);
         return;
       }
 
@@ -1913,6 +1960,13 @@ export class JaniaMatchBot {
           ? result.voiceResponse
           : textToDeliver;
 
+        const {
+          isExplicitLegalPdfRequest,
+          generateLegalPdfForDmRequest,
+          isExplicitCreativeImageRequest,
+          generateCustomUserCreativeImage
+        } = await import('./jania/handlers/dmHandler');
+
         // Si la respuesta incluye un documento (ej. Factura Predial oficial en PDF)
         if (result.document) {
           await this.queuedSend(chatId, {
@@ -1921,6 +1975,34 @@ export class JaniaMatchBot {
             fileName: result.fileName || 'Factura_Predial_Bogota.pdf',
             caption: textToDeliver
           }, { mentions: [senderId], quoted: msg });
+        } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitLegalPdfRequest(bodyText)) {
+          try {
+            const groupPdf = await generateLegalPdfForDmRequest(bodyText, {
+              cuerpoDocumento: textToDeliver.length > 180 ? textToDeliver : undefined
+            });
+            await this.queuedSend(chatId, {
+              document: groupPdf.pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: groupPdf.fileName,
+              caption: textToDeliver
+            }, { mentions: [senderId], quoted: msg });
+          } catch (_) {
+            await this.queuedSend(chatId, textToDeliver, { mentions: [senderId], quoted: msg });
+          }
+        } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitCreativeImageRequest(bodyText)) {
+          try {
+            const groupImg = await generateCustomUserCreativeImage({
+              userPrompt: bodyText,
+              includeJaniaAvatar: true
+            });
+            await this.queuedSend(chatId, {
+              image: groupImg.buffer,
+              mimetype: 'image/jpeg',
+              caption: textToDeliver || groupImg.caption
+            }, { mentions: [senderId], quoted: msg });
+          } catch (_) {
+            await this.queuedSend(chatId, textToDeliver, { mentions: [senderId], quoted: msg });
+          }
         } else {
           // Decisión Autónoma de JanIA (IA Pura): O responde por Nota de Voz PTT exclusiva o por Texto exclusivo (NUNCA ambos a la vez)
           const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
@@ -3078,7 +3160,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
         }
         // Si ya es un payload directo de Baileys
-        else if (content && (content.text || content.audio || content.image || content.video || content.document || content.sticker)) {
+        else if (content && (content.text || content.audio || content.image || content.video || content.document || content.sticker || content.location || content.contacts || content.poll || content.event)) {
           messagePayload = content;
           if (typeof messagePayload.text === 'string') {
             messagePayload.text = sanitizeResponseMarkdown(messagePayload.text);
@@ -3193,6 +3275,258 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 
   /**
+   * 📊 Envía una encuesta nativa interactiva en el Canal Oficial de WhatsApp (@newsletter)
+   * usando la estructura binaria oficial de Newsletter (<plaintext mediatype="poll"> + <meta polltype="creation" />),
+   * porque en los Canales los seguidores NO pueden escribir respuestas de texto.
+   */
+  public async sendChannelPoll(
+    name: string,
+    options: string[],
+    selectableCount: number = 1,
+    channelJid?: string
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      if (!this.sock || !this.isReady) {
+        console.warn(`[JANIA-MATCH] Bot no listo para enviar encuesta de canal`);
+        return { success: false, error: 'Bot no listo' };
+      }
+      if (!this.channelNewsletterId) {
+        await this.discoverAndSyncNewsletters().catch(() => { });
+      }
+      const targetNewsletter = channelJid || this.channelNewsletterId;
+      if (!targetNewsletter) {
+        console.warn(`[JANIA-MATCH] Canal Oficial no identificado para enviar encuesta.`);
+        return { success: false, error: 'Canal Oficial no identificado' };
+      }
+
+      const cleanOptions = options.map(o => String(o).trim()).filter(Boolean).slice(0, 12);
+      console.log(`[JANIA-MATCH] 🗳️ Despachando Encuesta Nativa de Canal a ${targetNewsletter}: "${name}" (${cleanOptions.length} opciones)...`);
+
+      const crypto = await import('crypto');
+      const msgId = `3EB0${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+      const pollProto: proto.IMessage = selectableCount === 1
+        ? {
+            pollCreationMessageV3: {
+              name,
+              options: cleanOptions.map(opt => ({ optionName: opt })),
+              selectableOptionsCount: 1,
+              pollType: 0
+            }
+          }
+        : {
+            pollCreationMessage: {
+              name,
+              options: cleanOptions.map(opt => ({ optionName: opt })),
+              selectableOptionsCount: selectableCount,
+              pollType: 0
+            }
+          };
+
+      if (typeof (this.sock as any).sendNode === 'function') {
+        const encoded = proto.Message.encode(pollProto).finish();
+        const stanza = {
+          tag: 'message',
+          attrs: {
+            to: targetNewsletter,
+            type: 'text',
+            id: msgId
+          },
+          content: [
+            {
+              tag: 'plaintext',
+              attrs: { mediatype: 'poll' },
+              content: encoded
+            },
+            {
+              tag: 'meta',
+              attrs: { polltype: 'creation' }
+            }
+          ]
+        };
+        await (this.sock as any).sendNode(stanza);
+        this.botSentMessageIds.add(msgId);
+        console.log(`[JANIA-MATCH] ✅ Encuesta nativa de Canal enviada exitosamente (${msgId}) a ${targetNewsletter}`);
+        return { success: true, messageId: msgId };
+      }
+
+      const res = await this.sock.sendMessage(targetNewsletter, {
+        poll: {
+          name,
+          values: cleanOptions,
+          selectableCount
+        }
+      });
+      return { success: true, messageId: res?.key?.id || msgId };
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] ❌ Error enviando encuesta nativa al Canal:`, err?.message || err);
+      return { success: false, error: err?.message || 'Error desconocido' };
+    }
+  }
+
+  /**
+   * 🏆 Envía un Cuestionario / Quiz nativo de WhatsApp (pollType = 1 / QUIZ con correctAnswer)
+   * Compatible con el Canal Oficial (@newsletter), Grupos 2 y 3, y DMs.
+   */
+  public async sendQuiz(
+    targetJid: string,
+    question: string,
+    options: string[],
+    correctAnswerIndex: number = 0
+  ): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady) return false;
+      const cleanOptions = options.map(o => String(o).trim()).filter(Boolean).slice(0, 12);
+      if (cleanOptions.length < 2) return false;
+      const safeIdx = Math.max(0, Math.min(cleanOptions.length - 1, correctAnswerIndex));
+      const correctOption = cleanOptions[safeIdx];
+
+      const quizProto: proto.IMessage = {
+        pollCreationMessageV3: {
+          name: question,
+          options: cleanOptions.map(opt => ({ optionName: opt })),
+          selectableOptionsCount: 1,
+          pollType: 1,
+          correctAnswer: { optionName: correctOption }
+        }
+      };
+
+      if (targetJid.endsWith('@newsletter') && typeof (this.sock as any).sendNode === 'function') {
+        const crypto = await import('crypto');
+        const msgId = `3EB0${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+        const encoded = proto.Message.encode(quizProto).finish();
+        const stanza = {
+          tag: 'message',
+          attrs: {
+            to: targetJid,
+            type: 'text',
+            id: msgId
+          },
+          content: [
+            {
+              tag: 'plaintext',
+              attrs: { mediatype: 'poll' },
+              content: encoded
+            },
+            {
+              tag: 'meta',
+              attrs: { polltype: 'creation' }
+            }
+          ]
+        };
+        await (this.sock as any).sendNode(stanza);
+        this.botSentMessageIds.add(msgId);
+        console.log(`[JANIA-MATCH] 🏆 Cuestionario (Quiz) nativo enviado al Canal ${targetJid} (${msgId})`);
+        return true;
+      }
+
+      if (typeof (this.sock as any).relayMessage === 'function' && !targetJid.endsWith('@newsletter')) {
+        try {
+          await (this.sock as any).relayMessage(targetJid, quizProto, {});
+          console.log(`[JANIA-MATCH] 🏆 Cuestionario (Quiz) enviado a ${targetJid}`);
+          return true;
+        } catch (_) {
+          // Fallback a poll estándar si el cliente receptor requiere pollCreation estándar
+        }
+      }
+
+      await this.sock.sendMessage(targetJid, {
+        poll: {
+          name: `🏆 CUESTIONARIO: ${question}`,
+          values: cleanOptions,
+          selectableCount: 1
+        }
+      });
+      return true;
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] ❌ Error enviando Cuestionario a ${targetJid}:`, err?.message || err);
+      return false;
+    }
+  }
+
+  /**
+   * ❓ Envía la herramienta nativa "Preguntar" de WhatsApp (contextInfo: { isQuestion: true })
+   * Habilita la tarjeta interactiva de pregunta abierta para que seguidores/miembros envíen sus preguntas a los administradores/JanIA.
+   */
+  public async sendQuestionPrompt(targetJid: string, questionText: string): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady) return false;
+      const questionProto: proto.IMessage = {
+        extendedTextMessage: {
+          text: questionText,
+          contextInfo: {
+            isQuestion: true
+          }
+        }
+      };
+
+      if (targetJid.endsWith('@newsletter') && typeof (this.sock as any).sendNode === 'function') {
+        const crypto = await import('crypto');
+        const msgId = `3EB0${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+        const encoded = proto.Message.encode(questionProto).finish();
+        const stanza = {
+          tag: 'message',
+          attrs: {
+            to: targetJid,
+            type: 'text',
+            id: msgId
+          },
+          content: [
+            {
+              tag: 'plaintext',
+              attrs: {},
+              content: encoded
+            }
+          ]
+        };
+        await (this.sock as any).sendNode(stanza);
+        this.botSentMessageIds.add(msgId);
+        console.log(`[JANIA-MATCH] ❓ Tarjeta nativa "Preguntar" enviada al Canal ${targetJid} (${msgId})`);
+        return true;
+      }
+
+      if (typeof (this.sock as any).relayMessage === 'function') {
+        await (this.sock as any).relayMessage(targetJid, questionProto, {});
+        return true;
+      }
+
+      await this.queuedSend(targetJid, questionText, { allowDirectMessage: true });
+      return true;
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] Error enviando tarjeta "Preguntar" a ${targetJid}:`, err?.message || err);
+      return false;
+    }
+  }
+
+  /**
+   * 📍 Envía un Pin de Ubicación GPS interactivo nativo de WhatsApp (locationMessage)
+   */
+  public async sendLocationPin(
+    targetJid: string,
+    latitude: number = 4.6768,
+    longitude: number = -74.0482,
+    name: string = 'VECY BIENES RAÍCES — Mesa Central Bogotá',
+    address: string = 'Parque de la 93 / El Chicó, Bogotá D.C., Colombia',
+    quoted?: any
+  ): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady) return false;
+      console.log(`[JANIA-MATCH] 📍 Despachando pin de ubicación GPS (${name}) a ${targetJid}...`);
+      await this.sock.sendMessage(targetJid, {
+        location: {
+          degreesLatitude: latitude,
+          degreesLongitude: longitude,
+          name,
+          address
+        }
+      }, quoted ? { quoted } : undefined);
+      return true;
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] Error enviando ubicación GPS a ${targetJid}:`, err?.message || err);
+      return false;
+    }
+  }
+
+  /**
    * Envía una encuesta nativa e interactiva de WhatsApp a un grupo específico.
    * Utiliza la funcionalidad nativa de Baileys pollCreationMessage.
    */
@@ -3203,6 +3537,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return false;
       }
       const targetJid = groupId || this.buzonGroupId;
+      if (targetJid.endsWith('@newsletter')) {
+        const cRes = await this.sendChannelPoll(name, options, selectableCount, targetJid);
+        return cRes.success;
+      }
       console.log(`[JANIA-MATCH] 📊 Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones, selectableCount: ${selectableCount})...`);
       await this.sock.sendMessage(targetJid, {
         poll: {
@@ -3223,6 +3561,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
    * Envía una encuesta nativa a cualquier JID (grupo o canal de WhatsApp) con modo de votación configurable
    */
   public async sendPoll(targetJid: string, name: string, options: string[], selectableCount: number = 1): Promise<boolean> {
+    if (targetJid.endsWith('@newsletter')) {
+      const cRes = await this.sendChannelPoll(name, options, selectableCount, targetJid);
+      return cRes.success;
+    }
     return this.sendPollToGroup(name, options, targetJid, selectableCount);
   }
 
@@ -3873,7 +4215,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   public pendingWelcomeJids: string[] = [];
 
   public async sendAnuncioRetorno() {
-    const baseMsg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
+    const baseMsg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 👩🏻‍💼🏛️\n\n` +
       `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.\n\n` +
       `Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores más afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:\n\n` +
       `🧠 *¿Qué puedo hacer por ti en esta v2.0?*\n` +
@@ -4000,4 +4342,27 @@ export async function sendNativeWhatsAppEvent(targetJid: string, eventData: { na
 
 export async function deleteNativeWhatsAppMessage(targetJid: string, messageKey: any): Promise<boolean> {
   return janiaMatchBot.deleteMessage(targetJid, messageKey);
+}
+
+export async function sendNativeWhatsAppChannelPoll(name: string, options: string[], selectableCount: number = 1, channelJid?: string): Promise<boolean> {
+  const res = await janiaMatchBot.sendChannelPoll(name, options, selectableCount, channelJid);
+  return res.success;
+}
+
+export async function sendNativeWhatsAppQuiz(targetJid: string, question: string, options: string[], correctAnswerIndex: number = 0): Promise<boolean> {
+  return janiaMatchBot.sendQuiz(targetJid, question, options, correctAnswerIndex);
+}
+
+export async function sendNativeWhatsAppQuestionPrompt(targetJid: string, questionText: string): Promise<boolean> {
+  return janiaMatchBot.sendQuestionPrompt(targetJid, questionText);
+}
+
+export async function sendNativeWhatsAppLocation(
+  targetJid: string,
+  latitude: number = 4.6768,
+  longitude: number = -74.0482,
+  name: string = 'VECY BIENES RAÍCES — Mesa Central Bogotá',
+  address: string = 'Parque de la 93 / El Chicó, Bogotá D.C., Colombia'
+): Promise<boolean> {
+  return janiaMatchBot.sendLocationPin(targetJid, latitude, longitude, name, address);
 }

@@ -297,6 +297,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Toma el mismo orden y organización que propones y potencializa mi proyecto como debe de ser: 1) Particionado de bundles en vite.config.ts; 2) Modularización de dmHandler; 3) Generador instantáneo de cartas y minutas en PDF membretado desde WhatsApp; 4) Pack oficial de 14 stickers ejecutivos y jocosos de JanIA en Baileys para que nuestra agente de IA PURA JanIA trabaje como una humana real.",
     createdAt: "2026-10-28T07:50:00.000Z",
     active: true
+  },
+  {
+    id: "seed-canon-visual-sagrado-jania-oficina-vecy-estudio-creativo-y-herramientas-nativas-v33-67",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Canon Visual Sagrado de JanIA (Cabello Negro Azabache), Oficina Institucional Negro/Oro, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas",
+    directive:
+      "1) CANON VISUAL SAGRADO DE JANIA Y OFICINA INSTITUCIONAL VECY: El cabello de JanIA debe ser SIEMPRE negro azabache profundo brillante (deep glossy jet-black, cero castaño), manteniendo su fisonomía 3D Pixar/Disney, corte bob voluminoso, gafas translúcidas tono lila, aretes de diamantes y broche circular dorado Vecy en el pecho, variando poses, vestuario de alta costura y escenarios. Nuestra oficina institucional maneja la paleta Negro Carbón Mate (#0A0A0A) y Dorado Imperial (#D4AF37 / #BF953F) con escritorio de mármol negro con vetas doradas, biblioteca iluminada con maquetas doradas y logo circular Vecy en la pared. 2) PORTADAS EDITORIALES DINÁMICAS 1:1 Y ESTUDIO CREATIVO DE IMÁGENES EN WHATSAPP: Cada publicación diaria del Canal Oficial genera su propia portada editorial 1:1 (1080x1080) única del tema sin repetir siempre las mismas imágenes, y cualquier usuario por WhatsApp puede pedirle a JanIA con su propio prompt que le elabore Flyers para sus inmuebles, Banners, Posts o Infografías 1:1. 3) HERRAMIENTAS NATIVAS EN CANAL, GRUPOS Y DM: Prohibido hacer encuestas de texto (A, B, C) en el Canal Oficial porque los seguidores no pueden escribir allí; usar las herramientas nativas de WhatsApp (Encuesta, Cuestionario/Quiz y Preguntar en el Canal y Grupos 2 y 3, más vCard, Pin de Ubicación GPS, PDFs membretados y Stickers 3D en DM y Grupos), anunciando siempre todos los servicios de JanIA en el Canal y en los ganchos de los Grupos 2 y 3.",
+    rawText:
+      "En el canal no hagas encuestas de texto pues recuerda que los seguidores no pueden escribir en el canal, debes hacer las encuestas con las herramientas que WhatsApp dispone para el canal, usa también lo de cuestionarios y preguntar. Además que la función de crear imágenes sirva por WhatsApp para los usuarios quienes usando sus propios prompts le puedan pedir a JanIA que les elabore sus imágenes, flyers con información para sus inmuebles o banners, post, infografías, etc., y que JanIA anuncie cada vez que pueda sus servicios en el canal y los ganchos en los grupos 2 y 3. El cabello de JanIA siempre debe ser negro y los colores institucionales de nuestra oficina negro y dorado.",
+    createdAt: "2026-10-28T09:30:00.000Z",
+    active: true
   }
 ];
 

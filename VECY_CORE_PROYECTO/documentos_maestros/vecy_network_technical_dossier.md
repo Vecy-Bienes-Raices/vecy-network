@@ -8243,6 +8243,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Build: `npm run build` limpio y sin advertencias de tamaño de chunk.
   * Versión: `v33.66` (`33.66.0`) en `shared/const.ts` y `package.json`.
 
+### 10.162 Versión v33.67 (28 de Octubre 2026) — Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  1. En `https://vecy-bienes-raices.vercel.app/jania`, los visitantes no autenticados veían el nombre quemado `"Vecy Bienes Raíces"` / `"VECY"`, y al registrarse o iniciar sesión eran redirigidos a `/admin`, encontrándose con `"🛡️ Acceso Denegado"` porque el login público no estaba separado del login de administrador.
+  2. En el Canal Oficial de WhatsApp (`120363399889853806@newsletter`), se enviaban encuestas de texto (`🔹 A)... 🔹 B)...`) que los seguidores no podían responder porque los canales son de solo lectura para suscriptores. Además, se requería aprovechar las herramientas nativas del Canal (**Encuesta**, **Cuestionario/Quiz** y **Preguntar**) y de los Grupos/DM (**Ubicación GPS**, **vCard**, **Encuestas**, **PDFs** y **Stickers 3D**).
+  3. Se requería que cada publicación diaria del Canal Oficial tuviera su propia portada editorial `1:1` única acorde al tema del día, respetando el Canon Sagrado de JanIA (**cabello SIEMPRE negro azabache**, cero cabello castaño) y los colores institucionales de la oficina de VECY (`#0A0A0A` Negro Carbón Mate y `#D4AF37` Oro Imperial), además de habilitar el **Estudio Creativo de Imágenes por WhatsApp** para que los usuarios pidan flyers, banners, posts o infografías con su propio prompt.
+- **Solución Técnica y Doctrinal Implementada (`v33.67`)**:
+  1. **Desacoplamiento de Login/Registro en `/jania` vs `/admin` (`useAuth.ts`, `JanIAConsole.tsx`, `Login.tsx`, `Admin.tsx`)**:
+     * Eliminado el fallback `"Vecy Bienes Raíces"` para sesiones de invitado (`"Visitante Invitado"` / `"Sesión sin registrar"`).
+     * `Login.tsx` ahora respeta `?redirect=/jania` y `sessionStorage.getItem('vecy_login_return_url')`, devolviendo a todos los usuarios públicos directamente al chat `/jania` con su nombre real y su historial activo.
+  2. **Canon Visual Sagrado de JanIA, Oficina VECY, Portadas Editoriales Dinámicas 1:1 y Estudio Creativo por WhatsApp (`server/_core/jania/creativeStudioImageService.ts`)**:
+     * Consagrados `JANIA_SACRED_VISUAL_CANON` (cabello negro azabache profundo) y `VECY_INSTITUTIONAL_OFFICE_CANON` (`#0A0A0A` y `#D4AF37`, `vecy_oficina_institucional.jpg`).
+     * `generateDailyChannelEditorialImage` compone una portada `1080x1080` única para cada publicación diaria del Canal.
+     * `generateCustomUserCreativeImage` y la herramienta `crear_imagen_creativa_whatsapp` permiten a cualquier usuario pedir por WhatsApp flyers inmobiliarios, banners, posts e infografías `1080x1080` HD con su propio prompt.
+  3. **Herramientas Nativas en Canal Oficial, Grupos 2/3 y DM (`whatsapp-match.ts`, `cronService.ts`, `dmHandler.ts`, `consultingHandler.ts`)**:
+     * Implementados `sendChannelPoll` (`pollType: 0`), `sendQuiz` (`pollType: 1`, `correctAnswer`), `sendQuestionPrompt` (`contextInfo: { isQuestion: true }`) y `sendLocationPin` (`locationMessage`).
+     * Erradicadas las encuestas falsas de texto en el Canal Oficial y añadido el anuncio permanente del portafolio de servicios de JanIA en el Canal y en los ganchos de los Grupos 2 y 3.
+- **Validación y Blindaje ($0 COP)**:
+  * Suite 153 en `regression.test.ts` con 5 pruebas integrales automatizadas.
+  * Cobertura de tests: `npm test` **471/471 passing** (100% verde a $0 COP).
+  * Typecheck: `npm run check` (0 errores).
+  * Build: `npm run build` limpio.
+  * Versión: `v33.67` (`33.67.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

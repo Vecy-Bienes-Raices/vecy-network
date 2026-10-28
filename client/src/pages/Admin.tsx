@@ -184,10 +184,13 @@ export default function Admin() {
             Tu cuenta (<span className="text-accent">{user.email}</span>) no tiene permisos de administrador o agente.
           </p>
           <p className="text-muted-foreground text-xs mb-6">
-            Por favor, ponte en contacto con soporte técnico para actualizar tu rol a "agent" o "admin".
+            Esta sección es exclusiva para el equipo directivo de VECY BIENES RAÍCES. Tu cuenta ya está activa para usar el Chat de JanIA Web y guardar tu historial.
           </p>
           <div className="flex flex-col gap-3">
-            <button onClick={() => logout()} className="btn-electric w-full">
+            <button onClick={() => navigate('/jania')} className="btn-electric w-full">
+              Ir al Chat de JanIA Web
+            </button>
+            <button onClick={() => logout()} className="w-full py-2.5 text-xs uppercase tracking-wider border border-white/10 rounded-lg text-zinc-300 hover:bg-white/5 transition-colors">
               Cerrar Sesión / Cambiar Cuenta
             </button>
             <button onClick={() => navigate('/')} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">

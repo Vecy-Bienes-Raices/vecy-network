@@ -94,7 +94,18 @@ export {
   isExplicitLegalPdfRequest,
   generateLegalPdfForDmRequest,
   processAndQueueDmSticker,
-  buildSessionOnboardingDirectives
+  buildSessionOnboardingDirectives,
+  detectCreativeAssetType,
+  isExplicitCreativeImageRequest,
+  generateCustomUserCreativeImage,
+  queueCreativeImageForDm,
+  popLatestDmCreativeImage,
+  queueDmVCard,
+  popLatestDmVCard,
+  queueDmLocationPin,
+  popLatestDmLocationPin,
+  queueDmInteractivePoll,
+  popLatestDmInteractivePoll
 } from "./dmOnboardingAndDocsHelper";
 
 const latestDmFollowUpMap = new Map<string, string>();
@@ -310,6 +321,46 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["tipoDocumento"]
         }
+      },
+      {
+        name: "generar_imagen_creativa_whatsapp",
+        description: "Crea y envía en imagen HD (1080x1080 JPG) cualquier pieza gráfica inmobiliaria solicitada por el usuario con su propio prompt: flyers para inmuebles en venta o arriendo, banners promocionales, posts para redes sociales (Instagram/Facebook/WhatsApp), infografías inmobiliarias o diseños personalizados con la paleta ejecutiva de VECY BIENES RAÍCES.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            promptUsuario: { type: "STRING", description: "Descripción completa del diseño, flyer, banner, post o infografía solicitada por el usuario" },
+            tipoPieza: {
+              type: "STRING",
+              description: "Valores permitidos: flyer_inmueble, banner_promocional, post_redes, infografia_inmobiliaria, arte_libre"
+            },
+            tituloPrincipal: { type: "STRING", description: "Titular principal del flyer o post (ej. 'APARTAMENTO EN VENTA CHICÓ NORTE')" },
+            subtitulo: { type: "STRING", description: "Subtítulo o tipo de negocio (ej. 'VENTA EXCLUSIVA · ESTRATO 6')" },
+            precioOValor: { type: "STRING", description: "Precio de venta, canon o cifra principal destacada" },
+            ubicacionOZona: { type: "STRING", description: "Barrio, sector o ciudad del inmueble" },
+            especificacionesClave: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "Lista de 3 a 4 especificaciones o puntos clave para el diseño (ej. ['145 m² construidos', '3 Alcobas + Estudio', '2 Garajes independientes'])"
+            },
+            telefonoContacto: { type: "STRING", description: "Teléfono de contacto a mostrar en el flyer (por defecto +57 316 656 9719)" },
+            incluirAvatarJania: { type: "BOOLEAN", description: "true si el usuario desea que aparezca JanIA en la pieza gráfica" }
+          },
+          required: ["promptUsuario"]
+        }
+      },
+      {
+        name: "enviar_ubicacion_mapa_gps",
+        description: "Envía un pin de ubicación GPS interactivo nativo de WhatsApp (Location Pin) de una zona, barrio de Bogotá/Colombia o punto de encuentro oficial de VECY BIENES RAÍCES.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            nombreLugar: { type: "STRING", description: "Nombre del lugar, edificio o punto de referencia" },
+            direccionOBarrio: { type: "STRING", description: "Dirección o barrio en Bogotá / Colombia" },
+            latitud: { type: "NUMBER", description: "Latitud GPS (por defecto 4.6768 Parque de la 93 / Chicó Bogotá)" },
+            longitud: { type: "NUMBER", description: "Longitud GPS (por defecto -74.0482 Parque de la 93 / Chicó Bogotá)" }
+          },
+          required: ["nombreLugar"]
+        }
       }
     ]
   }
@@ -330,7 +381,10 @@ export type JaniaDmToolType =
   | "web"
   | "catalogo_inmuebles"
   | "registro_inmueble"
-  | "documento_legal_pdf";
+  | "documento_legal_pdf"
+  | "imagen_creativa"
+  | "imagen_creativa_whatsapp"
+  | "ubicacion_gps";
 
 export async function executeJaniaDmTool(
   toolName: string,
@@ -977,6 +1031,57 @@ export async function executeJaniaDmTool(
         }
       };
     }
+    case "generar_imagen_creativa_whatsapp": {
+      const { generateCustomUserCreativeImage, queueCreativeImageForDm, detectCreativeAssetType } = await import("../creativeStudioImageService");
+      const rawPrompt = String(args.promptUsuario || args.tituloPrincipal || rawUserText || "Flyer inmobiliario ejecutivo VECY").trim();
+      const rawType = String(args.tipoPieza || "").trim() as any;
+      const assetType = rawType || detectCreativeAssetType(rawPrompt);
+      const specsList = args.especificacionesClave || args.puntosClave;
+      const specs = Array.isArray(specsList) ? specsList.map(String) : undefined;
+      const imgRes = await generateCustomUserCreativeImage({
+        userPrompt: rawPrompt,
+        assetType,
+        title: args.tituloPrincipal ? String(args.tituloPrincipal) : undefined,
+        subtitle: args.subtitulo ? String(args.subtitulo) : undefined,
+        priceOrValue: args.precioOValor ? String(args.precioOValor) : undefined,
+        locationOrZone: (args.ubicacionOZona || args.ubicacionZona) ? String(args.ubicacionOZona || args.ubicacionZona) : undefined,
+        specs,
+        contactPhone: args.telefonoContacto ? String(args.telefonoContacto) : undefined,
+        includeJaniaAvatar: args.incluirAvatarJania !== undefined ? Boolean(args.incluirAvatarJania) : true
+      });
+      queueCreativeImageForDm(userId, imgRes);
+      return {
+        toolType: "imagen_creativa_whatsapp",
+        resultJson: {
+          solicitud: "generar_imagen_creativa_whatsapp",
+          archivoImagen: imgRes.fileName,
+          tipoPieza: imgRes.assetType,
+          resolucion: "1080x1080 HD (Formato 1:1 Oficial)",
+          exitoso: true,
+          reporteOficial: imgRes.caption
+        }
+      };
+    }
+    case "enviar_ubicacion_mapa_gps": {
+      const { queueDmLocationPin } = await import("./dmOnboardingAndDocsHelper");
+      const name = String(args.nombreLugar || "VECY BIENES RAÍCES — Mesa Central Bogotá").trim();
+      const address = String(args.direccionOBarrio || "Parque de la 93 / El Chicó, Bogotá D.C., Colombia").trim();
+      const latitude = Number(args.latitud || 4.6768);
+      const longitude = Number(args.longitud || -74.0482);
+      queueDmLocationPin(userId, { latitude, longitude, name, address });
+      return {
+        toolType: "ubicacion_gps",
+        resultJson: {
+          solicitud: "enviar_ubicacion_mapa_gps",
+          nombreLugar: name,
+          direccion: address,
+          latitud: latitude,
+          longitud: longitude,
+          exitoso: true,
+          reporteOficial: `📍 *Pin de Ubicación GPS interactivo enviado:* ${name} (${address}).`
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -1227,7 +1332,10 @@ export const ALL_DM_TOOL_TYPES = [
   "catalogo",
   "web",
   "catalogo_inmuebles",
-  "registro_inmueble"
+  "registro_inmueble",
+  "documento_legal_pdf",
+  "imagen_creativa",
+  "ubicacion_gps"
 ] as const;
 
 function isKnownToolType(val: string): boolean {
@@ -1960,12 +2068,14 @@ export async function processPrivateDmConversationalMessage(
       `===================================================\n` +
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps.\n` +
       `a) Si el usuario envía un número, documento o nombre de empresa con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la razón social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.\n` +
       `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +
-      `d) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
-      `e) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
+      `d) Si el usuario pide elaborar una IMAGEN, FLYER para su inmueble, BANNER promocional, POST para redes sociales o INFOGRAFÍA inmobiliaria con su propio prompt: Invoca de inmediato 'generar_imagen_creativa_whatsapp' para diseñar y enviarle la pieza gráfica HD 1080x1080 directamente al chat.\n` +
+      `e) Si el usuario pide la ubicación GPS, mapa del sector o tarjeta de contacto oficial de VECY: Invoca 'enviar_ubicacion_mapa_gps' o 'enviar_tarjeta_contacto_vecy'.\n` +
+      `f) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
+      `g) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
       `===================================================\n` +
       `BUSCADOR Y MEDIACIÓN DE MATCHES (CÓDIGO #M...):\n` +
       `===================================================\n` +
@@ -2186,7 +2296,15 @@ export async function processPrivateDmConversationalMessage(
       }
     }
 
-    const { isExplicitLegalPdfRequest, generateLegalPdfForDmRequest, processAndQueueDmSticker } = await import("./dmOnboardingAndDocsHelper");
+    const {
+      isExplicitLegalPdfRequest,
+      generateLegalPdfForDmRequest,
+      processAndQueueDmSticker,
+      isExplicitCreativeImageRequest,
+      generateCustomUserCreativeImage,
+      queueCreativeImageForDm,
+      popLatestDmCreativeImage
+    } = await import("./dmOnboardingAndDocsHelper");
     if (isExplicitLegalPdfRequest(clean) && !hasLatestDmPdf(userId)) {
       try {
         const autoPdf = await generateLegalPdfForDmRequest(clean, {
@@ -2195,6 +2313,23 @@ export async function processPrivateDmConversationalMessage(
         setLatestDmPdf(userId, { pdfBuffer: autoPdf.pdfBuffer, pdfFileName: autoPdf.fileName });
       } catch (pdfErr: any) {
         console.warn("[dmHandler] Error generando PDF legal automático:", pdfErr?.message);
+      }
+    }
+
+    if (isExplicitCreativeImageRequest(clean)) {
+      const existingCreative = popLatestDmCreativeImage(userId);
+      if (existingCreative) {
+        queueCreativeImageForDm(userId, existingCreative);
+      } else {
+        try {
+          const autoImg = await generateCustomUserCreativeImage({
+            userPrompt: clean,
+            includeJaniaAvatar: true
+          });
+          queueCreativeImageForDm(userId, autoImg);
+        } catch (imgErr: any) {
+          console.warn("[dmHandler] Error generando imagen creativa automática:", imgErr?.message);
+        }
       }
     }
 
@@ -2237,7 +2372,7 @@ export async function processPrivateDmConversationalMessage(
         } else if (trustedContact.customMessage) {
           famMsg = `¡${timeGreeting}, ${trustedContact.customMessage}`;
         } else {
-          famMsg = `¡${timeGreeting}, ${trustedContact.primaryNick || displayName}! JanIA, la inteligencia artificial de VECY BIENES RAÍCES 🤖✨. Te cuento que Eduardo está disponible en su línea de bróker: +57 316 656 9719 (https://wa.me/573166569719).`;
+          famMsg = `¡${timeGreeting}, ${trustedContact.primaryNick || displayName}! JanIA, la inteligencia artificial de VECY BIENES RAÍCES 👩🏻‍💼✨. Te cuento que Eduardo está disponible en su línea de bróker: +57 316 656 9719 (https://wa.me/573166569719).`;
         }
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", famMsg);
@@ -2411,7 +2546,7 @@ export async function processPrivateDmConversationalMessage(
       : isJani
         ? `¡${timeSalutation}, Jani! Qué gusto saludarte. Tuve una breve demora de red en la consulta, pero ya estoy a tu entera disposición. ¿En qué te colaboro hoy? 🤝`
         : isFamilyOrTrusted
-          ? `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una pequeña demora de red en mi sistema (un pequeño fallo en la matrix 🤖😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
+          ? `¡${timeSalutation}, ${displayName}! Qué pena contigo, ocurrió una pequeña demora de red en mi sistema (un pequeño fallo en la matrix 👩🏻‍💼😅). ¿Me confirmas nuevamente qué necesitas para ayudarte de inmediato? 🤝`
           : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Tuve una pequeña demora de conexión de red con mi servicio de lenguaje. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
