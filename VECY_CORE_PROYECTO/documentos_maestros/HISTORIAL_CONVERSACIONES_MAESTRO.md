@@ -7,6 +7,40 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.62: Doctrina de Colegas sin 40/20/40 (Planes de Pago) y Propietarios Directos (Corretaje Virtual — v33.62 - 33.62.0)
+
+**Versión:** `v33.62` (`33.62.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Colegas que NO aceptan el 40/20/40 (Planes de Pago Mensual o Anual):**
+   - *"Si un colega o agente inmobiliario nos dice que NO comparte comisión bajo el modelo 40/20/40 (o prefiere el 50/50 tradicional o trabajar de forma independiente): SÍ lo vamos a registrar en la base de datos de VECY. Pero JanIA debe aclararle con total transparencia, firmeza y elegancia que muy seguramente será contactado/a por nuestra dirección comercial para adquirir un plan de suscripción de pago (mensual o anual), ya que el modelo colaborativo 40/20/40 es el ÚNICO modo 100% gratuito para recibir notificaciones y cruces de MATCHES en la red."*
+2. **Propietarios Directos (Corretaje Virtual — Cero Comisión Colaborativa):**
+   - *"A los propietarios directos NO se les ofrece comisión colaborativa (no son asesores ni intermediarios). Si desean registrar su inmueble en venta o arriendo:*
+     *a) JanIA debe hacerles aceptar los Términos y Condiciones para el corretaje virtual de VECY.*
+     *b) JanIA debe solicitarles su correo electrónico para enviarles el contrato de corretaje virtual.*
+     *c) JanIA registra el inmueble en el sistema entregándole su código radicado oficial (ID #PROP...).*
+     *d) JanIA debe insistirles enfáticamente en que deben comunicarse con Jani Alves o Eduardo Rivera al 3166569719 (+57 316 656 9719) para concretar y que le expliquen todo acerca del contrato de corretaje y las condiciones para poderlo publicar formalmente en nuestro portal (https://vecy-bienes-raices.vercel.app/) y sobre la comisión en caso de que se venda o arriende a través de nuestro sitio o nuestros agentes aliados."*
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Consagración en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:**
+  - Nueva Sección Doctrinal: *DOCTRINA DE COLEGAS SIN 40/20/40 (PLANES DE PAGO) Y PROPIETARIOS DIRECTOS (CORRETAJE VIRTUAL — DOCTRINA EDUARDO A. RIVERA)* detallando los dos flujos específicos.
+- **Ajustes en `server/_core/jania/handlers/dmHandler.ts`:**
+  - `registrar_inmueble_o_requerimiento`: Parámetros `acepta402040` (boolean) y `comisionEsquema` ('40/20/40' | '50/50' | 'plan_pago') enriquecidos.
+  - Al detectar `acepta402040 === false` o `comisionEsquema === "plan_pago"`, el JSON de retorno instruye explícitamente a Gemini para advertir sobre el plan de pago con suscripción y la exclusividad del 40/20/40 como modo gratuito.
+  - Al detectar propietario directo confirmando oferta, el JSON de retorno instruye solicitar correo para el contrato de corretaje virtual, verificar aceptación de Términos y canalizar con urgencia a Jani Alves o Eduardo Rivera (+57 316 656 9719).
+  - Manejo de respuestas cortas no-40/20/40 (`no`, `50/50`, `no acepto`, `prefiero independiente`) informando registro con advertencia de plan de suscripción de pago.
+  - Inyección directiva en el prompt de Gemini para propietarios directos y agentes que rechazan el 40/20/40.
+- **Directiva Semilla en `founderKnowledgeService.ts`:**
+  - Creada `seed-colegas-sin-402040-plan-pago-y-propietarios-corretaje-virtual` con la doctrina completa.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada la **Suite 148** en `server/__tests__/regression.test.ts` con 4 pruebas unitarias exhaustivas.
+  - Tests: `npm test` **444/444 passing** (100% verde).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio en 35.46s.
+- **Incremento de Versión:**
+  - Actualizado a `v33.62` (`33.62.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.61: Contacto Exclusivo por Parte de VECY (Eduardo o Jani) y Cero Contacto Directo de Terceros (v33.61 - 33.61.0)
 
 **Versión:** `v33.61` (`33.61.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

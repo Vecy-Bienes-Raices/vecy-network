@@ -8134,5 +8134,19 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Validación Exhaustiva**:
   * Typecheck `npm run check` (0 errores) | Tests `npm test` **291/291 passing** ($0 COP) | Build `npm run build` limpio.
 
+---
+
+### Versión v33.62 — Octubre 2026: Doctrina de Colegas sin 40/20/40 (Planes de Pago) y Propietarios Directos (Corretaje Virtual — Doctrina Eduardo A. Rivera)
+- **Colegas que Rechazan el 40/20/40 (Suscripción / Planes de Pago)**:
+  * Si un colega o asesor inmobiliario manifiesta que no comparte comisión bajo el 40/20/40 o prefiere el 50/50 tradicional, SÍ se registra en la base de datos de VECY.
+  * JanIA le aclara con total transparencia, elegancia y firmeza que muy seguramente será contactado por la dirección comercial (Eduardo Rivera o Jani Alves al +57 316 656 9719) para adquirir un plan de suscripción de pago (mensual o anual), dado que el 40/20/40 es la única modalidad 100% gratuita para recibir notificaciones y cruces de MATCHES.
+- **Propietarios Directos (Corretaje Virtual — Cero Comisión Colaborativa)**:
+  * A los propietarios directos no se les ofrece comisión colaborativa.
+  * JanIA les hace aceptar los Términos y Condiciones para el corretaje virtual de VECY, les solicita su correo electrónico para enviar el contrato formal, registra el inmueble con su radicado oficial (`ID #PROP...`) y les insiste enfáticamente en contactar a Jani Alves o Eduardo Rivera (+57 316 656 9719) para acordar la publicación en portal y la comisión por venta o arriendo.
+- **Contacto Exclusivo por VECY (Eduardo o Jani) y Cero Terceros**:
+  * Consagración inquebrantable de la exclusividad de contacto: ningún propietario directo, comprador directo ni colega externo contacta al usuario; toda gestión se centraliza a través de la mesa central de VECY Bienes Raíces.
+- **Validación Exhaustiva**:
+  * Typecheck `npm run check` (0 errores) | Tests `npm test` **444/444 passing** ($0 COP) | Build `npm run build` limpio.
+
 
 

@@ -160,8 +160,10 @@ export const JANIA_DM_TOOLS = [
             textoCompletoPublicacion: { type: "STRING", description: "Texto completo del inmueble ofrecido o demandado optimizado por JanIA" },
             tipoOperacion: { type: "STRING", description: "OFERTA o DEMANDA" },
             esPropietarioDirecto: { type: "BOOLEAN", description: "false por defecto. En VECY Network la gran mayoría son colegas/agentes inmobiliarios. NUNCA poner true a menos que el usuario haya declarado explícitamente ser comprador directo o propietario directo sin intermediarios. Si no lo ha aclarado expresamente, poner false." },
-            acepta402040: { type: "BOOLEAN", description: "true si el agente acepta comisión colaborativa 40/20/40; false si prefiere 50/50" },
-            comisionEsquema: { type: "STRING", description: "'40/20/40' o '50/50'" }
+            acepta402040: { type: "BOOLEAN", description: "true si el agente acepta comisión colaborativa 40/20/40; false si no acepta 40/20/40 o prefiere 50/50" },
+            comisionEsquema: { type: "STRING", description: "'40/20/40', '50/50' o 'plan_pago'" },
+            correoPropietario: { type: "STRING", description: "Correo electrónico del propietario directo para enviarle el contrato de corretaje virtual de VECY" },
+            aceptaTerminosCorretaje: { type: "BOOLEAN", description: "true si el propietario directo aceptó los Términos y Condiciones de Corretaje Virtual de VECY" }
           },
           required: ["textoCompletoPublicacion"]
         }
@@ -313,9 +315,9 @@ export async function executeJaniaDmTool(
       const { processWhatsAppMessage } = await import("./propertiesHandler");
       let textToProcess = String(args.textoCompletoPublicacion || rawUserText || "").trim();
 
-      if (args.acepta402040 === false || args.comisionEsquema === "50/50") {
-        if (!textToProcess.includes("50/50")) {
-          textToProcess += "\n[🛡️50/50 - NO TERCERÍA]";
+      if (args.acepta402040 === false || args.comisionEsquema === "50/50" || args.comisionEsquema === "plan_pago") {
+        if (!textToProcess.includes("PLAN DE PAGO")) {
+          textToProcess += "\n[PLAN DE PAGO MENSUAL/ANUAL REQUERIDO - NO 40/20/40]";
         }
       } else if (args.acepta402040 === true || args.comisionEsquema === "40/20/40") {
         if (!textToProcess.includes("40/20/40")) {
@@ -323,7 +325,9 @@ export async function executeJaniaDmTool(
         }
       } else if (args.esPropietarioDirecto === true) {
         if (!textToProcess.includes("PROPIETARIO DIRECTO")) {
-          textToProcess += "\n[PROPIETARIO DIRECTO - ASESORÍA VECY]";
+          const emailPart = args.correoPropietario ? ` - CORREO: ${args.correoPropietario}` : "";
+          const tcPart = args.aceptaTerminosCorretaje ? " - T&C CORRETAJE ACEPTADOS" : "";
+          textToProcess += `\n[PROPIETARIO DIRECTO${emailPart}${tcPart} - CORRETAJE VIRTUAL VECY]`;
         }
       }
 
@@ -405,11 +409,18 @@ export async function executeJaniaDmTool(
           registroId: res.savedId ? `${res.savedType === 'requirement' ? 'REQ-' : 'PROP-'}${res.savedId} (ID #${res.savedId})` : undefined,
           esPropietarioDirecto: Boolean(args.esPropietarioDirecto),
           acepta402040: args.acepta402040 !== undefined ? Boolean(args.acepta402040) : (args.comisionEsquema === "40/20/40"),
-          comisionEsquema: args.comisionEsquema || (args.acepta402040 === true ? "40/20/40" : args.acepta402040 === false ? "50/50" : "pendiente"),
+          comisionEsquema: args.comisionEsquema || (args.acepta402040 === true ? "40/20/40" : args.acepta402040 === false ? "plan_pago" : "pendiente"),
+          correoPropietario: args.correoPropietario || undefined,
+          aceptaTerminosCorretaje: Boolean(args.aceptaTerminosCorretaje),
           totalMatchesFound: matchesSummary.length,
           matchesEncontrados: matchesSummary,
           detalle: res.inserted && res.savedId
             ? `Registro guardado exitosamente en la base de datos de VECY BIENES RAÍCES con código oficial ${res.savedType === 'requirement' ? 'REQ-' : 'PROP-'}${res.savedId} (ID #${res.savedId}). ` +
+              (args.esPropietarioDirecto
+                ? "PROPIETARIO DIRECTO: Insiste en que debe comunicarse con Jani o Eduardo al 3166569719 (+57 316 656 9719) para concretar las condiciones del contrato de corretaje virtual, condiciones de publicación en el portal y comisión de corretaje en caso de venta o arriendo. "
+                : (args.acepta402040 === false
+                  ? "AGENTE SIN 40/20/40: Informa que se registró pero muy seguramente será contactado para adquirir plan de pago mensual/anual ya que el 40/20/40 es el único modo gratuito para notificación de matches. "
+                  : "")) +
               (matchesSummary.length > 0
                 ? `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match).`
                 : "No se encontraron coincidencias inmediatas con el umbral 85%-100%, pero el registro quedó 100% activo en el radar 24/7 de VECY Network.")
@@ -999,8 +1010,8 @@ export async function synthesizeToolResponseWithGemini(
       `    - En la red inmobiliaria de VECY Network, la gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS (asesores, inmobiliarias, brokers independientes) con clientes.\n` +
       `    - Queda TERMINANTEMENTE PROHIBIDO asumir o calificar al interlocutor como "comprador directo" o "propietario directo" por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'.\n` +
       `    - Salvo que el usuario haya declarado explícita e inequívocamente ser comprador o propietario directo sin intermediario ('soy comprador directo', 'es para mí', 'soy el dueño'), JanIA le pregunta con amabilidad y señorío: "¿Nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?".\n` +
-      `    - Si es colega/agente: trátala con toda la altura y respeto como colega y aliada estratégica en nuestra red; su cliente y su comisión del 40% de la punta colocadora o captadora están 100% blindados y protegidos con VECY bajo el modelo 40/20/40.\n` +
-      `    - Si el usuario es propietario o comprador directo confirmado: Explícale que VECY Bienes Raíces (+57 316 656 9719) respalda su gestión conectándolo de forma segura y blindada con peritos y oportunidades.\n` +
+      `    - Si es colega/agente: trátala con toda la altura y respeto como colega y aliada estratégica en nuestra red; su cliente y su comisión del 40% de la punta colocadora o captadora están 100% blindados y protegidos con VECY bajo el modelo 40/20/40. Si declara que NO acepta el modelo 40/20/40 (o prefiere 50/50 o independiente): JanIA le aclara que SÍ lo vamos a registrar en la base de datos, pero muy seguramente será contactada/o por nuestra dirección para adquirir un plan de pago mensual o anual (suscripción), ya que el ÚNICO modo de operar en modo 100% gratuito para la notificación de MATCHES es aceptar el 40/20/40.\n` +
+      `    - Si el usuario es PROPIETARIO DIRECTO que desea registrar su inmueble en venta o arriendo: Aunque no se le ofrece comisión colaborativa (él no es asesor/corredor inmobiliario): si acepta que registremos su inmueble, JanIA debe: 1) Hacerle aceptar nuestros Términos y Condiciones para el corretaje virtual de VECY; 2) Pedirle su correo electrónico para poderle enviar el contrato de corretaje virtual; 3) Registrar su inmueble en el sistema entregándole su código radicado oficial (ID #PROP...); y 4) Insistirle enfáticamente en que debe comunicarse con Jani Alves o Eduardo Rivera al 3166569719 (+57 316 656 9719) para concretar y que le expliquen todo acerca del contrato de corretaje y las condiciones para poderlo publicar formalmente en nuestro portal (https://vecy-bienes-raices.vercel.app/) y sobre la comisión en caso de que se venda o arriende a través de nuestro sitio o nuestros agentes aliados. Si es compradora directa, se le brinda el protocolo de cliente final respaldado por VECY (+57 316 656 9719).\n` +
       `  * DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA):\n` +
       `    - SÍ VAN A SER CONTACTADOS: A todo usuario (colega inmobiliario o cliente) que suba o registre directamente a través de JanIA una OFERTA (inmueble) o una DEMANDA (requerimiento): SÍ LO VAMOS A CONTACTAR. Jamás dejes al usuario con incertidumbre.\n` +
       `    - CONTACTO EXCLUSIVO DIRECTO DE EDUARDO RIVERA O JANI ALVES: Quienes contactan directamente a ese usuario somos NOSOTROS PERSONALMENTE (Eduardo Rivera o Jani Alves) desde la mesa directiva y central de VECY BIENES RAÍCES (+57 316 656 9719).\n` +
@@ -1010,7 +1021,8 @@ export async function synthesizeToolResponseWithGemini(
       `    - VECY HACE LA CONEXIÓN CENTRALIZADA: En VECY somos nosotros (Eduardo o Jani) quienes hacemos la conexión formal y segura. Y si en VECY llegamos a captar o tener en la mesa central a un propietario directo, a un comprador directo o a un inversionista que coincida con esa oferta o demanda, también seremos nosotros directamente (Eduardo Rivera o Jani Alves al +57 316 656 9719) quienes contactaremos al usuario para presentarle la opción formal, coordinar la visita con Vecy Agenda y formalizar el cierre blindando la operación y garantizando el modelo colaborativo 40/20/40. ¡Eso se sobreentiende y es la regla de oro institucional de VECY!\n` +
       `    - JanIA debe informar siempre: "En cuanto tengamos una opción compatible que cumpla tus filtros al milímetro (provenga de un colega aliado, de un propietario o de nuestro inventario verificado), seremos nosotros directamente desde VECY BIENES RAÍCES (Eduardo Rivera o Jani Alves al +57 316 656 9719) quienes te contactaremos para presentarte la ficha técnica neutralizada, coordinar la visita y acompañarte en todo el proceso hasta el cierre, garantizando tu 40% de comisión colaborativa y blindando legalmente la operación."\n` +
       `  * Si es colega/agente y aceptó 40/20/40: Confirma su estatus de Aliada Prioritaria en la red colaborativa.\n` +
-      `  * Si es colega/agente y eligió 50/50: Confirma que ingresó a la mesa de coincidencias bajo la pestaña [🛡️50/50].\n` +
+      `  * Si es colega/agente y NO aceptó 40/20/40 (o eligió 50/50 / independiente): Confirma que su registro fue guardado, pero recuérdale con amabilidad que muy seguramente será contactado por la dirección para adquirir un plan de pago mensual o anual ya que el 40/20/40 es la única vía gratuita de recibir notificaciones de cruces comerciales.\n` +
+      `  * Si es PROPIETARIO DIRECTO: Asegura la aceptación de Términos de corretaje virtual, solicita su correo para enviar el corretaje virtual, e insiste enfáticamente en que debe comunicarse con Jani o Eduardo al +57 316 656 9719 para coordinar condiciones de publicación en el portal y comisión.\n` +
       `- ENTREGA DE RESULTADOS DEL MATCH (DOCTRINA EDUARDO A. RIVERA):\n` +
       `  * Si 'totalMatchesFound' > 0 (SÍ HAY COINCIDENCIAS / MATCHES):\n` +
       `    1. Anúnciale con alegría y profesionalismo que el radar detectó de inmediato coincidencia(s) de alta afinidad (entre el 85% y 100%).\n` +
@@ -1507,16 +1519,17 @@ export async function processPrivateDmConversationalMessage(
         await setUser402040Agreement(userId, false);
         userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
         userPerpetualSession.keyFacts.esperando_respuesta_40_20_40 = false;
+        userPerpetualSession.keyFacts.rechaza_402040_requiere_plan_pago = true;
         await saveUserPerpetualSession(userPerpetualSession);
 
         if (isShortAnswer) {
-          const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Quedas categorizada en nuestro sistema como contacto convencional (50/50). Tu publicación permanece registrada en nuestra base de datos y si encontramos una oportunidad adecuada que se ajuste a tu esquema, te avisaremos. ¿En qué otra consulta o trámite te puedo colaborar hoy? 🤝✨`;
+          const reply = `Comprendido perfectamente${displayName ? `, ${displayName}` : ""}. Te confirmo que **SÍ vamos a registrar tu información** en nuestra base de datos. Sin embargo, ten presente que **el único modo de operar en modo 100% gratuito para la notificación y cruce de MATCHES en VECY Network es aceptar el modelo colaborativo 40/20/40**.\n\nPor ello, para poder notificarte cruces comerciales fuera del 40/20/40 o bajo esquemas independientes, muy seguramente serás contactada/o por nuestra dirección para adquirir un **plan de suscripción de pago (mensual o anual)**. ¿Deseas que radiquemos de una vez los datos de tu requerimiento o inmueble en el sistema? 🤝✨`;
           appendDmHistory(userId, "user", clean);
           appendDmHistory(userId, "assistant", reply);
           markUserGreetedToday(userId);
           return reply;
         } else {
-          context402040Directive = `\n[SISTEMA: El interlocutor prefiere el esquema tradicional 50/50 y ha quedado registrado como contacto convencional. Respeta su decisión cordialmente y atiende con máxima diligencia las preguntas, inmuebles o requerimientos de su mensaje.]`;
+          context402040Directive = `\n[SISTEMA: El interlocutor es agente/colega inmobiliario y ha manifestado que NO acepta trabajar bajo el esquema 40/20/40 (o prefiere 50/50 / independiente). Aplica la DOCTRINA EDUARDO A. RIVERA: Confírmale que SÍ lo vamos a registrar en la base de datos de VECY, pero explícale con total claridad y elegancia que muy seguramente será contactado/a por nuestra dirección (Eduardo Rivera o Jani Alves) para adquirir un plan de pago mensual o anual (suscripción), ya que el ÚNICO modo de operar en modo 100% gratuito para la notificación y cruce de MATCHES es aceptar el modelo colaborativo 40/20/40. Atiende con diligencia los datos o consultas de su mensaje.]`;
         }
       } else if (isQueryingOrDoubting) {
         context402040Directive = `\n[SISTEMA: El interlocutor tiene dudas o pregunta cómo funciona la alianza colaborativa 40/20/40. Explícaselo con maestría pedagógica, astucia y total claridad: 40% para el captador, 40% para el colocador, y 20% para VECY por la mesa de cruce, peritaje, seguridad jurídica y acompañamiento notarial hasta el cierre. Pregúntale amablemente si desea trabajar bajo este modelo para activarlo como Aliado Prioritario.]`;
@@ -1725,7 +1738,7 @@ export async function processPrivateDmConversationalMessage(
       `    4. ¡REGLA DE ORO DE ACCIÓN INMEDIATA (CERO PROMESAS EN DIFERIDO)!: Tan pronto como el usuario haya aportado los datos indispensables (o si acaba de confirmar las habitaciones/garajes/presupuesto): QUEDA TERMINANTEMENTE PROHIBIDO RESPONDER "Dame un momento y te comparto los resultados", "Ya te aviso", "Estoy consultando... dame un momento". En WhatsApp NO hay respuestas automáticas en diferido. DEBES INVOCAR EN ESE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado con todos los datos recopilados en la conversación.\\n` +
       `    5. DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En la red VECY la gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS (asesores, inmobiliarias, corredores independientes) gestionando clientes. Queda TERMINANTEMENTE PROHIBIDO calificar a un usuario como 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario declare expresamente de forma inequívoca ('soy comprador directo', 'es para mí sin intermediario', 'soy el dueño directo'), JanIA DEBE PREGUNTAR CON ELEGANCIA: 'Por cierto, ¿nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?'. Si es colega, su cliente y su 40% están 100% protegidos y blindados con VECY.\\n` +
       `    6. DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA): SÍ se contacta al usuario, pero EXCLUSIVAMENTE por Eduardo Rivera o Jani Alves (+57 316 656 9719). ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO! Si busca inmueble, JAMÁS lo contacta un propietario directo (gran mentira); si publica inmueble, JAMÁS lo contacta un comprador o inversionista directo. Nosotros hacemos la conexión formal y segura, coordinamos visitas por Vecy Agenda y formalizamos el cierre garantizando el 40% al colocador, 40% al captador y 20% institucional a VECY.\\n` +
-      `    7. Si es AGENTE/COLEGA INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisión bajo el modelo colaborativo de la Red VECY 40/20/40. Si SÍ acepta, JanIA lo registra como Alianza 40/20/40 Aceptada - Aliada Prioritaria. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo envía a la mesa de coincidencias a la sección [🛡️50/50].\\n` +
+      `    7. Si es AGENTE/COLEGA INMOBILIARIO: JanIA le pregunta con claridad y firmeza si acepta compartir comisión bajo el modelo colaborativo de la Red VECY 40/20/40. Si SÍ acepta, JanIA lo registra como [ALIANZA 40/20/40 ACEPTADA - ALIADA PRIORITARIA]. Si prefiere el 50/50 tradicional, JanIA de todas formas sube el inmueble o requerimiento y el sistema lo envía a la mesa de coincidencias a la sección [🛡️50/50 - NO TERCERÍA]. Si declara que no acepta 40/20/40, JanIA le explica que se registrará pero será contactado/a para un plan de pago mensual o anual ya que el 40/20/40 es la única vía 100% gratuita.\\n` +
       `    8. Si es PROPIETARIO/COMPRADOR DIRECTO CONFIRMADO: JanIA lo acoge con empatía, estructura su ficha y le explica que VECY Bienes Raíces (+57 316 656 9719) respaldará su gestión conectándolo de forma segura y blindada con peritos y oportunidades.\\n` +
       `    9. Invoca la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto optimizado y los parámetros esPropietarioDirecto (false por defecto salvo confirmación expresa de cliente directo), acepta402040 y comisionEsquema.\\n` +
       `    10. Al confirmar el registro de un requerimiento o inmueble: ENTREGA SIEMPRE con total orgullo y claridad el código o ID oficial asignado devuelto por la herramienta (ej: *REQ-1105* o *ID #1105*) confirmando que ya quedó formalmente radicado e indexado en el motor de base de datos autoritativo de VECY BIENES RAÍCES.\\n` +

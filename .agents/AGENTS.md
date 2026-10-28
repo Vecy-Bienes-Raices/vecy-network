@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.61 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.62 — Octubre 2026
+
+### Novedades v33.62 (Doctrina de Colegas sin 40/20/40 y Propietarios Directos con Corretaje Virtual):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Colegas que NO aceptan el 40/20/40 (Planes de Pago Mensual o Anual):**
+     - SÍ se registran en la base de datos de VECY.
+     - JanIA les aclara con total transparencia, firmeza y elegancia que muy seguramente serán contactados por nuestra dirección comercial (Eduardo Rivera o Jani Alves al +57 316 656 9719) para adquirir un plan de suscripción de pago (mensual o anual), ya que el modelo colaborativo 40/20/40 es el ÚNICO modo 100% gratuito para recibir notificaciones y cruces de MATCHES en la red.
+  2. **Propietarios Directos (Corretaje Virtual — Cero Comisión Colaborativa):**
+     - A los propietarios directos NO se les ofrece comisión colaborativa (no son agentes ni asesores).
+     - JanIA les hace aceptar los Términos y Condiciones para el corretaje virtual de VECY.
+     - JanIA les solicita su correo electrónico para enviarles el contrato de corretaje virtual.
+     - JanIA registra el inmueble en el sistema entregando su código radicado oficial (ID #PROP...).
+     - JanIA les insiste enfáticamente en comunicarse con Jani Alves o Eduardo Rivera al +57 316 656 9719 para concretar las condiciones para publicarlo formalmente en nuestro portal (https://vecy-bienes-raices.vercel.app/) y la comisión en caso de venta o arriendo.
+  3. **Contacto Exclusivo por Parte de VECY (Eduardo o Jani) y Cero Terceros:**
+     - Se mantiene rigurosamente el contacto exclusivo centralizado por Eduardo Rivera o Jani Alves (+57 316 656 9719). Cero promesas de propietarios directos, compradores directos o terceros contactando al usuario.
+- **Consagración Doctrinal**:
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts` enriquecidos con la sección doctrinal correspondiente.
+  - `server/_core/jania/handlers/dmHandler.ts` adaptado con parámetros `acepta402040` y `comisionEsquema`, instrucciones directas para Gemini ante rechazo de 40/20/40 y flujo de corretaje virtual para propietarios directos.
+  - `server/_core/jania/founderKnowledgeService.ts` con directiva viva `seed-colegas-sin-402040-plan-pago-y-propietarios-corretaje-virtual`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **444/444 passing** (Suite 148 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.62`) y `package.json` (`33.62.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.61 — Octubre 2026
 
 ### Novedades v33.61 (Contacto Exclusivo por Parte de VECY — Eduardo Rivera o Jani Alves — y Cero Contacto Directo de Terceros):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

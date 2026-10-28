@@ -1,11 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.61.0 — 2026-10-27)
-- **JanIA Server:** `v33.61` (`33.61.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
-- **Contacto Exclusivo por Parte de VECY (Eduardo Rivera o Jani Alves) y Cero Contacto Directo de Terceros (Doctrina Eduardo A. Rivera):**
-  1. **SÍ van a ser contactados:** Todo usuario que registre oferta o demanda a través de JanIA SÍ será contactado al presentarse un MATCH.
-  2. **Contacto Exclusivo de Eduardo Rivera o Jani Alves (+57 316 656 9719):** Quienes contactan directamente al usuario son exclusivamente Eduardo o Jani desde la mesa central de VECY Bienes Raíces.
-  3. **Cero Propietarios Directos (Gran Mentira):** Queda terminantemente prohibido afirmar que propietarios directos contactarán al usuario.
-  4. **Cero Compradores, Inversionistas o Colegas Externos Directos:** Nadie contacta directo a nadie; VECY centraliza y presenta fichas 360°, protegiendo la red y el 40/20/40.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 440/440 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.62.0 — 2026-10-27)
+- **JanIA Server:** `v33.62` (`33.62.0`) consolidado y validado en local y desplegado en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Colegas sin 40/20/40 (Planes de Pago) y Propietarios Directos (Corretaje Virtual — Doctrina Eduardo A. Rivera):**
+  1. **Colegas que NO aceptan el 40/20/40:** SÍ se registran en la base de datos de VECY. Se les advierte que serán contactados para adquirir un plan de suscripción de pago (mensual o anual) para notificaciones/cruces, pues el 40/20/40 es la única vía 100% gratuita.
+  2. **Propietarios Directos (Cero Comisión Colaborativa):** Aceptación obligatoria de Términos y Condiciones para corretaje virtual, solicitud de correo electrónico para envío de contrato y canalización enfática con Jani Alves o Eduardo Rivera (+57 316 656 9719) para acordar publicación web y comisión por venta/arriendo.
+  3. **Contacto Exclusivo por Eduardo Rivera o Jani Alves (+57 316 656 9719):** Cero contacto de terceros (ni propietarios, ni compradores, ni inversionistas, ni colegas externos).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 444/444 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

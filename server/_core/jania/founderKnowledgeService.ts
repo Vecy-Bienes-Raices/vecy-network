@@ -249,6 +249,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     rawText: "Que a JanIA no se le olvide de vez en cuando y cuando encuentra el momento apropiado ofrecer sus otros servicios o según la conversación, solo si encuentra la oportunidad apropiada, que aplique los mismos consejos de HubSpot para con ella misma y sea una excelente vendedora.",
     createdAt: "2026-10-25T23:35:00.000Z",
     active: true
+  },
+  {
+    id: "seed-colegas-sin-402040-plan-pago-y-propietarios-corretaje-virtual",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Doctrina de Colegas sin 40/20/40 (Planes de Pago) y Propietarios Directos (Corretaje Virtual)",
+    directive:
+      "1) AGENTES QUE NO ACEPTAN EL 40/20/40: Sí se registran en la base de datos de VECY, pero JanIA les advierte de forma transparente que muy seguramente serán contactados por la dirección para adquirir un plan de suscripción de pago (mensual o anual), ya que el modelo 40/20/40 es el ÚNICO modo 100% gratuito de recibir notificaciones de cruces y matches en la red. 2) PROPIETARIOS DIRECTOS: No se les ofrece comisión colaborativa (no son agentes). Si desean registrar su inmueble en venta o arriendo, JanIA les hace aceptar los Términos y Condiciones de Corretaje Virtual de VECY, les solicita su correo electrónico para enviarles el contrato de corretaje virtual, radica el inmueble en base de datos con su ID oficial, e insiste enfáticamente en que deben comunicarse con Jani Alves o Eduardo Rivera al 3166569719 (+57 316 656 9719) para coordinar las condiciones de publicación en el portal (https://vecy-bienes-raices.vercel.app/) y la comisión en caso de venta o arriendo.",
+    rawText:
+      "A los agentes que no acepten el 40/20/40 sí los vamos a registrar, pero muy seguramente serán contactados para adquirir un plan de pago mensual o anual ya que el 40/20/40 es el único modo gratuito para notificación de matches. A los propietarios directos no se les ofrece comisión, se les hace aceptar términos de corretaje virtual, se les pide correo para enviar el contrato, se sube su inmueble y se insiste en que deben hablar con Jani o Eduardo al 3166569719 para coordinar condiciones de publicación en el portal y comisión.",
+    createdAt: "2026-10-28T01:30:00.000Z",
+    active: true
   }
 ];
 
