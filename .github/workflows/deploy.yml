@@ -27,7 +27,8 @@ jobs:
             cd ${{ secrets.VPS_TARGET_DIR || '/var/www/vecy-network' }}
 
             echo "📥 [CI/CD] Sincronizando código desde origin/main..."
-            git pull origin main
+            git config pull.rebase false
+            git pull origin main --ff-only || git pull origin main --no-rebase
 
             echo "📦 [CI/CD] Verificando dependencias (pnpm / npm)..."
             if command -v pnpm &> /dev/null; then
