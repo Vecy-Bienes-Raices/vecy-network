@@ -2184,9 +2184,26 @@ export function getChannelSquareImage1x1(themeKey: string, dayOfMonth?: number):
   const dir1x1 = path.resolve(process.cwd(), 'client/public/assets/channel_1x1');
   const janiaDir = path.resolve(process.cwd(), 'client/public/assets/jania');
 
+  // Galería completa de 10 piezas cuadradas [1:1] (5 temáticas + 5 Alta Costura Couture) para alternancia diaria sin repetición
+  const fullRotation1x1 = [
+    'jania_anfitriona_cafe_1x1.jpg',
+    'jania_couture_oro_liquido_1x1.png',
+    'jania_legal_due_diligence_1x1.jpg',
+    'jania_couture_esmeralda_seda_1x1.jpg',
+    'jania_marketing_colaborativo_1x1.jpg',
+    'jania_couture_purpura_imperial_1x1.jpg',
+    'jania_avaluos_pot_1x1.jpg',
+    'jania_couture_blanco_mao_oro_1x1.jpg',
+    'jania_seguridad_notarial_1x1.jpg',
+    'jania_couture_magma_volcanico_1x1.jpg'
+  ];
+
   let target1x1 = 'jania_anfitriona_cafe_1x1.jpg';
 
-  if (normalized.includes("legal") || normalized.includes("jurid") || normalized.includes("vicio") || normalized.includes("contrato") || normalized.includes("titulo") || normalized.includes("promesa") || normalized.includes("pleito")) {
+  if (typeof dayOfMonth === "number" && dayOfMonth > 0) {
+    // Rotación diaria activa sobre las 10 piezas maestras [1:1] para no repetir siempre las mismas imágenes antiguas
+    target1x1 = fullRotation1x1[(dayOfMonth - 1) % fullRotation1x1.length];
+  } else if (normalized.includes("legal") || normalized.includes("jurid") || normalized.includes("vicio") || normalized.includes("contrato") || normalized.includes("titulo") || normalized.includes("promesa") || normalized.includes("pleito")) {
     target1x1 = 'jania_legal_due_diligence_1x1.jpg';
   } else if (normalized.includes("segurid") || normalized.includes("notari") || normalized.includes("cedula") || normalized.includes("predial") || normalized.includes("adres") || normalized.includes("rues") || normalized.includes("verific")) {
     target1x1 = 'jania_seguridad_notarial_1x1.jpg';
@@ -2196,16 +2213,18 @@ export function getChannelSquareImage1x1(themeKey: string, dayOfMonth?: number):
     target1x1 = 'jania_marketing_colaborativo_1x1.jpg';
   } else if (normalized.includes("cafe") || normalized.includes("podcast") || normalized.includes("anfitriona") || normalized.includes("educa") || normalized.includes("comunidad") || normalized.includes("balance")) {
     target1x1 = 'jania_anfitriona_cafe_1x1.jpg';
+  } else if (normalized.includes("oro")) {
+    target1x1 = 'jania_couture_oro_liquido_1x1.png';
+  } else if (normalized.includes("esmeralda")) {
+    target1x1 = 'jania_couture_esmeralda_seda_1x1.jpg';
+  } else if (normalized.includes("purpura") || normalized.includes("imperial")) {
+    target1x1 = 'jania_couture_purpura_imperial_1x1.jpg';
+  } else if (normalized.includes("blanco") || normalized.includes("mao")) {
+    target1x1 = 'jania_couture_blanco_mao_oro_1x1.jpg';
+  } else if (normalized.includes("magma") || normalized.includes("volcan")) {
+    target1x1 = 'jania_couture_magma_volcanico_1x1.jpg';
   } else {
-    // Rotación activa por día del mes sobre las piezas 1:1 maestras
-    const rotation = [
-      'jania_anfitriona_cafe_1x1.jpg',
-      'jania_legal_due_diligence_1x1.jpg',
-      'jania_marketing_colaborativo_1x1.jpg',
-      'jania_avaluos_pot_1x1.jpg',
-      'jania_seguridad_notarial_1x1.jpg'
-    ];
-    target1x1 = dayOfMonth ? rotation[(dayOfMonth - 1) % rotation.length] : 'jania_legal_due_diligence_1x1.jpg';
+    target1x1 = 'jania_legal_due_diligence_1x1.jpg';
   }
 
   // 1. Prioridad: directorio dedicado channel_1x1

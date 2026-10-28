@@ -8198,5 +8198,32 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Build: `npm run build` limpio y bundle de servidor generado en 77ms.
   * Versión: `v33.64` (`33.64.0`) en `shared/const.ts` y `package.json`.
 
+### 10.160 Versión v33.65 (2026-10-28) — Conocimiento Inmobiliario Enciclopédico Integral vs. Foco Operacional VECY, Detección de Nombres Reales sin Siglas de Profesión (`Arq.`), Limpieza de Punto Huérfano y Rotación de 10 Imágenes 1:1 en Canal (Doctrina Eduardo A. Rivera)
+- **Doctrina Fundacional Consagrada (Eduardo A. Rivera)**:
+  1. **Conocimiento Inmobiliario Enciclopédico Integral vs. Foco Operacional de VECY**:
+     * Mientras que **VECY BIENES RAÍCES** como empresa decidió no administrar arriendos directamente (centrando su operación en Venta Directa, Venta Indirecta Colaborativa 40/20/40 e Inversiones Rentables), **JanIA como Consultora e IA Inmobiliaria SABE ABSOLUTAMENTE TODO SOBRE BIENES RAÍCES SIN EXCEPCIÓN**:
+       - **Arriendos (Ley 820 de 2003 y Código de Comercio)**: Contratos de arrendamiento de vivienda y comercial, cartas de solicitud de entrega o restitución de inmuebles, cartas de terminación de contrato, preavisos, prórrogas, incrementos IPC e indemnizaciones.
+       - **Compraventas, Leasing, Permutas y Figuras Financieras**: Compraventas simples, con hipoteca, con cesión de leasing habitacional y comercial/vivienda, minutas de toda clase y figura, permutas, préstamos sobre inmuebles con garantía hipotecaria o pacto de retroventa (Art. 1939 C.C.).
+       - **Avalúos Comerciales (ACM), Sondeos de Mercado y POT**: Avalúos comerciales profundos y sondeos superficiales de mercado, comparativas con portales para lograr precios acertados del metro cuadrado ($/m²), revisión de POT y edificabilidad por dirección.
+       - **Verificación Documental, Redacción Legal, Firma Electrónica y Asesoría Jurídica**: Verificación de identidad, prediales, IDU, redacción legal con cláusulas y leyes, cartas de presentación formal de clientes (física o email), contratos de corretaje físicos o por email, **firma electrónica y su tutorial paso a paso en `https://autenticaciondigital.and.gov.co/`**, guía para trámites en internet y asesoramiento resumido prejurídico y jurídico (derecho inmobiliario, administrativo, comercial y civil).
+       - **Marketing Digital Inmobiliario, IA, Actualidad y Uso Multimodal**: Consejos sobre publicación en redes sociales, marketing digital inmobiliario, noticias y avances tecnológicos en bienes raíces, cómo hablarle a JanIA (voz, texto, fotos/imágenes de fachadas y acabados, archivos PDF para estudios de títulos o POT, direcciones).
+       - **El Colapso de los "Dinosaurios Inmobiliarios" vs. El Posicionamiento de VECY BIENES RAÍCES**: Contraste entre la obsolescencia de los portales clasificados tradicionales y la ventaja tecnológica y colaborativa de VECY (`https://vecy-bienes-raices.vercel.app/historia`).
+  2. **Detección de Nombres Reales sin Siglas de Profesión (`Arq.`) y Limpieza de Punto Huérfano**:
+     * Resolución del caso real reportado por Eduardo (`@arq.adrypynto ~Arq Adriana Pinto` -> `". Un gusto saludarte de nuevo, Arq. 🏙️✨"`).
+     * Limpieza de `@handles`, extracción posterior a `~`, eliminación de prefijos de títulos profesionales (`Arq`, `Arq.`, `Ing`, `Dr`, `Dra`, `Abg`, `Lic`, `Econ`, `Cont`, `CP`, `Prof`, etc.) y reconocimiento del apellido `"Pinto"` para resolver `"Adriana"` (`isFemale: true`).
+     * Erradicación de puntos y signos de puntuación huérfanos iniciales tras `stripLeadingGreetingsAndCourtesies` y en `sanitizeResponseMarkdown`.
+  3. **Rotación Diaria Completa de las 10 Imágenes Cuadradas `1:1` en el Canal Oficial**:
+     * `getChannelSquareImage1x1` en `server/_core/cronService.ts` rota a través de las 10 piezas cuadradas `1:1` (5 temáticas + 5 de Alta Costura `jania_couture_*_1x1`) cuando recibe `dayOfMonth`, evitando repeticiones.
+- **Implementación Técnica en Backend**:
+  * `server/_core/nameAndGenderResolver.ts`, `server/_core/whatsapp-utils.ts`, `server/_core/jania/parsers.ts`: Limpieza de `@handles`, extracción tras `~`, remoción de prefijos profesionales y sanitización de puntuación huérfana inicial.
+  * `server/_core/jania/handlers/dmHandler.ts`, `server/_core/prompts/base.md`, `server/_core/jania/prompts.ts`, `server/_core/jania/founderKnowledgeService.ts`: Consagración de la doctrina enciclopédica integral, trato por nombre real de pila y personalidad ejecutiva, cálida y jocosa.
+  * `server/_core/cronService.ts`: Rotación de 10 piezas `1:1` en `getChannelSquareImage1x1`.
+- **Validación y Blindaje ($0 COP)**:
+  * Suite 151 en `regression.test.ts` con 6 pruebas unitarias automatizadas.
+  * Cobertura de tests: `npm test` **460/460 passing** (100% verde a $0 COP).
+  * Typecheck: `npm run check` (0 errores).
+  * Build: `npm run build` limpio.
+  * Versión: `v33.65` (`33.65.0`) en `shared/const.ts` y `package.json`.
+
 
 

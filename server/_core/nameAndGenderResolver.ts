@@ -192,7 +192,8 @@ export const COMMON_COLOMBIAN_SURNAMES = new Set([
   "nino", "niño", "bravo", "plazas", "roldan", "roldán", "galvis", "galindo", "forero",
   "puentes", "chacon", "chacón", "viveros", "salcedo", "lozano", "daza", "valderrama",
   "bello", "corredor", "caicedo", "cifuentes", "hincapie", "hincapié", "ardila", "bustamante",
-  "prada", "villalba", "amador", "soler", "barreto", "polo", "castellanos", "quijano", "rueda", "perea"
+  "prada", "villalba", "amador", "soler", "barreto", "polo", "castellanos", "quijano", "rueda", "perea",
+  "pinto", "camacho", "salcedo", "guarin", "guarín"
 ]);
 
 // 5. Nombres de Pila Comunes en Colombia
@@ -234,12 +235,24 @@ export interface NameAndGenderResult {
 
 /**
  * Limpia y normaliza el nombre de un usuario de WhatsApp
- * Remueve etiquetas gremiales, paréntesis, barras y caracteres decorativos
+ * Remueve etiquetas gremiales, paréntesis, barras, siglas de profesión y caracteres decorativos
  */
 export function cleanRawUserName(name: string): string {
   if (!name) return "";
-  let cleaned = name
-    // Eliminar contenido entre paréntesis, corchetes o llaves: (Inmo), [Broker], etc.
+  let cleaned = name;
+
+  // 1. WhatsApp format: si contiene tilde (~), extraer lo que está después del tilde:
+  // Ej: "@arq.adrypynto ~Arq Adriana Pinto" -> "Arq Adriana Pinto"
+  const tildeMatch = cleaned.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    cleaned = tildeMatch[1].trim();
+  }
+
+  // 2. Limpieza de handles o menciones que empiezan con @ (ej: "@arq.adrypynto"):
+  cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
+
+  // 3. Eliminar contenido entre paréntesis, corchetes o llaves: (Inmo), [Broker], etc.
+  cleaned = cleaned
     .replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "")
     // Eliminar sufijos tras barras o plecas: " / Realtor", " | Inmobiliaria"
     .replace(/\s*[\/\|\\].*$/, "")
@@ -249,11 +262,18 @@ export function cleanRawUserName(name: string): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora")
+  // 4. Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora")
   const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
   const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
   if (withoutGuild.length >= 2) {
     cleaned = withoutGuild;
+  }
+
+  // 5. Limpiar prefijos de títulos profesionales y abreviaturas al inicio (ej: "Arq Adriana Pinto", "Arq. Adriana", "Ing. Carlos", "Dra. Claudia", "Abg. Fernando")
+  const professionalPrefixRegex = /^(?:(?:arq|arqa|arquitecto|arquitecta|ing|inga|ingeniero|ingeniera|dr|dra|doctor|doctora|abg|abga|abog|aboga|abogado|abogada|lic|lica|licenciado|licenciada|econ|economista|cont|contador|contadora|cp|c\.p\.|prof|profesor|profesora|asesor|asesora|agente|broker|realtor|consultor|consultora|perito|valuador|tasador)\.?\s+)+/i;
+  const withoutPrefix = cleaned.replace(professionalPrefixRegex, "").trim();
+  if (withoutPrefix.length >= 2) {
+    cleaned = withoutPrefix;
   }
 
   return cleaned.replace(/\s+/g, " ").trim();
@@ -325,11 +345,12 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
       "agente", "asesor", "asesora", "broker", "inmobiliaria", "inmobiliario", "independiente",
       "consultor", "consultora", "abogado", "abogada", "arquitecto", "arquitecta", "director",
       "directora", "gerente", "perito", "valuador", "tasador", "colombia", "bogota", "bogotá",
-      "medellin", "medellín", "cali", "ventas", "arriendos", "finca", "propiedades", "red", "vecy"
+      "medellin", "medellín", "cali", "ventas", "arriendos", "finca", "propiedades", "red", "vecy",
+      "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"
     ]);
 
-    // Si empieza con título profesional o saludo (ej: "Agente Karina", "Asesor Carlos", "Hola"):
-    if (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
+    // Si empieza con título profesional, abreviatura o saludo (ej: "Arq Adriana", "Ing Carlos", "Agente Karina", "Hola"):
+    while (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || professionalTitles.has(parts[0].toLowerCase().replace(/\.$/, "")) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
       parts = parts.slice(1);
     }
 
@@ -370,8 +391,8 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
       // Si el contacto SOLO tiene un apellido registrado (ej. "Luna", "Pérez", "Gómez"),
       // NUNCA llamarlo por el apellido a secas ("¡Luna!"). Retornar vacío para vocativo neutro y educado.
       resolvedDisplayName = "";
-    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
-      // Nombre de pila único: si el segundo término es un apellido (ej. Mario Pérez, Rosmery Luna), solo tomar el primer nombre
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
+      // Nombre de pila único: si el segundo término es un apellido (ej. Mario Pérez, Rosmery Luna, Adriana Pinto), solo tomar el primer nombre
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";

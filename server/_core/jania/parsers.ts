@@ -87,6 +87,17 @@ export function extractFirstName(fullName: string): string {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
+
+  // WhatsApp format: si contiene tilde (~), extraer lo que está después del tilde:
+  // Ej: "@arq.adrypynto ~Arq Adriana Pinto" -> "Arq Adriana Pinto"
+  const tildeMatch = clean.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    clean = tildeMatch[1].trim();
+  }
+
+  // Limpiar handles que empiezan con @ seguidos de espacio (ej: "@arq.adrypynto Adriana Pinto")
+  clean = clean.replace(/^@[\w\.-]+\s+/i, "");
+
   // Si es un número telefónico o contiene indicativos de número, retornar vacío
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
 
@@ -105,11 +116,14 @@ export function extractFirstName(fullName: string): string {
   const INVALID_FIRST_NAMES = new Set([
     "hola", "buenas", "buenos", "asesor", "asesora", "agente", "inmobiliaria", "inmobiliario",
     "contacto", "usuario", "desconocido", "admin", "administrador", "broker", "vecy",
-    "propiedades", "finca", "raices", "bienes", "consultor", "consultora", "independiente"
+    "propiedades", "finca", "raices", "bienes", "consultor", "consultora", "independiente",
+    "arq", "arqa", "arquitecto", "arquitecta", "ing", "inga", "ingeniero", "ingeniera",
+    "dr", "dra", "doctor", "doctora", "abg", "abga", "abog", "aboga", "abogado", "abogada",
+    "lic", "lica", "licenciado", "licenciada", "econ", "cont", "cp", "prof"
   ]);
 
-  // Si la primera palabra es un título o saludo (ej: "Agente Karina", "Asesor Carlos", "Hola"):
-  if (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
+  // Si la primera palabra es un título o saludo (ej: "Agente Karina", "Asesor Carlos", "Arq Adriana", "Hola"):
+  while (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
     wordsList = wordsList.slice(1);
   }
 
@@ -1887,6 +1901,9 @@ export function sanitizeResponseMarkdown(text: string): string {
 
   // 10. Limpieza final de espacios antes de URLs precedidas por viñetas/emojis
   clean = clean.replace(/([:👉🔗])\s{2,}(https?:\/\/)/g, "$1 $2");
+
+  // 11. Limpiar puntuación huérfana al inicio del texto (ej. ". Un gusto saludarte" -> "Un gusto saludarte")
+  clean = clean.replace(/^[\s\.\,\;\:\-\_]+/, "");
 
   return clean;
 }

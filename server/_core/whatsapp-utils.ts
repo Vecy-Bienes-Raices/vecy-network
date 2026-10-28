@@ -121,6 +121,15 @@ export function extractFirstName(fullName: string): string {
   let clean = fullName.trim();
   if (!clean) return "";
 
+  // WhatsApp format: si contiene tilde (~), extraer lo que está después del tilde:
+  const tildeMatch = clean.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    clean = tildeMatch[1].trim();
+  }
+
+  // Limpiar handles que empiezan con @ seguidos de espacio (ej: "@arq.adrypynto Adriana Pinto")
+  clean = clean.replace(/^@[\w\.-]+\s+/i, "");
+
   // Si es un número telefónico o contiene indicativos numéricos sin letras, retornar vacío
   if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
 
@@ -136,8 +145,22 @@ export function extractFirstName(fullName: string): string {
   const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter(w => w.length > 0);
   if (words.length === 0) return "";
 
-  // Filtrar conectores iniciales (ej. "De la Rosa")
+  const TITLE_PREFIXES = new Set([
+    "arq", "arqa", "arquitecto", "arquitecta",
+    "ing", "inga", "ingeniero", "ingeniera",
+    "dr", "dra", "doctor", "doctora",
+    "abg", "abga", "abog", "aboga", "abogado", "abogada",
+    "lic", "lica", "licenciado", "licenciada",
+    "econ", "economista", "cont", "cp", "contador", "contadora",
+    "prof", "profesor", "profesora",
+    "asesor", "asesora", "agente", "broker", "realtor"
+  ]);
+
+  // Filtrar títulos profesionales y conectores iniciales (ej. "Arq Adriana Pinto", "De la Rosa")
   let nameWords = words;
+  while (nameWords.length > 1 && TITLE_PREFIXES.has(nameWords[0].toLowerCase())) {
+    nameWords.shift();
+  }
   while (nameWords.length > 0 && CONNECTORS.has(nameWords[0].toLowerCase())) {
     nameWords.shift();
   }

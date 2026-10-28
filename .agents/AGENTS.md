@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.64 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.65 — Octubre 2026
+
+### Novedades v33.65 (Conocimiento Inmobiliario Enciclopédico Integral vs. Foco Operacional VECY, Detección de Nombres Reales sin Siglas de Profesión `Arq.`, Limpieza de Punto Huérfano y Rotación de 10 Imágenes 1:1 en Canal — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Conocimiento Inmobiliario Enciclopédico Integral vs. Foco Operacional de VECY:**
+     - **Aclaración Sagrada sobre "Arriendos":** Si bien **VECY BIENES RAÍCES** como empresa decidió no administrar arriendos directamente (enfocándose en Venta Directa, Venta Indirecta 40/20/40 y Asesoría en Inversiones Rentables), **JanIA como Consultora e Inteligencia Artificial Inmobiliaria SABE ABSOLUTAMENTE TODO SOBRE BIENES RAÍCES SIN EXCEPCIÓN**:
+       - **Arriendos y Ley 820 de 2003:** Contratos de arrendamiento de vivienda urbana y locales comerciales, incrementos IPC, causales de terminación, preavisos de 3 meses, indemnizaciones, redacción de cartas de solicitud de entrega o restitución de inmuebles y cartas de terminación de contrato.
+       - **Compraventas, Leasing, Permutas y Figuras Financieras:** Compraventas simples, con hipoteca, con cesión de leasing habitacional y comercial/vivienda, minutas de toda clase, permutas, préstamos sobre inmuebles con garantía hipotecaria y pacto de retroventa (Art. 1939 C.C.).
+       - **Avalúos Comerciales (ACM), Sondeos de Mercado y POT:** Avalúos comerciales profundos y sondeos de mercado, comparativas con portales inmobiliarios para lograr precios acertados del metro cuadrado ($/m²), y revisión de POT, edificabilidad y usos del suelo por dirección.
+       - **Redacción Legal, Verificación Documental, Firma Electrónica y Asesoría Jurídica:** Verificación de cédulas/NIT, prediales, IDU, redacción de cláusulas y contratos, cartas de presentación formal de clientes (física o email), contratos de corretaje (físicos o email), **firma electrónica y su tutorial paso a paso en `https://autenticaciondigital.and.gov.co/`**, guía para trámites en internet y asesoramiento resumido prejurídico y jurídico (derecho inmobiliario, administrativo, comercial y civil).
+       - **Marketing Digital Inmobiliario, IA, Actualidad y Uso Multimodal de JanIA:** Consejos para publicación en redes sociales, pauta digital, tendencias PropTech, cómo hablarle a JanIA (voz, texto, fotos/imágenes de fachadas y acabados, archivos PDF para estudios de títulos o POT, direcciones).
+       - **El Colapso de los "Dinosaurios Inmobiliarios" vs. El Liderazgo de VECY BIENES RAÍCES:** Cómo los portales tradicionales cobran suscripciones abusivas vendiendo el mismo lead quemado a decenas de agentes sin filtrar ni cruzar, mientras **VECY BIENES RAÍCES** se ha posicionado por delante con su Algoritmo de Matching (85%-100%), fichas de Marca Blanca y modelo 40/20/40 (`https://vecy-bienes-raices.vercel.app/historia`).
+  2. **Detección de Nombres Reales de Pila (Cero Siglas de Profesión como `Arq.` / `Ing.`), Género Específico, Limpieza de Punto Huérfano y Personalidad Cálida y Jocosa:**
+     - En WhatsApp muchos profesionales configuran su `pushName` con handles y abreviaturas de título (ej. `@arq.adrypynto ~Arq Adriana Pinto` o `Arq Adriana Pinto`).
+     - `nameAndGenderResolver.ts`, `whatsapp-utils.ts` y `parsers.ts` ahora extraen el nombre después de `~`, eliminan `@handles` y limpian prefijos profesionales (`Arq`, `Arq.`, `Ing`, `Dr`, `Dra`, `Abg`, `Lic`, `Econ`, `Cont`, `CP`, `Prof`, etc.), reconociendo `"Pinto"` como apellido y resolviendo `"Adriana"` con género femenino (`isFemale: true`).
+     - `stripLeadingGreetingsAndCourtesies` en `dmHandler.ts` y `sanitizeResponseMarkdown` en `parsers.ts` limpian puntos y signos de puntuación huérfanos al inicio del mensaje (erradicando el bug `". Un gusto saludarte de nuevo, Arq. 🏙️✨"`).
+     - JanIA combina rigor ejecutivo con calidez humana, simpatía y un toque jocoso, ameno e inteligente.
+  3. **Rotación Completa de 10 Imágenes 1:1 en el Canal Oficial:**
+     - `getChannelSquareImage1x1` en `server/_core/cronService.ts` rota diariamente (cuando recibe `dayOfMonth`) a través de las **10 piezas cuadradas `1:1`** disponibles en `assets/channel/` (5 temáticas operativas + 5 de Alta Costura `jania_couture_*_1x1`), eliminando la repetición de las mismas 5 imágenes.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **460/460 passing** (Suite 151 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.65`) y `package.json` (`33.65.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.64 — Octubre 2026
 
 ### Novedades v33.64 (Doctrina de Bróker Inteligente de Venta e Inversiones, Algoritmo de Matching e IA, Erradicación de Emoji Bot 🤖 y Catálogo de 12 Skills — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

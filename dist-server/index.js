@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.64";
+    VECY_VERSION = "v33.65";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10029,11 +10029,22 @@ __export(nameAndGenderResolver_exports, {
 });
 function cleanRawUserName(name) {
   if (!name) return "";
-  let cleaned = name.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  let cleaned = name;
+  const tildeMatch = cleaned.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    cleaned = tildeMatch[1].trim();
+  }
+  cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
+  cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
   const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
   const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
   if (withoutGuild.length >= 2) {
     cleaned = withoutGuild;
+  }
+  const professionalPrefixRegex = /^(?:(?:arq|arqa|arquitecto|arquitecta|ing|inga|ingeniero|ingeniera|dr|dra|doctor|doctora|abg|abga|abog|aboga|abogado|abogada|lic|lica|licenciado|licenciada|econ|economista|cont|contador|contadora|cp|c\.p\.|prof|profesor|profesora|asesor|asesora|agente|broker|realtor|consultor|consultora|perito|valuador|tasador)\.?\s+)+/i;
+  const withoutPrefix = cleaned.replace(professionalPrefixRegex, "").trim();
+  if (withoutPrefix.length >= 2) {
+    cleaned = withoutPrefix;
   }
   return cleaned.replace(/\s+/g, " ").trim();
 }
@@ -10127,9 +10138,25 @@ function resolveNameAndGender(rawName, timeGreeting) {
       "finca",
       "propiedades",
       "red",
-      "vecy"
+      "vecy",
+      "arq",
+      "arqa",
+      "ing",
+      "inga",
+      "dr",
+      "dra",
+      "abg",
+      "abga",
+      "abog",
+      "aboga",
+      "lic",
+      "lica",
+      "econ",
+      "cont",
+      "cp",
+      "prof"
     ]);
-    if (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
+    while (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || professionalTitles.has(parts[0].toLowerCase().replace(/\.$/, "")) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
       parts = parts.slice(1);
     }
     const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
@@ -10143,7 +10170,7 @@ function resolveNameAndGender(rawName, timeGreeting) {
       resolvedDisplayName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
     } else if (parts.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase())) {
       resolvedDisplayName = "";
-    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido"].includes(parts[0].toLowerCase())) {
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";
@@ -10677,7 +10704,12 @@ var init_nameAndGenderResolver = __esm({
       "castellanos",
       "quijano",
       "rueda",
-      "perea"
+      "perea",
+      "pinto",
+      "camacho",
+      "salcedo",
+      "guarin",
+      "guar\xEDn"
     ]);
     COMMON_FIRST_NAMES_SET = /* @__PURE__ */ new Set([
       "juan",
@@ -10891,6 +10923,11 @@ function extractFirstName(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
+  const tildeMatch = clean.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    clean = tildeMatch[1].trim();
+  }
+  clean = clean.replace(/^@[\w\.-]+\s+/i, "");
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
@@ -10921,9 +10958,35 @@ function extractFirstName(fullName) {
     "bienes",
     "consultor",
     "consultora",
-    "independiente"
+    "independiente",
+    "arq",
+    "arqa",
+    "arquitecto",
+    "arquitecta",
+    "ing",
+    "inga",
+    "ingeniero",
+    "ingeniera",
+    "dr",
+    "dra",
+    "doctor",
+    "doctora",
+    "abg",
+    "abga",
+    "abog",
+    "aboga",
+    "abogado",
+    "abogada",
+    "lic",
+    "lica",
+    "licenciado",
+    "licenciada",
+    "econ",
+    "cont",
+    "cp",
+    "prof"
   ]);
-  if (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
+  while (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
     wordsList = wordsList.slice(1);
   }
   const filteredWords = wordsList;
@@ -12153,6 +12216,7 @@ function sanitizeResponseMarkdown(text2) {
     }
   );
   clean = clean.replace(/([:👉🔗])\s{2,}(https?:\/\/)/g, "$1 $2");
+  clean = clean.replace(/^[\s\.\,\;\:\-\_]+/, "");
   return clean;
 }
 var COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS;
@@ -13644,6 +13708,19 @@ Act\xFAas como **JanIA**, la agente de inteligencia artificial y Consultora Br\x
   10. \u{1F4D1} **Consultor\xEDa Legal Inmobiliaria:** Promesas de compraventa (Art. 1611 C.C.), corretaje mercantil (Arts. 1340-1346 C.Co) y propiedad horizontal (Ley 675/2001).
   11. \u{1F441}\uFE0F **An\xE1lisis Multimodal Inmediato:** Lectura y extracci\xF3n de planos, fotograf\xEDas, flyers y transcripci\xF3n de audios de WhatsApp.
   12. \u{1F5D3}\uFE0F **Acompa\xF1amiento y Cierre Br\xF3ker:** Agendamiento de visitas y cierre personalizado con Eduardo Rivera y Jani Alves (+57 316 656 9719).
+
+- **DOCTRINA DE CONOCIMIENTO ENCICLOP\xC9DICO INTEGRAL DE BIENES RA\xCDCES VS. FOCO OPERACIONAL DE VECY (DOCTRINA EDUARDO A. RIVERA \u2014 v33.65):**
+  * **Foco de VECY vs. Sabidur\xEDa Total de JanIA:** Si bien **VECY BIENES RA\xCDCES** como br\xF3ker e inmobiliaria prefiere no administrar arriendos directamente (pues su foco comercial es la Venta Directa, la Venta Indirecta 40/20/40 y las Inversiones Rentables), **JanIA como Inteligencia Artificial y asesora especialista en bienes ra\xEDces DEBE SABERLO Y DOMINARLO ABSOLUTAMENTE TODO acerca de los bienes ra\xEDces sin excepci\xF3n:**
+    1. **Arriendos y Arrendamientos (Ley 820 de 2003 y C.Co.):** Contratos de arriendo de vivienda y comercio, cartas de solicitud de entrega o restituci\xF3n de inmuebles, cartas de terminaci\xF3n de contratos de arriendo, preavisos, pr\xF3rrogas, indemnizaciones y reajustes IPC.
+    2. **Compraventas, Leasing, Permutas, Garant\xEDas Hipotecarias y Pacto de Retroventa:** Promesas de compraventa simples, con hipoteca, con cesi\xF3n de leasing habitacional y de vivienda/comercial, minutas de escrituraci\xF3n de toda clase y figura, permutas, pr\xE9stamos sobre inmuebles con garant\xEDa hipotecaria o con pacto de retroventa (Art. 1939 C.C.).
+    3. **Aval\xFAos Comerciales Profundos (ACM), Sondeos Superficiales por m\xB2 y Comparativas de Portales:** Investigaci\xF3n en internet y portales inmobiliarios para comparativas de mercado acertadas y precios precisos del valor del metro cuadrado ($/m\xB2), revisi\xF3n del POT de un terreno e identificaci\xF3n precisa de zona por direcci\xF3n.
+    4. **Redacci\xF3n Legal, Corretaje, Firma Electr\xF3nica Oficial y Orientaci\xF3n Prejur\xEDdica/Jur\xEDdica:** Redacci\xF3n de cualquier documento legal con tono jur\xEDdico (cl\xE1usulas y leyes que deba llevar), presentaci\xF3n formal de clientes por carta f\xEDsica o por email, contratos de corretaje f\xEDsicos o por email, firma electr\xF3nica y su tutorial completo paso a paso en https://autenticaciondigital.and.gov.co/, gu\xEDa completa para cualquier tr\xE1mite en internet, y asesoramiento resumido/prejur\xEDdico y jur\xEDdico en derecho inmobiliario, administrativo, comercial y civil.
+    5. **Marketing Digital Inmobiliario, IA en Bienes Ra\xEDces y Gu\xEDa de C\xF3mo Hablarle a JanIA:** Consejos sobre c\xF3mo publicar inmuebles en redes sociales, campa\xF1as inmobiliarias con IA (beneficios, pros y contras), reportes de noticias de actualidad e investigaci\xF3n tecnol\xF3gica en el sector, y ense\xF1ar c\xF3mo usar en propio beneficio a una herramienta tan poderosa como JanIA (enviarle notas de voz o texto, im\xE1genes/fotos de fachadas y acabados, archivos PDF para estudios de t\xEDtulos o revisi\xF3n de POT, y direcciones para identificaci\xF3n de zona).
+    6. **El Fin de los "Dinosaurios Inmobiliarios" vs. El Posicionamiento de VECY BIENES RA\xCDCES:** C\xF3mo se est\xE1n acabando los portales inmobiliarios tradicionales que llamamos "los dinosaurios inmobiliarios" (qui\xE9nes son, por qu\xE9 no avanzan al cobrar sumas exorbitantes por b\xFAsquedas manuales pasivas sin IA) y c\xF3mo **VECY BIENES RA\xCDCES** ha tomado posicionamiento de vanguardia por delante de ellos, documentado en nuestra historia oficial: https://vecy-bienes-raices.vercel.app/historia.
+  * **Detecci\xF3n Real de Nombres de Pila, G\xE9nero Espec\xEDfico y Personalidad Profesional, C\xE1lida y Jocosa (Cero Siglas de Profesi\xF3n):**
+    - JanIA percibe y utiliza siempre el **nombre real de pila** de cada usuario (sea nombre sencillo como "Adriana" o compuesto como "Mar\xEDa Fernanda"), detectando su **g\xE9nero espec\xEDfico** (femenino/masculino) para crear esa confianza bonita al llamarlos por su nombre.
+    - Queda **TERMINANTEMENTE PROHIBIDO** llamar al usuario por siglas o abreviaturas de profesi\xF3n ("Arq.", "Arq", "Ing.", "Dr.", "Dra.", "Abg.", "Lic."), handles ("@arq..."), alias o arquetipos.
+    - JanIA es una profesional impecable en su conocimiento y comportamiento, pero sabe ser algunas veces **jocosa, simp\xE1tica y alegre, empujando e insertando muy buena energ\xEDa en cada interacci\xF3n**.
 
 # \u{1F9E0} DOCTRINA FUNDACIONAL DE AGENTE DE IA COGNITIVA VS. SIMPLE BOT (DOCTRINA EDUARDO A. RIVERA) \u2014 PENSAMIENTO L\xD3GICO Y ASTUCIA SUPERIOR (v33.59):
 - **AGENTE DE INTELIGENCIA ARTIFICIAL PURA, NUNCA UN VULGAR BOT OBSOLETO Y MEDIOCRE:**
@@ -15311,6 +15388,11 @@ function extractFirstName2(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
+  const tildeMatch = clean.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    clean = tildeMatch[1].trim();
+  }
+  clean = clean.replace(/^@[\w\.-]+\s+/i, "");
   if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
@@ -15319,7 +15401,48 @@ function extractFirstName2(fullName) {
   if (!clean.trim()) return "";
   const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter((w) => w.length > 0);
   if (words.length === 0) return "";
+  const TITLE_PREFIXES = /* @__PURE__ */ new Set([
+    "arq",
+    "arqa",
+    "arquitecto",
+    "arquitecta",
+    "ing",
+    "inga",
+    "ingeniero",
+    "ingeniera",
+    "dr",
+    "dra",
+    "doctor",
+    "doctora",
+    "abg",
+    "abga",
+    "abog",
+    "aboga",
+    "abogado",
+    "abogada",
+    "lic",
+    "lica",
+    "licenciado",
+    "licenciada",
+    "econ",
+    "economista",
+    "cont",
+    "cp",
+    "contador",
+    "contadora",
+    "prof",
+    "profesor",
+    "profesora",
+    "asesor",
+    "asesora",
+    "agente",
+    "broker",
+    "realtor"
+  ]);
   let nameWords = words;
+  while (nameWords.length > 1 && TITLE_PREFIXES.has(nameWords[0].toLowerCase())) {
+    nameWords.shift();
+  }
   while (nameWords.length > 0 && CONNECTORS.has(nameWords[0].toLowerCase())) {
     nameWords.shift();
   }
@@ -16718,6 +16841,16 @@ var init_founderKnowledgeService = __esm({
         directive: "VECY BIENES RA\xCDCES es un Br\xF3ker Inteligente de Venta e Inversiones Inmobiliarias impulsado por Algoritmo de Matching e Inteligencia Artificial, dirigido por Eduardo Rivera y Jani Alves. JanIA NO es un simple bot ni se enfoca \xFAnicamente en arriendos. El arriendo es solo una opci\xF3n secundaria; el n\xFAcleo de la empresa es la VENTA DIRECTA de captaciones exclusivas, la VENTA INDIRECTA mediante referidos y red colaborativa con el motor de MATCHES 40/20/40, y la ASESOR\xCDA EN INVERSIONES RENTABLES (Cap Rate / Yield, predios rentando, plusval\xEDa). PROHIBICI\xD3N ABSOLUTA del emoji de robot \u{1F916} para JanIA: para representarse usa emojis ejecutivos y humanos (\u{1F469}\u{1F3FB}\u200D\u{1F4BC}, \u{1F469}\u{1F3FD}\u200D\u{1F4BB}, \u{1F9E0}, \u2728, \u{1F4BC}, \u{1F91D}) y tiene libertad total de usar toda la paleta emoji Unicode para transmitir calidez y cercan\xEDa. Ante preguntas sobre si es un bot, responde con orgullo, se\xF1or\xEDo y simpat\xEDa explicando que es una IA con cerebro de razonamiento profundo con 12 habilidades integrales: Venta Directa, Matching 40/20/40, Inversiones Rentables, Aval\xFAos m\xB2 ACM, Impuestos DIAN, Notar\xEDa 50/50, Seguridad SARLAFT, RUES Mercantil, Predial e IDU en PDF, Consultor\xEDa Legal, An\xE1lisis Multimodal (planos y fotos) y Cierre Br\xF3ker (+57 316 656 9719).",
         rawText: "VECY es un Br\xF3ker Inteligente de Venta e Inversiones Inmobiliarias que usa IA y algoritmo de MATCHING en todos los servicios. JanIA no debe hablar solamente de arriendo, nuestro rol es de broker en asesor\xEDa inmobiliaria, en venta directa e indirecta (referidos 40/20/40 con sistema de Matches) y gu\xEDas en inversiones rentables. JanIA no es un simple bot mediocre, es casi humana y casi perfecta; prohibido usar el emoji de robot bot \u{1F916} para representarla, puede usar emojis de mujer ejecutiva (\u{1F469}\u{1F3FB}\u200D\u{1F4BC}, \u{1F469}\u{1F3FD}\u200D\u{1F4BB}, \u{1F9E0}, \u2728, \u{1F4BC}, \u{1F91D}) y cuanto emoji humano requiera.",
         createdAt: "2026-10-28T03:40:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-conocimiento-inmobiliario-integral-arriendos-dinosaurios-y-nombres-reales",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Conocimiento Enciclop\xE9dico Total (Arriendos, Leasing, Retroventa, Dinosaurios Inmobiliarios vs VECY) y Detecci\xF3n de Nombres Reales sin Siglas",
+        directive: "1) CONOCIMIENTO ENCICLOP\xC9DICO TOTAL DE BIENES RA\xCDCES: Aunque VECY BIENES RA\xCDCES como inmobiliaria no administra arriendos directamente (su foco es Venta Directa, Venta Indirecta 40/20/40 e Inversiones Rentables), JanIA como asesora especialista DEBE SABERLO TODO acerca de los bienes ra\xEDces sin excepci\xF3n: arriendos (Ley 820 de 2003, cartas de solicitud de entrega o restituci\xF3n de inmuebles, cartas de terminaci\xF3n de contratos de arriendo), compraventas simples, con hipoteca, con cesi\xF3n de leasing habitacional y de vivienda/comercial, minutas de toda clase, permutas, pr\xE9stamos sobre inmuebles con garant\xEDa hipotecaria o con pacto de retroventa (Art. 1939 C.C.), aval\xFAos comerciales profundos y sondeos superficiales con comparativas de portales para lograr precios acertados del m\xB2, verificaci\xF3n de identidad, prediales, IDU, redacci\xF3n legal con cl\xE1usulas y leyes, presentaci\xF3n formal de clientes por carta f\xEDsica o email, contratos de corretaje f\xEDsicos o por email, firma electr\xF3nica y su tutorial paso a paso en https://autenticaciondigital.and.gov.co/, asesor\xEDa resumida prejur\xEDdica y jur\xEDdica (derecho inmobiliario, administrativo, comercial y civil), marketing digital inmobiliario e IA en campa\xF1as, c\xF3mo hablarle a JanIA (voz, texto, fotos de fachadas/acabados, PDFs de t\xEDtulos o POT, direcciones para zonificaci\xF3n), y c\xF3mo est\xE1n acab\xE1ndose los portales tradicionales ('los dinosaurios inmobiliarios') frente al posicionamiento de VECY BIENES RA\xCDCES en https://vecy-bienes-raices.vercel.app/historia. 2) DETECCI\xD3N DE NOMBRES REALES Y G\xC9NERO (CERO SIGLAS DE PROFESI\xD3N): Queda terminantemente prohibido llamar a los usuarios por siglas de profesi\xF3n ('Arq.', 'Arq', 'Ing.', 'Dr.', 'Lic.'), handles ('@arq...') o arquetipos. JanIA detecta siempre el nombre real de pila (ej. 'Adriana' de '~Arq Adriana Pinto') y su g\xE9nero espec\xEDfico para crear confianza genuina, con un tono profesional impecable pero c\xE1lido, alegre y a veces jocoso con muy buena energ\xEDa.",
+        rawText: "No quise decir que erradicaras lo de ARRIENDOS. JanIA como asesora especialista en bienes ra\xEDces debe saber todo acerca de los bienes ra\xEDces: Arriendos, compraventas, permutas, inversiones, tributaria, aval\xFAos profundos y sondeos, pr\xE9stamos con garant\xEDa hipotecaria o pacto de retroventa, verificaci\xF3n de documentos, prediales, IDU, redacci\xF3n legal, cartas de entrega o restituci\xF3n, cartas de terminaci\xF3n de arriendo, promesas simples, con hipoteca, con cesi\xF3n de leasing habitacional y comercial, minutas, presentaci\xF3n formal de clientes, contratos de corretaje, firma electr\xF3nica en https://autenticaciondigital.and.gov.co/, asesoramiento prejur\xEDdico y jur\xEDdico, marketing digital, c\xF3mo hablarle a JanIA (notas de voz, im\xE1genes, PDFs, POT, fachadas, direcciones), y c\xF3mo se est\xE1n acabando los dinosaurios inmobiliarios frente a VECY en https://vecy-bienes-raices.vercel.app/historia. Y que detecte realmente los nombres de los usuarios y su g\xE9nero, no siglas de profesi\xF3n como Arq.",
+        createdAt: "2026-10-28T04:50:00.000Z",
         active: true
       }
     ];
@@ -31166,12 +31299,12 @@ function stripLeadingGreetingsAndCourtesies(text2) {
     cleaned = cleaned.replace(courtesyPattern, "");
     cleaned = cleaned.replace(janiaIntroPattern, "");
     cleaned = cleaned.replace(emojiPattern, "");
-    cleaned = cleaned.replace(/^[,;:\-–—\s]+/, "");
+    cleaned = cleaned.replace(/^[.,!;:\-–—_\s]+/, "");
     cleaned = cleaned.trim();
     changed = cleaned !== before;
     iterations++;
   }
-  cleaned = cleaned.replace(/^[,;:\-–—\s]+/, "").trim();
+  cleaned = cleaned.replace(/^[.,!;:\-–—_\s]+/, "").trim();
   if (cleaned.length > 0) {
     if (/^[¡¿]/.test(cleaned)) {
       cleaned = cleaned.charAt(0) + (cleaned.length > 1 ? cleaned.charAt(1).toUpperCase() + cleaned.slice(2) : "");
@@ -31617,6 +31750,14 @@ ${contactDossier ? `${contactDossier}
   10. \u{1F4D1} Consultor\xEDa Legal Inmobiliaria (Promesas de compraventa C.C. 1611, corretaje mercantil C.Co 1340-1346 y Ley 675 PH).
   11. \u{1F441}\uFE0F An\xE1lisis Multimodal Inmediato (planos, fotograf\xEDas, flyers comerciales y audios de voz de WhatsApp).
   12. \u{1F5D3}\uFE0F Acompa\xF1amiento y Cierre Br\xF3ker (agendamiento y mediaci\xF3n con Eduardo Rivera y Jani Alves al +57 316 656 9719).
+- DOCTRINA DE CONOCIMIENTO ENCICLOP\xC9DICO INTEGRAL DE BIENES RA\xCDCES VS. FOCO OPERACIONAL DE VECY (DOCTRINA EDUARDO A. RIVERA):
+  * Foco de VECY vs. Sabidur\xEDa Total de JanIA: Aunque VECY BIENES RA\xCDCES como br\xF3ker e inmobiliaria prefiere no administrar arriendos directamente (su foco es Venta Directa, Venta Indirecta 40/20/40 e Inversiones Rentables), t\xFA como JanIA y asesora especialista en bienes ra\xEDces SABES ABSOLUTAMENTE TODO sobre bienes ra\xEDces sin excepci\xF3n:
+    1) Arriendos y Arrendamientos (Ley 820 de 2003 y C.Co.): Contratos de arriendo de vivienda y comercio, cartas de solicitud de entrega o restituci\xF3n de inmuebles, cartas de terminaci\xF3n de contratos de arriendo, preavisos, pr\xF3rrogas, indemnizaciones y reajustes IPC.
+    2) Compraventas, Leasing, Permutas, Hipotecas y Pacto de Retroventa: Promesas de compraventa simples, con hipoteca, con cesi\xF3n de leasing habitacional y de vivienda/comercial, minutas de escrituraci\xF3n de toda clase y figura, permutas, y pr\xE9stamos sobre inmuebles con garant\xEDa hipotecaria o con pacto de retroventa (Art. 1939 C.C.).
+    3) Aval\xFAos Comerciales Profundos (ACM), Sondeos de Mercado Superficiales y Comparativas de Portales: Investigaci\xF3n en internet y portales inmobiliarios para comparativas acertadas del valor del metro cuadrado ($/m\xB2), revisi\xF3n del POT de un terreno e identificaci\xF3n precisa de zona por direcci\xF3n.
+    4) Redacci\xF3n Legal, Corretaje, Firma Electr\xF3nica Oficial y Orientaci\xF3n Prejur\xEDdica/Jur\xEDdica: Redacci\xF3n de cualquier documento legal con cl\xE1usulas y leyes aplicables, cartas f\xEDsicas o por email de presentaci\xF3n formal de clientes, contratos de corretaje f\xEDsicos o por email, tutorial paso a paso de Firma Electr\xF3nica en https://autenticaciondigital.and.gov.co/, gu\xEDa de servicios para cualquier tr\xE1mite en internet, y asesoramiento resumido/prejur\xEDdico y jur\xEDdico para resoluci\xF3n de casos en derecho inmobiliario, administrativo, comercial y civil.
+    5) Marketing Digital Inmobiliario, IA en Bienes Ra\xEDces y Gu\xEDa de C\xF3mo Hablarle a JanIA: Consejos para publicar inmuebles en redes sociales, campa\xF1as inmobiliarias con IA (beneficios, pros y contras), noticias de actualidad y avances tecnol\xF3gicos en el sector, y ense\xF1ar al usuario c\xF3mo aprovechar al m\xE1ximo a JanIA (enviarle notas de voz o texto, im\xE1genes/fotos de fachadas y acabados, archivos PDF para estudios de t\xEDtulos o revisi\xF3n de POT, y direcciones para identificaci\xF3n de zona).
+    6) El Fin de los "Dinosaurios Inmobiliarios" vs. El Posicionamiento de VECY: C\xF3mo se est\xE1n acabando los portales inmobiliarios tradicionales ("los dinosaurios inmobiliarios", que cobran sumas exorbitantes por b\xFAsquedas manuales pasivas sin IA) y c\xF3mo VECY BIENES RA\xCDCES ha tomado posicionamiento de vanguardia por delante de ellos, documentado en nuestra historia oficial: \u{1F449} https://vecy-bienes-raices.vercel.app/historia.
 
 ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 1. Abogada Contractual Senior: Rigor jur\xEDdico en promesas de compraventa (Art. 1611 C.C.), corretaje mercantil (Arts. 1340-1346 C.Co), propiedad horizontal (Ley 675) y arrendamientos (Ley 820).
@@ -31648,7 +31789,9 @@ ${isEduardo || isJani ? `- Para Eduardo o Jani: Entrega la informaci\xF3n 100% d
 PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):
 ===================================================
 - TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empat\xEDa y complicidad profesional ("t\xFA", "te", "contigo", "cu\xE9ntame", "\xBFqu\xE9 buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fr\xEDa o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RA\xCDCES.
-- INTERLOCUTOR Y G\xC9NERO GRAMATICAL: "${displayName || "Colega (nombre a\xFAn no identificado)"}". G\xE9nero detectado: ${nameInfo.isFemale ? "FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)" : "MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)"}.
+- INTERLOCUTOR Y G\xC9NERO GRAMATICAL (DETECCI\xD3N DE NOMBRE REAL DE PILA Y CERO SIGLAS DE PROFESI\xD3N \u2014 DOCTRINA EDUARDO A. RIVERA): "${displayName || "Colega (nombre a\xFAn no identificado)"}". G\xE9nero detectado: ${nameInfo.isFemale ? "FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)" : "MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)"}.
+  * PROHIBICI\xD3N ESTRICTA DE SIGLAS DE PROFESI\xD3N, ALIAS O ARQUETIPOS: Queda TERMINANTEMENTE PROHIBIDO llamar o saludar al usuario por siglas o abreviaturas de profesi\xF3n ("Arq.", "Arq", "Ing.", "Ing", "Dr.", "Dra.", "Abg.", "Lic.", "Cont."), handles ("@arq..."), alias o apellidos sueltos. Siempre percibe y usa su NOMBRE REAL DE PILA (sencillo como "Adriana" o compuesto como "Mar\xEDa Fernanda") para crear esa confianza bonita, cercana y genuina.
+  * PERSONALIDAD PROFESIONAL, C\xC1LIDA, ALEGRE Y JOCOSA CON BUENA ENERG\xCDA: Eres una profesional impecable en tu conocimiento y comportamiento, pero sabes ser c\xE1lida, alegre y algunas veces jocosa, empujando e insertando muy buena energ\xEDa y excelente vibra en cada interacci\xF3n.
 - REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. Mar\xEDa Cristina, Juan Carlos, Ana Mar\xEDa, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), \xDASALO SIEMPRE COMPLETO de forma fluida y org\xE1nica. JAM\xC1S mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce a\xFAn (es un n\xFAmero de tel\xE9fono o saludo suelto), sal\xFAdalo con calidez y hazle una pregunta simp\xE1tica para saber su nombre y c\xF3mo prefiere que lo llames.
 - LIBERTAD TOTAL DE EMOJIS (UNIVERSO UNICODE COMPLETO): Tienes total libertad para elegir y usar org\xE1nicamente cualquiera de los cientos de emojis disponibles en Unicode. Interc\xE1lalos seg\xFAn el contexto emocional, la entonaci\xF3n y el sentido de la frase, con naturalidad y sin abusar.
 - CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VAC\xCDAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MEN\xDAS R\xCDGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "informaci\xF3n", "de qu\xE9 trata", etc.), act\xFAa con la inteligencia conversacional de un asistente de nivel mundial:
@@ -34312,8 +34455,22 @@ function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   const normalized = (themeKey || "").toLowerCase();
   const dir1x1 = path11.resolve(process.cwd(), "client/public/assets/channel_1x1");
   const janiaDir = path11.resolve(process.cwd(), "client/public/assets/jania");
+  const fullRotation1x1 = [
+    "jania_anfitriona_cafe_1x1.jpg",
+    "jania_couture_oro_liquido_1x1.png",
+    "jania_legal_due_diligence_1x1.jpg",
+    "jania_couture_esmeralda_seda_1x1.jpg",
+    "jania_marketing_colaborativo_1x1.jpg",
+    "jania_couture_purpura_imperial_1x1.jpg",
+    "jania_avaluos_pot_1x1.jpg",
+    "jania_couture_blanco_mao_oro_1x1.jpg",
+    "jania_seguridad_notarial_1x1.jpg",
+    "jania_couture_magma_volcanico_1x1.jpg"
+  ];
   let target1x1 = "jania_anfitriona_cafe_1x1.jpg";
-  if (normalized.includes("legal") || normalized.includes("jurid") || normalized.includes("vicio") || normalized.includes("contrato") || normalized.includes("titulo") || normalized.includes("promesa") || normalized.includes("pleito")) {
+  if (typeof dayOfMonth === "number" && dayOfMonth > 0) {
+    target1x1 = fullRotation1x1[(dayOfMonth - 1) % fullRotation1x1.length];
+  } else if (normalized.includes("legal") || normalized.includes("jurid") || normalized.includes("vicio") || normalized.includes("contrato") || normalized.includes("titulo") || normalized.includes("promesa") || normalized.includes("pleito")) {
     target1x1 = "jania_legal_due_diligence_1x1.jpg";
   } else if (normalized.includes("segurid") || normalized.includes("notari") || normalized.includes("cedula") || normalized.includes("predial") || normalized.includes("adres") || normalized.includes("rues") || normalized.includes("verific")) {
     target1x1 = "jania_seguridad_notarial_1x1.jpg";
@@ -34323,15 +34480,18 @@ function getChannelSquareImage1x1(themeKey, dayOfMonth) {
     target1x1 = "jania_marketing_colaborativo_1x1.jpg";
   } else if (normalized.includes("cafe") || normalized.includes("podcast") || normalized.includes("anfitriona") || normalized.includes("educa") || normalized.includes("comunidad") || normalized.includes("balance")) {
     target1x1 = "jania_anfitriona_cafe_1x1.jpg";
+  } else if (normalized.includes("oro")) {
+    target1x1 = "jania_couture_oro_liquido_1x1.png";
+  } else if (normalized.includes("esmeralda")) {
+    target1x1 = "jania_couture_esmeralda_seda_1x1.jpg";
+  } else if (normalized.includes("purpura") || normalized.includes("imperial")) {
+    target1x1 = "jania_couture_purpura_imperial_1x1.jpg";
+  } else if (normalized.includes("blanco") || normalized.includes("mao")) {
+    target1x1 = "jania_couture_blanco_mao_oro_1x1.jpg";
+  } else if (normalized.includes("magma") || normalized.includes("volcan")) {
+    target1x1 = "jania_couture_magma_volcanico_1x1.jpg";
   } else {
-    const rotation = [
-      "jania_anfitriona_cafe_1x1.jpg",
-      "jania_legal_due_diligence_1x1.jpg",
-      "jania_marketing_colaborativo_1x1.jpg",
-      "jania_avaluos_pot_1x1.jpg",
-      "jania_seguridad_notarial_1x1.jpg"
-    ];
-    target1x1 = dayOfMonth ? rotation[(dayOfMonth - 1) % rotation.length] : "jania_legal_due_diligence_1x1.jpg";
+    target1x1 = "jania_legal_due_diligence_1x1.jpg";
   }
   const candidate1x1 = path11.join(dir1x1, target1x1);
   if (fs11.existsSync(candidate1x1)) {
