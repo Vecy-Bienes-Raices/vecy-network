@@ -1,9 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.63.0 — 2026-10-27)
-- **JanIA Server:** `v33.63` (`33.63.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Reglas de Onboarding en dmHandler.ts y prompts.ts (Doctrina Eduardo A. Rivera):**
-  1. **Agente Inmobiliario que rechaza el modelo 40/20/40:** Se registra en el sistema, pero se le advierte que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado para adquirir un plan de pago mensual o anual.
-  2. **Propietario Directo (Venta/Arriendo):** JanIA exige aceptación de Términos y Condiciones de corretaje virtual, solicita su correo para el envío formal, y le recuerda comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisión previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 448/448 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.64.0 — 2026-10-27)
+- **JanIA Server:** `v33.64` (`33.64.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Bróker Inteligente de Venta e Inversiones Inmobiliarias, Algoritmo de Matching e IA, Erradicación de Emoji Bot 🤖 y Catálogo de 12 Skills (Doctrina Eduardo A. Rivera):**
+  1. **Identidad Soberana:** JanIA se consagra como "Bróker Inteligente de Venta e Inversiones Inmobiliarias impulsado por Algoritmo de Matching e Inteligencia Artificial", erradicando el sesgo de "arriendos" como su núcleo y posicionando la Venta Directa, Venta Indirecta Colaborativa (40/20/40) y Asesoría en Inversiones Rentables (Cap Rate).
+  2. **Erradicación del Emoji Bot (`🤖`) y Libertad Emoji:** Prohibición absoluta de utilizar el emoji `🤖` para representar a JanIA. Representación mediante emojis ejecutivos, humanos y cognitivos (`👩🏻‍💼`, `👩🏽‍💻`, `🧠`, `✨`, `💼`, `🤝`) con libertad plena del catálogo Unicode para calidez y empatía.
+  3. **Catálogo Integral de 12 Skills:** Venta Directa, Venta Indirecta (Matching 40/20/40), Inversiones Rentables (Cap Rate), Avalúos Comerciales (ACM), Inteligencia Tributaria (DIAN), Liquidación Notarial/Registro, SARLAFT, RUES (57 Cámaras), Saneamiento/Predial/IDU, Consultoría Legal (Promesas C.C. 1611), Análisis Multimodal Inmediato y Acompañamiento/Cierre Bróker (+57 316 656 9719).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 454/454 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

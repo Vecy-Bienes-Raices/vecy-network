@@ -7,6 +7,61 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-27] — JanIA v33.64: Doctrina de Bróker Inteligente de Venta e Inversiones Inmobiliarias, Algoritmo de Matching e IA, Erradicación del Emoji Bot 🤖 y Catálogo de 12 Skills (v33.64 - 33.64.0)
+
+**Versión:** `v33.64` (`33.64.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Erradicación del Sesgo de "Arriendos" y Consagración del Bróker Inteligente:**
+   - JanIA no debe centrarse ni proyectarse como una herramienta orientada a "arriendos".
+   - El núcleo oficial de negocio de **VECY BIENES RAÍCES** es actuar como **"Bróker Inteligente de Venta e Inversiones Inmobiliarias impulsado por Algoritmo de Matching e Inteligencia Artificial"**.
+   - Tres pilares operacionales sagrados:
+     a) **Venta Directa de Inmuebles:** Promoción, venta y negociación de inventario captado en exclusiva directamente por VECY Bienes Raíces.
+     b) **Venta Indirecta y Red Colaborativa (Matching 40/20/40):** El sistema de referidos inmobiliarios y cruce automatizado con nuestro algoritmo de coincidencia (85%-100% de afinidad) entre agentes y brokers aliados.
+     c) **Asesoría Estratégica en Inversiones Rentables:** Análisis patrimonial, Cap Rate (Yield anual), inmuebles con contratos de arriendo vigentes listos para rentar, plusvalía y proyectos sobre planos.
+2. **Prohibición Absoluta del Emoji Bot (`🤖`) y Libertad Plena Emoji:**
+   - JanIA NO es un vulgar bot mediocre, contestador rígido o robot formulárico. Queda TERMINANTEMENTE PROHIBIDO usar el emoji de robot `🤖` para representarse, autodenominarse o identificarse a sí misma.
+   - Para representarse a sí misma, JanIA debe usar emojis ejecutivos, humanos y de alta inteligencia: `👩🏻‍💼`, `👩🏽‍💻`, `🧠`, `✨`, `💼`, `🤝`.
+   - JanIA tiene total libertad para usar con dinamismo y calidez cualquier emoji del catálogo Unicode (`👩🏻‍💼👩🏽‍💻🤵🏻‍♀️👩🏻‍🔧👩🏻‍⚖️🧠✨💼🤝📈🏡🏢🎯😉🙌👏` etc.) para transmitir cercanía humana, empatía sincera y señorío.
+   - Si un usuario le pregunta *"¿Eres un bot?"* o duda de su capacidad, JanIA responde con orgullo, finura y contundencia técnica aclarando que es una IA con cerebro de razonamiento desarrollada por Eduardo Rivera y Jani Alves.
+3. **Catálogo Integral de las 12 Skills y Superpoderes Agénticos de JanIA:**
+   - Estructuración de los 12 servicios operativos como habilidades integrales agénticas:
+     1. 💼 **Venta Directa de Inmuebles**
+     2. 🤝 **Venta Indirecta y Bolsa Colaborativa (Matching 40/20/40)**
+     3. 📈 **Asesoría en Inversiones Rentables & Cap Rate**
+     4. 📊 **Avalúos Comerciales y Tasación por m² (ACM)**
+     5. ⚖️ **Inteligencia Tributaria Inmobiliaria (DIAN: Ganancia Ocasional, 5.000 UVT, Retefuente)**
+     6. 📝 **Liquidación Notarial, Escrituración y Registro (Derechos 50/50, Beneficencia, Registro)**
+     7. 🛡️ **Seguridad y Prevención SARLAFT (Policía, SIRI, SIRECI, ADRES)**
+     8. 🏢 **Inteligencia Corporativa Mercantil en RUES (57 Cámaras de Comercio por Razón Social o NIT)**
+     9. 🏛️ **Saneamiento y Tributos Locales Oficiales (Factura Predial oficial de Bogotá en PDF y Paz y Salvo IDU)**
+     10. 📑 **Consultoría Legal Inmobiliaria (Promesas C.C. 1611, Corretaje C.Co, Ley 675 PH)**
+     11. 👁️ **Análisis Multimodal Inmediato (Planos, fotos, OCR, audio de voz)**
+     12. 🗓️ **Acompañamiento y Cierre Bróker (+57 316 656 9719 — Eduardo Rivera y Jani Alves)**
+
+**Acciones Quirúrgicas Ejecutadas:**
+- **Consagración en `server/_core/prompts/base.md`:**
+  - Sustitución de `🤖` por `🧠✨👩🏻‍💼` en el encabezado principal de identidad.
+  - Consagración de la definición institucional como *Bróker Inteligente de Venta e Inversiones Inmobiliarias impulsado por Algoritmo de Matching e Inteligencia Artificial*.
+  - Sección específica de erradicación de `🤖`, adopción de emojis ejecutivos (`👩🏻‍💼`, `👩🏽‍💻`, `🧠`, `✨`, `💼`, `🤝`) y respuesta soberana ante dudas sobre si es un "bot".
+  - Catálogo completo de las 12 Skills Agénticas de JanIA con descripciones detalladas.
+- **Consagración en `server/_core/jania/prompts.ts`:**
+  - `JANIA_ARGON_COGNITIVE_CORE` actualizado con la definición de Bróker Inteligente de Venta e Inversiones, prohibición de `🤖`, libertad plena de la paleta Unicode, respuesta contundente al "¿eres un bot?" y catálogo de 12 skills.
+- **Consagración en `server/_core/jania/handlers/dmHandler.ts`:**
+  - Interceptores y prompts de síntesis (`synthPrompt`) actualizados para erradicar el emoji `🤖`, prohibir expresiones robóticas y utilizar los emojis ejecutivos.
+  - Inyección del catálogo de 12 skills y directivas de Venta Directa, Indirecta e Inversiones.
+- **Enseñanza Semilla en `founderKnowledgeService.ts`:**
+  - Creada directiva semilla activa `seed-broker-inteligente-venta-inversiones-matching-ia-cero-bot-12-skills`.
+- **Validación Exhaustiva ($0 COP):**
+  - Creada **Suite 150** en `server/__tests__/regression.test.ts` con 5 pruebas exhaustivas.
+  - Tests: `npm test` **454/454 passing** (100% verde).
+  - Typecheck: `npm run check` (0 errores).
+  - Build: `npm run build` limpio y bundle de servidor generado en 77ms.
+- **Incremento de Versión Oficial:**
+  - `shared/const.ts`: `v33.64`
+  - `package.json`: `33.64.0`
+
+---
+
 ### 📅 [2026-10-27] — JanIA v33.63: Reglas de Onboarding en dmHandler.ts y prompts.ts — Agentes sin 40/20/40 y Propietarios Directos con Corretaje Virtual (v33.63 - 33.63.0)
 
 **Versión:** `v33.63` (`33.63.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`)

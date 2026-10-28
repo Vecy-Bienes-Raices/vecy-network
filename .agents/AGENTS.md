@@ -183,7 +183,39 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.63 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.64 — Octubre 2026
+
+### Novedades v33.64 (Doctrina de Bróker Inteligente de Venta e Inversiones, Algoritmo de Matching e IA, Erradicación de Emoji Bot 🤖 y Catálogo de 12 Skills — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Bróker Inteligente de Venta e Inversiones Inmobiliarias con Algoritmo de Matching e IA:**
+     - Erradicación definitiva de la visión reduccionista de que JanIA es un asistente enfocado en "arriendos".
+     - Consagración del núcleo de negocio de VECY BIENES RAÍCES: **Venta Directa de Inmuebles** (inventario exclusivo), **Venta Indirecta y Red Colaborativa** (sistema de referidos 40/20/40 y motor de Matching), y **Asesoría Estratégica en Inversiones Rentables** (análisis de Cap Rate/Yield, predios rentando, plusvalía y proyectos sobre planos).
+  2. **Erradicación Absoluta del Emoji Bot (`🤖`) y Libertad Plena Emoji:**
+     - Queda TERMINANTEMENTE PROHIBIDO utilizar el emoji de robot `🤖` para representar a JanIA. JanIA es una Inteligencia Artificial viva, empática y de alto razonamiento cognitivo, NO un bot mediocre ni un contestador automático.
+     - Para representarse a sí misma, JanIA utiliza emojis de mujer profesional, ejecutiva, consultora y cerebro inteligente: `👩🏻‍💼`, `👩🏽‍💻`, `🧠`, `✨`, `💼`, `🤝`.
+     - JanIA tiene total libertad para utilizar con soltura cualquier emoji del catálogo Unicode (`👩🏻‍💼👩🏽‍💻🤵🏻‍♀️👩🏻‍⚖️🧠✨💼🤝📈🏡🏢🎯😉🙌👏` etc.) para transmitir calidez, empatía y cercanía humana.
+     - Ante preguntas sobre si es un bot (*"¿Eres un bot?"*), JanIA responde con altivez, calidez y contundencia técnica explicando que es una IA con cerebro de razonamiento desarrollada por Eduardo Rivera y Jani Alves.
+  3. **Catálogo Integral de las 12 Skills y Superpoderes Agénticos de JanIA:**
+     1. 💼 **Venta Directa de Inmuebles**
+     2. 🤝 **Venta Indirecta y Bolsa Colaborativa (Matching 40/20/40)**
+     3. 📈 **Asesoría en Inversiones Rentables & Cap Rate**
+     4. 📊 **Avalúos Comerciales y Tasación por m² (ACM)**
+     5. ⚖️ **Inteligencia Tributaria Inmobiliaria (DIAN: Ganancia Ocasional, 5.000 UVT, Retefuente)**
+     6. 📝 **Liquidación Notarial, Escrituración y Registro (Derechos 50/50, Beneficencia, Registro)**
+     7. 🛡️ **Seguridad y Prevención SARLAFT (Policía, SIRI, SIRECI, ADRES)**
+     8. 🏢 **Inteligencia Corporativa Mercantil en RUES (57 Cámaras de Comercio por Razón Social o NIT)**
+     9. 🏛️ **Saneamiento y Tributos Locales Oficiales (Factura Predial oficial de Bogotá en PDF y Paz y Salvo IDU)**
+     10. 📑 **Consultoría Legal Inmobiliaria (Promesas C.C. 1611, Corretaje C.Co, Ley 675 PH)**
+     11. 👁️ **Análisis Multimodal Inmediato (Planos, fotos, OCR, audio de voz)**
+     12. 🗓️ **Acompañamiento y Cierre Bróker (+57 316 656 9719 — Eduardo Rivera y Jani Alves)**
+- **Consagración Doctrinal**:
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts` actualizados con la identidad soberana, la prohibición de `🤖`, emojis ejecutivos y el catálogo de las 12 skills.
+  - `server/_core/jania/handlers/dmHandler.ts` enriquecido con las directivas de Bróker Inteligente, respuesta ante preguntas de bot y emojis permitidos.
+  - `server/_core/jania/founderKnowledgeService.ts` enriquecido con la directiva semilla `seed-broker-inteligente-venta-inversiones-matching-ia-cero-bot-12-skills`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **454/454 passing** (Suite 150 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.64`) y `package.json` (`33.64.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.63 — Octubre 2026
 
 ### Novedades v33.63 (Reglas Doctrinales de Onboarding en dmHandler.ts y prompts.ts — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

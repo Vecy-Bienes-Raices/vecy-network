@@ -8164,5 +8164,39 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Build: `npm run build` limpio.
   * Versión: `v33.63` (`33.63.0`) en `shared/const.ts` y `package.json`.
 
+### 10.159 Versión v33.64 (2026-10-27) — Doctrina de Bróker Inteligente de Venta e Inversiones Inmobiliarias, Algoritmo de Matching e IA, Erradicación del Emoji Bot 🤖 y Catálogo de 12 Skills (Doctrina Eduardo A. Rivera)
+- **Doctrina Fundacional Consagrada (Eduardo A. Rivera)**:
+  1. **Bróker Inteligente de Venta e Inversiones Inmobiliarias con Algoritmo de Matching e IA**:
+     * Erradicación definitiva de la distorsión de que JanIA se enfoca en "arriendos".
+     * Consagración de los 3 pilares estructurales: **Venta Directa de Inmuebles** (inventario exclusivo), **Venta Indirecta y Bolsa Colaborativa** (sistema 40/20/40 y algoritmo de Matching entre aliados), y **Asesoría Estratégica en Inversiones Rentables** (Cap Rate/Yield anual, inmuebles rentando, plusvalía y proyectos sobre planos).
+  2. **Erradicación Total del Emoji Bot (`🤖`) y Libertad Plena Emoji**:
+     * Prohibición absoluta del uso del emoji de robot `🤖` para identificar, autodenominar o representar a JanIA.
+     * Representación visual y conceptual a través de emojis ejecutivos, humanos y de inteligencia pura: `👩🏻‍💼`, `👩🏽‍💻`, `🧠`, `✨`, `💼`, `🤝`.
+     * Libertad plena para usar la paleta completa Unicode (`👩🏻‍💼👩🏽‍💻🤵🏻‍♀️👩🏻‍⚖️🧠✨💼🤝📈🏡🏢🎯😉🙌👏` etc.) para transmitir calidez, empatía y cercanía humana sin rigidez ni fórmulas mecánicas.
+     * Respuesta soberana y elegante ante preguntas de usuarios sobre si es un bot (*"¿Eres un bot?"*), destacando su arquitectura de razonamiento profundo concebida por Eduardo Rivera y Jani Alves.
+  3. **Catálogo Integral de las 12 Skills Agénticas de JanIA**:
+     1. 💼 **Venta Directa de Inmuebles**
+     2. 🤝 **Venta Indirecta y Bolsa Colaborativa (Matching 40/20/40)**
+     3. 📈 **Asesoría en Inversiones Rentables & Cap Rate**
+     4. 📊 **Avalúos Comerciales y Tasación por m² (ACM)**
+     5. ⚖️ **Inteligencia Tributaria Inmobiliaria (DIAN: Ganancia Ocasional, 5.000 UVT, Retefuente)**
+     6. 📝 **Liquidación Notarial, Escrituración y Registro (Derechos 50/50, Beneficencia, Registro)**
+     7. 🛡️ **Seguridad y Prevención SARLAFT (Policía, SIRI, SIRECI, ADRES)**
+     8. 🏢 **Inteligencia Corporativa Mercantil en RUES (57 Cámaras de Comercio por Razón Social o NIT)**
+     9. 🏛️ **Saneamiento y Tributos Locales Oficiales (Factura Predial oficial de Bogotá en PDF y Paz y Salvo IDU)**
+     10. 📑 **Consultoría Legal Inmobiliaria (Promesas C.C. 1611, Corretaje C.Co, Ley 675 PH)**
+     11. 👁️ **Análisis Multimodal Inmediato (Planos, fotos, OCR, audio de voz)**
+     12. 🗓️ **Acompañamiento y Cierre Bróker (+57 316 656 9719 — Eduardo Rivera y Jani Alves)**
+- **Implementación Técnica en Backend**:
+  * `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`: Actualizados con la identidad soberana, la prohibición del emoji `🤖`, la respuesta soberana al "¿eres un bot?" y el catálogo de las 12 skills.
+  * `server/_core/jania/handlers/dmHandler.ts`: Directivas de redacción en síntesis y prompt conversacional actualizadas.
+  * `server/_core/jania/founderKnowledgeService.ts`: Directiva semilla `seed-broker-inteligente-venta-inversiones-matching-ia-cero-bot-12-skills`.
+- **Validación y Blindaje ($0 COP)**:
+  * Suite 150 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  * Cobertura de tests: `npm test` **454/454 passing** (100% verde a $0 COP).
+  * Typecheck: `npm run check` (0 errores).
+  * Build: `npm run build` limpio y bundle de servidor generado en 77ms.
+  * Versión: `v33.64` (`33.64.0`) en `shared/const.ts` y `package.json`.
+
 
 
