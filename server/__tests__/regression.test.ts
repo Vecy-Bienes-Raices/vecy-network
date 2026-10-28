@@ -7255,7 +7255,7 @@ Ana Morales Castillo
     it("1. Diálogo maestro de sondeos con los 8 datos clave y nombre oficial del Grupo 1 en dmHandler", async () => {
       const fs = await import("fs");
       const content = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
-      
+
       // 8 datos clave requeridos por Eduardo A. Rivera
       expect(content).toContain("• Dirección exacta del predio con complementarios de ser necesario.");
       expect(content).toContain("• Barrio.");
