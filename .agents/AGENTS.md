@@ -183,7 +183,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.67 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.68 — Octubre 2026
+
+### Novedades v33.68 (Blindaje de Sincronización de Estados WhatsApp en Multi-Device [Cero 'Recibiste un estado, pero no es compatible'], Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Reconciliación de Lockfile pnpm para Vercel CI/CD (`pnpm-lock.yaml`, `package.json`):**
+     - Diagnóstico: Vercel falló el despliegue con `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH: The current "overrides" configuration doesn't match the value found in the lockfile`. Esto ocurrió porque en `v33.66` se agregaron `overrides` para `tailwindcss` en `package.json` sin actualizar `pnpm-lock.yaml`.
+     - Solución: Reconciliación de `pnpm-lock.yaml` mediante `pnpm install --no-frozen-lockfile`, registrando el override `tailwindcss>nanoid: 3.3.7` y permitiendo que Vercel complete su build congelado al 100%.
+  2. **Erradicación Definitiva de la Pantalla de Incompatibilidad en Estados de WhatsApp (`server/_core/whatsapp-match.ts`):**
+     - Diagnóstico del error *"Recibiste un estado, pero no es compatible con esta versión de WhatsApp"*:
+       1. En `postToWhatsAppStatus`, la línea `recipientSet.add('573192919978@s.whatsapp.net')` agregaba el propio número del socket a `statusJidList`. En el protocolo Signal de WhatsApp multi-device, incluirse a sí mismo como destinatario externo de un broadcast causa que WhatsApp Web reciba un paquete `skmsg` sin el sobre de sincronización interna `deviceSentMessage`, provocando que WhatsApp Web no reconozca el estado saliente y muestre el fallback de incompatibilidad.
+       2. Al publicar texto con enlaces hacia el Canal, Baileys intentaba generar tarjetas de previsualización (`matchedText`, `previewType: 0`), las cuales no son admitidas en estados de WhatsApp.
+       3. El socket no guardaba el mensaje emitido en `this.messageStore`, impidiendo responder a los reintentos de descifrado (`retry receipts`) de WhatsApp Web y los clientes vinculados.
+     - Solución doctrinal aplicada:
+       1. **Desacople de Self-JID:** Exclusión estricta de `573192919978@s.whatsapp.net` y `cleanJid(this.sock.user?.id)` de `statusJidList`. Solo se incluyen contactos externos legítimos (`+573166569719` del Bróker y asesores verificados).
+       2. **Blindaje de Payload:** `linkPreview: null` en estados de texto para garantizar que viajen como `extendedTextMessage` limpio sin metadatos corruptos, además de soporte dinámico para imágenes si se envía `mediaPath`.
+       3. **Persistencia para Reintentos:** Almacenamiento inmediato de `sent.message` en `this.messageStore.set(sent.key.id, sent.message)` asegurando que cualquier reintento de descifrado de WhatsApp Web se resuelva al instante.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **474/474 passing** (Suite 154 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio (frontend Vite + backend esbuild) ✅
+- `shared/const.ts` (`v33.68`) y `package.json` (`33.68.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.67 — Octubre 2026
 
 ### Novedades v33.67 (Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

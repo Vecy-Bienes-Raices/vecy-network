@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.67";
+    VECY_VERSION = "v33.68";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17858,7 +17858,7 @@ async function generateCustomUserCreativeImage(input) {
   const badgeText = badgeMap[assetType] || "ESTUDIO CREATIVO IA \u2022 VECY BIENES RA\xCDCES";
   const headlineText = input.headline?.trim() || input.title?.trim() || extractHeadlineFromUserPrompt(cleanPrompt, assetType);
   const subheadlineText = input.subheadline?.trim() || input.subtitle?.trim() || input.ubicacion?.trim() || input.locationOrZone?.trim() || "Dise\xF1o profesional generado por JanIA \u2014 VECY BIENES RA\xCDCES";
-  const priceHighlight = input.priceOrHighlight?.trim() || input.priceOrValue?.trim() || input.price?.trim() || extractPriceOrAreaHighlight(cleanPrompt);
+  const priceHighlight = input.priceOrHighlight?.trim() || input.priceOrValue?.trim() || input.price?.trim() || input.precio?.trim() || extractPriceOrAreaHighlight(cleanPrompt);
   const customBullets = input.bulletPoints || input.specs || input.puntosClave;
   const bullets = customBullets && customBullets.length > 0 ? customBullets.slice(0, 4) : extractBulletsFromUserPrompt(cleanPrompt);
   const contactFooter = input.contactInfo?.trim() || input.contactPhone?.trim() || "Informes y Citas \u2022 VECY BIENES RA\xCDCES \u2022 +57 316 656 9719";
@@ -27319,11 +27319,23 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             console.warn("[JANIA-STATUS] \u{1F6D1} Socket de WhatsApp no listo para publicar estado.");
             return { success: false, error: "Socket no conectado" };
           }
-          const { captionText, recipients } = options;
+          const { captionText, mediaPath, recipients } = options;
           const targetJid = "status@broadcast";
-          const messagePayload = {
-            text: captionText
+          let messagePayload = {
+            text: captionText,
+            linkPreview: null
           };
+          if (mediaPath && fs12.existsSync(mediaPath)) {
+            try {
+              const buffer = fs12.readFileSync(mediaPath);
+              messagePayload = {
+                image: buffer,
+                caption: captionText
+              };
+            } catch (mediaErr) {
+              console.warn("[JANIA-STATUS] Advertencia leyendo mediaPath para estado, enviando texto puro:", mediaErr?.message);
+            }
+          }
           const recipientSet = /* @__PURE__ */ new Set();
           if (Array.isArray(recipients) && recipients.length > 0) {
             recipients.forEach((r) => recipientSet.add(r));
@@ -27334,8 +27346,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             advisors2.forEach((a) => recipientSet.add(a));
           } catch (_) {
           }
-          recipientSet.add("573192919978@s.whatsapp.net");
           recipientSet.add("573166569719@s.whatsapp.net");
+          const ownPhoneJid = this.sock.user?.id ? cleanJid(this.sock.user.id) : "573192919978@s.whatsapp.net";
+          recipientSet.delete(ownPhoneJid);
+          recipientSet.delete("573192919978@s.whatsapp.net");
           const targetRecipients = Array.from(recipientSet);
           const sendOptions = {
             broadcast: true,
@@ -27346,9 +27360,12 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetRecipients.length > 0) {
             sendOptions.statusJidList = targetRecipients;
           }
-          console.log(`[JANIA-STATUS] \u{1F4E2} Despachando Estado de WhatsApp (Texto Limpio / Cero Pantalla Negra). Destinatarios: ${targetRecipients.length}...`);
+          console.log(`[JANIA-STATUS] \u{1F4E2} Despachando Estado de WhatsApp (${messagePayload.image ? "Imagen" : "Texto Limpio"}). Destinatarios: ${targetRecipients.length}...`);
           const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
           if (sent && sent.key && sent.key.id) {
+            if (sent.message) {
+              this.messageStore.set(sent.key.id, sent.message);
+            }
             this.botSentMessageIds.add(sent.key.id);
             console.log(`[JANIA-STATUS] \u2705 Estado propio de WhatsApp publicado exitosamente (ID: ${sent.key.id}).`);
             return { success: true, messageId: sent.key.id };

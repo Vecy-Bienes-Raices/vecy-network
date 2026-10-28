@@ -3931,15 +3931,27 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return { success: false, error: 'Socket no conectado' };
       }
 
-      const { captionText, recipients } = options;
+      const { captionText, mediaPath, recipients } = options;
       const targetJid = 'status@broadcast';
 
-      // 1. Desistir completamente de imágenes en status@broadcast (Doctrina Eduardo A. Rivera v33.54):
-      // En WhatsApp multi-device, subir imágenes a historias produce pantallas negras debido a restricciones de transcodificación
-      // y distribución de llaves de cifrado en clientes móviles. Se publica EXCLUSIVAMENTE el gancho escrito en texto limpio hacia el Canal Oficial.
-      const messagePayload = {
-        text: captionText
+      // 1. Estructura de payload compatible para status@broadcast:
+      // Soporta imagen vertical/cuadrada si mediaPath existe, o texto limpio sin tarjetas de linkPreview corruptas
+      let messagePayload: any = {
+        text: captionText,
+        linkPreview: null
       };
+
+      if (mediaPath && fs.existsSync(mediaPath)) {
+        try {
+          const buffer = fs.readFileSync(mediaPath);
+          messagePayload = {
+            image: buffer,
+            caption: captionText
+          };
+        } catch (mediaErr: any) {
+          console.warn('[JANIA-STATUS] Advertencia leyendo mediaPath para estado, enviando texto puro:', mediaErr?.message);
+        }
+      }
 
       // 2. Construir lista exhaustiva de destinatarios autorizados para statusJidList
       const recipientSet = new Set<string>();
@@ -3953,9 +3965,16 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         advisors.forEach(a => recipientSet.add(a));
       } catch (_) { }
 
-      // Incluir contactos oficiales clave para garantizar distribución de llaves Signal
-      recipientSet.add('573192919978@s.whatsapp.net'); // Eduardo Rivera (JanIA Socket)
+      // Contacto oficial del Bróker (+573166569719) para validación y acompañamiento
       recipientSet.add('573166569719@s.whatsapp.net'); // Vecy Bienes Raíces Bróker
+
+      // 🛡️ REGLA PROTOCOLAR CRÍTICA: JAMÁS incluir el JID propio en statusJidList.
+      // En WhatsApp multi-device, si un cliente incluye su propio número en el fanout de status@broadcast,
+      // WhatsApp Web recibe un paquete de broadcast externo sin formato companion/deviceSentMessage
+      // y despliega el error "Recibiste un estado, pero no es compatible con esta versión de WhatsApp".
+      const ownPhoneJid = this.sock.user?.id ? cleanJid(this.sock.user.id) : '573192919978@s.whatsapp.net';
+      recipientSet.delete(ownPhoneJid);
+      recipientSet.delete('573192919978@s.whatsapp.net');
 
       const targetRecipients = Array.from(recipientSet);
 
@@ -3968,10 +3987,14 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         sendOptions.statusJidList = targetRecipients;
       }
 
-      console.log(`[JANIA-STATUS] 📢 Despachando Estado de WhatsApp (Texto Limpio / Cero Pantalla Negra). Destinatarios: ${targetRecipients.length}...`);
+      console.log(`[JANIA-STATUS] 📢 Despachando Estado de WhatsApp (${messagePayload.image ? 'Imagen' : 'Texto Limpio'}). Destinatarios: ${targetRecipients.length}...`);
 
       const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
       if (sent && sent.key && sent.key.id) {
+        // Almacenar en messageStore para responder reintentos de descifrado (retry receipts)
+        if (sent.message) {
+          this.messageStore.set(sent.key.id, sent.message);
+        }
         this.botSentMessageIds.add(sent.key.id);
         console.log(`[JANIA-STATUS] ✅ Estado propio de WhatsApp publicado exitosamente (ID: ${sent.key.id}).`);
         return { success: true, messageId: sent.key.id };

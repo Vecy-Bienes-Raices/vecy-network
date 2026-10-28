@@ -330,6 +330,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.68 — Octubre 2026
+
+#### [v33.68.0] — 2026-10-28: Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero 'Recibiste un estado, pero no es compatible'), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (Doctrina Eduardo A. Rivera)
+- **Reconciliación de Lockfile pnpm para Vercel CI/CD (`pnpm-lock.yaml`, `package.json`):**
+  - **Problema:** En el commit `59ed7f1`, Vercel abortó el build con el error `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH: The current "overrides" configuration doesn't match the value found in the lockfile`.
+  - **Causa Raíz:** En `v33.66` se agregaron overrides de `tailwindcss>nanoid: 3.3.7` en `package.json` pero no se ejecutó la actualización correspondiente en `pnpm-lock.yaml`.
+  - **Solución:** Reconciliación de `pnpm-lock.yaml` mediante `pnpm install --no-frozen-lockfile`, permitiendo builds congelados 100% exitosos en Vercel.
+- **Erradicación del Error 'Recibiste un estado, pero no es compatible' en WhatsApp Web (`server/_core/whatsapp-match.ts`):**
+  - **Problema:** Al abrir los estados publicados por JanIA desde WhatsApp Web (`web.whatsapp.com`), la aplicación mostraba una pantalla negra con el mensaje: *"Recibiste un estado, pero no es compatible con esta versión de WhatsApp."*
+  - **Causa Raíz:** En `postToWhatsAppStatus`, se agregaba el propio número del socket (`573192919978@s.whatsapp.net`) a `statusJidList`. En el protocolo Signal de WhatsApp multi-device, cuando un cliente emisor se incluye a sí mismo en los destinatarios de difusión externa de `status@broadcast`, WhatsApp Web recibe un paquete de broadcast externo sin la envoltura `deviceSentMessage`, provocando un fallo criptográfico que activa el fallback de incompatibilidad. Adicionalmente, los estados de texto intentaban generar previsualizaciones enriquecidas (`linkPreview`) no soportadas en estados y no se almacenaban en `this.messageStore` para responder a reintentos de descifrado (`retry receipts`).
+  - **Solución:**
+    1. Desacople estricto de `cleanJid(this.sock.user?.id)` y `573192919978@s.whatsapp.net` de `statusJidList`. Solo se incluyen contactos externos (`573166569719@s.whatsapp.net` y asesores).
+    2. Supresión de previsualizaciones de tarjetas con `linkPreview: null` en estados de texto y soporte para estados con imagen (`mediaPath`).
+    3. Persistencia de cada estado despachado en `this.messageStore.set(sent.key.id, sent.message)` para atender solicitudes de reintento Signal de WhatsApp Web.
+- **Validación ($0 COP):** `npm run check` (0 errores) | `npm test` 474/474 passing | `npm run build` limpio en Vite y esbuild.
+
+### 🔖 v33.67 — Octubre 2026
+
+#### [v33.67.0] — 2026-10-28: Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM (Doctrina Eduardo A. Rivera)
+- **Separación de Login/Registro Público en `/jania` vs `/admin`:** Eliminación del fallback de invitado `"Vecy Bienes Raíces"` por `"Visitante Invitado"` y redirección directa a `/jania` tras registro o login.
+- **Canon Visual Sagrado de JanIA y Oficina VECY:** Cabello SIEMPRE negro azabache profundo brillante, facciones 3D Pixar/Disney, oficina en Negro Carbón (`#0A0A0A`) y Oro Imperial (`#D4AF37`).
+- **Portadas Editoriales Dinámicas 1:1 y Estudio Creativo por WhatsApp:** Generación de portadas 1080x1080 para cada publicación diaria del Canal y creación bajo demanda de flyers e infografías por WhatsApp (`crear_imagen_creativa_whatsapp`).
+- **Herramientas Nativas de WhatsApp en Canal Oficial, Grupos 2/3 y DM:** Uso de `sendChannelPoll`, `sendQuiz`, `sendQuestionPrompt`, `sendLocationPin`, `vCard` oficial y anuncio activo del portafolio en Canal y Grupos 2 y 3.
+- **Validación ($0 COP):** Suite 153 pasando 100% verde (471 tests).
+
 ### 🔖 v33.61 — Octubre 2026
 
 #### [v33.61.0] — 2026-10-27: Contacto Exclusivo por Parte de VECY (Eduardo Rivera o Jani Alves) y Cero Contacto Directo de Terceros (Doctrina Eduardo A. Rivera)

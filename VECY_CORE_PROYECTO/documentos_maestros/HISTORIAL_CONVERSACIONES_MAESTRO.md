@@ -7,6 +7,30 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-28] — JanIA v33.68: Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero 'Recibiste un estado, pero no es compatible'), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (v33.68 - 33.68.0)
+
+**Versión:** `v33.68` (`33.68.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Fallo de Build en Vercel CI/CD (`ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`):**
+   - Eduardo reportó error en el pipeline de Vercel tras los commits de `v33.66`/`v33.67`: `The current "overrides" configuration doesn't match the value found in the lockfile. Update your lockfile using "pnpm install --no-frozen-lockfile"`.
+   - Causa raíz: En `v33.66` se agregó el bloque `overrides` a `package.json` para fijar `tailwindcss>nanoid: 3.3.7`, pero no se había regenerado `pnpm-lock.yaml`. Vercel en CI corre con `--frozen-lockfile` y rechaza cualquier desfase entre `package.json` y `pnpm-lock.yaml`.
+   - Solución: Reconciliación de `pnpm-lock.yaml` mediante `pnpm install --no-frozen-lockfile` registrando los `overrides` exactos.
+2. **Error de Incompatibilidad en Estados de WhatsApp ("Recibiste un estado, pero no es compatible con esta versión de WhatsApp"):**
+   - Eduardo reportó que al abrir el estado publicado por JanIA desde WhatsApp Web (`web.whatsapp.com`), la pantalla quedaba negra mostrando el mensaje: *"Recibiste un estado, pero no es compatible con esta versión de WhatsApp."* (a pesar de tener 1 visualización de contactos móviles).
+   - Diagnóstico técnico profundo:
+     1. En `postToWhatsAppStatus` (`server/_core/whatsapp-match.ts`), la línea `recipientSet.add('573192919978@s.whatsapp.net')` incorporaba el número del socket a `statusJidList`. En el protocolo Signal de WhatsApp multi-device, incluirse a uno mismo como destinatario externo en un fanout de `status@broadcast` hace que los clientes companion (como WhatsApp Web) reciban un sobre `skmsg` sin el formato interno `deviceSentMessage`, provocando que WhatsApp Web no reconozca el estado como propio y active el fallback de incompatibilidad.
+     2. El mensaje saliente de texto contenía URLs hacia el Canal Oficial y no especificaba `linkPreview: null`, causando que Baileys intentara generar metadatos de tarjeta de previsualización web (`matchedText`, `previewType: 0`), no admitidos en el protocolo de estados de WhatsApp.
+     3. El socket no registraba el mensaje enviado en `this.messageStore`, provocando que cualquier petición de reintento de descifrado (`enc retry receipt`) proveniente de WhatsApp Web fallara con `undefined`.
+   - Acciones ejecutadas:
+     - **Desacople estricto de Self-JID:** Exclusión garantizada de `573192919978@s.whatsapp.net` y `cleanJid(this.sock.user?.id)` de `statusJidList`. Se envían únicamente los JIDs de terceros autorizados (`573166569719@s.whatsapp.net` del Bróker y directorio de asesores).
+     - **Blindaje de Payload y Enlaces:** `linkPreview: null` en mensajes de texto para prevenir inserción de metadatos corruptos, y soporte dinámico transparente para estados con imagen (`mediaPath`).
+     - **Persistencia en messageStore:** Almacenamiento inmediato de `sent.message` en `this.messageStore.set(sent.key.id, sent.message)` garantizando respuesta limpia a reintentos Signal.
+3. **Validación Exhaustiva ($0 COP):**
+   - Creada **Suite 154** en `server/__tests__/regression.test.ts` con 3 pruebas automatizadas.
+   - Typecheck: `npm run check` (0 errores).
+   - Tests: `npm test` **474/474 passing** (100% verde a $0 COP).
+   - Build: `npm run build` limpio en 24.84s (cliente Vite) + 382ms (servidor esbuild).
+
 ### 📅 [2026-10-28] — JanIA v33.67: Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1 en Canal, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM (v33.67 - 33.67.0)
 
 **Versión:** `v33.67` (`33.67.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

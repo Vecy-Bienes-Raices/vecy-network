@@ -1,10 +1,13 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.67.0 — 2026-10-28)
-- **JanIA Server:** `v33.67` (`33.67.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Separación de Login/Registro en `/jania` vs `/admin`, Canon Visual Sagrado de JanIA y Oficina VECY, Portadas Editoriales Dinámicas 1:1, Estudio Creativo de Imágenes por WhatsApp y Herramientas Nativas en Canal/Grupos/DM (Doctrina Eduardo A. Rivera):**
-  1. **Login/Registro Público en `/jania` Desacoplado de `/admin` (`useAuth.ts`, `JanIAConsole.tsx`, `Login.tsx`, `Admin.tsx`):** Eliminado el fallback `"Vecy Bienes Raíces"` para visitantes sin sesión (`"Visitante Invitado"`) y redirección directa a `/jania` tras registrarse o iniciar sesión.
-  2. **Canon Visual Sagrado de JanIA (Cabello Negro Azabache), Oficina VECY (`#0A0A0A` / `#D4AF37`), Portadas Editoriales 1:1 y Estudio Creativo por WhatsApp (`server/_core/jania/creativeStudioImageService.ts`):** Generación de portadas editoriales `1080x1080` únicas para cada tema diario del Canal y creación bajo demanda de flyers inmobiliarios, banners, posts e infografías `1:1` HD por WhatsApp (`crear_imagen_creativa_whatsapp`).
-  3. **Herramientas Nativas de WhatsApp en Canal Oficial, Grupos 2/3 y DM (`whatsapp-match.ts`, `cronService.ts`, `dmHandler.ts`, `consultingHandler.ts`):** Cero encuestas falsas de texto en el Canal; uso nativo de Encuestas (`sendChannelPoll`), Cuestionarios/Quizzes (`sendQuiz`), Preguntar (`sendQuestionPrompt`), Ubicación GPS (`sendLocationPin`), `vCard` oficial y anuncio permanente de servicios en Canal y Grupos 2 y 3.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 471/471 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.68.0 — 2026-10-28)
+- **JanIA Server:** `v33.68` (`33.68.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero 'Recibiste un estado, pero no es compatible'), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (Doctrina Eduardo A. Rivera):**
+  1. **Reconciliación de Lockfile pnpm para Vercel CI/CD (`pnpm-lock.yaml`, `package.json`):** Resuelto el fallo `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` en los despliegues de Vercel actualizando `pnpm-lock.yaml` para registrar los `overrides` de `tailwindcss>nanoid: 3.3.7`, permitiendo que `pnpm install` corra con `--frozen-lockfile` en Vercel con 100% de éxito.
+  2. **Erradicación del Error 'Recibiste un estado, pero no es compatible' en WhatsApp Web (`whatsapp-match.ts`):** 
+     - Exclusión estricta del número propio del socket (`573192919978@s.whatsapp.net`) de `statusJidList`. Al emitir estados a `status@broadcast`, WhatsApp prohíbe que el emisor se incluya a sí mismo en la lista de destinatarios externos de difusión, lo que generaba un conflicto criptográfico en WhatsApp Web y arrojaba la pantalla de incompatibilidad.
+     - Supresión de metadatos de preview de enlace (`linkPreview: null`) en estados de texto para evitar objetos corruptos de tarjeta enriquecida no soportados por el protocolo de historias.
+     - Persistencia en `this.messageStore` de cada estado despachado para responder reintentos de descifrado (`retry receipts`) de WhatsApp Web y dispositivos vinculados.
+     - Soporte dinámico para estados con imagen y texto (`captionText`).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 474/474 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
