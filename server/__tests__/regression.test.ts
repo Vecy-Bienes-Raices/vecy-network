@@ -8818,13 +8818,13 @@ Ana Morales Castillo
       expect(seed?.directive).toContain("12 habilidades integrales");
     });
 
-    it("5. Consagración doctrinal de versión v33.64/v33.65 en shared/const.ts y package.json", async () => {
+    it("5. Consagración doctrinal de versión v33.64/v33.65/v33.66 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(64|65)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(64|65|66)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(64|65)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(64|65|66)\.0$/);
     });
   });
 
