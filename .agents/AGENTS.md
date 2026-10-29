@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.72 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.73 — Octubre 2026
+
+### Novedades v33.73 (Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida [Cero Monólogos Teóricos ni Cuestionarios en Bucle] — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Por ejemplo ahí cuando le preguntan tú compartes comisión, JanIA debió responder algo parecido a esto como por ejemplo; 'Pero por supuesto que si Andréa, estoy abierta a cualquier negociación. Dime, ¿por qué la pregunta? Estás interesada en alguna de mis OFERTAS o DEMANDAS?'"*.
+     - Ante preguntas sobre comisión o negociación, una asesora comercial astuta y de alto rango jamás dispara un monólogo teórico con viñetas del 40/20/40 de entrada, ni cierra con cuestionarios enlatados ("¿tienes un inmueble en venta o arriendo...?").
+  2. **Causa Raíz Identificada:**
+     - Al no existir un detector directo de consultas de comisión, el mensaje caía al LLM general, que leía en el prompt del sistema que VECY opera bajo el modelo 40/20/40 y de forma mecánica recitaba una clase teórica de los porcentajes y un cuestionario genérico al final.
+- **Implementación Técnica**:
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - Interceptor ágil `isShareCommissionDirectInquiry` para consultas directas sobre comisión compartida:
+      `"¡Pero por supuesto que sí, [Nombre]! Estoy abierta a cualquier negociación. 😉🤝\n\nDime, ¿por qué la pregunta? ¿Estás interesada/o en alguna de mis OFERTAS o DEMANDAS?"` con concordancia de género gramatical.
+    - Directiva contextual de sistema `context402040Directive` enriquecida con guardarraíl prohibitivo de monólogos.
+    - Ampliación de `isQueryingOrDoubting` para explicar el 40/20/40 únicamente cuando el usuario pregunte expresamente por porcentajes o repartición ("¿y cómo se reparte?", "¿cuánto es el porcentaje?").
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+    - Sección 6.1 consagrando la Doctrina de Apertura Comercial y Negociación ante Preguntas de Comisión.
+  - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`:
+    - Seed `seed-astucia-comercial-comision-abierta-negociacion-v33-73`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **497/497 passing** (Suite 159 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.73`) y `package.json` (`33.73.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.72 — Octubre 2026
 
 ### Novedades v33.72 (Erradicación Definitiva de Saludos Vocativos Repetidos en DMs, Supresión Total de Secretos Propietarios [HubSpot], Teaser Matutino Conciso y Cero Preguntas Cuestionario en Bucle — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

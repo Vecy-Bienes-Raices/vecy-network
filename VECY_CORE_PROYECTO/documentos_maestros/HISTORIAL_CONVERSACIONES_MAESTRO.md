@@ -7,6 +7,39 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-29] — JanIA v33.73: Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida (Cero Monólogos Teóricos ni Cuestionarios en Bucle) (v33.73 - 33.73.0)
+
+**Versión:** `v33.73` (`33.73.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Por ejemplo ahí cuando le preguntan tú compartes comisión, JanIA debió responder algo parecido a esto como por ejemplo; 'Pero por supuesto que si Andréa, estoy abierta a cualquier negociación. Dime, ¿por qué la pregunta? Estás interesada en alguna de mis OFERTAS o DEMANDAS?'"*.
+- Eduardo enseñó que ante una pregunta directa sobre si se comparte comisión o sobre negociación, una asesora comercial astuta y de alto rango jamás dispara un monólogo teórico con viñetas del 40/20/40 de entrada, ni cierra con cuestionarios enlatados ("¿tienes un inmueble en venta o arriendo...?"). Debe responder con apertura comercial inmediata y devolver la pelota con picante para descubrir qué negocio o cliente trae entre manos la persona.
+
+**Diagnóstico Técnico Profundo:**
+- Cuando el interlocutor preguntaba *"Tu compartes comisión"*, al no haber un filtro directo ágil, la solicitud iba al LLM. El modelo leía en su system prompt que VECY opera bajo el 40/20/40 y de forma mecánica interpretaba que debía dictar una cátedra completa del modelo (40% punta A, 40% punta B, 20% VECY), agregando al final la pregunta genérica de captación/búsqueda.
+- Esto convertía a JanIA en un contestador rígido y predecible en vez de una bróker ágil con visión comercial superior.
+
+**Acciones Ejecutadas:**
+1. **Interceptor Ágil y Directiva Contextual en `dmHandler.ts`**:
+   - Detecta consultas de comisión compartida (`isShareCommissionDirectInquiry`).
+   - Para consultas cortas y directas ("Tu compartes comisión", "¿ustedes comparten comisión?"), emite inmediatamente la respuesta doctrinal de Eduardo A. Rivera:
+     `"¡Pero por supuesto que sí, [Nombre]! Estoy abierta a cualquier negociación. 😉🤝\n\nDime, ¿por qué la pregunta? ¿Estás interesada/o en alguna de mis OFERTAS o DEMANDAS?"` con concordancia de género gramatical automática.
+   - Para mensajes combinados o más largos, inyecta la directiva de sistema `context402040Directive` con el guardarraíl prohibitivo de monólogos teóricos.
+2. **Ampliación de `isQueryingOrDoubting` (`dmHandler.ts`)**:
+   - Permite explicar el 40/20/40 únicamente cuando el usuario pregunte explícitamente por el porcentaje o la forma de repartición ("¿y cómo se reparte?", "¿cuánto es el porcentaje?").
+3. **Sincronización en Prompts Base y de Sistema**:
+   - `server/_core/prompts/base.md` (Sección 6.1) y `server/_core/jania/prompts.ts`: Consagración doctrinal de apertura comercial ante comisión.
+   - `server/_core/jania/handlers/dmHandler.ts`: System prompt enriquecido con la regla cardinal.
+4. **Memoria RAG Persistente de Fundadores**:
+   - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`: Creado el seed permanente `seed-astucia-comercial-comision-abierta-negociacion-v33-73`.
+5. **Verificación y Pruebas Automatizadas ($0 COP)**:
+   - Creada la **Suite 159** en `server/__tests__/regression.test.ts` con 4 tests unitarios específicos.
+   - `npm run check` (0 errores).
+   - Tests `npm test`: **497/497 passing (100% verde a $0 COP)**.
+   - Build `npm run build` limpio.
+   - Bump de versión a `v33.73` (`33.73.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-29] — JanIA v33.72: Erradicación Definitiva de Saludos Vocativos Repetidos en DMs, Supresión Total de Secretos Propietarios (HubSpot), Teaser Matutino Conciso y Cero Preguntas Cuestionario en Bucle (v33.72 - 33.72.0)
 
 **Versión:** `v33.72` (`33.72.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

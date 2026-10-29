@@ -8401,6 +8401,23 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio (Vite + esbuild).
   - Versión: `v33.72` (`33.72.0`) en `shared/const.ts` y `package.json`.
 
+### 10.168 Versión v33.73 (2026-10-29) — Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida (Cero Monólogos Teóricos ni Cuestionarios en Bucle) (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  - Ante preguntas sobre si se comparte comisión o sobre negociación ("Tu compartes comisión"), JanIA soltaba un monólogo teórico con viñetas del 40/20/40 y un cuestionario genérico de captación/búsqueda. Eduardo ordenó responder con astucia y apertura comercial: *"¡Pero por supuesto que sí, [Nombre]! Estoy abierta a cualquier negociación. 😉🤝 Dime, ¿por qué la pregunta? ¿Estás interesada/o en alguna de mis OFERTAS o DEMANDAS?"*.
+- **Solución Técnica Implementada (`v33.73`)**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Interceptor `isShareCommissionDirectInquiry` con respuesta ágil de apertura comercial inmediata y devolución de la pelota para descubrir el negocio puntual.
+     - Directiva contextual `context402040Directive` con guardarraíl prohibitivo de monólogos teóricos.
+     - `isQueryingOrDoubting` ampliado para detallar el modelo 40/20/40 solo cuando el usuario pregunte expresamente por porcentajes o división.
+  2. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`: Sección 6.1 consagrando la doctrina.
+  3. `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`: Seed fundacional permanente.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 159 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **497/497 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.73` (`33.73.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

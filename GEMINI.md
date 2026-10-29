@@ -1,17 +1,13 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.72.0 — 2026-10-29)
-- **JanIA Server:** `v33.72` (`33.72.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Erradicación de Bucles de Saludos, Secreto Industrial de Herramientas y Teaser Matutino Persuasivo (Doctrina Eduardo A. Rivera):**
-  1. **Erradicación Definitiva de Bucles de Saludos Vocativos en DMs (`dmHandler.ts`):**
-     - Blindaje integral en `stripLeadingGreetingsAndCourtesies` con patrones vocativos regex (`nameVocativeGreetingPattern` y `welcomePattern`). Erradicación absoluta de frases como `"Andrea! Qué gusto saludarte de nuevo. ✨"` o bienvenidas forzadas en chats continuos con historial.
-     - Eliminación de la excepción `!cleaned.includes("?")` en `sanitizeDmOrthographyAndGreeting`, garantizando que la limpieza se aplique incondicionalmente en usuarios recurrentes.
-  2. **Secreto Industrial y Purga Total de Nombres Propietarios (HubSpot / Cero "en primera persona"):**
-     - Purga absoluta de la marca interna en todos los prompts, herramientas, reportes y teasers. Se consagra institucionalmente como **"Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test y AIDA)"**.
-     - Prohibición estricta de meta-lenguaje técnico: JanIA jamás repite fórmulas de instrucción como "en primera persona".
-  3. **Restauración del Teaser Matutino Conciso y Persuasivo (`cronService.ts`):**
-     - El teaser matutino en Grupos 2 y 3 vuelve al estándar limpio y directo de ARGON (3-4 líneas máximo conectando con el tema del día en el Canal Oficial), eliminando listas saturadas de 6 servicios.
-  4. **Eliminación de Cuestionarios en Bucle en DMs (`dmHandler.ts`):**
-     - Guardarraíl cognitivo que prohíbe formular preguntas genéricas de captación/búsqueda en turnos consecutivos cuando el usuario consulta un aspecto puntual (como el modelo 40/20/40).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 493/493 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.73.0 — 2026-10-29)
+- **JanIA Server:** `v33.73` (`33.73.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida (Doctrina Eduardo A. Rivera):**
+  1. **Apertura Comercial Total y Negociación Inmediata (`dmHandler.ts`):**
+     - Ante preguntas sobre si se comparte comisión o sobre negociación, JanIA jamás dispara un monólogo teórico ni un desglose con viñetas del 40/20/40 de entrada, ni cierra con cuestionarios enlatados.
+     - Responde con la frescura y astucia comercial enseñada por Eduardo: `"¡Pero por supuesto que sí, [Nombre]! Estoy abierta a cualquier negociación. 😉🤝 Dime, ¿por qué la pregunta? ¿Estás interesada/o en alguna de mis OFERTAS o DEMANDAS?"`.
+  2. **Indagación Comercial Estratégica:**
+     - Devuelve la pelota con picante para descubrir de inmediato qué negocio puntual o cliente trae entre manos. Solo si el interlocutor pregunta después específicamente cómo se reparte el porcentaje (*"¿y cómo es el porcentaje?"*), se le explica el modelo colaborativo 40/20/40 o planes de pago institucionales.
+  3. **Consagración Doctrinal:** Sincronizado en prompts base (`base.md`), `prompts.ts`, `dmHandler.ts` y en el seed fundacional persistente.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 497/497 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
