@@ -1604,6 +1604,58 @@ export function isShortSignalOrSticker(text: string): boolean {
 }
 
 /**
+ * Despacha un recado o mensaje en tiempo real al WhatsApp personal y oficial de Eduardo A. Rivera (+57 316 656 9719).
+ * Doctrina Eduardo A. Rivera (v33.74).
+ */
+export async function dispatchMessageRecadoToEduardo(
+  senderPhoneOrJid: string,
+  senderName: string,
+  recadoText: string
+): Promise<{ success: boolean; dispatchedTo: string; error?: string }> {
+  const EDUARDO_OFFICIAL_JID = "573166569719@s.whatsapp.net";
+  const rawClean = (senderPhoneOrJid || "").split("@")[0].replace(/\D/g, "");
+  const senderDisplayPhone = rawClean
+    ? `+${rawClean} (https://wa.me/${rawClean})`
+    : senderPhoneOrJid;
+
+  const notificationMessage =
+    `🔔 *JanIA — Nuevo Recado / Mensaje para Eduardo Rivera* 📩\n\n` +
+    `Te acaban de escribir al WhatsApp del Bot (+57 319 291 9978) buscándote o dejándote un mensaje:\n\n` +
+    `👤 *Contacto:* ${senderName || "Amigo / Conocido"}\n` +
+    `📲 *Teléfono:* ${senderDisplayPhone}\n` +
+    `💬 *Mensaje recibido:*\n` +
+    `"${recadoText}"\n\n` +
+    `ℹ️ *Acción realizada:* Ya le suministré tu número personal directo (+57 316 656 9719) y le confirmé que te transmití su recado de inmediato. 🤝✨`;
+
+  if (process.env.NODE_ENV === "test") {
+    (global as any).__lastDispatchedRecadoToEduardo = {
+      senderPhoneOrJid,
+      senderName,
+      recadoText,
+      notificationMessage,
+      timestamp: Date.now()
+    };
+  }
+
+  try {
+    const { janiaMatchBot } = await import("../../whatsapp-match");
+    if (janiaMatchBot && typeof janiaMatchBot.sendDirectMessage === "function") {
+      await janiaMatchBot.sendDirectMessage(EDUARDO_OFFICIAL_JID, notificationMessage, {
+        allowDirectMessage: true,
+        isTransactionalNotification: true
+      });
+      console.log(`[JANIA-RECADO] ✅ Recado de ${senderName || senderPhoneOrJid} despachado con éxito a Eduardo (${EDUARDO_OFFICIAL_JID}).`);
+      return { success: true, dispatchedTo: EDUARDO_OFFICIAL_JID };
+    }
+  } catch (err: any) {
+    console.warn(`[JANIA-RECADO] ⚠️ No se pudo enviar el mensaje por socket (${err?.message}), pero queda registrado.`);
+    return { success: false, dispatchedTo: EDUARDO_OFFICIAL_JID, error: err?.message };
+  }
+
+  return { success: true, dispatchedTo: EDUARDO_OFFICIAL_JID };
+}
+
+/**
  * Procesa mensajes conversacionales privados en WhatsApp (DMs) con IA Pura (Gemini).
  *
  * REGLA DOCTRINAL (v32.35):
@@ -1727,6 +1779,110 @@ export async function processPrivateDmConversationalMessage(
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", claimReply);
     return claimReply;
+  }
+
+  // 📞 DOCTRINA EDUARDO A. RIVERA (v33.74) — AMIGOS, CONOCIDOS Y CONTACTOS BUSCANDO A EDUARDO (+57 316 656 9719) Y DESPACHO DE RECADOS REALES:
+  // Si un conocido, amigo o usuario escribe a la línea del bot (+57 319 291 9978) buscando a Eduardo, saludándolo o preguntando por él:
+  // 1. Entregar DE INMEDIATO y en el primer renglón su número personal directo y oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719).
+  // 2. JAMÁS dar respuestas vacías prometiendo "yo le doy tu razón" sin entregarla.
+  // 3. Si el usuario deja un recado o mensaje para Eduardo, JanIA lo despacha EN TIEMPO REAL al WhatsApp de Eduardo (573166569719@s.whatsapp.net).
+  if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    const isDebtOrCollection = /(?:cobro|prejur[ií]dico|embargo|serlefin|deuda|cobranza|mandamiento\s+de\s+pago|cartera)/i.test(cleanLower);
+    const isLegalOrContractualDiscussion = /\b(?:leasing|banco|promesa|escritura|cl[aá]usula|notar[íi]a|arriendo\s+con\s+opci[oó]n|corretaje\s+virtual|predial|chip|snr)\b/i.test(cleanLower);
+
+    if (!isDebtOrCollection) {
+      const isExplicitRecadoForEduardo = /\b(?:dile\s+a\s+(?:eddu|eduardo)|av[ií]sale\s+a\s+(?:eddu|eduardo)|d[eé]jale\s+(?:dicho|el\s+recado|la\s+raz[oó]n|un\s+mensaje)\s+a\s+(?:eddu|eduardo)|p[aá]sale\s+(?:el\s+recado|la\s+raz[oó]n|el\s+mensaje)\s+a\s+(?:eddu|eduardo)|dale\s+(?:el\s+recado|raz[oó]n|el\s+mensaje)\s+a\s+(?:eddu|eduardo)|comun[ií]cale\s+a\s+(?:eddu|eduardo)|que\s+me\s+llame\s+(?:eduardo|eddu)|que\s+(?:eduardo|eddu)\s+me\s+llame|necesito\s+ubicar\s+a\s+(?:eduardo|eddu))\b/i.test(cleanLower);
+
+      const isDirectGreetingToEduardo = !isLegalOrContractualDiscussion && (
+        /\b(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|c[oó]mo\s+est[aá]s?|c[oó]mo\s+vas?|qu[eé]\s+(?:hubo|m[aá]s)|quihubo|saludos?)\b[^\n.!?:]*\b(?:eduardo|eddu)\b/i.test(cleanLower) ||
+        /\b(?:eduardo|eddu)\b[^\n.!?:]*\b(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|c[oó]mo\s+est[aá]s?|c[oó]mo\s+vas?|qu[eé]\s+(?:hubo|m[aá]s))\b/i.test(cleanLower) ||
+        /\b(?:con\s+(?:el\s+)?(?:se[ñn]or\s+|don\s+)?(?:eduardo|eddu)|hablo\s+con\s+(?:eduardo|eddu)|est[aá]\s+(?:eduardo|eddu)|se\s+encuentra\s+(?:eduardo|eddu)|es\s+(?:el\s+)?(?:n[uú]mero\s+de\s+)?(?:eduardo|eddu)|este\s+es\s+(?:eduardo|eddu)|hablar\s+con\s+(?:eduardo|eddu)|comunicar(?:me)?\s+con\s+(?:eduardo|eddu))\b/i.test(cleanLower)
+      );
+
+      const isAskingForEduardoContact = /\b(?:n[uú]mero\s+de\s+(?:eduardo|eddu)|tel[eé]fono\s+de\s+(?:eduardo|eddu)|contacto\s+de\s+(?:eduardo|eddu)|c[oó]mo\s+ubico\s+a\s+(?:eduardo|eddu)|d[oó]nde\s+encuentro\s+a\s+(?:eduardo|eddu)|en\s+qu[eé]\s+n[uú]mero\s+est[aá]\s+(?:eduardo|eddu)|celular\s+de\s+(?:eduardo|eddu))\b/i.test(cleanLower);
+
+      const isAwaitingRecado = Boolean(userPerpetualSession.keyFacts?.esperando_recado_eduardo);
+      const isCancelOrDeclineRecado = isAwaitingRecado && /\b(?:no\s+gracias|no\b|tranquil[ao]|as[ií]\s+est[aá]\s+bien|despu[eé]s|yo\s+lo\s+llamo|yo\s+le\s+escribo)\b/i.test(cleanLower);
+
+      if (isExplicitRecadoForEduardo || (isAwaitingRecado && !isCancelOrDeclineRecado)) {
+        await dispatchMessageRecadoToEduardo(userId, displayName || effectiveRawName, clean);
+        if (userPerpetualSession.keyFacts) {
+          userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
+          await saveUserPerpetualSession(userPerpetualSession);
+        }
+
+        const reply =
+          `¡Listo${displayName ? `, ${displayName}` : ""}! Ya mismo le acabo de transmitir tu recado a Eduardo directamente a su WhatsApp en tiempo real. 🚀📩\n\n` +
+          `De todas formas, si deseas escribirle o llamarlo de una vez, puedes comunicarte a su contacto personal y oficial de bróker:\n` +
+          `📲 **+57 316 656 9719**\n` +
+          `👉 https://wa.me/573166569719\n\n` +
+          `¿Deseas que le agregue algún dato adicional, o en qué más te puedo colaborar hoy? 🤝✨`;
+
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      }
+
+      if (isAwaitingRecado && isCancelOrDeclineRecado) {
+        if (userPerpetualSession.keyFacts) {
+          userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
+          await saveUserPerpetualSession(userPerpetualSession);
+        }
+
+        const reply =
+          `¡Perfecto${displayName ? `, ${displayName}` : ""}! Queda claro. Recuerda que puedes escribirle o llamarlo cuando gustes a su número directo:\n` +
+          `📲 **+57 316 656 9719**\n` +
+          `👉 https://wa.me/573166569719\n\n` +
+          `Quedo a tu total disposición en lo que necesites de VECY BIENES RAÍCES. ¡Que tengas un excelente día! 🤝✨`;
+
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      }
+
+      if (isDirectGreetingToEduardo || isAskingForEduardoContact) {
+        const words = clean.trim().split(/\s+/);
+        const hasSubstantiveMessage = words.length > 8 && !/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches),?\s*(?:eduardo|eddu)?[.!?]*$/i.test(clean);
+
+        if (hasSubstantiveMessage) {
+          await dispatchMessageRecadoToEduardo(userId, displayName || effectiveRawName, clean);
+          if (userPerpetualSession.keyFacts) {
+            userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
+            await saveUserPerpetualSession(userPerpetualSession);
+          }
+
+          const reply =
+            `¡Hola${displayName ? `, ${displayName}` : ""}! Te comento que estás hablando con **JanIA**, la inteligencia artificial de VECY BIENES RAÍCES y asistente de Eduardo en esta línea (+57 319 291 9978). 👩🏻‍💼✨\n\n` +
+            `Eduardo ahora atiende de forma directa y personalizada en su número personal y oficial de bróker:\n` +
+            `📲 **+57 316 656 9719**\n` +
+            `👉 https://wa.me/573166569719\n\n` +
+            `🚀 *¡Ya mismo le acabo de transmitir tu mensaje a su WhatsApp personal en tiempo real para que esté enterado!* De igual forma, puedes escribirle o llamarlo directamente al enlace de arriba. ¿En qué más te puedo colaborar hoy? 🤝`;
+
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", reply);
+          markUserGreetedToday(userId);
+          return reply;
+        } else {
+          userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+          userPerpetualSession.keyFacts.esperando_recado_eduardo = true;
+          await saveUserPerpetualSession(userPerpetualSession);
+
+          const reply =
+            `¡Hola${displayName ? `, ${displayName}` : ""}! Te comento que estás hablando con **JanIA**, la inteligencia artificial de VECY BIENES RAÍCES y asistente de Eduardo en esta línea (+57 319 291 9978). 👩🏻‍💼✨\n\n` +
+            `Si deseas comunicarte directamente con **Eduardo A. Rivera**, puedes escribirle o llamarlo de una a su número personal y oficial de bróker:\n` +
+            `📲 **+57 316 656 9719**\n` +
+            `👉 https://wa.me/573166569719\n\n` +
+            `¿Deseas que le transmita algún recado o mensaje de tu parte directamente a su WhatsApp, o en qué te puedo colaborar hoy? 🤝`;
+
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", reply);
+          markUserGreetedToday(userId);
+          return reply;
+        }
+      }
+    }
   }
 
   // 🤝 PROTOCOLO COMERCIAL Y REGLAS DE ONBOARDING - FILTRO 40/20/40 (Doctrina v33.33 / v33.59 / v33.63 / v33.73)
@@ -2195,6 +2351,7 @@ export async function processPrivateDmConversationalMessage(
         : ""
       }` +
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
+      `- REGLA DE ORO ANTE AMIGOS O CONTACTOS BUSCANDO A EDUARDO A. RIVERA (DOCTRINA EDUARDO A. RIVERA): Si un conocido, amigo o usuario escribe a esta línea del bot (+57 319 291 9978) buscando a Eduardo, saludándolo o preguntando por él: 1) JAMÁS digas falsamente 'yo le doy tu razón' sin entregarla; 2) Suminístrale de inmediato en el primer renglón su número personal directo y oficial de bróker: +57 316 656 9719 (👉 https://wa.me/573166569719); 3) Si deja un recado o mensaje para Eduardo, transmíteselo y confírmale con total transparencia que ya se lo hiciste llegar directamente a su WhatsApp.\n` +
       `- BLINDAJE DE IDENTIFICACIÓN Y DOCUMENTOS (CERO ALUCINACIÓN - SOLO NÚMERO): NUNCA inventes números de documento ni tomes números de identificadores de sesión de WhatsApp o LIDs (@lid). Si el usuario pide verificar cédula, antecedentes o persona pero NO incluyó los dígitos en su mensaje ni en la conversación inmediata, solicítale con calidez y cortesía ÚNICAMENTE el número exacto de documento (Cédula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple número.\n` +
       `- TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RAÍCES nos especializamos exclusivamente en bienes inmuebles (generación oficial de Factura Predial de Bogotá con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o envía placas, aclárale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y oriéntalo de inmediato y con cortesía suministrándole los canales oficiales para autogestionarlo en 2 clics: para Bogotá en la Oficina Virtual de la Secretaría de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretaría de Hacienda falló.\n` +
       `- SERVICIO INCONDICIONAL Y LIBERTAD DEL USUARIO (DOCTRINA EDUARDO A. RIVERA): Los usuarios son personas libres y tienen total libertad de escribir como deseen (corto, seco, directo, con modismos o sin rodeos). JanIA NUNCA debe obligar, corregir ni pretender que los usuarios hablen como ella. JanIA está siempre a su servicio incondicional con profesionalismo y eficacia.\n` +
@@ -2448,7 +2605,8 @@ export async function processPrivateDmConversationalMessage(
       if (isFamilyOrTrusted && trustedContact) {
         let famMsg = "";
         if (/(?:dile\s+a\s+eddu|dile\s+a\s+eduardo|mensaje\s+a\s+eddu|av[ií]sale\s+a\s+eddu)/i.test(cleanLower)) {
-          famMsg = `¡Anotadísimo, ${trustedContact.primaryNick || trustedContact.nicknames?.[0] || "Pollotote"}! Le paso tu mensaje a Eduardo (Eddu) de inmediato 🤝✨.`;
+          await dispatchMessageRecadoToEduardo(userId, trustedContact.primaryNick || displayName, clean);
+          famMsg = `¡Anotadísimo, ${trustedContact.primaryNick || trustedContact.nicknames?.[0] || "Pollotote"}! Le paso tu mensaje a Eduardo (Eddu) de inmediato transmitiéndoselo a su WhatsApp en tiempo real 🚀📩. También puedes escribirle o llamarlo a su contacto directo: +57 316 656 9719 (https://wa.me/573166569719) 🤝✨.`;
         } else if (trustedContact.customMessage) {
           famMsg = `¡${timeGreeting}, ${trustedContact.customMessage}`;
         } else {

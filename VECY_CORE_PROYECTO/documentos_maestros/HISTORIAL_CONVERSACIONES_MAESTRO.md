@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-29] — JanIA v33.74: Contacto Directo para Amigos y Conocidos de Eduardo A. Rivera (+57 316 656 9719), Despacho Activo de Recados en Tiempo Real por WhatsApp y Cero Promesas Vacías (v33.74 - 33.74.0)
+
+**Versión:** `v33.74` (`33.74.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Al amigo que me habló a mi, ella debió entender como lo hizo que hablaba de mi y de una debió decirle que me podía encontrar en el número +57 3166569719 y no decirle disque yo le doy tu razón si sabemos que JanIA no da recados, o por lo menos tu no la has configurado para eso o si se puede, peroi es mejor que de el número cuando detecte amistad o si haces lo de los recados pues sería genial."*
+- Eduardo instruyó que cuando un amigo, conocido o usuario escriba a la línea donde corre el bot (`+57 319 291 9978`) saludándolo o buscándolo:
+  1. JanIA jamás debe disparar el onboarding inmobiliario de 40/20/40 ni prometer de forma vacía *"yo le doy tu razón"* o *"yo le aviso a Eduardo"* si no se va a entregar de verdad.
+  2. Debe aclararle con calidez y naturalidad que está hablando con JanIA (asistente de IA de VECY) y suministrarle de inmediato en el primer renglón el número personal directo y oficial de bróker de Eduardo: **`+57 316 656 9719`** (`https://wa.me/573166569719`).
+  3. Y si el usuario deja un recado o mensaje ("dile que me llame...", "avísale que...", etc.), JanIA debe tomar el recado y despacharlo **EN TIEMPO REAL** al WhatsApp de Eduardo (`573166569719@s.whatsapp.net`), confirmándole al usuario con total transparencia.
+
+**Diagnóstico Técnico Profundo:**
+- La línea de WhatsApp conectada al socket Baileys de JanIA (`+57 319 291 9978`) fue durante años la línea de Eduardo. Amigos y contactos de su agenda le escriben frecuentemente pensando que es él.
+- Al no existir una compuerta especializada de detección de amigos o recados para Eduardo, el mensaje caía en el flujo general del LLM, que interpretaba de manera imprecisa que era una charla informal y emitía la frase vacía *"yo le doy tu razón"*, sin tener implementada una función de reenvío de recados, dejando al amigo en limbo y sin el número telefónico actualizado de Eduardo.
+
+**Acciones Ejecutadas:**
+1. **Función de Despacho Real de Recados (`dispatchMessageRecadoToEduardo`)**:
+   - Creada en `server/_core/jania/handlers/dmHandler.ts`.
+   - Empaqueta el nombre del remitente, teléfono limpio, enlace `wa.me`, fecha/hora y el texto íntegro del recado, enviándolo en tiempo real a `573166569719@s.whatsapp.net` mediante `janiaMatchBot.sendDirectMessage`.
+   - Incluye emulación en entorno de test (`(global as any).__lastDispatchedRecadoToEduardo`) para validación unitaria a $0 COP.
+2. **Interceptor Conversacional de Amigos y Recados (`dmHandler.ts`)**:
+   - Detecta saludos directos o consultas sobre Eduardo (`isDirectGreetingToEduardo` / `isAskingForEduardoContact`).
+   - Aclara de entrada la identidad de JanIA y entrega en el primer renglón el número de Eduardo: `+57 316 656 9719` (`https://wa.me/573166569719`), indagando si desea dejar un recado.
+   - Detecta recados explícitos o turnos de seguimiento (`isExplicitRecadoForEduardo` / `isAwaitingRecado`), despacha el recado de inmediato al WhatsApp de Eduardo y confirma la entrega.
+   - Preserva intacto el escudo anti-cobranzas (no suministra el número ante cobradores o despachos).
+   - Integrado en el círculo familiar y de confianza (`isFamilyOrTrusted`).
+3. **Superpoder WhatsApp Exportado (`server/_core/whatsapp-match.ts`)**:
+   - Exportada la función `sendNativeWhatsAppTextMessage(targetPhoneOrJid, text)`.
+4. **Sincronización en Prompts y Base de Conocimiento**:
+   - `server/_core/prompts/base.md` (Sección 6.2) y `server/_core/jania/prompts.ts`: Consagración doctrinal de contacto directo para amigos y despacho de recados.
+   - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`: Seed fundacional permanente `seed-contacto-directo-amigos-eduardo-recados-reales-v33-74`.
+5. **Verificación y Blindaje ($0 COP)**:
+   - Creada la **Suite 160** en `server/__tests__/regression.test.ts` con 5 tests unitarios exhaustivos.
+   - Typecheck `npm run check` (0 errores).
+   - Tests `npm test`: **502/502 passing (100% verde a $0 COP)**.
+   - Build `npm run build` limpio (Vite + esbuild).
+   - Incremento de versión a `v33.74` (`33.74.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-29] — JanIA v33.73: Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida (Cero Monólogos Teóricos ni Cuestionarios en Bucle) (v33.73 - 33.73.0)
 
 **Versión:** `v33.73` (`33.73.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

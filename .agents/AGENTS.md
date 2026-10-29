@@ -183,7 +183,33 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.73 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.74 — Octubre 2026
+
+### Novedades v33.74 (Contacto Directo para Amigos y Conocidos de Eduardo A. Rivera [+57 316 656 9719], Despacho Activo de Recados en Tiempo Real por WhatsApp y Cero Promesas Vacías — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Al amigo que me habló a mi, ella debió entender como lo hizo que hablaba de mi y de una debió decirle que me podía encontrar en el número +57 3166569719 y no decirle disque yo le doy tu razón si sabemos que JanIA no da recados, o por lo menos tu no la has configurado para eso o si se puede, peroi es mejor que de el número cuando detecte amistad o si haces lo de los recados pues sería genial."*
+  2. **Causa Raíz Identificada:**
+     - La línea del bot Baileys (`+57 319 291 9978`) fue históricamente el número de Eduardo. Cuando amigos, conocidos o colegas escribían buscándolo ("Hola Eduardo", "¿Con Eduardo?"), el sistema no tenía un interceptor de amistad/contacto de Eduardo, cayendo en el LLM general que prometía falsamente *"yo le doy tu razón"* sin tener un canal de entrega, ni suministraba de inmediato en el primer renglón el número oficial de bróker y personal de Eduardo (`+57 316 656 9719`).
+- **Implementación Técnica**:
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - Función `dispatchMessageRecadoToEduardo(senderPhoneOrJid, senderName, recadoText)` que envía una notificación estructurada en caliente al WhatsApp de Eduardo (`573166569719@s.whatsapp.net`).
+    - Interceptor conversacional de amistad / recados:
+      - Si el mensaje saluda o busca a Eduardo ("Hola Eduardo", "¿Con Eduardo?", "¿Está Eduardo?"): JanIA aclara de inmediato que habla con JanIA y suministra de una el contacto directo de Eduardo: `+57 316 656 9719` (`https://wa.me/573166569719`), preguntando si desea dejar un recado.
+      - Si el usuario deja un recado expreso ("Dile a Eduardo que me llame...", "Avísale que ya tengo los planos...", etc.): JanIA toma el recado, lo despacha en tiempo real al WhatsApp de Eduardo, y le confirma al usuario con total transparencia.
+      - Si el usuario rechaza dejar recado ("No gracias, yo lo llamo"): limpia el estado y reitera el contacto directo.
+      - Integrado también en el círculo familiar y de confianza (`isFamilyOrTrusted`).
+    - Escudo anti-cobranzas preservado intacto (no se suministra el contacto ante despachos o cobros).
+  - `server/_core/whatsapp-match.ts`:
+    - Exportada `sendNativeWhatsAppTextMessage(targetPhoneOrJid, text)` para envíos directos transaccionales autorizados.
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+    - Sección 6.2 consagrando la Doctrina de Contacto Directo para Amigos y Despacho de Recados a Eduardo A. Rivera.
+  - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`:
+    - Seed `seed-contacto-directo-amigos-eduardo-recados-reales-v33-74`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **502/502 passing** (Suite 160 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.74`) y `package.json` (`33.74.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.73 — Octubre 2026
 
 ### Novedades v33.73 (Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida [Cero Monólogos Teóricos ni Cuestionarios en Bucle] — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

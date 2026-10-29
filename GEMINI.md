@@ -1,13 +1,13 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.73.0 — 2026-10-29)
-- **JanIA Server:** `v33.73` (`33.73.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Apertura Comercial y Negociación Inteligente ante Preguntas de Comisión Compartida (Doctrina Eduardo A. Rivera):**
-  1. **Apertura Comercial Total y Negociación Inmediata (`dmHandler.ts`):**
-     - Ante preguntas sobre si se comparte comisión o sobre negociación, JanIA jamás dispara un monólogo teórico ni un desglose con viñetas del 40/20/40 de entrada, ni cierra con cuestionarios enlatados.
-     - Responde con la frescura y astucia comercial enseñada por Eduardo: `"¡Pero por supuesto que sí, [Nombre]! Estoy abierta a cualquier negociación. 😉🤝 Dime, ¿por qué la pregunta? ¿Estás interesada/o en alguna de mis OFERTAS o DEMANDAS?"`.
-  2. **Indagación Comercial Estratégica:**
-     - Devuelve la pelota con picante para descubrir de inmediato qué negocio puntual o cliente trae entre manos. Solo si el interlocutor pregunta después específicamente cómo se reparte el porcentaje (*"¿y cómo es el porcentaje?"*), se le explica el modelo colaborativo 40/20/40 o planes de pago institucionales.
-  3. **Consagración Doctrinal:** Sincronizado en prompts base (`base.md`), `prompts.ts`, `dmHandler.ts` y en el seed fundacional persistente.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 497/497 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.74.0 — 2026-10-29)
+- **JanIA Server:** `v33.74` (`33.74.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Contacto Directo para Amigos de Eduardo (+57 316 656 9719) y Despacho Real de Recados por WhatsApp (Doctrina Eduardo A. Rivera):**
+  1. **Contacto Directo Inmediato (`dmHandler.ts`):**
+     - Si un conocido, amigo o contacto escribe a la línea del bot (`+57 319 291 9978`) buscando a Eduardo o saludándolo ("Hola Eduardo", "¿Con Eduardo?"), JanIA jamás le dispara el onboarding de 40/20/40 ni promete vacíamente *"yo le doy tu razón"*.
+     - Le aclara con calidez que habla con JanIA y le suministra de inmediato en el primer renglón el número personal directo y oficial de bróker de Eduardo: **`+57 316 656 9719`** (`https://wa.me/573166569719`).
+  2. **Despacho Real de Recados en Tiempo Real (`dispatchMessageRecadoToEduardo`):**
+     - Si dejan un recado o mensaje ("dile que me llame...", "avísale que...", etc.), JanIA toma el recado y lo despacha de forma activa e instantánea al WhatsApp de Eduardo (`573166569719@s.whatsapp.net`), confirmándole al usuario con total transparencia.
+  3. **Consagración Doctrinal:** Sincronizado en prompts base (`base.md`), `prompts.ts`, `dmHandler.ts`, `whatsapp-match.ts` y en el seed fundacional persistente.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 502/502 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

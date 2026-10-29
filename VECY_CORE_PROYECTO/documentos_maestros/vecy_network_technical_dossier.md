@@ -8418,6 +8418,26 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.73` (`33.73.0`) en `shared/const.ts` y `package.json`.
 
+### 10.169 Versión v33.74 (2026-10-29) — Contacto Directo para Amigos de Eduardo A. Rivera (+57 316 656 9719), Despacho Real de Recados en Tiempo Real por WhatsApp y Cero Promesas Vacías (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  - Amigos o conocidos escribían a la línea del bot (`+57 319 291 9978`) buscando a Eduardo. JanIA prometía de forma vacía *"yo le doy tu razón"* sin tener implementado un mecanismo de despacho de recados, y no suministraba de inmediato en el primer renglón el número oficial y personal de Eduardo (`+57 316 656 9719`).
+- **Solución Técnica Implementada (`v33.74`)**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Implementada la función `dispatchMessageRecadoToEduardo(senderPhoneOrJid, senderName, recadoText)` despachando notificaciones estructuradas a `573166569719@s.whatsapp.net` vía Baileys socket.
+     - Interceptor para conocidos y amigos: entrega de inmediato el contacto directo de Eduardo `+57 316 656 9719` (`https://wa.me/573166569719`) e indaga si desean dejar un recado.
+     - Detección activa de recados: captura mensajes y los transmite de forma instantánea al WhatsApp personal de Eduardo, confirmando con transparencia al emisor.
+     - Integración con círculo familiar (`isFamilyOrTrusted`) y preservación del escudo anti-cobranzas.
+  2. `server/_core/whatsapp-match.ts`:
+     - Función `sendNativeWhatsAppTextMessage` exportada para envíos autorizados.
+  3. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`: Sección 6.2 consagrando la doctrina.
+  4. `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`: Seed fundacional permanente.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 160 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **502/502 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.74` (`33.74.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

@@ -4359,6 +4359,16 @@ export async function sendNativeWhatsAppContact(targetJid: string, contactType: 
   return janiaMatchBot.sendContactCard(targetJid, contactType);
 }
 
+export async function sendNativeWhatsAppTextMessage(targetPhoneOrJid: string, text: string): Promise<boolean> {
+  try {
+    const res = await janiaMatchBot.sendDirectMessage(targetPhoneOrJid, text);
+    return Boolean(res);
+  } catch (err: any) {
+    console.warn(`[sendNativeWhatsAppTextMessage] Error enviando mensaje a ${targetPhoneOrJid}: ${err?.message}`);
+    return false;
+  }
+}
+
 export async function sendNativeWhatsAppEvent(targetJid: string, eventData: { name: string; description?: string; startTime: number; location?: string }): Promise<boolean> {
   return janiaMatchBot.sendEventMessage(targetJid, eventData);
 }

@@ -345,6 +345,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Por ejemplo ahí cuando le preguntan tú compartes comisión, JanIA debió responder algo parecido a esto como por ejemplo: 'Pero por supuesto que si Andréa, estoy abierta a cualquier negociación. Dime, ¿por qué la pregunta? Estás interesada en alguna de mis OFERTAS o DEMANDAS?'",
     createdAt: "2026-10-29T16:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-contacto-directo-amigos-eduardo-recados-reales-v33-74",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Contacto Directo Inmediato para Amigos de Eduardo (+57 316 656 9719) y Despacho Real de Recados por WhatsApp",
+    directive:
+      "Cuando un amigo, conocido o usuario escriba a la línea del bot (+57 319 291 9978) buscando a Eduardo, saludándolo o preguntando por él: 1) PROHIBIDO terminantemente prometer vacíamente 'yo le doy tu razón' sin entregarla; 2) Suministrar de inmediato en el primer renglón su número personal directo y oficial de bróker (+57 316 656 9719 / https://wa.me/573166569719); 3) Si el interlocutor deja un recado o mensaje para Eduardo, JanIA lo despacha de forma activa e instantánea al WhatsApp de Eduardo (573166569719@s.whatsapp.net) y le confirma al usuario con total transparencia que su mensaje ya fue entregado en tiempo real.",
+    rawText:
+      "Al amigo que me habló a mi, ella debió entender como lo hizo que hablaba de mi y de una debió decirle que me podía encontrar en el número +57 3166569719 y no decirle disque yo le doy tu razón si sabemos que JanIA no da recados, o por lo menos tu no la has configurado para eso o si se puede, peroi es mejor que de el número cuando detecte amistad o si haces lo de los recados pues sería genial.",
+    createdAt: "2026-10-29T17:00:00.000Z",
+    active: true
   }
 ];
 
