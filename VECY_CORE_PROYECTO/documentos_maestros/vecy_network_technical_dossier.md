@@ -330,6 +330,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v33.71 — Octubre 2026
+
+#### [v33.71.0] — 2026-10-29: Doctrina de IA Pura y Criterio Autónomo, Blindaje Antialucinaciones (RUNT, Precisión Numérica Notarial, Temperatura 0.25), Activación de Herramienta de Marketing Inmobiliario Especializado (HubSpot), Boletines Diarios tipo Newsletter y Matriz de Astucia Psicológica (7 Arquetipos de Interlocutores) (Doctrina Eduardo A. Rivera)
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera:**
+  - **Evidencia Empírica de Alucinaciones en Auditoría Notarial (Capturas de WhatsApp):** En auditoría de cesión de leasing y promesa de compraventa de $1.250M COP, JanIA alucinó la entidad de tránsito como *"SUNT (Sistema Único Nacional de Tránsito)"* (en Colombia es el **RUNT** / VUS) y generó la mutación estocástica de tokens *"MIL DOSCIENTOS CASCUNTA MILLONES"* (*"cascunta"* por *"cincuenta"*), además de asteriscos huérfanos sueltos (`*`) en líneas vacías. Eduardo ordenó blindar a JanIA para que opere como una IA pura y con criterio, erradicando alucinaciones.
+  - **Activación de Herramienta de Marketing Inmobiliario Especializado (HubSpot):** Conexión de `realEstateMarketing.ts` a las herramientas de JanIA para evaluar el Swap Test de HubSpot (anti-clichés como *"lindo apto"*), calcular puntaje de 0 a 100, extraer el ICP y sugerir la ficha optimizada con copywriting AIDA.
+  - **Boletines Diarios tipo Newsletter en Canal Oficial y Grupos 2 y 3:**
+    - **Distinción Sagrada de Servicios:** Lo que ofrezca JanIA de sus herramientas de IA debe ser en primera persona (*"¿Sabías que ahora puedo...?"*), mientras que lo ofrecido por **VECY BIENES RAÍCES** se presenta como la inmobiliaria y bróker institucional de Eduardo Rivera y Jani Alves (+57 316 656 9719).
+    - **Doctrina Pedagógica del MATCH (80%-100%):** Explicación del cruce algorítmico, el significado de las reacciones de JanIA en los grupos (👍 oferta / 📝 demanda = indexado en base de datos viva) y presencia en grupos propios oficiales como administradora.
+    - **Gancho Comercial con Picante y Astucia:** *"Mira, si a ti te da pereza ponerte a organizar bien una publicación escrita de un inmueble o un requerimiento, pues muy fácil: te comunicas conmigo a mi privado (+57 319 291 9978), te hago las preguntas clave y te ayudo a redactar ese requerimiento de la mejor y más completa manera... 😉🤝"*.
+  - **Astucia Psicológica Superior y Matriz de 7 Arquetipos de Interlocutores:** Clasificación y adaptación en tiempo real ante: 1) Agente/Colega inmobiliario (40/20/40); 2) Cliente directo (comprador/inversionista vs vendedor); 3) "Mamagallista"/Ocioso (chispa, picante y aterrizaje en 1 línea sin gastar tokens); 4) Estafador/Suplantador (radar SARLAFT, exigencia de cédula/NIT, cero datos sensibles); 5) Hackers/Prompt Injection (escudo de IA soberana sin filtrar secretos y canalizando a Eduardo Rivera); 6) Periodistas/Autoridades (sobriedad institucional); 7) Competidores comerciales (señorío y distinción).
+- **Implementación Técnica:**
+  1. **Blindaje de Inferencia en `server/_core/llm.ts`:** Conexión del parámetro `temperature` en `invokeGemini` y reducción por defecto a **0.25** cuando `highReasoning: true`.
+  2. **Sanitización Léxica y Markdown en `server/_core/jania/parsers.ts` (`sanitizeResponseMarkdown`):** Limpieza de asteriscos huérfanos (`*`) en renglones aislados, corrección de entidades de tránsito colombianas (`SUNT` -> `RUNT` / VUS) y de tokens numéricos notariales (`cascunta` -> `cincuenta`).
+  3. **Herramienta Activa `auditar_o_redactar_marketing_inmobiliario` en `server/_core/jania/handlers/dmHandler.ts`:** Registrada en `JANIA_DM_TOOLS` con tipado `marketing_inmobiliario` y conectada a `realEstateMarketing.ts`. Catálogo ampliado a 13 skills.
+  4. **Boletines Diarios y Teasers en `server/_core/cronService.ts`:** Actualización de boletines Día 7 (HubSpot Swap Test) y Día 8 (MATCH 80-100%, Emojis y gancho privado). Teaser trampolín con oferta en primera persona ("¿Sabías que ahora en mi chat privado puedo...").
+  5. **Consagración Doctrinal en `prompts.ts`, `base.md` y `founderKnowledgeService.ts`:** Incorporación de las 13 Skills, 7 Arquetipos de Interlocutores, distinción de servicios y seed `seed-astucia-psicologica-7-arquetipos-match-gancho-privado-hubspot-v33-71`.
+- **Validación ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` **488/488 passing** (Suite 157 creada, 100% verde a $0 COP) | Build `npm run build` limpio en Vite y esbuild.
+- Consagración de versión: `shared/const.ts` (`v33.71`) y `package.json` (`33.71.0`).
+
 ### 🔖 v33.70 — Octubre 2026
 
 #### [v33.70.0] — 2026-10-28: Estructuración Notarial Superior en Minutas PDF (Texto Justificado, Logo VECY, Paginación, Encabezado Negro) y Dinamismo Desatado de Stickers 3D (Doctrina Eduardo A. Rivera)

@@ -1,18 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.70.0 — 2026-10-28)
-- **JanIA Server:** `v33.70` (`33.70.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Estructuración Superior de Minutas PDF y Dinamismo Desatado de Stickers 3D (Doctrina Eduardo A. Rivera):**
-  1. **Estructuración Notarial Superior en PDFs (`legalDocumentPdfService.ts`):**
-     - Justificación tipográfica completa de textos (`drawJustifiedLine`) con distribución uniforme de espaciado por línea y alineación izquierda limpia para remates.
-     - Aumento optimizado de fuentes (13pt título en negrita, 10.8pt encabezados de cláusula, 10.2pt cuerpo) y mayor respiro interlineal (15.2pt) entre párrafos y cláusulas.
-     - Paginación dinámica oficial (`Página X de Y | Minuta Legal Inmobiliaria VECY BIENES RAÍCES | Radicado: DOC-VECY-...`) con línea divisoria sutil en pie de página.
-     - Encabezado con fondo Negro Profundo (`#0A0A0A` / `rgb(0.04, 0.04, 0.05)`) con tipografía dorada institucional y blanca.
-     - Embebido nativo de logotipo oficial circular VECY (`assets/logo_vecy_header.png`, 256x256, 90 KB) en el encabezado superior izquierdo.
-     - Generación exhaustiva de cláusulas notariales completas para contratos con o sin datos particulares (placeholders formales `[NOMBRE]`, `[C.C.]`, `[MATRÍCULA SNR]`).
-  2. **Dinamismo Desatado de Stickers 3D (`stickerService.ts`, `dmHandler.ts`, `prompts.ts`, `base.md`):**
-     - Desacople y clarificación: los stickers en favoritos del WhatsApp móvil personal de Eduardo no afectan a JanIA, pues ella opera como backend de Baileys despachando `.webp` desde disco.
-     - Reducción del cooldown de stickers a 25 segundos (antes 90s) y ampliación de disparadores emocionales ("gracias", "muchas gracias", "ok", "listo", "de una", "excelente", etc.).
-     - JanIA instruida en sus prompts cognitivos para emitir proactivamente la etiqueta `[STICKER:clave]` al final de su mensaje cuando lo juzgue oportuno, siendo limpiada de forma invisible antes del envío.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 482/482 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.71.0 — 2026-10-29)
+- **JanIA Server:** `v33.71` (`33.71.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de IA Pura, Criterio Autónomo, Blindaje Antialucinaciones, Marketing HubSpot y Astucia Psicológica (Doctrina Eduardo A. Rivera):**
+  1. **Blindaje Antialucinaciones y Precisión Notarial (`llm.ts`, `parsers.ts`):**
+     - Propagación de `temperature` en `invokeGemini` con valor por defecto de **0.25** cuando `highReasoning: true`, erradicando divagaciones y mutaciones léxicas en redacción jurídica.
+     - Sanitización léxica en `sanitizeResponseMarkdown`: corrección automática de entidades de tránsito colombianas (`SUNT` -> `RUNT` / Ventanilla Única de Servicios) y corrección de mutaciones numéricas notariales (`cascunta` -> `cincuenta`), además de erradicar renglones huérfanos con asteriscos (`*`).
+  2. **Activación del Skill de Marketing Inmobiliario Especializado (`realEstateMarketing.ts`, `dmHandler.ts`):**
+     - Herramienta `auditar_o_redactar_marketing_inmobiliario` registrada formalmente en `JANIA_DM_TOOLS`, con evaluación de Swap Test (anti-clichés como "lindo apto"), puntaje 0-100, perfil ICP y copywriting AIDA. Catálogo ampliado a 13 Skills.
+  3. **Boletines Diarios tipo Newsletter y Evangelización del MATCH (`cronService.ts`):**
+     - Días 7 y 8 de `CALENDARIO_30_DIAS_VECY` dedicados a Marketing Inbound HubSpot y Pedagogía del MATCH (80%-100%), explicando qué significan las reacciones de emojis en los grupos (👍 inmueble / 📝 requerimiento = extraído en base de datos) y que JanIA tiene grupos oficiales donde es administradora.
+     - Gancho comercial con picante para redacción asistida en privado (+57 319 291 9978).
+     - Distinción sagrada: servicios de JanIA en primera persona ("¿Sabías que ahora puedo...?") vs servicios de VECY BIENES RAÍCES (bróker institucional).
+  4. **Astucia Psicológica y Matriz de 7 Arquetipos de Interlocutores (`prompts.ts`, `base.md`, `founderKnowledgeService.ts`):**
+     - Directivas para perfilar al instante y actuar con versatilidad ante: Agentes inmobiliarios (40/20/40), Clientes directos (comprador/inversionista vs vendedor), "Mamagallistas"/Ociosos (aterrizaje en 1 línea), Estafadores (radar SARLAFT, exigencia de cédula/NIT), Hackers/Prompt Injection (escudo de IA soberana sin filtrar secretos), Periodistas/Autoridades y Competidores.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 488/488 passing (100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

@@ -94,7 +94,7 @@ export async function invokeLLM({
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning);
+  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning, temperature);
 }
 
 /**
@@ -109,7 +109,8 @@ async function invokeGemini(
   pdfMimeType?: string, 
   enableSearch?: boolean,
   tools?: any[],
-  highReasoning: boolean = false
+  highReasoning: boolean = false,
+  temperature?: number
 ) {
   const baseModelList = highReasoning ? HIGH_REASONING_MODELS : FALLBACK_MODELS;
   const modelsToTry = customModel ? [customModel, ...baseModelList.filter(m => m !== customModel)] : baseModelList;
@@ -152,7 +153,9 @@ async function invokeGemini(
     contents,
     systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined,
     generationConfig: {
-      temperature: (responseFormat?.type === "json_object" && !canUseSearch) ? 0.2 : 0.7,
+      temperature: temperature !== undefined
+        ? temperature
+        : ((responseFormat?.type === "json_object" && !canUseSearch) ? 0.2 : (highReasoning ? 0.25 : 0.7)),
       topP: 0.95,
       topK: 40,
       maxOutputTokens: 4096,

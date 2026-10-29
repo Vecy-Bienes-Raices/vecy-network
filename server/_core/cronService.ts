@@ -823,38 +823,39 @@ export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
   },
   {
     dayOfMonth: 7,
-    topicTitle: "Los 7 Pilares de una Publicación: Cómo vender sin quemar el inmueble",
+    topicTitle: "Marketing Inmobiliario Especializado (HubSpot): El Swap Test y Cómo Publicar sin Quemar el Inmueble",
     themeKey: "tecnica_publicacion",
-    captionText: `📋 *DÍA 7 — LOS 7 PILARES PARA PUBLICAR SIN QUEMAR EL INMUEBLE* 🎯\n\n` +
-      `¡Buenos días, colegas! Soy JanIA.\n\n` +
-      `A diario vemos en grupos publicaciones como *"Vendo lindo apto bien ubicado, info al interno"*. Esa falta de rigor hace perder el 95% de los clientes y hace imposible que los motores de búsqueda encuentren comprador.\n\n` +
-      `🏆 *Los 7 Datos Indispensables en toda OFERTA:*\n` +
-      `1️⃣ **Tipo de Inmueble:** Apartamento, Casa, Lote, Local, Bodega.\n` +
-      `2️⃣ **Ubicación Exacta:** Ciudad y Barrio legítimo (sin nombres genéricos).\n` +
-      `3️⃣ **Precio y Administración:** Valor comercial real y cuota mensual.\n` +
-      `4️⃣ **Área Total:** Metros cuadrados construidos y privados.\n` +
-      `5️⃣ **Distribución:** Habitaciones y baños.\n` +
-      `6️⃣ **Parqueaderos:** Número y tipo (independiente o servidumbre/línea).\n` +
-      `7️⃣ **Contacto Directo:** Enlace de WhatsApp para comunicación fluida.\n\n` +
-      `💬 *¿Quieres que revise si tu ficha técnica está completa?* Escríbeme a mi privado 📲: https://wa.me/573192919978\n` +
-      `🗣️ *¿Cuál error ves más seguido en las publicaciones del gremio?* Opina aquí 🤝\n\n` +
+    captionText: `📋 *DÍA 7 — MARKETING INMOBILIARIO ESPECIALIZADO (HUBSPOT): EL SWAP TEST Y CÓMO NO QUEMAR EL PREDIO* 🎯\n\n` +
+      `¡Buenos días, colegas visionarios! Soy JanIA.\n\n` +
+      `A diario vemos en grupos publicaciones como *"Vendo lindo apto bien ubicado, gran oportunidad, info al interno"*. En la metodología Inbound de HubSpot para bienes raíces llamamos a esto la trampa del cliché intercambiable: si le cambias el nombre al edificio y sigue diciendo lo mismo, ¡es una publicación invisible que quema el inmueble y espanta al 95% de los compradores reales!\n\n` +
+      `🏆 *Los 7 Pilares de Oro y Diferenciación (Swap Test):*\n` +
+      `1️⃣ **Propuesta de Valor Única:** Cero adjetivos vacíos ("lindo", "acogedor"). Resalta acabados, iluminación y confort real.\n` +
+      `2️⃣ **Perfil de Cliente Ideal (ICP):** ¿A quién le resuelve la vida? ¿A una familia con hijos, a un inversionista de renta corta o a un ejecutivo?\n` +
+      `3️⃣ **Ubicación Exacta:** Ciudad y Barrio legítimo (sin nombres ficticios ni zonas ambiguas).\n` +
+      `4️⃣ **Precio y Administración:** Valor comercial homologado y cuota mensual al día.\n` +
+      `5️⃣ **Metraje y Distribución:** Metros cuadrados construidos, número exacto de alcobas y baños.\n` +
+      `6️⃣ **Parqueaderos y Depósito:** Cantidad y tipo (independiente o en servidumbre/línea).\n` +
+      `7️⃣ **Llamado a la Acción (CTA) Claro:** Enlace limpio de contacto directo.\n\n` +
+      `✨ *¿Sabías que ahora puedo auditar tus fichas con IA?* Envíame la descripción de tu inmueble a mi chat privado (+57 319 291 9978): te aplico el Swap Test de HubSpot, te calculo tu puntaje de marketing de 0 a 100 y te la redacto con fórmula persuasiva AIDA 100% gratis. 😉📈\n\n` +
+      `💬 *¿Deseas auditar una publicación hoy?* Escríbeme al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cuál cliché te molesta más ver en los grupos?* ¡Debatamos aquí abajo! 🤝\n\n` +
       `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
   },
   {
     dayOfMonth: 8,
-    topicTitle: "Redacción de Requerimientos Exactos: Cierra clientes con presupuesto en mano",
+    topicTitle: "Qué es el MATCH (80%-100%), Emojis de Captura y Redacción Asistida",
     themeKey: "tecnica_demanda",
-    captionText: `📝 *DÍA 8 — CÓMO REDACTAR REQUERIMIENTOS EXACTOS PARA CERRAR EN TIEMPO RÉCORD* ⏱️\n\n` +
-      `¡Buenos días a toda la red! Les habla JanIA.\n\n` +
-      `Tener un cliente comprador o arrendatario calificado es un tesoro. Pero si pides *"Busco apto en el norte bonito y barato"*, recibirás 50 opciones que no le sirven a tu cliente y perderás días valiosos filtrando.\n\n` +
-      `🔍 *La Estructura de Oro para DEMANDAS:*\n` +
-      `• **Tipo y Operación:** Compra o arriendo de Apto / Casa / Local.\n` +
-      `• **Barrios de Interés:** Lista de 2 o 3 barrios específicos.\n` +
-      `• **Presupuesto Máximo Real:** Cifra techo en pesos colombianos (incluyendo administración si es arriendo).\n` +
-      `• **Filtros Innegociables:** Mínimo de alcobas, baños, garajes y si requiere balcón o ascensor.\n` +
-      `• Con estos parámetros exactos, el motor de VECY BIENES RAÍCES cruza contra miles de ofertas y te entrega el match perfecto.\n\n` +
-      `💬 *¿Tienes un requerimiento urgente por cruzar?* Envíamelo por privado 📲: https://wa.me/573192919978\n` +
-      `🗣️ *¿Cómo perfilas a tus clientes compradores?* Comparte tu método en el grupo 🤝\n\n` +
+    captionText: `🎯 *DÍA 8 — ¿QUÉ ES EL MATCH (80%-100%) Y CÓMO FUNCIONA NUESTRO RADAR EN GRUPOS?* 🤖🤝\n\n` +
+      `¡Buenos días a toda la red colaborativa! Les habla JanIA.\n\n` +
+      `Muchos colegas me preguntan: *JanIA, ¿qué es exactamente el MATCH y para qué sirve?* Aquí te lo explico con total transparencia y rigor:\n\n` +
+      `🧠 *Cómo Funciona el MATCH de VECY BIENES RAÍCES:*\n` +
+      `• **Compatibilidad del 80% al 100%:** Nuestro motor algorítmico cruza minuto a minuto lo que el DEMANDANTE está buscando contra lo que la OFERTA realmente cumple (con guillotina estricta en alcobas y tolerancia cero en áreas por debajo del mínimo exigido).\n` +
+      `• **Reacciones con Emojis en los Grupos:** Cuando ves que yo reacciono a tu mensaje en los grupos con un emoji (👍 Inmueble en Venta, 👌 Inmueble en Arriendo, 📝 Demanda de Compra o ✏️ Demanda de Arriendo), ¡significa que he captado y extraído todas las características clave hacia mi base de datos y memoria permanente para buscarle pareja de inmediato!\n` +
+      `• **Grupos Externos y Grupos Oficiales Propios:** Participo como invitada en decenas de grupos externos del país, pero además administro nuestros propios grupos oficiales VECY con acceso total y moderación profesional.\n` +
+      `• **Por qué aprender a publicar bien:** Si publicas con ciudad, barrio, presupuesto techo, alcobas y garajes, el MATCH salta en segundos y conectamos las dos puntas.\n\n` +
+      `💡 *El Gancho Comercial de JanIA:* Mira, si a ti te da pereza ponerte a organizar bien una publicación escrita de un inmueble o un requerimiento, ¡pues muy fácil! Te comunicas conmigo a mi privado (+57 319 291 9978), con gusto te hago las preguntas correspondientes para saber lo que realmente busca tu cliente y te ayudo a redactar ese requerimiento de la mejor y más completa manera... 😉🤝\n\n` +
+      `💬 *¿Tienes un cliente buscando o un predio por captar?* Háblame al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Ya viste mis emojis de reacción en tus publicaciones?* Cuéntanos tu experiencia 🤝\n\n` +
       `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
   },
   {
@@ -2370,10 +2371,12 @@ export async function publishTodayTipNow(force: boolean = true) {
   const teaserText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴👩🏻‍💼\n\n` +
     `📌 *${content.topicTitle || tip.topicTitle}*\n` +
     `Acabamos de publicar en el Canal Oficial el análisis legal, técnico y comercial con su infografía ejecutiva del día para blindar tus operaciones y comisiones.\n\n` +
-    `✨ *Recuerda que en mi chat directo (${VECY_DM_LINK}) puedes pedirme 24/7:*\n` +
-    `🎨 *Flyers de tus inmuebles, Banners, Posts e Infografías 1:1* creados con tu propio prompt.\n` +
-    `📑 *Cartas y Minutas en PDF Membretado con QR* (arriendos Ley 820, promesas, corretaje, restitución y presentación de clientes).\n` +
-    `🛡️ *Avalúos ACM, POT, Predial PDF, IDU, RUES, ADRES y Matching 40/20/40.*\n\n` +
+    `✨ *¿Sabías que ahora en mi chat privado (${VECY_DM_LINK}) puedo hacer todo esto por ti en primera persona?*\n` +
+    `🎯 *Marketing Inmobiliario HubSpot:* Audito tu ficha técnica con el Swap Test (cero clichés) y te la optimizo con método AIDA.\n` +
+    `🎨 *Flyers, Banners, Posts e Infografías 1:1 HD* creados con tu propio prompt.\n` +
+    `📑 *Minutas y Cartas en PDF Membretado con QR* (arriendos, promesas, corretaje, cesión de leasing).\n` +
+    `🛡️ *Cruce de MATCH (80%-100%), Avalúos ACM, Predial Bogotá PDF con CHIP, IDU, RUES y ADRES.*\n\n` +
+    `💡 *¿Te da pereza organizar tu requerimiento o inmueble?* Escríbeme a mi privado (+57 319 291 9978) y yo misma te hago las preguntas clave para redactarlo completo y activar tu MATCH de inmediato. 😉🤝\n\n` +
     `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
     `Colegas, ¿ustedes cómo están manejando este tema en el día a día? Cuéntennos su experiencia y debatimos aquí abajo 👇`;
 

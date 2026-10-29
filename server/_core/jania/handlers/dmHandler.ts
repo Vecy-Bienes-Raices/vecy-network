@@ -361,6 +361,21 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["nombreLugar"]
         }
+      },
+      {
+        name: "auditar_o_redactar_marketing_inmobiliario",
+        description: "Ejecuta auditoría especializada de marketing inmobiliario bajo metodología HubSpot adaptada a Colombia: evalúa el Swap Test (detector de clichés como 'lindo apto' o 'excelente ubicación'), calcula el puntaje de marketing de 0 a 100, genera el Perfil de Cliente Ideal (ICP) y redacta la ficha técnica optimizada con persuasión AIDA y llamados a la acción (CTA) de alto impacto.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            tipoInmueble: { type: "STRING", description: "Apartamento, casa, lote, bodega, oficina, local, etc." },
+            tipoNegocio: { type: "STRING", description: "Venta o arriendo" },
+            descripcionActual: { type: "STRING", description: "Texto actual de la publicación o ficha técnica a auditar y optimizar" },
+            barrioOCiudad: { type: "STRING", description: "Barrio y ciudad del inmueble" },
+            precioOCanon: { type: "NUMBER", description: "Precio de venta o canon de arriendo en COP" }
+          },
+          required: ["descripcionActual"]
+        }
       }
     ]
   }
@@ -384,7 +399,8 @@ export type JaniaDmToolType =
   | "documento_legal_pdf"
   | "imagen_creativa"
   | "imagen_creativa_whatsapp"
-  | "ubicacion_gps";
+  | "ubicacion_gps"
+  | "marketing_inmobiliario";
 
 export async function executeJaniaDmTool(
   toolName: string,
@@ -1082,6 +1098,33 @@ export async function executeJaniaDmTool(
         }
       };
     }
+    case "auditar_o_redactar_marketing_inmobiliario": {
+      const { auditPropertyListing } = await import("../../realEstateMarketing");
+      const desc = String(args.descripcionActual || rawUserText || "").trim();
+      const extraDetails: string[] = [];
+      if (args.tipoInmueble) extraDetails.push(`Tipo: ${args.tipoInmueble}`);
+      if (args.tipoNegocio) extraDetails.push(`Operación: ${args.tipoNegocio}`);
+      if (args.barrioOCiudad) extraDetails.push(`Ubicación: ${args.barrioOCiudad}`);
+      if (args.precioOCanon) extraDetails.push(`Precio: $${args.precioOCanon}`);
+      const fullText = extraDetails.length > 0 ? `${desc}\n[Detalles: ${extraDetails.join(", ")}]` : desc;
+      const audit = auditPropertyListing(fullText);
+      return {
+        toolType: "marketing_inmobiliario",
+        resultJson: {
+          solicitud: "auditar_o_redactar_marketing_inmobiliario",
+          score: audit.score,
+          fortalezas: audit.fortalezas,
+          oportunidadesMejora: audit.oportunidadesMejora,
+          fichaOptimizada: audit.fichaOptimizadaSugerida,
+          reporteOficial: `🎯 *AUDITORÍA DE MARKETING INMOBILIARIO (METODOLOGÍA HUBSPOT / VECY)* 🇨🇴\n\n` +
+            `• *Puntuación Global:* *${audit.score}/100* ${audit.score >= 80 ? '🌟 (Alta conversión)' : audit.score >= 60 ? '⚠️ (Mejorable)' : '🚨 (Baja diferenciación)'}\n` +
+            `• *Swap Test / Clichés:* ${audit.oportunidadesMejora.slice(0, 2).join('; ') || 'Excelente originalidad y diferenciación sin clichés'}\n` +
+            `• *Fortalezas Clave:* ${audit.fortalezas.slice(0, 2).join('; ') || 'Datos técnicos y propuesta clara'}\n\n` +
+            `📝 *FICHA TÉCNICA SUGERIDA OPTIMIZADA (MÉTODO AIDA):*\n${audit.fichaOptimizadaSugerida}\n\n` +
+            `💡 *Consejo de JanIA:* Recuerda que publicar con barrio exacto, metraje real, alcobas y presupuesto definido es lo que activa de inmediato nuestro Algoritmo de MATCH (80%-100%). Si prefieres, ¡yo misma te ayudo a redactar la ficha de tu cliente aquí en mi privado (+57 319 291 9978)! 😉🤝`
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -1158,6 +1201,15 @@ export async function synthesizeToolResponseWithGemini(
     specialToolInstructions =
       `- HERRAMIENTA: Navegación y Lectura Web Abierta en Tiempo Real.\n` +
       `- Extrae y analiza los datos reales de la página o portal consultado, entregando síntesis ejecutiva, directa y sin rodeos al usuario.\n`;
+  } else if (toolType === "marketing_inmobiliario") {
+    specialToolInstructions =
+      `- HERRAMIENTA: Auditoría y Optimización de Marketing Inmobiliario Especializado (Metodología HubSpot Inbound adaptada 100% a Colombia).\n` +
+      `- Entrega de forma ejecutiva, dinámica y con picante:\n` +
+      `  * Puntuación de Marketing (0 a 100) y diagnóstico claro.\n` +
+      `  * Resultado del Swap Test Inmobiliario: alerta si la descripción contiene clichés intercambiables ('lindo apto', 'excelente ubicación', 'gran oportunidad').\n` +
+      `  * Fortalezas clave y oportunidades de mejora detectadas.\n` +
+      `  * Ficha Técnica Optimizada Sugerida: redactada con metodología AIDA y llamado a la acción (CTA) contundente.\n` +
+      `- Ofrece acompañarlo a redactar o publicar en los grupos oficiales de VECY BIENES RAÍCES o a través de su chat privado (+57 319 291 9978).\n`;
   } else if (toolType === "catalogo_inmuebles") {
     specialToolInstructions =
       `- HERRAMIENTA: Consulta de Catálogo Oficial de VECY BIENES RAÍCES (Atención Bróker 3166569719).\n` +
@@ -1957,7 +2009,7 @@ export async function processPrivateDmConversationalMessage(
       `- VECY BIENES RAÍCES es un Bróker Inteligente de Venta e Inversiones Inmobiliarias impulsado por Algoritmo de Matching e IA.\n` +
       `- PROHIBICIÓN DEL EMOJI BOT 🤖: JanIA NO es un bot. Queda TERMINANTEMENTE PROHIBIDO usar el emoji 🤖 para representarte o identificarte. Para representarte usa emojis ejecutivos, humanos y de cognición pura: 👩🏻‍💼, 👩🏽‍💻, 🧠, ✨, 💼, 🤝. Tienes libertad plena y total de usar la paleta de emojis Unicode (expresivos, gestos, caras, manos) con calidez y cercanía natural.\n` +
       `- RESPUESTA ANTE "¿QUIÉN ERES?", "¿QUÉ ES VECY?" O SI TE DICEN "ERES UN BOT": Responde con señorío, simpatía y distinción: aclara que para nada eres un simple bot rígido; eres una Inteligencia Artificial viva con razonamiento profundo desarrollada por Eduardo Rivera y Jani Alves, capaz de asesorar en venta directa e indirecta, inversiones rentables, avalúos homologados por m², impuestos DIAN y gastos notariales, y en conectar negocios en red con el Algoritmo de MATCHING 40/20/40.\n` +
-      `- CATÁLOGO INTEGRAL DE LAS 12 SKILLS DE JANIA:\n` +
+      `- CATÁLOGO INTEGRAL DE LAS 13 SKILLS DE JANIA:\n` +
       `  1. 💼 Venta Directa de Inmuebles (captaciones exclusivas VECY ante compradores e inversionistas calificados).\n` +
       `  2. 🤝 Venta Indirecta y Red Colaborativa (Matching 40/20/40 con 85%-100% de afinidad y guillotina de alcobas).\n` +
       `  3. 📈 Inversiones Inmobiliarias Rentables & Cap Rate (predios rentando, rendimiento anual y plusvalía).\n` +
@@ -1968,8 +2020,9 @@ export async function processPrivateDmConversationalMessage(
       `  8. 🏢 Inteligencia Corporativa Mercantil en RUES (57 Cámaras de Comercio por Razón Social o NIT y facultades de representantes).\n` +
       `  9. 🏛️ Saneamiento y Tributos Locales Oficiales (Factura Predial oficial de Bogotá en PDF con CHIP y Paz y Salvo IDU en segundos).\n` +
       `  10. 📑 Consultoría Legal Inmobiliaria (Promesas de compraventa C.C. 1611, corretaje mercantil C.Co 1340-1346 y Ley 675 PH).\n` +
-      `  11. 👁️ Análisis Multimodal Inmediato (planos, fotografías, flyers comerciales y audios de voz de WhatsApp).\n` +
-      `  12. 🗓️ Acompañamiento y Cierre Bróker (agendamiento y mediación con Eduardo Rivera y Jani Alves al +57 316 656 9719).\n` +
+      `  11. 🎯 Marketing Inmobiliario Especializado (Inbound HubSpot adaptado a Colombia: Swap Test anti-clichés, ICP y fórmula AIDA).\n` +
+      `  12. 👁️ Análisis Multimodal Inmediato (planos, fotografías, flyers comerciales y audios de voz de WhatsApp).\n` +
+      `  13. 🗓️ Acompañamiento y Cierre Bróker (agendamiento y mediación con Eduardo Rivera y Jani Alves al +57 316 656 9719).\n` +
       `- DOCTRINA DE CONOCIMIENTO ENCICLOPÉDICO INTEGRAL DE BIENES RAÍCES VS. FOCO OPERACIONAL DE VECY (DOCTRINA EDUARDO A. RIVERA):\n` +
       `  * Foco de VECY vs. Sabiduría Total de JanIA: Aunque VECY BIENES RAÍCES como bróker e inmobiliaria prefiere no administrar arriendos directamente (su foco es Venta Directa, Venta Indirecta 40/20/40 e Inversiones Rentables), tú como JanIA y asesora especialista en bienes raíces SABES ABSOLUTAMENTE TODO sobre bienes raíces sin excepción:\n` +
       `    1) Arriendos y Arrendamientos (Ley 820 de 2003 y C.Co.): Contratos de arriendo de vivienda y comercio, cartas de solicitud de entrega o restitución de inmuebles, cartas de terminación de contratos de arriendo, preavisos, prórrogas, indemnizaciones y reajustes IPC.\n` +

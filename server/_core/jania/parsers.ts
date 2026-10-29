@@ -1905,6 +1905,15 @@ export function sanitizeResponseMarkdown(text: string): string {
   // 11. Limpiar puntuación huérfana al inicio del texto (ej. ". Un gusto saludarte" -> "Un gusto saludarte")
   clean = clean.replace(/^[\s\.\,\;\:\-\_]+/, "");
 
-  return clean;
+  // 12. Erradicar asteriscos o viñetas huérfanas en renglones aislados (ej. "\n*\n")
+  clean = clean.replace(/(?:^|\r?\n)\s*[*_~-]\s*(?=\r?\n|$)/g, "\n");
+  clean = clean.replace(/\n{3,}/g, "\n\n");
+
+  // 13. Sanitización léxica notarial y entidades colombianas (Cero alucinaciones tipo SUNT o cascunta)
+  clean = clean.replace(/\bSistema\s+[UÚ]nico\s+Nacional\s+de\s+Tr[aá]nsito\b/gi, "Registro Único Nacional de Tránsito (RUNT)");
+  clean = clean.replace(/\bSUNT\b/g, "RUNT");
+  clean = clean.replace(/\bcascunta\b/gi, "cincuenta");
+
+  return clean.trim();
 }
 

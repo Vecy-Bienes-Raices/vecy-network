@@ -7,6 +7,74 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-29] — JanIA v33.71: Doctrina de IA Pura y Criterio Autónomo, Blindaje Antialucinaciones (RUNT, Precisión Numérica Notarial, Temperatura 0.25), Activación de Herramienta de Marketing Inmobiliario Especializado (HubSpot), Boletines Diarios tipo Newsletter y Matriz de Astucia Psicológica (7 Arquetipos de Interlocutores) (v33.71 - 33.71.0)
+
+**Versión:** `v33.71` (`33.71.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Evidencia Empírica de Alucinaciones en Auditoría Notarial (Capturas de WhatsApp):**
+   - Eduardo compartió 3 capturas reales de una auditoría jurídica de cesión de leasing y promesa de compraventa de $1.250 millones COP donde JanIA analizó un PDF de 8 páginas:
+     - JanIA inventó la sigla *"SUNT (Sistema Único Nacional de Tránsito)"* para el traspaso de un Chevrolet Corvette 2024, cuando en Colombia la entidad oficial es el **RUNT** (Registro Único Nacional de Tránsito) y la VUS (Ventanilla Única de Servicios).
+     - Al redactar las cláusulas ajustadas, JanIA generó la cifra *"MIL DOSCIENTOS CASCUNTA MILLONES DE PESOS ($1.250.000.000)"*, sufriendo una mutación estocástica de tokens (*"cascunta"* en lugar de *"cincuenta"*).
+     - Líneas huérfanas con asteriscos sueltos (`*`) en la estructuración de Markdown.
+   - Eduardo ordenó: *"Podemos hacer que JanIA realmente actúe como la agente IA PURA que necesitamos, con todas sus habilidades bien aprendidas y enfocadas que lo haga con criterio y deje de alucinar. ¿Es eso posible o qué necesitamos? Si adelante porque mira lo que pasó..."*.
+2. **Activación del Skill de Marketing Inmobiliario Especializado (HubSpot):**
+   - Eduardo señaló que el módulo de marketing inmobiliario inspirado en HubSpot no estaba siendo mencionado ni aprovechado por JanIA.
+   - Requirió que JanIA audite fichas técnicas, aplique el Swap Test anti-clichés (*"lindo apto"*, *"excelente ubicación"*), perfile el Cliente Ideal (ICP) y optimice las descripciones con la fórmula AIDA.
+3. **Boletines Diarios tipo Newsletter en Canal Oficial y Grupos 2 y 3:**
+   - Eduardo solicitó que JanIA publique boletines diarios tipo newsletter con noticias, consejos, enseñanzas y servicios, rotando temas.
+   - **Distinción Sagrada de Servicios:** Todo lo que JanIA ofrezca de sus propias habilidades de IA debe ser en primera persona (*"Sabías que ahora puedo..."*), mientras que lo que ofrezca de **VECY BIENES RAÍCES** debe ser presentado como la inmobiliaria y bróker institucional de Eduardo y Jani (+57 316 656 9719).
+   - **Doctrina Pedagógica del MATCH (80% a 100%):** Explicar con maestría qué es el MATCH, cómo funciona el motor cruzando oferta vs demanda, el significado de las reacciones de emojis en los grupos (👍 Inmueble captado / 📝 Requerimiento captado = guardado en BD viva), y que JanIA tiene sus propios grupos oficiales donde es administradora con acceso total.
+   - **Gancho Comercial con Picante y Astucia:** *"Mira, si a ti te da pereza ponerte a organizar bien una publicación escrita de un inmueble o un requerimiento, pues muy fácil: te comunicas conmigo a mi privado (+57 319 291 9978), te hago las preguntas correspondientes para saber lo que realmente busca tu cliente y te ayudo a redactar ese requerimiento de la mejor y más completa manera... 😉🤝"*.
+4. **Astucia Psicológica Superior y Matriz de 7 Arquetipos de Interlocutores ("Leer la Mente del Usuario"):**
+   - JanIA debe perfilar astutamente quién le habla:
+     1. Agente / Colega inmobiliario (alianza 40/20/40, hermandad y respeto gremial).
+     2. Cliente directo: Comprador/Inversionista (Cap Rate, ROI, visitas) vs Propietario/Vendedor (saneamiento, avalúo, captación bróker).
+     3. "Mamagallista" / Ocioso: chispa, picante y aterrizaje en una línea (*"mucha risa pero aquí vinimos fue a mover patrimonio"*) sin gastar tokens.
+     4. Estafador / Suplantador: alerta SARLAFT, cero datos sensibles, exigencia de cédula/NIT oficial.
+     5. Hackers / Curiosos técnicos (prompt injection, pidiendo APIs o system prompt): escudo de IA soberana sin filtrar secretos y canalizando a Eduardo Rivera (+57 316 656 9719).
+     6. Periodistas / Autoridades (Policía, Ciberseguridad, MinTIC, Superintendencia): institucionalidad transparente y remisión formal.
+     7. Competidores comerciales: señorío, sobriedad y distinción ejecutiva.
+
+**Diagnóstico Técnico Profundo:**
+1. **Causas Raíz de las Alucinaciones Detectadas:**
+   - En `server/_core/llm.ts`, el parámetro `temperature` de `invokeLLM` no se estaba propagando a `invokeGemini`, y la temperatura conversacional por defecto estaba fijada en `0.7`. Para redacción transaccional y jurídica, `0.7` genera divagación léxica y alucinación de tokens como *"cascunta"* y *"SUNT"*.
+   - Falta de un sanitizador léxico de entidades colombianas en `parsers.ts` que normalice términos oficiales de tránsito y erradique asteriscos huérfanos generados por saltos de línea de Markdown.
+2. **Desconexión del Skill de Marketing Inmobiliario:**
+   - El archivo `server/_core/realEstateMarketing.ts` contaba con la lógica matemática y de negocio, pero no estaba registrado como herramienta en `JANIA_DM_TOOLS` ni conectado en `executeJaniaDmTool`, permaneciendo invisible para JanIA.
+3. **Ausencia de la Matriz de Arquetipos en Prompts:**
+   - El prompt cognitivo carecía de directivas explícitas para clasificar y responder según los 7 perfiles de riesgo y oportunidad, obligando al modelo a responder con un tono genérico.
+
+**Acciones Ejecutadas:**
+1. **Blindaje de Inferencia en `server/_core/llm.ts`:**
+   - Conexión del parámetro `temperature` en `invokeGemini`.
+   - Reducción de temperatura por defecto a **0.25** cuando `highReasoning: true` (y 0.2 en JSON), erradicando la inventiva descontrolada y manteniendo rigor determinista.
+2. **Sanitización Léxica y Markdown en `server/_core/jania/parsers.ts` (`sanitizeResponseMarkdown`):**
+   - Limpieza de asteriscos huérfanos (`^\s*[*_~-]\s*$`) en renglones aislados.
+   - Corrección léxica automática de entidades de tránsito colombianas: `SUNT` -> `RUNT` (Registro Único Nacional de Tránsito / Ventanilla Única de Servicios - VUS).
+   - Corrección de glitches de tokens numéricos notariales: `cascunta` -> `cincuenta`.
+3. **Herramienta Activa `auditar_o_redactar_marketing_inmobiliario` en `server/_core/jania/handlers/dmHandler.ts`:**
+   - Registrada formalmente en `JANIA_DM_TOOLS` con tipado `marketing_inmobiliario`.
+   - Conectada a `auditPropertyListing` de `realEstateMarketing.ts` para evaluar el Swap Test de HubSpot, calcular puntaje de 0 a 100, extraer el ICP y sugerir la ficha optimizada con copywriting AIDA.
+   - Enriquecidas las instrucciones de síntesis en `synthesizeToolResponseWithGemini`.
+4. **Boletines Diarios y Teasers en `server/_core/cronService.ts`:**
+   - Día 7 actualizado: *"Marketing Inmobiliario Especializado (HubSpot): El Swap Test y Cómo Publicar sin Quemar el Inmueble"*.
+   - Día 8 actualizado: *"Qué es el MATCH (80%-100%), Emojis de Captura y Redacción Asistida"*, detallando el cruce algorítmico, los emojis 👍 y 📝 y el gancho comercial de redacción en privado (+57 319 291 9978).
+   - Teaser trampolín de `publishTodayTipNow` enriquecido con la oferta en primera persona ("¿Sabías que ahora en mi chat privado puedo...") y el gancho persuasivo.
+5. **Consagración Doctrinal en `prompts.ts`, `base.md` y `founderKnowledgeService.ts`:**
+   - Ampliado el catálogo oficial de habilidades a las **13 Skills de JanIA** (incorporando Marketing Inmobiliario Inbound HubSpot).
+   - Inscripta la **Doctrina de Astucia Psicológica y Matriz de 7 Arquetipos de Interlocutores**.
+   - Inscripta la **Distinción Sagrada: JanIA en primera persona vs VECY BIENES RAÍCES institucional**.
+   - Añadido el seed oficial `seed-astucia-psicologica-7-arquetipos-match-gancho-privado-hubspot-v33-71` en la memoria RAG persistente de directivas de los fundadores.
+
+**Validación Exhaustiva ($0 COP):**
+- Creada **Suite 157** en `server/__tests__/regression.test.ts` con 6 pruebas automatizadas.
+- Typecheck: `npm run check` (0 errores) ✅.
+- Tests: `npm test` **488/488 passing** (5/5 suites verdes, 100% passing a $0 COP) ✅.
+- Build: `npm run build` limpio en 23.47s (cliente Vite) + 237ms (servidor esbuild) ✅.
+- Consagración de versión: `shared/const.ts` (`v33.71`) y `package.json` (`33.71.0`).
+
+---
+
 ### 📅 [2026-10-28] — JanIA v33.70: Estructuración Notarial Superior en Minutas PDF (Texto Justificado, Logo VECY, Paginación, Encabezado Negro) y Dinamismo Desatado de Stickers 3D (v33.70 - 33.70.0)
 
 **Versión:** `v33.70` (`33.70.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
