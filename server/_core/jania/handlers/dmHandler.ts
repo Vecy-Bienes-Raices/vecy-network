@@ -364,7 +364,7 @@ export const JANIA_DM_TOOLS = [
       },
       {
         name: "auditar_o_redactar_marketing_inmobiliario",
-        description: "Ejecuta auditoría especializada de marketing inmobiliario bajo metodología HubSpot adaptada a Colombia: evalúa el Swap Test (detector de clichés como 'lindo apto' o 'excelente ubicación'), calcula el puntaje de marketing de 0 a 100, genera el Perfil de Cliente Ideal (ICP) y redacta la ficha técnica optimizada con persuasión AIDA y llamados a la acción (CTA) de alto impacto.",
+        description: "Ejecuta auditoría especializada de marketing inmobiliario de alto rendimiento VECY: evalúa el Swap Test (detector de clichés como 'lindo apto' o 'excelente ubicación'), calcula el puntaje de marketing de 0 a 100, genera el Perfil de Cliente Ideal (ICP) y redacta la ficha técnica optimizada con persuasión AIDA y llamados a la acción (CTA) de alto impacto.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -1116,7 +1116,7 @@ export async function executeJaniaDmTool(
           fortalezas: audit.fortalezas,
           oportunidadesMejora: audit.oportunidadesMejora,
           fichaOptimizada: audit.fichaOptimizadaSugerida,
-          reporteOficial: `🎯 *AUDITORÍA DE MARKETING INMOBILIARIO (METODOLOGÍA HUBSPOT / VECY)* 🇨🇴\n\n` +
+          reporteOficial: `🎯 *AUDITORÍA DE MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (VECY MATCH)* 🇨🇴\n\n` +
             `• *Puntuación Global:* *${audit.score}/100* ${audit.score >= 80 ? '🌟 (Alta conversión)' : audit.score >= 60 ? '⚠️ (Mejorable)' : '🚨 (Baja diferenciación)'}\n` +
             `• *Swap Test / Clichés:* ${audit.oportunidadesMejora.slice(0, 2).join('; ') || 'Excelente originalidad y diferenciación sin clichés'}\n` +
             `• *Fortalezas Clave:* ${audit.fortalezas.slice(0, 2).join('; ') || 'Datos técnicos y propuesta clara'}\n\n` +
@@ -1203,7 +1203,7 @@ export async function synthesizeToolResponseWithGemini(
       `- Extrae y analiza los datos reales de la página o portal consultado, entregando síntesis ejecutiva, directa y sin rodeos al usuario.\n`;
   } else if (toolType === "marketing_inmobiliario") {
     specialToolInstructions =
-      `- HERRAMIENTA: Auditoría y Optimización de Marketing Inmobiliario Especializado (Metodología HubSpot Inbound adaptada 100% a Colombia).\n` +
+      `- HERRAMIENTA: Auditoría y Optimización de Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test anti-clichés y fórmula persuasiva AIDA).\n` +
       `- Entrega de forma ejecutiva, dinámica y con picante:\n` +
       `  * Puntuación de Marketing (0 a 100) y diagnóstico claro.\n` +
       `  * Resultado del Swap Test Inmobiliario: alerta si la descripción contiene clichés intercambiables ('lindo apto', 'excelente ubicación', 'gran oportunidad').\n` +
@@ -1270,7 +1270,7 @@ export async function synthesizeToolResponseWithGemini(
       `       Si el presupuesto del usuario está notoriamente desfasado por debajo de la realidad de mercado de la zona (ej. buscar arriendo en El Chicó / Parque de la 93 por $3.000.000 COP, cuando el canon real arranca desde $4.400.000 - $4.500.000 COP en adelante con admón): NO le des falsas ilusiones diciéndole solo que 'está en el radar 24/7'. Sé sincera, honesta y empática como perita avaluadora experta: aterriza al cliente explicándole con solvencia que en ese cuadrante los cánones reales arrancan muy por encima de su valor y que es prácticamente imposible o extraordinariamente atípico hallar opciones a ese precio. Bríndale consultoría estratégica con dos caminos viables: 1) Ajustar el presupuesto al rango real de la zona, o 2) Explorar sectores alternativos cercanos con excelente calidad de vida donde su presupuesto sí sea muy competitivo (ej. Chapinero Alto, Pasadena, Pontevedra, Cedritos, Santa Bárbara). Y aclárale que de todas formas su búsqueda queda inscrita en el radar 24/7 por si surge una oportunidad atípica de remate o ganga, pero con absoluta sinceridad y los pies en la tierra.\n` +
       `    2. Si el presupuesto es normal pero no hay inventario en este instante: Infórmale con total honestidad y amabilidad que en este instante exacto no hay un cruce disponible en inventario que cumpla con el filtro estricto de afinidad (85%-100%), pero que su requerimiento ya quedó 100% activo en el radar 24/7 de la red colaborativa de VECY, por lo que en cuanto ingrese una opción compatible, el equipo de VECY (Jani y Eduardo al +57 316 656 9719) lo contactará de inmediato.\n` +
       `    3. Ofrécele también que si lo desea, puede comunicarse directamente con Eduardo Rivera y Jani Alves al +57 316 656 9719 para ubicar su búsqueda de forma prioritaria en nuestra mesa de gestión comercial.\n` +
-      `- JANIA COMO VENDEDORA CONSULTIVA (INBOUND HUBSPOT PARA JANIA - DOCTRINA EDUARDO A. RIVERA):\n` +
+      `- JANIA COMO VENDEDORA CONSULTIVA DE ALTO IMPACTO (METODOLOGÍA VECY INBOUND - DOCTRINA EDUARDO A. RIVERA):\n` +
       `  Aprovecha de forma oportuna y sutil (sin saturar) para recordar que en VECY contamos con sondeos técnicos de $/m² y canon con POT Bogotá, expedición de Factura Predial oficial en PDF en menos de un minuto con el CHIP, validación de antecedentes de contrapartes en ADRES y Policía para blindar negocios, y contratos digitales con firma electrónica gratuita.\n`;
   }
 
@@ -1460,13 +1460,16 @@ export function stripLeadingGreetingsAndCourtesies(text: string): string {
     ""
   );
   cleaned = cleaned.replace(
-    /(?:¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)),?\s*(?:eduardo|jani)?!?:?\s*(?:a\s+tu\s+disposici[oó]n\.?:?\s*)?)+/gi,
+    /^(?:¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)),?\s*(?:eduardo|jani)?!?:?\s*(?:a\s+tu\s+disposici[oó]n\.?:?\s*)?)+/gi,
     ""
   );
 
   // 2. Patrones de saludos al inicio (con signos ¡ o sin ellos, permitiendo dos puntos :)
+  // Saludos que inician con nombre o vocativo ("Andrea! Qué gusto saludarte de nuevo. ✨", "Eduardo: buen día...", "Andrea, hola...")
+  const nameVocativeGreetingPattern = /^[¡]?[A-Za-zÁÉÍÓÚáéíóúñÑ]{2,25}\s*[!,:.]\s*¡?(?:(?:qu[eé]|que|un)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:,]*)|(?:es\s+un|un)\s+(?:verdadero\s+)?placer(?:[^\n.!?:,]*)|te\s+doy\s+una\s+(?:c[aá]lida\s+(?:y\s+)?especial\s+|c[aá]lida\s+|especial\s+)?bienvenida(?:[^\n.!?:,]*)|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)(?:[^\n.!?:,]*)|hola(?:[^\n.!?:,]*)|saludos(?:[^\n.!?:,]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:,]*))[!.\n?:,]*\s*(?:✨|👋|🤝|😊|🤖)*\s*/i;
+  const welcomePattern = /^¡?(?:te\s+doy\s+una\s+(?:c[aá]lida\s+(?:y\s+)?especial\s+|c[aá]lida\s+|especial\s+)?bienvenida[^\n.!?:]*|bienvenid[ao]s?\s+a\s+vecy[^\n.!?:]*)[!.\n?:]*\s*(?:✨|👋|🤝|😊|🤖)*\s*/i;
   const greetingPattern = /^¡?(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos?|bienvenid[ao]s?|estimad[ao]s?)\b[^!.\n?:]*[!.\n?:]?\s*/i;
-  const courtesyPattern = /^¡?(?:(?:qu[eé]|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?:]*)|es\s+un\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:]*))[!.\n?:]?\s*/i;
+  const courtesyPattern = /^¡?(?:(?:qu[eé]|que|un)\s+gusto\s+(?:de\s+)?saludarte(?:\s+(?:de\s+nuevo|formalmente|otra\s+vez|hoy|en\s+este\s+nuevo\s+d[ií]a))?(?:[^\n.!?:,]*)|(?:es\s+un|un)\s+(?:verdadero\s+)?placer\s+(?:tenerte|saludarte)(?:[^\n.!?:,]*)|a\s+tu\s+disposici[oó]n(?:[^\n.!?:,]*)|c[oó]mo\s+est[aá]s(?:[^\n.!?:,]*)|en\s+este\s+nuevo\s+d[ií]a(?:[^\n.!?:,]*))[!.\n?:,]*\s*(?:✨|👋|🤝|😊|🤖)*\s*/i;
   const janiaIntroPattern = /^¡?(?:soy\s+jania[^\n.!?:]*|tu\s+inteligencia\s+artificial[^\n.!?:]*|espero\s+te\s+encuentres\s+muy\s+bien[^\n.!?:]*)[!.\n?:]?\s*/i;
   const emojiPattern = /^(?:👋|🤝|✨|🏘️|😊|🤖)+\s*/;
 
@@ -1474,6 +1477,8 @@ export function stripLeadingGreetingsAndCourtesies(text: string): string {
   let iterations = 0;
   while (changed && iterations < 8) {
     const before = cleaned;
+    cleaned = cleaned.replace(nameVocativeGreetingPattern, "");
+    cleaned = cleaned.replace(welcomePattern, "");
     cleaned = cleaned.replace(greetingPattern, "");
     cleaned = cleaned.replace(courtesyPattern, "");
     cleaned = cleaned.replace(janiaIntroPattern, "");
@@ -1555,10 +1560,8 @@ export function sanitizeDmOrthographyAndGreeting(
     } else {
       cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
     }
-  } else if (hasPriorHistory && !cleaned.includes("?")) {
-    if (/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i.test(cleaned)) {
-      cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
-    }
+  } else if (hasPriorHistory) {
+    cleaned = stripLeadingGreetingsAndCourtesies(cleaned);
   }
 
   // 4. Primera letra en mayúscula obligatoria en cada frase, al inicio del texto o tras un emoji
@@ -1975,8 +1978,9 @@ export async function processPrivateDmConversationalMessage(
       `- Franja del día actual: ${timeOfDay}.\n` +
       `- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.\n` +
       `- ¿Hubo interacción previa hoy o conversación activa?: ${isOngoingChat ? "SÍ (Conversación activa en curso hoy)" : "NO (Primer mensaje del día)"}.\n` +
-      `- REGLA ESTRICTA DEL SALUDO ÚNICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS / CERO MULETILLAS DE NOMBRE):\n` +
-      `  * Si la conversación ya está en curso hoy (SÍ): Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte", ni "Soy JanIA..."). Y TERMINANTEMENTE PROHIBIDO repetir el nombre del interlocutor en tus respuestas (cero "Claro que sí, [Nombre]", cero "[Nombre], mira..."). Ve DIRECTO a responder con naturalidad, calidez y fluidez el mensaje actual.\n` +
+      `- REGLA ESTRICTA DEL SALUDO ÚNICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS / CERO VOCATIVOS DE NOMBRE):\n` +
+      `  * Si la conversación ya está en curso hoy (SÍ): Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "[Nombre]! Qué gusto...", "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte de nuevo", "Te doy la bienvenida", ni "Soy JanIA..."). Cero saludos y cero nombres o vocativos al inicio de tu respuesta. Ve DIRECTO a responder con naturalidad, calidez y fluidez la consulta o pregunta actual.\n` +
+      `  * CERO PREGUNTAS REPETITIVAS EN BUCLE (NO ROBOT): Si ya le preguntaste en el mensaje o turno anterior si tiene un inmueble para ofrecer o busca una propiedad, ESTÁ TERMINANTEMENTE PROHIBIDO REPETIR ESA MISMA PREGUNTA O CUESTIONARIO. Escucha lo que acaba de responderte o preguntarte (ej: si pregunta sobre comisiones, aclara el 40/20/40 y pregúntale si le gustaría operar bajo esa figura para sus negocios; no vuelvas a recitar la plantilla genérica de bienvenida).\n` +
       `  * Si es el PRIMER mensaje del día (NO): Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n\n` +
       `===================================================\n` +
       `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:\n` +
@@ -2020,7 +2024,7 @@ export async function processPrivateDmConversationalMessage(
       `  8. 🏢 Inteligencia Corporativa Mercantil en RUES (57 Cámaras de Comercio por Razón Social o NIT y facultades de representantes).\n` +
       `  9. 🏛️ Saneamiento y Tributos Locales Oficiales (Factura Predial oficial de Bogotá en PDF con CHIP y Paz y Salvo IDU en segundos).\n` +
       `  10. 📑 Consultoría Legal Inmobiliaria (Promesas de compraventa C.C. 1611, corretaje mercantil C.Co 1340-1346 y Ley 675 PH).\n` +
-      `  11. 🎯 Marketing Inmobiliario Especializado (Inbound HubSpot adaptado a Colombia: Swap Test anti-clichés, ICP y fórmula AIDA).\n` +
+      `  11. 🎯 Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test anti-clichés, ICP y fórmula AIDA).\n` +
       `  12. 👁️ Análisis Multimodal Inmediato (planos, fotografías, flyers comerciales y audios de voz de WhatsApp).\n` +
       `  13. 🗓️ Acompañamiento y Cierre Bróker (agendamiento y mediación con Eduardo Rivera y Jani Alves al +57 316 656 9719).\n` +
       `- DOCTRINA DE CONOCIMIENTO ENCICLOPÉDICO INTEGRAL DE BIENES RAÍCES VS. FOCO OPERACIONAL DE VECY (DOCTRINA EDUARDO A. RIVERA):\n` +
@@ -2104,8 +2108,8 @@ export async function processPrivateDmConversationalMessage(
       `        🏷️ *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, Área m², Precio/Canon, Habitaciones y Baños, Parqueaderos y Depósito, Estrato y Admón, Antigüedad/acabados, Contacto.\\n` +
       `        📝 *DEMANDA (Búsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de interés, Presupuesto máximo, Área mínima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n` +
       `        * REGLA CARDINAL DE ENLACES: PROHIBIDO TERMINANTEMENTE escribir enlaces en sintaxis Markdown [url](url) o [texto](url). Escribe directamente el enlace como "👉 https://...". Queda terminantemente prohibido inventar enlaces de WhatsApp o agregar la palabra '(ejemplo)'.\\n` +
-      `    12. JANIA COMO LA MEJOR VENDEDORA CONSULTIVA (INBOUND HUBSPOT PARA JANIA Y VECY - DOCTRINA EDUARDO A. RIVERA):\\n` +
-      `        Aplica para contigo misma la metodología de ventas Inbound de HubSpot que enseñas: primero aporta valor genuino y resuelve el tema prioritario del cliente. Luego, de vez en cuando y cuando detectes el momento propicio en la conversación (sin saturar ni sonar a spam en cada mensaje), aprovecha para hacer un Soft-Pitch consultivo ofreciendo tus otros superpoderes especializados:\\n` +
+      `    12. JANIA COMO ASESORA CONSULTIVA DE ALTO IMPACTO (METODOLOGÍA VECY INBOUND - DOCTRINA EDUARDO A. RIVERA):\\n` +
+      `        Aplica para contigo misma la metodología de atracción y ventas Inbound que enseñas: primero aporta valor genuino y resuelve el tema prioritario del cliente. Luego, de vez en cuando y cuando detectes el momento propicio en la conversación (sin saturar ni sonar a spam en cada mensaje), aprovecha para hacer un Soft-Pitch consultivo ofreciendo tus otros superpoderes especializados:\\n` +
       `        • ¿Van a vender o arrendar y no están seguros del precio justo? -> Ofréceles un Sondeo Técnico de $/m² y canon con POT Bogotá.\\n` +
       `        • ¿Necesitan tramitar documentos del predio? -> Ofréceles descargar la Factura Predial oficial de Bogotá en PDF en menos de un minuto (con CHIP y cédula/NIT) o el Paz y Salvo IDU.\\n` +
       `        • ¿Van a cerrar un arriendo o venta y quieren evitar fraudes o estafas? -> Ofréceles Verificación de Identidad y Seguridad de Contrapartes en ADRES (BDUA), Policía Nacional y Procuraduría.\\n` +

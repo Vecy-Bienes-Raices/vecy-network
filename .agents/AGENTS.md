@@ -183,7 +183,37 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.71 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.72 — Octubre 2026
+
+### Novedades v33.72 (Erradicación Definitiva de Saludos Vocativos Repetidos en DMs, Supresión Total de Secretos Propietarios [HubSpot], Teaser Matutino Conciso y Cero Preguntas Cuestionario en Bucle — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Evidencia de Fugas y Descalabros en Producción (Capturas de WhatsApp):**
+     - **Captura Grupos ("VECY TIPS 💡"):** JanIA publicó textualmente: *"¿Sabías que ahora en mi chat privado (...) puedo hacer todo esto por ti en primera persona?"* y nombró de manera pública *"Marketing Inmobiliario HubSpot"*, soltando una lista desordenada y saturada de 6 servicios.
+     - Eduardo ordenó: *"Yo no me refería a que JanIA diga o hable que lo hace en primera persona, que chistoso, ahora si quedó loca y nuevamente está totalmente loca... está nombrando herramientas que ella usa y que las personas no deben saber es secreto que usamos lo de HubSpot, no para que lo cuente, imagínate de esa manera puede estar revelando hasta contraseñas o algo peor que eso... Además si JanIA va a postear en el canal pues que lo haga sobre un solo tema como siempre y temas distintos cada día, pero igualmente el gancho debe ser corto y persuasivo, no como esa porquería que posteó tan confusa, esos servicios debes dejarlos para otro post aparte..."*.
+     - **Captura DM Andrea Guerrero (`@Andr8010`):** Al preguntar Andrea *"Tu compartes comisión"*, JanIA volvió a caer en bucle de saludo: *"Andrea! Qué gusto saludarte de nuevo. ✨"*, y cerró repitiendo el mismo cuestionario genérico que ya había hecho en el mensaje anterior (*"¿tienes un inmueble en venta o arriendo para registrar en nuestra red, o estás buscando una opción específica para un cliente?"*).
+     - Eduardo ordenó: *"ha vuelto a saludar y saludar y saludar... cómo hacemos para que en verdad lo corrijas y quede todo correctamente alineado y yo pueda tener la JanIA que finalmente deseo, ???????"*.
+  2. **Causa Raíz Identificada:**
+     - `stripLeadingGreetingsAndCourtesies` no detectaba vocativos seguidos de cortesía (`nameVocativeGreetingPattern`), y una regex global mutilaba frases intermedias.
+     - `sanitizeDmOrthographyAndGreeting` tenía un bypass (`!cleaned.includes("?")`) que impedía limpiar saludos en respuestas con preguntas.
+     - El teaser matutino en `cronService.ts` había sido saturado con listas estáticas y lenguaje meta.
+     - El nombre interno "HubSpot" se había filtrado en prompts, descripciones y crons.
+- **Implementación Técnica**:
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - `stripLeadingGreetingsAndCourtesies` reforzado con `nameVocativeGreetingPattern` y `welcomePattern`, anclaje estricto `^` y delimitador por coma `,`.
+    - `sanitizeDmOrthographyAndGreeting` purga incondicionalmente saludos si `hasPriorHistory === true`.
+    - Guardarraíl en prompt de DM que prohíbe repetir la pregunta de captación/búsqueda en turnos sucesivos.
+    - Herramienta y reporte renombrados a *"Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test y AIDA)"*.
+  - `server/_core/cronService.ts`:
+    - Restauración del Teaser Matutino conciso de 3-4 líneas enfocado en un solo tema, sin lista de servicios ni frases meta.
+    - Día 7 renombrado sin la marca HubSpot.
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+    - Erradicación absoluta de la palabra "HubSpot" y de la frase meta "en primera persona".
+  - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`:
+    - Depuración de semillas de conocimiento fundacional.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **493/493 passing** (Suite 158 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.72`) y `package.json` (`33.72.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.71 — Octubre 2026
 
 ### Novedades v33.71 (Doctrina de IA Pura y Criterio Autónomo, Blindaje Antialucinaciones [RUNT, Precisión Notarial, Temperatura 0.25], Activación de Herramienta de Marketing Inmobiliario HubSpot, Boletines Diarios tipo Newsletter y Matriz de Astucia Psicológica de 7 Arquetipos — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -823,11 +823,11 @@ export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
   },
   {
     dayOfMonth: 7,
-    topicTitle: "Marketing Inmobiliario Especializado (HubSpot): El Swap Test y Cómo Publicar sin Quemar el Inmueble",
+    topicTitle: "Marketing Inmobiliario de Alto Rendimiento: El Swap Test y Cómo Publicar sin Quemar el Predio",
     themeKey: "tecnica_publicacion",
-    captionText: `📋 *DÍA 7 — MARKETING INMOBILIARIO ESPECIALIZADO (HUBSPOT): EL SWAP TEST Y CÓMO NO QUEMAR EL PREDIO* 🎯\n\n` +
+    captionText: `📋 *DÍA 7 — MARKETING INMOBILIARIO DE ALTO RENDIMIENTO: EL SWAP TEST Y CÓMO NO QUEMAR EL PREDIO* 🎯\n\n` +
       `¡Buenos días, colegas visionarios! Soy JanIA.\n\n` +
-      `A diario vemos en grupos publicaciones como *"Vendo lindo apto bien ubicado, gran oportunidad, info al interno"*. En la metodología Inbound de HubSpot para bienes raíces llamamos a esto la trampa del cliché intercambiable: si le cambias el nombre al edificio y sigue diciendo lo mismo, ¡es una publicación invisible que quema el inmueble y espanta al 95% de los compradores reales!\n\n` +
+      `A diario vemos en grupos publicaciones como *"Vendo lindo apto bien ubicado, gran oportunidad, info al interno"*. En las mejores prácticas de mercadeo inmobiliario moderno llamamos a esto la trampa del cliché intercambiable: si le cambias el nombre al edificio y sigue diciendo lo mismo, ¡es una publicación invisible que quema el inmueble y espanta al 95% de los compradores reales!\n\n` +
       `🏆 *Los 7 Pilares de Oro y Diferenciación (Swap Test):*\n` +
       `1️⃣ **Propuesta de Valor Única:** Cero adjetivos vacíos ("lindo", "acogedor"). Resalta acabados, iluminación y confort real.\n` +
       `2️⃣ **Perfil de Cliente Ideal (ICP):** ¿A quién le resuelve la vida? ¿A una familia con hijos, a un inversionista de renta corta o a un ejecutivo?\n` +
@@ -836,7 +836,7 @@ export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
       `5️⃣ **Metraje y Distribución:** Metros cuadrados construidos, número exacto de alcobas y baños.\n` +
       `6️⃣ **Parqueaderos y Depósito:** Cantidad y tipo (independiente o en servidumbre/línea).\n` +
       `7️⃣ **Llamado a la Acción (CTA) Claro:** Enlace limpio de contacto directo.\n\n` +
-      `✨ *¿Sabías que ahora puedo auditar tus fichas con IA?* Envíame la descripción de tu inmueble a mi chat privado (+57 319 291 9978): te aplico el Swap Test de HubSpot, te calculo tu puntaje de marketing de 0 a 100 y te la redacto con fórmula persuasiva AIDA 100% gratis. 😉📈\n\n` +
+      `✨ *¿Sabías que ahora puedo auditar tus fichas con IA?* Envíame la descripción de tu inmueble a mi chat privado (+57 319 291 9978): te aplico el Swap Test anti-clichés, te calculo tu puntaje de marketing de 0 a 100 y te la redacto con fórmula persuasiva AIDA 100% gratis. 😉📈\n\n` +
       `💬 *¿Deseas auditar una publicación hoy?* Escríbeme al privado 📲: https://wa.me/573192919978\n` +
       `🗣️ *¿Cuál cliché te molesta más ver en los grupos?* ¡Debatamos aquí abajo! 🤝\n\n` +
       `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
@@ -845,7 +845,7 @@ export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
     dayOfMonth: 8,
     topicTitle: "Qué es el MATCH (80%-100%), Emojis de Captura y Redacción Asistida",
     themeKey: "tecnica_demanda",
-    captionText: `🎯 *DÍA 8 — ¿QUÉ ES EL MATCH (80%-100%) Y CÓMO FUNCIONA NUESTRO RADAR EN GRUPOS?* 🤖🤝\n\n` +
+    captionText: `🎯 *DÍA 8 — ¿QUÉ ES EL MATCH (80%-100%) Y CÓMO FUNCIONA NUESTRO RADAR EN GRUPOS?* 👩🏻‍💼🤝\n\n` +
       `¡Buenos días a toda la red colaborativa! Les habla JanIA.\n\n` +
       `Muchos colegas me preguntan: *JanIA, ¿qué es exactamente el MATCH y para qué sirve?* Aquí te lo explico con total transparencia y rigor:\n\n` +
       `🧠 *Cómo Funciona el MATCH de VECY BIENES RAÍCES:*\n` +
@@ -2367,16 +2367,11 @@ export async function publishTodayTipNow(force: boolean = true) {
     captionText: content.captionText,
   }).catch(() => getChannelSquareImage1x1(content.themeKey || tip.themeKey, tip.dayOfMonth));
 
-  // 3. Generación del Micro-Gancho Persuasivo (Teaser Trampolín) para Grupos 2 y 3 con Anuncio de Servicios de JanIA
+  // 3. Generación del Micro-Gancho Persuasivo (Teaser Trampolín) para Grupos 2 y 3 (Doctrina Eduardo A. Rivera / ARGON)
+  // Breve, persuasivo y enfocado 100% en el tema del día, sin saturar con listas masivas de servicios.
   const teaserText = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴👩🏻‍💼\n\n` +
     `📌 *${content.topicTitle || tip.topicTitle}*\n` +
     `Acabamos de publicar en el Canal Oficial el análisis legal, técnico y comercial con su infografía ejecutiva del día para blindar tus operaciones y comisiones.\n\n` +
-    `✨ *¿Sabías que ahora en mi chat privado (${VECY_DM_LINK}) puedo hacer todo esto por ti en primera persona?*\n` +
-    `🎯 *Marketing Inmobiliario HubSpot:* Audito tu ficha técnica con el Swap Test (cero clichés) y te la optimizo con método AIDA.\n` +
-    `🎨 *Flyers, Banners, Posts e Infografías 1:1 HD* creados con tu propio prompt.\n` +
-    `📑 *Minutas y Cartas en PDF Membretado con QR* (arriendos, promesas, corretaje, cesión de leasing).\n` +
-    `🛡️ *Cruce de MATCH (80%-100%), Avalúos ACM, Predial Bogotá PDF con CHIP, IDU, RUES y ADRES.*\n\n` +
-    `💡 *¿Te da pereza organizar tu requerimiento o inmueble?* Escríbeme a mi privado (+57 319 291 9978) y yo misma te hago las preguntas clave para redactarlo completo y activar tu MATCH de inmediato. 😉🤝\n\n` +
     `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n\n` +
     `Colegas, ¿ustedes cómo están manejando este tema en el día a día? Cuéntennos su experiencia y debatimos aquí abajo 👇`;
 

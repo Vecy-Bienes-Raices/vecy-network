@@ -8351,6 +8351,56 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Build: `npm run build` limpio.
   * Versión: `v33.67` (`33.67.0`) en `shared/const.ts` y `package.json`.
 
+### 10.163 Versión v33.68 (2026-10-28) — Blindaje de Sincronización de Estados WhatsApp en Multi-Device (Cero "Recibiste un estado, pero no es compatible"), Desacople de Self-JID en statusJidList y Reconciliación de Lockfile pnpm para Vercel CI/CD (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  1. Los estados emitidos por JanIA en Baileys mostraban en WhatsApp móvil "Recibiste un estado, pero no es compatible con tu versión de WhatsApp" cuando el self-JID aparecía en la lista de difusión `statusJidList`.
+  2. Fallo de CI/CD en Vercel por desincronización entre `package.json` y `pnpm-lock.yaml`.
+- **Solución Técnica**:
+  1. `server/_core/whatsapp-match.ts`: Filtrado de `selfJid` de la lista de destinatarios de estados (`cleanStatusJids = jidList.filter(j => j !== selfJid)`).
+  2. Reconciliación de dependencias y regeneración limpia de `pnpm-lock.yaml`.
+- **Validación**: Tests pasando, typecheck 0 errores, build limpio, versión `v33.68` (`33.68.0`).
+
+### 10.164 Versión v33.69 (2026-10-28) — Límite Sagrado de Borradores Jurídicos en JanIA, Minutas Base, Canalización a Contratos "Con Todas las de la Ley" con Eduardo Rivera y Reciprocidad de 5 Estrellas (Doctrina Eduardo A. Rivera)
+- **Doctrina Fundacional Consagrada**:
+  1. JanIA emite borradores de alta factura técnica, pero aclara que para contratos definitivos "con todas las de la ley" (con linderos notariales de 20 años, afectación de vivienda familiar y arras/cláusula penal blindadas) se debe contactar a Eduardo Rivera (+57 319 291 9978 / +57 316 656 9719) y Jani Alves.
+  2. Cobro sagrado de reciprocidad: JanIA solicita calificación de 5 estrellas en Google y compartir capturas en grupos inmobiliarios.
+- **Validación**: Suite 155 en `regression.test.ts` (477 tests passing), build limpio, versión `v33.69` (`33.69.0`).
+
+### 10.165 Versión v33.70 (2026-10-28) — Estructuración Notarial Superior en Minutas PDF (Texto Justificado, Logo VECY, Paginación, Encabezado Negro) y Dinamismo Desatado de Stickers 3D (Doctrina Eduardo A. Rivera)
+- **Implementación Técnica**:
+  1. `server/_core/jania/legalDocumentPdfService.ts`: Implementación de texto justificado con espaciado dinámico (`drawJustifiedLine`), encabezado Negro Carbón Mate (`#0A0A0A`) con pleca Dorada Imperial (`#D4AF37`), logotipo embebido y paginación "Página X de Y".
+  2. `server/_core/jania/stickerService.ts`: Reducción del cooldown a 25 segundos y ampliación de disparadores emocionales para stickers 3D.
+- **Validación**: Suite 156 en `regression.test.ts` (482 tests passing), build limpio, versión `v33.70` (`33.70.0`).
+
+### 10.166 Versión v33.71 (2026-10-29) — Doctrina de IA Pura y Criterio Autónomo, Blindaje Antialucinaciones (RUNT, Precisión Numérica Notarial, Temperatura 0.25), Activación de Herramienta de Marketing Inmobiliario, Boletines Diarios tipo Newsletter y Matriz de 7 Arquetipos (Doctrina Eduardo A. Rivera)
+- **Implementación Técnica**:
+  1. `server/_core/llm.ts`: Temperatura fijada a 0.25 cuando `highReasoning: true` para erradicar mutaciones de tokens.
+  2. `server/_core/jania/parsers.ts`: Sanitización léxica notarial (`SUNT` -> `RUNT`, `cascunta` -> `cincuenta`) y purga de asteriscos huérfanos.
+  3. `server/_core/jania/handlers/dmHandler.ts`: Herramienta `auditar_o_redactar_marketing_inmobiliario` registrada en `JANIA_DM_TOOLS` (Swap Test y AIDA).
+  4. `server/_core/cronService.ts`: Días 7 y 8 orientados a marketing y pedagogía del MATCH (80%-100%).
+  5. Matriz de 7 arquetipos de interlocutores y distinción de servicios de JanIA vs VECY Bróker.
+- **Validación**: Suite 157 en `regression.test.ts` (488 tests passing), build limpio, versión `v33.71` (`33.71.0`).
+
+### 10.167 Versión v33.72 (2026-10-29) — Erradicación Definitiva de Saludos Vocativos Repetidos en DMs, Supresión Total de Secretos Propietarios (HubSpot), Teaser Matutino Conciso y Cero Preguntas Cuestionario en Bucle (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada (Capturas de Producción)**:
+  1. JanIA filtró el nombre interno "HubSpot" y emitió la frase meta *"puedo hacer todo esto por ti en primera persona"* en un mensaje público de grupos con una lista saturada de 6 servicios.
+  2. En chat con Andrea Guerrero (`@Andr8010`), ante la pregunta *"Tu compartes comisión"*, JanIA volvió a saludar (`"Andrea! Qué gusto saludarte de nuevo. ✨"`) y repitió el cuestionario genérico que ya había formulado el turno anterior.
+- **Solución Técnica Implementada (`v33.72`)**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Refuerzo de `stripLeadingGreetingsAndCourtesies` con `nameVocativeGreetingPattern` (limpia `[Nombre]! [Cortesia]` al inicio) y `welcomePattern`.
+     - Anclaje de regex a inicio con `^` y delimitador por coma para evitar truncamiento indebido en mitad de frase.
+     - `sanitizeDmOrthographyAndGreeting` purga incondicionalmente saludos si `hasPriorHistory === true` (eliminado el bypass `!cleaned.includes("?")`).
+     - Guardarraíl en prompt de DM que prohíbe repetir preguntas de captación/búsqueda en turnos consecutivos.
+  2. `server/_core/cronService.ts`:
+     - Restaurado el teaser matutino limpio y conciso (3-4 líneas) conectando al tema del día en el Canal Oficial, eliminando listas saturadas y la frase meta "en primera persona".
+     - Purga total del término "HubSpot" en cron, prompts, reportes y herramientas, reemplazado por **"Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test y AIDA)"**.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 158 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **493/493 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio (Vite + esbuild).
+  - Versión: `v33.72` (`33.72.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

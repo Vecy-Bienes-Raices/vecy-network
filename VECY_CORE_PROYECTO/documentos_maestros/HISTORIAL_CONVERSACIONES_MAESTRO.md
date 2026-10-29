@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-29] — JanIA v33.72: Erradicación Definitiva de Saludos Vocativos Repetidos en DMs, Supresión Total de Secretos Propietarios (HubSpot), Teaser Matutino Conciso y Cero Preguntas Cuestionario en Bucle (v33.72 - 33.72.0)
+
+**Versión:** `v33.72` (`33.72.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. **Evidencia de Fugas y Descalabros Flagrantes en Producción (Capturas de WhatsApp):**
+   - Eduardo adjuntó dos capturas críticas donde JanIA desobedeció principios fundamentales:
+     - **Captura Grupos ("VECY TIPS 💡"):** JanIA publicó textualmente: *"¿Sabías que ahora en mi chat privado (...) puedo hacer todo esto por ti en primera persona?"* y nombró de manera pública *"Marketing Inmobiliario HubSpot"*, soltando una lista desordenada y saturada de 6 servicios.
+     - Eduardo ordenó: *"Yo no me refería a que JanIA diga o hable que lo hace en primera persona, que chistoso, ahora si quedó loca y nuevamente está totalmente loca... está nombrando herramientas que ella usa y que las personas no deben saber es secreto que usamos lo de HubSpot, no para que lo cuente, imagínate de esa manera puede estar revelando hasta contraseñas o algo peor que eso... Además si JanIA va a postear en el canal pues que lo haga sobre un solo tema como siempre y temas distintos cada día, pero igualmente el gancho debe ser corto y persuasivo, no como esa porquería que posteó tan confusa, esos servicios debes dejarlos para otro post aparte..."*.
+     - **Captura DM Andrea Guerrero (`@Andr8010`):** Al preguntar Andrea *"Tu compartes comisión"*, JanIA volvió a caer en bucle de saludo: *"Andrea! Qué gusto saludarte de nuevo. ✨"*, y cerró repitiendo el mismo cuestionario genérico que ya había hecho en el mensaje anterior (*"¿tienes un inmueble en venta o arriendo para registrar en nuestra red, o estás buscando una opción específica para un cliente?"*).
+     - Eduardo ordenó: *"ha vuelto a saludar y saludar y saludar... cómo hacemos para que en verdad lo corrijas y quede todo correctamente alineado y yo pueda tener la JanIA que finalmente deseo, ???????"*.
+
+**Diagnóstico Técnico Profundo:**
+1. **Falla en `stripLeadingGreetingsAndCourtesies` ante Saludos Vocativos con Nombre:**
+   - La función tenía regexes anclados al inicio (`^¡?(?:hola|buenos días|qué gusto...)`). Si el mensaje del LLM iniciaba con el nombre del usuario y un signo de exclamación o coma (ej: `"Andrea! Qué gusto saludarte de nuevo. ✨"`), la regex fallaba porque el nombre precedía a la cortesía.
+   - Además, una regex global no anclada (`cleaned.replace(/(?:¡?(?:hola|buenos días)...)+/gi, "")`) mutilaba saludos en medio de la frase dejando el vocativo huérfano (`"Andrea, te confirmo..."`).
+2. **Filtro Roto en `sanitizeDmOrthographyAndGreeting`:**
+   - La condición para usuarios recurrentes tenía `else if (hasPriorHistory && !cleaned.includes("?"))`, de modo que si el texto contenía un signo de interrogación `?` (como cualquier pregunta de asesoría), se omitía por completo la limpieza de saludos.
+3. **Saturación y Meta-Lenguaje en el Teaser Matutino (`cronService.ts`):**
+   - En `publishTodayTipNow`, se había inyectado un bloque promocional estático con viñetas de 6 servicios y la frase literal *"en primera persona"*. El teaser matutino debe ser exclusivamente un puente corto (máx 3-4 renglones) hacia el tema del día en el Canal Oficial.
+4. **Fuga del Nombre Propietario "HubSpot":**
+   - El término "HubSpot" estaba expuesto en la descripción de la herramienta en `JANIA_DM_TOOLS`, en el título del Día 7 del calendario y en los prompts de sistema. En VECY se maneja bajo secreto industrial como **"Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test y AIDA)"**.
+5. **Cuestionario en Bucle en DMs:**
+   - JanIA carecía de un guardarraíl que le impidiera repetir la misma pregunta de cierre en turnos consecutivos cuando el usuario ya estaba dialogando sobre un punto específico (como comisiones 40/20/40).
+
+**Acciones Ejecutadas:**
+1. **Blindaje de `stripLeadingGreetingsAndCourtesies` (`dmHandler.ts`):**
+   - Incorporación de `nameVocativeGreetingPattern` que erradica cualquier combinación de `[Nombre]! [Cortesia]` (`"Andrea! Qué gusto saludarte de nuevo"`, `"¡Andrea! Te doy una cálida bienvenida"`, `"Eduardo! Un placer saludarte"`).
+   - Inclusión de `welcomePattern` para purgar bienvenidas institucionales residuales en chats activos.
+   - Anclaje estricto de la regex inicial con `^` para evitar mutilaciones intermedias y delimitador por coma `,`.
+2. **Corrección de `sanitizeDmOrthographyAndGreeting` (`dmHandler.ts`):**
+   - Eliminación del bypass `!cleaned.includes("?")`. Ahora, si `hasPriorHistory` es verdadero, `stripLeadingGreetingsAndCourtesies` se ejecuta de forma incondicional.
+3. **Restauración del Teaser Matutino Conciso (`cronService.ts`):**
+   - Eliminación de la lista masiva de 6 servicios y erradicación total de la frase *"en primera persona"*.
+   - El teaser de Grupos 2 y 3 vuelve al formato limpio y persuasivo de ARGON: título del día, síntesis de 2 líneas, enlace al canal y llamado al debate.
+4. **Purga Total de la Marca Secreta "HubSpot":**
+   - Sustitución unánime por **"Marketing Inmobiliario de Alto Rendimiento VECY (Swap Test y AIDA)"** en:
+     - `server/_core/realEstateMarketing.ts`
+     - `server/_core/jania/handlers/dmHandler.ts` (herramienta `auditar_o_redactar_marketing_inmobiliario` y reporte oficial)
+     - `server/_core/cronService.ts` (Día 7 del calendario)
+     - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`
+     - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`
+5. **Guardarraíl Anti-Cuestionarios en Bucle (`dmHandler.ts`):**
+   - Instrucción estricta que prohíbe repetir la pregunta de captación/búsqueda si ya se hizo en el turno anterior. JanIA debe escuchar, responder con precisión a lo consultado (ej. 40/20/40) y hacer seguimiento específico.
+6. **Verificación y Pruebas:**
+   - Creación de la **Suite 158** en `server/__tests__/regression.test.ts`.
+   - Typecheck `npm run check` limpio (0 errores).
+   - Tests `npm test`: **493/493 passing (100% verde a $0 COP)**.
+   - Build de producción `npm run build` limpio (Vite + esbuild).
+   - Bump de versión a `v33.72` (`33.72.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-29] — JanIA v33.71: Doctrina de IA Pura y Criterio Autónomo, Blindaje Antialucinaciones (RUNT, Precisión Numérica Notarial, Temperatura 0.25), Activación de Herramienta de Marketing Inmobiliario Especializado (HubSpot), Boletines Diarios tipo Newsletter y Matriz de Astucia Psicológica (7 Arquetipos de Interlocutores) (v33.71 - 33.71.0)
 
 **Versión:** `v33.71` (`33.71.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

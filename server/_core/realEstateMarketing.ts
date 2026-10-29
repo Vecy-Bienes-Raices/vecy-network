@@ -1,7 +1,7 @@
 /**
  * VECY NETWORK — Real Estate Marketing Engine v33.42
  * Biblioteca de 10 Habilidades Especializadas de Marketing Inmobiliario
- * Inspirada en la metodología interoperable de HubSpot adaptada 100% al corretaje colombiano.
+ * Metodología Inbound Inmobiliaria VECY adaptada 100% al corretaje colombiano.
  */
 
 export interface PropertyMarketingAuditResult {
