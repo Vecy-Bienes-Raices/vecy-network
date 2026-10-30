@@ -38,6 +38,7 @@ import { transcribeAudioBuffer } from './voiceTranscription';
 import { isNonRealEstateText } from './matching';
 import { VECY_OFFICIAL_GROUPS, VECY_BRAND } from '../../shared/const';
 import { sanitizeResponseMarkdown } from './jania/parsers';
+import { cleanRawUserName } from './nameAndGenderResolver';
 
 
 // Tiempo de arranque para omitir mensajes históricos (con 2 min de margen por desfase de reloj)
@@ -1746,7 +1747,8 @@ export class JaniaMatchBot {
       // Si la transcripción del audio falló, respondemos con un mensaje específico
       const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
       if (isAudioFailed) {
-        const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. 🙏\n\nPor favor escribe tu consulta o requerimiento por texto aquí en el grupo para atenderte de inmediato. ¡Estoy lista para responderte! 😊`;
+        const cleanUserName = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
+        const failMsg = `Hola ${cleanUserName} 👋🏻, escuché que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. 🙏\n\nPor favor escribe tu consulta o requerimiento por texto aquí en el grupo para atenderte de inmediato. ¡Estoy lista para responderte! 😊`;
         await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
         await this.sock.sendPresenceUpdate('paused', chatId);
         return;
@@ -1763,9 +1765,10 @@ export class JaniaMatchBot {
           isBotAdmin = !!myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin');
         } catch (_) { }
 
+        const cleanUserName = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
         const redirectMsg =
           `⚠️ *AVISO DE MODERACIÓN — VECY BIENES RAÍCES* ⚠️\n\n` +
-          `Hola ${realName} 👋🏻, este grupo (*${VECY_OFFICIAL_GROUPS.grupo1.name}*) está reservado *EXCLUSIVAMENTE* para la publicación de *OFERTAS🏷️ y DEMANDAS📝 inmobiliarias*.\n\n` +
+          `Hola ${cleanUserName} 👋🏻, este grupo (*${VECY_OFFICIAL_GROUPS.grupo1.name}*) está reservado *EXCLUSIVAMENTE* para la publicación de *OFERTAS🏷️ y DEMANDAS📝 inmobiliarias*.\n\n` +
           `Para mantener este canal 100% limpio y ágil para encontrar coincidencias sin saturar a los colegas, por favor comparte tus consultas o temas en nuestros canales autorizados:\n\n` +
           `💡 *Grupo 2 (Tips, Noticias y Consultas Inmobiliarias):*\n👉 ${VECY_OFFICIAL_GROUPS.grupo2.inviteLink}\n\n` +
           `🚀 *Grupo 3 (Proyecto VECY BIENES RAÍCES, Casos y Foros):*\n👉 ${VECY_OFFICIAL_GROUPS.grupo3.inviteLink}\n\n` +
@@ -1938,8 +1941,9 @@ export class JaniaMatchBot {
       if (result && (chatId === this.buzonGroupId || chatId === this.circuloGroupId)) {
         if (result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO') {
           const rawPhone = senderId.split('@')[0];
+          const cleanUserName = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
           const redirectText =
-            `Hola @${rawPhone} 👋🏻, publicaste una ${result.classification === 'INMUEBLE' ? 'oferta' : 'demanda'} inmobiliaria en este grupo.\n\n` +
+            `Hola ${cleanUserName} 👋🏻, publicaste una ${result.classification === 'INMUEBLE' ? 'oferta' : 'demanda'} inmobiliaria en este grupo.\n\n` +
             `Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) inmediato, por favor publícala en nuestro grupo exclusivo:\n\n` +
             `🏢 *${VECY_OFFICIAL_GROUPS.grupo1.name}*\n👉 ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
             `_He eliminado tu publicación en este canal para preservar el orden temático._ 🤝✨`;

@@ -15015,3 +15015,56 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **514/514 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
 - **Versión Oficial:** `v33.77` en `shared/const.ts` y `33.77.0` en `package.json`.
+
+---
+
+### 📅 [2026-10-30] — Naturalidad en Nombres de Usuario (Limpieza de Sufijos Gremiales y Erradicación de Menciones Robóticas en Grupos) y Garantía de Saludo Cálido y Personalizado en DMs (v33.78 — Doctrina Eduardo A. Rivera)
+
+**Versión Desplegada:** `jania-server v33.78.0` (PM2 en VPS Contabo `13.140.149.144`)
+**Archivos Modificados:**
+- `server/_core/nameAndGenderResolver.ts`
+- `server/_core/whatsapp-utils.ts`
+- `server/_core/jania/parsers.ts`
+- `server/_core/whatsapp-match.ts`
+- `server/_core/jania/handlers/circuloHandler.ts`
+- `server/_core/jania/handlers/consultingHandler.ts`
+- `server/_core/jania/handlers/propertiesHandler.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `shared/const.ts`
+- `package.json`
+- `server/__tests__/regression.test.ts`
+- `GEMINI.md`
+- `.agents/AGENTS.md`
+- `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción de Eduardo A. Rivera:**
+  *"Esto es Grave, las personas ya están escribiendo a JanIA para probar sus habilidades y JanIA nisiquiera ha saludado correctamente, será que está fallando, o es por lo que precisamente tu estabas trabajando en ella cuando el usuario escribió y por eso ni saludó diciemndole su nombre y amablemente o qué sucedió. He visto tambien que en los grupos JanIA no dice el nombre de cada usuario con naturalidad sino nombra todo como en la imagen 2 (Hola "Alexandra Quintero Inmo": ? ??)"*
+- **Diagnóstico y Causas Raíz Identificadas:**
+  1. **Omisión de Saludo en DMs (Caso Leonardo Prieto):**
+     - En `dmHandler.ts`, la variable `isOngoingChat` se calculaba como: `hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday`.
+     - Como en la arquitectura de JanIA todo mensaje entrante se persiste inmediatamente en PostgreSQL (`logToDb(senderId, 'user', body)`), cuando `getOrLoadDmHistory` consultaba la base de datos, `history.length` siempre era mayor o igual a 1.
+     - En consecuencia, el sistema marcaba erróneamente cualquier primer mensaje como una "conversación en curso activo". El prompt del sistema le ordenaba a Gemini: *"¿Hubo interacción previa hoy?: SÍ... Está TERMINANTEMENTE PROHIBIDO saludar de nuevo... Cero saludos..."*, y el post-procesador `stripLeadingGreetingsAndCourtesies` extirpaba cualquier saludo de apertura que el LLM hubiese formulado, devolviendo una respuesta cortante y mecánica ("😉 Registraré de inmediato en el motor...").
+  2. **Nombres Rígidos y Menciones Deformadas en Grupos (Caso Alexandra Quintero Inmo):**
+     - En los mensajes automáticos de redirección de `whatsapp-match.ts` (cuando un usuario publica una oferta en el grupo de debate o soporte legal), el código utilizaba la plantilla: `Hola @${rawPhone} 👋🏻, publicaste una oferta...` pasando `{ mentions: [senderId] }`.
+     - El cliente oficial de WhatsApp renderiza `@número` reemplazándolo por el nombre de perfil público exacto configurado por el usuario (pushName). Los colegas y asesores inmobiliarios suelen colocar marcas, títulos o empresas en su perfil ("Alexandra Quintero Inmo", "Carlos Gómez Broker", "Juan Pablo Tobo correo").
+     - Al no limpiar estos sufijos gremiales ni extraer el nombre de pila natural, WhatsApp mostraba en pantalla: `Hola @Alexandra Quintero Inmo 👋...`, lo que generaba una sensación robótica, impersonal y poco natural.
+
+#### 2. Solución Técnica Implementada (`v33.78`)
+1. **Garantía Inquebrantable de Saludo Cálido y Personalizado en DMs (`dmHandler.ts`):**
+   - Rediseño de la condición `isOngoingChat`: ahora exige estrictamente que JanIA ya haya saludado hoy al usuario (`alreadyGreetedToday`) Y que exista un turno previo del asistente en las últimas horas (`hasRecentAssistantTurn`). En la primera interacción del día, `isOngoingChat` siempre es `false`.
+   - Instrucción estricta a Gemini en el prompt: en el primer mensaje del día debe saludar con calidez, cortesía y señorío usando el nombre del usuario (`¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋`).
+   - Guardarraíl de cortesía en post-procesamiento: si en la primera interacción del día el LLM omite el saludo formal, el sistema le antepone automáticamente `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋`.
+   - `stripLeadingGreetingsAndCourtesies` opera únicamente cuando `isOngoingChat === true`.
+2. **Depuración de Nombres y Extracción de Firmas (`nameAndGenderResolver.ts`, `parsers.ts`, `whatsapp-utils.ts`):**
+   - Enriquecida la regex de sufijos gremiales y comerciales en `cleanRawUserName` y `extractFirstName`: purga "Inmo", "Inmobiliaria", "Broker", "Realtor", "correo", "Lotes", "Asesor/a", etc., resolviendo el nombre de pila natural ("Alexandra", "Leonardo", "Juan Pablo").
+   - Añadido soporte en `extractIntroducedName` para capturar firmas al final del mensaje ("Att. Leonardo Prieto", "Atte: Carlos", "Cordialmente, Diana").
+3. **Erradicación de Menciones Robóticas en Grupos (`whatsapp-match.ts`, `circuloHandler.ts`, `consultingHandler.ts`, `propertiesHandler.ts`):**
+   - Erradicadas las menciones textuales `@${rawPhone}`. Ahora JanIA redacta con total naturalidad humana: `Hola Alexandra 👋🏻, publicaste una oferta inmobiliaria en este grupo.`, conservando la mención en opciones para que el usuario reciba la notificación en su móvil sin ensuciar la estética de la conversación.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 164 en `regression.test.ts`:** 4 pruebas unitarias automatizadas verificando limpieza de sufijos gremiales, firmas en texto, redacción natural en grupos, guardarraíl de saludo en DMs y sincronización de versión.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **518/518 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
+- **Versión Oficial:** `v33.78` en `shared/const.ts` y `33.78.0` en `package.json`.

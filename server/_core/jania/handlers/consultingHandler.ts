@@ -38,7 +38,9 @@ export async function processConsultingMessage(
     const strictOffTopic = checkStrictOffTopic(text);
     if (strictOffTopic.isOffTopic) {
       console.log(`[JanIA-Consulting-OffTopic] Mensaje prohibido en Soporte Legal para ${userId}: "${text.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en los grupos oficiales de VECY BIENES RAÍCES. 🚫\n\nNuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesoría legal, tributaria y avalúos inmobiliarios. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
+      const cleanFirstName = extractFirstName(realName);
+      const targetUserGreeting = cleanFirstName && !["hola", "buenas", "buenos", "asesor"].includes(cleanFirstName.toLowerCase()) ? cleanFirstName : "colega";
+      const warningText = `Hola ${targetUserGreeting} 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en los grupos oficiales de VECY BIENES RAÍCES. 🚫\n\nNuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesoría legal, tributaria y avalúos inmobiliarios. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
       return {
         classification: "VIOLACION_DE_NORMAS",
         response: warningText,

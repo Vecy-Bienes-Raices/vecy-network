@@ -98,6 +98,9 @@ export function extractFirstName(fullName: string): string {
   // Limpiar handles que empiezan con @ seguidos de espacio (ej: "@arq.adrypynto Adriana Pinto")
   clean = clean.replace(/^@[\w\.-]+\s+/i, "");
 
+  // Limpiar sufijos gremiales y comerciales (inmo, realtor, broker, asesor, correo, etc.)
+  clean = clean.replace(/\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i, "").trim();
+
   // Si es un número telefónico o contiene indicativos de número, retornar vacío
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
 

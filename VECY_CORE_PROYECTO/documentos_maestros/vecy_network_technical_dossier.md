@@ -8512,6 +8512,34 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.77` (`33.77.0`) en `shared/const.ts` y `package.json`.
 
+### 10.173 Versión v33.78 (2026-10-30) — Naturalidad en Nombres de Usuario (Limpieza de Sufijos Gremiales y Erradicación de Menciones Robóticas en Grupos) y Garantía de Saludo Cálido y Personalizado en DMs (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  - Eduardo Rivera detectó dos fallas críticas en la interacción humana de JanIA:
+    1. **Falta de Saludo Inicial en DMs:** Usuarios que escribían para probar los servicios (como Leonardo Prieto: *"Buena tarde, escribo para probar el servicio, tengo cliente buscando apartamento en Villa Magdala..."*) recibían respuestas frías e inmediatas sin ningún saludo ni mención a su nombre ("😉 Registraré de inmediato en el motor de base de datos...").
+    2. **Menciones Deformadas y Rígidas en Grupos:** En las advertencias y redirecciones de grupos, JanIA no llamaba a los usuarios por su nombre de pila natural, sino que reproducía nombres completos con sufijos gremiales y marcas comerciales (`Hola @Alexandra Quintero Inmo 👋, publicaste una oferta...`).
+- **Diagnóstico Técnico y Causas Raíz**:
+  1. **Falso Positivo en `isOngoingChat`:** La lógica evaluaba `const isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday;`. Como `whatsapp-match.ts` registra cada mensaje entrante en la base de datos de PostgreSQL antes de despachar al manejador conversacional, `history.length` siempre era ≥ 1. Esto provocaba que cualquier primer mensaje de un usuario fuera clasificado erróneamente como una conversación en curso activo, instruyendo a Gemini en el prompt a no saludar ("Cero saludos...") y activando la función `stripLeadingGreetingsAndCourtesies` que borraba de raíz cualquier saludo de apertura.
+  2. **Renderizado de `@teléfono` en WhatsApp con Menciones:** En los avisos de moderación de grupos se empleaba la plantilla `Hola @${rawPhone} 👋🏻` con `{ mentions: [senderId] }`. WhatsApp sustituye visualmente el número de teléfono por el nombre de perfil público (pushName), el cual frecuentemente contiene añadidos gremiales ("Inmo", "Broker", "correo"), mostrando etiquetas no naturales.
+- **Solución Técnica Implementada (`v33.78`)**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Redefinición estricta de `isOngoingChat`: ahora requiere conjuntamente que JanIA haya saludado hoy (`alreadyGreetedToday`) Y que exista un turno previo del asistente en las últimas horas (`hasRecentAssistantTurn`). En la primera interacción del día, `isOngoingChat` es `false`.
+     - Directiva mandatoria en el prompt del sistema para saludar con calidez, cortesía y señorío usando el nombre del usuario (`¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋`).
+     - Guardarraíl de cortesía en post-procesamiento: si en la primera interacción del día el LLM omite el saludo formal, el sistema le antepone automáticamente el saludo oficial con su nombre.
+     - `stripLeadingGreetingsAndCourtesies` se ejecuta exclusivamente cuando `isOngoingChat === true`.
+  2. `server/_core/nameAndGenderResolver.ts`:
+     - Soporte en `extractIntroducedName` para extraer nombres propios en firmas de texto ("Att. Leonardo Prieto", "Atte: Carlos", "Cordialmente, Diana").
+     - Enriquecida la regex `guildSuffixRegex` en `cleanRawUserName` para depurar automáticamente sufijos gremiales: "Inmo", "Inmobiliaria", "Broker", "Realtor", "correo", "Lotes", "Asesor/a", etc.
+  3. `server/_core/whatsapp-utils.ts` y `server/_core/jania/parsers.ts`:
+     - Sincronizada la limpieza de sufijos gremiales dentro de `extractFirstName` para resolver siempre el nombre de pila natural ("Alexandra", "Leonardo", "Juan Pablo").
+  4. `server/_core/whatsapp-match.ts`, `circuloHandler.ts`, `consultingHandler.ts` y `propertiesHandler.ts`:
+     - Erradicadas las menciones `@${rawPhone}` en textos de moderación y redirección. Ahora se redactan con cercanía y naturalidad: `Hola Alexandra 👋🏻, publicaste una oferta inmobiliaria en este grupo.`, manteniendo la mención técnica en opciones para la notificación del usuario.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 164 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **518/518 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.78` (`33.78.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

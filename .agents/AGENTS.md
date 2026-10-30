@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.77 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.78 — Octubre 2026
+
+### Novedades v33.78 (Naturalidad en Nombres de Usuario [Limpieza de Sufijos Gremiales y Erradicación de Menciones Robóticas en Grupos] y Garantía de Saludo Cálido y Personalizado en DMs — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Esto es Grave, las personas ya están escribiendo a JanIA para probar sus habilidades y JanIA nisiquiera ha saludado correctamente, será que está fallando, o es por lo que precisamente tu estabas trabajando en ella cuando el usuario escribió y por eso ni saludó diciemndole su nombre y amablemente o qué sucedió. He visto tambien que en los grupos JanIA no dice el nombre de cada usuario con naturalidad sino nombra todo como en la imagen 2 (Hola "Alexandra Quintero Inmo": ? ??)"*
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Cero Saludo en DMs):** La variable `isOngoingChat` evaluaba `history.length > 0`. Como todo mensaje entrante se persiste de inmediato en la base de datos de PostgreSQL antes de procesar el DM (`logToDb(senderId, 'user', body)`), `history.length` siempre era ≥ 1, provocando que JanIA considerara erróneamente cualquier primer mensaje como "conversación activa en curso". En consecuencia, el prompt del sistema prohibía taxativamente saludar ("Cero saludos...") y el post-procesador `stripLeadingGreetingsAndCourtesies` mutilaba cualquier saludo generado por el LLM, entregando respuestas frías y mecánicas directamente con la confirmación del requerimiento ("😉 Registraré de inmediato en el motor...").
+     - **Problema 2 (Menciones Robóticas y Nombres no Naturales en Grupos):** En los mensajes de moderación y redirección (`whatsapp-match.ts`), se usaba la sintaxis `Hola @${rawPhone} 👋🏻` con `{ mentions: [senderId] }`. WhatsApp reemplazaba visualmente ese `@teléfono` por el nombre de perfil público exacto del usuario (pushName), el cual frecuentemente contiene sufijos de marca o actividad profesional ("Alexandra Quintero Inmo", "Carlos Gomez Broker", "Juan Pablo Tobo correo"), renderizándose en el chat como `Hola @Alexandra Quintero Inmo 👋`.
+- **Implementación Técnica**:
+  - `server/_core/nameAndGenderResolver.ts`, `server/_core/whatsapp-utils.ts` y `server/_core/jania/parsers.ts`:
+    - Ampliado el espectro de limpieza de sufijos gremiales y comerciales en `cleanRawUserName` y `extractFirstName`: erradica "Inmo", "Inmobiliaria", "Broker", "Realtor", "correo", "Lotes", "Asesor/a", etc., resolviendo el nombre de pila natural ("Alexandra", "Leonardo", "Juan Pablo").
+    - Soporte en `extractIntroducedName` para detectar nombres en firmas de texto ("Att. Leonardo Prieto" -> "Leonardo").
+  - `server/_core/whatsapp-match.ts`:
+    - Erradicado el uso de `@${rawPhone}` en textos de redirección y moderación. Ahora saluda con calidez humana usando el nombre de pila limpio (`Hola Alexandra 👋🏻`), conservando el tag en `mentions` para la notificación móvil sin alterar la naturalidad visual.
+  - `server/_core/jania/handlers/circuloHandler.ts`, `consultingHandler.ts` y `propertiesHandler.ts`:
+    - Reemplazado el formato rígido `Hola @teléfono (Nombre)` por el saludo cálido y natural `Hola ${cleanUserName} 👋🏻`.
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - Corregida la condición `isOngoingChat = alreadyGreetedToday && hasRecentAssistantTurn;`, garantizando que en el primer mensaje del día JanIA salude con señorío, respeto y afecto humano usando el nombre del interlocutor (`¡Buenas tardes, Leonardo! 👋`).
+    - Añadido guardarraíl de cortesía: si en la primera interacción del día el modelo no incluye el saludo formal por alguna razón, JanIA le antepone automáticamente `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **518/518 passing** (Suite 164 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.78`) y `package.json` (`33.78.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.77 — Octubre 2026
 
 ### Novedades v33.77 (Desactivación Permanente de Estados de WhatsApp [status@broadcast], Blindaje Anti-Baneo y Estabilidad Multi-Device — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -262,8 +262,8 @@ export function cleanRawUserName(name: string): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  // 4. Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora")
-  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
+  // 4. Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora", "Alexandra Quintero Inmo", "Juan Pablo Tobo correo")
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
   const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
   if (withoutGuild.length >= 2) {
     cleaned = withoutGuild;
@@ -295,13 +295,19 @@ export function getCanonicalCompositeName(rawName: string): string | null {
 
 /**
  * Extrae un nombre propio presentado orgánicamente por el usuario en el mensaje de chat
- * (ej: "Hola, soy María Cristina", "me llamo Juan Carlos", "mi nombre es Ana Sofía", "hablas con Nelson Enrique")
+ * (ej: "Hola, soy María Cristina", "me llamo Juan Carlos", "mi nombre es Ana Sofía", "hablas con Nelson Enrique", o firmas como "Att. Leonardo Prieto", "Atte: Carlos", "Cordialmente, Diana")
  */
 export function extractIntroducedName(text: string): string | null {
   if (!text) return null;
-  const match = text.match(
+  // 1. Detección en cuerpo: "soy Juan", "mi nombre es Maria", etc.
+  const introMatch = text.match(
     /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
   );
+  // 2. Detección en firmas o despedidas: "Att. Leonardo Prieto", "Atte: Carlos Gomez", "Cordialmente, Diana", "Saludos, Andres"
+  const signMatch = text.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:att\.?|atte\.?|atentamente|cordialmente|saludos|firma)\s*:?\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  const match = introMatch || signMatch;
   if (match && match[1]) {
     const rawCandidate = match[1].trim();
     const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);

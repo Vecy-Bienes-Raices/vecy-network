@@ -34,7 +34,8 @@ export async function processCirculoMessage(
     const strictOffTopic = checkStrictOffTopic(text);
     if (strictOffTopic.isOffTopic) {
       console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto VECY BIENES RAÍCES para ${userId}: "${text.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en nuestra comunidad de VECY BIENES RAÍCES. 🚫\n\nNuestros canales son 100% profesionales y dedicados exclusivamente a la tecnología, comisiones y el modelo colaborativo inmobiliario. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
+      const targetUserGreeting = cleanFirstName || "colega";
+      const warningText = `Hola ${targetUserGreeting} 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en nuestra comunidad de VECY BIENES RAÍCES. 🚫\n\nNuestros canales son 100% profesionales y dedicados exclusivamente a la tecnología, comisiones y el modelo colaborativo inmobiliario. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
       return {
         classification: "VIOLACION_DE_NORMAS",
         response: warningText,

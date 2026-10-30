@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.77";
+    VECY_VERSION = "v33.78";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10006,7 +10006,7 @@ function cleanRawUserName(name) {
   }
   cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
   cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
-  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|realtor|broker|asesor|asesora|agente|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|independiente)\b.*$/i;
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
   const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
   if (withoutGuild.length >= 2) {
     cleaned = withoutGuild;
@@ -10030,9 +10030,13 @@ function getCanonicalCompositeName(rawName) {
 }
 function extractIntroducedName(text2) {
   if (!text2) return null;
-  const match = text2.match(
+  const introMatch = text2.match(
     /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
   );
+  const signMatch = text2.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:att\.?|atte\.?|atentamente|cordialmente|saludos|firma)\s*:?\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  const match = introMatch || signMatch;
   if (match && match[1]) {
     const rawCandidate = match[1].trim();
     const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
@@ -10898,6 +10902,7 @@ function extractFirstName(fullName) {
     clean = tildeMatch[1].trim();
   }
   clean = clean.replace(/^@[\w\.-]+\s+/i, "");
+  clean = clean.replace(/\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i, "").trim();
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
@@ -15426,6 +15431,7 @@ function extractFirstName2(fullName) {
     clean = tildeMatch[1].trim();
   }
   clean = clean.replace(/^@[\w\.-]+\s+/i, "");
+  clean = clean.replace(/\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i, "").trim();
   if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
@@ -20907,13 +20913,15 @@ ${content.substring(0, 15e3)}
             groupRulesName = "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}";
             acceptedTopics = "publicaci\xF3n directa de ofertas (Inmuebles) y demandas (Requerimientos) comerciales";
           }
-          staticText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}. Detect\xE9 que tu publicaci\xF3n trata sobre un tema que no corresponde al prop\xF3sito de este canal (fechas festivas, pol\xEDtica, religi\xF3n o contenido ajeno al corretaje).
+          const cleanUserName = extractFirstName(realName) || "colega";
+          staticText = `Hola ${cleanUserName} \u{1F44B}\u{1F3FB}. Detect\xE9 que tu publicaci\xF3n trata sobre un tema que no corresponde al prop\xF3sito de este canal (fechas festivas, pol\xEDtica, religi\xF3n o contenido ajeno al corretaje).
 
 Te recuerdo que en el grupo *${groupRulesName}* solo se admiten temas de: **${acceptedTopics}**.
 
 Te solicito amablemente que elimines tu mensaje para mantener el orden del chat, y te invito a revisar y comprender las normas completas del grupo que se encuentran en su descripci\xF3n. \xA1Gracias por tu colaboraci\xF3n y cultura de red! \u{1F91D}\u{1F680}`;
         } else {
-          staticText = `Hola ${realName || "colega"} \u{1F44B}\u{1F3FB}. Como asistente de VECY Bienes Ra\xEDces, estoy entrenada exclusivamente para ayudarte con temas de bienes ra\xEDces (buscar, publicar o cruzar inmuebles), asesor\xEDas legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. \u{1F3E0}\u2728
+          const cleanUserName = extractFirstName(realName) || "colega";
+          staticText = `Hola ${cleanUserName} \u{1F44B}\u{1F3FB}. Como asistente de VECY Bienes Ra\xEDces, estoy entrenada exclusivamente para ayudarte con temas de bienes ra\xEDces (buscar, publicar o cruzar inmuebles), asesor\xEDas legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. \u{1F3E0}\u2728
 
 Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con gusto te responder\xE9! \u{1F60A}`;
         }
@@ -24635,6 +24643,7 @@ var init_whatsapp_match = __esm({
     init_matching();
     init_const();
     init_parsers();
+    init_nameAndGenderResolver();
     try {
       dns.setDefaultResultOrder("ipv4first");
     } catch (e) {
@@ -25850,7 +25859,8 @@ Mis grupos oficiales:
           }
           const isAudioFailed = bodyText === "[audio-vac\xEDo]" || bodyText === "[audio-sin-buffer]" || bodyText === "[audio-error]";
           if (isAudioFailed) {
-            const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. \u{1F64F}
+            const cleanUserName = extractFirstName2(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName2(realName) || "colega";
+            const failMsg = `Hola ${cleanUserName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. \u{1F64F}
 
 Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para atenderte de inmediato. \xA1Estoy lista para responderte! \u{1F60A}`;
             await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
@@ -25867,9 +25877,10 @@ Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para
               isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
             } catch (_) {
             }
+            const cleanUserName = extractFirstName2(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName2(realName) || "colega";
             const redirectMsg = `\u26A0\uFE0F *AVISO DE MODERACI\xD3N \u2014 VECY BIENES RA\xCDCES* \u26A0\uFE0F
 
-Hola ${realName} \u{1F44B}\u{1F3FB}, este grupo (*${VECY_OFFICIAL_GROUPS.grupo1.name}*) est\xE1 reservado *EXCLUSIVAMENTE* para la publicaci\xF3n de *OFERTAS\u{1F3F7}\uFE0F y DEMANDAS\u{1F4DD} inmobiliarias*.
+Hola ${cleanUserName} \u{1F44B}\u{1F3FB}, este grupo (*${VECY_OFFICIAL_GROUPS.grupo1.name}*) est\xE1 reservado *EXCLUSIVAMENTE* para la publicaci\xF3n de *OFERTAS\u{1F3F7}\uFE0F y DEMANDAS\u{1F4DD} inmobiliarias*.
 
 Para mantener este canal 100% limpio y \xE1gil para encontrar coincidencias sin saturar a los colegas, por favor comparte tus consultas o temas en nuestros canales autorizados:
 
@@ -26029,7 +26040,8 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
           if (result && (chatId === this.buzonGroupId || chatId === this.circuloGroupId)) {
             if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
               const rawPhone = senderId.split("@")[0];
-              const redirectText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}, publicaste una ${result.classification === "INMUEBLE" ? "oferta" : "demanda"} inmobiliaria en este grupo.
+              const cleanUserName = extractFirstName2(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName2(realName) || "colega";
+              const redirectText = `Hola ${cleanUserName} \u{1F44B}\u{1F3FB}, publicaste una ${result.classification === "INMUEBLE" ? "oferta" : "demanda"} inmobiliaria en este grupo.
 
 Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) inmediato, por favor publ\xEDcala en nuestro grupo exclusivo:
 
@@ -33852,9 +33864,9 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   const hasVerifiedReview = userPerpetualSession.hasVerifiedGoogleReview || isEduardoOrJani(userId);
   const history = await getOrLoadDmHistory(userId);
   const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1e3;
-  const hasRecentInteractionPast6Hours = history.some((h) => (h.ts || 0) > sixHoursAgo);
+  const hasRecentAssistantTurn = history.some((h) => h.role === "assistant" && (h.ts || 0) > sixHoursAgo);
   const alreadyGreetedToday = await checkAlreadyGreeted(userId);
-  const isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday;
+  const isOngoingChat = alreadyGreetedToday && hasRecentAssistantTurn;
   const cleanLower = clean.toLowerCase();
   const isCommunityInquiry = /\b(?:comunidad(?:es)?|nuestra\s+comunidad|tu\s+comunidad|su\s+comunidad|los\s+grupos|tus\s+grupos|grupos\s+oficiales|unirme\s+a\s+(?:la\s+)?comunidad|conocer\s+(?:la\s+)?comunidad|compart(?:as?|ir|es)\s+(?:tus?\s+)?(?:servicios\s+o\s+)?comunidad|enlaces?\s+de\s+(?:la\s+)?comunidad|links?\s+de\s+(?:la\s+)?comunidad|de\s+qu[eé]\s+trata\s+(?:la\s+)?comunidad|cu[aá]l\s+es\s+(?:la|tu)\s+comunidad|qu[eé]\s+comunidades\s+tienen)\b/i.test(cleanLower);
   const isVecyBrokerLine = userId.includes("3166569719") || userName && userName.includes("VECY BIENES RA\xCDCES");
@@ -34314,11 +34326,11 @@ CONCIENCIA TEMPORAL EXACTA Y REGLAS DE HORA EN COLOMBIA:
 - Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.
 - Franja del d\xEDa actual: ${timeOfDay}.
 - Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.
-- \xBFHubo interacci\xF3n previa hoy o conversaci\xF3n activa?: ${isOngoingChat ? "S\xCD (Conversaci\xF3n activa en curso hoy)" : "NO (Primer mensaje del d\xEDa)"}.
+- \xBFHubo interacci\xF3n previa hoy o conversaci\xF3n activa?: ${isOngoingChat ? "S\xCD (Conversaci\xF3n activa en curso hoy)" : "NO (Primer mensaje del d\xEDa o nueva sesi\xF3n)"}.
 - REGLA ESTRICTA DEL SALUDO \xDANICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS / CERO VOCATIVOS DE NOMBRE):
   * Si la conversaci\xF3n ya est\xE1 en curso hoy (S\xCD): Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "[Nombre]! Qu\xE9 gusto...", "\xA1Hola!", "\xA1Buenos d\xEDas!", "Buenas tardes", "Buenas noches", "Qu\xE9 gusto saludarte de nuevo", "Te doy la bienvenida", ni "Soy JanIA..."). Cero saludos y cero nombres o vocativos al inicio de tu respuesta. Ve DIRECTO a responder con naturalidad, calidez y fluidez la consulta o pregunta actual.
   * CERO PREGUNTAS REPETITIVAS EN BUCLE (NO ROBOT): Si ya le preguntaste en el mensaje o turno anterior si tiene un inmueble para ofrecer o busca una propiedad, EST\xC1 TERMINANTEMENTE PROHIBIDO REPETIR ESA MISMA PREGUNTA O CUESTIONARIO. Escucha lo que acaba de responderte o preguntarte (ej: si pregunta sobre comisiones, aclara el 40/20/40 y preg\xFAntale si le gustar\xEDa operar bajo esa figura para sus negocios; no vuelvas a recitar la plantilla gen\xE9rica de bienvenida).
-  * Si es el PRIMER mensaje del d\xEDa (NO): Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional UNA SOLA VEZ al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
+  * Si es el PRIMER mensaje del d\xEDa o nueva sesi\xF3n (NO): Saluda con calidez, cortes\xEDa y se\xF1or\xEDo profesional OBLIGATORIAMENTE al inicio de tu mensaje usando "\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}".
 
 ===================================================
 MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:
@@ -34574,6 +34586,14 @@ DIRECTIVAS OBLIGATORIAS:
     reply = sanitizeResponseMarkdown(reply.trim());
     if (isOngoingChat && reply) {
       reply = stripLeadingGreetingsAndCourtesies(reply);
+    } else if (!isOngoingChat && reply) {
+      const hasGreetingAlready = /^(?:¡?hola|¡?buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos)/i.test(reply.trim());
+      if (!hasGreetingAlready) {
+        const greetingHeader = `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B}`;
+        reply = `${greetingHeader}
+
+${reply.trim()}`;
+      }
     }
     const generalCourtesyRegex = /(?:(?:\r?\n\s*)*(?:(?:Un\s+)?Servicio de cortesía de VECY BIENES RAÍCES 🤝\.?))+/gi;
     const courtesyMatches = reply.match(generalCourtesyRegex);
@@ -35173,7 +35193,9 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer, pd
     const strictOffTopic = checkStrictOffTopic(text2);
     if (strictOffTopic.isOffTopic) {
       console.log(`[JanIA-Consulting-OffTopic] Mensaje prohibido en Soporte Legal para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en los grupos oficiales de VECY BIENES RA\xCDCES. \u{1F6AB}
+      const cleanFirstName = extractFirstName(realName);
+      const targetUserGreeting = cleanFirstName && !["hola", "buenas", "buenos", "asesor"].includes(cleanFirstName.toLowerCase()) ? cleanFirstName : "colega";
+      const warningText = `Hola ${targetUserGreeting} \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en los grupos oficiales de VECY BIENES RA\xCDCES. \u{1F6AB}
 
 Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesor\xEDa legal, tributaria y aval\xFAos inmobiliarios. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
       return {
@@ -35584,7 +35606,8 @@ async function processCirculoMessage(text2, userId, userName, imageBuffer, pdfBu
     const strictOffTopic = checkStrictOffTopic(text2);
     if (strictOffTopic.isOffTopic) {
       console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto VECY BIENES RA\xCDCES para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en nuestra comunidad de VECY BIENES RA\xCDCES. \u{1F6AB}
+      const targetUserGreeting = cleanFirstName || "colega";
+      const warningText = `Hola ${targetUserGreeting} \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en nuestra comunidad de VECY BIENES RA\xCDCES. \u{1F6AB}
 
 Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog\xEDa, comisiones y el modelo colaborativo inmobiliario. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
       return {

@@ -1721,9 +1721,10 @@ export async function processPrivateDmConversationalMessage(
   // Historial conversacional de 72 horas y verificación de interacción en últimas 6 horas
   const history = await getOrLoadDmHistory(userId);
   const sixHoursAgo = Date.now() - (6 * 60 * 60 * 1000);
-  const hasRecentInteractionPast6Hours = history.some(h => (h.ts || 0) > sixHoursAgo);
+  const hasRecentAssistantTurn = history.some(h => h.role === "assistant" && (h.ts || 0) > sixHoursAgo);
   const alreadyGreetedToday = await checkAlreadyGreeted(userId);
-  const isOngoingChat = hasRecentInteractionPast6Hours || history.length > 0 || alreadyGreetedToday;
+  // Es conversación activa en curso hoy SI Y SOLO SI JanIA ya saludó hoy Y existió un turno previo del asistente en las últimas horas
+  const isOngoingChat = alreadyGreetedToday && hasRecentAssistantTurn;
 
   const cleanLower = clean.toLowerCase();
 
@@ -2232,11 +2233,11 @@ export async function processPrivateDmConversationalMessage(
       `- Fecha y hora exacta en Colombia (America/Bogota): ${colombiaTimeFormatted}.\n` +
       `- Franja del día actual: ${timeOfDay}.\n` +
       `- Saludo oficial correspondiente al horario: "${timeSalutation}". Si saludas por tu cuenta, usa estrictamente "${timeSalutation}" conforme a la hora colombiana.\n` +
-      `- ¿Hubo interacción previa hoy o conversación activa?: ${isOngoingChat ? "SÍ (Conversación activa en curso hoy)" : "NO (Primer mensaje del día)"}.\n` +
+      `- ¿Hubo interacción previa hoy o conversación activa?: ${isOngoingChat ? "SÍ (Conversación activa en curso hoy)" : "NO (Primer mensaje del día o nueva sesión)"}.\n` +
       `- REGLA ESTRICTA DEL SALUDO ÚNICO Y CONTINUIDAD (CERO PLANTILLAS / CERO SALUDOS REPETIDOS / CERO VOCATIVOS DE NOMBRE):\n` +
       `  * Si la conversación ya está en curso hoy (SÍ): Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "[Nombre]! Qué gusto...", "¡Hola!", "¡Buenos días!", "Buenas tardes", "Buenas noches", "Qué gusto saludarte de nuevo", "Te doy la bienvenida", ni "Soy JanIA..."). Cero saludos y cero nombres o vocativos al inicio de tu respuesta. Ve DIRECTO a responder con naturalidad, calidez y fluidez la consulta o pregunta actual.\n` +
       `  * CERO PREGUNTAS REPETITIVAS EN BUCLE (NO ROBOT): Si ya le preguntaste en el mensaje o turno anterior si tiene un inmueble para ofrecer o busca una propiedad, ESTÁ TERMINANTEMENTE PROHIBIDO REPETIR ESA MISMA PREGUNTA O CUESTIONARIO. Escucha lo que acaba de responderte o preguntarte (ej: si pregunta sobre comisiones, aclara el 40/20/40 y pregúntale si le gustaría operar bajo esa figura para sus negocios; no vuelvas a recitar la plantilla genérica de bienvenida).\n` +
-      `  * Si es el PRIMER mensaje del día (NO): Saluda con calidez, cortesía y señorío profesional UNA SOLA VEZ al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n\n` +
+      `  * Si es el PRIMER mensaje del día o nueva sesión (NO): Saluda con calidez, cortesía y señorío profesional OBLIGATORIAMENTE al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n\n` +
       `===================================================\n` +
       `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:\n` +
       `===================================================\n` +
@@ -2587,9 +2588,16 @@ DIRECTIVAS OBLIGATORIAS:
     reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
     reply = sanitizeResponseMarkdown(reply.trim());
 
-    // Erradicación rigurosa de saludos en conversaciones activas en curso (Doctrina v33.33)
+    // Erradicación rigurosa de saludos ÚNICAMENTE en conversaciones activas en curso (Doctrina v33.33)
     if (isOngoingChat && reply) {
       reply = stripLeadingGreetingsAndCourtesies(reply);
+    } else if (!isOngoingChat && reply) {
+      // Si es el primer mensaje del día o nueva sesión y el modelo omitió el saludo formal, anteponerlo siempre:
+      const hasGreetingAlready = /^(?:¡?hola|¡?buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos)/i.test(reply.trim());
+      if (!hasGreetingAlready) {
+        const greetingHeader = `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋`;
+        reply = `${greetingHeader}\n\n${reply.trim()}`;
+      }
     }
 
     // Normalizar y deduplicar cualquier duplicación del cierre de cortesía en la respuesta
