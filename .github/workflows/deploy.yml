@@ -28,6 +28,9 @@ jobs:
 
             echo "📥 [CI/CD] Sincronizando código desde origin/main..."
             git config pull.rebase false
+            # Descarta artefactos compilados localmente (dist-server/ se regenera con npm run build)
+            # para evitar que "git pull" aborte por cambios locales en archivos versionados.
+            git checkout -- dist-server/ 2>/dev/null || true
             git pull origin main --ff-only || git pull origin main --no-rebase
 
             echo "📦 [CI/CD] Verificando dependencias (pnpm / npm)..."
