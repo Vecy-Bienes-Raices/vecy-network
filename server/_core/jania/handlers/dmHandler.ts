@@ -48,6 +48,10 @@ import {
   isFounderTeachingInstruction,
   saveFounderTeaching
 } from "../founderKnowledgeService";
+import {
+  analyzeRequirementCompleteness,
+  buildDetailedProfilingInterview
+} from "../profilingInterviewService";
 
 export interface DmMediaOptions {
   imageBuffer?: string;
@@ -465,7 +469,8 @@ export async function executeJaniaDmTool(
             insertado: false,
             esIncompleto: true,
             guiaFichaTecnica: res.dmResponse,
-            detalle: "Requerimiento incompleto (falta presupuesto, administración, zona o tipología). JanIA guía al usuario con la Ficha Técnica Estandarizada [ ] para completar los datos indispensables."
+            reporteOficial: res.dmResponse,
+            detalle: "Requerimiento incompleto (falta presupuesto, administración, zona o tipología). JanIA guía al usuario con la Entrevista Minuciosa de Perfilamiento Inmobiliario (Doctrina Eduardo A. Rivera) para completar los datos indispensables."
           }
         };
       }
@@ -1725,6 +1730,9 @@ export async function processPrivateDmConversationalMessage(
   const alreadyGreetedToday = await checkAlreadyGreeted(userId);
   // Es conversación activa en curso hoy SI Y SOLO SI JanIA ya saludó hoy Y existió un turno previo del asistente en las últimas horas
   const isOngoingChat = alreadyGreetedToday && hasRecentAssistantTurn;
+  const lastAssistantTurnEarly = history.slice().reverse().find(h => h.role === "assistant");
+  const lastAssistantTextEarly = lastAssistantTurnEarly?.content || "";
+  const isAssistantRefiningListingOrReqEarly = /(?:habitaciones|alcobas|parqueadero|garajes|presupuesto|canon|precio|barrio|zona|sector|tipo de inmueble|apartamento o casa|radicar|ficha técnica|datos clave|completar los datos|afinar la punter[íi]a|opciones m[áa]s exactas|cu[áa]ntas habitaciones|requieres parqueadero|qu[eé] tipo de inmueble|detalles de lo que tu cliente|entrevista|capacidad financiera|altura|amenidades|distribución)/i.test(lastAssistantTextEarly);
 
   const cleanLower = clean.toLowerCase();
 
@@ -2156,6 +2164,33 @@ export async function processPrivateDmConversationalMessage(
     return vehicularReply;
   }
 
+  // 🏢 DOCTRINA EDUARDO A. RIVERA (v33.79) — ENTREVISTA MINUCIOSA DE PERFILAMIENTO INMOBILIARIO Y ATERRIZAJE AL ASESOR:
+  // Si el usuario (sea colega inmobiliario o cliente) presenta un requerimiento o búsqueda inmobiliaria escueta, incompleta o genérica
+  // (sin cifras numéricas de presupuesto, sin alcobas exactas o sin especificaciones indispensables):
+  // Queda TERMINANTEMENTE PROHIBIDO responder como un bot mediocre diciendo "😉 Registraré de inmediato en el motor...".
+  // JanIA saluda con cortesía por su nombre, valora la oportunidad y la zona, aterriza al agente con criterio profesional haciéndole ver
+  // que no podemos salir a improvisar visitas ni hacerle perder el tiempo a su cliente, y despliega la entrevista minuciosa de perfilamiento
+  // adaptada para cada tipología (apartamento, casa, lote, bodega, oficina/local, finca).
+  if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    const reqProfiling = analyzeRequirementCompleteness(clean);
+    if (reqProfiling.isRequirement && reqProfiling.isIncompleteOrHollow && (!isOngoingChat || !isAssistantRefiningListingOrReqEarly)) {
+      const interviewReply = buildDetailedProfilingInterview({
+        displayName,
+        timeSalutation,
+        propertyType: reqProfiling.propertyType,
+        transactionType: reqProfiling.transactionType,
+        zoneOrSector: reqProfiling.zoneOrSector,
+        isAgent: reqProfiling.isAgentRepresentingClient,
+        rawUserText: clean
+      });
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", interviewReply);
+      markUserGreetedToday(userId);
+      return interviewReply;
+    }
+  }
+
   // 🌐 NAVEGACIÓN Y EXTRACCIÓN PREVIA DE URLs:
   let preloadedWebContent = "";
   const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
@@ -2307,7 +2342,8 @@ export async function processPrivateDmConversationalMessage(
       `    1. ¡Acéptalo y ayúdalo con total entusiasmo! JanIA asume el rol de Asesora y Guía Especialista en Marketing Inmobiliario.\\n` +
       `    2. PEDAGOGÍA SINCERA DEL MATCH Y MODELO 40/20/40 (CERO FALSAS ILUSIONES):\\n` +
       `       Explica con total franqueza y claridad cómo funciona el MATCH. Sé sincera y no ilusiones al cliente: para que la mesa de operaciones active el cruce y conecte las puntas, las partes deben aceptar trabajar bajo la figura de alianza colaborativa 40/20/40. El 40% de la comisión es para ti que tienes la DEMANDA o la OFERTA según lo que tengas, el 40% para quien aporta la otra punta complementaria, y el 20% para la mesa de VECY por el respaldo legal, la coordinación y el acompañamiento hasta el cierre.\\n` +
-      `    3. RECOPILACIÓN Y AUDITORÍA DE FICHA TÉCNICA ULTRA-COMPLETA (NO DATOS BÁSICOS - INDAGACIÓN CON EJEMPLOS):\\n` +
+      `    3. RECOPILACIÓN Y AUDITORÍA DE FICHA TÉCNICA ULTRA-COMPLETA (NO DATOS BÁSICOS - INDAGACIÓN CON EJEMPLOS): (DOCTRINA EDUARDO A. RIVERA — PROHIBICIÓN RADICAL DE DECIR "REGISTRARÉ DE INMEDIATO" ANTE REQUERIMIENTOS ESCUETOS Y OBLIGACIÓN DE ENTREVISTA MINUCIOSA DE PERFILAMIENTO):\\n` +
+      `       Ante un requerimiento o búsqueda inmobiliaria que carezca de cifras de presupuesto numéricas, alcobas exactas o especificaciones indispensables (ej. "tengo cliente buscando apartamento en X, conjunto grande, cuenta con recursos"): QUEDA TERMINANTEMENTE PROHIBIDO responder diciendo "Registraré de inmediato en el motor..." o actuar como un bot mediocre que asiente sin indagar. En su lugar, JanIA DEBE desplegar la Entrevista Minuciosa de Perfilamiento Inmobiliario: saluda con calidez por su nombre, valora la oportunidad y la zona, aterriza al agente con criterio profesional haciéndole ver que para cerrar negocios y encontrar el inmueble perfecto sin hacer perder tiempo al comprador en visitas infructuosas se debe perfilar con total rigor, y formula las preguntas correspondientes: presupuesto en COP, recursos propios vs crédito aprobado y banco, valor mensual de administración, alcobas exactas (1=1, 2=2), baños, parqueaderos independientes/lineales, depósito, piso, exterior/interior con sol, cocina (abierta/isla/barra americana vs cerrada clásica), balcón/chimenea, amenidades indispensables del conjunto, y sectores aledaños.\\n` +
       `       No te conformes con datos escuetos o superficiales. Entre más características tenga la ficha, más exacto y veloz será el MATCH. Indaga con astucia, naturalidad y calidez mediante ejemplos:\\n` +
       `       • DEDUCCIÓN AUTÓNOMA DE ROL (OFERTA VS DEMANDA - CERO REPREGUNTAS OBVIAS): Si durante la conversación el usuario ya usó palabras como 'busco', 'necesito', 'tengo un cliente', 'vendo', 'tengo este apartamento': JanIA deduce el tipo de operación de inmediato con astucia y jamás pregunta '¿Es una búsqueda o un inmueble?' como un bot rígido; se adelanta y lo enuncia con autoridad ('Veo que tienes este requerimiento de búsqueda activo...' o 'Veo que tienes este inmueble en oferta...'). JAMÁS asumas ni digas que está buscando 'para sí mismo' ni lo rotules de 'comprador directo'.\\n` +
       `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En la red VECY Network la gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS (asesores, inmobiliarias, corredores independientes) gestionando clientes. Queda TERMINANTEMENTE PROHIBIDO rotular a un usuario como 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario declare expresamente de forma inequívoca ('soy comprador directo', 'es para mí sin intermediario', 'soy el dueño directo'), JanIA DEBE PREGUNTAR CON ELEGANCIA: 'Por cierto, ¿nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?'. Si es colega, su cliente y su 40% están 100% protegidos y blindados con VECY.\\n` +
@@ -2489,13 +2525,13 @@ export async function processPrivateDmConversationalMessage(
 5. Si aún falta algún dato verdaderamente indispensable para radicar o buscar, solicítalo con extrema calidez, astucia y brevedad (máximo 1 o 2 renglones) sin hacer formularios largos ni repreguntar lo que ya se sabe.]`;
     }
 
-    const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|unirme\s+a\s+(?:la\s+)?comunidad|entrar\s+al\s+grupo|entrar\s+a\s+(?:la\s+)?comunidad|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(clean);
+    const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|unirme\s+a\s+(?:la\s+)?comunidad|entrar\s+al\s+grupo|entrar\s+a\s+(?:la\s+)?comunidad|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+(?:un\s+)?(?:requerimiento|cliente|inmueble)|cliente\s+buscando|buscando\s+(?:apartamento|apto|casa|bodega|oficina|lote|finca))\b/i.test(clean);
 
     if (isExplicitRegistrationOrJoinIntentInPrompt) {
-      userPromptContent += `\n[SISTEMA: El usuario manifiesta la intención de REGISTRAR O PUBLICAR un requerimiento o inmueble nuevo, o de UNIRSE a los grupos oficiales de VECY. QUEDA TERMINANTEMENTE PROHIBIDO asumir que ya está registrado o que proviene de un grupo previo. Directivas obligatorias:
-1) Si aún no ha compartido los datos de su búsqueda o inmueble (tipo de negocio, tipología, zona/barrios, presupuesto, alcobas/garajes): pídeselos con calidez y estructura clara para poder radicarlo en el motor autoritativo y entregarle su código oficial de radicado (ID #REQ... o ID #P...).
+      userPromptContent += `\n[SISTEMA - DOCTRINA EDUARDO A. RIVERA DE REQUERIMIENTOS Y PERFILAMIENTO: El usuario manifiesta la intención de registrar o buscar un inmueble, o unirse a los grupos oficiales. QUEDA TERMINANTEMENTE PROHIBIDO asumir que ya está registrado o responder diciendo "Registraré de inmediato en la base de datos" ante datos incompletos. Directivas obligatorias:
+1) Si es un requerimiento que carece de presupuesto numérico, alcobas exactas o especificaciones indispensables: QUEDA TERMINANTEMENTE PROHIBIDO prometer registro o match a ciegas. Despliega la Entrevista Minuciosa de Perfilamiento Inmobiliario aterrizando al asesor con señorío y formulando las preguntas por dimensiones: presupuesto en COP, recursos propios vs crédito aprobado/banco, administración, alcobas exactas 1=1, baños, parqueaderos independientes/lineales, depósito, piso, cocina, balcón y amenidades del conjunto.
 2) Si solicitó unirse al grupo de Demandas y Ofertas (o grupos oficiales), entrégale el enlace oficial limpio: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ.
-3) Si ya aportó los datos indispensables en este turno o en la conversación, invoca DE INMEDIATO la herramienta 'registrar_inmueble_o_requerimiento' para guardarlo en la base de datos y entregarle su código oficial de radicado (ID #REQ).]`;
+3) Si ya aportó los datos indispensables completos en este turno o en la conversación, invoca DE INMEDIATO la herramienta 'registrar_inmueble_o_requerimiento' para guardarlo en la base de datos y entregarle su código oficial de radicado (ID #REQ).]`;
     }
 
     if (isCommunityInquiry) {
@@ -2587,6 +2623,23 @@ DIRECTIVAS OBLIGATORIAS:
     // Limpiar cualquier prefijo de timestamp o corchete imitado por el LLM
     reply = reply.replace(/^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\]\s*/, '').trim();
     reply = sanitizeResponseMarkdown(reply.trim());
+
+    // 🛡️ GUARDARRAÍL DOCTRINAL EDUARDO A. RIVERA (v33.79) — ANTI-RESPUESTA ROBÓTICA ANTE REQUERIMIENTOS ESCUETOS:
+    // Si la respuesta generada contiene afirmaciones huecas de registro ("Registraré de inmediato...", "He registrado tu requerimiento...", etc.)
+    // ante un texto de usuario que carecía de especificaciones indispensables (presupuesto numérico, alcobas o área):
+    const isHollowRegistrationReply = /(?:registrar[eé]\s+de\s+inmediato.*(?:requerimiento|b[uú]squeda|motor)|he\s+registrado.*(?:requerimiento|b[uú]squeda)|radicar[eé]\s+de\s+inmediato.*(?:requerimiento|b[uú]squeda)|registro\s+tu\s+requerimiento)/i.test(reply);
+    const reqCheck = analyzeRequirementCompleteness(clean);
+    if (isHollowRegistrationReply && reqCheck.isRequirement && reqCheck.isIncompleteOrHollow) {
+      reply = buildDetailedProfilingInterview({
+        displayName,
+        timeSalutation,
+        propertyType: reqCheck.propertyType,
+        transactionType: reqCheck.transactionType,
+        zoneOrSector: reqCheck.zoneOrSector,
+        isAgent: reqCheck.isAgentRepresentingClient,
+        rawUserText: clean
+      });
+    }
 
     // Erradicación rigurosa de saludos ÚNICAMENTE en conversaciones activas en curso (Doctrina v33.33)
     if (isOngoingChat && reply) {

@@ -8540,6 +8540,34 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.78` (`33.78.0`) en `shared/const.ts` y `package.json`.
 
+### 10.174 Versión v33.79 (2026-10-30) — Entrevista Minuciosa de Perfilamiento Inmobiliario y Aterrizaje Pedagógico al Asesor (Erradicación Total de Promesas Vacías de Registro de Requerimientos Incompletos) (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  - Eduardo Rivera detectó que ante mensajes de prueba o requerimientos iniciales de colegas (ej: Leonardo Prieto: *"Buena tarde, escribo para probar el servicio, tengo cliente buscando apartamento en Villa Magdala, conjunto grande, ya cuenta con los recursos. Att. Leonardo Prieto"*), JanIA respondía de forma robótica y complaciente con una promesa vacía: *"😉 Registraré de inmediato en el motor de base de datos y cruce de la red VECY el requerimiento..."*.
+  - Esta respuesta degradaba la imagen de JanIA a un "simple bot mediocremente programado". En el corretaje inmobiliario profesional, registrar una solicitud sin presupuesto numérico (recursos propios vs crédito y banco), alcobas exactas (regla 1=1), área construida m², piso/vista, tipo de cocina o cuota de administración es inviable para cruces y perjudica al cliente al provocar visitas improvisadas a ciegas.
+  - La doctrina de Eduardo exige que JanIA primero salude cálidamente por su nombre, valore la oportunidad y el sector, aterrice profesionalmente al asesor explicando la necesidad de un perfilamiento riguroso y despliegue una entrevista estructurada en 5 dimensiones adaptada a la tipología del inmueble (apartamento, casa, lote, bodega, oficina, finca).
+- **Solución Técnica Implementada (`v33.79`)**:
+  1. `server/_core/jania/profilingInterviewService.ts` (NUEVO):
+     - `analyzeRequirementCompleteness`: Examina si el mensaje contiene una demanda y verifica si faltan datos críticos (presupuesto numérico, m², habitaciones exactas, desglose financiero). Identifica tipología, tipo de negocio (venta/arriendo), sector e interlocutor (asesor vs cliente final).
+     - `buildDetailedProfilingInterview`: Genera la entrevista estructurada y personalizada en 5 dimensiones:
+       1. *Presupuesto y Finanzas:* Efectivo vs crédito/leasing aprobado, banco emisor, cuota inicial y tope de administración.
+       2. *Espacios y Distribución:* Metraje estimado en m², número exacto de alcobas (regla 1=1), baños, garajes independientes vs servidumbre y depósito.
+       3. *Altura, Iluminación y Confort Interior:* Rango de pisos, ascensor, vista exterior o interior iluminado, antigüedad, estilo de cocina (abierta/isla/barra americana vs clásica cerrada), balcón, terraza o chimenea.
+       4. *Conjunto y Amenidades:* Club house, gimnasio, salón social, parque infantil, zonas verdes, piscina/sauna/turco y coworking.
+       5. *Ubicación y Alternativas:* Sectores o barrios colindantes aceptables.
+     - Aplica pedagogía y señorío al asesor e invita a la alianza bajo el modelo colaborativo 40/20/40 de VECY.
+  2. `server/_core/jania/handlers/dmHandler.ts`:
+     - Interceptor para requerimientos incompletos en la apertura conversacional privada.
+     - Guardarraíl de post-procesamiento: intercepta y reemplaza cualquier intento del LLM de emitir confirmaciones vacías ("Registraré de inmediato...").
+     - Enriquecida la herramienta `registrar_inmueble_o_requerimiento`.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Incorporada la enseñanza `seed-entrevista-perfilamiento-minucioso` en la memoria fundacional de JanIA.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 165 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **522/522 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.79` (`33.79.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

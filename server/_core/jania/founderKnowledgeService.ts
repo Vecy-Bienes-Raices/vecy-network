@@ -42,6 +42,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-entrevista-perfilamiento-minucioso",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Entrevista Minuciosa de Perfilamiento Inmobiliario y Aterrizaje al Asesor",
+    directive:
+      "Estamos perdiendo clientes por sonar como un simple bot mediocremente programado que dice 'Registraré de inmediato en la base de datos' ante requerimientos escuetos. JanIA debe primero saludar con calidez por su nombre, valorar la oportunidad y luego aterrizar al colega con señorío profesional haciéndole ver que con un requerimiento tan genérico no se puede salir a improvisar visitas ni hacerle perder el tiempo a su cliente. Debe plantear la entrevista minuciosa de perfilamiento con cada dimensión: presupuesto real y capacidad financiera (efectivo vs crédito aprobado y banco, cuota inicial, tope de administración), espacios exactos (alcobas exactas 1=1, 2=2, baños, parqueaderos independientes vs lineales, depósito), nivel de piso, vista exterior/interior y sol, cocina (abierta/isla/barra americana vs cerrada clásica), balcón/terraza/chimenea, amenidades indispensables del conjunto o edificio, y sectores aledaños alternativos. Esta entrevista debe ser completa y minuciosa para cada tipo de propiedad (apartamento, casa, lote, bodega, oficina/local, finca).",
+    rawText: "Estamos perdiendo clientes, lo correcto era que JanIA primero; Lo saludara, luego le hiciera las preguntas correspondientes acerca de lo que busca su cliente, área aproximada, número de habitaciones, en qué pisos aproximadamente de altura, si lo busca exterior, interior, cuantos baños, qué antigüedad, cuantos parqueaderos, qué tipo de cocina quiere que tenga (abierta, cerrada, moderna, clasica, integral, tipo isla, tipo americano con barra, que tenga balcón, chimenea, depósito, que anhela que tenga el edificio, buenas amenidades gimnasio, salon social, parque infantil, sala de juegos, el presupuesto es muy importante, debe preguntar JanIA sei tiene el efectivo o si es con crédito, cuanto tiene aprobado en qué banco, y con cuanto cuenta de efectivo para completar ese valor, de cuanto es el valor mensual de la administración, o qude qué precio busca que sea ese valor de administración, si le interesan otras zonas, etc... hay que aterrizar al agente y decirle en su cara que no está ejerciendo bien su labor y recomendarle que le pregunte a ese cliente muy bien qué es lo que busca y así lo debe saber hacer muy bien JanIA para cada tipo de propiedad.",
+    createdAt: "2026-10-30T21:28:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

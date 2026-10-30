@@ -15068,3 +15068,54 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **518/518 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
 - **Versión Oficial:** `v33.78` en `shared/const.ts` y `33.78.0` en `package.json`.
+
+---
+
+### 📅 [2026-10-30] — Entrevista Minuciosa de Perfilamiento Inmobiliario y Aterrizaje Pedagógico al Asesor (Erradicación Total de Promesas Vacías de Registro de Requerimientos Incompletos) (v33.79 — Doctrina Eduardo A. Rivera)
+
+**Versión Desplegada:** `jania-server v33.79.0` (PM2 en VPS Contabo `13.140.149.144`)
+**Archivos Creados y Modificados:**
+- `server/_core/jania/profilingInterviewService.ts` (NUEVO)
+- `server/_core/jania/founderKnowledgeService.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts`
+- `package.json`
+- `GEMINI.md`
+- `.agents/AGENTS.md`
+- `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Estamos perdiendo clientes, lo correcto era que JanIA primero; Lo saludara, luego le hiciera las preguntas correspondientes acerca de lo que busca su cliente, área aproximada, número de habitaciones, en qué pisos aproximadamente de altura, si lo busca exterior, interior, cuantos baños, qué antigüedad, cuantos parqueaderos, qué tipo de cocina quiere que tenga (abierta, cerrada, moderna, clasica, integral, tipo isla, tipo americano con barra, que tenga balcón, chimenea, depósito, que anhela que tenga el edificio, buenas amenidades gimnasio, salon social, parque infantil, sala de juegos, el presupuesto es muy importante, debe preguntar JanIA sei tiene el efectivo o si es con crédito, cuanto tiene aprobado en qué banco, y con cuanto cuenta de efectivo para completar ese valor, de cuanto es el valor mensual de la administración, o qude qué precio busca que sea ese valor de administración, si le interesan otras zonas, etc, en fin son tantas cosas que hay que decir o que Jaia debe ir preuntando en cada chat o durante la conversación hasta lograr perfilar muy bien el cliente, ya que con lo que respondió, sonó como un simple BOT mediocremente programado, bueno la entervista de janIA debe ser muy minuciosa, clara, completísima y puntual con cada cosa hasta saber muy bien si en verdad se puede o no registrar tal requerimiento, pues si es completo más rápido encontraremos lo que busca el cliente de ese colega, mientras sean tan sencillos esos requerimientos, hay que aterrizar al agente y decirle en su cara que no está ejerciendo bien su labor y recomendarle que le pregunte a es cliente muy bien qué es lo que busca y así lo debe saber hacer muy bien JanIA para cada tipo de propiedad."*
+- **Diagnóstico y Causa Raíz Identificada:**
+  - Ante mensajes de colegas como el de Leonardo Prieto: *"Buena tarde, escribo para probar el servicio, tengo cliente buscando apartamento en Villa Magdala, conjunto grande, ya cuenta con los recursos. Att. Leonardo Prieto"*.
+  - El sistema detectaba la intención de requerimiento, pero como no contenía presupuesto numérico, habitaciones exactas ni área en m², el modelo caía en una promesa genérica vacía: *"😉 Registraré de inmediato en el motor de base de datos y cruce de la red VECY el requerimiento de tu cliente buscando apartamento en Villa Magdala (conjunto residencial grande y recursos listos)"*.
+  - Esto hacía que JanIA sonara como un bot amateur y descuidado. En el corretaje inmobiliario serio, registrar una demanda con datos tan pobres es inviable: no hay forma de cruzar contra el inventario sin conocer el rango financiero real (efectivo vs. crédito aprobado y banco), las alcobas exactas (regla de oro 1=1), el metraje, piso/vista, tipo de cocina ni tope de administración. Además, enviar a un comprador a visitas a ciegas quema al cliente y deteriora la reputación del asesor.
+
+#### 2. Solución Técnica Implementada (`v33.79`)
+1. **Módulo Especializado de Auditoría y Entrevista (`profilingInterviewService.ts`):**
+   - Función `analyzeRequirementCompleteness`: Examina si el mensaje contiene un requerimiento e identifica si es incompleto o hueco (carece de presupuesto numérico, habitaciones exactas, área o desglose de recursos).
+   - Extrae tipología (`apartamento`, `casa`, `lote`, `bodega`, `oficina`, `finca`), tipo de negocio (`compra` o `arriendo`), zona/sector y si el interlocutor es un asesor o el cliente directo.
+   - Función `buildDetailedProfilingInterview`: Genera la entrevista estructurada y profesional adaptada al tipo de propiedad con 5 dimensiones clave:
+     1. **Presupuesto y Finanzas:** Recursos propios de contado vs crédito hipotecario / leasing aprobado, banco emisor, cuota inicial y tope de cuota de administración.
+     2. **Espacios y Distribución:** Área construida estimada (m²), número exacto de alcobas (regla estricta 1=1, 2=2), baños completos, parqueaderos (independientes vs servidumbre) y depósito.
+     3. **Altura, Iluminación y Confort Interior:** Piso de preferencia, ascensor, vista exterior con sol de mañana/tarde o interior silencioso, antigüedad máxima, diseño de cocina (abierta/isla/barra americana vs cerrada clásica), balcón, terraza o chimenea.
+     4. **Conjunto y Amenidades:** Conjunto club house, gimnasio, salón social, zonas verdes, parque infantil, zonas húmedas (piscina/sauna/turco), coworking y vigilancia 24/7.
+     5. **Ubicación y Alternativas:** Si está cerrado únicamente a ese sector o si contempla barrios vecinos.
+   - **Aterrizaje Pedagógico:** JanIA explica con señorío y asertividad pedagógica por qué no se pueden registrar requerimientos al tanteo ("un asesor profesional no lleva a su comprador a dar vueltas a ciegas"), motivándolo a profundizar con su cliente.
+   - Cierra con la invitación formal a trabajar en llave bajo el modelo colaborativo 40/20/40 de VECY Network.
+2. **Intercepción Prioritaria y Guardarraíl en `dmHandler.ts`:**
+   - Interceptor activo en el flujo principal: si entra un requerimiento incompleto/hueco en la apertura, entrega de inmediato la entrevista detallada de perfilamiento con saludo cálido y personalizado.
+   - Guardarraíl de post-procesamiento: si Gemini llega a generar una respuesta de confirmación vacía ("Registraré de inmediato..."), el guardarraíl intercepta y reemplaza la salida con la entrevista estructurada.
+   - La herramienta `registrar_inmueble_o_requerimiento` orienta sobre la necesidad de perfilamiento profundo ante solicitudes sin datos duros.
+3. **Memoria Fundacional y Enseñanza Persistente (`founderKnowledgeService.ts`):**
+   - Consagrada la enseñanza `seed-entrevista-perfilamiento-minucioso` dictada por Eduardo A. Rivera, permanente en la base de conocimiento vectorial de JanIA.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 165 en `regression.test.ts`:** 4 pruebas unitarias automatizadas que comprueban la detección de requerimientos incompletos, la formulación de la entrevista minuciosa adaptada a apartamentos y casas, la intercepción en `dmHandler.ts` y la consistencia de versión.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **522/522 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
+- **Versión Oficial:** `v33.79` en `shared/const.ts` y `33.79.0` en `package.json`.

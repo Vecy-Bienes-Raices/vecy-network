@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.78 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.79 — Octubre 2026
+
+### Novedades v33.79 (Entrevista Minuciosa de Perfilamiento Inmobiliario y Aterrizaje Pedagógico al Asesor — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Estamos perdiendo clientes, lo correcto era que JanIA primero; Lo saludara, luego le hiciera las preguntas correspondientes acerca de lo que busca su cliente, área aproximada, número de habitaciones, en qué pisos aproximadamente de altura, si lo busca exterior, interior, cuantos baños, qué antigüedad, cuantos parqueaderos, qué tipo de cocina quiere que tenga (abierta, cerrada, moderna, clasica, integral, tipo isla, tipo americano con barra, que tenga balcón, chimenea, depósito, que anhela que tenga el edificio, buenas amenidades gimnasio, salon social, parque infantil, sala de juegos, el presupuesto es muy importante, debe preguntar JanIA sei tiene el efectivo o si es con crédito, cuanto tiene aprobado en qué banco, y con cuanto cuenta de efectivo para completar ese valor, de cuanto es el valor mensual de la administración, o qude qué precio busca que sea ese valor de administración, si le interesan otras zonas, etc... hay que aterrizar al agente y decirle en su cara que no está ejerciendo bien su labor y recomendarle que le pregunte a es cliente muy bien qué es lo que busca y así lo debe saber hacer muy bien JanIA para cada tipo de propiedad."*
+  2. **Causas Raíz Identificadas:**
+     - Ante un requerimiento de un colega como Leonardo Prieto (*"tengo cliente buscando apartamento en Villa Magdala, conjunto grande, ya cuenta con los recursos"*), el sistema no detectaba datos duros (presupuesto numérico, alcobas exactas o m²), pero Gemini emitía una confirmación vacía: *"😉 Registraré de inmediato en el motor de base de datos..."*.
+     - Esto generaba la impresión de un bot mediocre y automatizado, cuando la doctrina VECY exige rigor profesional, aterrizaje pedagógico al asesor y una entrevista minuciosa de perfilamiento en 5 dimensiones (Finanzas, Espacios, Altura/Confort, Amenidades y Sectores) antes de registrar cualquier demanda.
+- **Implementación Técnica**:
+  - `server/_core/jania/profilingInterviewService.ts` (NUEVO):
+    - Detección de requerimientos incompletos (`analyzeRequirementCompleteness`) y construcción de entrevista estructurada (`buildDetailedProfilingInterview`) adaptada a cada tipología inmobiliaria (Apartamentos, Casas, Lotes, Bodegas, Oficinas/Locales, Fincas).
+    - Incluye indagación de: Recursos propios vs crédito hipotecario/leasing aprobado, banco, cuota inicial, administración, m², alcobas exactas (regla 1=1), baños, garajes independientes, depósito, piso, ascensor, vista, antigüedad, tipo de cocina, balcón/terraza, amenidades de club house y zonas aledañas toleradas.
+    - Aterrizaje pedagógico al asesor e invitación formal al modelo 40/20/40 de VECY.
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - Interceptor activo para requerimientos incompletos en el flujo conversacional directo.
+    - Guardarraíl de post-procesamiento que sustituye confirmaciones robóticas vacías por la entrevista minuciosa.
+    - Directivas en system prompt y respuesta enriquecida en `registrar_inmueble_o_requerimiento`.
+  - `server/_core/jania/founderKnowledgeService.ts`:
+    - Incorporada la enseñanza `seed-entrevista-perfilamiento-minucioso` en la memoria fundacional de JanIA.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **522/522 passing** (Suite 165 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.79`) y `package.json` (`33.79.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.78 — Octubre 2026
 
 ### Novedades v33.78 (Naturalidad en Nombres de Usuario [Limpieza de Sufijos Gremiales y Erradicación de Menciones Robóticas en Grupos] y Garantía de Saludo Cálido y Personalizado en DMs — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
