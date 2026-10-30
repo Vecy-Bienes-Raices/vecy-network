@@ -121,7 +121,7 @@ export default function TerminosCondiciones() {
                     SISTEMA COLABORATIVO DE CORRETAJE INMOBILIARIO & CONTRATACIÓN DIGITAL
                   </p>
                   <p className="text-[11px] text-zinc-400 font-mono mt-0.5 print:text-gray-600">
-                    Bogotá D.C., Colombia · Correo: contacto@vecy.co · PBX: +57 316 656 9719
+                    Bogotá D.C., Colombia · Correo: vecybienesraices@gmail.com · PBX: +57 316 656 9719
                   </p>
                 </div>
               </div>

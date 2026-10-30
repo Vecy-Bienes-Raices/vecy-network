@@ -122,7 +122,7 @@ export default function PoliticaPrivacidad() {
                     SISTEMA COLABORATIVO DE CORRETAJE INMOBILIARIO & CONTRATACIÓN DIGITAL
                   </p>
                   <p className="text-[11px] text-zinc-400 font-mono mt-0.5 print:text-gray-600">
-                    Bogotá D.C., Colombia · Correo: contacto@vecy.co · PBX: +57 316 656 9719
+                    Bogotá D.C., Colombia · Correo: vecybienesraices@gmail.com · PBX: +57 316 656 9719
                   </p>
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function PoliticaPrivacidad() {
                 </h3>
               </div>
               <p>
-                <strong className="text-white print:text-black">VECY BIENES RAÍCES</strong>, con domicilio principal en la ciudad de Bogotá D.C., Colombia, correo electrónico oficial de contacto <strong className="text-white print:text-black">contacto@vecy.co</strong>, línea oficial del bróker <strong className="text-white print:text-black">+57 316 656 9719</strong> y portal web <strong className="text-white print:text-black">https://vecy-network.vercel.app</strong>, actúa como <strong className="text-white print:text-black">Responsable del Tratamiento de Datos Personales</strong> respecto de la información que recolecta, almacena, utiliza, circula o suprime a través de sus plataformas digitales, canales de mensajería, el bot de Inteligencia Artificial <strong className="text-[#bf953f] print:text-black">JanIA</strong> y el sistema de agendamiento <strong className="text-white print:text-black">Vecy Agenda Pro</strong>.
+                <strong className="text-white print:text-black">VECY BIENES RAÍCES</strong>, con domicilio principal en la ciudad de Bogotá D.C., Colombia, correo electrónico oficial de contacto <strong className="text-white print:text-black">vecybienesraices@gmail.com</strong>, línea oficial del bróker <strong className="text-white print:text-black">+57 316 656 9719</strong> y portal web <strong className="text-white print:text-black">https://vecy-bienes-raices.vercel.app</strong>, actúa como <strong className="text-white print:text-black">Responsable del Tratamiento de Datos Personales</strong> respecto de la información que recolecta, almacena, utiliza, circula o suprime a través de sus plataformas digitales, canales de mensajería, el bot de Inteligencia Artificial <strong className="text-[#bf953f] print:text-black">JanIA</strong> y el sistema de agendamiento <strong className="text-white print:text-black">Vecy Agenda Pro</strong>.
               </p>
             </section>
 
@@ -288,7 +288,7 @@ export default function PoliticaPrivacidad() {
                 Los titulares de la información o sus apoderados debidamente autorizados podrán ejercer sus derechos mediante comunicación formal enviada al correo electrónico oficial:
               </p>
               <div className="bg-white/[0.03] border border-[#bf953f]/30 p-4 rounded-xl font-mono text-xs sm:text-sm text-zinc-200 print:bg-white print:border-gray-300 print:text-black">
-                <strong className="text-[#bf953f] print:text-black">Correo Oficial de Hábeas Data:</strong> contacto@vecy.co <br />
+                <strong className="text-[#bf953f] print:text-black">Correo Oficial de Hábeas Data:</strong> vecybienesraices@gmail.com <br />
                 <span className="text-zinc-400 text-xs mt-1 block print:text-gray-700">Asunto requerido: "Ejercicio de Derechos Hábeas Data — [Nombre Completo y Documento]"</span>
               </div>
               <p>

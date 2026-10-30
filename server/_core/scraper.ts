@@ -20,6 +20,7 @@ const DOMINIOS_PERMITIDOS = [
   'lambienesraices.com',  // Inmobiliarias independientes
   'drive.google.com',     // Google Drive (fichas compartidas)
   'netlify.app',          // Sitios web inmobiliarios en Netlify
+  'vecy-bienes-raices.vercel.app', // Portal oficial VECY
   'vecy.co',              // Portales VECY Network
   'github.io'            // Páginas web estáticas
 ];
