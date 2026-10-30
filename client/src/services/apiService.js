@@ -44,23 +44,39 @@ export const updateProfile = async (session, formData) => {
 };
 
 /**
- * Envía el payload completo a la Edge Function.
- * La Edge Function genera el ID, inserta el registro y envía notificaciones.
- * El frontend ya NO llama a get_next_solicitud_id ni inserta directamente en la BD.
+ * Envía el payload al servidor autoritativo VPS de Vecy Bienes Raíces (a través de /api/submit)
+ * para persistencia inmediata en la base de datos de producción y generación oficial del contrato.
  */
 export const submitSolicitud = async (payload, session) => {
-  // Actualizar perfil del usuario autenticado en paralelo (sin bloquear el envío)
   if (session) {
     updateProfile(session, payload); // Fire and forget
   }
 
-    // La Edge Function genera el ID, inserta en BD y envía notificaciones
+  // 1. Enviar prioritariamente al backend autoritativo VPS de Vecy Bienes Raíces
+  try {
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success !== false) {
+      console.log('✅ Solicitud registrada con éxito en el servidor de Vecy Bienes Raíces:', data);
+      return data;
+    } else {
+      throw new Error(data.error || data.message || 'Error procesando solicitud en el servidor');
+    }
+  } catch (vpsErr) {
+    console.warn('⚠️ Fallo comunicando con el VPS vía /api/submit, recurriendo a Edge Function de respaldo:', vpsErr.message);
+
+    // 2. Respaldo secundario vía Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('send-confirmation-email', {
       body: payload,
     });
 
     if (error) {
-      console.error('❌ Error detallado de la Edge Function:', error);
+      console.error('❌ Error crítico al invocar la función de respaldo:', error);
       let detail = error.message;
       if (error.context) {
         try {
@@ -82,6 +98,7 @@ export const submitSolicitud = async (payload, session) => {
       throw new Error(`Error del servidor: ${detail}`);
     }
 
-    console.log('✅ Solicitud procesada exitosamente en el servidor.');
+    console.log('✅ Solicitud procesada mediante función de respaldo.');
     return data;
+  }
 };

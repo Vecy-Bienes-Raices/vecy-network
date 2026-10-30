@@ -264,3 +264,53 @@ export const formatTitleCase = (str) => {
     })
     .join(" ");
 };
+
+/**
+ * Convierte el formato de la Policía Nacional de Colombia
+ * (Apellidos y Nombres: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...])
+ * al orden civil y natural colombiano (NOMBRE_1 [NOMBRE_2...] APELLIDO_1 APELLIDO_2)
+ * con Title Case respetando partículas y preposiciones (de, del, la, etc.)
+ */
+export const parsePoliceAntecedentesFullName = (rawFullName) => {
+  if (!rawFullName || !String(rawFullName).trim()) return "";
+  const clean = String(rawFullName).trim().replace(/\s+/g, " ");
+  const words = clean.split(" ").filter(Boolean);
+  if (words.length <= 1) return formatTitleCase(clean);
+
+  const upper = words.map(w => w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+
+  let ap1Tokens = [];
+  let idx = 0;
+  if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 2 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+    idx += 3;
+  } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 1 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1]];
+    idx += 2;
+  } else {
+    ap1Tokens = [words[idx]];
+    idx += 1;
+  }
+
+  let ap2Tokens = [];
+  if (idx < words.length - 1) {
+    if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 3 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+      idx += 3;
+    } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 2 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1]];
+      idx += 2;
+    } else {
+      ap2Tokens = [words[idx]];
+      idx += 1;
+    }
+  }
+
+  const nameTokens = words.slice(idx);
+  if (nameTokens.length === 0) {
+    return formatTitleCase(clean);
+  }
+
+  const naturalTokens = [...nameTokens, ...ap1Tokens, ...ap2Tokens];
+  return formatTitleCase(naturalTokens.join(" "));
+};
