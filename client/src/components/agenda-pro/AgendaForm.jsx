@@ -12,7 +12,7 @@ const SignaturePadComponent = React.lazy(() => import('./SignaturePad'));
 import CustomDateTimePicker from './CustomDateTimePicker';
 import CustomSelect from './CustomSelect';
 import AuthModal from './AuthModal';
-import { validateForm } from './validations';
+import { validateForm, formatTitleCase } from './validations';
 import { fetchProfile, updateProfile, submitSolicitud } from '../../services/apiService';
 
 const logoUrl = '/logo-vecy.png';
@@ -535,12 +535,24 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   };
 
   const handleClientNameBlur = () => {
+    if (formData.interesado_nombre && formData.tipo_cliente === "Persona") {
+      const clean = formData.interesado_nombre.trim();
+      if (clean.length >= 3) {
+        setFormData(prev => ({ ...prev, interesado_nombre: formatTitleCase(clean) }));
+      }
+    }
     if (formData.interesado_documento && formData.interesado_documento.length >= 5) {
       handleVerifyClientIdentity(formData.interesado_nombre, formData.interesado_documento, formData.interesado_tipo_documento);
     }
   };
 
   const handleNameBlur = () => {
+    if (formData.solicitante_nombre && formData.solicitante_tipo_persona === "Persona Natural") {
+      const clean = formData.solicitante_nombre.trim();
+      if (clean.length >= 3) {
+        setFormData(prev => ({ ...prev, solicitante_nombre: formatTitleCase(clean) }));
+      }
+    }
     if (formData.solicitante_numero_documento && formData.solicitante_numero_documento.length >= 5) {
       handleVerifyIdentity(formData.solicitante_nombre, formData.solicitante_numero_documento, formData.solicitante_tipo_documento);
     }
@@ -805,6 +817,90 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       return;
     }
 
+    if (isValidatingDoc || isValidatingClientDoc || validatingAcompIndex !== null) {
+      toast.info('⏳ Verificando autenticidad en tiempo real. Por favor espera unos segundos...');
+      setError('⏳ Verificando autenticidad en tiempo real. Por favor espera unos segundos...');
+      return;
+    }
+
+    let finalSolicitanteNombre = (formData.solicitante_nombre || '').trim();
+    if (formData.solicitante_tipo_persona === 'Persona Natural' && finalSolicitanteNombre) {
+      finalSolicitanteNombre = formatTitleCase(finalSolicitanteNombre);
+    }
+
+    // Verificación final de seguridad si no se ha validado
+    if (formData.solicitante_numero_documento && formData.solicitante_tipo_documento && !identityVerified) {
+      setIsSubmitting(true);
+      try {
+        const cleanDoc = formData.solicitante_numero_documento.replace(/[^0-9a-zA-Z]/g, '');
+        const data = await runVerificationJob(
+          formData.solicitante_tipo_documento,
+          cleanDoc,
+          formData.solicitante_nombre,
+          (msg) => setIdentitySuccessMsg(msg)
+        );
+        if (!data || (data.valid === false && !data.officialName)) {
+          setIsSubmitting(false);
+          const errMsg = data?.error || '⚠️ Inconsistencia de identidad: El número de documento no corresponde a los nombres y apellidos indicados. Por favor verifica el documento o escribe el nombre real.';
+          setIdentityError(errMsg);
+          setIdentityVerified(false);
+          setFormErrors(prev => ({ ...prev, solicitante_numero_documento: true }));
+          setError(errMsg);
+          toast.error(errMsg);
+          const el = document.getElementById('solicitante_numero_documento');
+          if (el) el.focus();
+          return;
+        }
+        if (data.officialName) {
+          finalSolicitanteNombre = data.officialName;
+          formData.solicitante_nombre = data.officialName;
+          setFormData(prev => ({ ...prev, solicitante_nombre: data.officialName }));
+        }
+        setIdentityVerified(true);
+      } catch (err) {
+        console.warn('Verificación en envío omitida por error de red', err);
+      }
+    }
+
+    let finalInteresadoNombre = (formData.interesado_nombre || '').trim();
+    if (formData.tipo_cliente === 'Persona' && finalInteresadoNombre) {
+      finalInteresadoNombre = formatTitleCase(finalInteresadoNombre);
+    }
+
+    // Verificación final de seguridad para cliente presentado
+    if (showAgentSections && formData.interesado_documento && !clientIdentityVerified) {
+      setIsSubmitting(true);
+      try {
+        const cleanDoc = formData.interesado_documento.replace(/[^0-9a-zA-Z]/g, '');
+        const data = await runVerificationJob(
+          formData.interesado_tipo_documento || 'Cédula de ciudadanía',
+          cleanDoc,
+          formData.interesado_nombre,
+          (msg) => setClientIdentitySuccessMsg(msg)
+        );
+        if (!data || (data.valid === false && !data.officialName)) {
+          setIsSubmitting(false);
+          const errMsg = data?.error || '⚠️ Inconsistencia de identidad del cliente presentado.';
+          setClientIdentityError(errMsg);
+          setClientIdentityVerified(false);
+          setFormErrors(prev => ({ ...prev, interesado_documento: true }));
+          setError(errMsg);
+          toast.error(errMsg);
+          const el = document.getElementById('interesado_documento');
+          if (el) el.focus();
+          return;
+        }
+        if (data.officialName) {
+          finalInteresadoNombre = data.officialName;
+          formData.interesado_nombre = data.officialName;
+          setFormData(prev => ({ ...prev, interesado_nombre: data.officialName }));
+        }
+        setClientIdentityVerified(true);
+      } catch (err) {
+        console.warn('Verificación de cliente en envío omitida por error de red', err);
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -823,6 +919,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
 
       const payload = {
         ...formData,
+        solicitante_nombre: finalSolicitanteNombre || formData.solicitante_nombre,
+        interesado_nombre: finalInteresadoNombre || formData.interesado_nombre,
         agent_id: formData.agent_id ? String(formData.agent_id) : null,
         fecha_cita_texto,
         hora_cita,

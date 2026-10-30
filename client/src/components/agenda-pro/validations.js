@@ -244,3 +244,23 @@ export const validateForm = (data) => {
 
   return errors;
 };
+
+/**
+ * Convierte cualquier texto a Formato Título (Title Case)
+ * respetando partículas y preposiciones en español (de, del, la, las, los, y)
+ */
+export const formatTitleCase = (str) => {
+  if (!str) return "";
+  const lowerParticles = ["de", "del", "la", "las", "los", "y"];
+  return String(str)
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, idx) => {
+      if (idx > 0 && lowerParticles.includes(w)) {
+        return w;
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+};
