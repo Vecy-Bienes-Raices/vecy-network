@@ -357,6 +357,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Al amigo que me habló a mi, ella debió entender como lo hizo que hablaba de mi y de una debió decirle que me podía encontrar en el número +57 3166569719 y no decirle disque yo le doy tu razón si sabemos que JanIA no da recados, o por lo menos tu no la has configurado para eso o si se puede, peroi es mejor que de el número cuando detecte amistad o si haces lo de los recados pues sería genial.",
     createdAt: "2026-10-29T17:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-doctrina-comunidad-grupos-oficiales-v33-75",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Doctrina de Comunidad y Grupos Oficiales de WhatsApp (Invitación Activa, Explicación por Grupo y Cero Despistes)",
+    directive:
+      "Cuando las personas le hablen de 'comunidad' a JanIA, se refieren DIRECTA E INEQUÍVOCAMENTE a nuestros grupos y canales oficiales de WhatsApp. JanIA debe comprender de inmediato que la comunidad son nuestros espacios colaborativos en WhatsApp e invitar cordialmente a los usuarios a unirse y participar activamente, contándoles para qué es cada comunidad: 1) Grupo 1 Oficial (Ofertas🏷️ y Demandas📝 Inmobiliarias: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) para comercializar y buscar propiedades de clientes con cruce y matching automático por IA sin saturar de chat; 2) Grupo 2 Oficial (Consultorio Jurídico, Tributario y Avalúos💡: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6) para resolver en vivo dudas legales, notariales 50/50, impuestos prediales y avalúos; 3) Grupo 3 Oficial (Proyecto VECY Network🌐: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU) para alianzas gremiales entre colegas inmobiliarios, debate del modelo 40/20/40 y tecnología Proptech; 4) Canal Oficial de WhatsApp📰 (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) para boletines diarios y tendencias del sector. Si además el usuario solicita llamar o coordinar alianzas con la dirección comercial, JanIA le suministra la línea oficial del bróker de Eduardo Rivera y Jani Alves (+57 316 656 9719 / https://wa.me/573166569719).",
+    rawText:
+      "Cuando las personas le hablen de comunidad a JanIA se refieren a nuestros grupos oficiales, entonces dile a JanIA que cuando esto suceda los invite a unirse y a participar en nuestros grupos oficiales, contándoles para qué es cada comunidad.",
+    createdAt: "2026-10-30T14:30:00.000Z",
+    active: true
   }
 ];
 

@@ -1726,6 +1726,10 @@ export async function processPrivateDmConversationalMessage(
 
   const cleanLower = clean.toLowerCase();
 
+  // 🌐 DOCTRINA EDUARDO A. RIVERA (v33.75) — CONSULTAS DE "COMUNIDAD" (GRUPOS Y CANALES OFICIALES DE WHATSAPP):
+  // Cuando las personas le hablen de "comunidad" a JanIA, se refieren DIRECTA E INEQUÍVOCAMENTE a nuestros grupos y canales oficiales de WhatsApp.
+  const isCommunityInquiry = /\b(?:comunidad(?:es)?|nuestra\s+comunidad|tu\s+comunidad|su\s+comunidad|los\s+grupos|tus\s+grupos|grupos\s+oficiales|unirme\s+a\s+(?:la\s+)?comunidad|conocer\s+(?:la\s+)?comunidad|compart(?:as?|ir|es)\s+(?:tus?\s+)?(?:servicios\s+o\s+)?comunidad|enlaces?\s+de\s+(?:la\s+)?comunidad|links?\s+de\s+(?:la\s+)?comunidad|de\s+qu[eé]\s+trata\s+(?:la\s+)?comunidad|cu[aá]l\s+es\s+(?:la|tu)\s+comunidad|qu[eé]\s+comunidades\s+tienen)\b/i.test(cleanLower);
+
   // Detección de la línea comercial oficial de VECY BIENES RAÍCES (+57 316 656 9719)
   const isVecyBrokerLine = userId.includes("3166569719") || (userName && userName.includes("VECY BIENES RAÍCES"));
   const isEduardoIdentified = isVecyBrokerLine && /(?:soy\s+eduardo|habla\s+eduardo|de\s+parte\s+de\s+eduardo|eddu\b|eduardo\s+rivera)/i.test(cleanLower);
@@ -1910,6 +1914,37 @@ export async function processPrivateDmConversationalMessage(
       }
     }
 
+    // 🌐 DOCTRINA EDUARDO A. RIVERA (v33.75) — CONSULTAS DE "COMUNIDAD" (GRUPOS Y CANALES OFICIALES DE WHATSAPP):
+    if (isCommunityInquiry) {
+      const isShortCommunityOnly = clean.split(/\s+/).length <= 14 &&
+        !/(?:inmueble|apartamento|apto|casa|vendo|arriendo|compro|presupuesto|millones|chico|cedritos|radicar|c[eé]dula|nit|idu|predial)/i.test(cleanLower) &&
+        !/(?:llamarte|llamar|reuni[oó]n|hablar\s+con|marcarte|ll[aá]mame)/i.test(cleanLower);
+
+      if (isShortCommunityOnly) {
+        const reply =
+          `¡Qué alegría${displayName ? `, ${displayName}` : ""}! 🎉 En VECY BIENES RAÍCES nuestra **comunidad** se vive y se construye en nuestros grupos y canales oficiales de WhatsApp, donde conectamos a más de 2.000 colegas y aliados en toda Colombia. 🇨🇴🤝\n\n` +
+          `Te invito cordialmente a unirte y participar activamente en los espacios que mejor se adapten a tu día a día:\n\n` +
+          `1️⃣ **Grupo 1 Oficial — Ofertas🏷️ y Demandas📝 Inmobiliarias**:\n` +
+          `👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n` +
+          `*Propósito:* Espacio exclusivo y transaccional para publicar inmuebles y requerimientos de clientes. Aquí no hay charlas para no saturar; yo extraigo cada ficha e inicio el cruce automático (Match) 24/7.\n\n` +
+          `2️⃣ **Grupo 2 Oficial — Consultorio Jurídico, Tributario y Avalúos💡**:\n` +
+          `👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
+          `*Propósito:* Foro abierto donde resolvemos dudas en vivo sobre promesas, contratos, Ley 820, gastos notariales 50/50, prediales y avalúos.\n\n` +
+          `3️⃣ **Grupo 3 Oficial — Proyecto VECY Network, Alianzas y Debate 40/20/40🌐**:\n` +
+          `👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n` +
+          `*Propósito:* Espacio de comunidad, alianzas comerciales entre colegas, cultura del corretaje colaborativo y evolución Proptech.\n\n` +
+          `4️⃣ **Canal Oficial de WhatsApp📰**:\n` +
+          `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+          `*Propósito:* Boletín diario tipo newsletter con noticias clave del sector, análisis de mercado y oportunidades destacadas.\n\n` +
+          `¡Únete a los que desees y siéntete en casa! ¿En cuál de estos temas te gustaría que empecemos a colaborar hoy? 🙌✨`;
+
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      }
+    }
+
     const isAwaiting402040 = !!userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40;
     const isExplicit402040Rejection = /\b(?:no\s+(?:acepto|comparto|trabajo|voy|quiero|me\s+sirve)\s+(?:el\s+)?40\/20\/40|rechazo\s+(?:el\s+)?40\/20\/40|sin\s+40\/20\/40|nada\s+de\s+40\/20\/40|no\s+al?\s+40\/20\/40|no\s+quiero\s+40\/20\/40)\b/i.test(cleanLower);
 
@@ -1959,10 +1994,10 @@ export async function processPrivateDmConversationalMessage(
 
     const isReactionInquiry = /\b(?:por\s*qu[eé]\s+(?:le\s+)?(?:diste|pusiste|reaccionaste|reaccionaron|dejaste|mandaste)|qu[eé]\s+significa\s+(?:la\s+reacci[oó]n|el\s+emoji|el\s+lapicito|el\s+pulgar|la\s+manito)|para\s*qu[eé]\s+(?:el\s+emoji|la\s+reacci[oó]n)|por\s*qu[eé]\s+el\s+(?:emoji|lapicito|pulgar|📝|👍)|a\s+qu[eé]\s+se\s+debe\s+la\s+reacci[oó]n|por\s*qu[eé]\s+(?:me\s+)?reaccionas)\b/i.test(cleanLower);
 
-    // 🛡️ REGLA DOCTRINAL v33.58 / v33.59: Blindaje contra falsos positivos de duplicación.
-    // Si el usuario manifiesta intención de registrar, publicar, ingresar un requerimiento nuevo o unirse a los grupos,
+    // 🛡️ REGLA DOCTRINAL v33.58 / v33.59 / v33.75: Blindaje contra falsos positivos de duplicación.
+    // Si el usuario manifiesta intención de registrar, publicar, ingresar un requerimiento nuevo, unirse a los grupos o conocer la comunidad,
     // JAMÁS debe ser interceptado asumiendo que "ya está registrado en el sistema".
-    const isExplicitRegistrationOrJoinIntent = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(cleanLower);
+    const isExplicitRegistrationOrJoinIntent = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|unirme\s+a\s+(?:la\s+)?comunidad|entrar\s+al\s+grupo|entrar\s+a\s+(?:la\s+)?comunidad|link\s+del\s+grupo|enlace\s+del\s+grupo|comunidad(?:es)?|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(cleanLower);
 
     const isRequirementForwardOrDuplication = !isExplicitRegistrationOrJoinIntent && (
       /\b(?:lo\s+puse\s+en\s+el\s+grupo|acabo\s+de\s+publicar(?:\s+en\s+el\s+grupo)?|te\s+reenv[ií]o\s+(?:lo\s+del\s+grupo|del\s+grupo)|lo\s+sub[ií]\s+al\s+grupo|del\s+grupo\s+te\s+paso|mira\s+lo\s+del\s+grupo)\b/i.test(cleanLower) &&
@@ -2273,15 +2308,15 @@ export async function processPrivateDmConversationalMessage(
       `          - ✏️ Lápiz (✏️): Demanda o Búsqueda de Arriendo.\\n` +
       `          - 🔄 / 🔁 Flechas circulares (🔄/🔁): Demanda con Permuta.\\n` +
       `        • MODERACIÓN (en grupos oficiales): 🚫 Infracción de normas / spam | ❓ Ficha con datos incompletos.\\n` +
-      `    11. CANALIZACIÓN A NUESTROS GRUPOS Y CANALES OFICIALES DE VECY BIENES RAÍCES (ENLACES LIMPIOS):\\n` +
-      `        Si invitas o canalizas al usuario a alguno de nuestros espacios colaborativos oficiales, entrega SIEMPRE un único enlace limpio sin corchetes Markdown [ ] ni paréntesis ( ), usando exclusivamente los enlaces oficiales reales:\\n` +
-      `        • Grupo 1 Oficial (Ofertas🏷️ y Demandas📝 Inmobiliarias): https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n` +
-      `        • Grupo 2 Oficial (Consultorio Inmobiliario💡 / VECY TIPS📰 / Soporte Legal, Tributario y Avalúos): https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n` +
-      `        • Grupo 3 Oficial (Proyecto VECY Network🌐 / Comunidad, Modelo 40/20/40 y Debate): https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\\n` +
-      `        • Canal Oficial de WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\\n` +
+      `    11. DOCTRINA SAGRADA DE COMUNIDAD Y CANALIZACIÓN A NUESTROS GRUPOS OFICIALES (ENLACES LIMPIOS — DOCTRINA EDUARDO A. RIVERA):\\n` +
+      `        Cuando las personas le hablen de "comunidad" a JanIA o le pidan compartir su comunidad, se refieren DIRECTA E INEQUÍVOCAMENTE a nuestros grupos y canales oficiales de WhatsApp. JanIA debe invitarlos cordialmente a unirse y a participar activamente en nuestros grupos oficiales, contándoles con claridad para qué es cada comunidad:\\n` +
+      `        • Grupo 1 Oficial (Ofertas🏷️ y Demandas📝 Inmobiliarias): https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ (Exclusivo para comercializar y buscar propiedades con cruce y matching automático por IA sin saturar de chat).\\n` +
+      `        • Grupo 2 Oficial (Consultorio Inmobiliario💡 / VECY TIPS📰 / Soporte Legal, Tributario y Avalúos): https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6 (Consultorio abierto donde JanIA y el equipo resuelven en vivo dudas legales, notariales 50/50, prediales y avalúos).\\n` +
+      `        • Grupo 3 Oficial (Proyecto VECY Network🌐 / Comunidad, Modelo 40/20/40 y Debate): https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU (Espacio de debate gremial, alianzas colaborativas entre colegas inmobiliarios, cultura del corretaje 40/20/40 y tecnología Proptech).\\n` +
+      `        • Canal Oficial de WhatsApp📰: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b (Boletín diario con noticias clave y análisis del sector inmobiliario).\\n` +
       `        • Portal Web Oficial: https://vecy-bienes-raices.vercel.app/\\n` +
       `        • Consola Web JanIA 24/7: https://vecy-bienes-raices.vercel.app/jania\\n` +
-      `        • Atención Bróker Oficial (Eduardo y Jani): +57 316 656 9719 (https://wa.me/573166569719)\\n` +
+      `        • Atención Bróker Oficial (Eduardo y Jani): +57 316 656 9719 (https://wa.me/573166569719) para llamadas directas, coordinación comercial y alianzas estratégicas.\\n` +
       `        PLANTILLA ESTANDARIZADA VECY PARA COMPARTIR EN GRUPO 1:\\n` +
       `        🏷️ *OFERTA (Venta/Arriendo):* Negocio, Tipo de inmueble, Ciudad y Barrio, Área m², Precio/Canon, Habitaciones y Baños, Parqueaderos y Depósito, Estrato y Admón, Antigüedad/acabados, Contacto.\\n` +
       `        📝 *DEMANDA (Búsqueda):* Negocio, Inmueble buscado, Ciudad y Barrios de interés, Presupuesto máximo, Área mínima, Habitaciones y garajes indispensables, Observaciones clave, Contacto.\\n` +
@@ -2411,13 +2446,35 @@ export async function processPrivateDmConversationalMessage(
 5. Si aún falta algún dato verdaderamente indispensable para radicar o buscar, solicítalo con extrema calidez, astucia y brevedad (máximo 1 o 2 renglones) sin hacer formularios largos ni repreguntar lo que ya se sabe.]`;
     }
 
-    const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|entrar\s+al\s+grupo|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(clean);
+    const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|unirme\s+a\s+(?:la\s+)?comunidad|entrar\s+al\s+grupo|entrar\s+a\s+(?:la\s+)?comunidad|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+un\s+(?:requerimiento|cliente|inmueble))\b/i.test(clean);
 
     if (isExplicitRegistrationOrJoinIntentInPrompt) {
       userPromptContent += `\n[SISTEMA: El usuario manifiesta la intención de REGISTRAR O PUBLICAR un requerimiento o inmueble nuevo, o de UNIRSE a los grupos oficiales de VECY. QUEDA TERMINANTEMENTE PROHIBIDO asumir que ya está registrado o que proviene de un grupo previo. Directivas obligatorias:
 1) Si aún no ha compartido los datos de su búsqueda o inmueble (tipo de negocio, tipología, zona/barrios, presupuesto, alcobas/garajes): pídeselos con calidez y estructura clara para poder radicarlo en el motor autoritativo y entregarle su código oficial de radicado (ID #REQ... o ID #P...).
 2) Si solicitó unirse al grupo de Demandas y Ofertas (o grupos oficiales), entrégale el enlace oficial limpio: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ.
 3) Si ya aportó los datos indispensables en este turno o en la conversación, invoca DE INMEDIATO la herramienta 'registrar_inmueble_o_requerimiento' para guardarlo en la base de datos y entregarle su código oficial de radicado (ID #REQ).]`;
+    }
+
+    if (isCommunityInquiry) {
+      userPromptContent += `\n[SISTEMA - DOCTRINA DE COMUNIDAD Y GRUPOS OFICIALES (DOCTRINA EDUARDO A. RIVERA — v33.75):
+El usuario pregunta o menciona 'COMUNIDAD' o solicita conocerla/compartirla. En VECY BIENES RAÍCES, 'comunidad' se refiere DIRECTA E INEQUÍVOCAMENTE a nuestros GRUPOS Y CANALES OFICIALES DE WHATSAPP.
+DIRECTIVAS OBLIGATORIAS:
+1. Invita cordialmente y con entusiasmo a ${displayName || "al usuario"} a unirse y participar activamente en nuestras comunidades oficiales de WhatsApp.
+2. Cuéntale con calidez y claridad para qué sirve cada comunidad y entrégale sus enlaces oficiales limpios (sin corchetes Markdown [ ] ni duplicaciones):
+   • Grupo 1 Oficial — 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴:
+     👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+     (Exclusivo para publicar inmuebles y requerimientos de clientes; JanIA extrae y cruza automáticamente con la red en segundos sin saturar de chat).
+   • Grupo 2 Oficial — 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠:
+     👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+     (Consultorio inmobiliario abierto donde JanIA y el equipo resuelven en vivo dudas legales, notariales, impuestos prediales y avalúos).
+   • Grupo 3 Oficial — 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗘𝗖𝗬 𝗕𝗜𝗘𝗡𝗘𝗦 𝗥𝗔Í𝗖𝗘𝗦" 🌐🚀:
+     👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+     (Espacio de debate gremial, alianzas colaborativas entre colegas inmobiliarios, modelo 40/20/40 y tecnología Proptech).
+   • Canal Oficial de WhatsApp📰:
+     👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+     (Boletines diarios y tendencias del sector inmobiliario).
+3. Si el usuario además manifestó querer llamar o coordinar alianzas con la dirección comercial o fundadores: recuerda suministrarle la línea oficial del bróker de Eduardo Rivera y Jani Alves: +57 316 656 9719 (https://wa.me/573166569719).
+4. CERO preguntas repetitivas en bucle ni cuestionarios genéricos. Anímalo a integrarse a los grupos según su interés profesional.]`;
     }
 
     messages.push({

@@ -183,7 +183,28 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.74 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.75 — Octubre 2026
+
+### Novedades v33.75 (Doctrina de Comunidad y Grupos Oficiales de WhatsApp [Invitación Activa y Explicación por Grupo], Línea Directa de Bróker [+57 316 656 9719] y Auditoría Técnica de Habilidades Operativas — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Cuando las personas le hablen de comunidad a JanIA se refieren a nuestros grupos oficiales, entonces dile a JanIA que cuando esto suceda los invite a unirse y a participar en nuestros grupos oficiales, contándoles para qué es cada comunidad. Y por favor pégame a manera de publicación todos los servicios o habilidades que puede realizar JanIA en general, pero verifica que en realidad estén funcionando y no que vayamos a quedar mal con nuestros usuarios."*
+  2. **Causa Raíz Identificada:**
+     - Al interactuar con colegas y usuarios que mencionaban "comunidad" (como el colega José María Romero Esguerra: *"Quisiera llamarte y que me compartas tus servicios o comunidad"*), JanIA interpretaba "comunidad" de manera abstracta o genérica y repreguntaba sobre qué temas de la comunidad profundizar, en vez de invitarlos de inmediato a unirse a nuestros 3 grupos oficiales de WhatsApp y explicar para qué sirve cada comunidad.
+- **Implementación Técnica**:
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - Detector de intención `isCommunityInquiry` a nivel de función principal.
+    - Respuesta ágil para consultas breves de comunidad entregando la bienvenida y los 3 grupos oficiales + Canal con su propósito y enlaces limpios sin markdown roto.
+    - Directiva de sistema en `userPromptContent` y en `systemPrompt` (Regla 11) que obliga a Gemini a invitar cordialmente a los grupos oficiales, explicar cada comunidad y, si el usuario manifestó intención de llamada o alianzas, suministrar la línea oficial de atención bróker de Eduardo y Jani (+57 316 656 9719 / `https://wa.me/573166569719`).
+    - Blindaje en `isExplicitRegistrationOrJoinIntent` para evitar falsas duplicaciones ante intenciones de unirse a la comunidad.
+  - `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+    - Sección consagrando la Doctrina de Comunidad y Grupos Oficiales de WhatsApp.
+  - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`:
+    - Seed `seed-doctrina-comunidad-grupos-oficiales-v33-75`.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **506/506 passing** (Suite 161 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.75`) y `package.json` (`33.75.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.74 — Octubre 2026
 
 ### Novedades v33.74 (Contacto Directo para Amigos y Conocidos de Eduardo A. Rivera [+57 316 656 9719], Despacho Activo de Recados en Tiempo Real por WhatsApp y Cero Promesas Vacías — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

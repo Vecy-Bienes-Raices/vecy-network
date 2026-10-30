@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-10-30] — JanIA v33.75: Doctrina de Comunidad (Grupos Oficiales de WhatsApp), Invitación Activa y Explicación por Grupo, y Catálogo Verificado de Habilidades Operativas (v33.75 - 33.75.0)
+
+**Versión:** `v33.75` (`33.75.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Cuando las personas le hablen de comunidad a JanIA se refieren a nuestros grupos oficiales, entonces dile a JanIA que cuando esto suceda los invite a unirse y a participar en nuestros grupos oficiales, contándoles para qué es cada comunidad. Y por favor pégame a manera de publicación todos los servicios o habilidades que puede realizar JanIA en general, pero verifica que en realidad estén funcionando y no que vayamos a quedar mal con nuestros usuarios."*
+- Evidencia empírica en chat de WhatsApp (+57 315 8157698 - José María Romero Esguerra):
+  Al solicitar *"Quisiera llamarte y que me compartas tus servicios o comunidad"*, JanIA suministró el número telefónico para llamadas pero, ante la mención de "comunidad", respondió con preguntas abstractas ("¿en qué temas específicos de nuestra comunidad te gustaría que profundicemos hoy...?") en lugar de invitarlo de inmediato a unirse a los grupos oficiales de WhatsApp y explicar para qué sirve cada uno.
+- Eduardo estableció la directiva mandatoria:
+  1. Comprender que cuando las personas hablen de "comunidad", se refieren inequívocamente a **nuestros grupos oficiales de WhatsApp**.
+  2. Invitarlos con calidez a unirse y participar activamente, detallando para qué sirve cada comunidad y facilitando sus enlaces limpios oficiales.
+  3. Si la persona además solicita llamadas o alianzas, reiterar la línea oficial de atención bróker de Eduardo y Jani (+57 316 656 9719).
+  4. Auditar técnicamente todos los servicios y habilidades de JanIA en el código para asegurar que funcionen de verdad antes de presentarlos a los usuarios.
+
+**Diagnóstico Técnico Profundo:**
+- El clasificador y los prompts de JanIA interpretaban "comunidad" como un concepto abstracto o de cultura inmobiliaria en lugar de conectarlo con los 3 grupos oficiales de WhatsApp y el canal de difusión.
+- Los interceptores en `dmHandler.ts` no contaban con un manejador específico para `isCommunityInquiry`, provocando que Gemini cayera en respuestas abiertas sin entregar los enlaces de los grupos.
+- Faltaba consagrar la doctrina en `base.md`, `prompts.ts`, `founderKnowledgeService.ts` y el seed permanente.
+
+**Acciones Ejecutadas:**
+1. **Interceptor y Directivas de Comunidad en `dmHandler.ts`**:
+   - Creado el detector `isCommunityInquiry` a nivel de función principal.
+   - En respuestas cortas exclusivas de comunidad, JanIA devuelve de inmediato una invitación estructurada presentando los 3 grupos oficiales + Canal de WhatsApp con su propósito y enlaces limpios sin markdown roto.
+   - En mensajes compuestos (como el de José María que combina llamada y comunidad), se inyecta en `userPromptContent` y en `systemPrompt` la directiva obligatoria para que el LLM invite a las comunidades, explique los grupos y entregue el contacto del bróker (+57 316 656 9719).
+   - Blindaje en `isExplicitRegistrationOrJoinIntent` para que las consultas de comunidad jamás se confundan con duplicación.
+2. **Consagración Doctrinal en Prompts Maestros y Memoria Fundacional**:
+   - `server/_core/prompts/base.md`: Sección 4 de canalización inter-grupos consagrando la Doctrina de Comunidad.
+   - `server/_core/jania/prompts.ts`: Actualizado el rol "Coach de Comunidad y Herramientas WhatsApp (Grupos Oficiales — Doctrina Eduardo A. Rivera)".
+   - `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`: Registrado el seed `seed-doctrina-comunidad-grupos-oficiales-v33-75`.
+3. **Auditoría Técnica Exhaustiva de las 15 Habilidades Operativas de JanIA**:
+   - Verificado el funcionamiento comprobado de cada herramienta en el backend: Matching (85%-100%), ADRES/Policía/Procuraduría/Contraloría, RUES empresas, Factura Predial Bogotá, Paz y Salvo IDU, Liquidación Notarial 50/50, Sondeos de $/m², Minutas y Cartas PDF membretadas con QR/CUV, Marketing Inmobiliario de Alto Rendimiento (Swap Test AIDA), Tutoría en Firma Electrónica, Análisis Multimodal de imágenes/planos, Búsqueda Web, Encuestas/vCards/Pins de WhatsApp y Despacho Real de Recados.
+4. **Verificación y Blindaje ($0 COP)**:
+   - Creada la **Suite 161** en `server/__tests__/regression.test.ts` con 4 tests unitarios exhaustivos.
+   - Typecheck `npm run check` (0 errores).
+   - Tests `npm test`: **506/506 passing (100% verde a $0 COP)**.
+   - Build `npm run build` limpio (Vite + esbuild).
+   - Incremento oficial de versión a `v33.75` (`33.75.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-29] — JanIA v33.74: Contacto Directo para Amigos y Conocidos de Eduardo A. Rivera (+57 316 656 9719), Despacho Activo de Recados en Tiempo Real por WhatsApp y Cero Promesas Vacías (v33.74 - 33.74.0)
 
 **Versión:** `v33.74` (`33.74.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

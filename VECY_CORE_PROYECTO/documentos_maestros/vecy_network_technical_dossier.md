@@ -8438,6 +8438,33 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.74` (`33.74.0`) en `shared/const.ts` y `package.json`.
 
+### 10.170 Versión v33.75 (2026-10-30) — Doctrina de Comunidad y Grupos Oficiales de WhatsApp, Enlaces Directos Limpios y Catálogo Verificado de 15 Habilidades Reales (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  - Al interactuar con colegas y asesores inmobiliarios (como el caso de José María Romero Esguerra: *"Quisiera llamarte y que me compartas tus servicios o comunidad"*), JanIA no asociaba de inmediato el término "comunidad" con nuestros grupos oficiales de WhatsApp. En su lugar, emitía respuestas genéricas sobre el modelo 40/20/40 sin invitarlos a unirse a los grupos ni explicar el propósito específico de cada uno.
+  - Existía la necesidad de consolidar y verificar empíricamente en el código fuente la totalidad de herramientas y servicios que JanIA ejecuta activamente en el backend, evitando prometer funciones inexistentes y garantizando una entrega intachable a los usuarios.
+- **Solución Técnica Implementada (`v33.75`)**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Detección y manejo prioritario de consultas sobre "comunidad" (`isCommunityInquiry`).
+     - Respuestas estructuradas con invitación cordial a participar en nuestros grupos oficiales de WhatsApp, explicando el propósito de cada espacio y entregando enlaces de invitación directos y limpios (sin markdown roto ni formatos `[url](url)` incompatibles con WhatsApp):
+       - **Grupo 1 Oficial (Ofertas🏷️ y Demandas📝):** `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` (Cruce inteligente 24/7 sin chat saturado).
+       - **Grupo 2 Oficial (Consultorio Inmobiliario💡 / Soporte Legal, Tributario y Avalúos):** `https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6` (Consultas jurídicas, minutas, prediales, avalúos).
+       - **Grupo 3 Oficial (Proyecto VECY Network🌐 / Alianzas y Debate 40/20/40):** `https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU` (Comunidad, modelo 40/20/40, alianzas PropTech).
+       - **Canal Oficial de WhatsApp📰:** `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (Boletines diarios y noticias).
+     - Canalización inmediata de llamadas y temas de bróker a la línea de Eduardo Rivera y Jani Alves: **`+57 316 656 9719`** (`https://wa.me/573166569719`).
+     - Inyección de directivas en el prompt dinámico de usuario y en las reglas del sistema (Regla 11) para respuestas complejas generadas con IA.
+  2. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+     - Consagración de la Doctrina de Comunidad (Grupos Oficiales de WhatsApp) en Sección 6 y actualización del rol 3 "Coach de Comunidad y Herramientas WhatsApp".
+  3. `server/_core/jania/founderKnowledgeService.ts` y `data/jania_founder_teachings.json`:
+     - Seed fundacional persistente `seed-doctrina-comunidad-grupos-oficiales-v33-75`.
+  4. **Auditoría Exhaustiva de Habilidades Reales en Backend**:
+     - Verificados 15 servicios activos en código: Cruce/Matching, Antecedentes SARLAFT (Policía, Procuraduría, Contraloría, ADRES), Verificación RUES (57 Cámaras), Factura Predial Oficial Bogotá en PDF con CHIP, Paz y Salvo IDU Bogotá en PDF, Liquidador Notarial y de Registro 50/50 y Ganancia Ocasional, Sondeo Inmobiliario $/m², Generador Notarial de Minutas PDF con QR/CUV, Auditoría de Marketing Inmobiliario de Alto Rendimiento, Guía en Firma Electrónica Gratuita ($0 COP Ley 527/1999), Análisis Multimodal de Planos/Fotos, Búsqueda y Navegación Web en Tiempo Real (TRM, POT), Despacho Real de Recados a Eduardo (+57 316 656 9719), Superpoderes Interactivos de WhatsApp (encuestas, vCards, agendamiento), y Pack de 14 Stickers 3D.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 161 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **506/506 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.75` (`33.75.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

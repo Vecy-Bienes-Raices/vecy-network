@@ -1,13 +1,16 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.74.0 — 2026-10-29)
-- **JanIA Server:** `v33.74` (`33.74.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Contacto Directo para Amigos de Eduardo (+57 316 656 9719) y Despacho Real de Recados por WhatsApp (Doctrina Eduardo A. Rivera):**
-  1. **Contacto Directo Inmediato (`dmHandler.ts`):**
-     - Si un conocido, amigo o contacto escribe a la línea del bot (`+57 319 291 9978`) buscando a Eduardo o saludándolo ("Hola Eduardo", "¿Con Eduardo?"), JanIA jamás le dispara el onboarding de 40/20/40 ni promete vacíamente *"yo le doy tu razón"*.
-     - Le aclara con calidez que habla con JanIA y le suministra de inmediato en el primer renglón el número personal directo y oficial de bróker de Eduardo: **`+57 316 656 9719`** (`https://wa.me/573166569719`).
-  2. **Despacho Real de Recados en Tiempo Real (`dispatchMessageRecadoToEduardo`):**
-     - Si dejan un recado o mensaje ("dile que me llame...", "avísale que...", etc.), JanIA toma el recado y lo despacha de forma activa e instantánea al WhatsApp de Eduardo (`573166569719@s.whatsapp.net`), confirmándole al usuario con total transparencia.
-  3. **Consagración Doctrinal:** Sincronizado en prompts base (`base.md`), `prompts.ts`, `dmHandler.ts`, `whatsapp-match.ts` y en el seed fundacional persistente.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 502/502 passing (100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.75.0 — 2026-10-30)
+- **JanIA Server:** `v33.75` (`33.75.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Comunidad y Grupos Oficiales de WhatsApp (Doctrina Eduardo A. Rivera):**
+  1. **Asimilación Doctrinal de "Comunidad" (`dmHandler.ts`):**
+     - Cuando los usuarios o colegas pregunten a JanIA por la "comunidad" (ej: *"quisiera que me compartas tus servicios o comunidad"*), JanIA asume inequívocamente que se refieren a nuestros grupos oficiales de WhatsApp.
+     - JanIA los invita cordialmente a unirse y participar en nuestros grupos oficiales, explicando para qué sirve cada uno y entregando enlaces de WhatsApp limpios y directos:
+       - **Grupo 1 (Ofertas🏷️ y Demandas📝):** `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` (Matching 24/7 sin chat saturado).
+       - **Grupo 2 (Consultorio Inmobiliario💡 / Soporte Legal, Tributario y Avalúos):** `https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6` (Consultas jurídicas, minutas, prediales, avalúos).
+       - **Grupo 3 (Proyecto VECY Network🌐 / Alianzas y Debate 40/20/40):** `https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU` (Comunidad, modelo 40/20/40, alianzas PropTech).
+       - **Canal Oficial de WhatsApp📰:** `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (Boletines diarios y noticias).
+  2. **Coordinación de Llamadas y Bróker:** Si solicitan llamada o reunión personalizada, JanIA provee de inmediato la línea del bróker de Eduardo Rivera y Jani Alves: **`+57 316 656 9719`** (`https://wa.me/573166569719`).
+  3. **Catálogo de Habilidades 100% Verificado ($0 COP):** 15 servicios y herramientas activas en backend comprobadas e integradas.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 506/506 passing (Suite 161, 100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
