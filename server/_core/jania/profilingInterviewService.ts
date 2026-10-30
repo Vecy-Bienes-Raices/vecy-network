@@ -307,10 +307,13 @@ export function buildDetailedProfilingInterview(options: ProfilingInterviewOptio
     }
   }
 
-  // 3. Cierre y llamado a la acción comercial colaborativo (40/20/40)
+  // 3. Cierre y llamado a la acción comercial colaborativo (40/20/40) y solicitud persuasiva de reseña en Google
+  const googleReviewCta = `\n\n⭐ *Por cierto, ${displayName || (isAgent ? 'colega' : 'amigo/a')}: como estás probando en vivo la tecnología de JanIA para el gremio, ¿nos regalarías tu calificación de 5 estrellas y un comentario en Google para seguir impulsando la red?* 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐`;
+
   const closingCta =
     `\n\n${isAgent ? 'Consúltale estos puntos clave a tu cliente (o si ya los tienes en mente, compártemelos por aquí punto a punto o en una nota de voz). 🎙️📲\n\n' : 'Compárteme estos datos por aquí o en una nota de voz para estructurar tu búsqueda. 🎙️📲\n\n'}` +
-    `Con este perfil 100% afinado, activamos de inmediato el radar de **MATCH** en la red de **VECY BIENES RAÍCES** para encontrar la opción soñada y cerrar este negocio juntos${isAgent ? ' bajo nuestro modelo colaborativo **40/20/40**' : ''}. 🤝🚀`;
+    `Con este perfil 100% afinado, activamos de inmediato el radar de **MATCH** en la red de **VECY BIENES RAÍCES** para encontrar la opción soñada y cerrar este negocio juntos${isAgent ? ' bajo nuestro modelo colaborativo **40/20/40**' : ''}. 🤝🚀` +
+    googleReviewCta;
 
   return `${greetingHeader}\n\n${sectorPraise}${pedagogyIntro}${questionsBody}${closingCta}`;
 }
