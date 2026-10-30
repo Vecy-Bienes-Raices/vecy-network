@@ -279,7 +279,11 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
     console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] 📤 Enviando notificación de JanIA al Bróker (+57 316 6569719)...`);
     
     try {
-      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
+      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg, {
+        allowDirectMessage: true,
+        isTransactionalNotification: true,
+        skipDelay: true
+      });
       brokerSent = true;
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] ✅ Notificación entregada al socket para Bróker (+57 316 6569719).`);
     } catch (brokerErr: any) {
@@ -295,7 +299,11 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] 📤 Enviando mensaje de confirmación de JanIA al Solicitante (${cleanClientCel})...`);
       
       try {
-        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg);
+        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg, {
+          allowDirectMessage: true,
+          isTransactionalNotification: true,
+          skipDelay: true
+        });
         clientSent = true;
         console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] ✅ Confirmación de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
       } catch (clientErr: any) {

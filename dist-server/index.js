@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.76";
+    VECY_VERSION = "v33.77";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -9299,21 +9299,6 @@ var init_matching = __esm({
 });
 
 // server/_core/advisors.ts
-var advisors_exports = {};
-__export(advisors_exports, {
-  brokerDirectoryCache: () => brokerDirectoryCache,
-  extractColombianPhoneFromText: () => extractColombianPhoneFromText,
-  getAllAdvisorJids: () => getAllAdvisorJids,
-  initAdvisorsDirectory: () => initAdvisorsDirectory,
-  isGenericName: () => isGenericName,
-  isLidIdentifier: () => isLidIdentifier,
-  lookupAdvisor: () => lookupAdvisor,
-  lookupAdvisorSync: () => lookupAdvisorSync,
-  normalizeAdvisorPhone: () => normalizeAdvisorPhone,
-  preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
-  reconcileAndBackfillAdvisors: () => reconcileAndBackfillAdvisors,
-  saveOrUpdateAdvisor: () => saveOrUpdateAdvisor
-});
 import { and as and2, eq as eq4, or, sql as sql3 } from "drizzle-orm";
 function isGenericName(n) {
   if (!n) return true;
@@ -9991,21 +9976,6 @@ async function lookupAdvisor(identifier) {
     console.warn(`[AdvisorsCore] Error consultando advisors en BD:`, err?.message);
   }
   return null;
-}
-function getAllAdvisorJids() {
-  const jids = /* @__PURE__ */ new Set();
-  for (const [_, value] of brokerDirectoryCache.entries()) {
-    if (value && value.phone) {
-      let p = value.phone.replace(/\D/g, "");
-      if (p.length === 10 && p.startsWith("3")) {
-        p = "57" + p;
-      }
-      if (p.startsWith("57") && p.length >= 12) {
-        jids.add(`${p}@s.whatsapp.net`);
-      }
-    }
-  }
-  return Array.from(jids);
 }
 var brokerDirectoryCache;
 var init_advisors = __esm({
@@ -27737,115 +27707,35 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
       }
       /**
        * 📱 Emisión a Estados Propios de WhatsApp (status@broadcast)
-       * Publica imágenes en formato vertical 9:16 o textos en el Estado de JanIA (+573192919978)
-       * distribuyendo a la lista de contactos autorizados (statusJidList).
+       * 🛑 DESACTIVADA DEFINITIVAMENTE (v33.77 — Doctrina Eduardo A. Rivera).
+       *
+       * MOTIVO DE ARQUITECTURA Y SEGURIDAD CRÍTICA:
+       * En WhatsApp Multi-Device (Baileys como dispositivo vinculado / companion), el despacho hacia
+       * status@broadcast genera un bucle de desincronización y reintentos en el hilo SQLite local
+       * del teléfono principal del bróker (+57 319 291 9978). Anteriormente se intentó blindar con:
+       * recipientSet.delete(ownPhoneJid);
+       * recipientSet.delete('573192919978@s.whatsapp.net');
+       * linkPreview: null
+       * this.messageStore.set(sent.key.id, sent.message);
+       * pero los dispositivos vinculados por diseño de protocolo de WhatsApp no deben publicar estados.
+       * Por ello, JanIA canaliza el 100% de su difusión pública a través del Canal Oficial (@newsletter) y Grupos.
        */
-      async postToWhatsAppStatus(options) {
-        try {
-          if (!this.sock || !this.isReady) {
-            console.warn("[JANIA-STATUS] \u{1F6D1} Socket de WhatsApp no listo para publicar estado.");
-            return { success: false, error: "Socket no conectado" };
-          }
-          const { captionText, mediaPath, recipients } = options;
-          const targetJid = "status@broadcast";
-          let messagePayload = {
-            text: captionText,
-            linkPreview: null
-          };
-          if (mediaPath && fs13.existsSync(mediaPath)) {
-            try {
-              const buffer = fs13.readFileSync(mediaPath);
-              messagePayload = {
-                image: buffer,
-                caption: captionText
-              };
-            } catch (mediaErr) {
-              console.warn("[JANIA-STATUS] Advertencia leyendo mediaPath para estado, enviando texto puro:", mediaErr?.message);
-            }
-          }
-          const recipientSet = /* @__PURE__ */ new Set();
-          if (Array.isArray(recipients) && recipients.length > 0) {
-            recipients.forEach((r) => recipientSet.add(r));
-          }
-          try {
-            const { getAllAdvisorJids: getAllAdvisorJids2 } = await Promise.resolve().then(() => (init_advisors(), advisors_exports));
-            const advisors2 = getAllAdvisorJids2();
-            advisors2.forEach((a) => recipientSet.add(a));
-          } catch (_) {
-          }
-          recipientSet.add("573166569719@s.whatsapp.net");
-          const ownPhoneJid = this.sock.user?.id ? cleanJid(this.sock.user.id) : "573192919978@s.whatsapp.net";
-          recipientSet.delete(ownPhoneJid);
-          recipientSet.delete("573192919978@s.whatsapp.net");
-          const targetRecipients = Array.from(recipientSet);
-          const sendOptions = {
-            broadcast: true,
-            backgroundColor: "#1B2A4A",
-            // Azul marino corporativo VECY de alto contraste y legibilidad
-            font: 1
-          };
-          if (targetRecipients.length > 0) {
-            sendOptions.statusJidList = targetRecipients;
-          }
-          console.log(`[JANIA-STATUS] \u{1F4E2} Despachando Estado de WhatsApp (${messagePayload.image ? "Imagen" : "Texto Limpio"}). Destinatarios: ${targetRecipients.length}...`);
-          const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
-          if (sent && sent.key && sent.key.id) {
-            if (sent.message) {
-              this.messageStore.set(sent.key.id, sent.message);
-            }
-            this.botSentMessageIds.add(sent.key.id);
-            console.log(`[JANIA-STATUS] \u2705 Estado propio de WhatsApp publicado exitosamente (ID: ${sent.key.id}).`);
-            return { success: true, messageId: sent.key.id };
-          }
-          return { success: false, error: "Sin confirmaci\xF3n de ID de estado" };
-        } catch (err) {
-          console.error("[JANIA-STATUS] \u274C Error publicando Estado en WhatsApp:", err?.message || err);
-          return { success: false, error: err?.message || String(err) };
-        }
+      async postToWhatsAppStatus(_options) {
+        console.log("[JANIA-STATUS-SHIELD] \u{1F6E1}\uFE0F Publicaci\xF3n de Estados en WhatsApp desactivada definitivamente por seguridad anti-baneo y estabilidad multi-device (Doctrina Eduardo A. Rivera v33.77).");
+        return { success: true, disabled: true };
       }
       /**
-       * 📱 Publicación de Estados de WhatsApp (Historias/Stories) — Doctrina Eduardo A. Rivera (v33.44):
-       * A los estados SOLO se sube el gancho escrito en texto limpio de alto contraste (#0a0a0a y dorado)
-       * que jala hacia el Canal Oficial con la frase ineludible:
-       * 👉 Sigue el Canal Oficial y lee la guía completa aquí: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-       * Cero imágenes en historias para erradicar errores de incompatibilidad en WhatsApp Web.
+       * 📱 Publicación de Estados de WhatsApp (Historias/Stories) — DESACTIVADA DEFINITIVAMENTE (v33.77)
        */
-      async postDailyHookStatus(teaserText, topicTitle) {
-        try {
-          const channelLink = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
-          let hookContent = "";
-          if (teaserText && teaserText.trim()) {
-            let cleanTeaser = teaserText.replace(/Colegas,\s*¿ustedes\s+c[oó]mo\s+est[aá]n\s+manejando.*$/is, "").replace(/¿Quieres\s+debatir.*$/is, "").replace(/¡?Opina\s+aqu[íi]\s+en\s+el\s+grupo.*$/is, "").trim();
-            if (!cleanTeaser.includes(channelLink)) {
-              cleanTeaser += `
-
-\u{1F449} Sigue el Canal Oficial y lee la gu\xEDa completa aqu\xED: ${channelLink}`;
-            }
-            hookContent = cleanTeaser;
-          } else {
-            const title = topicTitle || "Gu\xEDa Inmobiliaria y Notarial Exclusiva";
-            hookContent = `\u{1F4A1} *HOY EN EL CANAL OFICIAL DE VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
-
-\u{1F4CC} *${title}*
-Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado para blindar tus operaciones inmobiliarias.
-
-\u{1F449} Sigue el Canal Oficial y lee la gu\xEDa completa aqu\xED: ${channelLink}`;
-          }
-          console.log(`[JANIA-STATUS] \u{1F4F1} Publicando gancho escrito oficial en Estado de WhatsApp (status@broadcast)...`);
-          return await this.postToWhatsAppStatus({
-            captionText: hookContent
-          });
-        } catch (err) {
-          console.error("[JANIA-STATUS] Error publicando gancho en Estado de WhatsApp:", err?.message || err);
-          return { success: false, error: err?.message || String(err) };
-        }
+      async postDailyHookStatus(_teaserText, _topicTitle) {
+        console.log("[JANIA-STATUS-SHIELD] \u{1F6E1}\uFE0F postDailyHookStatus desactivado por seguridad anti-baneo y estabilidad multi-device (Doctrina Eduardo A. Rivera v33.77).");
+        return { success: true, disabled: true };
       }
       /**
-       * 🌟 Despacha el Estado de WhatsApp diario rotativo:
-       * Redirige al método doctrinal de gancho de texto hacia el Canal Oficial
+       * 🌟 Despacha el Estado de WhatsApp diario rotativo — DESACTIVADA DEFINITIVAMENTE (v33.77)
        */
-      async postDailyServiceStatus(customImagePath, customTopic) {
-        return await this.postDailyHookStatus(void 0, customTopic);
+      async postDailyServiceStatus(_customImagePath, _customTopic) {
+        return { success: true, disabled: true };
       }
       /**
        * Compatibilidad: Despacho de texto puro delegando a sendDailyTipToGroupsAndChannel sin imagen
@@ -28292,7 +28182,11 @@ async function sendAgendaWhatsAppNotifications(payload) {
     const brokerMsg = buildBrokerNotificationMessage(payload);
     console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando notificaci\xF3n de JanIA al Br\xF3ker (+57 316 6569719)...`);
     try {
-      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
+      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg, {
+        allowDirectMessage: true,
+        isTransactionalNotification: true,
+        skipDelay: true
+      });
       brokerSent = true;
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Notificaci\xF3n entregada al socket para Br\xF3ker (+57 316 6569719).`);
     } catch (brokerErr) {
@@ -28304,7 +28198,11 @@ async function sendAgendaWhatsAppNotifications(payload) {
       const clientMsg = buildClientConfirmationMessage(payload);
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando mensaje de confirmaci\xF3n de JanIA al Solicitante (${cleanClientCel})...`);
       try {
-        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg);
+        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg, {
+          allowDirectMessage: true,
+          isTransactionalNotification: true,
+          skipDelay: true
+        });
         clientSent = true;
         console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Confirmaci\xF3n de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
       } catch (clientErr) {
@@ -37464,19 +37362,13 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
 \u{1F449} Sigue el Canal Oficial y lee la gu\xEDa completa aqu\xED: ${VECY_SOCIAL_NETWORKS.whatsappChannel}`;
   try {
     await janiaMatchBot.sendMorningPillAndGroupTeasers(content.captionText, teaserText, imagePath);
-    try {
-      console.log("[CRON-SERVICE] \u{1F4F1} Despachando Estado de WhatsApp con gancho escrito hacia el Canal Oficial...");
-      await janiaMatchBot.postDailyHookStatus(statusHookText, content.topicTitle || tip.topicTitle);
-    } catch (statusErr) {
-      console.warn("[CRON-SERVICE] Advertencia en despacho de estado de WhatsApp:", statusErr?.message);
-    }
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
       imageFileName: imagePath ? path14.basename(imagePath) : void 0,
       captionText: content.captionText
     });
-    console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampol\xEDn + Estado WhatsApp con enlace): "${content.topicTitle}".`);
+    console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampol\xEDn): "${content.topicTitle}".`);
     return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText, statusHookText };
   } catch (err) {
     console.error(`[CRON-SERVICE] Error despachando difusi\xF3n diaria (D\xEDa ${tip.dayOfMonth}):`, err?.message);
@@ -37485,8 +37377,8 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
   }
 }
 async function publishDailyWhatsAppStatusNow() {
-  const tip = getCalendarTipForDate();
-  return await janiaMatchBot.postDailyHookStatus(void 0, tip.topicTitle);
+  console.log("[CRON-SERVICE] \u{1F6E1}\uFE0F Publicaci\xF3n de Estados WhatsApp desactivada permanentemente por Doctrina Eduardo A. Rivera (v33.77).");
+  return { success: true, disabled: true, reason: "Estados desactivados por seguridad anti-baneo" };
 }
 async function publishWeeklyReportNow(force = true) {
   const dateKey = getBogotaDateString();

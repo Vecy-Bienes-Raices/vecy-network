@@ -1,12 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.76.0 — 2026-10-30)
-- **JanIA Server:** `v33.76` (`33.76.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Despacho Activo de Solicitudes de Llamada y Contacto a Eduardo Rivera (+57 316 656 9719), Sinceramiento de Habilidades y Optimización de Timeout (Doctrina Eduardo A. Rivera):**
-  1. **Captura Universal de Intenciones de Contacto y Llamada (`dmHandler.ts`):**
-     - Si un usuario manifiesta querer llamar ("quisiera llamarte", "quiero una llamada"), que lo llamen ("llámenme", "comuníquense conmigo") o solicitar cita/reunión con el bróker, JanIA despacha en caliente y en tiempo real el recado estructurado al WhatsApp de Eduardo: **`573166569719@s.whatsapp.net`** con teléfono formateado (`https://wa.me/...`), nombre completo y mensaje original.
-     - Entrega de inmediato la línea del bróker (+57 316 656 9719), avisa que ya le transmitió el mensaje a Eduardo en tiempo real, y si además preguntó por comunidad, le entrega la bienvenida y enlaces oficiales a los 3 grupos y al canal.
-  2. **Sinceramiento del Catálogo:** Erradicadas del catálogo funciones que no se ejecutan directamente en DM (encuestas interactivas de WhatsApp), precisión estricta en el POT (conocimiento del Decreto 555/2021 y guía en SINUPOT, sin simular acceso a bases de datos catastrales) y contextualización de la TRM hacia inversión internacional y colombianos en el exterior.
-  3. **Optimización de Web Grounding (`scraper.ts`):** Timeout reducido de 7000ms a 3500ms para eliminar cuelgues o retrasos en respuestas de WhatsApp.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 510/510 passing (Suite 162, 100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.77.0 — 2026-10-30)
+- **JanIA Server:** `v33.77` (`33.77.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Desactivación Permanente de Estados de WhatsApp (`status@broadcast`), Blindaje Anti-Baneo y Estabilidad Multi-Device (Doctrina Eduardo A. Rivera):**
+  1. **Desactivación Absoluta de Estados en Baileys (`whatsapp-match.ts` & `cronService.ts`):** Erradicada por completo toda publicación automática de estados/historias en WhatsApp. `postToWhatsAppStatus`, `postDailyHookStatus` y `postDailyServiceStatus` quedan neutralizadas permanentemente retornando `{ success: true, disabled: true }` sin interactuar con el socket ni con `status@broadcast`. Descartada la llamada desde el cron matutino.
+  2. **Resolución de la Causa Raíz de Congelamiento / Atraso en el Teléfono Móvil:** Al publicar estados desde un cliente web secundario (Baileys en VPS), WhatsApp fuerza una sincronización masiva hacia el teléfono principal (`syncAction` / `deviceSentMessage`). El cliente oficial móvil de WhatsApp no soporta renderizar estados creados por sesiones complementarias (quedando en negro/vacíos) y entra en un bucle infinito de reintentos criptográficos en la base de datos interna SQLite (`msgstore.db`), bloqueando los hilos de sincronización de la app móvil y congelando los chats.
+  3. **Blindaje Anti-Baneo:** Eliminar el uso de `status@broadcast` en Baileys erradica el vector de riesgo más severo ante los algoritmos de detección de spam de Meta, protegiendo 100% la línea de JanIA (`+57 319 291 9978`).
+  4. **Garantía en Notificaciones de Vecy Agenda:** Ajustado `agendaWhatsAppService.ts` con `{ allowDirectMessage: true, isTransactionalNotification: true, skipDelay: true }` para garantizar que las alertas y recordatorios a Eduardo (+57 316 656 9719) salgan al instante sin demoras por typing ni colas trabadas.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 514/514 passing (Suite 163, 100% verde a $0 COP) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

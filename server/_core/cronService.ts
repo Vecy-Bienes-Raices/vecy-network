@@ -2385,13 +2385,9 @@ export async function publishTodayTipNow(force: boolean = true) {
     // 5. Despachar: Píldora completa con imagen [1:1] al Canal Oficial, y micro-gancho persuasivo a Grupos 2 y 3
     await whatsappBot.sendMorningPillAndGroupTeasers(content.captionText, teaserText, imagePath);
 
-    // 6. Despacho automático de Estado de WhatsApp propio (status@broadcast) en texto puro con enlace
-    try {
-      console.log('[CRON-SERVICE] 📱 Despachando Estado de WhatsApp con gancho escrito hacia el Canal Oficial...');
-      await whatsappBot.postDailyHookStatus(statusHookText, content.topicTitle || tip.topicTitle);
-    } catch (statusErr: any) {
-      console.warn('[CRON-SERVICE] Advertencia en despacho de estado de WhatsApp:', statusErr?.message);
-    }
+    // 6. Estados de WhatsApp (status@broadcast) DESACTIVADOS DEFINITIVAMENTE:
+    // Por directiva doctrinal de seguridad anti-baneo y estabilidad multi-device (Doctrina Eduardo A. Rivera v33.77).
+    // Toda la difusión pública se concentra con total éxito en el Canal Oficial (@newsletter) y Grupos Oficiales.
 
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
@@ -2399,7 +2395,7 @@ export async function publishTodayTipNow(force: boolean = true) {
       imageFileName: imagePath ? path.basename(imagePath) : undefined,
       captionText: content.captionText,
     });
-    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampolín + Estado WhatsApp con enlace): "${content.topicTitle}".`);
+    console.log(`[CRON-SERVICE] ✓ Difusión matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampolín): "${content.topicTitle}".`);
     return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath, teaserText, statusHookText };
   } catch (err: any) {
     console.error(`[CRON-SERVICE] Error despachando difusión diaria (Día ${tip.dayOfMonth}):`, err?.message);
@@ -2409,11 +2405,11 @@ export async function publishTodayTipNow(force: boolean = true) {
 }
 
 /**
- * Publica inmediatamente el Estado de WhatsApp rotativo del día
+ * Publicación de Estados de WhatsApp desactivada permanentemente por seguridad (v33.77)
  */
 export async function publishDailyWhatsAppStatusNow() {
-  const tip = getCalendarTipForDate();
-  return await whatsappBot.postDailyHookStatus(undefined, tip.topicTitle);
+  console.log('[CRON-SERVICE] 🛡️ Publicación de Estados WhatsApp desactivada permanentemente por Doctrina Eduardo A. Rivera (v33.77).');
+  return { success: true, disabled: true, reason: 'Estados desactivados por seguridad anti-baneo' };
 }
 
 /**

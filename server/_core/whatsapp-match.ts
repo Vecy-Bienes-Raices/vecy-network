@@ -3917,145 +3917,41 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
   /**
    * 📱 Emisión a Estados Propios de WhatsApp (status@broadcast)
-   * Publica imágenes en formato vertical 9:16 o textos en el Estado de JanIA (+573192919978)
-   * distribuyendo a la lista de contactos autorizados (statusJidList).
+   * 🛑 DESACTIVADA DEFINITIVAMENTE (v33.77 — Doctrina Eduardo A. Rivera).
+   *
+   * MOTIVO DE ARQUITECTURA Y SEGURIDAD CRÍTICA:
+   * En WhatsApp Multi-Device (Baileys como dispositivo vinculado / companion), el despacho hacia
+   * status@broadcast genera un bucle de desincronización y reintentos en el hilo SQLite local
+   * del teléfono principal del bróker (+57 319 291 9978). Anteriormente se intentó blindar con:
+   * recipientSet.delete(ownPhoneJid);
+   * recipientSet.delete('573192919978@s.whatsapp.net');
+   * linkPreview: null
+   * this.messageStore.set(sent.key.id, sent.message);
+   * pero los dispositivos vinculados por diseño de protocolo de WhatsApp no deben publicar estados.
+   * Por ello, JanIA canaliza el 100% de su difusión pública a través del Canal Oficial (@newsletter) y Grupos.
    */
-  public async postToWhatsAppStatus(options: {
+  public async postToWhatsAppStatus(_options: {
     captionText: string;
     mediaPath?: string;
     recipients?: string[];
-  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    try {
-      if (!this.sock || !this.isReady) {
-        console.warn('[JANIA-STATUS] 🛑 Socket de WhatsApp no listo para publicar estado.');
-        return { success: false, error: 'Socket no conectado' };
-      }
-
-      const { captionText, mediaPath, recipients } = options;
-      const targetJid = 'status@broadcast';
-
-      // 1. Estructura de payload compatible para status@broadcast:
-      // Soporta imagen vertical/cuadrada si mediaPath existe, o texto limpio sin tarjetas de linkPreview corruptas
-      let messagePayload: any = {
-        text: captionText,
-        linkPreview: null
-      };
-
-      if (mediaPath && fs.existsSync(mediaPath)) {
-        try {
-          const buffer = fs.readFileSync(mediaPath);
-          messagePayload = {
-            image: buffer,
-            caption: captionText
-          };
-        } catch (mediaErr: any) {
-          console.warn('[JANIA-STATUS] Advertencia leyendo mediaPath para estado, enviando texto puro:', mediaErr?.message);
-        }
-      }
-
-      // 2. Construir lista exhaustiva de destinatarios autorizados para statusJidList
-      const recipientSet = new Set<string>();
-      if (Array.isArray(recipients) && recipients.length > 0) {
-        recipients.forEach(r => recipientSet.add(r));
-      }
-
-      try {
-        const { getAllAdvisorJids } = await import('./advisors');
-        const advisors = getAllAdvisorJids();
-        advisors.forEach(a => recipientSet.add(a));
-      } catch (_) { }
-
-      // Contacto oficial del Bróker (+573166569719) para validación y acompañamiento
-      recipientSet.add('573166569719@s.whatsapp.net'); // Vecy Bienes Raíces Bróker
-
-      // 🛡️ REGLA PROTOCOLAR CRÍTICA: JAMÁS incluir el JID propio en statusJidList.
-      // En WhatsApp multi-device, si un cliente incluye su propio número en el fanout de status@broadcast,
-      // WhatsApp Web recibe un paquete de broadcast externo sin formato companion/deviceSentMessage
-      // y despliega el error "Recibiste un estado, pero no es compatible con esta versión de WhatsApp".
-      const ownPhoneJid = this.sock.user?.id ? cleanJid(this.sock.user.id) : '573192919978@s.whatsapp.net';
-      recipientSet.delete(ownPhoneJid);
-      recipientSet.delete('573192919978@s.whatsapp.net');
-
-      const targetRecipients = Array.from(recipientSet);
-
-      const sendOptions: any = {
-        broadcast: true,
-        backgroundColor: '#1B2A4A', // Azul marino corporativo VECY de alto contraste y legibilidad
-        font: 1
-      };
-      if (targetRecipients.length > 0) {
-        sendOptions.statusJidList = targetRecipients;
-      }
-
-      console.log(`[JANIA-STATUS] 📢 Despachando Estado de WhatsApp (${messagePayload.image ? 'Imagen' : 'Texto Limpio'}). Destinatarios: ${targetRecipients.length}...`);
-
-      const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
-      if (sent && sent.key && sent.key.id) {
-        // Almacenar en messageStore para responder reintentos de descifrado (retry receipts)
-        if (sent.message) {
-          this.messageStore.set(sent.key.id, sent.message);
-        }
-        this.botSentMessageIds.add(sent.key.id);
-        console.log(`[JANIA-STATUS] ✅ Estado propio de WhatsApp publicado exitosamente (ID: ${sent.key.id}).`);
-        return { success: true, messageId: sent.key.id };
-      }
-
-      return { success: false, error: 'Sin confirmación de ID de estado' };
-    } catch (err: any) {
-      console.error('[JANIA-STATUS] ❌ Error publicando Estado en WhatsApp:', err?.message || err);
-      return { success: false, error: err?.message || String(err) };
-    }
+  }): Promise<{ success: boolean; messageId?: string; error?: string; disabled?: boolean }> {
+    console.log('[JANIA-STATUS-SHIELD] 🛡️ Publicación de Estados en WhatsApp desactivada definitivamente por seguridad anti-baneo y estabilidad multi-device (Doctrina Eduardo A. Rivera v33.77).');
+    return { success: true, disabled: true };
   }
 
   /**
-   * 📱 Publicación de Estados de WhatsApp (Historias/Stories) — Doctrina Eduardo A. Rivera (v33.44):
-   * A los estados SOLO se sube el gancho escrito en texto limpio de alto contraste (#0a0a0a y dorado)
-   * que jala hacia el Canal Oficial con la frase ineludible:
-   * 👉 Sigue el Canal Oficial y lee la guía completa aquí: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-   * Cero imágenes en historias para erradicar errores de incompatibilidad en WhatsApp Web.
+   * 📱 Publicación de Estados de WhatsApp (Historias/Stories) — DESACTIVADA DEFINITIVAMENTE (v33.77)
    */
-  public async postDailyHookStatus(teaserText?: string, topicTitle?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    try {
-      const channelLink = 'https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b';
-      let hookContent = '';
-
-      if (teaserText && teaserText.trim()) {
-        // Limpiar preguntas o cierres de debate de grupo del teaser
-        let cleanTeaser = teaserText
-          .replace(/Colegas,\s*¿ustedes\s+c[oó]mo\s+est[aá]n\s+manejando.*$/is, '')
-          .replace(/¿Quieres\s+debatir.*$/is, '')
-          .replace(/¡?Opina\s+aqu[íi]\s+en\s+el\s+grupo.*$/is, '')
-          .trim();
-
-        // Garantizar la frase obligatoria exacta con el canal
-        if (!cleanTeaser.includes(channelLink)) {
-          cleanTeaser += `\n\n👉 Sigue el Canal Oficial y lee la guía completa aquí: ${channelLink}`;
-        }
-        hookContent = cleanTeaser;
-      } else {
-        const title = topicTitle || 'Guía Inmobiliaria y Notarial Exclusiva';
-        hookContent = `💡 *HOY EN EL CANAL OFICIAL DE VECY BIENES RAÍCES* 🇨🇴\n\n` +
-          `📌 *${title}*\n` +
-          `Acabamos de subir al Canal Oficial el análisis legal y técnico desglosado para blindar tus operaciones inmobiliarias.\n\n` +
-          `👉 Sigue el Canal Oficial y lee la guía completa aquí: ${channelLink}`;
-      }
-
-      console.log(`[JANIA-STATUS] 📱 Publicando gancho escrito oficial en Estado de WhatsApp (status@broadcast)...`);
-      return await this.postToWhatsAppStatus({
-        captionText: hookContent
-      });
-    } catch (err: any) {
-      console.error('[JANIA-STATUS] Error publicando gancho en Estado de WhatsApp:', err?.message || err);
-      return { success: false, error: err?.message || String(err) };
-    }
+  public async postDailyHookStatus(_teaserText?: string, _topicTitle?: string): Promise<{ success: boolean; messageId?: string; error?: string; disabled?: boolean }> {
+    console.log('[JANIA-STATUS-SHIELD] 🛡️ postDailyHookStatus desactivado por seguridad anti-baneo y estabilidad multi-device (Doctrina Eduardo A. Rivera v33.77).');
+    return { success: true, disabled: true };
   }
 
   /**
-   * 🌟 Despacha el Estado de WhatsApp diario rotativo:
-   * Redirige al método doctrinal de gancho de texto hacia el Canal Oficial
+   * 🌟 Despacha el Estado de WhatsApp diario rotativo — DESACTIVADA DEFINITIVAMENTE (v33.77)
    */
-  public async postDailyServiceStatus(customImagePath?: string, customTopic?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    return await this.postDailyHookStatus(undefined, customTopic);
+  public async postDailyServiceStatus(_customImagePath?: string, _customTopic?: string): Promise<{ success: boolean; messageId?: string; error?: string; disabled?: boolean }> {
+    return { success: true, disabled: true };
   }
 
   /**

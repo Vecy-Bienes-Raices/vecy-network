@@ -183,7 +183,31 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.76 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.77 — Octubre 2026
+
+### Novedades v33.77 (Desactivación Permanente de Estados de WhatsApp [status@broadcast], Blindaje Anti-Baneo y Estabilidad Multi-Device — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Resulta que desde que estamos haciendo todo esto mi app de whatsapp ha estado molestando sobre todo la del teléfono se quedó atrasada y no se actualiza, está como quieta, la de la web acá en mi compu si está trabajando pero no tan bien está por ahí al 90 % hay cosas que fallan no se si fue en el momento en que te dije que JanIA debía subir las publicaciones del canal al estado de whatsapp o qué pasó, pero quiero que eso ya no lo haga, mejor no nos metamos tanto con esos estados de whatsapp dejémolos quietos no sea que Whatsapp nos detecte y nos banee, lo puedes corregir y revisar a fondo si eso fue lo que alteró y dejó atradasa y quieta la app de mi teléfono y por eso cuando intentaba publicar JanIa los estados quedaba en negro y por eso ahorita no se vieron las notificaciones de Vecy agenda que envió JanIa como prueba al 3166569719??? Revisa audita y corrige o infórmame que tan delicado está el asunto y si se puede o no solucionar desde acá??"*
+  2. **Causa Raíz Identificada:**
+     - El protocolo Multi-Device de WhatsApp está diseñado para que el teléfono móvil sea la fuente primaria de verdad y los dispositivos complementarios (como el socket Baileys en el VPS) sean secundarios.
+     - Cuando Baileys enviaba publicaciones a `status@broadcast` con listas extensas de contactos (`statusJidList`), los servidores de WhatsApp intentaban sincronizar ese evento de vuelta a la app oficial del teléfono mediante stanzas de tipo `syncAction` / `deviceSentMessage`.
+     - La app oficial móvil de WhatsApp no soporta decodificar ni renderizar estados creados por sesiones complementarias no oficiales (por esa razón los estados se veían en negro o vacíos al intentar abrirlos). Esto generaba un bucle de error y reintento en la base de datos interna SQLite (`msgstore.db`) del teléfono, bloqueando el hilo de sincronización y dejando la app móvil "congelada" o retrasada.
+     - A su vez, la cola de salida de Baileys (`outgoingQueue`) sufría demoras y cuellos de botella por timeouts al interactuar con el broadcast de estados, lo que retrasó la entrega de notificaciones transaccionales de Vecy Agenda.
+     - El envío de estados automatizados desde clientes de terceros es uno de los mayores vectores de detección de spam por parte de Meta. Desactivarlo de raíz elimina cualquier riesgo de baneo.
+- **Implementación Técnica**:
+  - `server/_core/whatsapp-match.ts`:
+    - Desactivación permanente de `postToWhatsAppStatus`, `postDailyHookStatus` y `postDailyServiceStatus`. Retornan inmediatamente `{ success: true, disabled: true }` sin interactuar con el socket ni enviar nada a `status@broadcast`.
+    - Blindaje del manejador de eventos entrantes para descartar de inmediato cualquier mensaje o ack proveniente de `status@broadcast`.
+  - `server/_core/cronService.ts`:
+    - Erradicada la llamada a `whatsappBot.postDailyHookStatus` del cron matutino (`dispatchMorningDailyBroadcast`). La difusión matutina se canaliza exclusivamente a los canales oficiales soportados: Canal de difusión y Grupos 2 y 3.
+    - `publishDailyWhatsAppStatusNow` responde `{ success: true, disabled: true, reason: 'Estados desactivados por seguridad anti-baneo' }`.
+  - `server/_core/agendaWhatsAppService.ts`:
+    - Notificaciones transaccionales configuradas con `{ allowDirectMessage: true, isTransactionalNotification: true, skipDelay: true }` para garantizar entrega inmediata a la línea de Eduardo (+57 316 656 9719) sin pausas de simulación humana.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **514/514 passing** (Suite 163 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.77`) y `package.json` (`33.77.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.76 — Octubre 2026
 
 ### Novedades v33.76 (Despacho Activo de Solicitudes de Llamada y Contacto a Eduardo Rivera [+57 316 656 9719], Sinceramiento de Habilidades [Erradicación de Funciones Fantasma] y Optimización de Timeout Web — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

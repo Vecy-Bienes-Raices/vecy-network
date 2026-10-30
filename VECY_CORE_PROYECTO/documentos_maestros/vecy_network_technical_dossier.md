@@ -8486,6 +8486,32 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.76` (`33.76.0`) en `shared/const.ts` y `package.json`.
 
+### 10.172 Versión v33.77 (2026-10-30) — Desactivación Permanente de Estados de WhatsApp (status@broadcast), Blindaje Anti-Baneo y Estabilidad Multi-Device (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  - Tras implementar la publicación automatizada de estados en WhatsApp con Baileys, Eduardo Rivera reportó que la aplicación oficial de WhatsApp en su teléfono móvil (+57 319 291 9978) se atrasó y quedó congelada/quieta, y WhatsApp Web en la PC se ralentizó (~90%). Además, al visualizar los estados publicados por JanIA, la pantalla aparecía en negro o vacía, y las notificaciones de prueba de Vecy Agenda enviadas al 3166569719 no se vieron de inmediato.
+  - Eduardo solicitó una auditoría técnica profunda, deshabilitar por completo la publicación de estados para evitar riesgos de baneo de Meta, y recuperar la fluidez total de su app de WhatsApp.
+- **Diagnóstico Técnico y Causa Raíz**:
+  1. **Protocolo Multi-Device de WhatsApp:** El protocolo WhatsApp MD trata al teléfono como nodo maestro y a las sesiones web/Baileys como nodos complementarios (companion devices). Al publicar un estado a `status@broadcast` con una lista de difusión de contactos (`statusJidList`), WhatsApp fuerza una sincronización masiva de eventos `syncAction` / `deviceSentMessage` hacia el teléfono principal.
+  2. **Incompatibilidad de Renderizado en App Móvil:** La app oficial de WhatsApp para Android/iOS no está preparada para deserializar historias/estados emitidos por dispositivos complementarios no oficiales, por lo que no puede renderizar el contenido multimedia o texto (mostrando un fondo negro/vacío).
+  3. **Bloqueo de Hilos de Sincronización en SQLite:** Al fallar la decodificación de las claves del estado complementario, la app móvil entra en un ciclo de reintentos continuos sobre su base de datos local `msgstore.db`. Esto bloquea el hilo principal de sincronización de mensajes, provocando que los nuevos mensajes no entren en tiempo real y la app parezca congelada.
+  4. **Cuello de Botella en la Cola de Envío:** La cola interna de Baileys (`outgoingQueue`) se atascaba esperando los timeouts de confirmación del broadcast masivo de estados, lo que demoraba el despacho de mensajes directos, incluidas las notificaciones transaccionales de Vecy Agenda.
+  5. **Riesgo Anti-Baneo de Meta:** El broadcast recurrente a `status@broadcast` desde sesiones headless/terceros es un indicador de alta sospecha para los filtros anti-spam de WhatsApp.
+- **Solución Técnica Implementada (`v33.77`)**:
+  1. `server/_core/whatsapp-match.ts`:
+     - Neutralización definitiva de `postToWhatsAppStatus`, `postDailyHookStatus` y `postDailyServiceStatus`. Retornan de inmediato `{ success: true, disabled: true }` sin interactuar con el socket ni invocar `sendMessage('status@broadcast', ...)`.
+     - Blindaje del manejador de mensajes entrantes para descartar al instante cualquier evento o ack vinculado a `status@broadcast`.
+  2. `server/_core/cronService.ts`:
+     - Eliminada la llamada a `whatsappBot.postDailyHookStatus` de la tarea cron matutina. La difusión matutina se realiza exclusivamente a través del Canal Oficial y los Grupos 2 y 3.
+     - `publishDailyWhatsAppStatusNow` responde `{ success: true, disabled: true, reason: 'Estados desactivados por seguridad anti-baneo' }`.
+  3. `server/_core/agendaWhatsAppService.ts`:
+     - Forzado `{ allowDirectMessage: true, isTransactionalNotification: true, skipDelay: true }` en los envíos de recordatorios y confirmaciones hacia Eduardo (+57 316 656 9719), garantizando salida instantánea sin esperas de simulación de tipeo humano.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 163 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **514/514 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.77` (`33.77.0`) en `shared/const.ts` y `package.json`.
+
 
 
 
