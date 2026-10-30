@@ -1,16 +1,12 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.75.0 — 2026-10-30)
-- **JanIA Server:** `v33.75` (`33.75.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Comunidad y Grupos Oficiales de WhatsApp (Doctrina Eduardo A. Rivera):**
-  1. **Asimilación Doctrinal de "Comunidad" (`dmHandler.ts`):**
-     - Cuando los usuarios o colegas pregunten a JanIA por la "comunidad" (ej: *"quisiera que me compartas tus servicios o comunidad"*), JanIA asume inequívocamente que se refieren a nuestros grupos oficiales de WhatsApp.
-     - JanIA los invita cordialmente a unirse y participar en nuestros grupos oficiales, explicando para qué sirve cada uno y entregando enlaces de WhatsApp limpios y directos:
-       - **Grupo 1 (Ofertas🏷️ y Demandas📝):** `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` (Matching 24/7 sin chat saturado).
-       - **Grupo 2 (Consultorio Inmobiliario💡 / Soporte Legal, Tributario y Avalúos):** `https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6` (Consultas jurídicas, minutas, prediales, avalúos).
-       - **Grupo 3 (Proyecto VECY Network🌐 / Alianzas y Debate 40/20/40):** `https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU` (Comunidad, modelo 40/20/40, alianzas PropTech).
-       - **Canal Oficial de WhatsApp📰:** `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (Boletines diarios y noticias).
-  2. **Coordinación de Llamadas y Bróker:** Si solicitan llamada o reunión personalizada, JanIA provee de inmediato la línea del bróker de Eduardo Rivera y Jani Alves: **`+57 316 656 9719`** (`https://wa.me/573166569719`).
-  3. **Catálogo de Habilidades 100% Verificado ($0 COP):** 15 servicios y herramientas activas en backend comprobadas e integradas.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 506/506 passing (Suite 161, 100% verde) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.76.0 — 2026-10-30)
+- **JanIA Server:** `v33.76` (`33.76.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Despacho Activo de Solicitudes de Llamada y Contacto a Eduardo Rivera (+57 316 656 9719), Sinceramiento de Habilidades y Optimización de Timeout (Doctrina Eduardo A. Rivera):**
+  1. **Captura Universal de Intenciones de Contacto y Llamada (`dmHandler.ts`):**
+     - Si un usuario manifiesta querer llamar ("quisiera llamarte", "quiero una llamada"), que lo llamen ("llámenme", "comuníquense conmigo") o solicitar cita/reunión con el bróker, JanIA despacha en caliente y en tiempo real el recado estructurado al WhatsApp de Eduardo: **`573166569719@s.whatsapp.net`** con teléfono formateado (`https://wa.me/...`), nombre completo y mensaje original.
+     - Entrega de inmediato la línea del bróker (+57 316 656 9719), avisa que ya le transmitió el mensaje a Eduardo en tiempo real, y si además preguntó por comunidad, le entrega la bienvenida y enlaces oficiales a los 3 grupos y al canal.
+  2. **Sinceramiento del Catálogo:** Erradicadas del catálogo funciones que no se ejecutan directamente en DM (encuestas interactivas de WhatsApp), precisión estricta en el POT (conocimiento del Decreto 555/2021 y guía en SINUPOT, sin simular acceso a bases de datos catastrales) y contextualización de la TRM hacia inversión internacional y colombianos en el exterior.
+  3. **Optimización de Web Grounding (`scraper.ts`):** Timeout reducido de 7000ms a 3500ms para eliminar cuelgues o retrasos en respuestas de WhatsApp.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 510/510 passing (Suite 162, 100% verde) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

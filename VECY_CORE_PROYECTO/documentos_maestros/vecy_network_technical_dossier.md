@@ -8465,6 +8465,27 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.75` (`33.75.0`) en `shared/const.ts` y `package.json`.
 
+### 10.171 Versión v33.76 (2026-10-30) — Despacho Activo de Solicitudes de Llamada y Contacto a Eduardo Rivera (+57 316 656 9719), Sinceramiento de Habilidades [Erradicación de Funciones Fantasma] y Optimización de Timeout Web (Doctrina Eduardo A. Rivera)
+- **Problema / Necesidad Identificada**:
+  - Eduardo Rivera identificó que los usuarios le dejaban recados o solicitaban llamadas a JanIA, pero JanIA no enviaba ningún aviso ni mensaje a su WhatsApp personal y oficial (+57 316 656 9719). Antes de v33.74 no existía código de despacho y el LLM prometía vacíamente "yo le doy tu razón". En v33.74 se creó el despacho, pero estaba limitado a menciones explícitas de "Eduardo", obviando solicitudes de llamada o contacto ("quisiera llamarte", "llámenme", "comuníquense conmigo", como en el caso de José María Romero Esguerra).
+  - En la publicación anterior se incluyeron capacidades infladas o de bajo nivel que no se ejecutaban conversacionalmente en los chats privados (DMs) de WhatsApp (encuestas interactivas de 1 clic, vCards automáticas).
+  - Se requería aclarar con rigor técnico la capacidad de JanIA frente al POT de Bogotá (conoce el Decreto 555/2021 y orienta en SINUPOT, pero no tiene acceso directo a bases de datos de planeación distrital) y justificar la pertinencia del dólar/TRM únicamente en el contexto de inversión extranjera y compras de colombianos en el exterior.
+  - El scraper web en DuckDuckGo con timeout de 7000ms podía generar demoras o cuelgues ante bloqueos de IP en el VPS.
+- **Solución Técnica Implementada (`v33.76`)**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Implementado el interceptor universal `isCallOrPhoneConversationRequest` que captura cualquier solicitud de llamada, contacto o reunión ("quisiera llamarte", "quiero una llamada", "llámenme", "devuélvanme la llamada", "comuníquense conmigo", "quiero hablar con el bróker").
+     - Disparo inmediato de `dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName, clean)` hacia `573166569719@s.whatsapp.net` con enlace directo 1-clic (`https://wa.me/...`), nombre completo y mensaje original.
+     - Confirmación transparente al usuario: suministra la línea de Eduardo Rivera y Jani Alves (+57 316 656 9719) y avisa que ya le transmitió su solicitud en tiempo real. Si además preguntó por comunidad, integra armónicamente la invitación a los 3 grupos oficiales y al canal.
+  2. `server/_core/scraper.ts`:
+     - Reducción del timeout de DuckDuckGo de 7000ms a 3500ms para garantizar respuestas ágiles y eliminar cuelgues.
+  3. Sinceramiento del Catálogo de Habilidades: erradicadas funciones que no se ejecutan directamente en DM.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 162 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **510/510 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.76` (`33.76.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

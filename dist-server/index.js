@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.75";
+    VECY_VERSION = "v33.76";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1556,7 +1556,7 @@ async function fetchLiveTRM() {
   }
   return { valor: 0, fecha: "", success: false, fuente: "Datos Abiertos Colombia" };
 }
-async function searchWebGrounding(query, timeoutMs = 7e3) {
+async function searchWebGrounding(query, timeoutMs = 3500) {
   const cleanQ = (query || "").trim();
   if (!cleanQ) {
     return { query: "", source: "none", results: [], summary: "", success: false };
@@ -33879,16 +33879,16 @@ async function dispatchMessageRecadoToEduardo(senderPhoneOrJid, senderName, reca
   const EDUARDO_OFFICIAL_JID = "573166569719@s.whatsapp.net";
   const rawClean = (senderPhoneOrJid || "").split("@")[0].replace(/\D/g, "");
   const senderDisplayPhone = rawClean ? `+${rawClean} (https://wa.me/${rawClean})` : senderPhoneOrJid;
-  const notificationMessage = `\u{1F514} *JanIA \u2014 Nuevo Recado / Mensaje para Eduardo Rivera* \u{1F4E9}
+  const notificationMessage = `\u{1F514} *JanIA \u2014 Nuevo Recado / Solicitud de Contacto para Eduardo Rivera* \u{1F4E9}
 
-Te acaban de escribir al WhatsApp del Bot (+57 319 291 9978) busc\xE1ndote o dej\xE1ndote un mensaje:
+Te acaban de escribir al WhatsApp del Bot (+57 319 291 9978) busc\xE1ndote o solicitando contacto:
 
-\u{1F464} *Contacto:* ${senderName || "Amigo / Conocido"}
+\u{1F464} *Contacto:* ${senderName || "Colega / Cliente"}
 \u{1F4F2} *Tel\xE9fono:* ${senderDisplayPhone}
 \u{1F4AC} *Mensaje recibido:*
 "${recadoText}"
 
-\u2139\uFE0F *Acci\xF3n realizada:* Ya le suministr\xE9 tu n\xFAmero personal directo (+57 316 656 9719) y le confirm\xE9 que te transmit\xED su recado de inmediato. \u{1F91D}\u2728`;
+\u2139\uFE0F *Acci\xF3n realizada:* Ya le suministr\xE9 tu n\xFAmero personal directo (+57 316 656 9719) y le confirm\xE9 que te transmit\xED su solicitud de inmediato para coordinar. \u{1F91D}\u2728`;
   if (process.env.NODE_ENV === "test") {
     global.__lastDispatchedRecadoToEduardo = {
       senderPhoneOrJid,
@@ -33897,6 +33897,7 @@ Te acaban de escribir al WhatsApp del Bot (+57 319 291 9978) busc\xE1ndote o dej
       notificationMessage,
       timestamp: Date.now()
     };
+    return { success: true, dispatchedTo: EDUARDO_OFFICIAL_JID };
   }
   try {
     const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
@@ -34015,13 +34016,63 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
     const isDebtOrCollection = /(?:cobro|prejur[ií]dico|embargo|serlefin|deuda|cobranza|mandamiento\s+de\s+pago|cartera)/i.test(cleanLower);
     const isLegalOrContractualDiscussion = /\b(?:leasing|banco|promesa|escritura|cl[aá]usula|notar[íi]a|arriendo\s+con\s+opci[oó]n|corretaje\s+virtual|predial|chip|snr)\b/i.test(cleanLower);
     if (!isDebtOrCollection) {
-      const isExplicitRecadoForEduardo = /\b(?:dile\s+a\s+(?:eddu|eduardo)|av[ií]sale\s+a\s+(?:eddu|eduardo)|d[eé]jale\s+(?:dicho|el\s+recado|la\s+raz[oó]n|un\s+mensaje)\s+a\s+(?:eddu|eduardo)|p[aá]sale\s+(?:el\s+recado|la\s+raz[oó]n|el\s+mensaje)\s+a\s+(?:eddu|eduardo)|dale\s+(?:el\s+recado|raz[oó]n|el\s+mensaje)\s+a\s+(?:eddu|eduardo)|comun[ií]cale\s+a\s+(?:eddu|eduardo)|que\s+me\s+llame\s+(?:eduardo|eddu)|que\s+(?:eduardo|eddu)\s+me\s+llame|necesito\s+ubicar\s+a\s+(?:eduardo|eddu))\b/i.test(cleanLower);
+      const isCallOrPhoneConversationRequest = /\b(?:quisiera\s+(?:llamarte|una\s+llamada|hablar\s+con(?:tigo|ustedes|el\s+br[oó]ker|eduardo|jani))|quiero\s+(?:llamarte|una\s+llamada|hablar\s+con(?:tigo|ustedes|el\s+br[oó]ker|eduardo|jani))|me\s+gustar[ií]a\s+(?:llamarte|una\s+llamada|hablar\s+con(?:tigo|ustedes|el\s+br[oó]ker|eduardo|jani))|puedo\s+(?:llamarte|llamar|marcarte)|te\s+puedo\s+llamar|los\s+puedo\s+llamar|podemos\s+hablar(?:\s+por\s+tel[eé]fono)?|ll[aá]mame|ll[aá]menme|me\s+(?:puedes|pueden)\s+llamar|devu[eé]lveme\s+la\s+llamada|devu[eé]lvanme\s+la\s+llamada|comun[ií]quense\s+conmigo|cont[aá]ctenme|necesito\s+hablar\s+con\s+(?:el\s+br[oó]ker|eduardo|jani|ustedes)|quiero\s+coordinar\s+una\s+llamada|quiero\s+una\s+cita\s+con\s+(?:el\s+br[oó]ker|eduardo|jani))\b/i.test(cleanLower);
+      if (isCallOrPhoneConversationRequest) {
+        const contactNameToReport = effectiveRawName || displayName || "Colega / Cliente";
+        await dispatchMessageRecadoToEduardo(userId, contactNameToReport, clean);
+        if (userPerpetualSession.keyFacts) {
+          userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
+          await saveUserPerpetualSession(userPerpetualSession);
+        }
+        let reply = "";
+        if (isCommunityInquiry) {
+          reply = `\xA1Con el mayor de los gustos${displayName ? `, ${displayName}` : ""}! Para llamadas directas, coordinaci\xF3n de alianzas y asesor\xEDa personalizada con los fundadores, cuentas con la l\xEDnea oficial del br\xF3ker de VECY BIENES RA\xCDCES (Eduardo Rivera y Jani Alves):
+
+\u{1F4F2} **+57 316 656 9719**
+\u{1F449} https://wa.me/573166569719
+
+\u{1F680} *\xA1Ya mismo le acabo de transmitir tu solicitud y mensaje a Eduardo directamente a su WhatsApp en tiempo real para que est\xE9 enterado y pueda coordinar contigo!*
+
+Y respecto a nuestra **comunidad**, te invito cordialmente a unirte y participar en nuestros grupos oficiales de WhatsApp seg\xFAn lo que necesites hoy:
+
+1\uFE0F\u20E3 *Grupo 1 Oficial (Ofertas\u{1F3F7}\uFE0F y Demandas\u{1F4DD}):*
+\u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+(Matching inteligente 24/7 sin saturar de chat).
+
+2\uFE0F\u20E3 *Grupo 2 Oficial (Consultorio Inmobiliario\u{1F4A1} / Soporte Legal, Tributario y Aval\xFAos):*
+\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+(Consultas jur\xEDdicas, minutas, prediales y aval\xFAos en vivo).
+
+3\uFE0F\u20E3 *Grupo 3 Oficial (Proyecto VECY Network\u{1F310} / Alianzas y Debate 40/20/40):*
+\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+(Comunidad abierta, debate gremial y modelo 40/20/40).
+
+\u{1F4F0} *Canal Oficial de WhatsApp (Boletines y Noticias):*
+\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+
+\xA1Es un honor tenerte en nuestra red! \u{1F91D}\u2728`;
+        } else {
+          reply = `\xA1Con el mayor de los gustos${displayName ? `, ${displayName}` : ""}! Para llamadas directas, coordinaci\xF3n de alianzas y asesor\xEDa personalizada con la direcci\xF3n de VECY BIENES RA\xCDCES, cuentas con la l\xEDnea oficial del br\xF3ker de Eduardo Rivera y Jani Alves:
+
+\u{1F4F2} **+57 316 656 9719**
+\u{1F449} https://wa.me/573166569719
+
+\u{1F680} *\xA1Ya mismo le acabo de transmitir tu solicitud y mensaje a Eduardo directamente a su WhatsApp en tiempo real para que est\xE9 enterado y pueda coordinar contigo!*
+
+\xBFHay alg\xFAn tema espec\xEDfico o inmueble del que desees hablar con \xE9l, o en qu\xE9 m\xE1s te puedo colaborar mientras tanto? \u{1F91D}\u2728`;
+        }
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", reply);
+        markUserGreetedToday(userId);
+        return reply;
+      }
+      const isExplicitRecadoForEduardo = /\b(?:dile\s+a\s+(?:eddu|eduardo)|av[ií]sale\s+a\s+(?:eddu|eduardo)|d[eé]jale\s+(?:dicho|el\s+recado|la\s+raz[oó]n|un\s+mensaje)\s+a\s+(?:eddu|eduardo)|p[aá]sale\s+(?:el\s+recado|la\s+raz[oó]n|el\s+mensaje)\s+a\s+(?:eddu|eduardo)|dale\s+(?:el\s+recado|raz[oó]n|el\s+mensaje)\s+a\s+(?:eddu|eduardo)|comun[ií]cale\s+a\s+(?:eddu|eduardo)|que\s+me\s+llame\s+(?:eduardo|eddu)|que\s+(?:eduardo|eddu)\s+me\s+llame|necesito\s+ubicar\s+a\s+(?:eduardo|eddu)|dile\s+que\s+me\s+llame|av[ií]sale\s+que|d[eé]jale\s+el\s+recado|le\s+dejas\s+dicho|puedes\s+avisarle|dile\s+al\s+br[oó]ker)\b/i.test(cleanLower);
       const isDirectGreetingToEduardo = !isLegalOrContractualDiscussion && (/\b(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|c[oó]mo\s+est[aá]s?|c[oó]mo\s+vas?|qu[eé]\s+(?:hubo|m[aá]s)|quihubo|saludos?)\b[^\n.!?:]*\b(?:eduardo|eddu)\b/i.test(cleanLower) || /\b(?:eduardo|eddu)\b[^\n.!?:]*\b(?:hola|buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|c[oó]mo\s+est[aá]s?|c[oó]mo\s+vas?|qu[eé]\s+(?:hubo|m[aá]s))\b/i.test(cleanLower) || /\b(?:con\s+(?:el\s+)?(?:se[ñn]or\s+|don\s+)?(?:eduardo|eddu)|hablo\s+con\s+(?:eduardo|eddu)|est[aá]\s+(?:eduardo|eddu)|se\s+encuentra\s+(?:eduardo|eddu)|es\s+(?:el\s+)?(?:n[uú]mero\s+de\s+)?(?:eduardo|eddu)|este\s+es\s+(?:eduardo|eddu)|hablar\s+con\s+(?:eduardo|eddu)|comunicar(?:me)?\s+con\s+(?:eduardo|eddu))\b/i.test(cleanLower));
       const isAskingForEduardoContact = /\b(?:n[uú]mero\s+de\s+(?:eduardo|eddu)|tel[eé]fono\s+de\s+(?:eduardo|eddu)|contacto\s+de\s+(?:eduardo|eddu)|c[oó]mo\s+ubico\s+a\s+(?:eduardo|eddu)|d[oó]nde\s+encuentro\s+a\s+(?:eduardo|eddu)|en\s+qu[eé]\s+n[uú]mero\s+est[aá]\s+(?:eduardo|eddu)|celular\s+de\s+(?:eduardo|eddu))\b/i.test(cleanLower);
       const isAwaitingRecado = Boolean(userPerpetualSession.keyFacts?.esperando_recado_eduardo);
       const isCancelOrDeclineRecado = isAwaitingRecado && /\b(?:no\s+gracias|no\b|tranquil[ao]|as[ií]\s+est[aá]\s+bien|despu[eé]s|yo\s+lo\s+llamo|yo\s+le\s+escribo)\b/i.test(cleanLower);
       if (isExplicitRecadoForEduardo || isAwaitingRecado && !isCancelOrDeclineRecado) {
-        await dispatchMessageRecadoToEduardo(userId, displayName || effectiveRawName, clean);
+        await dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName, clean);
         if (userPerpetualSession.keyFacts) {
           userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
           await saveUserPerpetualSession(userPerpetualSession);
@@ -34057,7 +34108,7 @@ Quedo a tu total disposici\xF3n en lo que necesites de VECY BIENES RA\xCDCES. \x
         const words = clean.trim().split(/\s+/);
         const hasSubstantiveMessage = words.length > 8 && !/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches),?\s*(?:eduardo|eddu)?[.!?]*$/i.test(clean);
         if (hasSubstantiveMessage) {
-          await dispatchMessageRecadoToEduardo(userId, displayName || effectiveRawName, clean);
+          await dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName, clean);
           if (userPerpetualSession.keyFacts) {
             userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
             await saveUserPerpetualSession(userPerpetualSession);

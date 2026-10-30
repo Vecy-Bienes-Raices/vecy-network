@@ -268,7 +268,7 @@ export async function fetchLiveTRM(): Promise<{ valor: number; fecha: string; su
  * Consultas sobre normativa (POT 555, Estatuto Tributario, Notarías SNR, trámites en línea VUR/Sinupot)
  * y divisas (TRM), garantizando rigor jurídico sin alucinaciones.
  */
-export async function searchWebGrounding(query: string, timeoutMs: number = 7000): Promise<WebGroundingResult> {
+export async function searchWebGrounding(query: string, timeoutMs: number = 3500): Promise<WebGroundingResult> {
   const cleanQ = (query || '').trim();
   if (!cleanQ) {
     return { query: '', source: 'none', results: [], summary: '', success: false };

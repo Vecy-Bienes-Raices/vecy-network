@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.75 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.76 — Octubre 2026
+
+### Novedades v33.76 (Despacho Activo de Solicitudes de Llamada y Contacto a Eduardo Rivera [+57 316 656 9719], Sinceramiento de Habilidades [Erradicación de Funciones Fantasma] y Optimización de Timeout Web — Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Los puntos 13 y 14 los pongo en duda, ya que me han dejado recados y JanIA no nos ha avisado ni enviado ningún mensaje al 3166569719, tampoco he visto que pueda ingresar al POT y no se porqué le pudiste lo del dolar, eso acaso tiene que ver con Bienes Raíces Colombia, será por la compra extranjera acaso, o quizás porque podemos llegar a tener clientes que viven allá y nos han encomendado sus inmuebles, o quizás algunos colegas si los tengan?? Resuelve y verifica bien por que hasta donde sé hay cositas en las que se cuelga aún JanIA y no lo hace muy bien que digamos."*
+  2. **Causa Raíz Identificada:**
+     - Históricamente, JanIA no tenía código de despacho de recados hacia WhatsApp y solo emitía textos en Gemini prometiendo *"yo le doy tu razón"*. En v33.74 se creó `dispatchMessageRecadoToEduardo`, pero no se activaba ante intenciones de llamada ("quisiera llamarte", "quiero una llamada", "llámenme", "comuníquense conmigo", como ocurrió con José María Romero Esguerra).
+     - El Punto 14 (encuestas interactivas de 1 clic en WhatsApp) era código de bajo nivel que nunca se ejecutaba conversacionalmente con usuarios en DMs.
+     - JanIA no ingresa al visor SINUPOT de planeación; conoce el marco conceptual del Decreto 555/2021 de Bogotá y orienta sobre cómo contrastar la cédula normativa en SINUPOT.
+     - La TRM del dólar solo tiene pertinencia para colombianos en el exterior e inversionistas extranjeros, no como calculadora genérica de divisas.
+     - El timeout del scraper web (7000ms) podía provocar cuelgues o demoras innecesarias.
+- **Implementación Técnica**:
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - Interceptor prioritario `isCallOrPhoneConversationRequest` que captura cualquier intención de llamada o contacto ("quisiera llamarte", "quiero una llamada", "llámenme", "devuélvanme la llamada", "comuníquense conmigo").
+    - Despacho inmediato y en caliente de `dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName, clean)` hacia `573166569719@s.whatsapp.net` con enlace directo 1-clic (`https://wa.me/...`), nombre completo y mensaje original.
+    - Confirmación transparente al usuario: entrega la línea de Eduardo Rivera y Jani Alves (+57 316 656 9719) y avisa que ya le transmitió su solicitud en tiempo real. Si preguntó por comunidad, le entrega además la bienvenida y enlaces limpios a los 3 grupos oficiales y al canal.
+  - `server/_core/scraper.ts`:
+    - Reducción del timeout de DuckDuckGo de 7000ms a 3500ms para evitar cuelgues o demoras.
+  - Sinceramiento estricto del catálogo público de habilidades: erradicadas funciones que no se ejecutan directamente en DM.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **510/510 passing** (Suite 162 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.76`) y `package.json` (`33.76.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.75 — Octubre 2026
 
 ### Novedades v33.75 (Doctrina de Comunidad y Grupos Oficiales de WhatsApp [Invitación Activa y Explicación por Grupo], Línea Directa de Bróker [+57 316 656 9719] y Auditoría Técnica de Habilidades Operativas — Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -14931,3 +14931,44 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Compilación:** `npm run build` ejecutado sin errores de tipado en TypeScript.
 - **Despliegue VPS:** Ejecución de `npm run deploy:vps` y recarga en caliente de PM2 (`pm2 reload / pm2 status`).
 - **Estado en Producción:** Proceso `jania-server` online, estable y consumiendo ~162.7 MB de memoria con 0 caídas.
+
+---
+
+### 📅 [2026-10-30] — Despacho Activo de Solicitudes de Llamada y Contacto a Eduardo Rivera (+57 316 656 9719), Sinceramiento Técnico de Habilidades (Erradicación de Funciones Fantasma) y Optimización de Timeout (v33.76 — Doctrina Eduardo A. Rivera)
+
+**Versión Desplegada:** `jania-server v33.76.0` (PM2 Online en VPS Contabo `13.140.149.144`)
+**Archivos Modificados:**
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/scraper.ts`
+- `shared/const.ts`
+- `package.json`
+- `server/__tests__/regression.test.ts`
+- `GEMINI.md`
+- `.agents/AGENTS.md`
+- `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción de Eduardo A. Rivera:**
+  *"Los puntos 13 y 14 los pongo en duda, ya que me han dejado recados y JanIA no nos ha avisado ni enviado ningún mensaje al 3166569719, tampoco he visto que pueda ingresar al POT y no se porqué le pudiste lo del dolar, eso acaso tiene que ver con Bienes Raíces Colombia, será por la compra extranjera acaso, o quizás porque podemos llegar a tener clientes que viven allá y nos han encomendado sus inmuebles, o quizás algunos colegas si los tengan?? Resuelve y verifica bien por que hasta donde sé hay cositas en las que se cuelga aún JanIA y no lo hace muy bien que digamos."*
+- **Diagnóstico y Causas Raíz Identificadas:**
+  1. **Recados Perdidos históricamente:** Antes de la versión v33.74, JanIA prometía con respuestas de Gemini *"yo le doy tu razón"*, pero no existía en el código ningún despacho por socket a WhatsApp; eran promesas vacías del LLM. En v33.74 se implementó `dispatchMessageRecadoToEduardo`, pero estaba atado exclusivamente a frases que contuvieran la palabra "Eduardo". Cuando un colega (ej: José María Romero Esguerra) escribía: *"Quisiera llamarte y que me compartas tus servicios o comunidad"*, o pedía una llamada o reunión con el bróker, JanIA no despachaba la notificación a Eduardo.
+  2. **Punto 14 (Superpoderes Interactivos de WhatsApp):** Aunque existían métodos a bajo nivel (`sendPoll`, `sendContactCard`), JanIA nunca ejecutaba encuestas interactivas de 1 clic en los chats privados (DMs) de los usuarios, ni enviaba vCards de forma conversacional. Promocionarlo creaba expectativas falsas.
+  3. **Plan de Ordenamiento Territorial (POT):** JanIA conoce la normativa conceptual del Decreto 555 de 2021 de Bogotá (mezcla de usos, tratamientos, ejes de alta densidad), pero NO ingresa al visor geográfico SINUPOT ni descarga cédulas normativas por CHIP.
+  4. **Dólar (TRM) y Foco Inmobiliario:** JanIA no es un conversor de divisas. La TRM solo es relevante en finca raíz para colombianos en el exterior que compran con remesas o divisas, e inversionistas extranjeros que cotizan en USD.
+  5. **Causas de demoras o cuelgues:** El scraper web en DuckDuckGo tenía un timeout de 7000ms que ante bloqueos causaba retrasos en la respuesta de WhatsApp.
+
+#### 2. Solución Técnica Implementada (`v33.76`)
+1. **Interceptor Universal de Solicitudes de Llamada y Contacto (`dmHandler.ts`):**
+   - Implementado `isCallOrPhoneConversationRequest` que captura cualquier intención de llamada o contacto ("quisiera llamarte", "quiero una llamada", "llámenme", "devuélvanme la llamada", "comuníquense conmigo", "quiero hablar con el bróker").
+   - Dispara de inmediato y en caliente `dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName, clean)` hacia `573166569719@s.whatsapp.net` con los datos del remitente, enlace directo de WhatsApp (`https://wa.me/...`) y texto íntegro.
+   - En la respuesta al usuario, entrega de inmediato la línea del bróker de Eduardo y Jani (+57 316 656 9719) y le confirma: *"🚀 ¡Ya mismo le acabo de transmitir tu solicitud y mensaje a Eduardo directamente a su WhatsApp en tiempo real para que esté enterado y pueda coordinar contigo!"*.
+   - Si el usuario además preguntó por comunidad, integra armónicamente la invitación a los 3 grupos oficiales y el canal.
+2. **Sinceramiento del Catálogo de Servicios:** Erradicación del punto de encuestas interactivas de WhatsApp en DMs, precisión estricta sobre el POT (orientación sobre Decreto 555 y guía en SINUPOT, no acceso directo a base de datos de planeación), y contextualización de la TRM hacia inversión extranjera y colombianos en el exterior.
+3. **Optimización de Web Grounding (`scraper.ts`):** Reducción del timeout de DuckDuckGo de 7000ms a 3500ms para evitar demoras innecesarias.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 162 en `regression.test.ts`:** 4 pruebas automatizadas verificando despacho activo de recados, enlaces directos, timeout de 3500ms y sincronización de versión.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **510/510 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
+- **Versión Oficial:** `v33.76` en `shared/const.ts` y `33.76.0` en `package.json`.
