@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.83";
+    VECY_VERSION = "v33.84";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16221,6 +16221,24 @@ var init_whatsapp_utils = __esm({
 });
 
 // server/_core/jania/trustedContacts.ts
+var trustedContacts_exports = {};
+__export(trustedContacts_exports, {
+  CONTACT_PRIMARY_NICKS: () => CONTACT_PRIMARY_NICKS,
+  SILENCED_LEGAL_CASE_PHONES: () => SILENCED_LEGAL_CASE_PHONES,
+  TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
+  TRUSTED_FAMILY_AND_FRIENDS: () => TRUSTED_FAMILY_AND_FRIENDS,
+  buildChaloJokeResponse: () => buildChaloJokeResponse,
+  buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
+  buildJonathanCreditResponse: () => buildJonathanCreditResponse,
+  findTrustedContact: () => findTrustedContact,
+  getDebtCollectionDefenseResponse: () => getDebtCollectionDefenseResponse,
+  isChaloEscobarJoke: () => isChaloEscobarJoke,
+  isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
+  isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,
+  isSilencedLegalCaseAccount: () => isSilencedLegalCaseAccount,
+  isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
+  normalizePhoneDigits: () => normalizePhoneDigits
+});
 function normalizePhoneDigits(raw) {
   if (!raw) return "";
   const clean = raw.split("@")[0].replace(/\D/g, "");
@@ -16362,7 +16380,20 @@ function getDebtCollectionDefenseResponse(timeSalutation) {
   const salutation = timeSalutation || getGreetingByTime2();
   return `\xA1${salutation}! No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
 }
-var TRUSTED_FAMILY_AND_FRIENDS, CONTACT_PRIMARY_NICKS, TRUSTED_CONTACTS;
+function isSilencedLegalCaseAccount(phoneOrId, name) {
+  if (!phoneOrId && !name) return false;
+  const cleanId = (phoneOrId || "").replace(/\D/g, "");
+  if (cleanId.length >= 7) {
+    const isMatchPhone = SILENCED_LEGAL_CASE_PHONES.some((p) => cleanId.endsWith(p) || p.endsWith(cleanId) || cleanId === p);
+    if (isMatchPhone) return true;
+  }
+  if (name) {
+    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor)/i.test(name);
+    if (isMatchName) return true;
+  }
+  return false;
+}
+var TRUSTED_FAMILY_AND_FRIENDS, CONTACT_PRIMARY_NICKS, TRUSTED_CONTACTS, SILENCED_LEGAL_CASE_PHONES;
 var init_trustedContacts = __esm({
   "server/_core/jania/trustedContacts.ts"() {
     "use strict";
@@ -16547,6 +16578,12 @@ var init_trustedContacts = __esm({
         return enriched;
       }
     );
+    SILENCED_LEGAL_CASE_PHONES = [
+      "573229097000",
+      "3229097000",
+      "573213370737",
+      "3213370737"
+    ];
   }
 });
 
@@ -16712,6 +16749,16 @@ var init_founderKnowledgeService = __esm({
         directive: "En el chat consigo mismo ('Env\xEDa mensajes a este mismo n\xFAmero' / self-chat), Eduardo utiliza la ventana como bloc de notas personal, borradores y enlaces. JanIA NUNCA debe responder a mensajes propios ordinarios (como 'Hola', enlaces o notas) para no hablarse a s\xED misma ni hacer bucles. \xDANICAMENTE responde en self-chat si Eduardo la invoca expl\xEDcitamente con '@JanIA' o 'JanIA'. Asimismo, el identificador LID 167108705018103 y el tel\xE9fono 573192919978 pertenecen al fundador y Director de Tecnolog\xEDa Eduardo Rivera, JAM\xC1S a Jani Alves (cuya l\xEDnea directiva es 573188096811). JanIA jam\xE1s confundir\xE1 a Eduardo con Jani.",
         rawText: "JanIA se volvio loca y se est\xE1 hablando a ella misma pensando que habla con Jani Alves mi esposa ah y desde su propio n\xFAmero al mismo suyo. Dime qu\xE9 est\xE1 sucediendo y corrige por Dios!!",
         createdAt: "2026-10-31T17:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-silencio-absoluto-cuentas-deudoras-yennifer-y-sonia",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Silencio Absoluto en Cuentas Deudoras y Casos Jur\xEDdicos Sensibles (+57 322 909 7000 y +57 321 337 0737)",
+        directive: "JanIA mantiene 100% de silencio absoluto (cero respuestas de texto, notas de voz, respuestas de defensa, stickers o interactividad) ante mensajes provenientes de las cuentas de cobranza/deudores delicados que Eduardo gestiona en privado: +57 322 909 7000 (Yennifer Milena Soto) y +57 321 337 0737 (Sonia Stella P\xE9rez - Deudora Solidaria Caso Cristina Flores). JanIA descarta de inmediato cualquier procesamiento sin responder nada.",
+        rawText: "Tambi\xE9n te solicito que JanIA guarde por favor silencio en esta cuenta +57 322 9097000 y no responda nada. A esa y a aesta: +57 321 3370737. Se puede",
+        createdAt: "2026-10-31T18:47:00.000Z",
         active: true
       },
       {
@@ -25693,6 +25740,11 @@ ${quotedNote}` : quotedNote;
                 if (isBotOrMetaAi) {
                   return;
                 }
+                const { isSilencedLegalCaseAccount: isSilencedLegalCaseAccount2 } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
+                if (isSilencedLegalCaseAccount2(senderId, userName) || isSilencedLegalCaseAccount2(resolvedSenderId, userName) || isSilencedLegalCaseAccount2(rawPhone, userName)) {
+                  console.log(`[JANIA-SILENCE-SHIELD] \u{1F6E1}\uFE0F Mensaje de cuenta silenciada (${rawPhone} - ${userName || "Deudora"}). JanIA guarda silencio absoluto.`);
+                  return;
+                }
                 const rawMsg = unwrapMessage(msg.message);
                 let body = "";
                 if (rawMsg?.conversation) body = rawMsg.conversation;
@@ -25781,6 +25833,11 @@ ${quotedNote}` : quotedNote;
         });
       }
       async processBufferedDmMessages(senderId, userName, rawPhone, messages2, isAdmin, isSelfChat = false) {
+        const { isSilencedLegalCaseAccount: isSilencedLegalCaseAccount2 } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
+        if (isSilencedLegalCaseAccount2(senderId, userName) || isSilencedLegalCaseAccount2(rawPhone, userName)) {
+          console.log(`[JANIA-SILENCE-SHIELD] \u{1F6E1}\uFE0F Buffer DM descartado por cuenta silenciada (${senderId} - ${userName}). Silencio total.`);
+          return;
+        }
         let combinedBody = "";
         let mainMsg = messages2[messages2.length - 1];
         let imageBuffer;
@@ -34220,6 +34277,11 @@ Te acaban de escribir al WhatsApp del Bot (+57 319 291 9978) busc\xE1ndote o sol
   return { success: true, dispatchedTo: EDUARDO_OFFICIAL_JID };
 }
 async function processPrivateDmConversationalMessage(text2, userId, userName, mediaOptions) {
+  const { isSilencedLegalCaseAccount: isSilencedLegalCaseAccount2 } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
+  if (isSilencedLegalCaseAccount2(userId, userName)) {
+    console.log(`[dmHandler] \u{1F6E1}\uFE0F Mensaje descartado para cuenta silenciada (${userId} - ${userName}). Silencio total.`);
+    return "";
+  }
   let clean = (text2 || "").trim();
   const hasImage = !!mediaOptions?.imageBuffer;
   const hasPdf = !!mediaOptions?.pdfBuffer;
@@ -36307,6 +36369,7 @@ __export(janIA_exports, {
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   PROTOCOLO_URBANIDAD_CARRENO_PROMPT: () => PROTOCOLO_URBANIDAD_CARRENO_PROMPT,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
+  SILENCED_LEGAL_CASE_PHONES: () => SILENCED_LEGAL_CASE_PHONES,
   TRUSTED_CONTACTS: () => TRUSTED_CONTACTS,
   TRUSTED_FAMILY_AND_FRIENDS: () => TRUSTED_FAMILY_AND_FRIENDS,
   analyzeSender: () => analyzeSender,
@@ -36400,6 +36463,7 @@ __export(janIA_exports, {
   isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
   isSessionMuted: () => isSessionMuted,
   isShortSignalOrSticker: () => isShortSignalOrSticker,
+  isSilencedLegalCaseAccount: () => isSilencedLegalCaseAccount,
   isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
   isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
   janiaResultSchema: () => janiaResultSchema,

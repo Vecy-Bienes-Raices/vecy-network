@@ -1166,6 +1166,15 @@ export class JaniaMatchBot {
               return;
             }
 
+            // 🛡️ LISTA NEGRA DE SILENCIO TOTAL (Deudores / Casos Jurídicos Sensibles — Doctrina Eduardo A. Rivera v33.84):
+            // 1. +57 322 909 7000 (573229097000) -> Yennifer Milena Soto (Deudora - Caso Cristina Flores)
+            // 2. +57 321 337 0737 (573213370737) -> Sonia Stella Pérez (Deudora Solidaria Yennifer - Caso Cristina Florez)
+            const { isSilencedLegalCaseAccount } = await import('./jania/trustedContacts');
+            if (isSilencedLegalCaseAccount(senderId, userName) || isSilencedLegalCaseAccount(resolvedSenderId, userName) || isSilencedLegalCaseAccount(rawPhone, userName)) {
+              console.log(`[JANIA-SILENCE-SHIELD] 🛡️ Mensaje de cuenta silenciada (${rawPhone} - ${userName || 'Deudora'}). JanIA guarda silencio absoluto.`);
+              return;
+            }
+
             const rawMsg = unwrapMessage(msg.message);
             let body = '';
             if (rawMsg?.conversation) body = rawMsg.conversation;
@@ -1285,6 +1294,12 @@ export class JaniaMatchBot {
     isAdmin: boolean,
     isSelfChat: boolean = false
   ) {
+    const { isSilencedLegalCaseAccount } = await import('./jania/trustedContacts');
+    if (isSilencedLegalCaseAccount(senderId, userName) || isSilencedLegalCaseAccount(rawPhone, userName)) {
+      console.log(`[JANIA-SILENCE-SHIELD] 🛡️ Buffer DM descartado por cuenta silenciada (${senderId} - ${userName}). Silencio total.`);
+      return;
+    }
+
     // 1. Combinar cuerpos de texto y buscar imágenes, documentos o notas de voz
     let combinedBody = "";
     let mainMsg = messages[messages.length - 1]; // Usar el último mensaje como referencia para respuestas/reacciones

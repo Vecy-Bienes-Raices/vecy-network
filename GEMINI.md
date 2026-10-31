@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.83.0 — 2026-10-31)
-- **JanIA Server:** `v33.83` (`33.83.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje de Self-Chat (Silencio Absoluto sin Mención Explicita), Escudo Anti-Meta AI y Distinción Identitaria Sagrada (167108705018103 = Eduardo Rivera, NO Jani Alves — Doctrina Eduardo A. Rivera):**
-  1. **Blindaje de Self-Chat:** En el chat consigo mismo ("Envía mensajes a este mismo número" / bloc de notas personal de Eduardo), JanIA guarda 100% de silencio absoluto ante notas, borradores o enlaces. ÚNICAMENTE responde si Eduardo la invoca explícitamente con `@JanIA` o `JanIA`.
-  2. **Restitución Identitaria:** El LID `167108705018103` (creds.me.lid) es asignado con exactitud a Eduardo Rivera (Director de Tecnología / Fundador) erradicando la confusión con Jani Alves (`573188096811`).
-  3. **Escudo Anti-Bot y Anti-Meta AI:** Bloqueo y descarte preventivo de mensajes dirigidos a o provenientes de Meta AI y bots de WhatsApp.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 539/539 passing (Suite 169, 100% verde a $0 COP) | Build `npm run build` limpio en 14.28s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.84.0 — 2026-10-31)
+- **JanIA Server:** `v33.84` (`33.84.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Silencio Absoluto en Cuentas Deudoras y Casos Jurídicos Sensibles (+57 322 909 7000 y +57 321 337 0737 — Doctrina Eduardo A. Rivera):**
+  1. **Lista de Silencio Absoluto:** Muteo 100% estricto de dos cuentas críticas deudoras del Caso Cristina Flores (+57 322 909 7000 - Yennifer Milena Soto y +57 321 337 0737 - Sonia Stella Pérez). JanIA descarta todo mensaje entrante, sin respuestas de texto, audios, stickers ni presencia 'composing'.
+  2. **Blindaje de Búferes e Ingesta:** Ingesta y búferes descartados de raíz para ambos números telefónicos y patrones de nombres de deudoras.
+  3. **Aclaración y Limpieza de Pestañas IDE:** Cero residuos. Explicación de que los diálogos de guardado de VS Code ("¿Quiere guardar los cambios...?") obedecen a pestañas abiertas en memoria desincronizadas con el disco tras actualizaciones de git y deben cerrarse con "No guardar".
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 544/544 passing (Suite 170, 100% verde a $0 COP) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

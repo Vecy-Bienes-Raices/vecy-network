@@ -1678,6 +1678,12 @@ export async function processPrivateDmConversationalMessage(
   userName?: string,
   mediaOptions?: DmMediaOptions
 ): Promise<string> {
+  const { isSilencedLegalCaseAccount } = await import("../trustedContacts");
+  if (isSilencedLegalCaseAccount(userId, userName)) {
+    console.log(`[dmHandler] 🛡️ Mensaje descartado para cuenta silenciada (${userId} - ${userName}). Silencio total.`);
+    return "";
+  }
+
   let clean = (text || "").trim();
   const hasImage = !!mediaOptions?.imageBuffer;
   const hasPdf = !!mediaOptions?.pdfBuffer;

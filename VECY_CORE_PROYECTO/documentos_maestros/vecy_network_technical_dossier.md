@@ -8649,6 +8649,31 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio en 14.28s.
   - Versión: `v33.83` (`33.83.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.84 (2026-10-31) — Silencio Absoluto en Cuentas Deudoras y Casos Jurídicos Sensibles (+57 322 909 7000 y +57 321 337 0737) y Blindaje Anti-Residuo (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Cuentas Sensibles de Cobro y Deuda Jurídica:* Las cuentas telefónicas `+57 322 909 7000` (Yennifer Milena Soto - Deudora - Caso Cristina Flores) y `+57 321 337 0737` (Sonia Stella Pérez - Deudora Solidaria Yennifer - Caso Cristina Florez) corresponden a un litigio civil y de cobro de cartera extrajudicial donde JanIA no debe emitir respuestas automáticas, stickers, audios ni mensajes bajo ninguna circunstancia.
+  2. *Diálogos de Guardado en el Editor:* Eduardo observó diálogos modales en Antigravity IDE / VS Code ("¿Quiere guardar los cambios efectuados en whatsapp-match.ts / regression.test.ts?"). Esto se produce porque las pestañas de archivos editados estaban abiertas en memoria en la interfaz gráfica; al actualizarse en disco mediante el asistente o git, el editor detecta la divergencia en memoria y pregunta si guardar o descartar. La directriz correcta es oprimir **"No guardar"**, ya que la versión del disco es la oficial y completa.
+  3. *Indicador de Procesos Asíncronos en UI:* Comandos pesados que toman más de 5s pasan al gestor de tareas en background mostrando "1 task running" en la UI hasta que culminan.
+- **Solución Implementada**:
+  1. `server/_core/jania/trustedContacts.ts`:
+     - Definida lista `SILENCED_LEGAL_CASE_PHONES = ["573229097000", "3229097000", "573213370737", "3213370737"]`.
+     - Creada función `isSilencedLegalCaseAccount(phoneOrId: string, name?: string): boolean` que valida que el número posea al menos 7 dígitos y coincida con las deudoras, o que el nombre contenga patrones de las mismas.
+  2. `server/_core/whatsapp-match.ts`:
+     - Descarte preventivo inmediato de mensajes entrantes de estas cuentas en el handler de DMs.
+     - Limpieza y descarte automático de búferes pendientes en `processBufferedDmMessages`.
+  3. `server/_core/jania/handlers/dmHandler.ts`:
+     - En `processPrivateDmConversationalMessage`, retorno vacío (`""`) instantáneo si `isSilencedLegalCaseAccount`.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la enseñanza sagrada `seed-silencio-absoluto-cuentas-deudoras-yennifer-y-sonia`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 170 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **544/544 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio en 25.12s + 349ms.
+  - Versión: `v33.84` (`33.84.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

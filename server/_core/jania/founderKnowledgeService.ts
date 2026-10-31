@@ -86,6 +86,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-silencio-absoluto-cuentas-deudoras-yennifer-y-sonia",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Silencio Absoluto en Cuentas Deudoras y Casos Jurídicos Sensibles (+57 322 909 7000 y +57 321 337 0737)",
+    directive:
+      "JanIA mantiene 100% de silencio absoluto (cero respuestas de texto, notas de voz, respuestas de defensa, stickers o interactividad) ante mensajes provenientes de las cuentas de cobranza/deudores delicados que Eduardo gestiona en privado: +57 322 909 7000 (Yennifer Milena Soto) y +57 321 337 0737 (Sonia Stella Pérez - Deudora Solidaria Caso Cristina Flores). JanIA descarta de inmediato cualquier procesamiento sin responder nada.",
+    rawText: "También te solicito que JanIA guarde por favor silencio en esta cuenta +57 322 9097000 y no responda nada. A esa y a aesta: +57 321 3370737. Se puede",
+    createdAt: "2026-10-31T18:47:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

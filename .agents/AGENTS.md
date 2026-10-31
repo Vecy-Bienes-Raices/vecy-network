@@ -183,7 +183,32 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.83 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.84 — Octubre 2026
+
+### Novedades v33.84 (Silencio Absoluto en Cuentas Deudoras y Casos Jurídicos Sensibles [+57 322 909 7000 y +57 321 337 0737] — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Siguen quedando archivos resagados, creo que estás trabajando muy mal y dejando residuos y cosas muy mal configuradas. También te solicito que JanIA guarde por favor silencio en esta cuenta +57 322 9097000 y no responda nada. A esa y a aesta: +57 321 3370737. Se puede"*
+     - *"Veo que siempre dejas como procesos pendientes y sin terminar. No se qué te sucede."*
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Cuentas Sensibles de Cobro / Deuda Jurídica):** Los números `+57 322 909 7000` (Yennifer Milena Soto - Deudora - Caso Cristina Flores) y `+57 321 337 0737` (Sonia Stella Pérez - Deudora Solidaria Yennifer - Caso Cristina Florez) corresponden a un caso judicial y de cartera extrajudicial donde JanIA NO debe intervenir jamás (0% respuestas, 0% audios, 0% stickers, 0% presencia typing).
+     - **Problema 2 (Aparición de Diálogos de Guardado en el Editor):** Eduardo observó diálogos modales en Antigravity IDE / VS Code ("¿Quiere guardar los cambios efectuados en whatsapp-match.ts / regression.test.ts?"). Esto se produce porque las pestañas de archivos editados por el agente estaban previamente abiertas en el editor de Eduardo; al actualizarse en disco mediante herramientas automatizadas o git, el búfer de pantalla de VS Code detecta que el archivo en disco cambió y pregunta si guardar o descartar. La indicación correcta es oprimir **"No guardar"**, ya que la versión del disco es la oficial y completa.
+     - **Problema 3 (Indicador de Procesos Asíncronos en UI):** Comandos largos como `npm test` o llamadas de red que superan 5s pasan al gestor de tareas en background mostrando "1 task running" en la UI hasta que culminan.
+- **Implementación Técnica**:
+  - `server/_core/jania/trustedContacts.ts`:
+    - Definida lista `SILENCED_LEGAL_CASE_PHONES = ["573229097000", "3229097000", "573213370737", "3213370737"]`.
+    - Creada función `isSilencedLegalCaseAccount(phoneOrId: string, name?: string): boolean` que valida dígitos mínimos (>=7) y patrones de nombres de deudoras (`yennifer milena soto`, `sonia stella pérez`, `deudora.*cristina`).
+  - `server/_core/whatsapp-match.ts`:
+    - En el handler de DMs entrantes, se aplica un descarte preventivo inmediato si `isSilencedLegalCaseAccount(senderId, senderName)`.
+    - En `processBufferedDmMessages`, se limpia y descarta cualquier mensaje en búfer para cuentas silenciadas.
+  - `server/_core/jania/handlers/dmHandler.ts`:
+    - En `processPrivateDmConversationalMessage`, retorno vacío (`""`) instantáneo si `isSilencedLegalCaseAccount`.
+  - `server/_core/jania/founderKnowledgeService.ts`:
+    - Registrada la enseñanza sagrada `seed-silencio-absoluto-cuentas-deudoras-yennifer-y-sonia`.
+  - `shared/const.ts` (`v33.84`) y `package.json` (`33.84.0`).
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **544/544 passing** (Suite 170 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v33.83 — Octubre 2026
 
 ### Novedades v33.83 (Blindaje de Self-Chat, Escudo Anti-Meta AI y Distinción Identitaria Sagrada [167108705018103 = Eduardo Rivera, NO Jani Alves] — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -461,3 +461,31 @@ export function getDebtCollectionDefenseResponse(timeSalutation?: string): strin
   const salutation = timeSalutation || getGreetingByTime();
   return `¡${salutation}! No tengo información de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca raíz y bienes raíces en VECY BIENES RAÍCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
 }
+
+/**
+ * 🛡️ LISTA NEGRA DE SILENCIO ABSOLUTO (Deudores / Casos Jurídicos Sensibles — Doctrina Eduardo A. Rivera v33.84)
+ * Cuentas donde JanIA NUNCA debe contestar ni enviar ningún mensaje, sticker ni audio:
+ * 1. +57 322 909 7000 (573229097000) -> Yennifer Milena Soto (Deudora - Caso Cristina Flores)
+ * 2. +57 321 337 0737 (573213370737) -> Sonia Stella Pérez (Deudora Solidaria Yennifer - Caso Cristina Florez)
+ */
+export const SILENCED_LEGAL_CASE_PHONES = [
+  "573229097000",
+  "3229097000",
+  "573213370737",
+  "3213370737"
+];
+
+export function isSilencedLegalCaseAccount(phoneOrId: string, name?: string): boolean {
+  if (!phoneOrId && !name) return false;
+  const cleanId = (phoneOrId || "").replace(/\D/g, "");
+  if (cleanId.length >= 7) {
+    const isMatchPhone = SILENCED_LEGAL_CASE_PHONES.some(p => cleanId.endsWith(p) || p.endsWith(cleanId) || cleanId === p);
+    if (isMatchPhone) return true;
+  }
+
+  if (name) {
+    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor)/i.test(name);
+    if (isMatchName) return true;
+  }
+  return false;
+}
