@@ -15275,3 +15275,66 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **534/534 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
 - **Versión Oficial:** `v33.82` en `shared/const.ts` y `33.82.0` en `package.json`.
+
+---
+
+### Sesión v33.83 — Octubre 2026: Blindaje de Self-Chat (Silencio Absoluto sin Mención Explicita), Escudo Anti-Meta AI y Distinción Identitaria Sagrada (167108705018103 = Eduardo Rivera, NO Jani Alves) (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 31 de Octubre de 2026  
+> **Versión resultante:** `v33.83` (`33.83.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/whatsapp-match.ts`
+> - `server/_core/jania/trustedContacts.ts`
+> - `server/_core/jania/handlers/dmHandler.ts`
+> - `server/_core/adminMatchAssistantService.ts`
+> - `server/_core/jania/founderKnowledgeService.ts`
+> - `server/__tests__/regression.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Revisa por favor que JanIA no se esté saliendo de control, me pareció como ver que le escribía a Meta y tube que archivar la conversación para evitar tal vez que nos baneen los de whatsapp, ten mucho cuidado con lo que haces por favor. También quiero que me des tu opinión ya que hice un cambio a este mensaje para que quede más claro y los colegas lo entiendan, si dejo eso de SARLAFT, van a quedar desorientados a los agentes chapados a la antigua (LOs dinosaurios) hay que hablarles bien claro pa que entiendan o quedan perdidos... Mira que JanIA se volvio loca y se está hablando a ella misma pensando que habla con Jani Alves mi esposa ah y desde su propio número al mismo suyo. Dime qué está sucediendo y corrige por Dios!!"*
+- **Diagnóstico Forense y Causas Raíz Identificadas:**
+  1. **Confusión Identitaria Crítica (`167108705018103`):**
+     - En `.baileys_auth/creds.json`, el LID registrado en el socket de WhatsApp de JanIA (`573192919978:44@s.whatsapp.net`) es `creds.me.lid = '167108705018103:44@lid'`. Este es el LID nativo de la línea de **Eduardo Rivera**.
+     - Sin embargo, en `whatsapp-match.ts`, `trustedContacts.ts`, `dmHandler.ts` y `adminMatchAssistantService.ts`, el identificador `167108705018103` había sido erróneamente etiquetado como `// LID Directivo Jani Alves` y mapeado con `userName = "Jani Alves"` y `isJani = true`.
+     - Jani Alves opera en la línea telefónica `573188096811` (con sus LIDs reales `182781141344345` y `218820279050385`). Al estar invertida la asignación, cualquier mensaje procedente del socket o del chat consigo mismo era asumido por JanIA como una conversación con su socia y cofundadora Jani Alves.
+  2. **Procesamiento Indiscriminado en Self-Chat (`isSelfChat`):**
+     - En `whatsapp-match.ts`, la guarda `if (msg.key.fromMe)` permitía que si `isSelfChat || isAdmin` era verdadero, todo mensaje propio fuera procesado inmediatamente por el buffer conversacional.
+     - En WhatsApp, la ventana *"Envía mensajes a este mismo número"* (`@JanIA_agente_IA_de_VECY (Tú)`) es utilizada por Eduardo como bloc de notas personal, guardado de enlaces y borradores.
+     - Al enviar Eduardo un simple *"Hola"* o una nota a sí mismo, JanIA lo interpretaba como un mensaje entrante de Jani Alves, disparaba a Gemini Flash/Pro y devolvía una respuesta dentro de la misma ventana con frases como *"¡Buenas tardes, Jani!"*, *"¡Perfecto, Jani!"* y stickers 3D. Esto provocaba la ilusión aterradora de que JanIA *"se hablaba a sí misma creyendo que hablaba con su esposa"*.
+  3. **Interacción Aparente con Meta AI y Memoria de WhatsApp:**
+     - En la captura aportada por Eduardo de su chat con **Meta AI** (el bot oficial integrado de WhatsApp por Meta), Meta AI saludaba recordando un mensaje redactado el domingo sobre *"la casa de Morato, requerimientos y Diego"*.
+     - Eduardo pensó que JanIA estaba filtrando datos o chateando a sus espaldas con Meta AI.
+     - Se auditó el código del servidor (`grep -rn -i "meta ai" server/`) confirmando **0 conexiones, 0 llamadas y 0 interacción** entre JanIA y Meta AI. Meta AI simplemente estaba recuperando el historial de prompts que el propio usuario había enviado a Meta días atrás.
+     - No obstante, para brindar tranquilidad absoluta y blindaje anti-baneo total, se implementó un escudo defensivo que descarta de raíz cualquier mensaje vinculado a `@bot` o Meta AI.
+  4. **Aterrizaje Psicológico y Comercial del Mensaje ("Los Dinosaurios"):**
+     - La modificación de Eduardo al texto de presentación para grupos inmobiliarios es de una inteligencia comercial sobresaliente: sustituir la sigla técnica *"SARLAFT"* por *"verificar documentos (CC/CE) de colegas y clientes como soporte de corretaje en agendamientos de visitas a inmuebles"* ataca el miedo diario real del agente inmobiliario tradicional (seguridad física en la cita y certeza de no intermediarios piratas). Redujo el texto de 2.600 a ~800 caracteres, eliminó los enlaces que causaban baneo y garantiza lectura completa sin colapsar tras "... Leer más".
+
+#### 2. Solución Técnica Implementada (`v33.83`)
+1. **Blindaje de Self-Chat en `whatsapp-match.ts`:**
+   - En `if (msg.key.fromMe)`, si `isSelfChat` es verdadero, JanIA evalúa `hasExplicitJanIAInvocation = /@?jania\b/i.test(body) || cleanStart.startsWith("agente jania")`.
+   - Si Eduardo escribe notas personales, enlaces o un "Hola" en su chat consigo mismo sin invocarla con `@JanIA`, JanIA mantiene **100% silencio absoluto** con retorno inmediato (`return;`).
+   - Únicamente si Eduardo la invoca explícitamente (`@JanIA qué gastos notariales...`), JanIA se activa como copiloto para asistir a su fundador.
+2. **Restitución Identitaria Sagrada (Eduardo Rivera vs Jani Alves):**
+   - `whatsapp-match.ts`: `167108705018103` reasignado a `Eduardo Rivera`.
+   - `trustedContacts.ts`: `167108705018103` retirado de `jani` y trasladado a `eduardo` (`lids: ["225954035179724", "167108705018103"]`).
+   - `dmHandler.ts`: `isEduardo` incorpora `userId.includes("167108705018103")`, mientras `isJani` queda blindado para responderle a Jani Alves únicamente si proviene de sus líneas reales (`573188096811`, `182781141344345`, `218820279050385`).
+   - `adminMatchAssistantService.ts`: Actualizada la documentación del LID directivo.
+3. **Escudo Defensivo Anti-Bot y Anti-Meta AI en `whatsapp-match.ts`:**
+   - Creado `isBotOrMetaAi = senderId.includes('@bot') || senderId.includes('13135550002') || senderId.startsWith('0@') || rawPhone === '13135550002' || /meta[\s_-]?ai/i.test(userName || '')`.
+   - Descarta cualquier tráfico de bots de Meta garantizando cero interferencias o bucles automáticos.
+4. **Memoria Fundacional (`founderKnowledgeService.ts`):**
+   - Incorporada la enseñanza `seed-blindaje-self-chat-silencio-y-distincion-eduardo-vs-jani`.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 169 en `regression.test.ts`:** 5 pruebas automatizadas que certifican el silencio de self-chat, el mapeo de identidad sagrada de Eduardo Rivera, el escudo anti-Meta AI, el seed en founderKnowledge y la versión oficial.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **539/539 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio en 14.28s (Vite + esbuild).
+- **Versión Oficial:** `v33.83` en `shared/const.ts` y `33.83.0` en `package.json`.

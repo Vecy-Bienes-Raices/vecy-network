@@ -1150,15 +1150,21 @@ export class JaniaMatchBot {
               "573192919978",
               "573166569719",
               "573188096811", // Línea Directiva Jani Alves (Esposa de Eduardo)
-              "167108705018103", // LID Directivo Jani Alves
+              "167108705018103", // LID Principal Eduardo Rivera / Socket JanIA (creds.me.lid)
               "182781141344345", // LID Directivo Activo Jani Alves
               "225954035179724", // LID Directivo Eduardo Rivera
               "218820279050385", // LID Directivo Alterno Jani Alves
               ADMIN_PHONE
             ];
-            const isSelfChat = senderId === botJid || rawPhone === botPhone;
+            const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === "573192919978" || rawPhone === "167108705018103" || senderId.includes("167108705018103");
             const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
-            const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "573166569719" ? "VECY BIENES RAÍCES" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`)));
+            const userName = msg.pushName || (rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "573166569719" ? "VECY BIENES RAÍCES" : (rawPhone === "225954035179724" || rawPhone === "573192919978" || rawPhone === "167108705018103" ? "Eduardo Rivera" : `Asesor +${rawPhone}`)));
+
+            // 🛡️ ESCUDO ANTI-BOTS / META AI: Jamás procesar mensajes dirigidos a o provenientes de Meta AI ni bots externos
+            const isBotOrMetaAi = senderId.includes('@bot') || senderId.includes('13135550002') || senderId.startsWith('0@') || rawPhone === '13135550002' || /meta[\s_-]?ai/i.test(userName || '');
+            if (isBotOrMetaAi) {
+              return;
+            }
 
             const rawMsg = unwrapMessage(msg.message);
             let body = '';
@@ -1171,6 +1177,8 @@ export class JaniaMatchBot {
             else if ((rawMsg as any)?.reactionMessage) body = `[Reacción: ${(rawMsg as any).reactionMessage?.text || 'emoji'}]`;
             else if ((rawMsg as any)?.locationMessage) body = '[Ubicación compartida]';
             else if ((rawMsg as any)?.contactMessage || (rawMsg as any)?.contactsArrayMessage) body = '[Tarjeta de contacto compartida]';
+
+            const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
 
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
             if (msg.key.fromMe) {
@@ -1186,9 +1194,18 @@ export class JaniaMatchBot {
                 return;
               }
 
-              // Si es un mensaje escrito en el chat con JanIA / self-chat / admin:
-              if (isSelfChat || isAdmin) {
-                console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administración/self-chat (${senderId}). Procediendo a procesar.`);
+              // 🛡️ BLINDAJE DE SELF-CHAT ("Mensajes contigo mismo"):
+              // Eduardo utiliza su chat personal como bloc de notas, borradores o enlaces personales.
+              // JanIA ÚNICAMENTE debe responder en self-chat si Eduardo la invoca explícitamente (ej: "@JanIA", "JanIA", "Agente JanIA").
+              // Si es un "Hola", un borrador o una nota personal sin invocarla, JanIA guarda silencio absoluto.
+              if (isSelfChat) {
+                const hasExplicitJanIAInvocation = /@?jania\b/i.test(body) || cleanStart.startsWith("agente jania");
+                if (!hasExplicitJanIAInvocation) {
+                  return;
+                }
+                console.log(`[JANIA-MATCH] Invocación explícita a JanIA detectada en self-chat (${senderId}). Procediendo a procesar.`);
+              } else if (isAdmin) {
+                console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administración (${senderId}). Procediendo a procesar.`);
               } else {
                 // Intervención humana detectada en conversación DM con un tercero (cliente externo)
                 const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1000;
@@ -1204,8 +1221,6 @@ export class JaniaMatchBot {
             }
 
             // 2. Verificar reactivación ("Agente JanIA" o invocación explícita de herramientas: Cédula o Predial)
-            const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
-
             const { isSessionMuted, muteSession } = await import('./janIA');
             let isMuted = (isSelfChat || isAdmin) ? false : await isSessionMuted(senderId);
 

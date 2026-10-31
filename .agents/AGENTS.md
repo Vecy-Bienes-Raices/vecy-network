@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.82 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.83 — Octubre 2026
+
+### Novedades v33.83 (Blindaje de Self-Chat, Escudo Anti-Meta AI y Distinción Identitaria Sagrada [167108705018103 = Eduardo Rivera, NO Jani Alves] — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Revisa por favor que JanIA no se esté saliendo de control, me pareció como ver que le escribía a Meta y tube que archivar la conversación para evitar tal vez que nos baneen los de whatsapp, ten mucho cuidado con lo que haces por favor. También quiero que me des tu opinión ya que hice un cambio a este mensaje para que quede más claro y los colegas lo entiendan, si dejo eso de SARLAFT, van a quedar desorientados a los agentes chapados a la antigua (LOs dinosaurios) hay que hablarles bien claro pa que entiendan o quedan perdidos... Mira que JanIA se volvio loca y se está hablando a ella misma pensando que habla con Jani Alves mi esposa ah y desde su propio número al mismo suyo. Dime qué está sucediendo y corrige por Dios!!"*
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Confusión Identitaria del Socket):** En `creds.json`, el LID del socket de Baileys (`+57 319 291 9978`) es `167108705018103:44@lid` (Eduardo Rivera). En el código estaba erróneamente etiquetado como Jani Alves. Jani Alves opera en `+57 318 809 6811` (LIDs `182781141344345` y `218820279050385`).
+     - **Problema 2 (Auto-Respuesta en Self-Chat):** En `whatsapp-match.ts`, la guarda `if (msg.key.fromMe)` procesaba incondicionalmente los mensajes del self-chat. Si Eduardo escribía notas personales o "Hola" en su chat consigo mismo ("Envía mensajes a este mismo número"), JanIA creía que era Jani Alves y le respondía a sí misma con stickers y saludos a Jani.
+     - **Problema 3 (Falsa Alarma con Meta AI):** Meta AI saludó recordando una consulta antigua sobre la casa de Morato que el usuario había hecho el domingo. JanIA no tenía conexión con Meta AI, pero se requería un escudo preventivo estricto para evitar cualquier interacción con bots.
+- **Implementación Técnica**:
+  - `server/_core/whatsapp-match.ts`:
+    - En `isSelfChat`, JanIA guarda silencio absoluto salvo invocación explícita (`/@?jania\b/i` o `agente jania`).
+    - `167108705018103` asignado a Eduardo Rivera.
+    - Escudo `isBotOrMetaAi` que descarta tráfico de Meta AI y bots de WhatsApp.
+  - `server/_core/jania/trustedContacts.ts`, `dmHandler.ts`, `adminMatchAssistantService.ts`:
+    - `167108705018103` restituido a Eduardo Rivera; Jani Alves reservada exclusivamente para `573188096811` y sus LIDs reales.
+  - `server/_core/jania/founderKnowledgeService.ts`:
+    - Registrada la enseñanza `seed-blindaje-self-chat-silencio-y-distincion-eduardo-vs-jani`.
+  - `shared/const.ts` (`v33.83`) y `package.json` (`33.83.0`).
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **539/539 passing** (Suite 169 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio en 14.28s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v33.82 — Octubre 2026
 
 ### Novedades v33.82 (Actuación en Grupos Externos Exclusivamente ante Mención Directa [@JanIA] y Silencio Absoluto de Resto — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

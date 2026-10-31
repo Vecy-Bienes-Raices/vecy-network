@@ -417,8 +417,8 @@ export async function executeJaniaDmTool(
     case "consultar_matches_o_codigo": {
       const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
       const { executeAdminMatchSearch } = await import("../../adminMatchAssistantService");
-      const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-      const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("167108705018103");
+      const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || userId.includes("167108705018103");
+      const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("182781141344345") || userId.includes("218820279050385");
       const res = await executeAdminMatchSearch(query, isEduardo || isJani, userId);
       return {
         toolType: "match",
@@ -1747,8 +1747,8 @@ export async function processPrivateDmConversationalMessage(
 
   // Detección directiva de Eduardo, Jani y Agenda de Confianza / Familiar
   const trustedContact = findTrustedContact(userId, userName || realName);
-  const isEduardo = isEduardoIdentified || (!isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador"));
-  const isJani = isJaniIdentified || (!isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa"));
+  const isEduardo = isEduardoIdentified || (!isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || userId.includes("167108705018103") || trustedContact?.id === "eduardo_fundador" || trustedContact?.id === "eduardo"));
+  const isJani = isJaniIdentified || (!isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa" || trustedContact?.id === "jani"));
   const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
 
   // Resolución inteligente de nombres y género (apoyado en presentación orgánica en chat o perfil)

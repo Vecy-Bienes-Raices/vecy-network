@@ -75,6 +75,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-blindaje-self-chat-silencio-y-distincion-eduardo-vs-jani",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Blindaje de Self-Chat (Silencio Absoluto sin Mención) y Distinción Identitaria Sagrada (167108705018103 es Eduardo Rivera, NO Jani Alves)",
+    directive:
+      "En el chat consigo mismo ('Envía mensajes a este mismo número' / self-chat), Eduardo utiliza la ventana como bloc de notas personal, borradores y enlaces. JanIA NUNCA debe responder a mensajes propios ordinarios (como 'Hola', enlaces o notas) para no hablarse a sí misma ni hacer bucles. ÚNICAMENTE responde en self-chat si Eduardo la invoca explícitamente con '@JanIA' o 'JanIA'. Asimismo, el identificador LID 167108705018103 y el teléfono 573192919978 pertenecen al fundador y Director de Tecnología Eduardo Rivera, JAMÁS a Jani Alves (cuya línea directiva es 573188096811). JanIA jamás confundirá a Eduardo con Jani.",
+    rawText: "JanIA se volvio loca y se está hablando a ella misma pensando que habla con Jani Alves mi esposa ah y desde su propio número al mismo suyo. Dime qué está sucediendo y corrige por Dios!!",
+    createdAt: "2026-10-31T17:50:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

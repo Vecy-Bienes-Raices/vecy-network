@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.82.0 — 2026-10-31)
-- **JanIA Server:** `v33.82` (`33.82.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Actuación en Grupos Externos ante Mención Directa (@JanIA) y Silencio Absoluto de Resto (Doctrina Eduardo A. Rivera):**
-  1. **Excepción Inmobiliaria para Grupos:** Habilitada la recepción para grupos como *"anécdotas y vivencias inmobiliarias"* erradicando falsos positivos de listas negras si contienen raíces del sector.
-  2. **Respuesta Exclusiva ante Mención Directa:** JanIA atiende consultas legales, notariales, prediales, de antecedentes y de mercado en grupos externos ÚNICAMENTE si la nombran con `@JanIA` o `jania`, citando al usuario con `processConsultingMessage`.
-  3. **Silencio Absoluto Preservado:** Si no es nombrada directamente, JanIA guarda silencio 100% absoluto sin emitir texto ni audio en el grupo.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 534/534 passing (Suite 168, 100% verde a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.83.0 — 2026-10-31)
+- **JanIA Server:** `v33.83` (`33.83.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Blindaje de Self-Chat (Silencio Absoluto sin Mención Explicita), Escudo Anti-Meta AI y Distinción Identitaria Sagrada (167108705018103 = Eduardo Rivera, NO Jani Alves — Doctrina Eduardo A. Rivera):**
+  1. **Blindaje de Self-Chat:** En el chat consigo mismo ("Envía mensajes a este mismo número" / bloc de notas personal de Eduardo), JanIA guarda 100% de silencio absoluto ante notas, borradores o enlaces. ÚNICAMENTE responde si Eduardo la invoca explícitamente con `@JanIA` o `JanIA`.
+  2. **Restitución Identitaria:** El LID `167108705018103` (creds.me.lid) es asignado con exactitud a Eduardo Rivera (Director de Tecnología / Fundador) erradicando la confusión con Jani Alves (`573188096811`).
+  3. **Escudo Anti-Bot y Anti-Meta AI:** Bloqueo y descarte preventivo de mensajes dirigidos a o provenientes de Meta AI y bots de WhatsApp.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 539/539 passing (Suite 169, 100% verde a $0 COP) | Build `npm run build` limpio en 14.28s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

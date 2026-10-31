@@ -44,7 +44,7 @@ export const ADMIN_IDENTIFIERS = [
   "573192919978", // Eduardo Rivera (Línea Socket / Baileys)
   "573166569719", // Línea Oficial Bróker Comercial VECY
   "573188096811", // Línea Directiva Jani Alves
-  "167108705018103", // LID Directivo Jani Alves
+  "167108705018103", // LID Principal Eduardo Rivera / Socket JanIA (creds.me.lid)
   "182781141344345", // LID Directivo Activo Jani Alves
   "225954035179724", // LID Directivo Eduardo Rivera
   "218820279050385", // LID Directivo Alterno Jani Alves

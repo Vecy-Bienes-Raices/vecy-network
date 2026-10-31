@@ -8626,6 +8626,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.82` (`33.82.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.83 (2026-10-31) — Blindaje de Self-Chat (Silencio Absoluto sin Mención Explicita), Escudo Anti-Meta AI y Distinción Identitaria Sagrada (167108705018103 = Eduardo Rivera, NO Jani Alves) (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Confusión Identitaria del Socket:* El identificador LID `167108705018103` (perteneciente a Eduardo Rivera y al socket nativo de JanIA en `.baileys_auth/creds.json`) estaba erróneamente etiquetado como Jani Alves en múltiples archivos.
+  2. *Auto-Respuesta en Self-Chat:* En la ventana de notas personales de Eduardo ("Envía mensajes a este mismo número" / self-chat), cualquier texto ordinario ("Hola", borradores, enlaces) era procesado por JanIA asumiendo que era Jani Alves, generando auto-respuestas no solicitadas ("¡Buenas tardes, Jani!") y stickers.
+  3. *Alarma Preventiva con Meta AI:* Al interactuar con el bot nativo de Meta en WhatsApp, surgió el temor de filtración o cruce de datos entre JanIA y Meta AI.
+- **Solución Implementada**:
+  1. `server/_core/whatsapp-match.ts`:
+     - Exigida invocación explícita (`/@?jania\b/i` o `agente jania`) para que JanIA responda en el self-chat. Si Eduardo escribe notas o saludos sin invocarla, JanIA guarda 100% de silencio absoluto.
+     - Reasignado `167108705018103` a Eduardo Rivera.
+     - Implementado escudo `isBotOrMetaAi` que descarta de raíz cualquier mensaje de Meta AI o bots de WhatsApp.
+  2. `server/_core/jania/trustedContacts.ts`, `dmHandler.ts`, `adminMatchAssistantService.ts`:
+     - `167108705018103` restituido a Eduardo Rivera; Jani Alves reservada para su línea real (`573188096811`) y sus LIDs.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la enseñanza `seed-blindaje-self-chat-silencio-y-distincion-eduardo-vs-jani`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 169 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **539/539 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio en 14.28s.
+  - Versión: `v33.83` (`33.83.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

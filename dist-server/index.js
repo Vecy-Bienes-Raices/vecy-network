@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.82";
+    VECY_VERSION = "v33.83";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16423,7 +16423,7 @@ var init_trustedContacts = __esm({
         relation: "Esposa / Co-founder",
         nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Coraz\xF3n amado", "Mi vida hermosa", "Mi consentida", "Amada esposa m\xEDa"],
         customMessage: "mi amorzote hermosa! \xA1Mi vida hermosa, mi consentida y amada esposa m\xEDa! \u2764\uFE0F\u{1F970} Qu\xE9 alegr\xEDa que me escribas. Aqu\xED estoy al frente de JanIA operando en VECY BIENES RA\xCDCES. Si necesitas entrar a la l\xEDnea directa de br\xF3ker o coordinar cualquier operaci\xF3n con Eddu, sabes que estamos conectados 24/7. \xA1Te amo much\xEDsimo! \u{1F3E1}\u2728",
-        lids: ["167108705018103", "182781141344345", "218820279050385"]
+        lids: ["182781141344345", "218820279050385"]
       },
       monica: {
         phones: ["573103395788"],
@@ -16506,7 +16506,7 @@ var init_trustedContacts = __esm({
         nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
         customMessage: "Eduardo! A tu disposici\xF3n en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}",
         aliases: ["3166569719"],
-        lids: ["225954035179724"]
+        lids: ["225954035179724", "167108705018103"]
       }
     };
     CONTACT_PRIMARY_NICKS = {
@@ -16702,6 +16702,16 @@ var init_founderKnowledgeService = __esm({
         directive: "En grupos externos (como 'an\xE9cdotas y vivencias inmobiliarias' o comunidades gremiales no oficiales), JanIA act\xFAa y responde \xDANICAMENTE si la nombran directamente con @ o mencionando su nombre para responder una consulta jur\xEDdica, notarial, predial o de negocio. De resto, JanIA guarda silencio absoluto para no saturar el canal de los colegas ni generar spam. Al ser consultada directamente en un grupo externo, responde con rigor, calidez y se\xF1or\xEDo, citando el mensaje del usuario, resolviendo su duda de fondo y poni\xE9ndose a la orden para consultas privadas en su chat directo.",
         rawText: "Quiero que JanIA Act\xFAe en este grupo externo pero solamente si la nombran para que responda una consulta, de resto seguir\xE1 guaradando silencio.",
         createdAt: "2026-10-31T11:45:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-blindaje-self-chat-silencio-y-distincion-eduardo-vs-jani",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Blindaje de Self-Chat (Silencio Absoluto sin Menci\xF3n) y Distinci\xF3n Identitaria Sagrada (167108705018103 es Eduardo Rivera, NO Jani Alves)",
+        directive: "En el chat consigo mismo ('Env\xEDa mensajes a este mismo n\xFAmero' / self-chat), Eduardo utiliza la ventana como bloc de notas personal, borradores y enlaces. JanIA NUNCA debe responder a mensajes propios ordinarios (como 'Hola', enlaces o notas) para no hablarse a s\xED misma ni hacer bucles. \xDANICAMENTE responde en self-chat si Eduardo la invoca expl\xEDcitamente con '@JanIA' o 'JanIA'. Asimismo, el identificador LID 167108705018103 y el tel\xE9fono 573192919978 pertenecen al fundador y Director de Tecnolog\xEDa Eduardo Rivera, JAM\xC1S a Jani Alves (cuya l\xEDnea directiva es 573188096811). JanIA jam\xE1s confundir\xE1 a Eduardo con Jani.",
+        rawText: "JanIA se volvio loca y se est\xE1 hablando a ella misma pensando que habla con Jani Alves mi esposa ah y desde su propio n\xFAmero al mismo suyo. Dime qu\xE9 est\xE1 sucediendo y corrige por Dios!!",
+        createdAt: "2026-10-31T17:50:00.000Z",
         active: true
       },
       {
@@ -19504,7 +19514,7 @@ var init_adminMatchAssistantService = __esm({
       "573188096811",
       // Línea Directiva Jani Alves
       "167108705018103",
-      // LID Directivo Jani Alves
+      // LID Principal Eduardo Rivera / Socket JanIA (creds.me.lid)
       "182781141344345",
       // LID Directivo Activo Jani Alves
       "225954035179724",
@@ -25667,7 +25677,7 @@ ${quotedNote}` : quotedNote;
                   "573188096811",
                   // Línea Directiva Jani Alves (Esposa de Eduardo)
                   "167108705018103",
-                  // LID Directivo Jani Alves
+                  // LID Principal Eduardo Rivera / Socket JanIA (creds.me.lid)
                   "182781141344345",
                   // LID Directivo Activo Jani Alves
                   "225954035179724",
@@ -25676,9 +25686,13 @@ ${quotedNote}` : quotedNote;
                   // LID Directivo Alterno Jani Alves
                   ADMIN_PHONE
                 ];
-                const isSelfChat = senderId === botJid || rawPhone === botPhone;
+                const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === "573192919978" || rawPhone === "167108705018103" || senderId.includes("167108705018103");
                 const isAdmin = isSelfChat || ADMIN_IDENTIFIERS2.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
-                const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "573166569719" ? "VECY BIENES RA\xCDCES" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
+                const userName = msg.pushName || (rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "573166569719" ? "VECY BIENES RA\xCDCES" : rawPhone === "225954035179724" || rawPhone === "573192919978" || rawPhone === "167108705018103" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
+                const isBotOrMetaAi = senderId.includes("@bot") || senderId.includes("13135550002") || senderId.startsWith("0@") || rawPhone === "13135550002" || /meta[\s_-]?ai/i.test(userName || "");
+                if (isBotOrMetaAi) {
+                  return;
+                }
                 const rawMsg = unwrapMessage(msg.message);
                 let body = "";
                 if (rawMsg?.conversation) body = rawMsg.conversation;
@@ -25690,6 +25704,7 @@ ${quotedNote}` : quotedNote;
                 else if (rawMsg?.reactionMessage) body = `[Reacci\xF3n: ${rawMsg.reactionMessage?.text || "emoji"}]`;
                 else if (rawMsg?.locationMessage) body = "[Ubicaci\xF3n compartida]";
                 else if (rawMsg?.contactMessage || rawMsg?.contactsArrayMessage) body = "[Tarjeta de contacto compartida]";
+                const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
                 if (msg.key.fromMe) {
                   const msgId = msg.key.id || "";
                   if (this.botSentMessageIds.has(msgId)) {
@@ -25698,8 +25713,14 @@ ${quotedNote}` : quotedNote;
                   if (rawMsg?.reactionMessage || rawMsg?.protocolMessage) {
                     return;
                   }
-                  if (isSelfChat || isAdmin) {
-                    console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administraci\xF3n/self-chat (${senderId}). Procediendo a procesar.`);
+                  if (isSelfChat) {
+                    const hasExplicitJanIAInvocation = /@?jania\b/i.test(body) || cleanStart.startsWith("agente jania");
+                    if (!hasExplicitJanIAInvocation) {
+                      return;
+                    }
+                    console.log(`[JANIA-MATCH] Invocaci\xF3n expl\xEDcita a JanIA detectada en self-chat (${senderId}). Procediendo a procesar.`);
+                  } else if (isAdmin) {
+                    console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administraci\xF3n (${senderId}). Procediendo a procesar.`);
                   } else {
                     const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
                     const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
@@ -25712,7 +25733,6 @@ ${quotedNote}` : quotedNote;
                     return;
                   }
                 }
-                const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
                 const { isSessionMuted: isSessionMuted3, muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
                 let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted3(senderId);
                 if (isMuted) {
@@ -33148,8 +33168,8 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
     case "consultar_matches_o_codigo": {
       const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
       const { executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
-      const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-      const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("167108705018103");
+      const isEduardo = /eduardo/i.test(_userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || userId.includes("167108705018103");
+      const isJani = /jani/i.test(_userName || "") || userId.includes("3188096811") || userId.includes("182781141344345") || userId.includes("218820279050385");
       const res = await executeAdminMatchSearch2(query, isEduardo || isJani, userId);
       return {
         toolType: "match",
@@ -34250,8 +34270,8 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   const isEduardoIdentified = isVecyBrokerLine && /(?:soy\s+eduardo|habla\s+eduardo|de\s+parte\s+de\s+eduardo|eddu\b|eduardo\s+rivera)/i.test(cleanLower);
   const isJaniIdentified = isVecyBrokerLine && /(?:soy\s+jani|habla\s+jani|de\s+parte\s+de\s+jani|jani\s+alves)/i.test(cleanLower);
   const trustedContact = findTrustedContact(userId, userName || realName);
-  const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || trustedContact?.id === "eduardo_fundador");
-  const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa");
+  const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || userId.includes("167108705018103") || trustedContact?.id === "eduardo_fundador" || trustedContact?.id === "eduardo");
+  const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa" || trustedContact?.id === "jani");
   const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
   const introducedName = extractIntroducedName(clean);
   const effectiveRawName = introducedName || realName;

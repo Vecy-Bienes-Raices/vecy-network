@@ -95,7 +95,7 @@ export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
     nicknames: ["mi amorzote hermosa", "Amor", "Amorzote", "Corazón amado", "Mi vida hermosa", "Mi consentida", "Amada esposa mía"],
     customMessage:
       "mi amorzote hermosa! ¡Mi vida hermosa, mi consentida y amada esposa mía! ❤️🥰 Qué alegría que me escribas. Aquí estoy al frente de JanIA operando en VECY BIENES RAÍCES. Si necesitas entrar a la línea directa de bróker o coordinar cualquier operación con Eddu, sabes que estamos conectados 24/7. ¡Te amo muchísimo! 🏡✨",
-    lids: ["167108705018103", "182781141344345", "218820279050385"]
+    lids: ["182781141344345", "218820279050385"]
   },
   monica: {
     phones: ["573103395788"],
@@ -187,7 +187,7 @@ export const TRUSTED_FAMILY_AND_FRIENDS: Record<string, TrustedContact> = {
     nicknames: ["Eduardo", "Eddu", "Ingeniero", "Jefe"],
     customMessage: "Eduardo! A tu disposición en VECY BIENES RAÍCES. ¿En qué te colaboro hoy? 🤝",
     aliases: ["3166569719"],
-    lids: ["225954035179724"]
+    lids: ["225954035179724", "167108705018103"]
   }
 };
 
