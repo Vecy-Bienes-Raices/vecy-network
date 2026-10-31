@@ -936,13 +936,24 @@ export class JaniaMatchBot {
 
               const NON_REAL_ESTATE_KEYWORDS = [
                 "seguridad", "policía", "policia", "patrulla", "amigos", "curso",
-                "talento tech", "familia", "convivencia", "anécdotas", "anecdotas",
+                "talento tech", "familia", "convivencia",
                 "negociación arrecifes", "venta alameda", "proceso cristo rey"
               ];
 
-              const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some(kw => gNameLower.includes(kw));
+              // Si el nombre contiene palabras clave inmobiliarias (inmobiliari, inmueble, propiedad, asesores, bienes raíces, vivencias),
+              // NO es un grupo ajeno aunque contenga palabras como "anécdotas" (ej: "anécdotas y vivencias inmobiliarias").
+              const isRealEstateException = gNameLower.includes("inmobiliari") ||
+                gNameLower.includes("inmuebl") ||
+                gNameLower.includes("propiedad") ||
+                gNameLower.includes("finca") ||
+                gNameLower.includes("asesor") ||
+                gNameLower.includes("vivencias") ||
+                gNameLower.includes("bienes ra");
 
-              if (isNonRealEstateGroup) {
+              const isNonRealEstateGroup = !isRealEstateException && NON_REAL_ESTATE_KEYWORDS.some(kw => gNameLower.includes(kw));
+
+              // Si es un grupo ajeno y NO hay mención directa a JanIA, omitir
+              if (isNonRealEstateGroup && !hasDirectMention) {
                 // Omitir chats ajenos (familia, seguridad, etc.)
                 return;
               }
@@ -1084,17 +1095,16 @@ export class JaniaMatchBot {
 
             // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
             // En grupos externos no oficiales, CAPTURAMOS publicaciones comerciales e inmuebles (descartando cortesías cortas y reacciones).
+            // Si el mensaje contiene mención directa a JanIA (hasDirectMention), NO es una publicación desatendida, es una consulta activa.
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
-            const isListing = isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+            const isListing = !hasDirectMention && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
 
-            // En Soporte Legal (Buzón) y Círculo Cero, responder a consultas legítimas o continuaciones de conversación:
-            // - NO responder a reacciones de emojis (reacciones a mensajes ajenos)
-            // - NO responder a monosílabos de cortesía aislada descontextualizada (ok, gracias, 👍, etc.)
-            // - Admitir texto con intención (>= 4 caracteres o continuación conversacional/afirmativa) O multimedia/PTT
+            // En Soporte Legal (Buzón) y Círculo Cero, responder a consultas legítimas o continuaciones de conversación.
+            // En grupos externos o Grupo 1, responder ÚNICAMENTE ante mención directa explícita de JanIA (Doctrina Eduardo A. Rivera v33.82):
             const hasMeaningfulQuery = ((textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage) || hasRawMedia;
             const shouldRespond = (isBuzonGroup || isCirculoGroup)
               ? hasMeaningfulQuery
-              : (isOfficialGroup && hasDirectMention);
+              : hasDirectMention;
 
             if (isListing) {
               await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
@@ -1764,15 +1774,7 @@ export class JaniaMatchBot {
   private async handleDirectGroupQuestion(msg: proto.IWebMessageInfo, chatId: string, senderId: string, bodyText: string) {
     try {
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-      if (!isOfficialGroup) {
-        // 🛡️ BLINDAJE DOCTRINAL INQUEBRANTABLE: En grupos externos JanIA JAMÁS envía texto ni voz bajo ninguna circunstancia.
-        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
-        return;
-      }
 
-      // 🛡️ BLINDAJE ANTI-AUTORESPUESTA EN GRUPOS CONVERSACIONALES (Grupo 2 y 3):
-      // Si el mensaje proviene de la propia cuenta de WhatsApp y NO contiene mención directa explícita ("JanIA"),
-      // se ignora para evitar que JanIA se responda a sí misma ante tips matutinos, difusiones o mensajes propios.
       const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
       const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
       const isFromBotAccount = msg.key?.fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978');
@@ -1781,6 +1783,13 @@ export class JaniaMatchBot {
         (botPhone && textLower.includes(botPhone)) ||
         textLower.includes("573192919978") ||
         !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid: string) => cleanJid(jid) === botJid);
+
+      if (!isOfficialGroup && !hasDirectMention) {
+        // 🛡️ BLINDAJE DOCTRINAL INQUEBRANTABLE (Doctrina Eduardo A. Rivera v33.82):
+        // En grupos externos JanIA actúa ÚNICAMENTE si la nombran directamente; de resto guarda silencio 100% absoluto.
+        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje en grupo externo ${chatId} sin mención directa ignorado para respuestas textuales. Silencio 100% preservado.`);
+        return;
+      }
 
       if (isFromBotAccount && !hasDirectMention) {
         console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin mención explícita).`);
@@ -1998,6 +2007,57 @@ export class JaniaMatchBot {
           undefined,
           chatId,
           groupName
+        );
+
+      } else if (hasDirectMention) {
+        // 🌐 GRUPO EXTERNO DONDE JANIA ES NOMBRADA DIRECTAMENTE (Doctrina Eduardo A. Rivera v33.82):
+        // JanIA atiende la consulta profesional usando processConsultingMessage con todo su poder de IA resolutiva,
+        // respondiendo con precisión, calidez, citando al usuario y guardando total silencio de resto.
+        const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
+        const rawMsg = unwrapMessage(msg.message);
+        let imageBuffer: string | undefined;
+        let pdfBuffer: string | undefined;
+        let pdfMimeType: string | undefined;
+
+        if (rawMsg?.imageMessage) {
+          try {
+            const mediaBuffer = await downloadMediaSafely(msg as any, 'image');
+            if (mediaBuffer) imageBuffer = mediaBuffer.toString('base64');
+          } catch (e) { }
+        } else if (rawMsg?.documentMessage) {
+          try {
+            const mediaBuffer = await downloadMediaSafely(msg as any, 'document');
+            if (mediaBuffer) {
+              pdfBuffer = mediaBuffer.toString('base64');
+              pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+            }
+          } catch (e) { }
+        }
+
+        let quotedContext: string | undefined;
+        try {
+          const contextInfo = (rawMsg as any)?.extendedTextMessage?.contextInfo
+            || (msg.message as any)?.extendedTextMessage?.contextInfo
+            || (rawMsg as any)?.contextInfo;
+          if (contextInfo?.quotedMessage) {
+            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+            quotedContext = (unwrappedQuoted as any)?.conversation
+              || (unwrappedQuoted as any)?.extendedTextMessage?.text
+              || (unwrappedQuoted as any)?.imageMessage?.caption
+              || undefined;
+          }
+        } catch (e) { }
+
+        result = await processConsultingMessage(
+          bodyText,
+          resolvedSenderId,
+          realName,
+          imageBuffer,
+          pdfBuffer,
+          pdfMimeType,
+          isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
+          msgTs,
+          quotedContext
         );
 
       } else {

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.81";
+    VECY_VERSION = "v33.82";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16695,6 +16695,16 @@ var init_founderKnowledgeService = __esm({
         active: true
       },
       {
+        id: "seed-actuacion-grupos-externos-solo-mencion-directa-silencio",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Actuaci\xF3n en Grupos Externos: Respuesta Exclusiva ante Menci\xF3n Directa (@JanIA) y Silencio Absoluto de Resto",
+        directive: "En grupos externos (como 'an\xE9cdotas y vivencias inmobiliarias' o comunidades gremiales no oficiales), JanIA act\xFAa y responde \xDANICAMENTE si la nombran directamente con @ o mencionando su nombre para responder una consulta jur\xEDdica, notarial, predial o de negocio. De resto, JanIA guarda silencio absoluto para no saturar el canal de los colegas ni generar spam. Al ser consultada directamente en un grupo externo, responde con rigor, calidez y se\xF1or\xEDo, citando el mensaje del usuario, resolviendo su duda de fondo y poni\xE9ndose a la orden para consultas privadas en su chat directo.",
+        rawText: "Quiero que JanIA Act\xFAe en este grupo externo pero solamente si la nombran para que responda una consulta, de resto seguir\xE1 guaradando silencio.",
+        createdAt: "2026-10-31T11:45:00.000Z",
+        active: true
+      },
+      {
         id: "seed-entrega-codigos-match",
         founderName: "Eduardo Rivera",
         phoneOrJid: "+573192919978",
@@ -25586,14 +25596,13 @@ ${quotedNote}` : quotedNote;
                     "talento tech",
                     "familia",
                     "convivencia",
-                    "an\xE9cdotas",
-                    "anecdotas",
                     "negociaci\xF3n arrecifes",
                     "venta alameda",
                     "proceso cristo rey"
                   ];
-                  const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
-                  if (isNonRealEstateGroup) {
+                  const isRealEstateException = gNameLower.includes("inmobiliari") || gNameLower.includes("inmuebl") || gNameLower.includes("propiedad") || gNameLower.includes("finca") || gNameLower.includes("asesor") || gNameLower.includes("vivencias") || gNameLower.includes("bienes ra");
+                  const isNonRealEstateGroup = !isRealEstateException && NON_REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
+                  if (isNonRealEstateGroup && !hasDirectMention) {
                     return;
                   }
                 }
@@ -25613,9 +25622,9 @@ ${quotedNote}` : quotedNote;
                 const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
                 const isShortCourtesy = !isAudioPTT && !isConversationalContinuation && (textClean.length < 6 || ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
-                const isListing = isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+                const isListing = !hasDirectMention && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
                 const hasMeaningfulQuery = (textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage || hasRawMedia;
-                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isOfficialGroup && hasDirectMention;
+                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
                   continue;
@@ -26152,15 +26161,15 @@ Mis grupos oficiales:
       async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
         try {
           const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          if (!isOfficialGroup) {
-            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
-            return;
-          }
           const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
           const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
           const isFromBotAccount = msg.key?.fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978");
           const textLower = bodyText.toLowerCase();
           const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+          if (!isOfficialGroup && !hasDirectMention) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje en grupo externo ${chatId} sin menci\xF3n directa ignorado para respuestas textuales. Silencio 100% preservado.`);
+            return;
+          }
           if (isFromBotAccount && !hasDirectMention) {
             console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin menci\xF3n expl\xEDcita).`);
             return;
@@ -26361,6 +26370,48 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
               void 0,
               chatId,
               groupName
+            );
+          } else if (hasDirectMention) {
+            const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : void 0;
+            const rawMsg = unwrapMessage(msg.message);
+            let imageBuffer;
+            let pdfBuffer;
+            let pdfMimeType;
+            if (rawMsg?.imageMessage) {
+              try {
+                const mediaBuffer = await downloadMediaSafely(msg, "image");
+                if (mediaBuffer) imageBuffer = mediaBuffer.toString("base64");
+              } catch (e) {
+              }
+            } else if (rawMsg?.documentMessage) {
+              try {
+                const mediaBuffer = await downloadMediaSafely(msg, "document");
+                if (mediaBuffer) {
+                  pdfBuffer = mediaBuffer.toString("base64");
+                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                }
+              } catch (e) {
+              }
+            }
+            let quotedContext;
+            try {
+              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
+              if (contextInfo?.quotedMessage) {
+                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
+              }
+            } catch (e) {
+            }
+            result = await processConsultingMessage2(
+              bodyText,
+              resolvedSenderId,
+              realName,
+              imageBuffer,
+              pdfBuffer,
+              pdfMimeType,
+              isAudioPTT ? "mock-audio:" + bodyText : void 0,
+              msgTs,
+              quotedContext
             );
           } else {
             await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);

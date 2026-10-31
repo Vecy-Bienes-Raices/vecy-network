@@ -1,11 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.81.0 — 2026-10-31)
-- **JanIA Server:** `v33.81` (`33.81.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje Protocolar contra Cierres de WhatsApp Móvil y Estabilización Multi-Device (Doctrina Eduardo A. Rivera):**
-  1. **Rescate y Estabilización del Móvil:** WhatsApp actualizado a versión oficial estable `2.26.43.72` vía `adb install -r`, precompilación nativa AOT `pm compile -m speed -f com.whatsapp` y exención de congelador de batería. Cero desinstalación y datos 100% preservados.
-  2. **Blindaje de Encuestas V3 y Quizzes (`whatsapp-match.ts`):** Erradicado el uso de `pollCreationMessageV3` vía `relayMessage` hacia grupos regulares y DMs, delegando a encuestas nativas estándar de Baileys (`selectableCount: 1`). Cero cierres de app en Android por stanzas experimentales no soportadas.
-  3. **Blindaje en Tareas Cron (`cronService.ts`):** Quizzes en grupos 2 y 3 desactivados de `publishEveningPollNow` para evitar sobrecargas de protocolo en el hilo multi-device.
-  4. **Orientación de Privacidad Avanzada del Chat:** Instrucción para apagar el interruptor verde en WhatsApp Web para restaurar la operatividad libre de la comunidad.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 530/530 passing (Suite 167, 100% verde a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.82.0 — 2026-10-31)
+- **JanIA Server:** `v33.82` (`33.82.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Actuación en Grupos Externos ante Mención Directa (@JanIA) y Silencio Absoluto de Resto (Doctrina Eduardo A. Rivera):**
+  1. **Excepción Inmobiliaria para Grupos:** Habilitada la recepción para grupos como *"anécdotas y vivencias inmobiliarias"* erradicando falsos positivos de listas negras si contienen raíces del sector.
+  2. **Respuesta Exclusiva ante Mención Directa:** JanIA atiende consultas legales, notariales, prediales, de antecedentes y de mercado en grupos externos ÚNICAMENTE si la nombran con `@JanIA` o `jania`, citando al usuario con `processConsultingMessage`.
+  3. **Silencio Absoluto Preservado:** Si no es nombrada directamente, JanIA guarda silencio 100% absoluto sin emitir texto ni audio en el grupo.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 534/534 passing (Suite 168, 100% verde a $0 COP) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

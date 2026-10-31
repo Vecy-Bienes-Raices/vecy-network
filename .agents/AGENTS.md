@@ -183,7 +183,31 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.81 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.82 — Octubre 2026
+
+### Novedades v33.82 (Actuación en Grupos Externos Exclusivamente ante Mención Directa [@JanIA] y Silencio Absoluto de Resto — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Quiero que JanIA Actúe en este grupo externo pero solamente si la nombran para que responda una consulta, de resto seguirá guaradando silencio."*
+     - Referencia al grupo externo *"anécdotas y vivencias inmobiliarias"* (422 miembros) de la comunidad *"Red de Asesores Inmobiliarios de colombia"* (30 grupos).
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Falso Positivo de No-Inmobiliario):** La palabra *"anécdotas"* estaba en `NON_REAL_ESTATE_KEYWORDS`, provocando que el grupo fuera catalogado erróneamente como no inmobiliario a pesar de tener 422 asesores y el término *"inmobiliarias"*.
+     - **Problema 2 (Bloqueo en Grupos Externos):** En `whatsapp-match.ts`, toda consulta en grupo externo (`!isOfficialGroup`) era tratada como listing pasivo o bloqueada por la guarda `if (!isOfficialGroup) return;` en `handleDirectGroupQuestion`.
+     - **Problema 3 (Riesgo de Spam y Expulsión en Presentación Larga):** El mensaje promocional propuesto (>2,600 caracteres) incluía 4 enlaces de invitación a grupos de WhatsApp de VECY (`chat.whatsapp.com`). En comunidades externas con reglas estrictas de no proselitismo/spam, esto desencadena expulsión inmediata por administradores y reportes de baneo ante Meta en la línea de Baileys (`+57 319 291 9978`).
+- **Implementación Técnica**:
+  - `server/_core/whatsapp-match.ts`:
+    - Removidas `"anécdotas"` y `"anecdotas"` de `NON_REAL_ESTATE_KEYWORDS`.
+    - Agregada excepción `isRealEstateException`: si el nombre del grupo contiene raíces inmobiliarias o el mensaje tiene mención directa (`hasDirectMention`), jamás se descarta como no inmobiliario.
+    - `isListing`: agregado `!hasDirectMention` para evitar que menciones directas en grupos externos se traguen como publicaciones de inmuebles pasivos.
+    - `shouldRespond`: habilitado para responder ante `hasDirectMention` incluso en grupos no oficiales.
+    - `handleDirectGroupQuestion`: removida la restricción estricta de grupo oficial cuando existe mención directa (`!isOfficialGroup && !hasDirectMention`). Enrutado a `processConsultingMessage` citando al usuario y soportando texto, notas de voz, imágenes y PDFs.
+    - Si NO hay mención directa (`!hasDirectMention`), JanIA mantiene **100% silencio absoluto** (sin textos ni notas de voz no solicitadas).
+  - `server/_core/jania/founderKnowledgeService.ts`:
+    - Incorporada la enseñanza `seed-actuacion-grupos-externos-solo-mencion-directa-silencio` en la memoria fundacional de JanIA.
+  - `shared/const.ts` (`v33.82`) y `package.json` (`33.82.0`).
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **534/534 passing** (Suite 168 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v33.81 — Octubre 2026
 
 ### Novedades v33.81 (Blindaje Protocolar contra Cierres de WhatsApp Móvil [Erradicación de Encuestas V3/Quizzes en Grupos y Estabilización Multi-Device] — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

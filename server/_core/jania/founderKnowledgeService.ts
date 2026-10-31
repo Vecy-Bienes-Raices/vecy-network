@@ -64,6 +64,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-actuacion-grupos-externos-solo-mencion-directa-silencio",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Actuación en Grupos Externos: Respuesta Exclusiva ante Mención Directa (@JanIA) y Silencio Absoluto de Resto",
+    directive:
+      "En grupos externos (como 'anécdotas y vivencias inmobiliarias' o comunidades gremiales no oficiales), JanIA actúa y responde ÚNICAMENTE si la nombran directamente con @ o mencionando su nombre para responder una consulta jurídica, notarial, predial o de negocio. De resto, JanIA guarda silencio absoluto para no saturar el canal de los colegas ni generar spam. Al ser consultada directamente en un grupo externo, responde con rigor, calidez y señorío, citando el mensaje del usuario, resolviendo su duda de fondo y poniéndose a la orden para consultas privadas en su chat directo.",
+    rawText: "Quiero que JanIA Actúe en este grupo externo pero solamente si la nombran para que responda una consulta, de resto seguirá guaradando silencio.",
+    createdAt: "2026-10-31T11:45:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

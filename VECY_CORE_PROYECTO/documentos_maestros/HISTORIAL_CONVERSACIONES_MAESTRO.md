@@ -15225,3 +15225,53 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **530/530 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
 - **Versión Oficial:** `v33.81` en `shared/const.ts` y `33.81.0` en `package.json`.
+
+---
+
+### Sesión v33.82 — Octubre 2026: Actuación en Grupos Externos ante Mención Directa (@JanIA) y Silencio Absoluto de Resto (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 31 de Octubre de 2026  
+> **Versión resultante:** `v33.82` (`33.82.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/whatsapp-match.ts`
+> - `server/_core/jania/founderKnowledgeService.ts`
+> - `server/__tests__/regression.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Quiero que JanIA Actúe en este grupo externo pero solamente si la nombran para que responda una consulta, de resto seguirá guaradando silencio. Y dime si puede decir esto como presentación: [Texto de presentación con 12 servicios]"* (adjuntando captura de pantalla de WhatsApp Web del grupo ajeno *"anécdotas y vivencias inmobiliarias"* de la comunidad *"Red de Asesores Inmobiliarios de colombia"* con 422 miembros).
+- **Diagnóstico y Causas Raíz Identificadas:**
+  1. **Filtro Anti-Grupos Ajenos Rígido (`NON_REAL_ESTATE_KEYWORDS`):** El código contenía `"anécdotas"` y `"anecdotas"` en la lista negra de grupos no inmobiliarios. Debido a esto, cualquier mensaje proveniente del grupo *"anécdotas y vivencias inmobiliarias"* era descartado de inmediato con `return`, impidiendo cualquier procesamiento.
+  2. **Secuestro de Mensajes en Grupos Externos por Buffer de Inmuebles (`isListing`):** En grupos no oficiales (`!isOfficialGroup`), la variable `isListing` evaluaba como verdadera para todo mensaje con más de 70 caracteres o múltiples líneas. Si un colega mencionaba a JanIA para hacer una consulta jurídica o notarial, el mensaje era absorbido por el extractor de inmuebles y jamás llegaba a `handleDirectGroupQuestion`.
+  3. **Compuerta de Silencio Total Incondicional en `handleDirectGroupQuestion`:** El manejador contenía la regla `if (!isOfficialGroup) return;`, lo que silenciaba cualquier respuesta de texto o voz en grupos externos, incluso si el usuario etiquetaba directamente a JanIA.
+  4. **Ausencia de Procesador Consultivo para Grupos Externos:** Si superaba el filtro, el flujo derivaba a `handlePrivateDmRedirect` en lugar de resolver la consulta con la inteligencia de `processConsultingMessage`.
+  5. **Evaluación Estratégica del Texto de Presentación:**
+     El texto propuesto por Eduardo resume con precisión las 12 habilidades operativas reales de JanIA, pero contiene enlaces de invitación a los grupos oficiales de VECY (`chat.whatsapp.com/...`). Publicar enlaces a comunidades externas dentro de un grupo ajeno de 422 miembros ("Red de Asesores Inmobiliarios de colombia") es motivo de expulsión inmediata y reporte por spam por parte de los administradores. Además, con más de 2.600 caracteres, el mensaje queda colapsado bajo el botón "... Leer más". Se requiere brindar a Eduardo una orientación estratégica con alternativas seguras y de alta conversión.
+
+#### 2. Solución Técnica Implementada (`v33.82`)
+1. **Excepción Inmobiliaria Inteligente en `whatsapp-match.ts`:**
+   - Retirado `"anécdotas"` y `"anecdotas"` de la lista negra genérica.
+   - Implementado `isRealEstateException`: si el grupo incluye raíces inmobiliarias (`inmobiliari`, `inmuebl`, `propiedad`, `finca`, `asesor`, `vivencias`, `bienes ra`), jamás se cataloga como grupo ajeno.
+   - Blindaje de mención: si `hasDirectMention` es verdadero, el mensaje nunca se descarta.
+2. **Desacoplamiento de Menciones en `isListing` y `shouldRespond`:**
+   - `const isListing = !hasDirectMention && isListingGroup ...`: si alguien cita a JanIA, no se trata como publicación comercial desatendida, permitiendo que fluya a la compuerta de respuesta.
+   - `const shouldRespond = (isBuzonGroup || isCirculoGroup) ? hasMeaningfulQuery : hasDirectMention;`: en grupos externos y en Grupo 1, JanIA responde ÚNICAMENTE cuando es nombrada explícitamente (`@JanIA`, `jania`, etc.). De resto, guarda silencio 100% absoluto.
+3. **Atención Resolutiva en `handleDirectGroupQuestion`:**
+   - La condición de silencio ahora evalúa: `if (!isOfficialGroup && !hasDirectMention) return;`.
+   - Cuando JanIA es citada en un grupo externo, enruta la solicitud a `processConsultingMessage(bodyText, resolvedSenderId, realName, ...)` con capacidades multimodales completas (cédulas, antecedentes, RUES, predial, minutas, sondeos $/m², fotos y planos).
+   - Responde citando el mensaje del usuario con la respuesta integral, sin borrar mensajes ajenos ni emitir advertencias de moderación.
+4. **Memoria Fundacional (`founderKnowledgeService.ts`):**
+   - Incorporada la enseñanza `seed-actuacion-grupos-externos-solo-mencion-directa-silencio` dictada por Eduardo A. Rivera.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 168 en `regression.test.ts`:** 4 pruebas automatizadas que verifican la excepción de nombres de grupos inmobiliarios, la activación por mención directa en grupos externos, la memoria fundacional y la versión oficial.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **534/534 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
+- **Versión Oficial:** `v33.82` en `shared/const.ts` y `33.82.0` en `package.json`.

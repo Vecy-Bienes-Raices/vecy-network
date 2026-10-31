@@ -8605,6 +8605,27 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.81` (`33.81.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.82 (2026-10-31) — Actuación en Grupos Externos ante Mención Directa (@JanIA) y Silencio Absoluto de Resto (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Descarte por Nombre de Grupo:* El grupo *"anécdotas y vivencias inmobiliarias"* era ignorado por contener la palabra `"anécdotas"` en la lista de grupos no inmobiliarios.
+  2. *Bloqueo de Menciones Directas en Grupos Externos:* Toda mención directa en grupos ajenos a los 3 oficiales era absorbida por el buffer comercial de captación de inmuebles o descartada por el guardarraíl de silencio estricto en `handleDirectGroupQuestion`.
+- **Solución Implementada**:
+  1. `server/_core/whatsapp-match.ts`:
+     - Retiradas palabras clave restrictivas y añadida la excepción `isRealEstateException` para grupos con raíces del sector (`inmobiliari`, `vivencias`, `propiedad`, `asesor`).
+     - Excluida la condición `hasDirectMention` del clasificador pasivo `isListing`.
+     - Actualizado `shouldRespond` y `handleDirectGroupQuestion`: JanIA atiende y responde consultas profesionales en grupos externos ÚNICAMENTE si es nombrada directamente con `@JanIA` o `jania`, citando al usuario y resolviendo su inquietud con `processConsultingMessage`.
+     - Preservado el silencio 100% absoluto cuando no es nombrada.
+  2. `server/_core/jania/founderKnowledgeService.ts`: Registrada la enseñanza `seed-actuacion-grupos-externos-solo-mencion-directa-silencio`.
+  3. Asesoramiento estratégico a Eduardo sobre la presentación en comunidades ajenas: riesgos de baneo por enlaces a grupos propios y opciones pulidas y de alta conversión.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 168 en `regression.test.ts` con 4 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **534/534 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.82` (`33.82.0`) en `shared/const.ts` y `package.json`.
+
 
 
 
