@@ -1673,17 +1673,11 @@ export async function publishEveningPollNow(force: boolean = false) {
     const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
       await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
-      if (dayOfWeek === 4) {
-        await whatsappBot.sendQuiz(targetGroup2, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {});
-      }
       await whatsappBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
     }
     const targetGroup3 = whatsappBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
     if (targetGroup3) {
       await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup3, 1);
-      if (dayOfWeek === 4) {
-        await whatsappBot.sendQuiz(targetGroup3, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {});
-      }
       await whatsappBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
     }
 

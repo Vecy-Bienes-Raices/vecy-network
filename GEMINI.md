@@ -1,11 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.80.0 — 2026-10-30)
-- **JanIA Server:** `v33.80` (`33.80.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad (Doctrina Eduardo A. Rivera):**
-  1. **Desacoplamiento de Reseñas (Cero Enlaces Ocultos en 'Leer más'):** Erradicada la inserción de solicitudes de calificación al final de textos largos, informes técnicos o entrevistas de perfilamiento. Los enlaces de Google Reviews se despachan SIEMPRE como un mensaje corto, limpio e independiente, visible de un solo vistazo.
-  2. **Persuasión de Reciprocidad (`formatPersuasiveRecurrentUserReviewMessage` en `politenessService.ts`):** Para usuarios recurrentes (como Catalina, activa desde el 2 de octubre con 13 consultas gratuitas de cédulas/antecedentes) que aprovechan la gratuidad y no han calificado en Google, JanIA les envía un mensaje independiente, señorial y persuasivo recordándoles la inversión de VECY BIENES RAÍCES y solicitando su calificación de 5 estrellas en reciprocidad para mantener el servicio gratis.
-  3. **Despacho Automático en `whatsapp-match.ts`:** Si un usuario recurrente (`freeServicesUsedCount >= 2` o `messageCount >= 4`) recibe un reporte y no tiene verificada la reseña (`!hasVerifiedGoogleReview`), JanIA programa el despacho del mensaje persuasivo independiente con un retardo natural de 2.2s.
-  4. **Entrega Inmediata a Catalina:** Despachado con éxito el mensaje persuasivo a su chat oficial (`277145683288292@lid`) vía `/api/send-whatsapp-notification`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 527/527 passing (Suite 166, 100% verde a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.81.0 — 2026-10-31)
+- **JanIA Server:** `v33.81` (`33.81.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Blindaje Protocolar contra Cierres de WhatsApp Móvil y Estabilización Multi-Device (Doctrina Eduardo A. Rivera):**
+  1. **Rescate y Estabilización del Móvil:** WhatsApp actualizado a versión oficial estable `2.26.43.72` vía `adb install -r`, precompilación nativa AOT `pm compile -m speed -f com.whatsapp` y exención de congelador de batería. Cero desinstalación y datos 100% preservados.
+  2. **Blindaje de Encuestas V3 y Quizzes (`whatsapp-match.ts`):** Erradicado el uso de `pollCreationMessageV3` vía `relayMessage` hacia grupos regulares y DMs, delegando a encuestas nativas estándar de Baileys (`selectableCount: 1`). Cero cierres de app en Android por stanzas experimentales no soportadas.
+  3. **Blindaje en Tareas Cron (`cronService.ts`):** Quizzes en grupos 2 y 3 desactivados de `publishEveningPollNow` para evitar sobrecargas de protocolo en el hilo multi-device.
+  4. **Orientación de Privacidad Avanzada del Chat:** Instrucción para apagar el interruptor verde en WhatsApp Web para restaurar la operatividad libre de la comunidad.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 530/530 passing (Suite 167, 100% verde a $0 COP) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

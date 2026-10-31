@@ -183,7 +183,33 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.80 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.81 — Octubre 2026
+
+### Novedades v33.81 (Blindaje Protocolar contra Cierres de WhatsApp Móvil [Erradicación de Encuestas V3/Quizzes en Grupos y Estabilización Multi-Device] — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Pero la app de whatsapp del celular sigue igual de inmobil, Que hago?? No veo que lo hayas solucionado... Ya lo reinicie, pero creo que no sirvio de nada todo lo que hicimos porque sigue completamente igual... Estoy intentando hacer la copia de seguridad a ver si se destraba... No funcionó, se cerro nuevamente en automático. ;(( ... NAda no funciona. Dime la verdad y no dibgues más que hacemos. ,oo puedes arreglar o mejor desistalo, que hago??? ... No necesito salir y llevarme mi teléfojno desconectemos, que hago?? ... Listo activemos a Jania"*
+     - *"Ya todos marcados como leídos y dime este grupo porqué quedó así y silo puedo desactivar op volver a dejar como estaba sin privacidad o lo debo dejar así??"* (refiriéndose a la Privacidad Avanzada del Chat en PROYECTO: "VECY...").
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Bucle OOM en WhatsApp Android):** El WhatsApp Beta `2.26.42.74` en el Infinix HOT 50 Pro+ rebasaba el límite estricto de heap de Android (`dalvik.vm.heapgrowthlimit: 256m`) intentando poblar 4.9 millones de objetos en tablas hash con un `msgstore.db` de 2.95 GB y `axolotl.db` de 409 MB. El hilo de trabajo moría con `OutOfMemoryError` en `X.25x` / `X.2KC` y `SIGABRT` en `MNSStreamRuntime`.
+     - **Problema 2 (Riesgo Fatal de Pérdida de Cuenta):** El móvil no posee SIM física para recibir SMS de verificación. Cualquier desinstalación o borrado de datos habría destruido la cuenta del número `+57 319 291 9978` y desconectado tanto WhatsApp Web como a JanIA en el VPS.
+     - **Problema 3 (Stanzas Incompatibles en Grupos):** El envío de encuestas V3 (`pollCreationMessageV3`) y quizzes interactivos vía `relayMessage` hacia grupos regulares y DMs producía cierres forzados en clientes móviles Android.
+- **Implementación Técnica**:
+  - **Rescate Físico y Estabilización del Móvil:**
+    - Instalación limpia de la versión oficial y estable `2.26.43.72` vía `adb install -r`.
+    - Precompilación nativa AOT (`pm compile -m speed -f com.whatsapp`).
+    - Exención de optimización de batería y congelador de fondo en Android.
+    - Cero pérdida de datos, 100% preservada la sesión.
+  - `server/_core/whatsapp-match.ts`:
+    - En `sendQuiz` y `sendQuestionCard`: Bloqueado `pollCreationMessageV3` para destinos no-canal (`!targetJid.endsWith('@newsletter')`). Se delega de forma segura a encuestas nativas estándar de Baileys (`selectableCount: 1`).
+  - `server/_core/cronService.ts`:
+    - Desactivado el envío de quizzes a grupos en `publishEveningPollNow`.
+  - **Orientación de Privacidad Avanzada:**
+    - Guía a Eduardo para desactivar el switch verde en WhatsApp Web y permitir que los participantes guarden contenido en galería y exporten sin trabas.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **530/530 passing** (Suite 167 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.81`) y `package.json` (`33.81.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.80 — Octubre 2026
 
 ### Novedades v33.80 (Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

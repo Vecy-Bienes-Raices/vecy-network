@@ -3491,14 +3491,13 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return true;
       }
 
-      if (typeof (this.sock as any).relayMessage === 'function' && !targetJid.endsWith('@newsletter')) {
-        try {
-          await (this.sock as any).relayMessage(targetJid, quizProto, {});
-          console.log(`[JANIA-MATCH] 🏆 Cuestionario (Quiz) enviado a ${targetJid}`);
-          return true;
-        } catch (_) {
-          // Fallback a poll estándar si el cliente receptor requiere pollCreation estándar
-        }
+      // 🛡️ BLINDAJE PROTOCOLAR CRÍTICO (Doctrina Eduardo A. Rivera v33.81):
+      // JAMÁS enviar pollCreationMessageV3 ni quizProto a grupos (@g.us) ni DMs vía relayMessage.
+      // pollCreationMessageV3 solo es soportado en Canales/Newsletters (@newsletter).
+      // Enviar pollCreationMessageV3 a un grupo regular provoca el colapso inmediato (crash forzado / freeze)
+      // de la app móvil oficial de WhatsApp en teléfonos Android al intentar renderizar el mensaje.
+      if (!targetJid.endsWith('@newsletter')) {
+        console.log(`[JANIA-MATCH-SHIELD] 🛡️ Cuestionario V3 bloqueado para destino no-canal (${targetJid}). Delegando a encuesta estándar.`);
       }
 
       await this.sock.sendMessage(targetJid, {
@@ -3508,6 +3507,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           selectableCount: 1
         }
       });
+      console.log(`[JANIA-MATCH] 🏆 Encuesta estándar de Cuestionario enviada exitosamente a ${targetJid}`);
       return true;
     } catch (err: any) {
       console.error(`[JANIA-MATCH] ❌ Error enviando Cuestionario a ${targetJid}:`, err?.message || err);
@@ -3556,12 +3556,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return true;
       }
 
-      if (typeof (this.sock as any).relayMessage === 'function') {
-        await (this.sock as any).relayMessage(targetJid, questionProto, {});
-        return true;
-      }
-
-      await this.queuedSend(targetJid, questionText, { allowDirectMessage: true });
+      // Para grupos o DMs no enviar stanzas experimentales de canal vía relayMessage, enviar texto enriquecido limpio
+      await this.queuedSend(targetJid, questionText, { allowDirectMessage: true, allowGroupMessage: true });
       return true;
     } catch (err: any) {
       console.error(`[JANIA-MATCH] Error enviando tarjeta "Preguntar" a ${targetJid}:`, err?.message || err);

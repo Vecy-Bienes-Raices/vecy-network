@@ -8587,6 +8587,24 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.80` (`33.80.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.81 (2026-10-31) — Blindaje Protocolar contra Cierres de WhatsApp Móvil (Erradicación de Encuestas V3/Quizzes en Grupos y Estabilización Multi-Device) (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Colapso Recurrente de WhatsApp Móvil por OOM:* El teléfono Infinix HOT 50 Pro+ colapsaba sistemáticamente al abrir WhatsApp debido a agotamiento de heap de Android (límite 256MB) ante una base de datos de 2.95 GB y tablas hash de sesiones multi-device de 4.9 millones de objetos en la versión Beta 2.26.42.74.
+  2. *Incompatibilidad de Estrofas pollCreationMessageV3 en Grupos:* El envío de quizzes o encuestas experimentales V3 vía `relayMessage` hacia grupos regulares provocaba crashes nativos en los clientes móviles Android receptores.
+- **Solución Implementada**:
+  1. *Actualización y AOT Speed Compile Móvil:* Actualización de WhatsApp a versión estable oficial `2.26.43.72` (`adb install -r`), precompilación nativa AOT `pm compile -m speed -f com.whatsapp` y exención de congelador de batería. Cero pérdida de datos ni desinstalación.
+  2. `server/_core/whatsapp-match.ts`: En `sendQuiz`, se erradica el uso de `pollCreationMessageV3` para grupos y DMs. Si el destino no es un canal (`!targetJid.endsWith('@newsletter')`), se envía una encuesta nativa Baileys estándar (`selectableCount: 1`).
+  3. `server/_core/cronService.ts`: Desactivado el despacho de quizzes en `publishEveningPollNow` hacia los grupos 2 y 3.
+  4. Instrucción precisa a Eduardo para desactivar "Privacidad avanzada del chat" apagando el switch verde en WhatsApp Web.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 167 en `regression.test.ts` con 3 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **530/530 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.81` (`33.81.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

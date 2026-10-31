@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.80";
+    VECY_VERSION = "v33.81";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -27618,13 +27618,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             console.log(`[JANIA-MATCH] \u{1F3C6} Cuestionario (Quiz) nativo enviado al Canal ${targetJid} (${msgId})`);
             return true;
           }
-          if (typeof this.sock.relayMessage === "function" && !targetJid.endsWith("@newsletter")) {
-            try {
-              await this.sock.relayMessage(targetJid, quizProto, {});
-              console.log(`[JANIA-MATCH] \u{1F3C6} Cuestionario (Quiz) enviado a ${targetJid}`);
-              return true;
-            } catch (_) {
-            }
+          if (!targetJid.endsWith("@newsletter")) {
+            console.log(`[JANIA-MATCH-SHIELD] \u{1F6E1}\uFE0F Cuestionario V3 bloqueado para destino no-canal (${targetJid}). Delegando a encuesta est\xE1ndar.`);
           }
           await this.sock.sendMessage(targetJid, {
             poll: {
@@ -27633,6 +27628,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               selectableCount: 1
             }
           });
+          console.log(`[JANIA-MATCH] \u{1F3C6} Encuesta est\xE1ndar de Cuestionario enviada exitosamente a ${targetJid}`);
           return true;
         } catch (err) {
           console.error(`[JANIA-MATCH] \u274C Error enviando Cuestionario a ${targetJid}:`, err?.message || err);
@@ -27678,11 +27674,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             console.log(`[JANIA-MATCH] \u2753 Tarjeta nativa "Preguntar" enviada al Canal ${targetJid} (${msgId})`);
             return true;
           }
-          if (typeof this.sock.relayMessage === "function") {
-            await this.sock.relayMessage(targetJid, questionProto, {});
-            return true;
-          }
-          await this.queuedSend(targetJid, questionText, { allowDirectMessage: true });
+          await this.queuedSend(targetJid, questionText, { allowDirectMessage: true, allowGroupMessage: true });
           return true;
         } catch (err) {
           console.error(`[JANIA-MATCH] Error enviando tarjeta "Preguntar" a ${targetJid}:`, err?.message || err);
@@ -37220,19 +37212,11 @@ Colegas, \xA1voten tambi\xE9n en la encuesta aqu\xED arriba y debatimos su exper
     const targetGroup2 = janiaMatchBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
       await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
-      if (dayOfWeek === 4) {
-        await janiaMatchBot.sendQuiz(targetGroup2, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {
-        });
-      }
       await janiaMatchBot.queuedSend(targetGroup2, pollTeaser, { allowGroupMessage: true });
     }
     const targetGroup3 = janiaMatchBot.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
     if (targetGroup3) {
       await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup3, 1);
-      if (dayOfWeek === 4) {
-        await janiaMatchBot.sendQuiz(targetGroup3, quiz.question, quiz.options, quiz.correctAnswerIndex).catch(() => {
-        });
-      }
       await janiaMatchBot.queuedSend(targetGroup3, pollTeaser, { allowGroupMessage: true });
     }
     await completeBroadcast(lock.broadcastId, {

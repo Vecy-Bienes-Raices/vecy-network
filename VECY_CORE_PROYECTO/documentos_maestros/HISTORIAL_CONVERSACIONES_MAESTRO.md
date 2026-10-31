@@ -15172,3 +15172,56 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **527/527 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
 - **Versión Oficial:** `v33.80` en `shared/const.ts` y `33.80.0` en `package.json`.
+
+---
+
+### Sesión v33.81 — Octubre 2026: Blindaje Protocolar contra Cierres de WhatsApp Móvil (Erradicación de Encuestas V3/Quizzes en Grupos y Estabilización Multi-Device) (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 31 de Octubre de 2026  
+> **Versión resultante:** `v33.81` (`33.81.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/whatsapp-match.ts`
+> - `server/_core/cronService.ts`
+> - `server/__tests__/regression.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Pero la app de whatsapp del celular sigue igual de inmobil, Que hago?? No veo que lo hayas solucionado... Ya lo reinicie, pero creo que no sirvio de nada todo lo que hicimos porque sigue completamente igual... Estoy intentando hacer la copia de seguridad a ver si se destraba... No funcionó, se cerro nuevamente en automático. ;(( ... NAda no funciona. Dime la verdad y no dibgues más que hacemos. ,oo puedes arreglar o mejor desistalo, que hago??? ... No necesito salir y llevarme mi teléfojno desconectemos, que hago?? ... Listo activemos a Jania"*
+  Además preguntó sobre la Privacidad Avanzada del Chat en el grupo PROYECTO: "VECY...":
+  *"Ya todos marcados como leídos y dime este grupo porqué quedó así y silo puedo desactivar op volver a dejar como estaba sin privacidad o lo debo dejar así??"*
+- **Diagnóstico y Causas Raíz Identificadas:**
+  1. **Bucle OOM (OutOfMemoryError) y Crash en WhatsApp Móvil:**
+     El teléfono Infinix HOT 50 Pro+ de Eduardo se encontraba ejecutando una compilación Beta inestable (`2.26.42.74`). El dispositivo acumuló una base de datos `msgstore.db` de 2.95 GB, un almacén criptográfico de sesiones Signal `axolotl.db` de 409 MB, y 20.5 MB en `sync.db`.
+     Al arrancar, las rutinas de sincronización en Kotlin de WhatsApp (`X.25x` / `X.2KC`) poblaban millones de entradas en tablas hash (más de 4.9 millones de objetos en heap). El entorno de ejecución de Android aplica un límite estricto de memoria para procesos de aplicación (`dalvik.vm.heapgrowthlimit: 256m`). Cuando la app superaba los 256 MB, Android lanzaba `OutOfMemoryError` en el hilo de trabajo y un aborto nativo `SIGABRT` en `MNSStreamRuntime`, cerrando la aplicación al instante.
+     Intentar correr una "Copia de seguridad" de 16 GB exacerbaba el agotamiento del heap.
+  2. **Riesgo Crítico de Pérdida de Cuenta por Desinstalación:**
+     El teléfono Infinix NO cuenta con una SIM card física activa con capacidad de recibir SMS para re-autenticar el número `+57 319 291 9978`. Si Eduardo hubiera desinstalado WhatsApp o borrado los datos de la app, se habría perdido la sesión de forma irreversible, desconectando WhatsApp Web y destruyendo la instancia de JanIA en Baileys.
+  3. **Vulnerabilidad Protocolar de Encuestas V3 y Quizzes (`pollCreationMessageV3`):**
+     Se descubrió que el envío de stanzas experimentales exclusivas de canales (`pollCreationMessageV3` o cuestionarios interactivos) mediante `relayMessage` hacia grupos regulares (`@g.us`) o chats directos provocaba que la aplicación móvil oficial de WhatsApp colapsara al intentar renderizar componentes incompatibles.
+
+#### 2. Solución Técnica Implementada (`v33.81`)
+1. **Rescate Físico y Estabilización del Teléfono Móvil:**
+   - Actualizado WhatsApp en el móvil a la versión oficial y estable `2.26.43.72` preservando intactos todos los datos, chats, sesiones e historial (`adb install -r`).
+   - Precompilación nativa AOT con máxima optimización de velocidad: `adb shell pm compile -m speed -f com.whatsapp` (`Success`).
+   - Exención permanente del congelador de batería y optimización de energía de Android (`dumpsys deviceidle whitelist +com.whatsapp`, `cmd appops set com.whatsapp RUN_ANY_IN_BACKGROUND allow`).
+   - El contador de notificaciones de WhatsApp y WhatsApp Business comenzó a recibir mensajes de inmediato y la app se estabilizó sin pérdida de sesión.
+2. **Blindaje Protocolar en Backend (`whatsapp-match.ts`):**
+   - En `sendQuiz`: Erradicado el uso de `relayMessage` con `pollCreationMessageV3` hacia grupos regulares y DMs. Ahora, para cualquier destino que no sea canal (`!targetJid.endsWith('@newsletter')`), JanIA delega a encuestas nativas de Baileys estándar (`selectableCount: 1`), garantizando compatibilidad 100% y cero cierres de app en Android.
+   - En `sendQuestionCard`: Descartado el uso de stanzas experimentales no soportadas fuera de canales; entrega de texto enriquecido limpio.
+3. **Optimización de Rutinas Cron (`cronService.ts`):**
+   - Retirado el envío de quizzes a grupos en `publishEveningPollNow`, protegiendo los grupos oficiales 2 y 3 contra sobrecargas protocolares multi-device.
+4. **Instrucción de Privacidad Avanzada del Chat:**
+   - Se orientó a Eduardo sobre cómo apagar el interruptor de "Privacidad avanzada del chat" (activado accidentalmente en WhatsApp Web) tocando el switch verde, permitiendo que los miembros de la red puedan guardar imágenes en galería y compartir normalmente.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 167 en `regression.test.ts`:** 3 pruebas automatizadas que verifican el blindaje de encuestas V3 en `sendQuiz`, la inocuidad de `cronService` y la consagración de versión.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **530/530 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
+- **Versión Oficial:** `v33.81` en `shared/const.ts` y `33.81.0` en `package.json`.
