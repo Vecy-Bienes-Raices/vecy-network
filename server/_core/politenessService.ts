@@ -9,6 +9,7 @@
  */
 
 import { extractFirstName } from './whatsapp-utils';
+import { cleanRawUserName } from './nameAndGenderResolver';
 import { VECY_ACTIVE_DOMAIN, VECY_SOCIAL_NETWORKS } from '../../shared/const';
 
 /**
@@ -170,4 +171,38 @@ export function isCompanyInquiryOrAboutUs(text: string): boolean {
     /(?:qui[eé]nes?\s+(?:son|es|est[aá]n|son\s+ustedes)|qu[eé]\s+es\s+vecy|cu[eé]ntame\s+(?:de|sobre)\s+ustedes|qu[eé]\s+hacen|a\s+qu[eé]\s+se\s+dedican|qui[eé]n\s+fund[oó]|fundadores|eduardo\s+rivera|jani\s+alves|d[oó]nde\s+est[aá]n|c[oó]mo\s+naci[oó]|historia\s+de\s+vecy|redes\s+sociales|tienen\s+redes|cu[aá]les\s+son\s+sus\s+redes|redes\b|instagram|facebook|tiktok|canal\s+de\s+whatsapp|p[aá]gina\s+web)\b/i.test(clean)
   );
 }
+
+/**
+ * 6. Mensaje persuasivo, diplomático y contundente para usuarios recurrentes y beneficiarios
+ * de la gratuidad que no han calificado en Google Reviews (Doctrina Eduardo A. Rivera — v33.80).
+ *
+ * Directriz de Eduardo A. Rivera:
+ * "Recuerda siempre separar los mensajes de calificación de los otros, la mayoría de usuarios no terminan
+ * de leer los mensajes largos y no saben usar el botón de 'Leer más'. Algo que le indique que como ya ha usado
+ * varias veces el servicio y se ha beneficiado de la gratuidad pues que ya es hora de que califique nuestro
+ * servicio que le brinda JanIA a sus usuarios y colegas. Hablar bien y convincente para que no se hagan los locos
+ * y no solo a cata, sino a todos los que ya lo han usado y se siguen haciendo los de la vista gorda."
+ */
+export function formatPersuasiveRecurrentUserReviewMessage(
+  userName?: string,
+  options?: {
+    firstSeenText?: string;
+    serviceName?: string;
+  }
+): string {
+  const cleanName = (userName ? cleanRawUserName(userName) : "") || extractFirstName(userName || 'Colega') || 'Colega';
+  const timeContext = options?.firstSeenText || "desde hace varias semanas";
+  const serviceContext = options?.serviceName || "verificación oficial de antecedentes y cédulas";
+
+  return (
+    `¡Hola, ${cleanName}! Paso por aquí un momento… 👩🏻‍💼✨\n\n` +
+    `Veo que ${timeContext} has venido utilizando con frecuencia mis servicios de ${serviceContext} para blindar tus operaciones, totalmente gratis. ¡Me alegra muchísimo haberte sido de tanta utilidad en este tiempo! 🙌🏻🇨🇴\n\n` +
+    `Ahora bien, mantener esta tecnología de IA activa 24/7, cruzando bases de datos oficiales en tiempo real y sin cobrarte un solo peso, requiere un enorme esfuerzo e inversión de *VECY BIENES RAÍCES* para apoyar y dignificar al gremio.\n\n` +
+    `La única reciprocidad y apoyo que te pedimos para que este servicio siga siendo *100% GRATUITO* y abierto para ti, es regalarnos tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y un breve comentario sobre tu experiencia con JanIA en nuestro perfil oficial de Google.\n\n` +
+    `Te toma menos de 15 segundos y nos ayuda un montón a seguir construyendo la red:\n` +
+    `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+    `¡Cuento con tu apoyo! Mil gracias de antemano y que sigan los éxitos en tus gestiones inmobiliarias. 🤝🏢✨`
+  );
+}
+
 

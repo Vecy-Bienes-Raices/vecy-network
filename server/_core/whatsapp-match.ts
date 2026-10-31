@@ -1493,14 +1493,37 @@ export class JaniaMatchBot {
                 const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
                 const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
-                if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
-                  this.recentReviewPromptUsers.set(senderId, Date.now());
-                  const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
-                  const politeMsg = formatImmediatePoliteReviewMessage(userName);
-                  await new Promise(r => setTimeout(r, 1200));
-                  await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
-                  await this.logToDb(senderId, 'janIA', politeMsg);
-                  this.schedulePostReviewGroupInvitation(senderId, userName);
+                if (!isSenderAdminVoice && lastReviewSent < oneDayAgo) {
+                  try {
+                    const { getUserPerpetualSession } = await import('./jania/sessionManager');
+                    const session = await getUserPerpetualSession(senderId, userName);
+                    const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
+
+                    if (!hasVerified) {
+                      if (isGratitudeOrClosing) {
+                        this.recentReviewPromptUsers.set(senderId, Date.now());
+                        const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
+                        const politeMsg = formatImmediatePoliteReviewMessage(userName);
+                        await new Promise(r => setTimeout(r, 1500));
+                        await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                        await this.logToDb(senderId, 'janIA', politeMsg);
+                        this.schedulePostReviewGroupInvitation(senderId, userName);
+                      } else {
+                        const isRecurrent = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;
+                        if (isRecurrent) {
+                          this.recentReviewPromptUsers.set(senderId, Date.now());
+                          const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
+                          const recurrentMsg = formatPersuasiveRecurrentUserReviewMessage(userName);
+                          await new Promise(r => setTimeout(r, 2200));
+                          await this.queuedSend(senderId, recurrentMsg, { allowDirectMessage: true, skipDelay: true });
+                          await this.logToDb(senderId, 'janIA', recurrentMsg);
+                          this.schedulePostReviewGroupInvitation(senderId, userName);
+                        }
+                      }
+                    }
+                  } catch (vRevErr: any) {
+                    console.warn('[JANIA-MATCH] Error en despacho desacoplado de reseña de voz:', vRevErr?.message);
+                  }
                 }
 
                 return;
@@ -1614,14 +1637,59 @@ export class JaniaMatchBot {
           const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
           const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
-          if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
-            this.recentReviewPromptUsers.set(senderId, Date.now());
-            const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
-            const politeMsg = formatImmediatePoliteReviewMessage(userName);
-            await new Promise(r => setTimeout(r, 1200));
-            await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
-            await this.logToDb(senderId, 'janIA', politeMsg);
-            this.schedulePostReviewGroupInvitation(senderId, userName);
+          // 🌟 DESPACHO DESACOPLADO DE RESEÑA EN GOOGLE (DOCTRINA EDUARDO A. RIVERA — v33.80):
+          // Los mensajes de calificación NUNCA se pegan al final de un texto largo con 'Leer más'.
+          // Se emiten SIEMPRE como un mensaje independiente y separado con una breve pausa:
+          // Caso A: Gratitud espontánea o despedida ("gracias", "mil gracias", "hasta luego").
+          // Caso B: Usuario recurrente o beneficiario de la gratuidad (>= 2 servicios gratuitos o uso continuado)
+          //         que acaba de recibir un reporte o consulta y aún no ha calificado en Google Reviews.
+          if (!isSenderAdmin && !isErrorReply && lastReviewSent < oneDayAgo) {
+            try {
+              const { getUserPerpetualSession } = await import('./jania/sessionManager');
+              const session = await getUserPerpetualSession(senderId, userName);
+              const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
+
+              if (!hasVerified) {
+                if (isGratitudeOrClosing) {
+                  this.recentReviewPromptUsers.set(senderId, Date.now());
+                  const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
+                  const politeMsg = formatImmediatePoliteReviewMessage(userName);
+                  await new Promise(r => setTimeout(r, 1500));
+                  await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                  await this.logToDb(senderId, 'janIA', politeMsg);
+                  this.schedulePostReviewGroupInvitation(senderId, userName);
+                } else {
+                  const isServiceDeliveryReply =
+                    replyText.includes("VERIFICACIÓN") ||
+                    replyText.includes("antecedentes") ||
+                    replyText.includes("C.C.") ||
+                    replyText.includes("cédula") ||
+                    replyText.includes("ADRES") ||
+                    replyText.includes("BDUA") ||
+                    replyText.includes("PREDIAL") ||
+                    replyText.includes("PAZ Y SALVO") ||
+                    replyText.includes("RUES") ||
+                    replyText.includes("MATCH") ||
+                    replyText.includes("40/20/40");
+
+                  const isRecurrentFreeBeneficiary =
+                    (session.freeServicesUsedCount || 0) >= 2 ||
+                    (session.messageCount || 0) >= 4;
+
+                  if (isServiceDeliveryReply && isRecurrentFreeBeneficiary) {
+                    this.recentReviewPromptUsers.set(senderId, Date.now());
+                    const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
+                    const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage(userName);
+                    await new Promise(r => setTimeout(r, 2200));
+                    await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
+                    await this.logToDb(senderId, 'janIA', recurrentReviewMsg);
+                    this.schedulePostReviewGroupInvitation(senderId, userName);
+                  }
+                }
+              }
+            } catch (revErr: any) {
+              console.warn('[JANIA-MATCH] Error en despacho desacoplado de reseña Google:', revErr?.message);
+            }
           }
           return;
         }

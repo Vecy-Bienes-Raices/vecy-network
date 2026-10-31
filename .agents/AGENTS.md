@@ -183,7 +183,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.79 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.80 — Octubre 2026
+
+### Novedades v33.80 (Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Recuerda siempre separar los mensajes de calificación de los otros, recuerda siempre que la mayoría de usuarios no terminan de leer los mensajes largos, unos por pereza y otros por desconocimiento ya que no saben usar el botón de 'Leer más' y lo dejan hasta donde se alcanza a ver. Enviar algo que le indique que como ya ha usado varias veces el servicio y se ha beneficiado de la gratuidad pues que ya es hora de que califique nuestro servicio que le brinda JanIA a sus usuarios y colegas. Hablar bien y convincente para que no se hagan los locos y no solo a cata, sino a todos los que ya lo han usado y se siguen haciendo los de la vista gorda."*
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Ocultamiento de Enlaces tras 'Leer más'):** En la versión anterior se había incrustado el llamado a Google Reviews al final de la entrevista de perfilamiento inmobiliario en `profilingInterviewService.ts`. Al ser un texto de más de 2000 caracteres, WhatsApp Web y móvil colapsaban el mensaje con el botón "... Leer más". La gran mayoría de usuarios nunca lo abrían, perdiéndose el enlace de reseña.
+     - **Problema 2 (Ausencia de Persuasión para Usuarios Recurrentes no Agradecidos):** El sistema solo solicitaba reseña en Google si el usuario decía explícitamente "gracias" o se despedía (`isGratitudeOrClosing`). Usuarios recurrentes (como Catalina `@catabeta26`, activa desde el 2 de octubre con 13 consultas gratuitas de antecedentes y cédulas) que consultan de manera transaccional fría sin dar las gracias nunca recibían la invitación, beneficiándose de la gratuidad continua sin que JanIA cobrara la reciprocidad debida.
+- **Implementación Técnica**:
+  - `server/_core/jania/profilingInterviewService.ts`:
+    - Erradicado el `googleReviewCta` pegado al final de `closingCta`. La entrevista de perfilamiento queda 100% limpia y técnica, enfocada en la indagación de las 5 dimensiones y el modelo 40/20/40.
+  - `server/_core/politenessService.ts`:
+    - Nueva función `formatPersuasiveRecurrentUserReviewMessage(userName, options)`: Redacta un mensaje independiente, visible de un solo vistazo, que reconoce el uso frecuente y gratuito de la plataforma, explica con franqueza la enorme inversión de VECY BIENES RAÍCES en mantener la tecnología de IA activa 24/7 sin cobrar, y pide como compromiso ético y de reciprocidad una calificación de 5 estrellas en Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`) para que el servicio siga siendo 100% gratuito.
+  - `server/_core/whatsapp-match.ts`:
+    - Despacho desacoplado en segundo mensaje independiente tanto para texto como para notas de voz. Si un usuario recurrente (`freeServicesUsedCount >= 2` o `messageCount >= 4`) recibe una entrega de servicio y no ha validado su reseña (`!hasVerifiedGoogleReview`), JanIA le envía el mensaje persuasivo con un retardo natural de 2.2s.
+  - `server/_core/jania/founderKnowledgeService.ts`:
+    - Consagrada la enseñanza `seed-desacoplamiento-resenas-google-recurrentes` en la memoria fundacional de JanIA.
+  - **Entrega Inmediata a Catalina:** Despachado con éxito el mensaje persuasivo a su chat oficial (`277145683288292@lid`) vía la API de notificaciones en el VPS.
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **527/527 passing** (Suite 166 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.80`) y `package.json` (`33.80.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.79 — Octubre 2026
 
 ### Novedades v33.79 (Entrevista Minuciosa de Perfilamiento Inmobiliario y Aterrizaje Pedagógico al Asesor — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

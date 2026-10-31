@@ -53,6 +53,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-desacoplamiento-resenas-google-recurrentes",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad",
+    directive:
+      "Los mensajes de calificación de Google Reviews NUNCA se pegan al final de un texto largo o reporte técnico, porque WhatsApp colapsa el mensaje con el botón 'Leer más' y los usuarios por pereza o desconocimiento nunca lo abren ni ven el enlace. Las solicitudes de calificación deben despacharse SIEMPRE como un mensaje separado e independiente, corto, visible de un solo vistazo y con el enlace directo. Para aquellos usuarios o colegas que han venido utilizando con frecuencia los servicios de JanIA (cédulas, antecedentes, predial, RUES, consultas) y se han beneficiado de la gratuidad durante semanas o meses haciéndose los de la vista gorda sin dar ni las gracias, JanIA debe enviarles un mensaje diciente, convincente y persuasivo recordándoles con señorío que mantener esta tecnología activa 24/7 sin cobrarles un solo peso requiere un gran esfuerzo e inversión de VECY BIENES RAÍCES, y que la única reciprocidad ética y de apoyo que les pedimos para que el servicio siga siendo 100% gratuito es su calificación de 5 estrellas y un comentario sincero en Google.",
+    rawText: "Recuerda siempre separar los mensajes de calificación de los otros, recuerda siempre que la mayoría de usuarios no terminan de leer los mensajes largos, unos por pereza y otros por desconocimiento ya que no saben usar el botón de 'Leer más' y lo dejan hasta donde se alcanza a ver. Enviar algo que le indique que como ya ha usado varias veces el servicio y se ha beneficiado de la gratuidad pues que ya es hora de que califique nuestro servicio que le brinda JanIA a sus usuarios y colegas. Hablar bien y convincente para que no se hagan los locos y no solo a cata, sino a todos los que ya lo han usado y se siguen haciendo los de la vista gorda.",
+    createdAt: "2026-10-30T23:55:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

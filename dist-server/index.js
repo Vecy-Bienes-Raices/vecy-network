@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.79";
+    VECY_VERSION = "v33.80";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16685,6 +16685,16 @@ var init_founderKnowledgeService = __esm({
         active: true
       },
       {
+        id: "seed-desacoplamiento-resenas-google-recurrentes",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Desacoplamiento Estricto de Rese\xF1as en Google y Persuasi\xF3n de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad",
+        directive: "Los mensajes de calificaci\xF3n de Google Reviews NUNCA se pegan al final de un texto largo o reporte t\xE9cnico, porque WhatsApp colapsa el mensaje con el bot\xF3n 'Leer m\xE1s' y los usuarios por pereza o desconocimiento nunca lo abren ni ven el enlace. Las solicitudes de calificaci\xF3n deben despacharse SIEMPRE como un mensaje separado e independiente, corto, visible de un solo vistazo y con el enlace directo. Para aquellos usuarios o colegas que han venido utilizando con frecuencia los servicios de JanIA (c\xE9dulas, antecedentes, predial, RUES, consultas) y se han beneficiado de la gratuidad durante semanas o meses haci\xE9ndose los de la vista gorda sin dar ni las gracias, JanIA debe enviarles un mensaje diciente, convincente y persuasivo record\xE1ndoles con se\xF1or\xEDo que mantener esta tecnolog\xEDa activa 24/7 sin cobrarles un solo peso requiere un gran esfuerzo e inversi\xF3n de VECY BIENES RA\xCDCES, y que la \xFAnica reciprocidad \xE9tica y de apoyo que les pedimos para que el servicio siga siendo 100% gratuito es su calificaci\xF3n de 5 estrellas y un comentario sincero en Google.",
+        rawText: "Recuerda siempre separar los mensajes de calificaci\xF3n de los otros, recuerda siempre que la mayor\xEDa de usuarios no terminan de leer los mensajes largos, unos por pereza y otros por desconocimiento ya que no saben usar el bot\xF3n de 'Leer m\xE1s' y lo dejan hasta donde se alcanza a ver. Enviar algo que le indique que como ya ha usado varias veces el servicio y se ha beneficiado de la gratuidad pues que ya es hora de que califique nuestro servicio que le brinda JanIA a sus usuarios y colegas. Hablar bien y convincente para que no se hagan los locos y no solo a cata, sino a todos los que ya lo han usado y se siguen haciendo los de la vista gorda.",
+        createdAt: "2026-10-30T23:55:00.000Z",
+        active: true
+      },
+      {
         id: "seed-entrega-codigos-match",
         founderName: "Eduardo Rivera",
         phoneOrJid: "+573192919978",
@@ -17208,12 +17218,9 @@ Por favor comp\xE1rteme estos datos clave indispensables:
       break;
     }
   }
-  const googleReviewCta = `
-
-\u2B50 *Por cierto, ${displayName || (isAgent ? "colega" : "amigo/a")}: como est\xE1s probando en vivo la tecnolog\xEDa de JanIA para el gremio, \xBFnos regalar\xEDas tu calificaci\xF3n de 5 estrellas y un comentario en Google para seguir impulsando la red?* \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50`;
   const closingCta = `
 
-${isAgent ? "Cons\xFAltale estos puntos clave a tu cliente (o si ya los tienes en mente, comp\xE1rtemelos por aqu\xED punto a punto o en una nota de voz). \u{1F399}\uFE0F\u{1F4F2}\n\n" : "Comp\xE1rteme estos datos por aqu\xED o en una nota de voz para estructurar tu b\xFAsqueda. \u{1F399}\uFE0F\u{1F4F2}\n\n"}Con este perfil 100% afinado, activamos de inmediato el radar de **MATCH** en la red de **VECY BIENES RA\xCDCES** para encontrar la opci\xF3n so\xF1ada y cerrar este negocio juntos${isAgent ? " bajo nuestro modelo colaborativo **40/20/40**" : ""}. \u{1F91D}\u{1F680}` + googleReviewCta;
+${isAgent ? "Cons\xFAltale estos puntos clave a tu cliente (o si ya los tienes en mente, comp\xE1rtemelos por aqu\xED punto a punto o en una nota de voz). \u{1F399}\uFE0F\u{1F4F2}\n\n" : "Comp\xE1rteme estos datos por aqu\xED o en una nota de voz para estructurar tu b\xFAsqueda. \u{1F399}\uFE0F\u{1F4F2}\n\n"}Con este perfil 100% afinado, activamos de inmediato el radar de **MATCH** en la red de **VECY BIENES RA\xCDCES** para encontrar la opci\xF3n so\xF1ada y cerrar este negocio juntos${isAgent ? " bajo nuestro modelo colaborativo **40/20/40**" : ""}. \u{1F91D}\u{1F680}`;
   return `${greetingHeader}
 
 ${sectorPraise}${pedagogyIntro}${questionsBody}${closingCta}`;
@@ -22835,6 +22842,7 @@ __export(politenessService_exports, {
   formatCompanyFollowUpDeclineReviewMessage: () => formatCompanyFollowUpDeclineReviewMessage,
   formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
   formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
+  formatPersuasiveRecurrentUserReviewMessage: () => formatPersuasiveRecurrentUserReviewMessage,
   formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
   formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
   formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
@@ -22931,10 +22939,28 @@ function isCompanyInquiryOrAboutUs(text2) {
   const clean = text2.trim().toLowerCase();
   return /(?:qui[eé]nes?\s+(?:son|es|est[aá]n|son\s+ustedes)|qu[eé]\s+es\s+vecy|cu[eé]ntame\s+(?:de|sobre)\s+ustedes|qu[eé]\s+hacen|a\s+qu[eé]\s+se\s+dedican|qui[eé]n\s+fund[oó]|fundadores|eduardo\s+rivera|jani\s+alves|d[oó]nde\s+est[aá]n|c[oó]mo\s+naci[oó]|historia\s+de\s+vecy|redes\s+sociales|tienen\s+redes|cu[aá]les\s+son\s+sus\s+redes|redes\b|instagram|facebook|tiktok|canal\s+de\s+whatsapp|p[aá]gina\s+web)\b/i.test(clean);
 }
+function formatPersuasiveRecurrentUserReviewMessage(userName, options) {
+  const cleanName = (userName ? cleanRawUserName(userName) : "") || extractFirstName2(userName || "Colega") || "Colega";
+  const timeContext = options?.firstSeenText || "desde hace varias semanas";
+  const serviceContext = options?.serviceName || "verificaci\xF3n oficial de antecedentes y c\xE9dulas";
+  return `\xA1Hola, ${cleanName}! Paso por aqu\xED un momento\u2026 \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
+
+Veo que ${timeContext} has venido utilizando con frecuencia mis servicios de ${serviceContext} para blindar tus operaciones, totalmente gratis. \xA1Me alegra much\xEDsimo haberte sido de tanta utilidad en este tiempo! \u{1F64C}\u{1F3FB}\u{1F1E8}\u{1F1F4}
+
+Ahora bien, mantener esta tecnolog\xEDa de IA activa 24/7, cruzando bases de datos oficiales en tiempo real y sin cobrarte un solo peso, requiere un enorme esfuerzo e inversi\xF3n de *VECY BIENES RA\xCDCES* para apoyar y dignificar al gremio.
+
+La \xFAnica reciprocidad y apoyo que te pedimos para que este servicio siga siendo *100% GRATUITO* y abierto para ti, es regalarnos tu calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 y un breve comentario sobre tu experiencia con JanIA en nuestro perfil oficial de Google.
+
+Te toma menos de 15 segundos y nos ayuda un mont\xF3n a seguir construyendo la red:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Cuento con tu apoyo! Mil gracias de antemano y que sigan los \xE9xitos en tus gestiones inmobiliarias. \u{1F91D}\u{1F3E2}\u2728`;
+}
 var init_politenessService = __esm({
   "server/_core/politenessService.ts"() {
     "use strict";
     init_whatsapp_utils();
+    init_nameAndGenderResolver();
     init_const();
   }
 });
@@ -25909,14 +25935,36 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     const isGratitudeOrClosing2 = !isSenderAdminVoice && !isLongQueryVoice && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
                     const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
                     const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
-                    if (isGratitudeOrClosing2 && lastReviewSent2 < oneDayAgo2) {
-                      this.recentReviewPromptUsers.set(senderId, Date.now());
-                      const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-                      const politeMsg = formatImmediatePoliteReviewMessage2(userName);
-                      await new Promise((r) => setTimeout(r, 1200));
-                      await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
-                      await this.logToDb(senderId, "janIA", politeMsg);
-                      this.schedulePostReviewGroupInvitation(senderId, userName);
+                    if (!isSenderAdminVoice && lastReviewSent2 < oneDayAgo2) {
+                      try {
+                        const { getUserPerpetualSession: getUserPerpetualSession2 } = await Promise.resolve().then(() => (init_sessionManager(), sessionManager_exports));
+                        const session = await getUserPerpetualSession2(senderId, userName);
+                        const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
+                        if (!hasVerified) {
+                          if (isGratitudeOrClosing2) {
+                            this.recentReviewPromptUsers.set(senderId, Date.now());
+                            const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                            const politeMsg = formatImmediatePoliteReviewMessage2(userName);
+                            await new Promise((r) => setTimeout(r, 1500));
+                            await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                            await this.logToDb(senderId, "janIA", politeMsg);
+                            this.schedulePostReviewGroupInvitation(senderId, userName);
+                          } else {
+                            const isRecurrent = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;
+                            if (isRecurrent) {
+                              this.recentReviewPromptUsers.set(senderId, Date.now());
+                              const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                              const recurrentMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
+                              await new Promise((r) => setTimeout(r, 2200));
+                              await this.queuedSend(senderId, recurrentMsg, { allowDirectMessage: true, skipDelay: true });
+                              await this.logToDb(senderId, "janIA", recurrentMsg);
+                              this.schedulePostReviewGroupInvitation(senderId, userName);
+                            }
+                          }
+                        }
+                      } catch (vRevErr) {
+                        console.warn("[JANIA-MATCH] Error en despacho desacoplado de rese\xF1a de voz:", vRevErr?.message);
+                      }
                     }
                     return;
                   }
@@ -25997,14 +26045,37 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
               const isGratitudeOrClosing = !isSenderAdmin && !isLongQueryOrQuestion && !isErrorReply && (/^(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias[\s.!,]*$/i.test(cleanLower.trim()) || /^(?:muchas\s*gracias|mil\s*gracias|muy\s*amable|hasta\s*luego|chao|genial\s*gracias|perfecto\s*gracias|quedamos\s*as[ií])[\s.!,]*$/i.test(cleanLower.trim()) || cleanLower.length <= 45 && !cleanLower.includes("?") && /^(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))[\s.!,]*$/i.test(cleanLower.trim()));
               const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
               const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
-              if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
-                this.recentReviewPromptUsers.set(senderId, Date.now());
-                const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-                const politeMsg = formatImmediatePoliteReviewMessage2(userName);
-                await new Promise((r) => setTimeout(r, 1200));
-                await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
-                await this.logToDb(senderId, "janIA", politeMsg);
-                this.schedulePostReviewGroupInvitation(senderId, userName);
+              if (!isSenderAdmin && !isErrorReply && lastReviewSent < oneDayAgo) {
+                try {
+                  const { getUserPerpetualSession: getUserPerpetualSession2 } = await Promise.resolve().then(() => (init_sessionManager(), sessionManager_exports));
+                  const session = await getUserPerpetualSession2(senderId, userName);
+                  const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
+                  if (!hasVerified) {
+                    if (isGratitudeOrClosing) {
+                      this.recentReviewPromptUsers.set(senderId, Date.now());
+                      const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                      const politeMsg = formatImmediatePoliteReviewMessage2(userName);
+                      await new Promise((r) => setTimeout(r, 1500));
+                      await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                      await this.logToDb(senderId, "janIA", politeMsg);
+                      this.schedulePostReviewGroupInvitation(senderId, userName);
+                    } else {
+                      const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("MATCH") || replyText.includes("40/20/40");
+                      const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;
+                      if (isServiceDeliveryReply && isRecurrentFreeBeneficiary) {
+                        this.recentReviewPromptUsers.set(senderId, Date.now());
+                        const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                        const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
+                        await new Promise((r) => setTimeout(r, 2200));
+                        await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
+                        await this.logToDb(senderId, "janIA", recurrentReviewMsg);
+                        this.schedulePostReviewGroupInvitation(senderId, userName);
+                      }
+                    }
+                  }
+                } catch (revErr) {
+                  console.warn("[JANIA-MATCH] Error en despacho desacoplado de rese\xF1a Google:", revErr?.message);
+                }
               }
               return;
             }

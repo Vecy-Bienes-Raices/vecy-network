@@ -15119,3 +15119,56 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **522/522 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
 - **Versión Oficial:** `v33.79` en `shared/const.ts` y `33.79.0` en `package.json`.
+
+---
+
+### Sesión v33.80 — Octubre 2026: Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 30 de Octubre de 2026  
+> **Versión resultante:** `v33.80` (`33.80.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/jania/profilingInterviewService.ts`
+> - `server/_core/politenessService.ts`
+> - `server/_core/whatsapp-match.ts`
+> - `server/_core/jania/founderKnowledgeService.ts`
+> - `server/__tests__/regression.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Recuerda siempre separar los mensajes de calificación de los otros, recuerda siempre que la mayoría de usuarios no terminan de leer los mensajes largos, unos por pereza y otros por desconocimiento ya que no saben usar el botón de 'Leer más' y lo dejan hasta donde se alcanza a ver. Entonces ese ya por ahora déjalo así, ya la cagaste pero lo que sí te felicito estuvo muy bueno, espero que a JanIA se le grabe para siempre en su cerebro y a todo el que lance un requerimiento mediocre se lo inculque de cómo debe de ser un buen requerimiento o DEMANDA de búsqueda. ¡Me encantó! Por otra parte qué le vas a enviar a Catalina, no importa lo tarde, pero debiste enviarle también a ella pero algo que le indique que como ya ha usado varias veces el servicio y se ha beneficiado de la gratuidad pues que ya es hora de que califique nuestro servicio que le brinda JanIA a sus usuarios y colegas. No sé cómo le digas pero recuerda siempre hablar bien y convincente para que no se hagan los locos y no solo a Cata, sino a todos los que ya lo han usado y se siguen haciendo los de la vista gorda. Yo pensé algo así tomando como base el de Leonardo, pero no sé como que no me gusta tanto, ordénale a JanIA que redacte algo muy diciente y persuasivo:
+  ⭐ \*Por cierto, Catalina: como ya has probando tantas veces en vivo mi tecnología implementada por VECY BIENES RAÍCES para el gremio, ¿nos regalarías tu calificación de 5 estrellas y un comentario en Google para seguir impulsando la red?\* 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐
+  Graciasss... Lo viene usando desde el 2 de octubre, imagínate. Continúa desde donde quedaste y hazlo bien y termina las implementaciones, el envío y las correcciones si hay."*
+- **Diagnóstico y Causas Raíz Identificadas:**
+  1. **Ocultamiento de Enlaces tras 'Leer más':** En la versión anterior se cometió el error de incrustar el enlace de Google Reviews al final de la entrevista de perfilamiento inmobiliario (`profilingInterviewService.ts`). Como el texto supera los 2.000 caracteres, WhatsApp Web y móvil colapsan el mensaje con "... Leer más". La mayoría de usuarios no lo despliegan por pereza o desconocimiento, invisibilizando por completo la solicitud de reseña.
+  2. **Dependencia Rígida de Palabras de Gratitud:** En `whatsapp-match.ts`, el envío de invitaciones a calificar en Google estaba condicionado estrictamente a que el usuario dijera "gracias" o se despidiera (`isGratitudeOrClosing`). Usuarios recurrentes (como Catalina `@catabeta26`, quien desde el 2 de octubre acumuló 13 consultas de antecedentes y cédulas gratuitas) envían números de documento de forma transaccional y fría sin decir gracias; en consecuencia, JanIA nunca les solicitaba calificación, dejando que se beneficiaran de la gratuidad continuada sin retribución alguna ("haciéndose los de la vista gorda").
+
+#### 2. Solución Técnica Implementada (`v33.80`)
+1. **Desacoplamiento Estricto en `profilingInterviewService.ts`:**
+   - Retirado el bloque `googleReviewCta` del cierre de la entrevista (`closingCta`). La entrevista de perfilamiento queda 100% enfocada en las 5 dimensiones inmobiliarias y el cierre comercial 40/20/40.
+2. **Generador Persuasivo para Usuarios Recurrentes (`politenessService.ts`):**
+   - Implementada la función `formatPersuasiveRecurrentUserReviewMessage(userName, options)`:
+     - Saludo natural y respetuoso con nombre de pila limpio (`cleanRawUserName`).
+     - Alusión al tiempo e intensidad de uso ("Veo que desde comienzos de octubre has venido utilizando con frecuencia mis servicios de verificación oficial de antecedentes y cédulas para blindar tus operaciones, totalmente gratis...").
+     - Explicación franca y con señorío de la inversión tecnológica y económica de VECY BIENES RAÍCES para mantener activa la IA 24/7 y cruzar bases del Estado sin cobrar un peso.
+     - Planteamiento del compromiso ético de reciprocidad: la única condición para que siga siendo 100% gratis es calificar con 5 estrellas en Google Reviews.
+     - Enlace directo en renglón propio visible en un solo vistazo sin "Leer más".
+3. **Despacho Automático e Independiente en `whatsapp-match.ts`:**
+   - Se incorporó la regla de usuarios recurrentes: si un interlocutor no es administrador, no tiene verificada la reseña (`!hasVerifiedGoogleReview`), no ha recibido solicitud en 24 horas (`lastReviewSent < oneDayAgo`), tiene uso recurrente (`freeServicesUsedCount >= 2` o `messageCount >= 4`), y acaba de recibir un reporte de servicio (cédula, antecedentes, predial, RUES, etc.):
+   - JanIA espera 2.2 segundos tras la entrega del reporte y le despacha el mensaje persuasivo independiente y separado.
+4. **Entrega Inmediata a Catalina:**
+   - Despachado con éxito el mensaje persuasivo a su chat oficial (`277145683288292@lid`) vía la API `/api/send-whatsapp-notification` en el VPS, verificando entrega `200 OK` y retransmisión por Baileys en los logs.
+5. **Memoria Fundacional (`founderKnowledgeService.ts`):**
+   - Registrada la enseñanza `seed-desacoplamiento-resenas-google-recurrentes` dictada por Eduardo A. Rivera.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 166 en `regression.test.ts`:** 5 pruebas unitarias automatizadas que comprueban la generación persuasiva del mensaje para Catalina, el desacoplamiento de Google Reviews fuera del cuerpo largo de la entrevista, la lógica de despacho en `whatsapp-match.ts`, la memoria fundacional y la versión oficial.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **527/527 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio (Vite + esbuild).
+- **Versión Oficial:** `v33.80` en `shared/const.ts` y `33.80.0` en `package.json`.

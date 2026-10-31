@@ -1,11 +1,11 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.79.0 — 2026-10-30)
-- **JanIA Server:** `v33.79` (`33.79.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Entrevista Minuciosa de Perfilamiento Inmobiliario y Aterrizaje Pedagógico al Asesor (Doctrina Eduardo A. Rivera):**
-  1. **Módulo de Perfilamiento Estructurado (`profilingInterviewService.ts`):** Erradicadas las confirmaciones vacías ("😉 Registraré de inmediato en el motor...") ante requerimientos incompletos o sin datos técnicos mínimos. JanIA audita si la solicitud carece de presupuesto, habitaciones exactas o área, y despliega una entrevista profesional y estructurada adaptada a cada tipología (Apartamentos, Casas, Lotes, Bodegas, Oficinas, Fincas).
-  2. **Indagación Exhaustiva en 5 Dimensiones:** Presupuesto y finanzas (recursos de contado vs crédito/leasing y banco, administración), Espacios (área m², regla estricta de alcobas 1=1, baños, garajes independientes, depósito), Altura y confort (piso, ascensor, vista, antigüedad, tipo de cocina: abierta/isla/americana vs cerrada, balcón/terraza/chimenea), Conjunto y amenidades (gimnasio, salón social, zonas verdes, piscina/sauna/turco, coworking), y Ubicación (sectores aledaños tolerados).
-  3. **Aterrizaje al Asesor y Alianza 40/20/40:** JanIA frena con pedagogía y señorío al asesor, explicándole que un profesional no envía clientes a visitas a ciegas, e invita a trabajar en llave colaborativa.
-  4. **Guardarraíl y Memoria Fundacional (`dmHandler.ts`, `founderKnowledgeService.ts`):** Interceptor directo en apertura y reemplazo automático en post-procesamiento si el LLM emite una confirmación hueca. Enseñanza persistente `seed-entrevista-perfilamiento-minucioso`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 522/522 passing (Suite 165, 100% verde a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.80.0 — 2026-10-30)
+- **JanIA Server:** `v33.80` (`33.80.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad (Doctrina Eduardo A. Rivera):**
+  1. **Desacoplamiento de Reseñas (Cero Enlaces Ocultos en 'Leer más'):** Erradicada la inserción de solicitudes de calificación al final de textos largos, informes técnicos o entrevistas de perfilamiento. Los enlaces de Google Reviews se despachan SIEMPRE como un mensaje corto, limpio e independiente, visible de un solo vistazo.
+  2. **Persuasión de Reciprocidad (`formatPersuasiveRecurrentUserReviewMessage` en `politenessService.ts`):** Para usuarios recurrentes (como Catalina, activa desde el 2 de octubre con 13 consultas gratuitas de cédulas/antecedentes) que aprovechan la gratuidad y no han calificado en Google, JanIA les envía un mensaje independiente, señorial y persuasivo recordándoles la inversión de VECY BIENES RAÍCES y solicitando su calificación de 5 estrellas en reciprocidad para mantener el servicio gratis.
+  3. **Despacho Automático en `whatsapp-match.ts`:** Si un usuario recurrente (`freeServicesUsedCount >= 2` o `messageCount >= 4`) recibe un reporte y no tiene verificada la reseña (`!hasVerifiedGoogleReview`), JanIA programa el despacho del mensaje persuasivo independiente con un retardo natural de 2.2s.
+  4. **Entrega Inmediata a Catalina:** Despachado con éxito el mensaje persuasivo a su chat oficial (`277145683288292@lid`) vía `/api/send-whatsapp-notification`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 527/527 passing (Suite 166, 100% verde a $0 COP) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

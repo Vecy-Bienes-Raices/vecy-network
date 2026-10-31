@@ -8568,6 +8568,25 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.79` (`33.79.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.80 (2026-10-30) — Desacoplamiento Estricto de Reseñas en Google y Persuasión de Reciprocidad para Beneficiarios Recurrentes de la Gratuidad (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Ocultamiento tras 'Leer más':* La inserción de la solicitud de Google Reviews al final de la entrevista minuciosa de perfilamiento inmobiliario provocaba que quedara enterrada y oculta tras el botón de WhatsApp "... Leer más", el cual casi ningún usuario oprime por pereza o desconocimiento.
+  2. *Inmunidad de Usuarios Recurrentes no Agradecidos:* La solicitud de reseña solo se activaba ante expresiones explícitas de gratitud ("gracias", "muchas gracias"). Usuarios asiduos (como Catalina `@catabeta26`, quien acumulaba 13 consultas de antecedentes y cédulas gratuitas desde el 2 de octubre) consultaban fríamente sin agradecer, beneficiándose de la gratuidad continua sin que JanIA les cobrara reciprocidad.
+- **Solución Implementada**:
+  1. `server/_core/jania/profilingInterviewService.ts`: Erradicada la llamada a Google Reviews del cierre de la entrevista (`closingCta`). La entrevista se enfoca 100% en el perfilamiento técnico y el cierre comercial 40/20/40.
+  2. `server/_core/politenessService.ts`: Implementada `formatPersuasiveRecurrentUserReviewMessage(userName, options)`: mensaje corto e independiente que destaca el tiempo de uso gratuito continuo, la inversión tecnológica de VECY BIENES RAÍCES y el compromiso ético de calificar con 5 estrellas en Google Reviews para mantener el servicio 100% gratuito.
+  3. `server/_core/whatsapp-match.ts`: Despacho desacoplado en segundo mensaje independiente tanto en texto como en notas de voz. Si un usuario recurrente (`freeServicesUsedCount >= 2` o `messageCount >= 4`) recibe una entrega de servicio y no ha validado su reseña (`!hasVerifiedGoogleReview`), JanIA le envía el mensaje persuasivo con un retardo natural de 2.2s.
+  4. `server/_core/jania/founderKnowledgeService.ts`: Registrada la enseñanza fundacional `seed-desacoplamiento-resenas-google-recurrentes`.
+  5. Entrega inmediata y verificada a Catalina (`277145683288292@lid`) vía `/api/send-whatsapp-notification` (200 OK y log de Baileys confirmado).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 166 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **527/527 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.80` (`33.80.0`) en `shared/const.ts` y `package.json`.
+
 
 
 
