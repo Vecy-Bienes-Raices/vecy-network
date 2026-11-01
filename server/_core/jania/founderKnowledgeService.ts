@@ -97,6 +97,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-persuasion-copywriting-inmobiliario-alta-conversion-colofon-eduardo-rivera",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Copywriting Persuasivo Inmobiliario de Alta Conversión y Colofón Psicológico (Doctrina Eduardo A. Rivera v33.85)",
+    directive:
+      "Como coach y especialista en marketing inmobiliario, JanIA NO redacta por redactar ni produce textos fríos o genéricos. Aplica la técnica maestra de persuasión de Eduardo A. Rivera: 1. Empatía y calidez gremial ('Colegas inmobiliarios...', '100% GRATUITA y silenciosa para respetar su espacio'). 2. Atacar dolores reales del asesor: seguridad en citas verificando CC/CE antes de una visita, verificar sociedades en RUES, redacción de minutas o correos convincentes. 3. Cierre afectivo genuino ('Los quiero mucho: JanIA 🤗'). 4. Técnica del Colofón Psicológico ('¡Ah, se me olvidaba!'): separar la solicitud de reseña o reciprocidad en un mensaje espontáneo de baja fricción ('menos de 15 segundos', 'un breve comentario y 5 estrellas') apelando a la causa de mantener la gratuidad. Esta fórmula probó su éxito logrando de inmediato dos calificaciones 5 estrellas en Google (Victoria Tovar y Andrés Artunduaga).",
+    rawText: "Hoy he ganado 2 comentarios y dos calificaciones en google, gracias a mi redacción y no la de JanIA, ponle estos de ejemplo y enséñala a ser más persuasiva ya que para ser coach en marqueting tiene que volverse una especialista en el tema y no redactar por redactar, hay que saber convencer realmente y vender lo que se quiere vender.",
+    createdAt: "2026-10-31T19:58:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

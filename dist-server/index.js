@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.84";
+    VECY_VERSION = "v33.85";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16762,6 +16762,16 @@ var init_founderKnowledgeService = __esm({
         active: true
       },
       {
+        id: "seed-persuasion-copywriting-inmobiliario-alta-conversion-colofon-eduardo-rivera",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Copywriting Persuasivo Inmobiliario de Alta Conversi\xF3n y Colof\xF3n Psicol\xF3gico (Doctrina Eduardo A. Rivera v33.85)",
+        directive: "Como coach y especialista en marketing inmobiliario, JanIA NO redacta por redactar ni produce textos fr\xEDos o gen\xE9ricos. Aplica la t\xE9cnica maestra de persuasi\xF3n de Eduardo A. Rivera: 1. Empat\xEDa y calidez gremial ('Colegas inmobiliarios...', '100% GRATUITA y silenciosa para respetar su espacio'). 2. Atacar dolores reales del asesor: seguridad en citas verificando CC/CE antes de una visita, verificar sociedades en RUES, redacci\xF3n de minutas o correos convincentes. 3. Cierre afectivo genuino ('Los quiero mucho: JanIA \u{1F917}'). 4. T\xE9cnica del Colof\xF3n Psicol\xF3gico ('\xA1Ah, se me olvidaba!'): separar la solicitud de rese\xF1a o reciprocidad en un mensaje espont\xE1neo de baja fricci\xF3n ('menos de 15 segundos', 'un breve comentario y 5 estrellas') apelando a la causa de mantener la gratuidad. Esta f\xF3rmula prob\xF3 su \xE9xito logrando de inmediato dos calificaciones 5 estrellas en Google (Victoria Tovar y Andr\xE9s Artunduaga).",
+        rawText: "Hoy he ganado 2 comentarios y dos calificaciones en google, gracias a mi redacci\xF3n y no la de JanIA, ponle estos de ejemplo y ens\xE9\xF1ala a ser m\xE1s persuasiva ya que para ser coach en marqueting tiene que volverse una especialista en el tema y no redactar por redactar, hay que saber convencer realmente y vender lo que se quiere vender.",
+        createdAt: "2026-10-31T19:58:00.000Z",
+        active: true
+      },
+      {
         id: "seed-entrega-codigos-match",
         founderName: "Eduardo Rivera",
         phoneOrJid: "+573192919978",
@@ -22908,6 +22918,7 @@ __export(politenessService_exports, {
   buildWinningGoogleReviewMessage: () => buildWinningGoogleReviewMessage,
   formatCompanyFollowUpDeclineReviewMessage: () => formatCompanyFollowUpDeclineReviewMessage,
   formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
+  formatEduardoColophonReviewMessage: () => formatEduardoColophonReviewMessage,
   formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
   formatPersuasiveRecurrentUserReviewMessage: () => formatPersuasiveRecurrentUserReviewMessage,
   formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
@@ -23020,6 +23031,13 @@ La \xFAnica reciprocidad y apoyo que te pedimos para que este servicio siga sien
 
 Te toma menos de 15 segundos y nos ayuda un mont\xF3n a seguir construyendo la red:
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Cuento con tu apoyo! Mil gracias de antemano y que sigan los \xE9xitos en tus gestiones inmobiliarias. \u{1F91D}\u{1F3E2}\u2728`;
+}
+function formatEduardoColophonReviewMessage(userName) {
+  const namePart = userName ? cleanRawUserName(userName) : "";
+  return `\xA1Ah, se me olvidaba${namePart ? `, ${namePart}` : ""}! \xBFY si me colaboran con esto?. Que tan solo les toma menos de 15 segundos, dejando un breve comentario y 5 estrellas: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+van a ayudarnos un mont\xF3n a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria m\xE1s grande del planeta y a que mis servicios sigan siendo GRATUITOS. 
 
 \xA1Cuento con tu apoyo! Mil gracias de antemano y que sigan los \xE9xitos en tus gestiones inmobiliarias. \u{1F91D}\u{1F3E2}\u2728`;
 }
@@ -32924,10 +32942,12 @@ La consulta y tratamiento de esta informaci\xF3n p\xFAblica y semiprivada se efe
 // server/_core/realEstateMarketing.ts
 var realEstateMarketing_exports = {};
 __export(realEstateMarketing_exports, {
+  EDUARDO_PERSUASIVE_COPY_TEMPLATES: () => EDUARDO_PERSUASIVE_COPY_TEMPLATES,
   auditPropertyListing: () => auditPropertyListing,
   buildCommissionDoctrineGuide: () => buildCommissionDoctrineGuide,
   buildRealEstateIcp: () => buildRealEstateIcp,
-  evaluateSwapTest: () => evaluateSwapTest
+  evaluateSwapTest: () => evaluateSwapTest,
+  getEduardoPersuasiveMarketingGuidelines: () => getEduardoPersuasiveMarketingGuidelines
 });
 function buildRealEstateIcp(tipoInmueble, tipoNegocio, barrioOCiudad, precioOCanon, caracteristicas = "") {
   const tLower = (tipoInmueble || "").toLowerCase();
@@ -33154,9 +33174,37 @@ function buildCommissionDoctrineGuide(isAgent, accepts402040) {
 - Preg\xFAntale con amabilidad, total transparencia y firmeza si acepta la figura colaborativa de la Red VECY 40/20/40 (donde VECY respalda la operaci\xF3n, aporta la plataforma y la bolsa colaborativa con el 20%), o si prefiere registrarlo bajo el modelo 50/50 tradicional para la mesa de coincidencias [\u{1F6E1}\uFE0F50/50].
 `;
 }
+function getEduardoPersuasiveMarketingGuidelines() {
+  return `[DOCTRINA EDUARDO A. RIVERA \u2014 COPYWRITING PERSUASIVO Y COACHING EN MARKETING]:
+1. NUNCA redactes textos fr\xEDos, pedantes o acartonados tipo 'Estimado usuario, me complace informarle...'. El asesor y el cliente compran emoci\xF3n, empat\xEDa y cercan\xEDa.
+2. Conecta con el DOLOR REAL COTIDIANO del asesor: miedo a la inseguridad en visitas a inmuebles vac\xEDos con desconocidos (verificaci\xF3n CC/CE), empresas fantasmas (RUES), dudas de gastos notariales 50/50 y minutas legales.
+3. Usa el poder de la GRATUIDAD Y EL RESPETO: '100% GRATUITA y silenciosa para respetar su espacio'. La generosidad desarma cualquier prevenci\xF3n comercial.
+4. Emplea la t\xE9cnica del COLOF\xD3N PSICOL\xD3GICO ('\xA1Ah, se me olvidaba!'): desacopla el pedido de rese\xF1a o favor del mensaje principal. P\xEDdelo como un recuerdo espont\xE1neo con micro-esfuerzo expl\xEDcito ('menos de 15 segundos'), instrucci\xF3n sin fricci\xF3n ('un breve comentario y 5 estrellas') y causa noble ('para que mis servicios sigan siendo GRATUITOS'). Esta f\xF3rmula comprob\xF3 su efectividad generando 2 rese\xF1as de 5 estrellas en Google (Victoria Tovar y Andr\xE9s Artunduaga) en cuesti\xF3n de 4 horas.`;
+}
+var EDUARDO_PERSUASIVE_COPY_TEMPLATES;
 var init_realEstateMarketing = __esm({
   "server/_core/realEstateMarketing.ts"() {
     "use strict";
+    EDUARDO_PERSUASIVE_COPY_TEMPLATES = {
+      presentacionGrupoWhatsApp: `\u{1F44B}\u{1F469}\u{1F3FB} Colegas inmobiliarios, un saludo muy especial para todos.
+
+Me presento: soy JanIA, su Copiloto de Inteligencia Artificial para el mercado inmobiliario en Colombia \u{1F1E8}\u{1F1F4}\u{1F3E1}
+
+Estar\xE9 acompa\xF1\xE1ndolos en este grupo de forma 100% GRATUITA y silenciosa para respetar su espacio. Sin embargo, si en alg\xFAn momento tienen una duda jur\xEDdica, quieren contarme sus casos, necesitan un consejo profesional, liquidar unos gastos notariales, verificar documentos (CC/CE) de colegas y clientes como soporte de corretaje en agendamientos de visitas a inmuebles o si se trata de una empresa tambi\xE9n te la verifico, consultar el valor del m\xB2 en determinada zona, descargar una factura predial de Bogot\xE1 o un paz y salvo de IDU, pedir una ayuda en la redacci\xF3n de una minuta, un correo convincente o cualquier contrato inmobiliario, saber acerca de las mejores t\xE9cnicas y tips de marketing inmobiliario, crear im\xE1genes, flyers, infograf\xEDas, estudios de t\xEDtulos o an\xE1lisis del POT y firma digital entre otros m\xE1s, solo tienen que citarme con un @JanIA en este chat y con gusto les responder\xE9 en segundos.
+
+Tambi\xE9n pueden probar mis servicios escribi\xE9ndome directamente por privado aqu\xED:
+\u{1F449} https://wa.me/573192919978
+
+NOTA: \xDAnanse al Canal de VECY BIENES RA\xCDCES y reciban consejos pr\xE1cticos inmobiliarios muy interesantes todos los d\xEDas. Le dejo el enlace por si quieren aprender un poquito m\xE1s: \u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+
+\xA1Un gusto saludarlos, que tengan una bonita noche y un esplendoroso fin de semana y \xE9xitos en sus cierres! \u{1F91D}\u2728
+
+Los quiero mucho: JanIA \u{1F917}`,
+      colofonResenaGoogle: `\xA1Ah, se me olvidaba! \xBFY si me colaboran con esto?. Que tan solo les toma menos de 15 segundos, dejando un breve comentario y 5 estrellas: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+van a ayudarnos un mont\xF3n a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria m\xE1s grande del planeta y a que mis servicios sigan siendo GRATUITOS. 
+
+\xA1Cuento con tu apoyo! Mil gracias de antemano y que sigan los \xE9xitos en tus gestiones inmobiliarias. \u{1F91D}\u{1F3E2}\u2728`
+    };
   }
 });
 

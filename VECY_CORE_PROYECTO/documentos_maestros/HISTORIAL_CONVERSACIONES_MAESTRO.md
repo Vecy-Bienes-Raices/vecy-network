@@ -15402,3 +15402,57 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **544/544 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio en 25.12s + 349ms (Vite + esbuild).
 - **Versión Oficial:** `v33.84` en `shared/const.ts` y `33.84.0` en `package.json`.
+
+---
+
+### Sesión v33.85 — Octubre 2026: Doctrina de Persuasión, Copywriting Inmobiliario de Alta Conversión y Colofón Psicológico (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 31 de Octubre de 2026  
+> **Versión resultante:** `v33.85` (`33.85.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/realEstateMarketing.ts`
+> - `server/_core/politenessService.ts`
+> - `server/_core/jania/founderKnowledgeService.ts`
+> - `server/_core/prompts/base.md`
+> - `server/__tests__/regression.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Hoy he ganado 2 comentarios y dos calificaciones en google, gracias a mi redacción y no la de JanIA, ponle estos de ejemplo y enséñala a ser más persuasiva ya que para ser coach en marqueting tiene que volverse una especialista en el tema y no redactar por redactar, hay que saber convencer realmente y vender lo que se quiere vender ejemplos: [Presentación en grupo WhatsApp y Colofón psicológico de reseña Google]"*
+- **Diagnóstico y Análisis Psicológico de Alta Conversión:**
+  1. **Evidencia Empírica Incontestable (+2 Reseñas 5 Estrellas en Google Maps en 4 Horas):**
+     - Eduardo demostró con capturas de pantalla la efectividad real en el mercado:
+       - **Victoria Tovar:** Calificación 5 estrellas (⭐⭐⭐⭐⭐): *"Excelente"*.
+       - **Andrés Artunduaga Castañeda:** Calificación 5 estrellas (⭐⭐⭐⭐⭐): *"Magnífica herramienta para consultar la identificación, su veracidad y algo más. Completamente Recomendado"*.
+  2. **Los 4 Pilares de la Doctrina de Persuasión Inmobiliaria de Eduardo A. Rivera:**
+     - **Pilar 1: Tocar el dolor cotidiano real y no conceptos abstractos.** En lugar de decir *"Cumplo normatividad SARLAFT"*, el texto de Eduardo habla directo al temor diario del asesor: *"verificar documentos (CC/CE) de colegas y clientes como soporte de corretaje en agendamientos de visitas a inmuebles o si se trata de una empresa también te la verifico"*. Protege la vida del asesor antes de salir a mostrar un predio desocupado con desconocidos.
+     - **Pilar 2: Desarmar la prevención comercial con generosidad y respeto.** *"Estaré acompañándolos en este grupo de forma 100% GRATUITA y silenciosa para respetar su espacio"*.
+     - **Pilar 3: Cierre con afecto genuino y calidez gremial.** *"Los quiero mucho: JanIA 🤗"*. Rompe el acartonamiento y humaniza la relación.
+     - **Pilar 4: El Colofón Psicológico Desacoplado ("¡Ah, se me olvidaba!").** Enviar la solicitud de reseña como un segundo mensaje independiente, simulando un recuerdo espontáneo:
+       - *Micro-esfuerzo explícito:* *"Que tan solo les toma menos de 15 segundos"*.
+       - *Instrucción concreta sin fricción:* *"dejando un breve comentario y 5 estrellas"*.
+       - *Apelación a la causa de preservación de la gratuidad:* *"van a ayudarnos un montón a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria más grande del planeta y a que mis servicios sigan siendo GRATUITOS"*.
+
+#### 2. Solución Técnica Implementada (`v33.85`)
+1. **Modelado en Motor de Marketing (`realEstateMarketing.ts`):**
+   - Incorporadas las plantillas oficiales `EDUARDO_PERSUASIVE_COPY_TEMPLATES.presentacionGrupoWhatsApp` y `colofonResenaGoogle`.
+   - Creada la función de coaching `getEduardoPersuasiveMarketingGuidelines()`.
+2. **Mensaje Desacoplado de Reseña (`politenessService.ts`):**
+   - Creada la función `formatEduardoColophonReviewMessage(userName?: string)` para el despacho de colofón psicológico.
+3. **Memoria Persistente Sagrada (`founderKnowledgeService.ts`):**
+   - Registrada la enseñanza `seed-persuasion-copywriting-inmobiliario-alta-conversion-colofon-eduardo-rivera`.
+4. **Directivas en System Prompt (`base.md`):**
+   - Asimilada la doctrina en la sección de Marketing Inmobiliario de Alto Rendimiento.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 171 en `regression.test.ts`:** 5 pruebas automatizadas aprobadas.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **549/549 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio en 24.80s + 478ms (Vite + esbuild).
+- **Versión Oficial:** `v33.85` en `shared/const.ts` y `33.85.0` en `package.json`.

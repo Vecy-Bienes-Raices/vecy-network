@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.84 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.85 — Octubre 2026
+
+### Novedades v33.85 (Doctrina de Persuasión, Copywriting Inmobiliario de Alta Conversión y Colofón Psicológico de Reciprocidad — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Hoy he ganado 2 comentarios y dos calificaciones en google, gracias a mi redacción y no la de JanIA, ponle estos de ejemplo y enséñala a ser más persuasiva ya que para ser coach en marqueting tiene que volverse una especialista en el tema y no redactar por redactar, hay que saber convencer realmente y vender lo que se quiere vender ejemplos: [Presentación en grupo WhatsApp y Colofón psicológico de reseña Google]"*
+  2. **Pilares de Alta Conversión Comprobados en Vivo (+2 Reseñas 5 Estrellas en Google: Victoria Tovar y Andrés Artunduaga):**
+     - **Principio 1 (Tocar el Dolor Real Diario del Asesor):** Conectar con los miedos y necesidades de protección del colega: seguridad personal en visitas a inmuebles verificando documentos (CC/CE) de clientes y colegas como soporte de corretaje antes de ir a una cita con desconocidos; validación en vivo de personas jurídicas en RUES; redacción de minutas y correos convincentes.
+     - **Principio 2 (Empatía, Respeto y Afecto Genuino):** Trato de colega a colega, respeto por su espacio ("100% GRATUITA y silenciosa para respetar su espacio"), invitación sin arrogancia al canal ("por si quieren aprender un poquito más") y cierre con afecto sincero ("Los quiero mucho: JanIA 🤗").
+     - **Principio 3 (El Colofón Psicológico Desacoplado / "¡Ah, se me olvidaba!"):** Enviar la petición de reciprocidad de forma separada y espontánea, con micro-esfuerzo explícito ("menos de 15 segundos"), instrucción sin fricción ("dejando un breve comentario y 5 estrellas") y apelación a la causa de mantener la gratuidad de la plataforma.
+- **Implementación Técnica**:
+  - `server/_core/realEstateMarketing.ts`:
+    - Incorporadas plantillas maestras en `EDUARDO_PERSUASIVE_COPY_TEMPLATES`.
+    - Añadida guía de persuasión y coaching en `getEduardoPersuasiveMarketingGuidelines()`.
+  - `server/_core/politenessService.ts`:
+    - Creada función `formatEduardoColophonReviewMessage(userName?: string)`.
+  - `server/_core/jania/founderKnowledgeService.ts`:
+    - Incorporada enseñanza `seed-persuasion-copywriting-inmobiliario-alta-conversion-colofon-eduardo-rivera`.
+  - `server/_core/prompts/base.md`:
+    - Incorporada sección de persuasión y copywriting de alta conversión bajo la Doctrina Eduardo A. Rivera.
+  - `shared/const.ts` (`v33.85`) y `package.json` (`33.85.0`).
+- **Validación Exhaustiva ($0 COP)**: `npm run check` (0 errores) ✅ | `npm test` **549/549 passing** (Suite 171 creada, 100% verde a $0 COP) ✅ | `npm run build` limpio en 24.80s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v33.84 — Octubre 2026
 
 ### Novedades v33.84 (Silencio Absoluto en Cuentas Deudoras y Casos Jurídicos Sensibles [+57 322 909 7000 y +57 321 337 0737] — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -1,10 +1,10 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.84.0 — 2026-10-31)
-- **JanIA Server:** `v33.84` (`33.84.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Silencio Absoluto en Cuentas Deudoras y Casos Jurídicos Sensibles (+57 322 909 7000 y +57 321 337 0737 — Doctrina Eduardo A. Rivera):**
-  1. **Lista de Silencio Absoluto:** Muteo 100% estricto de dos cuentas críticas deudoras del Caso Cristina Flores (+57 322 909 7000 - Yennifer Milena Soto y +57 321 337 0737 - Sonia Stella Pérez). JanIA descarta todo mensaje entrante, sin respuestas de texto, audios, stickers ni presencia 'composing'.
-  2. **Blindaje de Búferes e Ingesta:** Ingesta y búferes descartados de raíz para ambos números telefónicos y patrones de nombres de deudoras.
-  3. **Aclaración y Limpieza de Pestañas IDE:** Cero residuos. Explicación de que los diálogos de guardado de VS Code ("¿Quiere guardar los cambios...?") obedecen a pestañas abiertas en memoria desincronizadas con el disco tras actualizaciones de git y deben cerrarse con "No guardar".
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 544/544 passing (Suite 170, 100% verde a $0 COP) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.85.0 — 2026-10-31)
+- **JanIA Server:** `v33.85` (`33.85.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Persuasión, Copywriting Inmobiliario de Alta Conversión y Colofón Psicológico de Reciprocidad (Doctrina Eduardo A. Rivera):**
+  1. **Especialización en Marketing y Cero Redacción por Redactar:** JanIA asimila el arte persuasivo de Eduardo A. Rivera: conectar con los dolores diarios reales del asesor (seguridad en visitas verificando CC/CE antes de una cita con desconocidos, verificación de sociedades en RUES, redacción de minutas y correos convincentes).
+  2. **Empatía Gremial y Afecto Genuino:** Tono de camaradería, respeto absoluto por el espacio del colega ("100% GRATUITA y silenciosa") y cierre con afecto sincero ("Los quiero mucho: JanIA 🤗").
+  3. **El Colofón Psicológico Desacoplado ("¡Ah, se me olvidaba!"):** Desacopla la petición de reseña/reciprocidad en un mensaje espontáneo de ultra baja fricción ("menos de 15 segundos", "un breve comentario y 5 estrellas") apelando a la causa de mantener la gratuidad y construir la red colaborativa más grande. Validado empíricamente en vivo con **2 reseñas de 5 estrellas en Google** en cuestión de horas (Victoria Tovar y Andrés Artunduaga).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 549/549 passing (Suite 171, 100% verde a $0 COP) | Build `npm run build` limpio en 24.80s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

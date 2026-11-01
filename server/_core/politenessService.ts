@@ -205,4 +205,18 @@ export function formatPersuasiveRecurrentUserReviewMessage(
   );
 }
 
+/**
+ * 🌟 COLOFÓN PSICOLÓGICO DE RESEÑA EN GOOGLE (Doctrina Eduardo A. Rivera v33.85)
+ * Mensaje desacoplado de alta conversión probado empíricamente (+2 reseñas 5 estrellas en 4 horas: Victoria Tovar y Andrés Artunduaga).
+ * Técnica del "By the way": micro-compromiso (< 15 segundos) y causa de preservación de la gratuidad.
+ */
+export function formatEduardoColophonReviewMessage(userName?: string): string {
+  const namePart = userName ? cleanRawUserName(userName) : "";
+  return (
+    `¡Ah, se me olvidaba${namePart ? `, ${namePart}` : ""}! ¿Y si me colaboran con esto?. Que tan solo les toma menos de 15 segundos, dejando un breve comentario y 5 estrellas: 👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
+    `van a ayudarnos un montón a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria más grande del planeta y a que mis servicios sigan siendo GRATUITOS. \n\n` +
+    `¡Cuento con tu apoyo! Mil gracias de antemano y que sigan los éxitos en tus gestiones inmobiliarias. 🤝🏢✨`
+  );
+}
+
 

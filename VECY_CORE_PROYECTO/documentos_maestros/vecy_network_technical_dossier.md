@@ -8674,6 +8674,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio en 25.12s + 349ms.
   - Versión: `v33.84` (`33.84.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.85 (2026-10-31) — Doctrina de Persuasión, Copywriting Inmobiliario de Alta Conversión y Colofón Psicológico (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Riesgo de Redactar por Redactar:* Como coach y especialista en marketing inmobiliario, JanIA no puede comportarse como un generador de textos huecos o impersonales. La venta y el convencimiento inmobiliario exigen conectar emocionalmente con los dolores del agente y del cliente.
+  2. *Éxito Empírico Comprobado en Vivo (+2 Reseñas 5 Estrellas en Google):* Eduardo redactó y envió en WhatsApp un modelo de presentación empático para grupos y un colofón psicológico desacoplado ("¡Ah, se me olvidaba!") que en menos de 4 horas produjo 2 calificaciones de 5 estrellas en Google (Victoria Tovar y Andrés Artunduaga).
+- **Solución Implementada**:
+  1. `server/_core/realEstateMarketing.ts`:
+     - Incorporadas las plantillas maestras en `EDUARDO_PERSUASIVE_COPY_TEMPLATES`.
+     - Definidas directrices de persuasión psicológica en `getEduardoPersuasiveMarketingGuidelines()`.
+  2. `server/_core/politenessService.ts`:
+     - Creada función `formatEduardoColophonReviewMessage(userName?: string)` modelando el mensaje desacoplado de micro-esfuerzo (< 15s) y preservación de gratuidad.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la enseñanza `seed-persuasion-copywriting-inmobiliario-alta-conversion-colofon-eduardo-rivera`.
+  4. `server/_core/prompts/base.md`:
+     - Asimilada la doctrina en las directivas de marketing y copywriting.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 171 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **549/549 passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio en 24.80s + 478ms.
+  - Versión: `v33.85` (`33.85.0`) en `shared/const.ts` y `package.json`.
+
 
 
 
