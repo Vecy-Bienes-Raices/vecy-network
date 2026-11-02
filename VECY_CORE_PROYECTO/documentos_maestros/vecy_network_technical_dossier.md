@@ -8697,6 +8697,28 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio en 24.80s + 478ms.
   - Versión: `v33.85` (`33.85.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.86 (2026-11-02) — Silencio Absoluto y Escudo Cortafuegos Anti-Bucle en Canal de Virgin Mobile Colombia (+57 319 251 0001) (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Bucle Infinito Bot contra Bot:* La línea oficial de Virgin Mobile Colombia (+57 319 251 0001) remite alertas y promociones por WhatsApp a la línea donde corre JanIA (+57 319 291 9978). JanIA respondía a los mensajes automatizados de Virgin, provocando que el bot de Virgin respondiera a su vez, originando un bucle incesante de respuestas de bot contra bot que saturaba la sesión.
+- **Solución Implementada**:
+  1. `server/_core/whatsapp-match.ts`:
+     - Inyección de compuerta de descarte inmediato (hard drop) en la cabecera misma del listener de eventos de Baileys (`messages.upsert`): cualquier mensaje desde o hacia `3192510001` es descartado sin procesamiento, eliminando los búferes de memoria.
+     - Refuerzo en `isBotOrMetaAi` y `isSilencedLegalCaseAccount`.
+  2. `server/_core/jania/trustedContacts.ts`:
+     - Incorporados `"573192510001"` y `"3192510001"` a `SILENCED_LEGAL_CASE_PHONES`.
+     - Filtro por nombre regex para `/virgin[\s_-]?mobile/i`.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz `seed-silencio-absoluto-virgin-mobile-colombia-3192510001`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 172 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **554 tests passing (100% verde a $0 COP)**.
+  - Build `npm run build` limpio en 24.54s + 274ms.
+  - Versión: `v33.86` (`33.86.0`) en `shared/const.ts` y `package.json`.
+
+
 
 
 

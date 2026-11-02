@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.85";
+    VECY_VERSION = "v33.86";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16388,7 +16388,7 @@ function isSilencedLegalCaseAccount(phoneOrId, name) {
     if (isMatchPhone) return true;
   }
   if (name) {
-    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor)/i.test(name);
+    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor|virgin\s*mobile|virgin\s*colombia)/i.test(name);
     if (isMatchName) return true;
   }
   return false;
@@ -16582,7 +16582,9 @@ var init_trustedContacts = __esm({
       "573229097000",
       "3229097000",
       "573213370737",
-      "3213370737"
+      "3213370737",
+      "573192510001",
+      "3192510001"
     ];
   }
 });
@@ -16769,6 +16771,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Como coach y especialista en marketing inmobiliario, JanIA NO redacta por redactar ni produce textos fr\xEDos o gen\xE9ricos. Aplica la t\xE9cnica maestra de persuasi\xF3n de Eduardo A. Rivera: 1. Empat\xEDa y calidez gremial ('Colegas inmobiliarios...', '100% GRATUITA y silenciosa para respetar su espacio'). 2. Atacar dolores reales del asesor: seguridad en citas verificando CC/CE antes de una visita, verificar sociedades en RUES, redacci\xF3n de minutas o correos convincentes. 3. Cierre afectivo genuino ('Los quiero mucho: JanIA \u{1F917}'). 4. T\xE9cnica del Colof\xF3n Psicol\xF3gico ('\xA1Ah, se me olvidaba!'): separar la solicitud de rese\xF1a o reciprocidad en un mensaje espont\xE1neo de baja fricci\xF3n ('menos de 15 segundos', 'un breve comentario y 5 estrellas') apelando a la causa de mantener la gratuidad. Esta f\xF3rmula prob\xF3 su \xE9xito logrando de inmediato dos calificaciones 5 estrellas en Google (Victoria Tovar y Andr\xE9s Artunduaga).",
         rawText: "Hoy he ganado 2 comentarios y dos calificaciones en google, gracias a mi redacci\xF3n y no la de JanIA, ponle estos de ejemplo y ens\xE9\xF1ala a ser m\xE1s persuasiva ya que para ser coach en marqueting tiene que volverse una especialista en el tema y no redactar por redactar, hay que saber convencer realmente y vender lo que se quiere vender.",
         createdAt: "2026-10-31T19:58:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-silencio-absoluto-virgin-mobile-colombia-3192510001",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Silencio Absoluto en Canal Oficial Corporativo de Telefon\xEDa (Virgin Mobile Colombia +57 319 251 0001 \u2014 Doctrina Eduardo A. Rivera v33.86)",
+        directive: "JanIA mantiene silencio absoluto total (0% respuestas, 0% typing, 0% audios, 0% stickers) ante la l\xEDnea y cuenta corporativa de Virgin Mobile Colombia (+57 319 251 0001). Cualquier mensaje promocional, notificaci\xF3n de saldo, recarga o alerta proveniente de este operador es descartado de inmediato en el socket sin emitir ninguna respuesta.",
+        rawText: "Espera antes de proceder necesito que le digas a JanIA Que por favor no le hable m\xE1s a este nu\xFAmero: [Virgin Mobile Colombia +57 319 2510001]",
+        createdAt: "2026-11-02T17:37:00.000Z",
         active: true
       },
       {
@@ -25498,6 +25510,11 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
               continue;
             }
+            if (chatId.includes("3192510001") || senderId.includes("3192510001") || rawChatId.includes("3192510001") || rawSenderId.includes("3192510001")) {
+              this.dmMessageBuffers.delete(chatId);
+              this.dmMessageBuffers.delete(senderId);
+              continue;
+            }
             const timestamp2 = msg.messageTimestamp;
             if (timestamp2) {
               const msgAgeSeconds = Math.floor(Date.now() / 1e3) - Number(timestamp2);
@@ -25754,13 +25771,13 @@ ${quotedNote}` : quotedNote;
                 const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === "573192919978" || rawPhone === "167108705018103" || senderId.includes("167108705018103");
                 const isAdmin = isSelfChat || ADMIN_IDENTIFIERS2.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
                 const userName = msg.pushName || (rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "573166569719" ? "VECY BIENES RA\xCDCES" : rawPhone === "225954035179724" || rawPhone === "573192919978" || rawPhone === "167108705018103" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
-                const isBotOrMetaAi = senderId.includes("@bot") || senderId.includes("13135550002") || senderId.startsWith("0@") || rawPhone === "13135550002" || /meta[\s_-]?ai/i.test(userName || "");
+                const isBotOrMetaAi = senderId.includes("@bot") || senderId.includes("13135550002") || senderId.startsWith("0@") || rawPhone === "13135550002" || /meta[\s_-]?ai/i.test(userName || "") || senderId.includes("3192510001") || rawPhone === "573192510001" || rawPhone === "3192510001" || /virgin[\s_-]?mobile/i.test(userName || "");
                 if (isBotOrMetaAi) {
                   return;
                 }
                 const { isSilencedLegalCaseAccount: isSilencedLegalCaseAccount2 } = await Promise.resolve().then(() => (init_trustedContacts(), trustedContacts_exports));
                 if (isSilencedLegalCaseAccount2(senderId, userName) || isSilencedLegalCaseAccount2(resolvedSenderId, userName) || isSilencedLegalCaseAccount2(rawPhone, userName)) {
-                  console.log(`[JANIA-SILENCE-SHIELD] \u{1F6E1}\uFE0F Mensaje de cuenta silenciada (${rawPhone} - ${userName || "Deudora"}). JanIA guarda silencio absoluto.`);
+                  console.log(`[JANIA-SILENCE-SHIELD] \u{1F6E1}\uFE0F Mensaje de cuenta silenciada (${rawPhone} - ${userName || "Silenciada"}). JanIA guarda silencio absoluto.`);
                   return;
                 }
                 const rawMsg = unwrapMessage(msg.message);

@@ -249,10 +249,10 @@ export const TRUSTED_CONTACTS: TrustedContact[] = Object.entries(TRUSTED_FAMILY_
         key === "jani" || key === "eduardo"
           ? "directiva"
           : key === "carmenza" || key === "daniel" || key === "natalia"
-          ? "familia_directa"
-          : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo")
-          ? "familia_extendida"
-          : "amigos_y_especiales"
+            ? "familia_directa"
+            : key.includes("tia") || key.includes("tio") || contact.relation.toLowerCase().includes("prima") || contact.relation.toLowerCase().includes("primo")
+              ? "familia_extendida"
+              : "amigos_y_especiales"
     };
     return enriched;
   }
@@ -463,16 +463,19 @@ export function getDebtCollectionDefenseResponse(timeSalutation?: string): strin
 }
 
 /**
- * 🛡️ LISTA NEGRA DE SILENCIO ABSOLUTO (Deudores / Casos Jurídicos Sensibles — Doctrina Eduardo A. Rivera v33.84)
+ * 🛡️ LISTA NEGRA DE SILENCIO ABSOLUTO (Deudores / Operadores Móviles / Casos Sensibles — Doctrina Eduardo A. Rivera v33.84 / v33.86)
  * Cuentas donde JanIA NUNCA debe contestar ni enviar ningún mensaje, sticker ni audio:
  * 1. +57 322 909 7000 (573229097000) -> Yennifer Milena Soto (Deudora - Caso Cristina Flores)
  * 2. +57 321 337 0737 (573213370737) -> Sonia Stella Pérez (Deudora Solidaria Yennifer - Caso Cristina Florez)
+ * 3. +57 319 251 0001 (573192510001) -> Virgin Mobile Colombia (Canal corporativo oficial / Operador de telefonía)
  */
 export const SILENCED_LEGAL_CASE_PHONES = [
   "573229097000",
   "3229097000",
   "573213370737",
-  "3213370737"
+  "3213370737",
+  "573192510001",
+  "3192510001"
 ];
 
 export function isSilencedLegalCaseAccount(phoneOrId: string, name?: string): boolean {
@@ -484,7 +487,7 @@ export function isSilencedLegalCaseAccount(phoneOrId: string, name?: string): bo
   }
 
   if (name) {
-    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor)/i.test(name);
+    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor|virgin\s*mobile|virgin\s*colombia)/i.test(name);
     if (isMatchName) return true;
   }
   return false;

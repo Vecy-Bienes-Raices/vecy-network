@@ -15456,3 +15456,47 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **549/549 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio en 24.80s + 478ms (Vite + esbuild).
 - **Versión Oficial:** `v33.85` en `shared/const.ts` y `33.85.0` en `package.json`.
+
+---
+
+### Sesión v33.86 — Noviembre 2026: Silencio Absoluto y Escudo Cortafuegos Anti-Bucle en Canal de Virgin Mobile Colombia (+57 319 251 0001) (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 2 de Noviembre de 2026  
+> **Versión resultante:** `v33.86` (`33.86.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/whatsapp-match.ts`
+> - `server/_core/jania/trustedContacts.ts`
+> - `server/_core/jania/founderKnowledgeService.ts`
+> - `server/__tests__/regression.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Espera antes de proceder necesito que le digas a JanIA Que por favor no le hable más a este nuúmero: [Virgin Mobile Colombia +57 319 251 0001]"*
+  *"Esa cuenta de virgin es un bot y entre ese bot y JanIA han creado un bucle infinito y no paran. Ayudaaaa"*
+- **Diagnóstico Técnico de Causa Raíz:**
+  1. La cuenta verificada de **Virgin Mobile Colombia** (`+57 319 251 0001` / `573192510001@s.whatsapp.net`) es un chatbot interactivo que remite notificaciones de saldo, promociones de datos y recargas a la línea donde corre JanIA (`+57 319 291 9978`).
+  2. Al no encontrarse en la lista negra estricta ni en el cortafuegos temprano, el socket de Baileys procesaba los mensajes de Virgin Mobile como solicitudes entrantes; JanIA generaba una respuesta y la enviaba al chat, lo que provocaba que el bot de Virgin interpretara la respuesta como una opción no reconocida o mensaje nuevo, emitiendo otra respuesta automática.
+  3. Esto creó un bucle infinito e incesante de "bot contra bot" (ping-pong descontrolado) que saturaba la sesión de WhatsApp y amenazaba con activar los filtros anti-spam de Meta sobre la línea del socket.
+
+#### 2. Solución Técnica Implementada (`v33.86`)
+1. **Compuerta de Descarte Inmediato en Entrada del Socket (`whatsapp-match.ts`):**
+   - Insertada validación de choque en la cabecera misma del bucle `messages.upsert`: si el `chatId`, `senderId`, `rawChatId` o `rawSenderId` contiene `3192510001`, se borran activamente de memoria los búferes (`this.dmMessageBuffers.delete`) y se ejecuta `continue` de inmediato.
+   - Enriquecido el escudo `isBotOrMetaAi` para descartar variantes de `3192510001`, `573192510001` y nombres con regex `/virgin[\s_-]?mobile/i`.
+2. **Ampliación de Lista Negra Sagrada (`trustedContacts.ts`):**
+   - Añadidos `"573192510001"` y `"3192510001"` a `SILENCED_LEGAL_CASE_PHONES`.
+   - Incluida la regla por nombre en `isSilencedLegalCaseAccount` para detectar y silenciar cuentas que contengan `virgin mobile` o `virgin colombia`.
+3. **Memoria Persistente Sagrada (`founderKnowledgeService.ts`):**
+   - Registrada la directriz de silencio absoluto `seed-silencio-absoluto-virgin-mobile-colombia-3192510001`.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 172 en `regression.test.ts`:** 5 pruebas automatizadas aprobadas al 100%.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Pruebas de Regresión:** `npm test` con **554 tests aprobados (100% verde a $0 COP)**.
+- **Compilación de Producción:** `npm run build` limpio en 24.54s + 274ms (Vite + esbuild).
+- **Versión Oficial:** `v33.86` en `shared/const.ts` y `33.86.0` en `package.json`.

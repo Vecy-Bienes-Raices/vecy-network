@@ -719,6 +719,19 @@ export class JaniaMatchBot {
           continue;
         }
 
+        // 🛡️ ESCUDO DE SILENCIO INMEDIATO / OPERADORES / BUCLE ANTI-BOT (Doctrina Eduardo A. Rivera v33.86)
+        // Cortar de raíz cualquier interacción con Virgin Mobile (+57 319 251 0001) para erradicar bucles infinitos de bot contra bot
+        if (
+          chatId.includes('3192510001') ||
+          senderId.includes('3192510001') ||
+          rawChatId.includes('3192510001') ||
+          rawSenderId.includes('3192510001')
+        ) {
+          this.dmMessageBuffers.delete(chatId);
+          this.dmMessageBuffers.delete(senderId);
+          continue;
+        }
+
         // 🛡️ FILTRO INTELIGENTE DE MENSAJES HISTÓRICOS:
         // Para grupos masivos: permitir hasta 900 segundos (15 minutos) para evitar descarte por ráfagas o reinicios.
         // Para DMs privados (!isGroup): PERMITIR hasta 1800 segundos (30 minutos) atrás para que JanIA
@@ -1160,18 +1173,19 @@ export class JaniaMatchBot {
             const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
             const userName = msg.pushName || (rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "573166569719" ? "VECY BIENES RAÍCES" : (rawPhone === "225954035179724" || rawPhone === "573192919978" || rawPhone === "167108705018103" ? "Eduardo Rivera" : `Asesor +${rawPhone}`)));
 
-            // 🛡️ ESCUDO ANTI-BOTS / META AI: Jamás procesar mensajes dirigidos a o provenientes de Meta AI ni bots externos
-            const isBotOrMetaAi = senderId.includes('@bot') || senderId.includes('13135550002') || senderId.startsWith('0@') || rawPhone === '13135550002' || /meta[\s_-]?ai/i.test(userName || '');
+            // 🛡️ ESCUDO ANTI-BOTS / META AI / OPERADORES (Virgin Mobile): Jamás procesar mensajes de bots, Meta AI ni operadores móviles
+            const isBotOrMetaAi = senderId.includes('@bot') || senderId.includes('13135550002') || senderId.startsWith('0@') || rawPhone === '13135550002' || /meta[\s_-]?ai/i.test(userName || '') || senderId.includes('3192510001') || rawPhone === '573192510001' || rawPhone === '3192510001' || /virgin[\s_-]?mobile/i.test(userName || '');
             if (isBotOrMetaAi) {
               return;
             }
 
-            // 🛡️ LISTA NEGRA DE SILENCIO TOTAL (Deudores / Casos Jurídicos Sensibles — Doctrina Eduardo A. Rivera v33.84):
+            // 🛡️ LISTA NEGRA DE SILENCIO TOTAL (Deudores / Operadores Móviles / Casos Sensibles — Doctrina Eduardo A. Rivera v33.84 / v33.86):
             // 1. +57 322 909 7000 (573229097000) -> Yennifer Milena Soto (Deudora - Caso Cristina Flores)
             // 2. +57 321 337 0737 (573213370737) -> Sonia Stella Pérez (Deudora Solidaria Yennifer - Caso Cristina Florez)
+            // 3. +57 319 251 0001 (573192510001) -> Virgin Mobile Colombia (Canal corporativo oficial / Operador de telefonía)
             const { isSilencedLegalCaseAccount } = await import('./jania/trustedContacts');
             if (isSilencedLegalCaseAccount(senderId, userName) || isSilencedLegalCaseAccount(resolvedSenderId, userName) || isSilencedLegalCaseAccount(rawPhone, userName)) {
-              console.log(`[JANIA-SILENCE-SHIELD] 🛡️ Mensaje de cuenta silenciada (${rawPhone} - ${userName || 'Deudora'}). JanIA guarda silencio absoluto.`);
+              console.log(`[JANIA-SILENCE-SHIELD] 🛡️ Mensaje de cuenta silenciada (${rawPhone} - ${userName || 'Silenciada'}). JanIA guarda silencio absoluto.`);
               return;
             }
 

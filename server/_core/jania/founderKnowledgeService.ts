@@ -108,6 +108,17 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-silencio-absoluto-virgin-mobile-colombia-3192510001",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Silencio Absoluto en Canal Oficial Corporativo de Telefonía (Virgin Mobile Colombia +57 319 251 0001 — Doctrina Eduardo A. Rivera v33.86)",
+    directive:
+      "JanIA mantiene silencio absoluto total (0% respuestas, 0% typing, 0% audios, 0% stickers) ante la línea y cuenta corporativa de Virgin Mobile Colombia (+57 319 251 0001). Cualquier mensaje promocional, notificación de saldo, recarga o alerta proveniente de este operador es descartado de inmediato en el socket sin emitir ninguna respuesta.",
+    rawText: "Espera antes de proceder necesito que le digas a JanIA Que por favor no le hable más a este nuúmero: [Virgin Mobile Colombia +57 319 2510001]",
+    createdAt: "2026-11-02T17:37:00.000Z",
+    active: true
+  },
+  {
     id: "seed-entrega-codigos-match",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",

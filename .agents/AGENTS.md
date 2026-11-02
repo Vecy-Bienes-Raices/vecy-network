@@ -183,7 +183,23 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.85 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.86 — Noviembre 2026
+
+### Novedades v33.86 (Silencio Absoluto y Escudo Cortafuegos Anti-Bucle en Canal de Virgin Mobile Colombia [+57 319 251 0001] — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Espera antes de proceder necesito que le digas a JanIA Que por favor no le hable más a este nuúmero: [Virgin Mobile Colombia +57 319 251 0001]"*
+     - *"Esa cuenta de virgin es un bot y entre ese bot y JanIA han creado un bucle infinito y no paran. Ayudaaaa"*
+  2. **Causa Raíz Identificada:**
+     - Virgin Mobile Colombia (`+57 319 251 0001` / `573192510001@s.whatsapp.net`) es una cuenta de empresa verificada que opera con un bot interactivo de telefonía celular enviando notificaciones promocionales, recargas de paquetes de datos y estados de saldo a la línea de JanIA (`+57 319 291 9978`).
+     - Al no estar filtrado, el socket de Baileys recibía los mensajes del bot de Virgin, JanIA los interpretaba como consultas entrantes y respondía; el bot de Virgin interpretaba la respuesta de JanIA como una opción no válida o consulta adicional y respondía de nuevo, generando un bucle ping-pong infinito e incesante de bot contra bot que saturaba la sesión.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Hard Drop Temprano en Entrada (`messages.upsert`):** Inyección de descarte fulminante al inicio de la escucha de mensajes antes de parsing, buffer o presencia typing si el chat o remitente contiene `3192510001`, eliminando activamente cualquier buffer acumulado en memoria.
+     - **Escudo Anti-Bot y Silencio Total:** Inclusión de `573192510001` y `3192510001` en `isBotOrMetaAi`, `SILENCED_LEGAL_CASE_PHONES`, `isSilencedLegalCaseAccount` y `dmHandler`.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-silencio-absoluto-virgin-mobile-colombia-3192510001` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 172 `vitest` (5/5 passing, 554 tests) | Build `npm run build` limpio en 24.54s.
+
+## 🔖 VERSIÓN ANTERIOR: v33.85 — Octubre 2026
 
 ### Novedades v33.85 (Doctrina de Persuasión, Copywriting Inmobiliario de Alta Conversión y Colofón Psicológico de Reciprocidad — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

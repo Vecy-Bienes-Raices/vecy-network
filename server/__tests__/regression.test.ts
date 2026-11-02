@@ -10388,11 +10388,68 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v33.85 en shared/const.ts y package.json (33.85.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.85");
+      expect(VECY_VERSION).toMatch(/^v33\.(?:85|86)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.85.0");
+      expect(pkg.version).toMatch(/^33\.(?:85|86)\.0$/);
+    });
+  });
+
+  describe("Suite 172: Silencio Absoluto en Canal Corporativo de Telefonía (Virgin Mobile Colombia +57 319 251 0001) (Doctrina Eduardo A. Rivera — v33.86)", () => {
+    it("1. isSilencedLegalCaseAccount y SILENCED_LEGAL_CASE_PHONES identifican exactamente el número y nombre de Virgin Mobile Colombia", async () => {
+      const { isSilencedLegalCaseAccount, SILENCED_LEGAL_CASE_PHONES } = await import("../_core/jania/trustedContacts");
+
+      expect(SILENCED_LEGAL_CASE_PHONES).toContain("573192510001");
+      expect(SILENCED_LEGAL_CASE_PHONES).toContain("3192510001");
+
+      expect(isSilencedLegalCaseAccount("573192510001@s.whatsapp.net")).toBe(true);
+      expect(isSilencedLegalCaseAccount("3192510001")).toBe(true);
+      expect(isSilencedLegalCaseAccount("+57 319 2510001")).toBe(true);
+      expect(isSilencedLegalCaseAccount("1234567890", "Virgin Mobile Colombia")).toBe(true);
+      expect(isSilencedLegalCaseAccount("9876543210", "Virgin Mobile")).toBe(true);
+
+      // Cuentas normales y directivas no son silenciadas
+      expect(isSilencedLegalCaseAccount("573105554433@s.whatsapp.net", "Carlos Asesor")).toBe(false);
+      expect(isSilencedLegalCaseAccount("573192919978@s.whatsapp.net", "Eduardo Rivera")).toBe(false);
+    });
+
+    it("2. processPrivateDmConversationalMessage devuelve vacío (silencio absoluto) para Virgin Mobile Colombia", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      const resVirgin = await processPrivateDmConversationalMessage(
+        "Virgin Mobile Colombia ¡Con todo es llenar tu celular de datos y no de problemas!",
+        "573192510001@s.whatsapp.net",
+        "Virgin Mobile Colombia"
+      );
+      expect(resVirgin).toBe("");
+    });
+
+    it("3. whatsapp-match.ts incorpora filtro de silencio total y escudo anti-bot/operador para Virgin Mobile Colombia (+57 319 251 0001)", async () => {
+      const fs = await import("fs");
+      const matchSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+
+      expect(matchSrc).toContain("3192510001");
+      expect(matchSrc).toContain("573192510001");
+      expect(matchSrc).toContain("Virgin Mobile Colombia");
+    });
+
+    it("4. founderKnowledgeService contiene seed-silencio-absoluto-virgin-mobile-colombia-3192510001", async () => {
+      const fs = await import("fs");
+      const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
+
+      expect(teachingsSrc).toContain("seed-silencio-absoluto-virgin-mobile-colombia-3192510001");
+      expect(teachingsSrc).toContain("Virgin Mobile Colombia");
+      expect(teachingsSrc).toContain("+57 319 251 0001");
+    });
+
+    it("5. Consagración doctrinal de versión v33.86 en shared/const.ts y package.json (33.86.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.86");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.86.0");
     });
   });
 });

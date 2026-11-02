@@ -1,10 +1,9 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.85.0 — 2026-10-31)
-- **JanIA Server:** `v33.85` (`33.85.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Persuasión, Copywriting Inmobiliario de Alta Conversión y Colofón Psicológico de Reciprocidad (Doctrina Eduardo A. Rivera):**
-  1. **Especialización en Marketing y Cero Redacción por Redactar:** JanIA asimila el arte persuasivo de Eduardo A. Rivera: conectar con los dolores diarios reales del asesor (seguridad en visitas verificando CC/CE antes de una cita con desconocidos, verificación de sociedades en RUES, redacción de minutas y correos convincentes).
-  2. **Empatía Gremial y Afecto Genuino:** Tono de camaradería, respeto absoluto por el espacio del colega ("100% GRATUITA y silenciosa") y cierre con afecto sincero ("Los quiero mucho: JanIA 🤗").
-  3. **El Colofón Psicológico Desacoplado ("¡Ah, se me olvidaba!"):** Desacopla la petición de reseña/reciprocidad en un mensaje espontáneo de ultra baja fricción ("menos de 15 segundos", "un breve comentario y 5 estrellas") apelando a la causa de mantener la gratuidad y construir la red colaborativa más grande. Validado empíricamente en vivo con **2 reseñas de 5 estrellas en Google** en cuestión de horas (Victoria Tovar y Andrés Artunduaga).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests `npm test` 549/549 passing (Suite 171, 100% verde a $0 COP) | Build `npm run build` limpio en 24.80s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.86.0 — 2026-11-02)
+- **JanIA Server:** `v33.86` (`33.86.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Silencio Absoluto y Escudo Cortafuegos Anti-Bucle en Canal de Virgin Mobile Colombia (+57 319 251 0001 — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico del Bucle Infinito Bot vs Bot:** La cuenta de empresa verificada de Virgin Mobile Colombia (+57 319 251 0001) opera como un chatbot automatizado de telefonía/recargas/saldo. Al recibir notificaciones automáticas del operador en la línea del socket (+57 319 291 9978), JanIA procesaba el mensaje e intentaba responder, provocando que el bot de Virgin respondiera de vuelta en un bucle infinito que no paraba.
+  2. **Escudo de Descarte Inmediato:** Inyección de hard drop en la compuerta de entrada de Baileys (`messages.upsert`) y en `isBotOrMetaAi`, `isSilencedLegalCaseAccount` y `dmHandler`. Limpieza inmediata de búferes para `3192510001`, garantizando 0% respuestas, 0% typing, 0% audios y corte definitivo del bucle.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 172 `vitest` (5/5 passing, 554 tests) | Build `npm run build` limpio en 24.54s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
