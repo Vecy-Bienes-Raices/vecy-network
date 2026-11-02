@@ -467,7 +467,7 @@ export function getDebtCollectionDefenseResponse(timeSalutation?: string): strin
  * Cuentas donde JanIA NUNCA debe contestar ni enviar ningún mensaje, sticker ni audio:
  * 1. +57 322 909 7000 (573229097000) -> Yennifer Milena Soto (Deudora - Caso Cristina Flores)
  * 2. +57 321 337 0737 (573213370737) -> Sonia Stella Pérez (Deudora Solidaria Yennifer - Caso Cristina Florez)
- * 3. +57 319 251 0001 (573192510001) -> Virgin Mobile Colombia (Canal corporativo oficial / Operador de telefonía)
+ * 3. +57 319 251 0001 (573192510001) / LID 148150702633067 -> Virgin Mobile Colombia (Canal corporativo oficial / Operador de telefonía)
  */
 export const SILENCED_LEGAL_CASE_PHONES = [
   "573229097000",
@@ -475,11 +475,12 @@ export const SILENCED_LEGAL_CASE_PHONES = [
   "573213370737",
   "3213370737",
   "573192510001",
-  "3192510001"
+  "3192510001",
+  "148150702633067" // LID oficial de Virgin Mobile Colombia en WhatsApp Cloud API
 ];
 
-export function isSilencedLegalCaseAccount(phoneOrId: string, name?: string): boolean {
-  if (!phoneOrId && !name) return false;
+export function isSilencedLegalCaseAccount(phoneOrId: string, name?: string, body?: string): boolean {
+  if (!phoneOrId && !name && !body) return false;
   const cleanId = (phoneOrId || "").replace(/\D/g, "");
   if (cleanId.length >= 7) {
     const isMatchPhone = SILENCED_LEGAL_CASE_PHONES.some(p => cleanId.endsWith(p) || p.endsWith(cleanId) || cleanId === p);
@@ -487,8 +488,13 @@ export function isSilencedLegalCaseAccount(phoneOrId: string, name?: string): bo
   }
 
   if (name) {
-    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor|virgin\s*mobile|virgin\s*colombia)/i.test(name);
+    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor|virgin\s*mobile|virgin\s*colombia|rockagent)/i.test(name);
     if (isMatchName) return true;
+  }
+
+  if (body) {
+    const isMatchBody = /(?:virgin\s*mobile|rockagent|bienvenido\s*a\s*virgin|orientadores|posici[oó]n.*cola|cola.*turno)/i.test(body);
+    if (isMatchBody) return true;
   }
   return false;
 }

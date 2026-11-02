@@ -16380,16 +16380,20 @@ function getDebtCollectionDefenseResponse(timeSalutation) {
   const salutation = timeSalutation || getGreetingByTime2();
   return `\xA1${salutation}! No tengo informaci\xF3n de esa persona ni manejo agendas personales; soy JanIA, la inteligencia artificial creada exclusivamente para gestionar servicios de finca ra\xEDz y bienes ra\xEDces en VECY BIENES RA\xCDCES. Si se trata de un requerimiento inmobiliario o comercial, con gusto te atiendo. De lo contrario, no insistas por este canal.`;
 }
-function isSilencedLegalCaseAccount(phoneOrId, name) {
-  if (!phoneOrId && !name) return false;
+function isSilencedLegalCaseAccount(phoneOrId, name, body) {
+  if (!phoneOrId && !name && !body) return false;
   const cleanId = (phoneOrId || "").replace(/\D/g, "");
   if (cleanId.length >= 7) {
     const isMatchPhone = SILENCED_LEGAL_CASE_PHONES.some((p) => cleanId.endsWith(p) || p.endsWith(cleanId) || cleanId === p);
     if (isMatchPhone) return true;
   }
   if (name) {
-    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor|virgin\s*mobile|virgin\s*colombia)/i.test(name);
+    const isMatchName = /(?:yennifer\s*milena\s*soto|sonia\s*stella\s*p[eé]rez|deudora.*cristina|deudora\s*solidaria|caso.*cristina\s*flor|virgin\s*mobile|virgin\s*colombia|rockagent)/i.test(name);
     if (isMatchName) return true;
+  }
+  if (body) {
+    const isMatchBody = /(?:virgin\s*mobile|rockagent|bienvenido\s*a\s*virgin|orientadores|posici[oó]n.*cola|cola.*turno)/i.test(body);
+    if (isMatchBody) return true;
   }
   return false;
 }
@@ -16584,7 +16588,9 @@ var init_trustedContacts = __esm({
       "573213370737",
       "3213370737",
       "573192510001",
-      "3192510001"
+      "3192510001",
+      "148150702633067"
+      // LID oficial de Virgin Mobile Colombia en WhatsApp Cloud API
     ];
   }
 });
@@ -25510,7 +25516,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
               continue;
             }
-            if (chatId.includes("3192510001") || senderId.includes("3192510001") || rawChatId.includes("3192510001") || rawSenderId.includes("3192510001")) {
+            if (chatId.includes("3192510001") || senderId.includes("3192510001") || rawChatId.includes("3192510001") || rawSenderId.includes("3192510001") || chatId.includes("148150702633067") || senderId.includes("148150702633067") || rawChatId.includes("148150702633067") || rawSenderId.includes("148150702633067")) {
               this.dmMessageBuffers.delete(chatId);
               this.dmMessageBuffers.delete(senderId);
               continue;
@@ -25771,7 +25777,7 @@ ${quotedNote}` : quotedNote;
                 const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === "573192919978" || rawPhone === "167108705018103" || senderId.includes("167108705018103");
                 const isAdmin = isSelfChat || ADMIN_IDENTIFIERS2.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
                 const userName = msg.pushName || (rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "573166569719" ? "VECY BIENES RA\xCDCES" : rawPhone === "225954035179724" || rawPhone === "573192919978" || rawPhone === "167108705018103" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
-                const isBotOrMetaAi = senderId.includes("@bot") || senderId.includes("13135550002") || senderId.startsWith("0@") || rawPhone === "13135550002" || /meta[\s_-]?ai/i.test(userName || "") || senderId.includes("3192510001") || rawPhone === "573192510001" || rawPhone === "3192510001" || /virgin[\s_-]?mobile/i.test(userName || "");
+                const isBotOrMetaAi = senderId.includes("@bot") || senderId.includes("13135550002") || senderId.startsWith("0@") || rawPhone === "13135550002" || /meta[\s_-]?ai/i.test(userName || "") || senderId.includes("3192510001") || rawPhone === "573192510001" || rawPhone === "3192510001" || senderId.includes("148150702633067") || rawPhone === "148150702633067" || /virgin[\s_-]?mobile/i.test(userName || "");
                 if (isBotOrMetaAi) {
                   return;
                 }

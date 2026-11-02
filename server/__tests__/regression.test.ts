@@ -10402,12 +10402,15 @@ Ana Morales Castillo
 
       expect(SILENCED_LEGAL_CASE_PHONES).toContain("573192510001");
       expect(SILENCED_LEGAL_CASE_PHONES).toContain("3192510001");
+      expect(SILENCED_LEGAL_CASE_PHONES).toContain("148150702633067");
 
       expect(isSilencedLegalCaseAccount("573192510001@s.whatsapp.net")).toBe(true);
       expect(isSilencedLegalCaseAccount("3192510001")).toBe(true);
+      expect(isSilencedLegalCaseAccount("148150702633067@lid")).toBe(true);
       expect(isSilencedLegalCaseAccount("+57 319 2510001")).toBe(true);
       expect(isSilencedLegalCaseAccount("1234567890", "Virgin Mobile Colombia")).toBe(true);
       expect(isSilencedLegalCaseAccount("9876543210", "Virgin Mobile")).toBe(true);
+      expect(isSilencedLegalCaseAccount("9999999999", undefined, "Por favor espere un momento mientras lo ponemos en contacto con uno de nuestros orientadores")).toBe(true);
 
       // Cuentas normales y directivas no son silenciadas
       expect(isSilencedLegalCaseAccount("573105554433@s.whatsapp.net", "Carlos Asesor")).toBe(false);

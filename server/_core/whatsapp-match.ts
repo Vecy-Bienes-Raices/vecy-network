@@ -720,12 +720,16 @@ export class JaniaMatchBot {
         }
 
         // 🛡️ ESCUDO DE SILENCIO INMEDIATO / OPERADORES / BUCLE ANTI-BOT (Doctrina Eduardo A. Rivera v33.86)
-        // Cortar de raíz cualquier interacción con Virgin Mobile (+57 319 251 0001) para erradicar bucles infinitos de bot contra bot
+        // Cortar de raíz cualquier interacción con Virgin Mobile (+57 319 251 0001 / LID 148150702633067) para erradicar bucles infinitos de bot contra bot
         if (
           chatId.includes('3192510001') ||
           senderId.includes('3192510001') ||
           rawChatId.includes('3192510001') ||
-          rawSenderId.includes('3192510001')
+          rawSenderId.includes('3192510001') ||
+          chatId.includes('148150702633067') ||
+          senderId.includes('148150702633067') ||
+          rawChatId.includes('148150702633067') ||
+          rawSenderId.includes('148150702633067')
         ) {
           this.dmMessageBuffers.delete(chatId);
           this.dmMessageBuffers.delete(senderId);
@@ -1174,7 +1178,7 @@ export class JaniaMatchBot {
             const userName = msg.pushName || (rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "573166569719" ? "VECY BIENES RAÍCES" : (rawPhone === "225954035179724" || rawPhone === "573192919978" || rawPhone === "167108705018103" ? "Eduardo Rivera" : `Asesor +${rawPhone}`)));
 
             // 🛡️ ESCUDO ANTI-BOTS / META AI / OPERADORES (Virgin Mobile): Jamás procesar mensajes de bots, Meta AI ni operadores móviles
-            const isBotOrMetaAi = senderId.includes('@bot') || senderId.includes('13135550002') || senderId.startsWith('0@') || rawPhone === '13135550002' || /meta[\s_-]?ai/i.test(userName || '') || senderId.includes('3192510001') || rawPhone === '573192510001' || rawPhone === '3192510001' || /virgin[\s_-]?mobile/i.test(userName || '');
+            const isBotOrMetaAi = senderId.includes('@bot') || senderId.includes('13135550002') || senderId.startsWith('0@') || rawPhone === '13135550002' || /meta[\s_-]?ai/i.test(userName || '') || senderId.includes('3192510001') || rawPhone === '573192510001' || rawPhone === '3192510001' || senderId.includes('148150702633067') || rawPhone === '148150702633067' || /virgin[\s_-]?mobile/i.test(userName || '');
             if (isBotOrMetaAi) {
               return;
             }
