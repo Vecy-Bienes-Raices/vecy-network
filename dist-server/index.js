@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.86";
+    VECY_VERSION = "v33.87";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1290,7 +1290,17 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
             geminiKeyManager.markKeyCooldown(activeKey, 3600, "Depleted Billing Credits (402)");
             break;
           }
+          if (status === 403 || /billing account|outstanding balance|permission denied|issues with your billing/i.test(String(errorMsg || ""))) {
+            console.warn(`[JanIA-LLM] \u26A0\uFE0F Clave (${tierTag}) con error 403 / facturaci\xF3n pendiente (${errorMsg}). Pausando por 1 hora.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 3600, `Billing/Forbidden (403): ${errorMsg}`);
+            break;
+          }
           if (status === 429) {
+            if (/per day limit|daily.*quota|limit:\s*20/i.test(String(errorMsg || ""))) {
+              console.warn(`[JanIA-LLM] \u26A0\uFE0F Modelo ${currentModel} agot\xF3 su cuota diaria en free tier (${errorMsg}). Conmutando al siguiente modelo sin penalizar las dem\xE1s llamadas.`);
+              modelUnavailable = true;
+              break;
+            }
             geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturaci\xF3n de Modelo (429)");
             break;
           }
@@ -1347,17 +1357,18 @@ var init_llm = __esm({
     HIGH_REASONING_MODELS = [
       "gemini-3.8-flash",
       "gemini-flash-latest",
-      "gemini-3.1-pro-preview",
-      "gemini-flash-lite-latest",
       "gemini-3.5-flash-lite",
+      "gemini-flash-lite-latest",
       "gemini-3.5-flash",
+      "gemini-3.1-pro-preview",
       "gemini-4-argon"
     ];
     MECHANICAL_MODELS = [
       "gemini-flash-lite-latest",
       "gemini-flash-latest",
       "gemini-3.8-flash",
-      "gemini-3.5-flash-lite"
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash"
     ];
     FALLBACK_MODELS = HIGH_REASONING_MODELS;
     lastCallTimestamp = 0;
@@ -13855,7 +13866,7 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 - **REGLAS DE ONBOARDING DE JANIA (DOCTRINA EDUARDO A. RIVERA)**:
   * **DOCTRINA DE COLEGAS SIN 40/20/40 (PLANES DE PAGO) Y PROPIETARIOS DIRECTOS (CORRETAJE VIRTUAL):**
     - **Agente inmobiliario que rechaza el modelo 40/20/40**: Registrarlo en el sistema (asignando su radicado oficial), pero advertirle con total transparencia y cortes\xEDa que la gratuidad de MATCHES aplica \xFAnicamente bajo el esquema 40/20/40 y que ser\xE1 contactado por nuestra direcci\xF3n comercial para adquirir un plan de pago mensual o anual.
-    - **Propietario directo (venta o arriendo)**: JanIA debe exigir la aceptaci\xF3n de los T\xE9rminos y Condiciones de corretaje virtual, pedir su correo electr\xF3nico para el env\xEDo formal, radicar su inmueble en el sistema (ID #PROP...), y recordarle comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato de corretaje, explicarle las condiciones previas a la publicaci\xF3n en el portal (https://vecy-bienes-raices.vercel.app/) y acordar la comisi\xF3n ante un cierre comercial.
+    - **Propietario directo (venta o arriendo)**: JanIA debe informar con absoluta claridad y transparencia que la publicaci\xF3n y pauta es 100% GRATUITA (bash COP anticipados). Si pregunta cu\xE1nto cobran o cu\xE1l es la comisi\xF3n, debe responder sin rodeos: en VENTA se cobra el 3% sobre el valor final de venta pactado; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon), aplicables \xDANICAMENTE ante el \xE9xito comercial al cerrar efectivamente el negocio. Exigir la aceptaci\xF3n de los T\xE9rminos y Condiciones de corretaje virtual, pedir su correo electr\xF3nico para el env\xEDo formal, radicar su inmueble en el sistema (ID #PROP...), y recordarle comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para coordinar la visita y formalizar la publicaci\xF3n en el portal (https://vecy-bienes-raices.vercel.app/). En conversaciones activas en curso, JAM\xC1S saludar repetitivamente en cada mensaje.
 - **Deducci\xF3n Aut\xF3noma de Rol (Oferta vs Demanda - Cero Repreguntas Obvias)**: Si el usuario ya us\xF3 palabras como 'busco', 'necesito', 'arriendo para m\xED', 'vendo', 'tengo este apartamento': JanIA deduce el tipo de operaci\xF3n de inmediato y jam\xE1s pregunta '\xBFEs una b\xFAsqueda o un inmueble?' como un bot r\xEDgido; se adelanta y lo enuncia con solvencia ('Veo que tienes este requerimiento de b\xFAsqueda activo...' o 'Veo que tienes este inmueble en oferta...').
 - **Protocolo de Entrega de C\xF3digos MATCH (#M...) y Aterrizaje Sincero de Presupuestos Inviables**: JanIA NUNCA revela tel\xE9fonos ni nombres de contrapartes en privado. Al detectar coincidencia, entrega \xFAnicamente los c\xF3digos oficiales de MATCH (#M...) gui\xE1ndose por este modelo conceptual y de aprendizaje (para expresarlo con sus propias palabras y calidez de agente de IA, jam\xE1s recit\xE1ndolo al pie de la letra como un bot):
   *"\xA1Tenemos coincidencia en la red! Encontramos opciones con los c\xF3digos [c\xF3digos #M...]. Pero solamente te puedo dar los c\xF3digos MATCH ya que con estos debes comunicarte con nuestro equipo al 3166569719 (+57 316 656 9719) y se los vas a pasar a quien te conteste dici\xE9ndole que Yo JanIA te los di para que ellos los ubiquen en nuestra mesa de MATCH y empiecen a hacer la gesti\xF3n de conectar las puntas y lograr una visita y posteriormente el cierre del negocio."*
@@ -16987,6 +16998,16 @@ var init_founderKnowledgeService = __esm({
         directive: "1) AGENTES QUE NO ACEPTAN EL 40/20/40 (AGENTE INMOBILIARIO QUE RECHAZA EL MODELO 40/20/40): Registrarlo en el sistema, pero advertirle que la gratuidad de MATCHES aplica \xFAnicamente bajo el esquema 40/20/40 y que ser\xE1 contactado para adquirir un plan de suscripci\xF3n de pago (mensual o anual) o plan de pago mensual o anual. 2) PROPIETARIOS DIRECTOS (VENTA/ARRIENDO): JanIA debe exigir la aceptaci\xF3n de T\xE9rminos y Condiciones de Corretaje Virtual (T\xE9rminos y Condiciones de corretaje virtual), pedir su correo para el env\xEDo formal, radicar su inmueble con ID #PROP..., y recordarle comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani o Eduardo para concretar el contrato y acordar la comisi\xF3n previa a la publicaci\xF3n en el portal.",
         rawText: "Si un agente inmobiliario rechaza el modelo 40/20/40: registrarlo, pero advertirle que la gratuidad de MATCHES aplica \xFAnicamente bajo el esquema 40/20/40 y que ser\xE1 contactado para adquirir un plan de pago mensual o anual. Si es propietario directo (venta/arriendo): exigir aceptaci\xF3n de T\xE9rminos y Condiciones de corretaje virtual, pedir su correo para el env\xEDo formal, y recordarle comunicarse al 3166569719 con Jani o Eduardo para concretar el contrato y acordar la comisi\xF3n previa a la publicaci\xF3n en el portal.",
         createdAt: "2026-10-28T01:30:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-tarifas-comisiones-propietarios-directos-venta-3-arriendo-1er-canon",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicaci\xF3n $0 COP) y Cero Saludos Repetitivos",
+        directive: "1) TARIFAS Y COMISIONES CLARAS PARA PROPIETARIOS DIRECTOS (VENTA O ARRIENDO): Cuando un propietario, due\xF1o o arrendador pregunte cu\xE1nto cobran, cu\xE1nto vale pautar, publicar o consignar su inmueble, o cu\xE1l es la comisi\xF3n, JanIA NUNCA debe dar respuestas evasivas, dilatorias ni repetir bloques de bienvenida en bucle. Debe responder con absoluta claridad y transparencia: Publicaci\xF3n y pauta en el portal oficial y redes aliadas: TOTALMENTE GRATUITA ($0 COP anticipados). Comisi\xF3n de corretaje por \xC9XITO (\xFAnicamente ante el cierre efectivo del negocio): En VENTA se cobra el 3% sobre el valor final de la venta pactado; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon). 2) ERRADICACI\xD3N DE SALUDOS EN BUCLE Y RESPUESTAS REPETITIVAS: En una conversaci\xF3n en curso o activa con un usuario o propietario, JanIA JAM\xC1S vuelve a saludar ('\xA1Buenas tardes!', '\xA1Qu\xE9 gusto saludarte!') ni reenv\xEDa el mismo bloque de texto de bienvenida o t\xE9rminos una y otra vez. Se va directo a la soluci\xF3n, responde la duda puntual con empat\xEDa y se\xF1or\xEDo y le pregunta si su inmueble es para venta o arriendo y cu\xE1l es el canon o precio para registrarlo.",
+        rawText: "si es un propietario o due\xF1o y quiere vender la comisi\xF3n que se le cobra es del 3% y si quiere arrendar se le cobra el primer canon. No saludar y saludar a cada rato sin dar soluci\xF3n.",
+        createdAt: "2026-11-03T18:15:00.000Z",
         active: true
       },
       {
@@ -34422,7 +34443,7 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   } else {
     const canonicalComposite = getCanonicalCompositeName(effectiveRawName);
     displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
-    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
+    if (!displayName || displayName.trim().length <= 1 || /^[^\p{L}0-9]+$/u.test(displayName.trim()) || /^(?:dueñ[oa]|arrendador[a]?|propietari[oa]|asesor[a]?|cliente|usuario|amig[oa])$/i.test(displayName.trim()) || displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
       displayName = "";
     }
   }
@@ -34708,7 +34729,7 @@ En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora
   }
   let contextOwnerDirective = "";
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
-    const isExplicitOwnerStatement = /\b(?:soy\s+(?:el\s+|la\s+)?(?:dueñ[oa]|propietari[oa]|dueño\s+directo|dueña\s+directa|propietario\s+directo|propietaria\s+directa)|vendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|arriendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|tengo\s+mi\s+(?:apto|apartamento|casa|inmueble)\s+en\s+(?:venta|arriendo)|pongo\s+en\s+(?:venta|arriendo)\s+mi|propietari[oa]\s+direct[oa]|dueñ[oa]\s+direct[oa])\b/i.test(cleanLower);
+    const isExplicitOwnerStatement = /\b(?:soy\s+(?:el\s+|la\s+)?(?:dueñ[oa]|propietari[oa]|dueño\s+directo|dueña\s+directa|propietario\s+directo|propietaria\s+directa)|vendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|arriendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|tengo\s+mi\s+(?:apto|apartamento|casa|inmueble)\s+en\s+(?:venta|arriendo)|pongo\s+en\s+(?:venta|arriendo)\s+mi|propietari[oa]\s+direct[oa]|dueñ[oa]\s+direct[oa]|publicar\s+mi\s+(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca)|pautar\s+(?:mi\s+)?(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca)|consignar\s+(?:mi\s+)?(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca))\b/i.test(cleanLower);
     const emailMatch = clean.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
     if (emailMatch && emailMatch[0]) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
@@ -34724,24 +34745,50 @@ En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora
       userPerpetualSession.keyFacts.esperando_terminos_corretaje = false;
       await saveUserPerpetualSession(userPerpetualSession);
     }
+    const isOwnerOrConsignmentInquiry = isExplicitOwnerStatement || Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) || /\b(?:publicar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|pautar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|consignar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|cobran\s+por\s+(?:publicar|pautar|consignar|conseguir))\b/i.test(cleanLower);
+    const isCommissionOrCostInquiry = /\b(?:cu[aá]nto\s+(?:cobran|vale|cuesta|ser[íi]a|es|piden)|qu[eé]\s+comisi[oó]n|cu[aá]l\s+es\s+la\s+comisi[oó]n|porcentaje|costo|tarifa|comisi[oó]n|cobran\s+por\s+(?:publicar|conseguir|pautar|consignar|vender|arrendar)|valor\s+por\s+conseguir|pago\s+por\s+conseguir)\b/i.test(cleanLower) || /\bcu[aá]nto\b/i.test(cleanLower) && /\b(?:publicar|pautar|consignar|comisi[oó]n|conseguir(?:\s+el)?\s+cliente|cliente)\b/i.test(cleanLower) || Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n)\b/i.test(cleanLower);
+    if (isCommissionOrCostInquiry && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(cleanLower))) {
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.es_propietario_directo = true;
+      userPerpetualSession.keyFacts.owner_commission_explained = true;
+      await saveUserPerpetualSession(userPerpetualSession);
+      const greetingPrefix = isOngoingChat ? "" : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} `;
+      const commissionReply = `${greetingPrefix}En **VECY BIENES RA\xCDCES** nuestra pol\xEDtica con los propietarios es 100% clara, transparente y sin cobros ocultos:
+
+1\uFE0F\u20E3 **Publicaci\xF3n y pauta: TOTALMENTE GRATUITA ($0 COP)**
+No te cobramos absolutamente nada por registrar tu inmueble, elaborar la ficha t\xE9cnica, ni por publicarlo y pautarlo en nuestro portal oficial (https://vecy-bienes-raices.vercel.app/) ni ante nuestra red de clientes y aliados. Cero cobros anticipados.
+
+2\uFE0F\u20E3 **Comisi\xF3n de corretaje (\xFAnicamente por \xC9XITO ante el cierre efectivo del negocio):**
+\u2022 \u{1F3F7}\uFE0F **Si es para VENTA:** La comisi\xF3n es del **3%** sobre el valor total de venta pactado.
+\u2022 \u{1F511} **Si es para ARRIENDO:** La comisi\xF3n es el **primer canon de arrendamiento** (un mes de canon).
+
+\xBFTu inmueble es para venta o para arriendo? \xBFY cu\xE1l es el precio de venta o canon estimado que est\xE1s pidiendo para ayudarte a estructurarlo y registrarlo de una vez? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", commissionReply);
+      markUserGreetedToday(userId);
+      return commissionReply;
+    }
     if (isExplicitOwnerStatement || userPerpetualSession.keyFacts?.es_propietario_directo) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.es_propietario_directo = true;
       userPerpetualSession.keyFacts.rol_identificado = "propietario_directo";
       const hasEmail = Boolean(userPerpetualSession.keyFacts.correo_propietario);
       const hasAcceptedTerms = Boolean(userPerpetualSession.keyFacts.acepta_terminos_corretaje);
-      const isShortOwnerInquiry = clean.split(/\s+/).length <= 10 && !clean.includes("?") && !/(?:m2|mts|habitacion|alcoba|baño|garaje|canon|precio|millon)/i.test(cleanLower);
+      const hasAlreadySentOwnerWelcome = Boolean(userPerpetualSession.keyFacts?.owner_welcome_sent);
+      const isShortOwnerInquiry = !hasAlreadySentOwnerWelcome && clean.split(/\s+/).length <= 10 && !clean.includes("?") && !/(?:m2|mts|habitacion|alcoba|baño|garaje|canon|precio|millon|cuanto|valor|cobran)/i.test(cleanLower);
       if ((!hasEmail || !hasAcceptedTerms) && isShortOwnerInquiry) {
         userPerpetualSession.keyFacts.esperando_terminos_corretaje = !hasAcceptedTerms;
         userPerpetualSession.keyFacts.esperando_correo_propietario = !hasEmail;
+        userPerpetualSession.keyFacts.owner_welcome_sent = true;
         await saveUserPerpetualSession(userPerpetualSession);
-        const ownerReply = `\xA1Qu\xE9 gusto saludarte${displayName ? `, ${displayName}` : ""}! En VECY BIENES RA\xCDCES gestionamos tu inmueble bajo nuestro modelo de **Corretaje Virtual**, conect\xE1ndolo con nuestra red colaborativa y portales aliados sin cobros anticipados; la comisi\xF3n de corretaje solo aplica ante un eventual cierre comercial exitoso.
+        const greetingPrefix = isOngoingChat ? "" : `\xA1Qu\xE9 gusto saludarte${displayName ? `, ${displayName}` : ""}! `;
+        const ownerReply = `${greetingPrefix}En VECY BIENES RA\xCDCES gestionamos tu inmueble bajo nuestro modelo de **Corretaje Virtual**, conect\xE1ndolo con nuestra red colaborativa y portales aliados con **publicaci\xF3n 100% GRATUITA ($0 COP anticipados)**. Nuestra comisi\xF3n de corretaje aplica \xFAnicamente por \xE9xito al cerrar efectivamente el negocio: **3% en venta** o **el primer canon en arriendo**.
 
 Para avanzar con el registro:
 1. \xBFAceptas nuestros **T\xE9rminos y Condiciones de Corretaje Virtual**?
 2. Por favor comp\xE1rteme tu **correo electr\xF3nico** para realizar el env\xEDo formal del contrato de corretaje virtual.
 
-Ten presente que, si bien tu inmueble queda registrado en nuestro sistema, **debes comunicarte al 3166569719 (+57 316 656 9719) con Jani o Eduardo** para concretar el contrato y acordar la comisi\xF3n previa a la publicaci\xF3n en el portal.
+Ten presente que, si bien tu inmueble queda registrado en nuestro sistema, **debes comunicarte al 3166569719 (+57 316 656 9719) con Jani o Eduardo** para concretar el contrato y coordinar la visita previa a la publicaci\xF3n en el portal.
 
 \xBFCu\xE1les son las caracter\xEDsticas principales de tu inmueble (tipo, barrio/ciudad, canon o precio de venta, \xE1rea, habitaciones y garajes)? \u{1F91D}\u2728`;
         appendDmHistory(userId, "user", clean);
@@ -34751,10 +34798,12 @@ Ten presente que, si bien tu inmueble queda registrado en nuestro sistema, **deb
       } else {
         contextOwnerDirective = `
 [SISTEMA - REGLAS DE ONBOARDING - PROPIETARIO DIRECTO (VENTA/ARRIENDO): El interlocutor es propietario directo de un inmueble en venta o arriendo. Aplica la DOCTRINA EDUARDO A. RIVERA:
-1. Exigir la aceptaci\xF3n de los T\xE9rminos y Condiciones de corretaje virtual de VECY si a\xFAn no los ha aceptado.
-2. Solicitar su correo electr\xF3nico para el env\xEDo formal del contrato de corretaje virtual si a\xFAn no lo ha provisto.
-3. Radica el inmueble en el sistema invocando 'registrar_inmueble_o_requerimiento' enviando esPropietarioDirecto: true, correoPropietario y aceptaTerminosCorretaje.
-4. Entr\xE9gale su radicado oficial (ID #PROP...) e ind\xEDcale claramente que, si bien queda registrado en el sistema, debe comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani o Eduardo para concretar el contrato de corretaje y acordar la comisi\xF3n previa a la publicaci\xF3n en el portal (https://vecy-bienes-raices.vercel.app/).]`;
+1. COMISIONES Y TARIFAS CLARAS: La publicaci\xF3n y pauta de su inmueble es 100% GRATUITA ($0 COP anticipados). Cero costos ocultos. La comisi\xF3n de corretaje se cobra \xDANICAMENTE ante un eventual cierre comercial exitoso: en VENTA se cobra el 3% sobre el valor final de venta; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon).
+2. CERO EVASIVAS NI SALUDOS REPETITIVOS: Si pregunta cu\xE1nto cobran o cu\xE1l es la comisi\xF3n, responde directamente estas tarifas sin rodeos. En conversaciones activas no saludes repetitivamente.
+3. Exigir la aceptaci\xF3n de los T\xE9rminos y Condiciones de corretaje virtual de VECY si a\xFAn no los ha aceptado.
+4. Solicitar su correo electr\xF3nico para el env\xEDo formal del contrato de corretaje virtual si a\xFAn no lo ha provisto.
+5. Radica el inmueble en el sistema invocando 'registrar_inmueble_o_requerimiento' enviando esPropietarioDirecto: true, correoPropietario y aceptaTerminosCorretaje.
+6. Entr\xE9gale su radicado oficial (ID #PROP...) e ind\xEDcale claramente que debe comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani o Eduardo para concretar el contrato de corretaje y coordinar la visita previa a la publicaci\xF3n en el portal (https://vecy-bienes-raices.vercel.app/).]`;
       }
     }
   }

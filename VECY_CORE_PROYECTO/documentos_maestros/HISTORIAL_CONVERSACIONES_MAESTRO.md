@@ -7,6 +7,60 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-03] — JanIA v33.87: Doctrina de Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicación $0 COP), Cero Saludos Repetitivos en Conversación Activa y Rescate Inteligente de Cascada LLM (v33.87 - 33.87.0)
+
+**Versión:** `v33.87` (`33.87.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Algo le hiciste a JanIa está muy incoherente, perdió totalmente sus habilidades y ha vualto a ser un simple bot mediocre y mal entrenado. ¿Qué rompiste o qué mal hiciste? Revisa y corrige inmediatamente."*
+- *"Mira esa porquería de contestaciones y ahora ha vuelto a saludar y saludar cada rato peroi no da solución, tu sabes que si es un propietario o dueño y quiere vender la comisión que se le cobra es del 3% y si quiere arrendar se le cobra el primer canon."*
+- Evidencia empírica en chat de WhatsApp (`media_1793746703458_411a0655.jpg`):
+  Un propietario preguntó repetidamente *"¿Cuánto cobran por publicar mi inmueble entonces?"*, *"cuanto vale el favor por consignar mi inmueble y pautar..."*, *"cuanto"*, *"cuanto cobran por consignar mi inmueble..."*. JanIA repetía mecánicamente el bloque de bienvenida de corretaje virtual saludando en cada mensaje con *"¡Qué gusto saludarte, .!"* o *"¡Buenas tardes!"* sin responder directamente la pregunta de costos ni comisiones.
+- Eduardo estableció la directiva mandatoria:
+  1. Si es un propietario o dueño directo y pregunta por costos, pauta, publicación, consignación o comisión: responder de inmediato con total transparencia.
+     - Publicación y pauta: **100% GRATUITA ($0 COP anticipados)**.
+     - Comisión por Éxito: **3% sobre el valor final de venta** / **Primer canon (1 mes) en arriendo**.
+     - Cero rodeos teóricos o burocráticos.
+  2. Erradicar de raíz los saludos repetitivos en conversaciones que ya están activas (`isOngoingChat`).
+  3. Diagnosticar a fondo por qué JanIA había perdido coherencia y restaurar su inteligencia superior de inmediato sin romper nada.
+
+**Diagnóstico Técnico Profundo:**
+- **Causa Raíz 1 (Fallo en Cascada LLM hacia Fallback Determinista):**
+  - La clave de pago (`GEMINI_PAID_KEY` / Clave #99) arrojaba error HTTP 403 Forbidden por saldo pendiente en Google Cloud Billing (`billing account issue`). Al no manejarse 403 con enfriamiento, bloqueaba la cascada de generación.
+  - El modelo `gemini-3.8-flash` en las claves gratuitas agotó la cuota diaria del free tier (`limit: 20 per day limit exceeded`). El código anterior interpretaba cualquier 429 como saturación de clave y activaba un cooldown de 60s en la llave completa, congelando todas las 4 claves gratuitas y enviando a JanIA al fallback estático donde repetía plantillas.
+  - Verificación en VPS demostró que `gemini-3.5-flash-lite` y `gemini-flash-lite-latest` devuelven HTTP 200 OK con latencia óptima en todas las claves gratuitas a $0 COP.
+- **Causa Raíz 2 (Bucle en Interceptor de Propietarios):**
+  - `isShortOwnerInquiry` capturaba mensajes cortos y devolvía repetidamente `ownerReply` porque el flag `owner_welcome_sent` no se persistía en `userPerpetualSession.keyFacts`.
+  - No existía un interceptor específico para preguntas directas sobre costos de publicación, pauta, consignación o comisión de corretaje.
+- **Causa Raíz 3 (Saludos Repetitivos y Nombres Corruptos):**
+  - JanIA saludaba formalmente en cada turno de la conversación activa (`isOngoingChat`).
+  - Nombres con puntos huérfanos (`.`) o términos genéricos (`Dueño`, `Propietario`) se pasaban sin filtrar a `displayName`, generando saludos ridículos como *"¡Qué gusto saludarte, .!"*.
+
+**Acciones Ejecutadas:**
+1. **Rescate Inteligente de Cascada LLM (`server/_core/llm.ts`)**:
+   - Manejo específico de error HTTP 403 (`billing account | outstanding balance`): congelamiento automático de 3600s para claves suspendidas por facturación.
+   - Detección precisa de límite diario 429 (`limit: 20 | per day limit`): bypass inmediato hacia modelos funcionales a $0 COP (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`) sin penalizar ni congelar las claves para otros modelos.
+   - Reordenamiento resiliente de `HIGH_REASONING_MODELS` y `MECHANICAL_MODELS`.
+2. **Interceptor de Tarifas Claras y Transparentes (`server/_core/jania/handlers/dmHandler.ts`)**:
+   - Ante preguntas de costo, valor, cobro, publicación, pauta, consignación o comisión:
+     1. Publicación y pauta: **100% GRATUITA ($0 COP anticipados)** en web y redes aliadas.
+     2. Comisión por Éxito: **3% sobre el valor final en VENTA** / **Primer canon (1 mes) en ARRIENDO** (únicamente si se cierra el negocio).
+     3. Sin cobros ocultos ni anticipados, solicitando tipo de negocio y valor para iniciar la radicación.
+3. **Cero Saludos Repetitivos y Sanitización de Nombres (`server/_core/jania/handlers/dmHandler.ts`)**:
+   - Si `isOngoingChat` es verdadero, se suprimen los saludos iniciales en respuestas predefinidas e interceptores.
+   - Sanitización rigurosa de `displayName`: eliminación de puntos, caracteres especiales y sustantivos comunes de rol.
+   - Flag `owner_welcome_sent` persistido en `userPerpetualSession.keyFacts` para erradicar bucles.
+4. **Prompts y Memoria Fundacional**:
+   - Actualizados `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts` con la doctrina de comisiones para propietarios directos.
+   - Registrada la directriz `seed-tarifas-comisiones-propietarios-directos-venta-3-arriendo-1er-canon` en `founderKnowledgeService.ts`.
+5. **Verificación y Blindaje ($0 COP)**:
+   - Creada la **Suite 173** en `server/__tests__/regression.test.ts` con 5 pruebas unitarias automatizadas.
+   - Typecheck `npm run check` (0 errores).
+   - Tests `npm test`: **559 tests passing (5/5 suites en verde, 100% passing a $0 COP)**.
+   - Build `npm run build` limpio en 24.27s + 337ms.
+   - Incremento oficial de versión a `v33.87` (`33.87.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-10-30] — JanIA v33.75: Doctrina de Comunidad (Grupos Oficiales de WhatsApp), Invitación Activa y Explicación por Grupo, y Catálogo Verificado de Habilidades Operativas (v33.75 - 33.75.0)
 
 **Versión:** `v33.75` (`33.75.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

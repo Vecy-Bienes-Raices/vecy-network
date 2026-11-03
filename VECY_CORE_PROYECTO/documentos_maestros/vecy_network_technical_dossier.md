@@ -8718,6 +8718,36 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio en 24.54s + 274ms.
   - Versión: `v33.86` (`33.86.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.87 (2026-11-03) — Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicación $0 COP), Cero Saludos Repetitivos en Conversación Activa y Rescate Inteligente de Cascada LLM (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Bucle de Respuestas Genéricas a Propietarios Directos:* Ante consultas reiteradas de propietarios directos sobre costos de publicación, pauta, consignación o comisión de corretaje (*"¿Cuánto cobran por publicar mi inmueble entonces?"*, *"cuanto cobran por consignar..."*), JanIA repetía en bucle un texto de bienvenida de corretaje virtual sin responder de forma transparente los costos y porcentajes.
+  2. *Saludos Mecánicos Repetitivos y Nombres Corruptos:* JanIA saludaba formalmente con vocativos como *"¡Qué gusto saludarte, .!"* o *"¡Buenas tardes!"* en cada mensaje sucesivo dentro de una conversación ya iniciada.
+  3. *Colapso en Cascada LLM hacia Fallback Determinista:* La clave de pago (`GEMINI_PAID_KEY`) arrojaba error 403 Forbidden por saldo pendiente en Google Cloud Billing y no contaba con un tiempo de enfriamiento, bloqueando la cascada. Al mismo tiempo, el modelo `gemini-3.8-flash` en el free tier agotó su cuota diaria de 20 peticiones/día (429), lo que el código anterior interpretaba erróneamente como saturación de clave completa, congelando todas las llaves gratuitas y arrojando a JanIA al fallback estático donde repetía respuestas enlatadas.
+- **Solución Implementada**:
+  1. `server/_core/llm.ts`:
+     - Manejo de error 403 con enfriamiento automático de 3600s para claves suspendidas por problemas de facturación de Google Cloud.
+     - Detección precisa de límite diario 429 (`limit: 20 | per day limit`) para realizar bypass inmediato de modelo hacia opciones funcionales a $0 COP (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`) sin congelar las claves para los demás modelos.
+  2. `server/_core/jania/handlers/dmHandler.ts`:
+     - Incorporado interceptor de tarifas claras para propietarios:
+       * Publicación y pauta: **100% GRATUITA ($0 COP anticipados)**.
+       * Comisión por Éxito: **3% en VENTA / 1er Canon en ARRIENDO** (solo si se concreta el negocio).
+       * Cero rodeos, preguntando de inmediato tipo de negocio y precio estimado.
+     - Erradicación de saludos mecánicos cuando `isOngoingChat` es verdadero.
+     - Sanitización rigurosa de `displayName` eliminando puntos y términos genéricos.
+     - Persistencia del flag `owner_welcome_sent` en `userPerpetualSession.keyFacts` para evitar duplicaciones.
+  3. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+     - Incorporada la doctrina de comisiones para propietarios directos y erradicación de saludos redundantes.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-tarifas-comisiones-propietarios-directos-venta-3-arriendo-1er-canon`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 173 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **559 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build` limpio en 24.27s + 337ms.
+  - Versión: `v33.87` (`33.87.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

@@ -183,7 +183,39 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.86 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.87 — Noviembre 2026
+
+### Novedades v33.87 (Doctrina de Tarifas y Comisiones Claras para Propietarios Directos [Venta 3% / Arriendo 1er Canon / Publicación $0 COP], Cero Saludos Repetitivos en DMs y Rescate Inteligente de Cascada LLM — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Algo le hiciste a JanIa está muy incoherente, perdió totalmente sus habilidades y ha vualto a ser un simple bot mediocre y mal entrenado. ¿Qué rompiste o qué mal hiciste? Revisa y corrige inmediatamente."*
+     - *"Mira esa porquería de contestaciones y ahora ha vuelto a saludar y saludar cada rato peroi no da solución, tu sabes que si es un propietario o dueño y quiere vender la comisión que se le cobra es del 3% y si quiere arrendar se le cobra el primer canon."*
+     - Evidencia gráfica en chat de WhatsApp (`media_1793746703458_411a0655.jpg`): Un propietario preguntó repetidamente *"¿Cuánto cobran por publicar mi inmueble entonces?"*, *"cuanto vale el favor por consignar mi inmueble y pautar..."*, *"cuanto"*, *"cuanto cobran por consignar mi inmueble..."*. JanIA repetía mecánicamente el bloque de bienvenida de corretaje virtual saludando en cada mensaje con *"¡Qué gusto saludarte, .!"* o *"¡Buenas tardes!"* sin responder directamente la pregunta de costos ni comisiones.
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Fallo en Cascada LLM hacia Fallback Determinista):**
+       - La clave de pago (`GEMINI_PAID_KEY` / Clave #99) arrojaba error HTTP 403 Forbidden por saldo pendiente en Google Cloud Billing (`billing account issue`). Al no manejarse 403 con enfriamiento, bloqueaba la cascada.
+       - El modelo `gemini-3.8-flash` en las claves gratuitas agotó la cuota diaria del free tier (`limit: 20 per day limit exceeded`). El código anterior interpretaba cualquier 429 como saturación de clave y activaba un cooldown de 60s en la llave completa, congelando todas las 4 claves gratuitas y enviando a JanIA al fallback estático donde repetía plantillas.
+     - **Problema 2 (Bucle en Interceptor de Propietarios y Omisión de Tarifas):**
+       - `isShortOwnerInquiry` capturaba mensajes cortos y devolvía repetidamente `ownerReply` porque el flag `owner_welcome_sent` no se persistía en `userPerpetualSession.keyFacts`.
+       - No existía un interceptor específico para preguntas directas sobre costos de publicación, pauta, consignación o comisión de corretaje.
+     - **Problema 3 (Saludos Repetitivos y Nombres Corruptos):**
+       - JanIA saludaba formalmente en cada turno de la conversación activa (`isOngoingChat`).
+       - Nombres con puntos huérfanos (`.`) o términos genéricos (`Dueño`, `Propietario`) se pasaban sin filtrar a `displayName`, generando saludos ridículos como *"¡Qué gusto saludarte, .!"*.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Rescate Inteligente de Cascada LLM:**
+       - Manejo específico de error HTTP 403 (`billing account | outstanding balance`): congelamiento automático de 3600s para claves suspendidas por facturación.
+       - Detección precisa de límite diario 429 (`limit: 20 | per day limit`): bypass inmediato hacia modelos funcionales a $0 COP (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`) sin penalizar ni congelar las claves para otros modelos.
+     - **Interceptor de Tarifas Claras y Transparentes:**
+       - Ante preguntas de costo, valor, cobro, publicación, pauta, consignación o comisión:
+         1. Publicación y pauta: **100% GRATUITA ($0 COP anticipados)** en web y redes aliadas.
+         2. Comisión por Éxito: **3% sobre el valor final en VENTA** / **Primer canon (1 mes) en ARRIENDO** (únicamente si se cierra el negocio).
+         3. Sin cobros ocultos ni anticipados, solicitando tipo de negocio y valor para iniciar la radicación.
+     - **Cero Saludos Repetitivos:** Si `isOngoingChat` es verdadero, se suprimen los saludos iniciales en respuestas predefinidas e interceptores.
+     - **Sanitización Rigurosa de `displayName`:** Eliminación de puntos, caracteres especiales y sustantivos comunes de rol.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-tarifas-comisiones-propietarios-directos-venta-3-arriendo-1er-canon` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 173 `vitest` (5/5 passing, 559 tests) | Build `npm run build` limpio en 24.27s.
+
+## 🔖 VERSIÓN ANTERIOR: v33.86 — Noviembre 2026
 
 ### Novedades v33.86 (Silencio Absoluto y Escudo Cortafuegos Anti-Bucle en Canal de Virgin Mobile Colombia [+57 319 251 0001] — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

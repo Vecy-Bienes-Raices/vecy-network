@@ -1,9 +1,19 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.86.0 — 2026-11-02)
-- **JanIA Server:** `v33.86` (`33.86.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Silencio Absoluto y Escudo Cortafuegos Anti-Bucle en Canal de Virgin Mobile Colombia (+57 319 251 0001 — Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico del Bucle Infinito Bot vs Bot:** La cuenta de empresa verificada de Virgin Mobile Colombia (+57 319 251 0001) opera como un chatbot automatizado de telefonía/recargas/saldo. Al recibir notificaciones automáticas del operador en la línea del socket (+57 319 291 9978), JanIA procesaba el mensaje e intentaba responder, provocando que el bot de Virgin respondiera de vuelta en un bucle infinito que no paraba.
-  2. **Escudo de Descarte Inmediato:** Inyección de hard drop en la compuerta de entrada de Baileys (`messages.upsert`) y en `isBotOrMetaAi`, `isSilencedLegalCaseAccount` y `dmHandler`. Limpieza inmediata de búferes para `3192510001`, garantizando 0% respuestas, 0% typing, 0% audios y corte definitivo del bucle.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 172 `vitest` (5/5 passing, 554 tests) | Build `npm run build` limpio en 24.54s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.87.0 — 2026-11-03)
+- **JanIA Server:** `v33.87` (`33.87.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicación $0 COP), Cero Saludos Repetitivos y Rescate LLM (Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Crítico de Eduardo A. Rivera:**
+     - Propietarios y dueños directos preguntaban repetidamente por el costo de pautar, publicar o consignar su inmueble (*"¿Cuánto cobran por publicar mi inmueble entonces?"*, *"¿Cuánto sería el valor por conseguir el cliente?"*).
+     - JanIA quedaba atrapada repitiendo en bucle un mensaje genérico de términos de corretaje virtual sin responder la pregunta, saludando de nuevo en cada mensaje (*"¡Qué gusto saludarte, .!"* o *"¡Buenas tardes!"*) y mostrando comportamientos de bot acartonado.
+  2. **Causa Raíz Identificada:**
+     - Interceptor `isShortOwnerInquiry` capturaba mensajes cortos de consulta sin `?` o preguntas de comisiones repitiendo el bloque de bienvenida porque `owner_welcome_sent` no estaba persistido.
+     - `displayName` no sanitizaba puntos (`.`) o sustantivos genéricos (`Dueño`, `Arrendador`) presentes en perfiles de WhatsApp.
+     - Caída en cascada de Gemini: `gemini-3.8-flash` en free tier agotó la cuota de 20 peticiones/día (429) y congelaba todas las llaves; `GEMINI_PAID_KEY` (Key #99) arrojaba 403 Forbidden por saldo pendiente en Google Cloud sin enfriarse, precipitando a JanIA en el fallback determinista.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Tarifas Claras y Directas:** Inyección de respuesta inmediata ante cualquier consulta de costos o comisiones: **Publicación y pauta 100% GRATUITA ($0 COP)**; **Comisión por Éxito: 3% en VENTA / 1er Canon en ARRIENDO**; sin cobros anticipados.
+     - **Cero Saludos Repetitivos:** Erradicación total de saludos mecánicos en conversaciones activas (`isOngoingChat`).
+     - **Sanitización de Nombres:** Normalización estricta de `displayName` eliminando puntos y términos genéricos.
+     - **Rescate Inteligente de Cascada LLM:** Detección de cuota diaria 429 para conmutar inmediatamente a modelos funcionales (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`) a $0 COP sin congelar las llaves; enfriamiento automático de 3600s para claves con 403 (facturación pendiente de Google Cloud).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 173 `vitest` (5/5 passing, 559 tests) | Build `npm run build` limpio en 24.27s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

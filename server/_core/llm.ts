@@ -28,14 +28,14 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos de alto razonamiento cognitivo (Nivel ARGON — gemini-3.8-flash y gemini-flash-latest prioritarios en DMs y síntesis de herramientas)
+// Modelos de alto razonamiento cognitivo (Nivel ARGON — gemini-3.8-flash prioritario, con fallback instantáneo a gemini-3.5-flash-lite y gemini-flash-lite-latest operativos a $0 COP)
 export const HIGH_REASONING_MODELS = [
   "gemini-3.8-flash",
   "gemini-flash-latest",
-  "gemini-3.1-pro-preview",
-  "gemini-flash-lite-latest",
   "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
   "gemini-3.5-flash",
+  "gemini-3.1-pro-preview",
   "gemini-4-argon",
 ];
 
@@ -45,6 +45,7 @@ export const MECHANICAL_MODELS = [
   "gemini-flash-latest",
   "gemini-3.8-flash",
   "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
 ];
 
 // Modelos ordenados por prioridad de fallback (priorizando alto razonamiento)
@@ -264,8 +265,21 @@ async function invokeGemini(
             break; // Saltar de inmediato al pool gratuito
           }
 
+          // Error 403: Cuenta de facturación suspendida o impago en Google Cloud Billing -> Pausar por 1 hora para no bloquear la cascada
+          if (status === 403 || /billing account|outstanding balance|permission denied|issues with your billing/i.test(String(errorMsg || ""))) {
+            console.warn(`[JanIA-LLM] ⚠️ Clave (${tierTag}) con error 403 / facturación pendiente (${errorMsg}). Pausando por 1 hora.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 3600, `Billing/Forbidden (403): ${errorMsg}`);
+            break;
+          }
+
           // 429: Rate Limit (15 RPM) o Cuota saturada en este modelo/clave
           if (status === 429) {
+            // Si es saturación por cuota diaria del modelo (ej: limit: 20 requests per day en gemini-3.8-flash), saltar de inmediato al siguiente modelo sin congelar la clave completa para otros modelos funcionales
+            if (/per day limit|daily.*quota|limit:\s*20/i.test(String(errorMsg || ""))) {
+              console.warn(`[JanIA-LLM] ⚠️ Modelo ${currentModel} agotó su cuota diaria en free tier (${errorMsg}). Conmutando al siguiente modelo sin penalizar las demás llamadas.`);
+              modelUnavailable = true;
+              break;
+            }
             geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)");
             break; // Saltar a la siguiente clave del Failover
           }

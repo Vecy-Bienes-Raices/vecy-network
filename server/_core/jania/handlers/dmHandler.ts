@@ -1775,7 +1775,14 @@ export async function processPrivateDmConversationalMessage(
   } else {
     const canonicalComposite = getCanonicalCompositeName(effectiveRawName);
     displayName = canonicalComposite || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : compositeOrFirst || "");
-    if (displayName.toLowerCase() === "colega" || displayName.toLowerCase().includes("asesor +")) {
+    if (
+      !displayName ||
+      displayName.trim().length <= 1 ||
+      /^[^\p{L}0-9]+$/u.test(displayName.trim()) ||
+      /^(?:dueñ[oa]|arrendador[a]?|propietari[oa]|asesor[a]?|cliente|usuario|amig[oa])$/i.test(displayName.trim()) ||
+      displayName.toLowerCase() === "colega" ||
+      displayName.toLowerCase().includes("asesor +")
+    ) {
       displayName = "";
     }
   }
@@ -2091,7 +2098,7 @@ export async function processPrivateDmConversationalMessage(
   // 🏡 REGLAS DE ONBOARDING - PROPIETARIOS DIRECTOS (VENTA O ARRIENDO) (Doctrina Eduardo A. Rivera)
   let contextOwnerDirective = "";
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
-    const isExplicitOwnerStatement = /\b(?:soy\s+(?:el\s+|la\s+)?(?:dueñ[oa]|propietari[oa]|dueño\s+directo|dueña\s+directa|propietario\s+directo|propietaria\s+directa)|vendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|arriendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|tengo\s+mi\s+(?:apto|apartamento|casa|inmueble)\s+en\s+(?:venta|arriendo)|pongo\s+en\s+(?:venta|arriendo)\s+mi|propietari[oa]\s+direct[oa]|dueñ[oa]\s+direct[oa])\b/i.test(cleanLower);
+    const isExplicitOwnerStatement = /\b(?:soy\s+(?:el\s+|la\s+)?(?:dueñ[oa]|propietari[oa]|dueño\s+directo|dueña\s+directa|propietario\s+directo|propietaria\s+directa)|vendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|arriendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|tengo\s+mi\s+(?:apto|apartamento|casa|inmueble)\s+en\s+(?:venta|arriendo)|pongo\s+en\s+(?:venta|arriendo)\s+mi|propietari[oa]\s+direct[oa]|dueñ[oa]\s+direct[oa]|publicar\s+mi\s+(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca)|pautar\s+(?:mi\s+)?(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca)|consignar\s+(?:mi\s+)?(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca))\b/i.test(cleanLower);
 
     // Detección y extracción de correo electrónico
     const emailMatch = clean.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
@@ -2114,6 +2121,46 @@ export async function processPrivateDmConversationalMessage(
       await saveUserPerpetualSession(userPerpetualSession);
     }
 
+    const isOwnerOrConsignmentInquiry =
+      isExplicitOwnerStatement ||
+      Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) ||
+      /\b(?:publicar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|pautar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|consignar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|cobran\s+por\s+(?:publicar|pautar|consignar|conseguir))\b/i.test(cleanLower);
+
+    // 🏷️ CONSULTAS SOBRE COSTOS, VALORES, PAUTA Y COMISIÓN DE PROPIETARIOS DIRECTOS (Doctrina Eduardo A. Rivera):
+    // Si el dueño o interesado pregunta cuánto cobran, cuánto cuesta pautar, publicar o consignar su inmueble, o cuál es la comisión:
+    // JanIA responde de inmediato con las tarifas exactas:
+    // 1) Publicación y pauta: TOTALMENTE GRATIS ($0 COP). Cero cobros anticipados.
+    // 2) Comisión por éxito al cerrar el negocio: 3% en venta / Primer canon en arriendo.
+    const isCommissionOrCostInquiry =
+      /\b(?:cu[aá]nto\s+(?:cobran|vale|cuesta|ser[íi]a|es|piden)|qu[eé]\s+comisi[oó]n|cu[aá]l\s+es\s+la\s+comisi[oó]n|porcentaje|costo|tarifa|comisi[oó]n|cobran\s+por\s+(?:publicar|conseguir|pautar|consignar|vender|arrendar)|valor\s+por\s+conseguir|pago\s+por\s+conseguir)\b/i.test(cleanLower) ||
+      (/\bcu[aá]nto\b/i.test(cleanLower) && /\b(?:publicar|pautar|consignar|comisi[oó]n|conseguir(?:\s+el)?\s+cliente|cliente)\b/i.test(cleanLower)) ||
+      (Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n)\b/i.test(cleanLower));
+
+    if (isCommissionOrCostInquiry && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(cleanLower))) {
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.es_propietario_directo = true;
+      userPerpetualSession.keyFacts.owner_commission_explained = true;
+      await saveUserPerpetualSession(userPerpetualSession);
+
+      const greetingPrefix = isOngoingChat
+        ? ""
+        : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 `;
+
+      const commissionReply =
+        `${greetingPrefix}En **VECY BIENES RAÍCES** nuestra política con los propietarios es 100% clara, transparente y sin cobros ocultos:\n\n` +
+        `1️⃣ **Publicación y pauta: TOTALMENTE GRATUITA ($0 COP)**\n` +
+        `No te cobramos absolutamente nada por registrar tu inmueble, elaborar la ficha técnica, ni por publicarlo y pautarlo en nuestro portal oficial (https://vecy-bienes-raices.vercel.app/) ni ante nuestra red de clientes y aliados. Cero cobros anticipados.\n\n` +
+        `2️⃣ **Comisión de corretaje (únicamente por ÉXITO ante el cierre efectivo del negocio):**\n` +
+        `• 🏷️ **Si es para VENTA:** La comisión es del **3%** sobre el valor total de venta pactado.\n` +
+        `• 🔑 **Si es para ARRIENDO:** La comisión es el **primer canon de arrendamiento** (un mes de canon).\n\n` +
+        `¿Tu inmueble es para venta o para arriendo? ¿Y cuál es el precio de venta o canon estimado que estás pidiendo para ayudarte a estructurarlo y registrarlo de una vez? 🤝✨`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", commissionReply);
+      markUserGreetedToday(userId);
+      return commissionReply;
+    }
+
     if (isExplicitOwnerStatement || userPerpetualSession.keyFacts?.es_propietario_directo) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.es_propietario_directo = true;
@@ -2121,19 +2168,29 @@ export async function processPrivateDmConversationalMessage(
 
       const hasEmail = Boolean(userPerpetualSession.keyFacts.correo_propietario);
       const hasAcceptedTerms = Boolean(userPerpetualSession.keyFacts.acepta_terminos_corretaje);
-      const isShortOwnerInquiry = clean.split(/\s+/).length <= 10 && !clean.includes("?") && !/(?:m2|mts|habitacion|alcoba|baño|garaje|canon|precio|millon)/i.test(cleanLower);
+      const hasAlreadySentOwnerWelcome = Boolean(userPerpetualSession.keyFacts?.owner_welcome_sent);
+      const isShortOwnerInquiry =
+        !hasAlreadySentOwnerWelcome &&
+        clean.split(/\s+/).length <= 10 &&
+        !clean.includes("?") &&
+        !/(?:m2|mts|habitacion|alcoba|baño|garaje|canon|precio|millon|cuanto|valor|cobran)/i.test(cleanLower);
 
       if ((!hasEmail || !hasAcceptedTerms) && isShortOwnerInquiry) {
         userPerpetualSession.keyFacts.esperando_terminos_corretaje = !hasAcceptedTerms;
         userPerpetualSession.keyFacts.esperando_correo_propietario = !hasEmail;
+        userPerpetualSession.keyFacts.owner_welcome_sent = true;
         await saveUserPerpetualSession(userPerpetualSession);
 
+        const greetingPrefix = isOngoingChat
+          ? ""
+          : `¡Qué gusto saludarte${displayName ? `, ${displayName}` : ""}! `;
+
         const ownerReply =
-          `¡Qué gusto saludarte${displayName ? `, ${displayName}` : ""}! En VECY BIENES RAÍCES gestionamos tu inmueble bajo nuestro modelo de **Corretaje Virtual**, conectándolo con nuestra red colaborativa y portales aliados sin cobros anticipados; la comisión de corretaje solo aplica ante un eventual cierre comercial exitoso.\n\n` +
+          `${greetingPrefix}En VECY BIENES RAÍCES gestionamos tu inmueble bajo nuestro modelo de **Corretaje Virtual**, conectándolo con nuestra red colaborativa y portales aliados con **publicación 100% GRATUITA ($0 COP anticipados)**. Nuestra comisión de corretaje aplica únicamente por éxito al cerrar efectivamente el negocio: **3% en venta** o **el primer canon en arriendo**.\n\n` +
           `Para avanzar con el registro:\n` +
           `1. ¿Aceptas nuestros **Términos y Condiciones de Corretaje Virtual**?\n` +
           `2. Por favor compárteme tu **correo electrónico** para realizar el envío formal del contrato de corretaje virtual.\n\n` +
-          `Ten presente que, si bien tu inmueble queda registrado en nuestro sistema, **debes comunicarte al 3166569719 (+57 316 656 9719) con Jani o Eduardo** para concretar el contrato y acordar la comisión previa a la publicación en el portal.\n\n` +
+          `Ten presente que, si bien tu inmueble queda registrado en nuestro sistema, **debes comunicarte al 3166569719 (+57 316 656 9719) con Jani o Eduardo** para concretar el contrato y coordinar la visita previa a la publicación en el portal.\n\n` +
           `¿Cuáles son las características principales de tu inmueble (tipo, barrio/ciudad, canon o precio de venta, área, habitaciones y garajes)? 🤝✨`;
 
         appendDmHistory(userId, "user", clean);
@@ -2142,10 +2199,12 @@ export async function processPrivateDmConversationalMessage(
         return ownerReply;
       } else {
         contextOwnerDirective = `\n[SISTEMA - REGLAS DE ONBOARDING - PROPIETARIO DIRECTO (VENTA/ARRIENDO): El interlocutor es propietario directo de un inmueble en venta o arriendo. Aplica la DOCTRINA EDUARDO A. RIVERA:
-1. Exigir la aceptación de los Términos y Condiciones de corretaje virtual de VECY si aún no los ha aceptado.
-2. Solicitar su correo electrónico para el envío formal del contrato de corretaje virtual si aún no lo ha provisto.
-3. Radica el inmueble en el sistema invocando 'registrar_inmueble_o_requerimiento' enviando esPropietarioDirecto: true, correoPropietario y aceptaTerminosCorretaje.
-4. Entrégale su radicado oficial (ID #PROP...) e indícale claramente que, si bien queda registrado en el sistema, debe comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani o Eduardo para concretar el contrato de corretaje y acordar la comisión previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).]`;
+1. COMISIONES Y TARIFAS CLARAS: La publicación y pauta de su inmueble es 100% GRATUITA ($0 COP anticipados). Cero costos ocultos. La comisión de corretaje se cobra ÚNICAMENTE ante un eventual cierre comercial exitoso: en VENTA se cobra el 3% sobre el valor final de venta; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon).
+2. CERO EVASIVAS NI SALUDOS REPETITIVOS: Si pregunta cuánto cobran o cuál es la comisión, responde directamente estas tarifas sin rodeos. En conversaciones activas no saludes repetitivamente.
+3. Exigir la aceptación de los Términos y Condiciones de corretaje virtual de VECY si aún no los ha aceptado.
+4. Solicitar su correo electrónico para el envío formal del contrato de corretaje virtual si aún no lo ha provisto.
+5. Radica el inmueble en el sistema invocando 'registrar_inmueble_o_requerimiento' enviando esPropietarioDirecto: true, correoPropietario y aceptaTerminosCorretaje.
+6. Entrégale su radicado oficial (ID #PROP...) e indícale claramente que debe comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani o Eduardo para concretar el contrato de corretaje y coordinar la visita previa a la publicación en el portal (https://vecy-bienes-raices.vercel.app/).]`;
       }
     }
   }

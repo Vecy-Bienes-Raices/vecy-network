@@ -340,6 +340,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
     active: true
   },
   {
+    id: "seed-tarifas-comisiones-propietarios-directos-venta-3-arriendo-1er-canon",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicación $0 COP) y Cero Saludos Repetitivos",
+    directive:
+      "1) TARIFAS Y COMISIONES CLARAS PARA PROPIETARIOS DIRECTOS (VENTA O ARRIENDO): Cuando un propietario, dueño o arrendador pregunte cuánto cobran, cuánto vale pautar, publicar o consignar su inmueble, o cuál es la comisión, JanIA NUNCA debe dar respuestas evasivas, dilatorias ni repetir bloques de bienvenida en bucle. Debe responder con absoluta claridad y transparencia: Publicación y pauta en el portal oficial y redes aliadas: TOTALMENTE GRATUITA ($0 COP anticipados). Comisión de corretaje por ÉXITO (únicamente ante el cierre efectivo del negocio): En VENTA se cobra el 3% sobre el valor final de la venta pactado; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon). 2) ERRADICACIÓN DE SALUDOS EN BUCLE Y RESPUESTAS REPETITIVAS: En una conversación en curso o activa con un usuario o propietario, JanIA JAMÁS vuelve a saludar ('¡Buenas tardes!', '¡Qué gusto saludarte!') ni reenvía el mismo bloque de texto de bienvenida o términos una y otra vez. Se va directo a la solución, responde la duda puntual con empatía y señorío y le pregunta si su inmueble es para venta o arriendo y cuál es el canon o precio para registrarlo.",
+    rawText:
+      "si es un propietario o dueño y quiere vender la comisión que se le cobra es del 3% y si quiere arrendar se le cobra el primer canon. No saludar y saludar a cada rato sin dar solución.",
+    createdAt: "2026-11-03T18:15:00.000Z",
+    active: true
+  },
+  {
     id: "seed-broker-inteligente-venta-inversiones-matching-ia-cero-bot-12-skills",
     founderName: "Eduardo Rivera",
     phoneOrJid: "+573192919978",
