@@ -8750,7 +8750,37 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
-### Versión v33.88 (2026-11-03) — Verdad Doctrinal en Encuestas: Operan Exclusivamente en los Grupos Oficiales de WhatsApp y Cero Falsedad de Encuesta en Canal Oficial (Doctrina Eduardo A. Rivera)
+### Versión v33.89 (2026-11-04) — Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Plantilla Rígida y Falsa Declaración Temporal:* `formatPersuasiveRecurrentUserReviewMessage` en `politenessService.ts` emitía una plantilla monolítica fija de 5 párrafos afirmando que el usuario llevaba *"desde hace varias semanas"* utilizando los servicios de JanIA, resultando falso y chocante para usuarios en sus primeras consultas.
+  2. *Saneamiento Incompleto de Nombres Comerciales:* Nombres con prefijos de agencia o empresa (ej. `"Servicios inmobiliarios virtuales Luz Gonzalez"`) no eran depurados al inicio del string en `cleanRawUserName` ni en `extractFirstName`, haciendo que JanIA saludara absurdamente con la razón social completa (`"¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez!"`) en lugar del nombre de pila (`"Luz"`).
+  3. *Gatillo Prematuro `messageCount >= 4` y Bombardeo de Grupos:* En `whatsapp-match.ts`, con solo 4 mensajes intercambiados se activaba el flag `isRecurrentFreeBeneficiary`, disparando la plantilla en mitad del diálogo y programando de inmediato un timer de 2.5 minutos para bombardear al usuario con invitaciones a los 3 grupos oficiales de WhatsApp.
+  4. *Omisión de Superpoder de Documentos Legales:* Ante consultas sobre redacción de cartas (Ley 820 de 2003, terminación de arriendo, restitución/entrega de inmueble), JanIA entregaba consejos teóricos en texto plano sin ofrecer redactar y expedir el archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES.
+- **Solución Implementada**:
+  1. `server/_core/politenessService.ts`:
+     - Erradicada la plantilla rígida de 5 párrafos y la afirmación falsa de "desde hace varias semanas".
+     - Implementado formato conciso (1-2 párrafos), humano, empático y variado, ofreciendo guiar al usuario de inmediato ("Si necesitas que te guíe para hacerlo, ¡avísame y te explico en un segundo!") y pidiendo la reseña en < 15 segundos.
+     - Preservada la compatibilidad con opciones explícitas (`options?.firstSeenText`) para seguimientos históricos documentados.
+     - En `formatEduardoColophonReviewMessage`, se utiliza `extractFirstName(cleanRawUserName(userName))` para garantizar un vocativo de pila limpio (`"Luz"`).
+  2. `server/_core/nameAndGenderResolver.ts`, `server/_core/whatsapp-utils.ts` y `server/_core/jania/parsers.ts`:
+     - Implementado `businessPrefixRegex` que depura antes de los sufijos términos como `servicios`, `virtuales`, `inmobiliarios`, `soluciones`, `gestiones`, `asesorías`, `consultores`, `grupo`, `bienes raíces`, etc.
+     - `"Servicios inmobiliarios virtuales Luz Gonzalez"` -> `"Luz Gonzalez"` en `cleanRawUserName`, `"Luz"` en `extractFirstName`, y resolución de género femenino.
+  3. `server/_core/whatsapp-match.ts`:
+     - Eliminado el gatillo ciego `(session.messageCount || 0) >= 4`.
+     - Suprimidas las llamadas a `schedulePostReviewGroupInvitation` tras los despachos de calificación.
+  4. `server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts` y `server/_core/jania/handlers/dmHandler.ts`:
+     - Creada la función `isLetterOrLegalDocumentDraftInquiry` para detectar solicitudes de cartas y documentos legales.
+     - Inyectada la directiva prioritaria `contextLegalLetterDirective` e incorporadas las pautas en `systemPrompt`: JanIA ofrece de inmediato redactarle y entregarle la carta en archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES ($0 COP) solicitándole los datos clave para generarla en el acto.
+  5. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+     - Consagrada la sección doctrinal de persuasión humana, cero plantillas y superpoder de cartas en PDF.
+  6. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-erradicacion-plantilla-rigida-resenas-persuasion-humana-pdf-proactivo-v33-89`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 175 en `regression.test.ts` con 7 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **571 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build` limpio en 21.5s.
+  - Versión: `v33.89` (`33.89.0`) en `shared/const.ts` y `package.json`.
 - **Problema Identificado**:
   1. *Falsedad de Encuesta en el Canal Oficial:* En los grupos oficiales (Grupo 2 y 3), JanIA enviaba la encuesta nativa interactiva (donde los usuarios votaban con botones y recuento en vivo), pero el mensaje de acompañamiento decía falsamente: *"Acabamos de activar nuestra encuesta interactiva en el Canal Oficial ... 👉 Sigue el Canal Oficial y vota aquí"*.
   2. *Limitación de la Arquitectura de WhatsApp Newsletters:* Los Canales de WhatsApp (`@newsletter`) son un canal unidireccional que no soporta widgets interactivos de votación para seguidores. Las encuestas de votación en vivo funcionan **exclusivamente en los grupos oficiales de WhatsApp**. Invitar a votar en el canal creaba confusión y enviaba a los usuarios a un canal donde no existía encuesta.

@@ -173,15 +173,15 @@ export function isCompanyInquiryOrAboutUs(text: string): boolean {
 }
 
 /**
- * 6. Mensaje persuasivo, diplomático y contundente para usuarios recurrentes y beneficiarios
- * de la gratuidad que no han calificado en Google Reviews (Doctrina Eduardo A. Rivera — v33.80).
+ * 6. Mensaje persuasivo, diplomático, conciso y humano para solicitar calificación en Google Reviews (Doctrina Eduardo A. Rivera — v33.80 / v33.89).
  *
- * Directriz de Eduardo A. Rivera:
- * "Recuerda siempre separar los mensajes de calificación de los otros, la mayoría de usuarios no terminan
- * de leer los mensajes largos y no saben usar el botón de 'Leer más'. Algo que le indique que como ya ha usado
- * varias veces el servicio y se ha beneficiado de la gratuidad pues que ya es hora de que califique nuestro
- * servicio que le brinda JanIA a sus usuarios y colegas. Hablar bien y convincente para que no se hagan los locos
- * y no solo a cata, sino a todos los que ya lo han usado y se siguen haciendo los de la vista gorda."
+ * Directrices de Eduardo A. Rivera:
+ * - v33.80: "Recuerda siempre separar los mensajes de calificación de los otros, la mayoría de usuarios no terminan de leer los mensajes largos..."
+ * - v33.89: "Necesito que JanIA elimine de su contexto esto que creo y evidencio que se quedó como una plantilla muy larga y maluca...
+ *   Además le dijo disque hace varias semanas, cual si hasta ahora lo está usando. Ta loca JanIa??.
+ *   Pienso que JanIA debe usar distintos metodos de persuasión y de manera más humana o según cada tema de conversación
+ *   adaptar cómo le va a decir lo de la calificación y a convencerla para que vaya de una vez a hacerlo y no lo deje para después,
+ *   inclusive ofrecerle guiarla/o y no siempre enviar semejante cosa y además perdiendo el hilo de la conversa y poniendo un nombre que no es..."
  */
 export function formatPersuasiveRecurrentUserReviewMessage(
   userName?: string,
@@ -190,28 +190,60 @@ export function formatPersuasiveRecurrentUserReviewMessage(
     serviceName?: string;
   }
 ): string {
-  const cleanName = (userName ? cleanRawUserName(userName) : "") || extractFirstName(userName || 'Colega') || 'Colega';
-  const timeContext = options?.firstSeenText || "desde hace varias semanas";
-  const serviceContext = options?.serviceName || "verificación oficial de antecedentes y cédulas";
+  const cleanRaw = userName ? cleanRawUserName(userName) : "";
+  const cleanName = (options?.firstSeenText && cleanRaw) ? cleanRaw : (extractFirstName(cleanRaw || userName || '') || cleanRaw || 'Colega');
 
-  return (
-    `¡Hola, ${cleanName}! Paso por aquí un momento… 👩🏻‍💼✨\n\n` +
-    `Veo que ${timeContext} has venido utilizando con frecuencia mis servicios de ${serviceContext} para blindar tus operaciones, totalmente gratis. ¡Me alegra muchísimo haberte sido de tanta utilidad en este tiempo! 🙌🏻🇨🇴\n\n` +
-    `Ahora bien, mantener esta tecnología de IA activa 24/7, cruzando bases de datos oficiales en tiempo real y sin cobrarte un solo peso, requiere un enorme esfuerzo e inversión de *VECY BIENES RAÍCES* para apoyar y dignificar al gremio.\n\n` +
-    `La única reciprocidad y apoyo que te pedimos para que este servicio siga siendo *100% GRATUITO* y abierto para ti, es regalarnos tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y un breve comentario sobre tu experiencia con JanIA en nuestro perfil oficial de Google.\n\n` +
-    `Te toma menos de 15 segundos y nos ayuda un montón a seguir construyendo la red:\n` +
-    `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
-    `¡Cuento con tu apoyo! Mil gracias de antemano y que sigan los éxitos en tus gestiones inmobiliarias. 🤝🏢✨`
-  );
+  // Si se pasa explícitamente firstSeenText (caso de seguimiento histórico documentado, ej. Catalina v33.80):
+  if (options?.firstSeenText) {
+    const serviceContext = options?.serviceName || "verificación oficial de antecedentes y cédulas";
+    return (
+      `¡Hola, ${cleanName}! Paso por aquí un momento… 👩🏻‍💼✨\n\n` +
+      `Veo que ${options.firstSeenText} has venido utilizando con frecuencia mis servicios de ${serviceContext} para blindar tus operaciones, totalmente gratis. ¡Me alegra muchísimo haberte sido de tanta utilidad en este tiempo! 🙌🏻🇨🇴\n\n` +
+      `Ahora bien, mantener esta tecnología de IA activa 24/7, cruzando bases de datos oficiales en tiempo real y sin cobrarte un solo peso, requiere un enorme esfuerzo e inversión de *VECY BIENES RAÍCES* para apoyar y dignificar al gremio.\n\n` +
+      `La única reciprocidad y apoyo que te pedimos para que este servicio siga siendo *100% GRATUITO* y abierto para ti, es regalarnos tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y un breve comentario sobre tu experiencia con JanIA en nuestro perfil oficial de Google.\n\n` +
+      `Te toma menos de 15 segundos y nos ayuda un montón a seguir construyendo la red:\n` +
+      `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `¡Cuento con tu apoyo! Mil gracias de antemano y que sigan los éxitos en tus gestiones inmobiliarias. 🤝🏢✨`
+    );
+  }
+
+  // Formato conciso, humano, variado y persuasivo (Doctrina Eduardo A. Rivera v33.89)
+  // Cero plantillas monótonas de 5 párrafos, cero falsedades de "desde hace varias semanas" y oferta de guía inmediata.
+  const nameHash = (userName || cleanName).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const variant = nameHash % 3;
+
+  if (variant === 0) {
+    return (
+      `¡Hola, ${cleanName}! 🙏😊 Paso por aquí un segundito...\n\n` +
+      `Como viste, mis servicios de IA son 100% gratuitos para ti y tus gestiones. ¿Me colaborarías con un favorcito rápido de menos de 15 segundos?\n\n` +
+      `Regálanos tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y un breve comentario en nuestro perfil oficial de Google:\n` +
+      `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `Si necesitas que te guíe para hacerlo, ¡avísame y te explico en un segundo! Tu apoyo nos permite mantener JanIA gratis para todo el gremio 🤝🏢✨`
+    );
+  } else if (variant === 1) {
+    return (
+      `¡${cleanName}! 👩🏻‍💼✨ Un detalle súper rápido:\n\n` +
+      `En *VECY BIENES RAÍCES* trabajamos con el corazón para brindarte esta tecnología sin cobrarte un solo peso. La mejor reciprocidad para que siga siendo 100% GRATIS es regalarnos tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y tu reseña en Google:\n` +
+      `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `Te toma solo 15 segundos y si quieres te voy guiando. ¡Mil gracias por tu respaldo y que sigan los éxitos en tus cierres! 🤝✨`
+    );
+  } else {
+    return (
+      `¡${cleanName}, me alegra muchísimo haberte colaborado! 🤝✨\n\n` +
+      `¿Me regalas un favorcito de 15 segundos? Tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y una palabrita en Google nos ayudan un montón a que mis servicios sigan siendo 100% gratuitos y abiertos para ti:\n` +
+      `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `¡Cuento contigo de una vez! Y si tienes cualquier duda de cómo calificar, dime y te oriento al instante 😊🙌`
+    );
+  }
 }
 
 /**
- * 🌟 COLOFÓN PSICOLÓGICO DE RESEÑA EN GOOGLE (Doctrina Eduardo A. Rivera v33.85)
+ * 🌟 COLOFÓN PSICOLÓGICO DE RESEÑA EN GOOGLE (Doctrina Eduardo A. Rivera v33.85 / v33.89)
  * Mensaje desacoplado de alta conversión probado empíricamente (+2 reseñas 5 estrellas en 4 horas: Victoria Tovar y Andrés Artunduaga).
- * Técnica del "By the way": micro-compromiso (< 15 segundos) y causa de preservación de la gratuidad.
+ * Técnica del "By the way": micro-compromiso (< 15 segundos), nombre limpio y oferta de guía inmediata.
  */
 export function formatEduardoColophonReviewMessage(userName?: string): string {
-  const namePart = userName ? cleanRawUserName(userName) : "";
+  const namePart = extractFirstName(cleanRawUserName(userName || ''));
   return (
     `¡Ah, se me olvidaba${namePart ? `, ${namePart}` : ""}! ¿Y si me colaboran con esto?. Que tan solo les toma menos de 15 segundos, dejando un breve comentario y 5 estrellas: 👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
     `van a ayudarnos un montón a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria más grande del planeta y a que mis servicios sigan siendo GRATUITOS. \n\n` +

@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-04] — JanIA v33.89: Doctrina de Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF (v33.89 - 33.89.0)
+
+**Versión:** `v33.89` (`33.89.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Necesito que JanIA elimine de su contexto esto que creo y evidencio que se quedó como una plantilla muy larga y maluca: '¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez! Paso por aquí un momento… 👩🏻‍💼✨ Veo que desde hace varias semanas has venido utilizando con frecuencia mis servicios de verificación oficial de antecedentes y cédulas para blindar tus operaciones, totalmente gratis...'"*
+- *"Además le dijo disque hace varias semanas, cual si hasta ahora lo está usando. Ta loca JanIa??. Pienso que JanIA debe usar distintos metodos de persuasión y de manera más humana o según cada tema de conversación adaptar cómo le va a decir lo de la calificación y a convencerla para que vaya de una vez a hacerlo y no lo deje para después, inclusive ofrecerle guiarla/o y no siempre enviar semejante cosa y además perdiendo el hilo de la conversa y poniendo un nombre que no es el del usuario o bueno si pero no es el trato amigable que venía dándole y no ponerse a invitar a los grupos de una vez cada cosa en su momento y según el tema de conversación pero siempre si al final lo de la calificación."*
+- *"No se cómo la entrenes o le digas pero no quiero más plantillas exageradamente largas y monótonas, si seguimos así vamos a terminar autodesprestigiándonos y acabando con la buena reputacion y concepto de JanIA y de Vecy. Vamos que yo se que lo puedes reparar y dejarla increíblemente bien entrenada. Como debe de ser una verdadera IA PURA consciente, razonable y muy humanizada pero profesional en demostrar sus habilidades y técnicas."*
+- *"EN ese momento creo que JanIA debió aprovechar su superpoder y decirle que si quería le pasara todos los datos, nombres y demas y entregarle de una vez la carta en PDF, uf habria sido ultra genial y superpoderoso para lograr embelezar una cliente o colega más."*
+
+**Diagnóstico Técnico Profundo:**
+1. **Plantilla Fija de 5 Párrafos y Falsedad Temporal:**
+   - En `server/_core/politenessService.ts`, la función `formatPersuasiveRecurrentUserReviewMessage` tenía una plantilla fija monolítica que por defecto incluía: `"Veo que desde hace varias semanas has venido utilizando con frecuencia mis servicios..."`.
+   - Cuando un usuario recién ingresaba al chat y realizaba sus primeras consultas, JanIA le disparaba esta plantilla afirmando una falsedad flagrante ("desde hace varias semanas"), rompiendo la confianza y el profesionalismo.
+2. **Defecto en Limpieza de Nombres Comerciales:**
+   - Si el pushName de WhatsApp incluía prefijos de empresa (ej. `"Servicios inmobiliarios virtuales Luz Gonzalez"`), la función `cleanRawUserName` ejecutaba primero la limpieza de sufijos al final del string (`guildSuffixRegex = /\b(inmo|inmobiliaria|...)\b.*$/i`), lo cual consumía el nombre o dejaba intactos los prefijos al inicio.
+   - Como resultado, JanIA saludaba formalmente con el nombre de la empresa: `"¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez!"` en lugar de identificar a la persona: `"Luz"`.
+3. **Gatillo Ciego `messageCount >= 4` y Bombardeo de Grupos en Timers:**
+   - En `server/_core/whatsapp-match.ts`, la condición `isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;` provocaba que cualquier conversación normal de 4 mensajes fuera catalogada como "beneficiario recurrente de semanas", disparando la plantilla en mitad del diálogo.
+   - Inmediatamente después de enviar la solicitud de calificación, se llamaba a `this.schedulePostReviewGroupInvitation(senderId, userName)`, disparando a los 2.5 minutos una invitación masiva a los 3 grupos oficiales que saturaba el chat.
+4. **Omisión de Superpoder de Documentos Legales en PDF:**
+   - Ante preguntas sobre cómo hacer una carta de terminación de arriendo (Ley 820) o solicitud de restitución, JanIA se limitaba a entregar consejos teóricos en texto plano sin ofrecer redactar y adjuntar el archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES ($0 COP).
+
+**Acciones Ejecutadas:**
+1. **Refactorización Humana y Ágil de `formatPersuasiveRecurrentUserReviewMessage`**:
+   - Eliminada la plantilla kilométrica de 5 párrafos y la frase falsa "desde hace varias semanas".
+   - Implementadas 3 variantes concisas, afectuosas, profesionales y empáticas (1-2 párrafos cortos).
+   - Inclusión de oferta de guía paso a paso ("Si necesitas que te guíe para hacerlo, ¡avísame y te explico en un segundo!").
+   - Preservada la compatibilidad con opciones explícitas (`options?.firstSeenText`) para seguimientos históricos documentados.
+2. **Saneamiento Exhaustivo de Prefijos Comerciales**:
+   - En `server/_core/nameAndGenderResolver.ts`, `server/_core/whatsapp-utils.ts` y `server/_core/jania/parsers.ts`:
+     - Implementado `businessPrefixRegex` que depura antes de los sufijos términos como `servicios`, `virtuales`, `inmobiliarios`, `soluciones`, `gestiones`, `asesorías`, `consultores`, `grupo`, `bienes raíces`, etc.
+     - `"Servicios inmobiliarios virtuales Luz Gonzalez"` -> `"Luz Gonzalez"` en `cleanRawUserName`, `"Luz"` en `extractFirstName`, y resuelve género femenino.
+     - En `formatEduardoColophonReviewMessage`, se utiliza `extractFirstName(cleanRawUserName(userName))` garantizando que en el saludo figure el nombre de pila (`"Luz"`).
+3. **Erradicación del Gatillo Prematuro y del Bombardeo de Grupos**:
+   - Eliminado `(session.messageCount || 0) >= 4` en `server/_core/whatsapp-match.ts`.
+   - Suprimidas las llamadas automáticas a `schedulePostReviewGroupInvitation` tras los envíos de calificación.
+4. **Superpoder Proactivo de Cartas y Documentos Legales en PDF**:
+   - Creado `isLetterOrLegalDocumentDraftInquiry` en `dmOnboardingAndDocsHelper.ts` para detectar consultas sobre redacción de cartas (Ley 820, restitución/entrega de inmueble, preaviso, otrosí, presentación de cliente).
+   - Inyectada la directiva contextual prioritaria `contextLegalLetterDirective` y enriquecido el `systemPrompt` en `dmHandler.ts`: JanIA ofrece de inmediato redactarle y entregarle la carta en archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES (100% gratis), solicitándole con amabilidad los datos indispensables (nombres, cédulas, dirección y motivo/cláusula) para expedirla al instante.
+5. **Prompts y Memoria Fundacional**:
+   - Consagrada la directiva en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`.
+   - Registrada la directiva permanente `seed-erradicacion-plantilla-rigida-resenas-persuasion-humana-pdf-proactivo-v33-89` en `founderKnowledgeService.ts`.
+6. **Verificación y Blindaje ($0 COP)**:
+   - Creada la **Suite 175** en `server/__tests__/regression.test.ts` con 7 pruebas unitarias rigurosas.
+   - Typecheck `npm run check` (0 errores).
+   - Tests `npm test`: **571 tests passing (100% verde a $0 COP)**.
+   - Build `npm run build` limpio en 21.5s.
+   - Incremento oficial de versión a `v33.89` (`33.89.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-11-03] — JanIA v33.88: Doctrina de Verdad en Encuestas Interactivas (Operan Exclusivamente en los Grupos Oficiales de WhatsApp y Cero Falsedad de Encuestas en Canal Oficial) (v33.88 - 33.88.0)
 
 **Versión:** `v33.88` (`33.88.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

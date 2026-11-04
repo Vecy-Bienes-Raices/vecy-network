@@ -2213,6 +2213,26 @@ export async function processPrivateDmConversationalMessage(
   const isVehicularTaxQuery =
     /(?:impuesto\s+(?:de\s+)?veh[íi]cul|liquidar\s+(?:el\s+)?veh[íi]cul|sacar\s+(?:un\s+|el\s+)?impuesto\s+veh[íi]cul|placa\s+[a-z]{3}\s*\d{2,3}|impuesto\s+del?\s+(?:carro|moto|veh[íi]culo))/i.test(clean);
 
+  // 📄 DOCTRINA EDUARDO A. RIVERA (v33.89) — SUPERPODER PROACTIVO DE CARTAS Y DOCUMENTOS LEGALES EN PDF:
+  // Si el usuario consulta sobre redactar una carta, preaviso de terminación de contrato, restitución/entrega de inmueble o minuta:
+  // JanIA no se limita a consejos teóricos en texto plano. Ofrece de inmediato su superpoder de redactar y generar
+  // el documento oficial en PDF con código QR y guía de firma electrónica de VECY BIENES RAÍCES (100% gratis).
+  let contextLegalLetterDirective = "";
+  const { isLetterOrLegalDocumentDraftInquiry } = await import("./dmOnboardingAndDocsHelper");
+  if (isLetterOrLegalDocumentDraftInquiry(clean)) {
+    contextLegalLetterDirective = `\n[SISTEMA - SUPERPODER PROACTIVO DE CARTAS Y DOCUMENTOS LEGALES EN PDF (DOCTRINA EDUARDO A. RIVERA — v33.89):
+El usuario consulta sobre cómo redactar o tramitar una carta, preaviso o documento legal (carta de terminación de contrato Ley 820, solicitud de entrega/restitución de inmueble, carta de presentación de cliente, u otrosí).
+Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
+1. Explícale brevemente la clave jurídica (ej. preaviso con al menos 3 meses de antelación por correo certificado bajo la Ley 820/2003 para no prórroga, o causales del Art. 22).
+2. Ofrécele con total entusiasmo y calidez que tú misma se la redactas y entregas en archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES (100% GRATUITO, $0 COP).
+3. Pídele que te pase los datos indispensables:
+   - Nombre completo y cédula de quien envía (arrendador o arrendatario).
+   - Nombre completo y cédula de quien recibe.
+   - Dirección completa del inmueble y ciudad.
+   - Fecha de terminación o entrega (y causal si aplica).
+4. Si el usuario ya suministró estos datos en su mensaje, invoca DE INMEDIATO en este mismo turno la herramienta 'generar_documento_legal_pdf' para entregarle el archivo PDF oficial listo para firmar.]`;
+  }
+
   if (isVehicularTaxQuery) {
     const targetSalutation = displayName || realName || "";
     const namePart = targetSalutation ? `¡Hola ${targetSalutation}! 👋 ` : `¡Hola! 👋 `;
@@ -2490,7 +2510,9 @@ export async function processPrivateDmConversationalMessage(
       `d) Si el usuario pide elaborar una IMAGEN, FLYER para su inmueble, BANNER promocional, POST para redes sociales o INFOGRAFÍA inmobiliaria con su propio prompt: Invoca de inmediato 'generar_imagen_creativa_whatsapp' para diseñar y enviarle la pieza gráfica HD 1080x1080 directamente al chat.\n` +
       `e) Si el usuario pide la ubicación GPS, mapa del sector o tarjeta de contacto oficial de VECY: Invoca 'enviar_ubicacion_mapa_gps' o 'enviar_tarjeta_contacto_vecy'.\n` +
       `f) Si el usuario envía SOLO un número suelto sin contexto ("79458979", "1018456789"): Pregúntale con calidez y naturalidad humana en UN solo renglón si desea consultar antecedentes de esa cédula/NIT o a qué trámite se refiere.\n` +
-      `g) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n\n` +
+      `g) Apenas el usuario confirme en el siguiente turno ("sí", "dale", "por fa", "cédula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el número que ya está en el historial de la conversación.\n` +
+      `h) Si el usuario consulta sobre redactar o hacer una CARTA, PREAVISO, NOTIFICACIÓN O MINUTA (terminación de arriendo Ley 820, solicitud de restitución/entrega de inmueble, carta de presentación de cliente, u otrosí): ¡Aprovecha de inmediato tu superpoder proactivo! Ofrécele redactarle y entregarle de una vez el documento en archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES (100% GRATIS, $0 COP). Pídele con calidez los datos indispensables que hagan falta (nombres, cédulas, dirección del inmueble, fecha y motivo/cláusula) o, si ya los suministró, invoca en este mismo turno 'generar_documento_legal_pdf' para entregarle el PDF adjunto.\n` +
+      `i) PERSUASIÓN HUMANA Y CERO PLANTILLAS RÍGIDAS DE CALIFICACIÓN (DOCTRINA EDUARDO A. RIVERA — v33.89): PROHIBIDO TERMINANTEMENTE usar plantillas monótonas de 5 párrafos o afirmar falsamente que el usuario 'lleva semanas' usando el servicio. Adapta la invitación a calificar en Google (👉 https://g.page/r/CctNbwU6UpX5EBM/review) con empatía, calidez y brevedad (< 15 segundos) según el tema conversacional, ofreciendo guiarlo al instante si no sabe cómo hacerlo. Y jamás programes invitaciones masivas automáticas a grupos en timers ciegos después de pedir calificación.\n\n` +
       `===================================================\n` +
       `BUSCADOR Y MEDIACIÓN DE MATCHES (CÓDIGO #M...):\n` +
       `===================================================\n` +
@@ -2567,6 +2589,9 @@ export async function processPrivateDmConversationalMessage(
     }
     if (contextOwnerDirective) {
       userPromptContent += contextOwnerDirective;
+    }
+    if (contextLegalLetterDirective) {
+      userPromptContent += contextLegalLetterDirective;
     }
 
     const lastAssistantTurn = history.slice().reverse().find(t => t.role === "assistant");

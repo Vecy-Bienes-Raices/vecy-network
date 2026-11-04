@@ -135,13 +135,13 @@ export function detectLegalDocumentTypeFromText(text: string): LegalDocumentType
   const lower = (text || "").toLowerCase();
   if (!lower) return null;
 
-  if (/\b(?:carta|notificaci[oó]n|preaviso)\b[\s\S]{0,45}\b(?:terminaci[oó]n|no\s+pr[oó]rroga|desahucio|finalizar\s+arriendo)\b/i.test(lower)) {
+  if (/\b(?:carta|notificaci[oó]n|preaviso|comunicado)\b[\s\S]{0,55}\b(?:terminaci[oó]n|no\s+pr[oó]rroga|no\s+renovaci[oó]n|no\s+renuevo|finalizar\s+arriendo|desahucio)\b/i.test(lower)) {
     return "carta_terminacion_arriendo";
   }
-  if (/\b(?:carta|solicitud|acta)\b[\s\S]{0,45}\b(?:restituci[oó]n|entrega\s+de\s+inmueble|devoluci[oó]n\s+del?\s+inmueble)\b/i.test(lower)) {
+  if (/\b(?:carta|solicitud|acta|comunicado)\b[\s\S]{0,55}\b(?:restituci[oó]n|entrega\s+de\s+inmueble|entregar\s+el\s+inmueble|devoluci[oó]n\s+del?\s+inmueble|desocupaci[oó]n)\b/i.test(lower)) {
     return "carta_restitucion_inmueble";
   }
-  if (/\b(?:carta|formato|documento)\b[\s\S]{0,45}\b(?:presentaci[oó]n\s+de\s+cliente|registro\s+de\s+punta|protecci[oó]n\s+de\s+cliente)\b/i.test(lower)) {
+  if (/\b(?:carta|formato|documento|comunicado)\b[\s\S]{0,55}\b(?:presentaci[oó]n\s+de\s+cliente|presentar\s+(?:a\s+)?un?\s+cliente|registro\s+de\s+punta|protecci[oó]n\s+de\s+cliente)\b/i.test(lower)) {
     return "carta_presentacion_cliente";
   }
   if (/\b(?:pacto\s+de\s+retroventa|retroventa|art(?:[ií]culo|\.?)\s*1939)\b/i.test(lower)) {
@@ -166,6 +166,17 @@ export function detectLegalDocumentTypeFromText(text: string): LegalDocumentType
     return "minuta_general";
   }
   return null;
+}
+
+/**
+ * Detecta si el usuario está consultando o pidiendo redactar una carta o documento legal (Doctrina Eduardo A. Rivera v33.89).
+ */
+export function isLetterOrLegalDocumentDraftInquiry(text: string): boolean {
+  const lower = (text || "").toLowerCase();
+  return (
+    /(?:c[oó]mo\s+(?:hago|redacto|hacer|elaboro)|ay[uú]da(?:me)?\s+con\s+(?:una|la)|necesito\s+(?:hacer|redactar|elaborar|una|un)|hacer\s+una|redactar\s+una|elaborar\s+una|plantilla\s+de|formato\s+de|minuta\s+de)\s+(?:carta|notificaci[oó]n|minuta|comunicaci[oó]n|preaviso|documento|contrato)/i.test(lower) ||
+    /(?:carta|notificaci[oó]n|preaviso)\s+(?:para|de)\s+(?:terminar|entregar|desocupar|restituir|no\s+prorrogar|no\s+renovar|presentar)/i.test(lower)
+  );
 }
 
 export function isExplicitLegalPdfRequest(text: string): boolean {

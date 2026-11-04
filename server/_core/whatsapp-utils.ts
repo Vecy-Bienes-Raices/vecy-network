@@ -130,8 +130,20 @@ export function extractFirstName(fullName: string): string {
   // Limpiar handles que empiezan con @ seguidos de espacio (ej: "@arq.adrypynto Adriana Pinto")
   clean = clean.replace(/^@[\w\.-]+\s+/i, "");
 
-  // Limpiar sufijos gremiales y comerciales (inmo, realtor, broker, asesor, correo, etc.)
-  clean = clean.replace(/\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i, "").trim();
+  // Limpiar prefijos comerciales, corporativos o de agencia al inicio (Doctrina Eduardo A. Rivera v33.89)
+  // Ej: "Servicios inmobiliarios virtuales Luz Gonzalez" -> "Luz Gonzalez", "Inmobiliaria Carlos" -> "Carlos"
+  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
+  const withoutBusinessPrefix = clean.replace(businessPrefixRegex, "").trim();
+  if (withoutBusinessPrefix.length >= 2) {
+    clean = withoutBusinessPrefix;
+  }
+
+  // Limpiar sufijos gremiales y comerciales al final (inmo, realtor, broker, asesor, correo, etc.)
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
+  const withoutGuild = clean.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    clean = withoutGuild;
+  }
 
   // Si es un número telefónico o contiene indicativos numéricos sin letras, retornar vacío
   if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
@@ -156,7 +168,8 @@ export function extractFirstName(fullName: string): string {
     "lic", "lica", "licenciado", "licenciada",
     "econ", "economista", "cont", "cp", "contador", "contadora",
     "prof", "profesor", "profesora",
-    "asesor", "asesora", "agente", "broker", "realtor"
+    "asesor", "asesora", "agente", "broker", "realtor",
+    "servicios", "virtuales", "soluciones", "gestiones", "multiservicios"
   ]);
 
   // Filtrar títulos profesionales y conectores iniciales (ej. "Arq Adriana Pinto", "De la Rosa")

@@ -262,7 +262,15 @@ export function cleanRawUserName(name: string): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  // 4. Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora", "Alexandra Quintero Inmo", "Juan Pablo Tobo correo")
+  // 4. Limpiar prefijos comerciales, corporativos o de agencia al inicio (Doctrina Eduardo A. Rivera v33.89)
+  // Ej: "Servicios inmobiliarios virtuales Luz Gonzalez" -> "Luz Gonzalez", "Inmobiliaria Carlos Camacho" -> "Carlos Camacho", "Soluciones Inmobiliarias Andrea" -> "Andrea"
+  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
+  const withoutBusinessPrefix = cleaned.replace(businessPrefixRegex, "").trim();
+  if (withoutBusinessPrefix.length >= 2) {
+    cleaned = withoutBusinessPrefix;
+  }
+
+  // 4b. Limpiar sufijos gremiales aislados al final del nombre (ej: "Floralba Inmo", "Carlos Realtor", "Luz Asesora", "Alexandra Quintero Inmo", "Juan Pablo Tobo correo")
   const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
   const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
   if (withoutGuild.length >= 2) {
@@ -352,6 +360,7 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
       "consultor", "consultora", "abogado", "abogada", "arquitecto", "arquitecta", "director",
       "directora", "gerente", "perito", "valuador", "tasador", "colombia", "bogota", "bogotá",
       "medellin", "medellín", "cali", "ventas", "arriendos", "finca", "propiedades", "red", "vecy",
+      "servicios", "virtuales", "soluciones", "gestiones", "multiservicios",
       "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"
     ]);
 

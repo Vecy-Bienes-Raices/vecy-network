@@ -1560,23 +1560,14 @@ export class JaniaMatchBot {
                     if (!hasVerified) {
                       if (isGratitudeOrClosing) {
                         this.recentReviewPromptUsers.set(senderId, Date.now());
-                        const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
-                        const politeMsg = formatImmediatePoliteReviewMessage(userName);
+                        const isRecurrent = (session.freeServicesUsedCount || 0) >= 2;
+                        const { formatImmediatePoliteReviewMessage, formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
+                        const politeMsg = isRecurrent
+                          ? formatPersuasiveRecurrentUserReviewMessage(userName)
+                          : formatImmediatePoliteReviewMessage(userName);
                         await new Promise(r => setTimeout(r, 1500));
                         await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                         await this.logToDb(senderId, 'janIA', politeMsg);
-                        this.schedulePostReviewGroupInvitation(senderId, userName);
-                      } else {
-                        const isRecurrent = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;
-                        if (isRecurrent) {
-                          this.recentReviewPromptUsers.set(senderId, Date.now());
-                          const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
-                          const recurrentMsg = formatPersuasiveRecurrentUserReviewMessage(userName);
-                          await new Promise(r => setTimeout(r, 2200));
-                          await this.queuedSend(senderId, recurrentMsg, { allowDirectMessage: true, skipDelay: true });
-                          await this.logToDb(senderId, 'janIA', recurrentMsg);
-                          this.schedulePostReviewGroupInvitation(senderId, userName);
-                        }
                       }
                     }
                   } catch (vRevErr: any) {
@@ -1708,41 +1699,38 @@ export class JaniaMatchBot {
               const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
 
               if (!hasVerified) {
+                const isServiceDeliveryReply =
+                  replyText.includes("VERIFICACIÓN") ||
+                  replyText.includes("antecedentes") ||
+                  replyText.includes("C.C.") ||
+                  replyText.includes("cédula") ||
+                  replyText.includes("ADRES") ||
+                  replyText.includes("BDUA") ||
+                  replyText.includes("PREDIAL") ||
+                  replyText.includes("PAZ Y SALVO") ||
+                  replyText.includes("RUES") ||
+                  replyText.includes("MATCH") ||
+                  replyText.includes("40/20/40");
+
+                const isRecurrentFreeBeneficiary =
+                  (session.freeServicesUsedCount || 0) >= 2;
+
                 if (isGratitudeOrClosing) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
-                  const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
-                  const politeMsg = formatImmediatePoliteReviewMessage(userName);
+                  const { formatImmediatePoliteReviewMessage, formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
+                  const politeMsg = isRecurrentFreeBeneficiary
+                    ? formatPersuasiveRecurrentUserReviewMessage(userName)
+                    : formatImmediatePoliteReviewMessage(userName);
                   await new Promise(r => setTimeout(r, 1500));
                   await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                   await this.logToDb(senderId, 'janIA', politeMsg);
-                  this.schedulePostReviewGroupInvitation(senderId, userName);
-                } else {
-                  const isServiceDeliveryReply =
-                    replyText.includes("VERIFICACIÓN") ||
-                    replyText.includes("antecedentes") ||
-                    replyText.includes("C.C.") ||
-                    replyText.includes("cédula") ||
-                    replyText.includes("ADRES") ||
-                    replyText.includes("BDUA") ||
-                    replyText.includes("PREDIAL") ||
-                    replyText.includes("PAZ Y SALVO") ||
-                    replyText.includes("RUES") ||
-                    replyText.includes("MATCH") ||
-                    replyText.includes("40/20/40");
-
-                  const isRecurrentFreeBeneficiary =
-                    (session.freeServicesUsedCount || 0) >= 2 ||
-                    (session.messageCount || 0) >= 4;
-
-                  if (isServiceDeliveryReply && isRecurrentFreeBeneficiary) {
-                    this.recentReviewPromptUsers.set(senderId, Date.now());
-                    const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
-                    const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage(userName);
-                    await new Promise(r => setTimeout(r, 2200));
-                    await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
-                    await this.logToDb(senderId, 'janIA', recurrentReviewMsg);
-                    this.schedulePostReviewGroupInvitation(senderId, userName);
-                  }
+                } else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion) {
+                  this.recentReviewPromptUsers.set(senderId, Date.now());
+                  const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
+                  const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage(userName);
+                  await new Promise(r => setTimeout(r, 2200));
+                  await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
+                  await this.logToDb(senderId, 'janIA', recurrentReviewMsg);
                 }
               }
             } catch (revErr: any) {

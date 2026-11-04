@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.88";
+    VECY_VERSION = "v33.89";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10019,6 +10019,11 @@ function cleanRawUserName(name) {
   }
   cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
   cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
+  const withoutBusinessPrefix = cleaned.replace(businessPrefixRegex, "").trim();
+  if (withoutBusinessPrefix.length >= 2) {
+    cleaned = withoutBusinessPrefix;
+  }
   const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
   const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
   if (withoutGuild.length >= 2) {
@@ -10126,6 +10131,11 @@ function resolveNameAndGender(rawName, timeGreeting) {
       "propiedades",
       "red",
       "vecy",
+      "servicios",
+      "virtuales",
+      "soluciones",
+      "gestiones",
+      "multiservicios",
       "arq",
       "arqa",
       "ing",
@@ -10915,7 +10925,16 @@ function extractFirstName(fullName) {
     clean = tildeMatch[1].trim();
   }
   clean = clean.replace(/^@[\w\.-]+\s+/i, "");
-  clean = clean.replace(/\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i, "").trim();
+  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
+  const withoutBusinessPrefix = clean.replace(businessPrefixRegex, "").trim();
+  if (withoutBusinessPrefix.length >= 2) {
+    clean = withoutBusinessPrefix;
+  }
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
+  const withoutGuild = clean.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    clean = withoutGuild;
+  }
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
@@ -10972,7 +10991,12 @@ function extractFirstName(fullName) {
     "econ",
     "cont",
     "cp",
-    "prof"
+    "prof",
+    "servicios",
+    "virtuales",
+    "soluciones",
+    "gestiones",
+    "multiservicios"
   ]);
   while (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
     wordsList = wordsList.slice(1);
@@ -13896,9 +13920,12 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 5. **PROHIBICI\xD3N ABSOLUTA DE SALUDOS REPETIDOS O PRESENTACI\xD3N DE BOT**:
    - JAM\xC1S repitas "Soy JanIA, tu inteligencia artificial inmobiliaria en VECY Bienes Ra\xEDces" en cada turno.
    - En una conversaci\xF3n en curso (\xFAltimas 6 horas o turnos previos), est\xE1 TERMINANTEMENTE PROHIBIDO volver a saludar con "\xA1Hola!", "\xA1Hola, [Nombre]!" o "\xBFC\xF3mo est\xE1s?". Ve DIRECTO al grano a responder con empat\xEDa y fluidez natural.
-6. **CALIFICACI\xD3N Y FEEDBACK (MENSAJE INDEPENDIENTE Y DESACOPLADO)**:
+6. **CALIFICACI\xD3N Y FEEDBACK (MENSAJE INDEPENDIENTE Y DESACOPLADO \u2014 DOCTRINA EDUARDO A. RIVERA v33.80 / v33.89)**:
    - QUEDA TOTALMENTE PROHIBIDO incluir la solicitud de calificaci\xF3n o rese\xF1as de Google dentro de una respuesta t\xE9cnica o reporte. La respuesta jur\xEDdica, tributaria o de antecedentes debe ser autosuficiente y terminar de forma limpia sin a\xF1adidos comerciales.
    - La invitaci\xF3n a calificar en Google Reviews (https://g.page/r/CctNbwU6UpX5EBM/review) se emite como un segundo mensaje completamente independiente y oportuno (por ejemplo, cuando el usuario agradece o se despide amablemente).
+   - PERSUASI\xD3N HUMANA Y CERO PLANTILLAS R\xCDGIDAS (v33.89): PROHIBIDO TERMINANTEMENTE usar plantillas mon\xF3tonas de 5 p\xE1rrafos o afirmar falsamente que el usuario "lleva semanas" utilizando los servicios cuando apenas est\xE1 comenzando o lleva pocas consultas. Adapta la invitaci\xF3n de forma humana, afectuosa y breve (< 15 segundos) seg\xFAn el tema conversacional, y ofr\xE9cele guiarlo de inmediato si tiene dudas de c\xF3mo calificar.
+   - CERO INVITACIONES AUTOM\xC1TICAS A GRUPOS EN TIMERS CIEGOS (v33.89): Queda prohibido programar invitaciones masivas autom\xE1ticas a los grupos de WhatsApp despu\xE9s de enviar la solicitud de calificaci\xF3n. Cada espacio tiene su momento oportuno y natural seg\xFAn la conversaci\xF3n.
+   - SUPERPODER PROACTIVO DE CARTAS Y DOCUMENTOS LEGALES EN PDF (v33.89): Cuando el usuario consulte sobre c\xF3mo hacer o redactar una carta, preaviso de terminaci\xF3n de contrato Ley 820, solicitud de restituci\xF3n/entrega de inmueble o minuta, JanIA JAM\xC1S se limita a dar consejos te\xF3ricos en texto plano. Ofrece de inmediato su superpoder de redactarle y entregarle la carta en archivo PDF oficial membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica de VECY BIENES RA\xCDCES (100% GRATIS, $0 COP), pidi\xE9ndole con amabilidad los datos necesarios (nombres completos, c\xE9dulas, direcci\xF3n del inmueble, fecha y motivo/cl\xE1usula) para generarla de una vez.
 7. **CANALIZACI\xD3N HUMANA CON EL BR\xD3KER**:
    - Para peritajes presenciales, firma de contratos o gestiones directas con los fundadores, refiere con calidez a **Eduardo A. Rivera y Jani Alves** en la l\xEDnea oficial de atenci\xF3n br\xF3ker: **+57 316 656 9719** (https://wa.me/573166569719).
 8. **TRIBUTOS PREDIALES VS. IMPUESTO VEHICULAR**:
@@ -15445,7 +15472,16 @@ function extractFirstName2(fullName) {
     clean = tildeMatch[1].trim();
   }
   clean = clean.replace(/^@[\w\.-]+\s+/i, "");
-  clean = clean.replace(/\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i, "").trim();
+  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
+  const withoutBusinessPrefix = clean.replace(businessPrefixRegex, "").trim();
+  if (withoutBusinessPrefix.length >= 2) {
+    clean = withoutBusinessPrefix;
+  }
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
+  const withoutGuild = clean.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    clean = withoutGuild;
+  }
   if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
@@ -15490,7 +15526,12 @@ function extractFirstName2(fullName) {
     "asesora",
     "agente",
     "broker",
-    "realtor"
+    "realtor",
+    "servicios",
+    "virtuales",
+    "soluciones",
+    "gestiones",
+    "multiservicios"
   ]);
   let nameWords = words;
   while (nameWords.length > 1 && TITLE_PREFIXES.has(nameWords[0].toLowerCase())) {
@@ -17109,6 +17150,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Las encuestas interactivas de votaci\xF3n en vivo de VECY BIENES RA\xCDCES se realizan y operan EXCLUSIVAMENTE en los Grupos Oficiales de WhatsApp (Grupo 2 y Grupo 3), donde las herramientas nativas de selecci\xF3n de opciones y conteo de votos en tiempo real son soportadas por WhatsApp. En el Canal Oficial (@newsletter), WhatsApp no soporta widgets interactivos de votaci\xF3n para seguidores. Por lo tanto, JanIA tiene TERMINANTEMENTE PROHIBIDO afirmar falsamente que la encuesta interactiva est\xE1 en el Canal Oficial o invitar a votar en el canal. Todo post de acompa\xF1amiento en los grupos debe anunciar que la encuesta interactiva est\xE1 en los grupos oficiales e invitar a votar directamente arriba en el chat. Si se publica en el Canal Oficial, se informa con honestidad que la encuesta y el debate en vivo se encuentran abiertos en nuestros grupos oficiales de WhatsApp.",
         rawText: "Esto siempre ha estado mal ya que habla de que la encuesta se est\xE1 haciendo en el canal oficial, pero si vemos la hace o creo que solo la puede hacer en los grupos oficiales, m\xE1s no en el canal, por qu\xE9 pues no lo s\xE9 pero creo que solamente lo pudo hacer una vez hace ya mucho tiempo y tal vez ahora tu antigravity no lo sabes o no lo quieres o peor, no lo puedes hacer. entoncces si vas a hacer la encuesta solamente en los grupos, pues por favor que el post hable de que la encuesta est\xE1 en los grupos y no en el canal ya que eso de que la encuesta est\xE1 en el canal es falso. Que NO SE TE OLVIDE NUNCA.",
         createdAt: "2026-11-03T23:59:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-erradicacion-plantilla-rigida-resenas-persuasion-humana-pdf-proactivo-v33-89",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Erradicaci\xF3n de Plantillas R\xEDgidas de Rese\xF1as en Google, Persuasi\xF3n Humana Contextual, Saneamiento de Nombres y Superpoder Proactivo de Cartas en PDF",
+        directive: "JanIA tiene TERMINANTEMENTE PROHIBIDO enviar plantillas r\xEDgidas, mon\xF3tonas y kilom\xE9tricas de 5 p\xE1rrafos para pedir calificaciones en Google Reviews, o afirmar falsamente que el usuario 'lleva varias semanas' utilizando el servicio cuando apenas est\xE1 interactuando o lleva pocas consultas. La persuasi\xF3n debe ser humana, afectuosa, concisa (< 15 segundos) y adaptada org\xE1nicamente al tema de la conversaci\xF3n, ofreciendo guiar al usuario de inmediato si no sabe c\xF3mo hacerlo. Queda PROHIBIDO bombardear con invitaciones a grupos en timers ciegos despu\xE9s de pedir calificaci\xF3n. Los nombres de los usuarios deben ser escaneados y saneados con rigor para erradicar prefijos comerciales corporativos (ej. 'Servicios inmobiliarios virtuales Luz Gonzalez' -> 'Luz'). Asimismo, ante cualquier consulta sobre redacci\xF3n de cartas (terminaci\xF3n de arriendo Ley 820, entrega o restituci\xF3n de inmueble, presentaci\xF3n de clientes o minutas), JanIA JAM\xC1S se limita a dar consejos te\xF3ricos en texto plano: aprovecha de inmediato su superpoder proactivo para ofrecer redactarle y entregarle la carta en archivo PDF oficial membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica de VECY BIENES RA\xCDCES (100% gratis), solicit\xE1ndole con amabilidad los datos indispensables (nombres, c\xE9dulas, direcci\xF3n del inmueble, fecha y motivo/cl\xE1usula) para expedirla al instante.",
+        rawText: "Necesito que JanIA elimine de su contexto esto que creo y evidencio que se qued\xF3 como una plantilla muy larga y maluca... Adem\xE1s le dijo disque hace varias semanas, cual si hasta ahora lo est\xE1 usando. Ta loca JanIa??. Pienso que JanIA debe usar distintos metodos de persuasi\xF3n y de manera m\xE1s humana o seg\xFAn cada tema de conversaci\xF3n adaptar c\xF3mo le va a decir lo de la calificaci\xF3n y a convencerla para que vaya de una vez a hacerlo y no lo deje para despu\xE9s, inclusive ofrecerle guiarla/o y no siempre enviar semejante cosa y adem\xE1s perdiendo el hilo de la conversa y poniendo un nombre que no es el del usuario o bueno si pero no es el trato amigable que ven\xEDa d\xE1ndole y no ponerse a invitar a los grupos de una vez cada cosa en su momento y seg\xFAn el tema de conversaci\xF3n pero siempre si al final lo de la calificaci\xF3n. No se c\xF3mo la entrenes o le digas pero no quiero m\xE1s plantillas exageradamente largas y mon\xF3tonas... Como debe de ser una verdadera IA PURA consciente, razonable y muy humanizada pero profesional en demostrar sus habilidades y t\xE9cnicas. EN ese momento creo que JanIA debi\xF3 aprovechar su superpoder y decirle que si quer\xEDa le pasara todos los datos, nombres y demas y entregarle de una vez la carta en PDF, uf habria sido ultra genial y superpoderoso para lograr embelezar una cliente o colega m\xE1s.",
+        createdAt: "2026-11-04T00:45:00.000Z",
         active: true
       }
     ];
@@ -18798,6 +18849,7 @@ __export(dmOnboardingAndDocsHelper_exports, {
   generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
   isExplicitCreativeImageRequest: () => isExplicitCreativeImageRequest,
   isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
+  isLetterOrLegalDocumentDraftInquiry: () => isLetterOrLegalDocumentDraftInquiry,
   maybeGenerateLegalDocPdfForDm: () => maybeGenerateLegalDocPdfForDm,
   popLatestDmCreativeImage: () => popLatestDmCreativeImage,
   popLatestDmInteractivePoll: () => popLatestDmInteractivePoll,
@@ -18878,13 +18930,13 @@ function popLatestDmInteractivePoll(phone) {
 function detectLegalDocumentTypeFromText(text2) {
   const lower = (text2 || "").toLowerCase();
   if (!lower) return null;
-  if (/\b(?:carta|notificaci[oó]n|preaviso)\b[\s\S]{0,45}\b(?:terminaci[oó]n|no\s+pr[oó]rroga|desahucio|finalizar\s+arriendo)\b/i.test(lower)) {
+  if (/\b(?:carta|notificaci[oó]n|preaviso|comunicado)\b[\s\S]{0,55}\b(?:terminaci[oó]n|no\s+pr[oó]rroga|no\s+renovaci[oó]n|no\s+renuevo|finalizar\s+arriendo|desahucio)\b/i.test(lower)) {
     return "carta_terminacion_arriendo";
   }
-  if (/\b(?:carta|solicitud|acta)\b[\s\S]{0,45}\b(?:restituci[oó]n|entrega\s+de\s+inmueble|devoluci[oó]n\s+del?\s+inmueble)\b/i.test(lower)) {
+  if (/\b(?:carta|solicitud|acta|comunicado)\b[\s\S]{0,55}\b(?:restituci[oó]n|entrega\s+de\s+inmueble|entregar\s+el\s+inmueble|devoluci[oó]n\s+del?\s+inmueble|desocupaci[oó]n)\b/i.test(lower)) {
     return "carta_restitucion_inmueble";
   }
-  if (/\b(?:carta|formato|documento)\b[\s\S]{0,45}\b(?:presentaci[oó]n\s+de\s+cliente|registro\s+de\s+punta|protecci[oó]n\s+de\s+cliente)\b/i.test(lower)) {
+  if (/\b(?:carta|formato|documento|comunicado)\b[\s\S]{0,55}\b(?:presentaci[oó]n\s+de\s+cliente|presentar\s+(?:a\s+)?un?\s+cliente|registro\s+de\s+punta|protecci[oó]n\s+de\s+cliente)\b/i.test(lower)) {
     return "carta_presentacion_cliente";
   }
   if (/\b(?:pacto\s+de\s+retroventa|retroventa|art(?:[ií]culo|\.?)\s*1939)\b/i.test(lower)) {
@@ -18909,6 +18961,10 @@ function detectLegalDocumentTypeFromText(text2) {
     return "minuta_general";
   }
   return null;
+}
+function isLetterOrLegalDocumentDraftInquiry(text2) {
+  const lower = (text2 || "").toLowerCase();
+  return /(?:c[oó]mo\s+(?:hago|redacto|hacer|elaboro)|ay[uú]da(?:me)?\s+con\s+(?:una|la)|necesito\s+(?:hacer|redactar|elaborar|una|un)|hacer\s+una|redactar\s+una|elaborar\s+una|plantilla\s+de|formato\s+de|minuta\s+de)\s+(?:carta|notificaci[oó]n|minuta|comunicaci[oó]n|preaviso|documento|contrato)/i.test(lower) || /(?:carta|notificaci[oó]n|preaviso)\s+(?:para|de)\s+(?:terminar|entregar|desocupar|restituir|no\s+prorrogar|no\s+renovar|presentar)/i.test(lower);
 }
 function isExplicitLegalPdfRequest(text2) {
   const lower = (text2 || "").toLowerCase();
@@ -23068,12 +23124,13 @@ function isCompanyInquiryOrAboutUs(text2) {
   return /(?:qui[eé]nes?\s+(?:son|es|est[aá]n|son\s+ustedes)|qu[eé]\s+es\s+vecy|cu[eé]ntame\s+(?:de|sobre)\s+ustedes|qu[eé]\s+hacen|a\s+qu[eé]\s+se\s+dedican|qui[eé]n\s+fund[oó]|fundadores|eduardo\s+rivera|jani\s+alves|d[oó]nde\s+est[aá]n|c[oó]mo\s+naci[oó]|historia\s+de\s+vecy|redes\s+sociales|tienen\s+redes|cu[aá]les\s+son\s+sus\s+redes|redes\b|instagram|facebook|tiktok|canal\s+de\s+whatsapp|p[aá]gina\s+web)\b/i.test(clean);
 }
 function formatPersuasiveRecurrentUserReviewMessage(userName, options) {
-  const cleanName = (userName ? cleanRawUserName(userName) : "") || extractFirstName2(userName || "Colega") || "Colega";
-  const timeContext = options?.firstSeenText || "desde hace varias semanas";
-  const serviceContext = options?.serviceName || "verificaci\xF3n oficial de antecedentes y c\xE9dulas";
-  return `\xA1Hola, ${cleanName}! Paso por aqu\xED un momento\u2026 \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
+  const cleanRaw = userName ? cleanRawUserName(userName) : "";
+  const cleanName = options?.firstSeenText && cleanRaw ? cleanRaw : extractFirstName2(cleanRaw || userName || "") || cleanRaw || "Colega";
+  if (options?.firstSeenText) {
+    const serviceContext = options?.serviceName || "verificaci\xF3n oficial de antecedentes y c\xE9dulas";
+    return `\xA1Hola, ${cleanName}! Paso por aqu\xED un momento\u2026 \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
 
-Veo que ${timeContext} has venido utilizando con frecuencia mis servicios de ${serviceContext} para blindar tus operaciones, totalmente gratis. \xA1Me alegra much\xEDsimo haberte sido de tanta utilidad en este tiempo! \u{1F64C}\u{1F3FB}\u{1F1E8}\u{1F1F4}
+Veo que ${options.firstSeenText} has venido utilizando con frecuencia mis servicios de ${serviceContext} para blindar tus operaciones, totalmente gratis. \xA1Me alegra much\xEDsimo haberte sido de tanta utilidad en este tiempo! \u{1F64C}\u{1F3FB}\u{1F1E8}\u{1F1F4}
 
 Ahora bien, mantener esta tecnolog\xEDa de IA activa 24/7, cruzando bases de datos oficiales en tiempo real y sin cobrarte un solo peso, requiere un enorme esfuerzo e inversi\xF3n de *VECY BIENES RA\xCDCES* para apoyar y dignificar al gremio.
 
@@ -23083,9 +23140,36 @@ Te toma menos de 15 segundos y nos ayuda un mont\xF3n a seguir construyendo la r
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
 
 \xA1Cuento con tu apoyo! Mil gracias de antemano y que sigan los \xE9xitos en tus gestiones inmobiliarias. \u{1F91D}\u{1F3E2}\u2728`;
+  }
+  const nameHash = (userName || cleanName).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const variant = nameHash % 3;
+  if (variant === 0) {
+    return `\xA1Hola, ${cleanName}! \u{1F64F}\u{1F60A} Paso por aqu\xED un segundito...
+
+Como viste, mis servicios de IA son 100% gratuitos para ti y tus gestiones. \xBFMe colaborar\xEDas con un favorcito r\xE1pido de menos de 15 segundos?
+
+Reg\xE1lanos tu calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 y un breve comentario en nuestro perfil oficial de Google:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+Si necesitas que te gu\xEDe para hacerlo, \xA1av\xEDsame y te explico en un segundo! Tu apoyo nos permite mantener JanIA gratis para todo el gremio \u{1F91D}\u{1F3E2}\u2728`;
+  } else if (variant === 1) {
+    return `\xA1${cleanName}! \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728 Un detalle s\xFAper r\xE1pido:
+
+En *VECY BIENES RA\xCDCES* trabajamos con el coraz\xF3n para brindarte esta tecnolog\xEDa sin cobrarte un solo peso. La mejor reciprocidad para que siga siendo 100% GRATIS es regalarnos tu calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 y tu rese\xF1a en Google:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+Te toma solo 15 segundos y si quieres te voy guiando. \xA1Mil gracias por tu respaldo y que sigan los \xE9xitos en tus cierres! \u{1F91D}\u2728`;
+  } else {
+    return `\xA1${cleanName}, me alegra much\xEDsimo haberte colaborado! \u{1F91D}\u2728
+
+\xBFMe regalas un favorcito de 15 segundos? Tu calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 y una palabrita en Google nos ayudan un mont\xF3n a que mis servicios sigan siendo 100% gratuitos y abiertos para ti:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Cuento contigo de una vez! Y si tienes cualquier duda de c\xF3mo calificar, dime y te oriento al instante \u{1F60A}\u{1F64C}`;
+  }
 }
 function formatEduardoColophonReviewMessage(userName) {
-  const namePart = userName ? cleanRawUserName(userName) : "";
+  const namePart = extractFirstName2(cleanRawUserName(userName || ""));
   return `\xA1Ah, se me olvidaba${namePart ? `, ${namePart}` : ""}! \xBFY si me colaboran con esto?. Que tan solo les toma menos de 15 segundos, dejando un breve comentario y 5 estrellas: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
 van a ayudarnos un mont\xF3n a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria m\xE1s grande del planeta y a que mis servicios sigan siendo GRATUITOS. 
 
@@ -26102,23 +26186,12 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                         if (!hasVerified) {
                           if (isGratitudeOrClosing2) {
                             this.recentReviewPromptUsers.set(senderId, Date.now());
-                            const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-                            const politeMsg = formatImmediatePoliteReviewMessage2(userName);
+                            const isRecurrent = (session.freeServicesUsedCount || 0) >= 2;
+                            const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2, formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                            const politeMsg = isRecurrent ? formatPersuasiveRecurrentUserReviewMessage2(userName) : formatImmediatePoliteReviewMessage2(userName);
                             await new Promise((r) => setTimeout(r, 1500));
                             await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                             await this.logToDb(senderId, "janIA", politeMsg);
-                            this.schedulePostReviewGroupInvitation(senderId, userName);
-                          } else {
-                            const isRecurrent = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;
-                            if (isRecurrent) {
-                              this.recentReviewPromptUsers.set(senderId, Date.now());
-                              const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-                              const recurrentMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
-                              await new Promise((r) => setTimeout(r, 2200));
-                              await this.queuedSend(senderId, recurrentMsg, { allowDirectMessage: true, skipDelay: true });
-                              await this.logToDb(senderId, "janIA", recurrentMsg);
-                              this.schedulePostReviewGroupInvitation(senderId, userName);
-                            }
                           }
                         }
                       } catch (vRevErr) {
@@ -26210,26 +26283,22 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   const session = await getUserPerpetualSession2(senderId, userName);
                   const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
                   if (!hasVerified) {
+                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("MATCH") || replyText.includes("40/20/40");
+                    const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     if (isGratitudeOrClosing) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
-                      const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-                      const politeMsg = formatImmediatePoliteReviewMessage2(userName);
+                      const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2, formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                      const politeMsg = isRecurrentFreeBeneficiary ? formatPersuasiveRecurrentUserReviewMessage2(userName) : formatImmediatePoliteReviewMessage2(userName);
                       await new Promise((r) => setTimeout(r, 1500));
                       await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                       await this.logToDb(senderId, "janIA", politeMsg);
-                      this.schedulePostReviewGroupInvitation(senderId, userName);
-                    } else {
-                      const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("MATCH") || replyText.includes("40/20/40");
-                      const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2 || (session.messageCount || 0) >= 4;
-                      if (isServiceDeliveryReply && isRecurrentFreeBeneficiary) {
-                        this.recentReviewPromptUsers.set(senderId, Date.now());
-                        const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-                        const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
-                        await new Promise((r) => setTimeout(r, 2200));
-                        await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
-                        await this.logToDb(senderId, "janIA", recurrentReviewMsg);
-                        this.schedulePostReviewGroupInvitation(senderId, userName);
-                      }
+                    } else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion) {
+                      this.recentReviewPromptUsers.set(senderId, Date.now());
+                      const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                      const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
+                      await new Promise((r) => setTimeout(r, 2200));
+                      await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
+                      await this.logToDb(senderId, "janIA", recurrentReviewMsg);
                     }
                   }
                 } catch (revErr) {
@@ -34819,6 +34888,22 @@ Ten presente que, si bien tu inmueble queda registrado en nuestro sistema, **deb
     }
   }
   const isVehicularTaxQuery = /(?:impuesto\s+(?:de\s+)?veh[íi]cul|liquidar\s+(?:el\s+)?veh[íi]cul|sacar\s+(?:un\s+|el\s+)?impuesto\s+veh[íi]cul|placa\s+[a-z]{3}\s*\d{2,3}|impuesto\s+del?\s+(?:carro|moto|veh[íi]culo))/i.test(clean);
+  let contextLegalLetterDirective = "";
+  const { isLetterOrLegalDocumentDraftInquiry: isLetterOrLegalDocumentDraftInquiry2 } = await Promise.resolve().then(() => (init_dmOnboardingAndDocsHelper(), dmOnboardingAndDocsHelper_exports));
+  if (isLetterOrLegalDocumentDraftInquiry2(clean)) {
+    contextLegalLetterDirective = `
+[SISTEMA - SUPERPODER PROACTIVO DE CARTAS Y DOCUMENTOS LEGALES EN PDF (DOCTRINA EDUARDO A. RIVERA \u2014 v33.89):
+El usuario consulta sobre c\xF3mo redactar o tramitar una carta, preaviso o documento legal (carta de terminaci\xF3n de contrato Ley 820, solicitud de entrega/restituci\xF3n de inmueble, carta de presentaci\xF3n de cliente, u otros\xED).
+Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
+1. Expl\xEDcale brevemente la clave jur\xEDdica (ej. preaviso con al menos 3 meses de antelaci\xF3n por correo certificado bajo la Ley 820/2003 para no pr\xF3rroga, o causales del Art. 22).
+2. Ofr\xE9cele con total entusiasmo y calidez que t\xFA misma se la redactas y entregas en archivo PDF oficial membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica de VECY BIENES RA\xCDCES (100% GRATUITO, $0 COP).
+3. P\xEDdele que te pase los datos indispensables:
+   - Nombre completo y c\xE9dula de quien env\xEDa (arrendador o arrendatario).
+   - Nombre completo y c\xE9dula de quien recibe.
+   - Direcci\xF3n completa del inmueble y ciudad.
+   - Fecha de terminaci\xF3n o entrega (y causal si aplica).
+4. Si el usuario ya suministr\xF3 estos datos en su mensaje, invoca DE INMEDIATO en este mismo turno la herramienta 'generar_documento_legal_pdf' para entregarle el archivo PDF oficial listo para firmar.]`;
+  }
   if (isVehicularTaxQuery) {
     const targetSalutation = displayName || realName || "";
     const namePart = targetSalutation ? `\xA1Hola ${targetSalutation}! \u{1F44B} ` : `\xA1Hola! \u{1F44B} `;
@@ -35018,6 +35103,8 @@ d) Si el usuario pide elaborar una IMAGEN, FLYER para su inmueble, BANNER promoc
 e) Si el usuario pide la ubicaci\xF3n GPS, mapa del sector o tarjeta de contacto oficial de VECY: Invoca 'enviar_ubicacion_mapa_gps' o 'enviar_tarjeta_contacto_vecy'.
 f) Si el usuario env\xEDa SOLO un n\xFAmero suelto sin contexto ("79458979", "1018456789"): Preg\xFAntale con calidez y naturalidad humana en UN solo rengl\xF3n si desea consultar antecedentes de esa c\xE9dula/NIT o a qu\xE9 tr\xE1mite se refiere.
 g) Apenas el usuario confirme en el siguiente turno ("s\xED", "dale", "por fa", "c\xE9dula", "1", "adelante", "procede"): Ejecuta la herramienta de inmediato usando el n\xFAmero que ya est\xE1 en el historial de la conversaci\xF3n.
+h) Si el usuario consulta sobre redactar o hacer una CARTA, PREAVISO, NOTIFICACI\xD3N O MINUTA (terminaci\xF3n de arriendo Ley 820, solicitud de restituci\xF3n/entrega de inmueble, carta de presentaci\xF3n de cliente, u otros\xED): \xA1Aprovecha de inmediato tu superpoder proactivo! Ofr\xE9cele redactarle y entregarle de una vez el documento en archivo PDF oficial membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica de VECY BIENES RA\xCDCES (100% GRATIS, $0 COP). P\xEDdele con calidez los datos indispensables que hagan falta (nombres, c\xE9dulas, direcci\xF3n del inmueble, fecha y motivo/cl\xE1usula) o, si ya los suministr\xF3, invoca en este mismo turno 'generar_documento_legal_pdf' para entregarle el PDF adjunto.
+i) PERSUASI\xD3N HUMANA Y CERO PLANTILLAS R\xCDGIDAS DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA \u2014 v33.89): PROHIBIDO TERMINANTEMENTE usar plantillas mon\xF3tonas de 5 p\xE1rrafos o afirmar falsamente que el usuario 'lleva semanas' usando el servicio. Adapta la invitaci\xF3n a calificar en Google (\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review) con empat\xEDa, calidez y brevedad (< 15 segundos) seg\xFAn el tema conversacional, ofreciendo guiarlo al instante si no sabe c\xF3mo hacerlo. Y jam\xE1s programes invitaciones masivas autom\xE1ticas a grupos en timers ciegos despu\xE9s de pedir calificaci\xF3n.
 
 ===================================================
 BUSCADOR Y MEDIACI\xD3N DE MATCHES (C\xD3DIGO #M...):
@@ -35083,6 +35170,9 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
     }
     if (contextOwnerDirective) {
       userPromptContent += contextOwnerDirective;
+    }
+    if (contextLegalLetterDirective) {
+      userPromptContent += contextLegalLetterDirective;
     }
     const lastAssistantTurn = history.slice().reverse().find((t2) => t2.role === "assistant");
     const lastAssistantText = lastAssistantTurn?.content || "";

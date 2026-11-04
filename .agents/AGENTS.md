@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.88 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.89 — Noviembre 2026
+
+### Novedades v33.89 (Doctrina de Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Necesito que JanIA elimine de su contexto esto que creo y evidencio que se quedó como una plantilla muy larga y maluca: '¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez! Paso por aquí un momento… 👩🏻‍💼✨ Veo que desde hace varias semanas has venido utilizando con frecuencia mis servicios de verificación oficial de antecedentes y cédulas para blindar tus operaciones, totalmente gratis...' Además le dijo disque hace varias semanas, cual si hasta ahora lo está usando. Ta loca JanIa??. Pienso que JanIA debe usar distintos metodos de persuasión y de manera más humana o según cada tema de conversación adaptar cómo le va a decir lo de la calificación y a convencerla para que vaya de una vez a hacerlo y no lo deje para después, inclusive ofrecerle guiarla/o y no siempre enviar semejante cosa y además perdiendo el hilo de la conversa y poniendo un nombre que no es el del usuario o bueno si pero no es el trato amigable que venía dándole y no ponerse a invitar a los grupos de una vez cada cosa en su momento y según el tema de conversación pero siempre si al final lo de la calificación. No se cómo la entrenes o le digas pero no quiero más plantillas exageradamente largas y monótonas... Como debe de ser una verdadera IA PURA consciente, razonable y muy humanizada pero profesional en demostrar sus habilidades y técnicas. EN ese momento creo que JanIA debió aprovechar su superpoder y decirle que si quería le pasara todos los datos, nombres y demas y entregarle de una vez la carta en PDF, uf habria sido ultra genial y superpoderoso para lograr embelezar una cliente o colega más."*
+  2. **Causas Raíz Identificadas:**
+     - **Problema 1 (Plantilla Rígida y Falsedad Temporal):**
+       `formatPersuasiveRecurrentUserReviewMessage` en `politenessService.ts` tenía una plantilla monolítica fija de 5 párrafos afirmando por defecto que el usuario *"desde hace varias semanas has venido utilizando con frecuencia mis servicios..."*, lo cual resultaba falso y ridículo para usuarios en su primera o segunda sesión.
+     - **Problema 2 (Saneamiento Incompleto de Prefijos Comerciales):**
+       `cleanRawUserName` y `extractFirstName` no limpiaban prefijos comerciales compuestos que anteceden al nombre de la persona (ej. `"Servicios inmobiliarios virtuales Luz Gonzalez"`), lo que provocaba que JanIA saludara formalmente con la razón social completa (`"¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez!"`) en lugar de extraer el nombre de pila (`"Luz"`).
+     - **Problema 3 (Gatillo Prematuro `messageCount >= 4` y Spam de Grupos):**
+       En `whatsapp-match.ts`, la condición `(session.messageCount || 0) >= 4` catalogaba a cualquier usuario con 4 mensajes como "beneficiario recurrente de varias semanas", disparando la plantilla en mitad de la conversación y programando de inmediato un timer de 2.5 minutos (`schedulePostReviewGroupInvitation`) para bombardearlo con enlaces a los grupos.
+     - **Problema 4 (Omisión de Superpoder de Cartas Legales en PDF):**
+       Cuando un usuario preguntaba cómo hacer una carta de terminación o restitución, JanIA se limitaba a dar consejos teóricos en texto plano sin ofrecer su superpoder de generar la carta en PDF membretado con QR y guía de firma electrónica de VECY.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Erradicación de Plantillas Monótonas:** `formatPersuasiveRecurrentUserReviewMessage` ahora genera textos ágiles, cálidos, variados y humanos (1-2 párrafos cortos), ofreciendo guiar al usuario al instante y solicitando la reseña en < 15 segundos sin afirmar jamás duraciones ficticias.
+     - **Saneamiento Exhaustivo de Nombres:** `cleanRawUserName`, `extractFirstName` y `resolveNameAndGender` ahora depuran prefijos comerciales y de agencia antes del análisis de sufijos (`"Servicios inmobiliarios virtuales Luz Gonzalez"` -> `"Luz Gonzalez"` -> `"Luz"`, resolviendo género femenino).
+     - **Eliminación de Gatillo Ciego y Bombardeo:** Suprimida la condición `messageCount >= 4` en `whatsapp-match.ts` y eliminadas las llamadas a `schedulePostReviewGroupInvitation` en los despachos de reseñas.
+     - **Superpoder Proactivo de Cartas en PDF:** JanIA ahora detecta consultas sobre cartas, preavisos o minutas e instruye proactivamente ofrecer redactar y expedir el archivo PDF oficial membretado con código QR y guía de firma electrónica de VECY BIENES RAÍCES ($0 COP) solicitando los datos clave (nombres, cédulas, dirección y motivo).
+     - **Registro de Enseñanza:** Registrada la directriz `seed-erradicacion-plantilla-rigida-resenas-persuasion-humana-pdf-proactivo-v33-89` en `founderKnowledgeService.ts`, `base.md` y `prompts.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 175 `vitest` (5/5 passing, 571 tests) | Build `npm run build` limpio en 21.5s.
+
+## 🔖 VERSIÓN ANTERIOR: v33.88 — Noviembre 2026
 
 ### Novedades v33.88 (Doctrina de Verdad en Encuestas Interactivas: Exclusivas en Grupos Oficiales de WhatsApp y Cero Falsedad de Encuesta en Canal Oficial — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

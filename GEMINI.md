@@ -1,16 +1,20 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.88.0 — 2026-11-03)
-- **JanIA Server:** `v33.88` (`33.88.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Verdad en Encuestas Interactivas (Exclusivas en Grupos Oficiales de WhatsApp y Cero Falsedad de Encuesta en el Canal Oficial — Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.89.0 — 2026-11-04)
+- **JanIA Server:** `v33.89` (`33.89.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF (Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Crítico de Eduardo A. Rivera:**
-     - En los grupos oficiales (Grupo 2 y 3), JanIA enviaba la encuesta interactiva nativa (con opciones y botones de votación en vivo) pero el mensaje de acompañamiento decía falsamente: *"Acabamos de activar nuestra encuesta interactiva en el Canal Oficial: «¿Qué tanto castiga el precio un garaje lineal?» ... 👉 Sigue el Canal Oficial y vota aquí"*.
-     - En los canales de WhatsApp (`@newsletter`), la arquitectura oficial de Meta no soporta widgets interactivos de votación para seguidores. La encuesta interactiva en vivo se realiza **exclusivamente en los grupos oficiales**.
-     - Mandato terminante de Eduardo: *"si vas a hacer la encuesta solamente en los grupos, pues por favor que el post hable de que la encuesta está en los grupos y no en el canal ya que eso de que la encuesta está en el canal es falso. Que NO SE TE OLVIDE NUNCA."*
+     - JanIA enviaba una plantilla robótica de 5 párrafos (`"¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez! Paso por aquí un momento… 👩🏻‍💼✨ Veo que desde hace varias semanas has venido utilizando con frecuencia mis servicios de verificación oficial de antecedentes y cédulas para blindar tus operaciones, totalmente gratis..."`).
+     - Falsedad evidente: Afirmaba que llevaba "varias semanas" usando el servicio cuando apenas estaba comenzando su interacción.
+     - Saludo deshumanizado y corporativo: Tomaba literalmente el pushName comercial (`"Servicios inmobiliarios virtuales Luz Gonzalez"`) en lugar de sanearlo y extraer el nombre de pila (`"Luz"`).
+     - Gatillo erróneo `messageCount >= 4` en `whatsapp-match.ts`: Con solo 4 mensajes intercambiados (en un diálogo de 1 minuto), el sistema catalogaba al usuario como "beneficiario recurrente de varias semanas" y le disparaba la plantilla mid-conversation interrumpiendo el hilo.
+     - Bombardeo de grupos post-reseña: Se programaba automáticamente una invitación masiva a los 3 grupos oficiales a los 2.5 minutos de pedir la reseña.
+     - Omisión de Superpoderes: Ante consultas sobre redactar cartas o preavisos de terminación/restitución, JanIA no aprovechaba para ofrecer redactarle y entregarle de una vez la carta en PDF membretado con código QR.
   2. **Solución y Blindaje Quirúrgico:**
-     - **Erradicación de la Falsedad:** El post en los grupos ahora declara con total honestidad y exactitud: **"📊 ENCUESTA Y DEBATE OFICIAL EN NUESTROS GRUPOS VECY"** y *"Acabamos de activar nuestra encuesta interactiva aquí en nuestros grupos oficiales de WhatsApp:"*, invitando a los colegas a votar en la encuesta nativa *"aquí arriba en el chat"*.
-     - **Canal Oficial como Medio Informativo:** El enlace al Canal Oficial se presenta honestamente como canal de novedades (*"👉 Sigue también nuestro Canal Oficial de novedades:"*), sin afirmar jamás que la votación interactiva se hace en el canal.
-     - **Desacoplamiento Operativo:** Los envíos a grupos oficiales no se cancelan ni abortan por limitaciones o caídas del canal newsletter.
-     - **Registro de Enseñanza:** Registrada la directriz `seed-encuestas-interactivas-exclusivas-grupos-oficiales-verdad-canal-v33-88` en `founderKnowledgeService.ts`, `base.md` y `prompts.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 174 `vitest` (5/5 passing, 564 tests) | Build `npm run build` limpio en 24.5s.
+     - **Erradicación de Plantillas Monótonas:** `formatPersuasiveRecurrentUserReviewMessage` ahora genera mensajes concisos (1-2 párrafos), cálidos, humanos y con variadas técnicas de persuasión, ofreciendo guiar al usuario paso a paso y solicitando la reseña en < 15 segundos sin afirmar jamás que "lleva varias semanas".
+     - **Saneamiento de Prefijos Comerciales:** `cleanRawUserName`, `extractFirstName` y `resolveNameAndGender` ahora limpian de forma exhaustiva prefijos de agencias o empresas (`"Servicios inmobiliarios virtuales Luz Gonzalez"` -> `"Luz Gonzalez"` -> `"Luz"`, resolviendo género femenino).
+     - **Erradicación del Gatillo Prematuro:** Eliminado `(session.messageCount || 0) >= 4` y suprimidas las invitaciones automáticas a grupos oficiales en timers tras las solicitudes de calificación.
+     - **Superpoder Proactivo de Cartas en PDF:** JanIA ahora reconoce intenciones de redactar cartas o documentos legales e instruye y ofrece redactar y entregar la carta en archivo PDF oficial membretado con QR y guía de firma electrónica de VECY BIENES RAÍCES ($0 COP) de inmediato.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-erradicacion-plantilla-rigida-resenas-persuasion-humana-pdf-proactivo-v33-89` en `founderKnowledgeService.ts`, `base.md` y `prompts.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 175 `vitest` (5/5 passing, 571 tests) | Build `npm run build` limpio en 21.5s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
