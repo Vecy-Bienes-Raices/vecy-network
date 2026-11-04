@@ -1,16 +1,16 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.92.0 — 2026-11-04)
-- **JanIA Server:** `v33.92` (`33.92.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks (Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico Crítico de Eduardo A. Rivera:**
-     - En el grupo inmobiliario externo *"anécdotas y vivencias inmobiliarias"*, una colega (Vanessa) formuló una consulta urgente sobre compras con fondo de pensiones/cesantías Allianz. Eduardo citó el mensaje y etiquetó a JanIA para que le explicara.
-     - JanIA no respondió en el grupo y en chat privado alegó falsamente que no capturó la mención por carecer de "webhooks de administrador directos del grupo", produciendo la respuesta solo por privado.
-  2. **Causa Raíz y Solución Quirúrgica:**
-     - **Detección LID y Omnicanal (`isBotDirectlyMentioned`):** Soporta menciones mediante WhatsApp Web LIDs (`167108705018103@lid`), `@lid` en texto, teléfonos, nombres con emojis y respuestas citando mensajes de JanIA.
-     - **Desbloqueo en `queuedSend` (`allowExternalGroupResponse`):** Se eliminó el bloqueo ciego en la cola de salida para grupos no oficiales cuando el mensaje responde a una mención directa autorizada.
-     - **Integración de Contexto Citado y Etiquetado Multi-Parte:** En `handleDirectGroupQuestion`, JanIA absorbe el texto de la consulta citada (`quotedContext`), etiqueta a ambos participantes (`[senderId, quotedSenderId]`) y responde citando el mensaje original (`quoted: msg`).
-     - **Cero Excusas de Webhooks y Silencio Fantasma:** Prohibidas excusas técnicas sobre webhooks o capturas externas. Se preserva al 100% el modo silencioso de ingesta para mensajes que no mencionen a JanIA.
-     - **Registro de Enseñanza:** Registrada la directriz `seed-grupos-externos-mencion-lid-cita-partes-v33-92` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 178 `vitest` (5/5 passing, 590 tests) | Build `npm run build` limpio en 26.55s + 193ms.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.93.0 — 2026-11-04)
+- **JanIA Server:** `v33.93` (`33.93.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico y Visión de Eduardo A. Rivera:**
+     - Subida unificada e ilimitada de inmuebles a la Tienda en plan gratuito ($0 COP) y generación de Fichas Técnicas / Brochures PDF conectadas en vivo a PostgreSQL con dos modos clave: **Con Marca Propia** (logo, colores, plantillas y contacto del suscriptor) y **Marca Blanca Neutra ("Cero Rastro")** para terceros (sin datos de contacto ni colores que revelen al agente o a VECY).
+     - Bots/sensores de seguimiento SEO y QR dinámico en todos los enlaces y fichas para distribuir `vPoints` y comisiones de la Bolsa Colaborativa.
+     - Herramientas Pro adicionales desde el Dashboard personalizables con la marca del suscriptor: **Vecy Agenda Pro Marca Propia** (notificaciones a su propio correo y WhatsApp) y **Widget de Agente IA Personalizable** (IA Femenina/Masculina, 6 personalidades: `Normal`, `Audaz`, `Profesional`, `Extrovertida`, `Seria`, `Cordial` + prompt propio).
+  2. **Solución Quirúrgica en 3 Fases:**
+     - **Fase 1 (`UnbrandedFicha.tsx`):** Conectado a `trpc.properties.getById` con conmutador en vivo entre `Mi Marca (Estilo Wasi)`, `Marca Blanca Neutra (Cero Rastro)` y `Oficial Vecy`, 3 plantillas prediseñadas y QR dinámico (`?utm_source=pdf_qr`).
+     - **Fase 2 (`affiliates.ts`):** Montado `affiliatesRouter` en `appRouter` con `trackTelemetryEvent` (`POINTS_MATRIX`) y estadísticas SEO por red social (`whatsapp`, `facebook`, `instagram`, `tiktok`, `linkedin`, `google_seo`, `pdf_qr`).
+     - **Fase 3 (`agent.ts`, `AgentMicrosite.tsx`, `AgentProToolsWidget.tsx`, `AgentDashboard.tsx`):** Micro-sitio `/s/:slug`, `UnifiedPublishModal`, enrutamiento multi-tenant de Agenda Pro (`customAgentWhatsapp`, `customAgentEmail`), Widget IA con `PERSONALITY_PROMPTS` y Calculadora ROI.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 179 `vitest` (6/6 passing, 604 tests) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

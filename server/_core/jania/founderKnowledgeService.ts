@@ -518,6 +518,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Cómo podemos hacer para que JanIA responda esa consulta o cualquiera en ese grupo externo, pero que sean consultas, eso si solo si nosostros la citamos o etiquetamos a las partes.",
     createdAt: "2026-11-04T19:40:00.000Z",
     active: true
+  },
+  {
+    id: "seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Vecy Agenda Pro + Widget Agente IA)",
+    directive:
+      "VECY BIENES RAÍCES ofrece un plan de ingreso 100% GRATUITO con publicación de inmuebles ilimitados y un motor superior a Wasi potenciado 100% por IA. Cada suscriptor cuenta con: 1) Su propio Micro-Sitio Web personalizable (/s/su-agencia o /agencia/su-agencia) con su logo, colores corporativos, eslogan, datos de contacto y plantillas prediseñadas modificables (Clásica Wasi-Pro, Editorial Luxury, Minimalista Moderna); 2) Generación automática de Fichas Técnicas / Brochures PDF conectadas en vivo a PostgreSQL en dos modalidades clave: a) Modo Con Marca Propia (con el logo, colores y contacto de la agencia/agente suscriptor) y b) Modo Marca Blanca Neutra 'Cero Rastro' para terceros (sin ningún dato de contacto, sin logos y en paleta monocromática arquitectónica neutra que no revela ni los colores de la agencia ni los de VECY); 3) Bots y Sensores Invisibles de Telemetría y QR Dinámico instalados en todos los enlaces y PDFs (con y sin marca) para medir el origen del tráfico en redes sociales (WhatsApp, Facebook, Instagram, TikTok, LinkedIn, Google SEO, QR impreso), tiempo de lectura calificada (>15s) y descargas PDF, otorgando automáticamente vPoints para distribuir la Bolsa Colaborativa del 10% en el modelo 40/20/40; y 4) Herramientas Pro Adicionales a precio justo desde el Dashboard, editables con los colores y logo de su marca: 'Vecy Agenda Pro Marca Propia' (con verificación policial/registraduría en vivo, firma digital y contrato PDF enviando todas las notificaciones directo al correo y WhatsApp propios del suscriptor) y 'Widget de Agente IA Personalizable' (con elección de IA Femenina o Masculina, 6 personalidades de 1 clic: Normal, Audaz, Profesional, Extrovertida, Seria, Cordial, e inyección de su propio prompt personalizado).",
+    rawText:
+      "Pues arranca y en ese mismo orden que propones las 3 fases quirúrgicas... Algo adicional que me encantaría es poder ofrecer herramientas que los usuarios puedan añadir a sus sitios web desde su dashboard si las pagan pero a un precio adicional y justo ya que recuerda que la idea es que nuestro plan de ingreso a diferencia del de otros portales o CRM como wasi es que será gratuito con publicación de inmuebles ilimitados, pero creo que podemos darles ciertas herramientas adicionales y estas también modificables o editables con sus colores, logo y diseño propio de sus marcas, serían las siguientes; una vecy agenda pro con todas sus funciones idénticas pero que dirijan las notificaciones a sus correos y whatsapp propios / un widget con un/a agente de IA personalizable y editable como todas estas herramientas, y que si es IA femenina o masculina, con posibilidad que mediante sus propios prompt se inyecten una personalidad como ellos la deseen o que la dejen genérica o con botones que digan; normal, Audaz, profesional, extrovertida, seria, profesional, cordial, etc...",
+    createdAt: "2026-11-04T20:30:00.000Z",
+    active: true
   }
 ];
 

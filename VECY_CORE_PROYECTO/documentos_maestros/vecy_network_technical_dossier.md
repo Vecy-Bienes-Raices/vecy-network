@@ -8750,6 +8750,37 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.93 (2026-11-04) — Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Desconexión de `/ficha/:id` (`UnbrandedFicha.tsx`) frente a PostgreSQL:* La vista de fichas técnicas consultaba un objeto estático local (`propertiesDatabase`) en vez de `trpc.properties.getById`, impidiendo generar brochures PDF para los inmuebles subidos a la Tienda.
+  2. *Falta de Personalización Estilo Wasi y Modo Marca Blanca Neutra ("Cero Rastro"):* Se requería que cada suscriptor pudiera descargar y compartir fichas técnicas con su propio logo, colores corporativos, datos de contacto y plantillas editables, así como una segunda opción de **Marca Blanca Neutra ("Cero Rastro")** para terceros sin datos de contacto ni colores que delaten al captador o a VECY.
+  3. *Sensores de Seguimiento SEO y Atribución de Puntos (`vPoints`):* `affiliatesRouter` no estaba montado en `appRouter` y se requería telemetría embebida tanto en enlaces como en códigos QR dinámicos de los PDFs para rastrear vistas, lecturas calificadas (>15s), descargas PDF, escaneos QR y origen por red social (`whatsapp`, `facebook`, `instagram`, `tiktok`, `linkedin`, `google_seo`, `pdf_qr`).
+  4. *Herramientas Pro Personalizables en el Dashboard del Suscriptor:* Ofrecer un plan base gratuito con publicación ilimitada de inmuebles y herramientas Pro adicionales personalizables con la marca del suscriptor: **Vecy Agenda Pro Marca Propia** (enrutando notificaciones al correo y WhatsApp propios del suscriptor) y **Widget de Agente IA Personalizable** (Femenina/Masculina, 6 personalidades de 1 clic: `Normal`, `Audaz`, `Profesional`, `Extrovertida`, `Seria`, `Cordial`, e inyección de prompt propio).
+- **Solución Implementada**:
+  1. `client/src/pages/UnbrandedFicha.tsx`:
+     - Conectado a PostgreSQL mediante `trpc.properties.getById.useQuery` con hidratación de marca del agente (`trpc.agent.getProfile`) y resolución de token (`trpc.affiliates.resolveToken`).
+     - Implementados 3 modos en vivo: `branded` (Mi Marca estilo Wasi), `neutral` (Marca Blanca Neutra Cero Rastro en paleta monocromática `#27272a`/`#18181b` sin logos ni teléfonos) y `vecy` (Oficial Vecy), además de 3 plantillas (`wasi-classic`, `luxury-editorial`, `modern-minimal`), QR dinámico con `?utm_source=pdf_qr` y sensores `trackTelemetryEvent`.
+  2. `server/routers/affiliates.ts` y `server/routers.ts`:
+     - Montado `affiliatesRouter` en `appRouter`.
+     - Implementado `trackTelemetryEvent` con `POINTS_MATRIX` (`view: 2`, `engaged_read: 10`, `pdf_download: 15`, `qr_scan: 20`, `whatsapp_click: 25`, `share: 5`, `lead_conversion: 100`), deduplicación antifraude y estadísticas por red social en `getMyStats`.
+  3. `server/routers/agent.ts`, `client/src/pages/AgentMicrosite.tsx`, `client/src/components/AgentProToolsWidget.tsx` y `client/src/pages/AgentDashboard.tsx`:
+     - Ampliado `agentRouter` con `getStoreBySubdomain`, `getMyBrandConfig`, `updateBrandConfig` y `chatWithCustomAgent` (`PERSONALITY_PROMPTS`).
+     - Creado el Micro-Sitio público del suscriptor en `/s/:slug` y `/agencia/:slug`.
+     - Creado `AgentProToolsWidget.tsx` con el Widget de Agente IA Personalizable y la Calculadora Hipotecaria & ROI.
+     - Integrado `UnifiedPublishModal` y las 5 pestañas de gestión en `AgentDashboard.tsx`.
+  4. `server/_core/agendaWhatsAppService.ts`, `server/_core/emailContractService.ts` y `server/routers/agenda.ts`:
+     - Enrutamiento multi-tenant para despachar notificaciones de WhatsApp y contratos PDF al WhatsApp y correo propios del suscriptor (`customAgentWhatsapp`, `customAgentEmail`).
+  5. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 179 en `regression.test.ts` y `wasiBrandBrochureAndProToolsV33_93.test.ts`.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **604 tests passing (6/6 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.93` (`33.93.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.92 (2026-11-04) — Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Fallo en Detección de Mención por LID en Grupos Externos:* Al citar un mensaje y mencionar a JanIA desde WhatsApp Web o Desktop (`@✨JanIA agente IA de VECY⚡`), el cliente genera un identificador de dispositivo LID (`167108705018103@lid` e inserta `@167108705018103` en el texto). El filtro previo solo evaluaba el número telefónico o `cleanJid(jid) === botJid`, fallando en detectar la mención y no activando el handler.

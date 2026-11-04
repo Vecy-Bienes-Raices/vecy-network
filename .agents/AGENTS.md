@@ -184,7 +184,22 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.92 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.93 — Noviembre 2026
+
+### Novedades v33.93 (Infraestructura Wasi-IA de Fichas Técnicas [Con Marca Propia y Marca Blanca Neutra Cero Rastro], Sensores SEO/Puntos y Herramientas Pro Personalizables [Vecy Agenda Pro + Widget Agente IA] — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - Resolver de raíz la subida de inmuebles a la Tienda y la generación de Fichas Técnicas / Brochures PDF con infraestructura superior a Wasi potenciada 100% por IA: opción de descargar la ficha con la marca, logo, contactos y colores de cada suscriptor, y opción de **Marca Blanca Neutra ("Cero Rastro")** para terceros sin datos de contacto ni colores que se asemejen a los del agente ni a los de VECY.
+     - Instalar bots/sensores de seguimiento en todos los enlaces y fichas (con y sin marca) para medir estadísticas SEO por red social y distribuir automáticamente los `vPoints` y las ganancias de la Bolsa Colaborativa.
+     - Mantener el plan de ingreso 100% GRATUITO con publicación ilimitada de inmuebles y ofrecer **Herramientas Pro Adicionales** editables con los colores y logo de cada marca desde el Dashboard: **Vecy Agenda Pro Marca Propia** (dirigiendo notificaciones a los correos y WhatsApp propios del suscriptor) y **Widget con Agente IA Personalizable** (IA Femenina o Masculina, 6 botones de personalidad: `Normal`, `Audaz`, `Profesional`, `Extrovertida`, `Seria`, `Cordial`, e inyección de prompt propio).
+  2. **Solución y Blindaje Quirúrgico (3 Fases + Herramientas Pro):**
+     - **Fase 1 (`UnbrandedFicha.tsx` conectado a PostgreSQL):** `/ficha/:id` consulta en vivo `trpc.properties.getById` y ofrece 3 modos: `Mi Marca (Estilo Wasi)` (logo, colores, 3 plantillas y contacto del suscriptor), `Marca Blanca Neutra (Cero Rastro)` (monocromática arquitectónica neutra `#27272a`/`#18181b`, cero logos y cero teléfonos) y `Oficial Vecy`.
+     - **Fase 2 (Sensores de Telemetría y QR Dinámico en `affiliates.ts`):** Montado `affiliatesRouter` en `appRouter` con `trackTelemetryEvent` (`POINTS_MATRIX`: vista +2, lectura >15s +10, descarga PDF +15, escaneo QR +20, clic WhatsApp +25, conversión +100), deduplicación antifraude y analítica por red social (`whatsapp`, `facebook`, `instagram`, `tiktok`, `linkedin`, `google_seo`, `pdf_qr`).
+     - **Fase 3 (Micro-Sitio `/s/:slug`, Subida Ilimitada y Herramientas Pro en `agent.ts`, `AgentMicrosite.tsx`, `AgentProToolsWidget.tsx`, `AgentDashboard.tsx`):** Constructor de marca, Micro-Sitio público del suscriptor, `Vecy Agenda Pro` con enrutamiento multi-tenant al correo y WhatsApp propios del suscriptor (`customAgentEmail`, `customAgentWhatsapp`), `Widget de Agente IA Personalizable` (Femenina/Masculina, 6 personalidades y prompt propio) y `Calculadora Hipotecaria & ROI`.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 179 `vitest` (6/6 passing, 604 tests) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v33.92 — Noviembre 2026
 
 ### Novedades v33.92 (Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

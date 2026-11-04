@@ -5,6 +5,7 @@ import { janIARouter } from "./routers/janIA";
 import { githubRouter } from "./routers/github";
 import { imagesRouter } from "./routers/images";
 import { agentRouter } from "./routers/agent";
+import { affiliatesRouter } from "./routers/affiliates";
 import { leadsRouter } from "./routers/leads";
 import { propertiesRouter } from "./routers/properties";
 import { agendaRouter } from "./routers/agenda";
@@ -19,6 +20,7 @@ const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 export const appRouter = router({
   system: systemRouter,
   agent: agentRouter,
+  affiliates: affiliatesRouter,
   leads: leadsRouter,
   properties: propertiesRouter,
   agenda: agendaRouter,

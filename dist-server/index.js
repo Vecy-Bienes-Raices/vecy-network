@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.92";
+    VECY_VERSION = "v33.93";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17232,6 +17232,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "C\xF3mo podemos hacer para que JanIA responda esa consulta o cualquiera en ese grupo externo, pero que sean consultas, eso si solo si nosostros la citamos o etiquetamos a las partes.",
         createdAt: "2026-11-04T19:40:00.000Z",
         active: true
+      },
+      {
+        id: "seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Infraestructura Wasi-IA de Fichas T\xE9cnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Vecy Agenda Pro + Widget Agente IA)",
+        directive: "VECY BIENES RA\xCDCES ofrece un plan de ingreso 100% GRATUITO con publicaci\xF3n de inmuebles ilimitados y un motor superior a Wasi potenciado 100% por IA. Cada suscriptor cuenta con: 1) Su propio Micro-Sitio Web personalizable (/s/su-agencia o /agencia/su-agencia) con su logo, colores corporativos, eslogan, datos de contacto y plantillas predise\xF1adas modificables (Cl\xE1sica Wasi-Pro, Editorial Luxury, Minimalista Moderna); 2) Generaci\xF3n autom\xE1tica de Fichas T\xE9cnicas / Brochures PDF conectadas en vivo a PostgreSQL en dos modalidades clave: a) Modo Con Marca Propia (con el logo, colores y contacto de la agencia/agente suscriptor) y b) Modo Marca Blanca Neutra 'Cero Rastro' para terceros (sin ning\xFAn dato de contacto, sin logos y en paleta monocrom\xE1tica arquitect\xF3nica neutra que no revela ni los colores de la agencia ni los de VECY); 3) Bots y Sensores Invisibles de Telemetr\xEDa y QR Din\xE1mico instalados en todos los enlaces y PDFs (con y sin marca) para medir el origen del tr\xE1fico en redes sociales (WhatsApp, Facebook, Instagram, TikTok, LinkedIn, Google SEO, QR impreso), tiempo de lectura calificada (>15s) y descargas PDF, otorgando autom\xE1ticamente vPoints para distribuir la Bolsa Colaborativa del 10% en el modelo 40/20/40; y 4) Herramientas Pro Adicionales a precio justo desde el Dashboard, editables con los colores y logo de su marca: 'Vecy Agenda Pro Marca Propia' (con verificaci\xF3n policial/registradur\xEDa en vivo, firma digital y contrato PDF enviando todas las notificaciones directo al correo y WhatsApp propios del suscriptor) y 'Widget de Agente IA Personalizable' (con elecci\xF3n de IA Femenina o Masculina, 6 personalidades de 1 clic: Normal, Audaz, Profesional, Extrovertida, Seria, Cordial, e inyecci\xF3n de su propio prompt personalizado).",
+        rawText: "Pues arranca y en ese mismo orden que propones las 3 fases quir\xFArgicas... Algo adicional que me encantar\xEDa es poder ofrecer herramientas que los usuarios puedan a\xF1adir a sus sitios web desde su dashboard si las pagan pero a un precio adicional y justo ya que recuerda que la idea es que nuestro plan de ingreso a diferencia del de otros portales o CRM como wasi es que ser\xE1 gratuito con publicaci\xF3n de inmuebles ilimitados, pero creo que podemos darles ciertas herramientas adicionales y estas tambi\xE9n modificables o editables con sus colores, logo y dise\xF1o propio de sus marcas, ser\xEDan las siguientes; una vecy agenda pro con todas sus funciones id\xE9nticas pero que dirijan las notificaciones a sus correos y whatsapp propios / un widget con un/a agente de IA personalizable y editable como todas estas herramientas, y que si es IA femenina o masculina, con posibilidad que mediante sus propios prompt se inyecten una personalidad como ellos la deseen o que la dejen gen\xE9rica o con botones que digan; normal, Audaz, profesional, extrovertida, seria, profesional, cordial, etc...",
+        createdAt: "2026-11-04T20:30:00.000Z",
+        active: true
       }
     ];
   }
@@ -22989,6 +22999,21 @@ async function sendContractAndConfirmationEmails(rawPayload) {
       attachments
     });
     console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F514} Correo interno enviado a ${adminTargetEmail}`);
+    const customAgentEmail = rawPayload?.customAgentEmail;
+    if (customAgentEmail && typeof customAgentEmail === "string" && customAgentEmail.includes("@") && customAgentEmail !== adminTargetEmail) {
+      try {
+        await transporter.sendMail({
+          from: `"${rawPayload?.customAgencyName || "Vecy Agenda Pro"}" <${gmailUser}>`,
+          to: customAgentEmail,
+          subject: `${adminSubject} [${rawPayload?.customAgencyName || "Mi Sitio"}]`,
+          html: adminContent.html,
+          attachments
+        });
+        console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F514} Copia Vecy Agenda Pro enviada al correo del suscriptor: ${customAgentEmail}`);
+      } catch (subMailErr) {
+        console.warn(`[AGENDA-EMAIL-#${solicitudId}] \u26A0\uFE0F Error enviando copia a correo del suscriptor:`, subMailErr?.message);
+      }
+    }
   } catch (adminMailErr) {
     console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo interno a Vecy:`, adminMailErr?.message);
   }
@@ -28936,6 +28961,24 @@ async function sendAgendaWhatsAppNotifications(payload) {
     } catch (brokerErr) {
       console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error notificando al Br\xF3ker:`, brokerErr?.message || brokerErr);
     }
+    if (payload.customAgentWhatsapp) {
+      const cleanCustomAgentPhone = cleanColombianPhone(payload.customAgentWhatsapp);
+      if (cleanCustomAgentPhone && cleanCustomAgentPhone.length >= 10 && cleanCustomAgentPhone !== VECY_BROKER_OFFICIAL_PHONE) {
+        try {
+          const customHeader = payload.customAgencyName ? `\u{1F3E2} *VECY AGENDA PRO \u2014 ${payload.customAgencyName.toUpperCase()}*
+` : `\u{1F3E2} *VECY AGENDA PRO \u2014 NOTIFICACI\xD3N A SUSCRIPTOR*
+`;
+          await janiaMatchBot.sendDirectMessage(cleanCustomAgentPhone, `${customHeader}${brokerMsg}`, {
+            allowDirectMessage: true,
+            isTransactionalNotification: true,
+            skipDelay: true
+          });
+          console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Copia Vecy Agenda Pro entregada al Suscriptor (${cleanCustomAgentPhone}).`);
+        } catch (agentWaErr) {
+          console.warn(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error notificando al WhatsApp del suscriptor:`, agentWaErr?.message);
+        }
+      }
+    }
     const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";
     const cleanClientCel = cleanColombianPhone(rawCel);
     if (cleanClientCel && cleanClientCel.length >= 10) {
@@ -29828,6 +29871,25 @@ async function processAndSaveSolicitud(input) {
     alertaMotivo: antecedentesMotivo || null
   }).returning();
   const newRow = inserted[0];
+  let customAgentEmail;
+  let customAgentWhatsapp;
+  let customAgencyName;
+  if (input.agent_id && !isNaN(Number(input.agent_id))) {
+    try {
+      const agentRows = await db.select().from(users).where(eq10(users.id, Number(input.agent_id))).limit(1);
+      if (agentRows.length > 0) {
+        const ag = agentRows[0];
+        const theme = ag.themeConfig || {};
+        const tools = ag.activeTools || {};
+        const agendaProCfg = tools.agendaPro || {};
+        customAgencyName = agendaProCfg.customHeaderTitle || theme.agencyName || ag.name || void 0;
+        customAgentEmail = agendaProCfg.notifyEmail || theme.contactEmail || ag.email || void 0;
+        customAgentWhatsapp = agendaProCfg.notifyWhatsapp || theme.contactPhone || ag.phone || void 0;
+        await db.update(users).set({ vPoints: sql8`COALESCE(${users.vPoints}, 0) + 100` }).where(eq10(users.id, ag.id));
+      }
+    } catch (_) {
+    }
+  }
   sendContractAndConfirmationEmails({
     ...input,
     solicitud_id: nextSolicitudId,
@@ -29835,7 +29897,9 @@ async function processAndSaveSolicitud(input) {
     id: newRow?.id,
     alerta_antecedentes: hasAntecedentesFlag,
     alerta_motivo: antecedentesMotivo,
-    hasAlertaAntecedentes: hasAntecedentesFlag
+    hasAlertaAntecedentes: hasAntecedentesFlag,
+    customAgentEmail,
+    customAgencyName
   }).catch((emailErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
   });
@@ -29846,7 +29910,9 @@ async function processAndSaveSolicitud(input) {
     id: newRow?.id,
     alerta_antecedentes: hasAntecedentesFlag,
     alerta_motivo: antecedentesMotivo,
-    hasAlertaAntecedentes: hasAntecedentesFlag
+    hasAlertaAntecedentes: hasAntecedentesFlag,
+    customAgentWhatsapp,
+    customAgencyName
   }).catch((waErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
   });
@@ -30576,8 +30642,8 @@ function extractActividadesEconomicas(sourceRecord) {
     const code = String(cand.code || "").trim();
     if (!code || code === "0" || code === "0000" || seen.has(code)) continue;
     seen.add(code);
-    const desc11 = String(cand.desc || "").trim() || CIIU_DESCRIPTIONS[code] || "Actividad econ\xF3mica mercantil registrada en RUES";
-    items.push({ codigo: code, descripcion: desc11 });
+    const desc12 = String(cand.desc || "").trim() || CIIU_DESCRIPTIONS[code] || "Actividad econ\xF3mica mercantil registrada en RUES";
+    items.push({ codigo: code, descripcion: desc12 });
   }
   return items;
 }
@@ -34195,14 +34261,14 @@ _\xBFDeseas activar alguno de estos servicios de inmediato?_ \u{1F91D}\u2728`;
     }
     case "auditar_o_redactar_marketing_inmobiliario": {
       const { auditPropertyListing: auditPropertyListing2 } = await Promise.resolve().then(() => (init_realEstateMarketing(), realEstateMarketing_exports));
-      const desc11 = String(args.descripcionActual || rawUserText || "").trim();
+      const desc12 = String(args.descripcionActual || rawUserText || "").trim();
       const extraDetails = [];
       if (args.tipoInmueble) extraDetails.push(`Tipo: ${args.tipoInmueble}`);
       if (args.tipoNegocio) extraDetails.push(`Operaci\xF3n: ${args.tipoNegocio}`);
       if (args.barrioOCiudad) extraDetails.push(`Ubicaci\xF3n: ${args.barrioOCiudad}`);
       if (args.precioOCanon) extraDetails.push(`Precio: $${args.precioOCanon}`);
-      const fullText = extraDetails.length > 0 ? `${desc11}
-[Detalles: ${extraDetails.join(", ")}]` : desc11;
+      const fullText = extraDetails.length > 0 ? `${desc12}
+[Detalles: ${extraDetails.join(", ")}]` : desc12;
       const audit = auditPropertyListing2(fullText);
       return {
         toolType: "marketing_inmobiliario",
@@ -40230,7 +40296,7 @@ __export(matchAdHocService_exports, {
   detectInputListingType: () => detectInputListingType,
   executeAdHocMatch: () => executeAdHocMatch
 });
-import { sql as sql15, eq as eq20, and as and13, desc as desc10, gte as gte5 } from "drizzle-orm";
+import { sql as sql16, eq as eq21, and as and14, desc as desc11, gte as gte5 } from "drizzle-orm";
 function formatAdHocCOP(val) {
   if (!val) return "N/E";
   const num = Number(val);
@@ -40282,15 +40348,15 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
   let activeReqs = [];
   if (db) {
     if (inputType === "demanda") {
-      availableProps = await db.select().from(properties).where(and13(
-        eq20(properties.available, true),
-        gte5(sql15`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
-      )).orderBy(desc10(properties.createdAt)).limit(100);
+      availableProps = await db.select().from(properties).where(and14(
+        eq21(properties.available, true),
+        gte5(sql16`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
+      )).orderBy(desc11(properties.createdAt)).limit(100);
     } else {
-      activeReqs = await db.select().from(requirements).where(and13(
-        eq20(requirements.status, "active"),
-        gte5(sql15`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
-      )).orderBy(desc10(requirements.createdAt)).limit(100);
+      activeReqs = await db.select().from(requirements).where(and14(
+        eq21(requirements.status, "active"),
+        gte5(sql16`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
+      )).orderBy(desc11(requirements.createdAt)).limit(100);
     }
   } else {
     if (inputType === "demanda") {
@@ -44335,23 +44401,236 @@ var imagesRouter = {
 init_trpc();
 init_db();
 init_schema();
+init_llm();
 import { z as z7 } from "zod";
-import { eq as eq18, and as and12, desc as desc9, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq18, and as and12, desc as desc9, isNull as isNull2, or as or5 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
+var PERSONALITY_PROMPTS = {
+  normal: "Mant\xE9n un tono equilibrado, claro, amable y servicial. Responde con precisi\xF3n y naturalidad.",
+  audaz: "Mant\xE9n un tono audaz, persuasivo y orientado al cierre comercial. Destaca oportunidades \xFAnicas, valorizaci\xF3n y sentido de urgencia con elegancia.",
+  profesional: "Mant\xE9n un tono altamente ejecutivo, corporativo, t\xE9cnico y jur\xEDdico. Habla como un consultor patrimonial de alto nivel.",
+  extrovertida: "Mant\xE9n un tono entusiasta, carism\xE1tico, c\xE1lido, energ\xE9tico y cercano. Transmite emoci\xF3n positiva por cada inmueble.",
+  seria: "Mant\xE9n un tono sobrio, directo al grano, formal y enfocado estrictamente en cifras, \xE1reas, precios y datos verificables sin adornos.",
+  cordial: "Mant\xE9n un tono profundamente emp\xE1tico, hospitalario, paciente y familiar. Haz que el cliente se sienta acompa\xF1ado paso a paso."
+};
 var agentRouter = router({
-  // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
-  getProfile: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
+  // Public: Get agent profile for branding (Agenda Pro, Personal Shops, Branded Fichas)
+  getProfile: publicProcedure.input(z7.object({ id: z7.number().optional(), subdomain: z7.string().optional() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    if (!input.id && !input.subdomain) {
+      throw new TRPCError5({ code: "BAD_REQUEST", message: "id or subdomain required" });
+    }
+    const whereClause = input.id ? eq18(users.id, input.id) : eq18(users.subdomain, (input.subdomain || "").toLowerCase().trim());
     const agent = await db.select({
       id: users.id,
       name: users.name,
+      email: users.email,
+      phone: users.phone,
+      vPoints: users.vPoints,
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
-      subdomain: users.subdomain
-    }).from(users).where(eq18(users.id, input.id)).limit(1);
+      subdomain: users.subdomain,
+      activeTools: users.activeTools
+    }).from(users).where(whereClause).limit(1);
     if (agent.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
+  }),
+  // Public: Get complete Agent Microsite data (profile + own properties + network collaborative properties)
+  getStoreBySubdomain: publicProcedure.input(z7.object({ slug: z7.string().min(1) })).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const cleanSlug = input.slug.toLowerCase().trim();
+    const numericId = !isNaN(Number(cleanSlug)) ? Number(cleanSlug) : null;
+    const agentRows = await db.select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      phone: users.phone,
+      vPoints: users.vPoints,
+      customLogoUrl: users.customLogoUrl,
+      themeConfig: users.themeConfig,
+      subdomain: users.subdomain,
+      activeTools: users.activeTools
+    }).from(users).where(
+      numericId ? or5(eq18(users.subdomain, cleanSlug), eq18(users.id, numericId)) : eq18(users.subdomain, cleanSlug)
+    ).limit(1);
+    if (agentRows.length === 0) {
+      throw new TRPCError5({ code: "NOT_FOUND", message: "Sitio de agente no encontrado" });
+    }
+    const agent = agentRows[0];
+    const ownProperties = await db.select().from(properties).where(and12(eq18(properties.agentId, agent.id), eq18(properties.available, true))).orderBy(desc9(properties.createdAt)).limit(50);
+    const networkProperties = await db.select().from(properties).where(and12(eq18(properties.available, true), eq18(properties.aceptaTerceria, true))).orderBy(desc9(properties.featured), desc9(properties.createdAt)).limit(40);
+    const seenIds = new Set(ownProperties.map((p) => p.id));
+    const combinedProperties = [
+      ...ownProperties,
+      ...networkProperties.filter((p) => !seenIds.has(p.id))
+    ];
+    return {
+      agent,
+      ownCount: ownProperties.length,
+      properties: combinedProperties
+    };
+  }),
+  // Protected: Obtener la configuración completa de marca y herramientas del usuario autenticado
+  getMyBrandConfig: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const rows = await db.select().from(users).where(eq18(users.id, ctx.user.id)).limit(1);
+    if (rows.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "User not found" });
+    return rows[0];
+  }),
+  // Protected: Actualizar marca, plantilla tipo Wasi, colores, subdominio y herramientas Pro (Agenda Pro, Widget IA, etc.)
+  updateBrandConfig: protectedProcedure.input(z7.object({
+    name: z7.string().optional(),
+    phone: z7.string().optional(),
+    email: z7.string().optional(),
+    subdomain: z7.string().optional(),
+    customLogoUrl: z7.string().optional().nullable(),
+    themeConfig: z7.object({
+      agencyName: z7.string().optional(),
+      slogan: z7.string().optional(),
+      primaryColor: z7.string().optional(),
+      secondaryColor: z7.string().optional(),
+      accentColor: z7.string().optional(),
+      templateStyle: z7.enum(["wasi-classic", "luxury-editorial", "modern-minimal"]).optional(),
+      contactPhone: z7.string().optional(),
+      contactEmail: z7.string().optional(),
+      websiteUrl: z7.string().optional(),
+      instagramUrl: z7.string().optional(),
+      facebookUrl: z7.string().optional(),
+      linkedinUrl: z7.string().optional(),
+      address: z7.string().optional(),
+      nit: z7.string().optional(),
+      showNetworkCatalog: z7.boolean().optional()
+    }).optional(),
+    activeTools: z7.object({
+      agendaPro: z7.object({
+        enabled: z7.boolean().default(false),
+        notifyEmail: z7.string().optional(),
+        notifyWhatsapp: z7.string().optional(),
+        requireIdentityVerification: z7.boolean().default(true),
+        customHeaderTitle: z7.string().optional()
+      }).optional(),
+      aiAgentWidget: z7.object({
+        enabled: z7.boolean().default(false),
+        agentName: z7.string().default("Sof\xEDa IA"),
+        gender: z7.enum(["female", "male"]).default("female"),
+        personality: z7.enum(["normal", "audaz", "profesional", "extrovertida", "seria", "cordial"]).default("profesional"),
+        customPrompt: z7.string().optional(),
+        welcomeMessage: z7.string().optional(),
+        avatarUrl: z7.string().optional()
+      }).optional(),
+      roiCalculator: z7.object({
+        enabled: z7.boolean().default(true),
+        defaultInterestRateEA: z7.number().default(11.5)
+      }).optional(),
+      instantValuator: z7.object({
+        enabled: z7.boolean().default(false)
+      }).optional()
+    }).optional()
+  })).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const currentRows = await db.select().from(users).where(eq18(users.id, ctx.user.id)).limit(1);
+    if (currentRows.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Usuario no encontrado" });
+    const current = currentRows[0];
+    let cleanSubdomain = current.subdomain;
+    if (input.subdomain !== void 0) {
+      const normalized = input.subdomain.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      if (normalized.length > 0) {
+        const existingSub = await db.select({ id: users.id }).from(users).where(eq18(users.subdomain, normalized)).limit(1);
+        if (existingSub.length > 0 && existingSub[0].id !== ctx.user.id) {
+          throw new TRPCError5({ code: "CONFLICT", message: "Ese subdominio/enlace ya est\xE1 en uso por otro miembro de la red." });
+        }
+        cleanSubdomain = normalized;
+      } else {
+        cleanSubdomain = null;
+      }
+    }
+    const mergedTheme = {
+      ...current.themeConfig || {},
+      ...input.themeConfig || {}
+    };
+    const mergedTools = {
+      ...current.activeTools || {},
+      ...input.activeTools || {}
+    };
+    const updated = await db.update(users).set({
+      name: input.name !== void 0 ? input.name : current.name,
+      phone: input.phone !== void 0 ? input.phone : current.phone,
+      email: input.email !== void 0 ? input.email : current.email,
+      subdomain: cleanSubdomain,
+      customLogoUrl: input.customLogoUrl !== void 0 ? input.customLogoUrl : current.customLogoUrl,
+      themeConfig: mergedTheme,
+      activeTools: mergedTools,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq18(users.id, ctx.user.id)).returning();
+    return updated[0];
+  }),
+  // Public: Chat con el Widget de Agente IA Personalizable del Suscriptor
+  chatWithCustomAgent: publicProcedure.input(z7.object({
+    agentUserId: z7.number(),
+    message: z7.string().min(1).max(1500),
+    propertyContext: z7.string().optional(),
+    history: z7.array(z7.object({
+      role: z7.enum(["user", "assistant"]),
+      content: z7.string()
+    })).optional()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const agentRows = await db.select().from(users).where(eq18(users.id, input.agentUserId)).limit(1);
+    const agentUser = agentRows[0];
+    const theme = agentUser?.themeConfig || {};
+    const tools = agentUser?.activeTools || {};
+    const aiConfig = tools.aiAgentWidget || {};
+    const botName = aiConfig.agentName || (aiConfig.gender === "male" ? "Mateo IA" : "Sof\xEDa IA");
+    const genderLabel = aiConfig.gender === "male" ? "un asesor inmobiliario masculino" : "una asesora inmobiliaria femenina";
+    const agencyName = theme.agencyName || agentUser?.name || "nuestra Agencia Inmobiliaria aliada de Vecy Network";
+    const contactPhone = theme.contactPhone || agentUser?.phone || "+57 316 6569719";
+    const contactEmail = theme.contactEmail || agentUser?.email || "";
+    const personalityKey = aiConfig.personality || "profesional";
+    const personalityDirective = PERSONALITY_PROMPTS[personalityKey] || PERSONALITY_PROMPTS.profesional;
+    const customUserPrompt = aiConfig.customPrompt ? `
+INSTRUCCIONES PERSONALIZADAS DE LA AGENCIA:
+${aiConfig.customPrompt}` : "";
+    const systemPrompt = `Eres ${botName}, ${genderLabel} con inteligencia artificial al servicio exclusivo de "${agencyName}".
+PERSONALIDAD ACTIVA (${personalityKey.toUpperCase()}): ${personalityDirective}
+${customUserPrompt}
+
+DATOS OFICIALES DE CONTACTO DE LA AGENCIA:
+- Agencia / Br\xF3ker: ${agencyName}
+- WhatsApp / Tel\xE9fono directo: ${contactPhone}
+${contactEmail ? `- Correo: ${contactEmail}` : ""}
+${input.propertyContext ? `
+CONTEXTO DEL INMUEBLE O P\xC1GINA ACTUAL:
+${input.propertyContext}` : ""}
+
+REGLAS DE ORO:
+1. Responde en m\xE1ximo 3 a 4 oraciones concisas, persuasivas y \xFAtiles en espa\xF1ol colombiano.
+2. Ayuda al visitante a resolver dudas sobre los inmuebles, financiaci\xF3n, ubicaci\xF3n, agendamiento de visitas y tr\xE1mites.
+3. Invita siempre de forma natural a agendar visita en l\xEDnea o escribir al WhatsApp directo (${contactPhone}).`;
+    try {
+      const messagesPayload = [
+        { role: "system", content: systemPrompt },
+        ...(input.history || []).slice(-6).map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: input.message }
+      ];
+      const llmRes = await invokeLLM({ messages: messagesPayload });
+      const replyText = typeof llmRes?.choices?.[0]?.message?.content === "string" ? llmRes.choices[0].message.content : `\xA1Hola! Soy ${botName} de ${agencyName}. Con gusto te asesoro sobre este inmueble y agendamos tu visita. Tambi\xE9n puedes escribirnos directamente al WhatsApp ${contactPhone}.`;
+      return {
+        reply: replyText,
+        botName,
+        agencyName
+      };
+    } catch (err) {
+      return {
+        reply: `\xA1Hola! Soy ${botName} de ${agencyName}. Estoy lista para ayudarte a agendar tu visita o brindarte todos los detalles t\xE9cnicos en nuestro WhatsApp directo ${contactPhone}.`,
+        botName,
+        agencyName
+      };
+    }
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
@@ -44378,9 +44657,6 @@ var agentRouter = router({
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     const property = await db.select().from(properties).where(eq18(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
-    if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
-      throw new TRPCError5({ code: "FORBIDDEN", message: "You don't own this property" });
-    }
     const existingLink = await db.select().from(referralLinks).where(
       and12(
         eq18(referralLinks.propertyId, input.propertyId),
@@ -44407,9 +44683,235 @@ var agentRouter = router({
         id: properties.id,
         name: properties.name,
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
-        location: properties.location
+        location: properties.location,
+        zone: properties.zone,
+        price: properties.price
       }
     }).from(referralLinks).innerJoin(properties, eq18(referralLinks.propertyId, properties.id)).where(eq18(referralLinks.agentId, ctx.user.id)).orderBy(desc9(referralLinks.createdAt));
+  })
+});
+
+// server/routers/affiliates.ts
+init_trpc();
+init_db();
+init_schema();
+import { z as z8 } from "zod";
+import { eq as eq19, and as and13, sql as sql14, desc as desc10 } from "drizzle-orm";
+import { nanoid } from "nanoid";
+var recentTelemetryDedup = /* @__PURE__ */ new Map();
+var POINTS_MATRIX = {
+  view: 2,
+  engaged_read: 10,
+  pdf_download: 15,
+  qr_scan: 20,
+  whatsapp_click: 25,
+  share: 5,
+  lead_conversion: 100
+};
+var affiliatesRouter = router({
+  /**
+   * Generar un enlace de referido para un inmueble (Soporta Modo Con Marca, Marca Blanca Neutra y Stealth)
+   */
+  generateLink: protectedProcedure.input(z8.object({
+    propertyId: z8.number(),
+    mode: z8.enum(["branded", "neutral", "stealth", "ficha_branded", "ficha_neutral"]).optional().default("branded")
+  })).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    const existing = await db.select().from(referralLinks).where(
+      and13(
+        eq19(referralLinks.propertyId, input.propertyId),
+        eq19(referralLinks.agentId, ctx.user.id)
+      )
+    ).limit(1);
+    let token = existing[0]?.token;
+    if (!token) {
+      token = `vcy_${nanoid(10)}`;
+      await db.insert(referralLinks).values({
+        propertyId: input.propertyId,
+        agentId: ctx.user.id,
+        token
+      });
+    }
+    const buildUrlByMode = (tk, m) => {
+      if (m === "stealth") return `/p/${tk}`;
+      if (m === "neutral") return `/property/${input.propertyId}?mode=stealth&ref=${tk}`;
+      if (m === "ficha_branded") return `/ficha/${input.propertyId}?mode=branded&agentId=${ctx.user.id}&ref=${tk}`;
+      if (m === "ficha_neutral") return `/ficha/${input.propertyId}?mode=neutral&ref=${tk}`;
+      return `/property/${input.propertyId}?mode=branded&agentId=${ctx.user.id}&ref=${tk}`;
+    };
+    return {
+      token,
+      url: buildUrlByMode(token, input.mode),
+      urls: {
+        brandedProperty: `/property/${input.propertyId}?mode=branded&agentId=${ctx.user.id}&ref=${token}`,
+        neutralProperty: `/property/${input.propertyId}?mode=stealth&ref=${token}`,
+        brandedFichaPdf: `/ficha/${input.propertyId}?mode=branded&agentId=${ctx.user.id}&ref=${token}`,
+        neutralFichaPdf: `/ficha/${input.propertyId}?mode=neutral&ref=${token}`,
+        stealthFirewall: `/p/${token}`
+      },
+      message: "Enlace con sensor de seguimiento generado con \xE9xito. \xA1Comparte y acumula puntos de comisi\xF3n!"
+    };
+  }),
+  /**
+   * Resolver un token de referido para obtener el Agente y su configuración de marca (si aplica)
+   */
+  resolveToken: publicProcedure.input(z8.object({ token: z8.string() })).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    const linkRows = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.token)).limit(1);
+    if (linkRows.length === 0) return null;
+    const link = linkRows[0];
+    const agentRows = await db.select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      phone: users.phone,
+      customLogoUrl: users.customLogoUrl,
+      themeConfig: users.themeConfig,
+      subdomain: users.subdomain,
+      activeTools: users.activeTools
+    }).from(users).where(eq19(users.id, link.agentId)).limit(1);
+    return {
+      link,
+      agent: agentRows[0] || null
+    };
+  }),
+  /**
+   * Registrar un clic en un link de referido (público - retrocompatible)
+   */
+  trackClick: publicProcedure.input(z8.object({ token: z8.string() })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    await db.update(referralLinks).set({ clicks: sql14`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.token, input.token));
+    return { success: true };
+  }),
+  /**
+   * Sensor Inteligente ("Bot de Seguimiento") para Fichas Con Marca y Marca Blanca Neutra.
+   * Detecta red social de origen, lectura real (>15s), descargas de PDF, escaneo de QR y otorga vPoints.
+   */
+  trackTelemetryEvent: publicProcedure.input(z8.object({
+    token: z8.string().optional(),
+    agentId: z8.number().optional(),
+    propertyId: z8.number(),
+    eventType: z8.enum(["view", "engaged_read", "pdf_download", "qr_scan", "whatsapp_click", "share"]),
+    platform: z8.string().optional().default("direct"),
+    // whatsapp, facebook, instagram, tiktok, linkedin, google_seo, pdf_qr, direct
+    brandMode: z8.enum(["branded", "neutral", "vecy", "stealth"]).optional().default("vecy"),
+    visitorFingerprint: z8.string().optional()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) return { success: false, pointsAwarded: 0 };
+    let targetAgentId = input.agentId || null;
+    let linkRecord = null;
+    if (input.token) {
+      const found = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.token)).limit(1);
+      if (found.length > 0) {
+        linkRecord = found[0];
+        targetAgentId = found[0].agentId;
+      }
+    }
+    if (!targetAgentId) {
+      const propRows = await db.select({ agentId: properties.agentId }).from(properties).where(eq19(properties.id, input.propertyId)).limit(1);
+      targetAgentId = propRows[0]?.agentId || null;
+    }
+    if (!targetAgentId) {
+      return { success: true, pointsAwarded: 0 };
+    }
+    const dedupKey = `${targetAgentId}:${input.propertyId}:${input.eventType}:${input.visitorFingerprint || "anon"}`;
+    const lastSeen = recentTelemetryDedup.get(dedupKey) || 0;
+    const now = Date.now();
+    if (now - lastSeen < 10 * 60 * 1e3) {
+      return { success: true, pointsAwarded: 0, deduplicated: true };
+    }
+    recentTelemetryDedup.set(dedupKey, now);
+    const points = POINTS_MATRIX[input.eventType] || 2;
+    if (linkRecord && (input.eventType === "view" || input.eventType === "qr_scan")) {
+      await db.update(referralLinks).set({ clicks: sql14`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.id, linkRecord.id));
+    }
+    const platformTag = `${(input.platform || "direct").toLowerCase()}_${input.brandMode}`;
+    await db.insert(shares).values({
+      propertyId: input.propertyId,
+      agentId: targetAgentId,
+      platform: platformTag.slice(0, 50),
+      shareLink: input.token ? `ref:${input.token}|event:${input.eventType}` : `event:${input.eventType}`,
+      pointsAwarded: points
+    });
+    await db.update(users).set({ vPoints: sql14`COALESCE(${users.vPoints}, 0) + ${points}` }).where(eq19(users.id, targetAgentId));
+    return {
+      success: true,
+      pointsAwarded: points,
+      agentId: targetAgentId
+    };
+  }),
+  /**
+   * Ver mis puntos, métricas de marketing por red social, descargas de PDF y estadísticas de referidos
+   */
+  getMyStats: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    const user = await db.select().from(users).where(eq19(users.id, ctx.user.id)).limit(1);
+    const myLinks = await db.select().from(referralLinks).where(eq19(referralLinks.agentId, ctx.user.id));
+    const myShares = await db.select().from(shares).where(eq19(shares.agentId, ctx.user.id)).orderBy(desc10(shares.createdAt)).limit(200);
+    const myLedger = await db.select().from(clientLedger).where(eq19(clientLedger.agentId, ctx.user.id));
+    const totalClicks = myLinks.reduce((acc, link) => acc + (link.clicks || 0), 0);
+    const byPlatform = {
+      whatsapp: 0,
+      facebook: 0,
+      instagram: 0,
+      tiktok: 0,
+      linkedin: 0,
+      google_seo: 0,
+      pdf_qr: 0,
+      direct: 0
+    };
+    let engagedReads = 0;
+    let pdfDownloads = 0;
+    let qrScans = 0;
+    let brandedInteractions = 0;
+    let neutralInteractions = 0;
+    for (const s of myShares) {
+      const plat = (s.platform || "").toLowerCase();
+      if (plat.includes("whatsapp")) byPlatform.whatsapp++;
+      else if (plat.includes("facebook") || plat.includes("fb")) byPlatform.facebook++;
+      else if (plat.includes("instagram") || plat.includes("ig")) byPlatform.instagram++;
+      else if (plat.includes("tiktok")) byPlatform.tiktok++;
+      else if (plat.includes("linkedin")) byPlatform.linkedin++;
+      else if (plat.includes("google") || plat.includes("seo")) byPlatform.google_seo++;
+      else if (plat.includes("qr") || plat.includes("pdf")) byPlatform.pdf_qr++;
+      else byPlatform.direct++;
+      if (plat.includes("_neutral")) neutralInteractions++;
+      else brandedInteractions++;
+      const meta = s.shareLink || "";
+      if (meta.includes("engaged_read")) engagedReads++;
+      if (meta.includes("pdf_download")) pdfDownloads++;
+      if (meta.includes("qr_scan")) qrScans++;
+    }
+    return {
+      vPoints: user[0]?.vPoints || 0,
+      totalLinks: myLinks.length,
+      totalClicks,
+      engagedReads,
+      pdfDownloads,
+      qrScans,
+      leadsAnchored: myLedger.length,
+      brandedInteractions,
+      neutralInteractions,
+      byPlatform,
+      recentEvents: myShares.slice(0, 20),
+      links: myLinks
+    };
+  }),
+  /**
+   * Reclamar puntos (Cuando se genera un lead válido o conversión)
+   */
+  rewardPoints: protectedProcedure.input(z8.object({ referralToken: z8.string(), points: z8.number().default(100) })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    const link = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.referralToken)).limit(1);
+    if (link.length === 0) throw new Error("Token de referido inv\xE1lido");
+    await db.update(users).set({ vPoints: sql14`COALESCE(${users.vPoints}, 0) + ${input.points}` }).where(eq19(users.id, link[0].agentId));
+    return { success: true, pointsAwarded: input.points };
   })
 });
 
@@ -44417,19 +44919,19 @@ var agentRouter = router({
 init_trpc();
 init_db();
 init_schema();
-import { z as z8 } from "zod";
-import { eq as eq19, sql as sql14 } from "drizzle-orm";
+import { z as z9 } from "zod";
+import { eq as eq20, sql as sql15 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 var leadsRouter = router({
-  resolveStealthLink: publicProcedure.input(z8.object({ token: z8.string() })).query(async ({ input }) => {
+  resolveStealthLink: publicProcedure.input(z9.object({ token: z9.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq20(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql14`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql15`${referralLinks.clicks} + 1` }).where(eq20(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -44440,7 +44942,7 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq19(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq20(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -44448,16 +44950,16 @@ var leadsRouter = router({
       property: prop[0]
     };
   }),
-  submitStealthLead: publicProcedure.input(z8.object({
-    token: z8.string(),
-    name: z8.string().min(2),
-    documentNumber: z8.string().min(5),
-    email: z8.string().email(),
-    phone: z8.string().min(7)
+  submitStealthLead: publicProcedure.input(z9.object({
+    token: z9.string(),
+    name: z9.string().min(2),
+    documentNumber: z9.string().min(5),
+    email: z9.string().email(),
+    phone: z9.string().min(7)
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq20(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -44490,19 +44992,19 @@ init_trpc();
 init_db();
 init_schema();
 init_matching();
-import { z as z9 } from "zod";
-import { eq as eq21 } from "drizzle-orm";
+import { z as z10 } from "zod";
+import { eq as eq22 } from "drizzle-orm";
 var matchingRouter = router({
   /**
    * Buscar matches para un inmueble específico (Oferta -> Demanda)
    */
-  findMatchesForProperty: publicProcedure.input(z9.object({ propertyId: z9.number() })).query(async ({ input }) => {
+  findMatchesForProperty: publicProcedure.input(z10.object({ propertyId: z10.number() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database unavailable");
-    const property = await db.select().from(properties).where(eq21(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq22(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new Error("Propiedad no encontrada");
     const p = property[0];
-    const activeReqs = await db.select().from(requirements).where(eq21(requirements.status, "active"));
+    const activeReqs = await db.select().from(requirements).where(eq22(requirements.status, "active"));
     const matches = activeReqs.map((r) => ({
       requirementId: r.id,
       score: calcularScoreMatch(r, p)
@@ -44512,8 +45014,8 @@ var matchingRouter = router({
   /**
    * Registrar un requerimiento y buscar matches inmediatos
    */
-  createRequirement: publicProcedure.input(z9.object({
-    tipoInmuebleDeseado: z9.enum([
+  createRequirement: publicProcedure.input(z10.object({
+    tipoInmuebleDeseado: z10.enum([
       "apartment",
       "house",
       "building",
@@ -44526,7 +45028,7 @@ var matchingRouter = router({
       "loft",
       "consultorio"
     ]),
-    tipoNegocioDeseado: z9.enum([
+    tipoNegocioDeseado: z10.enum([
       "venta",
       "arriendo",
       "venta_o_arriendo",
@@ -44536,15 +45038,15 @@ var matchingRouter = router({
       "venta_permuta",
       "aporte"
     ]),
-    ciudadDeseada: z9.string().default("Bogot\xE1"),
-    zonaDeseada: z9.string().optional(),
-    presupuestoMax: z9.string(),
-    habitacionesMin: z9.number().optional(),
-    banosMin: z9.number().optional(),
-    garajes: z9.number().optional(),
-    interiorExterior: z9.enum(["interior", "exterior"]).optional(),
-    pisoDeseado: z9.number().optional(),
-    idUsuarioWhatsapp: z9.string().optional()
+    ciudadDeseada: z10.string().default("Bogot\xE1"),
+    zonaDeseada: z10.string().optional(),
+    presupuestoMax: z10.string(),
+    habitacionesMin: z10.number().optional(),
+    banosMin: z10.number().optional(),
+    garajes: z10.number().optional(),
+    interiorExterior: z10.enum(["interior", "exterior"]).optional(),
+    pisoDeseado: z10.number().optional(),
+    idUsuarioWhatsapp: z10.string().optional()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database unavailable");
@@ -44567,7 +45069,7 @@ var matchingRouter = router({
     }).returning();
     const reqId = newReq[0].id;
     const req = newReq[0];
-    const activeProps = await db.select().from(properties).where(eq21(properties.available, true));
+    const activeProps = await db.select().from(properties).where(eq22(properties.available, true));
     const matches = activeProps.map((p) => ({
       propertyId: p.id,
       score: calcularScoreMatch(req, p)
@@ -44585,10 +45087,10 @@ var matchingRouter = router({
   /**
    * Cruce Ad-Hoc instantáneo de requerimiento u oferta en texto crudo (v33.02)
    */
-  quickMatchAdHoc: publicProcedure.input(z9.object({
-    rawText: z9.string(),
-    channel: z9.enum(["admin", "public"]).default("admin"),
-    secretKey: z9.string().optional()
+  quickMatchAdHoc: publicProcedure.input(z10.object({
+    rawText: z10.string(),
+    channel: z10.enum(["admin", "public"]).default("admin"),
+    secretKey: z10.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const isAdmin = !!ctx.user && (ctx.user.role === "admin" || ctx.user.isAdmin === true) || input.secretKey === "vecy-admin-secret-2026" || input.channel === "admin";
     const { executeAdHocMatch: executeAdHocMatch2 } = await Promise.resolve().then(() => (init_matchAdHocService(), matchAdHocService_exports));
@@ -44599,11 +45101,12 @@ var matchingRouter = router({
 // server/routers.ts
 init_trpc();
 init_db();
-import { z as z10 } from "zod";
+import { z as z11 } from "zod";
 var ONE_YEAR_MS2 = 365 * 24 * 60 * 60 * 1e3;
 var appRouter = router({
   system: systemRouter,
   agent: agentRouter,
+  affiliates: affiliatesRouter,
   leads: leadsRouter,
   properties: propertiesRouter,
   agenda: agendaRouter,
@@ -44616,7 +45119,7 @@ var appRouter = router({
         success: true
       };
     }),
-    loginWithSupabaseToken: publicProcedure.input(z10.object({ accessToken: z10.string() })).mutation(async ({ input, ctx }) => {
+    loginWithSupabaseToken: publicProcedure.input(z11.object({ accessToken: z11.string() })).mutation(async ({ input, ctx }) => {
       try {
         const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
         const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
@@ -44703,10 +45206,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq22 } = await import("drizzle-orm");
+          const { eq: eq23 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq22(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq23(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -44720,10 +45223,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq22 } = await import("drizzle-orm");
+        const { eq: eq23 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq22(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq23(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -44759,7 +45262,7 @@ async function createContext(opts) {
 // server/_core/vite.ts
 import express from "express";
 import fs16 from "fs";
-import { nanoid } from "nanoid";
+import { nanoid as nanoid2 } from "nanoid";
 import path17 from "path";
 import { createServer as createViteServer } from "vite";
 
@@ -44857,7 +45360,7 @@ async function setupVite(app, server) {
       let template = await fs16.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
+        `src="/src/main.tsx?v=${nanoid2()}"`
       );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
@@ -45736,7 +46239,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq22, gte: gte6 } = await import("drizzle-orm");
+      const { eq: eq23, gte: gte6 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
@@ -45758,8 +46261,8 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq22(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq22(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq23(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq23(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

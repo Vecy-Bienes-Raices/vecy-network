@@ -23,6 +23,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Login = lazy(() => import("./pages/Login"));
 const AgentDashboard = lazy(() => import("./pages/AgentDashboard"));
+const AgentMicrosite = lazy(() => import("./pages/AgentMicrosite"));
 const StealthPropertyView = lazy(() => import("./pages/StealthPropertyView"));
 const UnbrandedFicha = lazy(() => import("./pages/UnbrandedFicha"));
 const Agenda = lazy(() => import("./pages/Agenda"));
@@ -60,6 +61,8 @@ function Router() {
         <Route path={"/admin"} component={Admin} />
         <Route path={"/login"} component={Login} />
         <Route path={"/agent-dashboard"} component={AgentDashboard} />
+        <Route path={"/s/:slug"} component={AgentMicrosite} />
+        <Route path={"/agencia/:slug"} component={AgentMicrosite} />
         <Route path={"/p/:token"} component={StealthPropertyView} />
         <Route path={"/ficha/:id"} component={UnbrandedFicha} />
         <Route path={"/agenda"} component={Agenda} />

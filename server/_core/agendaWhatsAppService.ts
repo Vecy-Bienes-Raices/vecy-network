@@ -39,6 +39,8 @@ export interface AgendaWhatsAppPayload {
   hasAlertaAntecedentes?: boolean;
   alerta_motivo?: string;
   alertaMotivo?: string;
+  customAgentWhatsapp?: string;
+  customAgencyName?: string;
 }
 
 /** Teléfono de WhatsApp oficial de la Inmobiliaria Vecy Bienes Raíces (Atención Bróker) */
@@ -288,6 +290,26 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] ✅ Notificación entregada al socket para Bróker (+57 316 6569719).`);
     } catch (brokerErr: any) {
       console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] ⚠️ Error notificando al Bróker:`, brokerErr?.message || brokerErr);
+    }
+
+    // 1b. Si la solicitud viene de Vecy Agenda Pro de un Agente/Suscriptor con WhatsApp propio configurado, enviarle copia inmediata
+    if (payload.customAgentWhatsapp) {
+      const cleanCustomAgentPhone = cleanColombianPhone(payload.customAgentWhatsapp);
+      if (cleanCustomAgentPhone && cleanCustomAgentPhone.length >= 10 && cleanCustomAgentPhone !== VECY_BROKER_OFFICIAL_PHONE) {
+        try {
+          const customHeader = payload.customAgencyName
+            ? `🏢 *VECY AGENDA PRO — ${payload.customAgencyName.toUpperCase()}*\n`
+            : `🏢 *VECY AGENDA PRO — NOTIFICACIÓN A SUSCRIPTOR*\n`;
+          await janiaMatchBot.sendDirectMessage(cleanCustomAgentPhone, `${customHeader}${brokerMsg}`, {
+            allowDirectMessage: true,
+            isTransactionalNotification: true,
+            skipDelay: true
+          });
+          console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] ✅ Copia Vecy Agenda Pro entregada al Suscriptor (${cleanCustomAgentPhone}).`);
+        } catch (agentWaErr: any) {
+          console.warn(`[AGENDA-WHATSAPP-#${numSolicitud}] ⚠️ Error notificando al WhatsApp del suscriptor:`, agentWaErr?.message);
+        }
+      }
     }
 
     // 2. Notificación al Solicitante / Cliente (si tiene celular registrado)

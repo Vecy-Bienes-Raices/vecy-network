@@ -715,6 +715,23 @@ export async function sendContractAndConfirmationEmails(rawPayload: SolicitudEma
       attachments,
     });
     console.log(`[AGENDA-EMAIL-#${solicitudId}] 🔔 Correo interno enviado a ${adminTargetEmail}`);
+
+    // 2b. Si la solicitud viene de Vecy Agenda Pro de un Agente/Suscriptor con Email propio configurado, enviarle copia inmediata
+    const customAgentEmail = (rawPayload as any)?.customAgentEmail;
+    if (customAgentEmail && typeof customAgentEmail === "string" && customAgentEmail.includes("@") && customAgentEmail !== adminTargetEmail) {
+      try {
+        await transporter.sendMail({
+          from: `"${(rawPayload as any)?.customAgencyName || "Vecy Agenda Pro"}" <${gmailUser}>`,
+          to: customAgentEmail,
+          subject: `${adminSubject} [${(rawPayload as any)?.customAgencyName || "Mi Sitio"}]`,
+          html: adminContent.html,
+          attachments,
+        });
+        console.log(`[AGENDA-EMAIL-#${solicitudId}] 🔔 Copia Vecy Agenda Pro enviada al correo del suscriptor: ${customAgentEmail}`);
+      } catch (subMailErr: any) {
+        console.warn(`[AGENDA-EMAIL-#${solicitudId}] ⚠️ Error enviando copia a correo del suscriptor:`, subMailErr?.message);
+      }
+    }
   } catch (adminMailErr: any) {
     console.error(`[AGENDA-EMAIL-#${solicitudId}] ❌ Error enviando correo interno a Vecy:`, adminMailErr?.message);
   }

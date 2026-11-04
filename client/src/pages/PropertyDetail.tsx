@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import NetworkBackground from '@/components/NetworkBackground';
 import PropertyGallery from '@/components/PropertyGallery';
 import NeighborhoodMap from '@/components/NeighborhoodMap';
+import AgentProToolsWidget from '@/components/AgentProToolsWidget';
 import { 
   Loader2, 
   MapPin, 
@@ -29,7 +30,9 @@ import {
   Calendar,
   Warehouse,
   Briefcase,
-  FileDown
+  FileDown,
+  Palette,
+  EyeOff
 } from 'lucide-react';
 import ShareModal from '@/components/ShareModal';
 import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
@@ -44,12 +47,58 @@ export default function PropertyDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const propertyId = params?.id ? parseInt(params.id) : null;
-  const isStealth = new URLSearchParams(window.location.search).get('mode') === 'stealth';
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const isStealth = searchParams.get('mode') === 'stealth';
+  const refToken = searchParams.get('ref') || '';
+  const agentIdParam = searchParams.get('agentId') ? Number(searchParams.get('agentId')) : undefined;
 
   const { data: property, isLoading, error } = trpc.properties.getById.useQuery(
     { id: propertyId || 0 },
     { enabled: !!propertyId }
   );
+
+  const { data: resolvedRef } = trpc.affiliates.resolveToken.useQuery(
+    { token: refToken },
+    { enabled: !!refToken }
+  );
+
+  const effectiveAgentId = agentIdParam || resolvedRef?.agent?.id;
+  const { data: brandingAgent } = trpc.agent.getProfile.useQuery(
+    { id: effectiveAgentId },
+    { enabled: !!effectiveAgentId }
+  );
+
+  const telemetryMutation = trpc.affiliates.trackTelemetryEvent.useMutation();
+
+  useEffect(() => {
+    if (!propertyId) return;
+    const ref = (document.referrer || '').toLowerCase();
+    const utm = (searchParams.get('utm_source') || '').toLowerCase();
+    const platform = utm || (ref.includes('whatsapp') ? 'whatsapp' : ref.includes('facebook') ? 'facebook' : ref.includes('instagram') ? 'instagram' : ref.includes('google') ? 'google_seo' : 'direct');
+    const brandMode = isStealth ? 'neutral' : effectiveAgentId ? 'branded' : 'vecy';
+
+    telemetryMutation.mutate({
+      token: refToken || undefined,
+      agentId: effectiveAgentId,
+      propertyId,
+      eventType: 'view',
+      platform,
+      brandMode,
+    });
+
+    const timer = setTimeout(() => {
+      telemetryMutation.mutate({
+        token: refToken || undefined,
+        agentId: effectiveAgentId,
+        propertyId,
+        eventType: 'engaged_read',
+        platform,
+        brandMode,
+      });
+    }, 15000);
+
+    return () => clearTimeout(timer);
+  }, [propertyId, refToken, effectiveAgentId, isStealth]);
 
   if (isLoading) {
     return (
@@ -299,14 +348,27 @@ export default function PropertyDetail() {
               )}
 
               {!isStealth && (
-                <a
-                  href={`/ficha/${property.id}`} 
-                  target="_blank" rel="noreferrer"
-                  className="py-3.5 px-6 bg-black border border-white/10 hover:border-primary/50 text-white rounded-xl transition-all inline-flex items-center gap-2 font-black tracking-widest text-xs uppercase"
-                >
-                  <Download className="w-4 h-4 text-zinc-300" />
-                  <span>FICHA TÉCNICA</span>
-                </a>
+                <>
+                  <a
+                    href={`/ficha/${property.id}?mode=branded${effectiveAgentId ? `&agentId=${effectiveAgentId}` : ''}${refToken ? `&ref=${refToken}` : ''}`} 
+                    target="_blank" rel="noreferrer"
+                    className="py-3.5 px-5 bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 text-sky-200 hover:text-white rounded-xl transition-all inline-flex items-center gap-2 font-black tracking-widest text-xs uppercase"
+                    title="Abrir Brochure editable con Tu Marca, Logo y Colores (Estilo Wasi)"
+                  >
+                    <Palette className="w-4 h-4 text-sky-400" />
+                    <span>FICHA CON MARCA</span>
+                  </a>
+
+                  <a
+                    href={`/ficha/${property.id}?mode=neutral${refToken ? `&ref=${refToken}` : ''}`} 
+                    target="_blank" rel="noreferrer"
+                    className="py-3.5 px-5 bg-black border border-white/15 hover:border-primary/50 text-white rounded-xl transition-all inline-flex items-center gap-2 font-black tracking-widest text-xs uppercase"
+                    title="Abrir Brochure Marca Blanca 100% Neutro (Sin contactos ni colores para enviar a terceros)"
+                  >
+                    <EyeOff className="w-4 h-4 text-zinc-300" />
+                    <span>FICHA MARCA BLANCA (TERCEROS)</span>
+                  </a>
+                </>
               )}
             </div>
           </div>
@@ -543,6 +605,19 @@ export default function PropertyDetail() {
             </p>
           </div>
         </ScrollReveal>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* 5.5 HERRAMIENTAS PRO DEL SUSCRIPTOR (SIMULADOR ROI + AGENTE IA)   */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {!isStealth && brandingAgent && (
+          <AgentProToolsWidget
+            agent={brandingAgent as any}
+            propertyContext={`${property.name} en ${property.addressNeighborhood || property.zone} — Precio: $${Number(property.price).toLocaleString('es-CO')} COP, Área: ${property.areaTotal} m²`}
+            propertyPrice={Number(property.price) || 450000000}
+            propertyId={property.id}
+            showRoiCalculatorInline={true}
+          />
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* 6. UBICACIÓN ESTRATÉGICA & VECY AGENDA FORM PROMINENTE            */}

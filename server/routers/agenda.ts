@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { desc, ilike, or, sql, eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { solicitudes, profiles } from "../../drizzle/schema";
+import { solicitudes, profiles, users } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -1634,6 +1634,31 @@ export async function processAndSaveSolicitud(input: any) {
 
   const newRow = inserted[0];
 
+  // Resolver datos personalizados del Agente/Suscriptor si viene agent_id (Vecy Agenda Pro Marca Propia)
+  let customAgentEmail: string | undefined;
+  let customAgentWhatsapp: string | undefined;
+  let customAgencyName: string | undefined;
+
+  if (input.agent_id && !isNaN(Number(input.agent_id))) {
+    try {
+      const agentRows = await db.select().from(users).where(eq(users.id, Number(input.agent_id))).limit(1);
+      if (agentRows.length > 0) {
+        const ag = agentRows[0];
+        const theme = (ag.themeConfig as any) || {};
+        const tools = (ag.activeTools as any) || {};
+        const agendaProCfg = tools.agendaPro || {};
+        customAgencyName = agendaProCfg.customHeaderTitle || theme.agencyName || ag.name || undefined;
+        customAgentEmail = agendaProCfg.notifyEmail || theme.contactEmail || ag.email || undefined;
+        customAgentWhatsapp = agendaProCfg.notifyWhatsapp || theme.contactPhone || ag.phone || undefined;
+
+        // Acreditar +100 vPoints al agente por conversión de cita en Vecy Agenda Pro
+        await db.update(users)
+          .set({ vPoints: sql`COALESCE(${users.vPoints}, 0) + 100` })
+          .where(eq(users.id, ag.id));
+      }
+    } catch (_) {}
+  }
+
   // Despacho asíncrono no bloqueante de correos y contrato PDF (100% VPS a $0 COP)
   sendContractAndConfirmationEmails({
     ...input,
@@ -1643,7 +1668,9 @@ export async function processAndSaveSolicitud(input: any) {
     alerta_antecedentes: hasAntecedentesFlag,
     alerta_motivo: antecedentesMotivo,
     hasAlertaAntecedentes: hasAntecedentesFlag,
-  }).catch((emailErr) => {
+    customAgentEmail,
+    customAgencyName,
+  } as any).catch((emailErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
   });
 
@@ -1656,6 +1683,8 @@ export async function processAndSaveSolicitud(input: any) {
     alerta_antecedentes: hasAntecedentesFlag,
     alerta_motivo: antecedentesMotivo,
     hasAlertaAntecedentes: hasAntecedentesFlag,
+    customAgentWhatsapp,
+    customAgencyName,
   }).catch((waErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
   });

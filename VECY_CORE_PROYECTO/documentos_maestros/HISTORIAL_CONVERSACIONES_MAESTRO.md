@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-04] — JanIA v33.93: Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Vecy Agenda Pro + Widget Agente IA) (v33.93 - 33.93.0)
+
+**Versión:** `v33.93` (`33.93.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+1. *"Hay una herramienta creo que en Github que se usa para averiguar cómo funcionan todas la aplicaciones y sitios web, escuché algo de una tecnología inversa creo que se llama REA o algo así parecido, tu sabes algo al respecto?? Crees tu que nos sirva para potenciar este proyecto, es que aún no encuentro la manera de resolver y corregir bien lo de subir inmuebles correctamente a la tienda y que se generan muy bien las fichas técnicas, dossiers o brochures de cada inmueble pero que se tenga la opción de descargar dicha ficha técnica con la marca, el logo, contactos y colores de cada usuario (Es decir tener la infraestructura que usa y ofrece Wasi en plantillas prediseñadas pero modificables según los colores que necesite cada agencia o agente referente a lo que usa su marca y colocar sus datos y logos) es para que cada usuario pueda crear su propio sitio en VECY BIENES RAÍCES y otra opción es donde esos usuarios le brinden a terceros la posibilidad de descargar dichas fichas sin nada de esa información de contacto ni siquiera colores que se asemejen o den a entender de que es de ellos o de nosotros... recuerda que cada ficha con o sin datos siempre debe tener instalados bots de seguimiento para saber distribuir los puntos por publicación y otorgar o aprender y saber distribuir las ganancias como es debido entre los miembros que decidan participar en la publicación de dichos enlaces de marca blanca en sus redes sociales y poder saber cómo se manejan las estadísticas de crecimiento publicitario..."*
+2. *"Pues arranca y en ese mismo orden que propones las 3 fases quirúrgicas. A ver que pasa. Confío en tí y ojalá lo mejores 100% y no vayas a romper otras cosas que ya funcionan muy bien... Algo adicional que me encantaría es poder ofrecer herramientas que los usuarios puedan añadir a sus sitios web desde su dashboard si las pagan pero a un precio adicional y justo ya que recuerda que la idea es que nuestro plan de ingreso a diferencia del de otros portales o CRM como wasi es que será gratuito con publicación de inmuebles ilimitados (Si se puede claro), pero creo que podemos darles ciertas herramientas adicionales y estas también modificables o editables con sus colores, logo y diseño propio de sus marcas, serían las siguientes; una vecy agenda pro con todas sus funciones idénticas pero que dirijan las notificaciones a sus correos y whatsapp propios / un widget con un/a agente de IA personalizable y editable como todas estas herramientas, y que si es IA femenina o masculina, con posibilidad que mediante sus propios prompt se inyecten una personalidad como ellos la deseen o que la dejen genérica o con botones que digan; normal, Audaz, profesional, extrovertida, seria, profesional, cordial, etc..."*
+
+**Diagnóstico Técnico Profundo:**
+1. **Desconexión de Fichas Técnicas (`UnbrandedFicha.tsx`) frente a PostgreSQL en Vivo:**
+   - La página `/ficha/:id` (`client/src/pages/UnbrandedFicha.tsx`) leía de un diccionario estático mock (`propertiesDatabase[propertyId]`) en lugar de consultar `trpc.properties.getById`. Por ello, todo inmueble recién subido a la Tienda de PostgreSQL arrojaba "Propiedad no encontrada" al abrir o descargar su ficha técnica.
+2. **Necesidad de Motor Dual de Brochures (Estilo Wasi + Marca Blanca "Cero Rastro"):**
+   - Wasi ofrece plantillas con colores y logo del agente, pero carece de una modalidad de **Marca Blanca Neutra ("Cero Rastro")** para redes colaborativas donde ni los colores del captador ni los de VECY aparezcan en el PDF compartido con clientes de terceros, manteniendo aun así la trazabilidad del agente difusor mediante sensores y QR dinámico.
+3. **Sensores de Telemetría y Atribución de Puntos (`vPoints`) en Enlaces y PDFs:**
+   - `affiliatesRouter` (`server/routers/affiliates.ts`) no estaba montado en `appRouter` (`server/routers.ts`) y requería un sensor omnicanal (`trackTelemetryEvent`) con deduplicación antifraude y matriz de puntos (`POINTS_MATRIX`) para registrar vistas (`+2 pts`), lectura calificada >15s (`+10 pts`), descargas PDF (`+15 pts`), escaneos de QR impreso (`+20 pts`), clics a WhatsApp (`+25 pts`) y conversiones (`+100 pts`), desglosando el origen SEO por red social (`whatsapp`, `facebook`, `instagram`, `tiktok`, `linkedin`, `google_seo`, `pdf_qr`).
+4. **Plan Gratuito con Publicación Ilimitada + Micro-Sitio Propio (`/s/:slug`) + Herramientas Pro Personalizables:**
+   - Los suscriptores necesitan un constructor en su Dashboard (`AgentDashboard.tsx`) para configurar su micro-sitio (`/s/:slug` y `/agencia/:slug`) con publicación ilimitada de inmuebles gratis, y activar herramientas adicionales con su marca:
+     - **Vecy Agenda Pro Marca Propia:** Con verificación de identidad en vivo, firma digital y contrato PDF, enrutando notificaciones al WhatsApp y correo propios del suscriptor (`customAgentWhatsapp`, `customAgentEmail`).
+     - **Widget de Agente IA Personalizable:** Con selección de género (Femenina / Masculina), 6 personalidades de 1 clic (`Normal`, `Audaz`, `Profesional`, `Extrovertida`, `Seria`, `Cordial`) y prompt propio inyectable (`customPrompt`).
+     - **Calculadora Hipotecaria & ROI Inversor:** Personalizada con los colores del suscriptor.
+
+**Acciones Ejecutadas (3 Fases Quirúrgicas + Herramientas Pro):**
+1. **Fase 1 — Motor de Fichas Técnicas / Brochures Conectado a PostgreSQL (`client/src/pages/UnbrandedFicha.tsx`):**
+   - Conectado en tiempo real a `trpc.properties.getById` con fallback seguro.
+   - Implementados **3 Modos de Ficha Técnica** conmutables en vivo antes de imprimir/descargar PDF A4:
+     - **Modo Con Mi Marca (`branded`):** Aplica el logo del suscriptor (`customLogoUrl`), colores corporativos (`primaryColor`, `secondaryColor`), plantilla (`wasi-classic`, `luxury-editorial`, `modern-minimal`) y datos de contacto de la agencia.
+     - **Modo Marca Blanca Neutra — Cero Rastro (`neutral`):** Suprime al 100% logos, teléfonos, correos y nombres de agencia, y aplica una paleta monocromática arquitectónica neutra (`#27272a`, `#18181b`, `#f4f4f5`) sin rastro de colores del captador ni de VECY.
+     - **Modo Oficial Vecy (`vecy`):** Identidad Gold & Espresso.
+2. **Fase 2 — Bots y Sensores de Telemetría SEO + QR Dinámico (`server/routers/affiliates.ts`, `server/routers.ts`):**
+   - Montado `affiliatesRouter` en `appRouter`.
+   - Implementado `trackTelemetryEvent` con matriz `POINTS_MATRIX`, deduplicación antifraude de 10 minutos por huella y desglose de tráfico por red social en `getMyStats`.
+   - Incorporado código QR dinámico con `?utm_source=pdf_qr&ref=TOKEN` en las fichas técnicas para rastrear escaneos desde PDFs descargados o impresos.
+3. **Fase 3 — Subida Unificada, Micro-Sitio del Suscriptor y Herramientas Pro (`server/routers/agent.ts`, `AgentMicrosite.tsx`, `AgentProToolsWidget.tsx`, `AgentDashboard.tsx`):**
+   - Integrado `UnifiedPublishModal` en `AgentDashboard.tsx` para publicación ilimitada y gratuita de inmuebles.
+   - Creado el Micro-Sitio propio del suscriptor en `/s/:slug` y `/agencia/:slug` (`client/src/pages/AgentMicrosite.tsx`).
+   - Creado el endpoint `agent.chatWithCustomAgent` con `PERSONALITY_PROMPTS` (`normal`, `audaz`, `profesional`, `extrovertida`, `seria`, `cordial`), soporte de género (`female` / `male`) y prompt personalizado.
+   - Creado `client/src/components/AgentProToolsWidget.tsx` con el Widget flotante de Agente IA y la Calculadora Hipotecaria & ROI con los colores de la agencia.
+   - Enrutamiento multi-tenant en `agendaWhatsAppService.ts`, `emailContractService.ts` y `server/routers/agenda.ts` para despachar copia del contrato PDF y alerta de WhatsApp directamente al correo y WhatsApp propios del suscriptor dueño de su Vecy Agenda Pro.
+   - Registrada la directriz fundacional `seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93` en `founderKnowledgeService.ts`.
+4. **Validación Limpia ($0 COP):**
+   - Creada la **Suite 179** en `server/__tests__/regression.test.ts` y `server/__tests__/wasiBrandBrochureAndProToolsV33_93.test.ts`.
+   - Typecheck `npm run check`: 0 errores.
+   - Tests `npm test`: **604 tests passing (6/6 suites en verde, 100% pasando)**.
+   - Build `npm run build`: Limpio sin errores.
+
+---
+
 ### 📅 [2026-11-04] — JanIA v33.92: Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks (v33.92 - 33.92.0)
 
 **Versión:** `v33.92` (`33.92.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
