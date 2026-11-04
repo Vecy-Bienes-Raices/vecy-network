@@ -8750,6 +8750,33 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.92 (2026-11-04) — Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Fallo en Detección de Mención por LID en Grupos Externos:* Al citar un mensaje y mencionar a JanIA desde WhatsApp Web o Desktop (`@✨JanIA agente IA de VECY⚡`), el cliente genera un identificador de dispositivo LID (`167108705018103@lid` e inserta `@167108705018103` en el texto). El filtro previo solo evaluaba el número telefónico o `cleanJid(jid) === botJid`, fallando en detectar la mención y no activando el handler.
+  2. *Bloqueo Incondicional en `queuedSend` a Grupos Externos:* La cola de salida descartaba de raíz cualquier mensaje dirigido a grupos no oficiales (`@g.us`), impidiendo que JanIA emitiera respuestas aun habiendo sido mencionada.
+  3. *Pérdida de Contexto Citado (`quotedContext`) y Omisión de Mención a la Contraparte:* Cuando un usuario (ej. Eduardo o un colega) cita una pregunta de otra persona (ej. Vanessa) solicitando la ayuda de JanIA, la consulta real está en el mensaje citado. Si JanIA evalúa solo el texto del invocador, pierde el contenido esencial. Además, para que ambos se enteren de la resolución, ambos deben figurar en las menciones del mensaje (`mentions: [senderId, quotedSenderId]`) con `quoted: msg`.
+  4. *Excusas Técnicas Falsas sobre Webhooks:* JanIA inventaba excusas técnicas alegando que no tenía "webhooks de administrador directos del grupo", respondiendo únicamente en privado y degradando la confianza en el sistema.
+- **Solución Implementada**:
+  1. `server/_core/whatsapp-match.ts`:
+     - Implementada la función `isBotDirectlyMentioned(msg, text)` cubriendo: texto (`jania`, `@jania`), teléfonos, LIDs (`167108705018103`), array `mentionedJid` (con `@lid` o `@s.whatsapp.net`), y respuestas citando mensajes de JanIA.
+     - Aplicada en los filtros de mensajes grupales para activar la compuerta ante menciones explícitas.
+     - En `queuedSend`, añadida la autorización explícita `options.allowExternalGroupResponse === true` para que los despachos aprobados a grupos externos se envíen con éxito.
+     - En `handleDirectGroupQuestion`: extraído el contexto citado (`quotedContext`), combinada la pregunta (`bodyText` + `quotedContext`), agregadas ambas partes al array `mentions: [senderId, quotedSenderId]`, y despachado el mensaje con `quoted: msg` y `allowExternalGroupResponse: true`.
+  2. `server/_core/jania/handlers/consultingHandler.ts`:
+     - Actualizado el prompt contextual para resolver con rigor jurídico y calidez cuando se es invocado en grupos externos sobre preguntas citadas, saludando a las partes y erradicando cualquier excusa de webhooks.
+  3. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+     - Incorporada la sección: *Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas y Cero Excusas de Webhooks (v33.92)*.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz de enseñanza permanente `seed-grupos-externos-mencion-lid-cita-partes-v33-92`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 178 en `regression.test.ts` con 6 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **590 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build` limpio en 26.55s + 193ms.
+  - Versión: `v33.92` (`33.92.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.91 (2026-11-04) — Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Caída a Voz Robótica de Contingencia (GTTS):* Google Cloud TTS (Laomedeia y Neural2) 403'd por saldo pendiente en el proyecto cloud. La librería `msedge-tts@2.0.7` arrojaba 403 al conectarse a los WebSockets de Microsoft por la introducción de la nueva cabecera de autenticación `Sec-MS-GEC v2` (CS64 hash). En consecuencia, JanIA caía en el último recurso (Google Translate TTS), sonando genérica y robótica.

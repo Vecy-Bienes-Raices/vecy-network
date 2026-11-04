@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.91 — Noviembre 2026
+
+## 🔖 VERSIÓN ACTUAL: v33.92 — Noviembre 2026
+
+### Novedades v33.92 (Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Cómo podemos hacer para que JanIA responda esa consulta o cualquiera en ese grupo externo, pero que sean consultas, eso si solo si nosostros la citamos o etiquetamos a las partes."*
+     - Evidencias en captura de WhatsApp: En el grupo externo inmobiliario *"anécdotas y vivencias inmobiliarias"* (`120363044892588903@g.us`), la colega Vanessa Lopez Aldana formuló una consulta urgente sobre venta inmobiliaria respaldada 100% por un fondo de pensiones y cesantías de Allianz. Eduardo citó a Vanessa etiquetando a JanIA: `"Hola @✨JanIA agente IA de VECY⚡, explícale por favor respóndele a Vanessa sobre lo que pregunta."`
+     - JanIA no respondió en el grupo. En DM privado, Eduardo preguntó *"¿No respondiste??"*, y JanIA emitió una excusa técnica afirmando que carecía de "webhooks de administrador directos de ese grupo en este preciso instante", enviando la respuesta jurídica y comercial únicamente al privado de Eduardo.
+  2. **Causa Raíz Identificada:**
+     - **Mención LID en WhatsApp Web/Desktop:** WhatsApp Web envía menciones usando el identificador de dispositivo LID (`167108705018103@lid` y `@167108705018103`), el cual no era detectado por los filtros previos basados estrictamente en el número telefónico o JID `@s.whatsapp.net`.
+     - **Blindaje Estricto de `queuedSend`:** Toda salida hacia JIDs grupales (`@g.us`) no oficiales era bloqueada incondicionalmente en la cola de envío (`queuedSend`), impidiendo respuestas autorizadas a grupos externos.
+     - **Pérdida de Contexto Citado (`quotedContext`) y Falta de Etiquetado Multi-Parte:** Se requería extraer el mensaje citado original, integrarlo a la consulta de JanIA y etiquetar a ambas partes (`[senderId, quotedSenderId]`) con `quoted: msg` en el grupo externo.
+     - **Alucinación de Webhooks:** JanIA inventaba excusas técnicas sobre falta de webhooks en lugar de responder directamente vía su socket de Baileys conectado 24/7.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Detector Omnicanal `isBotDirectlyMentioned`:** Detecta menciones por texto, emojis, teléfonos, LIDs (`167108705018103`), array `mentionedJid` (con `@lid` o `@s.whatsapp.net`), y citas directas de mensajes del bot.
+     - **Desbloqueo Quirúrgico en `queuedSend` (`allowExternalGroupResponse`):** Permite la entrega del mensaje saliente en el grupo externo solo cuando ha sido expresamente autorizado por una mención o consulta directa citada.
+     - **Integración de Contexto Citado y Etiquetado Multi-Parte en `handleDirectGroupQuestion`:** Combina la orden de Eduardo con la pregunta de Vanessa, etiqueta a ambas partes y responde citando el mensaje original en el grupo externo.
+     - **Directriz Doctrinal y Cero Excusas:** Inyectada regla en prompts y `consultingHandler.ts` prohibiendo excusas de webhooks y ordenando responder con solvencia técnica dirigiéndose a las partes citadas.
+     - **Preservación Total de la Ingesta Fantasma:** Los grupos externos continúan en 100% de silencio e ingesta pasiva de inmuebles/requerimientos cuando no hay mención directa hacia JanIA.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-grupos-externos-mencion-lid-cita-partes-v33-92` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 178 `vitest` (5/5 passing, 590 tests) | Build `npm run build` limpio en 26.55s + 193ms.
+
+## 🔖 VERSIÓN ANTERIOR: v33.91 — Noviembre 2026
 
 ### Novedades v33.91 (Doctrina de Voz Humana Colombiana Salomé [0 COP], Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-04] — JanIA v33.92: Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks (v33.92 - 33.92.0)
+
+**Versión:** `v33.92` (`33.92.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Cómo podemos hacer para que JanIA responda esa consulta o cualquiera en ese grupo externo, pero que sean consultas, eso si solo si nosostros la citamos o etiquetamos a las partes."*
+- **Evidencias Gráficas Aportadas por Eduardo A. Rivera:**
+  1. *Captura 1 (`media_1793820458889_706c7dde.jpg`):* En el grupo externo inmobiliario *"anécdotas y vivencias inmobiliarias"* (`120363044892588903@g.us`), la colega `Vanessa Lopez Aldana` preguntó a las 14:22: *"Buenos días tengo esta consulta URGENTE alguien ha hecho una venta, donde el comprador tenga su fondo de pensiones y cesantías con Allianz y respalde el 100% de la compra con el fondo?..."*. Eduardo citó el mensaje de Vanessa en el grupo y escribió: `"Hola @✨JanIA agente IA de VECY⚡, explícale por favor respóndele a Vanessa sobre lo que pregunta."`
+  2. *Captura 2 (`media_1793820507489_37bef0d3.jpg`):* JanIA no respondió en el grupo. Al preguntarle Eduardo por chat privado *"¿No respondiste??"*, JanIA emitió una excusa técnica inaceptable: *"¡Ay, Eduardo! 🙈 Disculpa, es que como opero por medio de solicitudes directas a través del sistema, en el grupo externo donde está el mensaje de Vanessa (al ser un chat de terceros donde no tengo los webhooks de administrador directos de ese grupo en este preciso instante) el sistema no capturó la mención de forma automática en el servidor externo..."*. Acto seguido, JanIA redactó la respuesta legal y comercial impecable únicamente en el chat privado de Eduardo en lugar de despacharla en el grupo.
+
+**Diagnóstico Técnico Profundo:**
+1. **Detección Incompleta de Menciones por Identificador de Dispositivo LID en WhatsApp Web/Desktop:**
+   - En WhatsApp Web y Desktop moderno, al tipear `@` y seleccionar el contacto de JanIA (`✨JanIA agente IA de VECY⚡`), el protocolo Baileys no envía el número telefónico (`573192919978`), sino el identificador vinculado de dispositivo LID (`167108705018103@lid`), e inserta en el texto `@167108705018103`.
+   - La lógica previa en `whatsapp-match.ts` comprobaba únicamente cadenas literales de teléfono (`573192919978`, `3192919978`) o comparaba `cleanJid(jid) === botJid` (`573192919978@s.whatsapp.net`), resultando en `false` para menciones emitidas vía `@lid`.
+2. **Bloqueo Incondicional de Mensajes Salientes en `queuedSend` hacia Grupos Externos:**
+   - La función `queuedSend` mantenía un blindaje estricto que descartaba cualquier mensaje saliente hacia un JID que terminara en `@g.us` si no coincidía con uno de los tres grupos oficiales de VECY.
+   - Aunque `handleDirectGroupQuestion` procesara una mención, el mensaje era silenciado silenciosamente en la cola de envío (`queuedSend`) al carecer de una bandera de autorización explícita para grupos externos.
+3. **Pérdida de Contexto Citado (`quotedContext`) y Falta de Etiquetado Multi-Parte:**
+   - Cuando Eduardo cita el mensaje de una colega (`Vanessa Lopez Aldana`) y etiqueta a JanIA, la consulta real reside en el mensaje citado (`quotedContext`). Si JanIA evalúa únicamente el texto de Eduardo (`"Hola @JanIA, explícale por favor..."`), carece del detalle sustantivo sobre el fondo de cesantías/pensiones de Allianz.
+   - Adicionalmente, para que tanto el usuario que invoca como el colega citado se enteren de la respuesta, ambos JIDs deben registrarse en el array de menciones (`mentions: [senderId, quotedSenderId]`) y el mensaje saliente debe citar el mensaje original (`quoted: msg`).
+4. **Erradicación Total de Excusas Técnicas de "Webhooks Externos":**
+   - JanIA está conectada 24/7 al protocolo WebSocket nativo de WhatsApp vía Baileys, recibiendo en tiempo real los mensajes de TODOS los grupos donde participa el número. Alegar falta de "webhooks de administrador directos" es una alucinación técnica que degrada la reputación y profesionalismo de JanIA.
+5. **Preservación Inquebrantable de la Ingesta Fantasma en Grupos Externos:**
+   - En ausencia de una mención directa a JanIA o citación explícita, los grupos externos deben permanecer bajo el Modo Silencioso / Ingesta Fantasma (extracción pasiva de inmuebles/requerimientos con reacción de emoji y cero mensajes de texto).
+
+**Acciones Ejecutadas:**
+1. **Implementación de `isBotDirectlyMentioned(msg, text)` Omnicanal:**
+   - En `server/_core/whatsapp-match.ts`, creada la función centralizada `isBotDirectlyMentioned`:
+     - Valida menciones en texto: `"jania"`, `"@jania"`, variantes con emojis, teléfonos (`573192919978`, `3192919978`), y LIDs conocidos (`167108705018103`, `@167108705018103`).
+     - Inspecciona el array `contextInfo.mentionedJid` comparando contra el JID del bot, su número telefónico y sufijos `@lid`.
+     - Detecta si el mensaje actual cita o responde directamente a un mensaje previamente enviado por JanIA (`quotedParticipant === botJid`).
+   - Aplicada esta validación en el procesamiento principal de mensajes (`hasDirectMention`) tanto a nivel global como en la compuerta de grupos externos.
+2. **Apertura Quirúrgica en `queuedSend` (`allowExternalGroupResponse`):**
+   - Actualizada la condición de autorización en `queuedSend`:
+     - Se autoriza el envío si el destino es un chat individual, uno de los tres grupos oficiales, o si `options.allowExternalGroupResponse === true` / `options.allowGroupMessage === true`.
+     - De esta forma, las respuestas explícitas a consultas citadas son entregadas en el grupo externo sin comprometer la regla de silencio para el tráfico normal.
+3. **Fusión de Contexto Citado y Etiquetado Multi-Parte en `handleDirectGroupQuestion`:**
+   - Se extrae el `quotedSenderId` del mensaje citado y se genera el array `groupMentions = [senderId, quotedSenderId]`.
+   - Se fusiona la instrucción del invocador con la pregunta de la colega citada (`queryToProcess = quotedContext ? "${bodyText}\n\n[CONSULTA CITADA]:\n${quotedContext}" : bodyText`).
+   - Se despacha la respuesta con `{ quoted: msg, mentions: groupMentions, allowExternalGroupResponse: true }`.
+4. **Doctrina Doctrinal en Prompts y Base de Conocimiento:**
+   - Incorporada en `server/_core/prompts/base.md`, `server/_core/jania/prompts.ts` y `server/_core/jania/handlers/consultingHandler.ts` la directiva:
+     *"DOCTRINA DE MENCIÓN EN GRUPOS EXTERNOS POR LID/TEXTO, RESPUESTA INMEDIATA A CONSULTAS CITADAS Y CERO EXCUSAS DE WEBHOOKS (DOCTRINA EDUARDO A. RIVERA — v33.92)"*.
+   - Prohibido terminantemente inventar excusas técnicas sobre webhooks o capturas externas.
+   - Registrada la directriz de enseñanza persistente `seed-grupos-externos-mencion-lid-cita-partes-v33-92` en `founderKnowledgeService.ts`.
+5. **Validación Limpia ($0 COP):**
+   - Creada la **Suite 178** en `server/__tests__/regression.test.ts` con 6 tests específicos.
+   - Vitest: **590 tests passing (5/5 suites en verde, 100% pasando)**.
+   - Typecheck `npm run check`: 0 errores.
+   - Build `npm run build`: Limpio en 26.55s (Vite) + 193ms (esbuild).
+
+---
+
 ### 📅 [2026-11-04] — JanIA v33.91: Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera (v33.91 - 33.91.0)
 
 **Versión:** `v33.91` (`33.91.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

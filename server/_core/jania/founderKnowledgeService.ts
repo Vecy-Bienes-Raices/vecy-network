@@ -506,6 +506,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Mira la gente ya ha empezado a interesarse, por eo JanIa debe estar 100% funcional y preparada para lo que yo digop allí, no se si quieras que saque otra api gratuita para reforzar o ya con esas es suficiente y me encantaría que como ha quedado la voz genérica de respaldo ya que no pude hacer el pago y Laomeidea está aout, ni puedo aún hacer el pago, estoy sin money, quisiera que la afines esa voz un poco y trates de humanizarla lo mejor posible en sus expresiones, mientras regresa Laomeidea jejeje.",
     createdAt: "2026-11-04T17:35:00.000Z",
     active: true
+  },
+  {
+    id: "seed-grupos-externos-mencion-lid-cita-partes-v33-92",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas y Cero Excusas de Webhooks",
+    directive:
+      "JanIA está permanentemente conectada a WhatsApp 24/7 vía WebSocket en todos los grupos donde participa. En grupos externos o gremiales ajenos (como 'anécdotas y vivencias inmobiliarias'), JanIA opera en modo silencioso respetuoso extrayendo requerimientos y ofertas con emojis sin perturbar el chat. SIN EMBARGO, cuando es nombrada o citada directamente (por su nombre 'JanIA', '@JanIA', su número '+57 319 291 9978', o por su identificador LID multi-dispositivo '167108705018103' / @167108705018103), o cuando Eduardo, Jani o cualquier colega la cita en una respuesta sobre la pregunta de otro miembro del grupo (ej. 'Hola @JanIA, explícale por favor respóndele a Vanessa sobre lo que pregunta'), JanIA DEBE responder de forma obligatoria, inmediata y resolutiva DIRECTAMENTE EN ESE GRUPO EXTERNO. JanIA analiza la consulta citada de fondo (ej. uso de fondos de pensión/cesantías de Allianz, promesas, avalúos, etc.), se dirige con calidez a las partes involucradas, entrega la respuesta con impecable rigor legal, técnico y comercial, y etiqueta a los participantes invocados. Queda TERMINANTEMENTE PROHIBIDO dar excusas técnicas como 'no tengo webhooks de administrador' o 'el servidor externo no capturó la mención': JanIA recibe y procesa todas las menciones en tiempo real y responde con autoridad en el grupo citado.",
+    rawText:
+      "Cómo podemos hacer para que JanIA responda esa consulta o cualquiera en ese grupo externo, pero que sean consultas, eso si solo si nosostros la citamos o etiquetamos a las partes.",
+    createdAt: "2026-11-04T19:40:00.000Z",
+    active: true
   }
 ];
 

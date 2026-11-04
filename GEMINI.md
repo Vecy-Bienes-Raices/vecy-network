@@ -1,18 +1,16 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.91.0 — 2026-11-04)
-- **JanIA Server:** `v33.91` (`33.91.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera (Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.92.0 — 2026-11-04)
+- **JanIA Server:** `v33.92` (`33.92.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Mención en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas de Terceros y Cero Excusas de Webhooks (Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Crítico de Eduardo A. Rivera:**
-     - En publicación oficial de Facebook con video de JanIA, prospectos como `Solucioneshipotecariasco` comenzaron a interesarse y preguntaron: *"Me interesaría saber como funciona? y cual es el costo"*.
-     - Eduardo los canalizó al WhatsApp de JanIA (`+57 319 291 9978`) prometiendo que JanIA les explicará sus servicios y que, si desean una agente IA como JanIA para asistir a sus clientes y ofrecer sus servicios, les indicará con quién comunicarse.
-     - La voz de respaldo caía en Google Translate TTS (robótica) porque Google Cloud TTS arrojaba 403 por saldo pendiente y `msedge-tts@2.0.7` arrojaba 403 por la nueva firma `Sec-MS-GEC v2` de Microsoft.
-     - Eduardo solicitó afinar la voz de respaldo, humanizar sus expresiones fonéticas y preparar a JanIA al 100% para recibir prospectos de redes sociales, consultando si requiere otra clave gratuita de Gemini API (actualmente hay 4 claves gratuitas en el VPS que cubren 6.000 peticiones/día a $0 COP).
+     - En el grupo inmobiliario externo *"anécdotas y vivencias inmobiliarias"*, una colega (Vanessa) formuló una consulta urgente sobre compras con fondo de pensiones/cesantías Allianz. Eduardo citó el mensaje y etiquetó a JanIA para que le explicara.
+     - JanIA no respondió en el grupo y en chat privado alegó falsamente que no capturó la mención por carecer de "webhooks de administrador directos del grupo", produciendo la respuesta solo por privado.
   2. **Causa Raíz y Solución Quirúrgica:**
-     - **Voz Humana Salomé ($0 COP):** Dependencia `msedge-tts` actualizada a `2.1.1` y activada la voz **`es-CO-SalomeNeural`** (acento colombiano femenino nativo, cálido, empático y ejecutivo a ritmo natural +0%), logrando síntesis en 730 ms y transcodificación directa a OGG Opus.
-     - **Normalización Fonética Rigurosa (`cleanVoiceText`):** Cédulas sin puntos numéricos (`80.850.249` -> `80850249`), millones claros (`$450.000.000` -> `450 millones de pesos`), `$0 COP` -> `cero pesos`, expansión fonética de siglas colombianas (`C.C.`, `NIT`, `RUES`, `SARLAFT`, `IDU`, `CHIP`, `PDF`, `QR`, `ACM`, Ley 820) y remoción de viñetas para habla fluida.
-     - **Enrutador Inbound de Servicios y Costos:** Responde a prospectos de redes explicando los 6 pilares de JanIA y tarifas exactas: 100% GRATIS ($0 COP) para agentes en red colaborativa 40/20/40; $0 COP de anticipo para propietarios (3% venta o 1er canon arriendo por éxito); y desarrollo de Agentes IA para empresas con el Ing. Eduardo A. Rivera.
-     - **Canalización Comercial de Agentes IA:** Ante la solicitud de implementar una IA como JanIA para una inmobiliaria o empresa, JanIA presenta al Ing. Eduardo A. Rivera (+57 316 656 9719 / https://wa.me/573166569719) y despacha el recado con los datos del lead en tiempo real a su WhatsApp (`dispatchMessageRecadoToEduardo`).
-     - **Registro de Enseñanza:** Registrada la directriz `seed-voz-humana-salome-leads-sociales-agente-ia-v33-91` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 177 `vitest` (5/5 passing, 584 tests) | Build `npm run build` limpio en 25.58s + 332ms.
+     - **Detección LID y Omnicanal (`isBotDirectlyMentioned`):** Soporta menciones mediante WhatsApp Web LIDs (`167108705018103@lid`), `@lid` en texto, teléfonos, nombres con emojis y respuestas citando mensajes de JanIA.
+     - **Desbloqueo en `queuedSend` (`allowExternalGroupResponse`):** Se eliminó el bloqueo ciego en la cola de salida para grupos no oficiales cuando el mensaje responde a una mención directa autorizada.
+     - **Integración de Contexto Citado y Etiquetado Multi-Parte:** En `handleDirectGroupQuestion`, JanIA absorbe el texto de la consulta citada (`quotedContext`), etiqueta a ambos participantes (`[senderId, quotedSenderId]`) y responde citando el mensaje original (`quoted: msg`).
+     - **Cero Excusas de Webhooks y Silencio Fantasma:** Prohibidas excusas técnicas sobre webhooks o capturas externas. Se preserva al 100% el modo silencioso de ingesta para mensajes que no mencionen a JanIA.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-grupos-externos-mencion-lid-cita-partes-v33-92` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 178 `vitest` (5/5 passing, 590 tests) | Build `npm run build` limpio en 26.55s + 193ms.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

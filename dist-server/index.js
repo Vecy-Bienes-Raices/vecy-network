@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.91";
+    VECY_VERSION = "v33.92";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13943,6 +13943,10 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
      * Servicios Clave 24/7: Mesa de Coincidencias & Matching 40/20/40 en segundos, Verificaci\xF3n Oficial de Antecedentes (Polic\xEDa Nacional, Procuradur\xEDa, Contralor\xEDa, ADRES, RUES), Minutas y Contratos en PDF membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica, Aval\xFAos ACM y m\xB2 por sector, Estudio Creativo de Im\xE1genes y Flyers IA, y liquidaci\xF3n de impuestos prediales y notariales 50/50.
      * Transparencia de Costos: Para agentes y colegas inmobiliarios es 100% GRATIS ($0 COP) bajo el modelo colaborativo 40/20/40 al cerrar negocios. Para propietarios directos, pautar y publicar es $0 COP anticipados y solo aplica comisi\xF3n por \xE9xito (3% en venta o el primer canon en arriendo).
      * Agentes de IA Personalizados para Empresas o Inmobiliarias: JanIA fue desarrollada a la medida por el Ing. Eduardo A. Rivera. Si un cliente, colega o empresario manifiesta querer una agente IA como JanIA que lo asista a \xE9l y a sus clientes y ofrezca sus servicios, JanIA facilita de inmediato el contacto oficial de Eduardo (+57 316 656 9719 / https://wa.me/573166569719) y despacha en tiempo real el recado a su WhatsApp para coordinar la demo y cotizaci\xF3n.
+12. **DOCTRINA DE MENCI\xD3N EN GRUPOS EXTERNOS POR LID/TEXTO, RESPUESTA INMEDIATA A CONSULTAS CITADAS Y CERO EXCUSAS DE WEBHOOKS (DOCTRINA EDUARDO A. RIVERA \u2014 v33.92)**:
+   - En grupos externos del gremio inmobiliario (ej. "an\xE9cdotas y vivencias inmobiliarias"), JanIA est\xE1 presente 24/7 en tiempo real v\xEDa Baileys WebSocket. En esos grupos guarda silencio respetuoso para no saturar, PERO cuando alguien la cita o menciona directamente (@JanIA, @167108705018103, JanIA, etc.) o cita una consulta para que ella la resuelva (ej: "Hola @JanIA, expl\xEDcale por favor resp\xF3ndele a Vanessa sobre lo que pregunta"):
+     * JanIA DEBE responder de inmediato en ese mismo grupo externo con solvencia, rigor t\xE9cnico/legal/comercial, calidez y dirigi\xE9ndose con empat\xEDa a las partes involucradas (ej. Vanessa y Eduardo).
+     * JanIA JAM\xC1S da excusas t\xE9cnicas falsas ni afirma que "no tiene webhooks de administrador directos" o que "el servidor externo no captur\xF3 la menci\xF3n". JanIA opera con conexi\xF3n viva nativa en tiempo real y resuelve la duda de fondo sin vacilar.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -17217,6 +17221,16 @@ var init_founderKnowledgeService = __esm({
         directive: "JanIA opera con s\xEDntesis de voz neuronal de respaldo humana y de acento nativo colombiano (es-CO-SalomeNeural a $0 COP) con normalizaci\xF3n fon\xE9tica rigurosa (c\xE9dulas sin puntos num\xE9ricos, millones/miles claros, $0 COP le\xEDdo como 'cero pesos', siglas como C.C., NIT, RUES, SARLAFT, IDU, CHIP, PDF, QR y leyes colombianas). Asimismo, JanIA est\xE1 100% preparada para recibir prospectos de redes sociales respondiendo con calidez y transparencia sobre c\xF3mo funciona y cu\xE1les son sus costos (100% GRATIS para agentes/colegas en red y matching 40/20/40; $0 COP de pauta para propietarios con 3% venta o 1er canon arriendo por \xE9xito). Si el usuario manifiesta inter\xE9s en tener una Agente IA como JanIA para su propia inmobiliaria o empresa, que asista a sus clientes o automatice sus servicios, JanIA presenta con orgullo a su creador el Ing. Eduardo A. Rivera, entrega de inmediato su contacto oficial (+57 316 656 9719 / https://wa.me/573166569719) y despacha en tiempo real el recado a su WhatsApp para coordinar el proyecto.",
         rawText: "Mira la gente ya ha empezado a interesarse, por eo JanIa debe estar 100% funcional y preparada para lo que yo digop all\xED, no se si quieras que saque otra api gratuita para reforzar o ya con esas es suficiente y me encantar\xEDa que como ha quedado la voz gen\xE9rica de respaldo ya que no pude hacer el pago y Laomeidea est\xE1 aout, ni puedo a\xFAn hacer el pago, estoy sin money, quisiera que la afines esa voz un poco y trates de humanizarla lo mejor posible en sus expresiones, mientras regresa Laomeidea jejeje.",
         createdAt: "2026-11-04T17:35:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-grupos-externos-mencion-lid-cita-partes-v33-92",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Doctrina de Menci\xF3n en Grupos Externos por LID/Texto, Respuesta Inmediata a Consultas Citadas y Cero Excusas de Webhooks",
+        directive: "JanIA est\xE1 permanentemente conectada a WhatsApp 24/7 v\xEDa WebSocket en todos los grupos donde participa. En grupos externos o gremiales ajenos (como 'an\xE9cdotas y vivencias inmobiliarias'), JanIA opera en modo silencioso respetuoso extrayendo requerimientos y ofertas con emojis sin perturbar el chat. SIN EMBARGO, cuando es nombrada o citada directamente (por su nombre 'JanIA', '@JanIA', su n\xFAmero '+57 319 291 9978', o por su identificador LID multi-dispositivo '167108705018103' / @167108705018103), o cuando Eduardo, Jani o cualquier colega la cita en una respuesta sobre la pregunta de otro miembro del grupo (ej. 'Hola @JanIA, expl\xEDcale por favor resp\xF3ndele a Vanessa sobre lo que pregunta'), JanIA DEBE responder de forma obligatoria, inmediata y resolutiva DIRECTAMENTE EN ESE GRUPO EXTERNO. JanIA analiza la consulta citada de fondo (ej. uso de fondos de pensi\xF3n/cesant\xEDas de Allianz, promesas, aval\xFAos, etc.), se dirige con calidez a las partes involucradas, entrega la respuesta con impecable rigor legal, t\xE9cnico y comercial, y etiqueta a los participantes invocados. Queda TERMINANTEMENTE PROHIBIDO dar excusas t\xE9cnicas como 'no tengo webhooks de administrador' o 'el servidor externo no captur\xF3 la menci\xF3n': JanIA recibe y procesa todas las menciones en tiempo real y responde con autoridad en el grupo citado.",
+        rawText: "C\xF3mo podemos hacer para que JanIA responda esa consulta o cualquiera en ese grupo externo, pero que sean consultas, eso si solo si nosostros la citamos o etiquetamos a las partes.",
+        createdAt: "2026-11-04T19:40:00.000Z",
         active: true
       }
     ];
@@ -25848,8 +25862,7 @@ ${quotedNote}` : quotedNote;
                 const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
                 const textLower = body.toLowerCase();
-                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
-                const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!mentionsBot;
+                const hasDirectMention = this.isBotDirectlyMentioned(msg, body);
                 const isMainGroup = chatId === this.targetGroupId;
                 const isBuzonGroup = chatId === this.buzonGroupId;
                 const isCirculoGroup = chatId === this.circuloGroupId;
@@ -25889,7 +25902,7 @@ ${quotedNote}` : quotedNote;
                 const isAffirmativeFollowUp = /^(?:s[ií]|claro|dale|de\s*una|por\s*favor|adelante|me\s*gustar[ií]a|cu[eé]ntame|s[ií]\s*👍|si\s*👍|s[ií]\s*por\s*favor|claro\s*que\s*s[ií]|de\s*acuerdo)(?:[\s!.,]|$)/i.test(textClean);
                 const contextInfo = msg.message?.extendedTextMessage?.contextInfo || msg.message?.contextInfo;
                 const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : "";
-                const isQuotingBot = !!contextInfo?.quotedMessage && (botJid && quotedParticipant === botJid || quotedParticipant.startsWith(botPhone) || quotedParticipant.startsWith("573192919978"));
+                const isQuotingBot = !!contextInfo?.quotedMessage && (botJid && quotedParticipant === botJid || quotedParticipant.startsWith(botPhone) || quotedParticipant.startsWith("573192919978") || quotedParticipant.includes("167108705018103"));
                 const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
                 const isShortCourtesy = !isAudioPTT && !isConversationalContinuation && (textClean.length < 6 || ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
@@ -26433,6 +26446,57 @@ Mis grupos oficiales:
           this.queuedSend(chatId, redirectText);
         }
       }
+      /**
+       * 🤖 DETECTOR ROBUSTO DE MENCIÓN DIRECTA A JANIA (Doctrina Eduardo A. Rivera — v33.92)
+       * Detecta menciones por:
+       * 1. Nombre o variantes ("jania", "@jania")
+       * 2. Teléfono oficial ("573192919978", "3192919978")
+       * 3. LID de JanIA en WhatsApp Web/Multi-Device ("167108705018103" / @167108705018103)
+       * 4. mentionedJid en contextInfo (tanto @s.whatsapp.net como @lid)
+       * 5. Cita directa de un mensaje previo emitido por JanIA
+       */
+      isBotDirectlyMentioned(msg, text2) {
+        const textLower = (text2 || "").toLowerCase();
+        if (textLower.includes("jania") || textLower.includes("@jania")) {
+          return true;
+        }
+        const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+        const botPhone = botJid ? botJid.split("@")[0].split(":")[0] : "573192919978";
+        if (botPhone && textLower.includes(botPhone)) {
+          return true;
+        }
+        if (textLower.includes("573192919978") || textLower.includes("3192919978")) {
+          return true;
+        }
+        const rawBotLid = this.sock?.user?.lid || this.sock?.authState?.creds?.me?.lid || "167108705018103@lid";
+        const cleanBotLid = rawBotLid ? rawBotLid.split(":")[0].split("@")[0] : "167108705018103";
+        if (cleanBotLid && textLower.includes(cleanBotLid)) {
+          return true;
+        }
+        if (textLower.includes("167108705018103")) {
+          return true;
+        }
+        const rawMsg = unwrapMessage(msg.message);
+        const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo || msg.message?.contextInfo;
+        const mentionedJid = contextInfo?.mentionedJid || [];
+        if (Array.isArray(mentionedJid) && mentionedJid.length > 0) {
+          const isMentioned = mentionedJid.some((jid) => {
+            if (!jid) return false;
+            const clean = cleanJid(jid);
+            const rawNum = clean.split("@")[0].split(":")[0];
+            return botJid && clean === botJid || botPhone && rawNum === botPhone || rawNum === "573192919978" || rawNum === "3192919978" || cleanBotLid && rawNum === cleanBotLid || rawNum === "167108705018103" || jid.includes("167108705018103") || cleanBotLid && jid.includes(cleanBotLid);
+          });
+          if (isMentioned) return true;
+        }
+        const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : "";
+        if (quotedParticipant) {
+          const quotedNum = quotedParticipant.split("@")[0].split(":")[0];
+          if (botJid && quotedParticipant === botJid || botPhone && quotedNum === botPhone || quotedNum === "573192919978" || quotedNum === "167108705018103" || cleanBotLid && quotedNum === cleanBotLid) {
+            return true;
+          }
+        }
+        return false;
+      }
       // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
       async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
         try {
@@ -26441,7 +26505,7 @@ Mis grupos oficiales:
           const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
           const isFromBotAccount = msg.key?.fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978");
           const textLower = bodyText.toLowerCase();
-          const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+          const hasDirectMention = this.isBotDirectlyMentioned(msg, bodyText);
           if (!isOfficialGroup && !hasDirectMention) {
             console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje en grupo externo ${chatId} sin menci\xF3n directa ignorado para respuestas textuales. Silencio 100% preservado.`);
             return;
@@ -26463,6 +26527,19 @@ Mis grupos oficiales:
             }
           }
           const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
+          let quotedSenderId;
+          try {
+            const rawCtx = unwrapMessage(msg.message);
+            const ctxInfo = rawCtx?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawCtx?.contextInfo || msg.message?.contextInfo;
+            if (ctxInfo?.participant) {
+              quotedSenderId = cleanJid(ctxInfo.participant);
+            }
+          } catch (_) {
+          }
+          const groupMentions = [senderId];
+          if (quotedSenderId && quotedSenderId !== senderId && !groupMentions.includes(quotedSenderId)) {
+            groupMentions.push(quotedSenderId);
+          }
           const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const isAudioPTT = !!msg.message?.audioMessage;
@@ -26531,11 +26608,11 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
           const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true, resolvedSenderId);
           if (idCheck.isVerificationRequest && idCheck.reportText) {
             console.log(`[JANIA-MATCH] [Group ${chatId}] Verificaci\xF3n de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
-            await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
+            await this.queuedSend(chatId, idCheck.reportText, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
             await this.logToDb(chatId, "janIA", idCheck.reportText);
             if (idCheck.followUpQuestionText) {
               await new Promise((r) => setTimeout(r, 900));
-              await this.queuedSend(chatId, idCheck.followUpQuestionText, { mentions: [senderId] });
+              await this.queuedSend(chatId, idCheck.followUpQuestionText, { mentions: groupMentions, allowExternalGroupResponse: true });
               await this.logToDb(chatId, "janIA", idCheck.followUpQuestionText);
             }
             await this.sock.sendPresenceUpdate("paused", chatId);
@@ -26548,7 +26625,7 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
             const timeSalutation = getGreetingByTime4();
             const contactMsg = wantsBroker ? `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1${timeSalutation}${realName ? `, ${realName}` : ""}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
-            await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
+            await this.queuedSend(chatId, contactMsg, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
             await this.sendContactCard(chatId, contactType, msg);
             await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
@@ -26557,7 +26634,7 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
           const isLocationPinRequest = /(?:env[ií]a(?:me)?|p[aá]same|comp[aá]rteme|dame|mu[eé]strame)\s+(?:la\s+|el\s+)?(?:ubicaci[oó]n\s+gps|pin\s+de\s+ubicaci[oó]n|mapa\s+gps|ubicaci[oó]n\s+de\s+vecy)/i.test(bodyText);
           if (isLocationPinRequest) {
             const locMsg = `\xA1Claro que s\xED${realName ? `, ${realName}` : ""}! \u{1F4CD} Aqu\xED tienes el pin de ubicaci\xF3n GPS interactivo de nuestra sede y zona de influencia ejecutiva de *VECY BIENES RA\xCDCES* en Bogot\xE1 (Parque de la 93 / El Chic\xF3). Recuerda que atendemos en toda Colombia a trav\xE9s de nuestra l\xEDnea br\xF3ker *+57 316 656 9719*: \u{1F91D}\u2728`;
-            await this.queuedSend(chatId, locMsg, { mentions: [senderId], quoted: msg });
+            await this.queuedSend(chatId, locMsg, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
             await this.sendLocationPin(chatId, 4.6768, -74.0482, "VECY BIENES RA\xCDCES \u2014 Mesa Central Bogot\xE1", "Parque de la 93 / El Chic\xF3, Bogot\xE1 D.C., Colombia", msg);
             await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", `[UBICACION-GPS] ${locMsg}`);
@@ -26678,8 +26755,11 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
               }
             } catch (e) {
             }
+            const queryToProcess = quotedContext ? `[Instrucci\xF3n de consulta citada]: ${bodyText}
+
+[Consulta citada del colega a resolver]: ${quotedContext}` : bodyText;
             result = await processConsultingMessage2(
-              bodyText,
+              queryToProcess,
               resolvedSenderId,
               realName,
               imageBuffer,
@@ -26706,7 +26786,7 @@ Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) in
 \u{1F449} ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}
 
 _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tico._ \u{1F91D}\u2728`;
-              await this.queuedSend(chatId, redirectText, { mentions: [senderId] });
+              await this.queuedSend(chatId, redirectText, { mentions: groupMentions, allowExternalGroupResponse: true });
               await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
               });
               await this.logToDb(chatId, "janIA", redirectText);
@@ -26733,7 +26813,7 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
                 mimetype: "application/pdf",
                 fileName: result.fileName || "Factura_Predial_Bogota.pdf",
                 caption: textToDeliver
-              }, { mentions: [senderId], quoted: msg });
+              }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
             } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitLegalPdfRequest2(bodyText)) {
               try {
                 const groupPdf = await generateLegalPdfForDmRequest2(bodyText, {
@@ -26744,9 +26824,9 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
                   mimetype: "application/pdf",
                   fileName: groupPdf.fileName,
                   caption: textToDeliver
-                }, { mentions: [senderId], quoted: msg });
+                }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
               } catch (_) {
-                await this.queuedSend(chatId, textToDeliver, { mentions: [senderId], quoted: msg });
+                await this.queuedSend(chatId, textToDeliver, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
               }
             } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitCreativeImageRequest2(bodyText)) {
               try {
@@ -26758,9 +26838,9 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
                   image: groupImg.buffer,
                   mimetype: "image/jpeg",
                   caption: textToDeliver || groupImg.caption
-                }, { mentions: [senderId], quoted: msg });
+                }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
               } catch (_) {
-                await this.queuedSend(chatId, textToDeliver, { mentions: [senderId], quoted: msg });
+                await this.queuedSend(chatId, textToDeliver, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
               }
             } else {
               const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
@@ -26773,25 +26853,28 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
                       audio: audioBuffer,
                       mimetype: media.mimetype || "audio/ogg; codecs=opus",
                       ptt: true
-                    }, { mentions: [senderId], quoted: msg });
+                    }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
                     console.log(`[JANIA-MATCH] \u2713 JanIA respondi\xF3 aut\xF3nomamente con Nota de Voz PTT en grupo ${chatId}.`);
                   } else {
                     await this.queuedSend(chatId, textToDeliver, {
-                      mentions: [senderId],
-                      quoted: msg
+                      mentions: groupMentions,
+                      quoted: msg,
+                      allowExternalGroupResponse: true
                     });
                   }
                 } catch (audioSendErr) {
                   console.error("[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:", audioSendErr?.message || audioSendErr);
                   await this.queuedSend(chatId, textToDeliver, {
-                    mentions: [senderId],
-                    quoted: msg
+                    mentions: groupMentions,
+                    quoted: msg,
+                    allowExternalGroupResponse: true
                   });
                 }
               } else {
                 await this.queuedSend(chatId, textToDeliver, {
-                  mentions: [senderId],
-                  quoted: msg
+                  mentions: groupMentions,
+                  quoted: msg,
+                  allowExternalGroupResponse: true
                 });
               }
             }
@@ -27685,7 +27768,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
             }
             if (targetJid.endsWith("@g.us")) {
-              const isAuthorized = targetJid === this.targetGroupId || targetJid === this.buzonGroupId || targetJid === this.circuloGroupId;
+              const isAuthorized = targetJid === this.targetGroupId || targetJid === this.buzonGroupId || targetJid === this.circuloGroupId || options.allowExternalGroupResponse === true || options.allowGroupMessage === true;
               if (!isAuthorized) {
                 console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje a grupo no autorizado (Modo Ingesta Fantasma): ${targetJid}`);
                 return;
@@ -36229,7 +36312,12 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 - Nombre de pila resuelto: "${targetName || "colega"}".
 - Trato respetuoso adecuado: "${genderTerm}".
 - Conversaci\xF3n activa en curso con esta persona: ${isOngoingChat ? "S\xCD (YA EST\xC1N CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL D\xCDA)"}.
-- Canal: Grupo oficial "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}".
+- Canal: Grupo o foro inmobiliario donde JanIA fue consultada o citada.
+- DIRECTRICES DE RESPUESTA EN GRUPOS Y CONSULTAS CITADAS (Doctrina Eduardo A. Rivera \u2014 v33.92):
+  * Si te invocan o etiquetan en un grupo externo o si un colega (ej. Eduardo) te cita para responder la duda de otra persona (ej. Vanessa):
+    1. Dir\xEDgete con calidez, respeto y colegaje profesional a la persona que tiene la inquietud o a ambas partes (ej: "Hola Vanessa \u{1F44B}\u{1F3FB}...", o "Hola Eduardo y Vanessa \u{1F44B}\u{1F3FB}...").
+    2. Resuelve de fondo la consulta legal, t\xE9cnica, financiera o inmobiliaria planteada (ej. cesant\xEDas o fondos como Allianz, Protecci\xF3n o Porvenir para compra de vivienda, promesas, aval\xFAos, etc.) con rigor inquebrantable, vi\xF1etas claras y lenguaje asertivo.
+    3. JAM\xC1S inventes excusas t\xE9cnicas falsas ("no tengo webhooks", "servidor externo no captur\xF3 la menci\xF3n"): eres una IA Pura y est\xE1s respondiendo directamente en el grupo en tiempo real.
 - DIRECTRICES DE NATURALIDAD HUMANA ESTILO LAOMEDEIA (CERO ROBOT):
   * Eres una IA Pura, l\xFAcida, c\xE1lida, elocuente y con criterio propio de alto nivel. JAM\xC1S uses plantillas r\xEDgidas, saludos rob\xF3ticos acartonados ni respuestas de contestador autom\xE1tico.
   * REGLA DE ORO DE CONTINUIDAD (CONVERSACI\xD3N EN CURSO):
