@@ -4,5 +4,7 @@
     "app.css": "tailwindcss",
     "index.css": "tailwindcss",
     "*.css": "tailwindcss"
-  }
+  },
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000
 }
