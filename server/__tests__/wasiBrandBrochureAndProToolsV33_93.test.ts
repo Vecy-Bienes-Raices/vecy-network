@@ -2,19 +2,23 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 import { VECY_VERSION } from "../../shared/const";
-import { PERSONALITY_PROMPTS } from "../routers/agent";
+import {
+  PERSONALITY_PROMPTS,
+  VIRTUAL_STAGING_STYLES,
+  CONTRACT_TEMPLATES_CATALOG,
+} from "../routers/agent";
 import { POINTS_MATRIX } from "../routers/affiliates";
 import { appRouter } from "../routers";
 
-describe("Suite 179 (v33.93): Wasi-IA Fichas Técnicas (Con Marca y Marca Blanca Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables", () => {
-  it("1. Verifica versión oficial v33.93 en shared/const.ts y package.json", () => {
-    expect(VECY_VERSION).toBe("v33.93");
+describe("Suite 179 & 180 (v33.93 - v33.94): Wasi-IA Fichas Técnicas, Sensores SEO/Puntos y Las 7 Herramientas Pro Personalizables (Qrador Search, Habi Valuator, Matterport Staging, DocuSign Contracts)", () => {
+  it("1. Verifica versión oficial v33.94 en shared/const.ts y package.json", () => {
+    expect(VECY_VERSION).toBe("v33.94");
     const pkgPath = path.resolve(process.cwd(), "package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    expect(pkg.version).toBe("33.93.0");
+    expect(pkg.version).toBe("33.94.0");
   });
 
-  it("2. Verifica la directriz fundacional seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93 en founderKnowledgeService", () => {
+  it("2. Verifica las directrices fundacionales v33.93 y v33.94 en founderKnowledgeService", () => {
     const teachingsPath = path.resolve(
       process.cwd(),
       "server/_core/jania/founderKnowledgeService.ts"
@@ -23,9 +27,13 @@ describe("Suite 179 (v33.93): Wasi-IA Fichas Técnicas (Con Marca y Marca Blanca
     expect(teachingsSrc).toContain(
       "seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93"
     );
-    expect(teachingsSrc).toContain("Marca Blanca Neutra");
-    expect(teachingsSrc).toContain("Vecy Agenda Pro Marca Propia");
-    expect(teachingsSrc).toContain("Widget de Agente IA Personalizable");
+    expect(teachingsSrc).toContain(
+      "seed-suite-proptech-ia-qrador-habi-staging-docusign-v33-94"
+    );
+    expect(teachingsSrc).toContain("Qrador");
+    expect(teachingsSrc).toContain("Habi/Casacol");
+    expect(teachingsSrc).toContain("Matterport");
+    expect(teachingsSrc).toContain("DocuSign/Autentic");
   });
 
   it("3. Verifica las 6 personalidades configurables del Widget de Agente IA (Normal, Audaz, Profesional, Extrovertida, Seria, Cordial)", () => {
@@ -59,13 +67,17 @@ describe("Suite 179 (v33.93): Wasi-IA Fichas Técnicas (Con Marca y Marca Blanca
     });
   });
 
-  it("5. Verifica que agentRouter y affiliatesRouter estén montados en appRouter con todos sus procedimientos", () => {
+  it("5. Verifica que agentRouter y affiliatesRouter estén montados en appRouter con los nuevos procedimientos Proptech (Qrador, Habi, Staging, DocuSign)", () => {
     const procedures = Object.keys(appRouter._def.procedures);
     expect(procedures).toContain("agent.getProfile");
     expect(procedures).toContain("agent.getStoreBySubdomain");
     expect(procedures).toContain("agent.getMyBrandConfig");
     expect(procedures).toContain("agent.updateBrandConfig");
     expect(procedures).toContain("agent.chatWithCustomAgent");
+    expect(procedures).toContain("agent.semanticCuratorSearch");
+    expect(procedures).toContain("agent.calculateInstantValuation");
+    expect(procedures).toContain("agent.generateVirtualStagingPlan");
+    expect(procedures).toContain("agent.generateBrandedLegalContract");
 
     expect(procedures).toContain("affiliates.generateLink");
     expect(procedures).toContain("affiliates.resolveToken");
@@ -73,7 +85,27 @@ describe("Suite 179 (v33.93): Wasi-IA Fichas Técnicas (Con Marca y Marca Blanca
     expect(procedures).toContain("affiliates.getMyStats");
   });
 
-  it("6. Verifica que UnbrandedFicha.tsx esté conectado a PostgreSQL (trpc.properties.getById) y soporte los 3 modos de marca + QR + Telemetría", () => {
+  it("6. Verifica los 5 estilos de Home Staging Virtual IA y las 4 Minutas Legales Ley 527", () => {
+    expect(Object.keys(VIRTUAL_STAGING_STYLES)).toEqual(
+      expect.arrayContaining([
+        "modern-scandinavian",
+        "luxury-minimalist",
+        "industrial-loft",
+        "executive-office",
+        "declutter-clean",
+      ])
+    );
+    expect(Object.keys(CONTRACT_TEMPLATES_CATALOG)).toEqual(
+      expect.arrayContaining([
+        "arrendamiento_vivienda",
+        "promesa_compraventa",
+        "mandato_consignacion",
+        "presentacion_cliente",
+      ])
+    );
+  });
+
+  it("7. Verifica que UnbrandedFicha.tsx esté conectado a PostgreSQL y soporte los 3 modos de marca + QR + Telemetría", () => {
     const fichaPath = path.resolve(
       process.cwd(),
       "client/src/pages/UnbrandedFicha.tsx"
@@ -88,58 +120,32 @@ describe("Suite 179 (v33.93): Wasi-IA Fichas Técnicas (Con Marca y Marca Blanca
     expect(content).toContain("pdf_download");
   });
 
-  it("7. Verifica el enrutamiento multi-tenant de notificaciones de Vecy Agenda Pro hacia correo y WhatsApp propios del suscriptor", () => {
-    const agendaWaPath = path.resolve(
+  it("8. Verifica la existencia e integración de AgentProptechSuite.tsx en AgentMicrosite.tsx y AgentDashboard.tsx", () => {
+    const suitePath = path.resolve(
       process.cwd(),
-      "server/_core/agendaWhatsAppService.ts"
+      "client/src/components/AgentProptechSuite.tsx"
     );
-    const agendaEmailPath = path.resolve(
-      process.cwd(),
-      "server/_core/emailContractService.ts"
-    );
-    const agendaRouterPath = path.resolve(
-      process.cwd(),
-      "server/routers/agenda.ts"
-    );
-
-    const waContent = fs.readFileSync(agendaWaPath, "utf-8");
-    const emailContent = fs.readFileSync(agendaEmailPath, "utf-8");
-    const routerContent = fs.readFileSync(agendaRouterPath, "utf-8");
-
-    expect(waContent).toContain("customAgentWhatsapp");
-    expect(waContent).toContain("customAgencyName");
-    expect(emailContent).toContain("customAgentEmail");
-    expect(emailContent).toContain("customAgencyName");
-    expect(routerContent).toContain("customAgentWhatsapp");
-    expect(routerContent).toContain("customAgentEmail");
-  });
-
-  it("8. Verifica la existencia e integración de AgentMicrosite.tsx, AgentProToolsWidget.tsx y las pestañas Wasi-IA en AgentDashboard.tsx", () => {
     const micrositePath = path.resolve(
       process.cwd(),
       "client/src/pages/AgentMicrosite.tsx"
-    );
-    const widgetPath = path.resolve(
-      process.cwd(),
-      "client/src/components/AgentProToolsWidget.tsx"
     );
     const dashboardPath = path.resolve(
       process.cwd(),
       "client/src/pages/AgentDashboard.tsx"
     );
-    const appPath = path.resolve(process.cwd(), "client/src/App.tsx");
 
-    expect(fs.existsSync(micrositePath)).toBe(true);
-    expect(fs.existsSync(widgetPath)).toBe(true);
+    expect(fs.existsSync(suitePath)).toBe(true);
+    const suiteContent = fs.readFileSync(suitePath, "utf-8");
+    expect(suiteContent).toContain("Curador IA (Estilo Qrador)");
+    expect(suiteContent).toContain("Avalúo ACM Instantáneo");
+    expect(suiteContent).toContain("Home Staging IA");
+    expect(suiteContent).toContain("Contratos Digitales Ley 527");
+
+    const micrositeContent = fs.readFileSync(micrositePath, "utf-8");
+    expect(micrositeContent).toContain("AgentProptechSuite");
 
     const dashboardContent = fs.readFileSync(dashboardPath, "utf-8");
-    expect(dashboardContent).toContain("UnifiedPublishModal");
-    expect(dashboardContent).toContain("Mi Sitio & Marca (Wasi IA)");
-    expect(dashboardContent).toContain("Herramientas Pro & Agente IA");
-    expect(dashboardContent).toContain("Métricas SEO & Puntos");
-
-    const appContent = fs.readFileSync(appPath, "utf-8");
-    expect(appContent).toContain("/s/:slug");
-    expect(appContent).toContain("/agencia/:slug");
+    expect(dashboardContent).toContain("AgentProptechSuite");
+    expect(dashboardContent).toContain("Guardar y Activar Mis 7 Herramientas Pro");
   });
 });

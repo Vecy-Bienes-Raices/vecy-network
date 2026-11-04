@@ -1,16 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.93.0 — 2026-11-04)
-- **JanIA Server:** `v33.93` (`33.93.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.94.0 — 2026-11-04)
+- **JanIA Server:** `v33.94` (`33.94.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingeniería Inversa Superada de Wasi, Qrador, Habi/Casacol, Matterport y DocuSign/Autentic — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico y Visión de Eduardo A. Rivera:**
-     - Subida unificada e ilimitada de inmuebles a la Tienda en plan gratuito ($0 COP) y generación de Fichas Técnicas / Brochures PDF conectadas en vivo a PostgreSQL con dos modos clave: **Con Marca Propia** (logo, colores, plantillas y contacto del suscriptor) y **Marca Blanca Neutra ("Cero Rastro")** para terceros (sin datos de contacto ni colores que revelen al agente o a VECY).
-     - Bots/sensores de seguimiento SEO y QR dinámico en todos los enlaces y fichas para distribuir `vPoints` y comisiones de la Bolsa Colaborativa.
-     - Herramientas Pro adicionales desde el Dashboard personalizables con la marca del suscriptor: **Vecy Agenda Pro Marca Propia** (notificaciones a su propio correo y WhatsApp) y **Widget de Agente IA Personalizable** (IA Femenina/Masculina, 6 personalidades: `Normal`, `Audaz`, `Profesional`, `Extrovertida`, `Seria`, `Cordial` + prompt propio).
-  2. **Solución Quirúrgica en 3 Fases:**
-     - **Fase 1 (`UnbrandedFicha.tsx`):** Conectado a `trpc.properties.getById` con conmutador en vivo entre `Mi Marca (Estilo Wasi)`, `Marca Blanca Neutra (Cero Rastro)` y `Oficial Vecy`, 3 plantillas prediseñadas y QR dinámico (`?utm_source=pdf_qr`).
-     - **Fase 2 (`affiliates.ts`):** Montado `affiliatesRouter` en `appRouter` con `trackTelemetryEvent` (`POINTS_MATRIX`) y estadísticas SEO por red social (`whatsapp`, `facebook`, `instagram`, `tiktok`, `linkedin`, `google_seo`, `pdf_qr`).
-     - **Fase 3 (`agent.ts`, `AgentMicrosite.tsx`, `AgentProToolsWidget.tsx`, `AgentDashboard.tsx`):** Micro-sitio `/s/:slug`, `UnifiedPublishModal`, enrutamiento multi-tenant de Agenda Pro (`customAgentWhatsapp`, `customAgentEmail`), Widget IA con `PERSONALITY_PROMPTS` y Calculadora ROI.
-     - **Registro de Enseñanza:** Registrada la directriz `seed-wasi-ia-fichas-marca-blanca-agenda-pro-widget-v33-93` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 179 `vitest` (6/6 passing, 604 tests) | Build `npm run build` limpio.
+     - Incorporar al ecosistema de Marca Propia y Marca Blanca Neutra las herramientas analizadas mediante Ingeniería Inversa de Arquitectura (REA), incluyendo a **Qrador** (búsqueda semántica con IA y colecciones curadas), **Habi/Casacol** (avalúo instantáneo ACM captador de propietarios), **Matterport/Giraffe360** (Home Staging Virtual IA) y **DocuSign/Autentic** (contratos inmobiliarios con sello digital Ley 527).
+  2. **Las 7 Herramientas Pro Personalizables Activas en Dashboard y Micro-Sitio (`/s/:slug`):**
+     - **1. Vecy Agenda Pro Marca Propia:** Notificaciones enrutadas al WhatsApp y correo propios del suscriptor (`customAgentWhatsapp`, `customAgentEmail`).
+     - **2. Widget de Agente IA Personalizable:** IA Femenina/Masculina, 6 personalidades (`Normal`, `Audaz`, `Profesional`, `Extrovertida`, `Seria`, `Cordial`) y prompt propio.
+     - **3. Simulador Hipotecario Bancario & Calculadora ROI Inversor.**
+     - **4. Buscador Semántico & Curador de Colecciones IA (Estilo Qrador):** `agent.semanticCuratorSearch` con score de afinidad 85%-99% y colecciones compartibles por WhatsApp.
+     - **5. Avalúo Instantáneo ACM & Captador de Propietarios (Estilo Habi/Casacol):** `agent.calculateInstantValuation` con rango de venta, precio/$m^2$, canon mensual y `+50 vPoints` por lead.
+     - **6. Estudio de Home Staging Virtual & Remodelación IA (Estilo Matterport/Qrador Photo AI):** `agent.generateVirtualStagingPlan` con comparador interactivo Antes/Después en 5 estilos arquitectónicos.
+     - **7. Generador de Contratos & Promesas Ley 527 (Estilo DocuSign/Autentic):** `agent.generateBrandedLegalContract` con 4 minutas colombianas, código `CUV-LEY527` y sello `SHA-256`.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-suite-proptech-ia-qrador-habi-staging-docusign-v33-94` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 180 `vitest` (6/6 passing) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

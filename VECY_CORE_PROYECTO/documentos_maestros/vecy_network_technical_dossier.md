@@ -8750,6 +8750,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.94 (2026-11-04) — Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingeniería Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic — Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Solicitud de Expansión de Herramientas Pro mediante Ingeniería Inversa de Arquitectura (REA):* Eduardo A. Rivera aprobó la incorporación de las herramientas analizadas en Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic, y ordenó analizar e integrar la tecnología de búsqueda y curaduría con IA de **Qrador (`qrador.com`)**.
+- **Solución Implementada**:
+  1. `server/routers/agent.ts`:
+     - Incorporados `VIRTUAL_STAGING_STYLES` (5 estilos arquitectónicos con proyección de valorización e imágenes Antes/Después) y `CONTRACT_TEMPLATES_CATALOG` (4 minutas legales colombianas).
+     - Añadidos los procedimientos:
+       - `semanticCuratorSearch`: Motor de búsqueda semántica en lenguaje natural y curador de colecciones IA (estilo Qrador superado) con porcentaje de afinidad (`85%-99%`), razones de curaduría y código de colección compartible por WhatsApp.
+       - `calculateInstantValuation`: Motor de avalúo comercial instantáneo ACM (estilo Habi/Casacol) con cálculo de liquidez rápida, valor óptimo, techo de mercado, precio por $m^2$, canon mensual y rentabilidad anual bruta (`% E.A.`), otorgando `+50 vPoints` al suscriptor por captación de lead.
+       - `generateVirtualStagingPlan`: Motor de interiorismo y Home Staging Virtual IA (estilo Matterport/Qrador Photo AI).
+       - `generateBrandedLegalContract`: Generador de contratos y promesas con código `CUV-LEY527` y sello criptográfico `SHA-256` (estilo DocuSign/Autentic).
+  2. `client/src/components/AgentProptechSuite.tsx`, `client/src/pages/AgentMicrosite.tsx` y `client/src/pages/AgentDashboard.tsx`:
+     - Creado el componente `AgentProptechSuite` e integrado tanto en el Micro-Sitio público del suscriptor (`/s/:slug` y `/agencia/:slug`) como en el Dashboard del Agente (completando 7 Herramientas Pro personalizables).
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-suite-proptech-ia-qrador-habi-staging-docusign-v33-94`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 180 en `regression.test.ts` y `wasiBrandBrochureAndProToolsV33_93.test.ts`.
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio.
+  - Versión: `v33.94` (`33.94.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.93 (2026-11-04) — Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Desconexión de `/ficha/:id` (`UnbrandedFicha.tsx`) frente a PostgreSQL:* La vista de fichas técnicas consultaba un objeto estático local (`propertiesDatabase`) en vez de `trpc.properties.getById`, impidiendo generar brochures PDF para los inmuebles subidos a la Tienda.

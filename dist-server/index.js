@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.93";
+    VECY_VERSION = "v33.94";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17242,6 +17242,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Pues arranca y en ese mismo orden que propones las 3 fases quir\xFArgicas... Algo adicional que me encantar\xEDa es poder ofrecer herramientas que los usuarios puedan a\xF1adir a sus sitios web desde su dashboard si las pagan pero a un precio adicional y justo ya que recuerda que la idea es que nuestro plan de ingreso a diferencia del de otros portales o CRM como wasi es que ser\xE1 gratuito con publicaci\xF3n de inmuebles ilimitados, pero creo que podemos darles ciertas herramientas adicionales y estas tambi\xE9n modificables o editables con sus colores, logo y dise\xF1o propio de sus marcas, ser\xEDan las siguientes; una vecy agenda pro con todas sus funciones id\xE9nticas pero que dirijan las notificaciones a sus correos y whatsapp propios / un widget con un/a agente de IA personalizable y editable como todas estas herramientas, y que si es IA femenina o masculina, con posibilidad que mediante sus propios prompt se inyecten una personalidad como ellos la deseen o que la dejen gen\xE9rica o con botones que digan; normal, Audaz, profesional, extrovertida, seria, profesional, cordial, etc...",
         createdAt: "2026-11-04T20:30:00.000Z",
         active: true
+      },
+      {
+        id: "seed-suite-proptech-ia-qrador-habi-staging-docusign-v33-94",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingenier\xEDa Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic)",
+        directive: "Adem\xE1s de Vecy Agenda Pro Marca Propia, el Widget de Agente IA Personalizable (Femenina/Masculina con 6 personalidades) y la Calculadora Hipotecaria ROI, cada suscriptor de VECY BIENES RA\xCDCES cuenta en su Dashboard y en su Micro-Sitio (/s/su-agencia) con 4 super-herramientas Pro adicionales potenciadas con IA y personalizadas con el logo y colores de su marca: 4) Buscador Sem\xE1ntico en Lenguaje Natural y Curador de Colecciones IA (inspirado y superando a Qrador: el comprador escribe en sus propias palabras qu\xE9 busca y la IA filtra, calcula el % de afinidad 85%-99% y arma una Colecci\xF3n Curada compartible por WhatsApp con sensor vPoints); 5) Aval\xFAo Instant\xE1neo ACM con IA y Captador de Propietarios (inspirado y superando a Habi/Casacol: calcula rango de venta, precio por m\xB2 y canon de arriendo, captando al propietario para el suscriptor y sum\xE1ndole +50 vPoints); 6) Estudio de Home Staging Virtual y Remodelaci\xF3n IA (inspirado en Matterport, Giraffe360 y Qrador Photo AI: visor interactivo Antes/Despu\xE9s con 5 estilos arquitect\xF3nicos y proyecci\xF3n de valorizaci\xF3n +14% a +18%); y 7) Generador de Contratos y Promesas con Firma Digital Ley 527 (inspirado en DocuSign/Autentic: genera contratos de arrendamiento Ley 820, promesas de compraventa, mandatos de consignaci\xF3n y actas de reserva 40/20/40 con el membrete del suscriptor, c\xF3digo CUV y sello criptogr\xE1fico SHA-256).",
+        rawText: "Me encanta que analices todos esos otros sitios y que podamos implementar todas esas herramientas que dices. Excelente y agrega Qrador que dicen que tienen herramientas de b\xFAsqueda con IA.",
+        createdAt: "2026-11-04T23:45:00.000Z",
+        active: true
       }
     ];
   }
@@ -27949,8 +27959,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           const cleanOptions = options.map((o) => String(o).trim()).filter(Boolean).slice(0, 12);
           console.log(`[JANIA-MATCH] \u{1F5F3}\uFE0F Despachando Encuesta Nativa de Canal a ${targetNewsletter}: "${name}" (${cleanOptions.length} opciones)...`);
-          const crypto5 = await import("crypto");
-          const msgId = `3EB0${crypto5.randomBytes(8).toString("hex").toUpperCase()}`;
+          const crypto6 = await import("crypto");
+          const msgId = `3EB0${crypto6.randomBytes(8).toString("hex").toUpperCase()}`;
           const pollProto = selectableCount === 1 ? {
             pollCreationMessageV3: {
               name,
@@ -28026,8 +28036,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
           };
           if (targetJid.endsWith("@newsletter") && typeof this.sock.sendNode === "function") {
-            const crypto5 = await import("crypto");
-            const msgId = `3EB0${crypto5.randomBytes(8).toString("hex").toUpperCase()}`;
+            const crypto6 = await import("crypto");
+            const msgId = `3EB0${crypto6.randomBytes(8).toString("hex").toUpperCase()}`;
             const encoded = proto.Message.encode(quizProto).finish();
             const stanza = {
               tag: "message",
@@ -28086,8 +28096,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
           };
           if (targetJid.endsWith("@newsletter") && typeof this.sock.sendNode === "function") {
-            const crypto5 = await import("crypto");
-            const msgId = `3EB0${crypto5.randomBytes(8).toString("hex").toUpperCase()}`;
+            const crypto6 = await import("crypto");
+            const msgId = `3EB0${crypto6.randomBytes(8).toString("hex").toUpperCase()}`;
             const encoded = proto.Message.encode(questionProto).finish();
             const stanza = {
               tag: "message",
@@ -40296,7 +40306,7 @@ __export(matchAdHocService_exports, {
   detectInputListingType: () => detectInputListingType,
   executeAdHocMatch: () => executeAdHocMatch
 });
-import { sql as sql16, eq as eq21, and as and14, desc as desc11, gte as gte5 } from "drizzle-orm";
+import { sql as sql17, eq as eq21, and as and14, desc as desc11, gte as gte5 } from "drizzle-orm";
 function formatAdHocCOP(val) {
   if (!val) return "N/E";
   const num = Number(val);
@@ -40350,12 +40360,12 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
     if (inputType === "demanda") {
       availableProps = await db.select().from(properties).where(and14(
         eq21(properties.available, true),
-        gte5(sql16`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
+        gte5(sql17`COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt})`, fifteenDaysAgo)
       )).orderBy(desc11(properties.createdAt)).limit(100);
     } else {
       activeReqs = await db.select().from(requirements).where(and14(
         eq21(requirements.status, "active"),
-        gte5(sql16`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
+        gte5(sql17`COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt})`, fifteenDaysAgo)
       )).orderBy(desc11(requirements.createdAt)).limit(100);
     }
   } else {
@@ -44403,8 +44413,9 @@ init_db();
 init_schema();
 init_llm();
 import { z as z7 } from "zod";
-import { eq as eq18, and as and12, desc as desc9, isNull as isNull2, or as or5 } from "drizzle-orm";
+import { eq as eq18, and as and12, desc as desc9, isNull as isNull2, or as or5, sql as sql14 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
+import crypto5 from "crypto";
 var PERSONALITY_PROMPTS = {
   normal: "Mant\xE9n un tono equilibrado, claro, amable y servicial. Responde con precisi\xF3n y naturalidad.",
   audaz: "Mant\xE9n un tono audaz, persuasivo y orientado al cierre comercial. Destaca oportunidades \xFAnicas, valorizaci\xF3n y sentido de urgencia con elegancia.",
@@ -44412,6 +44423,94 @@ var PERSONALITY_PROMPTS = {
   extrovertida: "Mant\xE9n un tono entusiasta, carism\xE1tico, c\xE1lido, energ\xE9tico y cercano. Transmite emoci\xF3n positiva por cada inmueble.",
   seria: "Mant\xE9n un tono sobrio, directo al grano, formal y enfocado estrictamente en cifras, \xE1reas, precios y datos verificables sin adornos.",
   cordial: "Mant\xE9n un tono profundamente emp\xE1tico, hospitalario, paciente y familiar. Haz que el cliente se sienta acompa\xF1ado paso a paso."
+};
+var VIRTUAL_STAGING_STYLES = {
+  "modern-scandinavian": {
+    id: "modern-scandinavian",
+    name: "Escandinavo Moderno & C\xE1lido",
+    tagline: "Madera roble claro, lino crudo e iluminaci\xF3n c\xE1lida 3000K para apartamentos familiares",
+    valueBoostPct: 14,
+    speedBoostPct: 38,
+    beforeImage: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+    afterImage: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80",
+    materials: ["Piso SPC Roble N\xF3rdico", "Pintura Blanco Hueso Mate", "Textiles en Lino Natural y Boucl\xE9"],
+    furnitureSpec: ["Sof\xE1 modular en L tono marfil", "Mesa de centro org\xE1nica en roble", "Alfombra tejida de pelo corto", "Plantas Ficus Lyrata y Olivo interior"],
+    lightingSpec: "Luz indirecta c\xE1lida 3000K en cortineros + l\xE1mpara de pie minimalista en bronce cepillado"
+  },
+  "luxury-minimalist": {
+    id: "luxury-minimalist",
+    name: "Luxury Minimalista & M\xE1rmol",
+    tagline: "Est\xE9tica de penthouse de alta gama tipo Rosales / Chic\xF3 con acentos en m\xE1rmol Calacatta y nogal",
+    valueBoostPct: 18,
+    speedBoostPct: 45,
+    beforeImage: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+    afterImage: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
+    materials: ["Porcelanato Gran Formato Calacatta", "Paneles alistonados en Nogal Americano", "Perfiler\xEDa Negra Anodizada"],
+    furnitureSpec: ["Sof\xE1 italiano de perfil bajo en cuero cognac o gris topo", "Comedor de 8 puestos con cubierta en piedra sinterizada", "Arte abstracto de gran formato"],
+    lightingSpec: "Rieles magn\xE9ticos empotrados + luminaria colgante escultural sobre comedor"
+  },
+  "industrial-loft": {
+    id: "industrial-loft",
+    name: "Loft Industrial Contempor\xE1neo",
+    tagline: "Ideal para apartaestudios, d\xFAplex, Chapinero Alto, Poblado o renta corta AirBnB",
+    valueBoostPct: 15,
+    speedBoostPct: 42,
+    beforeImage: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+    afterImage: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+    materials: ["Microcemento gris satinado", "Ladrillo a la vista hidrofugado", "Acero negro mate y madera teca"],
+    furnitureSpec: ["Sof\xE1 Chester contempor\xE1neo en cuero camel", "Estanter\xEDa abierta en hierro y madera maciza", "Barra tipo isla con butacos altos"],
+    lightingSpec: "Spots dirigibles en riel negro + bombiller\xEDa c\xE1lida de filamento LED"
+  },
+  "executive-office": {
+    id: "executive-office",
+    name: "Oficina Corporativa Boutique",
+    tagline: "Transforma locales o plantas libres en oficinas ejecutivas listas para multinacionales",
+    valueBoostPct: 16,
+    speedBoostPct: 35,
+    beforeImage: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+    afterImage: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80",
+    materials: ["Divisiones en vidrio templado ac\xFAstico 10mm", "Piso vin\xEDlico de tr\xE1fico pesado", "Cielo raso con paneles fonoabsorbentes"],
+    furnitureSpec: ["Puestos de trabajo ergon\xF3micos colaborativos", 'Sala de juntas para 10 personas con pantalla 85"', "Zona lounge de caf\xE9 corporativo"],
+    lightingSpec: "Iluminaci\xF3n lineal LED neutra 4000K de alta eficiencia para productividad"
+  },
+  "declutter-clean": {
+    id: "declutter-clean",
+    name: "Despeje Visual & Luz Natural IA",
+    tagline: "Limpia visualmente espacios recargados o antiguos para destacar amplitud y distribuci\xF3n real",
+    valueBoostPct: 12,
+    speedBoostPct: 30,
+    beforeImage: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+    afterImage: "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=80",
+    materials: ["Muros en blanco puro arquitect\xF3nico", "Pisos pulidos y lacados", "Ventanales despejados de cortinas pesadas"],
+    furnitureSpec: ["Mobiliario neutro minimalista a escala exacta para evidenciar circulaci\xF3n libre"],
+    lightingSpec: "Realce de luz solar natural + balance de blancos neutro HDR"
+  }
+};
+var CONTRACT_TEMPLATES_CATALOG = {
+  arrendamiento_vivienda: {
+    id: "arrendamiento_vivienda",
+    title: "Contrato de Arrendamiento de Vivienda Urbana",
+    legalBasis: "Ley 820 de 2003 y C\xF3digo Civil Colombiano",
+    description: "Cl\xE1usulas completas de canon, incremento IPC, obligaciones de mantenimiento, inventario, prohibici\xF3n de subarriendo y m\xE9rito ejecutivo."
+  },
+  promesa_compraventa: {
+    id: "promesa_compraventa",
+    title: "Promesa de Compraventa de Bien Inmueble",
+    legalBasis: "Art\xEDculo 1611 del C\xF3digo Civil y Ley 527 de 1999",
+    description: "Tradici\xF3n, libertad de grav\xE1menes, arras confirmatorias/penales, forma de pago, fecha y Notar\xEDa de escrituraci\xF3n y entrega material."
+  },
+  mandato_consignacion: {
+    id: "mandato_consignacion",
+    title: "Contrato de Consignaci\xF3n y Mandato Comercial",
+    legalBasis: "C\xF3digo de Comercio Colombiano (Arts. 1262 y ss.)",
+    description: "Autorizaci\xF3n de comercializaci\xF3n, honorarios de corretaje (3% venta / 1er canon arriendo), difusi\xF3n en red colaborativa y protecci\xF3n de puntas."
+  },
+  presentacion_cliente: {
+    id: "presentacion_cliente",
+    title: "Acta de Presentaci\xF3n de Cliente y Reserva de Comisi\xF3n (40/20/40)",
+    legalBasis: "Ley 527 de 1999 \u2014 Acuerdo de Corretaje Colaborativo",
+    description: "Blindaje antielusi\xF3n de punta captadora y punta colocadora, registro de identidad del comprador/arrendatario y distribuci\xF3n transparente."
+  }
 };
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops, Branded Fichas)
@@ -44525,8 +44624,21 @@ var agentRouter = router({
         enabled: z7.boolean().default(true),
         defaultInterestRateEA: z7.number().default(11.5)
       }).optional(),
+      qradorSmartSearch: z7.object({
+        enabled: z7.boolean().default(true),
+        allowCollaborativeNetwork: z7.boolean().default(true)
+      }).optional(),
       instantValuator: z7.object({
-        enabled: z7.boolean().default(false)
+        enabled: z7.boolean().default(true),
+        captureOwnerLeads: z7.boolean().default(true)
+      }).optional(),
+      virtualStaging: z7.object({
+        enabled: z7.boolean().default(true),
+        defaultStyle: z7.string().default("modern-scandinavian")
+      }).optional(),
+      contractGenerator: z7.object({
+        enabled: z7.boolean().default(true),
+        includeDigitalSeal: z7.boolean().default(true)
       }).optional()
     }).optional()
   })).mutation(async ({ ctx, input }) => {
@@ -44688,6 +44800,368 @@ REGLAS DE ORO:
         price: properties.price
       }
     }).from(referralLinks).innerJoin(properties, eq18(referralLinks.propertyId, properties.id)).where(eq18(referralLinks.agentId, ctx.user.id)).orderBy(desc9(referralLinks.createdAt));
+  }),
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔎 HERRAMIENTA PRO 4 (ESTILO QRADOR + IA): BUSCADOR SEMÁNTICO EN LENGUAJE NATURAL & CURADOR DE COLECCIONES
+  // ═══════════════════════════════════════════════════════════════════════════
+  semanticCuratorSearch: publicProcedure.input(z7.object({
+    query: z7.string().min(3).max(600),
+    agentUserId: z7.number().optional(),
+    includeNetwork: z7.boolean().default(true)
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const raw = input.query.toLowerCase();
+    let detectedType = null;
+    if (/\b(apartaestudio|loft)\b/i.test(raw)) detectedType = "Apartaestudio";
+    else if (/\b(apartamento|apto|penthouse|duplex|dúplex)\b/i.test(raw)) detectedType = "Apartamento";
+    else if (/\b(casa|campestre|condominio|chalet|quinta)\b/i.test(raw)) detectedType = "Casa";
+    else if (/\b(bodega|industrial|galpon)\b/i.test(raw)) detectedType = "Bodega";
+    else if (/\b(oficina|consultorio)\b/i.test(raw)) detectedType = "Oficina";
+    else if (/\b(local|comercial|vitrina)\b/i.test(raw)) detectedType = "Local";
+    else if (/\b(lote|terreno|finca)\b/i.test(raw)) detectedType = "Lote";
+    let detectedTx = null;
+    if (/\b(permuta|cambio|reciba|parte de pago)\b/i.test(raw)) detectedTx = "permuta";
+    else if (/\b(arriendo|arrendar|alquiler|canon|renta)\b/i.test(raw)) detectedTx = "arriendo";
+    else if (/\b(venta|comprar|compra|inversion|inversión)\b/i.test(raw)) detectedTx = "venta";
+    let maxBudgetCop = null;
+    const millMatch = raw.match(/(\d+(?:[.,]\d+)?)\s*(?:millones|mill|m\b|mm\b)/i);
+    if (millMatch) {
+      const val = parseFloat(millMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0) {
+        maxBudgetCop = val < 2e4 ? val * 1e6 : val;
+      }
+    } else {
+      const bigNumMatch = raw.match(/\$?\s*(\d{2,4})\.(\d{3})\.(\d{3})/);
+      if (bigNumMatch) {
+        maxBudgetCop = parseInt(`${bigNumMatch[1]}${bigNumMatch[2]}${bigNumMatch[3]}`, 10);
+      }
+    }
+    let detectedBeds = null;
+    const bedsMatch = raw.match(/(\d)\s*(?:habitaciones|alcobas|hab|cuartos|dormitorios)/i);
+    if (bedsMatch) detectedBeds = parseInt(bedsMatch[1], 10);
+    let minArea = null;
+    const areaMatch = raw.match(/(\d{2,4})\s*(?:m2|mts|metros|m²)/i);
+    if (areaMatch) minArea = parseInt(areaMatch[1], 10);
+    const stopWords = /* @__PURE__ */ new Set([
+      "busco",
+      "quiero",
+      "necesito",
+      "para",
+      "con",
+      "sin",
+      "que",
+      "tenga",
+      "hasta",
+      "desde",
+      "millones",
+      "apartamento",
+      "apto",
+      "casa",
+      "bodega",
+      "oficina",
+      "local",
+      "lote",
+      "venta",
+      "arriendo",
+      "comprar",
+      "habitaciones",
+      "alcobas",
+      "ba\xF1os",
+      "garaje",
+      "parqueadero",
+      "en",
+      "el",
+      "la",
+      "los",
+      "las",
+      "un",
+      "una",
+      "por",
+      "cerca",
+      "sector",
+      "zona",
+      "barrio",
+      "de",
+      "del",
+      "o",
+      "y"
+    ]);
+    const keywords = raw.replace(/[^\wáéíóúñ\s]/gi, " ").split(/\s+/).filter((w) => w.length >= 4 && !stopWords.has(w) && !/^\d+$/.test(w));
+    const allProps = await db.select().from(properties).orderBy(desc9(properties.createdAt)).limit(80);
+    const scored = allProps.map((prop) => {
+      let score = 82;
+      const reasons = [];
+      const propText = `${prop.name || ""} ${prop.zone || ""} ${prop.location || ""} ${prop.description || ""} ${prop.propertyType || ""}`.toLowerCase();
+      const numPrice = Number(prop.price || 0);
+      const numArea = Number(prop.areaTotal || 0);
+      const isOwnProperty = input.agentUserId ? prop.agentId === input.agentUserId : false;
+      if (isOwnProperty) {
+        score += 4;
+        reasons.push("Destacado de nuestra agencia");
+      }
+      if (detectedType) {
+        if ((prop.propertyType || "").toLowerCase().includes(detectedType.toLowerCase())) {
+          score += 6;
+          reasons.push(`Tipolog\xEDa exacta (${prop.propertyType})`);
+        } else {
+          score -= 12;
+        }
+      }
+      if (detectedTx) {
+        const pTx = (prop.transactionType || "venta").toLowerCase();
+        if (pTx.includes(detectedTx) || detectedTx === "permuta" && pTx.includes("permuta")) {
+          score += 5;
+          reasons.push(detectedTx === "permuta" ? "Acepta permuta / canje" : `Modalidad ${prop.transactionType}`);
+        } else {
+          score -= 10;
+        }
+      }
+      if (maxBudgetCop && numPrice > 0) {
+        if (numPrice <= maxBudgetCop) {
+          score += 6;
+          reasons.push(`Dentro de presupuesto ($${(numPrice / 1e6).toFixed(0)}M)`);
+        } else if (numPrice <= maxBudgetCop * 1.12) {
+          score += 2;
+          reasons.push(`Precio negociable cercano ($${(numPrice / 1e6).toFixed(0)}M)`);
+        } else {
+          score -= 15;
+        }
+      }
+      if (detectedBeds !== null && prop.bedrooms !== null) {
+        if (prop.bedrooms === detectedBeds) {
+          score += 6;
+          reasons.push(`${prop.bedrooms} alcobas exactas`);
+        } else {
+          score -= 10;
+        }
+      }
+      if (minArea !== null && numArea > 0) {
+        if (numArea >= minArea) {
+          score += 4;
+          reasons.push(`\xC1rea amplia (${numArea} m\xB2)`);
+        } else {
+          score -= 8;
+        }
+      }
+      let matchedKeywords = 0;
+      for (const kw of keywords) {
+        if (propText.includes(kw)) {
+          matchedKeywords++;
+          score += 4;
+        }
+      }
+      if (matchedKeywords > 0) {
+        reasons.push(`Coincide en ubicaci\xF3n/atributos clave`);
+      }
+      const clampedScore = Math.max(65, Math.min(99, score));
+      return {
+        property: prop,
+        affinityScore: clampedScore,
+        isOwnProperty,
+        curatorReason: reasons.length > 0 ? reasons.slice(0, 3).join(" \u2022 ") : `Seleccionado por relaci\xF3n \xE1rea/precio (${numArea || 90} m\xB2 en ${prop.zone || prop.location})`
+      };
+    });
+    const curatedList = scored.filter((item) => input.includeNetwork || item.isOwnProperty).sort((a, b) => b.affinityScore - a.affinityScore).slice(0, 6);
+    const collectionCode = `COL-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    return {
+      collectionCode,
+      parsedFilters: {
+        propertyType: detectedType,
+        transactionType: detectedTx,
+        maxBudgetCop,
+        bedrooms: detectedBeds,
+        minArea,
+        keywords
+      },
+      totalMatched: curatedList.length,
+      curatedProperties: curatedList
+    };
+  }),
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📈 HERRAMIENTA PRO 5 (ESTILO HABI / CASACOL + IA): AVALÚO INSTANTÁNEO ACM & CAPTADOR DE PROPIETARIOS
+  // ═══════════════════════════════════════════════════════════════════════════
+  calculateInstantValuation: publicProcedure.input(z7.object({
+    agentUserId: z7.number().optional(),
+    city: z7.string().default("Bogot\xE1"),
+    zone: z7.string().min(2),
+    propertyType: z7.string().default("Apartamento"),
+    areaM2: z7.number().min(15).max(1e4),
+    bedrooms: z7.number().min(0).max(20).default(3),
+    bathrooms: z7.number().min(1).max(20).default(2),
+    garages: z7.number().min(0).max(10).default(1),
+    estrato: z7.number().min(1).max(6).default(4),
+    ageYears: z7.number().min(0).max(80).default(8),
+    condition: z7.enum(["excelente", "bueno", "remodelar"]).default("bueno"),
+    ownerName: z7.string().optional(),
+    ownerWhatsapp: z7.string().optional()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    const zLower = `${input.city} ${input.zone}`.toLowerCase();
+    let baseM2Cop = 62e5;
+    if (/(rosales|chico|chicó|cabrera|virrey|retiro|santa ana|multicentro)/i.test(zLower)) {
+      baseM2Cop = 108e5;
+    } else if (/(santa barbara|bárbara|usaque|usaquén|colina|cedritos|contador|castellana|niza|salitre|modelia)/i.test(zLower)) {
+      baseM2Cop = 74e5;
+    } else if (/(chapinero|teusaquillo|javeriana|macarena|bosque|polo)/i.test(zLower)) {
+      baseM2Cop = 71e5;
+    } else if (/(chia|chía|cajica|cajicá|cota|sopó|sopo|la calera|sabana)/i.test(zLower)) {
+      baseM2Cop = 66e5;
+    } else if (/(poblado|tesoro|provenza|llanogrande|laureles|envigado)/i.test(zLower)) {
+      baseM2Cop = 89e5;
+    } else if (/(bocagrande|castillogrande|manga|manzanillo|alto prado|ciudad jardin|ciudad jardín)/i.test(zLower)) {
+      baseM2Cop = 78e5;
+    } else {
+      const estratoMap = {
+        1: 32e5,
+        2: 41e5,
+        3: 52e5,
+        4: 65e5,
+        5: 81e5,
+        6: 102e5
+      };
+      baseM2Cop = estratoMap[input.estrato] || 62e5;
+    }
+    const ageFactor = Math.max(0.72, 1 - input.ageYears * 85e-4);
+    const conditionFactor = input.condition === "excelente" ? 1.08 : input.condition === "remodelar" ? 0.86 : 1;
+    const garageBonusCop = input.garages * 28e6;
+    const bathBonusCop = Math.max(0, input.bathrooms - 1) * 85e5;
+    const adjustedM2Cop = Math.round(baseM2Cop * ageFactor * conditionFactor);
+    const optimalSalePrice = Math.round((adjustedM2Cop * input.areaM2 + garageBonusCop + bathBonusCop) / 1e6) * 1e6;
+    const minQuickSalePrice = Math.round(optimalSalePrice * 0.93 / 1e6) * 1e6;
+    const maxMarketCeilingPrice = Math.round(optimalSalePrice * 1.07 / 1e6) * 1e6;
+    const estimatedMonthlyRent = Math.round(optimalSalePrice * 58e-4 / 5e4) * 5e4;
+    const annualGrossYieldPct = Number((estimatedMonthlyRent * 12 / optimalSalePrice * 100).toFixed(2));
+    if (db && input.agentUserId && input.ownerWhatsapp) {
+      await db.update(users).set({ vPoints: sql14`COALESCE(${users.vPoints}, 0) + 50` }).where(eq18(users.id, input.agentUserId));
+    }
+    return {
+      valuationCode: `ACM-${Date.now().toString(36).toUpperCase()}`,
+      city: input.city,
+      zone: input.zone,
+      propertyType: input.propertyType,
+      areaM2: input.areaM2,
+      pricePerM2Cop: adjustedM2Cop,
+      minQuickSalePrice,
+      optimalSalePrice,
+      maxMarketCeilingPrice,
+      estimatedMonthlyRent,
+      annualGrossYieldPct,
+      estimatedSaleDaysWithVecy: 45,
+      traditionalPortalDays: 180
+    };
+  }),
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🎨 HERRAMIENTA PRO 6 (ESTILO MATTERPORT / GIRAFFE360 / QRADOR PHOTO AI): HOME STAGING VIRTUAL IA
+  // ═══════════════════════════════════════════════════════════════════════════
+  generateVirtualStagingPlan: publicProcedure.input(z7.object({
+    styleId: z7.string().default("modern-scandinavian"),
+    roomType: z7.enum(["sala_comedor", "alcoba_principal", "cocina_abierta", "oficina_estudio", "terraza_lounge"]).default("sala_comedor"),
+    areaM2: z7.number().min(8).max(500).default(35),
+    customPhotoUrl: z7.string().optional()
+  })).mutation(async ({ input }) => {
+    const style = VIRTUAL_STAGING_STYLES[input.styleId] || VIRTUAL_STAGING_STYLES["modern-scandinavian"];
+    const estimatedStagingCostCop = Math.round(input.areaM2 * 38e4 / 1e5) * 1e5;
+    const roomLabels = {
+      sala_comedor: "Sala - Comedor Social",
+      alcoba_principal: "Suite / Alcoba Principal",
+      cocina_abierta: "Cocina Abierta Tipo Isla",
+      oficina_estudio: "Oficina / Estudio Ejecutivo",
+      terraza_lounge: "Terraza & Zona Lounge Exterior"
+    };
+    return {
+      style,
+      roomLabel: roomLabels[input.roomType] || "Sala Social",
+      areaM2: input.areaM2,
+      estimatedStagingCostCop,
+      aiArchitecturalPrompt: `Architectural interior photography of a ${input.areaM2}sqm ${roomLabels[input.roomType]} in ${style.name} style, ${style.materials.join(", ")}, ${style.lightingSpec}, photorealistic 8k, ArchDaily Colombia featured.`
+    };
+  }),
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ⚖️ HERRAMIENTA PRO 7 (ESTILO DOCUSIGN / AUTENTIC): GENERADOR DE CONTRATOS Y PROMESAS CON FIRMA DIGITAL LEY 527
+  // ═══════════════════════════════════════════════════════════════════════════
+  generateBrandedLegalContract: publicProcedure.input(z7.object({
+    agentUserId: z7.number().optional(),
+    contractType: z7.enum([
+      "arrendamiento_vivienda",
+      "promesa_compraventa",
+      "mandato_consignacion",
+      "presentacion_cliente"
+    ]),
+    partyAName: z7.string().min(2),
+    partyADoc: z7.string().min(4),
+    partyBName: z7.string().min(2),
+    partyBDoc: z7.string().min(4),
+    propertyAddress: z7.string().min(4),
+    propertyCity: z7.string().default("Bogot\xE1 D.C."),
+    propertyMatricula: z7.string().optional(),
+    contractValueCop: z7.number().min(1e5),
+    additionalClauses: z7.string().optional()
+  })).mutation(async ({ input }) => {
+    const template = CONTRACT_TEMPLATES_CATALOG[input.contractType] || CONTRACT_TEMPLATES_CATALOG.arrendamiento_vivienda;
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    const dateFormatted = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+    const hashPayload = `${input.contractType}|${input.partyADoc}|${input.partyBDoc}|${input.propertyAddress}|${input.contractValueCop}|${nowIso}`;
+    const sha256Seal = crypto5.createHash("sha256").update(hashPayload).digest("hex");
+    const cuvCode = `CUV-LEY527-${sha256Seal.substring(0, 10).toUpperCase()}`;
+    const formattedCop = new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0
+    }).format(input.contractValueCop);
+    let clausesBody = "";
+    if (input.contractType === "arrendamiento_vivienda") {
+      clausesBody = `PRIMERA \u2014 OBJETO: EL ARRENDADOR entrega a t\xEDtulo de arrendamiento de vivienda urbana a EL ARRENDATARIO el inmueble ubicado en ${input.propertyAddress}, ciudad de ${input.propertyCity}${input.propertyMatricula ? `, identificado con Folio de Matr\xEDcula Inmobiliaria No. ${input.propertyMatricula}` : ""}.
+
+SEGUNDA \u2014 CANON DE ARRENDAMIENTO: El canon mensual ser\xE1 la suma de ${formattedCop} M/CTE, pagaderos dentro de los primeros cinco (5) d\xEDas h\xE1biles de cada per\xEDodo mensual conforme a la Ley 820 de 2003.
+
+TERCERA \u2014 DESTINACI\xD3N Y CONSERVACI\xD3N: El inmueble se destinar\xE1 exclusivamente a vivienda familiar de EL ARRENDATARIO, quien se obliga a conservarlo en perfecto estado y restituirlo en las mismas condiciones salvo el deterioro natural.
+
+CUARTA \u2014 REAJUSTE ANUAL: Cumplidos doce (12) meses de ejecuci\xF3n, el canon se reajustar\xE1 autom\xE1ticamente hasta en el 100% del IPC certificado por el DANE para el a\xF1o inmediatamente anterior (Art. 20 Ley 820 de 2003).`;
+    } else if (input.contractType === "promesa_compraventa") {
+      clausesBody = `PRIMERA \u2014 OBJETO: EL PROMITENTE VENDEDOR se obliga a vender y EL PROMITENTE COMPRADOR se obliga a adquirir a t\xEDtulo de compraventa el bien inmueble ubicado en ${input.propertyAddress}, ciudad de ${input.propertyCity}${input.propertyMatricula ? `, Folio de Matr\xEDcula Inmobiliaria No. ${input.propertyMatricula}` : ""}.
+
+SEGUNDA \u2014 PRECIO Y FORMA DE PAGO: El precio total pactado de com\xFAn acuerdo es la suma de ${formattedCop} M/CTE, que EL PROMITENTE COMPRADOR pagar\xE1 conforme al cronograma de desembolso acordado entre las partes.
+
+TERCERA \u2014 LIBERTAD DE GRAV\xC1MENES Y SANEAMIENTO: EL PROMITENTE VENDEDOR garantiza que el inmueble se entregar\xE1 libre de hipotecas, embargos, pleitos pendientes, condiciones resolutorias e impuestos prediales o de valorizaci\xF3n al d\xEDa.
+
+CUARTA \u2014 ARRAS Y M\xC9RITO EJECUTIVO: Las partes pactan como arras de retractaci\xF3n y/o cl\xE1usula penal el equivalente al diez por ciento (10%) del valor total del negocio conforme al art\xEDculo 1611 del C\xF3digo Civil Colombiano.`;
+    } else if (input.contractType === "mandato_consignacion") {
+      clausesBody = `PRIMERA \u2014 ENCARGO DE COMERCIALIZACI\xD3N: EL PROPIETARIO / MANDANTE faculta a LA AGENCIA INMOBILIARIA para promover, ofertar y gestionar la comercializaci\xF3n del inmueble situado en ${input.propertyAddress}, ciudad de ${input.propertyCity}, por un valor base de oferta de ${formattedCop} M/CTE.
+
+SEGUNDA \u2014 HONORARIOS DE CORRETAJE: En caso de perfeccionarse la operaci\xF3n comercial con cliente presentado por LA AGENCIA o su Red Colaborativa, EL PROPIETARIO reconocer\xE1 por concepto de comisi\xF3n el tres por ciento (3%) en compraventa (o el equivalente al primer canon mensual en arrendamiento).
+
+TERCERA \u2014 AUTORIZACI\xD3N DE DIFUSI\xD3N Y FICHAS T\xC9CNICAS: Se autoriza la elaboraci\xF3n de fichas t\xE9cnicas digitales, posicionamiento SEO y promoci\xF3n calificada con filtro de seguridad de visitantes.`;
+    } else {
+      clausesBody = `PRIMERA \u2014 REGISTRO Y PROTECCI\xD3N DE PUNTA CLIENTE: Por medio de la presente acta se deja constancia fehaciente de la presentaci\xF3n oficial del cliente interesado (${input.partyBName} - Doc. ${input.partyBDoc}) para el inmueble ubicado en ${input.propertyAddress} (${input.propertyCity}), ofertado en ${formattedCop} M/CTE.
+
+SEGUNDA \u2014 DISTRIBUCI\xD3N COLABORATIVA Y NO ELUSI\xD3N: Las partes intervinientes reconocen la trazabilidad de presentaci\xF3n del cliente y se obligan a respetar la distribuci\xF3n de comisi\xF3n acordada bajo el esquema colaborativo protegido, absteni\xE9ndose de realizar contacto directo elusivo por un t\xE9rmino de doce (12) meses.`;
+    }
+    if (input.additionalClauses && input.additionalClauses.trim().length > 0) {
+      clausesBody += `
+
+CL\xC1USULA ESPECIAL ADICIONAL: ${input.additionalClauses.trim()}`;
+    }
+    return {
+      cuvCode,
+      sha256Seal,
+      generatedAt: dateFormatted,
+      title: template.title,
+      legalBasis: template.legalBasis,
+      partyAName: input.partyAName,
+      partyADoc: input.partyADoc,
+      partyBName: input.partyBName,
+      partyBDoc: input.partyBDoc,
+      propertyAddress: input.propertyAddress,
+      propertyCity: input.propertyCity,
+      propertyMatricula: input.propertyMatricula || "En verificaci\xF3n registral",
+      formattedValue: formattedCop,
+      clausesBody
+    };
   })
 });
 
@@ -44696,7 +45170,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z8 } from "zod";
-import { eq as eq19, and as and13, sql as sql14, desc as desc10 } from "drizzle-orm";
+import { eq as eq19, and as and13, sql as sql15, desc as desc10 } from "drizzle-orm";
 import { nanoid } from "nanoid";
 var recentTelemetryDedup = /* @__PURE__ */ new Map();
 var POINTS_MATRIX = {
@@ -44783,7 +45257,7 @@ var affiliatesRouter = router({
   trackClick: publicProcedure.input(z8.object({ token: z8.string() })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database unavailable");
-    await db.update(referralLinks).set({ clicks: sql14`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.token, input.token));
+    await db.update(referralLinks).set({ clicks: sql15`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.token, input.token));
     return { success: true };
   }),
   /**
@@ -44827,7 +45301,7 @@ var affiliatesRouter = router({
     recentTelemetryDedup.set(dedupKey, now);
     const points = POINTS_MATRIX[input.eventType] || 2;
     if (linkRecord && (input.eventType === "view" || input.eventType === "qr_scan")) {
-      await db.update(referralLinks).set({ clicks: sql14`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.id, linkRecord.id));
+      await db.update(referralLinks).set({ clicks: sql15`${referralLinks.clicks} + 1` }).where(eq19(referralLinks.id, linkRecord.id));
     }
     const platformTag = `${(input.platform || "direct").toLowerCase()}_${input.brandMode}`;
     await db.insert(shares).values({
@@ -44837,7 +45311,7 @@ var affiliatesRouter = router({
       shareLink: input.token ? `ref:${input.token}|event:${input.eventType}` : `event:${input.eventType}`,
       pointsAwarded: points
     });
-    await db.update(users).set({ vPoints: sql14`COALESCE(${users.vPoints}, 0) + ${points}` }).where(eq19(users.id, targetAgentId));
+    await db.update(users).set({ vPoints: sql15`COALESCE(${users.vPoints}, 0) + ${points}` }).where(eq19(users.id, targetAgentId));
     return {
       success: true,
       pointsAwarded: points,
@@ -44910,7 +45384,7 @@ var affiliatesRouter = router({
     if (!db) throw new Error("Database unavailable");
     const link = await db.select().from(referralLinks).where(eq19(referralLinks.token, input.referralToken)).limit(1);
     if (link.length === 0) throw new Error("Token de referido inv\xE1lido");
-    await db.update(users).set({ vPoints: sql14`COALESCE(${users.vPoints}, 0) + ${input.points}` }).where(eq19(users.id, link[0].agentId));
+    await db.update(users).set({ vPoints: sql15`COALESCE(${users.vPoints}, 0) + ${input.points}` }).where(eq19(users.id, link[0].agentId));
     return { success: true, pointsAwarded: input.points };
   })
 });
@@ -44920,7 +45394,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z9 } from "zod";
-import { eq as eq20, sql as sql15 } from "drizzle-orm";
+import { eq as eq20, sql as sql16 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z9.object({ token: z9.string() })).query(async ({ input }) => {
@@ -44931,7 +45405,7 @@ var leadsRouter = router({
       throw new TRPCError6({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql15`${referralLinks.clicks} + 1` }).where(eq20(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql16`${referralLinks.clicks} + 1` }).where(eq20(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,

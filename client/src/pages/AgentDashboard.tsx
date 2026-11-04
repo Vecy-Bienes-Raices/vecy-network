@@ -5,11 +5,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Copy, Check, Shield, Plus, Search, BarChart3, Zap, Sparkles,
   Loader2, Globe, FileText, Palette, Bot, CalendarCheck, EyeOff,
-  Download, Share2, ExternalLink, TrendingUp, QrCode, Calculator
+  Download, Share2, ExternalLink, TrendingUp, QrCode, Calculator, Wand2, FileSignature
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import UnifiedPublishModal from "@/components/publish/UnifiedPublishModal";
+import AgentProptechSuite from "@/components/AgentProptechSuite";
 
 type DashboardTab = "properties" | "links" | "branding" | "pro_tools" | "analytics" | "claim" | "publish";
 type PersonalityOption = "normal" | "audaz" | "profesional" | "extrovertida" | "seria" | "cordial";
@@ -76,6 +77,10 @@ export default function AgentDashboard() {
   const [aiCustomPrompt, setAiCustomPrompt] = useState("");
   const [aiWelcomeMessage, setAiWelcomeMessage] = useState("");
   const [roiCalculatorEnabled, setRoiCalculatorEnabled] = useState(true);
+  const [qradorSearchEnabled, setQradorSearchEnabled] = useState(true);
+  const [instantValuatorEnabled, setInstantValuatorEnabled] = useState(true);
+  const [virtualStagingEnabled, setVirtualStagingEnabled] = useState(true);
+  const [contractGeneratorEnabled, setContractGeneratorEnabled] = useState(true);
 
   const { data: myProperties, refetch: refetchProps, isLoading: loadingProps } = trpc.agent.getMyProperties.useQuery();
   const { data: availableProperties, refetch: refetchAvailable, isLoading: loadingAvailable } = trpc.agent.getAvailablePropertiesToClaim.useQuery();
@@ -118,6 +123,18 @@ export default function AgentDashboard() {
       }
       if (tl.roiCalculator) {
         setRoiCalculatorEnabled(tl.roiCalculator.enabled ?? true);
+      }
+      if (tl.qradorSmartSearch) {
+        setQradorSearchEnabled(tl.qradorSmartSearch.enabled ?? true);
+      }
+      if (tl.instantValuator) {
+        setInstantValuatorEnabled(tl.instantValuator.enabled ?? true);
+      }
+      if (tl.virtualStaging) {
+        setVirtualStagingEnabled(tl.virtualStaging.enabled ?? true);
+      }
+      if (tl.contractGenerator) {
+        setContractGeneratorEnabled(tl.contractGenerator.enabled ?? true);
       }
     }
   }, [myBrand]);
@@ -170,6 +187,22 @@ export default function AgentDashboard() {
         roiCalculator: {
           enabled: roiCalculatorEnabled,
           defaultInterestRateEA: 11.5,
+        },
+        qradorSmartSearch: {
+          enabled: qradorSearchEnabled,
+          allowCollaborativeNetwork: true,
+        },
+        instantValuator: {
+          enabled: instantValuatorEnabled,
+          captureOwnerLeads: true,
+        },
+        virtualStaging: {
+          enabled: virtualStagingEnabled,
+          defaultStyle: "modern-scandinavian",
+        },
+        contractGenerator: {
+          enabled: contractGeneratorEnabled,
+          includeDigitalSeal: true,
         },
       },
     });
@@ -980,14 +1013,130 @@ export default function AgentDashboard() {
                 </label>
               </div>
 
+              {/* HERRAMIENTAS PRO 4, 5, 6 Y 7: SUITE PROPTECH IA (QRADOR, HABI/CASACOL, MATTERPORT, DOCUSIGN) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="panel-card p-5 border border-amber-500/30 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                      <Search className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-foreground">
+                        4. Buscador Semántico & Curador de Colecciones IA (Estilo Qrador)
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Búsqueda en lenguaje natural con porcentaje de afinidad (85%-99%) y colecciones curadas para compartir por WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-secondary px-3 py-1.5 rounded-xl border border-border shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={qradorSearchEnabled}
+                      onChange={(e) => setQradorSearchEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <span className="text-[11px] font-black uppercase">Activo</span>
+                  </label>
+                </div>
+
+                <div className="panel-card p-5 border border-purple-500/30 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-foreground">
+                        5. Avalúo Instantáneo ACM & Captador de Propietarios (Estilo Habi / Casacol)
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Calcula valor comercial, precio/m² y canon mensual en tu sitio web y te envía el propietario interesado (+50 vPoints).
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-secondary px-3 py-1.5 rounded-xl border border-border shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={instantValuatorEnabled}
+                      onChange={(e) => setInstantValuatorEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-purple-500"
+                    />
+                    <span className="text-[11px] font-black uppercase">Activo</span>
+                  </label>
+                </div>
+
+                <div className="panel-card p-5 border border-pink-500/30 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-pink-500/15 border border-pink-500/40 flex items-center justify-center text-pink-400">
+                      <Wand2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-foreground">
+                        6. Estudio de Home Staging Virtual & Remodelación IA (Estilo Matterport / Qrador Photo AI)
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Visor interactivo Antes/Después con 5 estilos de interiorismo arquitectónico y proyección de valorización (+14% a +18%).
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-secondary px-3 py-1.5 rounded-xl border border-border shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={virtualStagingEnabled}
+                      onChange={(e) => setVirtualStagingEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-pink-500"
+                    />
+                    <span className="text-[11px] font-black uppercase">Activo</span>
+                  </label>
+                </div>
+
+                <div className="panel-card p-5 border border-cyan-500/30 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                      <FileSignature className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-foreground">
+                        7. Generador de Contratos & Promesas Ley 527 (Estilo DocuSign / Autentic)
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Expide contratos de arriendo Ley 820, promesas de compraventa y mandatos con tu logo, código CUV y sello SHA-256.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-secondary px-3 py-1.5 rounded-xl border border-border shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={contractGeneratorEnabled}
+                      onChange={(e) => setContractGeneratorEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-cyan-500"
+                    />
+                    <span className="text-[11px] font-black uppercase">Activo</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={updateBrandMutation.isPending}
                   className="btn-gold px-8 py-3.5 text-xs font-black uppercase tracking-widest cursor-pointer"
                 >
-                  {updateBrandMutation.isPending ? "Guardando Herramientas..." : "Guardar y Activar Mis Herramientas Pro"}
+                  {updateBrandMutation.isPending ? "Guardando Herramientas..." : "Guardar y Activar Mis 7 Herramientas Pro"}
                 </button>
+              </div>
+
+              {/* CONSOLA EN VIVO PARA USAR LAS 4 NUEVAS HERRAMIENTAS DIRECTAMENTE EN EL DASHBOARD */}
+              <div className="pt-4">
+                <AgentProptechSuite
+                  agentUserId={myBrand?.id}
+                  agencyName={agencyName || myBrand?.name || "Mi Agencia"}
+                  customLogoUrl={customLogoUrl}
+                  primaryColor={primaryColor}
+                  secondaryColor={secondaryColor}
+                  contactPhone={contactPhone || "+57 316 656 9719"}
+                  isDashboardPreview={true}
+                />
               </div>
             </form>
           )}

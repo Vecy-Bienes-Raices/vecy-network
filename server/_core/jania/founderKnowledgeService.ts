@@ -530,6 +530,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Pues arranca y en ese mismo orden que propones las 3 fases quirúrgicas... Algo adicional que me encantaría es poder ofrecer herramientas que los usuarios puedan añadir a sus sitios web desde su dashboard si las pagan pero a un precio adicional y justo ya que recuerda que la idea es que nuestro plan de ingreso a diferencia del de otros portales o CRM como wasi es que será gratuito con publicación de inmuebles ilimitados, pero creo que podemos darles ciertas herramientas adicionales y estas también modificables o editables con sus colores, logo y diseño propio de sus marcas, serían las siguientes; una vecy agenda pro con todas sus funciones idénticas pero que dirijan las notificaciones a sus correos y whatsapp propios / un widget con un/a agente de IA personalizable y editable como todas estas herramientas, y que si es IA femenina o masculina, con posibilidad que mediante sus propios prompt se inyecten una personalidad como ellos la deseen o que la dejen genérica o con botones que digan; normal, Audaz, profesional, extrovertida, seria, profesional, cordial, etc...",
     createdAt: "2026-11-04T20:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-suite-proptech-ia-qrador-habi-staging-docusign-v33-94",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingeniería Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic)",
+    directive:
+      "Además de Vecy Agenda Pro Marca Propia, el Widget de Agente IA Personalizable (Femenina/Masculina con 6 personalidades) y la Calculadora Hipotecaria ROI, cada suscriptor de VECY BIENES RAÍCES cuenta en su Dashboard y en su Micro-Sitio (/s/su-agencia) con 4 super-herramientas Pro adicionales potenciadas con IA y personalizadas con el logo y colores de su marca: 4) Buscador Semántico en Lenguaje Natural y Curador de Colecciones IA (inspirado y superando a Qrador: el comprador escribe en sus propias palabras qué busca y la IA filtra, calcula el % de afinidad 85%-99% y arma una Colección Curada compartible por WhatsApp con sensor vPoints); 5) Avalúo Instantáneo ACM con IA y Captador de Propietarios (inspirado y superando a Habi/Casacol: calcula rango de venta, precio por m² y canon de arriendo, captando al propietario para el suscriptor y sumándole +50 vPoints); 6) Estudio de Home Staging Virtual y Remodelación IA (inspirado en Matterport, Giraffe360 y Qrador Photo AI: visor interactivo Antes/Después con 5 estilos arquitectónicos y proyección de valorización +14% a +18%); y 7) Generador de Contratos y Promesas con Firma Digital Ley 527 (inspirado en DocuSign/Autentic: genera contratos de arrendamiento Ley 820, promesas de compraventa, mandatos de consignación y actas de reserva 40/20/40 con el membrete del suscriptor, código CUV y sello criptográfico SHA-256).",
+    rawText:
+      "Me encanta que analices todos esos otros sitios y que podamos implementar todas esas herramientas que dices. Excelente y agrega Qrador que dicen que tienen herramientas de búsqueda con IA.",
+    createdAt: "2026-11-04T23:45:00.000Z",
+    active: true
   }
 ];
 

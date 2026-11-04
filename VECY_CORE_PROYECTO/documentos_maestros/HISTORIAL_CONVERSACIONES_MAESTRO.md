@@ -7,6 +7,40 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-04] — JanIA v33.94: Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingeniería Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic) (v33.94 - 33.94.0)
+
+**Versión:** `v33.94` (`33.94.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Me encanta que analices todos esos otros sitios y que podamos implementar todas esas herramientas que dices. Excelente y agrega Qrador que dicen que tienen herramientas de búsqueda con IA."*
+
+**Diagnóstico de Ingeniería Inversa de Arquitectura (REA) sobre Qrador, Habi/Casacol, Matterport y DocuSign:**
+1. **Qrador (`qrador.com` — Colombia):**
+   - Su nombre proviene de *"Curador"*. Su fortaleza es reemplazar los formularios rígidos de 15 filtros por **Búsqueda Semántica con IA y Colecciones Curadas** para una red de agentes (*Amig@s Qrador*), además de edición fotográfica con IA.
+   - **Cómo lo superamos en VECY:** Creamos `agent.semanticCuratorSearch`, donde el comprador o el asesor escribe en lenguaje natural qué busca (*"Apartamento iluminado de 3 alcobas hasta 850 millones o que reciba permuta"*). La IA extrae tipología, negocio, presupuesto en millones, alcobas, área y palabras clave, cruza contra PostgreSQL (priorizando los inmuebles del agente y sumando la Red Colaborativa VECY), calcula el **Score de Afinidad IA (85%–99%)**, explica por qué cada inmueble encaja y genera una **Colección Curada compartible por WhatsApp** con enlaces Con Marca y Marca Blanca Neutra con sensor de puntos (`vPoints`).
+2. **Habi / Casacol (Captación de Propietarios por Avalúo Instantáneo):**
+   - Su principal imán de captación de inmuebles es la calculadora de *"¿Cuánto vale mi inmueble?"*.
+   - **Cómo lo superamos en VECY:** Creamos `agent.calculateInstantValuation`, que calcula al instante el **Valor de Liquidez Rápida**, **Valor Óptimo de Mercado**, **Techo Máximo**, **Precio por $m^2$ del sector**, **Canon Mensual Estimado** y **Rentabilidad Anual Bruta (% E.A.)**. Cuando un propietario realiza el avalúo en el sitio del suscriptor, le acredita `+50 vPoints` al suscriptor y redirige el lead directo al WhatsApp propio de su agencia.
+3. **Matterport / Giraffe360 / Qrador Photo AI (Home Staging Virtual e Interiorismo IA):**
+   - Permiten mostrar espacios vacíos o antiguos amoblados virtualmente para acelerar la venta.
+   - **Cómo lo superamos en VECY:** Creamos `agent.generateVirtualStagingPlan` y `VIRTUAL_STAGING_STYLES` con un **Comparador Interactivo Antes / Después (Slider en tiempo real)** en 5 estilos arquitectónicos (*Escandinavo Moderno*, *Luxury Minimalista & Mármol*, *Loft Industrial*, *Oficina Corporativa Boutique*, *Despeje Visual & Luz Natural IA*), con lista de materiales, mobiliario y proyección de incremento de valor (+14% a +18%).
+4. **DocuSign / Autentic (Contratos y Promesas con Firma Electrónica Ley 527):**
+   - **Cómo lo superamos en VECY:** Creamos `agent.generateBrandedLegalContract` y `CONTRACT_TEMPLATES_CATALOG` para expedir en vivo 4 minutas colombianas (*Contrato de Arrendamiento Ley 820 de 2003*, *Promesa de Compraventa Art. 1611 C.C.*, *Mandato de Consignación* y *Acta de Presentación y Reserva de Punta 40/20/40*) membretadas con el nombre y colores del suscriptor, código único `CUV-LEY527` y sello criptográfico `SHA-256`, listas para imprimir/descargar en PDF.
+
+**Acciones Ejecutadas:**
+1. **`server/routers/agent.ts`:**
+   - Incorporados `VIRTUAL_STAGING_STYLES` (5 estilos) y `CONTRACT_TEMPLATES_CATALOG` (4 minutas legales).
+   - Ampliado `updateBrandConfig` con los switches `qradorSmartSearch`, `instantValuator`, `virtualStaging` y `contractGenerator`.
+   - Implementados los 4 procedimientos: `semanticCuratorSearch`, `calculateInstantValuation`, `generateVirtualStagingPlan` y `generateBrandedLegalContract`.
+2. **`client/src/components/AgentProptechSuite.tsx` (Nuevo Componente Modular):**
+   - Consola interactiva de las 4 super-herramientas Proptech personalizada con el logo, nombre y colores de la agencia del suscriptor.
+3. **`client/src/pages/AgentMicrosite.tsx` y `client/src/pages/AgentDashboard.tsx`:**
+   - Integrada `AgentProptechSuite` tanto en el Micro-Sitio público del suscriptor (`/s/:slug` y `/agencia/:slug`) como dentro de la pestaña *Herramientas Pro & Agente IA* del Dashboard del Agente (completando un ecosistema de **7 Herramientas Pro personalizables**).
+4. **Enseñanza Fundacional y Pruebas Automatizadas ($0 COP):**
+   - Registrada `seed-suite-proptech-ia-qrador-habi-staging-docusign-v33-94` en `founderKnowledgeService.ts`.
+   - Creada la **Suite 180** en `server/__tests__/regression.test.ts` y `server/__tests__/wasiBrandBrochureAndProToolsV33_93.test.ts`.
+
+---
+
 ### 📅 [2026-11-04] — JanIA v33.93: Infraestructura Wasi-IA de Fichas Técnicas (Con Marca Propia y Marca Blanca Neutra Cero Rastro), Sensores SEO/Puntos y Herramientas Pro Personalizables (Vecy Agenda Pro + Widget Agente IA) (v33.93 - 33.93.0)
 
 **Versión:** `v33.93` (`33.93.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

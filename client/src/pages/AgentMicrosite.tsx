@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useRoute, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import AgentProToolsWidget from '@/components/AgentProToolsWidget';
+import AgentProptechSuite from '@/components/AgentProptechSuite';
 import {
   Building2, MapPin, Bed, Bath, Car, Ruler, Phone, Mail,
   CalendarCheck, Download, EyeOff, Palette, Search, Sparkles,
@@ -183,7 +184,18 @@ export default function AgentMicrosite() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* CATÁLOGO DE INMUEBLES CON DESCARGA DE FICHAS CON MARCA Y NEUTRAS   */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        {/* Suite Proptech IA (Qrador Search, Habi Valuator, Matterport Staging, DocuSign Contracts) */}
+        <AgentProptechSuite
+          agentUserId={agent.id}
+          agencyName={agencyName}
+          customLogoUrl={agent.customLogoUrl}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+          contactPhone={contactPhone}
+          activeTools={tools}
+        />
+
         <div className="flex items-center justify-between mb-8">
           <div>
             <h3 className="text-xl font-black uppercase tracking-wider">
@@ -346,3 +358,4 @@ export default function AgentMicrosite() {
     </div>
   );
 }
+
