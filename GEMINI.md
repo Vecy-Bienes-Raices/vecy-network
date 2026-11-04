@@ -1,19 +1,16 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.87.0 — 2026-11-03)
-- **JanIA Server:** `v33.87` (`33.87.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicación $0 COP), Cero Saludos Repetitivos y Rescate LLM (Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.88.0 — 2026-11-03)
+- **JanIA Server:** `v33.88` (`33.88.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Verdad en Encuestas Interactivas (Exclusivas en Grupos Oficiales de WhatsApp y Cero Falsedad de Encuesta en el Canal Oficial — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Crítico de Eduardo A. Rivera:**
-     - Propietarios y dueños directos preguntaban repetidamente por el costo de pautar, publicar o consignar su inmueble (*"¿Cuánto cobran por publicar mi inmueble entonces?"*, *"¿Cuánto sería el valor por conseguir el cliente?"*).
-     - JanIA quedaba atrapada repitiendo en bucle un mensaje genérico de términos de corretaje virtual sin responder la pregunta, saludando de nuevo en cada mensaje (*"¡Qué gusto saludarte, .!"* o *"¡Buenas tardes!"*) y mostrando comportamientos de bot acartonado.
-  2. **Causa Raíz Identificada:**
-     - Interceptor `isShortOwnerInquiry` capturaba mensajes cortos de consulta sin `?` o preguntas de comisiones repitiendo el bloque de bienvenida porque `owner_welcome_sent` no estaba persistido.
-     - `displayName` no sanitizaba puntos (`.`) o sustantivos genéricos (`Dueño`, `Arrendador`) presentes en perfiles de WhatsApp.
-     - Caída en cascada de Gemini: `gemini-3.8-flash` en free tier agotó la cuota de 20 peticiones/día (429) y congelaba todas las llaves; `GEMINI_PAID_KEY` (Key #99) arrojaba 403 Forbidden por saldo pendiente en Google Cloud sin enfriarse, precipitando a JanIA en el fallback determinista.
-  3. **Solución y Blindaje Quirúrgico:**
-     - **Tarifas Claras y Directas:** Inyección de respuesta inmediata ante cualquier consulta de costos o comisiones: **Publicación y pauta 100% GRATUITA ($0 COP)**; **Comisión por Éxito: 3% en VENTA / 1er Canon en ARRIENDO**; sin cobros anticipados.
-     - **Cero Saludos Repetitivos:** Erradicación total de saludos mecánicos en conversaciones activas (`isOngoingChat`).
-     - **Sanitización de Nombres:** Normalización estricta de `displayName` eliminando puntos y términos genéricos.
-     - **Rescate Inteligente de Cascada LLM:** Detección de cuota diaria 429 para conmutar inmediatamente a modelos funcionales (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`) a $0 COP sin congelar las llaves; enfriamiento automático de 3600s para claves con 403 (facturación pendiente de Google Cloud).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 173 `vitest` (5/5 passing, 559 tests) | Build `npm run build` limpio en 24.27s.
+     - En los grupos oficiales (Grupo 2 y 3), JanIA enviaba la encuesta interactiva nativa (con opciones y botones de votación en vivo) pero el mensaje de acompañamiento decía falsamente: *"Acabamos de activar nuestra encuesta interactiva en el Canal Oficial: «¿Qué tanto castiga el precio un garaje lineal?» ... 👉 Sigue el Canal Oficial y vota aquí"*.
+     - En los canales de WhatsApp (`@newsletter`), la arquitectura oficial de Meta no soporta widgets interactivos de votación para seguidores. La encuesta interactiva en vivo se realiza **exclusivamente en los grupos oficiales**.
+     - Mandato terminante de Eduardo: *"si vas a hacer la encuesta solamente en los grupos, pues por favor que el post hable de que la encuesta está en los grupos y no en el canal ya que eso de que la encuesta está en el canal es falso. Que NO SE TE OLVIDE NUNCA."*
+  2. **Solución y Blindaje Quirúrgico:**
+     - **Erradicación de la Falsedad:** El post en los grupos ahora declara con total honestidad y exactitud: **"📊 ENCUESTA Y DEBATE OFICIAL EN NUESTROS GRUPOS VECY"** y *"Acabamos de activar nuestra encuesta interactiva aquí en nuestros grupos oficiales de WhatsApp:"*, invitando a los colegas a votar en la encuesta nativa *"aquí arriba en el chat"*.
+     - **Canal Oficial como Medio Informativo:** El enlace al Canal Oficial se presenta honestamente como canal de novedades (*"👉 Sigue también nuestro Canal Oficial de novedades:"*), sin afirmar jamás que la votación interactiva se hace en el canal.
+     - **Desacoplamiento Operativo:** Los envíos a grupos oficiales no se cancelan ni abortan por limitaciones o caídas del canal newsletter.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-encuestas-interactivas-exclusivas-grupos-oficiales-verdad-canal-v33-88` en `founderKnowledgeService.ts`, `base.md` y `prompts.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 174 `vitest` (5/5 passing, 564 tests) | Build `npm run build` limpio en 24.5s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

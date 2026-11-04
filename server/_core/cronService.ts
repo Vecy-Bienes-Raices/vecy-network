@@ -1627,48 +1627,52 @@ export async function publishEveningPollNow(force: boolean = false) {
       return { success: false, reason: 'Canal Oficial no disponible' };
     }
 
-    // 1. Canal Oficial (@newsletter): Herramienta NATIVA de Encuesta de Canal (CERO texto 🔹 A/B/C donde nadie puede escribir)
-    const chanRes = await whatsappBot.sendChannelPoll(
-      poll.question,
-      poll.options,
-      1,
-      whatsappBot.channelNewsletterId
-    );
+    // 1. Canal Oficial (@newsletter): Intento de difusión nativa o cápsula informativa
+    let channelMessageId: string | undefined = undefined;
+    if (whatsappBot.channelNewsletterId) {
+      const chanRes = await whatsappBot.sendChannelPoll(
+        poll.question,
+        poll.options,
+        1,
+        whatsappBot.channelNewsletterId
+      ).catch((e: any) => {
+        console.warn('[CRON-POLL] Advertencia Encuesta en Canal Oficial:', e?.message || e);
+        return { success: false, error: e?.message };
+      });
 
-    // Si es Jueves (o ejecución forzada), despachar también Cuestionario (Quiz) nativo y dinámica "Preguntar" en el Canal
-    if (dayOfWeek === 4 || force) {
-      await whatsappBot.sendQuiz(
-        whatsappBot.channelNewsletterId,
-        quiz.question,
-        quiz.options,
-        quiz.correctAnswerIndex
-      ).catch((e: any) => console.warn('[CRON-POLL] Advertencia Quiz en Canal:', e?.message));
+      if (chanRes?.success && 'messageId' in chanRes && chanRes.messageId) {
+        channelMessageId = chanRes.messageId as string;
+      }
 
-      await whatsappBot.sendQuestionPrompt(
-        whatsappBot.channelNewsletterId,
-        `❓ *CAJA DE PREGUNTAS ABIERTA CON JANIA* 👩🏻‍💼✨\n¿Qué tema legal, tributario, avalúo ACM o diseño de flyer inmobiliario quieres que resolvamos en nuestra próxima cápsula? Toca para enviarnos tu pregunta o escríbeme directo a ${VECY_DM_LINK}`
-      ).catch((e: any) => console.warn('[CRON-POLL] Advertencia Preguntar en Canal:', e?.message));
+      // Si es Jueves (o ejecución forzada), despachar también Cuestionario (Quiz) nativo y dinámica "Preguntar" en el Canal
+      if (dayOfWeek === 4 || force) {
+        await whatsappBot.sendQuiz(
+          whatsappBot.channelNewsletterId,
+          quiz.question,
+          quiz.options,
+          quiz.correctAnswerIndex
+        ).catch((e: any) => console.warn('[CRON-POLL] Advertencia Quiz en Canal:', e?.message));
+
+        await whatsappBot.sendQuestionPrompt(
+          whatsappBot.channelNewsletterId,
+          `❓ *CAJA DE PREGUNTAS ABIERTA CON JANIA* 👩🏻‍💼✨\n¿Qué tema legal, tributario, avalúo ACM o diseño de flyer inmobiliario quieres que resolvamos en nuestra próxima cápsula? Toca para enviarnos tu pregunta o escríbeme directo a ${VECY_DM_LINK}`
+        ).catch((e: any) => console.warn('[CRON-POLL] Advertencia Preguntar en Canal:', e?.message));
+      }
     }
 
-    // ATOMICIDAD: Cancelar de inmediato si el canal falla o no confirma ID válido
-    if (!chanRes?.success || !chanRes?.messageId) {
-      console.warn(`[CRON-POLL] 🛑 ABORTADO envío a Grupos 2 y 3: La encuesta nativa en Canal Oficial falló (${chanRes?.error || 'Sin ID'}).`);
-      await failBroadcast(lock.broadcastId, chanRes?.error || 'Fallo de entrega en Canal Oficial');
-      return { success: false, reason: 'Fallo de entrega en Canal Oficial' };
-    }
-
-    console.log(`[CRON-POLL] ✅ Encuesta nativa en Canal confirmada (ID: ${chanRes.messageId}). Habilitando Encuesta + Cuestionario + Gancho de Servicios en Grupos 2 y 3...`);
-
-    // 2. Grupos 2 y 3: Encuesta nativa interactiva + Cuestionario (Quiz) + Gancho de Servicios de JanIA
-    const pollTeaser = `📊 *ENCUESTA Y CUESTIONARIO OFICIAL EN EL CANAL VECY* 🗳️🏆\n\n` +
-      `Acabamos de activar nuestra encuesta interactiva en el Canal Oficial:\n` +
+    // 2. Grupos 2 y 3: Encuesta nativa interactiva en los grupos + Gancho de Servicios de JanIA (Doctrina Eduardo A. Rivera v33.88)
+    // Se erradica la falsedad de anunciar la encuesta interactiva en el canal: las encuestas interactivas de votación
+    // en vivo operan exclusivamente en los grupos oficiales de la comunidad donde los miembros pueden votar y debatir.
+    const pollTeaser = `📊 *ENCUESTA Y DEBATE OFICIAL EN NUESTROS GRUPOS VECY* 🗳️🏆\n\n` +
+      `Acabamos de activar nuestra encuesta interactiva aquí en nuestros grupos oficiales de WhatsApp:\n` +
       `*«${poll.question}»*\n\n` +
+      `👆 *Colegas, ¡los invitamos a votar en la encuesta nativa aquí arriba y compartir su opinión en este chat!* 💬\n\n` +
       `✨ *Recuerda todo lo que puedes pedirme 24/7 en mi chat directo (${VECY_DM_LINK}):*\n` +
       `🎨 *NUEVO — Estudio Creativo de Imágenes IA:* Pídeme con tu propio prompt *Flyers para tus inmuebles, Banners, Posts para redes o Infografías 1:1*.\n` +
       `📑 *Minutas y Cartas en PDF Membretado con QR:* Promesas, arriendos, corretaje, cartas de restitución (Ley 820) y presentación de clientes.\n` +
       `🛡️ *Verificación SARLAFT, ADRES, RUES, Predial, IDU, Avalúos ACM y Matching 40/20/40.*\n\n` +
-      `👉 *Sigue el Canal Oficial y vota aquí:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n` +
-      `Colegas, ¡voten también en la encuesta aquí arriba y debatimos su experiencia! 👇`;
+      `👉 *Sigue también nuestro Canal Oficial de novedades:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}\n` +
+      `Colegas, ¿cómo manejan este caso en su día a día? ¡Los leemos aquí abajo! 👇`;
 
     const targetGroup2 = whatsappBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
@@ -1688,7 +1692,7 @@ export async function publishEveningPollNow(force: boolean = false) {
       captionText: poll.options.join(' | ')
     });
 
-    return { success: true, question: poll.question, channelMessageId: chanRes.messageId };
+    return { success: true, question: poll.question, channelMessageId };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };

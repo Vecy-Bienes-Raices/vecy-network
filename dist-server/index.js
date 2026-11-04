@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.87";
+    VECY_VERSION = "v33.88";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13720,6 +13720,7 @@ Act\xFAas como **JanIA**, la agente de inteligencia artificial y Consultora Br\x
     - **Paleta y Oficina Institucional de VECY BIENES RA\xCDCES:** Negro carb\xF3n mate ('#0A0A0A') y Dorado Imperial/Met\xE1lico ('#D4AF37' / '#BF953F'), escritorio ejecutivo de m\xE1rmol negro con vetas doradas, biblioteca iluminada con maquetas doradas de edificios, emblema circular luminoso 'Vecy' en la pared y ventanal piso a techo con skyline al atardecer.
     - **Estudio Creativo de Im\xE1genes por WhatsApp ('generar_imagen_creativa_whatsapp'):** Los usuarios pueden pedirle a JanIA con su propio prompt que les dise\xF1e **Flyers para sus inmuebles, Banners comerciales, Posts para redes sociales o Infograf\xEDas 1:1** ('1080x1080' HD JPG entregado directamente en WhatsApp).
     - **Herramientas Nativas de WhatsApp en Perfil Directo, Grupos y Canal Oficial:** JanIA domina y anuncia activamente sus herramientas nativas: **Encuestas ('poll')**, **Cuestionarios / Quiz ('pollType: 1')**, **Preguntar ('isQuestion: true')**, **Tarjeta de Contacto vCard ('+57 316 656 9719')**, **Pin de Ubicaci\xF3n GPS ('locationMessage')**, **PDFs membretados con QR** y **Stickers 3D**, sin usar jam\xE1s encuestas falsas de texto en el Canal Oficial.
+    - **Verdad Doctrinal en Encuestas Interactivas (v33.88 \u2014 Doctrina Eduardo A. Rivera):** Las encuestas interactivas de votaci\xF3n en vivo operan **exclusivamente en los Grupos Oficiales de WhatsApp (Grupo 2 y Grupo 3)** donde WhatsApp soporta widgets nativos de votaci\xF3n en tiempo real. En el Canal Oficial (@newsletter), WhatsApp no soporta encuestas interactivas. Prohibido afirmar que la encuesta est\xE1 en el Canal Oficial o pedir que voten all\xED; el post debe declarar honestamente que la encuesta interactiva est\xE1 en los grupos oficiales de la comunidad e invitar a votar arriba en el chat.
   * **L\xEDmite Sagrado de Borradores Jur\xEDdicos, Contratos Definitivos con Todas las de la Ley y Reciprocidad de Valor (v33.69 \u2014 Doctrina Eduardo A. Rivera):**
     - **L\xEDmite de Borradores Jur\xEDdicos:** Cuando JanIA atienda consultas de alta exigencia y genere minutas o documentos en PDF, debe dejar claro con se\xF1or\xEDo y pedagog\xEDa que se trata de un borrador est\xE1ndar base preliminar. Para un contrato vinculante formal ante notar\xEDa, las partes deben completar: cronograma exacto de pagos, notar\xEDa y fechas de escrituraci\xF3n, plazos y actas de entrega, datos completos y estado civil (afectaci\xF3n a vivienda familiar), linderos literales de escrituras o SNR, estudio de t\xEDtulos de 20 a\xF1os y r\xE9gimen de arras vs cl\xE1usula penal.
     - **Canalizaci\xF3n a Eduardo Rivera y Jani Alves:** JanIA no debe excederse redactando contratos definitivos a ciegas; recomienda al usuario poner la redacci\xF3n definitiva y el blindaje en manos de nuestros directores Eduardo Rivera (+57 319 291 9978) o la l\xEDnea de atenci\xF3n br\xF3ker (+57 316 656 9719) para elaborar la promesa de compraventa con todas las de la ley.
@@ -17098,6 +17099,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando las personas le hablen de 'comunidad' a JanIA, se refieren DIRECTA E INEQU\xCDVOCAMENTE a nuestros grupos y canales oficiales de WhatsApp. JanIA debe comprender de inmediato que la comunidad son nuestros espacios colaborativos en WhatsApp e invitar cordialmente a los usuarios a unirse y participar activamente, cont\xE1ndoles para qu\xE9 es cada comunidad: 1) Grupo 1 Oficial (Ofertas\u{1F3F7}\uFE0F y Demandas\u{1F4DD} Inmobiliarias: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ) para comercializar y buscar propiedades de clientes con cruce y matching autom\xE1tico por IA sin saturar de chat; 2) Grupo 2 Oficial (Consultorio Jur\xEDdico, Tributario y Aval\xFAos\u{1F4A1}: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6) para resolver en vivo dudas legales, notariales 50/50, impuestos prediales y aval\xFAos; 3) Grupo 3 Oficial (Proyecto VECY Network\u{1F310}: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU) para alianzas gremiales entre colegas inmobiliarios, debate del modelo 40/20/40 y tecnolog\xEDa Proptech; 4) Canal Oficial de WhatsApp\u{1F4F0} (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) para boletines diarios y tendencias del sector. Si adem\xE1s el usuario solicita llamar o coordinar alianzas con la direcci\xF3n comercial, JanIA le suministra la l\xEDnea oficial del br\xF3ker de Eduardo Rivera y Jani Alves (+57 316 656 9719 / https://wa.me/573166569719).",
         rawText: "Cuando las personas le hablen de comunidad a JanIA se refieren a nuestros grupos oficiales, entonces dile a JanIA que cuando esto suceda los invite a unirse y a participar en nuestros grupos oficiales, cont\xE1ndoles para qu\xE9 es cada comunidad.",
         createdAt: "2026-10-30T14:30:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-encuestas-interactivas-exclusivas-grupos-oficiales-verdad-canal-v33-88",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Verdad Doctrinal en Encuestas: Operan Exclusivamente en los Grupos Oficiales y Prohibici\xF3n de Afirmar Falsamente que Est\xE1n en el Canal Oficial",
+        directive: "Las encuestas interactivas de votaci\xF3n en vivo de VECY BIENES RA\xCDCES se realizan y operan EXCLUSIVAMENTE en los Grupos Oficiales de WhatsApp (Grupo 2 y Grupo 3), donde las herramientas nativas de selecci\xF3n de opciones y conteo de votos en tiempo real son soportadas por WhatsApp. En el Canal Oficial (@newsletter), WhatsApp no soporta widgets interactivos de votaci\xF3n para seguidores. Por lo tanto, JanIA tiene TERMINANTEMENTE PROHIBIDO afirmar falsamente que la encuesta interactiva est\xE1 en el Canal Oficial o invitar a votar en el canal. Todo post de acompa\xF1amiento en los grupos debe anunciar que la encuesta interactiva est\xE1 en los grupos oficiales e invitar a votar directamente arriba en el chat. Si se publica en el Canal Oficial, se informa con honestidad que la encuesta y el debate en vivo se encuentran abiertos en nuestros grupos oficiales de WhatsApp.",
+        rawText: "Esto siempre ha estado mal ya que habla de que la encuesta se est\xE1 haciendo en el canal oficial, pero si vemos la hace o creo que solo la puede hacer en los grupos oficiales, m\xE1s no en el canal, por qu\xE9 pues no lo s\xE9 pero creo que solamente lo pudo hacer una vez hace ya mucho tiempo y tal vez ahora tu antigravity no lo sabes o no lo quieres o peor, no lo puedes hacer. entoncces si vas a hacer la encuesta solamente en los grupos, pues por favor que el post hable de que la encuesta est\xE1 en los grupos y no en el canal ya que eso de que la encuesta est\xE1 en el canal es falso. Que NO SE TE OLVIDE NUNCA.",
+        createdAt: "2026-11-03T23:59:00.000Z",
         active: true
       }
     ];
@@ -37427,43 +37438,48 @@ async function publishEveningPollNow(force = false) {
       await failBroadcast(lock.broadcastId, "Canal Oficial no disponible");
       return { success: false, reason: "Canal Oficial no disponible" };
     }
-    const chanRes = await janiaMatchBot.sendChannelPoll(
-      poll.question,
-      poll.options,
-      1,
-      janiaMatchBot.channelNewsletterId
-    );
-    if (dayOfWeek === 4 || force) {
-      await janiaMatchBot.sendQuiz(
-        janiaMatchBot.channelNewsletterId,
-        quiz.question,
-        quiz.options,
-        quiz.correctAnswerIndex
-      ).catch((e) => console.warn("[CRON-POLL] Advertencia Quiz en Canal:", e?.message));
-      await janiaMatchBot.sendQuestionPrompt(
-        janiaMatchBot.channelNewsletterId,
-        `\u2753 *CAJA DE PREGUNTAS ABIERTA CON JANIA* \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
+    let channelMessageId = void 0;
+    if (janiaMatchBot.channelNewsletterId) {
+      const chanRes = await janiaMatchBot.sendChannelPoll(
+        poll.question,
+        poll.options,
+        1,
+        janiaMatchBot.channelNewsletterId
+      ).catch((e) => {
+        console.warn("[CRON-POLL] Advertencia Encuesta en Canal Oficial:", e?.message || e);
+        return { success: false, error: e?.message };
+      });
+      if (chanRes?.success && "messageId" in chanRes && chanRes.messageId) {
+        channelMessageId = chanRes.messageId;
+      }
+      if (dayOfWeek === 4 || force) {
+        await janiaMatchBot.sendQuiz(
+          janiaMatchBot.channelNewsletterId,
+          quiz.question,
+          quiz.options,
+          quiz.correctAnswerIndex
+        ).catch((e) => console.warn("[CRON-POLL] Advertencia Quiz en Canal:", e?.message));
+        await janiaMatchBot.sendQuestionPrompt(
+          janiaMatchBot.channelNewsletterId,
+          `\u2753 *CAJA DE PREGUNTAS ABIERTA CON JANIA* \u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
 \xBFQu\xE9 tema legal, tributario, aval\xFAo ACM o dise\xF1o de flyer inmobiliario quieres que resolvamos en nuestra pr\xF3xima c\xE1psula? Toca para enviarnos tu pregunta o escr\xEDbeme directo a ${VECY_DM_LINK}`
-      ).catch((e) => console.warn("[CRON-POLL] Advertencia Preguntar en Canal:", e?.message));
+        ).catch((e) => console.warn("[CRON-POLL] Advertencia Preguntar en Canal:", e?.message));
+      }
     }
-    if (!chanRes?.success || !chanRes?.messageId) {
-      console.warn(`[CRON-POLL] \u{1F6D1} ABORTADO env\xEDo a Grupos 2 y 3: La encuesta nativa en Canal Oficial fall\xF3 (${chanRes?.error || "Sin ID"}).`);
-      await failBroadcast(lock.broadcastId, chanRes?.error || "Fallo de entrega en Canal Oficial");
-      return { success: false, reason: "Fallo de entrega en Canal Oficial" };
-    }
-    console.log(`[CRON-POLL] \u2705 Encuesta nativa en Canal confirmada (ID: ${chanRes.messageId}). Habilitando Encuesta + Cuestionario + Gancho de Servicios en Grupos 2 y 3...`);
-    const pollTeaser = `\u{1F4CA} *ENCUESTA Y CUESTIONARIO OFICIAL EN EL CANAL VECY* \u{1F5F3}\uFE0F\u{1F3C6}
+    const pollTeaser = `\u{1F4CA} *ENCUESTA Y DEBATE OFICIAL EN NUESTROS GRUPOS VECY* \u{1F5F3}\uFE0F\u{1F3C6}
 
-Acabamos de activar nuestra encuesta interactiva en el Canal Oficial:
+Acabamos de activar nuestra encuesta interactiva aqu\xED en nuestros grupos oficiales de WhatsApp:
 *\xAB${poll.question}\xBB*
+
+\u{1F446} *Colegas, \xA1los invitamos a votar en la encuesta nativa aqu\xED arriba y compartir su opini\xF3n en este chat!* \u{1F4AC}
 
 \u2728 *Recuerda todo lo que puedes pedirme 24/7 en mi chat directo (${VECY_DM_LINK}):*
 \u{1F3A8} *NUEVO \u2014 Estudio Creativo de Im\xE1genes IA:* P\xEDdeme con tu propio prompt *Flyers para tus inmuebles, Banners, Posts para redes o Infograf\xEDas 1:1*.
 \u{1F4D1} *Minutas y Cartas en PDF Membretado con QR:* Promesas, arriendos, corretaje, cartas de restituci\xF3n (Ley 820) y presentaci\xF3n de clientes.
 \u{1F6E1}\uFE0F *Verificaci\xF3n SARLAFT, ADRES, RUES, Predial, IDU, Aval\xFAos ACM y Matching 40/20/40.*
 
-\u{1F449} *Sigue el Canal Oficial y vota aqu\xED:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
-Colegas, \xA1voten tambi\xE9n en la encuesta aqu\xED arriba y debatimos su experiencia! \u{1F447}`;
+\u{1F449} *Sigue tambi\xE9n nuestro Canal Oficial de novedades:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+Colegas, \xBFc\xF3mo manejan este caso en su d\xEDa a d\xEDa? \xA1Los leemos aqu\xED abajo! \u{1F447}`;
     const targetGroup2 = janiaMatchBot.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
     if (targetGroup2) {
       await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
@@ -37480,7 +37496,7 @@ Colegas, \xA1voten tambi\xE9n en la encuesta aqu\xED arriba y debatimos su exper
       voiceText: poll.question,
       captionText: poll.options.join(" | ")
     });
-    return { success: true, question: poll.question, channelMessageId: chanRes.messageId };
+    return { success: true, question: poll.question, channelMessageId };
   } catch (err) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };

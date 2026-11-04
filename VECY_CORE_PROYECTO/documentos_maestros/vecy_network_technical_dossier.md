@@ -8748,6 +8748,28 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio en 24.27s + 337ms.
   - Versión: `v33.87` (`33.87.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.88 (2026-11-03) — Verdad Doctrinal en Encuestas: Operan Exclusivamente en los Grupos Oficiales de WhatsApp y Cero Falsedad de Encuesta en Canal Oficial (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Falsedad de Encuesta en el Canal Oficial:* En los grupos oficiales (Grupo 2 y 3), JanIA enviaba la encuesta nativa interactiva (donde los usuarios votaban con botones y recuento en vivo), pero el mensaje de acompañamiento decía falsamente: *"Acabamos de activar nuestra encuesta interactiva en el Canal Oficial ... 👉 Sigue el Canal Oficial y vota aquí"*.
+  2. *Limitación de la Arquitectura de WhatsApp Newsletters:* Los Canales de WhatsApp (`@newsletter`) son un canal unidireccional que no soporta widgets interactivos de votación para seguidores. Las encuestas de votación en vivo funcionan **exclusivamente en los grupos oficiales de WhatsApp**. Invitar a votar en el canal creaba confusión y enviaba a los usuarios a un canal donde no existía encuesta.
+- **Solución Implementada**:
+  1. `server/_core/cronService.ts`:
+     - Actualizado el post de acompañamiento `pollTeaser` en grupos: se titula **`📊 ENCUESTA Y DEBATE OFICIAL EN NUESTROS GRUPOS VECY 🗳️🏆`** y declara con total veracidad: *"Acabamos de activar nuestra encuesta interactiva aquí en nuestros grupos oficiales de WhatsApp: «...» 👆 Colegas, ¡los invitamos a votar en la encuesta nativa aquí arriba y compartir su opinión en este chat! 💬"*.
+     - Se erradica toda afirmación falsa de encuesta interactiva en el canal. El enlace al Canal Oficial se presenta honestamente como medio informativo (*"👉 Sigue también nuestro Canal Oficial de novedades:"*).
+     - Se desacopla la publicación de encuestas en los grupos de posibles limitaciones del canal newsletter.
+  2. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+     - Incorporada la sección de *Verdad Doctrinal en Encuestas Interactivas (v33.88 — Doctrina Eduardo A. Rivera)*.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-encuestas-interactivas-exclusivas-grupos-oficiales-verdad-canal-v33-88`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 174 en `regression.test.ts` con 5 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **564 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build` limpio.
+  - Versión: `v33.88` (`33.88.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

@@ -7,6 +7,41 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-03] — JanIA v33.88: Doctrina de Verdad en Encuestas Interactivas (Operan Exclusivamente en los Grupos Oficiales de WhatsApp y Cero Falsedad de Encuestas en Canal Oficial) (v33.88 - 33.88.0)
+
+**Versión:** `v33.88` (`33.88.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Esto siempre ha estado mal ya que habla de que la encuesta se está haciendo en el canal oficial, pero si vemos la hace o creo que solo la puede hacer en los grupos oficiales, más no en el canal, por qué pues no lo sé pero creo que solamente lo pudo hacer una vez hace ya mucho tiempo y tal vez ahora tu antigravity no lo sabes o no lo quieres o peor, no lo puedes hacer. entoncces si vas a hacer la encuesta solamente en los grupos, pues por favor que el post hable de que la encuesta está en los grupos y no en el canal ya que eso de que la encuesta está en el canal es falso. Que NO SE TE OLVIDE NUNCA."*
+- Evidencia empírica en chat de WhatsApp (`media_1793750117916_b0db2065.jpg`):
+  En el Grupo 3 (`PROYECTO: "VECYBIENESRAICES"`), JanIA publicó la encuesta nativa interactiva de WhatsApp (*"¿Qué tanto castiga el precio un garaje lineal?"* con 2 votos reales de miembros), pero el post de acompañamiento decía falsamente:
+  *"Acabamos de activar nuestra encuesta interactiva en el Canal Oficial: «¿Qué tanto castiga el precio un garaje lineal?» ... 👉 Sigue el Canal Oficial y vota aquí"*.
+- Eduardo estableció la directiva mandatoria:
+  1. Si la encuesta interactiva de votación en vivo se realiza en los grupos oficiales, el post debe declarar con absoluta veracidad que la encuesta está en los **grupos oficiales** y **no en el canal**, ya que decir que está en el canal es falso.
+  2. Que NO se le olvide nunca a JanIA ni a ningún agente.
+
+**Diagnóstico Técnico Profundo:**
+- En la arquitectura oficial de Meta para WhatsApp, los Canales (`@newsletter`) son canales de difusión unidireccional que **no admiten widgets nativos de votación interactiva** (radio buttons con recuento en vivo) para los seguidores. Los seguidores solo pueden ver contenido y reaccionar con emojis.
+- En contraste, en los **Grupos Oficiales de WhatsApp** (Grupo 2 y Grupo 3), las encuestas nativas de Baileys (`sendPollToGroup`) funcionan al 100% interactivamente.
+- El texto del teaser (`pollTeaser`) en `cronService.ts` afirmaba erróneamente que la encuesta estaba activada en el Canal Oficial y enviaba a los usuarios al canal, generando una evidente incongruencia y confusión.
+
+**Acciones Ejecutadas:**
+1. **Actualización Veraz de `pollTeaser` en `cronService.ts`**:
+   - Título oficial: `📊 *ENCUESTA Y DEBATE OFICIAL EN NUESTROS GRUPOS VECY* 🗳️🏆`.
+   - Texto honesto: *"Acabamos de activar nuestra encuesta interactiva aquí en nuestros grupos oficiales de WhatsApp: «...» 👆 Colegas, ¡los invitamos a votar en la encuesta nativa aquí arriba y compartir su opinión en este chat! 💬"*.
+   - El canal oficial se presenta honestamente como canal de novedades (*"👉 Sigue también nuestro Canal Oficial de novedades:"*), erradicando la afirmación falsa de votar en el canal.
+   - Desacople de atomicidad: la publicación de la encuesta en los grupos oficiales no se cancela si el canal newsletter presenta limitaciones.
+2. **Prompts y Memoria Fundacional**:
+   - Consagrada la sección *Verdad Doctrinal en Encuestas Interactivas (v33.88 — Doctrina Eduardo A. Rivera)* en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`.
+   - Registrada la directiva permanente `seed-encuestas-interactivas-exclusivas-grupos-oficiales-verdad-canal-v33-88` en `founderKnowledgeService.ts`.
+3. **Verificación y Blindaje ($0 COP)**:
+   - Creada la **Suite 174** en `server/__tests__/regression.test.ts` con 5 pruebas unitarias automatizadas.
+   - Typecheck `npm run check` (0 errores).
+   - Tests `npm test`: **564 tests passing (100% verde a $0 COP)**.
+   - Build `npm run build` limpio.
+   - Incremento oficial de versión a `v33.88` (`33.88.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 📅 [2026-11-03] — JanIA v33.87: Doctrina de Tarifas y Comisiones Claras para Propietarios Directos (Venta 3% / Arriendo 1er Canon / Publicación $0 COP), Cero Saludos Repetitivos en Conversación Activa y Rescate Inteligente de Cascada LLM (v33.87 - 33.87.0)
 
 **Versión:** `v33.87` (`33.87.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

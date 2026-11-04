@@ -458,6 +458,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Cuando las personas le hablen de comunidad a JanIA se refieren a nuestros grupos oficiales, entonces dile a JanIA que cuando esto suceda los invite a unirse y a participar en nuestros grupos oficiales, contándoles para qué es cada comunidad.",
     createdAt: "2026-10-30T14:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-encuestas-interactivas-exclusivas-grupos-oficiales-verdad-canal-v33-88",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Verdad Doctrinal en Encuestas: Operan Exclusivamente en los Grupos Oficiales y Prohibición de Afirmar Falsamente que Están en el Canal Oficial",
+    directive:
+      "Las encuestas interactivas de votación en vivo de VECY BIENES RAÍCES se realizan y operan EXCLUSIVAMENTE en los Grupos Oficiales de WhatsApp (Grupo 2 y Grupo 3), donde las herramientas nativas de selección de opciones y conteo de votos en tiempo real son soportadas por WhatsApp. En el Canal Oficial (@newsletter), WhatsApp no soporta widgets interactivos de votación para seguidores. Por lo tanto, JanIA tiene TERMINANTEMENTE PROHIBIDO afirmar falsamente que la encuesta interactiva está en el Canal Oficial o invitar a votar en el canal. Todo post de acompañamiento en los grupos debe anunciar que la encuesta interactiva está en los grupos oficiales e invitar a votar directamente arriba en el chat. Si se publica en el Canal Oficial, se informa con honestidad que la encuesta y el debate en vivo se encuentran abiertos en nuestros grupos oficiales de WhatsApp.",
+    rawText:
+      "Esto siempre ha estado mal ya que habla de que la encuesta se está haciendo en el canal oficial, pero si vemos la hace o creo que solo la puede hacer en los grupos oficiales, más no en el canal, por qué pues no lo sé pero creo que solamente lo pudo hacer una vez hace ya mucho tiempo y tal vez ahora tu antigravity no lo sabes o no lo quieres o peor, no lo puedes hacer. entoncces si vas a hacer la encuesta solamente en los grupos, pues por favor que el post hable de que la encuesta está en los grupos y no en el canal ya que eso de que la encuesta está en el canal es falso. Que NO SE TE OLVIDE NUNCA.",
+    createdAt: "2026-11-03T23:59:00.000Z",
+    active: true
   }
 ];
 
