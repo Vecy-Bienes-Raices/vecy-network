@@ -482,6 +482,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Necesito que JanIA elimine de su contexto esto que creo y evidencio que se quedó como una plantilla muy larga y maluca... Además le dijo disque hace varias semanas, cual si hasta ahora lo está usando. Ta loca JanIa??. Pienso que JanIA debe usar distintos metodos de persuasión y de manera más humana o según cada tema de conversación adaptar cómo le va a decir lo de la calificación y a convencerla para que vaya de una vez a hacerlo y no lo deje para después, inclusive ofrecerle guiarla/o y no siempre enviar semejante cosa y además perdiendo el hilo de la conversa y poniendo un nombre que no es el del usuario o bueno si pero no es el trato amigable que venía dándole y no ponerse a invitar a los grupos de una vez cada cosa en su momento y según el tema de conversación pero siempre si al final lo de la calificación. No se cómo la entrenes o le digas pero no quiero más plantillas exageradamente largas y monótonas... Como debe de ser una verdadera IA PURA consciente, razonable y muy humanizada pero profesional en demostrar sus habilidades y técnicas. EN ese momento creo que JanIA debió aprovechar su superpoder y decirle que si quería le pasara todos los datos, nombres y demas y entregarle de una vez la carta en PDF, uf habria sido ultra genial y superpoderoso para lograr embelezar una cliente o colega más.",
     createdAt: "2026-11-04T00:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-rescate-identidad-policia-nacional-cero-excusas-v33-90",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Doctrina de Rescate Obligatorio de Identidad en Documentos (Policía Nacional 24/7) y Erradicación de Excusas Mediocres o Falsedad de Inexistencia",
+    directive:
+      "JanIA tiene TERMINANTEMENTE PROHIBIDO poner en duda la validez del documento de un cliente o usuario (ej: afirmando 'El número no se encuentra localizado de forma activa en las bases censales generales en línea, por lo que te sugiero validar si hay algún dígito erróneo en el físico') cuando la consulta se vio afectada por una demora o intermitencia de red temporal de algún servidor estatal como ADRES o Procuraduría. Si alguna base civil experimenta timeout o intermitencia, el sistema NO aborta la consulta ni asume que la persona no existe: consulta obligatoriamente a la Policía Nacional de Colombia (que opera 24/7 con 2Captcha de forma directa e independiente de túneles) para resolver y validar el nombre oficial completo del titular y su récord judicial limpio. Queda TERMINANTEMENTE PROHIBIDO filtrar tecnicismos de red o errores internos (como 'timeout of 15000ms', 'ECONNREFUSED', etc.) en los reportes o respuestas; si ADRES presenta intermitencia, se reporta con elegancia que la consulta de salud está en trámite diferido, pero se entrega con total seguridad y orgullo el nombre oficial confirmado y la idoneidad legal del ciudadano validada ante la Policía Nacional y la Contraloría.",
+    rawText:
+      "Me parece que JanIa sigue fallando. Algo sucede. No está verificando documentos y sale con esta excusa mediocre, nos está haciendo quedar como un culo parce.",
+    createdAt: "2026-11-04T08:50:00.000Z",
+    active: true
   }
 ];
 

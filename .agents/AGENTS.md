@@ -183,7 +183,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.89 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.90 — Noviembre 2026
+
+### Novedades v33.90 (Doctrina de Rescate Obligatorio de Identidad en Documentos [Policía Nacional 24/7], Cero Excusas Mediocres y Saneamiento de Errores Técnicos — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Me parece quie JanIa sigue fallando. Algo sucede. No está verificando docuementos y sale con esta excusa mediocre, nos está haciendo quedar como un culo parce."*
+     - Evidencias en captura de WhatsApp: A las 6:26 AM, Innova Bienes Raíces solicitó `"Jania Verificar cc: 80850249"`. JanIA demoró 7 minutos y respondió con:
+       - *"• Estado del documento: El número no se encuentra localizado de forma activa en las bases censales generales en línea, por lo que te sugiero validar si hay algún dígito erróneo en el físico o si corresponde a un régimen especial o de extranjería."*
+       - *"• ADRES (Salud): En este momento se presentó una intermitencia temporal en la conexión (timeout of 15000ms), por lo que no fue posible consultar la EPS en tiempo real."*
+     - Eduardo demostró mediante capturas directas que la cédula `80.850.249` está activa en ADRES como **JOAN NICOLAS SANCHEZ MONROY** (Sanitas EPS, Cotizante) y en la Policía Nacional como ciudadano plenamente identificado y sin antecedentes pendientes.
+  2. **Causa Raíz Identificada:**
+     - El túnel SSH inverso en los puertos `18443` y `28443` estuvo temporalmente inactivo de madrugada mientras la estación local estuvo suspendida.
+     - Al arrojar timeout las peticiones de ADRES y Procuraduría, la lógica fail-fast evaluó `existsInCivilOrControlDatabases` como falso y abortó la consulta a la Policía Nacional.
+     - Sin embargo, la Policía Nacional (`antecedentes.policia.gov.co:7005`) **no tiene geobloqueo** y funciona directamente desde el VPS, por lo que JanIA omitió la fuente que habría validado de inmediato la identidad y los antecedentes limpios del ciudadano.
+     - Se filtró el string técnico `timeout of 15000ms` y el LLM emitió la recomendación vergonzosa de *"validar si hay algún dígito erróneo en el físico"*.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Rescate Obligatorio por Policía Nacional:** En `identityVerificationService.ts`, ante cualquier fallo o timeout de red en ADRES/PGN, la Policía Nacional se invoca de manera obligatoria como salvavidas institucional. Al confirmar el nombre oficial (`finalOfficialName`), la verificación se marca como exitosa (`success: true`) y la identidad queda validada.
+     - **Erradicación de Tecnicismos Crudos:** Creada `cleanAdresErrorMessage` para eliminar `timeout of 15000ms` y `ECONNREFUSED`, reportando de forma pulcra e institucional.
+     - **Prohibición Absoluta de Dudar del Documento:** Inyectada directiva en `dmHandler.ts`, `base.md` y `prompts.ts` que prohíbe terminantemente a Gemini dudar de un documento o sugerir dígitos erróneos cuando la identidad está validada por cualquier autoridad del Estado.
+     - **Optimización de Tiempos:** Timeouts HTTP reducidos de 15s a 6s y Puppeteer a 10s.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-rescate-identidad-policia-nacional-cero-excusas-v33-90` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 176 `vitest` (5/5 passing, 578 tests) | Build `npm run build` limpio en 24.81s + 331ms.
+
+## 🔖 VERSIÓN ANTERIOR: v33.89 — Noviembre 2026
 
 ### Novedades v33.89 (Doctrina de Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

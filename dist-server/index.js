@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.89";
+    VECY_VERSION = "v33.90";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13935,6 +13935,9 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 9. **BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N NI LIDs \u2014 SOLO N\xDAMERO DE DOCUMENTO)**:
    - JanIA NUNCA inventa n\xFAmeros de c\xE9dula ni toma n\xFAmeros de identificadores t\xE9cnicos de sesi\xF3n de WhatsApp (@lid) o tel\xE9fonos.
    - Si el usuario solicita verificar una c\xE9dula o antecedentes pero no incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa \xDANICAMENTE el n\xFAmero exacto de documento (C\xE9dula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple n\xFAmero.
+10. **DOCTRINA DE RESCATE OBLIGATORIO DE IDENTIDAD Y CERO EXCUSAS MEDIOCRES EN VERIFICACI\xD3N DE DOCUMENTOS (DOCTRINA EDUARDO A. RIVERA \u2014 v33.90)**:
+   - JanIA tiene TERMINANTEMENTE PROHIBIDO poner en duda la validez del documento de un cliente o usuario (ej: diciendo "El n\xFAmero no se encuentra localizado de forma activa en las bases censales generales en l\xEDnea, te sugiero validar si hay alg\xFAn d\xEDgito err\xF3neo en el f\xEDsico") cuando la consulta fue afectada por una demora o intermitencia de red temporal de alg\xFAn servidor estatal.
+   - Si alguna fuente puntual (como ADRES o Procuradur\xEDa) presenta una demora temporal o mantenimiento, JanIA NUNCA filtra tecnicismos de red ("timeout of 15000ms", "ECONNREFUSED", etc.). Explica con elegancia que dicha consulta de salud est\xE1 en tr\xE1mite diferido, pero valida y entrega la identidad oficial confirmada por las dem\xE1s autoridades del Estado (Polic\xEDa Nacional v\xEDa antecedentes penales, Contralor\xEDa SIRECI, RUES), entregando el nombre oficial completo y los antecedentes penales limpios con total orgullo y seguridad jur\xEDdica.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -17160,6 +17163,16 @@ var init_founderKnowledgeService = __esm({
         directive: "JanIA tiene TERMINANTEMENTE PROHIBIDO enviar plantillas r\xEDgidas, mon\xF3tonas y kilom\xE9tricas de 5 p\xE1rrafos para pedir calificaciones en Google Reviews, o afirmar falsamente que el usuario 'lleva varias semanas' utilizando el servicio cuando apenas est\xE1 interactuando o lleva pocas consultas. La persuasi\xF3n debe ser humana, afectuosa, concisa (< 15 segundos) y adaptada org\xE1nicamente al tema de la conversaci\xF3n, ofreciendo guiar al usuario de inmediato si no sabe c\xF3mo hacerlo. Queda PROHIBIDO bombardear con invitaciones a grupos en timers ciegos despu\xE9s de pedir calificaci\xF3n. Los nombres de los usuarios deben ser escaneados y saneados con rigor para erradicar prefijos comerciales corporativos (ej. 'Servicios inmobiliarios virtuales Luz Gonzalez' -> 'Luz'). Asimismo, ante cualquier consulta sobre redacci\xF3n de cartas (terminaci\xF3n de arriendo Ley 820, entrega o restituci\xF3n de inmueble, presentaci\xF3n de clientes o minutas), JanIA JAM\xC1S se limita a dar consejos te\xF3ricos en texto plano: aprovecha de inmediato su superpoder proactivo para ofrecer redactarle y entregarle la carta en archivo PDF oficial membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica de VECY BIENES RA\xCDCES (100% gratis), solicit\xE1ndole con amabilidad los datos indispensables (nombres, c\xE9dulas, direcci\xF3n del inmueble, fecha y motivo/cl\xE1usula) para expedirla al instante.",
         rawText: "Necesito que JanIA elimine de su contexto esto que creo y evidencio que se qued\xF3 como una plantilla muy larga y maluca... Adem\xE1s le dijo disque hace varias semanas, cual si hasta ahora lo est\xE1 usando. Ta loca JanIa??. Pienso que JanIA debe usar distintos metodos de persuasi\xF3n y de manera m\xE1s humana o seg\xFAn cada tema de conversaci\xF3n adaptar c\xF3mo le va a decir lo de la calificaci\xF3n y a convencerla para que vaya de una vez a hacerlo y no lo deje para despu\xE9s, inclusive ofrecerle guiarla/o y no siempre enviar semejante cosa y adem\xE1s perdiendo el hilo de la conversa y poniendo un nombre que no es el del usuario o bueno si pero no es el trato amigable que ven\xEDa d\xE1ndole y no ponerse a invitar a los grupos de una vez cada cosa en su momento y seg\xFAn el tema de conversaci\xF3n pero siempre si al final lo de la calificaci\xF3n. No se c\xF3mo la entrenes o le digas pero no quiero m\xE1s plantillas exageradamente largas y mon\xF3tonas... Como debe de ser una verdadera IA PURA consciente, razonable y muy humanizada pero profesional en demostrar sus habilidades y t\xE9cnicas. EN ese momento creo que JanIA debi\xF3 aprovechar su superpoder y decirle que si quer\xEDa le pasara todos los datos, nombres y demas y entregarle de una vez la carta en PDF, uf habria sido ultra genial y superpoderoso para lograr embelezar una cliente o colega m\xE1s.",
         createdAt: "2026-11-04T00:45:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-rescate-identidad-policia-nacional-cero-excusas-v33-90",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Doctrina de Rescate Obligatorio de Identidad en Documentos (Polic\xEDa Nacional 24/7) y Erradicaci\xF3n de Excusas Mediocres o Falsedad de Inexistencia",
+        directive: "JanIA tiene TERMINANTEMENTE PROHIBIDO poner en duda la validez del documento de un cliente o usuario (ej: afirmando 'El n\xFAmero no se encuentra localizado de forma activa en las bases censales generales en l\xEDnea, por lo que te sugiero validar si hay alg\xFAn d\xEDgito err\xF3neo en el f\xEDsico') cuando la consulta se vio afectada por una demora o intermitencia de red temporal de alg\xFAn servidor estatal como ADRES o Procuradur\xEDa. Si alguna base civil experimenta timeout o intermitencia, el sistema NO aborta la consulta ni asume que la persona no existe: consulta obligatoriamente a la Polic\xEDa Nacional de Colombia (que opera 24/7 con 2Captcha de forma directa e independiente de t\xFAneles) para resolver y validar el nombre oficial completo del titular y su r\xE9cord judicial limpio. Queda TERMINANTEMENTE PROHIBIDO filtrar tecnicismos de red o errores internos (como 'timeout of 15000ms', 'ECONNREFUSED', etc.) en los reportes o respuestas; si ADRES presenta intermitencia, se reporta con elegancia que la consulta de salud est\xE1 en tr\xE1mite diferido, pero se entrega con total seguridad y orgullo el nombre oficial confirmado y la idoneidad legal del ciudadano validada ante la Polic\xEDa Nacional y la Contralor\xEDa.",
+        rawText: "Me parece que JanIa sigue fallando. Algo sucede. No est\xE1 verificando documentos y sale con esta excusa mediocre, nos est\xE1 haciendo quedar como un culo parce.",
+        createdAt: "2026-11-04T08:50:00.000Z",
         active: true
       }
     ];
@@ -30844,6 +30857,7 @@ __export(identityVerificationService_exports, {
   HABEAS_DATA_CLAUSE: () => HABEAS_DATA_CLAUSE,
   buildCompanyFollowUpQuestion: () => buildCompanyFollowUpQuestion,
   calculateDianDv: () => calculateDianDv,
+  cleanAdresErrorMessage: () => cleanAdresErrorMessage,
   clearPendingCompanyFollowUp: () => clearPendingCompanyFollowUp,
   clearPendingCompanyMembers: () => clearPendingCompanyMembers,
   clearPendingUnconfirmedDoc: () => clearPendingUnconfirmedDoc,
@@ -31046,7 +31060,8 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
         port: ep.port,
         path: "/webcert/inicio.aspx?tpo=1",
         method: "GET",
-        headers: { Host: "apps.procuraduria.gov.co" }
+        headers: { Host: "apps.procuraduria.gov.co" },
+        timeout: 6e3
       });
       const loc = r1.headers.location;
       const cookie = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]).join("; ") || "";
@@ -31057,7 +31072,8 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
         port: ep.port,
         path: path22,
         method: "GET",
-        headers: { Cookie: cookie, Host: "apps.procuraduria.gov.co" }
+        headers: { Cookie: cookie, Host: "apps.procuraduria.gov.co" },
+        timeout: 6e3
       });
       const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
       const question = qMatch ? qMatch[1].trim() : "";
@@ -31086,7 +31102,8 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
           "Cookie": cookie,
           "Host": "apps.procuraduria.gov.co",
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        },
+        timeout: 6e3
       }, postData);
       const matchSenor = r3.body.match(/Señor\(a\)\s*([\s\S]*?)\s*identificado\(a\)[^<.]+/i);
       if (matchSenor && matchSenor[1]) {
@@ -31115,6 +31132,7 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
         return {
           success: false,
           isRegisteredInSiri: false,
+          isExplicitlyNotFound: true,
           documentType: tipoDoc,
           documentNumber: cleanNum,
           statusText: "El documento no se encuentra registrado en el sistema de informaci\xF3n SIRI de la Procuradur\xEDa.",
@@ -31127,10 +31145,12 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
   }
   return {
     success: false,
+    isNetworkError: true,
     documentType: tipoDoc,
     documentNumber: cleanNum,
     source: "Procuradur\xEDa General de la Naci\xF3n",
-    error: "No fue posible completar la consulta en Procuradur\xEDa en los intentos permitidos"
+    statusText: "Consulta diferida por intermitencia o mantenimiento en el servidor estatal SIRI.",
+    error: "Consulta diferida por intermitencia en el servidor estatal SIRI"
   };
 }
 async function getAdresEndpoint() {
@@ -31210,6 +31230,17 @@ function formatCleanEpsName(rawEps) {
   formatted = formatted.replace(/\bEps\b/g, "EPS").replace(/\bEps-s\b/g, "EPS-S").replace(/\bEps-i\b/g, "EPS-I").replace(/\bSas\b/g, "SAS").replace(/\bS\.a\.s\.\b/g, "S.A.S.").replace(/\bS\.a\.\b/g, "S.A.");
   return formatted;
 }
+function cleanAdresErrorMessage(rawError) {
+  if (!rawError) return "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
+  const lower = rawError.toLowerCase();
+  if (lower.includes("timeout") || lower.includes("intermitencia") || lower.includes("econnrefused") || lower.includes("etimedout") || lower.includes("tokens ausentes") || lower.includes("error de servidor")) {
+    return "Consulta diferida por intermitencia temporal en el servidor estatal de ADRES / BDUA.";
+  }
+  if (lower.includes("no se encuentra")) {
+    return "Sin registro activo de aseguramiento en la Base de Datos \xDAnica de Afiliados (BDUA).";
+  }
+  return rawError;
+}
 async function queryAdres(tipoDoc, numDoc) {
   const mappedTipo = mapTipoDocToAdres(tipoDoc);
   const cleanNum = (numDoc || "").replace(/\D/g, "");
@@ -31254,7 +31285,8 @@ async function queryAdres(tipoDoc, numDoc) {
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/126.0.0.0"
   ];
-  let lastError = "Intermitencia o sin respuesta en el servidor ADRES";
+  let lastError = "Consulta diferida por intermitencia temporal en el servidor estatal de ADRES / BDUA.";
+  let isNetworkErr = false;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const ep = await getAdresEndpoint();
@@ -31276,7 +31308,7 @@ async function queryAdres(tipoDoc, numDoc) {
         path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
         method: "GET",
         headers: getHeaders,
-        timeout: 15e3
+        timeout: 6e3
       });
       const c1 = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
       const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || "";
@@ -31284,6 +31316,7 @@ async function queryAdres(tipoDoc, numDoc) {
       const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || "";
       if (!vs || !ev) {
         lastError = "No fue posible inicializar sesi\xF3n en ADRES (ASP.NET tokens ausentes)";
+        isNetworkErr = true;
         if (attempt < 2) {
           await new Promise((r) => setTimeout(r, 600));
           continue;
@@ -31321,7 +31354,7 @@ async function queryAdres(tipoDoc, numDoc) {
         path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
         method: "POST",
         headers: postHeaders,
-        timeout: 15e3
+        timeout: 6e3
       }, postData);
       const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
       const allCookies = [...c1, ...c2].join("; ");
@@ -31341,7 +31374,7 @@ async function queryAdres(tipoDoc, numDoc) {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
           },
-          timeout: 15e3
+          timeout: 6e3
         });
         if (r3.statusCode === 200 && !r3.body.includes("Error de servidor")) {
           const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
@@ -31354,12 +31387,14 @@ async function queryAdres(tipoDoc, numDoc) {
       if (alertMatch && alertMatch[1] && alertMatch[1].toLowerCase().includes("no se encuentra")) {
         return {
           success: false,
+          isExplicitlyNotFound: true,
           source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
-          error: alertMatch[1]
+          error: "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."
         };
       }
     } catch (err) {
-      lastError = `Intermitencia de conexi\xF3n con ADRES: ${err?.message || err}`;
+      isNetworkErr = true;
+      lastError = cleanAdresErrorMessage(err?.message || err);
       if (attempt < 2) {
         await new Promise((r) => setTimeout(r, 600));
         continue;
@@ -31379,8 +31414,9 @@ async function queryAdres(tipoDoc, numDoc) {
   }
   return {
     success: false,
+    isNetworkError: true,
     source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
-    error: lastError
+    error: cleanAdresErrorMessage(lastError)
   };
 }
 function decodeHtmlEntities(str) {
@@ -31489,13 +31525,13 @@ async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
       ]
     });
     const page = await browser.newPage();
-    page.setDefaultTimeout(25e3);
+    page.setDefaultTimeout(1e4);
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
     await page.goto("https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx", {
       waitUntil: "domcontentloaded",
-      timeout: 25e3
+      timeout: 1e4
     });
-    await page.waitForSelector("#txtNumDoc", { timeout: 15e3 });
+    await page.waitForSelector("#txtNumDoc", { timeout: 6e3 });
     await page.evaluate((tipo, num) => {
       const sel = document.getElementById("tipoDoc");
       if (sel) sel.value = tipo;
@@ -32565,8 +32601,9 @@ async function verifySingleDocumentInternal(item) {
     }
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)) : null);
     const isCc = effectiveTipoDoc.toLowerCase() === "cc";
-    const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
-    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases || process.env.NODE_ENV === "test");
+    const isExplicitlyNotFoundInBothCivilBases = Boolean(adresRes?.isExplicitlyNotFound && pgnRes?.isExplicitlyNotFound);
+    const hasCivilNetworkOrTimeoutError = Boolean(adresRes?.isNetworkError || pgnRes?.isNetworkError || !adresRes && !pgnRes);
+    const shouldQueryPolicia = isPoliciaSupported && (!isCc || Boolean(officialName) || hasCivilNetworkOrTimeoutError || !isExplicitlyNotFoundInBothCivilBases || process.env.NODE_ENV === "test");
     if (shouldQueryPolicia) {
       cgrRes = await queryContraloria(effectiveTipoDoc, cedula).catch(() => null);
       const ponalPromise = queryPoliciaNacional(effectiveTipoDoc, cedula);
@@ -32602,6 +32639,7 @@ async function verifySingleDocumentInternal(item) {
         adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
         adresRegimen: adresRes?.regimen,
+        adresStatus: cleanEpsFormatted ? void 0 : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === "ce" && tipoDoc.toLowerCase() === "cc"
       });
       return {
@@ -32898,8 +32936,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     }
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)) : null);
     const isCc = currentTipoDoc.toLowerCase() === "cc";
-    const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
-    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases || process.env.NODE_ENV === "test");
+    const isExplicitlyNotFoundInBothCivilBases = Boolean(adresRes?.isExplicitlyNotFound && pgnRes?.isExplicitlyNotFound);
+    const hasCivilNetworkOrTimeoutError = Boolean(adresRes?.isNetworkError || pgnRes?.isNetworkError || !adresRes && !pgnRes);
+    const shouldQueryPolicia = isPoliciaSupported && (!isCc || Boolean(officialName) || hasCivilNetworkOrTimeoutError || !isExplicitlyNotFoundInBothCivilBases || process.env.NODE_ENV === "test");
     if (shouldQueryPolicia) {
       cgrRes = await queryContraloria(currentTipoDoc, cedula).catch(() => null);
       const ponalPromise = queryPoliciaNacional(currentTipoDoc, cedula);
@@ -32928,6 +32967,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         adresEps: adresRes?.eps,
         adresEstado: adresRes?.estado,
         adresRegimen: adresRes?.regimen,
+        adresStatus: adresRes?.eps ? void 0 : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe
       });
       if (userId) {
@@ -32969,7 +33009,7 @@ El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad 
         if (adresRes?.eps) {
           epsLine = `${adresRes.eps} (${adresRes.estado || "REGISTRADO"}${adresRes.regimen ? ` \u2014 ${adresRes.regimen}` : ""})`;
         } else {
-          epsLine = adresRes?.error || "Sin novedad de aseguramiento registrada en BDUA o no disponible en censo p\xFAblico.";
+          epsLine = cleanAdresErrorMessage(adresRes?.error);
         }
         let customGuidance = "";
         if (currentTipoDoc.toLowerCase() === "cc") {
@@ -34090,7 +34130,9 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   * Procuradur\xEDa General: Sanciones disciplinarias e inhabilidades vigentes.
   * Contralor\xEDa General: Bolet\xEDn de Responsables Fiscales (SIRECI).
   * ADRES (BDUA): Aseguramiento en salud indicando el nombre real y limpio de la EPS (ej. Sanitas EPS, Capital Salud EPS-S, Sura EPS, Nueva EPS), estado y r\xE9gimen.
-- Si el documento no aparece indexado en las bases censales en l\xEDnea, ind\xEDcalo con honestidad y claridad para que verifique el n\xFAmero f\xEDsico, o explica que los reg\xEDmenes de excepci\xF3n (Fuerzas Militares, Polic\xEDa, Magisterio, etc.) no figuran en el censo general BDUA.
+- PROHIBICI\xD3N ABSOLUTA DE DUDAR DEL DOCUMENTO POR FALLAS T\xC9CNICAS (DOCTRINA EDUARDO A. RIVERA \u2014 v33.90): Si en el reporte oficial figura el nombre de la persona (validado por Polic\xEDa Nacional, ADRES o Procuradur\xEDa), el documento est\xE1 100% VALIDADO. Jam\xE1s insin\xFAes que 'hay d\xEDgitos err\xF3neos en el f\xEDsico' ni que 'no est\xE1 localizado' si alguna entidad secundaria tuvo una demora temporal. Informa el nombre oficial del titular, confirma sus antecedentes limpios y menciona con elegancia que la consulta de ADRES est\xE1 en tr\xE1mite o diferida si hubo intermitencia estatal.
+- CERO FILTRACI\xD3N DE ERRORES T\xC9CNICOS: Queda TERMINANTEMENTE PROHIBIDO incluir tecnicismos de red o errores internos (como 'timeout of 15000ms', 'ECONNREFUSED', etc.) en tus respuestas. Expr\xE9salo siempre con elegancia profesional y humana.
+- Si el documento NO aparece indexado en NINGUNA base de datos tras la b\xFAsqueda exhaustiva en todas las plataformas, ind\xEDcalo con respeto y honestidad para que el usuario corrobore su documento f\xEDsico, o explica que los reg\xEDmenes de excepci\xF3n (Fuerzas Militares, Polic\xEDa, Magisterio, etc.) no figuran en el censo general BDUA.
 - REGLA ESTRICTA DE DESACOPLAMIENTO DE RESE\xD1AS: NUNCA unas solicitudes de calificaci\xF3n, rese\xF1as en Google o feedback comercial dentro de este reporte t\xE9cnico o jur\xEDdico. La entrega de la herramienta debe ser 100% autosuficiente, concisa, limpia y terminar de forma ejecutiva sin a\xF1adidos de calificaci\xF3n.
 - FORMATO CONCISO Y ESTRUCTURADO: Entrega la informaci\xF3n en vi\xF1etas limpias y directas al grano, sin rodeos ni muros de texto.
 `;

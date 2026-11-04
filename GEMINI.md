@@ -1,20 +1,17 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.89.0 — 2026-11-04)
-- **JanIA Server:** `v33.89` (`33.89.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF (Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.90.0 — 2026-11-04)
+- **JanIA Server:** `v33.90` (`33.90.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Rescate Obligatorio de Identidad en Documentos (Policía Nacional 24/7), Cero Excusas Mediocres y Saneamiento de Errores Técnicos (Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Crítico de Eduardo A. Rivera:**
-     - JanIA enviaba una plantilla robótica de 5 párrafos (`"¡Hola, Servicios inmobiliarios virtuales Luz Gonzalez! Paso por aquí un momento… 👩🏻‍💼✨ Veo que desde hace varias semanas has venido utilizando con frecuencia mis servicios de verificación oficial de antecedentes y cédulas para blindar tus operaciones, totalmente gratis..."`).
-     - Falsedad evidente: Afirmaba que llevaba "varias semanas" usando el servicio cuando apenas estaba comenzando su interacción.
-     - Saludo deshumanizado y corporativo: Tomaba literalmente el pushName comercial (`"Servicios inmobiliarios virtuales Luz Gonzalez"`) en lugar de sanearlo y extraer el nombre de pila (`"Luz"`).
-     - Gatillo erróneo `messageCount >= 4` en `whatsapp-match.ts`: Con solo 4 mensajes intercambiados (en un diálogo de 1 minuto), el sistema catalogaba al usuario como "beneficiario recurrente de varias semanas" y le disparaba la plantilla mid-conversation interrumpiendo el hilo.
-     - Bombardeo de grupos post-reseña: Se programaba automáticamente una invitación masiva a los 3 grupos oficiales a los 2.5 minutos de pedir la reseña.
-     - Omisión de Superpoderes: Ante consultas sobre redactar cartas o preavisos de terminación/restitución, JanIA no aprovechaba para ofrecer redactarle y entregarle de una vez la carta en PDF membretado con código QR.
-  2. **Solución y Blindaje Quirúrgico:**
-     - **Erradicación de Plantillas Monótonas:** `formatPersuasiveRecurrentUserReviewMessage` ahora genera mensajes concisos (1-2 párrafos), cálidos, humanos y con variadas técnicas de persuasión, ofreciendo guiar al usuario paso a paso y solicitando la reseña en < 15 segundos sin afirmar jamás que "lleva varias semanas".
-     - **Saneamiento de Prefijos Comerciales:** `cleanRawUserName`, `extractFirstName` y `resolveNameAndGender` ahora limpian de forma exhaustiva prefijos de agencias o empresas (`"Servicios inmobiliarios virtuales Luz Gonzalez"` -> `"Luz Gonzalez"` -> `"Luz"`, resolviendo género femenino).
-     - **Erradicación del Gatillo Prematuro:** Eliminado `(session.messageCount || 0) >= 4` y suprimidas las invitaciones automáticas a grupos oficiales en timers tras las solicitudes de calificación.
-     - **Superpoder Proactivo de Cartas en PDF:** JanIA ahora reconoce intenciones de redactar cartas o documentos legales e instruye y ofrece redactar y entregar la carta en archivo PDF oficial membretado con QR y guía de firma electrónica de VECY BIENES RAÍCES ($0 COP) de inmediato.
-     - **Registro de Enseñanza:** Registrada la directriz `seed-erradicacion-plantilla-rigida-resenas-persuasion-humana-pdf-proactivo-v33-89` en `founderKnowledgeService.ts`, `base.md` y `prompts.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 175 `vitest` (5/5 passing, 571 tests) | Build `npm run build` limpio en 21.5s.
+     - A las 6:26 AM, el usuario Innova Bienes Raíces (`+57 305 3469665`) solicitó: `"Jania Verificar cc: 80850249"`.
+     - JanIA tardó 7 minutos en responder con un informe vergonzoso: *"El número no se encuentra localizado de forma activa en las bases censales generales en línea, por lo que te sugiero validar si hay algún dígito erróneo en el físico..."* y filtró el string técnico *"timeout of 15000ms"*.
+     - Eduardo comprobó de inmediato que la cédula `80.850.249` está 100% activa en ADRES a nombre de **Joan Nicolas Sanchez Monroy** (Sanitas EPS, Cotizante) y en la Policía Nacional como ciudadano plenamente identificado y sin asuntos pendientes con las autoridades judiciales.
+  2. **Causa Raíz y Solución Quirúrgica:**
+     - **Causa Raíz:** El túnel inverso SSH hacia Colombia estaba inactivo en la madrugada mientras el equipo local estuvo suspendido. Al dar timeout ADRES y Procuraduría, la lógica fail-fast evaluó falsamente que el documento no existía y abortó la llamada a la Policía Nacional. Sin embargo, la Policía Nacional (`antecedentes.policia.gov.co:7005`) **no tiene geobloqueo** y funciona directamente desde el VPS las 24 horas.
+     - **Rescate Obligatorio:** En `identityVerificationService.ts`, ante cualquier timeout o fallo de red en ADRES/Procuraduría, **la Policía Nacional se invoca obligatoriamente como salvavidas**. Al extraer el nombre oficial (`finalOfficialName`), la verificación se marca como exitosa (`success: true`) y la identidad queda validada.
+     - **Cero Excusas Mediocres y Cero Filtraciones:** Creada `cleanAdresErrorMessage` para erradicar `timeout of 15000ms` y `ECONNREFUSED`. En `dmHandler.ts`, `base.md` y `prompts.ts`, se prohíbe terminantemente a Gemini dudar de un documento o sugerir "dígitos erróneos" cuando la identidad está confirmada por cualquiera de las autoridades del Estado.
+     - **Optimización de Tiempos:** Timeouts HTTP reducidos de 15s a 6s y Puppeteer a 10s.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-rescate-identidad-policia-nacional-cero-excusas-v33-90` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 176 `vitest` (5/5 passing, 578 tests) | Build `npm run build` limpio en 24.81s + 331ms.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

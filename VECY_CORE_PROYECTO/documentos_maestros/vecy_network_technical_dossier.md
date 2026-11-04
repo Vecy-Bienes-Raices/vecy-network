@@ -8750,6 +8750,34 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.90 (2026-11-04) — Rescate Obligatorio de Identidad en Documentos (Policía Nacional 24/7), Cero Excusas Mediocres y Saneamiento de Errores Técnicos (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Fallo en Túnel Inverso en Horas de la Madrugada:* ADRES y Procuraduría geobloquean conexiones originadas desde IPs de centros de datos extranjeros (como el VPS Contabo en Alemania). Vecy canaliza estas peticiones mediante un túnel inverso SSH (`18443` -> PGN, `28443` -> ADRES) enlazado al equipo local en Colombia. Cuando el equipo local estaba suspendido durante la madrugada, las peticiones cayeron en timeout (15.000 ms).
+  2. *Defecto en la Estrategia Fail-Fast:* El sistema evaluaba `existsInCivilOrControlDatabases` como `false` cuando ADRES y PGN fallaban por red. Asumía erróneamente que "el documento no existe" y abortaba la llamada a la Policía Nacional. Sin embargo, la Policía Nacional (`antecedentes.policia.gov.co:7005`) **no tiene geobloqueo** y funciona directamente desde el VPS, por lo que JanIA dejó de consultar la única fuente que habría rescatado el nombre oficial del titular (`JOAN NICOLAS SANCHEZ MONROY`) y sus antecedentes limpios.
+  3. *Filtración de Errores Técnicos Crudos y Excusas Inaceptables:* JanIA filtró strings crudos como `timeout of 15000ms` y generó respuestas vergonzosas sugiriendo *"validar si hay algún dígito erróneo en el físico"*, dañando la reputación del sistema frente a clientes y colegas inmobiliarios.
+  4. *Retardos Excesivos (7 minutos):* Timeouts de 15.000 ms por reintento HTTP y 30.000 ms en Puppeteer provocaron demoras intolerables de hasta 7 minutos para responder.
+- **Solución Implementada**:
+  1. `server/_core/identityVerificationService.ts`:
+     - Incorporados flags `isExplicitlyNotFound` e `isNetworkError` en los resultados de ADRES y Procuraduría.
+     - Refactorizado `shouldQueryPolicia`: ante cualquier error de red o timeout en las bases civiles, o si la no-existencia no ha sido confirmada por ambas fuentes, **la Policía Nacional se invoca de manera obligatoria como rescate institucional**.
+     - Cuando la Policía Nacional resuelve el nombre del ciudadano, se extrae el nombre oficial, se marca `success: true`, se valida la identidad y se informa ADRES como temporalmente diferido por mantenimiento de la entidad estatal sin sembrar dudas sobre el documento.
+     - Creada la función `cleanAdresErrorMessage(rawError)` que sanea tecnicismos (`timeout of 15000ms`, `ECONNREFUSED`) transformándolos en reportes pulcros.
+     - Reducidos los timeouts HTTP locales a 6.000 ms y Puppeteer a 10.000 ms.
+  2. `server/_core/jania/handlers/dmHandler.ts`:
+     - Inyectada la prohibición absoluta en `synthesizeToolResponseWithGemini`: prohibido dudar del documento o sugerir dígito erróneo cuando la identidad está validada, y prohibida la filtración de strings técnicos de red.
+  3. `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`:
+     - Consagrada la sección doctrinal: *Doctrina de Rescate Obligatorio de Identidad y Cero Excusas Mediocres en Verificación de Documentos (v33.90)*.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-rescate-identidad-policia-nacional-cero-excusas-v33-90`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 176 en `regression.test.ts` con 7 pruebas unitarias automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **578 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build` limpio en 24.81s + 331ms.
+  - Versión: `v33.90` (`33.90.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.89 (2026-11-04) — Erradicación de Plantillas Rígidas de Reseñas en Google, Persuasión Humana Contextual, Saneamiento de Nombres Comerciales y Superpoder Proactivo de Cartas en PDF (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Plantilla Rígida y Falsa Declaración Temporal:* `formatPersuasiveRecurrentUserReviewMessage` en `politenessService.ts` emitía una plantilla monolítica fija de 5 párrafos afirmando que el usuario llevaba *"desde hace varias semanas"* utilizando los servicios de JanIA, resultando falso y chocante para usuarios en sus primeras consultas.

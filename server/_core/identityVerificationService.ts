@@ -34,6 +34,8 @@ export interface ProcuraduriaResult {
   hasSanctions?: boolean;
   source: string;
   error?: string;
+  isExplicitlyNotFound?: boolean;
+  isNetworkError?: boolean;
 }
 
 export interface AdresResult {
@@ -50,6 +52,8 @@ export interface AdresResult {
   regimen?: string;
   source: string;
   error?: string;
+  isExplicitlyNotFound?: boolean;
+  isNetworkError?: boolean;
 }
 
 export interface ContraloriaResult {
@@ -327,7 +331,8 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
         port: ep.port,
         path: "/webcert/inicio.aspx?tpo=1",
         method: "GET",
-        headers: { Host: "apps.procuraduria.gov.co" }
+        headers: { Host: "apps.procuraduria.gov.co" },
+        timeout: 6000
       });
 
       const loc = r1.headers.location;
@@ -342,7 +347,8 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
         port: ep.port,
         path: path2,
         method: "GET",
-        headers: { Cookie: cookie, Host: "apps.procuraduria.gov.co" }
+        headers: { Cookie: cookie, Host: "apps.procuraduria.gov.co" },
+        timeout: 6000
       });
 
       const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
@@ -378,7 +384,8 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
           "Cookie": cookie,
           "Host": "apps.procuraduria.gov.co",
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        },
+        timeout: 6000
       }, postData);
 
       // 4. Analizar respuesta
@@ -415,6 +422,7 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
         return {
           success: false,
           isRegisteredInSiri: false,
+          isExplicitlyNotFound: true,
           documentType: tipoDoc,
           documentNumber: cleanNum,
           statusText: 'El documento no se encuentra registrado en el sistema de información SIRI de la Procuraduría.',
@@ -428,10 +436,12 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
 
   return {
     success: false,
+    isNetworkError: true,
     documentType: tipoDoc,
     documentNumber: cleanNum,
     source: 'Procuraduría General de la Nación',
-    error: 'No fue posible completar la consulta en Procuraduría en los intentos permitidos'
+    statusText: 'Consulta diferida por intermitencia o mantenimiento en el servidor estatal SIRI.',
+    error: 'Consulta diferida por intermitencia en el servidor estatal SIRI'
   };
 }
 
@@ -547,6 +557,22 @@ export function formatCleanEpsName(rawEps: string | null | undefined): string {
 }
 
 /**
+ * Sanea y humaniza los mensajes de error de ADRES erradicando filtraciones técnicas
+ * como "timeout of 15000ms", "ECONNREFUSED", etc.
+ */
+export function cleanAdresErrorMessage(rawError?: string): string {
+  if (!rawError) return 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
+  const lower = rawError.toLowerCase();
+  if (lower.includes('timeout') || lower.includes('intermitencia') || lower.includes('econnrefused') || lower.includes('etimedout') || lower.includes('tokens ausentes') || lower.includes('error de servidor')) {
+    return 'Consulta diferida por intermitencia temporal en el servidor estatal de ADRES / BDUA.';
+  }
+  if (lower.includes('no se encuentra')) {
+    return 'Sin registro activo de aseguramiento en la Base de Datos Única de Afiliados (BDUA).';
+  }
+  return rawError;
+}
+
+/**
  * Consulta oficial a la Base de Datos Única de Afiliados (BDUA) de ADRES (Ministerio de Salud).
  * Extrae nombres, apellidos, departamento, municipio, EPS y estado de afiliación para colombianos y extranjeros.
  */
@@ -605,7 +631,8 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/126.0.0.0'
   ];
 
-  let lastError: string = 'Intermitencia o sin respuesta en el servidor ADRES';
+  let lastError: string = 'Consulta diferida por intermitencia temporal en el servidor estatal de ADRES / BDUA.';
+  let isNetworkErr = false;
 
   // Capa 1: Intento Directo HTTP ASP.NET
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -625,14 +652,14 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         'Upgrade-Insecure-Requests': '1'
       };
 
-      // 1. GET formulario para inicializar tokens y cookies (timeout: 15000ms)
+      // 1. GET formulario para inicializar tokens y cookies (timeout: 6000ms)
       const r1 = await httpRequest({
         hostname: ep.host,
         port: ep.port,
         path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
         method: 'GET',
         headers: getHeaders,
-        timeout: 15000
+        timeout: 6000
       } as any);
 
       const c1 = r1.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
@@ -642,6 +669,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
 
       if (!vs || !ev) {
         lastError = 'No fue posible inicializar sesión en ADRES (ASP.NET tokens ausentes)';
+        isNetworkErr = true;
         if (attempt < 2) {
           await new Promise(r => setTimeout(r, 600));
           continue;
@@ -684,7 +712,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
         method: 'POST',
         headers: postHeaders,
-        timeout: 15000
+        timeout: 6000
       } as any, postData);
 
       const c2 = r2.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
@@ -694,7 +722,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       if (m && m[1]) {
         const popupUrl = m[1];
 
-        // 3. GET resultado del afiliado (timeout: 15000ms)
+        // 3. GET resultado del afiliado (timeout: 6000ms)
         const r3 = await httpRequest({
           hostname: ep.host,
           port: ep.port,
@@ -708,7 +736,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
           },
-          timeout: 15000
+          timeout: 6000
         } as any);
 
         if (r3.statusCode === 200 && !r3.body.includes('Error de servidor')) {
@@ -723,12 +751,14 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       if (alertMatch && alertMatch[1] && alertMatch[1].toLowerCase().includes('no se encuentra')) {
         return {
           success: false,
+          isExplicitlyNotFound: true,
           source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
-          error: alertMatch[1]
+          error: 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'
         };
       }
     } catch (err: any) {
-      lastError = `Intermitencia de conexión con ADRES: ${err?.message || err}`;
+      isNetworkErr = true;
+      lastError = cleanAdresErrorMessage(err?.message || err);
       if (attempt < 2) {
         await new Promise(r => setTimeout(r, 600));
         continue;
@@ -751,8 +781,9 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
 
   return {
     success: false,
+    isNetworkError: true,
     source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
-    error: lastError
+    error: cleanAdresErrorMessage(lastError)
   };
 }
 
@@ -902,15 +933,15 @@ export async function queryAdresViaPuppeteer(mappedTipo: string, cleanNum: strin
     });
 
     const page = await browser.newPage();
-    page.setDefaultTimeout(25000);
+    page.setDefaultTimeout(10000);
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
 
     await page.goto('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx', {
       waitUntil: 'domcontentloaded',
-      timeout: 25000
+      timeout: 10000
     });
 
-    await page.waitForSelector('#txtNumDoc', { timeout: 15000 });
+    await page.waitForSelector('#txtNumDoc', { timeout: 6000 });
 
     await page.evaluate((tipo: string, num: string) => {
       const sel = document.getElementById('tipoDoc') as HTMLSelectElement;
@@ -2223,12 +2254,25 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
       (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
       (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)!) : null);
 
-    // 🛡️ ESTRATEGIA FAIL-FAST:
-    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN ni RUES):
-    // ABORTAR antes de consumir recursos de captcha de la Policía Nacional.
+    // 🛡️ DOCTRINA DE RESCATE OBLIGATORIO DE IDENTIDAD ANTE LA POLICÍA NACIONAL (Doctrina Eduardo A. Rivera — v33.90):
+    // Jamás descartar una cédula ni afirmar que "no se encuentra en las bases censales" por fallas de red o timeouts.
+    // La Policía Nacional opera 24/7 de forma directa e independiente de túneles y resuelve nombres y antecedentes penales.
     const isCc = effectiveTipoDoc.toLowerCase() === 'cc';
-    const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
-    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases || process.env.NODE_ENV === 'test');
+    const isExplicitlyNotFoundInBothCivilBases = Boolean(adresRes?.isExplicitlyNotFound && pgnRes?.isExplicitlyNotFound);
+    const hasCivilNetworkOrTimeoutError = Boolean(adresRes?.isNetworkError || pgnRes?.isNetworkError || (!adresRes && !pgnRes));
+
+    // Consultar Policía Nacional si:
+    // 1. Ya se obtuvo el nombre en ADRES/PGN/RUES (para verificar antecedentes judiciales).
+    // 2. Hubo intermitencia/timeout de red en ADRES o PGN (Policía es el salvavidas indispensable para resolver la identidad).
+    // 3. No se ha confirmado de forma fehaciente y explícita por ambas entidades civiles que el documento no existe.
+    // 4. O si el documento es extranjero (CE, Pasaporte, etc.).
+    const shouldQueryPolicia = isPoliciaSupported && (
+      !isCc ||
+      Boolean(officialName) ||
+      hasCivilNetworkOrTimeoutError ||
+      !isExplicitlyNotFoundInBothCivilBases ||
+      process.env.NODE_ENV === 'test'
+    );
 
     if (shouldQueryPolicia) {
       // 3° PASO: Contraloría General de la República (CGR - SIRECI)
@@ -2271,6 +2315,7 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
         adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
         adresRegimen: adresRes?.regimen,
+        adresStatus: cleanEpsFormatted ? undefined : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === 'ce' && tipoDoc.toLowerCase() === 'cc'
       });
 
@@ -2607,12 +2652,25 @@ export async function executeIdentityVerificationFromWhatsApp(
       (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
       (ruesVerifiedNames.get(cedula) ? formatTitleCase(ruesVerifiedNames.get(cedula)!) : null);
 
-    // 🛡️ ESTRATEGIA FAIL-FAST:
-    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN ni RUES):
-    // ABORTAR antes de consumir recursos de captcha de la Policía Nacional.
+    // 🛡️ DOCTRINA DE RESCATE OBLIGATORIO DE IDENTIDAD ANTE LA POLICÍA NACIONAL (Doctrina Eduardo A. Rivera — v33.90):
+    // Jamás descartar una cédula ni afirmar que "no se encuentra en las bases censales" por fallas de red o timeouts.
+    // La Policía Nacional opera 24/7 de forma directa e independiente de túneles y resuelve nombres y antecedentes penales.
     const isCc = currentTipoDoc.toLowerCase() === 'cc';
-    const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
-    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases || process.env.NODE_ENV === 'test');
+    const isExplicitlyNotFoundInBothCivilBases = Boolean(adresRes?.isExplicitlyNotFound && pgnRes?.isExplicitlyNotFound);
+    const hasCivilNetworkOrTimeoutError = Boolean(adresRes?.isNetworkError || pgnRes?.isNetworkError || (!adresRes && !pgnRes));
+
+    // Consultar Policía Nacional si:
+    // 1. Ya se obtuvo el nombre en ADRES/PGN/RUES (para verificar antecedentes judiciales).
+    // 2. Hubo intermitencia/timeout de red en ADRES o PGN (Policía es el salvavidas indispensable para resolver la identidad).
+    // 3. No se ha confirmado de forma fehaciente y explícita por ambas entidades civiles que el documento no existe.
+    // 4. O si el documento es extranjero (CE, Pasaporte, etc.).
+    const shouldQueryPolicia = isPoliciaSupported && (
+      !isCc ||
+      Boolean(officialName) ||
+      hasCivilNetworkOrTimeoutError ||
+      !isExplicitlyNotFoundInBothCivilBases ||
+      process.env.NODE_ENV === 'test'
+    );
 
     if (shouldQueryPolicia) {
       // 3° PASO: Contraloría General de la República (SIRECI - Boletín de Responsables Fiscales)
@@ -2648,6 +2706,7 @@ export async function executeIdentityVerificationFromWhatsApp(
         adresEps: adresRes?.eps,
         adresEstado: adresRes?.estado,
         adresRegimen: adresRes?.regimen,
+        adresStatus: adresRes?.eps ? undefined : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe
       });
 
@@ -2689,7 +2748,7 @@ export async function executeIdentityVerificationFromWhatsApp(
         if (adresRes?.eps) {
           epsLine = `${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})`;
         } else {
-          epsLine = adresRes?.error || 'Sin novedad de aseguramiento registrada en BDUA o no disponible en censo público.';
+          epsLine = cleanAdresErrorMessage(adresRes?.error);
         }
 
         let customGuidance = '';
