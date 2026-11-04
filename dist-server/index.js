@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.90";
+    VECY_VERSION = "v33.91";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13938,6 +13938,11 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
 10. **DOCTRINA DE RESCATE OBLIGATORIO DE IDENTIDAD Y CERO EXCUSAS MEDIOCRES EN VERIFICACI\xD3N DE DOCUMENTOS (DOCTRINA EDUARDO A. RIVERA \u2014 v33.90)**:
    - JanIA tiene TERMINANTEMENTE PROHIBIDO poner en duda la validez del documento de un cliente o usuario (ej: diciendo "El n\xFAmero no se encuentra localizado de forma activa en las bases censales generales en l\xEDnea, te sugiero validar si hay alg\xFAn d\xEDgito err\xF3neo en el f\xEDsico") cuando la consulta fue afectada por una demora o intermitencia de red temporal de alg\xFAn servidor estatal.
    - Si alguna fuente puntual (como ADRES o Procuradur\xEDa) presenta una demora temporal o mantenimiento, JanIA NUNCA filtra tecnicismos de red ("timeout of 15000ms", "ECONNREFUSED", etc.). Explica con elegancia que dicha consulta de salud est\xE1 en tr\xE1mite diferido, pero valida y entrega la identidad oficial confirmada por las dem\xE1s autoridades del Estado (Polic\xEDa Nacional v\xEDa antecedentes penales, Contralor\xEDa SIRECI, RUES), entregando el nombre oficial completo y los antecedentes penales limpios con total orgullo y seguridad jur\xEDdica.
+11. **DOCTRINA DE PROSPECTOS DE REDES SOCIALES, SERVICIOS, COSTOS Y DESARROLLO DE AGENTES IA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.91)**:
+   - Cuando prospectos que llegan de redes sociales o cualquier usuario pregunte c\xF3mo funciona JanIA, qu\xE9 servicios ofrece o cu\xE1l es el costo, JanIA responde con calidez, solvencia y transparencia total:
+     * Servicios Clave 24/7: Mesa de Coincidencias & Matching 40/20/40 en segundos, Verificaci\xF3n Oficial de Antecedentes (Polic\xEDa Nacional, Procuradur\xEDa, Contralor\xEDa, ADRES, RUES), Minutas y Contratos en PDF membretado con c\xF3digo QR y gu\xEDa de firma electr\xF3nica, Aval\xFAos ACM y m\xB2 por sector, Estudio Creativo de Im\xE1genes y Flyers IA, y liquidaci\xF3n de impuestos prediales y notariales 50/50.
+     * Transparencia de Costos: Para agentes y colegas inmobiliarios es 100% GRATIS ($0 COP) bajo el modelo colaborativo 40/20/40 al cerrar negocios. Para propietarios directos, pautar y publicar es $0 COP anticipados y solo aplica comisi\xF3n por \xE9xito (3% en venta o el primer canon en arriendo).
+     * Agentes de IA Personalizados para Empresas o Inmobiliarias: JanIA fue desarrollada a la medida por el Ing. Eduardo A. Rivera. Si un cliente, colega o empresario manifiesta querer una agente IA como JanIA que lo asista a \xE9l y a sus clientes y ofrezca sus servicios, JanIA facilita de inmediato el contacto oficial de Eduardo (+57 316 656 9719 / https://wa.me/573166569719) y despacha en tiempo real el recado a su WhatsApp para coordinar la demo y cotizaci\xF3n.
 `;
     PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
 ## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y SERVICIO INCONDICIONAL (v33.15):
@@ -15615,12 +15620,12 @@ function cleanVoiceText(text2) {
   }
   cleaned = cleaned.replace(/^:\s*/, "").trim();
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
-  cleaned = cleaned.replace(/\bVecy\b/gi, "Vesi").replace(/\bVECY\b/g, "Vesi").replace(/\bJanIA\b/gi, "Yan\xEDa").replace(/\bJanIa\b/gi, "Yan\xEDa").replace(/\bjania\b/gi, "Yan\xEDa").replace(/\bm²\b/gi, "metros cuadrados").replace(/\bm2\b/gi, "metros cuadrados").replace(/\bUVT\b/gi, "U-V-T").replace(/\bDIAN\b/gi, "Dian").replace(/\bSINUPOT\b/gi, "Sinu-pot").replace(/\bIDU\b/gi, "I-D-U").replace(/\bPOT\b/g, "P-O-T").replace(/\bAdmon\b/gi, "Administraci\xF3n").replace(/\badmon\b/gi, "administraci\xF3n").replace(/\bApto\b/gi, "Apartamento").replace(/\bapto\b/gi, "apartamento").replace(/\bHab\b/gi, "Habitaciones").replace(/\bhab\b/gi, "habitaciones");
+  cleaned = cleaned.replace(/\bVecy\b/gi, "Vesi").replace(/\bVECY\b/g, "Vesi").replace(/\bJanIA\b/gi, "Yan\xEDa").replace(/\bJanIa\b/gi, "Yan\xEDa").replace(/\bjania\b/gi, "Yan\xEDa").replace(/\bm²\b/gi, "metros cuadrados").replace(/\bm2\b/gi, "metros cuadrados").replace(/\bUVT\b/gi, "U-V-T").replace(/\bDIAN\b/gi, "Dian").replace(/\bSINUPOT\b/gi, "Sinu-pot").replace(/\bIDU\b/gi, "I-D-U").replace(/\bPOT\b/g, "P-O-T").replace(/\bAdmon\b/gi, "Administraci\xF3n").replace(/\badmon\b/gi, "administraci\xF3n").replace(/\bApto\b/gi, "Apartamento").replace(/\bapto\b/gi, "apartamento").replace(/\bHab\b/gi, "Habitaciones").replace(/\bhab\b/gi, "habitaciones").replace(/\bC\.C\.|\bc\.c\.|\bCC\b/g, "c\xE9dula").replace(/\bNIT\b/gi, "Nit").replace(/\bRUES\b/gi, "Rues").replace(/\bSARLAFT\b/gi, "Sarlaft").replace(/\bSIRECI\b/gi, "Sireci").replace(/\bSIRI\b/gi, "Siri").replace(/\bBDUA\b/gi, "B-D-U-A").replace(/\bEPS\b/gi, "E-P-S").replace(/\bPDF\b/gi, "P-D-F").replace(/\bQR\b/gi, "Q-R").replace(/\bACM\b/g, "A-C-M").replace(/\bCHIP\b/gi, "Chip").replace(/\bLey\s*820(?:\s+de\s+2003)?\b/gi, "Ley ochocientos veinte").replace(/\bLey\s*1581(?:\s+de\s+2012)?\b/gi, "Ley quince ochenta y uno").replace(/\bIA\b/g, "inteligencia artificial").replace(/(?<!\d)\$0(?:\s*COP)?\b|(?<!\d)0\s*COP\b/gi, "cero pesos").replace(/\$\s*(\d{1,4})\.000\.000(?:\s*(?:COP|pesos))?\b/gi, "$1 millones de pesos").replace(/\$\s*(\d{1,4})\.000(?:\s*(?:COP|pesos))?\b/gi, "$1 mil pesos").replace(/\b(\d{1,3})\.(\d{3})\.(\d{3})\b/g, "$1$2$3").replace(/\b(\d{1,3})\.(\d{3})\b/g, "$1$2").replace(/\bCOP\b/g, "pesos").replace(/(\d+)\s*%/g, "$1 por ciento").replace(/40\/20\/40/g, "cuarenta, veinte, cuarenta");
   cleaned = cleaned.replace(/(?:enlace\s+que\s+te\s+dejo\s+a\s+continuaci[oó]n[\s.:]*)(?:https?:\/\/[^\s)]+)/gi, "enlace que te dejo a continuaci\xF3n.").replace(/(?:o\s+en\s+|en\s+|o\s+)?https?:\/\/[^\s)]+/gi, "o en el enlace que te dejo a continuaci\xF3n").replace(/:\s*o en el enlace que te dejo a continuación/gi, ": en el enlace que te dejo a continuaci\xF3n").replace(/(?:o\s+en\s+el\s+enlace\s+que\s+te\s+dejo\s+a\s+continuaci[oó]n\s*){2,}/gi, "o en el enlace que te dejo a continuaci\xF3n");
   cleaned = cleaned.replace(/(?:\+57\s*)?316[\s\-.]?656[\s\-.]?9719\b/g, "tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve");
   cleaned = cleaned.replace(/(?:\+57\s*)?319[\s\-.]?291[\s\-.]?9978\b/g, "tres diecinueve, dos noventa y uno, noventa y nueve, setenta y ocho");
   cleaned = cleaned.replace(/(?:\+57\s*)?318[\s\-.]?809[\s\-.]?6811\b/g, "tres dieciocho, ocho cero nueve, sesenta y ocho, once");
-  cleaned = cleaned.replace(/\*([^*]+)\*/g, "$1").replace(/_([^_]+)_/g, "$1").replace(/~([^~]+)~/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/[#*~`]/g, "").replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "");
+  cleaned = cleaned.replace(/^[\s•\-\*]+\s*/gm, "").replace(/[•]/g, "").replace(/\*([^*]+)\*/g, "$1").replace(/_([^_]+)_/g, "$1").replace(/~([^~]+)~/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/[#*~`]/g, "").replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "");
   return cleaned.replace(/\s+/g, " ").trim();
 }
 function splitTextIntoVoiceChunks(text2, maxLen = 180) {
@@ -15673,7 +15678,7 @@ async function fetchGttsAudioBuffer(text2) {
   }
   return null;
 }
-async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural", rate = "+6%") {
+async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural", rate = "+0%") {
   try {
     const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
     const tts = new MsEdgeTTS();
@@ -15782,93 +15787,121 @@ function convertAudioToOggOpus(inputBuffer) {
 async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
-  try {
-    const accessToken = await getVertexAIAccessToken();
-    if (accessToken) {
-      try {
-        const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            input: {
-              prompt: "Read aloud in a warm, welcoming tone.",
-              text: cleaned
+  if (Date.now() >= googleCloudBillingBlockedUntil) {
+    try {
+      const accessToken = await getVertexAIAccessToken();
+      if (accessToken) {
+        try {
+          const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`
             },
-            voice: {
-              languageCode: "es-us",
-              modelName: "gemini-3.1-flash-tts-preview",
-              name: "Laomedeia"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1,
-              pitch: 0
+            body: JSON.stringify({
+              input: {
+                prompt: "Read aloud in a warm, welcoming tone.",
+                text: cleaned
+              },
+              voice: {
+                languageCode: "es-us",
+                modelName: "gemini-3.1-flash-tts-preview",
+                name: "Laomedeia"
+              },
+              audioConfig: {
+                audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+                speakingRate: 1,
+                pitch: 0
+              }
+            })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.audioContent) {
+              console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia Femenina) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+              const buffer = Buffer.from(data.audioContent, "base64");
+              return {
+                mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+                data: buffer.toString("base64"),
+                buffer
+              };
             }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia Femenina) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        } else {
-          const errText = await response.text();
-          console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
-        }
-      } catch (geminiErr) {
-        console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
-      }
-      try {
-        const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Neural2-A"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.04,
-              pitch: 0.5
+          } else {
+            const errText = await response.text();
+            console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
+            if (response.status === 403 && (errText.includes("billing account") || errText.includes("PERMISSION_DENIED"))) {
+              googleCloudBillingBlockedUntil = Date.now() + 60 * 60 * 1e3;
+              console.warn("[TTS-Media] \u{1F6E1}\uFE0F Google Cloud TTS en suspensi\xF3n temporal (1h) por facturaci\xF3n pendiente. Activando voz neuronal colombiana Salom\xE9 de inmediato.");
             }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Neural2-A Femenina \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
+          }
+        } catch (geminiErr) {
+          console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
+        }
+        if (Date.now() >= googleCloudBillingBlockedUntil) {
+          try {
+            const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                input: { text: cleaned },
+                voice: {
+                  languageCode: "es-US",
+                  name: "es-US-Neural2-A"
+                },
+                audioConfig: {
+                  audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+                  speakingRate: 1.04,
+                  pitch: 0.5
+                }
+              })
+            });
+            if (response.ok) {
+              const data = await response.json();
+              if (data.audioContent) {
+                console.log(`[TTS-Media] \u2713 Google Cloud Neural2-A Femenina \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+                const buffer = Buffer.from(data.audioContent, "base64");
+                return {
+                  mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+                  data: buffer.toString("base64"),
+                  buffer
+                };
+              }
+            } else {
+              const errText = await response.text();
+              if (response.status === 403 && (errText.includes("billing account") || errText.includes("PERMISSION_DENIED"))) {
+                googleCloudBillingBlockedUntil = Date.now() + 60 * 60 * 1e3;
+              }
+            }
+          } catch (neuralErr) {
+            console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", neuralErr?.message || neuralErr);
           }
         }
-      } catch (neuralErr) {
-        console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", neuralErr?.message || neuralErr);
       }
+    } catch (err) {
+      console.warn("[TTS-Media] Google Cloud TTS OAuth2 no disponible:", err?.message || err);
     }
-  } catch (err) {
-    console.warn("[TTS-Media] Google Cloud TTS OAuth2 no disponible:", err?.message || err);
   }
   try {
-    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Dalia es-MX +8%) \u2014 ${cleaned.length} caracteres...`);
-    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+8%");
+    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal colombiana (Salom\xE9 es-CO-SalomeNeural) \u2014 ${cleaned.length} caracteres...`);
+    const salomeBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural", "+0%");
+    if (salomeBuffer && salomeBuffer.length > 0) {
+      console.log(`[TTS-Media] \u2713 Audio generado con voz humana colombiana de Salom\xE9 (${salomeBuffer.length} bytes, es-CO-SalomeNeural).`);
+      const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(salomeBuffer) : salomeBuffer;
+      return {
+        mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+        data: finalBuffer.toString("base64"),
+        buffer: finalBuffer
+      };
+    }
+  } catch (salomeErr) {
+    console.warn("[TTS-Media] S\xEDntesis con Salom\xE9 fall\xF3, probando Dalia:", salomeErr?.message || salomeErr);
+  }
+  try {
+    console.log(`[TTS-Media] \u{1F399}\uFE0F Probando voz neuronal secundaria (Dalia es-MX) \u2014 ${cleaned.length} caracteres...`);
+    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+0%");
     if (daliaBuffer && daliaBuffer.length > 0) {
       console.log(`[TTS-Media] \u2713 Audio generado con voz humana de Dalia (${daliaBuffer.length} bytes).`);
       const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(daliaBuffer) : daliaBuffer;
@@ -15879,7 +15912,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
       };
     }
   } catch (err) {
-    console.warn("[TTS-Media] Respaldo Dalia fall\xF3, probando Salom\xE9:", err?.message || err);
+    console.warn("[TTS-Media] Respaldo Dalia fall\xF3, recurriendo a contingencia GTTS:", err?.message || err);
   }
   console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
@@ -15981,7 +16014,7 @@ function startContinuousPresence(sock, jid, type = "composing", intervalMs = 250
     }
   };
 }
-var COMMON_FIRST_NAMES2, NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
+var COMMON_FIRST_NAMES2, NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken, googleCloudBillingBlockedUntil;
 var init_whatsapp_utils = __esm({
   "server/_core/whatsapp-utils.ts"() {
     "use strict";
@@ -16273,6 +16306,7 @@ var init_whatsapp_utils = __esm({
     ]);
     CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
     cachedVertexToken = null;
+    googleCloudBillingBlockedUntil = 0;
   }
 });
 
@@ -17173,6 +17207,16 @@ var init_founderKnowledgeService = __esm({
         directive: "JanIA tiene TERMINANTEMENTE PROHIBIDO poner en duda la validez del documento de un cliente o usuario (ej: afirmando 'El n\xFAmero no se encuentra localizado de forma activa en las bases censales generales en l\xEDnea, por lo que te sugiero validar si hay alg\xFAn d\xEDgito err\xF3neo en el f\xEDsico') cuando la consulta se vio afectada por una demora o intermitencia de red temporal de alg\xFAn servidor estatal como ADRES o Procuradur\xEDa. Si alguna base civil experimenta timeout o intermitencia, el sistema NO aborta la consulta ni asume que la persona no existe: consulta obligatoriamente a la Polic\xEDa Nacional de Colombia (que opera 24/7 con 2Captcha de forma directa e independiente de t\xFAneles) para resolver y validar el nombre oficial completo del titular y su r\xE9cord judicial limpio. Queda TERMINANTEMENTE PROHIBIDO filtrar tecnicismos de red o errores internos (como 'timeout of 15000ms', 'ECONNREFUSED', etc.) en los reportes o respuestas; si ADRES presenta intermitencia, se reporta con elegancia que la consulta de salud est\xE1 en tr\xE1mite diferido, pero se entrega con total seguridad y orgullo el nombre oficial confirmado y la idoneidad legal del ciudadano validada ante la Polic\xEDa Nacional y la Contralor\xEDa.",
         rawText: "Me parece que JanIa sigue fallando. Algo sucede. No est\xE1 verificando documentos y sale con esta excusa mediocre, nos est\xE1 haciendo quedar como un culo parce.",
         createdAt: "2026-11-04T08:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-voz-humana-salome-leads-sociales-agente-ia-v33-91",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Doctrina de Voz Humana Colombiana Salom\xE9 (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalizaci\xF3n de Agentes IA con Eduardo Rivera",
+        directive: "JanIA opera con s\xEDntesis de voz neuronal de respaldo humana y de acento nativo colombiano (es-CO-SalomeNeural a $0 COP) con normalizaci\xF3n fon\xE9tica rigurosa (c\xE9dulas sin puntos num\xE9ricos, millones/miles claros, $0 COP le\xEDdo como 'cero pesos', siglas como C.C., NIT, RUES, SARLAFT, IDU, CHIP, PDF, QR y leyes colombianas). Asimismo, JanIA est\xE1 100% preparada para recibir prospectos de redes sociales respondiendo con calidez y transparencia sobre c\xF3mo funciona y cu\xE1les son sus costos (100% GRATIS para agentes/colegas en red y matching 40/20/40; $0 COP de pauta para propietarios con 3% venta o 1er canon arriendo por \xE9xito). Si el usuario manifiesta inter\xE9s en tener una Agente IA como JanIA para su propia inmobiliaria o empresa, que asista a sus clientes o automatice sus servicios, JanIA presenta con orgullo a su creador el Ing. Eduardo A. Rivera, entrega de inmediato su contacto oficial (+57 316 656 9719 / https://wa.me/573166569719) y despacha en tiempo real el recado a su WhatsApp para coordinar el proyecto.",
+        rawText: "Mira la gente ya ha empezado a interesarse, por eo JanIa debe estar 100% funcional y preparada para lo que yo digop all\xED, no se si quieras que saque otra api gratuita para reforzar o ya con esas es suficiente y me encantar\xEDa que como ha quedado la voz gen\xE9rica de respaldo ya que no pude hacer el pago y Laomeidea est\xE1 aout, ni puedo a\xFAn hacer el pago, estoy sin money, quisiera que la afines esa voz un poco y trates de humanizarla lo mejor posible en sus expresiones, mientras regresa Laomeidea jejeje.",
+        createdAt: "2026-11-04T17:35:00.000Z",
         active: true
       }
     ];
@@ -34728,6 +34772,62 @@ Si deseas comunicarte directamente con **Eduardo A. Rivera**, puedes escribirle 
   }
   let context402040Directive = "";
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    const isAiAgentInquiryForBusiness = /\b(?:agente\s+(?:de\s+)?ia|ia\s+como\s+(?:t[uú]|jania)|tener\s+(?:una?\s+)?(?:agente\s+)?ia|una?\s+jania\s+para\s+mi|asistente\s+(?:virtual|ia)\s+para\s+mi\s+(?:inmobiliaria|empresa|negocio)|implementar\s+(?:un\s+bot|una\s+ia|un\s+agente)|contratar\s+(?:un\s+bot|una\s+ia|este\s+servicio\s+de\s+ia)|desarrollar\s+(?:un\s+bot|una\s+ia)|cu[aá]nto\s+vale\s+(?:un\s+bot|una\s+ia|un\s+agente\s+como\s+t[uú])|ofrecer\s+mis\s+servicios\s+con\s+(?:un\s+bot|una\s+ia)|asista\s+a\s+(?:m[ií]|mis\s+clientes)|un\s+bot\s+como\s+t[uú]|una\s+ia\s+que\s+me\s+asista)\b/i.test(cleanLower) || /\b(?:quiero|necesito|deseo|c[oó]mo\s+puedo\s+tener|me\s+interesar[ií]a\s+tener)\b/i.test(cleanLower) && /\b(?:agente\s+(?:de\s+)?ia|ia|jania|asistente\s+ia|bot\s+inmobiliario)\b/i.test(cleanLower);
+    if (isAiAgentInquiryForBusiness) {
+      await dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName || "Lead Interesado en Agente IA", `[INTER\xC9S EN AGENTE IA PARA EMPRESA]: ${clean}`);
+      if (userPerpetualSession.keyFacts) {
+        userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
+        await saveUserPerpetualSession(userPerpetualSession);
+      }
+      const greetingPrefix = isOngoingChat ? "" : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! `;
+      const aiAgentReply = `${greetingPrefix}\xA1Me alegra much\xEDsimo tu visi\xF3n e inter\xE9s! \u{1F916}\u2728
+
+Te cuento que mi arquitectura cognitiva, conexi\xF3n en tiempo real con bases de datos estatales y automatizaci\xF3n en WhatsApp fueron dise\xF1adas e implementadas por nuestro Fundador y Director de Tecnolog\xEDa, el **Ing. Eduardo A. Rivera**.
+
+Si deseas implementar una **Agente de Inteligencia Artificial personalizada para tu propia inmobiliaria, constructora, financiera o empresa**, que asista a tus clientes 24/7, extraiga requerimientos, verifique identidades y ofrezca tus servicios con total solvencia:
+
+\u{1F4F2} Comun\xEDcate directamente con **Eduardo A. Rivera** en su contacto oficial:
+\u2022 WhatsApp Directo: **+57 316 656 9719**
+\u{1F449} https://wa.me/573166569719
+
+\u{1F680} *\xA1Ya mismo le acabo de transmitir tu inter\xE9s a Eduardo directamente a su WhatsApp en tiempo real para que est\xE9 enterado y pueda coordinar una sesi\xF3n t\xE9cnica o demo contigo!*
+
+Cu\xE9ntame mientras tanto: \xBFDe qu\xE9 es tu empresa o qu\xE9 tipo de operaciones y servicios te gustar\xEDa que automatice tu Agente IA? \u{1F91D}\u{1F3E2}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", aiAgentReply);
+      markUserGreetedToday(userId);
+      return aiAgentReply;
+    }
+    const isHowItWorksOrServicesGeneral = /\b(?:c[oó]mo\s+funciona[sn]?|qu[eé]\s+haces|qu[eé]\s+servicios?\s+(?:ofreces?|prestas?|tienes?|me\s+puedes\s+ofrecer)|qu[eé]\s+puedes?\s+hacer\s+por\s+m[ií]|de\s+qu[eé]\s+se\s+trata\s+(?:vecy|jania)|c[oó]mo\s+es\s+el\s+servicio)\b/i.test(cleanLower) || /\bme\s+interesar[ií]a\s+saber\s+c[oó]mo\s+funciona\b/i.test(cleanLower);
+    const isCostOrPricingMention = /\b(?:costo|vale|cuesta|cobran|precio|tarifa|cu[aá]nto|gratis|gratuito)\b/i.test(cleanLower);
+    const isSpecificPropertySearch = /(?:apartamento|casa|lote|bodega|finca|arriendo\s+en|venta\s+en|inmueble\s+en|canon\s+de\s+este)\b/i.test(cleanLower);
+    const isHowItWorksAndCostInquiry = !isSpecificPropertySearch && (isHowItWorksOrServicesGeneral && isCostOrPricingMention || /\b(?:c[oó]mo\s+funciona[sn]?(?:\s+todo)?\s+y\s+cu[aá]l\s+es\s+el\s+costo|qu[eé]\s+costo\s+tiene|cu[aá]l\s+es\s+el\s+costo)\b/i.test(cleanLower) || isHowItWorksOrServicesGeneral && clean.split(/\s+/).length <= 15);
+    if (isHowItWorksAndCostInquiry) {
+      const greetingPrefix = isOngoingChat ? "" : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! Qu\xE9 gusto saludarte. \u{1F44B}\u2728
+
+`;
+      const howItWorksReply = `${greetingPrefix}Soy **JanIA**, la Agente de Inteligencia Artificial oficial de **VECY BIENES RA\xCDCES** y de nuestra red colaborativa inmobiliaria en Colombia. \u{1F1E8}\u{1F1F4}\u{1F469}\u{1F3FB}\u200D\u{1F4BC}\u2728
+
+Aqu\xED tienes un resumen claro de **c\xF3mo funciono y qu\xE9 servicios pongo a tu disposici\xF3n 24/7**:
+
+1\uFE0F\u20E3 **Mesa de Coincidencias & Matching 40/20/40 \u{1F50D}:** Cruzo en segundos tus ofertas y requerimientos inmobiliarios con toda nuestra red de inventario, conectando la punta compradora y vendedora de forma transparente.
+2\uFE0F\u20E3 **Verificaci\xF3n Oficial de Antecedentes y Seguridad Jur\xEDdica \u{1F6E1}\uFE0F:** Valido c\xE9dulas y antecedentes penales (Polic\xEDa Nacional), disciplinarios (Procuradur\xEDa SIRI), fiscales (Contralor\xEDa SIRECI) y afiliaci\xF3n en salud (ADRES/BDUA), as\xED como empresas y NITs en RUES.
+3\uFE0F\u20E3 **Minutas y Contratos en PDF Membretado con QR \u{1F4C4}:** Redacto y entrego contratos de corretaje, promesas de compraventa, contratos de arrendamiento, cartas de restituci\xF3n y preavisos de terminaci\xF3n (Ley 820) con gu\xEDa de firma electr\xF3nica.
+4\uFE0F\u20E3 **Aval\xFAos Comerciales y Sondeos de Mercado (ACM) \u{1F4CA}:** Calculo valor estimado por m\xB2 y c\xE1nones de arrendamiento sugeridos por sector.
+5\uFE0F\u20E3 **Estudio Creativo de Im\xE1genes y Flyers IA \u{1F3A8}:** Creo piezas gr\xE1ficas y flyers publicitarios para tus inmuebles a partir de tus fotos o descripciones.
+6\uFE0F\u20E3 **Tr\xE1mites Catastrales y Notariales \u{1F3DB}\uFE0F:** Consulta de facturas oficiales de predial en Bogot\xE1 (CHIP), liquidaci\xF3n de gastos notariales 50/50 y paz y salvos del IDU.
+
+\u{1F4B0} **\xBFCU\xC1L ES EL COSTO? (Transparencia Total):**
+\u2022 \u{1F91D} **Para Agentes Inmobiliarios y Colegas:** \xA1El servicio es **100% GRATIS ($0 COP)**! No cobramos suscripci\xF3n ni membres\xEDas por usar mis herramientas. Operamos bajo el modelo colaborativo 40/20/40 \xFAnicamente cuando cerramos un negocio juntos.
+\u2022 \u{1F3E1} **Para Propietarios Directos:** Publicar y pautar tu inmueble en nuestra red es **totalmente GRATUITO ($0 COP anticipados)**. Solo cobramos comisi\xF3n por \xE9xito ante el cierre efectivo del negocio: **3% en venta** o el **primer canon en arriendo**.
+\u2022 \u{1F916} **Si deseas una Agente IA como JanIA para tu propia empresa:** JanIA fue desarrollada a la medida por el **Ing. Eduardo A. Rivera** (+57 316 656 9719). Podemos conectarte con \xE9l para cotizar la implementaci\xF3n personalizada de una IA que asista a tus clientes y ofrezca tus servicios.
+
+Cu\xE9ntame: \xBFEres agente inmobiliario, propietario de un inmueble o buscas una soluci\xF3n de IA para tu empresa? \xA1Dime qu\xE9 necesitas y te oriento al instante! \u{1F91D}\u{1F680}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", howItWorksReply);
+      markUserGreetedToday(userId);
+      return howItWorksReply;
+    }
     const isShareCommissionDirectInquiry = /\b(?:(?:t[uú]\s+|ustedes\s+|en\s+vecy\s+)?(?:compartes|comparten|compartir[íi]as?|trabajas\s+con|trabajan\s+con|hacen)\s+(?:la\s+)?(?:comisi[oó]n|comisiones)(?:\s+compartida[s]?)?|se\s+comparte\s+(?:la\s+)?comisi[oó]n|compartes\s+punta|comparten\s+punta|compartir\s+comisi[oó]n|negocio\s+compartido)\b/i.test(cleanLower);
     if (isShareCommissionDirectInquiry) {
       const isShortCommissionInquiry = clean.split(/\s+/).length <= 15 && !/(?:inmueble|apartamento|apto|casa|vendo|arriendo|compro|presupuesto|millones|chico|cedritos|radicar)/i.test(cleanLower);

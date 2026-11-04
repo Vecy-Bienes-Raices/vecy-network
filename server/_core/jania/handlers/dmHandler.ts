@@ -1958,6 +1958,85 @@ export async function processPrivateDmConversationalMessage(
   // 🤝 PROTOCOLO COMERCIAL Y REGLAS DE ONBOARDING - FILTRO 40/20/40 (Doctrina v33.33 / v33.59 / v33.63 / v33.73)
   let context402040Directive = "";
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    // 🤖 DOCTRINA EDUARDO A. RIVERA (v33.91) — INTERÉS EN AGENTE IA PROPIO PARA EMPRESA O INMOBILIARIA:
+    // Si el usuario pregunta cómo tener una IA como JanIA, un bot que asista a sus clientes o automatice su inmobiliaria/empresa:
+    // JanIA explica con orgullo ejecutivo que su creador es el Ing. Eduardo A. Rivera, entrega su contacto (+57 316 656 9719)
+    // y despacha EN TIEMPO REAL el recado y datos a Eduardo para cerrar el proyecto comercial.
+    const isAiAgentInquiryForBusiness =
+      /\b(?:agente\s+(?:de\s+)?ia|ia\s+como\s+(?:t[uú]|jania)|tener\s+(?:una?\s+)?(?:agente\s+)?ia|una?\s+jania\s+para\s+mi|asistente\s+(?:virtual|ia)\s+para\s+mi\s+(?:inmobiliaria|empresa|negocio)|implementar\s+(?:un\s+bot|una\s+ia|un\s+agente)|contratar\s+(?:un\s+bot|una\s+ia|este\s+servicio\s+de\s+ia)|desarrollar\s+(?:un\s+bot|una\s+ia)|cu[aá]nto\s+vale\s+(?:un\s+bot|una\s+ia|un\s+agente\s+como\s+t[uú])|ofrecer\s+mis\s+servicios\s+con\s+(?:un\s+bot|una\s+ia)|asista\s+a\s+(?:m[ií]|mis\s+clientes)|un\s+bot\s+como\s+t[uú]|una\s+ia\s+que\s+me\s+asista)\b/i.test(cleanLower) ||
+      (/\b(?:quiero|necesito|deseo|c[oó]mo\s+puedo\s+tener|me\s+interesar[ií]a\s+tener)\b/i.test(cleanLower) && /\b(?:agente\s+(?:de\s+)?ia|ia|jania|asistente\s+ia|bot\s+inmobiliario)\b/i.test(cleanLower));
+
+    if (isAiAgentInquiryForBusiness) {
+      await dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName || "Lead Interesado en Agente IA", `[INTERÉS EN AGENTE IA PARA EMPRESA]: ${clean}`);
+      if (userPerpetualSession.keyFacts) {
+        userPerpetualSession.keyFacts.esperando_recado_eduardo = false;
+        await saveUserPerpetualSession(userPerpetualSession);
+      }
+
+      const greetingPrefix = isOngoingChat
+        ? ""
+        : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! `;
+
+      const aiAgentReply =
+        `${greetingPrefix}¡Me alegra muchísimo tu visión e interés! 🤖✨\n\n` +
+        `Te cuento que mi arquitectura cognitiva, conexión en tiempo real con bases de datos estatales y automatización en WhatsApp fueron diseñadas e implementadas por nuestro Fundador y Director de Tecnología, el **Ing. Eduardo A. Rivera**.\n\n` +
+        `Si deseas implementar una **Agente de Inteligencia Artificial personalizada para tu propia inmobiliaria, constructora, financiera o empresa**, que asista a tus clientes 24/7, extraiga requerimientos, verifique identidades y ofrezca tus servicios con total solvencia:\n\n` +
+        `📲 Comunícate directamente con **Eduardo A. Rivera** en su contacto oficial:\n` +
+        `• WhatsApp Directo: **+57 316 656 9719**\n` +
+        `👉 https://wa.me/573166569719\n\n` +
+        `🚀 *¡Ya mismo le acabo de transmitir tu interés a Eduardo directamente a su WhatsApp en tiempo real para que esté enterado y pueda coordinar una sesión técnica o demo contigo!*\n\n` +
+        `Cuéntame mientras tanto: ¿De qué es tu empresa o qué tipo de operaciones y servicios te gustaría que automatice tu Agente IA? 🤝🏢`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", aiAgentReply);
+      markUserGreetedToday(userId);
+      return aiAgentReply;
+    }
+
+    // 🌐 DOCTRINA EDUARDO A. RIVERA (v33.91) — INBOUND LEADS: CÓMO FUNCIONAS, QUÉ SERVICIOS OFRECES Y CUÁL ES EL COSTO:
+    // Responde con transparencia total a los prospectos que llegan de redes sociales o preguntan qué hace JanIA y cuánto cuesta:
+    // Servicios clave (Matching 40/20/40, antecedentes oficiales, minutas PDF con QR, avalúos ACM y flyers IA) + tarifas exactas:
+    // Colegas/Agentes: $0 COP (100% Gratis) | Propietarios: $0 COP pauta (3% venta / 1er canon arriendo por éxito) | Empresas: Agentes IA con Eduardo Rivera.
+    const isHowItWorksOrServicesGeneral =
+      /\b(?:c[oó]mo\s+funciona[sn]?|qu[eé]\s+haces|qu[eé]\s+servicios?\s+(?:ofreces?|prestas?|tienes?|me\s+puedes\s+ofrecer)|qu[eé]\s+puedes?\s+hacer\s+por\s+m[ií]|de\s+qu[eé]\s+se\s+trata\s+(?:vecy|jania)|c[oó]mo\s+es\s+el\s+servicio)\b/i.test(cleanLower) ||
+      /\bme\s+interesar[ií]a\s+saber\s+c[oó]mo\s+funciona\b/i.test(cleanLower);
+
+    const isCostOrPricingMention = /\b(?:costo|vale|cuesta|cobran|precio|tarifa|cu[aá]nto|gratis|gratuito)\b/i.test(cleanLower);
+
+    const isSpecificPropertySearch = /(?:apartamento|casa|lote|bodega|finca|arriendo\s+en|venta\s+en|inmueble\s+en|canon\s+de\s+este)\b/i.test(cleanLower);
+
+    const isHowItWorksAndCostInquiry =
+      !isSpecificPropertySearch &&
+      ((isHowItWorksOrServicesGeneral && isCostOrPricingMention) ||
+       /\b(?:c[oó]mo\s+funciona[sn]?(?:\s+todo)?\s+y\s+cu[aá]l\s+es\s+el\s+costo|qu[eé]\s+costo\s+tiene|cu[aá]l\s+es\s+el\s+costo)\b/i.test(cleanLower) ||
+       (isHowItWorksOrServicesGeneral && clean.split(/\s+/).length <= 15));
+
+    if (isHowItWorksAndCostInquiry) {
+      const greetingPrefix = isOngoingChat
+        ? ""
+        : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! Qué gusto saludarte. 👋✨\n\n`;
+
+      const howItWorksReply =
+        `${greetingPrefix}Soy **JanIA**, la Agente de Inteligencia Artificial oficial de **VECY BIENES RAÍCES** y de nuestra red colaborativa inmobiliaria en Colombia. 🇨🇴👩🏻‍💼✨\n\n` +
+        `Aquí tienes un resumen claro de **cómo funciono y qué servicios pongo a tu disposición 24/7**:\n\n` +
+        `1️⃣ **Mesa de Coincidencias & Matching 40/20/40 🔍:** Cruzo en segundos tus ofertas y requerimientos inmobiliarios con toda nuestra red de inventario, conectando la punta compradora y vendedora de forma transparente.\n` +
+        `2️⃣ **Verificación Oficial de Antecedentes y Seguridad Jurídica 🛡️:** Valido cédulas y antecedentes penales (Policía Nacional), disciplinarios (Procuraduría SIRI), fiscales (Contraloría SIRECI) y afiliación en salud (ADRES/BDUA), así como empresas y NITs en RUES.\n` +
+        `3️⃣ **Minutas y Contratos en PDF Membretado con QR 📄:** Redacto y entrego contratos de corretaje, promesas de compraventa, contratos de arrendamiento, cartas de restitución y preavisos de terminación (Ley 820) con guía de firma electrónica.\n` +
+        `4️⃣ **Avalúos Comerciales y Sondeos de Mercado (ACM) 📊:** Calculo valor estimado por m² y cánones de arrendamiento sugeridos por sector.\n` +
+        `5️⃣ **Estudio Creativo de Imágenes y Flyers IA 🎨:** Creo piezas gráficas y flyers publicitarios para tus inmuebles a partir de tus fotos o descripciones.\n` +
+        `6️⃣ **Trámites Catastrales y Notariales 🏛️:** Consulta de facturas oficiales de predial en Bogotá (CHIP), liquidación de gastos notariales 50/50 y paz y salvos del IDU.\n\n` +
+        `💰 **¿CUÁL ES EL COSTO? (Transparencia Total):**\n` +
+        `• 🤝 **Para Agentes Inmobiliarios y Colegas:** ¡El servicio es **100% GRATIS ($0 COP)**! No cobramos suscripción ni membresías por usar mis herramientas. Operamos bajo el modelo colaborativo 40/20/40 únicamente cuando cerramos un negocio juntos.\n` +
+        `• 🏡 **Para Propietarios Directos:** Publicar y pautar tu inmueble en nuestra red es **totalmente GRATUITO ($0 COP anticipados)**. Solo cobramos comisión por éxito ante el cierre efectivo del negocio: **3% en venta** o el **primer canon en arriendo**.\n` +
+        `• 🤖 **Si deseas una Agente IA como JanIA para tu propia empresa:** JanIA fue desarrollada a la medida por el **Ing. Eduardo A. Rivera** (+57 316 656 9719). Podemos conectarte con él para cotizar la implementación personalizada de una IA que asista a tus clientes y ofrezca tus servicios.\n\n` +
+        `Cuéntame: ¿Eres agente inmobiliario, propietario de un inmueble o buscas una solución de IA para tu empresa? ¡Dime qué necesitas y te oriento al instante! 🤝🚀`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", howItWorksReply);
+      markUserGreetedToday(userId);
+      return howItWorksReply;
+    }
+
     // 🤝 DOCTRINA EDUARDO A. RIVERA (v33.73) — RESPUESTA ASTUTA A PREGUNTAS DE COMISIÓN COMPARTIDA:
     // Si el interlocutor pregunta si JanIA o VECY comparte comisión ("tú compartes comisión", "¿comparten comisión?", etc.):
     // NUNCA disparar un monólogo teórico del 40/20/40 de entrada ni cerrar con el cuestionario genérico enlatado.

@@ -7,6 +7,59 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-04] — JanIA v33.91: Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera (v33.91 - 33.91.0)
+
+**Versión:** `v33.91` (`33.91.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Mira la gente ya ha empezado a interesarse, por eo JanIa debe estar 100% funcional y preparada para lo que yo digop allí, no se si quieras que saque otra api gratuita para reforzar o ya con esas es suficiente y me encantaría que como ha quedado la voz genérica de respaldo ya que no pude hacer el pago y Laomeidea está aout, ni puedo aún hacer el pago, estoy sin money, quisiera que la afines esa voz un poco y trates de humanizarla lo mejor posible en sus expresiones, mientras regresa Laomeidea jejeje."*
+- **Evidencia Gráfica Aportada (`media_1793812601679_4bffe889.jpg`):**
+  Publicación oficial en Facebook de VECY BIENES RAÍCES con video de JanIA donde el prospecto `Solucioneshipotecariasco` consultó: *"Me interesaría saber como funciona? y cual es el costo"*.
+  Eduardo respondió canalizándolo a JanIA por WhatsApp (`3192919978` / `https://wa.me/573192919978`) con la instrucción: *"estando allí podrás preguntarme qué servicios te puedo ofrecer o qué puedo hacer por ti. Si quieres una agente IA como JanIA que te asista a ti y a tus clientes y ofrezca tus servicios debes preguntarle igualmente a JanIA y ella te dirá lo que debes hacer o con quien comunicarte."*
+
+**Diagnóstico Técnico Profundo:**
+1. **Inbound Leads de Redes Sociales y Consultas Globales de Servicios y Costos:**
+   - La arquitectura previa canalizaba las consultas de costos de forma restrictiva hacia propietarios directos consignando un inmueble específico.
+   - Si un prospecto procedente de redes sociales (agente inmobiliario, bróker hipotecario o curioso) preguntaba: *"¿Cómo funcionas? y ¿cuál es el costo?"* o *"¿Qué servicios me puedes ofrecer o qué puedes hacer por mí?"*, no existía un enrutador de presentación institucional de JanIA que explicara con solvencia sus superpoderes y el esquema de gratuidad total ($0 COP) para agentes frente al corretaje de propietarios.
+2. **Canalización Comercial de Agentes IA para Empresas con Eduardo Rivera (+57 316 656 9719):**
+   - Eduardo prometió expresamente en Facebook que si un usuario desea una agente IA como JanIA para su propia inmobiliaria o negocio, JanIA le dirá con quién comunicarse.
+   - Era imperativo interceptar consultas como *"Quiero una agente IA como JanIA para mi inmobiliaria"*, *"¿Cómo puedo tener un bot como JanIA que me asista a mí y a mis clientes?"* o *"¿Cuánto vale una IA como tú?"*, presentando al Ing. Eduardo A. Rivera (+57 316 656 9719) y despachando el recado en tiempo real al WhatsApp personal de Eduardo.
+3. **Falla en Motor de Voz Neuronal de Respaldo por 403 en Google Cloud y msedge-tts v2 Token:**
+   - El proyecto de Google Cloud (`projects/747178664273`) acumulaba suspensión temporal de facturación, por lo que Gemini 3.1 Flash TTS (Laomedeia) y Neural2 arrojaban error 403 `PERMISSION_DENIED`.
+   - La librería `msedge-tts@2.0.7` arrojaba error 403 al conectarse a los WebSockets de Microsoft Read Aloud debido a que Microsoft desplegó una nueva firma de cabecera `Sec-MS-GEC v2` (CS64 hash).
+   - Como consecuencia, el sistema caía a Google Translate TTS (`gtts`), sonando robótica y genérica.
+4. **Normalización Fonética para Síntesis de Voz Realista:**
+   - Al sintetizar textos de antecedentes y cotizaciones, las cédulas con puntos (ej. `80.850.249`) eran leídas como "ochenta punto ochocientos cincuenta...", las cifras en millones se leían con dificultad, `$0 COP` no se leía como "cero pesos", y las siglas institucionales (`C.C.`, `NIT`, `RUES`, `SARLAFT`, `IDU`, `CHIP`, `PDF`, `QR`, `ACM`) carecían de modulación fonética óptima.
+5. **Auditoría del Pool de Claves de Gemini API:**
+   - En el servidor VPS Contabo se encuentran activas cuatro (4) claves gratuitas de Google AI Studio (`GEMINI_API_KEY_2..5`) con capacidad agregada de 6.000 peticiones diarias y 60 RPM a costo $0 COP, más una clave de pago en cooldown de seguridad. El volumen actual está plenamente protegido a $0 COP.
+
+**Acciones Ejecutadas:**
+1. **Actualización a `msedge-tts@2.1.1` y Activación de `es-CO-SalomeNeural` (Costo $0 COP):**
+   - Actualizada la dependencia `msedge-tts` a `2.1.1` en local y en el VPS Contabo para soportar la firma `Sec-MS-GEC v2`.
+   - Activada **`es-CO-SalomeNeural`** como la voz neuronal prioritaria de respaldo de JanIA: voz nativa colombiana femenina, cálida, ejecutiva y empática a ritmo natural (`+0%`), con síntesis ultrarrápida (730 ms en el VPS, 42 KB) y transcodificación directa a WhatsApp OGG Opus.
+   - Incorporado caché de bloqueo de 1 hora (`googleCloudBillingBlockedUntil`) ante 403 de facturación en Google Cloud para evitar demoras innecesarias de 300 ms en cada nota de voz.
+2. **Normalización Fonética Humana en `cleanVoiceText`:**
+   - Eliminación de puntos internos en cédulas (`80.850.249` -> `80850249`) para evitar la pronunciación de "punto".
+   - Cifras en millones: `$450.000.000` -> `"450 millones de pesos"`; `$0 COP` / `$0` -> `"cero pesos"`.
+   - Expansión fonética de siglas y marcos legales: `C.C.` -> `"cédula"`, `NIT` -> `"Nit"`, `RUES` -> `"Rues"`, `SARLAFT` -> `"Sarlaft"`, `SIRECI` -> `"Sireci"`, `SIRI` -> `"Siri"`, `BDUA` -> `"B-D-U-A"`, `EPS` -> `"E-P-S"`, `PDF` -> `"P-D-F"`, `QR` -> `"Q-R"`, `ACM` -> `"A-C-M"`, `CHIP` -> `"Chip"`, `Ley 820` -> `"Ley ochocientos veinte"`, `Ley 1581` -> `"Ley quince ochenta y uno"`, `IA` -> `"inteligencia artificial"`.
+   - Supresión de viñetas (`•`, `-`, `*`) al inicio de línea para garantizar un flujo continuo y natural en el habla.
+3. **Enrutador Inbound de Redes Sociales: Cómo Funciona y Cuál es el Costo:**
+   - En `server/_core/jania/handlers/dmHandler.ts`, ante consultas sobre funcionamiento, servicios y costos:
+     - Presenta los 6 pilares de JanIA: Matching 40/20/40, verificación oficial de antecedentes y cédulas, minutas y contratos en PDF membretado con código QR y guía de firma electrónica, avalúos ACM y m² por sector, estudio creativo de imágenes y flyers IA, y trámites prediales y notariales 50/50.
+     - Explica con total honestidad la política de precios: **100% GRATIS ($0 COP)** para agentes y colegas inmobiliarios bajo el modelo colaborativo 40/20/40; **$0 COP de anticipo** para propietarios con comisión por éxito del **3% en venta** o **el primer canon en arriendo**; y desarrollo personalizado de Agentes IA para empresas con el Ing. Eduardo A. Rivera.
+4. **Canalización Comercial de Agentes IA para Empresas con Eduardo Rivera:**
+   - Ante la intención de implementar o cotizar una agente IA como JanIA para una empresa o inmobiliaria:
+     - JanIA destaca con orgullo técnico que su arquitectura fue diseñada y desarrollada por el **Ing. Eduardo A. Rivera**.
+     - Facilita de inmediato el enlace y número directo de Eduardo: **+57 316 656 9719** (`https://wa.me/573166569719`).
+     - Despacha en tiempo real el recado con los datos del lead al WhatsApp de Eduardo mediante `dispatchMessageRecadoToEduardo`.
+5. **Registro Doctrinal en Prompts y Base de Conocimiento:**
+   - Registrado el principio `seed-voz-humana-salome-leads-sociales-agente-ia-v33-91` en `founderKnowledgeService.ts`.
+   - Incorporada la sección *Doctrina de Prospectos de Redes Sociales, Servicios, Costos y Desarrollo de Agentes IA (Doctrina Eduardo A. Rivera — v33.91)* en `server/_core/prompts/base.md` y `server/_core/jania/prompts.ts`.
+6. **Validación Limpia ($0 COP):**
+   - Creada la **Suite 177** en `server/__tests__/regression.test.ts` con 6 pruebas automatizadas.
+   - Vitest: **584 tests passing (5/5 suites en verde, 100% pasando)**.
+   - Typecheck `npm run check`: 0 errores.
+   - Build `npm run build`: Limpio en 25.58s (Vite) + 332ms (esbuild).
+
 ### 📅 [2026-11-04] — JanIA v33.90: Doctrina de Rescate Obligatorio de Identidad en Documentos (Policía Nacional 24/7), Cero Excusas Mediocres y Saneamiento de Errores Técnicos (v33.90 - 33.90.0)
 
 **Versión:** `v33.90` (`33.90.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

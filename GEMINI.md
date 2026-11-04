@@ -1,17 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.90.0 — 2026-11-04)
-- **JanIA Server:** `v33.90` (`33.90.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Doctrina de Rescate Obligatorio de Identidad en Documentos (Policía Nacional 24/7), Cero Excusas Mediocres y Saneamiento de Errores Técnicos (Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.91.0 — 2026-11-04)
+- **JanIA Server:** `v33.91` (`33.91.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera (Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Crítico de Eduardo A. Rivera:**
-     - A las 6:26 AM, el usuario Innova Bienes Raíces (`+57 305 3469665`) solicitó: `"Jania Verificar cc: 80850249"`.
-     - JanIA tardó 7 minutos en responder con un informe vergonzoso: *"El número no se encuentra localizado de forma activa en las bases censales generales en línea, por lo que te sugiero validar si hay algún dígito erróneo en el físico..."* y filtró el string técnico *"timeout of 15000ms"*.
-     - Eduardo comprobó de inmediato que la cédula `80.850.249` está 100% activa en ADRES a nombre de **Joan Nicolas Sanchez Monroy** (Sanitas EPS, Cotizante) y en la Policía Nacional como ciudadano plenamente identificado y sin asuntos pendientes con las autoridades judiciales.
+     - En publicación oficial de Facebook con video de JanIA, prospectos como `Solucioneshipotecariasco` comenzaron a interesarse y preguntaron: *"Me interesaría saber como funciona? y cual es el costo"*.
+     - Eduardo los canalizó al WhatsApp de JanIA (`+57 319 291 9978`) prometiendo que JanIA les explicará sus servicios y que, si desean una agente IA como JanIA para asistir a sus clientes y ofrecer sus servicios, les indicará con quién comunicarse.
+     - La voz de respaldo caía en Google Translate TTS (robótica) porque Google Cloud TTS arrojaba 403 por saldo pendiente y `msedge-tts@2.0.7` arrojaba 403 por la nueva firma `Sec-MS-GEC v2` de Microsoft.
+     - Eduardo solicitó afinar la voz de respaldo, humanizar sus expresiones fonéticas y preparar a JanIA al 100% para recibir prospectos de redes sociales, consultando si requiere otra clave gratuita de Gemini API (actualmente hay 4 claves gratuitas en el VPS que cubren 6.000 peticiones/día a $0 COP).
   2. **Causa Raíz y Solución Quirúrgica:**
-     - **Causa Raíz:** El túnel inverso SSH hacia Colombia estaba inactivo en la madrugada mientras el equipo local estuvo suspendido. Al dar timeout ADRES y Procuraduría, la lógica fail-fast evaluó falsamente que el documento no existía y abortó la llamada a la Policía Nacional. Sin embargo, la Policía Nacional (`antecedentes.policia.gov.co:7005`) **no tiene geobloqueo** y funciona directamente desde el VPS las 24 horas.
-     - **Rescate Obligatorio:** En `identityVerificationService.ts`, ante cualquier timeout o fallo de red en ADRES/Procuraduría, **la Policía Nacional se invoca obligatoriamente como salvavidas**. Al extraer el nombre oficial (`finalOfficialName`), la verificación se marca como exitosa (`success: true`) y la identidad queda validada.
-     - **Cero Excusas Mediocres y Cero Filtraciones:** Creada `cleanAdresErrorMessage` para erradicar `timeout of 15000ms` y `ECONNREFUSED`. En `dmHandler.ts`, `base.md` y `prompts.ts`, se prohíbe terminantemente a Gemini dudar de un documento o sugerir "dígitos erróneos" cuando la identidad está confirmada por cualquiera de las autoridades del Estado.
-     - **Optimización de Tiempos:** Timeouts HTTP reducidos de 15s a 6s y Puppeteer a 10s.
-     - **Registro de Enseñanza:** Registrada la directriz `seed-rescate-identidad-policia-nacional-cero-excusas-v33-90` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 176 `vitest` (5/5 passing, 578 tests) | Build `npm run build` limpio en 24.81s + 331ms.
+     - **Voz Humana Salomé ($0 COP):** Dependencia `msedge-tts` actualizada a `2.1.1` y activada la voz **`es-CO-SalomeNeural`** (acento colombiano femenino nativo, cálido, empático y ejecutivo a ritmo natural +0%), logrando síntesis en 730 ms y transcodificación directa a OGG Opus.
+     - **Normalización Fonética Rigurosa (`cleanVoiceText`):** Cédulas sin puntos numéricos (`80.850.249` -> `80850249`), millones claros (`$450.000.000` -> `450 millones de pesos`), `$0 COP` -> `cero pesos`, expansión fonética de siglas colombianas (`C.C.`, `NIT`, `RUES`, `SARLAFT`, `IDU`, `CHIP`, `PDF`, `QR`, `ACM`, Ley 820) y remoción de viñetas para habla fluida.
+     - **Enrutador Inbound de Servicios y Costos:** Responde a prospectos de redes explicando los 6 pilares de JanIA y tarifas exactas: 100% GRATIS ($0 COP) para agentes en red colaborativa 40/20/40; $0 COP de anticipo para propietarios (3% venta o 1er canon arriendo por éxito); y desarrollo de Agentes IA para empresas con el Ing. Eduardo A. Rivera.
+     - **Canalización Comercial de Agentes IA:** Ante la solicitud de implementar una IA como JanIA para una inmobiliaria o empresa, JanIA presenta al Ing. Eduardo A. Rivera (+57 316 656 9719 / https://wa.me/573166569719) y despacha el recado con los datos del lead en tiempo real a su WhatsApp (`dispatchMessageRecadoToEduardo`).
+     - **Registro de Enseñanza:** Registrada la directriz `seed-voz-humana-salome-leads-sociales-agente-ia-v33-91` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 177 `vitest` (5/5 passing, 584 tests) | Build `npm run build` limpio en 25.58s + 332ms.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

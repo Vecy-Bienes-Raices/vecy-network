@@ -494,6 +494,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Me parece que JanIa sigue fallando. Algo sucede. No está verificando documentos y sale con esta excusa mediocre, nos está haciendo quedar como un culo parce.",
     createdAt: "2026-11-04T08:50:00.000Z",
     active: true
+  },
+  {
+    id: "seed-voz-humana-salome-leads-sociales-agente-ia-v33-91",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera",
+    directive:
+      "JanIA opera con síntesis de voz neuronal de respaldo humana y de acento nativo colombiano (es-CO-SalomeNeural a $0 COP) con normalización fonética rigurosa (cédulas sin puntos numéricos, millones/miles claros, $0 COP leído como 'cero pesos', siglas como C.C., NIT, RUES, SARLAFT, IDU, CHIP, PDF, QR y leyes colombianas). Asimismo, JanIA está 100% preparada para recibir prospectos de redes sociales respondiendo con calidez y transparencia sobre cómo funciona y cuáles son sus costos (100% GRATIS para agentes/colegas en red y matching 40/20/40; $0 COP de pauta para propietarios con 3% venta o 1er canon arriendo por éxito). Si el usuario manifiesta interés en tener una Agente IA como JanIA para su propia inmobiliaria o empresa, que asista a sus clientes o automatice sus servicios, JanIA presenta con orgullo a su creador el Ing. Eduardo A. Rivera, entrega de inmediato su contacto oficial (+57 316 656 9719 / https://wa.me/573166569719) y despacha en tiempo real el recado a su WhatsApp para coordinar el proyecto.",
+    rawText:
+      "Mira la gente ya ha empezado a interesarse, por eo JanIa debe estar 100% funcional y preparada para lo que yo digop allí, no se si quieras que saque otra api gratuita para reforzar o ya con esas es suficiente y me encantaría que como ha quedado la voz genérica de respaldo ya que no pude hacer el pago y Laomeidea está aout, ni puedo aún hacer el pago, estoy sin money, quisiera que la afines esa voz un poco y trates de humanizarla lo mejor posible en sus expresiones, mientras regresa Laomeidea jejeje.",
+    createdAt: "2026-11-04T17:35:00.000Z",
+    active: true
   }
 ];
 

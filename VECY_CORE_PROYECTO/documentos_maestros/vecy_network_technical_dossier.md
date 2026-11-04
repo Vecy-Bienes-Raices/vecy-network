@@ -8750,6 +8750,33 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.91 (2026-11-04) — Doctrina de Voz Humana Colombiana Salomé (0 COP), Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Caída a Voz Robótica de Contingencia (GTTS):* Google Cloud TTS (Laomedeia y Neural2) 403'd por saldo pendiente en el proyecto cloud. La librería `msedge-tts@2.0.7` arrojaba 403 al conectarse a los WebSockets de Microsoft por la introducción de la nueva cabecera de autenticación `Sec-MS-GEC v2` (CS64 hash). En consecuencia, JanIA caía en el último recurso (Google Translate TTS), sonando genérica y robótica.
+  2. *Inbound Leads de Redes Sociales sobre Servicios y Costos:* Prospectos generados por campañas en Facebook (`Solucioneshipotecariasco`) preguntaban: *"Me interesaría saber como funciona? y cual es el costo"*. El sistema canalizaba preguntas de costos de forma rígida hacia consignación de inmuebles por propietarios, omitiendo la presentación integral de los 6 pilares de JanIA y la gratuidad total ($0 COP) para agentes inmobiliarios.
+  3. *Canalización de Proyectos de Agentes IA para Empresas:* Eduardo Rivera prometió en redes que si un usuario desea una agente IA como JanIA para asistir a sus clientes y ofrecer sus servicios, JanIA le dirá con quién comunicarse. Faltaba un detector y enrutador especializado que canalizara el lead comercial con el Ing. Eduardo A. Rivera (+57 316 656 9719) y despachara el recado a su WhatsApp en tiempo real.
+  4. *Deficiencias Fonéticas en Síntesis de Voz:* Cédulas con puntos se leían con la palabra "punto", cifras en millones se leían con errores numéricos, `$0 COP` no se expresaba como "cero pesos", y faltaba normalización de siglas (`C.C.`, `NIT`, `RUES`, `SARLAFT`, `IDU`, `CHIP`, `PDF`, `QR`, `ACM`) y remoción de viñetas.
+- **Solución Implementada**:
+  1. `package.json` y `server/_core/whatsapp-utils.ts`:
+     - Actualizado `msedge-tts` a `2.1.1` (soporte completo de `Sec-MS-GEC v2`).
+     - Activada **`es-CO-SalomeNeural`** como la voz neuronal prioritaria de JanIA a $0 COP (acento femenino colombiano nativo, cálido y profesional a ritmo natural +0%, síntesis en 730 ms).
+     - Incorporado caché de bloqueo de 1 hora ante errores 403 en Google Cloud TTS para ahorrar 300 ms de latencia en cada nota de voz.
+     - Refactorizada `cleanVoiceText` con normalización fonética rigurosa: eliminación de puntos en cédulas, millones/miles claros, `$0 COP` como "cero pesos", expansión fonética de siglas y leyes colombianas, y remoción de viñetas.
+  2. `server/_core/jania/handlers/dmHandler.ts`:
+     - Creado enrutador para prospectos de redes sociales respondiendo con claridad a *"¿cómo funciona y cuál es el costo?"*: explica los 6 pilares de JanIA y desglosa las tarifas ($0 COP agentes en red colaborativa 40/20/40; $0 COP de pauta para propietarios con 3% venta o 1er canon arriendo por éxito; y desarrollo de agentes IA con Eduardo Rivera).
+     - Creado detector y canalizador para solicitudes de Agentes IA para empresas: presenta con orgullo al Ing. Eduardo A. Rivera (+57 316 656 9719 / https://wa.me/573166569719) y despacha el recado con los datos del lead en tiempo real a su WhatsApp (`dispatchMessageRecadoToEduardo`).
+  3. `server/_core/jania/founderKnowledgeService.ts`, `base.md` y `prompts.ts`:
+     - Registrado el principio permanente `seed-voz-humana-salome-leads-sociales-agente-ia-v33-91`.
+     - Consagrada la sección doctrinal: *Doctrina de Prospectos de Redes Sociales, Servicios, Costos y Desarrollo de Agentes IA (v33.91)*.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 177 en `regression.test.ts` con 6 pruebas automatizadas.
+  - Typecheck `npm run check` (0 errores).
+  - Tests `npm test`: **584 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
+  - Build `npm run build`: Limpio en 25.58s (Vite) + 332ms (esbuild).
+  - Versión: `v33.91` (`33.91.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.90 (2026-11-04) — Rescate Obligatorio de Identidad en Documentos (Policía Nacional 24/7), Cero Excusas Mediocres y Saneamiento de Errores Técnicos (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Fallo en Túnel Inverso en Horas de la Madrugada:* ADRES y Procuraduría geobloquean conexiones originadas desde IPs de centros de datos extranjeros (como el VPS Contabo en Alemania). Vecy canaliza estas peticiones mediante un túnel inverso SSH (`18443` -> PGN, `28443` -> ADRES) enlazado al equipo local en Colombia. Cuando el equipo local estaba suspendido durante la madrugada, las peticiones cayeron en timeout (15.000 ms).

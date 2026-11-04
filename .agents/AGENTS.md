@@ -183,7 +183,27 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 ### 6. Autonomía Sagrada de JanIA como "IA PURA" y Cero Re-envíos Forzados — DOCTRINA v32.25
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
-## 🔖 VERSIÓN ACTUAL: v33.90 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.91 — Noviembre 2026
+
+### Novedades v33.91 (Doctrina de Voz Humana Colombiana Salomé [0 COP], Inbound Leads de Redes Sociales, Transparencia de Costos y Canalización de Agentes IA con Eduardo Rivera — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Mira la gente ya ha empezado a interesarse, por eo JanIa debe estar 100% funcional y preparada para lo que yo digop allí, no se si quieras que saque otra api gratuita para reforzar o ya con esas es suficiente y me encantaría que como ha quedado la voz genérica de respaldo ya que no pude hacer el pago y Laomeidea está aout, ni puedo aún hacer el pago, estoy sin money, quisiera que la afines esa voz un poco y trates de humanizarla lo mejor posible en sus expresiones, mientras regresa Laomeidea jejeje."*
+     - Evidencia gráfica: En publicación oficial de Facebook con video de JanIA, el prospecto `Solucioneshipotecariasco` preguntó: *"Me interesaría saber como funciona? y cual es el costo"*. Eduardo respondió dirigiéndolos al WhatsApp de JanIA (`+57 319 291 9978` / `https://wa.me/573192919978`) e instruyó que preguntaran qué servicios ofrece y que, si desean una agente IA como JanIA para asistir a sus clientes y ofrecer sus servicios, JanIA les indicará con quién comunicarse.
+  2. **Causa Raíz Identificada:**
+     - La voz de respaldo caía a Google Translate TTS (`gtts`) porque Google Cloud TTS (Laomedeia/Neural2) devolvía 403 por saldo pendiente y `msedge-tts@2.0.7` devolvía 403 por la nueva firma `Sec-MS-GEC v2` de Microsoft.
+     - Las consultas generales de prospectos de redes sociales sobre servicios y costos se canalizaban de forma restrictiva hacia consignación de inmuebles sin presentar los 6 pilares de JanIA ni la gratuidad ($0 COP) para agentes.
+     - No existía detector específico para solicitudes de agentes IA personalizados para inmobiliarias/empresas ni canalización directa con Eduardo Rivera (+57 316 656 9719) con despacho de recado en tiempo real.
+     - Faltaba normalización fonética de números de cédula con puntos, cifras en millones, siglas (`C.C.`, `NIT`, `RUES`, `SARLAFT`, `IDU`, `CHIP`, `PDF`, `QR`, `ACM`) y remoción de viñetas.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Voz Humana Salomé ($0 COP):** Actualizado `msedge-tts` a `2.1.1` y activada `es-CO-SalomeNeural` (acento colombiano femenino, natural, cálido y ejecutivo a 0% de velocidad) con generación en 730 ms y transcodificación directa a OGG Opus. Creado caché de bloqueo de 1 hora ante 403 de facturación en Google Cloud.
+     - **Normalización Fonética Rigurosa:** Cédulas sin puntos (`80.850.249` -> `80850249`), millones claros (`$450.000.000` -> `450 millones de pesos`), `$0 COP` -> `cero pesos`, expansión de siglas institucionales colombianas y remoción de viñetas para habla fluida.
+     - **Enrutador Inbound de Servicios y Costos:** Presenta los 6 pilares de JanIA y tarifas transparentes: 100% GRATIS ($0 COP) para agentes en red y matching 40/20/40; $0 COP de pauta para propietarios (3% venta / 1er canon arriendo por éxito); y desarrollo personalizado de Agentes IA para empresas con el Ing. Eduardo A. Rivera.
+     - **Canalización Comercial de Agentes IA:** Ante la solicitud de una IA como JanIA para empresas/inmobiliarias, presenta al Ing. Eduardo A. Rivera (+57 316 656 9719 / https://wa.me/573166569719) y despacha el recado con los datos del lead en tiempo real a su WhatsApp.
+     - **Registro de Enseñanza:** Registrado el principio `seed-voz-humana-salome-leads-sociales-agente-ia-v33-91` en `founderKnowledgeService.ts`, `base.md` y `prompts.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 177 `vitest` (5/5 passing, 584 tests) | Build `npm run build` limpio en 25.58s + 332ms.
+
+## 🔖 VERSIÓN ANTERIOR: v33.90 — Noviembre 2026
 
 ### Novedades v33.90 (Doctrina de Rescate Obligatorio de Identidad en Documentos [Policía Nacional 24/7], Cero Excusas Mediocres y Saneamiento de Errores Técnicos — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

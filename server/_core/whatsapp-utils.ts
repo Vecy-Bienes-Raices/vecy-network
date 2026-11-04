@@ -310,7 +310,7 @@ export function cleanVoiceText(text: string): string {
   cleaned = cleaned.replace(/^:\s*/, "").trim();
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
 
-  // 3. Normalización Fonética para Síntesis de Voz (Español Colombiano Natural)
+  // 3. Normalización Fonética para Síntesis de Voz (Español Colombiano Natural y Humano)
   // Garantiza que "Vecy" suene "Vesi" (como vecino) y no "Vici" en inglés
   cleaned = cleaned
     .replace(/\bVecy\b/gi, "Vesi")
@@ -330,7 +330,32 @@ export function cleanVoiceText(text: string): string {
     .replace(/\bApto\b/gi, "Apartamento")
     .replace(/\bapto\b/gi, "apartamento")
     .replace(/\bHab\b/gi, "Habitaciones")
-    .replace(/\bhab\b/gi, "habitaciones");
+    .replace(/\bhab\b/gi, "habitaciones")
+    // Siglas, entes y marcos legales colombianos (Doctrina v33.91)
+    .replace(/\bC\.C\.|\bc\.c\.|\bCC\b/g, "cédula")
+    .replace(/\bNIT\b/gi, "Nit")
+    .replace(/\bRUES\b/gi, "Rues")
+    .replace(/\bSARLAFT\b/gi, "Sarlaft")
+    .replace(/\bSIRECI\b/gi, "Sireci")
+    .replace(/\bSIRI\b/gi, "Siri")
+    .replace(/\bBDUA\b/gi, "B-D-U-A")
+    .replace(/\bEPS\b/gi, "E-P-S")
+    .replace(/\bPDF\b/gi, "P-D-F")
+    .replace(/\bQR\b/gi, "Q-R")
+    .replace(/\bACM\b/g, "A-C-M")
+    .replace(/\bCHIP\b/gi, "Chip")
+    .replace(/\bLey\s*820(?:\s+de\s+2003)?\b/gi, "Ley ochocientos veinte")
+    .replace(/\bLey\s*1581(?:\s+de\s+2012)?\b/gi, "Ley quince ochenta y uno")
+    .replace(/\bIA\b/g, "inteligencia artificial")
+    // Precios, porcentajes y cifras colombianas para lectura fonética sin "punto"
+    .replace(/(?<!\d)\$0(?:\s*COP)?\b|(?<!\d)0\s*COP\b/gi, "cero pesos")
+    .replace(/\$\s*(\d{1,4})\.000\.000(?:\s*(?:COP|pesos))?\b/gi, "$1 millones de pesos")
+    .replace(/\$\s*(\d{1,4})\.000(?:\s*(?:COP|pesos))?\b/gi, "$1 mil pesos")
+    .replace(/\b(\d{1,3})\.(\d{3})\.(\d{3})\b/g, "$1$2$3")
+    .replace(/\b(\d{1,3})\.(\d{3})\b/g, "$1$2")
+    .replace(/\bCOP\b/g, "pesos")
+    .replace(/(\d+)\s*%/g, "$1 por ciento")
+    .replace(/40\/20\/40/g, "cuarenta, veinte, cuarenta");
 
   // 4. Tratamiento Fonético Natural de Enlaces URLs (Doctrina v32.30)
   // En lugar de deletrear "h-t-t-p-s dos puntos barra barra...", se expresa con fluidez
@@ -350,8 +375,10 @@ export function cleanVoiceText(text: string): string {
   // Línea Directiva Jani Alves (+57 318 809 6811):
   cleaned = cleaned.replace(/(?:\+57\s*)?318[\s\-.]?809[\s\-.]?6811\b/g, "tres dieciocho, ocho cero nueve, sesenta y ocho, once");
 
-  // 6. Limpieza de Formato Markdown y Emojis para Audio Limpio
+  // 6. Limpieza de Viñetas, Formato Markdown y Emojis para Audio Limpio y Fluido
   cleaned = cleaned
+    .replace(/^[\s•\-\*]+\s*/gm, "") // Viñetas al inicio de línea
+    .replace(/[•]/g, "")
     .replace(/\*([^*]+)\*/g, "$1") // negrita *texto* -> texto
     .replace(/_([^_]+)_/g, "$1")   // cursiva _texto_ -> texto
     .replace(/~([^~]+)~/g, "$1")   // tachado ~texto~ -> texto
@@ -423,11 +450,9 @@ async function fetchGttsAudioBuffer(text: string): Promise<Buffer | null> {
 
 /**
  * Síntesis de voz neuronal ultra-realista con entonación humana y modulación natural (Salomé - es-CO o Dalia - es-MX).
+ * Por defecto utiliza es-CO-SalomeNeural (acento colombiano femenino nativo, cálido y ejecutivo a ritmo natural +0%).
  */
-/**
- * Síntesis de voz neuronal ultra-realista con entonación humana y modulación natural (Salomé - es-CO o Dalia - es-MX).
- */
-async function fetchNeuralVoiceBuffer(text: string, voiceName = "es-CO-SalomeNeural", rate = "+6%"): Promise<Buffer | null> {
+async function fetchNeuralVoiceBuffer(text: string, voiceName = "es-CO-SalomeNeural", rate = "+0%"): Promise<Buffer | null> {
   try {
     const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
     const tts = new MsEdgeTTS();
@@ -460,6 +485,7 @@ async function fetchNeuralVoiceBuffer(text: string, voiceName = "es-CO-SalomeNeu
 }
 
 let cachedVertexToken: { token: string; expiresAt: number } | null = null;
+let googleCloudBillingBlockedUntil: number = 0;
 
 function base64url(str: string): string {
   return Buffer.from(str).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -559,100 +585,132 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   if (!cleaned) return null;
 
   // 1. Motor Oficial Prioritario: Gemini 3.1 Flash TTS (Preview) — Voz Femenina Cálida Laomedeia (es-us)
-  try {
-    const accessToken = await getVertexAIAccessToken();
-    if (accessToken) {
-      // Intento 1: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia Femenina Oficial de JanIA
-      try {
-        const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            input: {
-              prompt: "Read aloud in a warm, welcoming tone.",
-              text: cleaned
+  // Si la cuenta de Google Cloud presenta suspensión o deuda de facturación, se omite de inmediato sin penalizar latencia.
+  if (Date.now() >= googleCloudBillingBlockedUntil) {
+    try {
+      const accessToken = await getVertexAIAccessToken();
+      if (accessToken) {
+        // Intento 1: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia Femenina Oficial de JanIA
+        try {
+          const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`
             },
-            voice: {
-              languageCode: "es-us",
-              modelName: "gemini-3.1-flash-tts-preview",
-              name: "Laomedeia"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.0,
-              pitch: 0.0
+            body: JSON.stringify({
+              input: {
+                prompt: "Read aloud in a warm, welcoming tone.",
+                text: cleaned
+              },
+              voice: {
+                languageCode: "es-us",
+                modelName: "gemini-3.1-flash-tts-preview",
+                name: "Laomedeia"
+              },
+              audioConfig: {
+                audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+                speakingRate: 1.0,
+                pitch: 0.0
+              }
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.audioContent) {
+              console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia Femenina) — ${cleaned.length} chars → audio generado.`);
+              const buffer = Buffer.from(data.audioContent, "base64");
+              return {
+                mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+                data: buffer.toString("base64"),
+                buffer
+              };
             }
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia Femenina) — ${cleaned.length} chars → audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        } else {
-          const errText = await response.text();
-          console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
-        }
-      } catch (geminiErr: any) {
-        console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
-      }
-
-      // Intento 2: Google Cloud Neural2 Femenina (es-US-Neural2-A)
-      try {
-        const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Neural2-A"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.04,
-              pitch: 0.5
+          } else {
+            const errText = await response.text();
+            console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
+            if (response.status === 403 && (errText.includes("billing account") || errText.includes("PERMISSION_DENIED"))) {
+              googleCloudBillingBlockedUntil = Date.now() + 60 * 60 * 1000;
+              console.warn("[TTS-Media] 🛡️ Google Cloud TTS en suspensión temporal (1h) por facturación pendiente. Activando voz neuronal colombiana Salomé de inmediato.");
             }
-          })
-        });
+          }
+        } catch (geminiErr: any) {
+          console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
+        }
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Google Cloud Neural2-A Femenina — ${cleaned.length} chars → audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
+        // Intento 2: Google Cloud Neural2 Femenina (es-US-Neural2-A) solo si no hay bloqueo de facturación
+        if (Date.now() >= googleCloudBillingBlockedUntil) {
+          try {
+            const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                input: { text: cleaned },
+                voice: {
+                  languageCode: "es-US",
+                  name: "es-US-Neural2-A"
+                },
+                audioConfig: {
+                  audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+                  speakingRate: 1.04,
+                  pitch: 0.5
+                }
+              })
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.audioContent) {
+                console.log(`[TTS-Media] ✓ Google Cloud Neural2-A Femenina — ${cleaned.length} chars → audio generado.`);
+                const buffer = Buffer.from(data.audioContent, "base64");
+                return {
+                  mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+                  data: buffer.toString("base64"),
+                  buffer
+                };
+              }
+            } else {
+              const errText = await response.text();
+              if (response.status === 403 && (errText.includes("billing account") || errText.includes("PERMISSION_DENIED"))) {
+                googleCloudBillingBlockedUntil = Date.now() + 60 * 60 * 1000;
+              }
+            }
+          } catch (neuralErr: any) {
+            console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", neuralErr?.message || neuralErr);
           }
         }
-      } catch (neuralErr: any) {
-        console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", neuralErr?.message || neuralErr);
       }
+    } catch (err: any) {
+      console.warn("[TTS-Media] Google Cloud TTS OAuth2 no disponible:", err?.message || err);
     }
-  } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud TTS OAuth2 no disponible:", err?.message || err);
   }
 
-  // 4. Respaldo Neuronal Humano: Dalia (es-MX) / Salomé (es-CO) con prosodia viva y transcodificación OGG Opus
+  // 2. Motor Neuronal Humano Oficial de Respaldo: Salomé (es-CO-SalomeNeural) — $0 COP
+  // Voz nativa colombiana femenina, cálida, empática, ejecutiva y transcodificada a WhatsApp OGG Opus (< 1s).
   try {
-    console.log(`[TTS-Media] 🎙️ Sintetizando con voz neuronal humana (Dalia es-MX +8%) — ${cleaned.length} caracteres...`);
-    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+8%");
+    console.log(`[TTS-Media] 🎙️ Sintetizando con voz neuronal colombiana (Salomé es-CO-SalomeNeural) — ${cleaned.length} caracteres...`);
+    const salomeBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural", "+0%");
+    if (salomeBuffer && salomeBuffer.length > 0) {
+      console.log(`[TTS-Media] ✓ Audio generado con voz humana colombiana de Salomé (${salomeBuffer.length} bytes, es-CO-SalomeNeural).`);
+      const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(salomeBuffer) : salomeBuffer;
+      return {
+        mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+        data: finalBuffer.toString("base64"),
+        buffer: finalBuffer
+      };
+    }
+  } catch (salomeErr: any) {
+    console.warn("[TTS-Media] Síntesis con Salomé falló, probando Dalia:", salomeErr?.message || salomeErr);
+  }
+
+  // 3. Respaldo Neuronal Secundario: Dalia (es-MX-DaliaNeural)
+  try {
+    console.log(`[TTS-Media] 🎙️ Probando voz neuronal secundaria (Dalia es-MX) — ${cleaned.length} caracteres...`);
+    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+0%");
     if (daliaBuffer && daliaBuffer.length > 0) {
       console.log(`[TTS-Media] ✓ Audio generado con voz humana de Dalia (${daliaBuffer.length} bytes).`);
       const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(daliaBuffer) : daliaBuffer;
@@ -663,10 +721,10 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
       };
     }
   } catch (err: any) {
-    console.warn("[TTS-Media] Respaldo Dalia falló, probando Salomé:", err?.message || err);
+    console.warn("[TTS-Media] Respaldo Dalia falló, recurriendo a contingencia GTTS:", err?.message || err);
   }
 
-  // 5. Último recurso de contingencia: Google Translate TTS libre
+  // 4. Último recurso de contingencia: Google Translate TTS libre
   console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
   if (gttsBuffer && gttsBuffer.length > 0) {
