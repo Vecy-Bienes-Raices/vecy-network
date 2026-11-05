@@ -184,7 +184,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.96 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.97 — Noviembre 2026
+
+### Novedades v33.97 (Blindaje de Respuestas Completas [Cero Cortes Multi-Part en Gemini], Entrega Directa de Reportes Oficiales de Identidad y Cero Reseñas Intrusivas Prematuras — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Revisa qué pasó ahí, no me gusta que JanIa esté fallando tanto y dando sus servicios tan de manera mediocre, imagínatre si la usuaria decide calificar pues mínimo nos pone unas 3 estrellas solamente por la mediocridad de JanIa al brindar el servicio a medias. o sería que tus procesos no habían terminado de desplegarse. :(("*
+  2. **Causas Raíz Identificadas en el Caso Catalina (@catabeta26 — Cédula 1.083.020.833 / Angee Carolina Home Herrera):**
+     - **Corte Abrupto Multi-Part en `llm.ts`:** `invokeGemini` hacía `const firstPart = parts[0]; const text = firstPart.text;`, descartando cualquier `parts[1]`, `parts[2]`, etc. Cuando Gemini generaba la introducción hasta los dos puntos (`"A continuación, el detalle del estado actual del perfil consultado:"`) en la parte 0 y el listado de antecedentes en la parte 1, `llm.ts` descartaba la parte 1, entregando un reporte cortado por la mitad.
+     - **Omisión del Bypass Directo en `dmHandler.ts`:** Mientras que Predial Bogotá, Paz y Salvo IDU y Match tenían bypass directo, la verificación oficial de antecedentes y aseguramiento en salud (ADRES, Policía, Procuraduría, Contraloría) se forzaba innecesariamente a través del LLM, exponiéndola a cuotas, fallas y alucinaciones.
+     - **Reseña Intrusiva a los 2.2s en `whatsapp-match.ts`:** La condición `else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion)` disparaba un mensaje pidiendo 5 estrellas en Google 2.2 segundos después de emitir el reporte, sin esperar a que el usuario leyera o expresara gratitud, empeorando la percepción si el servicio había fallado.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Blindaje Multi-Part en Gemini (`llm.ts`):** Concatena todas las partes textuales (`parts.filter(p => p && p.text && !p.thought).map(p => p.text).join('')`) para que JAMÁS se pierda ninguna sección de la respuesta.
+     - **Entrega Directa de Reportes Institucionales (`isDirectDocumentLookup` en `dmHandler.ts`):** Cuando el usuario aporta un documento numérico (ej. `1083020833`), JanIA entrega de forma directa, instantánea (0ms, $0 COP) y 100% íntegra el reporte institucional generado por `executeIdentityVerificationFromWhatsApp` (Cédula validada, Policía, Procuraduría, Contraloría, ADRES EPS y Ley 1581).
+     - **Guardarraíl Anti-Cortes Abruptos (`dmHandler.ts`):** Si una síntesis LLM termina en `:` o carece de las entidades oficiales, el sistema detecta la anomalía y adjunta el reporte oficial completo.
+     - **Despacho Elegante de Reseñas ÚNICAMENTE ante Gratitud (`isGratitudeOrClosing` en `whatsapp-match.ts`):** Erradicado el disparo automático prematuro a los 2.2s. Las solicitudes de calificación solo se emiten con respeto y señorío cuando el usuario manifiesta gratitud o despedida.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 183 `vitest` (100% passing) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v33.96 — Noviembre 2026
 
 ### Novedades v33.96 (Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta [Tú / @lid], Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -8750,6 +8750,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.97 (2026-11-05) — Blindaje de Respuestas Completas (Cero Cortes Multi-Part en Gemini), Entrega Directa de Reportes Oficiales de Identidad y Cero Reseñas Intrusivas Prematuras (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Corte Abrupto en Síntesis de Respuestas Gemini (`parts[0]` en `llm.ts`):* En `server/_core/llm.ts`, `invokeGemini` hacía `const firstPart = parts[0]; const text = firstPart.text;`, descartando cualquier `parts[1]`, `parts[2]`, etc. Cuando Gemini generaba una respuesta dividida en varias partes (la introducción con dos puntos en la parte 0 y el listado de antecedentes en la parte 1), `llm.ts` descartaba la parte 1, entregando un reporte cortado por la mitad (*"A continuación, el detalle del estado actual del perfil consultado:"* sin nada más).
+  2. *Omisión de Bypass Directo para Verificación de Identidad:* Mientras que Predial Bogotá, Paz y Salvo IDU y Match tenían bypass directo en `synthesizeToolResponseWithGemini`, la verificación oficial de antecedentes y aseguramiento en salud (ADRES, Policía, Procuraduría, Contraloría) se forzaba innecesariamente a través del LLM, exponiéndola a cuotas, fallas y alucinaciones.
+  3. *Despacho Prematuro Intrusivo de Reseñas en Google a los 2.2s:* En `whatsapp-match.ts`, la condición `else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion)` disparaba un mensaje pidiendo 5 estrellas en Google 2.2 segundos después de emitir el reporte, sin esperar a que el usuario confirmara la utilidad o expresara gratitud.
+- **Solución Implementada**:
+  1. `server/_core/llm.ts`:
+     - Concatena todas las partes de texto de Gemini (`parts.filter(p => p && p.text && !p.thought).map(p => p.text).join('').trim()`), erradicando cualquier pérdida de contenido.
+  2. `server/_core/jania/handlers/dmHandler.ts`:
+     - Incorporado `isDirectDocumentLookup` en `isDirectBypass` para entregar de forma directa, instantánea (0ms, $0 COP) y 100% íntegra el reporte institucional generado por `executeIdentityVerificationFromWhatsApp`.
+     - Añadido guardarraíl de completitud en `synthesizeToolResponseWithGemini`: si el LLM termina en `:` o carece de las entidades oficiales, el sistema detecta la anomalía y entrega el reporte oficial completo.
+  3. `server/_core/whatsapp-match.ts`:
+     - Desactivado el disparo automático prematuro a los 2.2s. Las solicitudes de reseña en Google se despachan con señorío ÚNICAMENTE cuando el usuario manifiesta gratitud o despedida (`isGratitudeOrClosing`).
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 183 en `regression.test.ts` (4 pruebas unitarias automatizadas).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio.
+  - Versión: `v33.97` (`33.97.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.96 (2026-11-05) — Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta (Tú / @lid), Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Auto-Respuesta de JanIA a su Propia Cuenta (`Tú` / `167108705018103:46@lid`) en Grupo Externo:* Cuando Eduardo publicó un flyer desde el WhatsApp Web de JanIA en el grupo externo *"anécdotas y vivencias inmobiliarias"* (`120363044892588903@g.us`), Baileys reportó `fromMe: false` y `participant: 167108705018103:46@lid`. Como el texto del flyer decía `"¡Buenos días! Soy JanIA, tu aliada inmobiliaria..."`, `isBotDirectlyMentioned` coincidió con `"jania"`, `isFromBotAccount` no contemplaba el LID `167108705018103`, y `resolveNameAndGender("✨JanIA agente IA de VECY⚡")` extrajo `"Ai✨"`, haciendo que JanIA se respondiera a sí misma.

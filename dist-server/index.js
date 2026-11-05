@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.96";
+    VECY_VERSION = "v33.97";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1237,7 +1237,6 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           if (response.data.candidates && response.data.candidates[0]) {
             const parts = response.data.candidates[0].content?.parts || [];
             const fnCallPart = parts.find((p) => p && p.functionCall);
-            const firstPart = parts[0];
             if (fnCallPart && fnCallPart.functionCall) {
               const rawFn = fnCallPart.functionCall;
               let normalizedArgs = rawFn.args ?? rawFn.arguments ?? {};
@@ -1262,11 +1261,10 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
                 }]
               };
             }
-            if (firstPart) {
-              const text2 = firstPart.text;
-              if (text2 && text2.trim() !== "") {
-                return { choices: [{ message: { content: text2 } }] };
-              }
+            const textParts = parts.filter((p) => p && typeof p.text === "string" && !p.thought).map((p) => p.text);
+            const text2 = textParts.join("").trim();
+            if (text2 !== "") {
+              return { choices: [{ message: { content: text2 } }] };
             }
           }
           console.warn(`[JanIA-LLM] Respuesta vac\xEDa de ${currentModel}. Reintentando...`);
@@ -17344,6 +17342,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "JanIA est\xE1 loca nuevamente o la configuraste mal, si quiero que hable en este grupo pero solo si alkguien la cita la nombra o la arrobea @ para que resuelva alguna consulta del tema inmobiliario, no debe responderse a ella misma nunca o si alguno de nosotros toma el control de su chat tampoco debe autoresponder, debe controlarse y esperar en silencio, si las personas siguen hablando pone atenci\xF3n si ya se dirigen directamente a ella ah\xED si responde o si yo no act\xFAo en nombre de ella, podr\xEDas reparar esto??, ha y segundo hoy no es mi\xE9rcoles o si??",
         createdAt: "2026-11-05T19:45:00.000Z",
         active: true
+      },
+      {
+        id: "seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Blindaje de Respuestas Completas (Cero Cortes Abruptos Multi-Part en Gemini), Entrega Directa de Reportes Oficiales de Identidad y Cero Rese\xF1as Intrusivas Prematuras",
+        directive: "Queda terminantemente prohibido que JanIA entregue servicios a medias o corte reportes a la mitad con frases inconclusas como 'A continuaci\xF3n, el detalle...'. En la integraci\xF3n con Gemini, todas las partes de texto (parts) deben concatenarse en su totalidad sin descartar partes secundarias. En consultas de antecedentes y c\xE9dulas donde el usuario suministra el documento, JanIA entrega de forma directa e inmediata el reporte oficial institucional completo verificado (Polic\xEDa Nacional, Procuradur\xEDa General, Contralor\xEDa General y ADRES EPS con Habeas Data). Si un reporte se sintetiza con LLM y este termina abruptamente o sin el detalle de las entidades, el sistema detecta la anomal\xEDa y adjunta el reporte oficial completo. Asimismo, se proh\xEDbe terminantemente solicitar rese\xF1as en Google 2 segundos despu\xE9s de entregar una herramienta sin que el usuario haya tenido tiempo de leer o haya expresado gratitud: las rese\xF1as solo se despachan con se\xF1or\xEDo cuando el usuario manifiesta agradecimiento espont\xE1neo o despedida (isGratitudeOrClosing).",
+        rawText: "Revisa qu\xE9 pas\xF3 ah\xED, no me gusta que JanIa est\xE9 fallando tanto y dando sus servicios tan de manera mediocre, imag\xEDnatre si la usuaria decide calificar pues m\xEDnimo nos pone unas 3 estrellas solamente por la mediocridad de JanIa al brindar el servicio a medias. o ser\xEDa que tus procesos no hab\xEDan terminado de desplegarse. :((",
+        createdAt: "2026-11-05T21:50:00.000Z",
+        active: true
       }
     ];
   }
@@ -26807,6 +26815,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   if (!hasVerified) {
                     const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("MATCH") || replyText.includes("40/20/40");
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
+                    const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
                     if (isGratitudeOrClosing) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                       const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2, formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
@@ -26814,9 +26823,9 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       await new Promise((r) => setTimeout(r, 1500));
                       await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                       await this.logToDb(senderId, "janIA", politeMsg);
-                    } else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion) {
+                    } else if (isServiceDeliveryReply && isCompleteDelivery && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion && false) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
-                      const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                      const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await null;
                       const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
                       await new Promise((r) => setTimeout(r, 2200));
                       await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
@@ -34829,7 +34838,8 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
     await incrementFreeServicesCount(userId);
   }
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
-  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH"));
+  const isDirectDocumentLookup = (toolType === "cedula" || toolType === "empresa") && Boolean(rawReport) && (rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA")) && (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,15}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 25);
+  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
   }
@@ -34974,6 +34984,12 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
     let text2 = res.choices[0]?.message?.content || "";
     if (text2) {
       text2 = sanitizeResponseMarkdown(text2.trim());
+      const endsWithTruncatedIntro = /:\s*$|a\s+continuaci[oó]n[,:\s]*$|perfil\s+consultado[,:\s]*$|siguiente\s+detalle[,:\s]*$/i.test(text2);
+      const isMissingCriticalOutcome = toolType === "cedula" && !/(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps|antecedentes)/i.test(text2);
+      if ((endsWithTruncatedIntro || isMissingCriticalOutcome) && rawReport) {
+        console.warn(`[synthesizeToolResponseWithGemini] \u26A0\uFE0F Respuesta de LLM truncada o incompleta detectada ("${text2.slice(-50)}"). Entregando reporte oficial completo.`);
+        text2 = rawReport;
+      }
       if (isFreeTool) {
         text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
       }
@@ -34984,28 +35000,32 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
   }
   let fallbackText = "";
   if (toolType === "cedula" && toolJson) {
-    const doc = toolJson.numeroDocumento || "";
-    const tipo = toolJson.tipoDocumento || "CC";
-    const name = toolJson.nombreOficial;
-    const eps = toolJson.adres?.eps;
-    const estadoEps = toolJson.adres?.estado;
-    const regEps = toolJson.adres?.regimen;
-    const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
-    const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
-    const cgr = toolJson.contraloria || "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI)";
-    if (name) {
-      const epsDetail = eps ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}).` : `En el censo general ADRES (BDUA) no registra afiliaci\xF3n ordinaria (habitual en reg\xEDmenes especiales o de excepci\xF3n: Fuerzas Militares, Polic\xEDa, Magisterio, etc.).`;
-      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.
+    if (rawReport && rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD")) {
+      fallbackText = rawReport;
+    } else {
+      const doc = toolJson.numeroDocumento || "";
+      const tipo = toolJson.tipoDocumento || "CC";
+      const name = toolJson.nombreOficial;
+      const eps = toolJson.adres?.eps;
+      const estadoEps = toolJson.adres?.estado;
+      const regEps = toolJson.adres?.regimen;
+      const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
+      const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
+      const cgr = toolJson.contraloria || "Sin reporte en Bolet\xEDn de Responsables Fiscales (SIRECI)";
+      if (name) {
+        const epsDetail = eps ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` \u2014 ${regEps}` : ""}).` : `En el censo general ADRES (BDUA) no registra afiliaci\xF3n ordinaria (habitual en reg\xEDmenes especiales o de excepci\xF3n: Fuerzas Militares, Polic\xEDa, Magisterio, etc.).`;
+        fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.
 
 \u{1F3E5} ${epsDetail}
 
 \u2696\uFE0F En antecedentes: Polic\xEDa Nacional registra ${pol.toLowerCase()}, Procuradur\xEDa General ${pgn.toLowerCase()} y Contralor\xEDa General ${cgr.toLowerCase()}. Todo validado para tu seguridad jur\xEDdica.
 
 \u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012 y Art. 15 C.P._`;
-    } else {
-      fallbackText = `Revis\xE9 el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en l\xEDnea. Por favor verifica que el n\xFAmero f\xEDsico coincida o si corresponde a un documento de extranjer\xEDa.
+      } else {
+        fallbackText = `Revis\xE9 el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en l\xEDnea. Por favor verifica que el n\xFAmero f\xEDsico coincida o si corresponde a un documento de extranjer\xEDa.
 
 \u2696\uFE0F _Validaci\xF3n oficial bajo Ley 1581 de 2012._`;
+      }
     }
   } else if (toolType === "empresa" && toolJson) {
     if (toolJson.exitoso && toolJson.razonSocial) {

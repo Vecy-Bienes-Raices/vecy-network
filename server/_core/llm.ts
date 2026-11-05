@@ -202,7 +202,6 @@ async function invokeGemini(
           if (response.data.candidates && response.data.candidates[0]) {
             const parts: any[] = response.data.candidates[0].content?.parts || [];
             const fnCallPart = parts.find((p: any) => p && p.functionCall);
-            const firstPart = parts[0];
             if (fnCallPart && fnCallPart.functionCall) {
               const rawFn = fnCallPart.functionCall;
               let normalizedArgs = rawFn.args ?? rawFn.arguments ?? {};
@@ -227,11 +226,13 @@ async function invokeGemini(
                 }]
               };
             }
-            if (firstPart) {
-              const text = firstPart.text;
-              if (text && text.trim() !== '') {
-                return { choices: [{ message: { content: text } }] };
-              }
+            // 🛡️ BLINDAJE MULTI-PART (v33.97): Concatenar todas las partes de texto de Gemini para evitar cortes abruptos
+            const textParts = parts
+              .filter((p: any) => p && typeof p.text === "string" && !p.thought)
+              .map((p: any) => p.text);
+            const text = textParts.join("").trim();
+            if (text !== "") {
+              return { choices: [{ message: { content: text } }] };
             }
           }
 

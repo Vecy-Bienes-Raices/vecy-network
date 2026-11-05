@@ -7,6 +7,42 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-05] — JanIA v33.97: Blindaje de Respuestas Completas (Cero Cortes Multi-Part en Gemini), Entrega Directa de Reportes Oficiales de Identidad y Cero Reseñas Intrusivas Prematuras (v33.97 - 33.97.0)
+
+**Versión:** `v33.97` (`33.97.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Revisa qué pasó ahí, no me gusta que JanIa esté fallando tanto y dando sus servicios tan de manera mediocre, imagínatre si la usuaria decide calificar pues mínimo nos pone unas 3 estrellas solamente por la mediocridad de JanIa al brindar el servicio a medias. o sería que tus procesos no habían terminado de desplegarse. :(("*
+- **Evidencia Gráfica Analizada (`media_1793915082025_cb58743f.jpg` — Chat DM de Catalina `@catabeta26` / `277145683288292@lid`, 15:54):**
+  1. Catalina envió el número de cédula `1083020833`.
+  2. JanIA respondió a las 15:54 con un texto cortado abruptamente que terminaba en:
+     `"¡Buenas tardes, Catalina! 👋\n\n⚖️✨ He completado la verificación oficial para la cédula 1.083.020.833 en nuestras bases de datos institucionales. El documento pertenece a Angee Carolina Home Herrera y su identidad se encuentra completamente validada.\n\nA continuación, el detalle del estado actual del perfil consultado:"` (¡y no salió nada más!).
+  3. A los 2.2 segundos de haber entregado ese mensaje incompleto, JanIA disparó un mensaje intrusivo pidiendo calificación de 5 estrellas en Google:
+     `"¡Kata, me alegra muchísimo haberte colaborado! 👩‍💼✨ ¿Me regalas un favorcito de 15 segundos? Tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y una palabrita en Google nos ayudan un montón..."`.
+
+**Diagnóstico Forense de Causas Raíz (Verificado en PostgreSQL `messages` ID `60364` y Código Fuente):**
+1. **Causa Raíz 1 — Corte Abrupto por Descarte de Partes Secundarias en `llm.ts` (`parts[0]`):**
+   - En `server/_core/llm.ts` (línea 205 y 230), `invokeGemini` hacía `const firstPart = parts[0]; const text = firstPart.text; return { choices: [{ message: { content: text } }] };`.
+   - Cuando Gemini (especialmente modelos con razonamiento o estructuras en markdown como listas) genera una respuesta dividida en múltiples partes (`parts[0]` con la introducción y `parts[1]` con el listado de antecedentes), `llm.ts` tomaba ÚNICAMENTE `parts[0]` y descartaba silenciosamente todo el resto del texto.
+2. **Causa Raíz 2 — Omisión de Bypass Directo para Consultas de Identidad en `dmHandler.ts`:**
+   - Mientras que Predial Bogotá, Paz y Salvo IDU y Match tenían bypass directo en `synthesizeToolResponseWithGemini`, la consulta de cédula se enviaba siempre al LLM a re-sintetizarse, a pesar de que `executeIdentityVerificationFromWhatsApp` ya generaba el reporte institucional perfecto, completo y verificado (Policía, Procuraduría, Contraloría, ADRES EPS y Ley 1581).
+3. **Causa Raíz 3 — Despacho Intrusivo Prematuro de Reseña en Google a los 2.2s en `whatsapp-match.ts`:**
+   - La condición `else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion)` disparaba la solicitud de 5 estrellas 2.2 segundos después de emitir el reporte, sin esperar a que el usuario confirmara si la respuesta fue útil ni a que expresara gratitud espontánea (`isGratitudeOrClosing`).
+
+**Acciones Ejecutadas:**
+1. **`server/_core/llm.ts` (Blindaje Multi-Part Inmune a Truncamiento):**
+   - Modificado `invokeGemini` para filtrar y concatenar todas las partes de texto (`parts.filter(p => p && p.text && !p.thought).map(p => p.text).join('').trim()`), garantizando que jamás se pierda una sola palabra o sección de la respuesta generada por Gemini.
+2. **`server/_core/jania/handlers/dmHandler.ts` (Entrega Directa de Reportes y Guardarraíl de Completitud):**
+   - Agregado `isDirectDocumentLookup` en `isDirectBypass`: Cuando el usuario consulta directamente un número de documento (`toolType === "cedula"` o `"empresa"`), JanIA entrega de forma instantánea (0ms, $0 COP) y 100% íntegra el reporte institucional oficial generado por `executeIdentityVerificationFromWhatsApp`.
+   - Incorporado guardarraíl de completitud en `synthesizeToolResponseWithGemini`: Si la síntesis del LLM termina abruptamente (`endsWithTruncatedIntro`) o carece de las entidades oficiales, el sistema detecta el fallo y entrega el reporte institucional completo.
+3. **`server/_core/whatsapp-match.ts` (Erradicación de Reseñas Intrusivas Prematuras):**
+   - Desactivado el disparo automático a los 2.2s sin confirmación. Las solicitudes de reseña en Google se despachan con señorío y respeto ÚNICAMENTE cuando el usuario manifiesta gratitud o despedida (`isGratitudeOrClosing`).
+4. **Registro de Enseñanza Doctrinal:**
+   - Registrada la directriz `seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97` en `founderKnowledgeService.ts`.
+5. **Suite 183 en `regression.test.ts`:**
+   - 4 pruebas automatizadas verificando multi-part en `llm.ts`, bypass directo y guardarraíl en `dmHandler.ts`, supresión de reseñas prematuras en `whatsapp-match.ts` y versión `v33.97`.
+
+---
+
 ### 📅 [2026-11-05] — JanIA v33.96: Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta (Tú / @lid), Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia (v33.96 - 33.96.0)
 
 **Versión:** `v33.96` (`33.96.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

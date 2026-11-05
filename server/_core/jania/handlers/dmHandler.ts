@@ -1155,12 +1155,20 @@ export async function synthesizeToolResponseWithGemini(
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
 
   // 1. Bypass exclusivo para herramientas con documentos oficiales descargables o formatos especiales (Predial, IDU, Notarial y Match)
+  // O consultas directas de Cédula/Empresa donde el usuario aportó el documento y se cuenta con el reporte institucional completo (v33.97 - Doctrina Eduardo A. Rivera)
+  const isDirectDocumentLookup =
+    (toolType === "cedula" || toolType === "empresa") &&
+    Boolean(rawReport) &&
+    (rawReport.includes("VERIFICACIÓN OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACIÓN OFICIAL DE EMPRESA")) &&
+    (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,15}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 25);
+
   const isDirectBypass = rawReport && (
     rawReport.includes("PAZ Y SALVO") ||
     rawReport.includes("FACTURA PREDIAL") ||
     rawReport.includes("LIQUIDACIÓN ESTIMADA") ||
     rawReport.includes("COINCIDENCIA") ||
-    rawReport.includes("MATCH")
+    rawReport.includes("MATCH") ||
+    isDirectDocumentLookup
   );
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH")
@@ -1312,6 +1320,16 @@ export async function synthesizeToolResponseWithGemini(
     let text = res.choices[0]?.message?.content || "";
     if (text) {
       text = sanitizeResponseMarkdown(text.trim());
+
+      // 🛡️ GUARDARRAÍL DE COMPLETITUD Y CORTE ABRUPTO (Doctrina Eduardo A. Rivera v33.97):
+      // Si la síntesis del LLM terminó abruptamente (con dos puntos :, con 'A continuación...', o carece del resultado esencial de las entidades):
+      const endsWithTruncatedIntro = /:\s*$|a\s+continuaci[oó]n[,:\s]*$|perfil\s+consultado[,:\s]*$|siguiente\s+detalle[,:\s]*$/i.test(text);
+      const isMissingCriticalOutcome = toolType === "cedula" && !/(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps|antecedentes)/i.test(text);
+      if ((endsWithTruncatedIntro || isMissingCriticalOutcome) && rawReport) {
+        console.warn(`[synthesizeToolResponseWithGemini] ⚠️ Respuesta de LLM truncada o incompleta detectada ("${text.slice(-50)}"). Entregando reporte oficial completo.`);
+        text = rawReport;
+      }
+
       if (isFreeTool) {
         text = await formatPoliteToolDelivery(userId, userName, toolType as any, text, true);
       }
@@ -1324,22 +1342,26 @@ export async function synthesizeToolResponseWithGemini(
   // Fallback conversacional orgánico en caso de que LLM no esté disponible o arroje timeout
   let fallbackText = "";
   if (toolType === "cedula" && toolJson) {
-    const doc = toolJson.numeroDocumento || "";
-    const tipo = toolJson.tipoDocumento || "CC";
-    const name = toolJson.nombreOficial;
-    const eps = toolJson.adres?.eps;
-    const estadoEps = toolJson.adres?.estado;
-    const regEps = toolJson.adres?.regimen;
-    const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
-    const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
-    const cgr = toolJson.contraloria || "Sin reporte en Boletín de Responsables Fiscales (SIRECI)";
-    if (name) {
-      const epsDetail = eps
-        ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}).`
-        : `En el censo general ADRES (BDUA) no registra afiliación ordinaria (habitual en regímenes especiales o de excepción: Fuerzas Militares, Policía, Magisterio, etc.).`;
-      fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.\n\n🏥 ${epsDetail}\n\n⚖️ En antecedentes: Policía Nacional registra ${pol.toLowerCase()}, Procuraduría General ${pgn.toLowerCase()} y Contraloría General ${cgr.toLowerCase()}. Todo validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._`;
+    if (rawReport && rawReport.includes("VERIFICACIÓN OFICIAL DE IDENTIDAD")) {
+      fallbackText = rawReport;
     } else {
-      fallbackText = `Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
+      const doc = toolJson.numeroDocumento || "";
+      const tipo = toolJson.tipoDocumento || "CC";
+      const name = toolJson.nombreOficial;
+      const eps = toolJson.adres?.eps;
+      const estadoEps = toolJson.adres?.estado;
+      const regEps = toolJson.adres?.regimen;
+      const pol = toolJson.policia || "Sin antecedentes judiciales pendientes";
+      const pgn = toolJson.procuraduria || "No registra sanciones disciplinarias vigentes";
+      const cgr = toolJson.contraloria || "Sin reporte en Boletín de Responsables Fiscales (SIRECI)";
+      if (name) {
+        const epsDetail = eps
+          ? `En el sistema de salud (ADRES BDUA) se encuentra afiliada/o a *${eps}* (${estadoEps || "ACTIVO"}${regEps ? ` — ${regEps}` : ""}).`
+          : `En el censo general ADRES (BDUA) no registra afiliación ordinaria (habitual en regímenes especiales o de excepción: Fuerzas Militares, Policía, Magisterio, etc.).`;
+        fallbackText = `Te confirmo que he verificado la ${tipo} ${doc} a nombre de *${name}* en las plataformas oficiales del Estado.\n\n🏥 ${epsDetail}\n\n⚖️ En antecedentes: Policía Nacional registra ${pol.toLowerCase()}, Procuraduría General ${pgn.toLowerCase()} y Contraloría General ${cgr.toLowerCase()}. Todo validado para tu seguridad jurídica.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012 y Art. 15 C.P._`;
+      } else {
+        fallbackText = `Revisé el documento ${tipo} ${doc} en las plataformas oficiales, pero no se encuentra registrado en los censos en línea. Por favor verifica que el número físico coincida o si corresponde a un documento de extranjería.\n\n⚖️ _Validación oficial bajo Ley 1581 de 2012._`;
+      }
     }
   } else if (toolType === "empresa" && toolJson) {
     if (toolJson.exitoso && toolJson.razonSocial) {

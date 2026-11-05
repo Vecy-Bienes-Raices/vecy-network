@@ -2079,6 +2079,11 @@ export class JaniaMatchBot {
                 const isRecurrentFreeBeneficiary =
                   (session.freeServicesUsedCount || 0) >= 2;
 
+                const isCompleteDelivery =
+                  !replyText.endsWith(":") &&
+                  !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) &&
+                  (!replyText.includes("cédula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
+
                 if (isGratitudeOrClosing) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { formatImmediatePoliteReviewMessage, formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
@@ -2088,7 +2093,9 @@ export class JaniaMatchBot {
                   await new Promise(r => setTimeout(r, 1500));
                   await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                   await this.logToDb(senderId, 'janIA', politeMsg);
-                } else if (isServiceDeliveryReply && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion) {
+                } else if (isServiceDeliveryReply && isCompleteDelivery && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion && false) {
+                  // 🛡️ DOCTRINA EDUARDO A. RIVERA (v33.97): Prohibido disparar solicitudes de reseña intrusivas a los 2.2s sin confirmación del usuario.
+                  // Las reseñas se solicitan con elegancia ÚNICAMENTE cuando el usuario expresa gratitud espontánea o despedida (isGratitudeOrClosing).
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
                   const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage(userName);

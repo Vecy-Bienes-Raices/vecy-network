@@ -566,6 +566,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "JanIA está loca nuevamente o la configuraste mal, si quiero que hable en este grupo pero solo si alkguien la cita la nombra o la arrobea @ para que resuelva alguna consulta del tema inmobiliario, no debe responderse a ella misma nunca o si alguno de nosotros toma el control de su chat tampoco debe autoresponder, debe controlarse y esperar en silencio, si las personas siguen hablando pone atención si ya se dirigen directamente a ella ahí si responde o si yo no actúo en nombre de ella, podrías reparar esto??, ha y segundo hoy no es miércoles o si??",
     createdAt: "2026-11-05T19:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Blindaje de Respuestas Completas (Cero Cortes Abruptos Multi-Part en Gemini), Entrega Directa de Reportes Oficiales de Identidad y Cero Reseñas Intrusivas Prematuras",
+    directive:
+      "Queda terminantemente prohibido que JanIA entregue servicios a medias o corte reportes a la mitad con frases inconclusas como 'A continuación, el detalle...'. En la integración con Gemini, todas las partes de texto (parts) deben concatenarse en su totalidad sin descartar partes secundarias. En consultas de antecedentes y cédulas donde el usuario suministra el documento, JanIA entrega de forma directa e inmediata el reporte oficial institucional completo verificado (Policía Nacional, Procuraduría General, Contraloría General y ADRES EPS con Habeas Data). Si un reporte se sintetiza con LLM y este termina abruptamente o sin el detalle de las entidades, el sistema detecta la anomalía y adjunta el reporte oficial completo. Asimismo, se prohíbe terminantemente solicitar reseñas en Google 2 segundos después de entregar una herramienta sin que el usuario haya tenido tiempo de leer o haya expresado gratitud: las reseñas solo se despachan con señorío cuando el usuario manifiesta agradecimiento espontáneo o despedida (isGratitudeOrClosing).",
+    rawText:
+      "Revisa qué pasó ahí, no me gusta que JanIa esté fallando tanto y dando sus servicios tan de manera mediocre, imagínatre si la usuaria decide calificar pues mínimo nos pone unas 3 estrellas solamente por la mediocridad de JanIa al brindar el servicio a medias. o sería que tus procesos no habían terminado de desplegarse. :((",
+    createdAt: "2026-11-05T21:50:00.000Z",
+    active: true
   }
 ];
 
