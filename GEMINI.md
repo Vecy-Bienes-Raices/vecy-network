@@ -1,16 +1,16 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.95.0 — 2026-11-04)
-- **JanIA Server:** `v33.95` (`33.95.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Blindaje Criptográfico Signal (`@lid` + PreKey Freshness + Retry Multi-Dominio) y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro (Independiente y Portal — Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico Forense (Solicitud No. 1146 — Lincy Hoyos Bróker):**
-     - Erradicado de raíz el aviso `"🕒 Esperando el mensaje. Esto puede demorar un poco."` en las confirmaciones de **ambas Vecy Agendas Pro** (`/vecy-agenda` independiente y Vecy Agenda Pro del portal/micro-sitios).
-     - Causa raíz identificada en `.baileys_auth` del VPS: 16.931 archivos `session-*.json` tenían sesiones `pendingPreKey` obsoletas de días atrás (`session-573192919978.46.json` y `session-573138862997.0.json`) porque el tráfico entrante migró a `@lid`, haciendo que `assertSessions` cifrara con PreKeys expiradas; sumado al bug de Baileys en `<receipt type="retry">` entre `@lid` y `@s.whatsapp.net`.
-  2. **Soluciones Activas en `whatsapp-match.ts` y `agendaWhatsAppService.ts`:**
-     - **1. Purga Automática de `pendingPreKey` (>10 min) en `state.keys.get('session')`:** Fuerza a `assertSessions` a negociar un `PreKeyBundle` 100% fresco con WhatsApp antes de cifrar.
-     - **2. Mapeo Bidireccional Teléfono ↔ `@lid` y Resolución `onWhatsApp` en `sendDirectMessage`:** Envía primero al `@lid` activo del solicitante con fallback a `@s.whatsapp.net`.
-     - **3. Normalizador `CB:receipt` Multi-Dominio y Desempaquetado `deviceSentMessage` en `saveMessageToStore`.**
-     - **4. Supresión Inteligente de Auto-Greetings de WhatsApp Business (`isWhatsAppBusinessAutoGreeting`):** Reacciona con `✅` al saludo automático del WhatsApp Business del solicitante tras recibir su confirmación de agenda, evitando respuestas redundantes.
-     - **Registro de Enseñanza:** Registrada la directriz `seed-vecy-agenda-pro-whatsapp-lid-signal-session-shield-v33-95` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 181 `vitest` (6/6 passing) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.96.0 — 2026-11-05)
+- **JanIA Server:** `v33.96` (`33.96.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta (`Tú` / `@lid`), Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia (Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Forense (Grupo externo *"anécdotas y vivencias inmobiliarias"* — `120363044892588903@g.us`):**
+     - **Auto-respuesta de JanIA a sí misma (`Tú`):** Cuando Eduardo publicó un flyer desde el WhatsApp Web de JanIA (`167108705018103:46@lid`), Baileys entregó el mensaje grupal con `fromMe: false` y `participant: 167108705018103@lid`. Como el pie del flyer decía `"¡Buenos días! Soy JanIA, tu aliada inmobiliaria..."`, `isBotDirectlyMentioned` detectó `"jania"`, `isFromBotAccount` no verificaba el LID `167108705018103`, y `resolveNameAndGender("✨JanIA agente IA de VECY⚡")` lo convirtió en `"Ai✨"`, haciendo que JanIA se respondiera a sí misma diciendo `"¡Hola, Ai✨! Qué gusto saludarte en esta hermosa mañana de miércoles."`.
+     - **Alucinación de Día de la Semana (`"miércoles"` en Jueves 5 de Noviembre de 2026):** `consultingHandler.ts` y `circuloHandler.ts` solo inyectaban la hora (`hour:00`) sin pasar el día de la semana ni la fecha oficial de Bogotá (`America/Bogota`).
+  2. **Soluciones Activas en `whatsapp-match.ts`, `parsers.ts`, `nameAndGenderResolver.ts`, `consultingHandler.ts` y `circuloHandler.ts`:**
+     - **1. Bloqueo Inquebrantable de Auto-Respuesta (`isFromOwnBotAccount` + `isSelfPresentationOrFlyerOfJanIA`):** Detecta cualquier mensaje originado en la propia cuenta de JanIA (`fromMe`, `573192919978`, LID `167108705018103`, `pushName` de JanIA) o flyers de autopresentación (`"Soy JanIA"`) y prohíbe al 100% auto-responderse en cualquier grupo o DM.
+     - **2. Respeto al Control Humano del Chat (`registerManualGroupTakeover` + `recordPassiveGroupContext`):** Si Eduardo o Jani escriben manualmente desde la cuenta de JanIA en un grupo o DM, JanIA guarda silencio absoluto, cede el control y registra pasivamente el hilo (`recordPassiveGroupContext` — *"pone atención"* en silencio); solo interviene si un tercero se dirige explícitamente a ella (`@JanIA` / `JanIA`) con una consulta inmobiliaria real (`isRealEstateConsultationForGroup`) y Eduardo no actúa en su nombre.
+     - **3. Conciencia Exacta del Día de la Semana y Franja Horaria en Colombia (`getColombiaDateTimeContext` + Guardarraíl en `sanitizeResponseMarkdown`):** Inyecta la fecha y día exacto de Bogotá (`jueves, 5 de noviembre de 2026`) en todos los handlers y corrige determinísticamente cualquier día o franja errónea en saludos, además de bloquear `"Ai"`, `"Ai✨"` y `"Jania"` como nombres de usuario.
+     - **4. Filtro `@newsletter` en `messages.upsert`:** Ignora canales de WhatsApp (`@newsletter`) para que nunca entren al flujo de DMs privados.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 182 `vitest` (100% passing) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

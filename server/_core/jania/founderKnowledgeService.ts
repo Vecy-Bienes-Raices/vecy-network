@@ -554,6 +554,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Aprovechemos y vayamos puliendo de una vez ambas Vecy Agendas Pro, la independiente y la del portal, es que resulta que la respuesta de confirmación que JanIA envía al whatsapp de los solicitantes, casi nunca se ve sino que sale ese aviso para nosotros, no se si para elos también les pase lo mismo y tal vez no la estén viendo. Observa la imagen de esta solicitud que acaba de llegar. En cambio la que se nos envóia a nosotros si se ve bien. Observa las imágenes.",
     createdAt: "2026-11-05T00:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Doctrina de Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta (Tú/LID), Respeto al Control Humano del Chat y Precisión Exacta de Día de la Semana en Colombia",
+    directive:
+      "En grupos externos (como 'anécdotas y vivencias inmobiliarias'), JanIA SOLO debe hablar si un tercero la cita, la nombra ('JanIA') o la arrobea ('@JanIA' / '@167108705018103' / '@573192919978') para resolver una consulta del tema inmobiliario, jurídico, tributario o de avalúos. JanIA JAMÁS debe responderse a sí misma bajo ninguna circunstancia (ni cuando el mensaje viene de su número +573192919978, ni de su LID 167108705018103, ni de un flyer promocional que diga 'Soy JanIA, tu aliada inmobiliaria'), ni saludarse a sí misma como 'Ai✨'. Si Eduardo o Jani toman el control manual de su chat en un grupo o en privado, JanIA NO debe auto-responder: debe controlarse, esperar en silencio y poner atención pasiva a lo que hablan las personas; únicamente si los participantes se dirigen directamente a ella con una consulta inmobiliaria y Eduardo no actúa en su nombre, ahí sí responde. Además, JanIA verifica siempre el día exacto de la semana y la franja horaria oficial de Bogotá (America/Bogota) antes de emitir cualquier saludo, teniendo terminantemente prohibido decir 'miércoles' cuando es jueves o decir 'mañana' cuando es por la tarde.",
+    rawText:
+      "JanIA está loca nuevamente o la configuraste mal, si quiero que hable en este grupo pero solo si alkguien la cita la nombra o la arrobea @ para que resuelva alguna consulta del tema inmobiliario, no debe responderse a ella misma nunca o si alguno de nosotros toma el control de su chat tampoco debe autoresponder, debe controlarse y esperar en silencio, si las personas siguen hablando pone atención si ya se dirigen directamente a ella ahí si responde o si yo no actúo en nombre de ella, podrías reparar esto??, ha y segundo hoy no es miércoles o si??",
+    createdAt: "2026-11-05T19:45:00.000Z",
+    active: true
   }
 ];
 

@@ -135,7 +135,8 @@ export function extractFirstName(fullName: string): string {
     "arq", "arqa", "arquitecto", "arquitecta", "ing", "inga", "ingeniero", "ingeniera",
     "dr", "dra", "doctor", "doctora", "abg", "abga", "abog", "aboga", "abogado", "abogada",
     "lic", "lica", "licenciado", "licenciada", "econ", "cont", "cp", "prof",
-    "servicios", "virtuales", "soluciones", "gestiones", "multiservicios"
+    "servicios", "virtuales", "soluciones", "gestiones", "multiservicios",
+    "jania", "ai", "ia", "bot"
   ]);
 
   // Si la primera palabra es un título o saludo (ej: "Agente Karina", "Asesor Carlos", "Arq Adriana", "Hola"):
@@ -212,6 +213,73 @@ export function getGreetingByTime(): string {
   } else {
     return "Buenas noches";
   }
+}
+
+export interface ColombiaDateTimeContext {
+  hour: number;
+  minute: number;
+  weekday: string;
+  weekdayCapitalized: string;
+  dayOfMonth: number;
+  monthName: string;
+  year: number;
+  periodOfDay: "mañana" | "tarde" | "noche";
+  greeting: "Buenos días" | "Buenas tardes" | "Buenas noches";
+  fullFormatted: string;
+}
+
+/**
+ * Obtiene el contexto autoritativo de fecha, día de la semana y franja horaria en Bogotá (America/Bogota - UTC-5)
+ * (Doctrina Eduardo A. Rivera v33.96 — Cero Alucinación de Día de la Semana o Franja Horaria)
+ */
+export function getColombiaDateTimeContext(referenceDate: Date = new Date()): ColombiaDateTimeContext {
+  const utcMs = referenceDate.getTime() + (referenceDate.getTimezoneOffset() * 60000);
+  const colDate = new Date(utcMs + (3600000 * -5));
+
+  const weekdays = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const months = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+  ];
+
+  const hour = colDate.getHours();
+  const minute = colDate.getMinutes();
+  const weekday = weekdays[colDate.getDay()] || "jueves";
+  const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const dayOfMonth = colDate.getDate();
+  const monthName = months[colDate.getMonth()] || "noviembre";
+  const year = colDate.getFullYear();
+
+  const periodOfDay: "mañana" | "tarde" | "noche" =
+    hour >= 5 && hour < 12
+      ? "mañana"
+      : hour >= 12 && hour < 18
+        ? "tarde"
+        : "noche";
+
+  const greeting: "Buenos días" | "Buenas tardes" | "Buenas noches" =
+    hour >= 6 && hour < 12
+      ? "Buenos días"
+      : hour >= 12 && hour < 18
+        ? "Buenas tardes"
+        : "Buenas noches";
+
+  const minPadded = String(minute).padStart(2, "0");
+  const hourPadded = String(hour).padStart(2, "0");
+  const fullFormatted = `${weekday}, ${dayOfMonth} de ${monthName} de ${year}, ${hourPadded}:${minPadded} (Hora Oficial de Colombia - America/Bogota)`;
+
+  return {
+    hour,
+    minute,
+    weekday,
+    weekdayCapitalized,
+    dayOfMonth,
+    monthName,
+    year,
+    periodOfDay,
+    greeting,
+    fullFormatted,
+  };
 }
 
 /**
@@ -1929,6 +1997,30 @@ export function sanitizeResponseMarkdown(text: string): string {
   clean = clean.replace(/\bSistema\s+[UÚ]nico\s+Nacional\s+de\s+Tr[aá]nsito\b/gi, "Registro Único Nacional de Tránsito (RUNT)");
   clean = clean.replace(/\bSUNT\b/g, "RUNT");
   clean = clean.replace(/\bcascunta\b/gi, "cincuenta");
+
+  // 14. Blindaje determinista de día de la semana, franja horaria y vocativos prohibidos (Doctrina Eduardo A. Rivera v33.96):
+  // Erradica saludos alucinados como "¡Hola, Ai✨! ... en esta hermosa mañana de miércoles" cuando es jueves por la tarde.
+  const colCtx = getColombiaDateTimeContext();
+  clean = clean.replace(/([¡!]*\s*(?:hola|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches)\s*,\s*)(?:ai|ia|jania)\s*(?:✨|⚡|🤖)*\s*([!¡.,])/gi, "$1colega$2");
+  clean = clean.replace(
+    /\b(en\s+esta\s+(?:hermosa\s+|linda\s+|gran\s+|excelente\s+|bendecida\s+|maravillosa\s+)?)(mañana|tarde|noche)(\s+de\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi,
+    (_m, prefix, _period, connector) => `${prefix}${colCtx.periodOfDay}${connector}${colCtx.weekday}`
+  );
+  clean = clean.replace(
+    /\b(feliz|excelente|bendecido|bendecida|buen|buena|lindo|linda|hermoso|hermosa)\s+(?:(mañana|tarde|noche)\s+de\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi,
+    (_m, adj, _period) => {
+      const adjFem = String(adj).replace(/o$/i, "a").replace(/^buen$/i, "buena");
+      return `${adjFem} ${colCtx.periodOfDay} de ${colCtx.weekday}`;
+    }
+  );
+  clean = clean.replace(
+    /\b(feliz|excelente|bendecido|buen|gran)\s+(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b(?!\s+\d)/gi,
+    (_m, adj) => `${adj} ${colCtx.weekday}`
+  );
+  clean = clean.replace(
+    /\b(hoy\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b(?!\s+\d)/gi,
+    (_m, prefix) => `${prefix}${colCtx.weekday}`
+  );
 
   return clean.trim();
 }

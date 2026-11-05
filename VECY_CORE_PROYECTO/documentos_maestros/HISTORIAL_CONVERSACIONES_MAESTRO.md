@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-05] — JanIA v33.96: Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta (Tú / @lid), Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia (v33.96 - 33.96.0)
+
+**Versión:** `v33.96` (`33.96.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"JanIA está loca nuevamente o la configuraste mal, si quiero que hable en este grupo pero solo si alkguien la cita la nombra o la arrobea @ para que resuelva alguna consulta del tema inmobiliario, no debe responderse a ella misma nunca o si alguno de nosotros toma el control de su chat tampoco debe autoresponder, debe controlarse y esperar en silencio, si las personas siguen hablando pone atención si ya se dirigen directamente a ella ahí si responde o si yo no actúo en nombre de ella, podrías reparar esto??, ha y segundo hoy no es miércoles o si??"*
+- **Evidencia Gráfica Analizada (`media_1793907459973_8dfeeed2.jpg` — Grupo externo *"anécdotas y vivencias inmobiliarias"*, `120363044892588903@g.us`, 14:26):**
+  1. Eduardo compartió desde el WhatsApp Web de JanIA (`Tú` / `167108705018103:46@lid`) un flyer oficial cuyo texto iniciaba con `"🖼️ ¡Buenos días! Soy JanIA, tu aliada inmobiliaria. En el gremio aún ..."`.
+  2. JanIA citó su propio mensaje (`Tú`) y se auto-respondió a las `14:26` del **jueves 5 de noviembre de 2026** diciendo: `"¡Hola, Ai✨! Qué gusto saludarte en esta hermosa mañana de miércoles. 👩‍💼✨ Acabo de analizar el flyer oficial que has compartido..."`.
+
+**Diagnóstico Forense de Causas Raíz (Verificado en PostgreSQL `messages` ID `59964` / `60286` y Logs PM2 del VPS):**
+1. **Causa Raíz 1 — Auto-Respuesta de JanIA a su Propia Cuenta (`Tú` / `167108705018103:46@lid`) y a su Propio Flyer (`"Soy JanIA"`):**
+   - Cuando se envía un mensaje a un grupo desde el WhatsApp Web de JanIA (`167108705018103:46@lid`), Baileys recibe el evento en `messages.upsert` con `msg.key.fromMe = false` y `msg.key.participant = "167108705018103:46@lid"` (`senderId = "167108705018103@lid"`).
+   - El filtro previo solo verificaba `if (fromMe && ...)` y en `handleDirectGroupQuestion` `isFromBotAccount` no incluía el LID `167108705018103` y tenía la condición `if (isFromBotAccount && !hasDirectMention) return;`.
+   - Como el texto del flyer contenía `"Soy JanIA, tu aliada inmobiliaria"`, `isBotDirectlyMentioned` dio `true` por `textLower.includes("jania")`, haciendo que JanIA procesara su propio flyer como si un tercero la estuviera invocando y resolviera su propio `pushName` (`"✨JanIA agente IA de VECY⚡"`) como `"Ai✨"`.
+2. **Causa Raíz 2 — Falta de Estado de Toma de Control Humana en Grupos (`groupHumanTakeoverMap` / `humanManualMessageIds`) y Filtro de Consulta Inmobiliaria:**
+   - Si Eduardo o Jani escribían manualmente desde la cuenta de JanIA en un grupo y luego otro miembro del grupo respondía citando ese mensaje manual sin nombrar a JanIA, el detector de citas activaba a JanIA interrumpiendo el control humano.
+3. **Causa Raíz 3 — Alucinación de `"mañana de miércoles"` el Jueves 5 de Noviembre a las 14:26:**
+   - En `consultingHandler.ts` y `circuloHandler.ts`, `greetingInstruction` solo inyectaba `- Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).`, omitiendo por completo el día de la semana (`jueves`) y la fecha actual en Colombia (`jueves, 5 de noviembre de 2026`). Además, al leer `"¡Buenos días!"` en el caption del flyer, el LLM imitó `"mañana"` a las 2:26 PM e inventó `"miércoles"`.
+4. **Causa Raíz 4 — Canales de WhatsApp (`@newsletter`) en `messages.upsert`:**
+   - Mensajes entrantes de canales (`120363420251805011@newsletter`) no se filtraban en `messages.upsert` y caían en `if (!isGroup)`.
+
+**Acciones Ejecutadas:**
+1. **`server/_core/whatsapp-match.ts`:**
+   - **Detector Infalible de Cuenta Propia (`isFromOwnBotAccount`) y de Flyers (`isSelfPresentationOrFlyerOfJanIA`):** Verifica `msg.key.fromMe`, `senderId`, `participant`, `senderPn`, `participantPn`, `senderLid`, `participantLid` contra `573192919978`, `3192919978` y `167108705018103`, así como `pushName` de JanIA. Bloquea al 100% cualquier auto-respuesta en grupos y DMs.
+   - **Control Humano del Chat y Atención Pasiva en Silencio (`registerManualGroupTakeover`, `recordPassiveGroupContext`, `getPassiveGroupContextSummary`, `isRealEstateConsultationForGroup`):**
+     - Si Eduardo o Jani envían un mensaje manual desde la cuenta de JanIA en un grupo (`!botSentMessageIds.has(msgId)`), se registra en `humanManualMessageIds` y `groupHumanTakeoverMap`, guardando silencio inmediato.
+     - Mientras las personas conversan en el grupo sin dirigirse a JanIA, ella guarda silencio y registra pasivamente el hilo (`recordPassiveGroupContext`).
+     - En grupos externos, JanIA solo responde cuando un tercero la cita, nombra (`JanIA`) o arrobea (`@JanIA`) para una **consulta inmobiliaria, jurídica, tributaria o de avalúos real** (`isRealEstateConsultationForGroup`), y verifica antes y después de consultar al LLM que Eduardo no haya intervenido manualmente en su nombre.
+   - **Filtro `@newsletter`:** Descarte inmediato de `chatId.endsWith('@newsletter') || senderId.endsWith('@newsletter')`.
+2. **`server/_core/jania/parsers.ts`, `server/_core/nameAndGenderResolver.ts`, `consultingHandler.ts` y `circuloHandler.ts`:**
+   - Creada `getColombiaDateTimeContext()` que calcula con exactitud el día de la semana (`jueves`), fecha completa y franja del día (`mañana` / `tarde` / `noche`) en Bogotá (`America/Bogota` UTC-5), inyectándola en `consultingHandler.ts` y `circuloHandler.ts`.
+   - Añadido guardarraíl determinista en `sanitizeResponseMarkdown` que corrige automáticamente cualquier día de la semana o franja horaria errónea en saludos (ej. `"en esta hermosa mañana de miércoles"` → `"en esta hermosa tarde de jueves"`) y reemplaza vocativos prohibidos (`"Ai✨"`, `"Jania"`).
+3. **Registro Doctrinal y Suite de Regresión 182:**
+   - Registrada `seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96` en `founderKnowledgeService.ts`.
+   - Creada la **Suite 182** en `server/__tests__/regression.test.ts`.
+
+---
+
 ### 📅 [2026-11-04] — JanIA v33.95: Blindaje Criptográfico Signal (@lid + PreKey Freshness + Retry Multi-Dominio) y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro (Independiente y Portal) (v33.95 - 33.95.0)
 
 **Versión:** `v33.95` (`33.95.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

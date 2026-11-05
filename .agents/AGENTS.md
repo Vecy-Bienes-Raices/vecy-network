@@ -184,7 +184,24 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.95 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.96 — Noviembre 2026
+
+### Novedades v33.96 (Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta [Tú / @lid], Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"JanIA está loca nuevamente o la configuraste mal, si quiero que hable en este grupo pero solo si alkguien la cita la nombra o la arrobea @ para que resuelva alguna consulta del tema inmobiliario, no debe responderse a ella misma nunca o si alguno de nosotros toma el control de su chat tampoco debe autoresponder, debe controlarse y esperar en silencio, si las personas siguen hablando pone atención si ya se dirigen directamente a ella ahí si responde o si yo no actúo en nombre de ella, podrías reparar esto??, ha y segundo hoy no es miércoles o si??"*
+  2. **Causas Raíz Identificadas en Logs y Base de Datos del VPS (`id = 59964` y `id = 60286`):**
+     - **Auto-respuesta a sí misma (`Tú` / `167108705018103:46@lid`):** Al publicar un flyer desde el WhatsApp Web de JanIA en el grupo externo *"anécdotas y vivencias inmobiliarias"* (`120363044892588903@g.us`), Baileys emitió `messages.upsert` con `fromMe: false` y `participant: 167108705018103@lid`. Como el flyer decía `"¡Buenos días! Soy JanIA, tu aliada inmobiliaria..."`, `isBotDirectlyMentioned` detectó `"jania"`, `isFromBotAccount` no filtraba el LID `167108705018103` y permitía auto-responder cuando `hasDirectMention` era `true`, y `resolveNameAndGender("✨JanIA agente IA de VECY⚡")` produjo `"Ai✨"`.
+     - **Alucinación del Día `"miércoles"` en Jueves 5 de Noviembre de 2026:** `consultingHandler.ts` y `circuloHandler.ts` inyectaban únicamente la hora (`hour:00`) sin el día de la semana ni la fecha oficial de Bogotá (`America/Bogota`).
+     - **Canales `@newsletter` en `messages.upsert`:** Los mensajes de canales (`120363420251805011@newsletter`) no terminaban en `@g.us` y entraban a `!isGroup`.
+  3. **Solución y Blindaje Quirúrgico:**
+     - **Prohibición Absoluta de Auto-Respuesta (`isFromOwnBotAccount` + `isSelfPresentationOrFlyerOfJanIA`):** Bloquea el 100% de mensajes originados en la cuenta de JanIA (`fromMe`, `573192919978`, LID `167108705018103`, `pushName` de JanIA) y flyers de autopresentación (`"Soy JanIA"`).
+     - **Control Humano del Chat y Atención Pasiva en Silencio (`registerManualGroupTakeover` + `recordPassiveGroupContext` + `isRealEstateConsultationForGroup`):** Cuando Eduardo o Jani escriben manualmente desde la cuenta de JanIA en un grupo o DM, JanIA guarda silencio absoluto y cede el control; mientras los participantes conversan, registra pasivamente el contexto en silencio y solo responde si un tercero se dirige explícitamente a ella (`@JanIA` / `JanIA`) con una consulta inmobiliaria real y Eduardo no actúa en su nombre.
+     - **Día Exacto de la Semana y Franja Horaria en Bogotá (`getColombiaDateTimeContext` + `sanitizeResponseMarkdown`):** Inyecta el día de la semana y fecha exacta de Bogotá en todos los handlers y corrige determinísticamente cualquier día o franja horaria alucinada en el saludo, además de bloquear `"Ai"`, `"Ai✨"` y `"Jania"` como vocativos.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 182 `vitest` (100% passing) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v33.95 — Noviembre 2026
 
 ### Novedades v33.95 (Blindaje Criptográfico Signal [@lid + PreKey Freshness + Retry Multi-Dominio] y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro [Independiente y Portal] — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

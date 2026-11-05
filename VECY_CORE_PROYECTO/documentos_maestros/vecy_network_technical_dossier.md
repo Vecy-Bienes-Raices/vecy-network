@@ -8750,6 +8750,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.96 (2026-11-05) — Control de Silencio en Grupos Externos, Prohibición Absoluta de Auto-Respuesta (Tú / @lid), Toma de Control Humana del Chat y Precisión Exacta de Día de la Semana en Colombia (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Auto-Respuesta de JanIA a su Propia Cuenta (`Tú` / `167108705018103:46@lid`) en Grupo Externo:* Cuando Eduardo publicó un flyer desde el WhatsApp Web de JanIA en el grupo externo *"anécdotas y vivencias inmobiliarias"* (`120363044892588903@g.us`), Baileys reportó `fromMe: false` y `participant: 167108705018103:46@lid`. Como el texto del flyer decía `"¡Buenos días! Soy JanIA, tu aliada inmobiliaria..."`, `isBotDirectlyMentioned` coincidió con `"jania"`, `isFromBotAccount` no contemplaba el LID `167108705018103`, y `resolveNameAndGender("✨JanIA agente IA de VECY⚡")` extrajo `"Ai✨"`, haciendo que JanIA se respondiera a sí misma.
+  2. *Control Humano del Chat Grupal y Privado:* Cuando Eduardo o Jani toman el control manual de la cuenta de JanIA para escribir en un grupo o en privado, JanIA no debe auto-responder ni interrumpir; debe mantenerse en silencio prestando atención a la charla y solo responder si un tercero se dirige directamente a ella (`@JanIA` / `JanIA`) por una consulta inmobiliaria sin que Eduardo haya intervenido en su nombre.
+  3. *Alucinación del Día `"miércoles"` en Jueves 5 de Noviembre de 2026:* `consultingHandler.ts` y `circuloHandler.ts` solo inyectaban la hora (`hour:00`) sin indicar el día de la semana ni la fecha de Bogotá (`America/Bogota`), por lo que el LLM inventó `"en esta hermosa mañana de miércoles"` un jueves a las 14:26.
+- **Solución Implementada**:
+  1. `server/_core/whatsapp-match.ts`:
+     - Añadidos `isFromOwnBotAccount`, `isSelfPresentationOrFlyerOfJanIA`, `registerManualGroupTakeover`, `recordPassiveGroupContext`, `getPassiveGroupContextSummary` e `isRealEstateConsultationForGroup`.
+     - Bloqueo absoluto de mensajes propios (`fromMe`, `573192919978`, LID `167108705018103`, `pushName` de JanIA) y de flyers de autopresentación en grupos y DMs, además de filtro de canales `@newsletter`.
+     - Respeto estricto a la toma de control humana (`groupHumanTakeoverMap` y `humanManualMessageIds`) y verificación de consulta inmobiliaria en grupos externos.
+  2. `server/_core/jania/parsers.ts`, `server/_core/nameAndGenderResolver.ts`, `consultingHandler.ts` y `circuloHandler.ts`:
+     - Creada `getColombiaDateTimeContext()` e inyectada en `consultingHandler.ts` y `circuloHandler.ts`.
+     - Añadida sanitización determinista de día de la semana, franja horaria y vocativos (`Ai✨` / `Jania`) en `sanitizeResponseMarkdown` y `resolveNameAndGender`.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 182 en `regression.test.ts` (4 pruebas unitarias automatizadas).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio.
+  - Versión: `v33.96` (`33.96.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.95 (2026-11-04) — Blindaje Criptográfico Signal (@lid + PreKey Freshness + Retry Multi-Dominio) y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Aviso `"🕒 Esperando el mensaje. Esto puede demorar un poco."` en Confirmaciones de Vecy Agenda Pro:* Al enviar la confirmación de una cita (ej. Solicitud No. 1146 de Lincy Hoyos Bróker) desde cualquiera de las dos Vecy Agendas Pro (`/vecy-agenda` independiente o la integrada en el portal/micro-sitios), el mensaje quedaba atrapado con el reloj de espera criptográfica en el WhatsApp Web de JanIA (`:46`) y en dispositivos receptores.

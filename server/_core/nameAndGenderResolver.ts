@@ -256,6 +256,8 @@ export function cleanRawUserName(name: string): string {
     .replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "")
     // Eliminar sufijos tras barras o plecas: " / Realtor", " | Inmobiliaria"
     .replace(/\s*[\/\|\\].*$/, "")
+    // Eliminar emojis y símbolos decorativos de WhatsApp
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}✨⚡🤖]/gu, " ")
     // Eliminar prefijos / sufijos de símbolos decorativos de WhatsApp
     .replace(/^[~•\-\*\_\s]+/, "")
     .replace(/[~•\-\*\_\s]+$/, "")
@@ -361,7 +363,8 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
       "directora", "gerente", "perito", "valuador", "tasador", "colombia", "bogota", "bogotá",
       "medellin", "medellín", "cali", "ventas", "arriendos", "finca", "propiedades", "red", "vecy",
       "servicios", "virtuales", "soluciones", "gestiones", "multiservicios",
-      "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"
+      "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof",
+      "jania", "ai", "ia", "bot"
     ]);
 
     // Si empieza con título profesional, abreviatura o saludo (ej: "Arq Adriana", "Ing Carlos", "Agente Karina", "Hola"):
@@ -406,7 +409,7 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
       // Si el contacto SOLO tiene un apellido registrado (ej. "Luna", "Pérez", "Gómez"),
       // NUNCA llamarlo por el apellido a secas ("¡Luna!"). Retornar vacío para vocativo neutro y educado.
       resolvedDisplayName = "";
-    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof", "jania", "ai", "ia", "bot", "vecy"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
       // Nombre de pila único: si el segundo término es un apellido (ej. Mario Pérez, Rosmery Luna, Adriana Pinto), solo tomar el primer nombre
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {

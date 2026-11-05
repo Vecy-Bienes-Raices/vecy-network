@@ -5,6 +5,7 @@ import {
   parseSafeJSON,
   sanitizeResponseMarkdown,
   getGreetingByTime,
+  getColombiaDateTimeContext,
 } from "../parsers";
 import { checkStrictOffTopic } from "../heuristics";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
@@ -126,6 +127,7 @@ export async function processCirculoMessage(
     const timeGreeting = getGreetingByTime();
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
+    const colDateTime = getColombiaDateTimeContext();
 
     // Detección magistral de nombre de pila y género (sin apellidos)
     const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
@@ -137,7 +139,9 @@ export async function processCirculoMessage(
     const isOngoingChat = alreadyGreeted || circuloHistory.length > 0;
 
     const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y CONTINUIDAD DE DEBATE]:
-- Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).
+- Fecha y día exacto hoy en Bogotá (Colombia): **${colDateTime.weekdayCapitalized}, ${colDateTime.dayOfMonth} de ${colDateTime.monthName} de ${colDateTime.year}** (${colDateTime.fullFormatted}).
+- Hora actual en Bogotá: ${hour}:00 (${timeGreeting} — franja: ${colDateTime.periodOfDay}).
+- PROHIBICIÓN ESTRICTA DE ALUCINACIÓN TEMPORAL (Doctrina Eduardo A. Rivera v33.96): Hoy es **${colDateTime.weekday}** y estamos en la **${colDateTime.periodOfDay}**. Queda TERMINANTEMENTE PROHIBIDO decir otro día de la semana (jamás digas "miércoles" si hoy es ${colDateTime.weekday}) o decir "mañana" cuando estamos en la ${colDateTime.periodOfDay}.
 - Nombre de pila resuelto: "${targetName || 'colega'}".
 - Conversación activa en curso con esta persona: ${isOngoingChat ? "SÍ (YA ESTÁN CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL DÍA)"}.
 - Canal: Grupo oficial "${groupZeroName}".

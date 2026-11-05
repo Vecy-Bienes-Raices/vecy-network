@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.95";
+    VECY_VERSION = "v33.96";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10018,7 +10018,7 @@ function cleanRawUserName(name) {
     cleaned = tildeMatch[1].trim();
   }
   cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
-  cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}✨⚡🤖]/gu, " ").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
   const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
   const withoutBusinessPrefix = cleaned.replace(businessPrefixRegex, "").trim();
   if (withoutBusinessPrefix.length >= 2) {
@@ -10151,7 +10151,11 @@ function resolveNameAndGender(rawName, timeGreeting) {
       "econ",
       "cont",
       "cp",
-      "prof"
+      "prof",
+      "jania",
+      "ai",
+      "ia",
+      "bot"
     ]);
     while (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || professionalTitles.has(parts[0].toLowerCase().replace(/\.$/, "")) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
       parts = parts.slice(1);
@@ -10167,7 +10171,7 @@ function resolveNameAndGender(rawName, timeGreeting) {
       resolvedDisplayName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
     } else if (parts.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase())) {
       resolvedDisplayName = "";
-    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof", "jania", "ai", "ia", "bot", "vecy"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
       resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";
@@ -10996,7 +11000,11 @@ function extractFirstName(fullName) {
     "virtuales",
     "soluciones",
     "gestiones",
-    "multiservicios"
+    "multiservicios",
+    "jania",
+    "ai",
+    "ia",
+    "bot"
   ]);
   while (wordsList.length > 1 && INVALID_FIRST_NAMES.has(wordsList[0].toLowerCase())) {
     wordsList = wordsList.slice(1);
@@ -11050,6 +11058,49 @@ function getGreetingByTime() {
   } else {
     return "Buenas noches";
   }
+}
+function getColombiaDateTimeContext(referenceDate = /* @__PURE__ */ new Date()) {
+  const utcMs = referenceDate.getTime() + referenceDate.getTimezoneOffset() * 6e4;
+  const colDate = new Date(utcMs + 36e5 * -5);
+  const weekdays = ["domingo", "lunes", "martes", "mi\xE9rcoles", "jueves", "viernes", "s\xE1bado"];
+  const months = [
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre"
+  ];
+  const hour = colDate.getHours();
+  const minute = colDate.getMinutes();
+  const weekday = weekdays[colDate.getDay()] || "jueves";
+  const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const dayOfMonth = colDate.getDate();
+  const monthName = months[colDate.getMonth()] || "noviembre";
+  const year = colDate.getFullYear();
+  const periodOfDay = hour >= 5 && hour < 12 ? "ma\xF1ana" : hour >= 12 && hour < 18 ? "tarde" : "noche";
+  const greeting = hour >= 6 && hour < 12 ? "Buenos d\xEDas" : hour >= 12 && hour < 18 ? "Buenas tardes" : "Buenas noches";
+  const minPadded = String(minute).padStart(2, "0");
+  const hourPadded = String(hour).padStart(2, "0");
+  const fullFormatted = `${weekday}, ${dayOfMonth} de ${monthName} de ${year}, ${hourPadded}:${minPadded} (Hora Oficial de Colombia - America/Bogota)`;
+  return {
+    hour,
+    minute,
+    weekday,
+    weekdayCapitalized,
+    dayOfMonth,
+    monthName,
+    year,
+    periodOfDay,
+    greeting,
+    fullFormatted
+  };
 }
 function cleanUnescapedQuotesInJSON(content) {
   const lines = content.split("\n");
@@ -12234,6 +12285,27 @@ function sanitizeResponseMarkdown(text2) {
   clean = clean.replace(/\bSistema\s+[UÚ]nico\s+Nacional\s+de\s+Tr[aá]nsito\b/gi, "Registro \xDAnico Nacional de Tr\xE1nsito (RUNT)");
   clean = clean.replace(/\bSUNT\b/g, "RUNT");
   clean = clean.replace(/\bcascunta\b/gi, "cincuenta");
+  const colCtx = getColombiaDateTimeContext();
+  clean = clean.replace(/([¡!]*\s*(?:hola|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches)\s*,\s*)(?:ai|ia|jania)\s*(?:✨|⚡|🤖)*\s*([!¡.,])/gi, "$1colega$2");
+  clean = clean.replace(
+    /\b(en\s+esta\s+(?:hermosa\s+|linda\s+|gran\s+|excelente\s+|bendecida\s+|maravillosa\s+)?)(mañana|tarde|noche)(\s+de\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi,
+    (_m, prefix, _period, connector) => `${prefix}${colCtx.periodOfDay}${connector}${colCtx.weekday}`
+  );
+  clean = clean.replace(
+    /\b(feliz|excelente|bendecido|bendecida|buen|buena|lindo|linda|hermoso|hermosa)\s+(?:(mañana|tarde|noche)\s+de\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi,
+    (_m, adj, _period) => {
+      const adjFem = String(adj).replace(/o$/i, "a").replace(/^buen$/i, "buena");
+      return `${adjFem} ${colCtx.periodOfDay} de ${colCtx.weekday}`;
+    }
+  );
+  clean = clean.replace(
+    /\b(feliz|excelente|bendecido|buen|gran)\s+(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b(?!\s+\d)/gi,
+    (_m, adj) => `${adj} ${colCtx.weekday}`
+  );
+  clean = clean.replace(
+    /\b(hoy\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b(?!\s+\d)/gi,
+    (_m, prefix) => `${prefix}${colCtx.weekday}`
+  );
   return clean.trim();
 }
 var COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS;
@@ -17261,6 +17333,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Todas las confirmaciones y notificaciones de ambas Vecy Agendas Pro (la independiente en /vecy-agenda y la integrada al portal y micro-sitios) se entregan con visibilidad instant\xE1nea 100% legible tanto en el WhatsApp del solicitante como en el WhatsApp Web de JanIA y de Vecy Bienes Ra\xEDces, erradicando de ra\xEDz el aviso 'Esperando el mensaje. Esto puede demorar un poco'. El sistema resuelve autom\xE1ticamente el identificador @lid activo del solicitante, purga sesiones Signal en estado pendingPreKey vencidas (>10 min) para renovar el PreKeyBundle criptogr\xE1fico en vivo, normaliza recibos de reintento (retry receipts) entre dominios @lid y @s.whatsapp.net, y reconoce respuestas autom\xE1ticas de WhatsApp Business posteriores a una confirmaci\xF3n de Vecy Agenda Pro reaccionando con \u2705 sin emitir respuestas redundantes que digan que el usuario 'copi\xF3 por error su mensaje autom\xE1tico'.",
         rawText: "Aprovechemos y vayamos puliendo de una vez ambas Vecy Agendas Pro, la independiente y la del portal, es que resulta que la respuesta de confirmaci\xF3n que JanIA env\xEDa al whatsapp de los solicitantes, casi nunca se ve sino que sale ese aviso para nosotros, no se si para elos tambi\xE9n les pase lo mismo y tal vez no la est\xE9n viendo. Observa la imagen de esta solicitud que acaba de llegar. En cambio la que se nos env\xF3ia a nosotros si se ve bien. Observa las im\xE1genes.",
         createdAt: "2026-11-05T00:45:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Doctrina de Control de Silencio en Grupos Externos, Prohibici\xF3n Absoluta de Auto-Respuesta (T\xFA/LID), Respeto al Control Humano del Chat y Precisi\xF3n Exacta de D\xEDa de la Semana en Colombia",
+        directive: "En grupos externos (como 'an\xE9cdotas y vivencias inmobiliarias'), JanIA SOLO debe hablar si un tercero la cita, la nombra ('JanIA') o la arrobea ('@JanIA' / '@167108705018103' / '@573192919978') para resolver una consulta del tema inmobiliario, jur\xEDdico, tributario o de aval\xFAos. JanIA JAM\xC1S debe responderse a s\xED misma bajo ninguna circunstancia (ni cuando el mensaje viene de su n\xFAmero +573192919978, ni de su LID 167108705018103, ni de un flyer promocional que diga 'Soy JanIA, tu aliada inmobiliaria'), ni saludarse a s\xED misma como 'Ai\u2728'. Si Eduardo o Jani toman el control manual de su chat en un grupo o en privado, JanIA NO debe auto-responder: debe controlarse, esperar en silencio y poner atenci\xF3n pasiva a lo que hablan las personas; \xFAnicamente si los participantes se dirigen directamente a ella con una consulta inmobiliaria y Eduardo no act\xFAa en su nombre, ah\xED s\xED responde. Adem\xE1s, JanIA verifica siempre el d\xEDa exacto de la semana y la franja horaria oficial de Bogot\xE1 (America/Bogota) antes de emitir cualquier saludo, teniendo terminantemente prohibido decir 'mi\xE9rcoles' cuando es jueves o decir 'ma\xF1ana' cuando es por la tarde.",
+        rawText: "JanIA est\xE1 loca nuevamente o la configuraste mal, si quiero que hable en este grupo pero solo si alkguien la cita la nombra o la arrobea @ para que resuelva alguna consulta del tema inmobiliario, no debe responderse a ella misma nunca o si alguno de nosotros toma el control de su chat tampoco debe autoresponder, debe controlarse y esperar en silencio, si las personas siguen hablando pone atenci\xF3n si ya se dirigen directamente a ella ah\xED si responde o si yo no act\xFAo en nombre de ella, podr\xEDas reparar esto??, ha y segundo hoy no es mi\xE9rcoles o si??",
+        createdAt: "2026-11-05T19:45:00.000Z",
         active: true
       }
     ];
@@ -25116,11 +25198,18 @@ __export(whatsapp_match_exports, {
   VIP_COMMUNITY_ADMIN_PHONES: () => VIP_COMMUNITY_ADMIN_PHONES,
   deleteNativeWhatsAppMessage: () => deleteNativeWhatsAppMessage,
   downloadMediaSafely: () => downloadMediaSafely,
+  getPassiveGroupContextSummary: () => getPassiveGroupContextSummary,
   isBlacklistedGroup: () => isBlacklistedGroup,
+  isBotDirectlyMentioned: () => isBotDirectlyMentioned,
+  isFromOwnBotAccount: () => isFromOwnBotAccount,
+  isRealEstateConsultationForGroup: () => isRealEstateConsultationForGroup,
+  isSelfPresentationOrFlyerOfJanIA: () => isSelfPresentationOrFlyerOfJanIA,
   isVipRealEstateGroup: () => isVipRealEstateGroup,
   isWhatsAppBusinessAutoGreeting: () => isWhatsAppBusinessAutoGreeting,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
+  recordPassiveGroupContext: () => recordPassiveGroupContext,
+  registerManualGroupTakeover: () => registerManualGroupTakeover,
   registerPhoneLidMapping: () => registerPhoneLidMapping,
   resolveLidForPhone: () => resolveLidForPhone,
   resolvePhoneForLid: () => resolvePhoneForLid,
@@ -25266,6 +25355,27 @@ function resolvePhoneForLid(lidOrJid) {
 function isWhatsAppBusinessAutoGreeting(text2) {
   return janiaMatchBot.isWhatsAppBusinessAutoGreeting(text2);
 }
+function isFromOwnBotAccount(msg, senderId) {
+  return janiaMatchBot.isFromOwnBotAccount(msg, senderId);
+}
+function isSelfPresentationOrFlyerOfJanIA(text2) {
+  return janiaMatchBot.isSelfPresentationOrFlyerOfJanIA(text2);
+}
+function isRealEstateConsultationForGroup(text2, quotedText) {
+  return janiaMatchBot.isRealEstateConsultationForGroup(text2, quotedText);
+}
+function isBotDirectlyMentioned(msg, text2) {
+  return janiaMatchBot.isBotDirectlyMentioned(msg, text2);
+}
+function registerManualGroupTakeover(chatId, msgId) {
+  janiaMatchBot.registerManualGroupTakeover(chatId, msgId);
+}
+function recordPassiveGroupContext(chatId, senderName, text2) {
+  janiaMatchBot.recordPassiveGroupContext(chatId, senderName, text2);
+}
+function getPassiveGroupContextSummary(chatId) {
+  return janiaMatchBot.getPassiveGroupContextSummary(chatId);
+}
 var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot, whatsappBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
@@ -25352,6 +25462,104 @@ var init_whatsapp_match = __esm({
         ["261731263762516", "573138862997"]
       ]);
       recentAgendaConfirmations = /* @__PURE__ */ new Map();
+      groupHumanTakeoverMap = /* @__PURE__ */ new Map();
+      humanManualMessageIds = /* @__PURE__ */ new Set();
+      groupRecentContextMap = /* @__PURE__ */ new Map();
+      /**
+       * 🛡️ DOCTRINA EDUARDO A. RIVERA (v33.96):
+       * Verifica de forma infalible si un mensaje proviene de la propia cuenta de JanIA (+573192919978 / LID 167108705018103),
+       * incluso cuando es enviado manualmente desde WhatsApp Web (:46@lid) donde Baileys puede reportar fromMe=false en grupos.
+       */
+      isFromOwnBotAccount(msg, senderId) {
+        if (!msg) return false;
+        if (msg.key?.fromMe) return true;
+        const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+        const botPhone = botJid ? botJid.split("@")[0].split(":")[0] : "573192919978";
+        const rawBotLid = this.sock?.user?.lid || this.sock?.authState?.creds?.me?.lid || "167108705018103@lid";
+        const cleanBotLid = rawBotLid ? String(rawBotLid).split(":")[0].split("@")[0] : "167108705018103";
+        const keyAny = msg.key || {};
+        const candidates = [
+          senderId || "",
+          msg.key?.participant || "",
+          msg?.participant || "",
+          keyAny.senderPn || "",
+          keyAny.participantPn || "",
+          keyAny.senderLid || "",
+          keyAny.participantLid || ""
+        ].filter(Boolean);
+        for (const cand of candidates) {
+          const clean = cleanJid(String(cand));
+          const num = clean.split("@")[0].split(":")[0];
+          if (botJid && clean === botJid || botPhone && num === botPhone || num === "573192919978" || num === "3192919978" || num === "167108705018103" || cleanBotLid && num === cleanBotLid || String(cand).includes("167108705018103") || String(cand).includes("573192919978")) {
+            return true;
+          }
+        }
+        const pushName = String(msg.pushName || "").trim();
+        if (/jania\s+agente\s+ia\s+de\s+vecy/i.test(pushName) || /^✨\s*jania\b/i.test(pushName)) {
+          return true;
+        }
+        return false;
+      }
+      /**
+       * 🛡️ Detecta si un texto es un flyer promocional o autopresentación de JanIA ("¡Buenos días! Soy JanIA, tu aliada inmobiliaria...")
+       * para evitar que JanIA confunda su propio anuncio con una consulta de un usuario.
+       */
+      isSelfPresentationOrFlyerOfJanIA(text2) {
+        if (!text2) return false;
+        const clean = text2.trim();
+        return (/\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/i.test(clean) || /\bjania,\s+tu\s+aliada\s+inmobiliaria\b/i.test(clean) || /\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/i.test(clean)) && !/@(?:✨\s*)?jania\b/i.test(clean);
+      }
+      /**
+       * 👂 Registra en silencio el contexto conversacional reciente del grupo para que JanIA "ponga atención"
+       * mientras los participantes hablan sin interrumpirlos, y tenga contexto si luego se dirigen directamente a ella.
+       */
+      recordPassiveGroupContext(chatId, senderName, text2) {
+        if (!chatId || !text2 || !text2.trim()) return;
+        const cleanText = text2.trim().slice(0, 350);
+        if (cleanText.length < 3) return;
+        const list = this.groupRecentContextMap.get(chatId) || [];
+        list.push({
+          senderName: senderName || "Participante",
+          text: cleanText,
+          timestamp: Date.now()
+        });
+        while (list.length > 8) {
+          list.shift();
+        }
+        this.groupRecentContextMap.set(chatId, list);
+      }
+      getPassiveGroupContextSummary(chatId) {
+        const list = this.groupRecentContextMap.get(chatId) || [];
+        const now = Date.now();
+        const recent = list.filter((item) => now - item.timestamp < 30 * 60 * 1e3);
+        if (recent.length === 0) return "";
+        return recent.map((item) => `- ${item.senderName}: "${item.text}"`).join("\n");
+      }
+      registerManualGroupTakeover(chatId, msgId) {
+        if (chatId) {
+          this.groupHumanTakeoverMap.set(chatId, Date.now());
+        }
+        if (msgId) {
+          this.humanManualMessageIds.add(msgId);
+          if (this.humanManualMessageIds.size > 1e3) {
+            const first = this.humanManualMessageIds.values().next().value;
+            if (first) this.humanManualMessageIds.delete(first);
+          }
+        }
+      }
+      /**
+       * ⚖️ Verifica que una mención a JanIA en un grupo externo corresponda a una consulta inmobiliaria, jurídica,
+       * tributaria, de avalúo o solicitud de explicación, y jamás a un flyer o saludo vacío.
+       */
+      isRealEstateConsultationForGroup(text2, quotedText) {
+        const clean = String(text2 || "").trim();
+        const quoted = String(quotedText || "").trim();
+        if (!clean && !quoted) return false;
+        if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
+        const combined = `${clean} ${quoted}`.toLowerCase();
+        const hasQuestionOrConsultIntent = /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura| escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensión|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match)\b/i.test(combined);
+        return hasQuestionOrConsultIntent;
+      }
       registerPhoneLidMapping(phoneOrJid, lidOrJid) {
         if (!phoneOrJid || !lidOrJid) return;
         let cleanPhone = String(phoneOrJid).split("@")[0].split(":")[0].replace(/\D/g, "");
@@ -25891,7 +26099,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
               }
             } catch (_) {
             }
-            if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
+            if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast") || chatId.endsWith("@newsletter") || senderId.endsWith("@newsletter") || rawChatId.includes("@newsletter")) {
               continue;
             }
             if (chatId.includes("3192510001") || senderId.includes("3192510001") || rawChatId.includes("3192510001") || rawSenderId.includes("3192510001") || chatId.includes("148150702633067") || senderId.includes("148150702633067") || rawChatId.includes("148150702633067") || rawSenderId.includes("148150702633067")) {
@@ -25928,7 +26136,11 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
                 if (rawMsg?.reactionMessage) {
                   continue;
                 }
-                if (fromMe && chatId !== this.targetGroupId && chatId !== this.buzonGroupId && chatId !== this.circuloGroupId) {
+                if (this.isFromOwnBotAccount(msg, senderId)) {
+                  if (msgId && !this.botSentMessageIds.has(msgId)) {
+                    this.registerManualGroupTakeover(chatId, msgId);
+                    console.log(`[JANIA-HUMAN-TAKEOVER] \u{1F6E1}\uFE0F Intervenci\xF3n manual detectada desde la cuenta de JanIA (${senderId}) en el grupo ${chatId} (msgId=${msgId}). JanIA guarda silencio absoluto.`);
+                  }
                   continue;
                 }
                 let body = "";
@@ -26096,6 +26308,9 @@ ${quotedNote}` : quotedNote;
                 const isQuotingBot = !!contextInfo?.quotedMessage && (botJid && quotedParticipant === botJid || quotedParticipant.startsWith(botPhone) || quotedParticipant.startsWith("573192919978") || quotedParticipant.includes("167108705018103"));
                 const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
                 const isShortCourtesy = !isAudioPTT && !isConversationalContinuation && (textClean.length < 6 || ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
+                if (body && body.trim() && !isReactionMessage && !this.isFromOwnBotAccount(msg, senderId)) {
+                  this.recordPassiveGroupContext(chatId, msg.pushName || senderId.split("@")[0], body);
+                }
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
                 const isListing = !hasDirectMention && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
                 const hasMeaningfulQuery = (textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage || hasRawMedia;
@@ -26190,7 +26405,7 @@ ${quotedNote}` : quotedNote;
                 else if (rawMsg?.locationMessage) body = "[Ubicaci\xF3n compartida]";
                 else if (rawMsg?.contactMessage || rawMsg?.contactsArrayMessage) body = "[Tarjeta de contacto compartida]";
                 const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
-                if (msg.key.fromMe) {
+                if (msg.key.fromMe || this.isFromOwnBotAccount(msg, senderId)) {
                   const msgId = msg.key.id || "";
                   if (this.botSentMessageIds.has(msgId)) {
                     return;
@@ -26199,27 +26414,37 @@ ${quotedNote}` : quotedNote;
                     return;
                   }
                   if (isSelfChat) {
-                    const hasExplicitJanIAInvocation = /@?jania\b/i.test(body) || cleanStart.startsWith("agente jania");
+                    const hasExplicitJanIAInvocation = !this.isSelfPresentationOrFlyerOfJanIA(body) && (/@?jania\b/i.test(body) || cleanStart.startsWith("agente jania"));
                     if (!hasExplicitJanIAInvocation) {
                       return;
                     }
                     console.log(`[JANIA-MATCH] Invocaci\xF3n expl\xEDcita a JanIA detectada en self-chat (${senderId}). Procediendo a procesar.`);
-                  } else if (isAdmin) {
-                    console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administraci\xF3n (${senderId}). Procediendo a procesar.`);
                   } else {
+                    const pendingBuf = this.dmMessageBuffers.get(chatId) || this.dmMessageBuffers.get(senderId) || this.dmMessageBuffers.get(resolvedSenderId);
+                    if (pendingBuf?.timer) {
+                      clearTimeout(pendingBuf.timer);
+                    }
+                    this.dmMessageBuffers.delete(chatId);
+                    this.dmMessageBuffers.delete(senderId);
+                    this.dmMessageBuffers.delete(resolvedSenderId);
                     const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
-                    const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
-                    if (isRecentMessage) {
-                      console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM de tercero ${senderId}. Silenciando bot.`);
+                    const isRecentMessage = !msgTimestampMs || Date.now() - msgTimestampMs < 5 * 60 * 1e3;
+                    if (isRecentMessage && !isAdmin) {
+                      console.log(`[JANIA-HUMAN-TAKEOVER] \u{1F6E1}\uFE0F Intervenci\xF3n humana detectada en DM de tercero ${senderId} (${resolvedSenderId}). Silenciando bot y cediendo control.`);
                       this.lastHumanIntervention.set(senderId, Date.now());
+                      this.lastHumanIntervention.set(resolvedSenderId, Date.now());
                       const { muteSession: muteSession4 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
                       await muteSession4(senderId, true).catch((err) => console.error("Error muting session in database:", err));
+                      if (resolvedSenderId !== senderId) {
+                        await muteSession4(resolvedSenderId, true).catch(() => {
+                        });
+                      }
                     }
                     return;
                   }
                 }
                 const { isSessionMuted: isSessionMuted3, muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted3(senderId);
+                let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted3(senderId) || (resolvedSenderId !== senderId ? await isSessionMuted3(resolvedSenderId) : false);
                 if (isMuted) {
                   const { extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
                   const { extractNotarialExpenseParams: extractNotarialExpenseParams2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
@@ -26227,10 +26452,19 @@ ${quotedNote}` : quotedNote;
                   const isPredialReq = body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip") || body.toLowerCase().includes("hacienda");
                   const isIduReq = body.toLowerCase().includes("idu") || body.toLowerCase().includes("valorizacion") || body.toLowerCase().includes("valorizaci\xF3n");
                   const isNotarialReq = hasPendingNotarialSession2(senderId) || extractNotarialExpenseParams2(body, senderId).found || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*familiar|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(body);
-                  if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
+                  const lastHumanTs = Math.max(
+                    this.lastHumanIntervention.get(senderId) || 0,
+                    this.lastHumanIntervention.get(resolvedSenderId) || 0
+                  );
+                  const isDirectInvocationAfterHumanPause = !this.isSelfPresentationOrFlyerOfJanIA(body) && /\b(?:@?jania|agente\s+jania)\b/i.test(body) && Date.now() - lastHumanTs > 60 * 1e3;
+                  if (cleanStart.startsWith("agente jania") || isDirectInvocationAfterHumanPause || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
                     await muteSession3(senderId, false).catch((err) => console.error("Error unmuting session:", err));
+                    if (resolvedSenderId !== senderId) {
+                      await muteSession3(resolvedSenderId, false).catch(() => {
+                      });
+                    }
                     isMuted = false;
-                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : isIduReq ? "paz y salvo de valorizaci\xF3n IDU" : isNotarialReq ? "liquidaci\xF3n notarial" : "comando de cliente"} para ${senderId}`);
+                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente para ${senderId}`);
                   }
                 }
                 const recentAgenda = this.recentAgendaConfirmations.get(rawPhone) || this.recentAgendaConfirmations.get(senderId) || this.recentAgendaConfirmations.get(senderId.split("@")[0]);
@@ -26665,25 +26899,38 @@ Mis grupos oficiales:
         }
       }
       /**
-       * 🤖 DETECTOR ROBUSTO DE MENCIÓN DIRECTA A JANIA (Doctrina Eduardo A. Rivera — v33.92)
-       * Detecta menciones por:
-       * 1. Nombre o variantes ("jania", "@jania")
+       * 🤖 DETECTOR ROBUSTO DE MENCIÓN DIRECTA A JANIA (Doctrina Eduardo A. Rivera — v33.92 / v33.96)
+       * Detecta menciones legítimas de terceros por:
+       * 1. Nombre o variantes ("jania", "@jania") excluyendo autopresentaciones/flyers ("Soy JanIA")
        * 2. Teléfono oficial ("573192919978", "3192919978")
        * 3. LID de JanIA en WhatsApp Web/Multi-Device ("167108705018103" / @167108705018103)
        * 4. mentionedJid en contextInfo (tanto @s.whatsapp.net como @lid)
-       * 5. Cita directa de un mensaje previo emitido por JanIA
+       * 5. Cita directa de un mensaje previo emitido por JanIA (excepto cuando es respuesta a un mensaje manual humano sin nombrar a JanIA)
+       *
+       * REGLA INQUEBRANTABLE v33.96: Jamás retorna true si el mensaje proviene de la propia cuenta de JanIA (Tú / fromMe / LID propio)
+       * ni si el texto es un flyer promocional ("¡Buenos días! Soy JanIA, tu aliada inmobiliaria...").
        */
       isBotDirectlyMentioned(msg, text2) {
+        if (this.isFromOwnBotAccount(msg)) {
+          return false;
+        }
+        if (this.isSelfPresentationOrFlyerOfJanIA(text2)) {
+          return false;
+        }
+        const sanitizedForNameCheck = (text2 || "").replace(/\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/gi, "").replace(/\bjania,\s+tu\s+aliada\s+inmobiliaria\b/gi, "").replace(/\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/gi, (m, offset, full) => {
+          const prevChar = offset > 0 ? full[offset - 1] : "";
+          return prevChar === "@" ? m : "";
+        }).toLowerCase();
         const textLower = (text2 || "").toLowerCase();
-        if (textLower.includes("jania") || textLower.includes("@jania")) {
+        if (sanitizedForNameCheck.includes("jania") || sanitizedForNameCheck.includes("@jania")) {
           return true;
         }
         const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
         const botPhone = botJid ? botJid.split("@")[0].split(":")[0] : "573192919978";
-        if (botPhone && textLower.includes(botPhone)) {
+        if (botPhone && sanitizedForNameCheck.includes(`@${botPhone}`)) {
           return true;
         }
-        if (textLower.includes("573192919978") || textLower.includes("3192919978")) {
+        if (sanitizedForNameCheck.includes("@573192919978") || sanitizedForNameCheck.includes("@3192919978") || /\b(?:573192919978|3192919978)\b/.test(sanitizedForNameCheck)) {
           return true;
         }
         const rawBotLid = this.sock?.user?.lid || this.sock?.authState?.creds?.me?.lid || "167108705018103@lid";
@@ -26709,7 +26956,23 @@ Mis grupos oficiales:
         const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : "";
         if (quotedParticipant) {
           const quotedNum = quotedParticipant.split("@")[0].split(":")[0];
-          if (botJid && quotedParticipant === botJid || botPhone && quotedNum === botPhone || quotedNum === "573192919978" || quotedNum === "167108705018103" || cleanBotLid && quotedNum === cleanBotLid) {
+          const isQuotingOurAccount = botJid && quotedParticipant === botJid || botPhone && quotedNum === botPhone || quotedNum === "573192919978" || quotedNum === "167108705018103" || cleanBotLid && quotedNum === cleanBotLid;
+          if (isQuotingOurAccount) {
+            const quotedStanzaId = String(contextInfo?.stanzaId || "");
+            const rawChatId = msg?.key?.remoteJid ? cleanJid(msg.key.remoteJid) : "";
+            if (quotedStanzaId && this.humanManualMessageIds.has(quotedStanzaId)) {
+              return false;
+            }
+            if (rawChatId && Date.now() - (this.groupHumanTakeoverMap.get(rawChatId) || 0) < 30 * 60 * 1e3) {
+              if (!quotedStanzaId || !this.botSentMessageIds.has(quotedStanzaId)) {
+                return false;
+              }
+            }
+            const unwrappedQuoted = contextInfo?.quotedMessage ? unwrapMessage(contextInfo.quotedMessage) : null;
+            const quotedText = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || "";
+            if (this.isSelfPresentationOrFlyerOfJanIA(quotedText)) {
+              return false;
+            }
             return true;
           }
         }
@@ -26718,18 +26981,20 @@ Mis grupos oficiales:
       // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
       async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
         try {
+          const questionStartedAt = Date.now();
           const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
-          const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-          const isFromBotAccount = msg.key?.fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978");
+          if (this.isFromOwnBotAccount(msg, senderId)) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Bloqueo absoluto de auto-respuesta: el mensaje en ${chatId} proviene de la propia cuenta de JanIA (${senderId}).`);
+            return;
+          }
+          if (this.isSelfPresentationOrFlyerOfJanIA(bodyText)) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Flyer o autopresentaci\xF3n de JanIA detectado en ${chatId}. No se auto-responde.`);
+            return;
+          }
           const textLower = bodyText.toLowerCase();
           const hasDirectMention = this.isBotDirectlyMentioned(msg, bodyText);
           if (!isOfficialGroup && !hasDirectMention) {
             console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje en grupo externo ${chatId} sin menci\xF3n directa ignorado para respuestas textuales. Silencio 100% preservado.`);
-            return;
-          }
-          if (isFromBotAccount && !hasDirectMention) {
-            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin menci\xF3n expl\xEDcita).`);
             return;
           }
           let resolvedSenderId = senderId;
@@ -26948,6 +27213,32 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             let imageBuffer;
             let pdfBuffer;
             let pdfMimeType;
+            let quotedContext;
+            try {
+              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
+              if (contextInfo?.quotedMessage) {
+                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
+              }
+            } catch (e) {
+            }
+            if (!this.isRealEstateConsultationForGroup(bodyText, quotedContext)) {
+              console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Menci\xF3n en grupo externo ${chatId} descartada por no constituir una consulta inmobiliaria/jur\xEDdica ("${bodyText.slice(0, 60)}").`);
+              await this.sock.sendPresenceUpdate("paused", chatId).catch(() => {
+              });
+              return;
+            }
+            const lastTakeoverTs = this.groupHumanTakeoverMap.get(chatId) || 0;
+            if (lastTakeoverTs > 0 && Date.now() - lastTakeoverTs < 15 * 60 * 1e3 && process.env.NODE_ENV !== "test") {
+              console.log(`[JANIA-HUMAN-TAKEOVER] \u23F3 Control humano reciente en ${chatId}. Esperando 6s para verificar si Eduardo/Jani responden manualmente antes de intervenir...`);
+              await new Promise((r) => setTimeout(r, 6e3));
+              if ((this.groupHumanTakeoverMap.get(chatId) || 0) >= questionStartedAt) {
+                console.log(`[JANIA-HUMAN-TAKEOVER] \u{1F6E1}\uFE0F Eduardo/Jani respondieron manualmente en ${chatId}. JanIA guarda silencio.`);
+                await this.sock.sendPresenceUpdate("paused", chatId).catch(() => {
+                });
+                return;
+              }
+            }
             if (rawMsg?.imageMessage) {
               try {
                 const mediaBuffer = await downloadMediaSafely(msg, "image");
@@ -26964,15 +27255,12 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
               } catch (e) {
               }
             }
-            let quotedContext;
-            try {
-              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
-              if (contextInfo?.quotedMessage) {
-                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
-              }
-            } catch (e) {
-            }
+            const passiveSummary = this.getPassiveGroupContextSummary(chatId);
+            const enrichedQuotedContext = [
+              quotedContext ? `Mensaje citado: "${quotedContext}"` : "",
+              passiveSummary ? `Hilo reciente del grupo al que JanIA estuvo prestando atenci\xF3n en silencio:
+${passiveSummary}` : ""
+            ].filter(Boolean).join("\n\n") || void 0;
             const queryToProcess = quotedContext ? `[Instrucci\xF3n de consulta citada]: ${bodyText}
 
 [Consulta citada del colega a resolver]: ${quotedContext}` : bodyText;
@@ -26985,8 +27273,14 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
               pdfMimeType,
               isAudioPTT ? "mock-audio:" + bodyText : void 0,
               msgTs,
-              quotedContext
+              enrichedQuotedContext
             );
+            if (result && (result.classification === "VIOLACION_DE_NORMAS" || result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO")) {
+              console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Resultado ${result.classification} suprimido en grupo externo ${chatId} (JanIA solo responde consultas en grupos externos).`);
+              await this.sock.sendPresenceUpdate("paused", chatId).catch(() => {
+              });
+              return;
+            }
           } else {
             await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
             await this.sock.sendPresenceUpdate("paused", chatId);
@@ -27015,6 +27309,12 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
               await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
               });
             }
+          }
+          if ((this.groupHumanTakeoverMap.get(chatId) || 0) >= questionStartedAt) {
+            console.log(`[JANIA-HUMAN-TAKEOVER] \u{1F6E1}\uFE0F Intervenci\xF3n manual detectada en ${chatId} mientras se procesaba la respuesta. Abortando env\xEDo autom\xE1tico.`);
+            await this.sock.sendPresenceUpdate("paused", chatId).catch(() => {
+            });
+            return;
           }
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
@@ -36588,6 +36888,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 }`;
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
+    const colDateTime = getColombiaDateTimeContext();
     const history = getConsultingHistory(userId);
     const isOngoingChat = alreadyGreeted || history.length > 0;
     const nowMs = Date.now();
@@ -36599,7 +36900,9 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     const greetingInstruction = `
 
 [SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y CONTINUIDAD HUMANA]:
-- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Fecha y d\xEDa exacto hoy en Bogot\xE1 (Colombia): **${colDateTime.weekdayCapitalized}, ${colDateTime.dayOfMonth} de ${colDateTime.monthName} de ${colDateTime.year}** (${colDateTime.fullFormatted}).
+- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting} \u2014 franja: ${colDateTime.periodOfDay}).
+- PROHIBICI\xD3N ESTRICTA DE ALUCINACI\xD3N TEMPORAL (Doctrina Eduardo A. Rivera v33.96): Hoy es **${colDateTime.weekday}** y estamos en la **${colDateTime.periodOfDay}**. Queda TERMINANTEMENTE PROHIBIDO decir otro d\xEDa de la semana (jam\xE1s digas "mi\xE9rcoles" si hoy es ${colDateTime.weekday}) o decir "ma\xF1ana" cuando estamos en la ${colDateTime.periodOfDay}.
 - Nombre de pila resuelto: "${targetName || "colega"}".
 - Trato respetuoso adecuado: "${genderTerm}".
 - Conversaci\xF3n activa en curso con esta persona: ${isOngoingChat ? "S\xCD (YA EST\xC1N CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL D\xCDA)"}.
@@ -36927,6 +37230,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     const timeGreeting = getGreetingByTime();
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
+    const colDateTime = getColombiaDateTimeContext();
     const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
     const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
@@ -36936,7 +37240,9 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     const greetingInstruction = `
 
 [SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y CONTINUIDAD DE DEBATE]:
-- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Fecha y d\xEDa exacto hoy en Bogot\xE1 (Colombia): **${colDateTime.weekdayCapitalized}, ${colDateTime.dayOfMonth} de ${colDateTime.monthName} de ${colDateTime.year}** (${colDateTime.fullFormatted}).
+- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting} \u2014 franja: ${colDateTime.periodOfDay}).
+- PROHIBICI\xD3N ESTRICTA DE ALUCINACI\xD3N TEMPORAL (Doctrina Eduardo A. Rivera v33.96): Hoy es **${colDateTime.weekday}** y estamos en la **${colDateTime.periodOfDay}**. Queda TERMINANTEMENTE PROHIBIDO decir otro d\xEDa de la semana (jam\xE1s digas "mi\xE9rcoles" si hoy es ${colDateTime.weekday}) o decir "ma\xF1ana" cuando estamos en la ${colDateTime.periodOfDay}.
 - Nombre de pila resuelto: "${targetName || "colega"}".
 - Conversaci\xF3n activa en curso con esta persona: ${isOngoingChat ? "S\xCD (YA EST\xC1N CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL D\xCDA)"}.
 - Canal: Grupo oficial "${groupZeroName}".
@@ -37163,6 +37469,7 @@ __export(janIA_exports, {
   generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getCirculoHistory: () => getCirculoHistory,
+  getColombiaDateTimeContext: () => getColombiaDateTimeContext,
   getColombiaHour: () => getColombiaHour,
   getColombiaNow: () => getColombiaNow,
   getCompanySession: () => getCompanySession,

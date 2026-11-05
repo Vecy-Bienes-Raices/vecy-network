@@ -6,7 +6,7 @@ import { resolveRealName, getConsultingHistory, appendConsultingHistory, checkAl
 import { checkStrictOffTopic } from "../heuristics";
 import { transcribeAudio } from "../../voiceTranscription";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
-import { getGreetingByTime, extractFirstName, sanitizeResponseMarkdown, parseSafeJSON } from "../parsers";
+import { getGreetingByTime, getColombiaDateTimeContext, extractFirstName, sanitizeResponseMarkdown, parseSafeJSON } from "../parsers";
 import { invokeLLM } from "../../llm";
 import { JanIAResult } from "../types";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
@@ -209,6 +209,7 @@ export async function processConsultingMessage(
 
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
+    const colDateTime = getColombiaDateTimeContext();
 
     const history = getConsultingHistory(userId);
     const isOngoingChat = alreadyGreeted || history.length > 0;
@@ -223,7 +224,9 @@ export async function processConsultingMessage(
       : ``;
 
     const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y CONTINUIDAD HUMANA]:
-- Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).
+- Fecha y día exacto hoy en Bogotá (Colombia): **${colDateTime.weekdayCapitalized}, ${colDateTime.dayOfMonth} de ${colDateTime.monthName} de ${colDateTime.year}** (${colDateTime.fullFormatted}).
+- Hora actual en Bogotá: ${hour}:00 (${timeGreeting} — franja: ${colDateTime.periodOfDay}).
+- PROHIBICIÓN ESTRICTA DE ALUCINACIÓN TEMPORAL (Doctrina Eduardo A. Rivera v33.96): Hoy es **${colDateTime.weekday}** y estamos en la **${colDateTime.periodOfDay}**. Queda TERMINANTEMENTE PROHIBIDO decir otro día de la semana (jamás digas "miércoles" si hoy es ${colDateTime.weekday}) o decir "mañana" cuando estamos en la ${colDateTime.periodOfDay}.
 - Nombre de pila resuelto: "${targetName || 'colega'}".
 - Trato respetuoso adecuado: "${genderTerm}".
 - Conversación activa en curso con esta persona: ${isOngoingChat ? "SÍ (YA ESTÁN CONVERSANDO HOY EN ESTE FORO)" : "NO (PRIMER CONTACTO DEL DÍA)"}.

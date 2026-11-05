@@ -235,6 +235,134 @@ export class JaniaMatchBot {
     ['261731263762516', '573138862997'],
   ]);
   private recentAgendaConfirmations: Map<string, { timestamp: number; confirmationText: string; solicitudId?: string | number }> = new Map();
+  private groupHumanTakeoverMap: Map<string, number> = new Map();
+  private humanManualMessageIds: Set<string> = new Set();
+  private groupRecentContextMap: Map<string, Array<{ senderName: string; text: string; timestamp: number }>> = new Map();
+
+  /**
+   * 🛡️ DOCTRINA EDUARDO A. RIVERA (v33.96):
+   * Verifica de forma infalible si un mensaje proviene de la propia cuenta de JanIA (+573192919978 / LID 167108705018103),
+   * incluso cuando es enviado manualmente desde WhatsApp Web (:46@lid) donde Baileys puede reportar fromMe=false en grupos.
+   */
+  public isFromOwnBotAccount(msg: proto.IWebMessageInfo, senderId?: string): boolean {
+    if (!msg) return false;
+    if (msg.key?.fromMe) return true;
+
+    const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
+    const botPhone = botJid ? botJid.split('@')[0].split(':')[0] : '573192919978';
+    const rawBotLid = (this.sock?.user as any)?.lid || (this.sock as any)?.authState?.creds?.me?.lid || '167108705018103@lid';
+    const cleanBotLid = rawBotLid ? String(rawBotLid).split(':')[0].split('@')[0] : '167108705018103';
+
+    const keyAny = (msg.key || {}) as any;
+    const candidates = [
+      senderId || '',
+      msg.key?.participant || '',
+      (msg as any)?.participant || '',
+      keyAny.senderPn || '',
+      keyAny.participantPn || '',
+      keyAny.senderLid || '',
+      keyAny.participantLid || '',
+    ].filter(Boolean);
+
+    for (const cand of candidates) {
+      const clean = cleanJid(String(cand));
+      const num = clean.split('@')[0].split(':')[0];
+      if (
+        (botJid && clean === botJid) ||
+        (botPhone && num === botPhone) ||
+        num === '573192919978' ||
+        num === '3192919978' ||
+        num === '167108705018103' ||
+        (cleanBotLid && num === cleanBotLid) ||
+        String(cand).includes('167108705018103') ||
+        String(cand).includes('573192919978')
+      ) {
+        return true;
+      }
+    }
+
+    const pushName = String(msg.pushName || '').trim();
+    if (/jania\s+agente\s+ia\s+de\s+vecy/i.test(pushName) || /^✨\s*jania\b/i.test(pushName)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 🛡️ Detecta si un texto es un flyer promocional o autopresentación de JanIA ("¡Buenos días! Soy JanIA, tu aliada inmobiliaria...")
+   * para evitar que JanIA confunda su propio anuncio con una consulta de un usuario.
+   */
+  public isSelfPresentationOrFlyerOfJanIA(text?: string | null): boolean {
+    if (!text) return false;
+    const clean = text.trim();
+    return (
+      /\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/i.test(clean) ||
+      /\bjania,\s+tu\s+aliada\s+inmobiliaria\b/i.test(clean) ||
+      /\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/i.test(clean)
+    ) && !/@(?:✨\s*)?jania\b/i.test(clean);
+  }
+
+  /**
+   * 👂 Registra en silencio el contexto conversacional reciente del grupo para que JanIA "ponga atención"
+   * mientras los participantes hablan sin interrumpirlos, y tenga contexto si luego se dirigen directamente a ella.
+   */
+  public recordPassiveGroupContext(chatId: string, senderName: string, text: string) {
+    if (!chatId || !text || !text.trim()) return;
+    const cleanText = text.trim().slice(0, 350);
+    if (cleanText.length < 3) return;
+    const list = this.groupRecentContextMap.get(chatId) || [];
+    list.push({
+      senderName: senderName || 'Participante',
+      text: cleanText,
+      timestamp: Date.now(),
+    });
+    while (list.length > 8) {
+      list.shift();
+    }
+    this.groupRecentContextMap.set(chatId, list);
+  }
+
+  public getPassiveGroupContextSummary(chatId: string): string {
+    const list = this.groupRecentContextMap.get(chatId) || [];
+    const now = Date.now();
+    const recent = list.filter(item => now - item.timestamp < 30 * 60 * 1000);
+    if (recent.length === 0) return '';
+    return recent.map(item => `- ${item.senderName}: "${item.text}"`).join('\n');
+  }
+
+  public registerManualGroupTakeover(chatId: string, msgId?: string) {
+    if (chatId) {
+      this.groupHumanTakeoverMap.set(chatId, Date.now());
+    }
+    if (msgId) {
+      this.humanManualMessageIds.add(msgId);
+      if (this.humanManualMessageIds.size > 1000) {
+        const first = this.humanManualMessageIds.values().next().value;
+        if (first) this.humanManualMessageIds.delete(first);
+      }
+    }
+  }
+
+  /**
+   * ⚖️ Verifica que una mención a JanIA en un grupo externo corresponda a una consulta inmobiliaria, jurídica,
+   * tributaria, de avalúo o solicitud de explicación, y jamás a un flyer o saludo vacío.
+   */
+  public isRealEstateConsultationForGroup(text?: string | null, quotedText?: string | null): boolean {
+    const clean = String(text || '').trim();
+    const quoted = String(quotedText || '').trim();
+    if (!clean && !quoted) return false;
+    if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
+
+    const combined = `${clean} ${quoted}`.toLowerCase();
+    // Si tiene signo de interrogación, verbos de consulta/explicación o términos del ámbito inmobiliario/jurídico/VECY
+    const hasQuestionOrConsultIntent =
+      /[¿?]/.test(combined) ||
+      /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) ||
+      /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura| escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensión|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match)\b/i.test(combined);
+
+    return hasQuestionOrConsultIntent;
+  }
 
   public registerPhoneLidMapping(phoneOrJid?: string | null, lidOrJid?: string | null) {
     if (!phoneOrJid || !lidOrJid) return;
@@ -869,8 +997,14 @@ export class JaniaMatchBot {
         } catch (_) { }
 
 
-        // Omitir si proviene de status broadcast
-        if (chatId.includes('status@broadcast') || senderId.includes('status@broadcast')) {
+        // Omitir si proviene de status broadcast o canales de WhatsApp (@newsletter)
+        if (
+          chatId.includes('status@broadcast') ||
+          senderId.includes('status@broadcast') ||
+          chatId.endsWith('@newsletter') ||
+          senderId.endsWith('@newsletter') ||
+          rawChatId.includes('@newsletter')
+        ) {
           continue;
         }
 
@@ -947,8 +1081,15 @@ export class JaniaMatchBot {
               continue;
             }
 
-            // 🛡️ Omitir mensajes propios en grupos externos (evitar eco y reprocesamiento de bot)
-            if (fromMe && chatId !== this.targetGroupId && chatId !== this.buzonGroupId && chatId !== this.circuloGroupId) {
+            // 🛡️ DOCTRINA EDUARDO A. RIVERA (v33.96) — PROHIBICIÓN ABSOLUTA DE AUTO-RESPUESTA Y CONTROL HUMANO EN GRUPOS:
+            // 1. JanIA JAMÁS debe responderse a sí misma (ni por fromMe, ni por su teléfono 573192919978, ni por su LID 167108705018103).
+            // 2. Si Eduardo o Jani escriben manualmente desde el WhatsApp Web / celular de JanIA en cualquier grupo (!botSentMessageIds.has(msgId)),
+            //    JanIA registra la toma de control humana, guarda silencio absoluto y cede el control.
+            if (this.isFromOwnBotAccount(msg, senderId)) {
+              if (msgId && !this.botSentMessageIds.has(msgId)) {
+                this.registerManualGroupTakeover(chatId, msgId);
+                console.log(`[JANIA-HUMAN-TAKEOVER] 🛡️ Intervención manual detectada desde la cuenta de JanIA (${senderId}) en el grupo ${chatId} (msgId=${msgId}). JanIA guarda silencio absoluto.`);
+              }
               continue;
             }
 
@@ -1262,6 +1403,11 @@ export class JaniaMatchBot {
                 ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
               );
 
+            // 👂 Atención silenciosa en grupos: registrar el hilo conversacional reciente sin interrumpir (Doctrina Eduardo A. Rivera v33.96)
+            if (body && body.trim() && !isReactionMessage && !this.isFromOwnBotAccount(msg, senderId)) {
+              this.recordPassiveGroupContext(chatId, msg.pushName || senderId.split('@')[0], body);
+            }
+
             // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
             // En grupos externos no oficiales, CAPTURAMOS publicaciones comerciales e inmuebles (descartando cortesías cortas y reacciones).
             // Si el mensaje contiene mención directa a JanIA (hasDirectMention), NO es una publicación desatendida, es una consulta activa.
@@ -1374,8 +1520,8 @@ export class JaniaMatchBot {
 
             const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
 
-            // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
-            if (msg.key.fromMe) {
+            // 1. Detectar si el mensaje es del bot o de un humano operando la cuenta de JanIA (fromMe / LID propio)
+            if (msg.key.fromMe || this.isFromOwnBotAccount(msg, senderId)) {
               const msgId = msg.key.id || "";
 
               // Si el propio bot despachó el mensaje programáticamente, ignorar para evitar loops
@@ -1390,33 +1536,50 @@ export class JaniaMatchBot {
 
               // 🛡️ BLINDAJE DE SELF-CHAT ("Mensajes contigo mismo"):
               // Eduardo utiliza su chat personal como bloc de notas, borradores o enlaces personales.
-              // JanIA ÚNICAMENTE debe responder en self-chat si Eduardo la invoca explícitamente (ej: "@JanIA", "JanIA", "Agente JanIA").
-              // Si es un "Hola", un borrador o una nota personal sin invocarla, JanIA guarda silencio absoluto.
+              // JanIA ÚNICAMENTE debe responder en self-chat si Eduardo la invoca explícitamente (ej: "@JanIA", "JanIA", "Agente JanIA") y NO es un flyer.
+              // Si es un "Hola", un borrador, un flyer ("Soy JanIA") o una nota personal sin invocarla, JanIA guarda silencio absoluto.
               if (isSelfChat) {
-                const hasExplicitJanIAInvocation = /@?jania\b/i.test(body) || cleanStart.startsWith("agente jania");
+                const hasExplicitJanIAInvocation =
+                  !this.isSelfPresentationOrFlyerOfJanIA(body) &&
+                  (/@?jania\b/i.test(body) || cleanStart.startsWith("agente jania"));
                 if (!hasExplicitJanIAInvocation) {
                   return;
                 }
                 console.log(`[JANIA-MATCH] Invocación explícita a JanIA detectada en self-chat (${senderId}). Procediendo a procesar.`);
-              } else if (isAdmin) {
-                console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administración (${senderId}). Procediendo a procesar.`);
               } else {
-                // Intervención humana detectada en conversación DM con un tercero (cliente externo)
+                // 🛡️ TOMA DE CONTROL HUMANA EN DM (Doctrina Eduardo A. Rivera v33.96):
+                // Si Eduardo o Jani escriben manualmente desde el WhatsApp Web / celular de JanIA en un chat privado con cualquier persona,
+                // cancelamos cualquier respuesta en buffer, silenciamos la sesión automática y JAMÁS auto-respondemos a nuestro propio mensaje.
+                const pendingBuf =
+                  this.dmMessageBuffers.get(chatId) ||
+                  this.dmMessageBuffers.get(senderId) ||
+                  this.dmMessageBuffers.get(resolvedSenderId);
+                if (pendingBuf?.timer) {
+                  clearTimeout(pendingBuf.timer);
+                }
+                this.dmMessageBuffers.delete(chatId);
+                this.dmMessageBuffers.delete(senderId);
+                this.dmMessageBuffers.delete(resolvedSenderId);
+
                 const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1000;
-                const isRecentMessage = (Date.now() - msgTimestampMs) < 2 * 60 * 1000; // 2 minutos
-                if (isRecentMessage) {
-                  console.log(`[JANIA-MATCH] Intervención humana detectada en DM de tercero ${senderId}. Silenciando bot.`);
+                const isRecentMessage = !msgTimestampMs || (Date.now() - msgTimestampMs) < 5 * 60 * 1000;
+                if (isRecentMessage && !isAdmin) {
+                  console.log(`[JANIA-HUMAN-TAKEOVER] 🛡️ Intervención humana detectada en DM de tercero ${senderId} (${resolvedSenderId}). Silenciando bot y cediendo control.`);
                   this.lastHumanIntervention.set(senderId, Date.now());
+                  this.lastHumanIntervention.set(resolvedSenderId, Date.now());
                   const { muteSession } = await import('./janIA');
                   await muteSession(senderId, true).catch(err => console.error("Error muting session in database:", err));
+                  if (resolvedSenderId !== senderId) {
+                    await muteSession(resolvedSenderId, true).catch(() => {});
+                  }
                 }
                 return;
               }
             }
 
-            // 2. Verificar reactivación ("Agente JanIA" o invocación explícita de herramientas: Cédula o Predial)
+            // 2. Verificar reactivación ("Agente JanIA", mención directa a JanIA tras pausa humana, o invocación explícita de herramientas)
             const { isSessionMuted, muteSession } = await import('./janIA');
-            let isMuted = (isSelfChat || isAdmin) ? false : await isSessionMuted(senderId);
+            let isMuted = (isSelfChat || isAdmin) ? false : (await isSessionMuted(senderId) || (resolvedSenderId !== senderId ? await isSessionMuted(resolvedSenderId) : false));
 
             if (isMuted) {
               const { extractCedulaForVerification } = await import('./identityVerificationService');
@@ -1425,11 +1588,22 @@ export class JaniaMatchBot {
               const isPredialReq = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
               const isIduReq = body.toLowerCase().includes('idu') || body.toLowerCase().includes('valorizacion') || body.toLowerCase().includes('valorización');
               const isNotarialReq = hasPendingNotarialSession(senderId) || extractNotarialExpenseParams(body, senderId).found || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*familiar|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(body);
+              const lastHumanTs = Math.max(
+                this.lastHumanIntervention.get(senderId) || 0,
+                this.lastHumanIntervention.get(resolvedSenderId) || 0
+              );
+              const isDirectInvocationAfterHumanPause =
+                !this.isSelfPresentationOrFlyerOfJanIA(body) &&
+                /\b(?:@?jania|agente\s+jania)\b/i.test(body) &&
+                (Date.now() - lastHumanTs > 60 * 1000);
 
-              if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
+              if (cleanStart.startsWith("agente jania") || isDirectInvocationAfterHumanPause || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
                 await muteSession(senderId, false).catch(err => console.error("Error unmuting session:", err));
+                if (resolvedSenderId !== senderId) {
+                  await muteSession(resolvedSenderId, false).catch(() => {});
+                }
                 isMuted = false;
-                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente mediante ${isCedulaReq ? 'verificación de documento' : (isPredialReq ? 'asistencia de predial' : (isIduReq ? 'paz y salvo de valorización IDU' : (isNotarialReq ? 'liquidación notarial' : 'comando de cliente')))} para ${senderId}`);
+                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente para ${senderId}`);
               }
             }
 
@@ -1997,29 +2171,48 @@ export class JaniaMatchBot {
   }
 
   /**
-   * 🤖 DETECTOR ROBUSTO DE MENCIÓN DIRECTA A JANIA (Doctrina Eduardo A. Rivera — v33.92)
-   * Detecta menciones por:
-   * 1. Nombre o variantes ("jania", "@jania")
+   * 🤖 DETECTOR ROBUSTO DE MENCIÓN DIRECTA A JANIA (Doctrina Eduardo A. Rivera — v33.92 / v33.96)
+   * Detecta menciones legítimas de terceros por:
+   * 1. Nombre o variantes ("jania", "@jania") excluyendo autopresentaciones/flyers ("Soy JanIA")
    * 2. Teléfono oficial ("573192919978", "3192919978")
    * 3. LID de JanIA en WhatsApp Web/Multi-Device ("167108705018103" / @167108705018103)
    * 4. mentionedJid en contextInfo (tanto @s.whatsapp.net como @lid)
-   * 5. Cita directa de un mensaje previo emitido por JanIA
+   * 5. Cita directa de un mensaje previo emitido por JanIA (excepto cuando es respuesta a un mensaje manual humano sin nombrar a JanIA)
+   *
+   * REGLA INQUEBRANTABLE v33.96: Jamás retorna true si el mensaje proviene de la propia cuenta de JanIA (Tú / fromMe / LID propio)
+   * ni si el texto es un flyer promocional ("¡Buenos días! Soy JanIA, tu aliada inmobiliaria...").
    */
   public isBotDirectlyMentioned(msg: proto.IWebMessageInfo, text: string): boolean {
+    if (this.isFromOwnBotAccount(msg)) {
+      return false;
+    }
+    if (this.isSelfPresentationOrFlyerOfJanIA(text)) {
+      return false;
+    }
+
+    const sanitizedForNameCheck = (text || '')
+      .replace(/\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/gi, '')
+      .replace(/\bjania,\s+tu\s+aliada\s+inmobiliaria\b/gi, '')
+      .replace(/\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/gi, (m, offset, full) => {
+        const prevChar = offset > 0 ? full[offset - 1] : '';
+        return prevChar === '@' ? m : '';
+      })
+      .toLowerCase();
+
     const textLower = (text || '').toLowerCase();
 
-    // 1. Detección por nombre o variantes
-    if (textLower.includes("jania") || textLower.includes("@jania")) {
+    // 1. Detección por nombre o variantes (excluyendo flyers de autopresentación)
+    if (sanitizedForNameCheck.includes("jania") || sanitizedForNameCheck.includes("@jania")) {
       return true;
     }
 
-    // 2. Detección por número telefónico oficial
+    // 2. Detección por número telefónico oficial (solo si está precedido de @ o no es un pie de firma de flyer)
     const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
     const botPhone = botJid ? botJid.split('@')[0].split(':')[0] : '573192919978';
-    if (botPhone && textLower.includes(botPhone)) {
+    if (botPhone && sanitizedForNameCheck.includes(`@${botPhone}`)) {
       return true;
     }
-    if (textLower.includes("573192919978") || textLower.includes("3192919978")) {
+    if (sanitizedForNameCheck.includes("@573192919978") || sanitizedForNameCheck.includes("@3192919978") || /\b(?:573192919978|3192919978)\b/.test(sanitizedForNameCheck)) {
       return true;
     }
 
@@ -2063,13 +2256,34 @@ export class JaniaMatchBot {
     const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : '';
     if (quotedParticipant) {
       const quotedNum = quotedParticipant.split('@')[0].split(':')[0];
-      if (
+      const isQuotingOurAccount =
         (botJid && quotedParticipant === botJid) ||
         (botPhone && quotedNum === botPhone) ||
         quotedNum === "573192919978" ||
         quotedNum === "167108705018103" ||
-        (cleanBotLid && quotedNum === cleanBotLid)
-      ) {
+        (cleanBotLid && quotedNum === cleanBotLid);
+
+      if (isQuotingOurAccount) {
+        const quotedStanzaId = String(contextInfo?.stanzaId || '');
+        const rawChatId = msg?.key?.remoteJid ? cleanJid(msg.key.remoteJid) : '';
+        // Si el mensaje citado fue escrito manualmente por Eduardo/Jani tomando el control del chat (humanManualMessageIds),
+        // o si el mensaje citado es un flyer de autopresentación ("Soy JanIA"), citarlo sin nombrar/arrobear a JanIA NO dispara auto-respuesta:
+        if (quotedStanzaId && this.humanManualMessageIds.has(quotedStanzaId)) {
+          return false;
+        }
+        if (rawChatId && (Date.now() - (this.groupHumanTakeoverMap.get(rawChatId) || 0) < 30 * 60 * 1000)) {
+          if (!quotedStanzaId || !this.botSentMessageIds.has(quotedStanzaId)) {
+            return false;
+          }
+        }
+        const unwrappedQuoted = contextInfo?.quotedMessage ? unwrapMessage(contextInfo.quotedMessage) : null;
+        const quotedText = (unwrappedQuoted as any)?.conversation
+          || (unwrappedQuoted as any)?.extendedTextMessage?.text
+          || (unwrappedQuoted as any)?.imageMessage?.caption
+          || '';
+        if (this.isSelfPresentationOrFlyerOfJanIA(quotedText)) {
+          return false;
+        }
         return true;
       }
     }
@@ -2080,23 +2294,27 @@ export class JaniaMatchBot {
   // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
   private async handleDirectGroupQuestion(msg: proto.IWebMessageInfo, chatId: string, senderId: string, bodyText: string) {
     try {
+      const questionStartedAt = Date.now();
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
 
-      const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
-      const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
-      const isFromBotAccount = msg.key?.fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978');
+      // 🛡️ REGLA DOCTRINAL INQUEBRANTABLE (v33.96):
+      // JanIA JAMÁS debe responderse a sí misma ni responder cuando alguien de nosotros usa su cuenta, ni auto-responder a sus propios flyers.
+      if (this.isFromOwnBotAccount(msg, senderId)) {
+        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Bloqueo absoluto de auto-respuesta: el mensaje en ${chatId} proviene de la propia cuenta de JanIA (${senderId}).`);
+        return;
+      }
+      if (this.isSelfPresentationOrFlyerOfJanIA(bodyText)) {
+        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Flyer o autopresentación de JanIA detectado en ${chatId}. No se auto-responde.`);
+        return;
+      }
+
       const textLower = bodyText.toLowerCase();
       const hasDirectMention = this.isBotDirectlyMentioned(msg, bodyText);
 
       if (!isOfficialGroup && !hasDirectMention) {
-        // 🛡️ BLINDAJE DOCTRINAL INQUEBRANTABLE (Doctrina Eduardo A. Rivera v33.82 / v33.92):
-        // En grupos externos JanIA actúa ÚNICAMENTE si la nombran o citan directamente; de resto guarda silencio 100% absoluto.
+        // 🛡️ BLINDAJE DOCTRINAL INQUEBRANTABLE (Doctrina Eduardo A. Rivera v33.82 / v33.92 / v33.96):
+        // En grupos externos JanIA actúa ÚNICAMENTE si la nombran, citan o arrobean (@) directamente; de resto guarda silencio 100% absoluto.
         console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje en grupo externo ${chatId} sin mención directa ignorado para respuestas textuales. Silencio 100% preservado.`);
-        return;
-      }
-
-      if (isFromBotAccount && !hasDirectMention) {
-        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin mención explícita).`);
         return;
       }
 
@@ -2332,15 +2550,47 @@ export class JaniaMatchBot {
         );
 
       } else if (hasDirectMention) {
-        // 🌐 GRUPO EXTERNO DONDE JANIA ES NOMBRADA DIRECTAMENTE (Doctrina Eduardo A. Rivera v33.82):
-        // (Doctrina Eduardo A. Rivera v33.92 — Mención por LID/Texto y respuesta obligatoria en grupo externo)
-        // JanIA atiende la consulta profesional usando processConsultingMessage con todo su poder de IA resolutiva,
-        // respondiendo con precisión, calidez, citando a las partes y entregando la respuesta directa en el grupo externo.
+        // 🌐 GRUPO EXTERNO DONDE JANIA ES NOMBRADA DIRECTAMENTE (Doctrina Eduardo A. Rivera v33.82)
+        // 🌐 GRUPO EXTERNO DONDE JANIA ES NOMBRADA, CITADA O ARROBEADA (@) DIRECTAMENTE (Doctrina Eduardo A. Rivera v33.82 / v33.92 / v33.96):
+        // 1. Verificar que realmente se trate de una consulta del tema inmobiliario/jurídico/avalúos/VECY y no de un saludo suelto o flyer.
+        // 2. Si Eduardo o Jani tomaron el control del chat en este grupo recientemente, esperar una ventana prudencial por si actúan en nombre de ella;
+        //    si actúan, JanIA guarda silencio absoluto; si no actúan y la consulta fue dirigida directamente a JanIA, ella responde.
         const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
         const rawMsg = unwrapMessage(msg.message);
         let imageBuffer: string | undefined;
         let pdfBuffer: string | undefined;
         let pdfMimeType: string | undefined;
+
+        let quotedContext: string | undefined;
+        try {
+          const contextInfo = (rawMsg as any)?.extendedTextMessage?.contextInfo
+            || (msg.message as any)?.extendedTextMessage?.contextInfo
+            || (rawMsg as any)?.contextInfo;
+          if (contextInfo?.quotedMessage) {
+            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+            quotedContext = (unwrappedQuoted as any)?.conversation
+              || (unwrappedQuoted as any)?.extendedTextMessage?.text
+              || (unwrappedQuoted as any)?.imageMessage?.caption
+              || undefined;
+          }
+        } catch (e) { }
+
+        if (!this.isRealEstateConsultationForGroup(bodyText, quotedContext)) {
+          console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mención en grupo externo ${chatId} descartada por no constituir una consulta inmobiliaria/jurídica ("${bodyText.slice(0, 60)}").`);
+          await this.sock.sendPresenceUpdate('paused', chatId).catch(() => {});
+          return;
+        }
+
+        const lastTakeoverTs = this.groupHumanTakeoverMap.get(chatId) || 0;
+        if (lastTakeoverTs > 0 && (Date.now() - lastTakeoverTs < 15 * 60 * 1000) && process.env.NODE_ENV !== 'test') {
+          console.log(`[JANIA-HUMAN-TAKEOVER] ⏳ Control humano reciente en ${chatId}. Esperando 6s para verificar si Eduardo/Jani responden manualmente antes de intervenir...`);
+          await new Promise(r => setTimeout(r, 6000));
+          if ((this.groupHumanTakeoverMap.get(chatId) || 0) >= questionStartedAt) {
+            console.log(`[JANIA-HUMAN-TAKEOVER] 🛡️ Eduardo/Jani respondieron manualmente en ${chatId}. JanIA guarda silencio.`);
+            await this.sock.sendPresenceUpdate('paused', chatId).catch(() => {});
+            return;
+          }
+        }
 
         if (rawMsg?.imageMessage) {
           try {
@@ -2357,19 +2607,11 @@ export class JaniaMatchBot {
           } catch (e) { }
         }
 
-        let quotedContext: string | undefined;
-        try {
-          const contextInfo = (rawMsg as any)?.extendedTextMessage?.contextInfo
-            || (msg.message as any)?.extendedTextMessage?.contextInfo
-            || (rawMsg as any)?.contextInfo;
-          if (contextInfo?.quotedMessage) {
-            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-            quotedContext = (unwrappedQuoted as any)?.conversation
-              || (unwrappedQuoted as any)?.extendedTextMessage?.text
-              || (unwrappedQuoted as any)?.imageMessage?.caption
-              || undefined;
-          }
-        } catch (e) { }
+        const passiveSummary = this.getPassiveGroupContextSummary(chatId);
+        const enrichedQuotedContext = [
+          quotedContext ? `Mensaje citado: "${quotedContext}"` : '',
+          passiveSummary ? `Hilo reciente del grupo al que JanIA estuvo prestando atención en silencio:\n${passiveSummary}` : ''
+        ].filter(Boolean).join('\n\n') || undefined;
 
         // Si citaron la consulta de otro colega para que JanIA la responda:
         const queryToProcess = quotedContext
@@ -2385,8 +2627,15 @@ export class JaniaMatchBot {
           pdfMimeType,
           isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
           msgTs,
-          quotedContext
+          enrichedQuotedContext
         );
+
+        // En un grupo externo JanIA es invitada consultora, NUNCA moderadora de publicaciones del grupo externo
+        if (result && (result.classification === 'VIOLACION_DE_NORMAS' || result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO')) {
+          console.log(`[JANIA-SILENT-SHIELD] 🛡️ Resultado ${result.classification} suprimido en grupo externo ${chatId} (JanIA solo responde consultas en grupos externos).`);
+          await this.sock.sendPresenceUpdate('paused', chatId).catch(() => {});
+          return;
+        }
 
       } else {
         await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
@@ -2412,6 +2661,12 @@ export class JaniaMatchBot {
         if (result.classification === 'VIOLACION_DE_NORMAS') {
           await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => { });
         }
+      }
+
+      if ((this.groupHumanTakeoverMap.get(chatId) || 0) >= questionStartedAt) {
+        console.log(`[JANIA-HUMAN-TAKEOVER] 🛡️ Intervención manual detectada en ${chatId} mientras se procesaba la respuesta. Abortando envío automático.`);
+        await this.sock.sendPresenceUpdate('paused', chatId).catch(() => {});
+        return;
       }
 
       if (result && result.response && result.response.trim() !== '') {
@@ -4806,4 +5061,33 @@ export function resolvePhoneForLid(lidOrJid?: string | null): string | null {
 
 export function isWhatsAppBusinessAutoGreeting(text?: string | null): boolean {
   return janiaMatchBot.isWhatsAppBusinessAutoGreeting(text);
+}
+
+// ─── Exportaciones Doctrinales de Silencio en Grupos Externos, Cero Auto-Respuesta y Control Humano (v33.96) ────
+export function isFromOwnBotAccount(msg: proto.IWebMessageInfo, senderId?: string): boolean {
+  return janiaMatchBot.isFromOwnBotAccount(msg, senderId);
+}
+
+export function isSelfPresentationOrFlyerOfJanIA(text?: string | null): boolean {
+  return janiaMatchBot.isSelfPresentationOrFlyerOfJanIA(text);
+}
+
+export function isRealEstateConsultationForGroup(text?: string | null, quotedText?: string | null): boolean {
+  return janiaMatchBot.isRealEstateConsultationForGroup(text, quotedText);
+}
+
+export function isBotDirectlyMentioned(msg: proto.IWebMessageInfo, text: string): boolean {
+  return janiaMatchBot.isBotDirectlyMentioned(msg, text);
+}
+
+export function registerManualGroupTakeover(chatId: string, msgId?: string): void {
+  janiaMatchBot.registerManualGroupTakeover(chatId, msgId);
+}
+
+export function recordPassiveGroupContext(chatId: string, senderName: string, text: string): void {
+  janiaMatchBot.recordPassiveGroupContext(chatId, senderName, text);
+}
+
+export function getPassiveGroupContextSummary(chatId: string): string {
+  return janiaMatchBot.getPassiveGroupContextSummary(chatId);
 }
