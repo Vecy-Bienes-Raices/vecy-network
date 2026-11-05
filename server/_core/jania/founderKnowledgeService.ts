@@ -542,6 +542,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Me encanta que analices todos esos otros sitios y que podamos implementar todas esas herramientas que dices. Excelente y agrega Qrador que dicen que tienen herramientas de búsqueda con IA.",
     createdAt: "2026-11-04T23:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-vecy-agenda-pro-whatsapp-lid-signal-session-shield-v33-95",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Blindaje Criptográfico Signal (@lid + PreKey Freshness + Retry Multi-Dominio) para Notificaciones de Vecy Agenda Pro (Independiente y Portal)",
+    directive:
+      "Todas las confirmaciones y notificaciones de ambas Vecy Agendas Pro (la independiente en /vecy-agenda y la integrada al portal y micro-sitios) se entregan con visibilidad instantánea 100% legible tanto en el WhatsApp del solicitante como en el WhatsApp Web de JanIA y de Vecy Bienes Raíces, erradicando de raíz el aviso 'Esperando el mensaje. Esto puede demorar un poco'. El sistema resuelve automáticamente el identificador @lid activo del solicitante, purga sesiones Signal en estado pendingPreKey vencidas (>10 min) para renovar el PreKeyBundle criptográfico en vivo, normaliza recibos de reintento (retry receipts) entre dominios @lid y @s.whatsapp.net, y reconoce respuestas automáticas de WhatsApp Business posteriores a una confirmación de Vecy Agenda Pro reaccionando con ✅ sin emitir respuestas redundantes que digan que el usuario 'copió por error su mensaje automático'.",
+    rawText:
+      "Aprovechemos y vayamos puliendo de una vez ambas Vecy Agendas Pro, la independiente y la del portal, es que resulta que la respuesta de confirmación que JanIA envía al whatsapp de los solicitantes, casi nunca se ve sino que sale ese aviso para nosotros, no se si para elos también les pase lo mismo y tal vez no la estén viendo. Observa la imagen de esta solicitud que acaba de llegar. En cambio la que se nos envóia a nosotros si se ve bien. Observa las imágenes.",
+    createdAt: "2026-11-05T00:45:00.000Z",
+    active: true
   }
 ];
 

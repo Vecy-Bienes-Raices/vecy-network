@@ -8750,6 +8750,30 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.95 (2026-11-04) — Blindaje Criptográfico Signal (@lid + PreKey Freshness + Retry Multi-Dominio) y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Aviso `"🕒 Esperando el mensaje. Esto puede demorar un poco."` en Confirmaciones de Vecy Agenda Pro:* Al enviar la confirmación de una cita (ej. Solicitud No. 1146 de Lincy Hoyos Bróker) desde cualquiera de las dos Vecy Agendas Pro (`/vecy-agenda` independiente o la integrada en el portal/micro-sitios), el mensaje quedaba atrapado con el reloj de espera criptográfica en el WhatsApp Web de JanIA (`:46`) y en dispositivos receptores.
+  2. *16.931 Sesiones Zombie `pendingPreKey` en `.baileys_auth`:* La auditoría forense en el VPS demostró que 16.931 de los 19.574 archivos `session-*.json` tenían `closed: -1` y `pendingPreKey` de días atrás (`session-573192919978.46.json` de hace 8 días y `session-573138862997.0.json` de hace 11 días) porque los mensajes entrantes ahora llegan por `@lid` (`261731263762516@lid` y `167108705018103:46@lid`), dejando las sesiones `@s.whatsapp.net` con PreKeys expiradas que nunca completaron handshake.
+  3. *Fallo de Reintento Criptográfico (`<receipt type="retry">`) entre `@lid` y `@s.whatsapp.net`:* Cuando el dispositivo compañero `:46` (`167108705018103:46@lid`) pedía retry de un mensaje enviado a `@s.whatsapp.net`, `relayMessage` en Baileys comparaba `'167108705018103' === '573192919978'` (`false`), metiendo al dispositivo propio en `otherJids`, codificando un JID inválido `167108705018103:46@s.whatsapp.net` y omitiendo `stanza.attrs.recipient`.
+  4. *Respuesta Redundante ante Auto-Greetings de WhatsApp Business:* Cuando el WhatsApp Business del solicitante respondía automáticamente con su saludo de bienvenida tras recibir la confirmación de Vecy Agenda, JanIA le respondía diciendo que *"por error se copió tu mensaje de respuesta automática"*.
+- **Solución Implementada**:
+  1. `server/_core/whatsapp-match.ts`:
+     - En `state.keys.get('session')`, se purgan automáticamente las sesiones con `closed === -1` y `pendingPreKey` cuya última actividad supere 10 minutos (`STALE_PENDING_PREKEY_MS`), retornando `null` si no queda sesión abierta válida para forzar a `assertSessions` a solicitar un `PreKeyBundle` fresco de WhatsApp antes de cifrar.
+     - Implementado mapeo bidireccional Teléfono ↔ `@lid` (`registerPhoneLidMapping`, `resolveLidForPhone`, `resolvePhoneForLid`) alimentado por `senderPn`/`senderLid` y por `this.sock.onWhatsApp(pnJid)` en `sendDirectMessage`, priorizando el envío al `@lid` activo con fallback a `@s.whatsapp.net`.
+     - Añadido interceptor `this.sock.ws.prependListener('CB:receipt', ...)` para normalizar recibos `retry` entre `@lid` y `@s.whatsapp.net`, y desempaquetado de `deviceSentMessage?.message` en `saveMessageToStore`.
+     - Añadido `isWhatsAppBusinessAutoGreeting` + `registerAgendaNotification` para reaccionar con `✅` y suprimir respuestas redundantes del LLM cuando el WhatsApp Business del solicitante dispara su saludo automático dentro de los 90s posteriores a una confirmación de Vecy Agenda Pro.
+  2. `server/_core/agendaWhatsAppService.ts`:
+     - Registro de cada confirmación saliente en `janiaMatchBot.registerAgendaNotification`.
+  3. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-vecy-agenda-pro-whatsapp-lid-signal-session-shield-v33-95`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 181 en `regression.test.ts` (4 pruebas unitarias automatizadas).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio.
+  - Versión: `v33.95` (`33.95.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.94 (2026-11-04) — Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingeniería Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic — Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Solicitud de Expansión de Herramientas Pro mediante Ingeniería Inversa de Arquitectura (REA):* Eduardo A. Rivera aprobó la incorporación de las herramientas analizadas en Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic, y ordenó analizar e integrar la tecnología de búsqueda y curaduría con IA de **Qrador (`qrador.com`)**.

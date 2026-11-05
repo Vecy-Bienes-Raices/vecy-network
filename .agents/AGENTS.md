@@ -184,7 +184,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.94 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v33.95 — Noviembre 2026
+
+### Novedades v33.95 (Blindaje Criptográfico Signal [@lid + PreKey Freshness + Retry Multi-Dominio] y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro [Independiente y Portal] — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Aprovechemos y vayamos puliendo de una vez ambas Vecy Agendas Pro, la independiente y la del portal, es que resulta que la respuesta de confirmación que JanIA envía al whatsapp de los solicitantes, casi nunca se ve sino que sale ese aviso para nosotros, no se si para elos también les pase lo mismo y tal vez no la estén viendo. Observa la imagen de esta solicitud que acaba de llegar. En cambio la que se nos envóia a nosotros si se ve bien. Observa las imágenes."*
+  2. **Causas Raíz Identificadas en `.baileys_auth` del VPS y en Baileys:**
+     - **16.931 Sesiones Zombie `pendingPreKey` en `.baileys_auth`:** Cuando WhatsApp migró el tráfico entrante a `@lid`, las sesiones `@s.whatsapp.net` quedaron con `closed: -1` y `pendingPreKey` de días atrás (`session-573192919978.46.json` de hace 8 días y `session-573138862997.0.json` de Lincy Hoyos de hace 11 días). Al enviar `sendDirectMessage` a `@s.whatsapp.net`, Baileys cifraba con un `preKeyId`/`signedKeyId` obsoleto ya descartado por el dispositivo receptor y por el WhatsApp Web de JanIA (`:46`), produciendo `"🕒 Esperando el mensaje. Esto puede demorar un poco."`.
+     - **Fallo de Retry Multi-Dominio (`@lid` ↔ `@s.whatsapp.net`) en Baileys:** Cuando el dispositivo compañero `:46` (`167108705018103:46@lid`) pedía `<receipt type="retry">` para un mensaje enviado a `@s.whatsapp.net`, `relayMessage` evaluaba `user === meUser` (`'167108705018103' === '573192919978'` -> `false`), generando un JID inválido y omitiendo `recipient`.
+     - **Auto-Greeting de WhatsApp Business tras Confirmación de Agenda:** El WhatsApp Business de la solicitante disparaba su mensaje automático de bienvenida en `@lid` y JanIA le contestaba que *"por error se copió tu mensaje de respuesta automática"*.
+  3. **Solución y Blindaje Quirúrgico Unificado (Ambas Vecy Agendas Pro):**
+     - **Purga Automática de `pendingPreKey` Zombies (`STALE_PENDING_PREKEY_MS = 10 min`):** En `state.keys.get('session')`, toda sesión en `pendingPreKey` con antigüedad >10 min es purgada y devuelve `null` para que `assertSessions` obtenga un `PreKeyBundle` fresco de WhatsApp antes de cifrar.
+     - **Mapeo Bidireccional Teléfono ↔ `@lid` y Resolución `onWhatsApp` en `sendDirectMessage`:** Despacha prioritariamente al `@lid` activo del solicitante con fallback a `@s.whatsapp.net`.
+     - **Normalizador `CB:receipt` Multi-Dominio y Desempaquetado `deviceSentMessage` en `saveMessageToStore`.**
+     - **Detector `isWhatsAppBusinessAutoGreeting` + `registerAgendaNotification`:** Reacciona con `✅` ante el saludo automático de WhatsApp Business del solicitante dentro de los 90s posteriores a una confirmación de Vecy Agenda Pro sin lanzar una respuesta redundante del LLM.
+     - **Registro de Enseñanza:** Registrada la directriz `seed-vecy-agenda-pro-whatsapp-lid-signal-session-shield-v33-95` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 181 `vitest` (6/6 suites passing) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v33.94 — Noviembre 2026
 
 ### Novedades v33.94 (Suite Proptech IA de 7 Herramientas Pro Personalizables: Ingeniería Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

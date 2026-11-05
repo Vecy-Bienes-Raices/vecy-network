@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.94";
+    VECY_VERSION = "v33.95";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17252,6 +17252,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Me encanta que analices todos esos otros sitios y que podamos implementar todas esas herramientas que dices. Excelente y agrega Qrador que dicen que tienen herramientas de b\xFAsqueda con IA.",
         createdAt: "2026-11-04T23:45:00.000Z",
         active: true
+      },
+      {
+        id: "seed-vecy-agenda-pro-whatsapp-lid-signal-session-shield-v33-95",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Blindaje Criptogr\xE1fico Signal (@lid + PreKey Freshness + Retry Multi-Dominio) para Notificaciones de Vecy Agenda Pro (Independiente y Portal)",
+        directive: "Todas las confirmaciones y notificaciones de ambas Vecy Agendas Pro (la independiente en /vecy-agenda y la integrada al portal y micro-sitios) se entregan con visibilidad instant\xE1nea 100% legible tanto en el WhatsApp del solicitante como en el WhatsApp Web de JanIA y de Vecy Bienes Ra\xEDces, erradicando de ra\xEDz el aviso 'Esperando el mensaje. Esto puede demorar un poco'. El sistema resuelve autom\xE1ticamente el identificador @lid activo del solicitante, purga sesiones Signal en estado pendingPreKey vencidas (>10 min) para renovar el PreKeyBundle criptogr\xE1fico en vivo, normaliza recibos de reintento (retry receipts) entre dominios @lid y @s.whatsapp.net, y reconoce respuestas autom\xE1ticas de WhatsApp Business posteriores a una confirmaci\xF3n de Vecy Agenda Pro reaccionando con \u2705 sin emitir respuestas redundantes que digan que el usuario 'copi\xF3 por error su mensaje autom\xE1tico'.",
+        rawText: "Aprovechemos y vayamos puliendo de una vez ambas Vecy Agendas Pro, la independiente y la del portal, es que resulta que la respuesta de confirmaci\xF3n que JanIA env\xEDa al whatsapp de los solicitantes, casi nunca se ve sino que sale ese aviso para nosotros, no se si para elos tambi\xE9n les pase lo mismo y tal vez no la est\xE9n viendo. Observa la imagen de esta solicitud que acaba de llegar. En cambio la que se nos env\xF3ia a nosotros si se ve bien. Observa las im\xE1genes.",
+        createdAt: "2026-11-05T00:45:00.000Z",
+        active: true
       }
     ];
   }
@@ -25108,8 +25118,12 @@ __export(whatsapp_match_exports, {
   downloadMediaSafely: () => downloadMediaSafely,
   isBlacklistedGroup: () => isBlacklistedGroup,
   isVipRealEstateGroup: () => isVipRealEstateGroup,
+  isWhatsAppBusinessAutoGreeting: () => isWhatsAppBusinessAutoGreeting,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
+  registerPhoneLidMapping: () => registerPhoneLidMapping,
+  resolveLidForPhone: () => resolveLidForPhone,
+  resolvePhoneForLid: () => resolvePhoneForLid,
   sendNativeWhatsAppChannelPoll: () => sendNativeWhatsAppChannelPoll,
   sendNativeWhatsAppContact: () => sendNativeWhatsAppContact,
   sendNativeWhatsAppEvent: () => sendNativeWhatsAppEvent,
@@ -25240,6 +25254,18 @@ async function sendNativeWhatsAppQuestionPrompt(targetJid, questionText) {
 async function sendNativeWhatsAppLocation(targetJid, latitude = 4.6768, longitude = -74.0482, name = "VECY BIENES RA\xCDCES \u2014 Mesa Central Bogot\xE1", address = "Parque de la 93 / El Chic\xF3, Bogot\xE1 D.C., Colombia") {
   return janiaMatchBot.sendLocationPin(targetJid, latitude, longitude, name, address);
 }
+function registerPhoneLidMapping(phoneOrJid, lidOrJid) {
+  janiaMatchBot.registerPhoneLidMapping(phoneOrJid, lidOrJid);
+}
+function resolveLidForPhone(phoneOrJid) {
+  return janiaMatchBot.resolveLidForPhone(phoneOrJid);
+}
+function resolvePhoneForLid(lidOrJid) {
+  return janiaMatchBot.resolvePhoneForLid(lidOrJid);
+}
+function isWhatsAppBusinessAutoGreeting(text2) {
+  return janiaMatchBot.isWhatsAppBusinessAutoGreeting(text2);
+}
 var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot, whatsappBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
@@ -25312,9 +25338,77 @@ var init_whatsapp_match = __esm({
       botSentMessageIds = /* @__PURE__ */ new Set();
       messageStore = /* @__PURE__ */ new Map();
       lastHumanIntervention = /* @__PURE__ */ new Map();
+      phoneToLidMap = /* @__PURE__ */ new Map([
+        ["573192919978", "167108705018103@lid"],
+        ["573166569719", "225954035179724@lid"],
+        ["573188096811", "182781141344345@lid"],
+        ["573138862997", "261731263762516@lid"]
+      ]);
+      lidToPhoneMap = /* @__PURE__ */ new Map([
+        ["167108705018103", "573192919978"],
+        ["225954035179724", "573166569719"],
+        ["182781141344345", "573188096811"],
+        ["218820279050385", "573188096811"],
+        ["261731263762516", "573138862997"]
+      ]);
+      recentAgendaConfirmations = /* @__PURE__ */ new Map();
+      registerPhoneLidMapping(phoneOrJid, lidOrJid) {
+        if (!phoneOrJid || !lidOrJid) return;
+        let cleanPhone = String(phoneOrJid).split("@")[0].split(":")[0].replace(/\D/g, "");
+        if (cleanPhone.length === 10 && cleanPhone.startsWith("3")) {
+          cleanPhone = "57" + cleanPhone;
+        }
+        const cleanLid = String(lidOrJid).split("@")[0].split(":")[0].replace(/\D/g, "");
+        if (!cleanPhone || !cleanLid || cleanPhone === cleanLid) return;
+        const lidJid = `${cleanLid}@lid`;
+        this.phoneToLidMap.set(cleanPhone, lidJid);
+        this.lidToPhoneMap.set(cleanLid, cleanPhone);
+      }
+      resolveLidForPhone(phoneOrJid) {
+        if (!phoneOrJid) return null;
+        let cleanPhone = String(phoneOrJid).split("@")[0].split(":")[0].replace(/\D/g, "");
+        if (cleanPhone.length === 10 && cleanPhone.startsWith("3")) {
+          cleanPhone = "57" + cleanPhone;
+        }
+        return this.phoneToLidMap.get(cleanPhone) || null;
+      }
+      resolvePhoneForLid(lidOrJid) {
+        if (!lidOrJid) return null;
+        const cleanLid = String(lidOrJid).split("@")[0].split(":")[0].replace(/\D/g, "");
+        return this.lidToPhoneMap.get(cleanLid) || null;
+      }
+      registerAgendaNotification(phoneOrJid, confirmationText, solicitudId) {
+        let cleanPhone = String(phoneOrJid || "").split("@")[0].split(":")[0].replace(/\D/g, "");
+        if (cleanPhone.length === 10 && cleanPhone.startsWith("3")) {
+          cleanPhone = "57" + cleanPhone;
+        }
+        if (!cleanPhone) return;
+        const entry = { timestamp: Date.now(), confirmationText, solicitudId };
+        this.recentAgendaConfirmations.set(cleanPhone, entry);
+        const mappedLid = this.resolveLidForPhone(cleanPhone);
+        if (mappedLid) {
+          const cleanLid = mappedLid.split("@")[0];
+          this.recentAgendaConfirmations.set(cleanLid, entry);
+          this.recentAgendaConfirmations.set(mappedLid, entry);
+        }
+        Promise.resolve().then(() => (init_janIA(), janIA_exports)).then(({ appendDmHistory: appendDmHistory2 }) => {
+          appendDmHistory2(`${cleanPhone}@s.whatsapp.net`, "assistant", confirmationText);
+          if (mappedLid) {
+            appendDmHistory2(mappedLid, "assistant", confirmationText);
+          }
+        }).catch(() => {
+        });
+      }
+      isWhatsAppBusinessAutoGreeting(text2) {
+        if (!text2) return false;
+        const clean = text2.trim();
+        if (clean.length < 15 || clean.length > 360) return false;
+        return /gracias\s+por\s+comunicarte\s+con\b/i.test(clean) || /gracias\s+por\s+contactar(?:te)?\s+(?:a|con)\b/i.test(clean) || /gracias\s+por\s+escribir(?:nos)?\s+a\b/i.test(clean) || /(?:d[eé]jame|haznos)\s+saber\s+c[oó]mo\s+(?:puedo|podemos)\s+ayudarte/i.test(clean) || /en\s+breve\s+(?:uno\s+de\s+nuestros\s+asesores\s+)?te\s+atenderemos/i.test(clean) || /bienvenid[oa]s?\s+a\s+[\w\s]{2,40}[.,!]\s*(?:¿?en\s+qu[eé]\s+podemos\s+ayudarte|¿?c[oó]mo\s+podemos\s+ayudarte)/i.test(clean);
+      }
       saveMessageToStore(id, message) {
         if (!id || !message) return;
-        this.messageStore.set(id, message);
+        const unwrapped = message?.deviceSentMessage?.message || message?.ephemeralMessage?.message || message;
+        this.messageStore.set(id, unwrapped);
         if (this.messageStore.size > 2e3) {
           const firstKey = this.messageStore.keys().next().value;
           if (firstKey) this.messageStore.delete(firstKey);
@@ -25542,12 +25636,24 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
           state.keys.get = (async (type, ids) => {
             const data = await originalKeysGet(type, ids);
             if (type === "session") {
+              const now = Date.now();
+              const STALE_PENDING_PREKEY_MS = 10 * 60 * 1e3;
               for (const id of ids) {
                 const sessRecord = data[id];
                 if (sessRecord && sessRecord._sessions) {
                   const sessionKeys = Object.keys(sessRecord._sessions);
                   if (sessionKeys.length > 0) {
-                    const hasOpen = sessionKeys.some((k) => sessRecord._sessions[k]?.indexInfo?.closed === -1);
+                    for (const k of sessionKeys) {
+                      const s = sessRecord._sessions[k];
+                      if (s?.indexInfo?.closed === -1 && s.pendingPreKey) {
+                        const lastActivity = Math.max(s.indexInfo?.used || 0, s.indexInfo?.created || 0);
+                        if (lastActivity > 0 && now - lastActivity > STALE_PENDING_PREKEY_MS) {
+                          delete sessRecord._sessions[k];
+                        }
+                      }
+                    }
+                    const remainingKeys = Object.keys(sessRecord._sessions);
+                    const hasOpen = remainingKeys.some((k) => sessRecord._sessions[k]?.indexInfo?.closed === -1);
                     if (!hasOpen) {
                       data[id] = null;
                     }
@@ -25611,6 +25717,47 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
               return void 0;
             }
           });
+          if (this.sock?.ws && typeof this.sock.ws.prependListener === "function") {
+            this.sock.ws.prependListener("CB:receipt", (node) => {
+              try {
+                if (!node?.attrs || node.attrs.type !== "retry") return;
+                const mePhone = (this.sock?.user?.id || state.creds?.me?.id || "573192919978").split(":")[0].split("@")[0];
+                const meLid = (state.creds?.me?.lid || "167108705018103").split(":")[0].split("@")[0];
+                const targetChat = String(node.attrs.recipient || node.attrs.from || "");
+                const isTargetPnChat = targetChat.endsWith("@s.whatsapp.net");
+                const isTargetLidChat = targetChat.endsWith("@lid");
+                const rewriteJidDomain = (rawJid) => {
+                  if (!rawJid) return rawJid;
+                  const [userAndDev, server] = rawJid.split("@");
+                  if (!userAndDev || !server) return rawJid;
+                  const [userPart, devPart] = userAndDev.split(":");
+                  const devSuffix = devPart !== void 0 ? `:${devPart}` : "";
+                  if (isTargetPnChat && server === "lid") {
+                    if (userPart === meLid || userPart === "167108705018103") {
+                      return `${mePhone}${devSuffix}@s.whatsapp.net`;
+                    }
+                    const targetPhone = targetChat.split("@")[0].split(":")[0];
+                    if (targetPhone) {
+                      this.registerPhoneLidMapping(targetPhone, userPart);
+                      return `${targetPhone}${devSuffix}@s.whatsapp.net`;
+                    }
+                  } else if (isTargetLidChat && server === "s.whatsapp.net") {
+                    if (userPart === mePhone || userPart === "573192919978") {
+                      return `${meLid}${devSuffix}@lid`;
+                    }
+                  }
+                  return rawJid;
+                };
+                if (node.attrs.recipient) {
+                  node.attrs.from = rewriteJidDomain(node.attrs.from);
+                }
+                if (node.attrs.participant) {
+                  node.attrs.participant = rewriteJidDomain(node.attrs.participant);
+                }
+              } catch (_) {
+              }
+            });
+          }
           if (this.sock?.signalRepository?.encryptMessage) {
             const origEncryptMessage = this.sock.signalRepository.encryptMessage.bind(this.sock.signalRepository);
             this.sock.signalRepository.encryptMessage = async (params) => {
@@ -25735,6 +25882,15 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             const rawSenderId = isGroup ? msg.key.participant || msg.participant || (this.sock?.user?.id ? cleanJid(this.sock.user.id) : "") : rawChatId;
             if (!rawSenderId || isGroup && rawSenderId.endsWith("@g.us")) continue;
             const senderId = cleanJid(rawSenderId);
+            try {
+              const keyAny = msg.key;
+              const pnCandidate = keyAny?.senderPn || keyAny?.participantPn || (senderId.endsWith("@s.whatsapp.net") ? senderId : null);
+              const lidCandidate = keyAny?.senderLid || keyAny?.participantLid || (senderId.endsWith("@lid") ? senderId : null);
+              if (pnCandidate && lidCandidate) {
+                this.registerPhoneLidMapping(pnCandidate, lidCandidate);
+              }
+            } catch (_) {
+            }
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
               continue;
             }
@@ -25964,16 +26120,31 @@ ${quotedNote}` : quotedNote;
               }
               if (!isGroup) {
                 let resolvedSenderId = senderId;
-                if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
-                  try {
-                    const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
-                    if (mappedPn) {
-                      const cleanUser = mappedPn.split(":")[0].split("@")[0];
+                if (senderId.endsWith("@lid")) {
+                  const keyPn = msg.key?.senderPn || msg.key?.participantPn;
+                  const mappedFromCache = this.resolvePhoneForLid(senderId);
+                  if (keyPn) {
+                    const cleanUser = String(keyPn).split(":")[0].split("@")[0].replace(/\D/g, "");
+                    if (cleanUser) {
                       resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
-                      console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto a PN ${resolvedSenderId}`);
+                      this.registerPhoneLidMapping(cleanUser, senderId);
+                      console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto v\xEDa senderPn a PN ${resolvedSenderId}`);
                     }
-                  } catch (err) {
-                    console.warn(`[JANIA-MATCH] [DM] No se pudo resolver PN para LID ${senderId}:`, err);
+                  } else if (mappedFromCache) {
+                    resolvedSenderId = `${mappedFromCache}@s.whatsapp.net`;
+                    console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto v\xEDa cach\xE9 a PN ${resolvedSenderId}`);
+                  } else if (this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+                    try {
+                      const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
+                      if (mappedPn) {
+                        const cleanUser = mappedPn.split(":")[0].split("@")[0];
+                        resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+                        this.registerPhoneLidMapping(cleanUser, senderId);
+                        console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto a PN ${resolvedSenderId}`);
+                      }
+                    } catch (err) {
+                      console.warn(`[JANIA-MATCH] [DM] No se pudo resolver PN para LID ${senderId}:`, err);
+                    }
                   }
                 }
                 const rawPhone = resolvedSenderId.split("@")[0];
@@ -26062,7 +26233,19 @@ ${quotedNote}` : quotedNote;
                     console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : isIduReq ? "paz y salvo de valorizaci\xF3n IDU" : isNotarialReq ? "liquidaci\xF3n notarial" : "comando de cliente"} para ${senderId}`);
                   }
                 }
-                const targetDmId = resolvedSenderId || senderId;
+                const recentAgenda = this.recentAgendaConfirmations.get(rawPhone) || this.recentAgendaConfirmations.get(senderId) || this.recentAgendaConfirmations.get(senderId.split("@")[0]);
+                if (recentAgenda && Date.now() - recentAgenda.timestamp < 90 * 1e3 && this.isWhatsAppBusinessAutoGreeting(body)) {
+                  console.log(`[JANIA-AGENDA-SHIELD] \u{1F916} Saludo autom\xE1tico de WhatsApp Business detectado tras confirmaci\xF3n de Vecy Agenda Pro (#${recentAgenda.solicitudId || "N/A"}) de ${rawPhone} (${senderId}). Reaccionando con \u2705 y omitiendo respuesta LLM.`);
+                  try {
+                    const reactRes = await this.sock.sendMessage(senderId, { react: { text: "\u2705", key: msg.key } });
+                    if (reactRes?.key?.id) {
+                      this.botSentMessageIds.add(reactRes.key.id);
+                    }
+                  } catch (_) {
+                  }
+                  return;
+                }
+                const targetDmId = senderId.endsWith("@lid") ? senderId : resolvedSenderId || senderId;
                 let buffer = this.dmMessageBuffers.get(targetDmId);
                 if (!buffer) {
                   buffer = { messages: [], timer: null };
@@ -27927,15 +28110,42 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
       }
       /**
        * Envía un mensaje de texto directo a un número o JID específico,
-       * normalizando celulares colombianos y habilitando el flag allowDirectMessage.
+       * normalizando celulares colombianos, resolviendo prioritariamente el hilo @lid activo
+       * (para garantizar visibilidad inmediata sin "🕒 Esperando el mensaje" tanto en el móvil
+       * del destinatario como en el WhatsApp Web de JanIA) y habilitando el flag allowDirectMessage.
        */
       async sendDirectMessage(targetPhoneOrJid, text2, options = {}) {
-        let clean = (targetPhoneOrJid || "").replace(/\D/g, "");
+        if (targetPhoneOrJid.endsWith("@lid") || targetPhoneOrJid.endsWith("@g.us") || targetPhoneOrJid.endsWith("@newsletter")) {
+          return this.queuedSend(targetPhoneOrJid, text2, { allowDirectMessage: true, ...options });
+        }
+        let clean = (targetPhoneOrJid || "").split("@")[0].split(":")[0].replace(/\D/g, "");
         if (clean.length === 10 && clean.startsWith("3")) {
           clean = "57" + clean;
         }
-        const jid = targetPhoneOrJid.includes("@") ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
-        return this.queuedSend(jid, text2, { allowDirectMessage: true, ...options });
+        const pnJid = `${clean}@s.whatsapp.net`;
+        let resolvedLid = this.resolveLidForPhone(clean);
+        if (!resolvedLid && this.sock && this.isReady && typeof this.sock.onWhatsApp === "function") {
+          try {
+            const onWaRes = await Promise.race([
+              this.sock.onWhatsApp(pnJid),
+              new Promise((resolve) => setTimeout(() => resolve(null), 3e3))
+            ]);
+            if (Array.isArray(onWaRes) && onWaRes[0]?.lid) {
+              this.registerPhoneLidMapping(clean, onWaRes[0].lid);
+              resolvedLid = this.resolveLidForPhone(clean);
+            }
+          } catch (_) {
+          }
+        }
+        if (resolvedLid) {
+          console.log(`[JANIA-MATCH] [DirectMsg] Enrutando mensaje para +${clean} v\xEDa hilo LID activo (${resolvedLid})...`);
+          const sentViaLid = await this.queuedSend(resolvedLid, text2, { allowDirectMessage: true, ...options });
+          if (sentViaLid) {
+            return sentViaLid;
+          }
+          console.warn(`[JANIA-MATCH] [DirectMsg] Fallback de ${resolvedLid} a ${pnJid}...`);
+        }
+        return this.queuedSend(pnJid, text2, { allowDirectMessage: true, ...options });
       }
       /**
        * 📊 Envía una encuesta nativa interactiva en el Canal Oficial de WhatsApp (@newsletter)
@@ -28978,11 +29188,14 @@ async function sendAgendaWhatsAppNotifications(payload) {
           const customHeader = payload.customAgencyName ? `\u{1F3E2} *VECY AGENDA PRO \u2014 ${payload.customAgencyName.toUpperCase()}*
 ` : `\u{1F3E2} *VECY AGENDA PRO \u2014 NOTIFICACI\xD3N A SUSCRIPTOR*
 `;
-          await janiaMatchBot.sendDirectMessage(cleanCustomAgentPhone, `${customHeader}${brokerMsg}`, {
+          const customAgentMsg = `${customHeader}${brokerMsg}`;
+          janiaMatchBot.registerAgendaNotification?.(cleanCustomAgentPhone, customAgentMsg, numSolicitud);
+          await janiaMatchBot.sendDirectMessage(cleanCustomAgentPhone, customAgentMsg, {
             allowDirectMessage: true,
             isTransactionalNotification: true,
             skipDelay: true
           });
+          janiaMatchBot.registerAgendaNotification?.(cleanCustomAgentPhone, customAgentMsg, numSolicitud);
           console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Copia Vecy Agenda Pro entregada al Suscriptor (${cleanCustomAgentPhone}).`);
         } catch (agentWaErr) {
           console.warn(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error notificando al WhatsApp del suscriptor:`, agentWaErr?.message);
@@ -28995,11 +29208,13 @@ async function sendAgendaWhatsAppNotifications(payload) {
       const clientMsg = buildClientConfirmationMessage(payload);
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando mensaje de confirmaci\xF3n de JanIA al Solicitante (${cleanClientCel})...`);
       try {
+        janiaMatchBot.registerAgendaNotification?.(cleanClientCel, clientMsg, numSolicitud);
         await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg, {
           allowDirectMessage: true,
           isTransactionalNotification: true,
           skipDelay: true
         });
+        janiaMatchBot.registerAgendaNotification?.(cleanClientCel, clientMsg, numSolicitud);
         clientSent = true;
         console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Confirmaci\xF3n de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
       } catch (clientErr) {

@@ -300,11 +300,14 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
           const customHeader = payload.customAgencyName
             ? `🏢 *VECY AGENDA PRO — ${payload.customAgencyName.toUpperCase()}*\n`
             : `🏢 *VECY AGENDA PRO — NOTIFICACIÓN A SUSCRIPTOR*\n`;
-          await janiaMatchBot.sendDirectMessage(cleanCustomAgentPhone, `${customHeader}${brokerMsg}`, {
+          const customAgentMsg = `${customHeader}${brokerMsg}`;
+          janiaMatchBot.registerAgendaNotification?.(cleanCustomAgentPhone, customAgentMsg, numSolicitud);
+          await janiaMatchBot.sendDirectMessage(cleanCustomAgentPhone, customAgentMsg, {
             allowDirectMessage: true,
             isTransactionalNotification: true,
             skipDelay: true
           });
+          janiaMatchBot.registerAgendaNotification?.(cleanCustomAgentPhone, customAgentMsg, numSolicitud);
           console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] ✅ Copia Vecy Agenda Pro entregada al Suscriptor (${cleanCustomAgentPhone}).`);
         } catch (agentWaErr: any) {
           console.warn(`[AGENDA-WHATSAPP-#${numSolicitud}] ⚠️ Error notificando al WhatsApp del suscriptor:`, agentWaErr?.message);
@@ -321,11 +324,13 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
       console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] 📤 Enviando mensaje de confirmación de JanIA al Solicitante (${cleanClientCel})...`);
       
       try {
+        janiaMatchBot.registerAgendaNotification?.(cleanClientCel, clientMsg, numSolicitud);
         await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg, {
           allowDirectMessage: true,
           isTransactionalNotification: true,
           skipDelay: true
         });
+        janiaMatchBot.registerAgendaNotification?.(cleanClientCel, clientMsg, numSolicitud);
         clientSent = true;
         console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] ✅ Confirmación de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
       } catch (clientErr: any) {

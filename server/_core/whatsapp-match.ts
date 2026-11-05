@@ -221,9 +221,92 @@ export class JaniaMatchBot {
   private messageStore: Map<string, proto.IMessage> = new Map();
   private lastHumanIntervention: Map<string, number> = new Map();
 
+  private phoneToLidMap: Map<string, string> = new Map([
+    ['573192919978', '167108705018103@lid'],
+    ['573166569719', '225954035179724@lid'],
+    ['573188096811', '182781141344345@lid'],
+    ['573138862997', '261731263762516@lid'],
+  ]);
+  private lidToPhoneMap: Map<string, string> = new Map([
+    ['167108705018103', '573192919978'],
+    ['225954035179724', '573166569719'],
+    ['182781141344345', '573188096811'],
+    ['218820279050385', '573188096811'],
+    ['261731263762516', '573138862997'],
+  ]);
+  private recentAgendaConfirmations: Map<string, { timestamp: number; confirmationText: string; solicitudId?: string | number }> = new Map();
+
+  public registerPhoneLidMapping(phoneOrJid?: string | null, lidOrJid?: string | null) {
+    if (!phoneOrJid || !lidOrJid) return;
+    let cleanPhone = String(phoneOrJid).split('@')[0].split(':')[0].replace(/\D/g, '');
+    if (cleanPhone.length === 10 && cleanPhone.startsWith('3')) {
+      cleanPhone = '57' + cleanPhone;
+    }
+    const cleanLid = String(lidOrJid).split('@')[0].split(':')[0].replace(/\D/g, '');
+    if (!cleanPhone || !cleanLid || cleanPhone === cleanLid) return;
+    const lidJid = `${cleanLid}@lid`;
+    this.phoneToLidMap.set(cleanPhone, lidJid);
+    this.lidToPhoneMap.set(cleanLid, cleanPhone);
+  }
+
+  public resolveLidForPhone(phoneOrJid?: string | null): string | null {
+    if (!phoneOrJid) return null;
+    let cleanPhone = String(phoneOrJid).split('@')[0].split(':')[0].replace(/\D/g, '');
+    if (cleanPhone.length === 10 && cleanPhone.startsWith('3')) {
+      cleanPhone = '57' + cleanPhone;
+    }
+    return this.phoneToLidMap.get(cleanPhone) || null;
+  }
+
+  public resolvePhoneForLid(lidOrJid?: string | null): string | null {
+    if (!lidOrJid) return null;
+    const cleanLid = String(lidOrJid).split('@')[0].split(':')[0].replace(/\D/g, '');
+    return this.lidToPhoneMap.get(cleanLid) || null;
+  }
+
+  public registerAgendaNotification(phoneOrJid: string, confirmationText: string, solicitudId?: string | number) {
+    let cleanPhone = String(phoneOrJid || '').split('@')[0].split(':')[0].replace(/\D/g, '');
+    if (cleanPhone.length === 10 && cleanPhone.startsWith('3')) {
+      cleanPhone = '57' + cleanPhone;
+    }
+    if (!cleanPhone) return;
+    const entry = { timestamp: Date.now(), confirmationText, solicitudId };
+    this.recentAgendaConfirmations.set(cleanPhone, entry);
+    const mappedLid = this.resolveLidForPhone(cleanPhone);
+    if (mappedLid) {
+      const cleanLid = mappedLid.split('@')[0];
+      this.recentAgendaConfirmations.set(cleanLid, entry);
+      this.recentAgendaConfirmations.set(mappedLid, entry);
+    }
+    // Registrar también en el historial conversacional de JanIA para que reconozca el contexto si el cliente escribe
+    import('./janIA').then(({ appendDmHistory }) => {
+      appendDmHistory(`${cleanPhone}@s.whatsapp.net`, 'assistant', confirmationText);
+      if (mappedLid) {
+        appendDmHistory(mappedLid, 'assistant', confirmationText);
+      }
+    }).catch(() => {});
+  }
+
+  public isWhatsAppBusinessAutoGreeting(text?: string | null): boolean {
+    if (!text) return false;
+    const clean = text.trim();
+    if (clean.length < 15 || clean.length > 360) return false;
+    return (
+      /gracias\s+por\s+comunicarte\s+con\b/i.test(clean) ||
+      /gracias\s+por\s+contactar(?:te)?\s+(?:a|con)\b/i.test(clean) ||
+      /gracias\s+por\s+escribir(?:nos)?\s+a\b/i.test(clean) ||
+      /(?:d[eé]jame|haznos)\s+saber\s+c[oó]mo\s+(?:puedo|podemos)\s+ayudarte/i.test(clean) ||
+      /en\s+breve\s+(?:uno\s+de\s+nuestros\s+asesores\s+)?te\s+atenderemos/i.test(clean) ||
+      /bienvenid[oa]s?\s+a\s+[\w\s]{2,40}[.,!]\s*(?:¿?en\s+qu[eé]\s+podemos\s+ayudarte|¿?c[oó]mo\s+podemos\s+ayudarte)/i.test(clean)
+    );
+  }
+
   public saveMessageToStore(id: string, message: proto.IMessage) {
     if (!id || !message) return;
-    this.messageStore.set(id, message);
+    const unwrapped = (message as any)?.deviceSentMessage?.message
+      || (message as any)?.ephemeralMessage?.message
+      || message;
+    this.messageStore.set(id, unwrapped);
     if (this.messageStore.size > 2000) {
       const firstKey = this.messageStore.keys().next().value;
       if (firstKey) this.messageStore.delete(firstKey);
@@ -486,21 +569,36 @@ export class JaniaMatchBot {
       }
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-      // 🛡️ DOCTRINA v32.51: Blindaje contra error "No open session" de Signal en Baileys
-      // Si un archivo de sesión en disco solo contiene sesiones cerradas (closed !== -1),
-      // retornamos null para que Baileys entienda que no hay sesión activa y solicite pre-keys frescas a WhatsApp.
+      // 🛡️ DOCTRINA v32.51 / v33.95: Blindaje contra error "No open session" y purga de pendingPreKey zombies en Baileys
+      // 1. Si un archivo de sesión en disco solo contiene sesiones cerradas (closed !== -1), o
+      // 2. Si una sesión abierta (closed === -1) lleva más de 10 minutos estancada en estado pendingPreKey sin recibir respuesta
+      //    que confirme el handshake (causa raíz del aviso "🕒 Esperando el mensaje. Esto puede demorar un poco"),
+      //    la purgamos y retornamos null para que assertSessions negocie un PreKeyBundle 100% fresco con WhatsApp antes de cifrar.
       const originalKeysGet = state.keys.get;
       state.keys.get = (async (type: any, ids: string[]) => {
         const data = await originalKeysGet(type, ids);
         if (type === 'session') {
+          const now = Date.now();
+          const STALE_PENDING_PREKEY_MS = 10 * 60 * 1000; // 10 minutos
           for (const id of ids) {
             const sessRecord: any = (data as any)[id];
             if (sessRecord && sessRecord._sessions) {
               const sessionKeys = Object.keys(sessRecord._sessions);
               if (sessionKeys.length > 0) {
-                const hasOpen = sessionKeys.some(k => sessRecord._sessions[k]?.indexInfo?.closed === -1);
+                for (const k of sessionKeys) {
+                  const s = sessRecord._sessions[k];
+                  if (s?.indexInfo?.closed === -1 && s.pendingPreKey) {
+                    const lastActivity = Math.max(s.indexInfo?.used || 0, s.indexInfo?.created || 0);
+                    if (lastActivity > 0 && (now - lastActivity) > STALE_PENDING_PREKEY_MS) {
+                      delete sessRecord._sessions[k];
+                    }
+                  }
+                }
+                const remainingKeys = Object.keys(sessRecord._sessions);
+                const hasOpen = remainingKeys.some(k => sessRecord._sessions[k]?.indexInfo?.closed === -1);
                 if (!hasOpen) {
-                  // Toda sesión en este archivo está cerrada: forzar re-negociación Signal a Baileys
+                  // Toda sesión en este archivo está cerrada o tenía un pendingPreKey obsoleto:
+                  // forzar re-negociación Signal limpia a Baileys
                   (data as any)[id] = null;
                 }
               }
@@ -557,6 +655,53 @@ export class JaniaMatchBot {
           return undefined;
         },
       });
+
+      // 🛡️ DOCTRINA v33.95: Normalizador de Reintentos (CB:receipt retry) Cruzados entre LID (@lid) y PN (@s.whatsapp.net)
+      // Corrige el bug nativo de Baileys donde un dispositivo acompañante propio (WhatsApp Web 167108705018103:46@lid)
+      // o el móvil de un contacto solicita retry usando su LID para un mensaje despachado originalmente a @s.whatsapp.net.
+      if (this.sock?.ws && typeof this.sock.ws.prependListener === 'function') {
+        this.sock.ws.prependListener('CB:receipt', (node: any) => {
+          try {
+            if (!node?.attrs || node.attrs.type !== 'retry') return;
+            const mePhone = (this.sock?.user?.id || state.creds?.me?.id || '573192919978').split(':')[0].split('@')[0];
+            const meLid = (state.creds?.me?.lid || '167108705018103').split(':')[0].split('@')[0];
+            const targetChat = String(node.attrs.recipient || node.attrs.from || '');
+            const isTargetPnChat = targetChat.endsWith('@s.whatsapp.net');
+            const isTargetLidChat = targetChat.endsWith('@lid');
+
+            const rewriteJidDomain = (rawJid?: string): string | undefined => {
+              if (!rawJid) return rawJid;
+              const [userAndDev, server] = rawJid.split('@');
+              if (!userAndDev || !server) return rawJid;
+              const [userPart, devPart] = userAndDev.split(':');
+              const devSuffix = devPart !== undefined ? `:${devPart}` : '';
+
+              if (isTargetPnChat && server === 'lid') {
+                if (userPart === meLid || userPart === '167108705018103') {
+                  return `${mePhone}${devSuffix}@s.whatsapp.net`;
+                }
+                const targetPhone = targetChat.split('@')[0].split(':')[0];
+                if (targetPhone) {
+                  this.registerPhoneLidMapping(targetPhone, userPart);
+                  return `${targetPhone}${devSuffix}@s.whatsapp.net`;
+                }
+              } else if (isTargetLidChat && server === 's.whatsapp.net') {
+                if (userPart === mePhone || userPart === '573192919978') {
+                  return `${meLid}${devSuffix}@lid`;
+                }
+              }
+              return rawJid;
+            };
+
+            if (node.attrs.recipient) {
+              node.attrs.from = rewriteJidDomain(node.attrs.from);
+            }
+            if (node.attrs.participant) {
+              node.attrs.participant = rewriteJidDomain(node.attrs.participant);
+            }
+          } catch (_) { }
+        });
+      }
 
       // 🛡️ DOCTRINA v32.51: Blindaje E2E Signal contra caídas por "No open session"
       // Interceptamos encryptMessage para auto-sanar sesiones cerradas y evitar que un participante con sesión cerrada aborte la entrega a todo el grupo
@@ -712,6 +857,16 @@ export class JaniaMatchBot {
         const rawSenderId = isGroup ? (msg.key.participant || msg.participant || (this.sock?.user?.id ? cleanJid(this.sock.user.id) : '')) : rawChatId;
         if (!rawSenderId || (isGroup && rawSenderId.endsWith('@g.us'))) continue;
         const senderId = cleanJid(rawSenderId);
+
+        // 🔗 Cosecha automática bidireccional de pares Teléfono <-> LID (Doctrina v33.95)
+        try {
+          const keyAny = msg.key as any;
+          const pnCandidate = keyAny?.senderPn || keyAny?.participantPn || (senderId.endsWith('@s.whatsapp.net') ? senderId : null);
+          const lidCandidate = keyAny?.senderLid || keyAny?.participantLid || (senderId.endsWith('@lid') ? senderId : null);
+          if (pnCandidate && lidCandidate) {
+            this.registerPhoneLidMapping(pnCandidate, lidCandidate);
+          }
+        } catch (_) { }
 
 
         // Omitir si proviene de status broadcast
@@ -1143,16 +1298,31 @@ export class JaniaMatchBot {
           // --- FLUJO 2: CHATS PRIVADOS (DMs) ---
           if (!isGroup) {
             let resolvedSenderId = senderId;
-            if (senderId.endsWith('@lid') && (this.sock?.signalRepository as any)?.lidMapping?.getPNForLID) {
-              try {
-                const mappedPn = await (this.sock.signalRepository as any).lidMapping.getPNForLID(senderId);
-                if (mappedPn) {
-                  const cleanUser = mappedPn.split(':')[0].split('@')[0];
+            if (senderId.endsWith('@lid')) {
+              const keyPn = (msg.key as any)?.senderPn || (msg.key as any)?.participantPn;
+              const mappedFromCache = this.resolvePhoneForLid(senderId);
+              if (keyPn) {
+                const cleanUser = String(keyPn).split(':')[0].split('@')[0].replace(/\D/g, '');
+                if (cleanUser) {
                   resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
-                  console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto a PN ${resolvedSenderId}`);
+                  this.registerPhoneLidMapping(cleanUser, senderId);
+                  console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto vía senderPn a PN ${resolvedSenderId}`);
                 }
-              } catch (err) {
-                console.warn(`[JANIA-MATCH] [DM] No se pudo resolver PN para LID ${senderId}:`, err);
+              } else if (mappedFromCache) {
+                resolvedSenderId = `${mappedFromCache}@s.whatsapp.net`;
+                console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto vía caché a PN ${resolvedSenderId}`);
+              } else if ((this.sock?.signalRepository as any)?.lidMapping?.getPNForLID) {
+                try {
+                  const mappedPn = await (this.sock.signalRepository as any).lidMapping.getPNForLID(senderId);
+                  if (mappedPn) {
+                    const cleanUser = mappedPn.split(':')[0].split('@')[0];
+                    resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+                    this.registerPhoneLidMapping(cleanUser, senderId);
+                    console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto a PN ${resolvedSenderId}`);
+                  }
+                } catch (err) {
+                  console.warn(`[JANIA-MATCH] [DM] No se pudo resolver PN para LID ${senderId}:`, err);
+                }
               }
             }
 
@@ -1263,8 +1433,31 @@ export class JaniaMatchBot {
               }
             }
 
-            // 3. Buffer de mensajes de DM privado unificado por número de teléfono
-            const targetDmId = resolvedSenderId || senderId;
+            // 🛡️ ESCUDO ANTI-AUTO-RESPUESTA DE WHATSAPP BUSINESS POST-CONFIRMACIÓN VECY AGENDA PRO (Doctrina v33.95):
+            // Si hace menos de 90s enviamos una confirmación de Vecy Agenda Pro a este número/LID y su WhatsApp Business
+            // dispara automáticamente un mensaje de bienvenida ("Gracias por comunicarte con... ¿cómo puedo ayudarte?"),
+            // reaccionamos con ✅ sin disparar una respuesta LLM redundante que confunda al solicitante.
+            const recentAgenda =
+              this.recentAgendaConfirmations.get(rawPhone) ||
+              this.recentAgendaConfirmations.get(senderId) ||
+              this.recentAgendaConfirmations.get(senderId.split('@')[0]);
+            if (
+              recentAgenda &&
+              Date.now() - recentAgenda.timestamp < 90 * 1000 &&
+              this.isWhatsAppBusinessAutoGreeting(body)
+            ) {
+              console.log(`[JANIA-AGENDA-SHIELD] 🤖 Saludo automático de WhatsApp Business detectado tras confirmación de Vecy Agenda Pro (#${recentAgenda.solicitudId || 'N/A'}) de ${rawPhone} (${senderId}). Reaccionando con ✅ y omitiendo respuesta LLM.`);
+              try {
+                const reactRes = await this.sock.sendMessage(senderId, { react: { text: '✅', key: msg.key } });
+                if (reactRes?.key?.id) {
+                  this.botSentMessageIds.add(reactRes.key.id);
+                }
+              } catch (_) { }
+              return;
+            }
+
+            // 3. Buffer de mensajes de DM privado: preservar el JID entrante (@lid si vino por LID) para responder en el hilo exacto
+            const targetDmId = senderId.endsWith('@lid') ? senderId : (resolvedSenderId || senderId);
             let buffer = this.dmMessageBuffers.get(targetDmId);
             if (!buffer) {
               buffer = { messages: [], timer: null };
@@ -3535,15 +3728,49 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
   /**
    * Envía un mensaje de texto directo a un número o JID específico,
-   * normalizando celulares colombianos y habilitando el flag allowDirectMessage.
+   * normalizando celulares colombianos, resolviendo prioritariamente el hilo @lid activo
+   * (para garantizar visibilidad inmediata sin "🕒 Esperando el mensaje" tanto en el móvil
+   * del destinatario como en el WhatsApp Web de JanIA) y habilitando el flag allowDirectMessage.
    */
   public async sendDirectMessage(targetPhoneOrJid: string, text: string, options: any = {}) {
-    let clean = (targetPhoneOrJid || '').replace(/\D/g, '');
+    if (
+      targetPhoneOrJid.endsWith('@lid') ||
+      targetPhoneOrJid.endsWith('@g.us') ||
+      targetPhoneOrJid.endsWith('@newsletter')
+    ) {
+      return this.queuedSend(targetPhoneOrJid, text, { allowDirectMessage: true, ...options });
+    }
+
+    let clean = (targetPhoneOrJid || '').split('@')[0].split(':')[0].replace(/\D/g, '');
     if (clean.length === 10 && clean.startsWith('3')) {
       clean = '57' + clean;
     }
-    const jid = targetPhoneOrJid.includes('@') ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
-    return this.queuedSend(jid, text, { allowDirectMessage: true, ...options });
+    const pnJid = `${clean}@s.whatsapp.net`;
+
+    let resolvedLid = this.resolveLidForPhone(clean);
+    if (!resolvedLid && this.sock && this.isReady && typeof this.sock.onWhatsApp === 'function') {
+      try {
+        const onWaRes: any = await Promise.race([
+          this.sock.onWhatsApp(pnJid),
+          new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
+        ]);
+        if (Array.isArray(onWaRes) && onWaRes[0]?.lid) {
+          this.registerPhoneLidMapping(clean, onWaRes[0].lid);
+          resolvedLid = this.resolveLidForPhone(clean);
+        }
+      } catch (_) { }
+    }
+
+    if (resolvedLid) {
+      console.log(`[JANIA-MATCH] [DirectMsg] Enrutando mensaje para +${clean} vía hilo LID activo (${resolvedLid})...`);
+      const sentViaLid = await this.queuedSend(resolvedLid, text, { allowDirectMessage: true, ...options });
+      if (sentViaLid) {
+        return sentViaLid;
+      }
+      console.warn(`[JANIA-MATCH] [DirectMsg] Fallback de ${resolvedLid} a ${pnJid}...`);
+    }
+
+    return this.queuedSend(pnJid, text, { allowDirectMessage: true, ...options });
   }
 
   /**
@@ -4562,4 +4789,21 @@ export async function sendNativeWhatsAppLocation(
   address: string = 'Parque de la 93 / El Chicó, Bogotá D.C., Colombia'
 ): Promise<boolean> {
   return janiaMatchBot.sendLocationPin(targetJid, latitude, longitude, name, address);
+}
+
+// ─── Exportaciones Doctrinales Signal & @lid para Vecy Agenda Pro (v33.95) ────
+export function registerPhoneLidMapping(phoneOrJid?: string | null, lidOrJid?: string | null): void {
+  janiaMatchBot.registerPhoneLidMapping(phoneOrJid, lidOrJid);
+}
+
+export function resolveLidForPhone(phoneOrJid?: string | null): string | null {
+  return janiaMatchBot.resolveLidForPhone(phoneOrJid);
+}
+
+export function resolvePhoneForLid(lidOrJid?: string | null): string | null {
+  return janiaMatchBot.resolvePhoneForLid(lidOrJid);
+}
+
+export function isWhatsAppBusinessAutoGreeting(text?: string | null): boolean {
+  return janiaMatchBot.isWhatsAppBusinessAutoGreeting(text);
 }

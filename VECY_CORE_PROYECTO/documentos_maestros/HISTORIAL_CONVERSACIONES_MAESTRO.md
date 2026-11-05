@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-04] — JanIA v33.95: Blindaje Criptográfico Signal (@lid + PreKey Freshness + Retry Multi-Dominio) y Supresión de Auto-Greetings de WhatsApp Business en Ambas Vecy Agendas Pro (Independiente y Portal) (v33.95 - 33.95.0)
+
+**Versión:** `v33.95` (`33.95.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Aprovechemos y vayamos puliendo de una vez ambas Vecy Agendas Pro, la independiente y la del portal, es que resulta que la respuesta de confirmación que JanIA envía al whatsapp de los solicitantes, casi nunca se ve sino que sale ese aviso para nosotros, no se si para elos también les pase lo mismo y tal vez no la estén viendo. Observa la imagen de esta solicitud que acaba de llegar. En cambio la que se nos envóia a nosotros si se ve bien. Observa las imágenes."*
+- **Evidencia Gráfica Analizada (Solicitud No. 1146 — Lincy Hoyos Bróker, 19:18):**
+  1. En el WhatsApp Web de JanIA (`+573192919978`, dispositivo compañero `:46` / `167108705018103:46@lid`), al enviarse a las `19:18` la confirmación de la Solicitud No. 1146 a Lincy Mayerly Hoyos Sierra (`573138862997@s.whatsapp.net`), el mensaje quedó con el aviso `"🕒 Esperando el mensaje. Esto puede demorar un poco. Más información 19:18 ✓"` (y en la barra lateral el espejo del mensaje enviado a Vecy Bienes Raíces `573166569719@s.whatsapp.net` también mostraba `"✓✓ 🕒 Esperando el mensaje. Esto puede demorar un poco."` en el WhatsApp Web de JanIA).
+  2. Acto seguido a las `19:18`, el WhatsApp Business de Lincy respondió automáticamente desde `261731263762516@lid`: `"Gracias por comunicarte con Lincy Hoyos Real Estate. Por favor, dejame saber cómo puedo ayudarte?"`.
+  3. El handler DM de JanIA respondió entonces sobre `261731263762516@lid` diciendo `"¡Hola, Lincy! 👋 Qué gusto saludarte de nuevo. Veo que por error se copió tu mensaje de respuesta automática en el chat..."`, y ese mensaje enviado a `@lid` sí se vio perfectamente tanto en el teléfono de Lincy como en el WhatsApp Web de JanIA.
+  4. En el WhatsApp Web de Vecy Bienes Raíces (`+573166569719`), la alerta `🔔 Solicitud No. 1146 🔔` llegó nítida a las `19:18`.
+
+**Diagnóstico Forense de Causas Raíz (Verificado en `.baileys_auth` del VPS y Código Fuente de Baileys):**
+1. **Causa Raíz 1 — 16.931 Sesiones Zombie `pendingPreKey` en `.baileys_auth` (`session-<teléfono>.*.json`):**
+   - En `/var/www/vecy-network/.baileys_auth`, **16.931 de los 19.574 archivos `session-*.json`** estaban estancados con `closed: -1` y un objeto `pendingPreKey` de días o semanas atrás (`session-573192919978.46.json` tenía `used: 1793147682291` de hace 8 días con `signedKeyId: 1`, cuando el dispositivo `:46` ya iba en `signedKeyId: 2`; y `session-573138862997.0.json` de Lincy tenía `used: 1792849541097` de hace 11 días con `preKeyId: 11695`).
+   - Como WhatsApp ahora enruta los mensajes entrantes por `@lid` (`261731263762516@lid` y `167108705018103:46@lid`), las sesiones `@s.whatsapp.net` nunca reciben un mensaje entrante que limpie su `pendingPreKey`, mientras que el dispositivo físico (`registrationId: 1421835094` de Lincy y `registrationId: 13344` del WhatsApp Web `:46`) ya rotó su sesión a `@lid` y descartó ese `preKeyId` de un solo uso. Cuando `sendDirectMessage` enviaba a `573138862997@s.whatsapp.net`, `assertSessions(..., false)` veía `closed === -1` y cifraba con el `preKeyId` / `signedKeyId` obsoleto, provocando el fallo de descifrado (`"🕒 Esperando el mensaje. Esto puede demorar un poco."`) tanto en el WhatsApp del solicitante como en el WhatsApp Web de JanIA.
+2. **Causa Raíz 2 — Bug de Reintento Criptográfico Multi-Dominio en Baileys (`messages-recv.js` y `messages-send.js`):**
+   - Cuando el WhatsApp Web de JanIA (`167108705018103:46@lid`) emitía un `<receipt type="retry">` para pedir el re-cifrado de un mensaje enviado a `573138862997@s.whatsapp.net`, `relayMessage` en `messages-send.js` comparaba `const isMe = user === meUser` (`'167108705018103' === '573192919978'` -> `false`), clasificando erróneamente nuestro propio WhatsApp Web en `otherJids`, construyendo un JID inválido `167108705018103:46@s.whatsapp.net` y omitiendo el atributo `recipient="573138862997@s.whatsapp.net"`, por lo que el retry jamás reparaba el mensaje en WhatsApp Web.
+3. **Causa Raíz 3 — Envoltorio `deviceSentMessage` en `saveMessageToStore` y Auto-Greetings de WhatsApp Business:**
+   - Al guardar mensajes salientes en `messageStore` para `getMessage(key)`, era indispensable desenvolver `deviceSentMessage?.message` para que Baileys no re-envolviera dos veces el payload al reintentar.
+   - Además, cuando un solicitante usa WhatsApp Business (como Lincy Hoyos Real Estate), al recibir la confirmación de Vecy Agenda su teléfono dispara en automático el saludo de bienvenida (`"Gracias por comunicarte con..."`), haciendo que JanIA le respondiera innecesariamente diciendo que *"por error se copió tu mensaje de respuesta automática"*.
+4. **Cobertura Unificada para Ambas Vecy Agendas Pro:**
+   - Tanto la **Vecy Agenda Pro Independiente** (`/vecy-agenda` -> `POST /api/agenda/submit`) como la **Vecy Agenda Pro del Portal y Micro-Sitios** (`trpc.agenda.createSolicitud`) convergen en `processAndSaveSolicitud` -> `sendAgendaWhatsAppNotifications`, quedando ambas 100% blindadas por esta solución.
+
+**Acciones Ejecutadas:**
+1. **`server/_core/whatsapp-match.ts`:**
+   - **Purga Automática de `pendingPreKey` Zombies (`STALE_PENDING_PREKEY_MS = 10 * 60 * 1000`):** En el interceptor de `state.keys.get('session')`, toda sesión con `closed === -1` y `pendingPreKey` cuya última actividad supere los 10 minutos se elimina en caliente; si no queda ninguna sesión abierta válida, retorna `null` para obligar a `assertSessions` a negociar un `PreKeyBundle` 100% fresco con los servidores de WhatsApp antes de cifrar.
+   - **Mapeo Bidireccional Teléfono ↔ `@lid` (`registerPhoneLidMapping`, `resolveLidForPhone`, `resolvePhoneForLid`) y Enrutamiento Primario `@lid` en `sendDirectMessage`:** Recolecta automáticamente `senderPn` / `senderLid` en cada evento y consulta `this.sock.onWhatsApp(pnJid)` (`USyncLIDProtocol`) al enviar por `sendDirectMessage`, despachando primero al `@lid` activo del destinatario con fallback automático a `@s.whatsapp.net`.
+   - **Normalizador Pre-proceso de Retry Multi-Dominio (`this.sock.ws.prependListener('CB:receipt', ...)`):** Normaliza `node.attrs.from` / `participant` / `recipient` cuando un dispositivo compañero `@lid` pide retry sobre un chat `@s.whatsapp.net` (o viceversa), garantizando que `relayMessage` identifique correctamente `isMe` y preserve `stanza.attrs.recipient`.
+   - **Desempaquetado Limpio en `saveMessageToStore`:** Desenvuelve `deviceSentMessage?.message` y `ephemeralMessage?.message` al almacenar en `messageStore`.
+   - **Supresión Inteligente de Auto-Greetings de WhatsApp Business (`isWhatsAppBusinessAutoGreeting` + `registerAgendaNotification`):** Si dentro de los 90 segundos posteriores al envío de una confirmación de Vecy Agenda Pro el WhatsApp Business del solicitante dispara su saludo automático, JanIA reacciona con `✅`, registra el mensaje en el historial y omite respuestas redundantes del LLM.
+2. **`server/_core/agendaWhatsAppService.ts`:**
+   - Registra cada confirmación saliente de Vecy Agenda Pro mediante `janiaMatchBot.registerAgendaNotification(cleanClientCel, clientMsg, numSolicitud)` (y para `cleanCustomAgentPhone`) antes y después de `sendDirectMessage`.
+3. **Limpieza en Caliente en el VPS Contabo y Registro Doctrinal:**
+   - Registrada `seed-vecy-agenda-pro-whatsapp-lid-signal-session-shield-v33-95` en `founderKnowledgeService.ts`.
+   - Creada la **Suite 181** en `server/__tests__/regression.test.ts`.
+
+---
+
 ### 📅 [2026-11-04] — JanIA v33.94: Suite Proptech IA de 7 Herramientas Pro Personalizables (Ingeniería Inversa Superada de Qrador, Habi/Casacol, Matterport/Giraffe360 y DocuSign/Autentic) (v33.94 - 33.94.0)
 
 **Versión:** `v33.94` (`33.94.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
