@@ -662,7 +662,22 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         timeout: 6000
       } as any);
 
-      const c1 = r1.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
+      const cookieMap = new Map<string, string>();
+      const addCookies = (rawCookies: any) => {
+        if (!rawCookies) return;
+        const list = Array.isArray(rawCookies) ? rawCookies : [rawCookies];
+        for (const c of list) {
+          if (typeof c === 'string') {
+            const part = c.split(';')[0];
+            const eqIdx = part.indexOf('=');
+            if (eqIdx !== -1) {
+              cookieMap.set(part.slice(0, eqIdx).trim(), part.slice(eqIdx + 1).trim());
+            }
+          }
+        }
+      };
+
+      addCookies(r1.headers['set-cookie']);
       const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || '';
       const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || '';
       const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || '';
@@ -687,6 +702,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       };
 
       const postData = querystring.stringify(postDataObj);
+      const initialCookieHeader = Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ');
 
       // 2. POST formulario de consulta con cabeceras ASP.NET estrictas (Origin y Referer exactos)
       const postHeaders = {
@@ -696,7 +712,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(postData),
-        'Cookie': c1.join('; '),
+        'Cookie': initialCookieHeader,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
         'Sec-Fetch-Dest': 'document',
@@ -715,12 +731,13 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         timeout: 6000
       } as any, postData);
 
-      const c2 = r2.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
-      const allCookies = [...c1, ...c2].join('; ');
+      addCookies(r2.headers['set-cookie']);
+      const allCookies = Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ');
 
       const m = r2.body.match(/window\.open\('([^']+)'/);
       if (m && m[1]) {
-        const popupUrl = m[1];
+        // Codificar determinísticamente '+' como '%2B' para evitar corrupción de tokens base64 en ASP.NET
+        const popupUrl = m[1].replace(/\+/g, '%2B');
 
         // 3. GET resultado del afiliado (timeout: 6000ms)
         const r3 = await httpRequest({
@@ -742,6 +759,21 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         if (r3.statusCode === 200 && !r3.body.includes('Error de servidor')) {
           const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
           if (parsed.success) {
+            // Persistir de inmediato en caché para consultas instantáneas a $0 COP
+            identityCache.set(cacheKey, {
+              fullName: parsed.officialName || '',
+              eps: parsed.eps,
+              estado: parsed.estado,
+              regimen: parsed.regimen,
+              timestamp: Date.now()
+            });
+            identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+              fullName: parsed.officialName || '',
+              eps: parsed.eps,
+              estado: parsed.estado,
+              regimen: parsed.regimen,
+              timestamp: Date.now()
+            });
             return parsed;
           }
         }

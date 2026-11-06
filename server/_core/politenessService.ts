@@ -251,4 +251,28 @@ export function formatEduardoColophonReviewMessage(userName?: string): string {
   );
 }
 
+/**
+ * 🌟 MENSAJE PERSUASIVO PARA USUARIOS INTENSIVOS Y DE ALTO VOLUMEN (Doctrina Eduardo A. Rivera — v33.98)
+ * Cuando un usuario realiza múltiples consultas gratuitas continuas (cédulas, prediales, avalúos, etc.)
+ * y pone a trabajar activamente a JanIA sin haber calificado, JanIA actúa con persuasión,
+ * firmeza y señorío, recordándole que mantener la infraestructura oficial 24/7 sin cobrarle un peso
+ * requiere de su apoyo indispensable con una reseña de 5 estrellas en Google para mantener la gratuidad.
+ */
+export function formatPersuasiveIntensiveUserReviewMessage(
+  userName?: string,
+  serviceCount: number = 3
+): string {
+  const cleanRaw = userName ? cleanRawUserName(userName) : "";
+  const cleanName = extractFirstName(cleanRaw || userName || '') || cleanRaw || 'Colega';
+
+  return (
+    `¡Hola, ${cleanName}! 👩🏻‍💼 Veo que has consultado ya ${serviceCount} documentos con JanIA en esta jornada. ¡Me alegra muchísimo poder serte de tanta utilidad en tus gestiones inmobiliarias! 🙌🏻🇨🇴\n\n` +
+    `Sin embargo, mantener esta infraestructura tecnológica conectada en tiempo real a las centrales del Estado (Policía Nacional, Procuraduría, Contraloría, ADRES EPS) 24/7 sin cobrarte un solo peso, requiere un enorme esfuerzo e inversión de *VECY BIENES RAÍCES* para apoyar al gremio.\n\n` +
+    `La única reciprocidad indispensable que te pedimos para que puedas seguir disfrutando de la gratuidad ilimitada de mis servicios es tu calificación de 5 estrellas ⭐⭐⭐⭐⭐ y un breve comentario en nuestro perfil oficial de Google:\n` +
+    `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+    `Te toma menos de 15 segundos y es lo mínimo necesario para que nuestra comunidad mantenga tu acceso libre y abierto. ¿Me confirmas cuando lo hayas hecho para que sigas contando con el servicio al 100%? ¡Cuento con tu respaldo! 🤝🏢✨`
+  );
+}
+
+
 

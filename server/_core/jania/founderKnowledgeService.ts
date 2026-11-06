@@ -578,6 +578,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Revisa qué pasó ahí, no me gusta que JanIa esté fallando tanto y dando sus servicios tan de manera mediocre, imagínatre si la usuaria decide calificar pues mínimo nos pone unas 3 estrellas solamente por la mediocridad de JanIa al brindar el servicio a medias. o sería que tus procesos no habían terminado de desplegarse. :((",
     createdAt: "2026-11-05T21:50:00.000Z",
     active: true
+  },
+  {
+    id: "seed-blindaje-adres-bdua-cookies-tokens-persuasion-usuarios-intensivos-v33-98",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Blindaje de ADRES BDUA (Map de Cookies y Codificación Segura de Tokens) y Persuasión Firme para Usuarios Intensivos de Servicios Gratuitos",
+    directive:
+      "La consulta a la Base de Datos Única de Afiliados (ADRES BDUA) debe operar con un Map estricto de cookies de sesión para que ASP.NET_SessionId y la sesión activa sobrescriban cabeceras viejas sin duplicados que disparen errores 500, codificando además determinísticamente cualquier signo '+' en los tokens de popup como '%2B' para evitar corrupción criptográfica en IIS. Por otra parte, cuando un usuario es de alto volumen o intensivo y pone a trabajar repetidamente a JanIA (>= 3 verificaciones o servicios) sin haber calificado, JanIA debe actuar con persuasión, señorío y firmeza, recordándole tras la entrega de su reporte que mantener la costosa infraestructura estatal conectada 24/7 sin cobrarle un peso requiere de su reciprocidad indispensable mediante una calificación de 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review) para continuar disfrutando de la gratuidad ilimitada.",
+    rawText:
+      "Bueno primero este usuario ha verificado bastantes documentos esta noche, pero quisiera que cuando hay alguien tan activo y poniendo a JanIA a trabajar tanto y tantas veces pues es ahí donde ella debe saber actuar persuasivamente e insistir en que nos den la calificación y comenten para que puedan seguir disfrutando de la gratuidad del servicio, es lo mínimo que se les pide. Por otra parte veo que vuelve a fallar los datos con ADRES, qué estará pasando que arreglas uno y se daña o dañas el otro, la verdad tengo miedo de que lso demás servicios estén inertes o muertos y solo estemos ofreciendo humo a los usuarios. Mira lo que les digo en este video en youtube: https://youtube.com/shorts/CoeSD_Mi7j8",
+    createdAt: "2026-11-05T22:45:00.000Z",
+    active: true
   }
 ];
 

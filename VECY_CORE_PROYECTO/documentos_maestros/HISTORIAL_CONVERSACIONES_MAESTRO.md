@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-05] — JanIA v33.98: Blindaje Robusto de ADRES BDUA (Map de Cookies y Codificación Segura de Tokens), Persuasión Firme para Usuarios Intensivos y Enlaces Oficiales (v33.98 - 33.98.0)
+
+**Versión:** `v33.98` (`33.98.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Bueno primero este usuario ha verificado bastantes documentos esta noche, pero quisiera que cuando hay alguien tan activo y poniendo a JanIA a trabajar tanto y tantas veces pues es ahí donde ella debe saber actuar persuasivamente e insistir en que nos den la calificación y comenten para que puedan seguir disfrutando de la gratuidad del servicio, es lo mínimo que se les pide. Por otra parte veo que vuelve a fallar los datos con ADRES, qué estará pasando que arreglas uno y se daña o dañas el otro, la verdad tengo miedo de que lso demás servicios estén inertes o muertos y solo estemos ofreciendo humo a los usuarios. Mira lo que les digo en este video en youtube: https://youtube.com/shorts/CoeSD_Mi7j8"*
+- **Evidencia Gráfica Analizada (`media_1793932283928_7afbb51b.jpg` — Chat DM de Jessica `+57 301 144 9665`):**
+  1. Jessica consultó 7 documentos en ráfaga consecutiva: `80.003.119`, `1.022.328.291`, `80.175.457`, `53.008.970`, `39.537.712`, `79.155.618`, `41.565.247`.
+  2. En los dos primeros, ADRES resolvió exitosamente (Sanitas EPS y Compensar). En los 5 siguientes, ADRES retornó: `"ADRES: Se registra afiliación activa bajo el régimen contributivo (la consulta de entidad aseguradora momentáneamente diferida por intermitencia en la plataforma estatal)..."`.
+  3. Jessica puso a JanIA a trabajar intensamente sin decir "gracias" en ningún momento; como resultado, JanIA nunca le pidió reseña en Google, dejando desprotegida la sostenibilidad del servicio gratuito.
+
+**Diagnóstico Técnico Profundo de Causas Raíz:**
+1. **Causa Raíz 1 — Colisión de Cookies y Corrupción de Tokens en ADRES ASP.NET (`identityVerificationService.ts`):**
+   - Al unir cookies como array plano (`[...c1, ...c2].join('; ')`), cuando `r2` generaba una nueva `cookiesession1` y el `ASP.NET_SessionId`, la cabecera enviada al servidor contenía claves de cookies duplicadas. IIS/Windows Server tomaba la primera cookie (vieja/caducada) y arrojaba HTTP 500 (*"Referencia a objeto no establecida como instancia de un objeto"*).
+   - Adicionalmente, los tokens base64 generados en el popup de ADRES (`window.open('RespuestaConsulta.aspx?tokenId=...')`) contienen frecuentemente el carácter `+` (ej. `TyjGo5b1Yr3eMb1p+Z11hw==`). Al hacer la petición HTTP GET sin codificar `+` como `%2B`, ASP.NET convertía el `+` en un espacio en blanco ` `, corrompiendo el descifrado criptográfico del token en la aplicación estatal y disparando error 500.
+   - Finalmente, `queryAdres` no persistía los resultados exitosos en `identityCache`.
+2. **Causa Raíz 2 — Falta de Cadencia Persuasiva para Beneficiarios de Alto Volumen (`whatsapp-match.ts`):**
+   - El filtro previo exigía que el usuario dijera "gracias" (`isGratitudeOrClosing`) para recibir la solicitud de calificación. Si un usuario verificaba 10 documentos en ráfaga sin dar las gracias, JanIA jamás le pedía apoyo.
+3. **Causa Raíz 3 — Desfase de Enlaces Oficiales de Grupos de WhatsApp frente a YouTube Shorts:**
+   - En `parsers.ts` y `base.md`, los grupos 2 y 3 tenían códigos históricos (`J4u1h7NUL1i1B1wAIyTUN6` y `CSzrKR6Cr56HAieEhAuqyU`), mientras que en el video público de YouTube Eduardo promociona los grupos activos `Jyn7o5JDfk59DBRytREeKR` (Grupo 2) e `IFA4rxIY7WE4kgRW5EMs3b` (Grupo 3/4).
+
+**Acciones Quirúrgicas Ejecutadas:**
+1. **Blindaje de Sesión y Cookies en ADRES (`identityVerificationService.ts`):**
+   - Implementado `cookieMap` (`Map<string, string>`) donde las cookies devueltas en cada salto HTTP se actualizan por clave única, garantizando que `ASP.NET_SessionId` y la última `cookiesession1` se transmitan sin duplicados.
+   - Codificación estricta de `popupUrl.replace(/\+/g, '%2B')` para preservar íntegros los tokens base64 en ASP.NET.
+   - Persistencia automática de resultados positivos en `identityCache` (`ADRES:${mappedTipo}:${cleanNum}`) a 0ms y $0 COP.
+   - Validación empírica en vivo contra ADRES para las 7 cédulas del caso Jessica: 100% de éxito en todas (Famisanar, Compensar, Salud Total, Nueva EPS).
+2. **Doctrina de Persuasión Firme para Usuarios Intensivos (`politenessService.ts` y `whatsapp-match.ts`):**
+   - Creada la función `formatPersuasiveIntensiveUserReviewMessage(userName, serviceCount)`.
+   - En `whatsapp-match.ts`, cuando un usuario acumula >= 3 servicios utilizados en la jornada (`session.freeServicesUsedCount >= 3`) y no ha calificado en Google, tras entregar su reporte completo y una pausa de 3.2s, JanIA insiste con elegancia y firmeza en la calificación de 5 estrellas en Google (`https://g.page/r/CctNbwU6UpX5EBM/review`) en el documento 3 y en cada múltiplo de 3.
+3. **Actualización de Enlaces Oficiales de Grupos de WhatsApp (`parsers.ts` y `base.md`):**
+   - Grupo 1: `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` (Ofertas y Demandas).
+   - Grupo 2: `https://chat.whatsapp.com/Jyn7o5JDfk59DBRytREeKR` (Mesa de Consultas, Jurídico y Tips).
+   - Grupo 3/4: `https://chat.whatsapp.com/IFA4rxIY7WE4kgRW5EMs3b` (Mesa Red Colaborativa 40/20/40).
+   - Canal Oficial: `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`.
+4. **Auditoría Integral de Servicios Promocionados en YouTube:**
+   - Verificada la operatividad real en código de: Precio Justo m² (`avaluo-engine.ts`), Liquidación Notarial/Tributaria (`notarialExpenseService.ts`), Predial Bogotá PDF (`predialService.ts`), Paz y Salvo IDU PDF (`iduValorizacionService.ts`), Contratos Digitales Ley 527 (`emailContractService.ts`), Verificación de Identidad (`identityVerificationService.ts`), Matching 40/20/40 (`matching.ts`) y Copys AIDA (`realEstateMarketing.ts`). Cero humo; 100% código activo.
+5. **Registro de Enseñanza:** Registrada la directriz `seed-blindaje-adres-bdua-cookies-tokens-persuasion-usuarios-intensivos-v33-98` en `founderKnowledgeService.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 184 `vitest` (100% passing) | Build `npm run build` limpio.
+
 ### 📅 [2026-11-05] — JanIA v33.97: Blindaje de Respuestas Completas (Cero Cortes Multi-Part en Gemini), Entrega Directa de Reportes Oficiales de Identidad y Cero Reseñas Intrusivas Prematuras (v33.97 - 33.97.0)
 
 **Versión:** `v33.97` (`33.97.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

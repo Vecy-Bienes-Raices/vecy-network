@@ -11366,14 +11366,61 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.97 en shared/const.ts y package.json (33.97.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.97");
+      expect(VECY_VERSION).toMatch(/^v33\.(97|98)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.97.0");
+      expect(pkg.version).toMatch(/^33\.(97|98)\.0$/);
 
       const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
       expect(teachingsSrc).toContain("seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97");
+    });
+  });
+
+  describe("SUITE 184: BLINDAJE ADRES BDUA (MAP DE COOKIES Y TOKENS SEGUROS), PERSUASIÓN FIRME PARA USUARIOS INTENSIVOS Y ENLACES OFICIALES (Doctrina Eduardo A. Rivera v33.98)", () => {
+    it("1. Verifica que queryAdres en identityVerificationService.ts use cookieMap sin duplicados, codifique + como %2B y persista en caché", async () => {
+      const fs = await import("fs");
+      const idSrc = fs.readFileSync("server/_core/identityVerificationService.ts", "utf-8");
+      expect(idSrc).toContain("const cookieMap = new Map<string, string>();");
+      expect(idSrc).toContain("popupUrl = m[1].replace(/\\+/g, '%2B');");
+      expect(idSrc).toContain("identityCache.set(cacheKey, {");
+      expect(idSrc).toContain("identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {");
+    });
+
+    it("2. Verifica que politenessService y whatsapp-match tengan la doctrina de persuasión firme para usuarios intensivos de servicios gratuitos", async () => {
+      const fs = await import("fs");
+      const politenessSrc = fs.readFileSync("server/_core/politenessService.ts", "utf-8");
+      expect(politenessSrc).toContain("formatPersuasiveIntensiveUserReviewMessage");
+      expect(politenessSrc).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      const matchSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(matchSrc).toContain("isIntensiveCadence");
+      expect(matchSrc).toContain("formatPersuasiveIntensiveUserReviewMessage");
+    });
+
+    it("3. Verifica actualización de enlaces oficiales de WhatsApp (YouTube Shorts CoeSD_Mi7j8) en parsers.ts y base.md", async () => {
+      const fs = await import("fs");
+      const parsersSrc = fs.readFileSync("server/_core/jania/parsers.ts", "utf-8");
+      expect(parsersSrc).toContain("Jyn7o5JDfk59DBRytREeKR"); // Grupo 2 Oficial
+      expect(parsersSrc).toContain("IFA4rxIY7WE4kgRW5EMs3b"); // Grupo 3/4 Oficial
+      expect(parsersSrc).toContain("GzMbjNs1P2tHI7D0V4h8wZ"); // Grupo 1 Oficial
+
+      const baseMd = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+      expect(baseMd).toContain("https://chat.whatsapp.com/Jyn7o5JDfk59DBRytREeKR");
+      expect(baseMd).toContain("https://chat.whatsapp.com/IFA4rxIY7WE4kgRW5EMs3b");
+      expect(baseMd).toContain("https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b");
+    });
+
+    it("4. Consagración doctrinal de versión v33.98 en shared/const.ts y package.json (33.98.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.98");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.98.0");
+
+      const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
+      expect(teachingsSrc).toContain("seed-blindaje-adres-bdua-cookies-tokens-persuasion-usuarios-intensivos-v33-98");
     });
   });
 });

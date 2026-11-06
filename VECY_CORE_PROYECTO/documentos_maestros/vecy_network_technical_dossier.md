@@ -8750,6 +8750,32 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v33.98 (2026-11-05) — Blindaje Robusto de ADRES BDUA (Map de Cookies y Codificación Segura de Tokens), Persuasión Firme para Usuarios Intensivos y Enlaces Oficiales (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Intermitencia en ADRES BDUA por Colisión de Cookies y Corrupción de Tokens:* En ráfagas de consultas (ej. caso Jessica `+57 301 144 9665` con 7 cédulas consecutivas), `identityVerificationService.ts` concatenaba arrays planos de cookies (`[...c1, ...c2].join('; ')`), provocando que claves como `cookiesession1` se duplicaran en la cabecera enviada al servidor IIS de ADRES, el cual descartaba la sesión activa (`ASP.NET_SessionId`) y respondía con error HTTP 500 (*"Referencia a objeto no establecida como instancia de un objeto"*). Además, los tokens base64 en la URL del popup (`window.open('RespuestaConsulta.aspx?tokenId=...')`) a menudo contenían el carácter `+`, el cual era interpretado como un espacio en blanco ` ` por ASP.NET, corrompiendo el descifrado criptográfico del token estatal.
+  2. *Cero Insistencia de Calificación ante Usuarios de Alto Volumen:* El sistema solo pedía reseña si el usuario expresaba gratitud explícita (`isGratitudeOrClosing`). Cuando un usuario realizaba múltiples consultas seguidas poniendo a trabajar intensamente a JanIA sin dar las gracias, JanIA jamás le pedía reseña en Google, dejando sin reciprocidad la costosa infraestructura gratuita de VECY.
+  3. *Desfase de Enlaces de Grupos de WhatsApp:* En `parsers.ts` y `base.md`, los grupos 2 y 3 contenían enlaces antiguos (`J4u1h7NUL1i1B1wAIyTUN6` y `CSzrKR6Cr56HAieEhAuqyU`) en vez de los enlaces oficiales activos promocionados en el video de YouTube Shorts (`CoeSD_Mi7j8`): Grupo 2 `Jyn7o5JDfk59DBRytREeKR` y Grupo 3/4 `IFA4rxIY7WE4kgRW5EMs3b`.
+- **Solución Implementada**:
+  1. `server/_core/identityVerificationService.ts`:
+     - Implementado un `cookieMap` (`Map<string, string>`) para que cada salto HTTP actualice las cookies por clave única sin duplicados, enviando siempre el `ASP.NET_SessionId` y la última `cookiesession1`.
+     - Codificación obligatoria de `popupUrl.replace(/\+/g, '%2B')` para preservar el carácter `+` en los tokens base64 ante ASP.NET.
+     - Persistencia inmediata de respuestas exitosas en `identityCache` (`ADRES:${mappedTipo}:${cleanNum}`) a 0ms y $0 COP.
+     - Validado empíricamente en vivo contra ADRES para las 7 cédulas de Jessica: 100% de éxito en todas.
+  2. `server/_core/politenessService.ts` y `server/_core/whatsapp-match.ts`:
+     - Creada la función `formatPersuasiveIntensiveUserReviewMessage(userName, serviceCount)`.
+     - Cuando un usuario no administrador alcanza >= 3 servicios utilizados en la jornada sin haber calificado en Google (`session.freeServicesUsedCount >= 3`), tras la entrega de su reporte completo y una pausa respetuosa de 3.2s, JanIA despacha el mensaje persuasivo de alto volumen insistiendo con señorío en la calificación de 5 estrellas en Google (`https://g.page/r/CctNbwU6UpX5EBM/review`) en el documento 3 y en cada múltiplo de 3.
+  3. `server/_core/jania/parsers.ts` y `server/_core/prompts/base.md`:
+     - Actualizados los enlaces oficiales de WhatsApp: Grupo 1 `GzMbjNs1P2tHI7D0V4h8wZ`, Grupo 2 `Jyn7o5JDfk59DBRytREeKR`, Grupo 3/4 `IFA4rxIY7WE4kgRW5EMs3b` y Canal Oficial `0029Vb5iYUYCMY0A94zqti1b`.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-blindaje-adres-bdua-cookies-tokens-persuasion-usuarios-intensivos-v33-98`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 184 en `regression.test.ts` (4 pruebas unitarias automatizadas).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio.
+  - Versión: `v33.98` (`33.98.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v33.97 (2026-11-05) — Blindaje de Respuestas Completas (Cero Cortes Multi-Part en Gemini), Entrega Directa de Reportes Oficiales de Identidad y Cero Reseñas Intrusivas Prematuras (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Corte Abrupto en Síntesis de Respuestas Gemini (`parts[0]` en `llm.ts`):* En `server/_core/llm.ts`, `invokeGemini` hacía `const firstPart = parts[0]; const text = firstPart.text;`, descartando cualquier `parts[1]`, `parts[2]`, etc. Cuando Gemini generaba una respuesta dividida en varias partes (la introducción con dos puntos en la parte 0 y el listado de antecedentes en la parte 1), `llm.ts` descartaba la parte 1, entregando un reporte cortado por la mitad (*"A continuación, el detalle del estado actual del perfil consultado:"* sin nada más).

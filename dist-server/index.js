@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.97";
+    VECY_VERSION = "v33.98";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -12251,11 +12251,15 @@ function sanitizeResponseMarkdown(text2) {
   clean = clean.replace(/((?::|👉|🔗)\s*)\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi, "$1$2");
   const OFFICIAL_GROUP_CODES = /* @__PURE__ */ new Set([
     "GzMbjNs1P2tHI7D0V4h8wZ",
-    // Grupo 1
+    // Grupo 1 (Ofertas y Demandas)
+    "Jyn7o5JDfk59DBRytREeKR",
+    // Grupo 2 (Mesa de Consultas, Jurídico y Tips — YouTube Oficial)
+    "IFA4rxIY7WE4kgRW5EMs3b",
+    // Grupo 3/4 (Mesa Red Colaborativa 40/20/40 — YouTube Oficial)
     "J4u1h7NUL1i1B1wAIyTUN6",
-    // Grupo 2
+    // Grupo 2 (Histórico / Compatibilidad)
     "CSzrKR6Cr56HAieEhAuqyU"
-    // Grupo 3
+    // Grupo 3 (Histórico / Compatibilidad)
   ]);
   clean = clean.replace(
     /https:\/\/chat\.whatsapp\.com\/([a-zA-Z0-9_-]+)/gi,
@@ -12265,15 +12269,15 @@ function sanitizeResponseMarkdown(text2) {
       }
       const cleanLower = clean.toLowerCase();
       if (cleanLower.includes("tip") || cleanLower.includes("noticia") || cleanLower.includes("consulta") || cleanLower.includes("legal") || cleanLower.includes("tributari") || cleanLower.includes("leasing") || cleanLower.includes("davivienda") || cleanLower.includes("avaluo") || cleanLower.includes("aval\xFAo") || cleanLower.includes("soporte") || cleanLower.includes("vecy tips")) {
-        return "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6";
+        return "https://chat.whatsapp.com/Jyn7o5JDfk59DBRytREeKR";
       }
       if (cleanLower.includes("oferta") || cleanLower.includes("demanda") || cleanLower.includes("inmueble") || cleanLower.includes("corretaje") || cleanLower.includes("venta") || cleanLower.includes("arriendo") || cleanLower.includes("captad")) {
         return "https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ";
       }
       if (cleanLower.includes("proyecto") || cleanLower.includes("comunidad") || cleanLower.includes("debate") || cleanLower.includes("red colaborativa") || cleanLower.includes("40/20/40")) {
-        return "https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU";
+        return "https://chat.whatsapp.com/IFA4rxIY7WE4kgRW5EMs3b";
       }
-      return "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6";
+      return "https://chat.whatsapp.com/Jyn7o5JDfk59DBRytREeKR";
     }
   );
   clean = clean.replace(/([:👉🔗])\s{2,}(https?:\/\/)/g, "$1 $2");
@@ -17351,6 +17355,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Queda terminantemente prohibido que JanIA entregue servicios a medias o corte reportes a la mitad con frases inconclusas como 'A continuaci\xF3n, el detalle...'. En la integraci\xF3n con Gemini, todas las partes de texto (parts) deben concatenarse en su totalidad sin descartar partes secundarias. En consultas de antecedentes y c\xE9dulas donde el usuario suministra el documento, JanIA entrega de forma directa e inmediata el reporte oficial institucional completo verificado (Polic\xEDa Nacional, Procuradur\xEDa General, Contralor\xEDa General y ADRES EPS con Habeas Data). Si un reporte se sintetiza con LLM y este termina abruptamente o sin el detalle de las entidades, el sistema detecta la anomal\xEDa y adjunta el reporte oficial completo. Asimismo, se proh\xEDbe terminantemente solicitar rese\xF1as en Google 2 segundos despu\xE9s de entregar una herramienta sin que el usuario haya tenido tiempo de leer o haya expresado gratitud: las rese\xF1as solo se despachan con se\xF1or\xEDo cuando el usuario manifiesta agradecimiento espont\xE1neo o despedida (isGratitudeOrClosing).",
         rawText: "Revisa qu\xE9 pas\xF3 ah\xED, no me gusta que JanIa est\xE9 fallando tanto y dando sus servicios tan de manera mediocre, imag\xEDnatre si la usuaria decide calificar pues m\xEDnimo nos pone unas 3 estrellas solamente por la mediocridad de JanIa al brindar el servicio a medias. o ser\xEDa que tus procesos no hab\xEDan terminado de desplegarse. :((",
         createdAt: "2026-11-05T21:50:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-blindaje-adres-bdua-cookies-tokens-persuasion-usuarios-intensivos-v33-98",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Blindaje de ADRES BDUA (Map de Cookies y Codificaci\xF3n Segura de Tokens) y Persuasi\xF3n Firme para Usuarios Intensivos de Servicios Gratuitos",
+        directive: "La consulta a la Base de Datos \xDAnica de Afiliados (ADRES BDUA) debe operar con un Map estricto de cookies de sesi\xF3n para que ASP.NET_SessionId y la sesi\xF3n activa sobrescriban cabeceras viejas sin duplicados que disparen errores 500, codificando adem\xE1s determin\xEDsticamente cualquier signo '+' en los tokens de popup como '%2B' para evitar corrupci\xF3n criptogr\xE1fica en IIS. Por otra parte, cuando un usuario es de alto volumen o intensivo y pone a trabajar repetidamente a JanIA (>= 3 verificaciones o servicios) sin haber calificado, JanIA debe actuar con persuasi\xF3n, se\xF1or\xEDo y firmeza, record\xE1ndole tras la entrega de su reporte que mantener la costosa infraestructura estatal conectada 24/7 sin cobrarle un peso requiere de su reciprocidad indispensable mediante una calificaci\xF3n de 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review) para continuar disfrutando de la gratuidad ilimitada.",
+        rawText: "Bueno primero este usuario ha verificado bastantes documentos esta noche, pero quisiera que cuando hay alguien tan activo y poniendo a JanIA a trabajar tanto y tantas veces pues es ah\xED donde ella debe saber actuar persuasivamente e insistir en que nos den la calificaci\xF3n y comenten para que puedan seguir disfrutando de la gratuidad del servicio, es lo m\xEDnimo que se les pide. Por otra parte veo que vuelve a fallar los datos con ADRES, qu\xE9 estar\xE1 pasando que arreglas uno y se da\xF1a o da\xF1as el otro, la verdad tengo miedo de que lso dem\xE1s servicios est\xE9n inertes o muertos y solo estemos ofreciendo humo a los usuarios. Mira lo que les digo en este video en youtube: https://youtube.com/shorts/CoeSD_Mi7j8",
+        createdAt: "2026-11-05T22:45:00.000Z",
         active: true
       }
     ];
@@ -23232,6 +23246,7 @@ __export(politenessService_exports, {
   formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
   formatEduardoColophonReviewMessage: () => formatEduardoColophonReviewMessage,
   formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
+  formatPersuasiveIntensiveUserReviewMessage: () => formatPersuasiveIntensiveUserReviewMessage,
   formatPersuasiveRecurrentUserReviewMessage: () => formatPersuasiveRecurrentUserReviewMessage,
   formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
   formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
@@ -23380,6 +23395,18 @@ function formatEduardoColophonReviewMessage(userName) {
 van a ayudarnos un mont\xF3n a mi y a mi equipo VECY, a seguir construyendo la red colaborativa inmobiliaria m\xE1s grande del planeta y a que mis servicios sigan siendo GRATUITOS. 
 
 \xA1Cuento con tu apoyo! Mil gracias de antemano y que sigan los \xE9xitos en tus gestiones inmobiliarias. \u{1F91D}\u{1F3E2}\u2728`;
+}
+function formatPersuasiveIntensiveUserReviewMessage(userName, serviceCount = 3) {
+  const cleanRaw = userName ? cleanRawUserName(userName) : "";
+  const cleanName = extractFirstName2(cleanRaw || userName || "") || cleanRaw || "Colega";
+  return `\xA1Hola, ${cleanName}! \u{1F469}\u{1F3FB}\u200D\u{1F4BC} Veo que has consultado ya ${serviceCount} documentos con JanIA en esta jornada. \xA1Me alegra much\xEDsimo poder serte de tanta utilidad en tus gestiones inmobiliarias! \u{1F64C}\u{1F3FB}\u{1F1E8}\u{1F1F4}
+
+Sin embargo, mantener esta infraestructura tecnol\xF3gica conectada en tiempo real a las centrales del Estado (Polic\xEDa Nacional, Procuradur\xEDa, Contralor\xEDa, ADRES EPS) 24/7 sin cobrarte un solo peso, requiere un enorme esfuerzo e inversi\xF3n de *VECY BIENES RA\xCDCES* para apoyar al gremio.
+
+La \xFAnica reciprocidad indispensable que te pedimos para que puedas seguir disfrutando de la gratuidad ilimitada de mis servicios es tu calificaci\xF3n de 5 estrellas \u2B50\u2B50\u2B50\u2B50\u2B50 y un breve comentario en nuestro perfil oficial de Google:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+Te toma menos de 15 segundos y es lo m\xEDnimo necesario para que nuestra comunidad mantenga tu acceso libre y abierto. \xBFMe confirmas cuando lo hayas hecho para que sigas contando con el servicio al 100%? \xA1Cuento con tu respaldo! \u{1F91D}\u{1F3E2}\u2728`;
 }
 var init_politenessService = __esm({
   "server/_core/politenessService.ts"() {
@@ -26816,6 +26843,9 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("MATCH") || replyText.includes("40/20/40");
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
+                    const usedCount = session.freeServicesUsedCount || 0;
+                    const isIntensiveUser = usedCount >= 3;
+                    const isIntensiveCadence = isIntensiveUser && (usedCount === 3 || usedCount % 3 === 0);
                     if (isGratitudeOrClosing) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                       const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2, formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
@@ -26823,13 +26853,13 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       await new Promise((r) => setTimeout(r, 1500));
                       await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                       await this.logToDb(senderId, "janIA", politeMsg);
-                    } else if (isServiceDeliveryReply && isCompleteDelivery && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion && false) {
+                    } else if (isServiceDeliveryReply && isCompleteDelivery && isIntensiveCadence && !isLongQueryOrQuestion) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
-                      const { formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await null;
-                      const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage2(userName);
-                      await new Promise((r) => setTimeout(r, 2200));
-                      await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
-                      await this.logToDb(senderId, "janIA", recurrentReviewMsg);
+                      const { formatPersuasiveIntensiveUserReviewMessage: formatPersuasiveIntensiveUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                      const intensiveReviewMsg = formatPersuasiveIntensiveUserReviewMessage2(userName, usedCount);
+                      await new Promise((r) => setTimeout(r, 3200));
+                      await this.queuedSend(senderId, intensiveReviewMsg, { allowDirectMessage: true, skipDelay: true });
+                      await this.logToDb(senderId, "janIA", intensiveReviewMsg);
                     }
                   }
                 } catch (revErr) {
@@ -32037,7 +32067,21 @@ async function queryAdres(tipoDoc, numDoc) {
         headers: getHeaders,
         timeout: 6e3
       });
-      const c1 = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
+      const cookieMap = /* @__PURE__ */ new Map();
+      const addCookies = (rawCookies) => {
+        if (!rawCookies) return;
+        const list = Array.isArray(rawCookies) ? rawCookies : [rawCookies];
+        for (const c of list) {
+          if (typeof c === "string") {
+            const part = c.split(";")[0];
+            const eqIdx = part.indexOf("=");
+            if (eqIdx !== -1) {
+              cookieMap.set(part.slice(0, eqIdx).trim(), part.slice(eqIdx + 1).trim());
+            }
+          }
+        }
+      };
+      addCookies(r1.headers["set-cookie"]);
       const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || "";
       const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || "";
       const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || "";
@@ -32059,6 +32103,7 @@ async function queryAdres(tipoDoc, numDoc) {
         btnConsultar: "Consultar"
       };
       const postData = querystring.stringify(postDataObj);
+      const initialCookieHeader = Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
       const postHeaders = {
         "Host": "aplicaciones.adres.gov.co",
         "User-Agent": userAgent,
@@ -32066,7 +32111,7 @@ async function queryAdres(tipoDoc, numDoc) {
         "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
         "Content-Type": "application/x-www-form-urlencoded",
         "Content-Length": Buffer.byteLength(postData),
-        "Cookie": c1.join("; "),
+        "Cookie": initialCookieHeader,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
         "Sec-Fetch-Dest": "document",
@@ -32083,11 +32128,11 @@ async function queryAdres(tipoDoc, numDoc) {
         headers: postHeaders,
         timeout: 6e3
       }, postData);
-      const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
-      const allCookies = [...c1, ...c2].join("; ");
+      addCookies(r2.headers["set-cookie"]);
+      const allCookies = Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
       const m = r2.body.match(/window\.open\('([^']+)'/);
       if (m && m[1]) {
-        const popupUrl = m[1];
+        const popupUrl = m[1].replace(/\+/g, "%2B");
         const r3 = await httpRequest({
           hostname: ep.host,
           port: ep.port,
@@ -32106,6 +32151,20 @@ async function queryAdres(tipoDoc, numDoc) {
         if (r3.statusCode === 200 && !r3.body.includes("Error de servidor")) {
           const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
           if (parsed.success) {
+            identityCache.set(cacheKey, {
+              fullName: parsed.officialName || "",
+              eps: parsed.eps,
+              estado: parsed.estado,
+              regimen: parsed.regimen,
+              timestamp: Date.now()
+            });
+            identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+              fullName: parsed.officialName || "",
+              eps: parsed.eps,
+              estado: parsed.estado,
+              regimen: parsed.regimen,
+              timestamp: Date.now()
+            });
             return parsed;
           }
         }

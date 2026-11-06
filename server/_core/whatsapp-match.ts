@@ -2084,6 +2084,10 @@ export class JaniaMatchBot {
                   !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) &&
                   (!replyText.includes("cédula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
 
+                const usedCount = session.freeServicesUsedCount || 0;
+                const isIntensiveUser = usedCount >= 3;
+                const isIntensiveCadence = isIntensiveUser && (usedCount === 3 || usedCount % 3 === 0);
+
                 if (isGratitudeOrClosing) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { formatImmediatePoliteReviewMessage, formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
@@ -2093,15 +2097,17 @@ export class JaniaMatchBot {
                   await new Promise(r => setTimeout(r, 1500));
                   await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                   await this.logToDb(senderId, 'janIA', politeMsg);
-                } else if (isServiceDeliveryReply && isCompleteDelivery && isRecurrentFreeBeneficiary && !isLongQueryOrQuestion && false) {
-                  // 🛡️ DOCTRINA EDUARDO A. RIVERA (v33.97): Prohibido disparar solicitudes de reseña intrusivas a los 2.2s sin confirmación del usuario.
-                  // Las reseñas se solicitan con elegancia ÚNICAMENTE cuando el usuario expresa gratitud espontánea o despedida (isGratitudeOrClosing).
+                } else if (isServiceDeliveryReply && isCompleteDelivery && isIntensiveCadence && !isLongQueryOrQuestion) {
+                  // 🌟 DOCTRINA EDUARDO A. RIVERA (v33.98): Persuasión e insistencia firme para usuarios intensivos de alto volumen.
+                  // Si el usuario pone a trabajar intensamente a JanIA (>= 3 servicios) sin haber calificado,
+                  // tras entregar su reporte completo y una pausa respetuosa de 3.2s, JanIA insiste persuasivamente
+                  // en la calificación de 5 estrellas en Google para mantener la gratuidad y el acceso libre del servicio.
                   this.recentReviewPromptUsers.set(senderId, Date.now());
-                  const { formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
-                  const recurrentReviewMsg = formatPersuasiveRecurrentUserReviewMessage(userName);
-                  await new Promise(r => setTimeout(r, 2200));
-                  await this.queuedSend(senderId, recurrentReviewMsg, { allowDirectMessage: true, skipDelay: true });
-                  await this.logToDb(senderId, 'janIA', recurrentReviewMsg);
+                  const { formatPersuasiveIntensiveUserReviewMessage } = await import('./politenessService');
+                  const intensiveReviewMsg = formatPersuasiveIntensiveUserReviewMessage(userName, usedCount);
+                  await new Promise(r => setTimeout(r, 3200));
+                  await this.queuedSend(senderId, intensiveReviewMsg, { allowDirectMessage: true, skipDelay: true });
+                  await this.logToDb(senderId, 'janIA', intensiveReviewMsg);
                 }
               }
             } catch (revErr: any) {

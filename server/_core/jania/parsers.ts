@@ -1931,9 +1931,11 @@ export function sanitizeResponseMarkdown(text: string): string {
   // Si JanIA generó un enlace como "https://chat.whatsapp.com/KxL8w3Z92m61v29Q4jKxL8" (código inexistente):
   // Detectar por contexto del párrafo y reemplazar por el enlace oficial de VECY correspondiente.
   const OFFICIAL_GROUP_CODES = new Set([
-    "GzMbjNs1P2tHI7D0V4h8wZ", // Grupo 1
-    "J4u1h7NUL1i1B1wAIyTUN6", // Grupo 2
-    "CSzrKR6Cr56HAieEhAuqyU"  // Grupo 3
+    "GzMbjNs1P2tHI7D0V4h8wZ", // Grupo 1 (Ofertas y Demandas)
+    "Jyn7o5JDfk59DBRytREeKR", // Grupo 2 (Mesa de Consultas, Jurídico y Tips — YouTube Oficial)
+    "IFA4rxIY7WE4kgRW5EMs3b", // Grupo 3/4 (Mesa Red Colaborativa 40/20/40 — YouTube Oficial)
+    "J4u1h7NUL1i1B1wAIyTUN6", // Grupo 2 (Histórico / Compatibilidad)
+    "CSzrKR6Cr56HAieEhAuqyU"  // Grupo 3 (Histórico / Compatibilidad)
   ]);
 
   clean = clean.replace(
@@ -1957,7 +1959,7 @@ export function sanitizeResponseMarkdown(text: string): string {
         cleanLower.includes("soporte") ||
         cleanLower.includes("vecy tips")
       ) {
-        return "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6"; // Grupo 2
+        return "https://chat.whatsapp.com/Jyn7o5JDfk59DBRytREeKR"; // Grupo 2 Oficial
       }
       if (
         cleanLower.includes("oferta") ||
@@ -1968,7 +1970,7 @@ export function sanitizeResponseMarkdown(text: string): string {
         cleanLower.includes("arriendo") ||
         cleanLower.includes("captad")
       ) {
-        return "https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ"; // Grupo 1
+        return "https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ"; // Grupo 1 Oficial
       }
       if (
         cleanLower.includes("proyecto") ||
@@ -1977,9 +1979,9 @@ export function sanitizeResponseMarkdown(text: string): string {
         cleanLower.includes("red colaborativa") ||
         cleanLower.includes("40/20/40")
       ) {
-        return "https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU"; // Grupo 3
+        return "https://chat.whatsapp.com/IFA4rxIY7WE4kgRW5EMs3b"; // Grupo 3/4 Oficial
       }
-      return "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6";
+      return "https://chat.whatsapp.com/Jyn7o5JDfk59DBRytREeKR";
     }
   );
 
