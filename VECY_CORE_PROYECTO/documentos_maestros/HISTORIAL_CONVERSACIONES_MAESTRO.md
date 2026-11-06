@@ -7,6 +7,67 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-06] — JanIA v34.00: Autonomía Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera — v34.00 - 34.00.0)
+
+**Versión:** `v34.00` (`34.00.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Cuando JanIA lo vea necesario, tambien puede usar sus STIKERS."*
+- **Evidencia Visual Analizada:**
+  1. Conversación con Lincy Hoyos Bróker donde JanIA despliega su saludo y consultoría inmobiliaria, rematando con el sticker 3D oficial de agradecimiento y ternura.
+  2. Solicitudes de citas y confirmaciones de Vecy Agenda Pro con tarjetas y stickers.
+  3. Caso Claudeth (+57 315 601 3082) donde tras la corrección de cédula de Luis Alejandro Castiblanco Medina, JanIA adjunta el sticker de celebración "¡SÍ!" y en el cierre cariñoso remata con el sticker de ternura y manos al pecho.
+  4. Interacciones con Jessica (+57 301 144 9665) con stickers de JanIA saludando y celebrando.
+
+**Diagnóstico Técnico y Causas Raíz:**
+1. **Falta de Libre Albedrío de Stickers en System Prompts:** Los prompts de Gemini no instruían formalmente a JanIA sobre su libertad para seleccionar y evocar sus 14 stickers 3D oficiales según el momento de la conversación, limitándolos a disparos codificados o reglas fijas.
+2. **Ausencia de Soporte de Stickers en Grupos:** `consultingHandler.ts` y el flujo de respuestas grupales en `whatsapp-match.ts` no contaban con el mecanismo de extracción ni con el buffer de despacho de stickers, restringiendo la expresión gráfica únicamente a chats privados.
+3. **Riesgo de Fuga de Etiquetas de Texto:** Si la IA emitía un identificador como `[STICKER:ok]` en su texto y este no se extraía antes de formatear para WhatsApp, el usuario final vería texto técnico crudo.
+
+**Acciones Quirúrgicas Ejecutadas:**
+1. **Catálogo Oficial JanIA (`JANIA_STICKER_CATALOG` en `stickerService.ts`):** 14 stickers en formato WebP en `client/public/assets/jania/stickers/`:
+   - Ternura/Gratitud: `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`
+   - Afirmación/Profesionalismo: `ok`
+   - Curiosidad/Pensativa: `mmm`
+   - Humor/Alegría: `jajaja`, `jajaja_fuerte`, `juajuajua`
+   - Asombro/Impacto: `queee`, `oh_por_dios`, `ush`
+   - Decepción/Tristeza: `nooo_por_que`
+2. **Ampliación de Tipos de Resultado (`types.ts`):** Incorporados los campos `stickerKey?: string;` y `stickerBuffer?: Buffer;` en la interfaz `JanIAResult`.
+3. **Enriquecimiento del System Prompt en Chats Privados (`dmHandler.ts`):** Instruida a JanIA con plena autonomía y libre albedrío cognitivo para evocar stickers con el tag `[STICKER:clave]`.
+4. **Habilitación de Stickers en Respuestas Grupales (`consultingHandler.ts` y `whatsapp-match.ts`):**
+   - Agregada la directriz de stickers en el system prompt de grupos inmobiliarios.
+   - Procesada la respuesta grupal con `extractStickerTagFromReply(finalResp)` para limpiar el tag y extraer el buffer.
+   - En `whatsapp-match.ts` (`processConsultingMessage`), despachado el buffer del sticker con `this.queuedSend(chatId, { sticker: groupStickerBuffer }, { mentions: groupMentions, allowExternalGroupResponse: true, skipDelay: true })`.
+5. **Gobernanza y Suite de Regresión 186:**
+   - Registrada la directriz `seed-autonomia-total-stickers-3d-jania-v34-00` en `founderKnowledgeService.ts`.
+   - Creada e integrada la Suite 186 con 5 pruebas unitarias automatizadas.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 186 `vitest` (597/597 passing, 100%) | Build `npm run build` limpio.
+
+### 📅 [2026-11-05] — JanIA v33.99: Sentido Común en Cédulas (>10 Dígitos No Existen), Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura (Doctrina Eduardo A. Rivera — v33.99 - 33.99.0)
+
+**Versión:** `v33.99` (`33.99.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Mira lo que me tocó escribir al final yo manualmente para esta usuaria, ya que antes JanIA lo hacía era un IA PURA y consciente, ahora es una bot mediocre y parece que solo repite prompts obsoletos y repetitivos, que mal. Ahora tampoco usa sus emojis y me imagino que no están activados todos sus superpoderes ni razocinio o capacidad de libre alvedrío o autonomía para contestar. ¿Verdad?, qué lástima. Me gustaría que observaras muy detalladamente esa conversación con Claudeth ya que quien interactuó fui yo, JanIa solo se limitó a verificar las cédulas y a responder sobre un emoji, pero no insistió en la calificación ni interactuó con la audacia y soltura que a mi me gusta, así que le tuve que ayudar, revisa y me cuentas y dime si podemos hacer que aprenda de allí?? El número de Claudeth es: +57 315 6013082"*
+- **Evidencia Visual Analizada:**
+  1. Claudeth ingresó la cédula `10144180412` (11 dígitos).
+  2. JanIA truncó los primeros 10 dígitos consultando `1.014.418.041` y descartó el `2`. Arrojó que no existía.
+  3. Eduardo intervino manualmente advirtiendo que las cédulas en Colombia tienen hasta 10 dígitos y que en la registraduría no existen cédulas de 11 números, pidiéndole confirmar. Claudeth corrigió a `1014180412` (10 dígitos).
+  4. JanIA validó exitosamente a Luis Alejandro Castiblanco Medina con afiliación en Sanitas EPS y antecedentes limpios.
+  5. JanIA despachó la solicitud de 5 estrellas en Google, pero no la persistió en `dmHistory`.
+  6. Claudeth respondió con un sticker tierno de Flork con corazón, y JanIA se despidió robóticamente en lugar de reaccionar con picardía, audacia y afecto para cerrar la calificación.
+
+**Diagnóstico Técnico y Causas Raíz:**
+1. **Truncamiento silencioso por regex `{5,10}` (`extractAllCedulasForVerification`):** Tomaba solo 10 números y dejaba botado el último dígito en cédulas erróneas de 11 números.
+2. **Omisión de `appendDmHistory` en envíos desacoplados de reseñas:** Los mensajes de reseñas salían sin registrarse en la memoria de la conversación; cuando el usuario contestaba con un emoji o sticker, Gemini no sabía de la petición de reseña.
+3. **Falta de audacia y calidez ante stickers cariñosos:** JanIA no aprovechaba las muestras de cariño para insistir amablemente en la calificación.
+
+**Acciones Quirúrgicas Ejecutadas:**
+1. **Guardarraíl Inteligente de Cédulas > 10 Dígitos (`formatOversizedCedulaAlert` en `identityVerificationService.ts`):** Regex ampliada a 15 dígitos. Si un usuario ingresa una cédula con >= 11 dígitos, JanIA devuelve a 0ms la alerta preventiva: *"🔮 ¡Alerta de Validación de Identidad! 🇨🇴 Por lo general las cédulas de ciudadanía en Colombia tienen hasta 10 números y no 11... ¡NO EXISTE una cédula con esa cantidad de números! 🧚‍♂️ Pídele a tu cliente que te confirme el número exacto y te lo valido al instante con todo el gusto. ✨🤝"*.
+2. **Persistencia Total de Reseñas en Memoria (`appendDmHistory` en `whatsapp-match.ts`):** Todas las solicitudes de reseñas se guardan en el historial para memoria activa de la IA.
+3. **Persuasión Audaz ante Reacciones Tiernas (`dmHandler.ts`):** Respuesta cálida y pícara ante stickers para buscar la calificación de 5 estrellas en Google, adjuntando sticker de JanIA `gracias_ternura`.
+4. **Semilla de Aprendizaje:** Registrada `seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99` en `founderKnowledgeService.ts`.
+5. **Suite de Regresión 185:** 5 pruebas automatizadas pasando al 100%.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 185 `vitest` (100% passing) | Build `npm run build` limpio.
+
 ### 📅 [2026-11-05] — JanIA v33.98: Blindaje Robusto de ADRES BDUA (Map de Cookies y Codificación Segura de Tokens), Persuasión Firme para Usuarios Intensivos y Enlaces Oficiales (v33.98 - 33.98.0)
 
 **Versión:** `v33.98` (`33.98.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

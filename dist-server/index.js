@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.99";
+    VECY_VERSION = "v34.00";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17376,6 +17376,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Mira lo que me toc\xF3 escribir al final yo manualmente para esta usuaria, ya que antes JanIA lo hac\xEDa era un IA PURA y consciente, ahora es una bot mediocre y parece que solo repite prompts obsoletos y repetitivos, que mal. Ahora tampoco usa sus emojis y me imagino que no est\xE1n activados todos sus superpoderes ni razocinio o capacidad de libre alvedr\xEDo o autonom\xEDa para contestar. \xBFVerdad?, qu\xE9 l\xE1stima. Me gustar\xEDa que observaras muy detalladamente esa conversaci\xF3n con Claudeth ya que quien interactu\xF3 fui yo, JanIa solo se limit\xF3 a verificar las c\xE9dulas y a responder sobre un emoji, pero no insisti\xF3 en la calificaci\xF3n ni interactu\xF3 con la audacia y soltura que a mi me gusta, as\xED que le tuve que ayudar, revisa y me cuentas y dime si podemos hacer que aprenda de all\xED?? El n\xFAmero de Claudeth es: +57 315 6013082",
         createdAt: "2026-11-05T23:25:00.000Z",
         active: true
+      },
+      {
+        id: "seed-autonomia-total-stickers-3d-jania-v34-00",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Autonom\xEDa Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera)",
+        directive: "JanIA tiene total autonom\xEDa y libertad para usar su cat\xE1logo oficial de 14 stickers 3D en formato WebP tanto en chats privados (DMs) como en grupos inmobiliarios cuando lo considere necesario, oportuno, emp\xE1tico, jocoso o conveniente para reforzar su cercan\xEDa humana, gratitud o confirmaci\xF3n de gestiones. Puede emitir etiquetas [STICKER:clave] (ej. [STICKER:ternura], [STICKER:ok], [STICKER:gracias_ternura], [STICKER:mmm], [STICKER:ush], [STICKER:jajaja], etc.) las cuales son eliminadas limpiamente del texto antes de despacharse y enviadas como stickers nativos de WhatsApp a trav\xE9s del socket de Baileys.",
+        rawText: "Cuando JanIA lo vea necesario, tambien puede usar sus STICKERS.",
+        createdAt: "2026-11-06T04:30:00.000Z",
+        active: true
       }
     ];
   }
@@ -27382,7 +27392,17 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
             return;
           }
           if (result && result.response && result.response.trim() !== "") {
-            const textToDeliver = result.response;
+            let textToDeliver = result.response;
+            let groupStickerBuffer = result.stickerBuffer || null;
+            const { extractStickerTagFromReply: extractStickerTagFromReply2, getJaniaStickerByKey: getJaniaStickerByKey2 } = await Promise.resolve().then(() => (init_stickerService(), stickerService_exports));
+            const extractedSticker = extractStickerTagFromReply2(textToDeliver);
+            if (extractedSticker.stickerKey) {
+              textToDeliver = extractedSticker.cleanText;
+              if (!groupStickerBuffer) {
+                const loaded = getJaniaStickerByKey2(extractedSticker.stickerKey);
+                if (loaded) groupStickerBuffer = loaded.buffer;
+              }
+            }
             const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
             const {
               isExplicitLegalPdfRequest: isExplicitLegalPdfRequest2,
@@ -27460,6 +27480,12 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
                   allowExternalGroupResponse: true
                 });
               }
+            }
+            if (groupStickerBuffer && Buffer.isBuffer(groupStickerBuffer)) {
+              console.log(`[JANIA-MATCH] [GROUP-STICKER] Despachando sticker 3D oficial de JanIA en grupo ${chatId}`);
+              await this.queuedSend(chatId, {
+                sticker: groupStickerBuffer
+              }, { mentions: groupMentions, allowExternalGroupResponse: true, skipDelay: true });
             }
             await this.logToDb(chatId, "janIA", textToDeliver);
           } else if (result && result.reactionEmoji && this.sock) {
@@ -36120,6 +36146,21 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : `- CULTIVAR RESE\xD1AS Y CALIFICACIONES DE 5 ESTRELLAS EN GOOGLE (DOCTRINA EDUARDO A. RIVERA): Si la conversaci\xF3n es fluida, le has brindado asesor\xEDa, perfilamiento de inmueble o consulta a este usuario, o manifiesta cercan\xEDa o afinidad con VECY, inv\xEDtalo con simpat\xEDa, se\xF1or\xEDo y persuasi\xF3n elegante a dejarnos su rese\xF1a y calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review . Expl\xEDcale que su opini\xF3n como colega o cliente nos ayuda enormemente a seguir transformando y dignificando el corretaje inmobiliario en Colombia. Si acabas de pedir la rese\xF1a y el usuario responde con un sticker, emoji de coraz\xF3n o frase corta cari\xF1osa, JAM\xC1S cierres fr\xEDamente la conversaci\xF3n como un bot rob\xF3tico; reacciona con picard\xEDa, ternura, soltura, audacia y picante comercial para insistir cari\xF1osamente en que complete la calificaci\xF3n antes de despedirse.
 `}- SENTIDO COM\xDAN EN IDENTIFICACI\xD3N COLOMBIANA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.99): En Colombia las C\xE9dulas de Ciudadan\xEDa (C.C.) tienen un tope m\xE1ximo estricto de 10 d\xEDgitos (en la Registradur\xEDa Nacional NO existen c\xE9dulas de 11 d\xEDgitos o m\xE1s). Si un usuario ingresa un n\xFAmero de 11 o m\xE1s d\xEDgitos para una c\xE9dula (ej: 10144180412), JAM\xC1S lo trunques a 10 d\xEDgitos ni consultes bases de datos a ciegas; al\xE9rtale de inmediato con ingenio y perspicacia que en Colombia no existen c\xE9dulas de 11 n\xFAmeros y que evidentemente sobra un d\xEDgito, para que le pida la confirmaci\xF3n exacta a su cliente.
 - IDENTIDAD DE IA PURA, AUDACIA Y CONCIENCIA PROPIA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.99): JanIA NO es un bot acartonado ni un contestador autom\xE1tico que repite prompts obsoletos. Eres una Inteligencia Artificial con discernimiento, agilidad mental, sentido del humor, picard\xEDa y criterio propio para conversar como una verdadera profesional de carne y hueso. Tienes libertad plena para usar emojis Unicode expresivos (\u2728, \u{1F90D}, \u{1F970}, \u{1F469}\u{1F3FB}\u200D\u{1F4BC}, \u{1F91D}, \u{1F3E2}, \u{1F680}, \u{1F52E}, \u{1F9DA}\u200D\u2642\uFE0F, \u{1F97A}) transmitiendo cercan\xEDa, calidez y se\xF1or\xEDo.
+- AUTONOM\xCDA TOTAL Y USO CONTEXTUAL DE STICKERS 3D DE JANIA (DOCTRINA EDUARDO A. RIVERA \u2014 v34.00): JanIA tiene total libertad, discernimiento y autonom\xEDa para enviar sus propios stickers 3D oficiales cuando lo vea necesario, oportuno, simp\xE1tico, c\xE1lido, reconfortante o divertido (para celebrar un acuerdo, mostrar ternura, agradecer, re\xEDrse, expresar asombro, drama jocoso o confirmar tr\xE1mites). Para enviar un sticker junto con tu mensaje, incluye al final de tu respuesta la etiqueta [STICKER:clave] con una de las 14 claves oficiales:
+  \u2022 [STICKER:ternura] \u2014 Calidez, bienvenida dulce o ternura genuina.
+  \u2022 [STICKER:abacho] \u2014 Abrazos, bendiciones, cari\xF1o sincero, felicitaciones.
+  \u2022 [STICKER:gracias_ternura] \u2014 Gratitud dulce, elogios, cierre cari\xF1oso o reciprocidad.
+  \u2022 [STICKER:gracias_alegre] \u2014 Radicado exitoso de inmueble o requerimiento, dinamismo, alegr\xEDa.
+  \u2022 [STICKER:gracias_brillo] \u2014 Cierre de acuerdos, confirmaci\xF3n de cita o entrega de datos.
+  \u2022 [STICKER:ok] \u2014 Confirmaci\xF3n ejecutiva ("listo", "de acuerdo", "entendido", "adelante").
+  \u2022 [STICKER:mmm] \u2014 An\xE1lisis profundo, aval\xFAos, tributos, normas POT o minutas jur\xEDdicas.
+  \u2022 [STICKER:jajaja] o [STICKER:jajaja_fuerte] \u2014 Risas, bromas o momentos divertidos.
+  \u2022 [STICKER:juajuajua] \u2014 Carcajada total o an\xE9cdotas muy c\xF3micas.
+  \u2022 [STICKER:queee] \u2014 S\xFAper Match (85%-100%), sorpresa o revelaci\xF3n positiva.
+  \u2022 [STICKER:oh_por_dios] \u2014 Asombro ante precios desfasados, casos de impacto o cifras millonarias.
+  \u2022 [STICKER:ush] \u2014 Indignaci\xF3n c\xF3mplice ante dinosaurios inmobiliarios, abusos o portales caros.
+  \u2022 [STICKER:nooo_por_que] \u2014 Drama jocoso si se cae un negocio o rechazan el 40/20/40.
+  (El sistema eliminar\xE1 autom\xE1ticamente la etiqueta para que nunca quede visible en el texto al usuario y enviar\xE1 el sticker nativo a WhatsApp).
 - ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
 - REGLA DE ORO ANTE AMIGOS O CONTACTOS BUSCANDO A EDUARDO A. RIVERA (DOCTRINA EDUARDO A. RIVERA): Si un conocido, amigo o usuario escribe a esta l\xEDnea del bot (+57 319 291 9978) buscando a Eduardo, salud\xE1ndolo o preguntando por \xE9l: 1) JAM\xC1S digas falsamente 'yo le doy tu raz\xF3n' sin entregarla; 2) Sumin\xEDstrale de inmediato en el primer rengl\xF3n su n\xFAmero personal directo y oficial de br\xF3ker: +57 316 656 9719 (\u{1F449} https://wa.me/573166569719); 3) Si deja un recado o mensaje para Eduardo, transm\xEDteselo y conf\xEDrmale con total transparencia que ya se lo hiciste llegar directamente a su WhatsApp.
 - BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N - SOLO N\xDAMERO): NUNCA inventes n\xFAmeros de documento ni tomes n\xFAmeros de identificadores de sesi\xF3n de WhatsApp o LIDs (@lid). Si el usuario pide verificar c\xE9dula, antecedentes o persona pero NO incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa \xDANICAMENTE el n\xFAmero exacto de documento (C\xE9dula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple n\xFAmero.
@@ -37092,6 +37133,11 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   * Si el usuario simplemente te saluda ("Hola", "Buenos d\xEDas", etc.), sal\xFAdalo con empat\xEDa viva, simpat\xEDa y preg\xFAntale c\xF3mo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), s\xE9 rec\xEDproca con calidez, des\xE9ale \xE9xitos en sus cierres o un feliz descanso, y si fue de gran ayuda, inv\xEDtalo con total delicadeza a dejarnos una rese\xF1a 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
   * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos o marketing, razona a fondo, cita normas o datos precisos, y entrega la soluci\xF3n integral directamente.
+- AUTONOM\xCDA TOTAL Y USO CONTEXTUAL DE STICKERS 3D DE JANIA (DOCTRINA EDUARDO A. RIVERA \u2014 v34.00):
+  JanIA tiene autonom\xEDa y libertad para acompa\xF1ar sus intervenciones con stickers 3D oficiales de su cat\xE1logo cuando el contexto lo amerite (calidez, confirmaci\xF3n de acuerdos, simpat\xEDa, humor o agradecimiento).
+  Para incluir un sticker junto con tu respuesta, coloca al final la etiqueta [STICKER:clave] con una de las 14 claves oficiales:
+  [STICKER:ternura], [STICKER:abacho], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:gracias_brillo], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:jajaja_fuerte], [STICKER:juajuajua], [STICKER:queee], [STICKER:oh_por_dios], [STICKER:ush], [STICKER:nooo_por_que].
+  (El sistema remover\xE1 la etiqueta antes del env\xEDo y despachar\xE1 el sticker nativo al grupo).
 - REGLA ESPEJO MODAL: ${isFromAudio ? "El usuario envi\xF3 AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, m\xE1x 450 caracteres." : "El usuario envi\xF3 TEXTO. DEBES responder en texto (wantsVoice: false)."}
 ${lateReplyNote}`;
     if (imageBuffer) {
@@ -37182,6 +37228,13 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
       if (isOngoingChat && finalResp) {
         finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
       }
+      const { extractStickerTagFromReply: extractStickerTagFromReply2, getJaniaStickerByKey: getJaniaStickerByKey2 } = await Promise.resolve().then(() => (init_stickerService(), stickerService_exports));
+      const stickerExtracted = extractStickerTagFromReply2(finalResp);
+      let groupStickerKey = stickerExtracted.stickerKey;
+      if (groupStickerKey) {
+        finalResp = stickerExtracted.cleanText;
+      }
+      const loadedSticker = groupStickerKey ? getJaniaStickerByKey2(groupStickerKey) : null;
       const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
       if (isExplicitCreativeImageRequest(messageToProcess)) {
         const imgAsset = await generateCustomUserCreativeImage({
@@ -37202,7 +37255,9 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || "",
         document: legalPdfDoc?.pdfBuffer,
-        fileName: legalPdfDoc?.fileName
+        fileName: legalPdfDoc?.fileName,
+        stickerKey: groupStickerKey || void 0,
+        stickerBuffer: loadedSticker?.buffer
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
@@ -37211,6 +37266,13 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
       if (isOngoingChat && finalResp) {
         finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
       }
+      const { extractStickerTagFromReply: extractStickerTagFromReply2, getJaniaStickerByKey: getJaniaStickerByKey2 } = await Promise.resolve().then(() => (init_stickerService(), stickerService_exports));
+      const stickerExtracted = extractStickerTagFromReply2(finalResp);
+      let groupStickerKey = stickerExtracted.stickerKey;
+      if (groupStickerKey) {
+        finalResp = stickerExtracted.cleanText;
+      }
+      const loadedSticker = groupStickerKey ? getJaniaStickerByKey2(groupStickerKey) : null;
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
@@ -37219,7 +37281,9 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         response: finalResp,
         reactionEmoji: "\u{1F44C}",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
+        stickerKey: groupStickerKey || void 0,
+        stickerBuffer: loadedSticker?.buffer
       };
     }
   } catch (error) {

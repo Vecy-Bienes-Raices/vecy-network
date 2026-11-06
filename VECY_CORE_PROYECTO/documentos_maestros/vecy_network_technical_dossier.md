@@ -330,6 +330,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.00 — Noviembre 2026
+
+#### [v34.00.0] — 2026-11-06: Autonomía Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera)
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera:**
+  - *"Cuando JanIA lo vea necesario, tambien puede usar sus STIKERS."*
+  - **Evidencia Visual:** Conversaciones con Lincy Hoyos Bróker, Claudeth Bienes Raíces, Jessica y grupos inmobiliarios donde JanIA despliega su saludo y consultoría inmobiliaria, rematando contextualmente con los stickers 3D oficiales de ternura, agradecimiento, humor y celebración ("¡SÍ!", "¡Gracias!", etc.).
+- **Implementación Técnica:**
+  1. **Catálogo Oficial JanIA (`JANIA_STICKER_CATALOG` en `stickerService.ts`):** 14 stickers en formato WebP optimizados para WhatsApp (`client/public/assets/jania/stickers/`): `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`, `ok`, `mmm`, `jajaja`, `jajaja_fuerte`, `juajuajua`, `queee`, `oh_por_dios`, `ush`, `nooo_por_que`.
+  2. **Ampliación de Tipos de Resultado (`types.ts`):** Agregados `stickerKey?: string;` y `stickerBuffer?: Buffer;` en `JanIAResult`.
+  3. **Enriquecimiento de System Prompts (`dmHandler.ts` y `consultingHandler.ts`):** Concedido libre albedrío cognitivo a JanIA para incluir la etiqueta invisible `[STICKER:clave]` al final de sus intervenciones cuando el contexto emocional o profesional lo amerite.
+  4. **Sanitización y Despacho Limpio:** `extractStickerTagFromReply` limpia la etiqueta del texto y entrega el buffer. En `whatsapp-match.ts`, el motor despacha el buffer binario vía socket nativo Baileys `{ sticker: buffer }` tanto en chats privados como en grupos inmobiliarios.
+  5. **Gobernanza y Suite 186:** Semilla `seed-autonomia-total-stickers-3d-jania-v34-00` en `founderKnowledgeService.ts` y Suite 186 en `regression.test.ts`.
+- **Validación ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 186 `vitest` (597/597 passing, 100%) | Build `npm run build` limpio.
+
+### 🔖 v33.99 — Noviembre 2026
+
+#### [v33.99.0] — 2026-11-05: Sentido Común en Cédulas (>10 Dígitos No Existen), Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura (Doctrina Eduardo A. Rivera)
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera:**
+  - Caso Claudeth (+57 315 601 3082 — Cédula 10144180412 vs 1014180412 / Luis Alejandro Castiblanco Medina).
+  - Cédula de 11 dígitos mutilada a ciegas por regex `{5,10}` y omisión de `appendDmHistory` al pedir reseñas de Google, generando respuestas robóticas frías ante stickers tiernos.
+- **Implementación Técnica:**
+  1. **Guardarraíl Inteligente de Cédulas > 10 Dígitos (`formatOversizedCedulaAlert` en `identityVerificationService.ts`):** Alerta a 0ms sin truncar: *"🔮 ¡Alerta de Validación de Identidad! 🇨🇴 Por lo general las cédulas de ciudadanía en Colombia tienen hasta 10 números y no 11... ¡NO EXISTE una cédula con esa cantidad de números! 🧚‍♂️ Pídele a tu cliente que te confirme el número exacto y te lo valido al instante con todo el gusto. ✨🤝"*.
+  2. **Persistencia Total de Reseñas en Memoria (`appendDmHistory` en `whatsapp-match.ts`):** Registro inmediato en el historial de la conversación.
+  3. **Persuasión Audaz ante Reacciones Tiernas (`dmHandler.ts`):** Interacción cálida, simpática y pícara ante stickers/emojis para conseguir la reseña en Google, acompañada del sticker `gracias_ternura`.
+  4. **Semilla de Aprendizaje:** `seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99` en `founderKnowledgeService.ts`.
+- **Validación ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 185 `vitest` (100% passing) | Build `npm run build` limpio.
+
 ### 🔖 v33.71 — Octubre 2026
 
 #### [v33.71.0] — 2026-10-29: Doctrina de IA Pura y Criterio Autónomo, Blindaje Antialucinaciones (RUNT, Precisión Numérica Notarial, Temperatura 0.25), Activación de Herramienta de Marketing Inmobiliario Especializado (HubSpot), Boletines Diarios tipo Newsletter y Matriz de Astucia Psicológica (7 Arquetipos de Interlocutores) (Doctrina Eduardo A. Rivera)

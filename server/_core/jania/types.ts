@@ -24,6 +24,8 @@ export type JanIAResult = {
   flyerVerbatimText?: string;
   document?: Buffer;
   fileName?: string;
+  stickerKey?: string;
+  stickerBuffer?: Buffer;
 };
 
 export const janiaResultSchema = {

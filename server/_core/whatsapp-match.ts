@@ -2690,7 +2690,19 @@ export class JaniaMatchBot {
       }
 
       if (result && result.response && result.response.trim() !== '') {
-        const textToDeliver = result.response;
+        let textToDeliver = result.response;
+        let groupStickerBuffer: Buffer | null = (result as any).stickerBuffer || null;
+
+        const { extractStickerTagFromReply, getJaniaStickerByKey } = await import('./jania/stickerService');
+        const extractedSticker = extractStickerTagFromReply(textToDeliver);
+        if (extractedSticker.stickerKey) {
+          textToDeliver = extractedSticker.cleanText;
+          if (!groupStickerBuffer) {
+            const loaded = getJaniaStickerByKey(extractedSticker.stickerKey);
+            if (loaded) groupStickerBuffer = loaded.buffer;
+          }
+        }
+
         const voiceToDeliver = (result.voiceResponse && result.voiceResponse.trim() !== "")
           ? result.voiceResponse
           : textToDeliver;
@@ -2777,6 +2789,14 @@ export class JaniaMatchBot {
               allowExternalGroupResponse: true
             });
           }
+        }
+
+        // 🎨 Despacho Contextual de Stickers 3D Oficiales de JanIA en Grupos (v34.00 — Doctrina Eduardo A. Rivera)
+        if (groupStickerBuffer && Buffer.isBuffer(groupStickerBuffer)) {
+          console.log(`[JANIA-MATCH] [GROUP-STICKER] Despachando sticker 3D oficial de JanIA en grupo ${chatId}`);
+          await this.queuedSend(chatId, {
+            sticker: groupStickerBuffer
+          }, { mentions: groupMentions, allowExternalGroupResponse: true, skipDelay: true });
         }
 
         // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación

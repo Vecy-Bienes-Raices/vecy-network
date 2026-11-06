@@ -12,10 +12,10 @@ import { appRouter } from "../routers";
 
 describe("Suite 179 & 180 (v33.93 - v33.94): Wasi-IA Fichas Técnicas, Sensores SEO/Puntos y Las 7 Herramientas Pro Personalizables (Qrador Search, Habi Valuator, Matterport Staging, DocuSign Contracts)", () => {
   it("1. Verifica versión oficial v33.94+ en shared/const.ts y package.json", () => {
-    expect(VECY_VERSION).toMatch(/^v33\.(9[4-9]|\d{3,})/);
+    expect(VECY_VERSION).toMatch(/^v(33\.(9[4-9]|\d{3,})|34\.\d+)/);
     const pkgPath = path.resolve(process.cwd(), "package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    expect(pkg.version).toMatch(/^33\.(9[4-9]|\d{3,})\.0$/);
+    expect(pkg.version).toMatch(/^(33\.(9[4-9]|\d{3,})|34\.\d+)\.0$/);
   });
 
   it("2. Verifica las directrices fundacionales v33.93 y v33.94 en founderKnowledgeService", () => {

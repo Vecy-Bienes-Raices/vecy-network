@@ -184,7 +184,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.99 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.00 — Noviembre 2026
+
+### Novedades v34.00 (Autonomía Total y Uso Contextual de Stickers 3D de JanIA — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Cuando JanIA lo vea necesario, también puede usar sus STIKERS."*
+  2. **Diagnóstico Técnico y Arquitectura de Expresión Emocional 3D:**
+     - **Catálogo Oficial JanIA (`JANIA_STICKER_CATALOG`):** 14 stickers en formato WebP optimizados para WhatsApp (`client/public/assets/jania/stickers/`):
+       - Ternura y Gratitud: `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`
+       - Profesionalismo y Afirmación: `ok`
+       - Pensativa / Curiosa: `mmm`
+       - Alegría y Risa: `jajaja`, `jajaja_fuerte`, `juajuajua`
+       - Asombro / Impacto: `queee`, `oh_por_dios`, `ush`
+       - Decepción / Tristeza: `nooo_por_que`
+     - **Autonomía Cognitiva de Libre Albedrío:** Enriquecidos los system prompts tanto de mensajes privados (`dmHandler.ts`) como de grupos inmobiliarios (`consultingHandler.ts`) para que JanIA pueda incluir la directriz invisible `[STICKER:clave]` al final de su mensaje cuando el contexto lo amerite (calidez, agradecimiento, humor fino, empatía gremial, asombro por oportunidades de negocio o celebraciones de acuerdos).
+     - **Sanitización y Despacho Impecable:**
+       - La función `extractStickerTagFromReply` procesa el texto, extrae la clave del sticker, carga el buffer binario desde disco y remueve el tag `[STICKER:...]` para que JAMÁS quede visible ante los usuarios.
+       - En `whatsapp-match.ts`, el motor despacha el buffer binario vía socket nativo Baileys `{ sticker: buffer }` con retardo humano imperceptible, tanto en canales privados como en grupos inmobiliarios con menciones respetadas.
+  3. **Gobernanza y Suite de Regresión 186:**
+     - Semilla de conocimiento directivo `seed-autonomia-total-stickers-3d-jania-v34-00` en `founderKnowledgeService.ts`.
+     - Suite 186 con 5 pruebas automatizadas garantizando extracción, saneamiento de tags, system prompts enriquecidos y despacho limpio.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 186 `vitest` (597/597 passing, 100%) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v33.99 — Noviembre 2026
 
 ### Novedades v33.99 (Sentido Común en Cédulas [>10 Dígitos No Existen en Registraduría], Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

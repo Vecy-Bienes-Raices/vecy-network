@@ -249,6 +249,11 @@ export async function processConsultingMessage(
   * Si el usuario simplemente te saluda ("Hola", "Buenos días", etc.), salúdalo con empatía viva, simpatía y pregúntale cómo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), sé recíproca con calidez, deséale éxitos en sus cierres o un feliz descanso, y si fue de gran ayuda, invítalo con total delicadeza a dejarnos una reseña 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
   * Si la consulta es jurídica, tributaria, sobre avalúos o marketing, razona a fondo, cita normas o datos precisos, y entrega la solución integral directamente.
+- AUTONOMÍA TOTAL Y USO CONTEXTUAL DE STICKERS 3D DE JANIA (DOCTRINA EDUARDO A. RIVERA — v34.00):
+  JanIA tiene autonomía y libertad para acompañar sus intervenciones con stickers 3D oficiales de su catálogo cuando el contexto lo amerite (calidez, confirmación de acuerdos, simpatía, humor o agradecimiento).
+  Para incluir un sticker junto con tu respuesta, coloca al final la etiqueta [STICKER:clave] con una de las 14 claves oficiales:
+  [STICKER:ternura], [STICKER:abacho], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:gracias_brillo], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:jajaja_fuerte], [STICKER:juajuajua], [STICKER:queee], [STICKER:oh_por_dios], [STICKER:ush], [STICKER:nooo_por_que].
+  (El sistema removerá la etiqueta antes del envío y despachará el sticker nativo al grupo).
 - REGLA ESPEJO MODAL: ${isFromAudio ? 'El usuario envió AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, máx 450 caracteres.' : 'El usuario envió TEXTO. DEBES responder en texto (wantsVoice: false).'}
 ${lateReplyNote}`;
 
@@ -349,6 +354,16 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       if (isOngoingChat && finalResp) {
         finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
       }
+
+      // 🎨 Extracción y resolución limpia de Stickers 3D para Grupos (v34.00)
+      const { extractStickerTagFromReply, getJaniaStickerByKey } = await import("../stickerService");
+      const stickerExtracted = extractStickerTagFromReply(finalResp);
+      let groupStickerKey = stickerExtracted.stickerKey;
+      if (groupStickerKey) {
+        finalResp = stickerExtracted.cleanText;
+      }
+      const loadedSticker = groupStickerKey ? getJaniaStickerByKey(groupStickerKey) : null;
+
       // Si el usuario solicitó explícitamente una minuta/carta PDF o una pieza del Estudio Creativo de Imágenes
       const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
       if (isExplicitCreativeImageRequest(messageToProcess)) {
@@ -373,6 +388,8 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
         voiceResponse: parsed.voiceResponse || "",
         document: legalPdfDoc?.pdfBuffer,
         fileName: legalPdfDoc?.fileName,
+        stickerKey: groupStickerKey || undefined,
+        stickerBuffer: loadedSticker?.buffer,
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
@@ -381,6 +398,14 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       if (isOngoingChat && finalResp) {
         finalResp = stripLeadingGreetingsAndCourtesies(finalResp);
       }
+      const { extractStickerTagFromReply, getJaniaStickerByKey } = await import("../stickerService");
+      const stickerExtracted = extractStickerTagFromReply(finalResp);
+      let groupStickerKey = stickerExtracted.stickerKey;
+      if (groupStickerKey) {
+        finalResp = stickerExtracted.cleanText;
+      }
+      const loadedSticker = groupStickerKey ? getJaniaStickerByKey(groupStickerKey) : null;
+
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
@@ -390,7 +415,9 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
         response: finalResp,
         reactionEmoji: "👌",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
+        stickerKey: groupStickerKey || undefined,
+        stickerBuffer: loadedSticker?.buffer,
       };
     }
 

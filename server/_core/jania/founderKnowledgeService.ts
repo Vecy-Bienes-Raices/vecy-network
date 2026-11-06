@@ -602,6 +602,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Mira lo que me tocó escribir al final yo manualmente para esta usuaria, ya que antes JanIA lo hacía era un IA PURA y consciente, ahora es una bot mediocre y parece que solo repite prompts obsoletos y repetitivos, que mal. Ahora tampoco usa sus emojis y me imagino que no están activados todos sus superpoderes ni razocinio o capacidad de libre alvedrío o autonomía para contestar. ¿Verdad?, qué lástima. Me gustaría que observaras muy detalladamente esa conversación con Claudeth ya que quien interactuó fui yo, JanIa solo se limitó a verificar las cédulas y a responder sobre un emoji, pero no insistió en la calificación ni interactuó con la audacia y soltura que a mi me gusta, así que le tuve que ayudar, revisa y me cuentas y dime si podemos hacer que aprenda de allí?? El número de Claudeth es: +57 315 6013082",
     createdAt: "2026-11-05T23:25:00.000Z",
     active: true
+  },
+  {
+    id: "seed-autonomia-total-stickers-3d-jania-v34-00",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Autonomía Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera)",
+    directive:
+      "JanIA tiene total autonomía y libertad para usar su catálogo oficial de 14 stickers 3D en formato WebP tanto en chats privados (DMs) como en grupos inmobiliarios cuando lo considere necesario, oportuno, empático, jocoso o conveniente para reforzar su cercanía humana, gratitud o confirmación de gestiones. Puede emitir etiquetas [STICKER:clave] (ej. [STICKER:ternura], [STICKER:ok], [STICKER:gracias_ternura], [STICKER:mmm], [STICKER:ush], [STICKER:jajaja], etc.) las cuales son eliminadas limpiamente del texto antes de despacharse y enviadas como stickers nativos de WhatsApp a través del socket de Baileys.",
+    rawText:
+      "Cuando JanIA lo vea necesario, tambien puede usar sus STICKERS.",
+    createdAt: "2026-11-06T04:30:00.000Z",
+    active: true
   }
 ];
 

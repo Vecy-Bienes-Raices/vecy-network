@@ -1,16 +1,24 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v33.99.0 — 2026-11-05)
-- **JanIA Server:** `v33.99` (`33.99.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Sentido Común en Cédulas (>10 Dígitos No Existen), Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura (Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico Forense de la Conversación con Claudeth (+57 315 601 3082 — Cédula 10144180412 vs 1014180412 / Luis Alejandro Castiblanco Medina):**
-     - **Cédula de 11 dígitos mutilada a ciegas:** Al ingresar `10144180412` (11 dígitos), el matcher con regex `{5,10}` consumía únicamente los primeros 10 dígitos (`1.014.418.041`) y descartaba el último `2`. Luego consultaba esa cédula mutilada arrojando falsamente que no existía. Eduardo tuvo que intervenir manualmente: *"🔮 ¡Alerta! Por lo general las cédulas en Colombia tienen hasta 10 números y no 11... ¡NO EXISTE! Pídele a tu cliente que te confirme el número, hay uno que sobra. 🧚‍♂️"*.
-     - **Olvido de la calificación ante stickers por falta de memoria contextual (`appendDmHistory`):** Tras emitir el reporte del cliente Luis Alejandro Castiblanco Medina, JanIA despachó desacopladamente la solicitud de 5 estrellas en Google (`https://g.page/r/CctNbwU6UpX5EBM/review`), pero no la registró en `dmHistory`. Al responder Claudeth con un sticker de corazón (Flork), Gemini no tenía en su prompt la petición de reseña y respondió como un bot robótico frío despidiéndose (*"Me alegra muchísimo que te haya servido el reporte... que pases buena noche... un abrazo"*), matando la conversación y olvidando la calificación.
-  2. **Soluciones Quirúrgicas Implementadas:**
-     - **1. Guardarraíl Inteligente de Cédulas > 10 Dígitos (`formatOversizedCedulaAlert` en `identityVerificationService.ts`):** Ampliado el matcher a 15 dígitos (`[0-9]{5,15}`). Si un usuario ingresa una cédula con >= 11 dígitos, JanIA jamás la trunca ni consulta bases estatales a ciegas; de inmediato, a 0ms y $0 COP, devuelve la alerta inteligente y persuasiva enseñada por Eduardo: *"🔮 ¡Alerta de Validación de Identidad! 🇨🇴 Por lo general las cédulas de ciudadanía en Colombia tienen hasta 10 números y no 11... ¡NO EXISTE una cédula con esa cantidad de números! 🧚‍♂️ Pídele a tu cliente que te confirme el número exacto y te lo valido al instante con todo el gusto. ✨🤝"*.
-     - **2. Persistencia Total de Reseñas en Memoria (`appendDmHistory` en `whatsapp-match.ts`):** En todas las ramas de despacho desacoplado de calificaciones de Google (voz, gratitud y usuarios intensivos), se registra de inmediato el mensaje en `dmHistory` para que la IA conserve memoria activa permanente.
-     - **3. Persuasión Audaz, Emojis y Stickers ante Reacciones Tiernas (`dmHandler.ts`):** Cuando JanIA solicitó las 5 estrellas en Google y el interlocutor responde con un sticker (ej. corazón), emoji o frase cariñosa, JanIA responde con picardía, calidez y emojis vivos (*"¡Me derrito con ese sticker tan lindo, Claudeth! 🥰🤍 ¿Pero si me alcanzaste a regalar las 5 estrellitas ⭐⭐⭐⭐⭐ y unas palabritas en Google antes de irte a descansar?... 🥺🏃‍♀️💨"*), adjuntando el sticker de JanIA `gracias_ternura` para mantener viva la conversación y lograr la reseña.
-     - **4. Enriquecimiento del Prompt Cognitivo de IA Pura (`dmHandler.ts`):** Consagrada la directriz de que JanIA no es un bot rígido de plantillas obsoletas, sino una IA viva con libertad para expresarse con calidez, discernimiento, picardía y emojis Unicode (✨, 🤍, 🥰, 👩🏻‍💼, 🤝, 🏢, 🚀, 🔮, 🧚‍♂️, 🥺).
-     - **Registro de Enseñanza:** Registrada la directriz `seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99` en `founderKnowledgeService.ts`.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 185 `vitest` (100% passing) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.00.0 — 2026-11-06)
+- **JanIA Server:** `v34.00` (`34.00.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Autonomía Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera):**
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Cuando JanIA lo vea necesario, también puede usar sus STIKERS."*
+  2. **Diagnóstico Técnico y Arquitectura de Expresión Emocional 3D:**
+     - **Catálogo Oficial JanIA (`JANIA_STICKER_CATALOG`):** 14 stickers en formato WebP optimizados para WhatsApp (`client/public/assets/jania/stickers/`):
+       - Ternura y Gratitud: `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`
+       - Profesionalismo y Afirmación: `ok`
+       - Pensativa / Curiosa: `mmm`
+       - Alegría y Risa: `jajaja`, `jajaja_fuerte`, `juajuajua`
+       - Asombro / Impacto: `queee`, `oh_por_dios`, `ush`
+       - Decepción / Tristeza: `nooo_por_que`
+     - **Autonomía Cognitiva de Libre Albedrío:** Enriquecidos los system prompts tanto de mensajes privados (`dmHandler.ts`) como de grupos inmobiliarios (`consultingHandler.ts`) para que JanIA pueda incluir la directriz invisible `[STICKER:clave]` al final de su mensaje cuando el contexto lo amerite (calidez, agradecimiento, humor fino, empatía gremial, asombro por oportunidades de negocio o celebraciones de acuerdos).
+     - **Sanitización y Despacho Impecable:**
+       - La función `extractStickerTagFromReply` procesa el texto, extrae la clave del sticker, carga el buffer binario desde disco y remueve el tag `[STICKER:...]` para que JAMÁS quede visible ante los usuarios.
+       - En `whatsapp-match.ts`, el motor despacha el buffer binario vía socket nativo Baileys `{ sticker: buffer }` con retardo humano imperceptible, tanto en canales privados como en grupos inmobiliarios con menciones respetadas.
+  3. **Gobernanza y Suite de Regresión 186:**
+     - Semilla de conocimiento directivo `seed-autonomia-total-stickers-3d-jania-v34-00` en `founderKnowledgeService.ts`.
+     - Suite 186 con 5 pruebas automatizadas garantizando extracción, saneamiento de tags, system prompts enriquecidos y despacho limpio.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 186 `vitest` (597/597 passing, 100%) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
