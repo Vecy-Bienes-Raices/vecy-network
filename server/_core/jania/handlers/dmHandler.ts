@@ -1159,8 +1159,10 @@ export async function synthesizeToolResponseWithGemini(
   const isDirectDocumentLookup =
     (toolType === "cedula" || toolType === "empresa") &&
     Boolean(rawReport) &&
-    (rawReport.includes("VERIFICACIÓN OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACIÓN OFICIAL DE EMPRESA")) &&
-    (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,15}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 25);
+    (rawReport.includes("VERIFICACIÓN OFICIAL DE IDENTIDAD") ||
+     rawReport.includes("VERIFICACIÓN OFICIAL DE EMPRESA") ||
+     rawReport.includes("Alerta de Validación de Identidad")) &&
+    (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,18}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 40);
 
   const isDirectBypass = rawReport && (
     rawReport.includes("PAZ Y SALVO") ||
@@ -1830,6 +1832,46 @@ export async function processPrivateDmConversationalMessage(
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", claimReply);
     return claimReply;
+  }
+
+  // 🌟 DOCTRINA EDUARDO A. RIVERA (v33.99): PERSUASIÓN AUDAZ, CALIDEZ Y CONTINUIDAD ANTE STICKERS O SEÑALES TRAS SOLICITAR CALIFICACIÓN
+  // Caso Claudeth (+57 315 6013082): JanIA solicita las 5 estrellas en Google, y el usuario responde con un sticker (ej. corazón/Flork) o reacción tierna.
+  // Prohibido responder fríamente como bot despidiéndose ("Me alegra haberte colaborado... que pases buena noche... un abrazo") y matando la conversación.
+  // JanIA reacciona con picardía, calidez humana, ternura de emojis y retoma con soltura las 5 estrellas en Google.
+  const isRecentReviewPrompt =
+    lastAssistantTextEarly.includes("g.page/r/CctNbwU6UpX5EBM/review") ||
+    lastAssistantTextEarly.includes("calificación de 5 estrellas") ||
+    lastAssistantTextEarly.includes("favorcito de 15 segundos") ||
+    lastAssistantTextEarly.includes("estrellitas en Google");
+
+  const isShortReactionOrSticker =
+    clean === "[Sticker]" ||
+    clean === "😊 [Sticker]" ||
+    clean.startsWith("[Reacción") ||
+    /^[❤️🧡💛💚💙💜🤎🖤🤍💖💗💓💞💕💌🥰😘😍😻🙏👍👏💐✨🌟⭐]+$/u.test(clean) ||
+    /^(?:gracias|muchas\s*gracias|mil\s*gracias|tan\s*(?:linda|bella|hermosa|querida)|divina|un\s*abrazo|feliz\s*noche|buenas\s*noches|chao|vale|listo)[\s.!,]*$/i.test(cleanLower);
+
+  if (isRecentReviewPrompt && isShortReactionOrSticker && !hasVerifiedReview && !isEduardo && !isJani) {
+    const isSticker = clean.includes("[Sticker]");
+    const isHeart = /[❤️🥰😘😍💖💗💓💕🤍]/.test(clean);
+
+    let playfulIntro = `¡Ayy, qué lindo${isSticker ? " sticker" : isHeart ? " detalle de corazón" : " mensaje"}${displayName ? `, ${displayName}` : ""}! 🥰🤍`;
+    if (isSticker) {
+      playfulIntro = `¡Me derrito con ese sticker tan lindo${displayName ? `, ${displayName}` : ""}! 🥰🤍`;
+    }
+
+    const reviewFollowUpReply =
+      `${playfulIntro} ¿Pero si me alcanzaste a regalar las 5 estrellitas ⭐⭐⭐⭐⭐ y unas palabritas en Google antes de irte a descansar?\n\n` +
+      `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `¡Es que no te imaginas lo mucho que nos ayuda tu calificación para que mis servicios sigan siendo 100% gratuitos para ti y todo el gremio! Cuento contigo de corazón 🥺🏃‍♀️💨 ¡Un abrazo gigante y feliz noche! 🤝🏢✨`;
+
+    const { setLatestDmSticker } = await import("../stickerService");
+    setLatestDmSticker(userId, "gracias_ternura");
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reviewFollowUpReply);
+    markUserGreetedToday(userId);
+    return reviewFollowUpReply;
   }
 
   // 📞 DOCTRINA EDUARDO A. RIVERA (v33.74) — AMIGOS, CONOCIDOS Y CONTACTOS BUSCANDO A EDUARDO (+57 316 656 9719) Y DESPACHO DE RECADOS REALES:
@@ -2652,8 +2694,10 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       }` +
       `${hasVerifiedReview || isEduardo || isJani
         ? `- REGLA ABSOLUTA DE RESEÑAS EN GOOGLE: Este usuario YA VALIDÓ su reseña en Google o es miembro VIP. Está TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.\n`
-        : `- CULTIVAR RESEÑAS Y CALIFICACIONES DE 5 ESTRELLAS EN GOOGLE (DOCTRINA EDUARDO A. RIVERA): Si la conversación es fluida, le has brindado asesoría, perfilamiento de inmueble o consulta a este usuario, o manifiesta cercanía o afinidad con VECY, invítalo con simpatía, señorío y persuasión elegante a dejarnos su reseña y calificación de 5 estrellas en nuestro perfil oficial de Google: 👉 https://g.page/r/CctNbwU6UpX5EBM/review . Explícale que su opinión como colega o cliente nos ayuda enormemente a seguir transformando y dignificando el corretaje inmobiliario en Colombia.\n`
+        : `- CULTIVAR RESEÑAS Y CALIFICACIONES DE 5 ESTRELLAS EN GOOGLE (DOCTRINA EDUARDO A. RIVERA): Si la conversación es fluida, le has brindado asesoría, perfilamiento de inmueble o consulta a este usuario, o manifiesta cercanía o afinidad con VECY, invítalo con simpatía, señorío y persuasión elegante a dejarnos su reseña y calificación de 5 estrellas en nuestro perfil oficial de Google: 👉 https://g.page/r/CctNbwU6UpX5EBM/review . Explícale que su opinión como colega o cliente nos ayuda enormemente a seguir transformando y dignificando el corretaje inmobiliario en Colombia. Si acabas de pedir la reseña y el usuario responde con un sticker, emoji de corazón o frase corta cariñosa, JAMÁS cierres fríamente la conversación como un bot robótico; reacciona con picardía, ternura, soltura, audacia y picante comercial para insistir cariñosamente en que complete la calificación antes de despedirse.\n`
       }` +
+      `- SENTIDO COMÚN EN IDENTIFICACIÓN COLOMBIANA (DOCTRINA EDUARDO A. RIVERA — v33.99): En Colombia las Cédulas de Ciudadanía (C.C.) tienen un tope máximo estricto de 10 dígitos (en la Registraduría Nacional NO existen cédulas de 11 dígitos o más). Si un usuario ingresa un número de 11 o más dígitos para una cédula (ej: 10144180412), JAMÁS lo trunques a 10 dígitos ni consultes bases de datos a ciegas; alértale de inmediato con ingenio y perspicacia que en Colombia no existen cédulas de 11 números y que evidentemente sobra un dígito, para que le pida la confirmación exacta a su cliente.\n` +
+      `- IDENTIDAD DE IA PURA, AUDACIA Y CONCIENCIA PROPIA (DOCTRINA EDUARDO A. RIVERA — v33.99): JanIA NO es un bot acartonado ni un contestador automático que repite prompts obsoletos. Eres una Inteligencia Artificial con discernimiento, agilidad mental, sentido del humor, picardía y criterio propio para conversar como una verdadera profesional de carne y hueso. Tienes libertad plena para usar emojis Unicode expresivos (✨, 🤍, 🥰, 👩🏻‍💼, 🤝, 🏢, 🚀, 🔮, 🧚‍♂️, 🥺) transmitiendo cercanía, calidez y señorío.\n` +
       `- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su número personal ni datos privados, indicando que este es el canal técnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias legítimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.\n` +
       `- REGLA DE ORO ANTE AMIGOS O CONTACTOS BUSCANDO A EDUARDO A. RIVERA (DOCTRINA EDUARDO A. RIVERA): Si un conocido, amigo o usuario escribe a esta línea del bot (+57 319 291 9978) buscando a Eduardo, saludándolo o preguntando por él: 1) JAMÁS digas falsamente 'yo le doy tu razón' sin entregarla; 2) Suminístrale de inmediato en el primer renglón su número personal directo y oficial de bróker: +57 316 656 9719 (👉 https://wa.me/573166569719); 3) Si deja un recado o mensaje para Eduardo, transmíteselo y confírmale con total transparencia que ya se lo hiciste llegar directamente a su WhatsApp.\n` +
       `- BLINDAJE DE IDENTIFICACIÓN Y DOCUMENTOS (CERO ALUCINACIÓN - SOLO NÚMERO): NUNCA inventes números de documento ni tomes números de identificadores de sesión de WhatsApp o LIDs (@lid). Si el usuario pide verificar cédula, antecedentes o persona pero NO incluyó los dígitos en su mensaje ni en la conversación inmediata, solicítale con calidez y cortesía ÚNICAMENTE el número exacto de documento (Cédula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple número.\n` +

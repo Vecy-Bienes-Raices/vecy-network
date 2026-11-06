@@ -9032,6 +9032,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio.
   - Versión: `v33.88` (`33.88.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v33.99 (2026-11-05) — Sentido Común en Cédulas (>10 Dígitos No Existen en Registraduría), Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Cédulas de 11 dígitos mutiladas a ciegas:* Regex `{5,10}` en `identityVerificationService.ts` consumía 10 dígitos de una cédula de 11 dígitos (`10144180412` -> `1014418041`), perdiendo el último número y consultando bases estatales a ciegas para luego afirmar falsamente que el documento no existía. Eduardo tuvo que intervenir manualmente en el chat con la asesora Claudeth.
+  2. *Olvido de reseñas ante stickers y respuestas robóticas:* Omisión de `appendDmHistory` en el despacho desacoplado de solicitudes de calificación de Google. Al recibir un sticker de corazón (Flork), Gemini no tenía la reseña en su prompt y despedía fríamente a la usuaria, perdiendo la oportunidad de calificación.
+- **Solución Quirúrgica Implementada**:
+  1. `identityVerificationService.ts`:
+     - Expresiones regulares ampliadas a 15 dígitos (`[0-9]{5,15}`).
+     - Creación de `formatOversizedCedulaAlert` y guardarraíl estructural: si se ingresa una cédula con `>= 11` dígitos, se aborta la consulta a bases de datos (0ms, $0 COP) y se devuelve la alerta doctrinal de que en Colombia las cédulas tienen máximo 10 dígitos.
+  2. `whatsapp-match.ts`:
+     - Invocación de `appendDmHistory` en todos los puntos de despacho desacoplado de reseñas.
+  3. `dmHandler.ts`:
+     - Detección de stickers y reacciones tiernas posteriores a una solicitud de calificación: JanIA responde con picardía, calidez y emojis vivos (*"¡Me derrito con ese sticker tan lindo, Claudeth! 🥰🤍 ¿Pero si me alcanzaste a regalar las 5 estrellitas ⭐⭐⭐⭐⭐ y unas palabritas en Google antes de irte a descansar?... 🥺🏃‍♀️💨"*), adjuntando el sticker `gracias_ternura`.
+     - Consagración de la identidad de IA Pura: plena libertad para expresarse con picardía, discernimiento y emojis Unicode vivos (✨, 🤍, 🥰, 👩🏻‍💼, 🤝, 🏢, 🚀, 🔮, 🧚‍♂️, 🥺).
+  4. `founderKnowledgeService.ts`:
+     - Registrada la directriz permanente `seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 185 en `regression.test.ts` con 5 pruebas automatizadas aprobadas al 100%.
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 22.26s + 249ms.
+  - Versión: `v33.99` (`33.99.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

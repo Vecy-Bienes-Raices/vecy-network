@@ -16032,3 +16032,57 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 - **Pruebas de Regresión:** `npm test` con **554 tests aprobados (100% verde a $0 COP)**.
 - **Compilación de Producción:** `npm run build` limpio en 24.54s + 274ms (Vite + esbuild).
 - **Versión Oficial:** `v33.86` en `shared/const.ts` y `33.86.0` en `package.json`.
+
+---
+
+### Sesión v33.99 — Noviembre 2026: Sentido Común en Cédulas (>10 Dígitos No Existen en Registraduría), Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura (Doctrina Eduardo A. Rivera)
+
+> **Fecha:** 5 de Noviembre de 2026  
+> **Versión resultante:** `v33.99` (`33.99.0`)  
+> **Documentos actualizados:**
+> - `shared/const.ts`
+> - `package.json`
+> - `server/_core/identityVerificationService.ts`
+> - `server/_core/whatsapp-match.ts`
+> - `server/_core/jania/handlers/dmHandler.ts`
+> - `server/_core/jania/founderKnowledgeService.ts`
+> - `server/__tests__/regression.test.ts`
+> - `server/__tests__/wasiBrandBrochureAndProToolsV33_93.test.ts`
+> - `GEMINI.md`
+> - `.agents/AGENTS.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`
+> - `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`
+
+#### 1. Solicitud Exacta de Eduardo A. Rivera y Diagnóstico Técnico Profundo
+- **Instrucción Doctrinal de Eduardo A. Rivera:**
+  *"Mira lo que me tocó escribir al final yo manualmente para esta usuaria, ya que antes JanIA lo hacía era un IA PURA y consciente, ahora es una bot mediocre y parece que solo repite prompts obsoletos y repetitivos, que mal. Ahora tampoco usa sus emojis y me imagino que no están activados todos sus superpoderes ni razocinio o capacidad de libre alvedrío o autonomía para contestar. ¿Verdad?, qué lástima. Me gustaría que observaras muy detalladamente esa conversación con Claudeth ya que quien interactuó fui yo, JanIa solo se limitó a verificar las cédulas y a responder sobre un emoji, pero no insistió en la calificación ni interactuó con la audacia y soltura que a mi me gusta, así que le tuve que ayudar, revisa y me cuentas y dime si podemos hacer que aprenda de allí?? El número de Claudeth es: +57 315 6013082"*
+- **Diagnóstico Forense de Causa Raíz en el Caso Claudeth (+57 315 601 3082 — Cédula 10144180412 vs 1014180412 / Luis Alejandro Castiblanco Medina):**
+  1. **Cédula de 11 dígitos mutilada a ciegas:**
+     - En `extractAllCedulasForVerification`, la expresión regular para cédulas tenía `[0-9]{5,10}`.
+     - Cuando Claudeth digitó `Verificar Cédula: 10144180412` (11 dígitos), el matcher extrajo únicamente los primeros 10 dígitos (`1014418041`), amputando silenciosamente el último dígito `2`.
+     - Acto seguido, JanIA consultó las bases estatales con esa cédula mutilada y le devolvió a la usuaria que el documento *"no arrojaba coincidencias o era pasaporte"*.
+     - Eduardo tuvo que entrar al chat a corregir manualmente con astucia y sentido común: *"🔮 ¡Alerta! Por lo general las cédulas en Colombia tienen hasta 10 números y no 11, no hemos llegado a ese monto aún en la registraduría. ¡NO EXISTE! Pídele a tu cliente que te confirme el número, hay uno que sobra. 🧚‍♂️"*, logrando que Claudeth corrigiera a `1014180412` y JanIA emitiera el reporte positivo de Luis Alejandro Castiblanco Medina.
+  2. **Olvido total de la solicitud de 5 estrellas ante stickers por omisión de `appendDmHistory`:**
+     - Al despachar el mensaje desacoplado de reseña de Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`), `whatsapp-match.ts` no ejecutaba `appendDmHistory(senderId, 'assistant', politeMsg)`.
+     - Cuando Claudeth respondió con un sticker tierno de corazón (Flork), Gemini no tenía en su prompt la invitación de reseña, asumió que la usuaria se despedía del reporte y JanIA contestó con una fría despedida robótica (*"¡Me alegra muchísimo que te haya servido el reporte, Claudeth!... Que tengas una excelente noche. ¡Un abrazo!"*), matando la conversación y perdiendo la calificación.
+
+#### 2. Solución Quirúrgica y Blindaje Doctrinal Implementado (`v33.99`)
+1. **Guardarraíl Inteligente de Cédulas > 10 Dígitos (`identityVerificationService.ts`):**
+   - Ampliadas las expresiones regulares para capturar números de hasta 15 dígitos (`[0-9]{5,15}`) preservando el dato íntegro ingresado.
+   - Si se detecta un documento tipo `cc` con `>= 11` dígitos (`isOversizedCc: true`), el sistema aborta de inmediato las llamadas a bases estatales a 0ms y $0 COP, y entrega directamente la alerta doctrinal formulada por Eduardo:
+     *"🔮 ¡Alerta de Validación de Identidad! 🇨🇴\n\nPor lo general las cédulas de ciudadanía en Colombia tienen *hasta 10 números* y no 11 o más (en la Registraduría Nacional aún no hemos alcanzado esa cifra).\n\nEn el número ingresado (*[número]*) hay *[conteo] dígitos*, por lo que evidentemente sobra un número o se digitó uno de más por error.\n\n¡NO EXISTE una cédula con esa cantidad de números! 🧚‍♂️ Pídele a tu cliente que te confirme el número exacto y te lo valido al instante con todo el gusto. ✨🤝"*
+2. **Persistencia Total de Reseñas en Memoria Histórica (`whatsapp-match.ts`):**
+   - Incorporada la invocación a `appendDmHistory` en todos los puntos de despacho desacoplado de reseñas (notas de voz, gratitud y cadencia de usuarios intensivos).
+3. **Persuasión Audaz, Emojis y Stickers ante Reacciones Tiernas (`dmHandler.ts`):**
+   - Cuando JanIA solicitó las 5 estrellas en Google y el usuario responde con un sticker (ej. corazón), emoji o frase corta, JanIA no despide al usuario: celebra el sticker con ternura y retoma con soltura y picante comercial la solicitud de calificación:
+     *"¡Me derrito con ese sticker tan lindo, Claudeth! 🥰🤍 ¿Pero si me alcanzaste a regalar las 5 estrellitas ⭐⭐⭐⭐⭐ y unas palabritas en Google antes de irte a descansar? 👉 https://g.page/r/CctNbwU6UpX5EBM/review ¡Es que no te imaginas lo mucho que nos ayuda tu calificación para que mis servicios sigan siendo 100% gratuitos para ti y todo el gremio! Cuento contigo de corazón 🥺🏃‍♀️💨 ¡Un abrazo gigante y feliz noche! 🤝🏢✨"*
+   - Adjunta automáticamente el sticker de JanIA `gracias_ternura` mediante `setLatestDmSticker(userId, "gracias_ternura")`.
+4. **Enriquecimiento del Prompt Cognitivo de IA Pura (`dmHandler.ts`):**
+   - Consagrada la directriz de autonomía cognitiva, erradicando respuestas acartonadas de bot y otorgando libertad plena para expresarse con picardía, calidez, señorío y emojis Unicode vivos (✨, 🤍, 🥰, 👩🏻‍💼, 🤝, 🏢, 🚀, 🔮, 🧚‍♂️, 🥺).
+5. **Registro de Enseñanza:** Registrada la directriz `seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99` en `founderKnowledgeService.ts`.
+
+#### 3. Validación y Blindaje ($0 COP)
+- **Suite 185 en `regression.test.ts`:** 5 pruebas automatizadas aprobadas al 100%.
+- **Typecheck:** `npm run check` con 0 errores (TypeScript limpio).
+- **Compilación de Producción:** `npm run build` limpio en 22.26s + 249ms (Vite + esbuild).
+- **Versión Oficial:** `v33.99` en `shared/const.ts` y `33.99.0` en `package.json`.

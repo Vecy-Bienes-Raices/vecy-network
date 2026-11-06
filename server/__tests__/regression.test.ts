@@ -11328,11 +11328,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.96 en shared/const.ts y package.json (33.96.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(96|97)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(96|97|98|99)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(96|97)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(96|97|98|99)\.0$/);
 
       const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
       expect(teachingsSrc).toContain("seed-control-silencio-grupos-externos-no-autorespuesta-dia-exacto-v33-96");
@@ -11366,11 +11366,11 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.97 en shared/const.ts y package.json (33.97.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v33\.(97|98)$/);
+      expect(VECY_VERSION).toMatch(/^v33\.(97|98|99)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toMatch(/^33\.(97|98)\.0$/);
+      expect(pkg.version).toMatch(/^33\.(97|98|99)\.0$/);
 
       const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
       expect(teachingsSrc).toContain("seed-blindaje-multi-part-gemini-reportes-completos-resenas-sin-intrusion-v33-97");
@@ -11413,14 +11413,69 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v33.98 en shared/const.ts y package.json (33.98.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.98");
+      expect(VECY_VERSION).toMatch(/^v33\.(98|99)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.98.0");
+      expect(pkg.version).toMatch(/^33\.(98|99)\.0$/);
 
       const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
       expect(teachingsSrc).toContain("seed-blindaje-adres-bdua-cookies-tokens-persuasion-usuarios-intensivos-v33-98");
+    });
+  });
+
+  describe("SUITE 185: SENTIDO COMÚN EN CÉDULAS (>10 DÍGITOS NO EXISTEN), PERSUASIÓN AUDAZ ANTE STICKERS Y LIBRE ALBEDRÍO DE IA PURA (Doctrina Eduardo A. Rivera v33.99)", () => {
+    it("1. Verifica que extractAllCedulasForVerification capture números de 11 dígitos como isOversizedCc sin truncar silenciosamente", async () => {
+      const { extractAllCedulasForVerification } = await import("../_core/identityVerificationService");
+      const items = extractAllCedulasForVerification("Verificar Cédula: 10144180412", true);
+      expect(items.length).toBe(1);
+      expect(items[0].cedula).toBe("10144180412");
+      expect(items[0].cedula.length).toBe(11);
+      expect(items[0].isOversizedCc).toBe(true);
+    });
+
+    it("2. Verifica que executeIdentityVerificationFromWhatsApp emita la alerta inteligente ante cédulas de 11 dígitos a 0ms sin consultar bases", async () => {
+      const { executeIdentityVerificationFromWhatsApp, formatOversizedCedulaAlert } = await import("../_core/identityVerificationService");
+      const report = await executeIdentityVerificationFromWhatsApp("Verificar Cédula: 10144180412", true);
+      expect(report.isVerificationRequest).toBe(true);
+      expect(report.success).toBe(false);
+      expect(report.reportText).toContain("🔮 *¡Alerta de Validación de Identidad!* 🇨🇴");
+      expect(report.reportText).toContain("10144180412");
+      expect(report.reportText).toContain("11 dígitos");
+      expect(report.reportText).toContain("NO EXISTE una cédula con esa cantidad de números");
+
+      const alertDirect = formatOversizedCedulaAlert("10144180412", 11);
+      expect(alertDirect).toContain("Registraduría Nacional");
+    });
+
+    it("3. Verifica que whatsapp-match.ts llame a appendDmHistory al despachar invitaciones a reseñas", async () => {
+      const fs = await import("fs");
+      const matchSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(matchSrc).toContain("appendDmHistory(senderId, 'assistant', politeMsg);");
+      expect(matchSrc).toContain("appendDmHistory(senderId, 'assistant', intensiveReviewMsg);");
+    });
+
+    it("4. Verifica que dmHandler.ts reaccione con picardía, audacia y emojis ante stickers tras solicitar calificación", async () => {
+      const fs = await import("fs");
+      const dmHandlerSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(dmHandlerSrc).toContain("isRecentReviewPrompt");
+      expect(dmHandlerSrc).toContain("isShortReactionOrSticker");
+      expect(dmHandlerSrc).toContain("setLatestDmSticker(userId, \"gracias_ternura\");");
+      expect(dmHandlerSrc).toContain("¿Pero si me alcanzaste a regalar las 5 estrellitas");
+      expect(dmHandlerSrc).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(dmHandlerSrc).toContain("SENTIDO COMÚN EN IDENTIFICACIÓN COLOMBIANA (DOCTRINA EDUARDO A. RIVERA — v33.99)");
+    });
+
+    it("5. Consagración doctrinal de versión v33.99 en shared/const.ts y package.json (33.99.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.99");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.99.0");
+
+      const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
+      expect(teachingsSrc).toContain("seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99");
     });
   });
 });

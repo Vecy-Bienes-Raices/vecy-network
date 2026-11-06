@@ -1932,6 +1932,8 @@ export class JaniaMatchBot {
                         await new Promise(r => setTimeout(r, 1500));
                         await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                         await this.logToDb(senderId, 'janIA', politeMsg);
+                        const { appendDmHistory } = await import('./janIA');
+                        appendDmHistory(senderId, 'assistant', politeMsg);
                       }
                     }
                   } catch (vRevErr: any) {
@@ -2097,8 +2099,11 @@ export class JaniaMatchBot {
                   await new Promise(r => setTimeout(r, 1500));
                   await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                   await this.logToDb(senderId, 'janIA', politeMsg);
+                  const { appendDmHistory } = await import('./janIA');
+                  appendDmHistory(senderId, 'assistant', politeMsg);
                 } else if (isServiceDeliveryReply && isCompleteDelivery && isIntensiveCadence && !isLongQueryOrQuestion) {
-                  // 🌟 DOCTRINA EDUARDO A. RIVERA (v33.98): Persuasión e insistencia firme para usuarios intensivos de alto volumen.
+                  // 🌟 DOCTRINA EDUARDO A. RIVERA (v33.97): Prohibido disparar solicitudes de reseña intrusivas prematuras sin gratitud.
+                  // 🌟 DOCTRINA EDUARDO A. RIVERA (v33.98 / v33.99): Persuasión e insistencia firme para usuarios intensivos de alto volumen.
                   // Si el usuario pone a trabajar intensamente a JanIA (>= 3 servicios) sin haber calificado,
                   // tras entregar su reporte completo y una pausa respetuosa de 3.2s, JanIA insiste persuasivamente
                   // en la calificación de 5 estrellas en Google para mantener la gratuidad y el acceso libre del servicio.
@@ -2108,6 +2113,8 @@ export class JaniaMatchBot {
                   await new Promise(r => setTimeout(r, 3200));
                   await this.queuedSend(senderId, intensiveReviewMsg, { allowDirectMessage: true, skipDelay: true });
                   await this.logToDb(senderId, 'janIA', intensiveReviewMsg);
+                  const { appendDmHistory } = await import('./janIA');
+                  appendDmHistory(senderId, 'assistant', intensiveReviewMsg);
                 }
               }
             } catch (revErr: any) {

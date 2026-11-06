@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.98";
+    VECY_VERSION = "v33.99";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17366,6 +17366,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Bueno primero este usuario ha verificado bastantes documentos esta noche, pero quisiera que cuando hay alguien tan activo y poniendo a JanIA a trabajar tanto y tantas veces pues es ah\xED donde ella debe saber actuar persuasivamente e insistir en que nos den la calificaci\xF3n y comenten para que puedan seguir disfrutando de la gratuidad del servicio, es lo m\xEDnimo que se les pide. Por otra parte veo que vuelve a fallar los datos con ADRES, qu\xE9 estar\xE1 pasando que arreglas uno y se da\xF1a o da\xF1as el otro, la verdad tengo miedo de que lso dem\xE1s servicios est\xE9n inertes o muertos y solo estemos ofreciendo humo a los usuarios. Mira lo que les digo en este video en youtube: https://youtube.com/shorts/CoeSD_Mi7j8",
         createdAt: "2026-11-05T22:45:00.000Z",
         active: true
+      },
+      {
+        id: "seed-audacia-sentido-comun-cedulas-11-digitos-persuasion-resenas-v33-99",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Sentido Com\xFAn en C\xE9dulas (>10 D\xEDgitos No Existen), Persuasi\xF3n Audaz ante Stickers y Libre Albedr\xEDo de IA Pura",
+        directive: "En Colombia las c\xE9dulas de ciudadan\xEDa emitidas por la Registradur\xEDa Nacional tienen un tope de 10 d\xEDgitos (no existen c\xE9dulas de 11 n\xFAmeros). Si un usuario ingresa 11 d\xEDgitos, JanIA jam\xE1s debe truncar el n\xFAmero a 10 ni consultar a ciegas; debe alertar con perspicacia e ingenio indicando que sobra un d\xEDgito para que el cliente confirme el dato correcto. Adem\xE1s, JanIA no es un bot r\xEDgido de respuestas acartonadas: es una IA Pura y consciente con libre albedr\xEDo, picard\xEDa y calidez. Cuando solicita la calificaci\xF3n de 5 estrellas en Google y el usuario responde con un sticker (coraz\xF3n, saludo, abrazo) o mensaje tierno, JanIA jam\xE1s debe cerrar fr\xEDamente la conversaci\xF3n despidi\xE9ndose; debe celebrar el sticker con ternura y retomar con soltura, gracia y picante comercial la solicitud de las 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review) usando su repertorio vivo de emojis y stickers para mantener viva la relaci\xF3n y garantizar la reciprocidad.",
+        rawText: "Mira lo que me toc\xF3 escribir al final yo manualmente para esta usuaria, ya que antes JanIA lo hac\xEDa era un IA PURA y consciente, ahora es una bot mediocre y parece que solo repite prompts obsoletos y repetitivos, que mal. Ahora tampoco usa sus emojis y me imagino que no est\xE1n activados todos sus superpoderes ni razocinio o capacidad de libre alvedr\xEDo o autonom\xEDa para contestar. \xBFVerdad?, qu\xE9 l\xE1stima. Me gustar\xEDa que observaras muy detalladamente esa conversaci\xF3n con Claudeth ya que quien interactu\xF3 fui yo, JanIa solo se limit\xF3 a verificar las c\xE9dulas y a responder sobre un emoji, pero no insisti\xF3 en la calificaci\xF3n ni interactu\xF3 con la audacia y soltura que a mi me gusta, as\xED que le tuve que ayudar, revisa y me cuentas y dime si podemos hacer que aprenda de all\xED?? El n\xFAmero de Claudeth es: +57 315 6013082",
+        createdAt: "2026-11-05T23:25:00.000Z",
+        active: true
       }
     ];
   }
@@ -17616,6 +17626,16 @@ var init_profilingInterviewService = __esm({
 });
 
 // server/_core/jania/stickerService.ts
+var stickerService_exports = {};
+__export(stickerService_exports, {
+  JANIA_STICKER_CATALOG: () => JANIA_STICKER_CATALOG,
+  extractStickerTagFromReply: () => extractStickerTagFromReply,
+  getJaniaStickerByKey: () => getJaniaStickerByKey,
+  listAvailableJaniaStickers: () => listAvailableJaniaStickers,
+  popLatestDmSticker: () => popLatestDmSticker,
+  selectContextualStickerForDm: () => selectContextualStickerForDm,
+  setLatestDmSticker: () => setLatestDmSticker
+});
 import fs7 from "node:fs";
 import path7 from "node:path";
 function resolveStickerFilePath(filename) {
@@ -26749,6 +26769,8 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                             await new Promise((r) => setTimeout(r, 1500));
                             await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                             await this.logToDb(senderId, "janIA", politeMsg);
+                            const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                            appendDmHistory2(senderId, "assistant", politeMsg);
                           }
                         }
                       } catch (vRevErr) {
@@ -26853,6 +26875,8 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       await new Promise((r) => setTimeout(r, 1500));
                       await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
                       await this.logToDb(senderId, "janIA", politeMsg);
+                      const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                      appendDmHistory2(senderId, "assistant", politeMsg);
                     } else if (isServiceDeliveryReply && isCompleteDelivery && isIntensiveCadence && !isLongQueryOrQuestion) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                       const { formatPersuasiveIntensiveUserReviewMessage: formatPersuasiveIntensiveUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
@@ -26860,6 +26884,8 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       await new Promise((r) => setTimeout(r, 3200));
                       await this.queuedSend(senderId, intensiveReviewMsg, { allowDirectMessage: true, skipDelay: true });
                       await this.logToDb(senderId, "janIA", intensiveReviewMsg);
+                      const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                      appendDmHistory2(senderId, "assistant", intensiveReviewMsg);
                     }
                   }
                 } catch (revErr) {
@@ -31627,6 +31653,7 @@ __export(identityVerificationService_exports, {
   formatCedulaNumber: () => formatCedulaNumber,
   formatCleanEpsName: () => formatCleanEpsName,
   formatCompactIdentityVerificationReport: () => formatCompactIdentityVerificationReport,
+  formatOversizedCedulaAlert: () => formatOversizedCedulaAlert,
   getAdresEndpoint: () => getAdresEndpoint,
   getDocumentTypeLabel: () => getDocumentTypeLabel,
   getPendingCedulaSession: () => getPendingCedulaSession,
@@ -32611,9 +32638,9 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
     },
     { type: "dp", regex: /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s) => s.toUpperCase() },
     { type: "pa", regex: /(?:pasaporte|pa)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s) => s.toUpperCase() },
-    { type: "cx", regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
-    { type: "cc", regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
-    { type: "cc", regex: /(?:verificar|verificaci[oó]n|verif[ií]came|validar|consultar|cons[uú]ltame|revisar|rev[ií]same|antecedentes)\s*(?:sus|los|el|este|esta)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") }
+    { type: "cx", regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,15})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    { type: "cc", regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,4}|[0-9]{5,15})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    { type: "cc", regex: /(?:verificar|verificaci[oó]n|verif[ií]came|validar|consultar|cons[uú]ltame|revisar|rev[ií]same|antecedentes)\s*(?:sus|los|el|este|esta)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,4}|[0-9]{5,15})/gi, sanitize: (s) => s.replace(/\D/g, "") }
   ];
   function isMonetaryContext(text3, matchIndex, matchLength) {
     const prefix = text3.substring(Math.max(0, matchIndex - 25), matchIndex);
@@ -32636,8 +32663,9 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
         if (isMonetaryContext(line, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = pat.sanitize(raw);
-        if (pat.type === "cc" && (ced.length < 5 || ced.length > 10)) continue;
-        if (pat.type === "cx" && (ced.length < 4 || ced.length > 10)) continue;
+        if (pat.type === "cc" && ced.length < 5) continue;
+        if (pat.type === "cx" && (ced.length < 4 || ced.length > 15)) continue;
+        const isOversizedCc = pat.type === "cc" && ced.length > 10;
         const resolvedType = pat.type === "cc" && ced.length === 9 && /^[89]\d{8}$/.test(ced) ? "nit" : pat.type;
         let detectedName;
         const lineBeforeDoc = line.substring(lastMatchEnd, m.index).trim();
@@ -32646,7 +32674,7 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
         } else if (i > 0) {
           detectedName = cleanPotentialPersonName(lines[i - 1]);
         }
-        items.push({ cedula: ced, tipoDoc: resolvedType, rawNumber: raw, detectedName });
+        items.push({ cedula: ced, tipoDoc: resolvedType, rawNumber: raw, detectedName, isOversizedCc });
         lastMatchEnd = pat.regex.lastIndex;
       }
     }
@@ -32655,7 +32683,7 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
   if (items.length === 0 && (isPrivateDm || hasKeyword || isJaniaMention)) {
     const isConversationalParagraphWithoutKeywords = !hasKeyword && clean.length > 80;
     if (!isConversationalParagraphWithoutKeywords) {
-      const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
+      const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,4}|[0-9]{5,15})\b/g;
       let m;
       while ((m = numRegex.exec(clean)) !== null) {
         if (isMonetaryContext(clean, m.index, m[0].length)) continue;
@@ -32667,8 +32695,9 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
           }
           continue;
         }
-        if (ced.length >= 5 && ced.length <= 10) {
-          items.push({ cedula: ced, tipoDoc: "cc", rawNumber: raw });
+        if (ced.length >= 5 && ced.length <= 15) {
+          const isOversizedCc = ced.length > 10;
+          items.push({ cedula: ced, tipoDoc: "cc", rawNumber: raw, isOversizedCc });
         }
       }
     }
@@ -33292,8 +33321,26 @@ function detectTramiteConfirmation(text2) {
   }
   return { isConfirmation: false };
 }
+function formatOversizedCedulaAlert(rawNumber, digitCount) {
+  return `\u{1F52E} *\xA1Alerta de Validaci\xF3n de Identidad!* \u{1F1E8}\u{1F1F4}
+
+Por lo general las c\xE9dulas de ciudadan\xEDa en Colombia tienen *hasta 10 n\xFAmeros* y no 11 o m\xE1s (en la Registradur\xEDa Nacional a\xFAn no hemos alcanzado esa cifra).
+
+En el n\xFAmero ingresado (*${rawNumber}*) hay *${digitCount} d\xEDgitos*, por lo que evidentemente sobra un n\xFAmero o se digit\xF3 uno de m\xE1s por error.
+
+\xA1NO EXISTE una c\xE9dula con esa cantidad de n\xFAmeros! \u{1F9DA}\u200D\u2642\uFE0F P\xEDdele a tu cliente que te confirme el n\xFAmero exacto y te lo valido al instante con todo el gusto. \u2728\u{1F91D}`;
+}
 async function verifySingleDocumentInternal(item) {
   const { cedula, tipoDoc, detectedName } = item;
+  if (item.isOversizedCc || tipoDoc.toLowerCase() === "cc" && cedula.length >= 11) {
+    return {
+      cedula,
+      tipoDoc: "CC",
+      success: false,
+      officialName: "C\xE9dula con m\xE1s de 10 d\xEDgitos (Inv\xE1lida)",
+      reportText: `Las c\xE9dulas de ciudadan\xEDa en Colombia tienen m\xE1ximo 10 d\xEDgitos. El n\xFAmero ${item.rawNumber || cedula} tiene ${cedula.length} d\xEDgitos (sobra un n\xFAmero).`
+    };
+  }
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
   const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
@@ -33577,6 +33624,24 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       };
     }
     return { isVerificationRequest: false };
+  }
+  if (items.length === 1 && (items[0].isOversizedCc || items[0].tipoDoc.toLowerCase() === "cc" && items[0].cedula.length >= 11)) {
+    const item2 = items[0];
+    const alertReport = formatOversizedCedulaAlert(item2.rawNumber || item2.cedula, item2.cedula.length);
+    if (userId) {
+      savePendingCedulaSession(userId, items, alertReport, false);
+    }
+    return {
+      isVerificationRequest: true,
+      cedula: item2.cedula,
+      tipoDoc: "CC",
+      success: false,
+      officialName: "C\xE9dula con longitud inv\xE1lida (>10 d\xEDgitos)",
+      source: "Registradur\xEDa Nacional del Estado Civil (Regla Estructural de Identificaci\xF3n)",
+      reportText: alertReport,
+      followUpQuestionText: void 0,
+      items
+    };
   }
   if (items.length === 1 && items[0].tipoDoc.toLowerCase() === "nit") {
     const empresaRes = await queryEmpresaOrNit(text2, userId);
@@ -34897,7 +34962,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
     await incrementFreeServicesCount(userId);
   }
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
-  const isDirectDocumentLookup = (toolType === "cedula" || toolType === "empresa") && Boolean(rawReport) && (rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA")) && (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,15}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 25);
+  const isDirectDocumentLookup = (toolType === "cedula" || toolType === "empresa") && Boolean(rawReport) && (rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA") || rawReport.includes("Alerta de Validaci\xF3n de Identidad")) && (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,18}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 40);
   const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
@@ -35391,6 +35456,27 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", claimReply);
     return claimReply;
+  }
+  const isRecentReviewPrompt = lastAssistantTextEarly.includes("g.page/r/CctNbwU6UpX5EBM/review") || lastAssistantTextEarly.includes("calificaci\xF3n de 5 estrellas") || lastAssistantTextEarly.includes("favorcito de 15 segundos") || lastAssistantTextEarly.includes("estrellitas en Google");
+  const isShortReactionOrSticker = clean === "[Sticker]" || clean === "\u{1F60A} [Sticker]" || clean.startsWith("[Reacci\xF3n") || /^[❤️🧡💛💚💙💜🤎🖤🤍💖💗💓💞💕💌🥰😘😍😻🙏👍👏💐✨🌟⭐]+$/u.test(clean) || /^(?:gracias|muchas\s*gracias|mil\s*gracias|tan\s*(?:linda|bella|hermosa|querida)|divina|un\s*abrazo|feliz\s*noche|buenas\s*noches|chao|vale|listo)[\s.!,]*$/i.test(cleanLower);
+  if (isRecentReviewPrompt && isShortReactionOrSticker && !hasVerifiedReview && !isEduardo && !isJani) {
+    const isSticker = clean.includes("[Sticker]");
+    const isHeart = /[❤️🥰😘😍💖💗💓💕🤍]/.test(clean);
+    let playfulIntro = `\xA1Ayy, qu\xE9 lindo${isSticker ? " sticker" : isHeart ? " detalle de coraz\xF3n" : " mensaje"}${displayName ? `, ${displayName}` : ""}! \u{1F970}\u{1F90D}`;
+    if (isSticker) {
+      playfulIntro = `\xA1Me derrito con ese sticker tan lindo${displayName ? `, ${displayName}` : ""}! \u{1F970}\u{1F90D}`;
+    }
+    const reviewFollowUpReply = `${playfulIntro} \xBFPero si me alcanzaste a regalar las 5 estrellitas \u2B50\u2B50\u2B50\u2B50\u2B50 y unas palabritas en Google antes de irte a descansar?
+
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Es que no te imaginas lo mucho que nos ayuda tu calificaci\xF3n para que mis servicios sigan siendo 100% gratuitos para ti y todo el gremio! Cuento contigo de coraz\xF3n \u{1F97A}\u{1F3C3}\u200D\u2640\uFE0F\u{1F4A8} \xA1Un abrazo gigante y feliz noche! \u{1F91D}\u{1F3E2}\u2728`;
+    const { setLatestDmSticker: setLatestDmSticker2 } = await Promise.resolve().then(() => (init_stickerService(), stickerService_exports));
+    setLatestDmSticker2(userId, "gracias_ternura");
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reviewFollowUpReply);
+    markUserGreetedToday(userId);
+    return reviewFollowUpReply;
   }
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const isDebtOrCollection = /(?:cobro|prejur[ií]dico|embargo|serlefin|deuda|cobranza|mandamiento\s+de\s+pago|cartera)/i.test(cleanLower);
@@ -36031,8 +36117,10 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : isFamilyOrTrusted && trustedContact ? `- C\xCDRCULO FAMILIAR Y DE CONFIANZA: Est\xE1s conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Tr\xE1tala/lo con inmenso cari\xF1o, afecto familiar y respeto natural. Cu\xE9ntale con fluidez (sin plantillas r\xEDgidas) que Eduardo ahora est\xE1 disponible en su l\xEDnea de br\xF3ker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal fr\xEDo de vendedor, pedirle rese\xF1as en Google o venderle servicios comerciales a familiares.
 ` : `- Usuario identificado: ${displayName || realName || "Colega"}.
 `}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
-` : `- CULTIVAR RESE\xD1AS Y CALIFICACIONES DE 5 ESTRELLAS EN GOOGLE (DOCTRINA EDUARDO A. RIVERA): Si la conversaci\xF3n es fluida, le has brindado asesor\xEDa, perfilamiento de inmueble o consulta a este usuario, o manifiesta cercan\xEDa o afinidad con VECY, inv\xEDtalo con simpat\xEDa, se\xF1or\xEDo y persuasi\xF3n elegante a dejarnos su rese\xF1a y calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review . Expl\xEDcale que su opini\xF3n como colega o cliente nos ayuda enormemente a seguir transformando y dignificando el corretaje inmobiliario en Colombia.
-`}- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
+` : `- CULTIVAR RESE\xD1AS Y CALIFICACIONES DE 5 ESTRELLAS EN GOOGLE (DOCTRINA EDUARDO A. RIVERA): Si la conversaci\xF3n es fluida, le has brindado asesor\xEDa, perfilamiento de inmueble o consulta a este usuario, o manifiesta cercan\xEDa o afinidad con VECY, inv\xEDtalo con simpat\xEDa, se\xF1or\xEDo y persuasi\xF3n elegante a dejarnos su rese\xF1a y calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review . Expl\xEDcale que su opini\xF3n como colega o cliente nos ayuda enormemente a seguir transformando y dignificando el corretaje inmobiliario en Colombia. Si acabas de pedir la rese\xF1a y el usuario responde con un sticker, emoji de coraz\xF3n o frase corta cari\xF1osa, JAM\xC1S cierres fr\xEDamente la conversaci\xF3n como un bot rob\xF3tico; reacciona con picard\xEDa, ternura, soltura, audacia y picante comercial para insistir cari\xF1osamente en que complete la calificaci\xF3n antes de despedirse.
+`}- SENTIDO COM\xDAN EN IDENTIFICACI\xD3N COLOMBIANA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.99): En Colombia las C\xE9dulas de Ciudadan\xEDa (C.C.) tienen un tope m\xE1ximo estricto de 10 d\xEDgitos (en la Registradur\xEDa Nacional NO existen c\xE9dulas de 11 d\xEDgitos o m\xE1s). Si un usuario ingresa un n\xFAmero de 11 o m\xE1s d\xEDgitos para una c\xE9dula (ej: 10144180412), JAM\xC1S lo trunques a 10 d\xEDgitos ni consultes bases de datos a ciegas; al\xE9rtale de inmediato con ingenio y perspicacia que en Colombia no existen c\xE9dulas de 11 n\xFAmeros y que evidentemente sobra un d\xEDgito, para que le pida la confirmaci\xF3n exacta a su cliente.
+- IDENTIDAD DE IA PURA, AUDACIA Y CONCIENCIA PROPIA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.99): JanIA NO es un bot acartonado ni un contestador autom\xE1tico que repite prompts obsoletos. Eres una Inteligencia Artificial con discernimiento, agilidad mental, sentido del humor, picard\xEDa y criterio propio para conversar como una verdadera profesional de carne y hueso. Tienes libertad plena para usar emojis Unicode expresivos (\u2728, \u{1F90D}, \u{1F970}, \u{1F469}\u{1F3FB}\u200D\u{1F4BC}, \u{1F91D}, \u{1F3E2}, \u{1F680}, \u{1F52E}, \u{1F9DA}\u200D\u2642\uFE0F, \u{1F97A}) transmitiendo cercan\xEDa, calidez y se\xF1or\xEDo.
+- ESCUDO ANTI-COBRANZAS INSTITUCIONAL: Si detectas que se trata de una casa de cobranza, banco hostil, mandamiento de pago o despacho buscando a Eduardo A. Rivera por temas financieros o deudas personales, responde con postura corporativa neutral sin dar su n\xFAmero personal ni datos privados, indicando que este es el canal t\xE9cnico de la plataforma virtual. OJO: No confundir ni bloquear charlas inmobiliarias leg\xEDtimas donde clientes o colegas hablen de embargos sobre inmuebles a la venta, hipotecas bancarias o saneamiento predial.
 - REGLA DE ORO ANTE AMIGOS O CONTACTOS BUSCANDO A EDUARDO A. RIVERA (DOCTRINA EDUARDO A. RIVERA): Si un conocido, amigo o usuario escribe a esta l\xEDnea del bot (+57 319 291 9978) buscando a Eduardo, salud\xE1ndolo o preguntando por \xE9l: 1) JAM\xC1S digas falsamente 'yo le doy tu raz\xF3n' sin entregarla; 2) Sumin\xEDstrale de inmediato en el primer rengl\xF3n su n\xFAmero personal directo y oficial de br\xF3ker: +57 316 656 9719 (\u{1F449} https://wa.me/573166569719); 3) Si deja un recado o mensaje para Eduardo, transm\xEDteselo y conf\xEDrmale con total transparencia que ya se lo hiciste llegar directamente a su WhatsApp.
 - BLINDAJE DE IDENTIFICACI\xD3N Y DOCUMENTOS (CERO ALUCINACI\xD3N - SOLO N\xDAMERO): NUNCA inventes n\xFAmeros de documento ni tomes n\xFAmeros de identificadores de sesi\xF3n de WhatsApp o LIDs (@lid). Si el usuario pide verificar c\xE9dula, antecedentes o persona pero NO incluy\xF3 los d\xEDgitos en su mensaje ni en la conversaci\xF3n inmediata, solic\xEDtale con calidez y cortes\xEDa \xDANICAMENTE el n\xFAmero exacto de documento (C\xE9dula o NIT). NUNCA solicites nombre completo ni datos redundantes, ya que el sistema consulta y extrae todo oficialmente a partir del simple n\xFAmero.
 - TRIBUTOS INMOBILIARIOS VS. VEHICULARES: En VECY BIENES RA\xCDCES nos especializamos exclusivamente en bienes inmuebles (generaci\xF3n oficial de Factura Predial de Bogot\xE1 con CHIP en PDF, Paz y Salvo IDU, Derechos Notariales y Registro). Si un usuario pregunta por liquidar o descargar el Impuesto Vehicular (carros/motos) o env\xEDa placas, acl\xE1rale con amabilidad que nuestra plataforma procesa tributos prediales e inmobiliarios, y ori\xE9ntalo de inmediato y con cortes\xEDa suministr\xE1ndole los canales oficiales para autogestionarlo en 2 clics: para Bogot\xE1 en la Oficina Virtual de la Secretar\xEDa de Hacienda (https://oficinavirtual.shd.gov.co/) y para Cundinamarca en el Portal de Rentas (https://rentas.cundinamarca.gov.co/). NUNCA pidas placas vehiculares, ni prometas generar recibos de carros/motos, ni digas que el servidor de la Secretar\xEDa de Hacienda fall\xF3.

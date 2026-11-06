@@ -70,6 +70,7 @@ export interface ExtractedCedulaItem {
   tipoDoc: string;
   rawNumber: string;
   detectedName?: string;
+  isOversizedCc?: boolean;
 }
 
 export interface SingleIdentityReport {
@@ -1347,9 +1348,9 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
     },
     { type: 'dp', regex: /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s: string) => s.toUpperCase() },
     { type: 'pa', regex: /(?:pasaporte|pa)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s: string) => s.toUpperCase() },
-    { type: 'cx', regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
-    { type: 'cc', regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
-    { type: 'cc', regex: /(?:verificar|verificaci[oó]n|verif[ií]came|validar|consultar|cons[uú]ltame|revisar|rev[ií]same|antecedentes)\s*(?:sus|los|el|este|esta)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
+    { type: 'cx', regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,15})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    { type: 'cc', regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,4}|[0-9]{5,15})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    { type: 'cc', regex: /(?:verificar|verificaci[oó]n|verif[ií]came|validar|consultar|cons[uú]ltame|revisar|rev[ií]same|antecedentes)\s*(?:sus|los|el|este|esta)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,4}|[0-9]{5,15})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
   ];
 
   /**
@@ -1377,9 +1378,10 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
         if (isMonetaryContext(line, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = pat.sanitize(raw);
-        if (pat.type === 'cc' && (ced.length < 5 || ced.length > 10)) continue;
-        if (pat.type === 'cx' && (ced.length < 4 || ced.length > 10)) continue;
+        if (pat.type === 'cc' && ced.length < 5) continue;
+        if (pat.type === 'cx' && (ced.length < 4 || ced.length > 15)) continue;
 
+        const isOversizedCc = pat.type === 'cc' && ced.length > 10;
         const resolvedType = (pat.type === 'cc' && ced.length === 9 && /^[89]\d{8}$/.test(ced)) ? 'nit' : pat.type;
 
         let detectedName: string | undefined;
@@ -1389,7 +1391,7 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
         } else if (i > 0) {
           detectedName = cleanPotentialPersonName(lines[i - 1]);
         }
-        items.push({ cedula: ced, tipoDoc: resolvedType, rawNumber: raw, detectedName });
+        items.push({ cedula: ced, tipoDoc: resolvedType, rawNumber: raw, detectedName, isOversizedCc });
         lastMatchEnd = pat.regex.lastIndex;
       }
     }
@@ -1402,7 +1404,7 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
     // no interpretar números aislados como cédulas a menos que el mensaje sea puramente numérico o con nombres
     const isConversationalParagraphWithoutKeywords = !hasKeyword && clean.length > 80;
     if (!isConversationalParagraphWithoutKeywords) {
-      const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
+      const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,4}|[0-9]{5,15})\b/g;
       let m: RegExpExecArray | null;
       while ((m = numRegex.exec(clean)) !== null) {
         if (isMonetaryContext(clean, m.index, m[0].length)) continue;
@@ -1415,8 +1417,9 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
           }
           continue;
         }
-        if (ced.length >= 5 && ced.length <= 10) {
-          items.push({ cedula: ced, tipoDoc: 'cc', rawNumber: raw });
+        if (ced.length >= 5 && ced.length <= 15) {
+          const isOversizedCc = ced.length > 10;
+          items.push({ cedula: ced, tipoDoc: 'cc', rawNumber: raw, isOversizedCc });
         }
       }
     }
@@ -2163,6 +2166,16 @@ export function detectTramiteConfirmation(text: string): {
 }
 
 /**
+ * Genera la alerta inteligente y persuasiva cuando un usuario ingresa una cédula con más de 10 dígitos (Doctrina Eduardo A. Rivera v33.99).
+ */
+export function formatOversizedCedulaAlert(rawNumber: string, digitCount: number): string {
+  return `🔮 *¡Alerta de Validación de Identidad!* 🇨🇴\n\n` +
+    `Por lo general las cédulas de ciudadanía en Colombia tienen *hasta 10 números* y no 11 o más (en la Registraduría Nacional aún no hemos alcanzado esa cifra).\n\n` +
+    `En el número ingresado (*${rawNumber}*) hay *${digitCount} dígitos*, por lo que evidentemente sobra un número o se digitó uno de más por error.\n\n` +
+    `¡NO EXISTE una cédula con esa cantidad de números! 🧚‍♂️ Pídele a tu cliente que te confirme el número exacto y te lo valido al instante con todo el gusto. ✨🤝`;
+}
+
+/**
  * Ejecuta la verificación oficial de un documento individual con estrategia Fail-Fast:
  * 1° ADRES (BDUA): Validación de existencia real, nombres y apellidos oficiales, EPS, régimen y estado.
  *    -> Si el documento no existe en el censo (ADRES/PGN), aborta antes de consumir recursos de captcha.
@@ -2172,6 +2185,18 @@ export function detectTramiteConfirmation(text: string): {
  */
 export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<SingleIdentityReport> {
   const { cedula, tipoDoc, detectedName } = item;
+
+  // 🔮 DOCTRINA EDUARDO A. RIVERA (v33.99): Guardarraíl Estructural C.C. > 10 dígitos
+  if (item.isOversizedCc || (tipoDoc.toLowerCase() === 'cc' && cedula.length >= 11)) {
+    return {
+      cedula,
+      tipoDoc: 'CC',
+      success: false,
+      officialName: 'Cédula con más de 10 dígitos (Inválida)',
+      reportText: `Las cédulas de ciudadanía en Colombia tienen máximo 10 dígitos. El número ${item.rawNumber || cedula} tiene ${cedula.length} dígitos (sobra un número).`
+    };
+  }
+
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
   const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
@@ -2505,6 +2530,29 @@ export async function executeIdentityVerificationFromWhatsApp(
       };
     }
     return { isVerificationRequest: false };
+  }
+
+  // 🔮 DOCTRINA EDUARDO A. RIVERA (v33.99): Guardarraíl Inteligente para Cédulas de Ciudadanía > 10 dígitos
+  // En Colombia las Cédulas de Ciudadanía tienen como tope máximo 10 dígitos. Si un usuario ingresa 11 o más dígitos,
+  // NO se trunca silenciosamente ni se consulta a ciegas en las bases estatales.
+  // JanIA alerta de inmediato con sentido común, astucia y perspicacia para que el usuario pida la corrección a su cliente.
+  if (items.length === 1 && (items[0].isOversizedCc || (items[0].tipoDoc.toLowerCase() === 'cc' && items[0].cedula.length >= 11))) {
+    const item = items[0];
+    const alertReport = formatOversizedCedulaAlert(item.rawNumber || item.cedula, item.cedula.length);
+    if (userId) {
+      savePendingCedulaSession(userId, items, alertReport, false);
+    }
+    return {
+      isVerificationRequest: true,
+      cedula: item.cedula,
+      tipoDoc: 'CC',
+      success: false,
+      officialName: 'Cédula con longitud inválida (>10 dígitos)',
+      source: 'Registraduría Nacional del Estado Civil (Regla Estructural de Identificación)',
+      reportText: alertReport,
+      followUpQuestionText: undefined,
+      items
+    };
   }
 
   if (items.length === 1 && items[0].tipoDoc.toLowerCase() === 'nit') {
