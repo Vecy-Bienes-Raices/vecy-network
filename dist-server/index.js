@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.00";
+    VECY_VERSION = "v34.01";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17385,6 +17385,16 @@ var init_founderKnowledgeService = __esm({
         directive: "JanIA tiene total autonom\xEDa y libertad para usar su cat\xE1logo oficial de 14 stickers 3D en formato WebP tanto en chats privados (DMs) como en grupos inmobiliarios cuando lo considere necesario, oportuno, emp\xE1tico, jocoso o conveniente para reforzar su cercan\xEDa humana, gratitud o confirmaci\xF3n de gestiones. Puede emitir etiquetas [STICKER:clave] (ej. [STICKER:ternura], [STICKER:ok], [STICKER:gracias_ternura], [STICKER:mmm], [STICKER:ush], [STICKER:jajaja], etc.) las cuales son eliminadas limpiamente del texto antes de despacharse y enviadas como stickers nativos de WhatsApp a trav\xE9s del socket de Baileys.",
         rawText: "Cuando JanIA lo vea necesario, tambien puede usar sus STICKERS.",
         createdAt: "2026-11-06T04:30:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Generaci\xF3n Autom\xE1tica de C\xF3digos de Inmuebles, Entrega de Direcci\xF3n F\xEDsica 24h Antes / Citas Expr\xE9s y Copia Espejo al Br\xF3ker (Doctrina Eduardo A. Rivera)",
+        directive: "Cuando un usuario o agente publica un inmueble en la tienda de VECY Bienes Ra\xEDces, el sistema genera autom\xE1ticamente un c\xF3digo oficial \xFAnico estructurado (formato ID-BOG-[ZONA3][CONSECUTIVO], ej: ID-BOG-CAR01), liberando al fundador de tener que inventar c\xF3digos manualmente. La direcci\xF3n f\xEDsica exacta del inmueble (location) se almacena de forma privada y confidencial para evitar desintermediaci\xF3n. Al generarse una solicitud de visita en Vecy Agenda Pro, el sistema entrega la confirmaci\xF3n inicial y programa la entrega de la direcci\xF3n f\xEDsica completa: si la cita es en m\xE1s de 24 horas, la direcci\xF3n se entrega autom\xE1ticamente 24 horas antes de la cita por WhatsApp y correo; si la cita es expr\xE9s (menos de 24 horas de antelaci\xF3n), se entrega inmediatamente tras la confirmaci\xF3n. Asimismo, para erradicar la incertidumbre por el aviso de WhatsApp Web 'Esperando el mensaje. Esto puede demorar un poco', el sistema despacha siempre una copia espejo id\xE9ntica al WhatsApp oficial del Br\xF3ker (+57 316 656 9719), garantizando visibilidad transparente y certera.",
+        rawText: "En cuanto a los c\xF3digos de cada inmueble, prefiero que cuando yo suba un inmueble estos se generen en autompatico para cada uno y no tener que est\xE1rmelso inventando yo por mi cuenta... y luego JanIA debe entregarles 24 horas antes la cita, la direcci\xF3n completa del inmueble... por Whatsapp y por correo... y que si alguien se agenda para ma\xF1ana a las 9:00 a.m. se genere de una vez la confirmaci\xF3n y enseguida el segundo aviso con la direcci\xF3n.",
+        createdAt: "2026-11-06T19:00:00.000Z",
         active: true
       }
     ];
@@ -42476,12 +42486,23 @@ var propertiesRouter = router({
   create: publicProcedure.input(propertyInputSchema).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const cleanZone = (input.zone || "BOG").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z]/g, "").toUpperCase().substring(0, 3) || "BOG";
     const newProperty = await db.insert(properties).values({
       ...input,
       agentId: ctx?.user?.id ?? 1
     }).returning();
+    const created = newProperty[0];
+    if (created?.id) {
+      const autoRefCode = `ID-BOG-${cleanZone}${String(created.id).padStart(2, "0")}`;
+      await db.update(properties).set({
+        externalListingId: autoRefCode,
+        canonicalExternalId: `VECY:${autoRefCode}`
+      }).where(eq12(properties.id, created.id));
+      created.externalListingId = autoRefCode;
+      created.canonicalExternalId = `VECY:${autoRefCode}`;
+    }
     invalidatePropertiesListCache();
-    return newProperty[0];
+    return created;
   }),
   parseText: publicProcedure.input(z3.object({
     text: z3.string().optional().default(""),

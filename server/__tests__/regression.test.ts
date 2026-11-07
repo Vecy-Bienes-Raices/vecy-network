@@ -11525,14 +11525,80 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v34.00 en shared/const.ts y package.json (34.00.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.00");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.00.0");
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
 
       const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
       expect(teachingsSrc).toContain("seed-autonomia-total-stickers-3d-jania-v34-00");
+    });
+  });
+
+  describe("187. SUITE 187: GENERACIÓN AUTOMÁTICA DE CÓDIGOS DE INMUEBLE, ENTREGA DE DIRECCIÓN FÍSICA Y COPIA ESPEJO AL BRÓKER (Doctrina Eduardo A. Rivera v34.01)", () => {
+    it("1. KNOWN_PROPERTY_ADDRESSES mapea la dirección confirmada de La Carolina y buildClientAppointmentAddressMessage incluye los datos completos", async () => {
+      const { KNOWN_PROPERTY_ADDRESSES, buildClientAppointmentAddressMessage } = await import("../_core/agendaWhatsAppService");
+
+      expect(KNOWN_PROPERTY_ADDRESSES["ID-LACAR-01BOG"]).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+
+      const msg = buildClientAppointmentAddressMessage({
+        solicitudId: 1147,
+        solicitanteNombre: "Alfredo Anaya Peñaranda",
+        nombreInmueble: "Apartamento en La Carolina",
+        codigoInmueble: "ID-LACAR-01BOG",
+        fechaCitaTexto: "lunes, 9 de noviembre de 2026",
+        horaCita: "11:00 AM"
+      }, KNOWN_PROPERTY_ADDRESSES["ID-LACAR-01BOG"]);
+
+      expect(msg).toContain("Alfredo Anaya Peñaranda");
+      expect(msg).toContain("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(msg).toContain("ID-LACAR-01BOG");
+      expect(msg).toContain("lunes, 9 de noviembre de 2026");
+      expect(msg).toContain("11:00 AM");
+      expect(msg).toContain("+57 316 6569719");
+      expect(msg).toContain("recepción / portería");
+    });
+
+    it("2. sendAppointmentAddressNotification despacha dirección y envía copia espejo al WhatsApp del Bróker (+57 316 6569719)", async () => {
+      const { sendAppointmentAddressNotification, VECY_BROKER_OFFICIAL_PHONE } = await import("../_core/agendaWhatsAppService");
+      expect(typeof sendAppointmentAddressNotification).toBe("function");
+      expect(VECY_BROKER_OFFICIAL_PHONE).toBe("573166569719");
+
+      const fs = await import("fs");
+      const serviceSrc = fs.readFileSync("server/_core/agendaWhatsAppService.ts", "utf-8");
+      expect(serviceSrc).toContain("COPIA ESPEJO DESPACHO DE DIRECCIÓN");
+      expect(serviceSrc).toContain("VECY_BROKER_OFFICIAL_PHONE");
+    });
+
+    it("3. Generación automática de código de inmueble (autoRefCode ID-BOG-[ZONA3][ID]) en properties.create", async () => {
+      const fs = await import("fs");
+      const routerSrc = fs.readFileSync("server/routers/properties.ts", "utf-8");
+      expect(routerSrc).toContain("autoRefCode");
+      expect(routerSrc).toContain("ID-BOG-");
+      expect(routerSrc).toContain("canonicalExternalId");
+      expect(routerSrc).toContain("externalListingId");
+    });
+
+    it("4. Script de despacho específico para Alfredo Anaya existe y está configurado con su número real +57 310 8149457", async () => {
+      const fs = await import("fs");
+      expect(fs.existsSync("server/scripts/send_alfredo_address.ts")).toBe(true);
+      const scriptSrc = fs.readFileSync("server/scripts/send_alfredo_address.ts", "utf-8");
+      expect(scriptSrc).toContain("573108149457");
+      expect(scriptSrc).toContain("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(scriptSrc).toContain("1147");
+    });
+
+    it("5. Consagración doctrinal de versión v34.01 en shared/const.ts y package.json (34.01.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.01");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.01.0");
+
+      const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
+      expect(teachingsSrc).toContain("seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01");
     });
   });
 });

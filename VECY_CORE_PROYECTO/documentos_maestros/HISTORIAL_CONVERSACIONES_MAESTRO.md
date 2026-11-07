@@ -7,6 +7,31 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-06] — JanIA v34.01: Generación Automática de Códigos de Inmueble, Entrega de Dirección Física 24h Antes / Citas Exprés y Copia Espejo al Bróker (Doctrina Eduardo A. Rivera — v34.01 - 34.01.0)
+
+**Versión:** `v34.01` (`34.01.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"1. No / 2. Sí / 3. No, mañana con el segundo con la dirección y ojalá que yo la pueda ver, recuerdas que salía un mensaje raro de whatsapp que yo no podía ver esos mensajes o algo así como; 'esperando mensaje' y nunca se ve, y queda uno en insertidumbre de si el colega o cliente lo vieron o no lo logran tampoco. SI sigue así corrigelo por favor. / 4. En cuanto a los códigos de cada inmueble, prefiero que cuando yo suba un inmueble estos se generen en autompatico para cada uno y no tener que estármelso inventando yo por mi cuenta, no importa si yo por ejemplo estaba usando este el de la carolina pero que si decido subir el inmueble se cree uno nuevo según tu diseño planeado pues es mejor así, por ahora para los mensajes de confirmación y dirección para alfredo si deja el que teníamos, pero apenas yo cree el inmueble todo eso cambiará. ADELANTE!!"*
+- **Evidencia Visual Analizada:**
+  1. `media_1794009068045_625e4466.png`: Aviso de WhatsApp Web: *"Esperando el mensaje. Esto puede demorar un poco. Más información 19:18 ✓✓"*.
+  2. `media_1794005994259_25381799.jpg`: Chat con Alfredo Anaya confirmando su agendamiento para el lunes 9 de noviembre a las 11:00 AM.
+  3. `media_1794006250129_5d619cc8.jpg`: Correo de Solicitud #1147 donde Alfredo digitó `573108145757` (erróneo por 2 dígitos al final).
+
+**Diagnóstico Técnico y Causas Raíz:**
+1. **Error de digitación en el celular de Alfredo:** Alfredo escribió `573108145757` (12 números) en lugar de `573108149457` (`+57 310 8149457`). Al despachar a ese número, WhatsApp no encontró cuenta activa. El correo a `inmovalores81@gmail.com` sí se entregó con el contrato PDF adjunto.
+2. **Causa del aviso *"Esperando el mensaje"*:*** En dispositivos vinculados (WhatsApp Web en el navegador de Eduardo), los mensajes salientes despachados por Baileys desde el VPS hacia clientes externos no siempre transmiten la clave local de sincronización `deviceSentMessage`. El destinatario final (el teléfono del cliente) sí lo recibe y lo lee en texto claro, pero en el WhatsApp Web de la línea bot aparece dicho aviso.
+3. **Necesidad de Auto-Generación de Códigos de Inmuebles:** Los administradores tenían que inventar códigos manuales (`ID-LACAR-01BOG`) en lugar de que el sistema los genere automáticamente y de forma única al publicar un inmueble en la tienda.
+
+**Acciones Quirúrgicas Ejecutadas:**
+1. **Auto-Generación de Códigos en `server/routers/properties.ts`:** Al insertar cualquier propiedad, se calcula su ID y se le asigna de inmediato el código estructurado `ID-BOG-[ZONA3][CONSECUTIVO]` (ej. `ID-BOG-CAR01`), guardándolo en `externalListingId` y `canonicalExternalId`.
+2. **Copia Espejo de Despacho de Dirección al Bróker Oficial (+57 316 656 9719):** Al despachar la dirección de la cita (`sendAppointmentAddressNotification`), JanIA envía una copia espejo idéntica al WhatsApp del Bróker Oficial. Al entrar como mensaje directo, Eduardo la ve con 100% de nitidez, sin avisos de espera y con certeza total.
+3. **Mapeo y Despacho de Dirección Física Completa:**
+   - Registrada la dirección oficial para `ID-LACAR-01BOG`: `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
+   - Creado el script de despacho `server/scripts/send_alfredo_address.ts` para enviar mañana sábado el mensaje con la dirección y la copia espejo al Bróker.
+4. **Semilla de Aprendizaje:** Registrada `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts`.
+5. **Suite de Regresión 187:** Creada con 5 pruebas automatizadas pasando al 100%.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 187 `vitest` (100% passing) | Build `npm run build` limpio.
+
 ### 📅 [2026-11-06] — JanIA v34.00: Autonomía Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera — v34.00 - 34.00.0)
 
 **Versión:** `v34.00` (`34.00.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

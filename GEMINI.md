@@ -1,24 +1,20 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.00.0 — 2026-11-06)
-- **JanIA Server:** `v34.00` (`34.00.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Autonomía Total y Uso Contextual de Stickers 3D de JanIA (Doctrina Eduardo A. Rivera):**
-  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
-     - *"Cuando JanIA lo vea necesario, también puede usar sus STIKERS."*
-  2. **Diagnóstico Técnico y Arquitectura de Expresión Emocional 3D:**
-     - **Catálogo Oficial JanIA (`JANIA_STICKER_CATALOG`):** 14 stickers en formato WebP optimizados para WhatsApp (`client/public/assets/jania/stickers/`):
-       - Ternura y Gratitud: `ternura`, `abacho`, `gracias_ternura`, `gracias_alegre`, `gracias_brillo`
-       - Profesionalismo y Afirmación: `ok`
-       - Pensativa / Curiosa: `mmm`
-       - Alegría y Risa: `jajaja`, `jajaja_fuerte`, `juajuajua`
-       - Asombro / Impacto: `queee`, `oh_por_dios`, `ush`
-       - Decepción / Tristeza: `nooo_por_que`
-     - **Autonomía Cognitiva de Libre Albedrío:** Enriquecidos los system prompts tanto de mensajes privados (`dmHandler.ts`) como de grupos inmobiliarios (`consultingHandler.ts`) para que JanIA pueda incluir la directriz invisible `[STICKER:clave]` al final de su mensaje cuando el contexto lo amerite (calidez, agradecimiento, humor fino, empatía gremial, asombro por oportunidades de negocio o celebraciones de acuerdos).
-     - **Sanitización y Despacho Impecable:**
-       - La función `extractStickerTagFromReply` procesa el texto, extrae la clave del sticker, carga el buffer binario desde disco y remueve el tag `[STICKER:...]` para que JAMÁS quede visible ante los usuarios.
-       - En `whatsapp-match.ts`, el motor despacha el buffer binario vía socket nativo Baileys `{ sticker: buffer }` con retardo humano imperceptible, tanto en canales privados como en grupos inmobiliarios con menciones respetadas.
-  3. **Gobernanza y Suite de Regresión 186:**
-     - Semilla de conocimiento directivo `seed-autonomia-total-stickers-3d-jania-v34-00` en `founderKnowledgeService.ts`.
-     - Suite 186 con 5 pruebas automatizadas garantizando extracción, saneamiento de tags, system prompts enriquecidos y despacho limpio.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 186 `vitest` (597/597 passing, 100%) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.01.0 — 2026-11-06)
+- **JanIA Server:** `v34.01` (`34.01.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Generación Automática de Códigos de Inmueble, Entrega de Dirección Física 24h Antes / Citas Exprés y Copia Espejo al Bróker (Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico del Caso Alfredo Anaya (Solicitud #1147 — ID-LACAR-01BOG):**
+     - **Causa del fallo de entrega de WhatsApp inicial:** En el formulario de la solicitud #1147, Alfredo digitó por error `573108145757` (12 dígitos, repitiendo `57` al final en lugar de `9457`). Su número real es `+57 310 8149457`. El socket de Baileys despachó al número digitado, el cual no existe en WhatsApp. El correo a `inmovalores81@gmail.com` sí se despachó con éxito con el PDF adjunto (`Contrato_Puntas_1147_...pdf`).
+     - **Causa del aviso *"Esperando el mensaje. Esto puede demorar un poco"*:*** En dispositivos vinculados (WhatsApp Web en el navegador de Eduardo), los mensajes salientes generados desde el socket Baileys en el VPS aparecen con ese aviso de sincronización si el navegador no tiene la clave de descifrado local para el `deviceSentMessage`. Sin embargo, el destinatario final (el teléfono del cliente) sí lo recibe y lo lee al instante. Para erradicar la incertidumbre en Eduardo, JanIA despacha una **copia espejo al WhatsApp oficial del Bróker (+57 316 656 9719)** como mensaje entrante directo, garantizando visibilidad 100% nítida y confirmada.
+  2. **Generación Automática de Códigos de Inmueble en la Tienda (`properties.create`):**
+     - El fundador ya no tiene que inventar códigos a mano. Al subir cualquier inmueble al portal, el sistema genera de forma automática y determinista el código estructurado `ID-BOG-[ZONA3][CONSECUTIVO]` (ej. para La Carolina: `ID-BOG-CAR01`, Chicó: `ID-BOG-CHI01`), almacenándolo en `externalListingId` y `canonicalExternalId`.
+  3. **Protocolo Doctrinal de Entrega de Dirección Física Completa:**
+     - La dirección física privada (`location`: *"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"*) se mantiene confidencial en la tienda pública para proteger al agente y evitar desintermediación.
+     - **Cita Normal (> 24h):** JanIA despacha la confirmación inicial y programa la entrega de la dirección para exactamente 24 horas antes de la cita por WhatsApp y correo.
+     - **Cita Exprés (< 24h):** JanIA despacha la confirmación inicial e inmediatamente enseguida el segundo mensaje con la dirección física completa y recomendaciones de portería.
+     - **Alfredo Anaya:** Configurado para entrega el día de mañana (sábado) de su confirmación final y dirección física con copia espejo al WhatsApp del Bróker (+57 316 656 9719) vía script `server/scripts/send_alfredo_address.ts`.
+  4. **Gobernanza y Suite de Regresión 187:**
+     - Semilla `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts`.
+     - Suite 187 con 5 pruebas automatizadas pasando al 100%.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 187 `vitest` (100% passing) | Build `npm run build` limpio.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

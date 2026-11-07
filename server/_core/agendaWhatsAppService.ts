@@ -346,3 +346,99 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
 
   return { brokerSent, clientSent };
 }
+
+/**
+ * Mapeo de direcciones físicas confirmadas de inmuebles captados oficialmente por Vecy Bienes Raíces
+ */
+export const KNOWN_PROPERTY_ADDRESSES: Record<string, string> = {
+  "ID-LACAR-01BOG": "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá",
+  "ID-LACAR01": "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá",
+  "LACAR-01": "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá",
+};
+
+/**
+ * Construye el mensaje de WhatsApp oficial con la dirección exacta del inmueble para la cita
+ */
+export function buildClientAppointmentAddressMessage(data: AgendaWhatsAppPayload, address: string): string {
+  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
+  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Colega";
+  const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Apartamento en La Carolina";
+  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
+  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
+  const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  
+  return (
+`¡Hola, ${nombre}! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*. 🏢✨
+
+📍 *CONFIRMACIÓN FINAL Y DIRECCIÓN OFICIAL DEL INMUEBLE*
+Solicitud *No. ${numSolicitud}* | Inmueble: *${nombreInmueble}* (Cod: ${codigo})
+
+📅 *Fecha de la cita:* ${fechaTexto}
+⏰ *Hora:* ${hora}
+
+📌 *DIRECCIÓN EXACTA COMPLETA:*
+📍 *${address}*
+
+🛡️ *RECOMENDACIONES DE INGRESO Y SEGURIDAD NOTARIAL:*
+1. Al llegar al edificio, acércate a la recepción / portería y preséntate con tu cédula de ciudadanía original (C.C.).
+2. Nuestro anfitrión bróker estará esperándote en la fecha y hora indicadas para realizar el recorrido guiado.
+3. Te recomendamos llegar con 5 a 10 minutos de anticipación para el registro en portería.
+
+Si requieres asistencia de llegada o tienes alguna pregunta antes del recorrido, comunícate directamente con nuestra línea oficial de bróker: *+57 316 6569719* (https://wa.me/573166569719).
+
+¡Muchos éxitos y te esperamos puntualmente para este recorrido! 🤝🏡✨`
+  );
+}
+
+/**
+ * Despacha el recordatorio con la dirección completa al WhatsApp del solicitante y envía copia espejo al Bróker (+57 316 6569719)
+ */
+export async function sendAppointmentAddressNotification(
+  payload: AgendaWhatsAppPayload,
+  customAddress?: string
+): Promise<{ clientSent: boolean; brokerCopySent: boolean; address: string }> {
+  let clientSent = false;
+  let brokerCopySent = false;
+  const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
+  const codigo = payload.codigo_inmueble || payload.codigoInmueble || "";
+
+  const address = customAddress || KNOWN_PROPERTY_ADDRESSES[codigo] || "Dirección confirmada en La Carolina, Bogotá";
+  const addressMsg = buildClientAppointmentAddressMessage(payload, address);
+
+  const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";
+  const cleanClientCel = cleanColombianPhone(rawCel);
+
+  console.log(`[AGENDA-DIRECCION-#${numSolicitud}] 📍 Despachando dirección para cita a ${cleanClientCel || "N/A"}...`);
+
+  // 1. Envío al solicitante / cliente
+  if (cleanClientCel && cleanClientCel.length >= 10) {
+    try {
+      janiaMatchBot.registerAgendaNotification?.(cleanClientCel, addressMsg, numSolicitud);
+      await janiaMatchBot.sendDirectMessage(cleanClientCel, addressMsg, {
+        allowDirectMessage: true,
+        isTransactionalNotification: true,
+        skipDelay: true
+      });
+      clientSent = true;
+      console.log(`[AGENDA-DIRECCION-#${numSolicitud}] ✅ Dirección entregada por WhatsApp a solicitante (${cleanClientCel}).`);
+    } catch (err: any) {
+      console.error(`[AGENDA-DIRECCION-#${numSolicitud}] ⚠️ Error enviando dirección a solicitante:`, err?.message);
+    }
+  }
+
+  // 2. Copia espejo al WhatsApp del Bróker Oficial (+57 316 6569719) para que Eduardo la vea siempre en su chat
+  try {
+    const brokerCopyHeader = `📋 *COPIA ESPEJO DESPACHO DE DIRECCIÓN (Solicitud #${numSolicitud})*\nEnviada a: ${payload.solicitante_nombre || "Cliente"} (${cleanClientCel})\n\n`;
+    await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, `${brokerCopyHeader}${addressMsg}`, {
+      allowDirectMessage: true,
+      isTransactionalNotification: true,
+      skipDelay: true
+    });
+    brokerCopySent = true;
+    console.log(`[AGENDA-DIRECCION-#${numSolicitud}] ✅ Copia espejo de dirección entregada al WhatsApp del Bróker.`);
+  } catch (brokerErr: any) {
+    console.warn(`[AGENDA-DIRECCION-#${numSolicitud}] ⚠️ Error enviando copia de dirección al Bróker:`, brokerErr?.message);
+  }
+
+  return { clientSent, brokerCopySent, address };
+}

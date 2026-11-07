@@ -551,13 +551,33 @@ export const propertiesRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
+      // Generación automática del código oficial único del inmueble (Doctrina Eduardo A. Rivera v34.01)
+      // Formato: ID-BOG-[ZONA3][CONSECUTIVO] (ej: ID-BOG-CAR01, ID-BOG-CHI05, ID-BOG-SBA12)
+      const cleanZone = (input.zone || "BOG")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z]/g, "")
+        .toUpperCase()
+        .substring(0, 3) || "BOG";
+
       const newProperty = await db.insert(properties).values({
         ...input,
         agentId: ctx?.user?.id ?? 1,
       }).returning();
 
+      const created = newProperty[0];
+      if (created?.id) {
+        const autoRefCode = `ID-BOG-${cleanZone}${String(created.id).padStart(2, '0')}`;
+        await db.update(properties).set({
+          externalListingId: autoRefCode,
+          canonicalExternalId: `VECY:${autoRefCode}`,
+        }).where(eq(properties.id, created.id));
+        created.externalListingId = autoRefCode;
+        created.canonicalExternalId = `VECY:${autoRefCode}`;
+      }
+
       invalidatePropertiesListCache();
-      return newProperty[0];
+      return created;
     }),
 
   parseText: publicProcedure

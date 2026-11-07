@@ -614,6 +614,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Cuando JanIA lo vea necesario, tambien puede usar sus STICKERS.",
     createdAt: "2026-11-06T04:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Generación Automática de Códigos de Inmuebles, Entrega de Dirección Física 24h Antes / Citas Exprés y Copia Espejo al Bróker (Doctrina Eduardo A. Rivera)",
+    directive:
+      "Cuando un usuario o agente publica un inmueble en la tienda de VECY Bienes Raíces, el sistema genera automáticamente un código oficial único estructurado (formato ID-BOG-[ZONA3][CONSECUTIVO], ej: ID-BOG-CAR01), liberando al fundador de tener que inventar códigos manualmente. La dirección física exacta del inmueble (location) se almacena de forma privada y confidencial para evitar desintermediación. Al generarse una solicitud de visita en Vecy Agenda Pro, el sistema entrega la confirmación inicial y programa la entrega de la dirección física completa: si la cita es en más de 24 horas, la dirección se entrega automáticamente 24 horas antes de la cita por WhatsApp y correo; si la cita es exprés (menos de 24 horas de antelación), se entrega inmediatamente tras la confirmación. Asimismo, para erradicar la incertidumbre por el aviso de WhatsApp Web 'Esperando el mensaje. Esto puede demorar un poco', el sistema despacha siempre una copia espejo idéntica al WhatsApp oficial del Bróker (+57 316 656 9719), garantizando visibilidad transparente y certera.",
+    rawText:
+      "En cuanto a los códigos de cada inmueble, prefiero que cuando yo suba un inmueble estos se generen en autompatico para cada uno y no tener que estármelso inventando yo por mi cuenta... y luego JanIA debe entregarles 24 horas antes la cita, la dirección completa del inmueble... por Whatsapp y por correo... y que si alguien se agenda para mañana a las 9:00 a.m. se genere de una vez la confirmación y enseguida el segundo aviso con la dirección.",
+    createdAt: "2026-11-06T19:00:00.000Z",
+    active: true
   }
 ];
 
