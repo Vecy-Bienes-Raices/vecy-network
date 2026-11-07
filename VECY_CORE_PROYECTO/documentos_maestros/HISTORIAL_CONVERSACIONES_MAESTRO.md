@@ -27,7 +27,7 @@
 2. **Copia Espejo de Despacho de Dirección al Bróker Oficial (+57 316 656 9719):** Al despachar la dirección de la cita (`sendAppointmentAddressNotification`), JanIA envía una copia espejo idéntica al WhatsApp del Bróker Oficial. Al entrar como mensaje directo, Eduardo la ve con 100% de nitidez, sin avisos de espera y con certeza total.
 3. **Mapeo y Despacho de Dirección Física Completa:**
    - Registrada la dirección oficial para `ID-LACAR-01BOG`: `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
-   - Creado el script de despacho `server/scripts/send_alfredo_address.ts` para enviar mañana sábado el mensaje con la dirección y la copia espejo al Bróker.
+   - Creado el script de despacho `server/scripts/send_alfredo_address.ts` para enviar el **DOMINGO 8 DE NOVIEMBRE A LAS 11:00 AM** (exactamente 24 horas antes de la cita del lunes a las 11:00 AM) el mensaje con la dirección y la copia espejo al Bróker.
 4. **Semilla de Aprendizaje:** Registrada `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts`.
 5. **Suite de Regresión 187:** Creada con 5 pruebas automatizadas pasando al 100%.
 - **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 187 `vitest` (100% passing) | Build `npm run build` limpio.

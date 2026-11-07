@@ -197,7 +197,7 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
      - **1. Copia Espejo de Despacho de Dirección al Bróker (+57 316 656 9719):** Al despachar la dirección de la cita (`sendAppointmentAddressNotification`), JanIA envía una copia espejo directa al WhatsApp del Bróker Oficial para que Eduardo la vea inmediatamente en su chat sin avisos de espera.
      - **2. Generación Automática de Códigos de Inmueble (`properties.create`):** Al guardar cualquier inmueble en el portal, el sistema genera de forma automática y determinista el código `ID-BOG-[ZONA3][ID]` (ej. `ID-BOG-CAR01`), eliminando la necesidad de inventar códigos manuales.
      - **3. Protocolo Doctrinal de Entrega de Dirección:** Programada la entrega para 24 horas antes en citas normales, o inmediata en citas exprés (< 24h).
-     - **4. Despacho Preparado para Alfredo Anaya:** Script `server/scripts/send_alfredo_address.ts` listo para despachar mañana sábado a su número real `+57 310 8149457` la dirección oficial: `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
+     - **4. Despacho Preparado para Alfredo Anaya:** Script `server/scripts/send_alfredo_address.ts` configurado para despachar el **DOMINGO 8 DE NOVIEMBRE A LAS 11:00 AM** (exactamente 24 horas antes de la cita del lunes a las 11:00 AM) a su número real `+57 310 8149457` la dirección oficial: `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
      - **Registro de Enseñanza:** Registrada la directriz `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts`.
 - **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 187 `vitest` (100% passing) | Build `npm run build` limpio.
 

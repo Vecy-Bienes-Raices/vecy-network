@@ -341,7 +341,7 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   1. **Auto-Generación de Códigos (`properties.create`):** Al guardar cualquier inmueble, el sistema genera automáticamente el código `ID-BOG-[ZONA3][CONSECUTIVO]` (ej. `ID-BOG-CAR01`), guardándolo en `externalListingId` y `canonicalExternalId`.
   2. **Copia Espejo de Despacho de Dirección al Bróker (+57 316 656 9719):** Al enviar la dirección de la cita (`sendAppointmentAddressNotification`), JanIA despacha una copia espejo idéntica al WhatsApp oficial del Bróker como mensaje entrante directo, asegurando que Eduardo siempre la vea al instante y con certeza total.
   3. **Mapeo Oficial de Dirección para La Carolina:** Registrada la dirección `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"` en `KNOWN_PROPERTY_ADDRESSES`.
-  4. **Script de Despacho Preparado:** Creado `server/scripts/send_alfredo_address.ts` para enviar mañana sábado el mensaje final de dirección a Alfredo Anaya (`+57 310 8149457`).
+  4. **Script de Despacho Preparado:** Creado `server/scripts/send_alfredo_address.ts` para enviar el **DOMINGO 8 DE NOVIEMBRE A LAS 11:00 AM** (exactamente 24 horas antes de la cita del lunes a las 11:00 AM) el mensaje final de dirección a Alfredo Anaya (`+57 310 8149457`).
   5. **Gobernanza y Suite 187:** Semilla `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts` y Suite 187 en `regression.test.ts`.
 - **Validación ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 187 `vitest` (100% passing) | Build `npm run build` limpio.
 

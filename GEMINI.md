@@ -10,7 +10,7 @@
      - La dirección física privada (`location`: *"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"*) se mantiene confidencial en la tienda pública para proteger al agente y evitar desintermediación.
      - **Cita Normal (> 24h):** JanIA despacha la confirmación inicial y programa la entrega de la dirección para exactamente 24 horas antes de la cita por WhatsApp y correo.
      - **Cita Exprés (< 24h):** JanIA despacha la confirmación inicial e inmediatamente enseguida el segundo mensaje con la dirección física completa y recomendaciones de portería.
-     - **Alfredo Anaya:** Configurado para entrega el día de mañana (sábado) de su confirmación final y dirección física con copia espejo al WhatsApp del Bróker (+57 316 656 9719) vía script `server/scripts/send_alfredo_address.ts`.
+     - **Alfredo Anaya:** Configurado para entrega el **DOMINGO 8 DE NOVIEMBRE A LAS 11:00 AM** (exactamente 24 horas antes de la cita del lunes 9 de noviembre a las 11:00 AM) de su confirmación final y dirección física con copia espejo al WhatsApp del Bróker (+57 316 656 9719) vía script `server/scripts/send_alfredo_address.ts`.
   4. **Gobernanza y Suite de Regresión 187:**
      - Semilla `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts`.
      - Suite 187 con 5 pruebas automatizadas pasando al 100%.

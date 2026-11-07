@@ -1,7 +1,11 @@
 import { sendAppointmentAddressNotification } from "../_core/agendaWhatsAppService";
 
+/**
+ * 📅 Despacho oficial programado para el DOMINGO 8 DE NOVIEMBRE DE 2026 A LAS 11:00 AM
+ * (Exactamente 24 horas antes de la cita del lunes 9 de noviembre a las 11:00 AM — Doctrina Eduardo A. Rivera).
+ */
 async function main() {
-  console.log("🚀 [ALFREDO-ANAYA] Iniciando despacho oficial de confirmación y dirección física...");
+  console.log("🚀 [ALFREDO-ANAYA] Iniciando despacho oficial de confirmación y dirección física (Programado: Domingo 8 Nov 11:00 AM)...");
 
   const payload = {
     solicitudId: 1147,
@@ -28,3 +32,4 @@ async function main() {
 }
 
 main().catch(console.error);
+
