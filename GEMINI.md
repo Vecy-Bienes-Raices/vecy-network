@@ -1,20 +1,14 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.01.0 — 2026-11-06)
-- **JanIA Server:** `v34.01` (`34.01.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Generación Automática de Códigos de Inmueble, Entrega de Dirección Física 24h Antes / Citas Exprés y Copia Espejo al Bróker (Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico Técnico del Caso Alfredo Anaya (Solicitud #1147 — ID-LACAR-01BOG):**
-     - **Causa del fallo de entrega de WhatsApp inicial:** En el formulario de la solicitud #1147, Alfredo digitó por error `573108145757` (12 dígitos, repitiendo `57` al final en lugar de `9457`). Su número real es `+57 310 8149457`. El socket de Baileys despachó al número digitado, el cual no existe en WhatsApp. El correo a `inmovalores81@gmail.com` sí se despachó con éxito con el PDF adjunto (`Contrato_Puntas_1147_...pdf`).
-     - **Causa del aviso *"Esperando el mensaje. Esto puede demorar un poco"*:*** En dispositivos vinculados (WhatsApp Web en el navegador de Eduardo), los mensajes salientes generados desde el socket Baileys en el VPS aparecen con ese aviso de sincronización si el navegador no tiene la clave de descifrado local para el `deviceSentMessage`. Sin embargo, el destinatario final (el teléfono del cliente) sí lo recibe y lo lee al instante. Para erradicar la incertidumbre en Eduardo, JanIA despacha una **copia espejo al WhatsApp oficial del Bróker (+57 316 656 9719)** como mensaje entrante directo, garantizando visibilidad 100% nítida y confirmada.
-  2. **Generación Automática de Códigos de Inmueble en la Tienda (`properties.create`):**
-     - El fundador ya no tiene que inventar códigos a mano. Al subir cualquier inmueble al portal, el sistema genera de forma automática y determinista el código estructurado `ID-BOG-[ZONA3][CONSECUTIVO]` (ej. para La Carolina: `ID-BOG-CAR01`, Chicó: `ID-BOG-CHI01`), almacenándolo en `externalListingId` y `canonicalExternalId`.
-  3. **Protocolo Doctrinal de Entrega de Dirección Física Completa:**
-     - La dirección física privada (`location`: *"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"*) se mantiene confidencial en la tienda pública para proteger al agente y evitar desintermediación.
-     - **Cita Normal (> 24h):** JanIA despacha la confirmación inicial y programa la entrega de la dirección para exactamente 24 horas antes de la cita por WhatsApp y correo.
-     - **Cita Exprés (< 24h):** JanIA despacha la confirmación inicial e inmediatamente enseguida el segundo mensaje con la dirección física completa y recomendaciones de portería.
-     - **Alfredo Anaya:** Configurado para entrega el **DOMINGO 8 DE NOVIEMBRE A LAS 11:00 AM** (exactamente 24 horas antes de la cita del lunes 9 de noviembre a las 11:00 AM) de su confirmación final y dirección física con copia espejo al WhatsApp del Bróker (+57 316 656 9719) vía script `server/scripts/send_alfredo_address.ts`.
-  4. **Gobernanza y Suite de Regresión 187:**
-     - Semilla `seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01` en `founderKnowledgeService.ts`.
-     - Suite 187 con 5 pruebas automatizadas pasando al 100%.
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 187 `vitest` (100% passing) | Build `npm run build` limpio.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.03.0 — 2026-11-07)
+- **JanIA Server:** `v34.03` (`34.03.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos (Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico de la Interacción con José María (`+57 315 8157698`):**
+     - Al consultar *"Quisiera conocer tus servicios"*, JanIA presentaba una síntesis donde el área jurídica quedaba reducida a *"5. Inteligencia Tributaria y Notarial (gastos 50/50, retención y ganancia ocasional)"* y *"7. Minutas y Contratos en PDF"*, omitiendo por completo que es una **Abogada Especialista Senior** y que los usuarios pueden consultarle **cualquier caso inmobiliario con inferencia jurídica** para resolverlo.
+  2. **Doctrina Mandatoria de Presentación del Portafolio y Poder Jurídico Inmobiliario:**
+     - En `dmHandler.ts` y en `enviar_catalogo_servicios`, se consagra que JanIA DEBE incluir destacadamente el servicio estrella: `⚖️ Consultoría Jurídica Inmobiliaria Senior y Solución de Casos Complejos`, anunciando su capacidad de analizar cualquier caso bajo los códigos de procedimiento judicial (CGP, Código Civil, Código de Comercio, CPACA, Ley 820, Ley 675, Ley 388) y su compromiso de IA PURA de encontrar SIEMPRE la salida o solución viable al problema, por difícil que parezca.
+  3. **Gobernanza y Suite de Regresión 189:**
+     - Semilla de conocimiento directivo `seed-jania-abogada-especialista-resolucion-casos-juridicos-inmobiliarios-v34-03` en `founderKnowledgeService.ts`.
+     - Suite 189 con 5 pruebas automatizadas pasando al 100% (612/612 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 189 `vitest` (100% passing) | Build `npm run build` limpio en 15.6s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

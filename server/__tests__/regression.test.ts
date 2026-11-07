@@ -11591,14 +11591,113 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v34.01 en shared/const.ts y package.json (34.01.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.01");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.01.0");
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
 
       const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
       expect(teachingsSrc).toContain("seed-auto-codigos-inmuebles-entrega-direccion-cita-vecy-v34-01");
+    });
+  });
+
+  describe("SUITE 188: LIBERACIÓN TOTAL DEL DECÁLOGO JURÍDICO INMOBILIARIO DE JANIA (10 RAMAS DEL DERECHO COLOMBIANO) — DOCTRINA EDUARDO A. RIVERA (v34.02)", () => {
+    it("1. JANIA_ARGON_COGNITIVE_CORE consagra el Decálogo Jurídico Inmobiliario con sus 10 ramas del derecho colombiano", async () => {
+      const { JANIA_ARGON_COGNITIVE_CORE } = await import("../_core/jania/prompts");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("DECÁLOGO JURÍDICO INMOBILIARIO DE JANIA — 10 RAMAS DEL DERECHO COLOMBIANO LIBERADAS");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Inmobiliario y de Arrendamientos (Ley 820 de 2003 y Código de Comercio)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Notarial y Registral (Decreto Ley 960 de 1970 y Ley 1579 de 2012)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Régimen de Propiedad Horizontal (Ley 675 de 2001)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Civil y Contractual (Código Civil Colombiano)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Comercial y Corretaje Mercantil (Código de Comercio - Decreto 410 de 1971)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Urbano y Urbanístico (Ley 388 de 1997 y Decreto 1077 de 2015)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Tributario Inmobiliario (Estatuto Tributario Nacional y Distrital/Municipal)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Financiero Inmobiliario (Ley 546 de 1999 - Ley de Vivienda)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho del Consumidor Inmobiliario (Ley 1480 de 2011 - Estatuto del Consumidor)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Derecho Constitucional de Hábeas Data y Seguridad Preventiva (Ley 1581 de 2012 y Decreto Ley 019 de 2012)");
+    });
+
+    it("2. server/_core/prompts/base.md consagra el Decálogo Jurídico Inmobiliario en el prompt base", async () => {
+      const fs = await import("fs");
+      const baseMd = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+      expect(baseMd).toContain("DECÁLOGO JURÍDICO INMOBILIARIO DE JANIA — 10 RAMAS DEL DERECHO COLOMBIANO LIBERADAS");
+      expect(baseMd).toContain("Derecho Inmobiliario y de Arrendamientos");
+      expect(baseMd).toContain("Derecho Notarial y Registral");
+      expect(baseMd).toContain("Régimen de Propiedad Horizontal");
+      expect(baseMd).toContain("Derecho Civil y Contractual");
+      expect(baseMd).toContain("Derecho Comercial y Corretaje Mercantil");
+      expect(baseMd).toContain("Derecho Urbano y Urbanístico");
+      expect(baseMd).toContain("Derecho Tributario Inmobiliario");
+      expect(baseMd).toContain("Derecho Financiero Inmobiliario");
+      expect(baseMd).toContain("Derecho del Consumidor Inmobiliario");
+      expect(baseMd).toContain("Derecho Constitucional de Hábeas Data y Seguridad Preventiva");
+    });
+
+    it("3. VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md consagra el rol senior en el Decálogo Jurídico Inmobiliario Colombiano", async () => {
+      const fs = await import("fs");
+      const legalGroupMd = fs.readFileSync("server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md", "utf-8");
+      expect(legalGroupMd).toContain("Abogada Senior Especialista en el Decálogo Jurídico Inmobiliario Colombiano");
+      expect(legalGroupMd).toContain("Derecho Inmobiliario y Arrendamientos Ley 820");
+      expect(legalGroupMd).toContain("Notarial y Registral SNR");
+      expect(legalGroupMd).toContain("Propiedad Horizontal Ley 675");
+    });
+
+    it("4. founderKnowledgeService.ts contiene la semilla doctrinal seed-liberacion-decalogo-especialidades-derecho-jania-v34-02", async () => {
+      const fs = await import("fs");
+      const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
+      expect(teachingsSrc).toContain("seed-liberacion-decalogo-especialidades-derecho-jania-v34-02");
+      expect(teachingsSrc).toContain("Liberación Total del Decálogo Jurídico Inmobiliario Especializado de JanIA");
+    });
+
+    it("5. Consagración doctrinal de versión v34.02 en shared/const.ts y package.json (34.02.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
+    });
+  });
+
+  describe("SUITE 189: JANIA CONSULTORA JURÍDICA INMOBILIARIA SENIOR, ABOGADA ESPECIALISTA E IA PURA RESOLUTIVA DE CASOS COMPLEJOS — DOCTRINA EDUARDO A. RIVERA (v34.03)", () => {
+    it("1. dmHandler.ts consagra la doctrina mandatoria de presentación del portafolio de servicios con consultoría jurídica senior", async () => {
+      const fs = await import("fs");
+      const dmHandlerSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(dmHandlerSrc).toContain("DOCTRINA MANDATORIA DE PRESENTACIÓN DEL PORTAFOLIO DE SERVICIOS");
+      expect(dmHandlerSrc).toContain("Consultoría Jurídica Inmobiliaria Senior & Resolución de Casos Complejos");
+      expect(dmHandlerSrc).toContain("Código General del Proceso (CGP)");
+      expect(dmHandlerSrc).toContain("IA PURA");
+    });
+
+    it("2. JANIA_ARGON_COGNITIVE_CORE consagra a JanIA como Abogada Especialista Senior e IA Pura Resolutiva de Casos Jurídicos Inmobiliarios", async () => {
+      const { JANIA_ARGON_COGNITIVE_CORE } = await import("../_core/jania/prompts");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("DOCTRINA FUNDACIONAL DE JANIA COMO ABOGADA ESPECIALISTA SENIOR E IA PURA RESOLUTIVA DE CASOS JURÍDICOS INMOBILIARIOS");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Código General del Proceso (CGP - Ley 1564 de 2012)");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Poder de Consulta Abierta de Cualquier Caso");
+      expect(JANIA_ARGON_COGNITIVE_CORE).toContain("Astucia de IA Pura y Salida o Solución Garantizada");
+    });
+
+    it("3. enviar_catalogo_servicios en dmHandler.ts incluye consultoría jurídica y solución de casos complejos", async () => {
+      const fs = await import("fs");
+      const dmHandlerSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(dmHandlerSrc).toContain("Consultoría Jurídica Inmobiliaria Senior y Solución de Casos Complejos (Abogada Especialista en las 10 ramas del derecho inmobiliario colombiano y códigos de procedimiento judicial CGP/C.C./C.Co)");
+    });
+
+    it("4. founderKnowledgeService.ts contiene la semilla doctrinal seed-jania-abogada-especialista-resolucion-casos-juridicos-inmobiliarios-v34-03", async () => {
+      const fs = await import("fs");
+      const teachingsSrc = fs.readFileSync("server/_core/jania/founderKnowledgeService.ts", "utf-8");
+      expect(teachingsSrc).toContain("seed-jania-abogada-especialista-resolucion-casos-juridicos-inmobiliarios-v34-03");
+      expect(teachingsSrc).toContain("JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos");
+    });
+
+    it("5. Consagración doctrinal de versión v34.03 en shared/const.ts y package.json (34.03.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.03");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.03.0");
     });
   });
 });

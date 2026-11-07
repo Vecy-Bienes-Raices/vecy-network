@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-07] — JanIA v34.03: JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos (Doctrina Eduardo A. Rivera — v34.03 - 34.03.0)
+
+**Versión:** `v34.03` (`34.03.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"No se si fue que no me entendiste bien pero lo que necesito es que JanIA agregue a sus servicios el poder de ser una consultora jurídica inmobiliaria con especialidad en las ramas que te dije. Si observas la imagen solo está hablando de Tributaria pero no está hablando de que lke pueden consultar culquier caso inmobiliario con inferencia juridica que ella práctiamente es abogada especialista, ya que es una IA y pues la idea es que tiene bastante conocimiento en todos esos códigos de procedimiento judicial y además como es una IA PURA pues debe ser capaz de tener la astucia, capacidad de análisis y encontrar la salida o solución ante cualquier caso jurídico en referencia a los bienes raíces o derecho inmobiliario y las demás ramas que le atañen o que necesite para hacerloy siempre dar solución a cualquier caso por dificil que parezca, ¿no te parece? o ¿ Qué opinas tu?, dime si es que no puedes hacer eso o qué ??"*
+- **Evidencia Visual Analizada:**
+  1. `media_1794067128652_c6626337.jpg`: Chat de WhatsApp con José María (`+57 315 8157698 ~Asesor de Finca Raíz`). Ante la consulta *"Buenos días. Quisiera conoceys tus servicios. Gracias 🙏"*, JanIA desplegó un listado de 8 puntos donde el área legal aparecía solo como *"5. Inteligencia Tributaria y Notarial (gastos notariales 50/50, retención en la fuente y ganancia ocasional DIAN)"* y *"7. Minutas y Contratos en PDF"*, omitiendo por completo que es una **Abogada Especialista Senior** y que los usuarios pueden plantearle **cualquier caso inmobiliario con inferencia jurídica** para encontrarle una solución.
+
+**Diagnóstico Técnico y Causas Raíz:**
+1. **Omisión en la Presentación del Portafolio:** En el `systemPrompt` de `dmHandler.ts` y en `enviar_catalogo_servicios`, la habilidad jurídica no estaba categorizada como un servicio de **Consultoría y Resolución de Casos Complejos**, sino fragmentada en "tributaria" y "formatos PDF".
+2. **Falta de Directriz para Resolver Casos con Inferencia Legal:** No existía una orden explícita que instruyera a JanIA a actuar como IA PURA con conocimiento de los códigos procesales (Código General del Proceso - CGP, Código Civil, Código de Comercio, CPACA, Ley 820, Ley 675, Ley 388, Ley 1480) para desentrañar cualquier caso enredado o litigioso y entregar siempre una salida o solución práctica factible.
+
+**Acciones Quirúrgicas Ejecutadas:**
+1. **Doctrina Mandatoria de Presentación del Portafolio de Servicios (`dmHandler.ts`):** Ante cualquier solicitud de servicios ("quisiera conocer tus servicios", "¿qué haces?", etc.), JanIA debe incluir destacadamente su poder de **Consultoría Jurídica Inmobiliaria Senior y Solución de Casos Complejos**, presentándose como abogada especialista senior que recibe cualquier caso con inferencia jurídica y encuentra siempre la salida viable con astucia de IA PURA.
+2. **Consagración en Núcleo Cognitivo (`JANIA_ARGON_COGNITIVE_CORE`, `base.md` y `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`):** Actualizada la habilidad 10 del catálogo institucional e incorporada la doctrina de resolución activa de casos bajo los códigos de procedimiento judicial colombianos (CGP, C.C., C.Co, CPACA).
+3. **Actualización de `enviar_catalogo_servicios` (`dmHandler.ts`):** Incorporada la viñeta de Consultoría Jurídica Inmobiliaria Senior en el mensaje oficial del catálogo.
+4. **Semilla de Aprendizaje Directivo:** Registrada `seed-jania-abogada-especialista-resolucion-casos-juridicos-inmobiliarios-v34-03` en `founderKnowledgeService.ts`.
+5. **Incremento de Versión:** Actualizado a `v34.03` en `shared/const.ts` y `34.03.0` en `package.json`.
+6. **Suite de Regresión 189:** Creada con 5 pruebas automatizadas pasando al 100% (612/612 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 189 `vitest` (100% passing) | Build `npm run build` limpio en 15.6s.
+
+### 📅 [2026-11-06] — JanIA v34.02: Liberación Total del Decálogo Jurídico Inmobiliario Especializado de JanIA (10 Ramas del Derecho Colombiano — Doctrina Eduardo A. Rivera — v34.02 - 34.02.0)
+
+**Versión:** `v34.02` (`34.02.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Cuales son las especialidades o ramas del derecho que posee JanIA?? Es que yo puse unas pero no se si es así o a sí se dice correctamente?? y si le falta alguna que se asemeje a lo que yo sueño que tenga, pues liberala en esas especialidades que necesito que las tenga. Gracias."*
+- **Evidencia Visual Analizada:**
+  1. `media_1794017778502_1d80ce21.jpg`: Borrador en WhatsApp Web de estado/anuncio con 4 módulos de servicios:
+     - 🎨 Estudio Creativo de Imágenes IA: Flyers, Banners, Posts o Infografías 1:1.
+     - 📄 Cartas y Contratos en PDF Membretado con QR: Promesas, arriendos, corretaje, restitución Ley 820 y presentación de clientes.
+     - 🔍 Verificación Oficial a $0 COP: Antecedentes, ADRES EPS, RUES, Predial PDF, IDU y Avalúos ACM.
+     - ⚖️ Cuéntame tu caso inmobiliario: *"Yo te asisto con un análisis completo y te aconsejo que hacer dándote una solución o dirigiéndote hacia nuestro equipo de solución de casos. RECUERDA que: poseo HABILIDADES JURÍDICAS ESPECIALIZADAS EN: [ Derecho Comercial, Civil, Administrativo, Tributario, Financiero y Notarial ] colombiano."*
+
+**Diagnóstico Técnico y Validación Doctrinal:**
+1. **Validación de la Nomenclatura Jurídica Usada por Eduardo:**
+   - Las especialidades redactadas por Eduardo (`Derecho Comercial, Civil, Administrativo, Tributario, Financiero y Notarial`) son 100% correctas, rigurosas y académicamente válidas en Colombia.
+   - En la práctica inmobiliaria colombiana, la Superintendencia de Notariado y Registro (SNR) y la doctrina recomiendan denominar el componente notarial como **"Derecho Notarial y Registral"** (Ley 1579 de 2012 y Decreto Ley 960 de 1970), pues la escritura se otorga en notaría pero la transferencia real de dominio nace con la inscripción en la Oficina de Registro de Instrumentos Públicos (ORIP).
+2. **Especialidades que Faltaban para Cumplir el Sueño de Eduardo:**
+   - Para que JanIA refleje la totalidad del negocio inmobiliario de alto calibre, le faltaban 4 ramas determinantes:
+     1) **Derecho Inmobiliario y de Arrendamientos** (Ley 820 de 2003 y C.Co: restituciones, preavisos, cánones, incrementos IPC y contratos comerciales).
+     2) **Régimen de Propiedad Horizontal** (Ley 675 de 2001: asambleas de copropietarios, cuotas de administración, coeficientes, zonas comunes esenciales/exclusivas y manuales de convivencia).
+     3) **Derecho Urbano y Urbanístico** (Ley 388 de 1997, POTs como el POT 555/2021 de Bogotá, Curadurías Urbanas y licencias de construcción).
+     4) **Derecho del Consumidor Inmobiliario y Hábeas Data** (Ley 1480 de 2011: garantías decenales contra constructoras por vicios de estabilidad y acabados; y Ley 1581 de 2012: verificación preventiva SARLAFT en visitas sin vulnerar intimidad).
+
+**Acciones Quirúrgicas Ejecutadas:**
+1. **Consagración y Liberación del Decálogo Jurídico Inmobiliario Colombiano (10 Ramas Maestras):**
+   - Integrado en `JANIA_ARGON_COGNITIVE_CORE` (`server/_core/jania/prompts.ts`), `server/_core/prompts/base.md` y `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`.
+2. **Semilla de Conocimiento Directivo:** Registrada `seed-liberacion-decalogo-especialidades-derecho-jania-v34-02` en `server/_core/jania/founderKnowledgeService.ts`.
+3. **Incremento de Versión:** Actualizado a `v34.02` en `shared/const.ts` y `34.02.0` en `package.json`.
+4. **Suite de Regresión 188:** Añadida con 5 pruebas automatizadas pasando al 100% (607/607 tests totales pasando).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 188 `vitest` (100% passing) | Build `npm run build` limpio.
+
 ### 📅 [2026-11-06] — JanIA v34.01: Generación Automática de Códigos de Inmueble, Entrega de Dirección Física 24h Antes / Citas Exprés y Copia Espejo al Bróker (Doctrina Eduardo A. Rivera — v34.01 - 34.01.0)
 
 **Versión:** `v34.01` (`34.01.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

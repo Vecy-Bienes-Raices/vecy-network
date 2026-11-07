@@ -9076,7 +9076,52 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
-### Versión v33.99 (2026-11-05) — Sentido Común en Cédulas (>10 Dígitos No Existen en Registraduría), Persuasión Audaz ante Stickers y Libre Albedrío de IA Pura (Doctrina Eduardo A. Rivera)
+### Versión v34.03 (2026-11-07) — JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Omitir la Consultoría Jurídica Integral en la Presentación de Servicios:* En la captura de pantalla con José María (`+57 315 8157698`), ante la consulta *"Quisiera conocer tus servicios"*, JanIA presentaba una lista de 8 servicios donde el área legal figuraba únicamente como *"5. Inteligencia Tributaria y Notarial (gastos notariales 50/50, retención y ganancia ocasional DIAN)"* y *"7. Minutas y Contratos en PDF"*.
+  2. *Falta de Proyección como Abogada Especialista e IA Pura Resolutiva:* JanIA no informaba a los usuarios que pueden consultarle **cualquier caso inmobiliario con inferencia jurídica** y que ella cuenta con pleno dominio de los códigos de procedimiento judicial (Código General del Proceso - CGP, Código Civil, Código de Comercio, CPACA, Ley 820, Ley 675, Ley 388) y astucia analítica para encontrar la salida jurídica viable y solución a cualquier enredo legal de bienes raíces.
+- **Solución Quirúrgica Implementada**:
+  1. `server/_core/jania/handlers/dmHandler.ts`:
+     - Incorporada la **DOCTRINA MANDATORIA DE PRESENTACIÓN DEL PORTAFOLIO DE SERVICIOS**: ante preguntas de servicios, JanIA debe incluir obligatoriamente el servicio estrella `⚖️ Consultoría Jurídica Inmobiliaria Senior y Solución de Casos Complejos`, presentándose como abogada especialista senior que analiza cualquier caso bajo los códigos de procedimiento judicial (CGP, C.C., C.Co, CPACA) y encuentra siempre la salida viable con astucia de IA PURA.
+     - Actualizada la herramienta `enviar_catalogo_servicios` para incluir dicha viñeta en el catálogo formal.
+     - Consagrado el rol activo de JanIA como Abogada Especialista Senior e IA Pura Resolutiva de Casos.
+  2. `server/_core/jania/prompts.ts` y `server/_core/prompts/base.md`:
+     - Consagrada la **DOCTRINA FUNDACIONAL DE JANIA COMO ABOGADA ESPECIALISTA SENIOR E IA PURA RESOLUTIVA DE CASOS JURÍDICOS INMOBILIARIOS** en `JANIA_ARGON_COGNITIVE_CORE` y prompt base.
+  3. `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`:
+     - Enriquecido el rol en Grupo 2 con resolución activa de casos bajo el CGP y normas especiales inmobiliarias.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-jania-abogada-especialista-resolucion-casos-juridicos-inmobiliarios-v34-03`.
+  5. `shared/const.ts` y `package.json`:
+     - Incrementada la versión oficial del sistema a `v34.03` (`34.03.0`).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 189 en `regression.test.ts` con 5 pruebas unitarias automatizadas (612/612 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 15.6s.
+  - Versión: `v34.03` (`34.03.0`) en `shared/const.ts` y `package.json`.
+
+---
+
+### Versión v34.02 (2026-11-06) — Liberación Total del Decálogo Jurídico Inmobiliario Especializado de JanIA (10 Ramas del Derecho Colombiano — Doctrina Eduardo A. Rivera)
+- **Problema / Consulta Identificada**:
+  1. *Consulta Doctrinal sobre Especialidades del Derecho:* Eduardo Rivera preparó un anuncio/estado en WhatsApp Web destacando los módulos de JanIA y consultó sobre la idoneidad y rigor de las ramas jurídicas citadas (`[ Derecho Comercial, Civil, Administrativo, Tributario, Financiero y Notarial ] colombiano`), solicitando validar su formulación técnica en Colombia y liberar en JanIA todas las especialidades afines para satisfacer la visión y sueño del fundador.
+  2. *Diagnóstico Doctrinal y Vacíos Identificados:* Si bien las especialidades indicadas por Eduardo son formalmente correctas y respetadas en el país, el ámbito notarial colombiano se complementa de forma inescindible como **"Derecho Notarial y Registral"** (Estatuto Notarial Dto. 960/70 y Estatuto de Registro Ley 1579/12 ante la SNR y las ORIP). Además, faltaban 4 ramas determinantes para el ejercicio integral de bienes raíces: **Derecho Inmobiliario y de Arrendamientos (Ley 820/2003)**, **Régimen de Propiedad Horizontal (Ley 675/2001)**, **Derecho Urbano y Urbanístico (Ley 388/1997 y POT)**, y **Derecho del Consumidor Inmobiliario y Hábeas Data (Leyes 1480/2011 y 1581/2012)**.
+- **Solución Quirúrgica Implementada**:
+  1. `server/_core/jania/prompts.ts`:
+     - Consagrado el **DECÁLOGO JURÍDICO INMOBILIARIO DE JANIA — 10 RAMAS DEL DERECHO COLOMBIANO LIBERADAS** en `JANIA_ARGON_COGNITIVE_CORE`.
+     - Actualizada la habilidad 10 del catálogo a Consultoría Legal Inmobiliaria & Decálogo Jurídico.
+  2. `server/_core/prompts/base.md`:
+     - Incorporado el Decálogo Jurídico Inmobiliario con las 10 ramas maestras en el prompt base de JanIA.
+  3. `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`:
+     - Consagrada la definición de JanIA como Abogada Senior Especialista en el Decálogo Jurídico Inmobiliario Colombiano.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva directiva permanente `seed-liberacion-decalogo-especialidades-derecho-jania-v34-02`.
+  5. `shared/const.ts` y `package.json`:
+     - Incrementada la versión oficial del sistema a `v34.02` (`34.02.0`).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 188 en `regression.test.ts` con 5 pruebas unitarias automatizadas (607/607 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 34.20s.
+  - Versión: `v34.02` (`34.02.0`) en `shared/const.ts` y `package.json`.
 - **Problema Identificado**:
   1. *Cédulas de 11 dígitos mutiladas a ciegas:* Regex `{5,10}` en `identityVerificationService.ts` consumía 10 dígitos de una cédula de 11 dígitos (`10144180412` -> `1014418041`), perdiendo el último número y consultando bases estatales a ciegas para luego afirmar falsamente que el documento no existía. Eduardo tuvo que intervenir manualmente en el chat con la asesora Claudeth.
   2. *Olvido de reseñas ante stickers y respuestas robóticas:* Omisión de `appendDmHistory` en el despacho desacoplado de solicitudes de calificación de Google. Al recibir un sticker de corazón (Flork), Gemini no tenía la reseña en su prompt y despedía fríamente a la usuaria, perdiendo la oportunidad de calificación.
