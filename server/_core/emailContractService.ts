@@ -518,7 +518,7 @@ export function getEmailContent(formData: Record<string, any>) {
   const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
   const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
 
-  const baseHtml = (title: string, bodyContent: string) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo"></div><div class="content"><h2>${title}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Gold Edition</p><p><a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p></div></div></body></html>`;
+  const baseHtml = (title: string, bodyContent: string) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; color: #ffffff !important; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f44; color: #ffffff !important; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #ffffff !important; } .content h2 { color: #bf953f !important; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 15px; line-height: 1.7; margin-bottom: 20px; color: #ffffff !important; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f !important; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #cccccc !important; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Poppins', Arial, sans-serif; color: #ffffff !important;"><div class="container" style="max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; border: 1px solid #bf953f44; color: #ffffff !important;"><div class="header" style="background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f;"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo" style="max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4));"></div><div class="content" style="padding: 35px 40px; color: #ffffff !important;"><h2 style="color: #bf953f !important; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">${title}</h2>${bodyContent}</div><div class="footer" style="background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #cccccc !important; border-top: 1px solid #333;"><p style="color: #cccccc !important; margin: 0 0 6px 0;">Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Gold Edition</p><p style="margin: 0;"><a href="https://vecy-bienes-raices.vercel.app/" target="_blank" style="color: #bf953f; text-decoration: none; font-weight: 600;">vecy-bienes-raices.vercel.app</a></p></div></div></body></html>`;
 
   const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
 
@@ -562,40 +562,40 @@ export function getEmailContent(formData: Record<string, any>) {
   });
 
   let body = `
-    <p>Confirmamos la recepción de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "trámite"}</strong> identificado con el código <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. 📅</p>
+    <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 18px 0;">Confirmamos la recepción de tu solicitud para <strong style="color: #bf953f;">"${servicio_solicitado}"</strong> en <strong style="color: #ffffff;">${opcion_negocio || "trámite"}</strong> identificado con el código <strong style="color: #bf953f;">${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong style="color: #ffffff;">${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong style="color: #ffffff;">${hora_cita || "hora por confirmar"}</strong>. 📅</p>
     
     <div style="background-color: #1a1a1a; border-left: 4px solid #bf953f; padding: 18px 20px; border-radius: 6px; margin: 20px 0;">
-      <p style="color: #bf953f; font-weight: bold; font-size: 15px; margin: 0 0 6px 0;">🔒 POLÍTICA DE SEGURIDAD NOTARIAL Y ENTREGA DE DIRECCIÓN:</p>
-      <p style="color: #ddd; font-size: 14px; line-height: 1.6; margin: 0;">
-        Tu reserva está <strong>100% confirmada</strong>. Por estrictos protocolos de seguridad y prevención notarial del edificio y de los propietarios, la <strong>dirección física exacta y nomenclatura</strong> te será despachada a este correo (<strong>${solicitante_email}</strong>) y a tu WhatsApp exactamente <strong>24 horas antes de la visita</strong> (o de forma inmediata si tu cita es para hoy). ¡Debes estar pendiente! 📩👀
+      <p style="color: #bf953f !important; font-weight: bold; font-size: 15px; margin: 0 0 8px 0;">🔒 POLÍTICA DE SEGURIDAD NOTARIAL Y ENTREGA DE DIRECCIÓN:</p>
+      <p style="color: #ffffff !important; font-size: 14px; line-height: 1.6; margin: 0;">
+        Tu reserva está <strong style="color: #00e676;">100% confirmada</strong>. Por estrictos protocolos de seguridad y prevención notarial del edificio y de los propietarios, la <strong style="color: #ffffff;">dirección física exacta y nomenclatura</strong> te será despachada a este correo (<strong style="color: #bf953f;">${solicitante_email}</strong>) y a tu WhatsApp exactamente <strong style="color: #bf953f;">24 horas antes de la visita</strong> (o de forma inmediata si tu cita es para hoy). ¡Debes estar muy pendiente! 📩👀
       </p>
     </div>
 
     <div style="text-align: center; margin: 25px 0;">
-      <a href="${calUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%); color: #000000; font-weight: bold; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(191,149,63,0.3);">
+      <a href="${calUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%); color: #000000 !important; font-weight: bold; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(191,149,63,0.3);">
         📅 Añadir a mi Google Calendar
       </a>
     </div>
   `;
 
   if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    let acompHtml = `<div class="highlight"><p><strong>👥 Acompañantes Autorizados:</strong></p><ul style="margin-top: 10px; margin-bottom: 0; color: #ccc;">`;
+    let acompHtml = `<div class="highlight" style="background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; border-radius: 4px; margin-top: 20px;"><p style="color: #bf953f !important; font-weight: bold; margin: 0 0 8px 0;"><strong>👥 Acompañantes Autorizados:</strong></p><ul style="margin-top: 5px; margin-bottom: 0; color: #ffffff !important; padding-left: 20px;">`;
     formData.acompanantes.forEach((acomp: any) => {
       let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
-      acompHtml += `<li>${acomp.nombre} (${parentesco}) - Doc: ${acomp.documento}</li>`;
+      acompHtml += `<li style="color: #ffffff !important; margin-bottom: 4px;">${acomp.nombre} (${parentesco}) - Doc: <strong style="color: #bf953f;">${acomp.documento}</strong></li>`;
     });
     acompHtml += "</ul></div>";
     body += acompHtml;
   }
 
   body += `
-    <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
+    <div class="highlight" style="background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; border-radius: 4px; margin-top: 25px;"><p style="color: #bf953f !important; font-size: 14px; margin: 0;"><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
     
-    <div style="background-color: #141414; border: 1px solid #333; padding: 15px 18px; border-radius: 6px; margin-top: 25px;">
-      <p style="color: #bf953f; font-weight: bold; font-size: 13px; margin: 0 0 6px 0;">🔄 GESTIÓN DE TU CITA (REAGENDAMIENTO O CANCELACIÓN):</p>
-      <p style="color: #aaa; font-size: 13px; margin: 0;">
+    <div style="background-color: #141414; border: 1px solid #333333; padding: 15px 18px; border-radius: 6px; margin-top: 25px;">
+      <p style="color: #bf953f !important; font-weight: bold; font-size: 13px; margin: 0 0 6px 0;">🔄 GESTIÓN DE TU CITA (REAGENDAMIENTO O CANCELACIÓN):</p>
+      <p style="color: #ffffff !important; font-size: 13px; line-height: 1.6; margin: 0;">
         Si se te presenta algún imprevisto o necesitas modificar la fecha u hora, puedes comunicarte directamente con nuestro Bróker al 
-        <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold;">+57 316 656 9719</a> o responder a este correo.
+        <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold; text-decoration: underline;">+57 316 656 9719</a> o responder a este correo.
       </p>
     </div>
   `;
@@ -604,8 +604,8 @@ export function getEmailContent(formData: Record<string, any>) {
   const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("bróker") || perfilLower.includes("broker");
   if (esAgente) {
     body += `
-      <p style="margin-top: 20px;">Como agente, hemos adjuntado a este correo el contrato de colaboración <strong>No. ${solicitud_id}</strong> firmado virtualmente hoy <strong>${fechaActual}</strong> a las <strong>${horaActual}</strong> a través de nuestro formulario. ✍️📄</p>
-      <p>Estamos seguros de que todo saldrá bien y será un cierre perfecto. ¡Gracias por tu confianza! 🤝🚀</p>
+      <p style="margin-top: 20px; color: #ffffff !important; font-size: 15px; line-height: 1.7;">Como agente, hemos adjuntado a este correo el contrato de colaboración <strong style="color: #bf953f;">No. ${solicitud_id}</strong> firmado virtualmente hoy <strong style="color: #ffffff;">${fechaActual}</strong> a las <strong style="color: #ffffff;">${horaActual}</strong> a través de nuestro formulario. ✍️📄</p>
+      <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7;">Estamos seguros de que todo saldrá bien y será un cierre perfecto. ¡Gracias por tu confianza! 🤝🚀</p>
     `;
   }
   return { subject, html: baseHtml(title, body) };
@@ -623,8 +623,8 @@ export function getAdminEmailContent(formData: Record<string, any>) {
 
     rows += `
       <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #333; font-weight: bold; width: 40%; color: #bf953f;">${key.replace(/_/g, " ")}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${displayValue}</td>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #333333; font-weight: bold; width: 40%; color: #bf953f !important; font-size: 13px;">${key.replace(/_/g, " ")}</td>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #333333; color: #ffffff !important; font-size: 13px;">${displayValue}</td>
       </tr>
     `;
   }
@@ -632,13 +632,13 @@ export function getAdminEmailContent(formData: Record<string, any>) {
   let acompanantesHtml = "";
   if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
     acompanantesHtml += `
-      <h3 style="color: #bf953f; margin-top: 30px; text-transform: uppercase;">👥 Acompañantes Registrados</h3>
-      <table style="width: 100%; border-collapse: collapse;">
+      <h3 style="color: #bf953f !important; margin-top: 30px; text-transform: uppercase; font-size: 15px;">👥 Acompañantes Registrados</h3>
+      <table style="width: 100%; border-collapse: collapse; background-color: #161616; border-radius: 6px; overflow: hidden;">
         <thead>
-          <tr style="background-color: #bf953f; color: #000;">
-            <th style="padding: 8px; text-align: left;">Nombre</th>
-            <th style="padding: 8px; text-align: left;">Documento</th>
-            <th style="padding: 8px; text-align: left;">Parentesco</th>
+          <tr style="background-color: #bf953f; color: #000000 !important;">
+            <th style="padding: 10px 12px; text-align: left; color: #000000 !important; font-size: 13px; font-weight: bold;">Nombre</th>
+            <th style="padding: 10px 12px; text-align: left; color: #000000 !important; font-size: 13px; font-weight: bold;">Documento</th>
+            <th style="padding: 10px 12px; text-align: left; color: #000000 !important; font-size: 13px; font-weight: bold;">Parentesco</th>
           </tr>
         </thead>
         <tbody>
@@ -647,9 +647,9 @@ export function getAdminEmailContent(formData: Record<string, any>) {
       let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
       acompanantesHtml += `
         <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.nombre}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.documento}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${parentesco}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #333333; color: #ffffff !important; font-size: 13px;">${acomp.nombre}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #333333; color: #ffffff !important; font-size: 13px;">${acomp.documento}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #333333; color: #ffffff !important; font-size: 13px;">${parentesco}</td>
         </tr>
       `;
     });
@@ -659,10 +659,10 @@ export function getAdminEmailContent(formData: Record<string, any>) {
   const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
   const alertaBanner = hasAlert
     ? `
-      <div style="background-color: #660000; border: 2px solid #ff4444; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #fff;">
-        <h3 style="margin-top: 0; color: #ff8888; font-size: 16px;">🚨 ALERTA CRÍTICA DE SEGURIDAD NOTARIAL</h3>
-        <p style="margin: 0; font-size: 13px;">El solicitante o asistente registra antecedentes o sanciones ante las autoridades: <strong>${formData.alerta_motivo || "Antecedentes vigentes"}</strong>.</p>
-        <p style="margin: 6px 0 0 0; font-size: 12px; color: #ffd0d0;">📌 La reserva ha sido DECLINADA formalmente y se ha remitido la advertencia al usuario.</p>
+      <div style="background-color: #660000; border: 2px solid #ff4444; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #ffffff !important;">
+        <h3 style="margin-top: 0; color: #ff8888 !important; font-size: 16px;">🚨 ALERTA CRÍTICA DE SEGURIDAD NOTARIAL</h3>
+        <p style="margin: 0; font-size: 13px; color: #ffffff !important;">El solicitante o asistente registra antecedentes o sanciones ante las autoridades: <strong style="color: #ffd0d0;">${formData.alerta_motivo || "Antecedentes vigentes"}</strong>.</p>
+        <p style="margin: 6px 0 0 0; font-size: 12px; color: #ffd0d0 !important;">📌 La reserva ha sido DECLINADA formalmente y se ha remitido la advertencia al usuario.</p>
       </div>
     `
     : "";
@@ -673,30 +673,30 @@ export function getAdminEmailContent(formData: Record<string, any>) {
     <head>
       <meta charset="UTF-8">
       <style>
-        body { font-family: Arial, sans-serif; background-color: #0a0a0a; color: #f0f0f0; margin: 0; padding: 20px; }
-        .container { max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; }
+        body { font-family: Arial, sans-serif; background-color: #0a0a0a; color: #ffffff !important; margin: 0; padding: 20px; }
+        .container { max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; color: #ffffff !important; }
         .header { background-color: #000; padding: 20px; text-align: center; border-bottom: 2px solid #bf953f; }
-        .content { padding: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background-color: #bf953f; color: #000; padding: 10px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid #222; }
+        .content { padding: 30px; color: #ffffff !important; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #161616; border-radius: 6px; overflow: hidden; }
+        th { background-color: #bf953f; color: #000000 !important; padding: 10px 12px; text-align: left; }
+        td { padding: 10px 12px; border-bottom: 1px solid #333333; color: #ffffff !important; }
       </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
+    <body style="font-family: Arial, sans-serif; background-color: #0a0a0a; color: #ffffff !important; margin: 0; padding: 20px;">
+      <div class="container" style="max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; color: #ffffff !important;">
+        <div class="header" style="background-color: #000000; padding: 20px; text-align: center; border-bottom: 2px solid #bf953f;">
           <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
         </div>
-        <div class="content">
+        <div class="content" style="padding: 30px; color: #ffffff !important;">
           ${alertaBanner}
-          <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
-          <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
-          <p style="font-size: 13px; color: #aaa;">A continuación, el resumen de los datos ingresados en el formulario:</p>
-          <table>
+          <h2 style="color: #bf953f !important; text-align: center; margin-top: 0; font-size: 20px;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
+          <p style="color: #ffffff !important; font-size: 15px; font-weight: bold; margin: 15px 0 6px 0;">👤 Solicitante: <span style="color: #bf953f;">${formData.solicitante_nombre}</span></p>
+          <p style="font-size: 13px; color: #dddddd !important; margin: 0 0 15px 0;">A continuación, el resumen de los datos ingresados en el formulario:</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #161616; border-radius: 6px; overflow: hidden;">
             <thead>
-              <tr>
-                <th>Campo</th>
-                <th>Valor</th>
+              <tr style="background-color: #bf953f; color: #000000 !important;">
+                <th style="padding: 10px 12px; text-align: left; color: #000000 !important; font-size: 13px; font-weight: bold;">Campo</th>
+                <th style="padding: 10px 12px; text-align: left; color: #000000 !important; font-size: 13px; font-weight: bold;">Valor</th>
               </tr>
             </thead>
             <tbody>
@@ -704,7 +704,7 @@ export function getAdminEmailContent(formData: Record<string, any>) {
             </tbody>
           </table>
           ${acompanantesHtml}
-          <p style="font-size: 11px; color: #666; margin-top: 30px; text-align: center;">Este es un correo automático del sistema interno de Vecy Agenda.</p>
+          <p style="font-size: 12px; color: #aaaaaa !important; margin-top: 30px; text-align: center;">Este es un correo automático del sistema interno de Vecy Agenda.</p>
         </div>
       </div>
     </body>
@@ -874,60 +874,65 @@ export async function sendAppointmentAddressEmail(
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
-  body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; color: #f0f0f0; }
-  .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f44; }
+  body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; color: #ffffff !important; }
+  .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f44; color: #ffffff !important; }
   .header { background-color: #000000; padding: 25px; text-align: center; border-bottom: 2px solid #bf953f; }
-  .header h1 { color: #bf953f; font-size: 22px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px; }
-  .content { padding: 30px 35px; }
-  .content h2 { color: #bf953f; font-size: 19px; margin-top: 0; }
+  .header h1 { color: #bf953f !important; font-size: 22px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px; }
+  .content { padding: 30px 35px; color: #ffffff !important; }
+  .content h2 { color: #bf953f !important; font-size: 20px; margin-top: 0; font-weight: bold; }
+  .content p { font-size: 15px; line-height: 1.7; margin-bottom: 16px; color: #ffffff !important; }
   .highlight { background-color: #1a1a1a; padding: 18px 20px; border-left: 4px solid #bf953f; border-radius: 6px; margin: 20px 0; }
-  .address-box { background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f88; padding: 18px; border-radius: 8px; margin: 20px 0; }
-  .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #222; }
+  .address-box { background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f; padding: 20px; border-radius: 8px; margin: 20px 0; }
+  .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #cccccc !important; border-top: 1px solid #222; }
   .footer a { color: #bf953f; text-decoration: none; font-weight: 600; }
 </style>
 </head>
-<body>
-<div class="container">
-  <div class="header">
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Poppins', Arial, sans-serif; color: #ffffff !important;">
+<div class="container" style="max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; border: 1px solid #bf953f44; color: #ffffff !important;">
+  <div class="header" style="background-color: #000000; padding: 25px; text-align: center; border-bottom: 2px solid #bf953f;">
     <img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo" style="max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4));">
-    <h1 style="margin-top: 10px;">VECY BIENES RAÍCES</h1>
-    <p style="color: #bf953f; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px;">CONFIRMACIÓN DE AGENDAMIENTO Y DIRECCIÓN OFICIAL</p>
+    <h1 style="margin-top: 10px; color: #bf953f !important; font-size: 22px; text-transform: uppercase; letter-spacing: 1.5px;">VECY BIENES RAÍCES</h1>
+    <p style="color: #bf953f !important; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px; font-weight: bold;">CONFIRMACIÓN DE AGENDAMIENTO Y DIRECCIÓN OFICIAL</p>
   </div>
-  <div class="content">
-    <h2>¡Hola, ${nombre}! 👋🏠✨</h2>
-    <p>Te saluda <strong>JanIA</strong> de la dirección comercial de <strong>Vecy Bienes Raíces</strong>.</p>
-    <p>Nos complace confirmarte que la verificación de tu solicitud <strong>#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble está <strong>100% confirmada</strong>.</p>
+  <div class="content" style="padding: 30px 35px; color: #ffffff !important;">
+    <h2 style="color: #bf953f !important; font-size: 20px; margin-top: 0; font-weight: bold;">¡Hola, ${nombre}! 👋🏠✨</h2>
+    <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+      Te saluda <strong style="color: #bf953f;">JanIA</strong> de la dirección comercial de <strong style="color: #bf953f;">Vecy Bienes Raíces</strong>.
+    </p>
+    <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">
+      Nos complace confirmarte que la verificación de tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble está <strong style="color: #00e676; text-decoration: underline;">100% confirmada</strong>.
+    </p>
     
-    <div class="address-box">
-      <p style="color: #bf953f; font-size: 13px; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">📍 DIRECCIÓN EXACTA CONFIRMADA DEL INMUEBLE:</p>
-      <p style="color: #ffffff; font-size: 18px; font-weight: bold; margin: 0 0 10px 0;">${address}</p>
-      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">🏢 Inmueble: <strong>${nombreInmueble}</strong> (Código: <strong>${codigo}</strong>)</p>
-      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">📅 Fecha de la cita: <strong>${fechaTexto}</strong></p>
-      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">⏰ Hora: <strong>${hora}</strong></p>
-      ${acompanante ? `<p style="color: #ccc; font-size: 13px; margin: 4px 0;">👤 Acompañante / Cliente interesado(a): <strong>${acompanante}</strong></p>` : ""}
+    <div class="address-box" style="background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <p style="color: #bf953f !important; font-size: 13px; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">📍 DIRECCIÓN EXACTA CONFIRMADA DEL INMUEBLE:</p>
+      <p style="color: #ffffff !important; font-size: 20px; font-weight: bold; margin: 0 0 12px 0; letter-spacing: 0.5px;">${address}</p>
+      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">🏢 Inmueble: <strong style="color: #ffffff;">${nombreInmueble}</strong> (Código: <strong style="color: #bf953f;">${codigo}</strong>)</p>
+      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">📅 Fecha de la cita: <strong style="color: #ffffff;">${fechaTexto}</strong></p>
+      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">⏰ Hora: <strong style="color: #ffffff;">${hora}</strong></p>
+      ${acompanante ? `<p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">👤 Acompañante / Cliente interesado(a): <strong style="color: #ffffff;">${acompanante}</strong></p>` : ""}
     </div>
 
-    <div class="highlight">
-      <p style="color: #bf953f; font-weight: bold; margin-top: 0;">🛡️ RECOMENDACIONES DE INGRESO Y SEGURIDAD NOTARIAL:</p>
-      <ol style="color: #ddd; font-size: 13px; line-height: 1.6; padding-left: 20px; margin: 10px 0 0 0;">
-        <li>Al llegar a la portería o recepción del edificio, preséntate con tu cédula de ciudadanía original (C.C.).</li>
-        <li>Nuestro anfitrión bróker de Vecy Bienes Raíces estará esperándote puntualmente para realizar el recorrido guiado.</li>
-        <li>Te recomendamos llegar con 5 a 10 minutos de anticipación para el registro en recepción.</li>
+    <div class="highlight" style="background-color: #1a1a1a; padding: 20px; border-left: 4px solid #bf953f; border-radius: 6px; margin: 25px 0;">
+      <p style="color: #bf953f !important; font-weight: bold; font-size: 14px; margin: 0 0 10px 0;">🛡️ RECOMENDACIONES DE INGRESO Y SEGURIDAD NOTARIAL:</p>
+      <ol style="color: #ffffff !important; font-size: 14px; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <li style="margin-bottom: 8px; color: #ffffff !important;">Al llegar a la portería o recepción del edificio, preséntate con tu <strong>cédula de ciudadanía original (C.C.)</strong>.</li>
+        <li style="margin-bottom: 8px; color: #ffffff !important;">Nuestro anfitrión bróker de Vecy Bienes Raíces estará esperándote puntualmente para realizar el recorrido guiado.</li>
+        <li style="color: #ffffff !important;">Te recomendamos llegar con <strong>5 a 10 minutos de anticipación</strong> para el registro en recepción.</li>
       </ol>
     </div>
 
-    <p style="font-size: 13px; color: #aaa; margin-top: 25px;">
+    <p style="font-size: 14px; color: #ffffff !important; line-height: 1.6; margin-top: 25px;">
       Si requieres asistencia de llegada o deseas comunicarte directamente con el bróker anfitrión, contáctanos a la línea oficial: 
-      <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold;">+57 316 656 9719</a> o al correo 
-      <a href="mailto:vecybienesraices@gmail.com" style="color: #bf953f;">vecybienesraices@gmail.com</a>.
+      <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold; text-decoration: underline;">+57 316 656 9719</a> o al correo 
+      <a href="mailto:vecybienesraices@gmail.com" style="color: #bf953f; font-weight: bold; text-decoration: underline;">vecybienesraices@gmail.com</a>.
     </p>
-    <p style="font-size: 14px; color: #f0f0f0; margin-top: 20px;">
+    <p style="font-size: 15px; color: #ffffff !important; font-weight: 600; margin-top: 25px;">
       ¡Te deseamos muchos éxitos en el recorrido y que sea un excelente cierre comercial! 🤝🚀
     </p>
   </div>
-  <div class="footer">
-    <p>Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Red Colaborativa Inmobiliaria</p>
-    <p><a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p>
+  <div class="footer" style="background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #cccccc !important; border-top: 1px solid #222;">
+    <p style="color: #cccccc !important; margin: 0 0 6px 0;">Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Red Colaborativa Inmobiliaria</p>
+    <p style="margin: 0;"><a href="https://vecy-bienes-raices.vercel.app/" target="_blank" style="color: #bf953f; text-decoration: none; font-weight: 600;">vecy-bienes-raices.vercel.app</a></p>
   </div>
 </div>
 </body>

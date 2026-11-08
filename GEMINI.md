@@ -1,22 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.05.0 — 2026-11-08)
-- **JanIA Server:** `v34.05` (`34.05.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar 1-Clic y Confirmación de Asistencia (Doctrina Eduardo A. Rivera):**
-  1. **Modalidades de Cancelación y Reagendamiento Digital Flexible:**
-     - En `drizzle/schema.ts` y PostgreSQL: columnas `estado`, `motivo_cancelacion`, `cancelada_at`, `reagendada_at`, `fecha_cita_anterior`, `hora_cita_anterior` en `solicitudes`.
-     - En `server/routers/agenda.ts`: procedimientos tRPC públicos `cancelar`, `reagendar` y `confirmarAsistencia`, despachando alertas inmediatas al WhatsApp del Bróker (+57 316 656 9719).
-  2. **Integración con Google Calendar sin Fricción (1-Clic Zero-Auth):**
-     - En `server/_core/emailContractService.ts`: creado `buildGoogleCalendarUrl()` que genera el enlace universal directo `https://calendar.google.com/calendar/render?action=TEMPLATE` con título, horario (UTC-5 Bogotá), ubicación y detalles, sin pedir contraseñas ni autorizaciones OAuth.
-     - En `GraciasScreen.jsx`: botón dorado con ícono oficial para añadir la cita a Google Calendar con 1 solo clic.
-  3. **Confirmación Inmediata de Reserva y Garantía de Despacho de Dirección 24 Horas Antes:**
-     - Pantalla de éxito (`GraciasScreen.jsx`), WhatsApp (`agendaWhatsAppService.ts`) y Correo Electrónico (`emailContractService.ts`) consagran la directiva: la reserva queda **100% CONFIRMADA de inmediato**; por seguridad preventiva de propietarios y agentes, la dirección física exacta se entrega **24 horas antes** (o al instante si la cita es para hoy mismo).
-  4. **Multimodalidad Inmobiliaria y Legal (Presencial, Llamada y Videollamada):**
-     - En `AgendaForm.jsx`: selector de modalidad (`visita_presencial`, `llamada`, `videollamada`).
-     - Expansión de servicios: citas para inmuebles (Venta/Arriendo) y asesorías personalizadas (`Asesoría Jurídica Inmobiliaria Personalizada`, `Consultoría Tributaria y Notarial DIAN`, `Estudio de Títulos y Viabilidad Inmobiliaria`).
-     - `validations.js`: solo exige verificación de asistentes en visitas presenciales a inmuebles.
-  5. **Gobernanza y Suite de Regresión 191:**
-     - Semilla de conocimiento directivo `seed-vecy-agenda-pro-multimodal-cancelacion-reagendamiento-google-calendar-v34-05` en `founderKnowledgeService.ts`.
-     - Suite 191 con 6 pruebas automatizadas pasando al 100% (624/624 tests totales en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 191 `vitest` (100% passing) | Build `npm run build` limpio en 47.6s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.06.0 — 2026-11-08)
+- **JanIA Server:** `v34.06` (`34.06.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales (Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz en Webmail (Gmail/Outlook):**
+     - En la captura aportada por Eduardo (`media_1794169829848_cf23f8f5.jpg`), el texto *"Te saluda JanIA de la dirección comercial... Nos complace confirmarte que la verificación de tu solicitud #1147..."* aparecía prácticamente invisible ("no visible al ojo humano").
+     - Causa: los clientes de correo web (especialmente Gmail) purgan o desestiman las reglas de clases en `<style>` del `<head>`. Al carecer los elementos `<p>` de un color explícito en línea, el navegador y cliente de correo aplicaban su color por defecto (`#222222`), el cual sobre el fondo oscuro (`#121212`) resultaba ilegible.
+  2. **Solución Arquitectural con Estilos en Línea (Inline CSS) Obligatorios:**
+     - En `server/_core/emailContractService.ts`:
+       - `sendAppointmentAddressEmail`: Todos los párrafos y listas tienen ahora `style="color: #ffffff !important; font-size: 15px; line-height: 1.7; ..."` y los resaltados usan `#bf953f` (dorado) o `#00e676` (verde éxito).
+       - `getEmailContent` y `baseHtml`: Garantizado `color: #ffffff !important` tanto en el contenedor como en cada `<p>`, garantizando legibilidad perfecta en confirmaciones a clientes.
+       - `getAdminEmailContent`: Las celdas de la tabla de resumen y textos administrativos ahora cuentan con `color: #ffffff !important` y encabezados `#bf953f`, eliminando grises tenues (`#888` / `#aaa`) que dificultaban la lectura en el correo interno.
+  3. **Gobernanza y Suite de Regresión 192:**
+     - Semilla de conocimiento directivo `seed-alto-contraste-legibilidad-correos-vecy-v34-06` en `founderKnowledgeService.ts`.
+     - Suite 192 con 5 pruebas automatizadas pasando al 100% (629/629 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 192 `vitest` (100% passing) | Build `npm run build` limpio en 17.15s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

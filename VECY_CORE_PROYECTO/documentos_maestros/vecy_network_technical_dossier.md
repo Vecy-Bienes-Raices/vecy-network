@@ -9100,6 +9100,27 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.06 (2026-11-08) — Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales de Vecy (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Texto tenue e invisible al ojo humano en Gmail:* En la captura de pantalla (`media_1794169829848_cf23f8f5.jpg`), el texto *"Te saluda JanIA de la dirección comercial de Vecy Bienes Raíces... Nos complace confirmarte que la verificación de tu solicitud #1147..."* aparecía oscurecido casi al tono de fondo (`#121212`).
+  2. *Causa Raíz:* Clientes de correo web y móviles (Gmail/Outlook) descartan etiquetas `<style>` del `<head>`. Los elementos `<p>` sin `color` en línea heredaban o adoptaban `#222222` del agente de usuario de Gmail, haciéndose invisibles sobre el fondo negro.
+- **Solución Quirúrgica Implementada**:
+  1. `server/_core/emailContractService.ts`:
+     - `sendAppointmentAddressEmail`: Estilos en línea forzados `style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;"` en el saludo de JanIA y texto de confirmación. Todos los bloques de datos y listas estilizados con `#ffffff !important` y acentos `#bf953f` y `#00e676`.
+     - `getEmailContent` y `baseHtml`: Aplicado `style="color: #ffffff !important;"` en los contenedores y párrafos de confirmación.
+     - `getAdminEmailContent`: Elevado el contraste en el reporte interno con `color: #ffffff !important` en celdas de la tabla y textos administrativos, erradicando grises tenues (`#888` / `#aaa`).
+  2. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-alto-contraste-legibilidad-correos-vecy-v34-06`.
+  3. `shared/const.ts` y `package.json`:
+     - Incrementada la versión oficial a `v34.06` (`34.06.0`).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 192 en `regression.test.ts` con 5 pruebas automatizadas (629/629 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 17.15s.
+  - Versión: `v34.06` (`34.06.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.05 (2026-11-08) — Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar 1-Clic y Confirmación de Asistencia (Doctrina Eduardo A. Rivera)
 - **Problema / Requerimiento Identificado**:
   1. *Falta de Modalidades Digitales de Cancelación y Reagendamiento:* Vecy Agendas Pro requería procedimientos automatizados para que los usuarios puedan cancelar, reagendar o confirmar su asistencia sin fricción.

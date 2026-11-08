@@ -7,6 +7,39 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-08] — JanIA v34.06: Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales de Vecy (Doctrina Eduardo A. Rivera — v34.06 - 34.06.0)
+
+**Versión:** `v34.06` (`34.06.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Arregla esto por lo pronto ya que en este correo esta parte no se ve de lo muy tenue que te quedó(NO ES VISIBLE AL OJO HUMANO):
+  'Te saluda JanIA de la dirección comercial de Vecy Bienes Raíces.
+  Nos complace confirmarte que la verificación de tu solicitud #1147 ha concluido exitosamente y la cita para la visita del inmueble está 100% confirmada.'
+  no solo en ese sino en las distintas respuestas que ya están programadas para el agendamiento viene sucediendo lo mismo, solo que se me había pasado decirtelo y es tanto en las que les llegan a los usuarios como las que nos llegan a nosotros.
+  Mira a ver si puedes corregirlo por fa."*
+
+**Diagnóstico Técnico Forense y Causas Raíz:**
+1. **Comportamiento de Clientes Webmail (Gmail / Outlook / Apple Mail):**
+   - En la captura aportada por Eduardo (`media_1794169829848_cf23f8f5.jpg`), el texto de introducción y confirmación de la solicitud #1147 aparecía oscurecido casi al nivel del fondo negro del contenedor (`#121212`).
+   - Causa técnica: Los clientes de correo modernos descartan las etiquetas `<style>` del `<head>` o aíslan las clases para evitar que colisionen con su interfaz. Al no tener el elemento `<p>` un estilo en línea (`style="color: ..."`), Gmail aplica las reglas de su propia hoja de estilos de usuario (`color: #222222`), haciendo que el texto quede negro sobre fondo negro/oscuro ("no visible al ojo humano").
+2. **Deficiencia de Contraste en Correos Administrativos y de Confirmación:**
+   - En el correo interno de administración (`getAdminEmailContent`) y en la confirmación general al usuario (`getEmailContent`), varios párrafos y celdas de tabla utilizaban clases CSS o grises como `#888` y `#aaa`, lo que en monitores de alta resolución o entornos con brillo moderado producía una lectura forzada o ilegible.
+
+**Acciones Quirúrgicas y Solución Permanente Ejecutadas:**
+1. **Estilos en Línea (Inline CSS) de Alto Contraste en `server/_core/emailContractService.ts`:**
+   - **`sendAppointmentAddressEmail`:**
+     - Aplicado `style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;"` en el saludo de JanIA y en el párrafo de confirmación 100%.
+     - Resaltados en dorado oficial (`#bf953f`) y verde esmeralda (`#00e676`).
+     - Cuadro de dirección física y caja de recomendaciones con `color: #ffffff !important` y bordes dorados de alto contraste.
+   - **`getEmailContent` y `baseHtml`:**
+     - Aplicado `color: #ffffff !important` tanto al `<body>` y `<div class="container">` como de manera explícita en cada párrafo `<p>` y elemento de lista de la confirmación inicial de cita.
+   - **`getAdminEmailContent` (Correo Interno de Vecy):**
+     - Filas de la tabla de datos y detalles de acompañantes reestilizados con `color: #ffffff !important; font-size: 13px;` sobre fondo `#161616`, con encabezados dorados `#bf953f` y texto en negro puro para contraste perfecto.
+2. **Semilla de Aprendizaje Directivo:**
+   - Registrada `seed-alto-contraste-legibilidad-correos-vecy-v34-06` en `founderKnowledgeService.ts`.
+3. **Suite de Regresión 192:**
+   - 5 pruebas automatizadas pasando al 100% (629/629 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 192 `vitest` (100% passing) | Build `npm run build` limpio en 17.15s.
+
 ### 📅 [2026-11-08] — JanIA v34.05: Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar 1-Clic y Confirmación de Asistencia (Doctrina Eduardo A. Rivera — v34.05 - 34.05.0)
 
 **Versión:** `v34.05` (`34.05.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

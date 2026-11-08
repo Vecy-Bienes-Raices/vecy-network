@@ -674,6 +674,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Para seguir potencializando esto podrías agregar los siguientes valores o modalidades a nuestras Vecy Agendas Pro: 1. Cancelación y reagendamiento como lo tienen casi todas las agendas digitales modernas. 2. Conexión con el calendario de google para los clientes. 3. Confirmar asistencia y avisar que si agendaron con mucha anticipación les llega la dirección 24 horas antes pero la reserva es inmediata. 4. Que no solamente sirva para visitas a inmuebles sino para llamadas o videollamadas a servicios y asesorías personalizadas.",
     createdAt: "2026-11-08T14:15:00.000Z",
     active: true
+  },
+  {
+    id: "seed-alto-contraste-legibilidad-correos-vecy-v34-06",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales de Vecy (Doctrina Eduardo A. Rivera v34.06)",
+    directive:
+      "Todos los correos electrónicos despachados por Vecy Network (confirmación de citas al cliente, despacho de dirección física exacta 24 horas antes y reporte administrativo interno) deben contar con estilos CSS en línea (inline styles) con 'color: #ffffff !important' en cada párrafo, lista y celda de texto. Se prohíbe confiar en estilos heredados o clases en el <head>, ya que clientes de correo como Gmail y Outlook purgan los estilos de cabecera y oscurecen los párrafos a texto negro o gris tenue, haciéndolos invisibles sobre el fondo negro de la plantilla. Cada texto debe ser 100% visible, nítido y de alto contraste al ojo humano.",
+    rawText:
+      "Arregla esto por lo pronto ya que en este correo esta parte no se ve de lo muy tenue que te quedó(NO ES VISIBLE AL OJO HUMANO): 'Te saluda JanIA de la dirección comercial de Vecy Bienes Raíces. Nos complace confirmarte que la verificación de tu solicitud #1147 ha concluido exitosamente y la cita para la visita del inmueble está 100% confirmada.' no solo en ese sino en las distintas respuestas que ya están programadas para el agendamiento viene sucediendo lo mismo, solo que se me había pasado decirtelo y es tanto en las que les llegan a los usuarios como las que nos llegan a nosotros. Mira a ver si puedes corregirlo por fa.",
+    createdAt: "2026-11-08T15:35:00.000Z",
+    active: true
   }
 ];
 

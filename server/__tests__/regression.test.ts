@@ -11873,11 +11873,71 @@ Ana Morales Castillo
 
     it("6. Consagración doctrinal de versión v34.05 en shared/const.ts y package.json (34.05.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.05");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.05.0");
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
+    });
+  });
+
+  describe("SUITE 192: ALTO CONTRASTE Y LEGIBILIDAD ABSOLUTA EN CORREOS ELECTRÓNICOS OFICIALES (v34.06 — DOCTRINA EDUARDO A. RIVERA)", () => {
+    it("1. getEmailContent aplica estilos en línea color: #ffffff !important en párrafos y textos para evitar que Gmail los oscurezca", async () => {
+      const { getEmailContent } = await import("../_core/emailContractService");
+      const result = getEmailContent({
+        solicitud_id: 1147,
+        solicitante_nombre: "Alfredo Anaya Peñaranda",
+        solicitante_email: "invervalores@hotmail.com",
+        servicio_solicitado: "Visitar inmueble",
+        opcion_negocio: "Venta",
+        codigo_inmueble: "ID-LACAR-01BOG",
+        fecha_cita_texto: "lunes, 9 de noviembre de 2026",
+        hora_cita: "11:00 AM",
+      });
+
+      expect(result.html).toContain('style="color: #ffffff !important;');
+      expect(result.html).toContain("Confirmamos la recepción de tu solicitud");
+      expect(result.html).toContain("Tu reserva está");
+    });
+
+    it("2. getAdminEmailContent aplica estilos en línea de alto contraste en celdas de tabla y textos internos", async () => {
+      const { getAdminEmailContent } = await import("../_core/emailContractService");
+      const result = getAdminEmailContent({
+        solicitud_id: 1147,
+        solicitante_nombre: "Alfredo Anaya",
+        solicitante_email: "invervalores@hotmail.com",
+        servicio_solicitado: "Visitar inmueble",
+      });
+
+      expect(result.html).toContain('color: #ffffff !important;');
+      expect(result.html).toContain("NUEVA SOLICITUD RECIBIDA #1147");
+    });
+
+    it("3. sendAppointmentAddressEmail contiene estilos en línea #ffffff !important en el saludo de JanIA y confirmación", async () => {
+      const fs = await import("fs");
+      const code = fs.readFileSync("server/_core/emailContractService.ts", "utf-8");
+      expect(code).toContain('color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;');
+      expect(code).toContain('Te saluda <strong style="color: #bf953f;">JanIA</strong>');
+      expect(code).toContain('Nos complace confirmarte que la verificación de tu solicitud');
+    });
+
+    it("4. Semilla de conocimiento directivo v34.06 registrada en founderKnowledgeService", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-alto-contraste-legibilidad-correos-vecy-v34-06"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.topic).toContain("Alto Contraste y Legibilidad Absoluta en Correos");
+      expect(seed?.active).toBe(true);
+    });
+
+    it("5. Consagración doctrinal de versión v34.06 en shared/const.ts y package.json (34.06.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.06");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.06.0");
     });
   });
 });

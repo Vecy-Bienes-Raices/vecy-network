@@ -184,7 +184,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.05 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.06 — Noviembre 2026
+
+### Novedades v34.06 (Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Arregla esto por lo pronto ya que en este correo esta parte no se ve de lo muy tenue que te quedó(NO ES VISIBLE AL OJO HUMANO): 'Te saluda JanIA de la dirección comercial de Vecy Bienes Raíces. Nos complace confirmarte que la verificación de tu solicitud #1147 ha concluido exitosamente y la cita para la visita del inmueble está 100% confirmada.' no solo en ese sino en las distintas respuestas que ya están programadas para el agendamiento viene sucediendo lo mismo, solo que se me había pasado decirtelo y es tanto en las que les llegan a los usuarios como las que nos llegan a nosotros. Mira a ver si puedes corregirlo por fa."*
+  2. **Diagnóstico Técnico y Causa Raíz en Webmail (Gmail/Outlook):**
+     - En la captura aportada por Eduardo (`media_1794169829848_cf23f8f5.jpg`), el texto citado aparecía prácticamente invisible ("no visible al ojo humano").
+     - Causa: los clientes de correo web (especialmente Gmail) purgan o desestiman las reglas de clases en `<style>` del `<head>`. Al carecer los elementos `<p>` de un color explícito en línea, el navegador y cliente de correo aplicaban su color por defecto (`#222222`), el cual sobre el fondo oscuro (`#121212`) resultaba ilegible.
+  3. **Solución Arquitectural con Estilos en Línea (Inline CSS) Obligatorios:**
+     - En `server/_core/emailContractService.ts`:
+       - `sendAppointmentAddressEmail`: Todos los párrafos y listas tienen ahora `style="color: #ffffff !important; font-size: 15px; line-height: 1.7; ..."` y los resaltados usan `#bf953f` (dorado) o `#00e676` (verde éxito).
+       - `getEmailContent` y `baseHtml`: Garantizado `color: #ffffff !important` tanto en el contenedor como en cada `<p>`, garantizando legibilidad perfecta en confirmaciones a clientes.
+       - `getAdminEmailContent`: Las celdas de la tabla de resumen y textos administrativos ahora cuentan con `color: #ffffff !important` y encabezados `#bf953f`, eliminando grises tenues (`#888` / `#aaa`) que dificultaban la lectura en el correo interno.
+  4. **Gobernanza y Suite de Regresión 192:**
+     - Semilla de conocimiento directivo `seed-alto-contraste-legibilidad-correos-vecy-v34-06` en `founderKnowledgeService.ts`.
+     - Suite 192 con 5 pruebas automatizadas pasando al 100% (629/629 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 192 `vitest` (100% passing) | Build `npm run build` limpio en 17.15s.
+
+## 🔖 VERSIÓN ANTERIOR: v34.05 — Noviembre 2026
 
 ### Novedades v34.05 (Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar 1-Clic y Confirmación de Asistencia — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
