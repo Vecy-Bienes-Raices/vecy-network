@@ -1221,6 +1221,23 @@ Dirección obligatoria:
     }
   });
 
+  // Admin endpoint: orquestar despacho de dirección y confirmación de citas 24h (Doctrina Eduardo A. Rivera v34.04)
+  // Uso: POST /api/admin/dispatch-appointment-address { token }
+  app.post('/api/admin/dispatch-appointment-address', async (req: any, res: any) => {
+    const { token } = req.body || {};
+    if (token !== 'vecy2025admin' && token !== 'vecy_network_secret_token') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    try {
+      const { checkAndDispatch24hAppointmentReminders } = await import('./cronService');
+      const result = await checkAndDispatch24hAppointmentReminders();
+      res.json({ ok: true, ...result });
+    } catch (err: any) {
+      console.error('[ADMIN-TRIGGER-ADDRESS] Error:', err?.message || err);
+      res.status(500).json({ error: err?.message || err });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

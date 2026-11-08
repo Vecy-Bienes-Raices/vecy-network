@@ -13,7 +13,8 @@ async function main() {
     id: 251,
     solicitante_nombre: "Alfredo Anaya Peñaranda",
     solicitante_perfil: "Agente Inmobiliario",
-    solicitante_email: "inmovalores81@gmail.com",
+    solicitante_email: "invervalores@hotmail.com",
+    solicitante_email_alt: "inmovalores81@gmail.com",
     solicitante_celular: "573108149457", // Número real y corregido de WhatsApp
     codigo_inmueble: "ID-LACAR-01BOG",
     nombre_inmueble: "Apartamento en La Carolina",

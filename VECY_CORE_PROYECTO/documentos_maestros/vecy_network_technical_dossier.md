@@ -330,6 +330,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.04 — Noviembre 2026
+
+#### [v34.04.0] — 2026-11-08: Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera)
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera:**
+  - Caso Alfredo Anaya (Solicitud #1147 — ID-LACAR-01BOG): Visita confirmada para el lunes 9 de noviembre de 2026 a las 11:00 AM.
+  - El recordatorio y dirección debían entregarse a las 11:00 AM de hoy domingo 8 de noviembre (24h antes). No se enviaron automáticamente porque en v34.01 se creó el script `send_alfredo_address.ts` como archivo suelto sin orquestación cron ni soporte para correo electrónico.
+  - Alfredo llamó a las 13:00 (1:00 PM) para consultar por su dirección.
+- **Implementación Técnica:**
+  1. **Despacho Inmediato de Emergencia:** Enviado mensaje WhatsApp a Alfredo (`+57 310 8149457`), copia espejo al WhatsApp del Bróker (+57 316 656 9719), y correo electrónico oficial HTML a `invervalores@hotmail.com` e `inmovalores81@gmail.com`.
+  2. **Trazabilidad en Base de Datos (`solicitudes`):** Añadidas columnas `direccion_despachada` y `direccion_despachada_at`. Actualizado registro de Alfredo y marcado como despachado.
+  3. **Servicio de Correo (`emailContractService.ts`):** Creado `sendAppointmentAddressEmail(payload, address)` con diseño luxury Gold Edition.
+  4. **Despacho Concurrente (`agendaWhatsAppService.ts`):** `sendAppointmentAddressNotification` ahora despacha concurrentemente por WhatsApp (cliente + Bróker) y Correo Electrónico.
+  5. **Orquestador Minutero Autónomo (`cronService.ts`):** Creado `parseAppointmentDateTime` y `checkAndDispatch24hAppointmentReminders()`, ejecutándose cada 15 minutos (`*/15 * * * *`) de forma autónoma.
+  6. **Endpoint Administrativo (`index.ts`):** Añadido `/api/admin/dispatch-appointment-address`.
+  7. **Gobernanza y Suite 190:** Semilla `seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04` en `founderKnowledgeService.ts` y Suite 190 con 6 pruebas pasando al 100%.
+
+### 🔖 v34.03 — Noviembre 2026
+
+#### [v34.03.0] — 2026-11-07: JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos (Doctrina Eduardo A. Rivera)
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera:**
+  - Omitir consultoría jurídica senior al presentar catálogo de servicios a los usuarios.
+- **Implementación Técnica:**
+  - Doctrina mandatoria en `dmHandler.ts`, `enviar_catalogo_servicios`, `JANIA_ARGON_COGNITIVE_CORE` y Suite 189 en `regression.test.ts`.
+
 ### 🔖 v34.01 — Noviembre 2026
 
 #### [v34.01.0] — 2026-11-06: Generación Automática de Códigos de Inmueble, Entrega de Dirección Física 24h Antes / Citas Exprés y Copia Espejo al Bróker (Doctrina Eduardo A. Rivera)
@@ -9073,6 +9097,26 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Tests `npm test`: **564 tests passing (5/5 suites en verde, 100% pasando a $0 COP)**.
   - Build `npm run build` limpio.
   - Versión: `v33.88` (`33.88.0`) en `shared/const.ts` y `package.json`.
+
+---
+
+### Versión v34.04 (2026-11-08) — Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Falta de Despacho Automático a las 11:00 AM para Alfredo Anaya (Solicitud #1147):* Cita confirmada para el lunes 9 de noviembre a las 11:00 AM en La Carolina (`ID-LACAR-01BOG`). A las 11:00 AM de hoy domingo (24h antes), nada se envió porque el script `send_alfredo_address.ts` creado en v34.01 no estaba registrado en el cron del servidor. Alfredo llamó a las 13:00 (1:00 PM) para consultar por su dirección.
+  2. *Ausencia de Envío por Correo Electrónico:* La lógica previa solo contemplaba WhatsApp, omitiendo el correo formal que Eduardo le había prometido a Alfredo en su conversación.
+- **Solución Quirúrgica Implementada**:
+  1. *Despacho Inmediato:* Enviado WhatsApp a Alfredo (`+57 310 8149457`), copia espejo al Bróker (+57 316 656 9719), y correo electrónico oficial HTML a `invervalores@hotmail.com` e `inmovalores81@gmail.com`.
+  2. `drizzle/schema.ts` y PostgreSQL: Añadidas columnas `direccion_despachada` y `direccion_despachada_at` a la tabla `solicitudes`.
+  3. `server/_core/emailContractService.ts`: Creado y exportado `sendAppointmentAddressEmail(payload, address)`.
+  4. `server/_core/agendaWhatsAppService.ts`: `sendAppointmentAddressNotification` ahora orquesta tanto WhatsApp como Correo Electrónico concurrentemente.
+  5. `server/_core/cronService.ts`: Creado `parseAppointmentDateTime` y `checkAndDispatch24hAppointmentReminders()`, ejecutándose en el cron minutero cada 15 minutos (`*/15 * * * *`) de forma completamente autónoma.
+  6. `server/_core/index.ts`: Añadido endpoint administrativo `/api/admin/dispatch-appointment-address`.
+  7. `server/_core/jania/founderKnowledgeService.ts`: Registrada la semilla directiva `seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 190 en `regression.test.ts` con 6 pruebas automatizadas (618/618 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 24.2s.
+  - Versión: `v34.04` (`34.04.0`) en `shared/const.ts` y `package.json`.
 
 ---
 

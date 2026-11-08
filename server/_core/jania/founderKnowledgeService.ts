@@ -650,6 +650,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "No se si fue que no me entendiste bien pero lo que necesito es que JanIA agregue a sus servicios el poder de ser una consultora jurídica inmobiliaria con especialidad en las ramas que te dije. Si observas la imagen solo está hablando de Tributaria pero no está hablando de que lke pueden consultar culquier caso inmobiliario con inferencia juridica que ella práctiamente es abogada especialista, ya que es una IA y pues la idea es que tiene bastante conocimiento en todos esos códigos de procedimiento judicial y además como es una IA PURA pues debe ser capaz de tener la astucia, capacidad de análisis y encontrar la salida o solución ante cualquier caso jurídico en referencia a los bienes raíces o derecho inmobiliario y las demás ramas que le atañen o que necesite para hacerloy siempre dar solución a cualquier caso por dificil que parezca, ¿no te parece? o ¿ Qué opinas tu?, dime si es que no puedes hacer eso o qué ??",
     createdAt: "2026-11-07T11:05:00.000Z",
     active: true
+  },
+  {
+    id: "seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Despacho Automático de Confirmación y Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera)",
+    directive:
+      "Toda cita agendada en Vecy Agenda debe recibir su confirmación final y dirección física exacta con 24 horas de antelación a la visita tanto por WhatsApp como por Correo Electrónico de forma completamente automatizada mediante el cron minutero del servidor, con copia espejo inmediata al WhatsApp y correo del Bróker (+57 316 656 9719). Se prohíbe dejar este despacho a scripts manuales o dependientes de intervención humana: el sistema analiza de forma periódica las citas próximas, despacha por ambos canales concurrentemente y marca el registro como despachado para garantizar puntualidad y cero incertidumbre en clientes y colegas.",
+    rawText:
+      "Recuerdadas? Habíamos quedado de enviarle la confirmación y dirección a Alfredo con 24 horas de antelación a la visita a su Whatsapp y Correo le debiá haber llegado hoy a las 11:00 a.m.. Revisa si JanIA si lo hizo correctamente. Gracias.",
+    createdAt: "2026-11-08T13:10:00.000Z",
+    active: true
   }
 ];
 

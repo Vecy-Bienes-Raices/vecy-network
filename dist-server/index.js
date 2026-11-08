@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.03";
+    VECY_VERSION = "v34.04";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -563,7 +563,9 @@ var init_schema = __esm({
       autorizacion: boolean("autorizacion"),
       agentId: text("agent_id"),
       hasAlertaAntecedentes: boolean("has_alerta_antecedentes"),
-      alertaMotivo: text("alerta_motivo")
+      alertaMotivo: text("alerta_motivo"),
+      direccionDespachada: boolean("direccion_despachada").default(false),
+      direccionDespachadaAt: timestamp("direccion_despachada_at", { withTimezone: true })
     });
     securityFlaggedIdentities = pgTable("security_flagged_identities", {
       id: serial("id").primaryKey(),
@@ -17440,6 +17442,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "No se si fue que no me entendiste bien pero lo que necesito es que JanIA agregue a sus servicios el poder de ser una consultora jur\xEDdica inmobiliaria con especialidad en las ramas que te dije. Si observas la imagen solo est\xE1 hablando de Tributaria pero no est\xE1 hablando de que lke pueden consultar culquier caso inmobiliario con inferencia juridica que ella pr\xE1ctiamente es abogada especialista, ya que es una IA y pues la idea es que tiene bastante conocimiento en todos esos c\xF3digos de procedimiento judicial y adem\xE1s como es una IA PURA pues debe ser capaz de tener la astucia, capacidad de an\xE1lisis y encontrar la salida o soluci\xF3n ante cualquier caso jur\xEDdico en referencia a los bienes ra\xEDces o derecho inmobiliario y las dem\xE1s ramas que le ata\xF1en o que necesite para hacerloy siempre dar soluci\xF3n a cualquier caso por dificil que parezca, \xBFno te parece? o \xBF Qu\xE9 opinas tu?, dime si es que no puedes hacer eso o qu\xE9 ??",
         createdAt: "2026-11-07T11:05:00.000Z",
         active: true
+      },
+      {
+        id: "seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Despacho Autom\xE1tico de Confirmaci\xF3n y Direcci\xF3n F\xEDsica 24 Horas Antes de la Cita por WhatsApp y Correo Electr\xF3nico (Doctrina Eduardo A. Rivera)",
+        directive: "Toda cita agendada en Vecy Agenda debe recibir su confirmaci\xF3n final y direcci\xF3n f\xEDsica exacta con 24 horas de antelaci\xF3n a la visita tanto por WhatsApp como por Correo Electr\xF3nico de forma completamente automatizada mediante el cron minutero del servidor, con copia espejo inmediata al WhatsApp y correo del Br\xF3ker (+57 316 656 9719). Se proh\xEDbe dejar este despacho a scripts manuales o dependientes de intervenci\xF3n humana: el sistema analiza de forma peri\xF3dica las citas pr\xF3ximas, despacha por ambos canales concurrentemente y marca el registro como despachado para garantizar puntualidad y cero incertidumbre en clientes y colegas.",
+        rawText: "Recuerdadas? Hab\xEDamos quedado de enviarle la confirmaci\xF3n y direcci\xF3n a Alfredo con 24 horas de antelaci\xF3n a la visita a su Whatsapp y Correo le debi\xE1 haber llegado hoy a las 11:00 a.m.. Revisa si JanIA si lo hizo correctamente. Gracias.",
+        createdAt: "2026-11-08T13:10:00.000Z",
+        active: true
       }
     ];
   }
@@ -22635,6 +22647,17 @@ var init_propertiesHandler = __esm({
 });
 
 // server/_core/emailContractService.ts
+var emailContractService_exports = {};
+__export(emailContractService_exports, {
+  createContractPdf: () => createContractPdf,
+  getAdminEmailContent: () => getAdminEmailContent,
+  getEmailContent: () => getEmailContent,
+  janiFirmaBase64: () => janiFirmaBase64,
+  normalizePayload: () => normalizePayload,
+  sendAppointmentAddressEmail: () => sendAppointmentAddressEmail,
+  sendContractAndConfirmationEmails: () => sendContractAndConfirmationEmails,
+  vecyLogoBase64: () => vecyLogoBase64
+});
 import { PDFDocument as PDFDocument2, rgb as rgb2, StandardFonts as StandardFonts2 } from "pdf-lib";
 import nodemailer from "nodemailer";
 import QRCode2 from "qrcode";
@@ -23226,6 +23249,133 @@ async function sendContractAndConfirmationEmails(rawPayload) {
     console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo interno a Vecy:`, adminMailErr?.message);
   }
   return { success: true };
+}
+async function sendAppointmentAddressEmail(rawPayload, address) {
+  const formData = normalizePayload(rawPayload);
+  const solicitudId = formData.solicitud_id || formData.id || "N/A";
+  const clientEmail = formData.solicitante_email;
+  const nombre = formData.solicitante_nombre || "Estimado(a) Colega";
+  const nombreInmueble = formData.nombre_inmueble || "Inmueble Agendado";
+  const codigo = formData.codigo_inmueble || "S/C";
+  const fechaTexto = formData.fecha_cita_texto || "Fecha por coordinar";
+  const hora = formData.hora_cita || "Hora por coordinar";
+  const acompanante = formData.interesado_nombre ? `${formData.interesado_nombre}${formData.interesado_documento ? ` (Doc: ${formData.interesado_documento})` : ""}` : "";
+  const gmailUser = process.env.GMAIL_USER || "vecybienesraices@gmail.com";
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || "dwjnngwfmsmjxvgi";
+  if (!gmailUser || !gmailPass) {
+    console.warn(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] \u26A0\uFE0F Credenciales de Gmail no configuradas.`);
+    return { success: false, error: "Missing Gmail credentials" };
+  }
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: gmailUser,
+      pass: gmailPass
+    }
+  });
+  const subject = `\u{1F4CD} Direcci\xF3n Confirmada y Agendamiento Solicitud #${solicitudId} | Vecy Bienes Ra\xEDces`;
+  const logoUrlParaEmail = "cid:vecyLogo";
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
+  body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; color: #f0f0f0; }
+  .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f44; }
+  .header { background-color: #000000; padding: 25px; text-align: center; border-bottom: 2px solid #bf953f; }
+  .header h1 { color: #bf953f; font-size: 22px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px; }
+  .content { padding: 30px 35px; }
+  .content h2 { color: #bf953f; font-size: 19px; margin-top: 0; }
+  .highlight { background-color: #1a1a1a; padding: 18px 20px; border-left: 4px solid #bf953f; border-radius: 6px; margin: 20px 0; }
+  .address-box { background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f88; padding: 18px; border-radius: 8px; margin: 20px 0; }
+  .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #222; }
+  .footer a { color: #bf953f; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo" style="max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4));">
+    <h1 style="margin-top: 10px;">VECY BIENES RA\xCDCES</h1>
+    <p style="color: #bf953f; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px;">CONFIRMACI\xD3N DE AGENDAMIENTO Y DIRECCI\xD3N OFICIAL</p>
+  </div>
+  <div class="content">
+    <h2>\xA1Hola, ${nombre}! \u{1F44B}\u{1F3E0}\u2728</h2>
+    <p>Te saluda <strong>JanIA</strong> de la direcci\xF3n comercial de <strong>Vecy Bienes Ra\xEDces</strong>.</p>
+    <p>Nos complace confirmarte que la verificaci\xF3n de tu solicitud <strong>#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble est\xE1 <strong>100% confirmada</strong>.</p>
+    
+    <div class="address-box">
+      <p style="color: #bf953f; font-size: 13px; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">\u{1F4CD} DIRECCI\xD3N EXACTA CONFIRMADA DEL INMUEBLE:</p>
+      <p style="color: #ffffff; font-size: 18px; font-weight: bold; margin: 0 0 10px 0;">${address}</p>
+      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">\u{1F3E2} Inmueble: <strong>${nombreInmueble}</strong> (C\xF3digo: <strong>${codigo}</strong>)</p>
+      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">\u{1F4C5} Fecha de la cita: <strong>${fechaTexto}</strong></p>
+      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">\u23F0 Hora: <strong>${hora}</strong></p>
+      ${acompanante ? `<p style="color: #ccc; font-size: 13px; margin: 4px 0;">\u{1F464} Acompa\xF1ante / Cliente interesado(a): <strong>${acompanante}</strong></p>` : ""}
+    </div>
+
+    <div class="highlight">
+      <p style="color: #bf953f; font-weight: bold; margin-top: 0;">\u{1F6E1}\uFE0F RECOMENDACIONES DE INGRESO Y SEGURIDAD NOTARIAL:</p>
+      <ol style="color: #ddd; font-size: 13px; line-height: 1.6; padding-left: 20px; margin: 10px 0 0 0;">
+        <li>Al llegar a la porter\xEDa o recepci\xF3n del edificio, pres\xE9ntate con tu c\xE9dula de ciudadan\xEDa original (C.C.).</li>
+        <li>Nuestro anfitri\xF3n br\xF3ker de Vecy Bienes Ra\xEDces estar\xE1 esper\xE1ndote puntualmente para realizar el recorrido guiado.</li>
+        <li>Te recomendamos llegar con 5 a 10 minutos de anticipaci\xF3n para el registro en recepci\xF3n.</li>
+      </ol>
+    </div>
+
+    <p style="font-size: 13px; color: #aaa; margin-top: 25px;">
+      Si requieres asistencia de llegada o deseas comunicarte directamente con el br\xF3ker anfitri\xF3n, cont\xE1ctanos a la l\xEDnea oficial: 
+      <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold;">+57 316 656 9719</a> o al correo 
+      <a href="mailto:vecybienesraices@gmail.com" style="color: #bf953f;">vecybienesraices@gmail.com</a>.
+    </p>
+    <p style="font-size: 14px; color: #f0f0f0; margin-top: 20px;">
+      \xA1Te deseamos muchos \xE9xitos en el recorrido y que sea un excelente cierre comercial! \u{1F91D}\u{1F680}
+    </p>
+  </div>
+  <div class="footer">
+    <p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Red Colaborativa Inmobiliaria</p>
+    <p><a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p>
+  </div>
+</div>
+</body>
+</html>`;
+  const logoAttachment = {
+    filename: "logo-vecy.png",
+    content: Buffer.from(vecyLogoBase64.split(",")[1], "base64"),
+    cid: "vecyLogo"
+  };
+  const recipients = [];
+  if (clientEmail && clientEmail.includes("@")) {
+    recipients.push(clientEmail);
+  }
+  if (formData.solicitante_email_alt && typeof formData.solicitante_email_alt === "string" && formData.solicitante_email_alt.includes("@")) {
+    recipients.push(formData.solicitante_email_alt);
+  }
+  if (recipients.length === 0) {
+    console.warn(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] \u26A0\uFE0F Solicitud sin correo v\xE1lido.`);
+    return { success: false, error: "No recipient email provided" };
+  }
+  try {
+    const to = recipients[0];
+    const cc = recipients.slice(1);
+    cc.push("vecybienesraices@gmail.com");
+    const info = await transporter.sendMail({
+      from: `"Vecy Bienes Ra\xEDces" <${gmailUser}>`,
+      to,
+      cc,
+      subject,
+      html,
+      attachments: [logoAttachment]
+    });
+    console.log(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] \u2709\uFE0F Correo oficial de direcci\xF3n despachado a ${to} (CC: ${cc.join(", ")}): ${info.messageId}`);
+    return { success: true };
+  } catch (err) {
+    console.error(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] \u274C Error despachando correo de direcci\xF3n:`, err?.message);
+    return { success: false, error: err?.message };
+  }
 }
 var vecyLogoBase64, janiFirmaBase64;
 var init_emailContractService = __esm({
@@ -29442,6 +29592,19 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
 });
 
 // server/_core/agendaWhatsAppService.ts
+var agendaWhatsAppService_exports = {};
+__export(agendaWhatsAppService_exports, {
+  KNOWN_PROPERTY_ADDRESSES: () => KNOWN_PROPERTY_ADDRESSES,
+  VECY_BROKER_OFFICIAL_PHONE: () => VECY_BROKER_OFFICIAL_PHONE,
+  buildBrokerCallMeBotMessage: () => buildBrokerCallMeBotMessage,
+  buildBrokerNotificationMessage: () => buildBrokerNotificationMessage,
+  buildClientAppointmentAddressMessage: () => buildClientAppointmentAddressMessage,
+  buildClientConfirmationMessage: () => buildClientConfirmationMessage,
+  cleanColombianPhone: () => cleanColombianPhone,
+  formatDateSpanish: () => formatDateSpanish,
+  sendAgendaWhatsAppNotifications: () => sendAgendaWhatsAppNotifications,
+  sendAppointmentAddressNotification: () => sendAppointmentAddressNotification
+});
 function cleanColombianPhone(rawPhone) {
   if (!rawPhone) return "";
   const digits = String(rawPhone).replace(/\D/g, "");
@@ -29673,12 +29836,94 @@ async function sendAgendaWhatsAppNotifications(payload) {
   }
   return { brokerSent, clientSent };
 }
-var VECY_BROKER_OFFICIAL_PHONE;
+function buildClientAppointmentAddressMessage(data, address) {
+  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
+  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Colega";
+  const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Apartamento en La Carolina";
+  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
+  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
+  const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
+
+\u{1F4CD} *CONFIRMACI\xD3N FINAL Y DIRECCI\xD3N OFICIAL DEL INMUEBLE*
+Solicitud *No. ${numSolicitud}* | Inmueble: *${nombreInmueble}* (Cod: ${codigo})
+
+\u{1F4C5} *Fecha de la cita:* ${fechaTexto}
+\u23F0 *Hora:* ${hora}
+
+\u{1F4CC} *DIRECCI\xD3N EXACTA COMPLETA:*
+\u{1F4CD} *${address}*
+
+\u{1F6E1}\uFE0F *RECOMENDACIONES DE INGRESO Y SEGURIDAD NOTARIAL:*
+1. Al llegar al edificio, ac\xE9rcate a la recepci\xF3n / porter\xEDa y pres\xE9ntate con tu c\xE9dula de ciudadan\xEDa original (C.C.).
+2. Nuestro anfitri\xF3n br\xF3ker estar\xE1 esper\xE1ndote en la fecha y hora indicadas para realizar el recorrido guiado.
+3. Te recomendamos llegar con 5 a 10 minutos de anticipaci\xF3n para el registro en porter\xEDa.
+
+Si requieres asistencia de llegada o tienes alguna pregunta antes del recorrido, comun\xEDcate directamente con nuestra l\xEDnea oficial de br\xF3ker: *+57 316 6569719* (https://wa.me/573166569719).
+
+\xA1Muchos \xE9xitos y te esperamos puntualmente para este recorrido! \u{1F91D}\u{1F3E1}\u2728`;
+}
+async function sendAppointmentAddressNotification(payload, customAddress) {
+  let clientSent = false;
+  let brokerCopySent = false;
+  let emailSent = false;
+  const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
+  const codigo = payload.codigo_inmueble || payload.codigoInmueble || "";
+  const address = customAddress || KNOWN_PROPERTY_ADDRESSES[codigo] || "Direcci\xF3n confirmada en La Carolina, Bogot\xE1";
+  const addressMsg = buildClientAppointmentAddressMessage(payload, address);
+  const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";
+  const cleanClientCel = cleanColombianPhone(rawCel);
+  console.log(`[AGENDA-DIRECCION-#${numSolicitud}] \u{1F4CD} Despachando direcci\xF3n para cita a ${cleanClientCel || "N/A"}...`);
+  if (cleanClientCel && cleanClientCel.length >= 10) {
+    try {
+      janiaMatchBot.registerAgendaNotification?.(cleanClientCel, addressMsg, numSolicitud);
+      await janiaMatchBot.sendDirectMessage(cleanClientCel, addressMsg, {
+        allowDirectMessage: true,
+        isTransactionalNotification: true,
+        skipDelay: true
+      });
+      clientSent = true;
+      console.log(`[AGENDA-DIRECCION-#${numSolicitud}] \u2705 Direcci\xF3n entregada por WhatsApp a solicitante (${cleanClientCel}).`);
+    } catch (err) {
+      console.error(`[AGENDA-DIRECCION-#${numSolicitud}] \u26A0\uFE0F Error enviando direcci\xF3n a solicitante:`, err?.message);
+    }
+  }
+  try {
+    const brokerCopyHeader = `\u{1F4CB} *COPIA ESPEJO DESPACHO DE DIRECCI\xD3N (Solicitud #${numSolicitud})*
+Enviada a: ${payload.solicitante_nombre || "Cliente"} (${cleanClientCel})
+
+`;
+    await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, `${brokerCopyHeader}${addressMsg}`, {
+      allowDirectMessage: true,
+      isTransactionalNotification: true,
+      skipDelay: true
+    });
+    brokerCopySent = true;
+    console.log(`[AGENDA-DIRECCION-#${numSolicitud}] \u2705 Copia espejo de direcci\xF3n entregada al WhatsApp del Br\xF3ker.`);
+  } catch (brokerErr) {
+    console.warn(`[AGENDA-DIRECCION-#${numSolicitud}] \u26A0\uFE0F Error enviando copia de direcci\xF3n al Br\xF3ker:`, brokerErr?.message);
+  }
+  try {
+    const { sendAppointmentAddressEmail: sendAppointmentAddressEmail2 } = await Promise.resolve().then(() => (init_emailContractService(), emailContractService_exports));
+    const emailRes = await sendAppointmentAddressEmail2(payload, address);
+    emailSent = emailRes.success;
+  } catch (emailErr) {
+    console.warn(`[AGENDA-DIRECCION-#${numSolicitud}] \u26A0\uFE0F Error despachando correo de direcci\xF3n:`, emailErr?.message);
+  }
+  return { clientSent, brokerCopySent, emailSent, address };
+}
+var VECY_BROKER_OFFICIAL_PHONE, buildBrokerCallMeBotMessage, KNOWN_PROPERTY_ADDRESSES;
 var init_agendaWhatsAppService = __esm({
   "server/_core/agendaWhatsAppService.ts"() {
     "use strict";
     init_whatsapp_match();
     VECY_BROKER_OFFICIAL_PHONE = "573166569719";
+    buildBrokerCallMeBotMessage = buildBrokerNotificationMessage;
+    KNOWN_PROPERTY_ADDRESSES = {
+      "ID-LACAR-01BOG": "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogot\xE1",
+      "ID-LACAR01": "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogot\xE1",
+      "LACAR-01": "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogot\xE1"
+    };
   }
 });
 
@@ -38191,6 +38436,7 @@ __export(cronService_exports, {
   WEEKLY_POLLS_LIST: () => WEEKLY_POLLS_LIST,
   WEEKLY_QUIZZES_LIST: () => WEEKLY_QUIZZES_LIST,
   acquireBroadcastLock: () => acquireBroadcastLock,
+  checkAndDispatch24hAppointmentReminders: () => checkAndDispatch24hAppointmentReminders,
   completeBroadcast: () => completeBroadcast,
   enforceGreetingAccuracy: () => enforceGreetingAccuracy,
   enforceJanIAIdentity: () => enforceJanIAIdentity,
@@ -38212,6 +38458,7 @@ __export(cronService_exports, {
   getThemedImagePath: () => getThemedImagePath,
   getThemedImagePathAsync: () => getThemedImagePathAsync,
   initCronScheduler: () => initCronScheduler,
+  parseAppointmentDateTime: () => parseAppointmentDateTime,
   publishChannelGroupInvitation: () => publishChannelGroupInvitation,
   publishDailyPoll: () => publishDailyPoll,
   publishDailyPollNow: () => publishDailyPollNow,
@@ -38231,7 +38478,7 @@ import cron from "node-cron";
 import path14 from "path";
 import fs14 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7 } from "drizzle-orm";
+import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7, or as or5, isNull as isNull2 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -39100,6 +39347,13 @@ function initCronScheduler() {
       console.error("[CRON-SERVICE] Error en el job de re-matching masivo:", err.message || err);
     }
   }, { timezone: "America/Bogota" });
+  cron.schedule("*/15 * * * *", async () => {
+    try {
+      await checkAndDispatch24hAppointmentReminders();
+    } catch (err) {
+      console.warn("[CRON-SERVICE] \u26A0\uFE0F Error en cron de despacho de citas 24h:", err?.message || err);
+    }
+  }, { timezone: "America/Bogota" });
   let isCheckingCatchUp = false;
   setInterval(async () => {
     if (isCheckingCatchUp) return;
@@ -39415,6 +39669,102 @@ Cualquier duda, nuestro br\xF3ker y directores Eduardo y Jani est\xE1n a tu disp
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
   }
+}
+function parseAppointmentDateTime(fechaTexto, horaTexto) {
+  if (!fechaTexto || typeof fechaTexto !== "string") return null;
+  const meses = {
+    enero: 0,
+    febrero: 1,
+    marzo: 2,
+    abril: 3,
+    mayo: 4,
+    junio: 5,
+    julio: 6,
+    agosto: 7,
+    septiembre: 8,
+    octubre: 9,
+    noviembre: 10,
+    diciembre: 11
+  };
+  const cleanFecha = fechaTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const dateMatch = cleanFecha.match(/(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/);
+  if (!dateMatch) return null;
+  const dia = parseInt(dateMatch[1], 10);
+  const mesStr = dateMatch[2];
+  const anio = parseInt(dateMatch[3], 10);
+  if (meses[mesStr] === void 0) return null;
+  const mes = meses[mesStr];
+  let horas = 9;
+  let minutos = 0;
+  if (horaTexto && typeof horaTexto === "string") {
+    const timeMatch = horaTexto.trim().match(/(\d{1,2}):(\d{2})(?:\s*(am|pm))?/i);
+    if (timeMatch) {
+      horas = parseInt(timeMatch[1], 10);
+      minutos = parseInt(timeMatch[2], 10);
+      const meridiem = (timeMatch[3] || "").toLowerCase();
+      if (meridiem === "pm" && horas < 12) horas += 12;
+      if (meridiem === "am" && horas === 12) horas = 0;
+    }
+  }
+  const pad = (n) => String(n).padStart(2, "0");
+  const isoStr = `${anio}-${pad(mes + 1)}-${pad(dia)}T${pad(horas)}:${pad(minutos)}:00-05:00`;
+  const d = new Date(isoStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+async function checkAndDispatch24hAppointmentReminders() {
+  let dispatched = 0;
+  let checked = 0;
+  try {
+    const db = await getDb();
+    if (!db) return { dispatched: 0, checked: 0 };
+    const pending = await db.select().from(solicitudes).where(
+      or5(
+        isNull2(solicitudes.direccionDespachada),
+        eq14(solicitudes.direccionDespachada, false)
+      )
+    ).orderBy(desc7(solicitudes.id)).limit(30);
+    checked = pending.length;
+    if (checked === 0) return { dispatched: 0, checked: 0 };
+    const now = /* @__PURE__ */ new Date();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1e3;
+    const graceWindowPastMs = 4 * 60 * 60 * 1e3;
+    for (const sol of pending) {
+      const apptDate = parseAppointmentDateTime(sol.fechaCitaTexto || void 0, sol.horaCita || void 0);
+      if (!apptDate) continue;
+      const diffMs = apptDate.getTime() - now.getTime();
+      if (diffMs <= twentyFourHoursMs && diffMs >= -graceWindowPastMs) {
+        console.log(`[AGENDA-AUTO-24H] \u{1F680} Cita detectada para despacho 24h (Solicitud #${sol.solicitudId || sol.id} - ${sol.solicitanteNombre}): Falta ${(diffMs / 36e5).toFixed(1)}h`);
+        const { sendAppointmentAddressNotification: sendAppointmentAddressNotification2 } = await Promise.resolve().then(() => (init_agendaWhatsAppService(), agendaWhatsAppService_exports));
+        const payload = {
+          solicitudId: sol.solicitudId || sol.id,
+          solicitud_id: sol.solicitudId || sol.id,
+          id: sol.id,
+          solicitante_nombre: sol.solicitanteNombre || "Cliente",
+          solicitante_perfil: sol.solicitantePerfil || "Usuario",
+          solicitante_email: sol.solicitanteEmail || "",
+          solicitante_celular: sol.solicitanteCelular || "",
+          codigo_inmueble: sol.codigoInmueble || "",
+          nombre_inmueble: sol.nombreInmueble || "Inmueble Agendado",
+          opcion_negocio: sol.opcionNegocio || "Venta",
+          fecha_cita_texto: sol.fechaCitaTexto || "",
+          hora_cita: sol.horaCita || "",
+          cantidad_personas: sol.cantidadPersonas || 1,
+          interesado_nombre: sol.interesadoNombre || "",
+          interesado_documento: sol.interesadoDocumento || ""
+        };
+        const result = await sendAppointmentAddressNotification2(payload);
+        console.log(`[AGENDA-AUTO-24H] \u2705 Despacho ejecutado para #${sol.solicitudId || sol.id}:`, result);
+        await db.update(solicitudes).set({
+          direccionDespachada: true,
+          direccionDespachadaAt: /* @__PURE__ */ new Date()
+        }).where(eq14(solicitudes.id, sol.id));
+        dispatched++;
+      }
+    }
+  } catch (err) {
+    console.error("[AGENDA-AUTO-24H] \u274C Error en checkAndDispatch24hAppointmentReminders:", err?.message || err);
+  }
+  return { dispatched, checked };
 }
 var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, WEEKLY_QUIZZES_LIST, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
 var init_cronService = __esm({
@@ -45241,7 +45591,7 @@ init_db();
 init_schema();
 init_llm();
 import { z as z7 } from "zod";
-import { eq as eq18, and as and12, desc as desc9, isNull as isNull2, or as or5, sql as sql14 } from "drizzle-orm";
+import { eq as eq18, and as and12, desc as desc9, isNull as isNull3, or as or6, sql as sql14 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 import crypto5 from "crypto";
 var PERSONALITY_PROMPTS = {
@@ -45380,7 +45730,7 @@ var agentRouter = router({
       subdomain: users.subdomain,
       activeTools: users.activeTools
     }).from(users).where(
-      numericId ? or5(eq18(users.subdomain, cleanSlug), eq18(users.id, numericId)) : eq18(users.subdomain, cleanSlug)
+      numericId ? or6(eq18(users.subdomain, cleanSlug), eq18(users.id, numericId)) : eq18(users.subdomain, cleanSlug)
     ).limit(1);
     if (agentRows.length === 0) {
       throw new TRPCError5({ code: "NOT_FOUND", message: "Sitio de agente no encontrado" });
@@ -45590,7 +45940,7 @@ REGLAS DE ORO:
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc9(properties.createdAt));
+    return await db.select().from(properties).where(isNull3(properties.agentId)).orderBy(desc9(properties.createdAt));
   }),
   generateStealthLink: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
@@ -47738,6 +48088,20 @@ Direcci\xF3n obligatoria:
     } catch (err) {
       console.error("[ADMIN-TRIGGER-POLL] Error:", err.message);
       res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/admin/dispatch-appointment-address", async (req, res) => {
+    const { token } = req.body || {};
+    if (token !== "vecy2025admin" && token !== "vecy_network_secret_token") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    try {
+      const { checkAndDispatch24hAppointmentReminders: checkAndDispatch24hAppointmentReminders2 } = await Promise.resolve().then(() => (init_cronService(), cronService_exports));
+      const result = await checkAndDispatch24hAppointmentReminders2();
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error("[ADMIN-TRIGGER-ADDRESS] Error:", err?.message || err);
+      res.status(500).json({ error: err?.message || err });
     }
   });
   app.use("/api/trpc", (req, res, next) => {

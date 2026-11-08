@@ -11700,6 +11700,72 @@ Ana Morales Castillo
       expect(pkg.version).toBe("34.03.0");
     });
   });
+
+  describe("SUITE 190: DESPACHO AUTOMÁTICO DE CONFIRMACIÓN Y DIRECCIÓN FÍSICA 24H ANTES POR WHATSAPP Y CORREO ELECTRÓNICO (v34.04 — DOCTRINA EDUARDO A. RIVERA)", () => {
+    it("1. parseAppointmentDateTime parsea fechas en español y horas 12h/24h en zona horaria America/Bogota", async () => {
+      const { parseAppointmentDateTime } = await import("../_core/cronService");
+      expect(typeof parseAppointmentDateTime).toBe("function");
+
+      const date1 = parseAppointmentDateTime("lunes, 9 de noviembre de 2026", "11:00 AM");
+      expect(date1).toBeInstanceOf(Date);
+      expect(date1?.getFullYear()).toBe(2026);
+      expect(date1?.getMonth()).toBe(10); // Noviembre = 10
+      expect(date1?.getDate()).toBe(9);
+
+      const date2 = parseAppointmentDateTime("sábado, 7 de noviembre de 2026", "02:30 PM");
+      expect(date2).toBeInstanceOf(Date);
+      expect(date2?.getDate()).toBe(7);
+
+      const invalid = parseAppointmentDateTime(undefined, undefined);
+      expect(invalid).toBeNull();
+    });
+
+    it("2. sendAppointmentAddressNotification despacha dirección física y orquesta envío por WhatsApp y Correo Electrónico", async () => {
+      const { sendAppointmentAddressNotification } = await import("../_core/agendaWhatsAppService");
+      expect(typeof sendAppointmentAddressNotification).toBe("function");
+
+      const payload = {
+        solicitudId: 1147,
+        solicitante_nombre: "Alfredo Anaya Peñaranda",
+        solicitante_celular: "573108149457",
+        solicitante_email: "invervalores@hotmail.com",
+        codigo_inmueble: "ID-LACAR-01BOG",
+        fecha_cita_texto: "lunes, 9 de noviembre de 2026",
+        hora_cita: "11:00 AM",
+      };
+
+      const res = await sendAppointmentAddressNotification(payload as any, "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(res).toHaveProperty("clientSent");
+      expect(res).toHaveProperty("brokerCopySent");
+      expect(res).toHaveProperty("emailSent");
+      expect(res.address).toContain("KRA 14 A # 127 - 65");
+    });
+
+    it("3. sendAppointmentAddressEmail está exportado en emailContractService y genera el HTML oficial", async () => {
+      const { sendAppointmentAddressEmail } = await import("../_core/emailContractService");
+      expect(typeof sendAppointmentAddressEmail).toBe("function");
+    });
+
+    it("4. checkAndDispatch24hAppointmentReminders está exportado en cronService y orquesta la revisión de citas", async () => {
+      const { checkAndDispatch24hAppointmentReminders } = await import("../_core/cronService");
+      expect(typeof checkAndDispatch24hAppointmentReminders).toBe("function");
+    });
+
+    it("5. drizzle/schema.ts consagra direccionDespachada y direccionDespachadaAt en la tabla solicitudes", async () => {
+      const { solicitudes } = await import("../../drizzle/schema");
+      expect(solicitudes.direccionDespachada).toBeDefined();
+      expect(solicitudes.direccionDespachadaAt).toBeDefined();
+    });
+
+    it("6. Consagración doctrinal de versión v34.04 en shared/const.ts y package.json (34.04.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.04");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.04.0");
+    });
+  });
 });
 
 

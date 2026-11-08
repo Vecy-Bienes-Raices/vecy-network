@@ -416,6 +416,8 @@ export const solicitudes = pgTable("solicitudes", {
   agentId: text("agent_id"),
   hasAlertaAntecedentes: boolean("has_alerta_antecedentes"),
   alertaMotivo: text("alerta_motivo"),
+  direccionDespachada: boolean("direccion_despachada").default(false),
+  direccionDespachadaAt: timestamp("direccion_despachada_at", { withTimezone: true }),
 });
 
 export const securityFlaggedIdentities = pgTable("security_flagged_identities", {

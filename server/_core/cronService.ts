@@ -6,8 +6,8 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { propertyMatches, requirements, properties, dailyBroadcasts } from '../../drizzle/schema';
-import { gte, and, eq, sql, desc } from 'drizzle-orm';
+import { propertyMatches, requirements, properties, dailyBroadcasts, solicitudes } from '../../drizzle/schema';
+import { gte, and, eq, sql, desc, or, isNull } from 'drizzle-orm';
 import { janiaMatchBot as whatsappBot } from './whatsapp-match';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 import { invokeLLM } from './llm';
@@ -2207,6 +2207,15 @@ export function initCronScheduler() {
     }
   }, { timezone: 'America/Bogota' });
 
+  // 📍 CADA 15 MINUTOS — Despacho automático de confirmación y dirección 24h antes por WhatsApp y Correo (Doctrina Eduardo A. Rivera v34.04)
+  cron.schedule('*/15 * * * *', async () => {
+    try {
+      await checkAndDispatch24hAppointmentReminders();
+    } catch (err: any) {
+      console.warn('[CRON-SERVICE] ⚠️ Error en cron de despacho de citas 24h:', err?.message || err);
+    }
+  }, { timezone: 'America/Bogota' });
+
   // 🛡️ GUARDIA DE SEGURIDAD MINUTERA CON BLOQUEO POSTGRESQL Y VENTANA ESTRICTA
   let isCheckingCatchUp = false;
   setInterval(async () => {
@@ -2622,4 +2631,128 @@ export async function publishIdentityAndPredialServiceAnnouncement(force: boolea
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
   }
+}
+
+/**
+ * Parsea fechas en español y hora para calcular el timestamp exacto en hora de Colombia (Doctrina Eduardo A. Rivera)
+ * Ejemplo: fechaTexto = "lunes, 9 de noviembre de 2026", horaTexto = "11:00 AM"
+ */
+export function parseAppointmentDateTime(fechaTexto?: string, horaTexto?: string): Date | null {
+  if (!fechaTexto || typeof fechaTexto !== "string") return null;
+
+  const meses: Record<string, number> = {
+    enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+    julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+  };
+
+  const cleanFecha = fechaTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const dateMatch = cleanFecha.match(/(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/);
+  if (!dateMatch) return null;
+
+  const dia = parseInt(dateMatch[1], 10);
+  const mesStr = dateMatch[2];
+  const anio = parseInt(dateMatch[3], 10);
+
+  if (meses[mesStr] === undefined) return null;
+  const mes = meses[mesStr];
+
+  let horas = 9;
+  let minutos = 0;
+
+  if (horaTexto && typeof horaTexto === "string") {
+    const timeMatch = horaTexto.trim().match(/(\d{1,2}):(\d{2})(?:\s*(am|pm))?/i);
+    if (timeMatch) {
+      horas = parseInt(timeMatch[1], 10);
+      minutos = parseInt(timeMatch[2], 10);
+      const meridiem = (timeMatch[3] || "").toLowerCase();
+      if (meridiem === "pm" && horas < 12) horas += 12;
+      if (meridiem === "am" && horas === 12) horas = 0;
+    }
+  }
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const isoStr = `${anio}-${pad(mes + 1)}-${pad(dia)}T${pad(horas)}:${pad(minutos)}:00-05:00`;
+  const d = new Date(isoStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * ⏰ Vigilante y Despachador Automático de Citas con 24 Horas de Antelación (Doctrina Eduardo A. Rivera v34.04)
+ * Revisa periódicamente las solicitudes con citas agendadas dentro de las próximas 24 horas y despacha
+ * automáticamente la confirmación con la dirección física por WhatsApp y Correo Electrónico.
+ */
+export async function checkAndDispatch24hAppointmentReminders(): Promise<{ dispatched: number; checked: number }> {
+  let dispatched = 0;
+  let checked = 0;
+
+  try {
+    const db = await getDb();
+    if (!db) return { dispatched: 0, checked: 0 };
+
+    const pending = await db
+      .select()
+      .from(solicitudes)
+      .where(
+        or(
+          isNull(solicitudes.direccionDespachada),
+          eq(solicitudes.direccionDespachada, false)
+        )
+      )
+      .orderBy(desc(solicitudes.id))
+      .limit(30);
+
+    checked = pending.length;
+    if (checked === 0) return { dispatched: 0, checked: 0 };
+
+    const now = new Date();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    const graceWindowPastMs = 4 * 60 * 60 * 1000;
+
+    for (const sol of pending) {
+      const apptDate = parseAppointmentDateTime(sol.fechaCitaTexto || undefined, sol.horaCita || undefined);
+      if (!apptDate) continue;
+
+      const diffMs = apptDate.getTime() - now.getTime();
+
+      if (diffMs <= twentyFourHoursMs && diffMs >= -graceWindowPastMs) {
+        console.log(`[AGENDA-AUTO-24H] 🚀 Cita detectada para despacho 24h (Solicitud #${sol.solicitudId || sol.id} - ${sol.solicitanteNombre}): Falta ${(diffMs / 3600000).toFixed(1)}h`);
+
+        const { sendAppointmentAddressNotification } = await import("./agendaWhatsAppService");
+        const payload: any = {
+          solicitudId: sol.solicitudId || sol.id,
+          solicitud_id: sol.solicitudId || sol.id,
+          id: sol.id,
+          solicitante_nombre: sol.solicitanteNombre || "Cliente",
+          solicitante_perfil: sol.solicitantePerfil || "Usuario",
+          solicitante_email: sol.solicitanteEmail || "",
+          solicitante_celular: sol.solicitanteCelular || "",
+          codigo_inmueble: sol.codigoInmueble || "",
+          nombre_inmueble: sol.nombreInmueble || "Inmueble Agendado",
+          opcion_negocio: sol.opcionNegocio || "Venta",
+          fecha_cita_texto: sol.fechaCitaTexto || "",
+          hora_cita: sol.horaCita || "",
+          cantidad_personas: sol.cantidadPersonas || 1,
+          interesado_nombre: sol.interesadoNombre || "",
+          interesado_documento: sol.interesadoDocumento || "",
+        };
+
+        const result = await sendAppointmentAddressNotification(payload);
+        console.log(`[AGENDA-AUTO-24H] ✅ Despacho ejecutado para #${sol.solicitudId || sol.id}:`, result);
+
+        await db
+          .update(solicitudes)
+          .set({
+            direccionDespachada: true,
+            direccionDespachadaAt: new Date()
+          })
+          .where(eq(solicitudes.id, sol.id));
+
+        dispatched++;
+      }
+    }
+  } catch (err: any) {
+    console.error("[AGENDA-AUTO-24H] ❌ Error en checkAndDispatch24hAppointmentReminders:", err?.message || err);
+  }
+
+  return { dispatched, checked };
 }

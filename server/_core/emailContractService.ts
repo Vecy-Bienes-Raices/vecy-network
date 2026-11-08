@@ -738,3 +738,150 @@ export async function sendContractAndConfirmationEmails(rawPayload: SolicitudEma
 
   return { success: true };
 }
+
+/**
+ * Despacha el correo electrónico oficial con la dirección física confirmada del inmueble (Doctrina Eduardo A. Rivera v34.04)
+ */
+export async function sendAppointmentAddressEmail(
+  rawPayload: SolicitudEmailPayload,
+  address: string
+): Promise<{ success: boolean; error?: string }> {
+  const formData = normalizePayload(rawPayload);
+  const solicitudId = formData.solicitud_id || formData.id || "N/A";
+  const clientEmail = formData.solicitante_email;
+  const nombre = formData.solicitante_nombre || "Estimado(a) Colega";
+  const nombreInmueble = formData.nombre_inmueble || "Inmueble Agendado";
+  const codigo = formData.codigo_inmueble || "S/C";
+  const fechaTexto = formData.fecha_cita_texto || "Fecha por coordinar";
+  const hora = formData.hora_cita || "Hora por coordinar";
+  const acompanante = formData.interesado_nombre
+    ? `${formData.interesado_nombre}${formData.interesado_documento ? ` (Doc: ${formData.interesado_documento})` : ""}`
+    : "";
+
+  const gmailUser = process.env.GMAIL_USER || "vecybienesraices@gmail.com";
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || "dwjnngwfmsmjxvgi";
+
+  if (!gmailUser || !gmailPass) {
+    console.warn(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] ⚠️ Credenciales de Gmail no configuradas.`);
+    return { success: false, error: "Missing Gmail credentials" };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: gmailUser,
+      pass: gmailPass,
+    },
+  });
+
+  const subject = `📍 Dirección Confirmada y Agendamiento Solicitud #${solicitudId} | Vecy Bienes Raíces`;
+  const logoUrlParaEmail = "cid:vecyLogo";
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
+  body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; color: #f0f0f0; }
+  .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f44; }
+  .header { background-color: #000000; padding: 25px; text-align: center; border-bottom: 2px solid #bf953f; }
+  .header h1 { color: #bf953f; font-size: 22px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px; }
+  .content { padding: 30px 35px; }
+  .content h2 { color: #bf953f; font-size: 19px; margin-top: 0; }
+  .highlight { background-color: #1a1a1a; padding: 18px 20px; border-left: 4px solid #bf953f; border-radius: 6px; margin: 20px 0; }
+  .address-box { background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f88; padding: 18px; border-radius: 8px; margin: 20px 0; }
+  .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #222; }
+  .footer a { color: #bf953f; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo" style="max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4));">
+    <h1 style="margin-top: 10px;">VECY BIENES RAÍCES</h1>
+    <p style="color: #bf953f; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px;">CONFIRMACIÓN DE AGENDAMIENTO Y DIRECCIÓN OFICIAL</p>
+  </div>
+  <div class="content">
+    <h2>¡Hola, ${nombre}! 👋🏠✨</h2>
+    <p>Te saluda <strong>JanIA</strong> de la dirección comercial de <strong>Vecy Bienes Raíces</strong>.</p>
+    <p>Nos complace confirmarte que la verificación de tu solicitud <strong>#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble está <strong>100% confirmada</strong>.</p>
+    
+    <div class="address-box">
+      <p style="color: #bf953f; font-size: 13px; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase;">📍 DIRECCIÓN EXACTA CONFIRMADA DEL INMUEBLE:</p>
+      <p style="color: #ffffff; font-size: 18px; font-weight: bold; margin: 0 0 10px 0;">${address}</p>
+      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">🏢 Inmueble: <strong>${nombreInmueble}</strong> (Código: <strong>${codigo}</strong>)</p>
+      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">📅 Fecha de la cita: <strong>${fechaTexto}</strong></p>
+      <p style="color: #ccc; font-size: 13px; margin: 4px 0;">⏰ Hora: <strong>${hora}</strong></p>
+      ${acompanante ? `<p style="color: #ccc; font-size: 13px; margin: 4px 0;">👤 Acompañante / Cliente interesado(a): <strong>${acompanante}</strong></p>` : ""}
+    </div>
+
+    <div class="highlight">
+      <p style="color: #bf953f; font-weight: bold; margin-top: 0;">🛡️ RECOMENDACIONES DE INGRESO Y SEGURIDAD NOTARIAL:</p>
+      <ol style="color: #ddd; font-size: 13px; line-height: 1.6; padding-left: 20px; margin: 10px 0 0 0;">
+        <li>Al llegar a la portería o recepción del edificio, preséntate con tu cédula de ciudadanía original (C.C.).</li>
+        <li>Nuestro anfitrión bróker de Vecy Bienes Raíces estará esperándote puntualmente para realizar el recorrido guiado.</li>
+        <li>Te recomendamos llegar con 5 a 10 minutos de anticipación para el registro en recepción.</li>
+      </ol>
+    </div>
+
+    <p style="font-size: 13px; color: #aaa; margin-top: 25px;">
+      Si requieres asistencia de llegada o deseas comunicarte directamente con el bróker anfitrión, contáctanos a la línea oficial: 
+      <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold;">+57 316 656 9719</a> o al correo 
+      <a href="mailto:vecybienesraices@gmail.com" style="color: #bf953f;">vecybienesraices@gmail.com</a>.
+    </p>
+    <p style="font-size: 14px; color: #f0f0f0; margin-top: 20px;">
+      ¡Te deseamos muchos éxitos en el recorrido y que sea un excelente cierre comercial! 🤝🚀
+    </p>
+  </div>
+  <div class="footer">
+    <p>Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Red Colaborativa Inmobiliaria</p>
+    <p><a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const logoAttachment = {
+    filename: "logo-vecy.png",
+    content: Buffer.from(vecyLogoBase64.split(",")[1], "base64"),
+    cid: "vecyLogo",
+  };
+
+  const recipients: string[] = [];
+  if (clientEmail && clientEmail.includes("@")) {
+    recipients.push(clientEmail);
+  }
+  if ((formData as any).solicitante_email_alt && typeof (formData as any).solicitante_email_alt === "string" && (formData as any).solicitante_email_alt.includes("@")) {
+    recipients.push((formData as any).solicitante_email_alt);
+  }
+
+  if (recipients.length === 0) {
+    console.warn(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] ⚠️ Solicitud sin correo válido.`);
+    return { success: false, error: "No recipient email provided" };
+  }
+
+  try {
+    const to = recipients[0];
+    const cc = recipients.slice(1);
+    cc.push("vecybienesraices@gmail.com");
+
+    const info = await transporter.sendMail({
+      from: `"Vecy Bienes Raíces" <${gmailUser}>`,
+      to,
+      cc,
+      subject,
+      html,
+      attachments: [logoAttachment],
+    });
+
+    console.log(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] ✉️ Correo oficial de dirección despachado a ${to} (CC: ${cc.join(", ")}): ${info.messageId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error(`[AGENDA-ADDRESS-EMAIL-#${solicitudId}] ❌ Error despachando correo de dirección:`, err?.message);
+    return { success: false, error: err?.message };
+  }
+}

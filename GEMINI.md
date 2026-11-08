@@ -1,14 +1,22 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.03.0 — 2026-11-07)
-- **JanIA Server:** `v34.03` (`34.03.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos (Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico de la Interacción con José María (`+57 315 8157698`):**
-     - Al consultar *"Quisiera conocer tus servicios"*, JanIA presentaba una síntesis donde el área jurídica quedaba reducida a *"5. Inteligencia Tributaria y Notarial (gastos 50/50, retención y ganancia ocasional)"* y *"7. Minutas y Contratos en PDF"*, omitiendo por completo que es una **Abogada Especialista Senior** y que los usuarios pueden consultarle **cualquier caso inmobiliario con inferencia jurídica** para resolverlo.
-  2. **Doctrina Mandatoria de Presentación del Portafolio y Poder Jurídico Inmobiliario:**
-     - En `dmHandler.ts` y en `enviar_catalogo_servicios`, se consagra que JanIA DEBE incluir destacadamente el servicio estrella: `⚖️ Consultoría Jurídica Inmobiliaria Senior y Solución de Casos Complejos`, anunciando su capacidad de analizar cualquier caso bajo los códigos de procedimiento judicial (CGP, Código Civil, Código de Comercio, CPACA, Ley 820, Ley 675, Ley 388) y su compromiso de IA PURA de encontrar SIEMPRE la salida o solución viable al problema, por difícil que parezca.
-  3. **Gobernanza y Suite de Regresión 189:**
-     - Semilla de conocimiento directivo `seed-jania-abogada-especialista-resolucion-casos-juridicos-inmobiliarios-v34-03` en `founderKnowledgeService.ts`.
-     - Suite 189 con 5 pruebas automatizadas pasando al 100% (612/612 tests totales en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 189 `vitest` (100% passing) | Build `npm run build` limpio en 15.6s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.04.0 — 2026-11-08)
+- **JanIA Server:** `v34.04` (`34.04.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera):**
+  1. **Auditoría Forense del Caso Alfredo Anaya (Solicitud #1147 — ID-LACAR-01BOG):**
+     - Cita programada para el lunes 9 de noviembre de 2026 a las 11:00 AM.
+     - A las 11:00 AM de hoy domingo 8 de noviembre (24 horas antes), el despacho programado no se ejecutó de forma automática porque en la sesión v34.01 se creó el script `send_alfredo_address.ts` como archivo estático suelto sin ser registrado en el cron del servidor (`cronService.ts`) ni contar con el canal de envío por correo electrónico. Alfredo llamó a las 13:00 (1:00 PM) consultando por su dirección.
+  2. **Ejecución Inmediata de Emergencia:**
+     - Despachado inmediatamente el mensaje oficial de WhatsApp a Alfredo Anaya (`+57 310 8149457`) con copia espejo al WhatsApp del Bróker (+57 316 656 9719).
+     - Enviado inmediatamente el correo oficial de lujo en HTML con la dirección exacta (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`) a sus cuentas `invervalores@hotmail.com` e `inmovalores81@gmail.com` con copia a `vecybienesraices@gmail.com`.
+  3. **Solución Arquitectural Permanente y Automatizada:**
+     - En `drizzle/schema.ts` y PostgreSQL: añadidas columnas `direccion_despachada` y `direccion_despachada_at` a la tabla `solicitudes`.
+     - En `emailContractService.ts`: creado `sendAppointmentAddressEmail` con diseño Gold Edition oficial de Vecy.
+     - En `agendaWhatsAppService.ts`: `sendAppointmentAddressNotification` ahora orquesta tanto WhatsApp (con copia espejo al Bróker) como Correo Electrónico concurrentemente.
+     - En `cronService.ts`: creado `parseAppointmentDateTime` y `checkAndDispatch24hAppointmentReminders`, programado en el cron para ejecutarse automáticamente cada 15 minutos (`*/15 * * * *`) en hora Bogotá.
+     - En `server/_core/index.ts`: añadido endpoint administrativo `/api/admin/dispatch-appointment-address`.
+  4. **Gobernanza y Suite de Regresión 190:**
+     - Semilla de conocimiento directivo `seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04` en `founderKnowledgeService.ts`.
+     - Suite 190 con 6 pruebas automatizadas pasando al 100% (618/618 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 190 `vitest` (100% passing) | Build `npm run build` limpio en 24.2s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

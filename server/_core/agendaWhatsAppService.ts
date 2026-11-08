@@ -396,9 +396,10 @@ Si requieres asistencia de llegada o tienes alguna pregunta antes del recorrido,
 export async function sendAppointmentAddressNotification(
   payload: AgendaWhatsAppPayload,
   customAddress?: string
-): Promise<{ clientSent: boolean; brokerCopySent: boolean; address: string }> {
+): Promise<{ clientSent: boolean; brokerCopySent: boolean; emailSent: boolean; address: string }> {
   let clientSent = false;
   let brokerCopySent = false;
+  let emailSent = false;
   const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
   const codigo = payload.codigo_inmueble || payload.codigoInmueble || "";
 
@@ -410,7 +411,7 @@ export async function sendAppointmentAddressNotification(
 
   console.log(`[AGENDA-DIRECCION-#${numSolicitud}] 📍 Despachando dirección para cita a ${cleanClientCel || "N/A"}...`);
 
-  // 1. Envío al solicitante / cliente
+  // 1. Envío al solicitante / cliente por WhatsApp
   if (cleanClientCel && cleanClientCel.length >= 10) {
     try {
       janiaMatchBot.registerAgendaNotification?.(cleanClientCel, addressMsg, numSolicitud);
@@ -440,5 +441,14 @@ export async function sendAppointmentAddressNotification(
     console.warn(`[AGENDA-DIRECCION-#${numSolicitud}] ⚠️ Error enviando copia de dirección al Bróker:`, brokerErr?.message);
   }
 
-  return { clientSent, brokerCopySent, address };
+  // 3. Envío al correo electrónico oficial del solicitante (Doctrina Eduardo A. Rivera v34.04)
+  try {
+    const { sendAppointmentAddressEmail } = await import("./emailContractService");
+    const emailRes = await sendAppointmentAddressEmail(payload as any, address);
+    emailSent = emailRes.success;
+  } catch (emailErr: any) {
+    console.warn(`[AGENDA-DIRECCION-#${numSolicitud}] ⚠️ Error despachando correo de dirección:`, emailErr?.message);
+  }
+
+  return { clientSent, brokerCopySent, emailSent, address };
 }

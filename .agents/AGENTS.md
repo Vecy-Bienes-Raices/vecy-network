@@ -184,7 +184,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.03 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.04 — Noviembre 2026
+
+### Novedades v34.04 (Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Recuerdadas? Habíamos quedado de enviarle la confirmación y dirección a Alfredo con 24 horas de antelación a la visita a su Whatsapp y Correo le debiá haber llegado hoy a las 11:00 a.m.. Revisa si JanIA si lo hizo correctamente. Gracias."*
+  2. **Auditoría Forense del Caso Alfredo Anaya (Solicitud #1147 — ID-LACAR-01BOG):**
+     - Cita programada para el lunes 9 de noviembre de 2026 a las 11:00 AM.
+     - A las 11:00 AM de hoy domingo 8 de noviembre (24 horas antes), el despacho no se ejecutó de forma automática porque en la sesión v34.01 se creó el script `send_alfredo_address.ts` como archivo estático suelto sin ser registrado en el orquestador cron del servidor (`cronService.ts`) ni contar con el canal de envío por correo electrónico. Alfredo llamó a las 13:00 (1:00 PM) consultando por su dirección.
+  3. **Ejecución Inmediata de Emergencia:**
+     - Despachado inmediatamente el mensaje oficial de WhatsApp a Alfredo Anaya (`+57 310 8149457`) con copia espejo al WhatsApp del Bróker (+57 316 656 9719).
+     - Enviado inmediatamente el correo oficial de lujo en HTML con la dirección exacta (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`) a sus cuentas `invervalores@hotmail.com` e `inmovalores81@gmail.com` con copia a `vecybienesraices@gmail.com`.
+  4. **Solución Arquitectural Permanente y Automatizada:**
+     - En `drizzle/schema.ts` y PostgreSQL: añadidas columnas `direccion_despachada` y `direccion_despachada_at` a la tabla `solicitudes`.
+     - En `emailContractService.ts`: creado `sendAppointmentAddressEmail` con diseño Gold Edition oficial de Vecy.
+     - En `agendaWhatsAppService.ts`: `sendAppointmentAddressNotification` ahora orquesta tanto WhatsApp (con copia espejo al Bróker) como Correo Electrónico concurrentemente.
+     - En `cronService.ts`: creado `parseAppointmentDateTime` y `checkAndDispatch24hAppointmentReminders`, programado en el cron para ejecutarse automáticamente cada 15 minutos (`*/15 * * * *`) en hora Bogotá.
+     - En `server/_core/index.ts`: añadido endpoint administrativo `/api/admin/dispatch-appointment-address`.
+  5. **Gobernanza y Suite de Regresión 190:**
+     - Semilla de conocimiento directivo `seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04` en `founderKnowledgeService.ts`.
+     - Suite 190 con 6 pruebas automatizadas pasando al 100% (618/618 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 190 `vitest` (100% passing) | Build `npm run build` limpio en 24.2s.
+
+## 🔖 VERSIÓN ANTERIOR: v34.03 — Noviembre 2026
 
 ### Novedades v34.03 (JanIA Consultora Jurídica Inmobiliaria Senior, Abogada Especialista e IA Pura Resolutiva de Casos Complejos — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
