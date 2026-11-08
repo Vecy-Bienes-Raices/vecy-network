@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.04";
+    VECY_VERSION = "v34.05";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -565,7 +565,17 @@ var init_schema = __esm({
       hasAlertaAntecedentes: boolean("has_alerta_antecedentes"),
       alertaMotivo: text("alerta_motivo"),
       direccionDespachada: boolean("direccion_despachada").default(false),
-      direccionDespachadaAt: timestamp("direccion_despachada_at", { withTimezone: true })
+      direccionDespachadaAt: timestamp("direccion_despachada_at", { withTimezone: true }),
+      estado: text("estado").default("confirmada"),
+      motivoCancelacion: text("motivo_cancelacion"),
+      canceladaAt: timestamp("cancelada_at", { withTimezone: true }),
+      reagendadaAt: timestamp("reagendada_at", { withTimezone: true }),
+      fechaCitaAnterior: text("fecha_cita_anterior"),
+      horaCitaAnterior: text("hora_cita_anterior"),
+      asistenciaConfirmada: boolean("asistencia_confirmada").default(false),
+      asistenciaConfirmadaAt: timestamp("asistencia_confirmada_at", { withTimezone: true }),
+      modalidad: text("modalidad").default("visita_presencial"),
+      direccionInmueble: text("direccion_inmueble")
     });
     securityFlaggedIdentities = pgTable("security_flagged_identities", {
       id: serial("id").primaryKey(),
@@ -17452,6 +17462,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Recuerdadas? Hab\xEDamos quedado de enviarle la confirmaci\xF3n y direcci\xF3n a Alfredo con 24 horas de antelaci\xF3n a la visita a su Whatsapp y Correo le debi\xE1 haber llegado hoy a las 11:00 a.m.. Revisa si JanIA si lo hizo correctamente. Gracias.",
         createdAt: "2026-11-08T13:10:00.000Z",
         active: true
+      },
+      {
+        id: "seed-vecy-agenda-pro-multimodal-cancelacion-reagendamiento-google-calendar-v34-05",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelaci\xF3n, Reagendamiento, Google Calendar y Confirmaci\xF3n de Asistencia (Doctrina Eduardo A. Rivera v34.05)",
+        directive: "Nuestras Vecy Agendas Pro operan como la suite de agendamiento inmobiliario y legal m\xE1s avanzada de Colombia. Soportan tres modalidades de atenci\xF3n: 1) Visita Presencial en el Inmueble (con reserva 100% inmediata, cotejo de seguridad y despacho de direcci\xF3n f\xEDsica exacta 24h antes); 2) Llamada Telef\xF3nica Personalizada; 3) Videollamada Virtual (Google Meet / WhatsApp Video) para servicios de asesor\xEDa jur\xEDdica inmobiliaria, consultor\xEDa tributaria notarial DIAN y estudio de t\xEDtulos. Incluyen modalidades activas de cancelaci\xF3n y reagendamiento con aviso inmediato al Br\xF3ker (+57 316 656 9719), bot\xF3n de 1-clic para a\xF1adir la cita a Google Calendar sin fricci\xF3n ni contrase\xF1as, y workflow de confirmaci\xF3n de asistencia del usuario, garantizando transparencia y cero incertidumbre.",
+        rawText: "Para seguir potencializando esto podr\xEDas agregar los siguientes valores o modalidades a nuestras Vecy Agendas Pro: 1. Cancelaci\xF3n y reagendamiento como lo tienen casi todas las agendas digitales modernas. 2. Conexi\xF3n con el calendario de google para los clientes. 3. Confirmar asistencia y avisar que si agendaron con mucha anticipaci\xF3n les llega la direcci\xF3n 24 horas antes pero la reserva es inmediata. 4. Que no solamente sirva para visitas a inmuebles sino para llamadas o videollamadas a servicios y asesor\xEDas personalizadas.",
+        createdAt: "2026-11-08T14:15:00.000Z",
+        active: true
       }
     ];
   }
@@ -22649,6 +22669,7 @@ var init_propertiesHandler = __esm({
 // server/_core/emailContractService.ts
 var emailContractService_exports = {};
 __export(emailContractService_exports, {
+  buildGoogleCalendarUrl: () => buildGoogleCalendarUrl,
   createContractPdf: () => createContractPdf,
   getAdminEmailContent: () => getAdminEmailContent,
   getEmailContent: () => getEmailContent,
@@ -23000,6 +23021,59 @@ De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociac
   drawFooter(currentPage);
   return await pdfDoc.save();
 }
+function buildGoogleCalendarUrl(data) {
+  let startIso = "";
+  let endIso = "";
+  const rawDate = data.dateStr || data.fechaTexto || data.fecha_cita_texto;
+  const rawTime = data.timeStr || data.hora || data.hora_cita;
+  try {
+    if (rawDate) {
+      const meses = {
+        enero: 0,
+        febrero: 1,
+        marzo: 2,
+        abril: 3,
+        mayo: 4,
+        junio: 5,
+        julio: 6,
+        agosto: 7,
+        septiembre: 8,
+        octubre: 9,
+        noviembre: 10,
+        diciembre: 11
+      };
+      const cleanFecha = rawDate.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const match = cleanFecha.match(/(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/);
+      if (match) {
+        const dia = parseInt(match[1], 10);
+        const mes = meses[match[2]] ?? 0;
+        const anio = parseInt(match[3], 10);
+        let horas = 11;
+        let minutos = 0;
+        if (rawTime) {
+          const tMatch = rawTime.match(/(\d{1,2}):(\d{2})(?:\s*(am|pm))?/i);
+          if (tMatch) {
+            horas = parseInt(tMatch[1], 10);
+            minutos = parseInt(tMatch[2], 10);
+            if ((tMatch[3] || "").toLowerCase() === "pm" && horas < 12) horas += 12;
+            if ((tMatch[3] || "").toLowerCase() === "am" && horas === 12) horas = 0;
+          }
+        }
+        const startUtc = new Date(Date.UTC(anio, mes, dia, horas + 5, minutos, 0));
+        const endUtc = new Date(Date.UTC(anio, mes, dia, horas + 6, minutos, 0));
+        const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+        startIso = fmt(startUtc);
+        endIso = fmt(endUtc);
+      }
+    }
+  } catch (_) {
+  }
+  const datesParam = startIso && endIso ? `&dates=${startIso}/${endIso}` : "";
+  const titleParam = encodeURIComponent(data.title);
+  const detailsParam = encodeURIComponent(data.description);
+  const locationParam = encodeURIComponent(data.location || "Bogot\xE1, Colombia");
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titleParam}${datesParam}&details=${detailsParam}&location=${locationParam}`;
+}
 function getEmailContent(formData) {
   const { solicitante_nombre, solicitante_perfil, solicitud_id, servicio_solicitado, opcion_negocio, codigo_inmueble, fecha_cita_texto, solicitante_email, hora_cita } = formData;
   const logoUrlParaEmail = "cid:vecyLogo";
@@ -23035,11 +23109,30 @@ function getEmailContent(formData) {
     `;
     return { subject: subject2, html: baseHtml(title2, body2) };
   }
-  const subject = `\u2705 Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
-  const title = `\xA1Hola, ${solicitante_nombre}! Hemos recibido tu solicitud \u{1F3E0}\u2728`;
+  const subject = `\u2705 Solicitud #${solicitud_id} Confirmada | Vecy Agenda`;
+  const title = `\xA1Hola, ${solicitante_nombre}! Tu cita est\xE1 confirmada \u{1F3E0}\u2728`;
+  const calUrl = buildGoogleCalendarUrl({
+    title: `Cita Vecy: ${servicio_solicitado || "Inmueble"} (${codigo_inmueble || "Vecy"})`,
+    description: `Solicitud #${solicitud_id} con Vecy Bienes Ra\xEDces. Inmueble: ${formData.nombre_inmueble || ""}. Tel\xE9fono br\xF3ker: +57 316 6569719.`,
+    location: formData.nombre_inmueble || "Bogot\xE1, Colombia",
+    dateStr: fecha_cita_texto,
+    timeStr: hora_cita
+  });
   let body = `
     <p>Confirmamos la recepci\xF3n de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "tr\xE1mite"}</strong> identificado con el c\xF3digo <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. \u{1F4C5}</p>
-    <p>Nuestro equipo revisar\xE1 la fidelidad de todos los datos y, una vez verificados, te enviaremos un correo a <strong>${solicitante_email}</strong> con la confirmaci\xF3n del agendamiento y la direcci\xF3n completa del inmueble. \xA1Debes estar pendiente! \u{1F4E9}\u{1F440}</p>
+    
+    <div style="background-color: #1a1a1a; border-left: 4px solid #bf953f; padding: 18px 20px; border-radius: 6px; margin: 20px 0;">
+      <p style="color: #bf953f; font-weight: bold; font-size: 15px; margin: 0 0 6px 0;">\u{1F512} POL\xCDTICA DE SEGURIDAD NOTARIAL Y ENTREGA DE DIRECCI\xD3N:</p>
+      <p style="color: #ddd; font-size: 14px; line-height: 1.6; margin: 0;">
+        Tu reserva est\xE1 <strong>100% confirmada</strong>. Por estrictos protocolos de seguridad y prevenci\xF3n notarial del edificio y de los propietarios, la <strong>direcci\xF3n f\xEDsica exacta y nomenclatura</strong> te ser\xE1 despachada a este correo (<strong>${solicitante_email}</strong>) y a tu WhatsApp exactamente <strong>24 horas antes de la visita</strong> (o de forma inmediata si tu cita es para hoy). \xA1Debes estar pendiente! \u{1F4E9}\u{1F440}
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 25px 0;">
+      <a href="${calUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%); color: #000000; font-weight: bold; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(191,149,63,0.3);">
+        \u{1F4C5} A\xF1adir a mi Google Calendar
+      </a>
+    </div>
   `;
   if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
     let acompHtml = `<div class="highlight"><p><strong>\u{1F465} Acompa\xF1antes Autorizados:</strong></p><ul style="margin-top: 10px; margin-bottom: 0; color: #ccc;">`;
@@ -23052,6 +23145,14 @@ function getEmailContent(formData) {
   }
   body += `
     <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
+    
+    <div style="background-color: #141414; border: 1px solid #333; padding: 15px 18px; border-radius: 6px; margin-top: 25px;">
+      <p style="color: #bf953f; font-weight: bold; font-size: 13px; margin: 0 0 6px 0;">\u{1F504} GESTI\xD3N DE TU CITA (REAGENDAMIENTO O CANCELACI\xD3N):</p>
+      <p style="color: #aaa; font-size: 13px; margin: 0;">
+        Si se te presenta alg\xFAn imprevisto o necesitas modificar la fecha u hora, puedes comunicarte directamente con nuestro Br\xF3ker al 
+        <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold;">+57 316 656 9719</a> o responder a este correo.
+      </p>
+    </div>
   `;
   const perfilLower = (solicitante_perfil || "").toLowerCase();
   const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
@@ -29728,6 +29829,7 @@ function buildClientConfirmationMessage(data) {
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
   const hora = data.hora_cita || data.horaCita || "Por coordinar";
   const email = data.solicitante_email || data.solicitanteEmail || "tu correo registrado";
+  const servicio = data.servicio_solicitado || data.servicioSolicitado || "Servicio Inmobiliario";
   let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
   if (!personas || isNaN(personas)) {
     personas = 1;
@@ -29754,22 +29856,31 @@ Si consideras que existe una inconsistencia o deseas presentar documentaci\xF3n 
 
 Vecy Bienes Ra\xEDces \u2014 Seguridad y Transparencia Inmobiliaria. \u{1F91D}`;
   }
+  const modalidad = data.modalidad || "visita_presencial";
+  const esVirtual = modalidad === "llamada" || modalidad === "videollamada";
+  const modalidadLabel = modalidad === "videollamada" ? "\u{1F4BB} Videollamada Virtual (Google Meet / WhatsApp Video)" : modalidad === "llamada" ? "\u{1F4DE} Llamada Telef\xF3nica Personalizada" : "\u{1F4CD} Visita Presencial en el Inmueble";
   return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
 
-Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
+\u2705 *\xA1TU RESERVA HA SIDO CONFIRMADA EXITOSAMENTE!*
+Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}* | ${servicio}
 
 \u{1F3E0} *Inmueble:* ${nombreInmueble}
 \u{1F4CC} *C\xF3digo:* ${codigo}
+\u{1F91D} *Modalidad:* ${modalidadLabel}
 \u{1F4BC} *Operaci\xF3n:* ${negocio}
 \u{1F4C5} *Fecha:* ${fechaTexto}
 \u23F0 *Hora:* ${hora}
-\u{1F465} *Asistentes:* ${personas} persona(s)${lineaCliente}
+${!esVirtual ? `\u{1F465} *Asistentes:* ${personas} persona(s)${lineaCliente}` : `\u{1F4F1} *Atenci\xF3n:* Recibir\xE1s la sesi\xF3n en tu celular ${data.solicitante_celular || data.solicitanteCelular || ""}`}
 
-\u{1F50D} *Estamos verificando tus datos.* En un momento te enviaremos la confirmaci\xF3n oficial y la direcci\xF3n exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). \u{1F4E9}\u{1F4F2}
+${!esVirtual ? `\u{1F50D} *Estamos verificando tus datos.* \u{1F512} *POL\xCDTICA DE SEGURIDAD NOTARIAL Y ENTREGA DE DIRECCI\xD3N:*
+En un momento te enviaremos la confirmaci\xF3n oficial y la direcci\xF3n exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). Por estrictos protocolos de seguridad de los propietarios y la administraci\xF3n, la direcci\xF3n exacta te ser\xE1 despachada exactamente *24 horas antes de la visita* (o de inmediato si tu cita es para hoy mismo). \xA1Debes estar muy pendiente! \u{1F4E9}\u{1F440}` : `\u{1F4BB} *ENLACE / CONTACTO:*
+Puntualmente a la hora acordada, nuestro anfitri\xF3n br\xF3ker se comunicar\xE1 contigo al n\xFAmero registrado o te enviar\xE1 el enlace de conexi\xF3n.`}
 
-Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comun\xEDcate directamente con nosotros al *+57 316 6569719*.
+\u{1F4C5} *GESTI\xD3N DE TU CITA (MODERNA Y FLEXIBLE):*
+\u2022 *Confirmar Asistencia:* Responde a este chat *"Confirmo asistencia #${numSolicitud}"*.
+\u2022 *Reagendar o Cancelar:* Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comun\xEDcate directamente con nosotros al *+57 316 6569719*. (https://wa.me/573166569719)
 
-\xA1Gracias por confiar en *Vecy Bienes Ra\xEDces*! \u{1F91D}\u{1F3E1}`;
+\xA1Gracias por confiar en *Vecy Bienes Ra\xEDces*! \u{1F91D}\u{1F3E1}\u2728`;
 }
 async function sendAgendaWhatsAppNotifications(payload) {
   let brokerSent = false;
@@ -30783,7 +30894,9 @@ async function processAndSaveSolicitud(input) {
     autorizacion: input.autorizacion ?? true,
     agentId: input.agent_id || null,
     hasAlertaAntecedentes: hasAntecedentesFlag,
-    alertaMotivo: antecedentesMotivo || null
+    alertaMotivo: antecedentesMotivo || null,
+    modalidad: input.modalidad || "visita_presencial",
+    direccionInmueble: input.direccion_inmueble || null
   }).returning();
   const newRow = inserted[0];
   let customAgentEmail;
@@ -31139,6 +31252,112 @@ var init_agenda = __esm({
           item: updated[0] || null
         };
       }),
+      cancelar: publicProcedure.input(
+        z2.object({
+          id: z2.number(),
+          motivo: z2.string().optional()
+        })
+      ).mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+        const existing = await db.select().from(solicitudes).where(eq10(solicitudes.id, input.id)).limit(1);
+        if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Solicitud no encontrada" });
+        const updated = await db.update(solicitudes).set({
+          estado: "cancelada",
+          motivoCancelacion: input.motivo || "Cancelada por el usuario",
+          canceladaAt: /* @__PURE__ */ new Date()
+        }).where(eq10(solicitudes.id, input.id)).returning();
+        try {
+          const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+          const { VECY_BROKER_OFFICIAL_PHONE: VECY_BROKER_OFFICIAL_PHONE2 } = await Promise.resolve().then(() => (init_agendaWhatsAppService(), agendaWhatsAppService_exports));
+          const sol = updated[0];
+          const cancelMsg = `\u{1F6D1} *CITA CANCELADA (Solicitud #${sol.solicitudId || sol.id})*
+
+\u{1F464} *Solicitante:* ${sol.solicitanteNombre}
+\u{1F3E2} *Inmueble / Servicio:* ${sol.nombreInmueble || sol.servicioSolicitado}
+\u{1F4C5} *Fecha:* ${sol.fechaCitaTexto} a las ${sol.horaCita}
+\u{1F4DD} *Motivo:* ${input.motivo || "Cancelada por el usuario"}
+
+El horario ha quedado liberado en el sistema. \u{1F91D}`;
+          await janiaMatchBot2.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE2, cancelMsg, {
+            allowDirectMessage: true,
+            skipDelay: true
+          });
+        } catch (err) {
+          console.warn("[AGENDA-CANCEL-NOTIFY]", err?.message);
+        }
+        return { success: true, item: updated[0] };
+      }),
+      reagendar: publicProcedure.input(
+        z2.object({
+          id: z2.number(),
+          nuevaFechaTexto: z2.string().min(1),
+          nuevaHoraTexto: z2.string().min(1),
+          motivo: z2.string().optional()
+        })
+      ).mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+        const existing = await db.select().from(solicitudes).where(eq10(solicitudes.id, input.id)).limit(1);
+        if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Solicitud no encontrada" });
+        const prev = existing[0];
+        const updated = await db.update(solicitudes).set({
+          estado: "reagendada",
+          fechaCitaAnterior: prev.fechaCitaTexto,
+          horaCitaAnterior: prev.horaCita,
+          fechaCitaTexto: input.nuevaFechaTexto,
+          horaCita: input.nuevaHoraTexto,
+          direccionDespachada: false,
+          reagendadaAt: /* @__PURE__ */ new Date()
+        }).where(eq10(solicitudes.id, input.id)).returning();
+        try {
+          const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+          const { VECY_BROKER_OFFICIAL_PHONE: VECY_BROKER_OFFICIAL_PHONE2 } = await Promise.resolve().then(() => (init_agendaWhatsAppService(), agendaWhatsAppService_exports));
+          const sol = updated[0];
+          const reschedMsg = `\u{1F504} *CITA REAGENDADA (Solicitud #${sol.solicitudId || sol.id})*
+
+\u{1F464} *Solicitante:* ${sol.solicitanteNombre}
+\u{1F3E2} *Inmueble / Servicio:* ${sol.nombreInmueble || sol.servicioSolicitado}
+\u{1F4C5} *Nueva Fecha:* ${input.nuevaFechaTexto} a las ${input.nuevaHoraTexto}
+\u23EA *Fecha Anterior:* ${prev.fechaCitaTexto} a las ${prev.horaCita}
+${input.motivo ? `\u{1F4DD} *Motivo:* ${input.motivo}
+` : ""}
+El sistema reprogram\xF3 el despacho autom\xE1tico de direcci\xF3n para 24 horas antes de la nueva fecha. \u{1F91D}`;
+          await janiaMatchBot2.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE2, reschedMsg, {
+            allowDirectMessage: true,
+            skipDelay: true
+          });
+        } catch (err) {
+          console.warn("[AGENDA-RESCHEDULE-NOTIFY]", err?.message);
+        }
+        return { success: true, item: updated[0] };
+      }),
+      confirmarAsistencia: publicProcedure.input(z2.object({ id: z2.number() })).mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+        const updated = await db.update(solicitudes).set({
+          asistenciaConfirmada: true,
+          asistenciaConfirmadaAt: /* @__PURE__ */ new Date()
+        }).where(eq10(solicitudes.id, input.id)).returning();
+        try {
+          const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+          const { VECY_BROKER_OFFICIAL_PHONE: VECY_BROKER_OFFICIAL_PHONE2 } = await Promise.resolve().then(() => (init_agendaWhatsAppService(), agendaWhatsAppService_exports));
+          const sol = updated[0];
+          const confirmMsg = `\u2705 *ASISTENCIA CONFIRMADA (Solicitud #${sol.solicitudId || sol.id})*
+
+\u{1F464} *Cliente:* ${sol.solicitanteNombre}
+\u{1F3E2} *Inmueble:* ${sol.nombreInmueble}
+\u{1F4C5} *Fecha:* ${sol.fechaCitaTexto} a las ${sol.horaCita}
+
+El cliente confirm\xF3 formalmente que asistir\xE1 a la visita programada. \u2728`;
+          await janiaMatchBot2.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE2, confirmMsg, {
+            allowDirectMessage: true,
+            skipDelay: true
+          });
+        } catch (_) {
+        }
+        return { success: true, item: updated[0] };
+      }),
       create: publicProcedure.input(
         z2.object({
           solicitante_nombre: z2.string().min(1),
@@ -31166,7 +31385,9 @@ var init_agenda = __esm({
           autorizacion: z2.boolean().nullable().optional(),
           agent_id: z2.string().nullable().optional(),
           alerta_antecedentes: z2.boolean().nullable().optional(),
-          alerta_motivo: z2.string().nullable().optional()
+          alerta_motivo: z2.string().nullable().optional(),
+          modalidad: z2.string().nullable().optional(),
+          direccion_inmueble: z2.string().nullable().optional()
         })
       ).mutation(async ({ input }) => {
         return await processAndSaveSolicitud(input);
@@ -39752,7 +39973,8 @@ async function checkAndDispatch24hAppointmentReminders() {
           interesado_nombre: sol.interesadoNombre || "",
           interesado_documento: sol.interesadoDocumento || ""
         };
-        const result = await sendAppointmentAddressNotification2(payload);
+        const customAddr = sol.direccionInmueble || void 0;
+        const result = await sendAppointmentAddressNotification2(payload, customAddr);
         console.log(`[AGENDA-AUTO-24H] \u2705 Despacho ejecutado para #${sol.solicitudId || sol.id}:`, result);
         await db.update(solicitudes).set({
           direccionDespachada: true,

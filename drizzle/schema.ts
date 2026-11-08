@@ -418,6 +418,16 @@ export const solicitudes = pgTable("solicitudes", {
   alertaMotivo: text("alerta_motivo"),
   direccionDespachada: boolean("direccion_despachada").default(false),
   direccionDespachadaAt: timestamp("direccion_despachada_at", { withTimezone: true }),
+  estado: text("estado").default("confirmada"),
+  motivoCancelacion: text("motivo_cancelacion"),
+  canceladaAt: timestamp("cancelada_at", { withTimezone: true }),
+  reagendadaAt: timestamp("reagendada_at", { withTimezone: true }),
+  fechaCitaAnterior: text("fecha_cita_anterior"),
+  horaCitaAnterior: text("hora_cita_anterior"),
+  asistenciaConfirmada: boolean("asistencia_confirmada").default(false),
+  asistenciaConfirmadaAt: timestamp("asistencia_confirmada_at", { withTimezone: true }),
+  modalidad: text("modalidad").default("visita_presencial"),
+  direccionInmueble: text("direccion_inmueble"),
 });
 
 export const securityFlaggedIdentities = pgTable("security_flagged_identities", {

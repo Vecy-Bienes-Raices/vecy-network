@@ -1415,6 +1415,137 @@ export const agendaRouter = router({
       };
     }),
 
+  cancelar: publicProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        motivo: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      const existing = await db.select().from(solicitudes).where(eq(solicitudes.id, input.id)).limit(1);
+      if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitud no encontrada" });
+
+      const updated = await db
+        .update(solicitudes)
+        .set({
+          estado: "cancelada",
+          motivoCancelacion: input.motivo || "Cancelada por el usuario",
+          canceladaAt: new Date(),
+        })
+        .where(eq(solicitudes.id, input.id))
+        .returning();
+
+      try {
+        const { janiaMatchBot } = await import("../_core/whatsapp-match");
+        const { VECY_BROKER_OFFICIAL_PHONE } = await import("../_core/agendaWhatsAppService");
+        const sol = updated[0];
+        const cancelMsg = `🛑 *CITA CANCELADA (Solicitud #${sol.solicitudId || sol.id})*\n\n` +
+          `👤 *Solicitante:* ${sol.solicitanteNombre}\n` +
+          `🏢 *Inmueble / Servicio:* ${sol.nombreInmueble || sol.servicioSolicitado}\n` +
+          `📅 *Fecha:* ${sol.fechaCitaTexto} a las ${sol.horaCita}\n` +
+          `📝 *Motivo:* ${input.motivo || "Cancelada por el usuario"}\n\n` +
+          `El horario ha quedado liberado en el sistema. 🤝`;
+        await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, cancelMsg, {
+          allowDirectMessage: true,
+          skipDelay: true,
+        });
+      } catch (err: any) {
+        console.warn("[AGENDA-CANCEL-NOTIFY]", err?.message);
+      }
+
+      return { success: true, item: updated[0] };
+    }),
+
+  reagendar: publicProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        nuevaFechaTexto: z.string().min(1),
+        nuevaHoraTexto: z.string().min(1),
+        motivo: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      const existing = await db.select().from(solicitudes).where(eq(solicitudes.id, input.id)).limit(1);
+      if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitud no encontrada" });
+
+      const prev = existing[0];
+      const updated = await db
+        .update(solicitudes)
+        .set({
+          estado: "reagendada",
+          fechaCitaAnterior: prev.fechaCitaTexto,
+          horaCitaAnterior: prev.horaCita,
+          fechaCitaTexto: input.nuevaFechaTexto,
+          horaCita: input.nuevaHoraTexto,
+          direccionDespachada: false,
+          reagendadaAt: new Date(),
+        })
+        .where(eq(solicitudes.id, input.id))
+        .returning();
+
+      try {
+        const { janiaMatchBot } = await import("../_core/whatsapp-match");
+        const { VECY_BROKER_OFFICIAL_PHONE } = await import("../_core/agendaWhatsAppService");
+        const sol = updated[0];
+        const reschedMsg = `🔄 *CITA REAGENDADA (Solicitud #${sol.solicitudId || sol.id})*\n\n` +
+          `👤 *Solicitante:* ${sol.solicitanteNombre}\n` +
+          `🏢 *Inmueble / Servicio:* ${sol.nombreInmueble || sol.servicioSolicitado}\n` +
+          `📅 *Nueva Fecha:* ${input.nuevaFechaTexto} a las ${input.nuevaHoraTexto}\n` +
+          `⏪ *Fecha Anterior:* ${prev.fechaCitaTexto} a las ${prev.horaCita}\n` +
+          `${input.motivo ? `📝 *Motivo:* ${input.motivo}\n` : ""}\n` +
+          `El sistema reprogramó el despacho automático de dirección para 24 horas antes de la nueva fecha. 🤝`;
+        await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, reschedMsg, {
+          allowDirectMessage: true,
+          skipDelay: true,
+        });
+      } catch (err: any) {
+        console.warn("[AGENDA-RESCHEDULE-NOTIFY]", err?.message);
+      }
+
+      return { success: true, item: updated[0] };
+    }),
+
+  confirmarAsistencia: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      const updated = await db
+        .update(solicitudes)
+        .set({
+          asistenciaConfirmada: true,
+          asistenciaConfirmadaAt: new Date(),
+        })
+        .where(eq(solicitudes.id, input.id))
+        .returning();
+
+      try {
+        const { janiaMatchBot } = await import("../_core/whatsapp-match");
+        const { VECY_BROKER_OFFICIAL_PHONE } = await import("../_core/agendaWhatsAppService");
+        const sol = updated[0];
+        const confirmMsg = `✅ *ASISTENCIA CONFIRMADA (Solicitud #${sol.solicitudId || sol.id})*\n\n` +
+          `👤 *Cliente:* ${sol.solicitanteNombre}\n` +
+          `🏢 *Inmueble:* ${sol.nombreInmueble}\n` +
+          `📅 *Fecha:* ${sol.fechaCitaTexto} a las ${sol.horaCita}\n\n` +
+          `El cliente confirmó formalmente que asistirá a la visita programada. ✨`;
+        await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, confirmMsg, {
+          allowDirectMessage: true,
+          skipDelay: true,
+        });
+      } catch (_) {}
+
+      return { success: true, item: updated[0] };
+    }),
+
   create: publicProcedure
     .input(
       z.object({
@@ -1444,6 +1575,8 @@ export const agendaRouter = router({
         agent_id: z.string().nullable().optional(),
         alerta_antecedentes: z.boolean().nullable().optional(),
         alerta_motivo: z.string().nullable().optional(),
+        modalidad: z.string().nullable().optional(),
+        direccion_inmueble: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -1629,6 +1762,8 @@ export async function processAndSaveSolicitud(input: any) {
       agentId: input.agent_id || null,
       hasAlertaAntecedentes: hasAntecedentesFlag,
       alertaMotivo: antecedentesMotivo || null,
+      modalidad: input.modalidad || 'visita_presencial',
+      direccionInmueble: input.direccion_inmueble || null,
     })
     .returning();
 

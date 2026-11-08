@@ -65,7 +65,7 @@ function AuthorizationCheckbox({ formData, handleChange, isAgentView, error }) {
   );
 }
 
-function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo, onSuccess }) {
+function AgendaForm({ propertyName, propertyCode, propertyAddress, isLocked, agentId, customLogo, onSuccess }) {
   const [, navigate] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -210,8 +210,10 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       solicitante_email: '', solicitante_celular: '',
       solicitante_tipo_documento: '', solicitante_numero_documento: '', solicitante_representante_legal: '',
       servicio_solicitado: '', opcion_negocio: '',
+      modalidad: 'visita_presencial',
       nombre_inmueble: sp.get('nombre') || propertyName || '',
       codigo_inmueble: sp.get('codigo') || propertyCode || '',
+      direccion_inmueble: sp.get('direccion') || propertyAddress || '',
       fecha_cita_bogota: null, cantidad_personas: '',
       acompanantes: [],
       tipo_cliente: 'Persona', interesado_nombre: '', interesado_tipo_documento: '', interesado_documento: '',
@@ -1051,7 +1053,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     setFormData(prev => ({ ...prev, interesado_documento: base ? `${base}-${dv}` : '' }));
   };
 
-  const showVisitDetails = formData.servicio_solicitado === 'Visitar inmueble';
+  const esPresencial = !formData.modalidad || formData.modalidad === 'visita_presencial';
+  const showVisitDetails = formData.servicio_solicitado === 'Visitar inmueble' && esPresencial;
   const showBusinessOption = formData.servicio_solicitado === 'Visitar inmueble' || formData.servicio_solicitado === 'Avalúo comercial';
   const showAgentSections = formData.solicitante_perfil === 'Agente' || formData.solicitante_perfil === 'Agencia / Inmobiliaria' || formData.solicitante_perfil === 'Bróker / Empresa';
   const tipoPersonaOptions = [{ value: 'Persona Natural', label: 'Persona Natural' }, { value: 'Persona Jurídica', label: 'Persona Jurídica' }];
@@ -1064,7 +1067,23 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     ? [{ value: 'Cédula de ciudadanía', label: 'Cédula de ciudadanía' }, { value: 'Cédula de extranjería', label: 'Cédula de extranjería' }, { value: 'Pasaporte', label: 'Pasaporte' }] 
     : [{ value: 'NIT', label: 'NIT' }, { value: 'RUT', label: 'RUT' }, { value: 'Registro Mercantil', label: 'Registro Mercantil' }];
 
-  const servicioOptions = [{ value: 'Visitar inmueble', label: 'Visitar inmueble' }, { value: 'Avalúo comercial', label: 'Avalúo comercial' }, { value: 'Préstamo sobre inmueble', label: 'Préstamo sobre inmueble' }, { value: 'Redacción de contrato', label: 'Redacción de contrato' }, { value: 'Marketing Digital con IA', label: 'Marketing Digital con IA' }, { value: 'Curso de IA', label: 'Curso de IA' }];
+  const modalidadOptions = [
+    { value: 'visita_presencial', label: '📍 Visita Presencial en el Inmueble' },
+    { value: 'llamada', label: '📞 Llamada Telefónica Personalizada' },
+    { value: 'videollamada', label: '💻 Videollamada Virtual (Meet / WhatsApp Video)' },
+  ];
+
+  const servicioOptions = [
+    { value: 'Visitar inmueble', label: 'Visitar inmueble' },
+    { value: 'Asesoría Jurídica Inmobiliaria Personalizada', label: 'Asesoría Jurídica Inmobiliaria Personalizada' },
+    { value: 'Consultoría Tributaria y Notarial DIAN', label: 'Consultoría Tributaria y Notarial DIAN' },
+    { value: 'Estudio de Títulos y Viabilidad Inmobiliaria', label: 'Estudio de Títulos y Viabilidad Inmobiliaria' },
+    { value: 'Avalúo comercial', label: 'Avalúo comercial' },
+    { value: 'Redacción de contrato', label: 'Redacción de contrato' },
+    { value: 'Préstamo sobre inmueble', label: 'Préstamo sobre inmueble' },
+    { value: 'Marketing Digital con IA', label: 'Marketing Digital con IA' },
+    { value: 'Curso de IA', label: 'Curso de IA' },
+  ];
   const negocioOptions = [{ value: 'Venta', label: 'Venta' }, { value: 'Arriendo', label: 'Arriendo' }];
   const tipoClienteOptions = [{ value: 'Persona', label: 'Persona' }, { value: 'Empresa', label: 'Empresa' }];
   const tipoDocumentoClienteOptions = formData.tipo_cliente === 'Persona' ? [{ value: 'Cédula de ciudadanía', label: 'Cédula de ciudadanía' }, { value: 'Cédula de extranjería', label: 'Cédula de extranjería' }, { value: 'Pasaporte', label: 'Pasaporte' }] : [{ value: 'NIT', label: 'NIT' }, { value: 'RUT', label: 'RUT' }, { value: 'Registro Mercantil', label: 'Registro Mercantil' }];
@@ -1379,7 +1398,18 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
 
               <fieldset className="border-t-2 border-soft-gold pt-6 mb-10"><legend className="text-xl font-semibold section-legend-gold px-2 -ml-2">2. Detalles de la Solicitud</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <CustomSelect label="¿Qué servicio necesitas?" name="servicio_solicitado" value={formData.servicio_solicitado} onChange={handleChange} options={servicioOptions} placeholder="Selecciona un servicio..." error={!!formErrors.servicio_solicitado} />
+                <CustomSelect label="Modalidad de la Cita" name="modalidad" value={formData.modalidad} onChange={handleChange} options={modalidadOptions} placeholder="Selecciona modalidad..." />
                 {showBusinessOption && (<CustomSelect label="Opción de Negocio" name="opcion_negocio" value={formData.opcion_negocio} onChange={handleChange} options={negocioOptions} placeholder="Selecciona..." error={!!formErrors.opcion_negocio} />)}
+                
+                {!esPresencial && (
+                  <div className="md:col-span-2 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs sm:text-sm flex items-center gap-3">
+                    <span className="text-2xl">{formData.modalidad === 'videollamada' ? '💻' : '📞'}</span>
+                    <div>
+                      <p className="font-semibold text-white">Sesión Remota Personalizada ({formData.modalidad === 'videollamada' ? 'Videollamada' : 'Llamada Telefónica'})</p>
+                      <p className="text-gray-300 text-xs mt-0.5">Nuestro anfitrión bróker se comunicará contigo puntualmente a la fecha y hora seleccionadas en el número registrado o te enviará el enlace de conexión.</p>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Campos de Inmueble — readOnly cuando vienen de Vecy Network (URL o props) */}
                 <div className="relative">

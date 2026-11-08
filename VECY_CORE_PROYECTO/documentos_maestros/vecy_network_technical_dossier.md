@@ -9100,6 +9100,40 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.05 (2026-11-08) — Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar 1-Clic y Confirmación de Asistencia (Doctrina Eduardo A. Rivera)
+- **Problema / Requerimiento Identificado**:
+  1. *Falta de Modalidades Digitales de Cancelación y Reagendamiento:* Vecy Agendas Pro requería procedimientos automatizados para que los usuarios puedan cancelar, reagendar o confirmar su asistencia sin fricción.
+  2. *Integración con Google Calendar sin Fricción:* Necesidad de permitir que los clientes sincronicen la cita con Google Calendar de 1 solo clic sin solicitar contraseñas ni permisos pesados de OAuth.
+  3. *Tranquilidad del Usuario y Garantía de Despacho 24h:* Clientes que agendan con días de anticipación (como Alfredo Anaya) necesitaban certeza total de que su reserva está 100% confirmada desde el primer segundo, y que la dirección física exacta les llegará 24 horas antes por protocolos de seguridad de propietarios y agentes.
+  4. *Expansión Multimodal:* Habilitar la agenda no solo para visitas presenciales a inmuebles, sino para llamadas y videollamadas a servicios y asesorías personalizadas de Vecy (Asesoría Jurídica Inmobiliaria, Consultoría Tributaria DIAN, Estudio de Títulos).
+  5. *Ubicación de Configuración de la Dirección Física:* Brindar claridad de las 4 opciones donde se ingresa la dirección del inmueble.
+- **Solución Quirúrgica Implementada**:
+  1. `drizzle/schema.ts` y PostgreSQL en Contabo VPS:
+     - Añadidas las columnas `estado`, `motivo_cancelacion`, `cancelada_at`, `reagendada_at`, `fecha_cita_anterior`, `hora_cita_anterior`, `asistencia_confirmada`, `asistencia_confirmada_at`, `modalidad`, `direccion_inmueble` a la tabla `solicitudes`.
+  2. `server/routers/agenda.ts`:
+     - Implementados procedimientos tRPC públicos `cancelar`, `reagendar` y `confirmarAsistencia`, con despacho de alertas automáticas al WhatsApp del Bróker (+57 316 656 9719).
+     - Incorporados `modalidad` y `direccion_inmueble` en el pipeline de inserción de `processAndSaveSolicitud`.
+  3. `server/_core/emailContractService.ts`:
+     - Creado `buildGoogleCalendarUrl()` que genera el enlace universal directo `https://calendar.google.com/calendar/render?action=TEMPLATE` con título, horarios exactos en zona horaria Bogotá UTC-5, ubicación y descripción.
+     - Actualizado el contenido de los correos para incluir botón de Google Calendar, aviso de entrega de dirección física 24h antes e instrucciones de gestión de cita.
+  4. `client/src/components/agenda-pro/`:
+     - `GraciasScreen.jsx`: Añadido banner dorado explicativo de entrega de dirección física 24h antes, botón interactivo para agregar a Google Calendar con 1 clic y enlace directo al WhatsApp del Bróker.
+     - `AgendaForm.jsx`: Incorporado selector de modalidad (`visita_presencial`, `llamada`, `videollamada`) y nuevas opciones de servicios (`Asesoría Jurídica Inmobiliaria Personalizada`, `Consultoría Tributaria y Notarial DIAN`, `Estudio de Títulos y Viabilidad Inmobiliaria`).
+     - `validations.js`: El número de asistentes solo se exige cuando se trata de una visita presencial a un inmueble.
+  5. `client/src/pages/Agenda.tsx`:
+     - Propagada la dirección física del inmueble a través de `propertyAddress` hacia `AgendaForm`.
+  6. `server/_core/agendaWhatsAppService.ts`:
+     - Mensaje de confirmación adaptativo a la modalidad elegida (presencial, llamada, videollamada), integrando el protocolo de seguridad de entrega de dirección física 24h antes y los comandos de confirmar asistencia o reagendar/cancelar.
+  7. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-vecy-agenda-pro-multimodal-cancelacion-reagendamiento-google-calendar-v34-05`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 191 en `regression.test.ts` con 6 pruebas automatizadas (624/624 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 47.6s.
+  - Versión: `v34.05` (`34.05.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.04 (2026-11-08) — Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Falta de Despacho Automático a las 11:00 AM para Alfredo Anaya (Solicitud #1147):* Cita confirmada para el lunes 9 de noviembre a las 11:00 AM en La Carolina (`ID-LACAR-01BOG`). A las 11:00 AM de hoy domingo (24h antes), nada se envió porque el script `send_alfredo_address.ts` creado en v34.01 no estaba registrado en el cron del servidor. Alfredo llamó a las 13:00 (1:00 PM) para consultar por su dirección.

@@ -162,6 +162,7 @@ export default function Agenda() {
           <AgendaForm 
             propertyName={propName} 
             propertyCode={propCode} 
+            propertyAddress={property?.address || search.get('direccion') || ''}
             isLocked={!!property || !!search.get('nombre')} 
             agentId={agent?.id}
             customLogo={agent?.customLogoUrl}

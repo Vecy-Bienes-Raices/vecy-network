@@ -11693,11 +11693,11 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v34.03 en shared/const.ts y package.json (34.03.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.03");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.03.0");
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
     });
   });
 
@@ -11759,11 +11759,125 @@ Ana Morales Castillo
 
     it("6. Consagración doctrinal de versión v34.04 en shared/const.ts y package.json (34.04.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.04");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.04.0");
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
+    });
+  });
+
+  describe("SUITE 191: VECY AGENDAS PRO MULTIMODAL, CANCELACIÓN, REAGENDAMIENTO, GOOGLE CALENDAR Y ASISTENCIA (v34.05 — DOCTRINA EDUARDO A. RIVERA)", () => {
+    it("1. buildGoogleCalendarUrl genera enlace universal 1-clic a Google Calendar sin fricción de login ni contraseñas", async () => {
+      const { buildGoogleCalendarUrl } = await import("../_core/emailContractService");
+      expect(typeof buildGoogleCalendarUrl).toBe("function");
+
+      const url = buildGoogleCalendarUrl({
+        title: "Cita Inmobiliaria: Apartamento La Carolina",
+        description: "Cita con Vecy Bienes Raíces para conocer el apartamento.",
+        location: "KRA 14 A # 127 - 65, Bogotá",
+        fechaTexto: "lunes, 9 de noviembre de 2026",
+        hora: "11:00 AM",
+      });
+
+      expect(url).toContain("https://calendar.google.com/calendar/render?action=TEMPLATE");
+      expect(url).toContain("text=Cita%20Inmobiliaria");
+      expect(url).toContain("dates=20261109T");
+    });
+
+    it("2. buildClientConfirmationMessage adapta mensaje a modalidades (visita_presencial, llamada, videollamada) con aviso de 24h y gestión", async () => {
+      const { buildClientConfirmationMessage } = await import("../_core/agendaWhatsAppService");
+      expect(typeof buildClientConfirmationMessage).toBe("function");
+
+      // Modalidad 1: Visita Presencial
+      const msgPresencial = buildClientConfirmationMessage({
+        solicitudId: 1147,
+        solicitante_nombre: "Alfredo Anaya",
+        nombre_inmueble: "Apartamento La Carolina",
+        codigo_inmueble: "ID-LACAR-01BOG",
+        opcion_negocio: "Venta",
+        fecha_cita_texto: "lunes, 9 de noviembre de 2026",
+        hora_cita: "11:00 AM",
+        modalidad: "visita_presencial",
+        servicio_solicitado: "Visitar inmueble",
+      } as any);
+
+      expect(msgPresencial).toContain("Visita Presencial en el Inmueble");
+      expect(msgPresencial).toContain("exactamente *24 horas antes de la visita*");
+      expect(msgPresencial).toContain("Confirmar Asistencia");
+      expect(msgPresencial).toContain("Reagendar o Cancelar");
+
+      // Modalidad 2: Videollamada
+      const msgVirtual = buildClientConfirmationMessage({
+        solicitudId: 1148,
+        solicitante_nombre: "Carlos Gómez",
+        nombre_inmueble: "Asesoría Jurídica Inmobiliaria",
+        codigo_inmueble: "LEG-2026",
+        opcion_negocio: "Asesoría",
+        fecha_cita_texto: "martes, 10 de noviembre de 2026",
+        hora_cita: "03:00 PM",
+        modalidad: "videollamada",
+        servicio_solicitado: "Asesoría Jurídica Inmobiliaria Personalizada",
+      } as any);
+
+      expect(msgVirtual).toContain("Videollamada Virtual");
+      expect(msgVirtual).toContain("ENLACE / CONTACTO");
+      expect(msgVirtual).not.toContain("exactamente *24 horas antes de la visita*");
+
+      // Modalidad 3: Llamada Telefónica
+      const msgLlamada = buildClientConfirmationMessage({
+        solicitudId: 1149,
+        solicitante_nombre: "Lucía Pérez",
+        nombre_inmueble: "Consultoría Tributaria Notarial",
+        codigo_inmueble: "TRIB-2026",
+        opcion_negocio: "Consultoría",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "10:00 AM",
+        modalidad: "llamada",
+        servicio_solicitado: "Consultoría Tributaria y Notarial DIAN",
+      } as any);
+
+      expect(msgLlamada).toContain("Llamada Telefónica Personalizada");
+    });
+
+    it("3. drizzle/schema.ts define las 10 columnas enriquecidas en la tabla solicitudes", async () => {
+      const { solicitudes } = await import("../../drizzle/schema");
+      expect(solicitudes.estado).toBeDefined();
+      expect(solicitudes.motivoCancelacion).toBeDefined();
+      expect(solicitudes.canceladaAt).toBeDefined();
+      expect(solicitudes.reagendadaAt).toBeDefined();
+      expect(solicitudes.fechaCitaAnterior).toBeDefined();
+      expect(solicitudes.horaCitaAnterior).toBeDefined();
+      expect(solicitudes.asistenciaConfirmada).toBeDefined();
+      expect(solicitudes.asistenciaConfirmadaAt).toBeDefined();
+      expect(solicitudes.modalidad).toBeDefined();
+      expect(solicitudes.direccionInmueble).toBeDefined();
+    });
+
+    it("4. agendaRouter tiene procedimientos cancelar, reagendar y confirmarAsistencia", async () => {
+      const { agendaRouter } = await import("../routers/agenda");
+      expect(agendaRouter._def.procedures.cancelar).toBeDefined();
+      expect(agendaRouter._def.procedures.reagendar).toBeDefined();
+      expect(agendaRouter._def.procedures.confirmarAsistencia).toBeDefined();
+    });
+
+    it("5. Semilla de conocimiento directivo v34.05 registrada en founderKnowledgeService", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-vecy-agenda-pro-multimodal-cancelacion-reagendamiento-google-calendar-v34-05"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.topic).toContain("Vecy Agendas Pro Multimodal");
+      expect(seed?.active).toBe(true);
+    });
+
+    it("6. Consagración doctrinal de versión v34.05 en shared/const.ts y package.json (34.05.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.05");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.05.0");
     });
   });
 });

@@ -147,8 +147,13 @@ export const validateForm = (data) => {
     requiredFields.solicitante_representante_legal = 'Nombre del Representante Legal';
   }
 
-  if (data.servicio_solicitado === 'Visitar inmueble') {
-    requiredFields.fecha_cita_bogota = 'Fecha y Hora de la Visita';
+  const esPresencial = !data.modalidad || data.modalidad === 'visita_presencial';
+
+  if (data.servicio_solicitado) {
+    requiredFields.fecha_cita_bogota = 'Fecha y Hora de la Cita';
+  }
+
+  if (data.servicio_solicitado === 'Visitar inmueble' && esPresencial) {
     requiredFields.cantidad_personas = 'Cantidad de Personas';
   }
 
@@ -213,7 +218,7 @@ export const validateForm = (data) => {
   }
 
   if (!data.autorizacion) { errors.autorizacion = 'Debes aceptar la cláusula de confidencialidad para continuar.'; }
-  if (data.servicio_solicitado === 'Visitar inmueble' && !data.cantidad_personas) { errors.cantidad_personas = 'Selecciona una cantidad válida de personas entre 1 y 6.'; }
+  if (data.servicio_solicitado === 'Visitar inmueble' && esPresencial && !data.cantidad_personas) { errors.cantidad_personas = 'Selecciona una cantidad válida de personas entre 1 y 6.'; }
 
   // Validar campos de acompañantes
   if (Array.isArray(data.acompanantes)) {

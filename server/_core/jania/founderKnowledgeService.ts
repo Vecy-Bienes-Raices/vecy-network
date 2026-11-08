@@ -662,6 +662,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Recuerdadas? Habíamos quedado de enviarle la confirmación y dirección a Alfredo con 24 horas de antelación a la visita a su Whatsapp y Correo le debiá haber llegado hoy a las 11:00 a.m.. Revisa si JanIA si lo hizo correctamente. Gracias.",
     createdAt: "2026-11-08T13:10:00.000Z",
     active: true
+  },
+  {
+    id: "seed-vecy-agenda-pro-multimodal-cancelacion-reagendamiento-google-calendar-v34-05",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar y Confirmación de Asistencia (Doctrina Eduardo A. Rivera v34.05)",
+    directive:
+      "Nuestras Vecy Agendas Pro operan como la suite de agendamiento inmobiliario y legal más avanzada de Colombia. Soportan tres modalidades de atención: 1) Visita Presencial en el Inmueble (con reserva 100% inmediata, cotejo de seguridad y despacho de dirección física exacta 24h antes); 2) Llamada Telefónica Personalizada; 3) Videollamada Virtual (Google Meet / WhatsApp Video) para servicios de asesoría jurídica inmobiliaria, consultoría tributaria notarial DIAN y estudio de títulos. Incluyen modalidades activas de cancelación y reagendamiento con aviso inmediato al Bróker (+57 316 656 9719), botón de 1-clic para añadir la cita a Google Calendar sin fricción ni contraseñas, y workflow de confirmación de asistencia del usuario, garantizando transparencia y cero incertidumbre.",
+    rawText:
+      "Para seguir potencializando esto podrías agregar los siguientes valores o modalidades a nuestras Vecy Agendas Pro: 1. Cancelación y reagendamiento como lo tienen casi todas las agendas digitales modernas. 2. Conexión con el calendario de google para los clientes. 3. Confirmar asistencia y avisar que si agendaron con mucha anticipación les llega la dirección 24 horas antes pero la reserva es inmediata. 4. Que no solamente sirva para visitas a inmuebles sino para llamadas o videollamadas a servicios y asesorías personalizadas.",
+    createdAt: "2026-11-08T14:15:00.000Z",
+    active: true
   }
 ];
 

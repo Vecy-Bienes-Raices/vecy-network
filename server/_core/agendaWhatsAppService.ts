@@ -211,6 +211,7 @@ export function buildClientConfirmationMessage(data: AgendaWhatsAppPayload): str
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
   const hora = data.hora_cita || data.horaCita || "Por coordinar";
   const email = data.solicitante_email || data.solicitanteEmail || "tu correo registrado";
+  const servicio = data.servicio_solicitado || data.servicioSolicitado || "Servicio Inmobiliario";
   
   let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
   if (!personas || isNaN(personas)) {
@@ -245,23 +246,37 @@ Vecy Bienes Raíces — Seguridad y Transparencia Inmobiliaria. 🤝`
     );
   }
 
+  const modalidad = (data as any).modalidad || "visita_presencial";
+  const esVirtual = modalidad === "llamada" || modalidad === "videollamada";
+  const modalidadLabel = modalidad === "videollamada"
+    ? "💻 Videollamada Virtual (Google Meet / WhatsApp Video)"
+    : modalidad === "llamada"
+    ? "📞 Llamada Telefónica Personalizada"
+    : "📍 Visita Presencial en el Inmueble";
+
   return (
 `¡Hola, ${nombre}! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*. 🏢✨
 
-Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
+✅ *¡TU RESERVA HA SIDO CONFIRMADA EXITOSAMENTE!*
+Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}* | ${servicio}
 
 🏠 *Inmueble:* ${nombreInmueble}
 📌 *Código:* ${codigo}
+🤝 *Modalidad:* ${modalidadLabel}
 💼 *Operación:* ${negocio}
 📅 *Fecha:* ${fechaTexto}
 ⏰ *Hora:* ${hora}
-👥 *Asistentes:* ${personas} persona(s)${lineaCliente}
+${!esVirtual ? `👥 *Asistentes:* ${personas} persona(s)${lineaCliente}` : `📱 *Atención:* Recibirás la sesión en tu celular ${data.solicitante_celular || data.solicitanteCelular || ""}`}
 
-🔍 *Estamos verificando tus datos.* En un momento te enviaremos la confirmación oficial y la dirección exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). 📩📲
+${!esVirtual ? `🔍 *Estamos verificando tus datos.* 🔒 *POLÍTICA DE SEGURIDAD NOTARIAL Y ENTREGA DE DIRECCIÓN:*
+En un momento te enviaremos la confirmación oficial y la dirección exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). Por estrictos protocolos de seguridad de los propietarios y la administración, la dirección exacta te será despachada exactamente *24 horas antes de la visita* (o de inmediato si tu cita es para hoy mismo). ¡Debes estar muy pendiente! 📩👀` : `💻 *ENLACE / CONTACTO:*
+Puntualmente a la hora acordada, nuestro anfitrión bróker se comunicará contigo al número registrado o te enviará el enlace de conexión.`}
 
-Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comunícate directamente con nosotros al *+57 316 6569719*.
+📅 *GESTIÓN DE TU CITA (MODERNA Y FLEXIBLE):*
+• *Confirmar Asistencia:* Responde a este chat *"Confirmo asistencia #${numSolicitud}"*.
+• *Reagendar o Cancelar:* Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comunícate directamente con nosotros al *+57 316 6569719*. (https://wa.me/573166569719)
 
-¡Gracias por confiar en *Vecy Bienes Raíces*! 🤝🏡`
+¡Gracias por confiar en *Vecy Bienes Raíces*! 🤝🏡✨`
   );
 }
 

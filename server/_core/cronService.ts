@@ -2736,7 +2736,8 @@ export async function checkAndDispatch24hAppointmentReminders(): Promise<{ dispa
           interesado_documento: sol.interesadoDocumento || "",
         };
 
-        const result = await sendAppointmentAddressNotification(payload);
+        const customAddr = sol.direccionInmueble || undefined;
+        const result = await sendAppointmentAddressNotification(payload, customAddr);
         console.log(`[AGENDA-AUTO-24H] ✅ Despacho ejecutado para #${sol.solicitudId || sol.id}:`, result);
 
         await db

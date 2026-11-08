@@ -1,22 +1,22 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.04.0 — 2026-11-08)
-- **JanIA Server:** `v34.04` (`34.04.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera):**
-  1. **Auditoría Forense del Caso Alfredo Anaya (Solicitud #1147 — ID-LACAR-01BOG):**
-     - Cita programada para el lunes 9 de noviembre de 2026 a las 11:00 AM.
-     - A las 11:00 AM de hoy domingo 8 de noviembre (24 horas antes), el despacho programado no se ejecutó de forma automática porque en la sesión v34.01 se creó el script `send_alfredo_address.ts` como archivo estático suelto sin ser registrado en el cron del servidor (`cronService.ts`) ni contar con el canal de envío por correo electrónico. Alfredo llamó a las 13:00 (1:00 PM) consultando por su dirección.
-  2. **Ejecución Inmediata de Emergencia:**
-     - Despachado inmediatamente el mensaje oficial de WhatsApp a Alfredo Anaya (`+57 310 8149457`) con copia espejo al WhatsApp del Bróker (+57 316 656 9719).
-     - Enviado inmediatamente el correo oficial de lujo en HTML con la dirección exacta (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`) a sus cuentas `invervalores@hotmail.com` e `inmovalores81@gmail.com` con copia a `vecybienesraices@gmail.com`.
-  3. **Solución Arquitectural Permanente y Automatizada:**
-     - En `drizzle/schema.ts` y PostgreSQL: añadidas columnas `direccion_despachada` y `direccion_despachada_at` a la tabla `solicitudes`.
-     - En `emailContractService.ts`: creado `sendAppointmentAddressEmail` con diseño Gold Edition oficial de Vecy.
-     - En `agendaWhatsAppService.ts`: `sendAppointmentAddressNotification` ahora orquesta tanto WhatsApp (con copia espejo al Bróker) como Correo Electrónico concurrentemente.
-     - En `cronService.ts`: creado `parseAppointmentDateTime` y `checkAndDispatch24hAppointmentReminders`, programado en el cron para ejecutarse automáticamente cada 15 minutos (`*/15 * * * *`) en hora Bogotá.
-     - En `server/_core/index.ts`: añadido endpoint administrativo `/api/admin/dispatch-appointment-address`.
-  4. **Gobernanza y Suite de Regresión 190:**
-     - Semilla de conocimiento directivo `seed-despacho-automatico-24h-citas-whatsapp-correo-vecy-v34-04` en `founderKnowledgeService.ts`.
-     - Suite 190 con 6 pruebas automatizadas pasando al 100% (618/618 tests totales en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 190 `vitest` (100% passing) | Build `npm run build` limpio en 24.2s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.05.0 — 2026-11-08)
+- **JanIA Server:** `v34.05` (`34.05.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Vecy Agendas Pro Multimodal: Presencial, Llamada y Videollamada, Cancelación, Reagendamiento, Google Calendar 1-Clic y Confirmación de Asistencia (Doctrina Eduardo A. Rivera):**
+  1. **Modalidades de Cancelación y Reagendamiento Digital Flexible:**
+     - En `drizzle/schema.ts` y PostgreSQL: columnas `estado`, `motivo_cancelacion`, `cancelada_at`, `reagendada_at`, `fecha_cita_anterior`, `hora_cita_anterior` en `solicitudes`.
+     - En `server/routers/agenda.ts`: procedimientos tRPC públicos `cancelar`, `reagendar` y `confirmarAsistencia`, despachando alertas inmediatas al WhatsApp del Bróker (+57 316 656 9719).
+  2. **Integración con Google Calendar sin Fricción (1-Clic Zero-Auth):**
+     - En `server/_core/emailContractService.ts`: creado `buildGoogleCalendarUrl()` que genera el enlace universal directo `https://calendar.google.com/calendar/render?action=TEMPLATE` con título, horario (UTC-5 Bogotá), ubicación y detalles, sin pedir contraseñas ni autorizaciones OAuth.
+     - En `GraciasScreen.jsx`: botón dorado con ícono oficial para añadir la cita a Google Calendar con 1 solo clic.
+  3. **Confirmación Inmediata de Reserva y Garantía de Despacho de Dirección 24 Horas Antes:**
+     - Pantalla de éxito (`GraciasScreen.jsx`), WhatsApp (`agendaWhatsAppService.ts`) y Correo Electrónico (`emailContractService.ts`) consagran la directiva: la reserva queda **100% CONFIRMADA de inmediato**; por seguridad preventiva de propietarios y agentes, la dirección física exacta se entrega **24 horas antes** (o al instante si la cita es para hoy mismo).
+  4. **Multimodalidad Inmobiliaria y Legal (Presencial, Llamada y Videollamada):**
+     - En `AgendaForm.jsx`: selector de modalidad (`visita_presencial`, `llamada`, `videollamada`).
+     - Expansión de servicios: citas para inmuebles (Venta/Arriendo) y asesorías personalizadas (`Asesoría Jurídica Inmobiliaria Personalizada`, `Consultoría Tributaria y Notarial DIAN`, `Estudio de Títulos y Viabilidad Inmobiliaria`).
+     - `validations.js`: solo exige verificación de asistentes en visitas presenciales a inmuebles.
+  5. **Gobernanza y Suite de Regresión 191:**
+     - Semilla de conocimiento directivo `seed-vecy-agenda-pro-multimodal-cancelacion-reagendamiento-google-calendar-v34-05` en `founderKnowledgeService.ts`.
+     - Suite 191 con 6 pruebas automatizadas pasando al 100% (624/624 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 191 `vitest` (100% passing) | Build `npm run build` limpio en 47.6s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

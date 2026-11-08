@@ -450,6 +450,66 @@ export async function createContractPdf(rawFormData: SolicitudEmailPayload): Pro
   return await pdfDoc.save();
 }
 
+export function buildGoogleCalendarUrl(data: {
+  title: string;
+  description: string;
+  location?: string;
+  dateStr?: string;
+  timeStr?: string;
+  fechaTexto?: string;
+  fecha_cita_texto?: string;
+  hora?: string;
+  hora_cita?: string;
+}): string {
+  let startIso = "";
+  let endIso = "";
+
+  const rawDate = data.dateStr || data.fechaTexto || data.fecha_cita_texto;
+  const rawTime = data.timeStr || data.hora || data.hora_cita;
+
+  try {
+    if (rawDate) {
+      const meses: Record<string, number> = {
+        enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+        julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+      };
+      const cleanFecha = rawDate.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const match = cleanFecha.match(/(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/);
+      if (match) {
+        const dia = parseInt(match[1], 10);
+        const mes = meses[match[2]] ?? 0;
+        const anio = parseInt(match[3], 10);
+
+        let horas = 11;
+        let minutos = 0;
+        if (rawTime) {
+          const tMatch = rawTime.match(/(\d{1,2}):(\d{2})(?:\s*(am|pm))?/i);
+          if (tMatch) {
+            horas = parseInt(tMatch[1], 10);
+            minutos = parseInt(tMatch[2], 10);
+            if ((tMatch[3] || "").toLowerCase() === "pm" && horas < 12) horas += 12;
+            if ((tMatch[3] || "").toLowerCase() === "am" && horas === 12) horas = 0;
+          }
+        }
+        // Bogotá UTC-5 -> UTC + 5h
+        const startUtc = new Date(Date.UTC(anio, mes, dia, horas + 5, minutos, 0));
+        const endUtc = new Date(Date.UTC(anio, mes, dia, horas + 6, minutos, 0));
+
+        const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+        startIso = fmt(startUtc);
+        endIso = fmt(endUtc);
+      }
+    }
+  } catch (_) {}
+
+  const datesParam = startIso && endIso ? `&dates=${startIso}/${endIso}` : "";
+  const titleParam = encodeURIComponent(data.title);
+  const detailsParam = encodeURIComponent(data.description);
+  const locationParam = encodeURIComponent(data.location || "Bogotá, Colombia");
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titleParam}${datesParam}&details=${detailsParam}&location=${locationParam}`;
+}
+
 export function getEmailContent(formData: Record<string, any>) {
   const { solicitante_nombre, solicitante_perfil, solicitud_id, servicio_solicitado, opcion_negocio, codigo_inmueble, fecha_cita_texto, solicitante_email, hora_cita } = formData;
   const logoUrlParaEmail = "cid:vecyLogo";
@@ -490,12 +550,32 @@ export function getEmailContent(formData: Record<string, any>) {
     return { subject, html: baseHtml(title, body) };
   }
 
-  const subject = `✅ Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
-  const title = `¡Hola, ${solicitante_nombre}! Hemos recibido tu solicitud 🏠✨`;
+  const subject = `✅ Solicitud #${solicitud_id} Confirmada | Vecy Agenda`;
+  const title = `¡Hola, ${solicitante_nombre}! Tu cita está confirmada 🏠✨`;
+
+  const calUrl = buildGoogleCalendarUrl({
+    title: `Cita Vecy: ${servicio_solicitado || "Inmueble"} (${codigo_inmueble || "Vecy"})`,
+    description: `Solicitud #${solicitud_id} con Vecy Bienes Raíces. Inmueble: ${formData.nombre_inmueble || ""}. Teléfono bróker: +57 316 6569719.`,
+    location: formData.nombre_inmueble || "Bogotá, Colombia",
+    dateStr: fecha_cita_texto,
+    timeStr: hora_cita,
+  });
 
   let body = `
     <p>Confirmamos la recepción de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "trámite"}</strong> identificado con el código <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. 📅</p>
-    <p>Nuestro equipo revisará la fidelidad de todos los datos y, una vez verificados, te enviaremos un correo a <strong>${solicitante_email}</strong> con la confirmación del agendamiento y la dirección completa del inmueble. ¡Debes estar pendiente! 📩👀</p>
+    
+    <div style="background-color: #1a1a1a; border-left: 4px solid #bf953f; padding: 18px 20px; border-radius: 6px; margin: 20px 0;">
+      <p style="color: #bf953f; font-weight: bold; font-size: 15px; margin: 0 0 6px 0;">🔒 POLÍTICA DE SEGURIDAD NOTARIAL Y ENTREGA DE DIRECCIÓN:</p>
+      <p style="color: #ddd; font-size: 14px; line-height: 1.6; margin: 0;">
+        Tu reserva está <strong>100% confirmada</strong>. Por estrictos protocolos de seguridad y prevención notarial del edificio y de los propietarios, la <strong>dirección física exacta y nomenclatura</strong> te será despachada a este correo (<strong>${solicitante_email}</strong>) y a tu WhatsApp exactamente <strong>24 horas antes de la visita</strong> (o de forma inmediata si tu cita es para hoy). ¡Debes estar pendiente! 📩👀
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 25px 0;">
+      <a href="${calUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%); color: #000000; font-weight: bold; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(191,149,63,0.3);">
+        📅 Añadir a mi Google Calendar
+      </a>
+    </div>
   `;
 
   if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
@@ -510,6 +590,14 @@ export function getEmailContent(formData: Record<string, any>) {
 
   body += `
     <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
+    
+    <div style="background-color: #141414; border: 1px solid #333; padding: 15px 18px; border-radius: 6px; margin-top: 25px;">
+      <p style="color: #bf953f; font-weight: bold; font-size: 13px; margin: 0 0 6px 0;">🔄 GESTIÓN DE TU CITA (REAGENDAMIENTO O CANCELACIÓN):</p>
+      <p style="color: #aaa; font-size: 13px; margin: 0;">
+        Si se te presenta algún imprevisto o necesitas modificar la fecha u hora, puedes comunicarte directamente con nuestro Bróker al 
+        <a href="https://wa.me/573166569719" style="color: #bf953f; font-weight: bold;">+57 316 656 9719</a> o responder a este correo.
+      </p>
+    </div>
   `;
 
   const perfilLower = (solicitante_perfil || "").toLowerCase();
