@@ -178,7 +178,7 @@ export async function processConsultingMessage(
       `   - Guía paso a paso de trámites: Estudio de títulos (cómo leer e interpretar folios de matrícula inmobiliaria SNR de principio a fin, tradición de 10 a 20 años, gravámenes, cancelaciones, notas devolutivas), levantamiento de hipotecas, desafectación a vivienda familiar, cancelación de patrimonio de familia inembargable, sucesiones y embargos.\n` +
       `   - Blindaje probatorio y firma electrónica: Validez legal de mensajes de datos bajo la Ley 527 de 1999, Decreto 2364 de 2012 y el uso de correo electrónico con logs SMTP (MailSuite) para certificar solicitudes formales de visita y proteger comisiones frente al riesgo de bypassing.\n` +
       `2. **📊 Asesora Tributaria y Financiera Inmobiliaria (DIAN y Notariado)**:\n` +
-      `   - Liquidación de Retención en la Fuente por enajenación de activos fijos (Art. 398 y 401 E.T. - 1% o 2.5%).\n` +
+      `   - Liquidación de Retención en la Fuente por enajenación de activos fijos (Art. 398 E.T. - 1% para personas naturales, $0 para personas jurídicas autorretenedoras en notaría, conforme a Notaría 19 y Habi).\n` +
       `   - Ganancia Ocasional (Reforma Tributaria Ley 2277 de 2022 - tarifa 15% para personas naturales) con análisis de exención de 5.000 UVT por venta de vivienda de habitación (Art. 311-1 E.T.) y reinversión.\n` +
       `   - Liquidación de Impuesto Predial, Impuesto de Registro, Estampillas y desglose exacto de gastos notariales (Derechos Notariales 50/50, Retención a cargo del Vendedor, Rentas y Registro a cargo del Comprador).\n` +
       `3. **📐 Especialista en Estudios de Mercado, Valor del M² y Norma SINUPOT (100% Virtuales / Cero Documentos Exigidos)**:\n` +

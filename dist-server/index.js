@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.06";
+    VECY_VERSION = "v34.07";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17482,6 +17482,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Arregla esto por lo pronto ya que en este correo esta parte no se ve de lo muy tenue que te qued\xF3(NO ES VISIBLE AL OJO HUMANO): 'Te saluda JanIA de la direcci\xF3n comercial de Vecy Bienes Ra\xEDces. Nos complace confirmarte que la verificaci\xF3n de tu solicitud #1147 ha concluido exitosamente y la cita para la visita del inmueble est\xE1 100% confirmada.' no solo en ese sino en las distintas respuestas que ya est\xE1n programadas para el agendamiento viene sucediendo lo mismo, solo que se me hab\xEDa pasado decirtelo y es tanto en las que les llegan a los usuarios como las que nos llegan a nosotros. Mira a ver si puedes corregirlo por fa.",
         createdAt: "2026-11-08T15:35:00.000Z",
         active: true
+      },
+      {
+        id: "seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Precisi\xF3n Doctrinal en Gastos Notariales y Retenci\xF3n en la Fuente 1% (Homologaci\xF3n Notar\xEDa 19 de Bogot\xE1 y Habi \u2014 Doctrina Eduardo A. Rivera v34.07)",
+        directive: "El Skill de Liquidaci\xF3n de Gastos Notariales y Registro de JanIA debe calcular cifras 100% coherentes, exactas y homologadas con las calculadoras oficiales de la Notar\xEDa 19 de Bogot\xE1, la plataforma Habi y la Superintendencia de Notariado y Registro (SNR 2026). Para personas naturales enajenantes de inmuebles (activos fijos), la retenci\xF3n en la fuente ante Notar\xEDa es EXCLUSIVAMENTE del 1.0% sobre el valor total de la venta conforme al Art\xEDculo 398 del Estatuto Tributario, sin importar si el valor supera 20.000 UVT. Se proh\xEDbe terminantemente aplicar tarifas err\xF3neas del 2.5% a personas naturales en Notar\xEDa. Si el vendedor es persona jur\xEDdica, la retenci\xF3n en notar\xEDa es $0 COP por autorretenci\xF3n (Art. 401 E.T.). Los derechos notariales se dividen 50/50 bajo la escala oficial (0.36% a 0.59%), el impuesto de beneficencia es 1.0% a cargo del comprador, y los derechos de registro ORIP siguen la escala SNR (0.63% a 0.92% + 2% sistematizaci\xF3n + folios), garantizando exactitud matem\xE1tica y jur\xEDdica total.",
+        rawText: "El Skill de Gastos notariales no est\xE1 funcionando correctamente, JanIA est\xE1 lanzando cifras incoherentes. Debes corregirla y entrenarla correctamente como debe de ser. Puedes usar REA de GitHub para comparar con sitios que si liquidan como de be de ser como por ejemplo las calculadoras notariales de la notar\xEDa 19 de Bogot\xE1 o la de Habi que mantienen los valores notariales actualizados y sus formulas son casi perfectas y lograr as\xED que este Skill quede perfecto? Gracias. Dime si necesitas algo manual de mi parte o si puiedes hacerlo todo tu solo.",
+        createdAt: "2026-11-10T10:30:00.000Z",
+        active: true
       }
     ];
   }
@@ -23767,62 +23777,6 @@ var init_politenessService = __esm({
   }
 });
 
-// server/_core/taxEngine.ts
-function liquidarImpuestosVenta(params) {
-  const precioVenta = Math.max(0, params.precioVenta || 0);
-  const costoFiscal = Math.max(0, params.costoFiscal || 0);
-  const anosPosesion = Math.max(0, params.anosPosesion || 0);
-  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
-  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
-  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
-  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
-  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
-  let utilidadGravable = utilidadOriginal;
-  let exencionViviendaAplicada = 0;
-  let gananciaOcasional = 0;
-  let esRentaOrdinaria = false;
-  let tarifaGananciaOcasionalPorcentaje = 15;
-  let notas = "";
-  if (anosPosesion < 2) {
-    esRentaOrdinaria = true;
-    tarifaGananciaOcasionalPorcentaje = 0;
-    gananciaOcasional = 0;
-    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
-  } else {
-    if (params.esViviendaHabitacion) {
-      const exencionMaxima = 5e3 * VALOR_UVT_2026;
-      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
-      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
-      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
-    }
-    gananciaOcasional = Math.round(utilidadGravable * 0.15);
-    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
-  }
-  return {
-    valorUVT: VALOR_UVT_2026,
-    precioVenta,
-    costoFiscal,
-    utilidadCalculada: utilidadOriginal,
-    anosPosesion,
-    retencionFuente,
-    tarifaRetencionPorcentaje: tarifaRetencion * 100,
-    esSupera20kUvt,
-    exencionViviendaAplicada,
-    utilidadGravableGananciaOcasional: utilidadGravable,
-    gananciaOcasional,
-    tarifaGananciaOcasionalPorcentaje,
-    esRentaOrdinaria,
-    notas: notas.trim()
-  };
-}
-var VALOR_UVT_2026;
-var init_taxEngine = __esm({
-  "server/_core/taxEngine.ts"() {
-    "use strict";
-    VALOR_UVT_2026 = 50318;
-  }
-});
-
 // server/_core/notarialExpenseService.ts
 var notarialExpenseService_exports = {};
 __export(notarialExpenseService_exports, {
@@ -23864,17 +23818,22 @@ function liquidarGastosNotariales(params) {
       "\u26D4 *ALERTA CR\xCDTICA DE EMBARGO:* El inmueble tiene una medida cautelar o embargo judicial vigente. La ley colombiana proh\xEDbe su venta (objeto il\xEDcito). Para firmar promesa o escritura se requiere radicar previamente el oficio de desembargo emitido por el juzgado ante la Oficina de Registro (ORIP)."
     );
   }
-  const limite20kUvt = 2e4 * VALOR_UVT_2026;
   let tarifaRetencionPct = 0;
   let retencionFuente = 0;
   if (vendedorEsPersonaJuridica) {
     tarifaRetencionPct = 0;
     retencionFuente = 0;
     advertenciasJuridicas.push(
-      "\u{1F3E2} *Vendedor Persona Jur\xEDdica:* No causa retenci\xF3n en la fuente en notar\xEDa si la sociedad aporta RUT con condici\xF3n de autorretenedora o declara renta peri\xF3dica."
+      "\u{1F3E2} *Vendedor Persona Jur\xEDdica:* No causa retenci\xF3n en la fuente en notar\xEDa si la sociedad aporta RUT con condici\xF3n de autorretenedora o declara renta peri\xF3dica (Art. 401 E.T.)."
+    );
+  } else if (esVis) {
+    tarifaRetencionPct = 0;
+    retencionFuente = 0;
+    advertenciasJuridicas.push(
+      "\u{1F3E1} *Vivienda de Inter\xE9s Social (VIS):* Primera venta exenta de retenci\xF3n en la fuente por disposici\xF3n legal (Ley 1537 / E.T.)."
     );
   } else {
-    tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1;
+    tarifaRetencionPct = 1;
     retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
   }
   const notarialFeeRate = getNotarialFeeRate(precioVenta, esVis);
@@ -23886,9 +23845,9 @@ function liquidarGastosNotariales(params) {
   const ivaComprador = Math.round((derechosNotariales50Pct + otrosGastosComprador) * 0.19);
   let cancelacionHipotecaVendedor = 0;
   if (estadoPredio === "hipoteca") {
-    cancelacionHipotecaVendedor = Math.round(Math.min(12e5, Math.max(55e4, precioVenta * 15e-4)));
+    cancelacionHipotecaVendedor = 6e5;
     advertenciasJuridicas.push(
-      "\u{1F3E6} *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelaci\xF3n de hipoteca y certificado de saldo a la fecha para anexar a la escritura p\xFAblica."
+      "\u{1F3E6} *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelaci\xF3n de hipoteca y certificado de saldo a la fecha para anexar a la escritura p\xFAblica (~$600.000 acto sin cuant\xEDa notar\xEDa + registro)."
     );
   }
   let cancelacionAfectacionVivienda = 0;
@@ -23921,7 +23880,9 @@ function liquidarGastosNotariales(params) {
     );
   } else if (formaPago === "hipoteca") {
     const montoCredito = params.montoCredito && params.montoCredito > 0 ? params.montoCredito : Math.round(precioVenta * 0.7);
-    constitucionHipotecaComprador = Math.round(montoCredito * 0.011);
+    const notariaHipotecaConIva = Math.round(montoCredito * notarialFeeRate * 1.19);
+    const registroHipotecaOrip = Math.round(montoCredito * 7e-3);
+    constitucionHipotecaComprador = notariaHipotecaConIva + registroHipotecaOrip;
   }
   if (params.bienInteresCultural) {
     advertenciasJuridicas.push(
@@ -24017,10 +23978,13 @@ function formatNotarialExpenseText(p) {
   t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaVendedor)}*
 `;
   if (p.vendedorEsPersonaJuridica) {
-    t2 += `\u2022 Retenci\xF3n en la fuente (0% - Persona Jur\xEDdica): *$0 COP* (autorretenci\xF3n en renta)
+    t2 += `\u2022 Retenci\xF3n en la fuente (0% - Persona Jur\xEDdica): *$0 COP* (autorretenci\xF3n en renta peri\xF3dica)
+`;
+  } else if (p.esViviendaInteresSocial) {
+    t2 += `\u2022 Retenci\xF3n en la fuente (0% - VIS primera venta): *$0 COP* (exenta por ley)
 `;
   } else {
-    t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*
+    t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}* (Art. 398 E.T.)
 `;
   }
   if (p.cancelacionHipotecaVendedor > 0) {
@@ -24055,7 +24019,7 @@ function formatNotarialExpenseText(p) {
 `;
   }
   if (p.constitucionHipotecaComprador > 0) {
-    t2 += `\u2022 Registro de Cr\xE9dito Hipotecario (~1.1%): *${formatCurrency(p.constitucionHipotecaComprador)}*
+    t2 += `\u2022 Notar\xEDa y Registro Hipoteca bancaria: *${formatCurrency(p.constitucionHipotecaComprador)}*
 `;
   }
   t2 += `\u{1F449} *Subtotal Comprador: ~${formatCurrency(p.subtotalComprador)} COP*
@@ -24078,7 +24042,7 @@ function formatNotarialExpenseText(p) {
   }
   t2 += `\u{1F4A1} *Total aproximado escrituraci\xF3n:* ~${formatCurrency(p.totalGastosAproximados)} COP.
 `;
-  t2 += `_C\xE1lculo informativo conforme a tarifas vigentes SNR 2026 y est\xE1ndares notariales. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
+  t2 += `_C\xE1lculo informativo exacto homologado bajo est\xE1ndares oficiales de la Notar\xEDa 19 de Bogot\xE1, calculadoras de referencia Habi, SNR 2026 y Art. 398 del Estatuto Tributario. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
   return t2;
 }
 function hasPendingNotarialSession(senderId) {
@@ -24195,13 +24159,13 @@ Para avanzar con seguridad, primero debe radicarse y levantarse el embargo en la
       isQuestion: true,
       answerText: `\u2696\uFE0F *\xBFQui\xE9n paga qu\xE9 en la notar\xEDa y registro?* \u{1F1E8}\u{1F1F4}
 
-Por ley y costumbre comercial en Colombia:
-\u2022 *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.27% cada uno).
-\u2022 *Retenci\xF3n en la Fuente (1% o 2.5%):* La asume el *VENDEDOR* (si es persona natural; si es empresa, $0 en notar\xEDa).
-\u2022 *Impuesto de Beneficencia (1%):* Lo asume el *COMPRADOR*.
-\u2022 *Derechos de Registro ORIP (~0.75% a 0.92%):* Los asume el *COMPRADOR*.
+Por ley y costumbre comercial en Colombia (est\xE1ndar Notar\xEDa 19 y Habi):
+\u2022 *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.18% a 0.29% cada uno seg\xFAn cuant\xEDa).
+\u2022 *Retenci\xF3n en la Fuente (1.0%):* La asume el *VENDEDOR* (Art. 398 E.T.; si es persona jur\xEDdica, $0 en notar\xEDa por autorretenci\xF3n).
+\u2022 *Impuesto de Beneficencia / Registro Departamental (1.0%):* Lo asume el *COMPRADOR*.
+\u2022 *Derechos de Registro ORIP (SNR ~0.63% a 0.92% + sistematizaci\xF3n):* Los asume el *COMPRADOR*.
 \u2022 *Constituci\xF3n de Hipoteca Bancaria:* La asume el *COMPRADOR*.
-\u2022 *Cancelaci\xF3n de Hipoteca Previa:* La asume el *VENDEDOR*.
+\u2022 *Cancelaci\xF3n de Hipoteca Previa:* La asume el *VENDEDOR* (~$600.000 acto sin cuant\xEDa).
 
 \xBFDeseas que te liquide los valores exactos para un inmueble? \u{1F91D}`
     };
@@ -24212,8 +24176,9 @@ Por ley y costumbre comercial en Colombia:
       isQuestion: true,
       answerText: `\u{1F4B0} *Retenci\xF3n en la Fuente en Compraventa de Inmuebles:* \u{1F1E8}\u{1F1F4}
 
-\u2022 *Persona Natural:* Paga el 1.0% sobre el precio de venta si el predio no supera 20.000 UVT ($1.006.360.000 COP en 2026). Si excede las 20.000 UVT, se aplica el 2.5% sobre el exceso.
-\u2022 *Persona Jur\xEDdica (Empresas/Constructoras):* La notar\xEDa *NO le retiene nada ($0)*, ya que las sociedades aplican autorretenci\xF3n en su declaraci\xF3n peri\xF3dica de renta.
+\u2022 *Persona Natural:* Paga el 1.0% sobre el valor total de la venta (Art. 398 del Estatuto Tributario), recaudado directamente por el Notario p\xFAblico al otorgar la escritura (sin importar si supera o no 20.000 UVT).
+\u2022 *Persona Jur\xEDdica (Empresas/Constructoras):* La notar\xEDa *NO le retiene nada ($0)*, ya que las sociedades aplican autorretenci\xF3n en su declaraci\xF3n peri\xF3dica de renta (Art. 401 E.T.).
+\u2022 *Vivienda de Inter\xE9s Social (VIS):* Primera venta exenta de retenci\xF3n.
 \u2022 *\xBFQui\xE9n la paga?:* Siempre el *VENDEDOR* al momento de firmar la escritura p\xFAblica.`
     };
   }
@@ -24389,7 +24354,6 @@ var pendingNotarialSessions, NOTARIAL_SESSION_TTL_MS;
 var init_notarialExpenseService = __esm({
   "server/_core/notarialExpenseService.ts"() {
     "use strict";
-    init_taxEngine();
     pendingNotarialSessions = /* @__PURE__ */ new Map();
     NOTARIAL_SESSION_TTL_MS = 15 * 60 * 1e3;
   }
@@ -37609,7 +37573,7 @@ Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacida
    - Gu\xEDa paso a paso de tr\xE1mites: Estudio de t\xEDtulos (c\xF3mo leer e interpretar folios de matr\xEDcula inmobiliaria SNR de principio a fin, tradici\xF3n de 10 a 20 a\xF1os, grav\xE1menes, cancelaciones, notas devolutivas), levantamiento de hipotecas, desafectaci\xF3n a vivienda familiar, cancelaci\xF3n de patrimonio de familia inembargable, sucesiones y embargos.
    - Blindaje probatorio y firma electr\xF3nica: Validez legal de mensajes de datos bajo la Ley 527 de 1999, Decreto 2364 de 2012 y el uso de correo electr\xF3nico con logs SMTP (MailSuite) para certificar solicitudes formales de visita y proteger comisiones frente al riesgo de bypassing.
 2. **\u{1F4CA} Asesora Tributaria y Financiera Inmobiliaria (DIAN y Notariado)**:
-   - Liquidaci\xF3n de Retenci\xF3n en la Fuente por enajenaci\xF3n de activos fijos (Art. 398 y 401 E.T. - 1% o 2.5%).
+   - Liquidaci\xF3n de Retenci\xF3n en la Fuente por enajenaci\xF3n de activos fijos (Art. 398 E.T. - 1% para personas naturales, $0 para personas jur\xEDdicas autorretenedoras en notar\xEDa, conforme a Notar\xEDa 19 y Habi).
    - Ganancia Ocasional (Reforma Tributaria Ley 2277 de 2022 - tarifa 15% para personas naturales) con an\xE1lisis de exenci\xF3n de 5.000 UVT por venta de vivienda de habitaci\xF3n (Art. 311-1 E.T.) y reinversi\xF3n.
    - Liquidaci\xF3n de Impuesto Predial, Impuesto de Registro, Estampillas y desglose exacto de gastos notariales (Derechos Notariales 50/50, Retenci\xF3n a cargo del Vendedor, Rentas y Registro a cargo del Comprador).
 3. **\u{1F4D0} Especialista en Estudios de Mercado, Valor del M\xB2 y Norma SINUPOT (100% Virtuales / Cero Documentos Exigidos)**:
@@ -42671,12 +42635,63 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-init_taxEngine();
+import { z as z4 } from "zod";
+import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
+
+// server/_core/taxEngine.ts
+var VALOR_UVT_2026 = 50318;
+function liquidarImpuestosVenta(params) {
+  const precioVenta = Math.max(0, params.precioVenta || 0);
+  const costoFiscal = Math.max(0, params.costoFiscal || 0);
+  const anosPosesion = Math.max(0, params.anosPosesion || 0);
+  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
+  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
+  const tarifaRetencion = 0.01;
+  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
+  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
+  let utilidadGravable = utilidadOriginal;
+  let exencionViviendaAplicada = 0;
+  let gananciaOcasional = 0;
+  let esRentaOrdinaria = false;
+  let tarifaGananciaOcasionalPorcentaje = 15;
+  let notas = "";
+  if (anosPosesion < 2) {
+    esRentaOrdinaria = true;
+    tarifaGananciaOcasionalPorcentaje = 0;
+    gananciaOcasional = 0;
+    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
+  } else {
+    if (params.esViviendaHabitacion) {
+      const exencionMaxima = 5e3 * VALOR_UVT_2026;
+      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
+      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
+      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
+    }
+    gananciaOcasional = Math.round(utilidadGravable * 0.15);
+    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
+  }
+  return {
+    valorUVT: VALOR_UVT_2026,
+    precioVenta,
+    costoFiscal,
+    utilidadCalculada: utilidadOriginal,
+    anosPosesion,
+    retencionFuente,
+    tarifaRetencionPorcentaje: tarifaRetencion * 100,
+    esSupera20kUvt,
+    exencionViviendaAplicada,
+    utilidadGravableGananciaOcasional: utilidadGravable,
+    gananciaOcasional,
+    tarifaGananciaOcasionalPorcentaje,
+    esRentaOrdinaria,
+    notas: notas.trim()
+  };
+}
+
+// server/routers/janIA.ts
 init_matching();
 init_voiceTranscription();
 init_storage();
-import { z as z4 } from "zod";
-import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
 import fs15 from "fs";
 import path15 from "path";

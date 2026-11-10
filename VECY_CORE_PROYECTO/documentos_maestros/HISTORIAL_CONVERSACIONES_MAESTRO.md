@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-10] — JanIA v34.07: Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% — Homologación Notaría 19 de Bogotá y Habi (Doctrina Eduardo A. Rivera — v34.07 - 34.07.0)
+
+**Versión:** `v34.07` (`34.07.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"El Skill de Gastos notariales no está funcionando correctamente, JanIA está lanzando cifras incoherentes. Debes corregirla y entrenarla correctamente como debe de ser. Puedes usar REA de GitHub para comparar con sitios que si liquidan como de be de ser como por ejemplo las calculadoras notariales de la notaría 19 de Bogotá o la de Habi que mantienen los valores notariales actualizados y sus formulas son casi perfectas y lograr así que este Skill quede perfecto? Gracias. Dime si necesitas algo manual de mi parte o si puiedes hacerlo todo tu solo."*
+
+**Diagnóstico Técnico Forense y Causas Raíz:**
+1. **Auditoría del Caso Casa Morato ($1.400.198.000 — Captura `media_1794324406743_7651a298.jpg`):**
+   - El abogado Juan Carlos (representante de Jhoann Romero) envió el documento de oferta/ficha `2026-AAA0058EEXS-CASA-MORATO.pdf`. JanIA extrajo el valor pactado de $1.400.198.000 y procedió a liquidar los gastos notariales.
+   - En su respuesta, JanIA arrojó:
+     - `Retención en la fuente (2.5%): $35.004.950`
+     - `Subtotal Vendedor: ~$38.123.175 COP`
+     - `Total aproximado escrituración: ~$68.539.966 COP`
+   - **Causa Raíz:** En `server/_core/notarialExpenseService.ts` y `server/_core/taxEngine.ts`, existía una lógica errónea: `precioVenta > limite20kUvt ? 2.5 : 1.0`. Al superar el predio los $1.006.360.000 (20.000 UVT de 2026), JanIA aplicó una tarifa del 2.5% a todo el valor de venta ($1.400.198.000), cobrando $35.004.950 de retención en vez de $14.001.980 (1.0%). El subtotal del vendedor se infló en más de $21 millones de pesos ($38 millones en vez de $17.1 millones) y el total de escrituración escaló a casi $70 millones, generando cifras incoherentes que sorprendieron a los clientes.
+2. **Doctrina Notarial y Tributaria Colombiana (Art. 398 E.T. vs Art. 401 E.T.):**
+   - **Artículo 398 del Estatuto Tributario:** Regula expresamente la enajenación de activos fijos por parte de **personas naturales**. Establece que la tarifa de retención en la fuente ante Notaría es del **1.0%** sobre el valor total de la venta, recaudada directamente por el Notario público. La persona natural NO liquida por escalas de UVT ni al 2.5% ante el Notario.
+   - **Artículo 401 del E.T. (Compras corporativas / Personas Jurídicas):** El umbral de las 20.000 UVT y la tarifa del 2.5% aplican exclusivamente a pagos o abonos en cuenta realizados por agentes de retención corporativos (compradores personas jurídicas) en compras comerciales, pero jamás a personas naturales en ventanilla notarial.
+   - **Código Fuente Real de la Calculadora de la Notaría 19 de Bogotá:**
+     - Analizado el script JavaScript de la Notaría 19 (`https://www.notaria19bogota.com/gastos-notariales-compra-vivienda/`):
+       `[fieldname14] APLICA PARA VENDEDOR PERSONA NATURAL => (function(){ if(fieldname24 == 100) return PREC( fieldname4*0.01) })();`
+       ¡La Notaría 19 aplica 1.0% plano a toda persona natural, sin importar la cuantía!
+     - Si el vendedor es persona jurídica (`fieldname24 != 100`), la retención ante notaría es **$0 COP** porque las empresas declaran autorretención en renta periódica.
+   - **Estándar de la Plataforma Habi:** Habi liquida la retención en la fuente para personas naturales al **1%** del valor total de la enajenación.
+
+**Acciones Quirúrgicas y Solución Permanente Ejecutadas:**
+1. **Ajuste Doctrinal en `server/_core/notarialExpenseService.ts`:**
+   - La retención en la fuente para personas naturales se fija en el **1.0%** (`precioVenta * 0.01`) bajo el Art. 398 del Estatuto Tributario.
+   - Para personas jurídicas se mantiene en **$0 COP** (autorretención en renta periódica Art. 401 E.T.).
+   - Para VIS/VIP se establece en **$0 COP** (primera venta exenta).
+   - Cancelación de hipoteca previa del vendedor tasada en **$600.000 COP** (acto sin cuantía homologado con Notaría 19).
+   - Constitución de crédito hipotecario del comprador desglosado exactamente como Notaría 19: Derechos notariales con IVA (`montoCredito * notarialFeeRate * 1.19`) + Registro ORIP (`montoCredito * 0.007`).
+   - El texto del reporte ahora indica explícitamente:
+     `_Cálculo informativo exacto homologado bajo estándares oficiales de la Notaría 19 de Bogotá, calculadoras de referencia Habi, SNR 2026 y Art. 398 del Estatuto Tributario. Si vas a firmar promesa de compraventa, podemos revisar las cláusulas para total tranquilidad de las partes 🤝✨_`
+2. **Ajuste Doctrinal en `server/_core/taxEngine.ts`:**
+   - En `liquidarImpuestosVenta`, `tarifaRetencion` para persona natural fijada en `0.01` (1%), preservando `esSupera20kUvt` únicamente con fines informativos.
+3. **Ajuste en Prompts y Handlers de JanIA:**
+   - En `consultingHandler.ts`, `dmHandler.ts` y `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` se actualiza la doctrina notarial: 1.0% a cargo del vendedor para persona natural y $0 para persona jurídica autorretenedora.
+4. **Semilla de Aprendizaje Directivo:**
+   - Registrada `seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07` en `founderKnowledgeService.ts`.
+5. **Gobernanza y Suite de Regresión 193:**
+   - 7 pruebas automatizadas pasando al 100% (673/673 tests totales del sistema en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 193 `vitest` (100% passing) | Build `npm run build` limpio en 25.81s.
+
 ### 📅 [2026-11-08] — JanIA v34.06: Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales de Vecy (Doctrina Eduardo A. Rivera — v34.06 - 34.06.0)
 
 **Versión:** `v34.06` (`34.06.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

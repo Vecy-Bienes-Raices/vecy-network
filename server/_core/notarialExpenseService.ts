@@ -110,8 +110,10 @@ export function liquidarGastosNotariales(params: NotarialExpenseParams): Notaria
   }
 
   // 1. Tarifa Retención en la Fuente (Vendedor)
-  // Si el vendedor es persona jurídica, NO paga retención en notaría (autorretención en renta periódica)
-  const limite20kUvt = 20000 * VALOR_UVT_2026; // $1.006.360.000 COP en 2026
+  // Conforme al Art. 398 del Estatuto Tributario y la práctica oficial de la Notaría 19 de Bogotá y Habi:
+  // Para Persona Natural que enajena inmuebles (activos fijos), la tarifa ante Notario es del 1.0%
+  // del valor total de la venta (el límite de 20.000 UVT del Art. 401 aplica para compradores personas jurídicas
+  // retenedoras de rentas ordinarias, jamás para persona natural en Notaría).
   let tarifaRetencionPct = 0;
   let retencionFuente = 0;
 
@@ -119,10 +121,16 @@ export function liquidarGastosNotariales(params: NotarialExpenseParams): Notaria
     tarifaRetencionPct = 0;
     retencionFuente = 0;
     advertenciasJuridicas.push(
-      '🏢 *Vendedor Persona Jurídica:* No causa retención en la fuente en notaría si la sociedad aporta RUT con condición de autorretenedora o declara renta periódica.'
+      '🏢 *Vendedor Persona Jurídica:* No causa retención en la fuente en notaría si la sociedad aporta RUT con condición de autorretenedora o declara renta periódica (Art. 401 E.T.).'
+    );
+  } else if (esVis) {
+    tarifaRetencionPct = 0;
+    retencionFuente = 0;
+    advertenciasJuridicas.push(
+      '🏡 *Vivienda de Interés Social (VIS):* Primera venta exenta de retención en la fuente por disposición legal (Ley 1537 / E.T.).'
     );
   } else {
-    tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1.0;
+    tarifaRetencionPct = 1.0;
     retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
   }
 
@@ -142,10 +150,10 @@ export function liquidarGastosNotariales(params: NotarialExpenseParams): Notaria
   // 3. Gastos del Vendedor
   let cancelacionHipotecaVendedor = 0;
   if (estadoPredio === 'hipoteca') {
-    // Cancelación y levantamiento de hipoteca en la misma escritura
-    cancelacionHipotecaVendedor = Math.round(Math.min(1200000, Math.max(550000, precioVenta * 0.0015)));
+    // Cancelación y levantamiento de hipoteca en la misma escritura (Acto sin cuantía notaría + ORIP ~$600.000)
+    cancelacionHipotecaVendedor = 600000;
     advertenciasJuridicas.push(
-      '🏦 *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelación de hipoteca y certificado de saldo a la fecha para anexar a la escritura pública.'
+      '🏦 *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelación de hipoteca y certificado de saldo a la fecha para anexar a la escritura pública (~$600.000 acto sin cuantía notaría + registro).'
     );
   }
 
@@ -198,8 +206,10 @@ export function liquidarGastosNotariales(params: NotarialExpenseParams): Notaria
     const montoCredito = params.montoCredito && params.montoCredito > 0 
       ? params.montoCredito 
       : Math.round(precioVenta * 0.70);
-    // Gastos notariales y de registro de la hipoteca a favor del banco (~1.1% del crédito)
-    constitucionHipotecaComprador = Math.round(montoCredito * 0.011);
+    // Gastos notariales y de registro de la hipoteca a favor del banco (Notaría 19: Derechos notaría con IVA + 0.7% registro ORIP)
+    const notariaHipotecaConIva = Math.round(montoCredito * notarialFeeRate * 1.19);
+    const registroHipotecaOrip = Math.round(montoCredito * 0.007);
+    constitucionHipotecaComprador = notariaHipotecaConIva + registroHipotecaOrip;
   }
 
   // 5. Alerta de Bien de Interés Cultural (BIC) / Patrimonio Cultural
@@ -336,9 +346,11 @@ function formatNotarialExpenseText(p: FormatParams): string {
   t += `• Papelería, copias y biometría: *${formatCurrency(p.otrosGastosVendedor)}*\n`;
   t += `• IVA notarial (19%): *${formatCurrency(p.ivaVendedor)}*\n`;
   if (p.vendedorEsPersonaJuridica) {
-    t += `• Retención en la fuente (0% - Persona Jurídica): *$0 COP* (autorretención en renta)\n`;
+    t += `• Retención en la fuente (0% - Persona Jurídica): *$0 COP* (autorretención en renta periódica)\n`;
+  } else if (p.esViviendaInteresSocial) {
+    t += `• Retención en la fuente (0% - VIS primera venta): *$0 COP* (exenta por ley)\n`;
   } else {
-    t += `• Retención en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*\n`;
+    t += `• Retención en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}* (Art. 398 E.T.)\n`;
   }
   if (p.cancelacionHipotecaVendedor > 0) {
     t += `• Cancelación de Hipoteca del banco: *${formatCurrency(p.cancelacionHipotecaVendedor)}*\n`;
@@ -362,7 +374,7 @@ function formatNotarialExpenseText(p: FormatParams): string {
     t += `• Derechos de Registro SNR / ORIP + sistematización: *${formatCurrency(p.derechosRegistroOrip)}*\n`;
   }
   if (p.constitucionHipotecaComprador > 0) {
-    t += `• Registro de Crédito Hipotecario (~1.1%): *${formatCurrency(p.constitucionHipotecaComprador)}*\n`;
+    t += `• Notaría y Registro Hipoteca bancaria: *${formatCurrency(p.constitucionHipotecaComprador)}*\n`;
   }
   t += `👉 *Subtotal Comprador: ~${formatCurrency(p.subtotalComprador)} COP*\n\n`;
 
@@ -379,7 +391,7 @@ function formatNotarialExpenseText(p: FormatParams): string {
   }
 
   t += `💡 *Total aproximado escrituración:* ~${formatCurrency(p.totalGastosAproximados)} COP.\n`;
-  t += `_Cálculo informativo conforme a tarifas vigentes SNR 2026 y estándares notariales. Si vas a firmar promesa de compraventa, podemos revisar las cláusulas para total tranquilidad de las partes 🤝✨_`;
+  t += `_Cálculo informativo exacto homologado bajo estándares oficiales de la Notaría 19 de Bogotá, calculadoras de referencia Habi, SNR 2026 y Art. 398 del Estatuto Tributario. Si vas a firmar promesa de compraventa, podemos revisar las cláusulas para total tranquilidad de las partes 🤝✨_`;
 
   return t;
 }
@@ -543,13 +555,13 @@ export function explainNotarialFigures(text: string): { isQuestion: boolean; ans
       isQuestion: true,
       answerText:
         `⚖️ *¿Quién paga qué en la notaría y registro?* 🇨🇴\n\n` +
-        `Por ley y costumbre comercial en Colombia:\n` +
-        `• *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.27% cada uno).\n` +
-        `• *Retención en la Fuente (1% o 2.5%):* La asume el *VENDEDOR* (si es persona natural; si es empresa, $0 en notaría).\n` +
-        `• *Impuesto de Beneficencia (1%):* Lo asume el *COMPRADOR*.\n` +
-        `• *Derechos de Registro ORIP (~0.75% a 0.92%):* Los asume el *COMPRADOR*.\n` +
+        `Por ley y costumbre comercial en Colombia (estándar Notaría 19 y Habi):\n` +
+        `• *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.18% a 0.29% cada uno según cuantía).\n` +
+        `• *Retención en la Fuente (1.0%):* La asume el *VENDEDOR* (Art. 398 E.T.; si es persona jurídica, $0 en notaría por autorretención).\n` +
+        `• *Impuesto de Beneficencia / Registro Departamental (1.0%):* Lo asume el *COMPRADOR*.\n` +
+        `• *Derechos de Registro ORIP (SNR ~0.63% a 0.92% + sistematización):* Los asume el *COMPRADOR*.\n` +
         `• *Constitución de Hipoteca Bancaria:* La asume el *COMPRADOR*.\n` +
-        `• *Cancelación de Hipoteca Previa:* La asume el *VENDEDOR*.\n\n` +
+        `• *Cancelación de Hipoteca Previa:* La asume el *VENDEDOR* (~$600.000 acto sin cuantía).\n\n` +
         `¿Deseas que te liquide los valores exactos para un inmueble? 🤝`
     };
   }
@@ -564,8 +576,9 @@ export function explainNotarialFigures(text: string): { isQuestion: boolean; ans
       isQuestion: true,
       answerText:
         `💰 *Retención en la Fuente en Compraventa de Inmuebles:* 🇨🇴\n\n` +
-        `• *Persona Natural:* Paga el 1.0% sobre el precio de venta si el predio no supera 20.000 UVT ($1.006.360.000 COP en 2026). Si excede las 20.000 UVT, se aplica el 2.5% sobre el exceso.\n` +
-        `• *Persona Jurídica (Empresas/Constructoras):* La notaría *NO le retiene nada ($0)*, ya que las sociedades aplican autorretención en su declaración periódica de renta.\n` +
+        `• *Persona Natural:* Paga el 1.0% sobre el valor total de la venta (Art. 398 del Estatuto Tributario), recaudado directamente por el Notario público al otorgar la escritura (sin importar si supera o no 20.000 UVT).\n` +
+        `• *Persona Jurídica (Empresas/Constructoras):* La notaría *NO le retiene nada ($0)*, ya que las sociedades aplican autorretención en su declaración periódica de renta (Art. 401 E.T.).\n` +
+        `• *Vivienda de Interés Social (VIS):* Primera venta exenta de retención.\n` +
         `• *¿Quién la paga?:* Siempre el *VENDEDOR* al momento de firmar la escritura pública.`
     };
   }

@@ -1,18 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.06.0 — 2026-11-08)
-- **JanIA Server:** `v34.06` (`34.06.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales (Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico Técnico y Causa Raíz en Webmail (Gmail/Outlook):**
-     - En la captura aportada por Eduardo (`media_1794169829848_cf23f8f5.jpg`), el texto *"Te saluda JanIA de la dirección comercial... Nos complace confirmarte que la verificación de tu solicitud #1147..."* aparecía prácticamente invisible ("no visible al ojo humano").
-     - Causa: los clientes de correo web (especialmente Gmail) purgan o desestiman las reglas de clases en `<style>` del `<head>`. Al carecer los elementos `<p>` de un color explícito en línea, el navegador y cliente de correo aplicaban su color por defecto (`#222222`), el cual sobre el fondo oscuro (`#121212`) resultaba ilegible.
-  2. **Solución Arquitectural con Estilos en Línea (Inline CSS) Obligatorios:**
-     - En `server/_core/emailContractService.ts`:
-       - `sendAppointmentAddressEmail`: Todos los párrafos y listas tienen ahora `style="color: #ffffff !important; font-size: 15px; line-height: 1.7; ..."` y los resaltados usan `#bf953f` (dorado) o `#00e676` (verde éxito).
-       - `getEmailContent` y `baseHtml`: Garantizado `color: #ffffff !important` tanto en el contenedor como en cada `<p>`, garantizando legibilidad perfecta en confirmaciones a clientes.
-       - `getAdminEmailContent`: Las celdas de la tabla de resumen y textos administrativos ahora cuentan con `color: #ffffff !important` y encabezados `#bf953f`, eliminando grises tenues (`#888` / `#aaa`) que dificultaban la lectura en el correo interno.
-  3. **Gobernanza y Suite de Regresión 192:**
-     - Semilla de conocimiento directivo `seed-alto-contraste-legibilidad-correos-vecy-v34-06` en `founderKnowledgeService.ts`.
-     - Suite 192 con 5 pruebas automatizadas pasando al 100% (629/629 tests totales en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 192 `vitest` (100% passing) | Build `npm run build` limpio en 17.15s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.07.0 — 2026-11-10)
+- **JanIA Server:** `v34.07` (`34.07.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% (Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz en Liquidación Notarial:**
+     - En la captura aportada por Eduardo (`media_1794324406743_7651a298.jpg`), JanIA liquidó la venta de una casa en Morato de $1.400.198.000 con una retención en la fuente del 2.5% ($35.004.950 COP), inflando el subtotal del vendedor a $38.123.175 y el total escrituración a $68.539.966 COP.
+     - Causa: Una condición errónea `precioVenta > limite20kUvt ? 2.5 : 1.0` en `notarialExpenseService.ts` y `taxEngine.ts` que aplicaba la tarifa corporativa del Art. 401 E.T. sobre la totalidad del valor a personas naturales.
+  2. **Solución Doctrinal Homologada con Notaría 19 de Bogotá y Habi:**
+     - Conforme al Art. 398 del Estatuto Tributario y el código fuente extraído de la calculadora oficial de la Notaría 19 de Bogotá y Habi, la retención en la fuente ante Notaría para persona natural que enajena activos fijos es EXCLUSIVAMENTE del **1.0%** (`precioVenta * 0.01`), sin importar si supera 20.000 UVT.
+     - Para la Casa Morato ($1.400.198.000): La retención real del vendedor es **$14.001.980 COP**, el subtotal vendedor es **$17.120.205 COP** (¡ahorro de $21.002.970 COP frente al error previo!), el subtotal comprador es **$30.416.791 COP** y el total escrituración es **$47.536.996 COP** (en lugar de los $68.5 millones incoherentes).
+     - Si el vendedor es persona jurídica, la retención en notaría es **$0 COP** por autorretención (Art. 401 E.T.).
+     - Desglose de hipotecas bancarias homologado con Notaría 19 (Derechos notaría con IVA + 0.70% ORIP).
+  3. **Gobernanza y Suite de Regresión 193:**
+     - Semilla de conocimiento directivo `seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07` en `founderKnowledgeService.ts`.
+     - Suite 193 con 7 pruebas automatizadas pasando al 100% (673/673 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 193 `vitest` (100% passing) | Build `npm run build` limpio en 25.81s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

@@ -11933,11 +11933,113 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v34.06 en shared/const.ts y package.json (34.06.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.06");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.06.0");
+      expect(pkg.version).toMatch(/^34\.\d+\.\d+$/);
+    });
+  });
+
+  describe("Suite 193: Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% (Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera v34.07)", () => {
+    it("1. Liquidación de Casa Morato ($1.400.198.000) aplica Retención 1% ($14.001.980) y NO 2.5% erróneo", async () => {
+      const { liquidarGastosNotariales } = await import("../_core/notarialExpenseService");
+      const res = liquidarGastosNotariales({
+        precioVenta: 1400198000,
+        estadoPredio: "libre",
+        formaPago: "contado",
+        ciudad: "Bogotá"
+      });
+
+      // Retención Persona Natural: 1.0% exacto Art. 398 E.T. (NO 2.5% = $35.004.950)
+      expect(res.gastosVendedor.tarifaRetencionPct).toBe(1.0);
+      expect(res.gastosVendedor.retencionFuente).toBe(14001980);
+      expect(res.gastosVendedor.derechosNotariales50Pct).toBe(2520357); // 1.400.198.000 * 0.0036 / 2
+      expect(res.gastosVendedor.subtotalVendedor).toBe(17120205); // ~$17.120.205 COP
+
+      // Comprador: 50% notaría + papelería + IVA + 1% beneficencia + ORIP escala SNR
+      expect(res.gastosComprador.derechosNotariales50Pct).toBe(2520357);
+      expect(res.gastosComprador.impuestoRegistroBeneficencia).toBe(14001980);
+      expect(res.gastosComprador.derechosRegistroOrip).toBe(13296586);
+      expect(res.gastosComprador.subtotalComprador).toBe(30416791); // ~$30.416.791 COP
+
+      // Gran total aproximado escrituración: ~$47.536.996 COP (NO $68.539.966 COP)
+      expect(res.totalGastosAproximados).toBe(47536996);
+      expect(res.reportText).toContain("Retención en la fuente (1%): *$14.001.980* (Art. 398 E.T.)");
+      expect(res.reportText).toContain("Subtotal Vendedor: ~$17.120.205 COP");
+      expect(res.reportText).toContain("Subtotal Comprador: ~$30.416.791 COP");
+      expect(res.reportText).toContain("Total aproximado escrituración:* ~$47.536.996 COP");
+      expect(res.reportText).toContain("Notaría 19 de Bogotá");
+    });
+
+    it("2. Vendedor Persona Jurídica causa $0 de Retención en Notaría por Autorretención (Art. 401 E.T.)", async () => {
+      const { liquidarGastosNotariales } = await import("../_core/notarialExpenseService");
+      const resPJ = liquidarGastosNotariales({
+        precioVenta: 1400198000,
+        vendedorEsPersonaJuridica: true
+      });
+
+      expect(resPJ.gastosVendedor.tarifaRetencionPct).toBe(0);
+      expect(resPJ.gastosVendedor.retencionFuente).toBe(0);
+      expect(resPJ.reportText).toContain("Retención en la fuente (0% - Persona Jurídica): *$0 COP*");
+      expect(resPJ.advertenciasJuridicas.some(a => a.includes("Persona Jurídica") && a.includes("autorretenedora"))).toBe(true);
+    });
+
+    it("3. Compra con Crédito Hipotecario liquida Notaría e Hipoteca ORIP conforme a Notaría 19", async () => {
+      const { liquidarGastosNotariales } = await import("../_core/notarialExpenseService");
+      const resHip = liquidarGastosNotariales({
+        precioVenta: 600000000,
+        formaPago: "hipoteca"
+      });
+
+      // Crédito estándar 70% ($420.000.000): Notaría con IVA (~0.38% * 1.19) + Registro Hipoteca (0.7%)
+      expect(resHip.gastosComprador.constitucionHipoteca).toBeGreaterThan(4500000);
+      expect(resHip.reportText).toContain("Notaría y Registro Hipoteca bancaria");
+    });
+
+    it("4. explainNotarialFigures consagra doctrina de Retención 1.0% para Persona Natural y estándar Notaría 19 / Habi", async () => {
+      const { explainNotarialFigures } = await import("../_core/notarialExpenseService");
+      const expQuienPaga = explainNotarialFigures("¿Quién paga qué en notaría?");
+      expect(expQuienPaga.isQuestion).toBe(true);
+      expect(expQuienPaga.answerText).toContain("Notaría 19 y Habi");
+      expect(expQuienPaga.answerText).toContain("Retención en la Fuente (1.0%):");
+
+      const expRetencion = explainNotarialFigures("cuánto es la retención en la fuente en notaría");
+      expect(expRetencion.isQuestion).toBe(true);
+      expect(expRetencion.answerText).toContain("Art. 398 del Estatuto Tributario");
+      expect(expRetencion.answerText).toContain("1.0%");
+    });
+
+    it("5. taxEngine liquida retención al 1% para persona natural bajo Art. 398 E.T.", async () => {
+      const { liquidarImpuestosVenta } = await import("../_core/taxEngine");
+      const res = liquidarImpuestosVenta({
+        precioVenta: 1400198000,
+        costoFiscal: 1000000000,
+        anosPosesion: 3,
+        esViviendaHabitacion: true
+      });
+
+      expect(res.tarifaRetencionPorcentaje).toBe(1.0);
+      expect(res.retencionFuente).toBe(14001980);
+    });
+
+    it("6. Semilla de conocimiento directivo v34.07 registrada en founderKnowledgeService", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.topic).toContain("Precisión Doctrinal en Gastos Notariales y Retención");
+      expect(seed?.active).toBe(true);
+    });
+
+    it("7. Consagración doctrinal de versión v34.07 en shared/const.ts y package.json (34.07.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.07");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.07.0");
     });
   });
 });

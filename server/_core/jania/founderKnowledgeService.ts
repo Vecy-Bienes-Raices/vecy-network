@@ -686,6 +686,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Arregla esto por lo pronto ya que en este correo esta parte no se ve de lo muy tenue que te quedó(NO ES VISIBLE AL OJO HUMANO): 'Te saluda JanIA de la dirección comercial de Vecy Bienes Raíces. Nos complace confirmarte que la verificación de tu solicitud #1147 ha concluido exitosamente y la cita para la visita del inmueble está 100% confirmada.' no solo en ese sino en las distintas respuestas que ya están programadas para el agendamiento viene sucediendo lo mismo, solo que se me había pasado decirtelo y es tanto en las que les llegan a los usuarios como las que nos llegan a nosotros. Mira a ver si puedes corregirlo por fa.",
     createdAt: "2026-11-08T15:35:00.000Z",
     active: true
+  },
+  {
+    id: "seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% (Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera v34.07)",
+    directive:
+      "El Skill de Liquidación de Gastos Notariales y Registro de JanIA debe calcular cifras 100% coherentes, exactas y homologadas con las calculadoras oficiales de la Notaría 19 de Bogotá, la plataforma Habi y la Superintendencia de Notariado y Registro (SNR 2026). Para personas naturales enajenantes de inmuebles (activos fijos), la retención en la fuente ante Notaría es EXCLUSIVAMENTE del 1.0% sobre el valor total de la venta conforme al Artículo 398 del Estatuto Tributario, sin importar si el valor supera 20.000 UVT. Se prohíbe terminantemente aplicar tarifas erróneas del 2.5% a personas naturales en Notaría. Si el vendedor es persona jurídica, la retención en notaría es $0 COP por autorretención (Art. 401 E.T.). Los derechos notariales se dividen 50/50 bajo la escala oficial (0.36% a 0.59%), el impuesto de beneficencia es 1.0% a cargo del comprador, y los derechos de registro ORIP siguen la escala SNR (0.63% a 0.92% + 2% sistematización + folios), garantizando exactitud matemática y jurídica total.",
+    rawText:
+      "El Skill de Gastos notariales no está funcionando correctamente, JanIA está lanzando cifras incoherentes. Debes corregirla y entrenarla correctamente como debe de ser. Puedes usar REA de GitHub para comparar con sitios que si liquidan como de be de ser como por ejemplo las calculadoras notariales de la notaría 19 de Bogotá o la de Habi que mantienen los valores notariales actualizados y sus formulas son casi perfectas y lograr así que este Skill quede perfecto? Gracias. Dime si necesitas algo manual de mi parte o si puiedes hacerlo todo tu solo.",
+    createdAt: "2026-11-10T10:30:00.000Z",
+    active: true
   }
 ];
 

@@ -9100,6 +9100,34 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.07 (2026-11-10) — Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% (Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Cifras Incoherentes en Liquidación Notarial de Casa Morato ($1.400.198.000):* En la captura (`media_1794324406743_7651a298.jpg`), JanIA liquidó la venta con una retención en la fuente del 2.5% ($35.004.950 COP), inflando el subtotal del vendedor a $38.123.175 y el total escrituración a $68.539.966 COP.
+  2. *Causa Raíz:* Condición errónea `precioVenta > limite20kUvt ? 2.5 : 1.0` en `notarialExpenseService.ts` y `taxEngine.ts`. Se aplicó una tarifa corporativa del Art. 401 E.T. sobre el 100% del valor a personas naturales, cuando por mandato del Art. 398 del Estatuto Tributario, la tarifa notarial para personas naturales es del **1.0%** plano independientemente del valor del predio.
+- **Solución Quirúrgica Implementada**:
+  1. `server/_core/notarialExpenseService.ts`:
+     - Retención en la fuente para Persona Natural fijada en **1.0%** (`precioVenta * 0.01`) según Art. 398 E.T.
+     - Vendedor Persona Jurídica fijado en **$0 COP** por autorretención (Art. 401 E.T.).
+     - VIS primera venta fijada en **$0 COP** (exenta por ley).
+     - Cancelación de hipoteca del vendedor fijada en **$600.000 COP** (acto sin cuantía homologado con Notaría 19).
+     - Crédito hipotecario del comprador desglosado como Notaría 19: Derechos Notaría con IVA (`montoCredito * notarialFeeRate * 1.19`) + Registro ORIP (`montoCredito * 0.007`).
+     - Casa Morato ($1.400.198.000) ahora liquida con precisión matemática y doctrinal: Retención $14.001.980, Subtotal Vendedor ~$17.120.205, Subtotal Comprador ~$30.416.791 y Total escrituración ~$47.536.996 COP (ahorro y corrección de $21.002.970 COP).
+  2. `server/_core/taxEngine.ts`:
+     - `tarifaRetencion` para persona natural fijada en `0.01` (1.0% Art. 398 E.T.).
+  3. `server/_core/prompts/` y handlers:
+     - Actualizada doctrina en `consultingHandler.ts`, `dmHandler.ts` y `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`.
+  4. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07`.
+  5. `shared/const.ts` y `package.json`:
+     - Incrementada la versión oficial a `v34.07` (`34.07.0`).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 193 en `regression.test.ts` con 7 pruebas automatizadas (673/673 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 25.81s.
+  - Versión: `v34.07` (`34.07.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.06 (2026-11-08) — Alto Contraste y Legibilidad Absoluta en Correos Electrónicos Oficiales de Vecy (Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Texto tenue e invisible al ojo humano en Gmail:* En la captura de pantalla (`media_1794169829848_cf23f8f5.jpg`), el texto *"Te saluda JanIA de la dirección comercial de Vecy Bienes Raíces... Nos complace confirmarte que la verificación de tu solicitud #1147..."* aparecía oscurecido casi al tono de fondo (`#121212`).

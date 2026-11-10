@@ -37,10 +37,10 @@ export function liquidarImpuestosVenta(params: TaxCalculationParams): TaxCalcula
   const costoFiscal = Math.max(0, params.costoFiscal || 0);
   const anosPosesion = Math.max(0, params.anosPosesion || 0);
 
-  // 1. Cálculo de Retención en la Fuente (1% general, 2.5% si supera 20.000 UVT)
+  // 1. Cálculo de Retención en la Fuente (Art. 398 Estatuto Tributario: 1.0% para personas naturales enajenantes de activos fijos ante Notaría)
   const limiteUvtRetencion = 20000 * VALOR_UVT_2026; // 1.006.360.000 COP
   const esSupera20kUvt = precioVenta > limiteUvtRetencion;
-  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
+  const tarifaRetencion = 0.01; // 1% legal ante Notaría para persona natural
   const retencionFuente = Math.round(precioVenta * tarifaRetencion);
 
   // 2. Cálculo de Ganancia Ocasional
