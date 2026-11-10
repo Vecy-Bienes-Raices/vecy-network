@@ -9295,6 +9295,43 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Build `npm run build` limpio en 22.26s + 249ms.
   - Versión: `v33.99` (`33.99.0`) en `shared/const.ts` y `package.json`.
 
+---
+
+### Versión v34.08 (2026-11-10) — Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario (Caso Alfredo Anaya Solicitud #1147 — Doctrina Eduardo A. Rivera)
+- **Problema / Consulta Identificada**:
+  - Alfredo Anaya recibió un correo atrasado indicando la cita del lunes 9 de noviembre a las 11:00 AM, debido a que en la prueba de alto contraste se re-ejecutó el despacho sobre los datos antiguos registrados en la base de datos.
+  - Dicha cita del lunes había sido cancelada por indisponibilidad/incumplimiento de los propietarios y reprogramada de común acuerdo para el **miércoles 11 de noviembre de 2026 a las 3:00 PM (15:00)** en el mismo apartamento (ID-LACAR-01BOG, Edificio Inmoval VI, La Carolina, Bogotá).
+- **Solución Quirúrgica Implementada**:
+  - En `agendaWhatsAppService.ts`: `buildClientAppointmentAddressMessage` ahora detecta si una cita es `reagendada` y despliega el encabezado explícito `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`, detalla la fecha anterior cancelada, la nota aclaratoria, los datos del acompañante (`Adriana Alvarez Barriga`, C.C. `21069381`) y la dirección completa confirmada (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`).
+  - En `emailContractService.ts`: `sendAppointmentAddressEmail` adapta dinámicamente el asunto (`🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #1147 - La Carolina | Vecy Bienes Raíces`), incluye un banner de aclaración oficial, destaca la nueva fecha del miércoles 11 a las 3:00 PM, muestra la fecha anterior postergada, la dirección física confirmada y el botón de 1-clic a Google Calendar con estilos de alto contraste (`#ffffff !important`).
+  - En `server/_core/index.ts`: Creado endpoint administrativo `POST /api/admin/reschedule-and-dispatch-appointment` que actualiza la base de datos PostgreSQL de forma atómica y ejecuta el despacho concurrente de WhatsApp y Correo Electrónico dentro del proceso activo de PM2 con Baileys conectado.
+  - Semilla directiva `seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08` en `founderKnowledgeService.ts`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 194 en `regression.test.ts` con 4 pruebas unitarias automatizadas (677/677 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 36.52s.
+  - Versión: `v34.08` (`34.08.0`) en `shared/const.ts` y `package.json`.
+
+---
+
+### Versión v34.09 (2026-11-10) — Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN (Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera)
+- **Problema / Consulta Identificada**:
+  - En las confirmaciones y notificaciones de agendamiento y entrega de dirección (WhatsApp y Correo), el sistema utilizaba el nombre legal completo de 4 palabras (`¡Hola, Alfredo Anaya Peñaranda!`, `¡Hola, Lincy Mayerly Hoyos Sierra!`, `¡Hola, Ana Maria Diaz Cardenas!`), generando un tono rígido y no natural.
+  - Eduardo instruyó que para quienes solicitan agendamientos no es necesario saludarlos con todo el nombre, sino con el primero o los dos primeros según la lógica canónica de nombres compuestos de Colombia (`resolveNameAndGender`).
+  - Además, Eduardo consultó si debía copiar y enviar manualmente la confirmación a Alfredo Anaya al notar en WhatsApp Web que aún no figuraba el mensaje a las 16:38.
+- **Solución Quirúrgica Implementada**:
+  - En `nameAndGenderResolver.ts`: Exportada la función doctrinal `formatShortGreetingName(rawName, fallback)`. Resuelve de forma exacta y cálida: "Alfredo Anaya Peñaranda" -> "Alfredo", "Lincy Mayerly Hoyos Sierra" -> "Lincy", "Ana Maria Diaz Cardenas" -> "Ana María", "Juan Carlos Gomez" -> "Juan Carlos", "Nelson Enrique Rivera" -> "Nelson Enrique", "María Fernanda Lopez" -> "María Fernanda".
+  - En `agendaWhatsAppService.ts`: `buildClientConfirmationMessage` y `buildClientAppointmentAddressMessage` ahora implementan `formatShortGreetingName`, saludando de forma natural (`¡Hola, Alfredo! 👋`, `¡Hola, Lincy! 👋`, `¡Hola, Ana María! 👋`), preservando el nombre completo y cédula en la sección formal del mensaje.
+  - En `whatsapp-match.ts`: `sendDirectMessage` ahora respeta `options.forcePn` / `options.forcePnJid` para enrutar directamente al JID telefónico (`${clean}@s.whatsapp.net`), garantizando visibilidad inmediata e inequívoca en WhatsApp Web.
+  - En `emailContractService.ts`: `getEmailContent` y `sendAppointmentAddressEmail` aplican `formatShortGreetingName` en los títulos y encabezados de correo (`¡Hola, Alfredo! Tu cita está confirmada 🏠✨`), manteniendo el nombre legal completo en tablas y contratos.
+  - En `server/_core/index.ts`: Endpoint `/api/admin/reschedule-and-dispatch-appointment` ejecutado y validado de extremo a extremo.
+  - Semilla directiva `seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09` en `founderKnowledgeService.ts`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 195 en `regression.test.ts` con 5 pruebas unitarias automatizadas (682/682 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 24.61s.
+  - Versión: `v34.09` (`34.09.0`) en `shared/const.ts` y `package.json`.
+
 
 
 

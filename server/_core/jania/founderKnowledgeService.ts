@@ -710,6 +710,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Alfredo está bravo porque hoy le llegó a su correo de manera atrasada la cita para ayer y dijo que qué es eso, que le deben confirmsar es la de mañana para las 3:00 p.m. a ese mismo apartamento ya que se corrió la cita para mañana por incumplimiento de los propietarios, no del bróker. Quedó para mañana a las 3:00 p.m. en ese mismo apartamento.",
     createdAt: "2026-11-10T16:20:00.000Z",
     active: true
+  },
+  {
+    id: "seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Saludos Naturales Canónicos en Agendamiento y Visitas (Doctrina Eduardo A. Rivera v34.09)",
+    directive:
+      "En todas las comunicaciones automáticas de agendamiento de visitas a inmuebles (WhatsApp y Correo Electrónico), JanIA NUNCA debe saludar a los usuarios con su nombre completo de cuatro palabras (ej: '¡Hola, Alfredo Anaya Peñaranda!' o '¡Hola, Lincy Mayerly Hoyos Sierra!'). JanIA debe saludar de forma cálida, humana y natural utilizando el primer nombre o los dos primeros nombres según la lógica canónica de nombres compuestos de Colombia ('¡Hola, Alfredo!', '¡Hola, Lincy!', '¡Hola, Ana María!'). Los nombres completos y documentos de identidad de solicitantes y acompañantes se reservan exclusivamente para las secciones de auditoría, resumen formal y contratos.",
+    rawText:
+      "Para quienes solicitan agendamiento de visita a inmuebles no es necesario saludarlos con todo el nombre, basta con el primero o los dos primeros según la lógica de combinaciones que habíamos organizado la vez pasada, recuerdas?? y no así como en las imágenes. Y vi que no le llegó nada aún a Alfredo debo yo copiarlo y enviárselo a su WhatsApp y al correo o lo hará JanIA??",
+    createdAt: "2026-11-10T17:10:00.000Z",
+    active: true
   }
 ];
 

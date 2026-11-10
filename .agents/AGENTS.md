@@ -184,7 +184,28 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.08 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.09 — Noviembre 2026
+
+### Novedades v34.09 (Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN — Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Para quieenes solicitan agendamiento de visita a inmuebles no es necesario saludarlos con todo el nombre, basta con el primero o los dos primeros según la lógica de combinaciones que habíamos organizado la vez pasada, recuerdas?? y no así como en las imágenes y vi que no le llegó nada aún a Alfredo debo yo copiarlo yen viarselo a su whatsapp y al correo o lo hará JanIa ??"*
+  2. **Diagnóstico Técnico y Causa Raíz en Webmail / WhatsApp:**
+     - En las confirmaciones y notificaciones de agendamiento y entrega de dirección (WhatsApp y Correo), el código utilizaba directamente `solicitante_nombre` sin procesar el nombre a través de `resolveNameAndGender`.
+     - Esto generaba saludos rígidos y artificiales de 4 palabras: `¡Hola, Alfredo Anaya Peñaranda!`, `¡Hola, Lincy Mayerly Hoyos Sierra!`, `¡Hola, Ana Maria Diaz Cardenas!`.
+     - Además, el despacho de reagendamiento para Alfredo Anaya había quedado pendiente de ejecución automática cuando Eduardo consultó a las 16:38, requiriendo claridad de que JanIA lo despacha 100% automático sin que Eduardo deba copiar ni enviar nada a mano.
+  3. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - En `nameAndGenderResolver.ts`: Exportada la función doctrinal `formatShortGreetingName(rawName, fallback)`. Resuelve de forma exacta y cálida: "Alfredo Anaya Peñaranda" -> "Alfredo", "Lincy Mayerly Hoyos Sierra" -> "Lincy", "Ana Maria Diaz Cardenas" -> "Ana María", "Juan Carlos Gomez" -> "Juan Carlos", "Nelson Enrique Rivera" -> "Nelson Enrique", "María Fernanda Lopez" -> "María Fernanda".
+     - En `agendaWhatsAppService.ts`: `buildClientConfirmationMessage` y `buildClientAppointmentAddressMessage` ahora implementan `formatShortGreetingName`, saludando de forma natural (`¡Hola, Alfredo! 👋`, `¡Hola, Lincy! 👋`, `¡Hola, Ana María! 👋`), preservando el nombre completo y cédula en la sección formal del mensaje.
+     - En `whatsapp-match.ts`: `sendDirectMessage` ahora respeta `options.forcePn` / `options.forcePnJid` para enrutar directamente al JID telefónico (`${clean}@s.whatsapp.net`), garantizando visibilidad inmediata e inequívoca en WhatsApp Web.
+     - En `emailContractService.ts`: `getEmailContent` y `sendAppointmentAddressEmail` aplican `formatShortGreetingName` en los títulos y encabezados de correo (`¡Hola, Alfredo! Tu cita está confirmada 🏠✨`), manteniendo el nombre legal completo en tablas y contratos.
+     - En `server/_core/index.ts`: Endpoint `/api/admin/reschedule-and-dispatch-appointment` ejecutado y validado de extremo a extremo.
+  4. **Gobernanza y Suite de Regresión 195:**
+     - Semilla directiva `seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09` en `founderKnowledgeService.ts`.
+     - Suite 195 con 5 pruebas automatizadas pasando al 100% (682/682 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 195 `vitest` (100% passing) | Build `npm run build` limpio en 24.61s.
+
+## 🔖 VERSIÓN ANTERIOR: v34.08 — Noviembre 2026
 
 ### Novedades v34.08 (Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario — Caso Alfredo Anaya Solicitud #1147 — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

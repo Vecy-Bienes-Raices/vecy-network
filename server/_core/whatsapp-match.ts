@@ -4056,7 +4056,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       } catch (_) { }
     }
 
-    if (resolvedLid) {
+    if (resolvedLid && !options.forcePn && !options.forcePnJid) {
       console.log(`[JANIA-MATCH] [DirectMsg] Enrutando mensaje para +${clean} vía hilo LID activo (${resolvedLid})...`);
       const sentViaLid = await this.queuedSend(resolvedLid, text, { allowDirectMessage: true, ...options });
       if (sentViaLid) {

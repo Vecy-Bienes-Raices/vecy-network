@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-10] — JanIA v34.09: Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN (Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera — v34.09 - 34.09.0)
+
+**Versión:** `v34.09` (`34.09.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Para quieenes solicitan agendamiento de visita a inmuebles no es necesario saludarlos con todo el nombre, basta con el primero o los dos primeros según la lógica de combinaciones que habíamos organizado la vez pasada, recuerdas?? y no así como en las imágenes y vi que no le llegó nada aún a Alfredo debo yo copiarlo yen viarselo a su whatsapp y al correo o lo hará JanIa ??"*
+- **Evidencia Visual Analizada:**
+  1. `media_1794347498608_d22ad452.jpg`: Chat de WhatsApp con "Lincy Mayerly Hoyos Sierra (Bróker)" donde JanIA emitía el agendamiento diciendo `¡Hola, Lincy Mayerly Hoyos Sierra! 👋`, pero en el diálogo orgánico le decía `¡Buenas tardes, Lincy! 👋`.
+  2. `media_1794347520102_056689b4.jpg`: Chat de WhatsApp con "Ana Maria Diaz Cardenas" donde JanIA emitía el mensaje con `¡Hola, Ana Maria Diaz Cardenas! 👋`, en lugar del cálido `¡Hola, Ana María! 👋`.
+  3. `media_1794347548674_4d1a4650.jpg`: Chat de WhatsApp Web con "Alfredo Anaya Inmo", donde la última interacción visible era del domingo ("Listo, Gracias") y no aparecía el nuevo despacho del martes a las 16:38, consultando Eduardo si debía copiar y enviar manualmente.
+
+**Diagnóstico Técnico Forense y Causas Raíz:**
+1. **Omisión de Filtro Canónico en Plantillas de Agendamiento:** En `agendaWhatsAppService.ts` y `emailContractService.ts`, el saludo tomaba directamente el valor sin procesar de `solicitante_nombre` (`data.solicitante_nombre || data.solicitanteNombre`), provocando que formularios o registros con nombres y apellidos completos (4 palabras) fueran insertados textualmente en el saludo informal (`¡Hola, Alfredo Anaya Peñaranda!`).
+2. **Despacho Automático vs Estado de la Conversación:** El endpoint administrativo `/api/admin/reschedule-and-dispatch-appointment` había sido desplegado pero no disparado antes de que Eduardo revisara su WhatsApp Web a las 16:38. Eduardo no requiere realizar ninguna acción manual: JanIA realiza el despacho concurrente de WhatsApp y correo de manera 100% autónoma.
+3. **Enrutamiento Prioritario a PN JID en WhatsApp Web:** Para garantizar que el mensaje de entrega de dirección aparezca de inmediato en la conversación abierta por número de teléfono en WhatsApp Web (`${clean}@s.whatsapp.net`), `sendDirectMessage` requería la opción de omitir el hilo `@lid` cuando se trate de notificaciones transaccionales directas (`forcePn: true`).
+
+**Acciones Quirúrgicas y Solución Permanente Ejecutadas:**
+1. **Módulo de Nombres Canónicos (`nameAndGenderResolver.ts`):**
+   - Creada y exportada la función doctrinal `formatShortGreetingName(rawName, fallback)`. Resuelve:
+     - `Alfredo Anaya Peñaranda` -> `Alfredo`
+     - `Lincy Mayerly Hoyos Sierra` -> `Lincy`
+     - `Ana Maria Diaz Cardenas` -> `Ana María`
+     - `Juan Carlos Gomez` -> `Juan Carlos`
+     - `Nelson Enrique Rivera` -> `Nelson Enrique`
+     - `Maria Fernanda Lopez` -> `María Fernanda`
+     - `Carlos Alberto Martinez` -> `Carlos Alberto`
+     - `Diana Marcela Ospina` -> `Diana Marcela`
+     - `Luz Marina Sanchez` -> `Luz Marina`
+     - `Pedro Perez` -> `Pedro`
+2. **Implementación en Mensajería de WhatsApp (`agendaWhatsAppService.ts`):**
+   - `buildClientConfirmationMessage` y `buildClientAppointmentAddressMessage` ahora filtran `rawNombre` con `formatShortGreetingName`, saludando siempre con `¡Hola, ${nombre}! 👋` en tono natural.
+   - Los datos legales completos (nombres y cédulas) se conservan estrictamente intactos en las secciones de auditoría (`👤 Solicitante: ...`, `👤 Acompañante: ...`).
+   - `sendAppointmentAddressNotification` ahora despacha a WhatsApp con `forcePn: true`.
+3. **Soporte de `forcePn` en `whatsapp-match.ts`:**
+   - En `sendDirectMessage`: `if (resolvedLid && !options.forcePn && !options.forcePnJid)` permite enrutar directamente al JID telefónico (`${clean}@s.whatsapp.net`), asegurando visibilidad directa en WhatsApp Web y móvil.
+4. **Plantillas de Correo Electrónico (`emailContractService.ts`):**
+   - `getEmailContent` y `sendAppointmentAddressEmail` aplican `formatShortGreetingName` en los encabezados `<h2>¡Hola, ${nombre}! 👋🏠✨</h2>` y títulos de confirmación.
+5. **Ejecución y Verificación en Vivo:**
+   - Disparado el reagendamiento para Alfredo Anaya: WhatsApp entregado a `573108149457`, copia espejo entregada al bróker `573166569719`, y correo electrónico entregado a `invervalores@hotmail.com` e `inmovalores81@gmail.com`.
+6. **Semilla de Conocimiento Directivo:**
+   - Registrada `seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09` en `founderKnowledgeService.ts`.
+7. **Suite de Regresión 195:**
+   - Creada Suite 195 con 5 pruebas automatizadas pasando al 100% (682/682 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 195 `vitest` (100% passing) | Build `npm run build` limpio en 24.61s.
+
 ### 📅 [2026-11-10] — JanIA v34.08: Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario — Caso Alfredo Anaya Solicitud #1147 (Doctrina Eduardo A. Rivera — v34.08 - 34.08.0)
 
 **Versión:** `v34.08` (`34.08.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

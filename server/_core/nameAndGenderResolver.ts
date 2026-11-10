@@ -471,6 +471,20 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
 }
 
 /**
+ * Retorna el nombre corto o compuesto de cortesía para saludos naturales en agendamiento y comunicaciones
+ * (ej: "Alfredo Anaya Peñaranda" -> "Alfredo", "Lincy Mayerly Hoyos Sierra" -> "Lincy", "Ana Maria Diaz Cardenas" -> "Ana María", "Juan Carlos Gomez" -> "Juan Carlos")
+ * Doctrina Eduardo A. Rivera v34.09
+ */
+export function formatShortGreetingName(rawName?: string | null, defaultFallback: string = "Colega"): string {
+  if (!rawName || !rawName.trim()) return defaultFallback;
+  const resolved = resolveNameAndGender(rawName);
+  if (resolved.displayName && resolved.displayName.toLowerCase() !== "colega") {
+    return resolved.displayName;
+  }
+  return defaultFallback;
+}
+
+/**
  * Horario Comercial Oficial de Vecy Bienes Raíces (Atención Bróker)
  */
 export const VECY_COMMERCIAL_INFO = {

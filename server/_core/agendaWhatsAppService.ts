@@ -1,4 +1,5 @@
 import { janiaMatchBot } from "./whatsapp-match";
+import { formatShortGreetingName } from "./nameAndGenderResolver";
 
 export interface AgendaWhatsAppPayload {
   solicitudId?: number | string;
@@ -213,7 +214,8 @@ export const buildBrokerCallMeBotMessage = buildBrokerNotificationMessage;
  */
 export function buildClientConfirmationMessage(data: AgendaWhatsAppPayload): string {
   const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
-  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Cliente";
+  const rawNombre = data.solicitante_nombre || data.solicitanteNombre || "Cliente";
+  const nombre = formatShortGreetingName(rawNombre, "Cliente");
   const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Inmueble seleccionado";
   const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
   const negocio = data.opcion_negocio || data.opcionNegocio || "Inmobiliario";
@@ -385,7 +387,8 @@ export const KNOWN_PROPERTY_ADDRESSES: Record<string, string> = {
  */
 export function buildClientAppointmentAddressMessage(data: AgendaWhatsAppPayload, address: string): string {
   const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
-  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Colega";
+  const rawNombre = data.solicitante_nombre || data.solicitanteNombre || "Colega";
+  const nombre = formatShortGreetingName(rawNombre, "Colega");
   const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Apartamento en La Carolina";
   const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
@@ -465,7 +468,8 @@ export async function sendAppointmentAddressNotification(
       await janiaMatchBot.sendDirectMessage(cleanClientCel, addressMsg, {
         allowDirectMessage: true,
         isTransactionalNotification: true,
-        skipDelay: true
+        skipDelay: true,
+        forcePn: true
       });
       clientSent = true;
       console.log(`[AGENDA-DIRECCION-#${numSolicitud}] ✅ Dirección entregada por WhatsApp a solicitante (${cleanClientCel}).`);

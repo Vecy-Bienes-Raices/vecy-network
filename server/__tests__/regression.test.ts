@@ -12088,11 +12088,115 @@ Ana Morales Castillo
 
     it("4. Consagración doctrinal de versión v34.08 en shared/const.ts y package.json (34.08.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.08");
+      expect(VECY_VERSION).toMatch(/^v34\.\d+$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.08.0");
+      expect(pkg.version).toMatch(/^34\.\d+\.\d+$/);
+    });
+  });
+
+  describe("Suite 195: Saludos Naturales Canónicos en Agendamiento y Visitas (Doctrina Eduardo A. Rivera v34.09)", () => {
+    it("1. formatShortGreetingName y resolveNameAndGender resuelven nombres naturales para agendamientos", async () => {
+      const { formatShortGreetingName } = await import("../_core/nameAndGenderResolver");
+
+      expect(formatShortGreetingName("Alfredo Anaya Peñaranda")).toBe("Alfredo");
+      expect(formatShortGreetingName("Lincy Mayerly Hoyos Sierra")).toBe("Lincy");
+      expect(formatShortGreetingName("Ana Maria Diaz Cardenas")).toBe("Ana María");
+      expect(formatShortGreetingName("Juan Carlos Gomez")).toBe("Juan Carlos");
+      expect(formatShortGreetingName("Nelson Enrique Rivera")).toBe("Nelson Enrique");
+      expect(formatShortGreetingName("Maria Fernanda Lopez")).toBe("María Fernanda");
+      expect(formatShortGreetingName("Carlos Alberto Martinez")).toBe("Carlos Alberto");
+      expect(formatShortGreetingName("Diana Marcela Ospina")).toBe("Diana Marcela");
+      expect(formatShortGreetingName("Luz Marina Sanchez")).toBe("Luz Marina");
+      expect(formatShortGreetingName("Pedro Perez")).toBe("Pedro");
+      expect(formatShortGreetingName("")).toBe("Colega");
+      expect(formatShortGreetingName(null)).toBe("Colega");
+    });
+
+    it("2. buildClientConfirmationMessage y buildClientAppointmentAddressMessage saludan naturalmente sin 4 palabras", async () => {
+      const { buildClientConfirmationMessage, buildClientAppointmentAddressMessage } = await import("../_core/agendaWhatsAppService");
+
+      const payloadAlfredo = {
+        solicitudId: 1147,
+        solicitante_nombre: "Alfredo Anaya Peñaranda",
+        nombre_inmueble: "Apartamento en La Carolina",
+        codigo_inmueble: "ID-LACAR-01BOG",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "3:00 PM",
+        estado: "reagendada",
+      };
+      const msgAlfredo = buildClientAppointmentAddressMessage(payloadAlfredo, "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(msgAlfredo).toContain("¡Hola, Alfredo! 👋");
+      expect(msgAlfredo).not.toContain("¡Hola, Alfredo Anaya Peñaranda!");
+
+      const payloadLincy = {
+        solicitudId: 1148,
+        solicitante_nombre: "Lincy Mayerly Hoyos Sierra",
+        nombre_inmueble: "Apartamento en La Carolina",
+        codigo_inmueble: "ID-lacar-01bog",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "04:00 PM",
+      };
+      const msgLincy = buildClientAppointmentAddressMessage(payloadLincy, "Dirección confirmada en La Carolina, Bogotá");
+      expect(msgLincy).toContain("¡Hola, Lincy! 👋");
+      expect(msgLincy).not.toContain("¡Hola, Lincy Mayerly Hoyos Sierra!");
+
+      const payloadAna = {
+        solicitudId: 1149,
+        solicitante_nombre: "Ana Maria Diaz Cardenas",
+        nombre_inmueble: "apartamento en la Carolina",
+        codigo_inmueble: "ID-lacar-01bog",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "04:00 PM",
+      };
+      const msgAna = buildClientConfirmationMessage(payloadAna);
+      expect(msgAna).toContain("¡Hola, Ana María! 👋");
+      expect(msgAna).not.toContain("¡Hola, Ana Maria Diaz Cardenas!");
+    });
+
+    it("3. getEmailContent y sendAppointmentAddressEmail aplican el saludo canónico en el título HTML", async () => {
+      const { getEmailContent, sendAppointmentAddressEmail } = await import("../_core/emailContractService");
+
+      const resContent = getEmailContent({
+        solicitud_id: 1147,
+        solicitante_nombre: "Alfredo Anaya Peñaranda",
+        solicitante_email: "invervalores@hotmail.com",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "3:00 PM",
+      });
+      expect(resContent.html).toContain("¡Hola, Alfredo! Tu cita está confirmada");
+      expect(resContent.html).not.toContain("¡Hola, Alfredo Anaya Peñaranda! Tu cita está confirmada");
+
+      const emailAddressRes = await sendAppointmentAddressEmail({
+        solicitud_id: 1147,
+        solicitante_nombre: "Alfredo Anaya Peñaranda",
+        solicitante_email: "test@example.com",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "3:00 PM",
+        codigo_inmueble: "ID-LACAR-01BOG",
+      }, "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+
+      expect(emailAddressRes).toBeDefined();
+    });
+
+    it("4. Semilla de conocimiento directivo v34.09 registrada en founderKnowledgeService", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.topic).toContain("Saludos Naturales Canónicos en Agendamiento");
+      expect(seed?.active).toBe(true);
+    });
+
+    it("5. Consagración doctrinal de versión v34.09 en shared/const.ts y package.json (34.09.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.09");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.09.0");
     });
   });
 });

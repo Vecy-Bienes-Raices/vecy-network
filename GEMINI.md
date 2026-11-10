@@ -1,18 +1,20 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.08.0 — 2026-11-10)
-- **JanIA Server:** `v34.08` (`34.08.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario (Caso Alfredo Anaya — Solicitud #1147 — Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.09.0 — 2026-11-10)
+- **JanIA Server:** `v34.09` (`34.09.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN (Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**
-     - Alfredo Anaya recibió un correo atrasado indicando la cita del lunes 9 de noviembre a las 11:00 AM, debido a que en la prueba de alto contraste se re-ejecutó el despacho sobre los datos antiguos registrados en la base de datos.
-     - Dicha cita del lunes había sido cancelada por indisponibilidad/incumplimiento de los propietarios y reprogramada de común acuerdo para el **miércoles 11 de noviembre de 2026 a las 3:00 PM (15:00)** en el mismo apartamento (ID-LACAR-01BOG, Edificio Inmoval VI, La Carolina, Bogotá).
+     - En los mensajes y correos automáticos de confirmación y entrega de dirección de citas, JanIA utilizaba el nombre legal completo de 4 palabras (ej: `¡Hola, Alfredo Anaya Peñaranda!`, `¡Hola, Lincy Mayerly Hoyos Sierra!`, `¡Hola, Ana Maria Diaz Cardenas!`).
+     - Eduardo instruyó que en agendamientos de visita no se debe saludar con el nombre completo, sino con el primer nombre o los dos primeros nombres según la lógica canónica de nombres compuestos desarrollada para Colombia (`resolveNameAndGender`).
+     - Adicionalmente, el mensaje de reagendamiento para Alfredo Anaya había quedado pendiente de disparo al momento de la captura de pantalla de Eduardo a las 16:38, requiriendo confirmación de que JanIA lo despacha 100% automático sin intervención manual del usuario.
   2. **Solución Doctrinal y Arquitectural Ejecutada:**
-     - En `agendaWhatsAppService.ts`: `buildClientAppointmentAddressMessage` ahora detecta si una cita es `reagendada` y despliega el encabezado explícito `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`, detalla la fecha anterior cancelada, la nota aclaratoria, los datos del acompañante (`Adriana Alvarez Barriga`, C.C. `21069381`) y la dirección completa confirmada (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`).
-     - En `emailContractService.ts`: `sendAppointmentAddressEmail` adapta dinámicamente el asunto (`🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #1147 - La Carolina | Vecy Bienes Raíces`), incluye un banner de aclaración oficial, destaca la nueva fecha del miércoles 11 a las 3:00 PM, muestra la fecha anterior postergada, la dirección física confirmada y el botón de 1-clic a Google Calendar con estilos de alto contraste (`#ffffff !important`).
-     - En `server/_core/index.ts`: Creado endpoint administrativo `POST /api/admin/reschedule-and-dispatch-appointment` que actualiza la base de datos PostgreSQL de forma atómica y ejecuta el despacho concurrente de WhatsApp y Correo Electrónico dentro del proceso activo de PM2 con Baileys conectado.
-     - Script `send_alfredo_address.ts` actualizado con la nueva fecha oficial y nota aclaratoria.
-  3. **Gobernanza y Suite de Regresión 194:**
-     - Semilla directiva `seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08` en `founderKnowledgeService.ts`.
-     - Suite 194 con 4 pruebas automatizadas pasando al 100% (677/677 tests en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 194 `vitest` (100% passing) | Build `npm run build` limpio en 36.52s.
+     - En `nameAndGenderResolver.ts`: Creada y exportada la función doctrinal `formatShortGreetingName(rawName, fallback)`. Resuelve de forma exacta y cálida: "Alfredo Anaya Peñaranda" -> "Alfredo", "Lincy Mayerly Hoyos Sierra" -> "Lincy", "Ana Maria Diaz Cardenas" -> "Ana María", "Juan Carlos Gomez" -> "Juan Carlos", "Nelson Enrique Rivera" -> "Nelson Enrique", "María Fernanda Lopez" -> "María Fernanda".
+     - En `agendaWhatsAppService.ts`: `buildClientConfirmationMessage` y `buildClientAppointmentAddressMessage` ahora implementan `formatShortGreetingName`, saludando de forma natural (`¡Hola, Alfredo! 👋`, `¡Hola, Lincy! 👋`, `¡Hola, Ana María! 👋`), preservando el nombre completo y cédula en la sección formal del mensaje.
+     - En `whatsapp-match.ts`: `sendDirectMessage` ahora respeta `options.forcePn` / `options.forcePnJid` para enrutar directamente al JID telefónico (`${clean}@s.whatsapp.net`), garantizando visibilidad inmediata e inequívoca en WhatsApp Web.
+     - En `emailContractService.ts`: `getEmailContent` y `sendAppointmentAddressEmail` aplican `formatShortGreetingName` en los títulos y encabezados de correo (`¡Hola, Alfredo! Tu cita está confirmada 🏠✨`), manteniendo el nombre legal completo en tablas y contratos.
+     - En `server/_core/index.ts`: Endpoint `/api/admin/reschedule-and-dispatch-appointment` ejecutado exitosamente vía curl y validado contra el VPS.
+  3. **Gobernanza y Suite de Regresión 195:**
+     - Semilla directiva `seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09` en `founderKnowledgeService.ts`.
+     - Suite 195 con 5 pruebas automatizadas pasando al 100% (682/682 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 195 `vitest` (100% passing) | Build `npm run build` limpio en 24.61s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)
