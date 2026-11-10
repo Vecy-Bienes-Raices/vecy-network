@@ -1,18 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.07.0 — 2026-11-10)
-- **JanIA Server:** `v34.07` (`34.07.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% (Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera):**
-  1. **Diagnóstico Técnico y Causa Raíz en Liquidación Notarial:**
-     - En la captura aportada por Eduardo (`media_1794324406743_7651a298.jpg`), JanIA liquidó la venta de una casa en Morato de $1.400.198.000 con una retención en la fuente del 2.5% ($35.004.950 COP), inflando el subtotal del vendedor a $38.123.175 y el total escrituración a $68.539.966 COP.
-     - Causa: Una condición errónea `precioVenta > limite20kUvt ? 2.5 : 1.0` en `notarialExpenseService.ts` y `taxEngine.ts` que aplicaba la tarifa corporativa del Art. 401 E.T. sobre la totalidad del valor a personas naturales.
-  2. **Solución Doctrinal Homologada con Notaría 19 de Bogotá y Habi:**
-     - Conforme al Art. 398 del Estatuto Tributario y el código fuente extraído de la calculadora oficial de la Notaría 19 de Bogotá y Habi, la retención en la fuente ante Notaría para persona natural que enajena activos fijos es EXCLUSIVAMENTE del **1.0%** (`precioVenta * 0.01`), sin importar si supera 20.000 UVT.
-     - Para la Casa Morato ($1.400.198.000): La retención real del vendedor es **$14.001.980 COP**, el subtotal vendedor es **$17.120.205 COP** (¡ahorro de $21.002.970 COP frente al error previo!), el subtotal comprador es **$30.416.791 COP** y el total escrituración es **$47.536.996 COP** (en lugar de los $68.5 millones incoherentes).
-     - Si el vendedor es persona jurídica, la retención en notaría es **$0 COP** por autorretención (Art. 401 E.T.).
-     - Desglose de hipotecas bancarias homologado con Notaría 19 (Derechos notaría con IVA + 0.70% ORIP).
-  3. **Gobernanza y Suite de Regresión 193:**
-     - Semilla de conocimiento directivo `seed-precision-doctrinal-gastos-notariales-retencion-1pct-notaria19-habi-v34-07` en `founderKnowledgeService.ts`.
-     - Suite 193 con 7 pruebas automatizadas pasando al 100% (673/673 tests totales en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 193 `vitest` (100% passing) | Build `npm run build` limpio en 25.81s.
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.08.0 — 2026-11-10)
+- **JanIA Server:** `v34.08` (`34.08.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario (Caso Alfredo Anaya — Solicitud #1147 — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz:**
+     - Alfredo Anaya recibió un correo atrasado indicando la cita del lunes 9 de noviembre a las 11:00 AM, debido a que en la prueba de alto contraste se re-ejecutó el despacho sobre los datos antiguos registrados en la base de datos.
+     - Dicha cita del lunes había sido cancelada por indisponibilidad/incumplimiento de los propietarios y reprogramada de común acuerdo para el **miércoles 11 de noviembre de 2026 a las 3:00 PM (15:00)** en el mismo apartamento (ID-LACAR-01BOG, Edificio Inmoval VI, La Carolina, Bogotá).
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - En `agendaWhatsAppService.ts`: `buildClientAppointmentAddressMessage` ahora detecta si una cita es `reagendada` y despliega el encabezado explícito `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`, detalla la fecha anterior cancelada, la nota aclaratoria, los datos del acompañante (`Adriana Alvarez Barriga`, C.C. `21069381`) y la dirección completa confirmada (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`).
+     - En `emailContractService.ts`: `sendAppointmentAddressEmail` adapta dinámicamente el asunto (`🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #1147 - La Carolina | Vecy Bienes Raíces`), incluye un banner de aclaración oficial, destaca la nueva fecha del miércoles 11 a las 3:00 PM, muestra la fecha anterior postergada, la dirección física confirmada y el botón de 1-clic a Google Calendar con estilos de alto contraste (`#ffffff !important`).
+     - En `server/_core/index.ts`: Creado endpoint administrativo `POST /api/admin/reschedule-and-dispatch-appointment` que actualiza la base de datos PostgreSQL de forma atómica y ejecuta el despacho concurrente de WhatsApp y Correo Electrónico dentro del proceso activo de PM2 con Baileys conectado.
+     - Script `send_alfredo_address.ts` actualizado con la nueva fecha oficial y nota aclaratoria.
+  3. **Gobernanza y Suite de Regresión 194:**
+     - Semilla directiva `seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08` en `founderKnowledgeService.ts`.
+     - Suite 194 con 4 pruebas automatizadas pasando al 100% (677/677 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 194 `vitest` (100% passing) | Build `npm run build` limpio en 36.52s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

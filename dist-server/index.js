@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.07";
+    VECY_VERSION = "v34.08";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17492,6 +17492,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "El Skill de Gastos notariales no est\xE1 funcionando correctamente, JanIA est\xE1 lanzando cifras incoherentes. Debes corregirla y entrenarla correctamente como debe de ser. Puedes usar REA de GitHub para comparar con sitios que si liquidan como de be de ser como por ejemplo las calculadoras notariales de la notar\xEDa 19 de Bogot\xE1 o la de Habi que mantienen los valores notariales actualizados y sus formulas son casi perfectas y lograr as\xED que este Skill quede perfecto? Gracias. Dime si necesitas algo manual de mi parte o si puiedes hacerlo todo tu solo.",
         createdAt: "2026-11-10T10:30:00.000Z",
         active: true
+      },
+      {
+        id: "seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaraci\xF3n Inmediata al Usuario (Doctrina Eduardo A. Rivera v34.08)",
+        directive: "Cuando una cita sea reprogramada o reagendada (por ejemplo por indisponibilidad o incumplimiento de los propietarios o requerimiento de las partes), JanIA y los servicios de notificaci\xF3n de Vecy deben actualizar de inmediato la fecha y hora oficial en la base de datos (solicitudes), registrar la fecha anterior postergada y despachar concurrentemente por WhatsApp y Correo Electr\xF3nico la confirmaci\xF3n oficial con el encabezado expl\xEDcito de CITA REAGENDADA, la direcci\xF3n f\xEDsica confirmada, recomendaciones notariales de ingreso, enlace a Google Calendar y la nota aclaratoria correspondiente. Jam\xE1s se debe reenviar una notificaci\xF3n de una fecha caduca sin la debida aclaraci\xF3n de reagendamiento, garantizando tranquilidad, transparencia y profesionalismo intachable con colegas y clientes.",
+        rawText: "Alfredo est\xE1 bravo porque hoy le lleg\xF3 a su correo de manera atrasada la cita para ayer y dijo que qu\xE9 es eso, que le deben confirmsar es la de ma\xF1ana para las 3:00 p.m. a ese mismo apartamento ya que se corri\xF3 la cita para ma\xF1ana por incumplimiento de los propietarios, no del br\xF3ker. Qued\xF3 para ma\xF1ana a las 3:00 p.m. en ese mismo apartamento.",
+        createdAt: "2026-11-10T16:20:00.000Z",
+        active: true
       }
     ];
   }
@@ -23396,8 +23406,20 @@ async function sendAppointmentAddressEmail(rawPayload, address) {
       pass: gmailPass
     }
   });
-  const subject = `\u{1F4CD} Direcci\xF3n Confirmada y Agendamiento Solicitud #${solicitudId} | Vecy Bienes Ra\xEDces`;
+  const isReagendada = formData.estado === "reagendada" || Boolean(formData.fecha_cita_anterior || formData.fechaCitaAnterior);
+  const fechaAnt = formData.fecha_cita_anterior || formData.fechaCitaAnterior;
+  const horaAnt = formData.hora_cita_anterior || formData.horaCitaAnterior;
+  const notaAclaratoria = formData.nota_aclaratoria || formData.notaAclaratoria;
+  const subject = isReagendada ? `\u{1F504} Confirmaci\xF3n de Cita Reagendada y Direcci\xF3n Oficial | Solicitud #${solicitudId} - La Carolina | Vecy Bienes Ra\xEDces` : `\u{1F4CD} Direcci\xF3n Confirmada y Agendamiento Solicitud #${solicitudId} | Vecy Bienes Ra\xEDces`;
   const logoUrlParaEmail = "cid:vecyLogo";
+  const subHeaderTitle = isReagendada ? "CONFIRMACI\xD3N DE CITA REAGENDADA Y DIRECCI\xD3N OFICIAL" : "CONFIRMACI\xD3N DE AGENDAMIENTO Y DIRECCI\xD3N OFICIAL";
+  const calUrl = buildGoogleCalendarUrl({
+    title: `Cita Vecy: ${nombreInmueble} (${codigo})`,
+    description: `Visita inmobiliaria agendada con Vecy Bienes Ra\xEDces. Solicitud #${solicitudId}. Direcci\xF3n: ${address}. Br\xF3ker anfitri\xF3n: +57 316 6569719.`,
+    location: address,
+    dateStr: fechaTexto,
+    timeStr: hora
+  });
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -23423,24 +23445,33 @@ async function sendAppointmentAddressEmail(rawPayload, address) {
   <div class="header" style="background-color: #000000; padding: 25px; text-align: center; border-bottom: 2px solid #bf953f;">
     <img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo" style="max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4));">
     <h1 style="margin-top: 10px; color: #bf953f !important; font-size: 22px; text-transform: uppercase; letter-spacing: 1.5px;">VECY BIENES RA\xCDCES</h1>
-    <p style="color: #bf953f !important; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px; font-weight: bold;">CONFIRMACI\xD3N DE AGENDAMIENTO Y DIRECCI\xD3N OFICIAL</p>
+    <p style="color: #bf953f !important; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px; font-weight: bold;">${subHeaderTitle}</p>
   </div>
   <div class="content" style="padding: 30px 35px; color: #ffffff !important;">
     <h2 style="color: #bf953f !important; font-size: 20px; margin-top: 0; font-weight: bold;">\xA1Hola, ${nombre}! \u{1F44B}\u{1F3E0}\u2728</h2>
+    ${notaAclaratoria ? `<div style="background-color: #1a1a1a; border-left: 4px solid #00e676; padding: 14px 18px; border-radius: 6px; margin: 0 0 20px 0;"><p style="color: #ffffff !important; font-size: 14px; margin: 0; line-height: 1.6;">\u2139\uFE0F <strong style="color: #00e676;">Aclaraci\xF3n oficial:</strong> ${notaAclaratoria}</p></div>` : ""}
     <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
       Te saluda <strong style="color: #bf953f;">JanIA</strong> de la direcci\xF3n comercial de <strong style="color: #bf953f;">Vecy Bienes Ra\xEDces</strong>.
     </p>
     <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">
-      Nos complace confirmarte que la verificaci\xF3n de tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble est\xE1 <strong style="color: #00e676; text-decoration: underline;">100% confirmada</strong>.
+      ${isReagendada ? `Nos complace confirmarte que la cita para la visita del inmueble correspondiente a tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha sido <strong style="color: #00e676; text-decoration: underline;">REAGENDADA CON \xC9XITO</strong> para <strong style="color: #ffffff;">${fechaTexto}</strong> a las <strong style="color: #ffffff;">${hora}</strong> y se encuentra <strong style="color: #00e676;">100% confirmada</strong>.` : `Nos complace confirmarte que la verificaci\xF3n de tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble est\xE1 <strong style="color: #00e676; text-decoration: underline;">100% confirmada</strong>.`}
     </p>
+    ${isReagendada && fechaAnt ? `<p style="color: #aaaaaa !important; font-size: 13px; margin: -10px 0 20px 0;">\u23EA <em>(Cita anterior postergada: ${fechaAnt}${horaAnt ? ` a las ${horaAnt}` : ""} por disponibilidad de los propietarios)</em></p>` : ""}
     
     <div class="address-box" style="background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <p style="color: #bf953f !important; font-size: 13px; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">\u{1F4CD} DIRECCI\xD3N EXACTA CONFIRMADA DEL INMUEBLE:</p>
       <p style="color: #ffffff !important; font-size: 20px; font-weight: bold; margin: 0 0 12px 0; letter-spacing: 0.5px;">${address}</p>
       <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">\u{1F3E2} Inmueble: <strong style="color: #ffffff;">${nombreInmueble}</strong> (C\xF3digo: <strong style="color: #bf953f;">${codigo}</strong>)</p>
-      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">\u{1F4C5} Fecha de la cita: <strong style="color: #ffffff;">${fechaTexto}</strong></p>
+      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">\u{1F4C5} Fecha confirmada: <strong style="color: #ffffff;">${fechaTexto}</strong></p>
       <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">\u23F0 Hora: <strong style="color: #ffffff;">${hora}</strong></p>
+      ${isReagendada && fechaAnt ? `<p style="color: #aaaaaa !important; font-size: 13px; margin: 6px 0;">\u23EA Fecha anterior: ${fechaAnt}${horaAnt ? ` a las ${horaAnt}` : ""}</p>` : ""}
       ${acompanante ? `<p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">\u{1F464} Acompa\xF1ante / Cliente interesado(a): <strong style="color: #ffffff;">${acompanante}</strong></p>` : ""}
+    </div>
+
+    <div style="text-align: center; margin: 25px 0;">
+      <a href="${calUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%); color: #000000 !important; font-weight: bold; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(191,149,63,0.3);">
+        \u{1F4C5} A\xF1adir a mi Google Calendar
+      </a>
     </div>
 
     <div class="highlight" style="background-color: #1a1a1a; padding: 20px; border-left: 4px solid #bf953f; border-radius: 6px; margin: 25px 0;">
@@ -29933,13 +29964,27 @@ function buildClientAppointmentAddressMessage(data, address) {
   const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
   const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  const isReagendada = data.estado === "reagendada" || Boolean(data.fecha_cita_anterior || data.fechaCitaAnterior);
+  const fechaAnt = data.fecha_cita_anterior || data.fechaCitaAnterior;
+  const horaAnt = data.hora_cita_anterior || data.horaCitaAnterior;
+  const acompanante = data.interesado_nombre || data.interesadoNombre;
+  const docAcompanante = data.interesado_documento || data.interesadoDocumento;
+  const nota = data.nota_aclaratoria || data.notaAclaratoria;
+  const header = isReagendada ? `\u{1F504} *CONFIRMACI\xD3N DE CITA REAGENDADA Y DIRECCI\xD3N OFICIAL*` : `\u{1F4CD} *CONFIRMACI\xD3N FINAL Y DIRECCI\xD3N OFICIAL DEL INMUEBLE*`;
+  const anteriorText = isReagendada && fechaAnt ? `
+\u23EA *Fecha anterior postergada:* ${formatDateSpanish(fechaAnt)}${horaAnt ? ` a las ${horaAnt}` : ""} (por disponibilidad de propietarios)` : "";
+  const acompananteText = acompanante ? `
+\u{1F464} *Acompa\xF1ante / Cliente interesado(a):* ${acompanante}${docAcompanante ? ` (Doc: ${docAcompanante})` : ""}` : "";
+  const notaText = nota ? `
+\u2139\uFE0F *Aclaraci\xF3n:* ${nota}
+` : "";
   return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
-
-\u{1F4CD} *CONFIRMACI\xD3N FINAL Y DIRECCI\xD3N OFICIAL DEL INMUEBLE*
+${notaText}
+${header}
 Solicitud *No. ${numSolicitud}* | Inmueble: *${nombreInmueble}* (Cod: ${codigo})
 
 \u{1F4C5} *Fecha de la cita:* ${fechaTexto}
-\u23F0 *Hora:* ${hora}
+\u23F0 *Hora:* ${hora}${anteriorText}${acompananteText}
 
 \u{1F4CC} *DIRECCI\xD3N EXACTA COMPLETA:*
 \u{1F4CD} *${address}*
@@ -48353,6 +48398,74 @@ Direcci\xF3n obligatoria:
       res.json({ ok: true, ...result });
     } catch (err) {
       console.error("[ADMIN-TRIGGER-ADDRESS] Error:", err?.message || err);
+      res.status(500).json({ error: err?.message || err });
+    }
+  });
+  app.post("/api/admin/reschedule-and-dispatch-appointment", async (req, res) => {
+    const { token, solicitudId, nuevaFechaTexto, nuevaHoraTexto, fechaAnteriorTexto, horaAnteriorTexto, motivo, notaAclaratoria, direccion } = req.body || {};
+    if (token !== "vecy2025admin" && token !== "vecy_network_secret_token") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    try {
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const { solicitudes: solicitudes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq23, or: or7 } = await import("drizzle-orm");
+      const db = await getDb2();
+      if (!db) throw new Error("Base de datos no disponible");
+      const solIdNum = Number(solicitudId) || 0;
+      const rows = await db.select().from(solicitudes2).where(or7(eq23(solicitudes2.id, solIdNum), eq23(solicitudes2.solicitudId, solIdNum))).limit(1);
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Solicitud no encontrada" });
+      }
+      const prev = rows[0];
+      const fechaAnt = fechaAnteriorTexto || prev.fechaCitaTexto || "lunes, 9 de noviembre de 2026";
+      const horaAnt = horaAnteriorTexto || prev.horaCita || "11:00 AM";
+      const fechaNueva = nuevaFechaTexto || "mi\xE9rcoles, 11 de noviembre de 2026";
+      const horaNueva = nuevaHoraTexto || "3:00 PM";
+      const direccionFinal = direccion || prev.direccionInmueble || "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogot\xE1";
+      const motivoFinal = motivo || "Postergaci\xF3n coordinada por disponibilidad de los propietarios del inmueble";
+      const notaFinal = notaAclaratoria || "Aclaraci\xF3n sobre reprogramaci\xF3n de cita: La visita fue reprogramada para este mi\xE9rcoles a las 3:00 p.m. por disponibilidad de los propietarios del inmueble. El correo previo emitido por el sistema reflejaba la fecha anterior.";
+      await db.update(solicitudes2).set({
+        estado: "reagendada",
+        fechaCitaTexto: fechaNueva,
+        horaCita: horaNueva,
+        fechaCitaAnterior: fechaAnt,
+        horaCitaAnterior: horaAnt,
+        motivoCancelacion: motivoFinal,
+        reagendadaAt: /* @__PURE__ */ new Date(),
+        direccionDespachada: true,
+        direccionDespachadaAt: /* @__PURE__ */ new Date(),
+        direccionInmueble: direccionFinal,
+        solicitanteCelular: prev.solicitanteCelular || "573108149457"
+      }).where(eq23(solicitudes2.id, prev.id));
+      const { sendAppointmentAddressNotification: sendAppointmentAddressNotification2 } = await Promise.resolve().then(() => (init_agendaWhatsAppService(), agendaWhatsAppService_exports));
+      const payload = {
+        solicitudId: prev.solicitudId || prev.id,
+        solicitud_id: prev.solicitudId || prev.id,
+        id: prev.id,
+        solicitante_nombre: prev.solicitanteNombre || "Alfredo Anaya Pe\xF1aranda",
+        solicitante_perfil: prev.solicitantePerfil || "Agente Inmobiliario",
+        solicitante_email: prev.solicitanteEmail || "invervalores@hotmail.com",
+        solicitante_email_alt: "inmovalores81@gmail.com",
+        solicitante_celular: prev.solicitanteCelular || "573108149457",
+        codigo_inmueble: prev.codigoInmueble || "ID-LACAR-01BOG",
+        nombre_inmueble: prev.nombreInmueble || "Apartamento en La Carolina",
+        opcion_negocio: prev.opcionNegocio || "Venta",
+        fecha_cita_texto: fechaNueva,
+        hora_cita: horaNueva,
+        estado: "reagendada",
+        fecha_cita_anterior: fechaAnt,
+        hora_cita_anterior: horaAnt,
+        motivo_reagendamiento: motivoFinal,
+        nota_aclaratoria: notaFinal,
+        cantidad_personas: prev.cantidadPersonas || 1,
+        interesado_nombre: prev.interesadoNombre || "Adriana Alvarez Barriga",
+        interesado_documento: prev.interesadoDocumento || "21069381"
+      };
+      const dispatchResult = await sendAppointmentAddressNotification2(payload, direccionFinal);
+      res.json({ ok: true, dispatchResult });
+    } catch (err) {
+      console.error("[ADMIN-RESCHEDULE-DISPATCH] Error:", err?.message || err);
       res.status(500).json({ error: err?.message || err });
     }
   });

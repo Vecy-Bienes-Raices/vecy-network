@@ -698,6 +698,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "El Skill de Gastos notariales no está funcionando correctamente, JanIA está lanzando cifras incoherentes. Debes corregirla y entrenarla correctamente como debe de ser. Puedes usar REA de GitHub para comparar con sitios que si liquidan como de be de ser como por ejemplo las calculadoras notariales de la notaría 19 de Bogotá o la de Habi que mantienen los valores notariales actualizados y sus formulas son casi perfectas y lograr así que este Skill quede perfecto? Gracias. Dime si necesitas algo manual de mi parte o si puiedes hacerlo todo tu solo.",
     createdAt: "2026-11-10T10:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario (Doctrina Eduardo A. Rivera v34.08)",
+    directive:
+      "Cuando una cita sea reprogramada o reagendada (por ejemplo por indisponibilidad o incumplimiento de los propietarios o requerimiento de las partes), JanIA y los servicios de notificación de Vecy deben actualizar de inmediato la fecha y hora oficial en la base de datos (solicitudes), registrar la fecha anterior postergada y despachar concurrentemente por WhatsApp y Correo Electrónico la confirmación oficial con el encabezado explícito de CITA REAGENDADA, la dirección física confirmada, recomendaciones notariales de ingreso, enlace a Google Calendar y la nota aclaratoria correspondiente. Jamás se debe reenviar una notificación de una fecha caduca sin la debida aclaración de reagendamiento, garantizando tranquilidad, transparencia y profesionalismo intachable con colegas y clientes.",
+    rawText:
+      "Alfredo está bravo porque hoy le llegó a su correo de manera atrasada la cita para ayer y dijo que qué es eso, que le deben confirmsar es la de mañana para las 3:00 p.m. a ese mismo apartamento ya que se corrió la cita para mañana por incumplimiento de los propietarios, no del bróker. Quedó para mañana a las 3:00 p.m. en ese mismo apartamento.",
+    createdAt: "2026-11-10T16:20:00.000Z",
+    active: true
   }
 ];
 

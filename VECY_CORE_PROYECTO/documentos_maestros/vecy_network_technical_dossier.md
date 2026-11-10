@@ -9100,6 +9100,32 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.08 (2026-11-10) — Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario (Caso Alfredo Anaya Solicitud #1147 — Doctrina Eduardo A. Rivera)
+- **Problema Identificado**:
+  1. *Despacho Involuntario de Fecha Anterior en Correo Electrónico:* Tras corregir los estilos de contraste de las plantillas de correo, se re-ejecutó el despacho de prueba utilizando los datos originales de la Solicitud #1147 (lunes 9 de noviembre 11:00 AM).
+  2. *Cita Reprogramada por Incumplimiento de Propietarios:* La cita original había sido aplazada de mutuo acuerdo entre Eduardo y el colega Alfredo Anaya para el **miércoles 11 de noviembre a las 3:00 PM (15:00)** en el mismo apartamento (ID-LACAR-01BOG, Edificio Inmoval VI, La Carolina, Bogotá). Al recibir Alfredo el correo de prueba con la fecha del lunes, manifestó su inconformidad ante la incoherencia de recibir una confirmación para una fecha caduca.
+- **Solución Quirúrgica Implementada**:
+  1. `server/_core/agendaWhatsAppService.ts`:
+     - `AgendaWhatsAppPayload` enriquecido con `estado`, `fecha_cita_anterior`, `hora_cita_anterior`, `motivo_reagendamiento` y `nota_aclaratoria`.
+     - `buildClientAppointmentAddressMessage` adaptado para identificar `isReagendada`, titular `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`, detallar la fecha anterior cancelada, acompañante (`Adriana Alvarez Barriga`, C.C. `21069381`), dirección completa (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`) y nota aclaratoria.
+  2. `server/_core/emailContractService.ts`:
+     - `sendAppointmentAddressEmail` adaptado con asunto `🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #1147 - La Carolina | Vecy Bienes Raíces`, banner de aclaración oficial, nueva fecha (`miércoles, 11 de noviembre de 2026` a las `3:00 PM`), fecha anterior postergada y botón de 1-clic a Google Calendar con estilos de alto contraste `#ffffff !important`.
+  3. `server/_core/index.ts`:
+     - Nuevo endpoint administrativo `POST /api/admin/reschedule-and-dispatch-appointment` que actualiza la base de datos PostgreSQL de forma atómica y ejecuta el despacho simultáneo por WhatsApp (cliente + copia espejo a Bróker) y Correo Electrónico dentro del proceso PM2 con Baileys activo.
+  4. `server/scripts/send_alfredo_address.ts`:
+     - Actualizado con los datos oficiales de reagendamiento para el miércoles 11 a las 3:00 PM.
+  5. `server/_core/jania/founderKnowledgeService.ts`:
+     - Registrada la directiva permanente `seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08`.
+  6. `shared/const.ts` y `package.json`:
+     - Incrementada la versión oficial a `v34.08` (`34.08.0`).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 194 en `regression.test.ts` con 4 pruebas automatizadas (677/677 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 36.52s.
+  - Versión: `v34.08` (`34.08.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.07 (2026-11-10) — Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% (Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera)
 - **Problema Identificado**:
   1. *Cifras Incoherentes en Liquidación Notarial de Casa Morato ($1.400.198.000):* En la captura (`media_1794324406743_7651a298.jpg`), JanIA liquidó la venta con una retención en la fuente del 2.5% ($35.004.950 COP), inflando el subtotal del vendedor a $38.123.175 y el total escrituración a $68.539.966 COP.

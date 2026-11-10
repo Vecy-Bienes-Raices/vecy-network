@@ -41,6 +41,15 @@ export interface AgendaWhatsAppPayload {
   alertaMotivo?: string;
   customAgentWhatsapp?: string;
   customAgencyName?: string;
+  estado?: string;
+  fecha_cita_anterior?: string;
+  fechaCitaAnterior?: string;
+  hora_cita_anterior?: string;
+  horaCitaAnterior?: string;
+  motivo_reagendamiento?: string;
+  motivoReagendamiento?: string;
+  nota_aclaratoria?: string;
+  notaAclaratoria?: string;
 }
 
 /** Teléfono de WhatsApp oficial de la Inmobiliaria Vecy Bienes Raíces (Atención Bróker) */
@@ -382,14 +391,37 @@ export function buildClientAppointmentAddressMessage(data: AgendaWhatsAppPayload
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
   const hora = data.hora_cita || data.horaCita || "Por coordinar";
   
+  const isReagendada = data.estado === "reagendada" || Boolean(data.fecha_cita_anterior || (data as any).fechaCitaAnterior);
+  const fechaAnt = data.fecha_cita_anterior || (data as any).fechaCitaAnterior;
+  const horaAnt = data.hora_cita_anterior || (data as any).horaCitaAnterior;
+  const acompanante = data.interesado_nombre || (data as any).interesadoNombre;
+  const docAcompanante = data.interesado_documento || (data as any).interesadoDocumento;
+  const nota = data.nota_aclaratoria || (data as any).notaAclaratoria;
+
+  const header = isReagendada
+    ? `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`
+    : `📍 *CONFIRMACIÓN FINAL Y DIRECCIÓN OFICIAL DEL INMUEBLE*`;
+
+  const anteriorText = isReagendada && fechaAnt
+    ? `\n⏪ *Fecha anterior postergada:* ${formatDateSpanish(fechaAnt)}${horaAnt ? ` a las ${horaAnt}` : ""} (por disponibilidad de propietarios)`
+    : "";
+
+  const acompananteText = acompanante
+    ? `\n👤 *Acompañante / Cliente interesado(a):* ${acompanante}${docAcompanante ? ` (Doc: ${docAcompanante})` : ""}`
+    : "";
+
+  const notaText = nota
+    ? `\nℹ️ *Aclaración:* ${nota}\n`
+    : "";
+
   return (
 `¡Hola, ${nombre}! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*. 🏢✨
-
-📍 *CONFIRMACIÓN FINAL Y DIRECCIÓN OFICIAL DEL INMUEBLE*
+${notaText}
+${header}
 Solicitud *No. ${numSolicitud}* | Inmueble: *${nombreInmueble}* (Cod: ${codigo})
 
 📅 *Fecha de la cita:* ${fechaTexto}
-⏰ *Hora:* ${hora}
+⏰ *Hora:* ${hora}${anteriorText}${acompananteText}
 
 📌 *DIRECCIÓN EXACTA COMPLETA:*
 📍 *${address}*

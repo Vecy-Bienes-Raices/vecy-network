@@ -1238,6 +1238,90 @@ Dirección obligatoria:
     }
   });
 
+  // Admin endpoint: reagendar y despachar inmediatamente confirmación y dirección de cita (Doctrina Eduardo A. Rivera v34.08)
+  // Uso: POST /api/admin/reschedule-and-dispatch-appointment { token, solicitudId, nuevaFechaTexto, nuevaHoraTexto, fechaAnteriorTexto, horaAnteriorTexto, motivo, notaAclaratoria, direccion }
+  app.post('/api/admin/reschedule-and-dispatch-appointment', async (req: any, res: any) => {
+    const { token, solicitudId, nuevaFechaTexto, nuevaHoraTexto, fechaAnteriorTexto, horaAnteriorTexto, motivo, notaAclaratoria, direccion } = req.body || {};
+    if (token !== 'vecy2025admin' && token !== 'vecy_network_secret_token') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    try {
+      const { getDb } = await import('../db');
+      const { solicitudes } = await import('../../drizzle/schema');
+      const { eq, or } = await import('drizzle-orm');
+      const db = await getDb();
+      if (!db) throw new Error('Base de datos no disponible');
+
+      const solIdNum = Number(solicitudId) || 0;
+      const rows = await db
+        .select()
+        .from(solicitudes)
+        .where(or(eq(solicitudes.id, solIdNum), eq(solicitudes.solicitudId, solIdNum)))
+        .limit(1);
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Solicitud no encontrada' });
+      }
+
+      const prev = rows[0];
+      const fechaAnt = fechaAnteriorTexto || prev.fechaCitaTexto || "lunes, 9 de noviembre de 2026";
+      const horaAnt = horaAnteriorTexto || prev.horaCita || "11:00 AM";
+      const fechaNueva = nuevaFechaTexto || "miércoles, 11 de noviembre de 2026";
+      const horaNueva = nuevaHoraTexto || "3:00 PM";
+      const direccionFinal = direccion || prev.direccionInmueble || "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá";
+      const motivoFinal = motivo || "Postergación coordinada por disponibilidad de los propietarios del inmueble";
+      const notaFinal = notaAclaratoria || "Aclaración sobre reprogramación de cita: La visita fue reprogramada para este miércoles a las 3:00 p.m. por disponibilidad de los propietarios del inmueble. El correo previo emitido por el sistema reflejaba la fecha anterior.";
+
+      await db
+        .update(solicitudes)
+        .set({
+          estado: 'reagendada',
+          fechaCitaTexto: fechaNueva,
+          horaCita: horaNueva,
+          fechaCitaAnterior: fechaAnt,
+          horaCitaAnterior: horaAnt,
+          motivoCancelacion: motivoFinal,
+          reagendadaAt: new Date(),
+          direccionDespachada: true,
+          direccionDespachadaAt: new Date(),
+          direccionInmueble: direccionFinal,
+          solicitanteCelular: prev.solicitanteCelular || "573108149457",
+        })
+        .where(eq(solicitudes.id, prev.id));
+
+      const { sendAppointmentAddressNotification } = await import('./agendaWhatsAppService');
+      const payload: any = {
+        solicitudId: prev.solicitudId || prev.id,
+        solicitud_id: prev.solicitudId || prev.id,
+        id: prev.id,
+        solicitante_nombre: prev.solicitanteNombre || "Alfredo Anaya Peñaranda",
+        solicitante_perfil: prev.solicitantePerfil || "Agente Inmobiliario",
+        solicitante_email: prev.solicitanteEmail || "invervalores@hotmail.com",
+        solicitante_email_alt: "inmovalores81@gmail.com",
+        solicitante_celular: prev.solicitanteCelular || "573108149457",
+        codigo_inmueble: prev.codigoInmueble || "ID-LACAR-01BOG",
+        nombre_inmueble: prev.nombreInmueble || "Apartamento en La Carolina",
+        opcion_negocio: prev.opcionNegocio || "Venta",
+        fecha_cita_texto: fechaNueva,
+        hora_cita: horaNueva,
+        estado: 'reagendada',
+        fecha_cita_anterior: fechaAnt,
+        hora_cita_anterior: horaAnt,
+        motivo_reagendamiento: motivoFinal,
+        nota_aclaratoria: notaFinal,
+        cantidad_personas: prev.cantidadPersonas || 1,
+        interesado_nombre: prev.interesadoNombre || "Adriana Alvarez Barriga",
+        interesado_documento: prev.interesadoDocumento || "21069381",
+      };
+
+      const dispatchResult = await sendAppointmentAddressNotification(payload, direccionFinal);
+      res.json({ ok: true, dispatchResult });
+    } catch (err: any) {
+      console.error('[ADMIN-RESCHEDULE-DISPATCH] Error:', err?.message || err);
+      res.status(500).json({ error: err?.message || err });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

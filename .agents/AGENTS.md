@@ -184,7 +184,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.07 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.08 — Noviembre 2026
+
+### Novedades v34.08 (Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario — Caso Alfredo Anaya Solicitud #1147 — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Alfredo está bravo porque hoy le llegó a su correo de manera atrasada la cita para ayer y dijo que qué es eso, que le deben confirmsar es la de mañana para las 3:00 p.m. a ese mismo apartamento ya que se corrió la cita para mañana por incumplimiento de los propietarios, no del bróker. Ahí te mando la imagen y yo tampoco se porqué le envió JanIA eso de ayer si ya pasó y ya no tenía que enviarle sino la confirmación de la de mañana, claro está que JanIA ni mucho menos tu lo sabían, pero ahí te adelanto el cuederno y te cuento. Quedó para mañana."*
+  2. **Diagnóstico Técnico y Causa Raíz:**
+     - La prueba de verificación de alto contraste ejecutó `send_alfredo_address.ts` sobre el registro anterior (lunes 9 de noviembre 11:00 AM).
+     - La cita había sido cancelada por incumplimiento/disponibilidad de los propietarios y acordada entre Eduardo y Alfredo para el **miércoles 11 de noviembre de 2026 a las 3:00 PM (15:00)** en el mismo inmueble (ID-LACAR-01BOG, Edificio Inmoval VI, La Carolina, Bogotá).
+  3. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - En `agendaWhatsAppService.ts`: `buildClientAppointmentAddressMessage` ahora detecta si una cita es `reagendada` y despliega el encabezado explícito `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`, detalla la fecha anterior cancelada, la nota aclaratoria, los datos del acompañante (`Adriana Alvarez Barriga`, C.C. `21069381`) y la dirección completa confirmada (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`).
+     - En `emailContractService.ts`: `sendAppointmentAddressEmail` adapta dinámicamente el asunto (`🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #1147 - La Carolina | Vecy Bienes Raíces`), incluye un banner de aclaración oficial, destaca la nueva fecha del miércoles 11 a las 3:00 PM, muestra la fecha anterior postergada, la dirección física confirmada y el botón de 1-clic a Google Calendar con estilos de alto contraste (`#ffffff !important`).
+     - En `server/_core/index.ts`: Creado endpoint administrativo `POST /api/admin/reschedule-and-dispatch-appointment` que actualiza la base de datos PostgreSQL de forma atómica y ejecuta el despacho concurrente de WhatsApp y Correo Electrónico dentro del proceso activo de PM2 con Baileys conectado.
+     - Script `send_alfredo_address.ts` actualizado con la nueva fecha oficial y nota aclaratoria.
+  4. **Gobernanza y Suite de Regresión 194:**
+     - Semilla directiva `seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08` en `founderKnowledgeService.ts`.
+     - Suite 194 con 4 pruebas automatizadas pasando al 100% (677/677 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 194 `vitest` (100% passing) | Build `npm run build` limpio en 36.52s.
+
+## 🔖 VERSIÓN ANTERIOR: v34.07 — Noviembre 2026
 
 ### Novedades v34.07 (Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% — Homologación Notaría 19 de Bogotá y Habi — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

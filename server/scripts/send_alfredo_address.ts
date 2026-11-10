@@ -1,11 +1,12 @@
 import { sendAppointmentAddressNotification } from "../_core/agendaWhatsAppService";
 
 /**
- * 📅 Despacho oficial programado para el DOMINGO 8 DE NOVIEMBRE DE 2026 A LAS 11:00 AM
- * (Exactamente 24 horas antes de la cita del lunes 9 de noviembre a las 11:00 AM — Doctrina Eduardo A. Rivera).
+ * 📅 Despacho oficial de CITA REAGENDADA Y DIRECCIÓN FÍSICA para ALFREDO ANAYA
+ * Cita reprogramada para el MIÉRCOLES 11 DE NOVIEMBRE DE 2026 A LAS 3:00 PM (15:00)
+ * (Doctrina Eduardo A. Rivera v34.08).
  */
 async function main() {
-  console.log("🚀 [ALFREDO-ANAYA] Iniciando despacho oficial de confirmación y dirección física (Programado: Domingo 8 Nov 11:00 AM)...");
+  console.log("🚀 [ALFREDO-ANAYA] Iniciando despacho oficial de confirmación de CITA REAGENDADA y dirección física (Miércoles 11 Nov 3:00 PM)...");
 
   const payload = {
     solicitudId: 1147,
@@ -19,8 +20,13 @@ async function main() {
     codigo_inmueble: "ID-LACAR-01BOG",
     nombre_inmueble: "Apartamento en La Carolina",
     opcion_negocio: "Venta",
-    fecha_cita_texto: "lunes, 9 de noviembre de 2026",
-    hora_cita: "11:00 AM",
+    fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+    hora_cita: "3:00 PM",
+    estado: "reagendada",
+    fecha_cita_anterior: "lunes, 9 de noviembre de 2026",
+    hora_cita_anterior: "11:00 AM",
+    motivo_reagendamiento: "Postergación por disponibilidad de los propietarios del inmueble",
+    nota_aclaratoria: "Aclaración sobre reprogramación de cita: La visita fue reprogramada para este miércoles a las 3:00 p.m. por disponibilidad de los propietarios del inmueble. El correo previo emitido por el sistema reflejaba la fecha anterior.",
     cantidad_personas: 1,
     interesado_nombre: "Adriana Alvarez Barriga",
     interesado_documento: "21069381",

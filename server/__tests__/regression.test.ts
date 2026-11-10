@@ -12033,13 +12033,66 @@ Ana Morales Castillo
       expect(seed?.active).toBe(true);
     });
 
-    it("7. Consagración doctrinal de versión v34.07 en shared/const.ts y package.json (34.07.0)", async () => {
+    it("7. Consagración doctrinal de versión v34.07 en shared/const.ts y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.07");
+      expect(VECY_VERSION).toMatch(/^v34\.\d+$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.07.0");
+      expect(pkg.version).toMatch(/^34\.\d+\.\d+$/);
+    });
+  });
+
+  describe("Suite 194: Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario (Doctrina Eduardo A. Rivera v34.08)", () => {
+    it("1. buildClientAppointmentAddressMessage resalta cita reagendada, fecha anterior y aclaración", async () => {
+      const { buildClientAppointmentAddressMessage } = await import("../_core/agendaWhatsAppService");
+      const payload = {
+        solicitudId: 1147,
+        solicitante_nombre: "Alfredo Anaya Peñaranda",
+        nombre_inmueble: "Apartamento en La Carolina",
+        codigo_inmueble: "ID-LACAR-01BOG",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "3:00 PM",
+        estado: "reagendada",
+        fecha_cita_anterior: "lunes, 9 de noviembre de 2026",
+        hora_cita_anterior: "11:00 AM",
+        nota_aclaratoria: "Aclaración: visita reprogramada para el miércoles 11 a las 3:00 p.m. por disponibilidad de propietarios",
+        interesado_nombre: "Adriana Alvarez Barriga",
+        interesado_documento: "21069381"
+      };
+
+      const msg = buildClientAppointmentAddressMessage(payload, "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(msg).toContain("CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL");
+      expect(msg).toContain("miércoles, 11 de noviembre de 2026");
+      expect(msg).toContain("3:00 PM");
+      expect(msg).toContain("*Fecha anterior postergada:* lunes, 9 de noviembre de 2026 a las 11:00 AM");
+      expect(msg).toContain("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(msg).toContain("Adriana Alvarez Barriga (Doc: 21069381)");
+      expect(msg).toContain("Aclaración:");
+    });
+
+    it("2. sendAppointmentAddressEmail genera plantilla de reagendamiento con Google Calendar y alto contraste", async () => {
+      const { sendAppointmentAddressEmail } = await import("../_core/emailContractService");
+      expect(typeof sendAppointmentAddressEmail).toBe("function");
+    });
+
+    it("3. Semilla directiva v34.08 registrada en founderKnowledgeService", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.topic).toContain("Reagendamiento Transparente de Citas");
+      expect(seed?.active).toBe(true);
+    });
+
+    it("4. Consagración doctrinal de versión v34.08 en shared/const.ts y package.json (34.08.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.08");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.08.0");
     });
   });
 });

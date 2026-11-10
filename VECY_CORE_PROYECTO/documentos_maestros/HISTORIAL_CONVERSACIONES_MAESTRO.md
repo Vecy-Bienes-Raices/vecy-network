@@ -7,6 +7,41 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-10] — JanIA v34.08: Reagendamiento Transparente de Citas, Despacho Concurrente y Aclaración Inmediata al Usuario — Caso Alfredo Anaya Solicitud #1147 (Doctrina Eduardo A. Rivera — v34.08 - 34.08.0)
+
+**Versión:** `v34.08` (`34.08.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Te cuento al colega Alfredo le cancelamos la cita que estaba para el luines y el reagendó para mañana miercoles 11 a las 3:00 p.m. Así que estamos retrasados en enviarle ya a su Whatsapp +57 310 8149457 y correo invervalores@hotmail.com , la confirmación de mañana en ese mismo apartamento por favor. ¿Me entendistye?"*
+- *"Alfredo está bravo porque hoy le llegó a su correo de manera atrasada la cita para ayer y dijo que qué es eso, que le deben confirmsar es la de mañana para las 3:00 p.m. a ese mismo apartamento ya que se corrió la cita para mañana por incumplimiento de los propietarios, no del bróker. Ahí te mando la imagen y yo tampoco se porqué le envió JanIA eso de ayer si ya pasó y ya no tenía que enviarle sino la confirmación de la de mañana, claro está que JanIA ni mucho menos tu lo sabían, pero ahí te adelanto el cuederno y te cuento. Quedó para mañana."*
+- **Evidencia Visual Analizada:**
+  1. `media_1794345487189_71e0a866.jpg`: Pantallazo de la bandeja de entrada de Gmail con el correo recibido por Alfredo correspondiente a la cita caduca del lunes 9 de noviembre de 2026 a las 11:00 AM para el apartamento en La Carolina (código ID-LACAR-01BOG).
+
+**Diagnóstico Técnico Forense y Causas Raíz:**
+1. **Despacho Involuntario del Registro Antiguo durante Test de Alto Contraste:** En la sesión anterior v34.06, al probar el correo de alto contraste (`send_alfredo_address.ts`), el script utilizó los datos previamente registrados en la Solicitud #1147 (lunes 9 de noviembre 11:00 AM). Ni JanIA ni el agente conocían que Eduardo y Alfredo habían acordado postergar la cita debido a la indisponibilidad de los propietarios del inmueble.
+2. **Incoherencia Temporal Percibida por el Usuario:** Al ser martes 10 de noviembre y recibir un correo formal confirmando una visita para "ayer lunes a las 11:00 AM", Alfredo manifestó su legítimo disgusto ante lo que parecía una desincronización del sistema de agendamiento.
+3. **Cita Reprogramada Oficial:** La cita fue concertada para el **miércoles 11 de noviembre de 2026 a las 3:00 PM (15:00)** en el mismo inmueble (ID-LACAR-01BOG, Edificio Inmoval VI, La Carolina, Bogotá - `KRA 14 A # 127 - 65`).
+
+**Acciones Quirúrgicas y Solución Permanente Ejecutadas:**
+1. **Enriquecimiento del Mensaje de WhatsApp (`agendaWhatsAppService.ts`):**
+   - `buildClientAppointmentAddressMessage` ahora detecta si `estado === 'reagendada'` o si existe `fecha_cita_anterior`.
+   - Encabezado oficial: `🔄 *CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL*`.
+   - Muestra claramente la nueva fecha (`miércoles, 11 de noviembre de 2026 a las 3:00 PM`), la fecha anterior cancelada (`lunes, 9 de noviembre a las 11:00 AM por disponibilidad de propietarios`), los datos del acompañante (`Adriana Alvarez Barriga`, C.C. `21069381`), la dirección completa (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`) y una nota de aclaración explícita.
+2. **Plantilla de Correo Electrónico Adaptativa (`emailContractService.ts`):**
+   - `sendAppointmentAddressEmail` adapta dinámicamente el asunto: `🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #1147 - La Carolina | Vecy Bienes Raíces`.
+   - Incluye banner de aclaración formal en verde éxito `#00e676` explicando que la cita del lunes fue reprogramada para este miércoles por disponibilidad de los propietarios.
+   - Enlace directo universal de 1-clic a Google Calendar (`buildGoogleCalendarUrl`) y estilos de alto contraste `#ffffff !important`.
+3. **Nuevo Endpoint Administrativo en `server/_core/index.ts`:**
+   - Creado `POST /api/admin/reschedule-and-dispatch-appointment` que actualiza la base de datos PostgreSQL y despacha concurrentemente por WhatsApp (cliente + copia espejo a Bróker) y Correo Electrónico dentro del proceso PM2 con Baileys conectado.
+4. **Actualización de Base de Datos PostgreSQL y Script de Despacho:**
+   - Solicitud #1147 (id 251) actualizada en PostgreSQL con `estado = 'reagendada'`, `fecha_cita_texto = 'miércoles, 11 de noviembre de 2026'`, `hora_cita = '3:00 PM'`, `fecha_cita_anterior = 'lunes, 9 de noviembre de 2026'`, `hora_cita_anterior = '11:00 AM'`, `reagendada_at = new Date()`, `direccion_despachada = true`.
+   - `send_alfredo_address.ts` actualizado con los nuevos parámetros oficiales de reagendamiento.
+5. **Semilla de Conocimiento Directivo:**
+   - Registrada `seed-reagendamiento-citas-aclaracion-notificacion-inmediata-alfredo-anaya-v34-08` en `founderKnowledgeService.ts`.
+6. **Incremento de Versión y Suite 194:**
+   - Actualizado a `v34.08` (`34.08.0`).
+   - Suite 194 con 4 pruebas automatizadas pasando al 100% (677/677 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 194 `vitest` (100% passing) | Build `npm run build` limpio en 36.52s.
+
 ### 📅 [2026-11-10] — JanIA v34.07: Precisión Doctrinal en Gastos Notariales y Retención en la Fuente 1% — Homologación Notaría 19 de Bogotá y Habi (Doctrina Eduardo A. Rivera — v34.07 - 34.07.0)
 
 **Versión:** `v34.07` (`34.07.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

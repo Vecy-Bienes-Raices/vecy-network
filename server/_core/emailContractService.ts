@@ -864,8 +864,27 @@ export async function sendAppointmentAddressEmail(
     },
   });
 
-  const subject = `📍 Dirección Confirmada y Agendamiento Solicitud #${solicitudId} | Vecy Bienes Raíces`;
+  const isReagendada = (formData.estado === "reagendada") || Boolean((formData as any).fecha_cita_anterior || (formData as any).fechaCitaAnterior);
+  const fechaAnt = (formData as any).fecha_cita_anterior || (formData as any).fechaCitaAnterior;
+  const horaAnt = (formData as any).hora_cita_anterior || (formData as any).horaCitaAnterior;
+  const notaAclaratoria = (formData as any).nota_aclaratoria || (formData as any).notaAclaratoria;
+
+  const subject = isReagendada
+    ? `🔄 Confirmación de Cita Reagendada y Dirección Oficial | Solicitud #${solicitudId} - La Carolina | Vecy Bienes Raíces`
+    : `📍 Dirección Confirmada y Agendamiento Solicitud #${solicitudId} | Vecy Bienes Raíces`;
   const logoUrlParaEmail = "cid:vecyLogo";
+
+  const subHeaderTitle = isReagendada
+    ? "CONFIRMACIÓN DE CITA REAGENDADA Y DIRECCIÓN OFICIAL"
+    : "CONFIRMACIÓN DE AGENDAMIENTO Y DIRECCIÓN OFICIAL";
+
+  const calUrl = buildGoogleCalendarUrl({
+    title: `Cita Vecy: ${nombreInmueble} (${codigo})`,
+    description: `Visita inmobiliaria agendada con Vecy Bienes Raíces. Solicitud #${solicitudId}. Dirección: ${address}. Bróker anfitrión: +57 316 6569719.`,
+    location: address,
+    dateStr: fechaTexto,
+    timeStr: hora,
+  });
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -892,24 +911,35 @@ export async function sendAppointmentAddressEmail(
   <div class="header" style="background-color: #000000; padding: 25px; text-align: center; border-bottom: 2px solid #bf953f;">
     <img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo" style="max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4));">
     <h1 style="margin-top: 10px; color: #bf953f !important; font-size: 22px; text-transform: uppercase; letter-spacing: 1.5px;">VECY BIENES RAÍCES</h1>
-    <p style="color: #bf953f !important; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px; font-weight: bold;">CONFIRMACIÓN DE AGENDAMIENTO Y DIRECCIÓN OFICIAL</p>
+    <p style="color: #bf953f !important; font-size: 12px; margin: 5px 0 0 0; letter-spacing: 2px; font-weight: bold;">${subHeaderTitle}</p>
   </div>
   <div class="content" style="padding: 30px 35px; color: #ffffff !important;">
     <h2 style="color: #bf953f !important; font-size: 20px; margin-top: 0; font-weight: bold;">¡Hola, ${nombre}! 👋🏠✨</h2>
+    ${notaAclaratoria ? `<div style="background-color: #1a1a1a; border-left: 4px solid #00e676; padding: 14px 18px; border-radius: 6px; margin: 0 0 20px 0;"><p style="color: #ffffff !important; font-size: 14px; margin: 0; line-height: 1.6;">ℹ️ <strong style="color: #00e676;">Aclaración oficial:</strong> ${notaAclaratoria}</p></div>` : ""}
     <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
       Te saluda <strong style="color: #bf953f;">JanIA</strong> de la dirección comercial de <strong style="color: #bf953f;">Vecy Bienes Raíces</strong>.
     </p>
     <p style="color: #ffffff !important; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">
-      Nos complace confirmarte que la verificación de tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble está <strong style="color: #00e676; text-decoration: underline;">100% confirmada</strong>.
+      ${isReagendada
+        ? `Nos complace confirmarte que la cita para la visita del inmueble correspondiente a tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha sido <strong style="color: #00e676; text-decoration: underline;">REAGENDADA CON ÉXITO</strong> para <strong style="color: #ffffff;">${fechaTexto}</strong> a las <strong style="color: #ffffff;">${hora}</strong> y se encuentra <strong style="color: #00e676;">100% confirmada</strong>.`
+        : `Nos complace confirmarte que la verificación de tu solicitud <strong style="color: #bf953f;">#${solicitudId}</strong> ha concluido exitosamente y la cita para la visita del inmueble está <strong style="color: #00e676; text-decoration: underline;">100% confirmada</strong>.`}
     </p>
+    ${isReagendada && fechaAnt ? `<p style="color: #aaaaaa !important; font-size: 13px; margin: -10px 0 20px 0;">⏪ <em>(Cita anterior postergada: ${fechaAnt}${horaAnt ? ` a las ${horaAnt}` : ""} por disponibilidad de los propietarios)</em></p>` : ""}
     
     <div class="address-box" style="background: linear-gradient(135deg, #1f1a10 0%, #141414 100%); border: 1px solid #bf953f; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <p style="color: #bf953f !important; font-size: 13px; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">📍 DIRECCIÓN EXACTA CONFIRMADA DEL INMUEBLE:</p>
       <p style="color: #ffffff !important; font-size: 20px; font-weight: bold; margin: 0 0 12px 0; letter-spacing: 0.5px;">${address}</p>
       <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">🏢 Inmueble: <strong style="color: #ffffff;">${nombreInmueble}</strong> (Código: <strong style="color: #bf953f;">${codigo}</strong>)</p>
-      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">📅 Fecha de la cita: <strong style="color: #ffffff;">${fechaTexto}</strong></p>
+      <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">📅 Fecha confirmada: <strong style="color: #ffffff;">${fechaTexto}</strong></p>
       <p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">⏰ Hora: <strong style="color: #ffffff;">${hora}</strong></p>
+      ${isReagendada && fechaAnt ? `<p style="color: #aaaaaa !important; font-size: 13px; margin: 6px 0;">⏪ Fecha anterior: ${fechaAnt}${horaAnt ? ` a las ${horaAnt}` : ""}</p>` : ""}
       ${acompanante ? `<p style="color: #ffffff !important; font-size: 14px; margin: 6px 0;">👤 Acompañante / Cliente interesado(a): <strong style="color: #ffffff;">${acompanante}</strong></p>` : ""}
+    </div>
+
+    <div style="text-align: center; margin: 25px 0;">
+      <a href="${calUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #bf953f 0%, #aa771c 100%); color: #000000 !important; font-weight: bold; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(191,149,63,0.3);">
+        📅 Añadir a mi Google Calendar
+      </a>
     </div>
 
     <div class="highlight" style="background-color: #1a1a1a; padding: 20px; border-left: 4px solid #bf953f; border-radius: 6px; margin: 25px 0;">
