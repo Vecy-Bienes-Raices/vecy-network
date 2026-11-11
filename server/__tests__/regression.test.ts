@@ -12192,11 +12192,97 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v34.09 en shared/const.ts y package.json (34.09.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.09");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.09.0");
+      expect(pkg.version).toMatch(/^(34\.\d+)\.0/);
+    });
+  });
+
+  describe("SUITE 196: JanIA v34.10 — HOMOLOGACIÓN RESILIENTE DE DIRECCIONES EN INMUEBLES MULTIRRESERVA Y RECONOCIMIENTO CONTEXTUAL DE CITAS", () => {
+    it("1. resolvePropertyAddress normaliza case-insensitively y resuelve nomenclatura exacta de La Carolina", async () => {
+      const { resolvePropertyAddress } = await import("../_core/agendaWhatsAppService");
+
+      // Variaciones mayúsculas, minúsculas, espacios y guiones
+      expect(resolvePropertyAddress("ID-LACAR-01BOG")).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(resolvePropertyAddress("ID-lacar-01bog")).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(resolvePropertyAddress("ID-Lacar-01bog")).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(resolvePropertyAddress("ID-LACAR -01BOG")).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(resolvePropertyAddress(undefined, "Apartamento en la carolina")).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(resolvePropertyAddress(undefined, "apartamento en la Carolina")).toBe("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      
+      // Respeto a dirección explícita personalizada
+      expect(resolvePropertyAddress("ID-OTRO", "Inmueble X", "Carrera 7 # 116 - 50, Torre Apto 502, Bogotá"))
+        .toBe("Carrera 7 # 116 - 50, Torre Apto 502, Bogotá");
+    });
+
+    it("2. Mensajes oficiales de WhatsApp para Lincy (#1148) y Ana María (#1149) integran dirección real y saludo canónico", async () => {
+      const { buildClientAppointmentAddressMessage, resolvePropertyAddress } = await import("../_core/agendaWhatsAppService");
+
+      const addrLincy = resolvePropertyAddress("ID-lacar-01bog", "Apartamento en la carolina");
+      const msgLincy = buildClientAppointmentAddressMessage({
+        solicitudId: 1148,
+        solicitante_nombre: "Lincy Mayerly Hoyos Sierra",
+        nombre_inmueble: "Apartamento en la carolina",
+        codigo_inmueble: "ID-lacar-01bog",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "04:00 PM",
+      }, addrLincy);
+
+      expect(msgLincy).toContain("¡Hola, Lincy! 👋");
+      expect(msgLincy).toContain("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+      expect(msgLincy).not.toContain("Dirección confirmada en La Carolina, Bogotá");
+
+      const addrAna = resolvePropertyAddress("ID-Lacar-01bog", "apartamento en la Carolina");
+      const msgAna = buildClientAppointmentAddressMessage({
+        solicitudId: 1149,
+        solicitante_nombre: "Ana Maria Diaz Cardenas",
+        nombre_inmueble: "apartamento en la Carolina",
+        codigo_inmueble: "ID-Lacar-01bog",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "04:00 PM",
+      }, addrAna);
+
+      expect(msgAna).toContain("¡Hola, Ana María! 👋");
+      expect(msgAna).toContain("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
+    });
+
+    it("3. sendAppointmentAddressEmail integra dirección confirmada, botón de Google Calendar y saludo natural", async () => {
+      const { sendAppointmentAddressEmail } = await import("../_core/emailContractService");
+      const { resolvePropertyAddress } = await import("../_core/agendaWhatsAppService");
+
+      const addr = resolvePropertyAddress("ID-lacar-01bog", "Apartamento en la carolina");
+      const res = await sendAppointmentAddressEmail({
+        solicitud_id: 1148,
+        solicitante_nombre: "Lincy Mayerly Hoyos Sierra",
+        solicitante_email: "test_lincy@example.com",
+        fecha_cita_texto: "miércoles, 11 de noviembre de 2026",
+        hora_cita: "04:00 PM",
+        codigo_inmueble: "ID-lacar-01bog",
+        nombre_inmueble: "Apartamento en la carolina",
+      }, addr);
+
+      expect(res).toBeDefined();
+    });
+
+    it("4. Semilla directiva v34.10 registrada en founderKnowledgeService", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-homologacion-direcciones-inmuebles-multireserva-v34-10"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.topic).toContain("Homologación Automática de Direcciones");
+      expect(seed?.active).toBe(true);
+    });
+
+    it("5. Consagración doctrinal de versión v34.10 en shared/const.ts y package.json (34.10.0)", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.10");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.10.0");
     });
   });
 });

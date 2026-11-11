@@ -9314,6 +9314,27 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.10 (2026-11-10) — Homologación Resiliente de Direcciones en Inmuebles Multirreserva, Despacho Oficial de Correos y Reconocimiento Contextual en DMs (Caso Lincy Hoyos y Ana María Díaz — Solicitudes #1148 y #1149 — Doctrina Eduardo A. Rivera)
+- **Problema / Consulta Identificada**:
+  - En las Solicitudes #1148 (Lincy Hoyos) y #1149 (Ana María Díaz), ambas agendadas para el mismo apartamento en La Carolina (Edificio Inmoval VI) que la cita de Alfredo Anaya (#1147), JanIA emitió el texto genérico de contingencia `"Dirección confirmada en La Carolina, Bogotá"` en vez de la dirección física oficial (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`).
+  - Esto motivó que Lincy preguntara en WhatsApp: *"No veo la dirección?"*, ante lo cual JanIA emitió una respuesta teórica sobre confidencialidad en vez de percatarse de que ya tenía una cita confirmada para el miércoles 11 a las 4:00 PM. Eduardo debió responder manualmente en WhatsApp para entregar la dirección real.
+  - Eduardo instruyó que JanIA ya conoce la dirección del inmueble y solicitó que JanIA les envíe el correo oficial de confirmación y agendamiento a Lincy y Ana María como corresponde.
+- **Solución Quirúrgica Implementada**:
+  - En `agendaWhatsAppService.ts`: Creada y exportada `resolvePropertyAddress(codigo, nombreInmueble, customAddress)`. Normaliza de forma insensible a mayúsculas/minúsculas (`ID-lacar-01bog`, `ID-Lacar-01bog`, `ID-LACAR -01BOG`), remueve guiones y espacios, e inspecciona el nombre del inmueble (`Apartamento en la carolina`), retornando infaliblemente `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
+  - En `server/scripts/dispatch_address_emails_1148_1149.ts`: Despacho oficial y exitoso mediante Gmail SMTP de los correos a Lincy Hoyos (`lincyhoyosrealestate@gmail.com`) y Ana María Díaz (`anamdiazc04@gmail.com`) con dirección física confirmada, recomendaciones notariales de portería, cliente registrado `Simon Ramirez Pineda` (Doc `1020823910`), botón universal 1-clic a Google Calendar y copia a `vecybienesraices@gmail.com`.
+  - En PostgreSQL VPS: Filas id 252 (#1148) e id 253 (#1149) actualizadas con `direccion_inmueble = 'KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá'` y `direccion_despachada = true`.
+  - En `dmHandler.ts`: Inyectada directiva `contextActiveAppointmentDirective`. Si un usuario con cita activa escribe al privado, JanIA reconoce su cita de inmediato y responde con los datos del recorrido y dirección física, sin respuestas evasivas.
+  - En `server/_core/index.ts`: Añadido endpoint administrativo `POST /api/admin/dispatch-address-email-direct`.
+  - En `cronService.ts`: `checkAndDispatch24hAppointmentReminders` integrado con `resolvePropertyAddress`.
+  - Semilla directiva `seed-homologacion-direcciones-inmuebles-multireserva-v34-10` en `founderKnowledgeService.ts`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 196 en `regression.test.ts` con 5 pruebas unitarias automatizadas (687/687 tests passing, 100%).
+  - Typecheck `npm run check` (0 errores).
+  - Build `npm run build` limpio en 23.85s.
+  - Versión: `v34.10` (`34.10.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.09 (2026-11-10) — Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN (Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera)
 - **Problema / Consulta Identificada**:
   - En las confirmaciones y notificaciones de agendamiento y entrega de dirección (WhatsApp y Correo), el sistema utilizaba el nombre legal completo de 4 palabras (`¡Hola, Alfredo Anaya Peñaranda!`, `¡Hola, Lincy Mayerly Hoyos Sierra!`, `¡Hola, Ana Maria Diaz Cardenas!`), generando un tono rígido y no natural.

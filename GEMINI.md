@@ -1,20 +1,21 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.09.0 — 2026-11-10)
-- **JanIA Server:** `v34.09` (`34.09.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
-- **Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN (Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera):**
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.10.0 — 2026-11-10)
+- **JanIA Server:** `v34.10` (`34.10.0`) consolidado y validado en local y listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Homologación Resiliente de Direcciones en Inmuebles Multirreserva, Despacho Oficial de Correos y Reconocimiento Contextual en DMs (Caso Lincy Hoyos y Ana María Díaz — Solicitudes #1148 y #1149 — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**
-     - En los mensajes y correos automáticos de confirmación y entrega de dirección de citas, JanIA utilizaba el nombre legal completo de 4 palabras (ej: `¡Hola, Alfredo Anaya Peñaranda!`, `¡Hola, Lincy Mayerly Hoyos Sierra!`, `¡Hola, Ana Maria Diaz Cardenas!`).
-     - Eduardo instruyó que en agendamientos de visita no se debe saludar con el nombre completo, sino con el primer nombre o los dos primeros nombres según la lógica canónica de nombres compuestos desarrollada para Colombia (`resolveNameAndGender`).
-     - Adicionalmente, el mensaje de reagendamiento para Alfredo Anaya había quedado pendiente de disparo al momento de la captura de pantalla de Eduardo a las 16:38, requiriendo confirmación de que JanIA lo despacha 100% automático sin intervención manual del usuario.
+     - En `agendaWhatsAppService.ts`, `KNOWN_PROPERTY_ADDRESSES` tenía llaves únicamente en mayúsculas (`ID-LACAR-01BOG`). Las solicitudes #1148 y #1149 traían `ID-lacar-01bog` y `ID-Lacar-01bog` respectivamente. La búsqueda exacta en el diccionario JS retornaba `undefined`, cayendo al fallback `"Dirección confirmada en La Carolina, Bogotá"`.
+     - Falta de inferencia por nombre del inmueble (`Apartamento en la carolina`).
+     - En `dmHandler.ts`, cuando Lincy preguntó *"No veo la dirección?"*, el bot la trató como consulta fría y soltó un mensaje sobre reserva de direcciones, en vez de percatarse de que el número telefónico tenía una cita activa confirmada.
   2. **Solución Doctrinal y Arquitectural Ejecutada:**
-     - En `nameAndGenderResolver.ts`: Creada y exportada la función doctrinal `formatShortGreetingName(rawName, fallback)`. Resuelve de forma exacta y cálida: "Alfredo Anaya Peñaranda" -> "Alfredo", "Lincy Mayerly Hoyos Sierra" -> "Lincy", "Ana Maria Diaz Cardenas" -> "Ana María", "Juan Carlos Gomez" -> "Juan Carlos", "Nelson Enrique Rivera" -> "Nelson Enrique", "María Fernanda Lopez" -> "María Fernanda".
-     - En `agendaWhatsAppService.ts`: `buildClientConfirmationMessage` y `buildClientAppointmentAddressMessage` ahora implementan `formatShortGreetingName`, saludando de forma natural (`¡Hola, Alfredo! 👋`, `¡Hola, Lincy! 👋`, `¡Hola, Ana María! 👋`), preservando el nombre completo y cédula en la sección formal del mensaje.
-     - En `whatsapp-match.ts`: `sendDirectMessage` ahora respeta `options.forcePn` / `options.forcePnJid` para enrutar directamente al JID telefónico (`${clean}@s.whatsapp.net`), garantizando visibilidad inmediata e inequívoca en WhatsApp Web.
-     - En `emailContractService.ts`: `getEmailContent` y `sendAppointmentAddressEmail` aplican `formatShortGreetingName` en los títulos y encabezados de correo (`¡Hola, Alfredo! Tu cita está confirmada 🏠✨`), manteniendo el nombre legal completo en tablas y contratos.
-     - En `server/_core/index.ts`: Endpoint `/api/admin/reschedule-and-dispatch-appointment` ejecutado exitosamente vía curl y validado contra el VPS.
-  3. **Gobernanza y Suite de Regresión 195:**
-     - Semilla directiva `seed-saludos-naturales-canonicos-agendamiento-visitas-v34-09` en `founderKnowledgeService.ts`.
-     - Suite 195 con 5 pruebas automatizadas pasando al 100% (682/682 tests en verde).
-- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 195 `vitest` (100% passing) | Build `npm run build` limpio en 24.61s.
+     - En `agendaWhatsAppService.ts`: Creada y exportada `resolvePropertyAddress(codigo, nombreInmueble, customAddress)`. Normaliza case-insensitively, remueve guiones y espacios, e inspecciona `nombreInmueble`, mapeando a `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
+     - En `server/scripts/dispatch_address_emails_1148_1149.ts`: Despacho oficial inmediato vía Gmail SMTP de los correos a Lincy Hoyos (`lincyhoyosrealestate@gmail.com`) y Ana María Díaz (`anamdiazc04@gmail.com`) con dirección confirmada, recomendaciones notariales de portería, cliente registrado `Simon Ramirez Pineda` (Doc `1020823910`), enlace 1-clic a Google Calendar y copia a `vecybienesraices@gmail.com`.
+     - En PostgreSQL VPS: Filas id 252 (#1148) e id 253 (#1149) actualizadas con `direccion_inmueble = 'KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá'` y `direccion_despachada = true`.
+     - En `dmHandler.ts`: Inyectada directiva `contextActiveAppointmentDirective`. Si un usuario con cita activa escribe al privado, JanIA reconoce su cita de inmediato y responde con los datos del recorrido y dirección física, sin respuestas evasivas.
+     - En `server/_core/index.ts`: Añadido endpoint administrativo `POST /api/admin/dispatch-address-email-direct`.
+     - En `cronService.ts`: `checkAndDispatch24hAppointmentReminders` integrado con `resolvePropertyAddress`.
+  3. **Gobernanza y Suite de Regresión 196:**
+     - Semilla directiva `seed-homologacion-direcciones-inmuebles-multireserva-v34-10` en `founderKnowledgeService.ts`.
+     - Suite 196 con 5 pruebas automatizadas pasando al 100% (687/687 tests en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 196 `vitest` (100% passing) | Build `npm run build` limpio en 23.85s.
 
 
 # MODO SÚPER INTELIGENTE, RAZONABLE Y CONCIENCIA PURA (VECY NETWORK PROJECT RULES)

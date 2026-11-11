@@ -1322,6 +1322,79 @@ Dirección obligatoria:
     }
   });
 
+  // Admin endpoint: despachar correo oficial de confirmación y dirección a solicitudes específicas (Doctrina Eduardo A. Rivera v34.10)
+  // Uso: POST /api/admin/dispatch-address-email-direct { token, solicitudIds: [1148, 1149], direccion?: string }
+  app.post('/api/admin/dispatch-address-email-direct', async (req: any, res: any) => {
+    const { token, solicitudIds, direccion } = req.body || {};
+    if (token !== 'vecy2025admin' && token !== 'vecy_network_secret_token') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    try {
+      const { getDb } = await import('../db');
+      const { solicitudes } = await import('../../drizzle/schema');
+      const { eq, or } = await import('drizzle-orm');
+      const { sendAppointmentAddressEmail } = await import('./emailContractService');
+      const { resolvePropertyAddress } = await import('./agendaWhatsAppService');
+
+      const db = await getDb();
+      if (!db) throw new Error('Base de datos no disponible');
+
+      const ids = Array.isArray(solicitudIds) ? solicitudIds.map(Number) : [Number(solicitudIds)];
+      const results: any[] = [];
+
+      for (const idToFind of ids) {
+        const rows = await db
+          .select()
+          .from(solicitudes)
+          .where(or(eq(solicitudes.id, idToFind), eq(solicitudes.solicitudId, idToFind)))
+          .limit(1);
+
+        if (rows.length === 0) {
+          results.push({ id: idToFind, success: false, error: 'Solicitud no encontrada' });
+          continue;
+        }
+
+        const sol = rows[0];
+        const finalAddress = resolvePropertyAddress(sol.codigoInmueble || undefined, sol.nombreInmueble || undefined, direccion || sol.direccionInmueble || undefined);
+
+        await db
+          .update(solicitudes)
+          .set({
+            direccionInmueble: finalAddress,
+            direccionDespachada: true,
+            direccionDespachadaAt: new Date(),
+          })
+          .where(eq(solicitudes.id, sol.id));
+
+        const payload: any = {
+          solicitudId: sol.solicitudId || sol.id,
+          solicitud_id: sol.solicitudId || sol.id,
+          id: sol.id,
+          solicitante_nombre: sol.solicitanteNombre,
+          solicitante_perfil: sol.solicitantePerfil,
+          solicitante_email: sol.solicitanteEmail,
+          solicitante_celular: sol.solicitanteCelular,
+          codigo_inmueble: sol.codigoInmueble || "ID-LACAR-01BOG",
+          nombre_inmueble: sol.nombreInmueble || "Apartamento en La Carolina",
+          opcion_negocio: sol.opcionNegocio || "Venta",
+          fecha_cita_texto: sol.fechaCitaTexto,
+          hora_cita: sol.horaCita,
+          estado: sol.estado || "confirmada",
+          interesado_nombre: sol.interesadoNombre,
+          interesado_documento: sol.interesadoDocumento,
+        };
+
+        const emailRes = await sendAppointmentAddressEmail(payload, finalAddress);
+        results.push({ id: sol.solicitudId || sol.id, email: sol.solicitanteEmail, address: finalAddress, emailRes });
+      }
+
+      res.json({ ok: true, results });
+    } catch (err: any) {
+      console.error('[ADMIN-DISPATCH-ADDRESS-EMAIL] Error:', err?.message || err);
+      res.status(500).json({ error: err?.message || err });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

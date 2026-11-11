@@ -2717,7 +2717,7 @@ export async function checkAndDispatch24hAppointmentReminders(): Promise<{ dispa
       if (diffMs <= twentyFourHoursMs && diffMs >= -graceWindowPastMs) {
         console.log(`[AGENDA-AUTO-24H] 🚀 Cita detectada para despacho 24h (Solicitud #${sol.solicitudId || sol.id} - ${sol.solicitanteNombre}): Falta ${(diffMs / 3600000).toFixed(1)}h`);
 
-        const { sendAppointmentAddressNotification } = await import("./agendaWhatsAppService");
+        const { sendAppointmentAddressNotification, resolvePropertyAddress } = await import("./agendaWhatsAppService");
         const payload: any = {
           solicitudId: sol.solicitudId || sol.id,
           solicitud_id: sol.solicitudId || sol.id,
@@ -2736,15 +2736,16 @@ export async function checkAndDispatch24hAppointmentReminders(): Promise<{ dispa
           interesado_documento: sol.interesadoDocumento || "",
         };
 
-        const customAddr = sol.direccionInmueble || undefined;
-        const result = await sendAppointmentAddressNotification(payload, customAddr);
+        const resolvedAddress = resolvePropertyAddress(sol.codigoInmueble || undefined, sol.nombreInmueble || undefined, sol.direccionInmueble || undefined);
+        const result = await sendAppointmentAddressNotification(payload, resolvedAddress);
         console.log(`[AGENDA-AUTO-24H] ✅ Despacho ejecutado para #${sol.solicitudId || sol.id}:`, result);
 
         await db
           .update(solicitudes)
           .set({
             direccionDespachada: true,
-            direccionDespachadaAt: new Date()
+            direccionDespachadaAt: new Date(),
+            direccionInmueble: resolvedAddress
           })
           .where(eq(solicitudes.id, sol.id));
 

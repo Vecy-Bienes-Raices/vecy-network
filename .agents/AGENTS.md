@@ -184,7 +184,29 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.09 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.10 — Noviembre 2026
+
+### Novedades v34.10 (Homologación Resiliente de Direcciones en Inmuebles Multirreserva, Despacho Oficial de Correos y Reconocimiento Contextual en DMs — Caso Lincy Hoyos y Ana María Díaz — Solicitudes #1148 y #1149 — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Hay un mal entendido con esto de las direcciones, si te fijas las solicitudes #1148 y 1149 son para el mismo apartamento que solicitó reserva Alfredo, por lo tanto JanIa Ya sabe la dirección de ese inmueble, yo ya lo hice manual por el Whatsapp de JanIA pero me gustaría que le digas o hagas que janIA les envíe el correo a estas dos agentes Ana María y lincy como debe de ser me entiendes."*
+  2. **Diagnóstico Técnico y Causa Raíz:**
+     - En `agendaWhatsAppService.ts`, `KNOWN_PROPERTY_ADDRESSES` tenía llaves únicamente en mayúsculas (`ID-LACAR-01BOG`). Las solicitudes #1148 y #1149 traían `ID-lacar-01bog` y `ID-Lacar-01bog` respectivamente. La búsqueda exacta en el diccionario JS retornaba `undefined`, cayendo al fallback `"Dirección confirmada en La Carolina, Bogotá"`.
+     - Falta de inferencia por nombre del inmueble (`Apartamento en la carolina`).
+     - En `dmHandler.ts`, cuando Lincy preguntó *"No veo la dirección?"*, el bot la trató como consulta fría y soltó un mensaje sobre reserva de direcciones, en vez de percatarse de que el número telefónico tenía una cita activa confirmada.
+  3. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - En `agendaWhatsAppService.ts`: Creada y exportada `resolvePropertyAddress(codigo, nombreInmueble, customAddress)`. Normaliza case-insensitively, remueve guiones y espacios, e inspecciona `nombreInmueble`, mapeando a `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
+     - En `server/scripts/dispatch_address_emails_1148_1149.ts`: Despacho oficial inmediato vía Gmail SMTP de los correos a Lincy Hoyos (`lincyhoyosrealestate@gmail.com`) y Ana María Díaz (`anamdiazc04@gmail.com`) con dirección confirmada, recomendaciones notariales de portería, cliente registrado `Simon Ramirez Pineda` (Doc `1020823910`), enlace 1-clic a Google Calendar y copia a `vecybienesraices@gmail.com`.
+     - En PostgreSQL VPS: Filas id 252 (#1148) e id 253 (#1149) actualizadas con `direccion_inmueble = 'KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá'` y `direccion_despachada = true`.
+     - En `dmHandler.ts`: Inyectada directiva `contextActiveAppointmentDirective`. Si un usuario con cita activa escribe al privado, JanIA reconoce su cita de inmediato y responde con los datos del recorrido y dirección física, sin respuestas evasivas.
+     - En `server/_core/index.ts`: Añadido endpoint administrativo `POST /api/admin/dispatch-address-email-direct`.
+     - En `cronService.ts`: `checkAndDispatch24hAppointmentReminders` integrado con `resolvePropertyAddress`.
+  4. **Gobernanza y Suite de Regresión 196:**
+     - Semilla directiva `seed-homologacion-direcciones-inmuebles-multireserva-v34-10` en `founderKnowledgeService.ts`.
+     - Suite 196 con 5 pruebas automatizadas pasando al 100% (687/687 tests totales en verde).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 196 `vitest` (100% passing) | Build `npm run build` limpio en 23.85s.
+
+## 🔖 VERSIÓN ANTERIOR: v34.09 — Noviembre 2026
 
 ### Novedades v34.09 (Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN — Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -722,6 +722,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Para quienes solicitan agendamiento de visita a inmuebles no es necesario saludarlos con todo el nombre, basta con el primero o los dos primeros según la lógica de combinaciones que habíamos organizado la vez pasada, recuerdas?? y no así como en las imágenes. Y vi que no le llegó nada aún a Alfredo debo yo copiarlo y enviárselo a su WhatsApp y al correo o lo hará JanIA??",
     createdAt: "2026-11-10T17:10:00.000Z",
     active: true
+  },
+  {
+    id: "seed-homologacion-direcciones-inmuebles-multireserva-v34-10",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Homologación Automática de Direcciones de Inmuebles, Resiliencia Multirreserva y Reconocimiento Contextual en DMs (Doctrina Eduardo A. Rivera v34.10)",
+    directive:
+      "Cuando múltiples solicitudes correspondan al mismo inmueble captado por Vecy (como las reservas para el Edificio Inmoval VI en La Carolina de Alfredo Anaya, Lincy Hoyos y Ana María Díaz), JanIA ya conoce la dirección física confirmada ('KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá'). Por lo tanto, el sistema debe resolver e indexar la dirección exacta independientemente de cómo venga escrito el código (mayúsculas, minúsculas, espacios, o por nombre del inmueble: 'ID-lacar-01bog', 'ID-Lacar-01bog', 'Apartamento en la carolina'). Jamás se debe emitir un texto genérico de reserva cuando la propiedad ya está identificada. Asimismo, en el correo oficial de confirmación y agendamiento (sendAppointmentAddressEmail) JanIA debe despachar de inmediato la dirección exacta completa, recomendaciones de portería, enlace a Google Calendar y saludo natural canónico a cada uno de los agentes y clientes solicitantes. Y si un usuario con cita activa pregunta en chat privado por la dirección ('No veo la dirección?'), JanIA debe reconocer su cita activa en base de datos y suministrarle de inmediato la dirección y datos de su cita con empatía y calidez, sin respuestas evasivas.",
+    rawText:
+      "Hay un mal entendido con esto de las direcciones, si te fijas las solicitudes #1148 y 1149 son para el mismo apartamento que solicitó reserva Alfredo, por lo tanto JanIa Ya sabe la dirección de ese inmueble, yo ya lo hice manual por el Whatsapp de JanIA pero me gustaría que le digas o hagas que janIA les envíe el correo a estas dos agentes Ana María y lincy como debe de ser me entiendes.",
+    createdAt: "2026-11-10T19:30:00.000Z",
+    active: true
   }
 ];
 

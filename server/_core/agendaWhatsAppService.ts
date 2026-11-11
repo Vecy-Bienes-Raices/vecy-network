@@ -383,6 +383,39 @@ export const KNOWN_PROPERTY_ADDRESSES: Record<string, string> = {
 };
 
 /**
+ * Normaliza y resuelve la dirección física confirmada de un inmueble
+ * admitiendo cualquier variación de mayúsculas/minúsculas, guiones, espacios o nombres de inmueble
+ * (Doctrina Eduardo A. Rivera v34.10)
+ */
+export function resolvePropertyAddress(codigo?: string, nombreInmueble?: string, customAddress?: string): string {
+  if (customAddress && customAddress.trim().length > 10 && !customAddress.toLowerCase().startsWith("dirección confirmada en")) {
+    return customAddress.trim();
+  }
+
+  const cleanCode = (codigo || "").trim().toUpperCase().replace(/[\s\-_.]/g, "");
+  const cleanNombre = (nombreInmueble || "").trim().toLowerCase();
+
+  // Caso La Carolina / Edificio Inmoval VI (ID-LACAR-01BOG en cualquier variación)
+  if (
+    cleanCode.includes("LACAR") ||
+    cleanCode.includes("INMOVAL") ||
+    (cleanNombre.includes("carolina") && (cleanNombre.includes("apartamento") || cleanNombre.includes("apto") || cleanNombre.includes("inmoval")))
+  ) {
+    return "KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá";
+  }
+
+  // Búsqueda en mapa conocido normalizado
+  for (const [key, addr] of Object.entries(KNOWN_PROPERTY_ADDRESSES)) {
+    const normKey = key.toUpperCase().replace(/[\s\-_.]/g, "");
+    if (cleanCode && normKey && (cleanCode === normKey || cleanCode.includes(normKey) || normKey.includes(cleanCode))) {
+      return addr;
+    }
+  }
+
+  return (customAddress && customAddress.trim()) || "Dirección confirmada en Bogotá";
+}
+
+/**
  * Construye el mensaje de WhatsApp oficial con la dirección exacta del inmueble para la cita
  */
 export function buildClientAppointmentAddressMessage(data: AgendaWhatsAppPayload, address: string): string {
@@ -452,8 +485,9 @@ export async function sendAppointmentAddressNotification(
   let emailSent = false;
   const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
   const codigo = payload.codigo_inmueble || payload.codigoInmueble || "";
+  const nombreInmueble = payload.nombre_inmueble || payload.nombreInmueble || "";
 
-  const address = customAddress || KNOWN_PROPERTY_ADDRESSES[codigo] || "Dirección confirmada en La Carolina, Bogotá";
+  const address = resolvePropertyAddress(codigo, nombreInmueble, customAddress);
   const addressMsg = buildClientAppointmentAddressMessage(payload, address);
 
   const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";

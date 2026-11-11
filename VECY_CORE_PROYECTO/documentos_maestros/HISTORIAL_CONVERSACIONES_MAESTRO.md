@@ -7,6 +7,43 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-10] — JanIA v34.10: Homologación Resiliente de Direcciones en Inmuebles Multirreserva, Despacho Oficial de Correos y Reconocimiento Contextual en DMs (Caso Lincy Hoyos y Ana María Díaz — Solicitudes #1148 y #1149 — Doctrina Eduardo A. Rivera — v34.10 - 34.10.0)
+
+**Versión:** `v34.10` (`34.10.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)
+**Instrucción / Doctrina Fundacional de Eduardo A. Rivera:**
+- *"Hay un mal entendido con esto de las direcciones, si te fijas las solicitudes #1148 y 1149 son para el mismo apartamento que solicitó reserva Alfredo, por lo tanto JanIa Ya sabe la dirección de ese inmueble, yo ya lo hice manual por el Whatsapp de JanIA pero me gustaría que le digas o hagas que janIA les envíe el correo a estas dos agentes Ana María y lincy como debe de ser me entiendes."*
+- **Evidencia Visual Analizada:**
+  1. `media_1794357505705_0e24ba3b.jpg`: Chat de WhatsApp con "Lincy Mayerly Hoyos Sierra (Bróker)". A las 16:00 JanIA le despachó un mensaje con `DIRECCIÓN EXACTA COMPLETA: Dirección confirmada en La Carolina, Bogotá`. A las 19:21 Lincy preguntó `No veo la dirección? 💡`. JanIA emitió una respuesta teórica genérica sobre confidencialidad de direcciones antes de agendar. A las 19:24 Eduardo intervino manualmente suministrándole la dirección exacta física: `KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`.
+  2. `media_1794357533968_97d96055.jpg`: Chat de WhatsApp con "Ana Maria Diaz Cardenas". A las 16:00 recibió el mensaje con el texto genérico `Dirección confirmada en La Carolina, Bogotá`. A las 19:30 Eduardo le reenvió la confirmación completa con la dirección real del Edificio Inmoval VI.
+
+**Diagnóstico Técnico Forense y Causas Raíz:**
+1. **Case-Sensitivity Estricta en Mapeo de Códigos de Inmuebles:** En `agendaWhatsAppService.ts`, el objeto `KNOWN_PROPERTY_ADDRESSES` indexaba exclusivamente con claves en mayúsculas (`ID-LACAR-01BOG`, `ID-LACAR01`, `LACAR-01`). En la base de datos, la Solicitud #1148 tenía `codigo_inmueble = 'ID-lacar-01bog'` y la #1149 tenía `codigo_inmueble = 'ID-Lacar-01bog'`. Al hacer `KNOWN_PROPERTY_ADDRESSES[codigo]`, la búsqueda retornaba `undefined` y caía al fallback genérico `"Dirección confirmada en La Carolina, Bogotá"`.
+2. **Carencia de Homologación por Nombre de Inmueble:** No existía validación heurística sobre `nombre_inmueble` (`Apartamento en la carolina` / `apartamento en la Carolina`). Si el código venía con variaciones o espacios (`ID-LACAR -01BOG`), el sistema no infería que se trataba del mismo apartamento captado oficialmente por Vecy en el Edificio Inmoval VI.
+3. **Falta de Reconocimiento Contextual en DMs Privados (`dmHandler.ts`):** Cuando Lincy preguntó *"No veo la dirección?"*, el manejador de mensajes directos procesó la pregunta como una consulta fría de un usuario nuevo, aplicando la política general de reserva de direcciones, en lugar de consultar si ese número de teléfono tenía una cita activa confirmada en la tabla `solicitudes`.
+
+**Acciones Quirúrgicas y Solución Permanente Ejecutadas:**
+1. **Función Canónica de Normalización (`agendaWhatsAppService.ts`):**
+   - Creada y exportada `resolvePropertyAddress(codigo?: string, nombreInmueble?: string, customAddress?: string): string`.
+   - Normaliza cadenas eliminando espacios, guiones, puntos y mayúsculas/minúsculas.
+   - Detecta coincidencias de `LACAR`, `INMOVAL`, y nombres de inmueble con `carolina` + `apartamento`, resolviendo infaliblemente: `"KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá"`.
+2. **Actualización de Base de Datos PostgreSQL en VPS:**
+   - Filas id 252 (Solicitud #1148) e id 253 (Solicitud #1149) actualizadas atómicamente con `direccion_inmueble = 'KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá'`.
+3. **Despacho Inmediato de Correos Oficiales con SMTP:**
+   - Ejecutado despacho oficial vía Gmail SMTP (`server/scripts/dispatch_address_emails_1148_1149.ts`):
+     - **Solicitud #1148 (Lincy Mayerly Hoyos Sierra - `lincyhoyosrealestate@gmail.com`):** Correo HTML de alto contraste despachado con éxito (MessageId `<52426068-4bec-9671-b8c0-b18a350e6065@gmail.com>`). Saludo canónico: `¡Hola, Lincy! 👋🏠✨`, dirección oficial, recomendaciones de portería, cliente registrado `Simon Ramirez Pineda` (Doc `1020823910`), botón universal 1-clic a Google Calendar y copia a `vecybienesraices@gmail.com`.
+     - **Solicitud #1149 (Ana María Díaz Cárdenas - `anamdiazc04@gmail.com`):** Correo HTML de alto contraste despachado con éxito (MessageId `<54281097-2f72-2de3-0ba7-3ccf1afd24f7@gmail.com>`). Saludo canónico: `¡Hola, Ana María! 👋🏠✨`, dirección oficial, recomendaciones de portería, cliente registrado `Simon Ramirez Pineda` (Doc `1020823910`), botón universal 1-clic a Google Calendar y copia a `vecybienesraices@gmail.com`.
+4. **Reconocimiento Contextual de Citas Activas en `dmHandler.ts`:**
+   - Integrada directiva `contextActiveAppointmentDirective`: ante mensajes entrantes por DM, JanIA verifica si el número telefónico tiene citas activas (`confirmada` o `reagendada`) en `solicitudes`. De haberla, inyecta los datos exactos del inmueble, fecha, hora, dirección física y cliente, ordenando a JanIA responder de inmediato con la dirección física y recomendaciones de ingreso, erradicando respuestas evasivas.
+5. **Endpoint Administrativo Directo en `server/_core/index.ts`:**
+   - Creado `POST /api/admin/dispatch-address-email-direct` para despachar correos oficiales y sincronizar la base de datos en lote.
+6. **Integración en Cron de 24 Horas (`cronService.ts`):**
+   - `checkAndDispatch24hAppointmentReminders` ahora utiliza `resolvePropertyAddress`, garantizando que futuras solicitudes para este u otros inmuebles almacenen y transmitan la dirección física exacta.
+7. **Gobernanza y Suite de Regresión 196:**
+   - Semilla directiva `seed-homologacion-direcciones-inmuebles-multireserva-v34-10` en `founderKnowledgeService.ts`.
+   - Suite 196 en `regression.test.ts` con 5 pruebas automatizadas pasando al 100%.
+
+---
+
 ### 📅 [2026-11-10] — JanIA v34.09: Saludos Naturales Canónicos en Agendamiento y Visitas, Despacho Concurrente y Enrutamiento PN (Caso Alfredo Anaya, Lincy Hoyos y Ana María Díaz — Doctrina Eduardo A. Rivera — v34.09 - 34.09.0)
 
 **Versión:** `v34.09` (`34.09.0`) | **Ambiente:** Servidor VPS Contabo (`13.140.149.144`) + PostgreSQL / PostGIS + WhatsApp Baileys Socket (`+573192919978`) + Frontend Vercel (`https://vecy-bienes-raices.vercel.app`)

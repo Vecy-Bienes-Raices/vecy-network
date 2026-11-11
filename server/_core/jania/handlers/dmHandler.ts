@@ -22,8 +22,9 @@ import {
 } from "../sessionManager";
 import { fetchWebUrlContent } from "../../scraper";
 import { getDb } from "../../../db";
-import { properties } from "../../../../drizzle/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { properties, solicitudes } from "../../../../drizzle/schema";
+import { cleanColombianPhone, resolvePropertyAddress } from "../../agendaWhatsAppService";
+import { eq, and, or, sql, desc } from "drizzle-orm";
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
@@ -2763,6 +2764,56 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     }
     if (contextLegalLetterDirective) {
       userPromptContent += contextLegalLetterDirective;
+    }
+
+    // Inyección de Cita Activa de Vecy Agenda Pro (Doctrina Eduardo A. Rivera v34.10)
+    let contextActiveAppointmentDirective = "";
+    try {
+      const cleanPhoneDigits = (userId || "").replace(/\D/g, "");
+      const cleanUserPhone = cleanColombianPhone(cleanPhoneDigits);
+      if (cleanUserPhone && cleanUserPhone.length >= 10) {
+        const db = await getDb();
+        if (db) {
+          const matchingAppointments = await db
+            .select()
+            .from(solicitudes)
+            .where(
+              and(
+                or(
+                  sql`REGEXP_REPLACE(${solicitudes.solicitanteCelular}, '\\D', '', 'g') LIKE ${'%' + cleanUserPhone.slice(-10)}`,
+                  eq(solicitudes.solicitanteCelular, cleanUserPhone)
+                ),
+                or(
+                  eq(solicitudes.estado, "confirmada"),
+                  eq(solicitudes.estado, "reagendada")
+                )
+              )
+            )
+            .orderBy(desc(solicitudes.id))
+            .limit(1);
+
+          if (matchingAppointments && matchingAppointments.length > 0) {
+            const apt = matchingAppointments[0];
+            const aptAddress = resolvePropertyAddress(apt.codigoInmueble || undefined, apt.nombreInmueble || undefined, apt.direccionInmueble || undefined);
+            
+            contextActiveAppointmentDirective =
+              `\n[SISTEMA: ESTE CONTACTO TIENE UNA CITA AGENDADA ACTIVA EN VECY BIENES RAÍCES:\n` +
+              `- Solicitud #${apt.solicitudId || apt.id}\n` +
+              `- Inmueble: ${apt.nombreInmueble || 'Apartamento en La Carolina'} (Código: ${apt.codigoInmueble || 'ID-LACAR-01BOG'})\n` +
+              `- Fecha y Hora de la cita: ${apt.fechaCitaTexto} a las ${apt.horaCita}\n` +
+              `- Dirección física confirmada: ${aptAddress}\n` +
+              (apt.interesadoNombre ? `- Cliente / Acompañante registrado: ${apt.interesadoNombre} (Doc: ${apt.interesadoDocumento || 'N/A'})\n` : '') +
+              `- Estado: ${apt.estado}\n` +
+              `DIRECTIVA OBLIGATORIA: Si este usuario pregunta por la dirección ("no veo la dirección", "cuál es la dirección", "dónde queda", "a qué horas es"), confirmación de su cita o detalles del recorrido, debes responder de inmediato con total calidez y amabilidad entregándole los datos completos de su cita, la dirección física confirmada y las recomendaciones de ingreso en portería. JAMÁS le digas que la dirección es confidencial o que debe agendar de nuevo, pues ya tiene su cita 100% aprobada y confirmada.]`;
+          }
+        }
+      }
+    } catch (aptErr: any) {
+      console.warn("[dmHandler] Error buscando cita activa del usuario:", aptErr?.message || aptErr);
+    }
+
+    if (contextActiveAppointmentDirective) {
+      userPromptContent += contextActiveAppointmentDirective;
     }
 
     const lastAssistantTurn = history.slice().reverse().find(t => t.role === "assistant");
