@@ -184,7 +184,25 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.10 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.11 — Noviembre 2026
+
+### Novedades v34.11 (Precisión Quirúrgica en Skill ACM y Protocolo Universal de Satisfacción + Google Reviews por Libre Albedrío — Caso Carolina Z. | eXp Realty — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Instrucción Doctrinal de Eduardo A. Rivera:**
+     - *"Excelente pues analiza esta imagen para que puedas afinar mejor a JanIA en su Skill de ACM, dándole una mayor precisción y haciendo que cada vez que de o brinde cualquier servicio, pregunte satisfacción del usuario con la respuesta y según esto solicite comentarios y calificación en Google según su libre alvedrío y no me toque hacerlo a mi directamente como en este caso que no lo hizo, pero menos mal la usuaria decidió escribirme a mi para solicitar el enlace de calificación y dejar su mensaje o dar su opiniónen google. SI puedes pulir al máximo este skill de ACM de Jania sería fabuloso."*
+  2. **Diagnóstico Técnico y Causa Raíz:**
+     - En la atención a **Carolina Z. | eXp Realty** (`+57 350 4374572`), el ACM de una casa remodelada de 2008 en Santa Ana Oriental (`242.83 m²`, 4 habitaciones, 4 baños, 3 parqueaderos, cocina con isla, 2 niveles, terraza, admon $2.000.000) omitió modelar edad efectiva Fitto y Corvini, microzona Santa Ana Oriental y atributos diferenciales, e incluyó un bloque extenso e innecesario de CTL/Escritura/Predial.
+     - Al entregar el ACM, JanIA no preguntó satisfacción ni ofreció el enlace de Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`), causando que Carolina escribiera directamente a Eduardo para pedir el enlace de calificación y sugerir afinar los ACM.
+  3. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - En `server/_core/valuation.ts`: Homologación ACM avanzada con mitigación Fitto y Corvini para inmuebles remodelados (`cAntiguedad` + `cRemodelacion`), eliminación de penalización de piso en casas, bono de `>=3` parqueaderos, coeficientes de terraza, cocina con isla y relación baños/habitaciones `1:1`, microzona `Santa Ana Oriental`, análisis de administración/m², 3 escenarios de venta (Cierre Rápido, Comercial Óptimo, Techo de Negociación), Cap Rate, ICP y `reporteAcmEstructurado`.
+     - En `server/_core/jania/handlers/dmHandler.ts`: Exportada `extractAcmAttributesFromText`, actualizada la herramienta `sondeo_mercado_inmobiliario` para capturar todas las variables ACM y eliminado el bloque CTL/Escritura/Predial del entregable.
+     - En `server/_core/politenessService.ts`, `dmHandler.ts`, `whatsapp-match.ts` y `consultingHandler.ts`: Protocolo Universal de Satisfacción y Google Reviews por Libre Albedrío (`isExplicitReviewLinkRequest`, `isUserSatisfactionOrFeedbackReply`, `buildAutonomousGoogleReviewInvitation`) en **todos los servicios gratuitos**, con cierre obligatorio de satisfacción, temporizador de seguimiento de 60s y entrega autónoma de `https://g.page/r/CctNbwU6UpX5EBM/review`.
+  4. **Gobernanza y Suite de Regresión 197:**
+     - Semilla directiva `seed-precision-acm-profesional-satisfaccion-y-resenas-google-libre-albedrio-v34-11` en `founderKnowledgeService.ts`.
+     - Suite 197 con 4 pruebas automatizadas pasando al 100% (`NODE_ENV=test`, $0 COP).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Tests Suite 197 `vitest` (4/4 passing, 100%) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v34.10 — Noviembre 2026
 
 ### Novedades v34.10 (Homologación Resiliente de Direcciones en Inmuebles Multirreserva, Despacho Oficial de Correos y Reconocimiento Contextual en DMs — Caso Lincy Hoyos y Ana María Díaz — Solicitudes #1148 y #1149 — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

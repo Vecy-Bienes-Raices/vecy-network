@@ -274,5 +274,119 @@ export function formatPersuasiveIntensiveUserReviewMessage(
   );
 }
 
+/**
+ * Detecta si el usuario solicita explícitamente el enlace/link de calificación o reseña en Google (v34.11).
+ */
+export function isExplicitReviewLinkRequest(text: string): boolean {
+  const normalized = (text || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!normalized || normalized.length > 400) return false;
+
+  const asksLinkOrWhere =
+    /\b(link|enlace|url|donde)\b.{0,40}\b(calificar|calificacion|resena|opinion|opinar|comentar|comentario|estrellas|google|puntuar)\b/.test(
+      normalized
+    ) ||
+    /\b(enviame|mandame|pasame|comparteme|dame|quiero\s+(?:dejar|dar))\b.{0,40}\b(calificacion|resena|opinion|link|enlace)\b/.test(
+      normalized
+    ) ||
+    /\b(link\s+de\s+google|calificar\s+en\s+google|dejar\s+(?:la\s+|una\s+|mi\s+)?(?:calificacion|resena|opinion|comentario))\b/.test(
+      normalized
+    );
+
+  return asksLinkOrWhere;
+}
+
+/**
+ * Detecta si el usuario expresa satisfacción, agrado o retroalimentación constructiva tras recibir un servicio (v34.11).
+ */
+export function isUserSatisfactionOrFeedbackReply(
+  text: string,
+  hasRecentServiceContext: boolean = false
+): {
+  isSatisfied: boolean;
+  hasConstructiveSuggestion: boolean;
+  constructiveTopic: string | null;
+} {
+  const raw = (text || "").trim();
+  const normalized = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (!normalized || normalized.length > 450) {
+    return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
+  }
+
+  // No confundir con una solicitud nueva de herramienta con datos propios
+  const looksLikeNewToolDataRequest =
+    /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales)\b/.test(
+      normalized
+    ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
+
+  if (looksLikeNewToolDataRequest) {
+    return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
+  }
+
+  const positivePatterns =
+    /\b(me\s+(?:ha(?:n)?\s+)?gust(?:o|a|ado|aron)|me\s+(?:ha(?:n)?\s+)?encant(?:o|a|ado|aron)|excelente|muy\s+(?:bien|bueno|buena|completo|completa|preciso|precisa|util)|quede\s+satisfech[oa]|muy\s+satisfech[oa]|si\s+me\s+sirvi[oó]|super\s+(?:bien|completo|util)|maravilloso|genial|fabuloso|increible|espectacular|impresionante)\b/i;
+
+  const constructivePatterns =
+    /\b(afinar|mejorar|ajustar|mas\s+precis|puntos?\s+mas\s+debiles|me\s+gustaria\s+si\s+pueden|seria\s+genial\s+que|podrian\s+(?:agregar|mejorar|incluir|afinar))\b/i;
+
+  const isPositive = positivePatterns.test(normalized);
+  const hasConstructive = constructivePatterns.test(normalized);
+
+  let constructiveTopic: string | null = null;
+  if (hasConstructive) {
+    if (/\bacm\b|avaluo|mercado|homologaci|valoraci/i.test(normalized)) {
+      constructiveTopic = "ACM";
+    } else {
+      constructiveTopic = "precisión técnica";
+    }
+  }
+
+  const isSatisfied =
+    isPositive || (hasRecentServiceContext && (hasConstructive || /^(?:si|claro|totalmente|100%|perfecto|ok|s[ií],?\s+muchas\s+gracias)[!.\s]*$/i.test(normalized)));
+
+  return {
+    isSatisfied,
+    hasConstructiveSuggestion: hasConstructive,
+    constructiveTopic
+  };
+}
+
+/**
+ * Construye una respuesta cálida, autónoma y personalizada (libre albedrío de JanIA) agradeciendo la retroalimentación
+ * e invitando a dejar comentario y calificación de 5 estrellas en Google Reviews (v34.11).
+ */
+export function buildAutonomousGoogleReviewInvitation(
+  userName?: string | null,
+  options?: {
+    isDirectLinkRequest?: boolean;
+    constructiveTopic?: string | null;
+    isConstructiveFeedback?: boolean;
+  }
+): string {
+  const cleanRaw = userName ? cleanRawUserName(userName) : "";
+  const cleanName = extractFirstName(cleanRaw || userName || "") || cleanRaw || "Colega";
+
+  const openingLine = options?.isDirectLinkRequest
+    ? `¡Con el mayor de los gustos, ${cleanName}! 🙌🏻✨ Nos alegra muchísimo saber que nuestras consultas y herramientas te han sido de gran utilidad.`
+    : options?.isConstructiveFeedback || options?.constructiveTopic
+    ? `¡Muchísimas gracias por tu valoración y por ese aporte tan valioso, ${cleanName}! 🙏✨ Tomamos nota inmediata de tu observación para seguir llevando nuestros ${options?.constructiveTopic || "análisis"} a la máxima precisión técnica del mercado.`
+    : `¡Qué alegría saber que quedaste satisfecha/o con el servicio, ${cleanName}! 🥰✨ Trabajo 24/7 junto al equipo de *VECY BIENES RAÍCES* para darte la mayor precisión gratuita del sector.`;
+
+  return (
+    `${openingLine}\n\n` +
+    `Aquí tienes el enlace oficial para dejarnos tu comentario y calificación de 5 estrellas en Google Reviews (te toma menos de 15 segundos y nos ayudas a que JanIA siga siendo 100% GRATUITA para el gremio):\n\n` +
+    `👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐\n\n` +
+    `¡Mil gracias por tu apoyo y mucho éxito en todos tus cierres inmobiliarios! 🤝🏢✨`
+  );
+}
+
+
 
 

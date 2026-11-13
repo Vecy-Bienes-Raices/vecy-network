@@ -2065,6 +2065,11 @@ export class JaniaMatchBot {
               const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
 
               if (!hasVerified) {
+                const alreadySentReviewInReply = replyText.includes("g.page/r/CctNbwU6UpX5EBM/review");
+                if (alreadySentReviewInReply) {
+                  this.recentReviewPromptUsers.set(senderId, Date.now());
+                }
+
                 const isServiceDeliveryReply =
                   replyText.includes("VERIFICACIÓN") ||
                   replyText.includes("antecedentes") ||
@@ -2075,8 +2080,15 @@ export class JaniaMatchBot {
                   replyText.includes("PREDIAL") ||
                   replyText.includes("PAZ Y SALVO") ||
                   replyText.includes("RUES") ||
+                  replyText.includes("ANÁLISIS COMPARATIVO DE MERCADO") ||
+                  replyText.includes("Escenarios Estratégicos de Precio") ||
+                  replyText.includes("Sondeo de Mercado") ||
+                  replyText.includes("Valor m² homologado") ||
+                  replyText.includes("LIQUIDACIÓN") ||
                   replyText.includes("MATCH") ||
-                  replyText.includes("40/20/40");
+                  replyText.includes("40/20/40") ||
+                  Boolean(latestPdf) ||
+                  Boolean(latestCreativeImage);
 
                 const isRecurrentFreeBeneficiary =
                   (session.freeServicesUsedCount || 0) >= 2;
@@ -2090,7 +2102,9 @@ export class JaniaMatchBot {
                 const isIntensiveUser = usedCount >= 3;
                 const isIntensiveCadence = isIntensiveUser && (usedCount === 3 || usedCount % 3 === 0);
 
-                if (isGratitudeOrClosing) {
+                if (alreadySentReviewInReply) {
+                  // Ya se entregó el enlace oficial de reseña en esta respuesta
+                } else if (isGratitudeOrClosing) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { formatImmediatePoliteReviewMessage, formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
                   const politeMsg = isRecurrentFreeBeneficiary
@@ -2115,6 +2129,10 @@ export class JaniaMatchBot {
                   await this.logToDb(senderId, 'janIA', intensiveReviewMsg);
                   const { appendDmHistory } = await import('./janIA');
                   appendDmHistory(senderId, 'assistant', intensiveReviewMsg);
+                } else if (isServiceDeliveryReply && isCompleteDelivery) {
+                  // 🌟 DOCTRINA EDUARDO A. RIVERA (v34.11): Si el usuario no responde tras recibir cualquier servicio (ACM, RUES, Predial, Notarial, etc.),
+                  // programar el seguimiento desacoplado de 60s para invitarlo autónomamente a calificar en Google sin intervención manual del fundador.
+                  this.onFreeToolServiceDelivered(senderId, userName);
                 }
               }
             } catch (revErr: any) {

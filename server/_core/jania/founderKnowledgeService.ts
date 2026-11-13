@@ -734,6 +734,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Hay un mal entendido con esto de las direcciones, si te fijas las solicitudes #1148 y 1149 son para el mismo apartamento que solicitó reserva Alfredo, por lo tanto JanIa Ya sabe la dirección de ese inmueble, yo ya lo hice manual por el Whatsapp de JanIA pero me gustaría que le digas o hagas que janIA les envíe el correo a estas dos agentes Ana María y lincy como debe de ser me entiendes.",
     createdAt: "2026-11-10T19:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-precision-acm-profesional-satisfaccion-y-resenas-google-libre-albedrio-v34-11",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Precisión Quirúrgica en Skill ACM (Fitto y Corvini + 3 Escenarios) y Protocolo Universal de Satisfacción + Reseñas Google por Libre Albedrío (Doctrina Eduardo A. Rivera v34.11)",
+    directive:
+      "1) PRECISIÓN PROFESIONAL DE ACM (Caso Carolina Z. | eXp Realty): JanIA debe reconocer explícitamente solicitudes de 'ACM', 'análisis comparativo de mercado', 'estudio de mercado' y 'sondeo', extrayendo todas las variables físicas del texto (microzona como Santa Ana Oriental, año de construcción, si es remodelada para aplicar edad efectiva de Fitto y Corvini, habitaciones, baños, parqueaderos 3+, cocina con isla, niveles, terraza y valor de administración/m²). El reporte ACM debe entregar valor homologado por m², los 3 Escenarios Estratégicos de Precio (Liquidez Rápida, Comercial Óptimo Homologado y Techo de Lista), canon de arriendo, Cap Rate bruto anual, ratio de administración y Perfil de Comprador Ideal (ICP), evitando muros largos de CTL/Escritura/Predial.\n2) PROTOCOLO UNIVERSAL DE SATISFACCIÓN Y CALIFICACIÓN AUTÓNOMA EN GOOGLE: Cada vez que JanIA entregue cualquier servicio (ACM, cédula/ADRES, RUES, predial, IDU, liquidación notarial, minuta PDF, marketing o consultoría jurídica), DEBE preguntar con calidez al usuario si quedó satisfecha/o con la respuesta entregada. Conforme a la respuesta del usuario (agrado, satisfacción o sugerencia constructiva) y haciendo uso de su libre albedrío autónomo (o ante solicitud del enlace), JanIA solicitará inmediatamente comentarios y calificación de 5 estrellas entregando el enlace oficial de Google (https://g.page/r/CctNbwU6UpX5EBM/review) sin que el usuario tenga que pedírselo a Eduardo manualmente.",
+    rawText:
+      "analiza esta imagen para que puedas afinar mejor a JanIA en su Skill de ACM, dándole una mayor precisción y haciendo que cada vez que de o brinde cualquier servicio, pregunte satisfacción del usuario con la respuesta y según esto solicite comentarios y calificación en Google según su libre alvedrío y no me toque hacerlo a mi directamente como en este caso que no lo hizo, pero menos mal la usuaria decidió escribirme a mi para solicitar el enlace de calificación y dejar su mensaje o dar su opiniónen google. SI puedes pulir al máximo este skill de ACM de Jania sería fabuloso.",
+    createdAt: "2026-11-12T22:20:00.000Z",
+    active: true
   }
 ];
 

@@ -9314,6 +9314,22 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.11 (2026-11-12) — Precisión Quirúrgica en Skill ACM (Fitto y Corvini + 3 Escenarios) y Protocolo Universal de Satisfacción + Google Reviews por Libre Albedrío (Caso Carolina Z. | eXp Realty — Doctrina Eduardo A. Rivera)
+- **Problema / Consulta Identificada**:
+  - En las capturas de WhatsApp compartidas por Eduardo con **Carolina Z. | eXp Realty** (`+57 350 4374572`), JanIA respondió un ACM de una casa en **Santa Ana Oriental** (`remodelada, 4 habitaciones, 4 baños, 3 parqueaderos, año 2008, 242.83 m², admon $2.000.000, cocina con isla, 2 niveles y terraza`) mediante un resumen genérico seguido de un bloque comercial largo de CTL/Escritura/Predial sin precisión homologada por edad efectiva ni atributos diferenciales.
+  - Adicionalmente, JanIA no preguntó la satisfacción de la usuaria tras prestar el servicio ni compartió de forma autónoma el enlace de Google Reviews, obligando a que Carolina contactara directamente a Eduardo (`+57 316 656 9719`) para solicitar el link de calificación y recomendar afinar el Skill de ACM.
+- **Solución Quirúrgica Implementada**:
+  - **Motor ACM (`server/_core/valuation.ts`)**: Incorporada mitigación Fitto y Corvini sobre edad efectiva en inmuebles remodelados (`cAntiguedad = 0.96`, `cRemodelacion = 1.06` en >15 años remodelados), anulación de penalización por piso en tipología casa, bono por `3+ parqueaderos` (`1.07`), coeficientes especiales (`cAtributosEspeciales`) para terraza (`1.035`), cocina con isla (`1.025`) y relación 1:1 de baños/habitaciones (`1.015`), precisión por microzona (`Santa Ana Oriental`), relación administración/m², **3 escenarios estratégicos de venta** (Cierre Rápido, Comercial Óptimo, Techo de Negociación), Cap Rate, Perfil de Comprador Ideal (ICP) y `reporteAcmEstructurado`.
+  - **Extracción y Limpieza de Entrega ACM (`server/_core/jania/handlers/dmHandler.ts`)**: Creada y exportada `extractAcmAttributesFromText`, ampliada la definición/ejecución de `sondeo_mercado_inmobiliario` y suprimido el bloque intrusivo de CTL/Escritura/Predial en entregables ACM.
+  - **Protocolo Universal de Satisfacción y Google Reviews por Libre Albedrío (`server/_core/politenessService.ts`, `dmHandler.ts`, `whatsapp-match.ts`, `consultingHandler.ts`)**: Agregadas `isExplicitReviewLinkRequest`, `isUserSatisfactionOrFeedbackReply` y `buildAutonomousGoogleReviewInvitation`; cierre de satisfacción obligatorio tras todo servicio gratuito, extensión del seguimiento automático de 60s en `whatsapp-match.ts` a ACM/Sondeo/Liquidación/PDF/Creativo e interceptación en DM para entregar de forma cálida y autónoma `https://g.page/r/CctNbwU6UpX5EBM/review` sin duplicaciones.
+  - **Gobernanza y Suite 197**: Semilla `seed-precision-acm-profesional-satisfaccion-y-resenas-google-libre-albedrio-v34-11` en `founderKnowledgeService.ts`, Suite 197 (4 tests) en `server/__tests__/regression.test.ts` y actualización a `v34.11` (`34.11.0`) en `shared/const.ts` y `package.json`.
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 197 en `regression.test.ts` con 4/4 pruebas automatizadas pasando al 100% (`NODE_ENV=test`, $0 COP).
+  - Typecheck `npm run check` (0 errores) y Build `npm run build` limpios.
+  - Versión: `v34.11` (`34.11.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.10 (2026-11-10) — Homologación Resiliente de Direcciones en Inmuebles Multirreserva, Despacho Oficial de Correos y Reconocimiento Contextual en DMs (Caso Lincy Hoyos y Ana María Díaz — Solicitudes #1148 y #1149 — Doctrina Eduardo A. Rivera)
 - **Problema / Consulta Identificada**:
   - En las Solicitudes #1148 (Lincy Hoyos) y #1149 (Ana María Díaz), ambas agendadas para el mismo apartamento en La Carolina (Edificio Inmoval VI) que la cita de Alfredo Anaya (#1147), JanIA emitió el texto genérico de contingencia `"Dirección confirmada en La Carolina, Bogotá"` en vez de la dirección física oficial (`KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá`).

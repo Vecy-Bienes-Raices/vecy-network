@@ -12278,11 +12278,140 @@ Ana Morales Castillo
 
     it("5. Consagración doctrinal de versión v34.10 en shared/const.ts y package.json (34.10.0)", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.10");
+      expect(VECY_VERSION).toMatch(/^v(34\.\d+)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.10.0");
+      expect(pkg.version).toMatch(/^34\.\d+\.0$/);
+    });
+  });
+
+  describe("SUITE 197: Precisión Quirúrgica ACM (Fitto y Corvini + 3 Escenarios + Caso Carolina Z. eXp Realty) y Protocolo Universal de Satisfacción + Google Reviews por Libre Albedrío (v34.11)", () => {
+    it("1. executeMarketValuationSurvey calcula ACM de alta precisión para Santa Ana Oriental remodelada (Caso Carolina Z. | eXp Realty)", async () => {
+      const { executeMarketValuationSurvey } = await import("../_core/valuation");
+
+      const acm = executeMarketValuationSurvey({
+        zonaOBarrio: "Santa Ana Oriental",
+        direccionExacta: "calle 113 con 6a",
+        tipoInmueble: "casa",
+        areaM2: 242.83,
+        anoConstruccion: 2008,
+        esRemodelado: true,
+        habitaciones: 4,
+        banos: 4,
+        garajes: 3,
+        administracionCop: 2000000,
+        cocinaConIsla: true,
+        niveles: 2,
+        tieneTerraza: true,
+        userId: "573504374572@s.whatsapp.net"
+      });
+
+      expect(acm.tieneComparablesVerificados).toBe(true);
+      expect(acm.baseZonePricePerM2).toBe(9200000);
+      expect(acm.coefficients.cAntiguedad).toBe(0.96);
+      expect(acm.coefficients.cRemodelacion).toBe(1.06);
+      expect(acm.coefficients.cGarajes).toBe(1.07);
+      expect(acm.coefficients.cPiso).toBe(1.0);
+      expect(acm.precioCierreRapido).toBeLessThan(acm.valorComercialOptimo);
+      expect(acm.valorComercialOptimo).toBeLessThan(acm.precioTechoNegociacion);
+      expect(acm.administracionPorM2).toBe(Math.round(2000000 / 242.83));
+      expect(acm.reporteAcmEstructurado).toContain("Fitto y Corvini");
+      expect(acm.reporteAcmEstructurado).toContain("Escenarios Estratégicos de Precio");
+      expect(acm.reporteAcmEstructurado).not.toContain("Certificado de Tradición y Libertad (CTL) con vigencia menor a 30 días");
+    });
+
+    it("2. extractAcmAttributesFromText y executeJaniaDmTool reconocen 'ACM' y extraen todas las variables físicas de Carolina Z.", async () => {
+      const { extractAcmAttributesFromText, executeJaniaDmTool } = await import("../_core/jania/handlers/dmHandler");
+
+      const carolinaPrompt =
+        "Hola quiero un ACM de lo siguiente: Quiero que me hagas un ACM de una casa en santa ana oriental, remodelada, 4 habitaciones, cuatro baños, 3 parqueaderos, año de construcción 2008, 242.83m², admon 2.000.000, cocina con isla, dos niveles y terraza en el último nivel dirección aprox calle 113 con 6a";
+
+      const extracted = extractAcmAttributesFromText(carolinaPrompt);
+      expect(extracted.areaM2).toBe(242.83);
+      expect(extracted.anoConstruccion).toBe(2008);
+      expect(extracted.esRemodelado).toBe(true);
+      expect(extracted.habitaciones).toBe(4);
+      expect(extracted.banos).toBe(4);
+      expect(extracted.garajes).toBe(3);
+      expect(extracted.administracionCop).toBe(2000000);
+      expect(extracted.cocinaConIsla).toBe(true);
+      expect(extracted.tieneTerraza).toBe(true);
+      expect(extracted.niveles).toBe(2);
+      expect(extracted.tipoInmueble).toBe("casa");
+      expect(extracted.zonaOBarrio?.toLowerCase()).toContain("santa ana oriental");
+
+      const toolExec = await executeJaniaDmTool(
+        "sondeo_mercado_inmobiliario",
+        { zonaOBarrio: "Santa Ana Oriental" },
+        "573504374572@s.whatsapp.net",
+        "Carolina Z. | eXp Realty",
+        carolinaPrompt
+      );
+      expect(toolExec.toolType).toBe("sondeo");
+      expect(toolExec.resultJson.omitted).toBeUndefined();
+      expect(toolExec.resultJson.baseZonePricePerM2).toBe(9200000);
+      expect(toolExec.resultJson.areaM2).toBe(242.83);
+    });
+
+    it("3. Detectores de satisfacción, libre albedrío y respuesta autónoma de JanIA entregando el enlace de Google Reviews", async () => {
+      const {
+        isExplicitReviewLinkRequest,
+        isUserSatisfactionOrFeedbackReply,
+        buildAutonomousGoogleReviewInvitation
+      } = await import("../_core/politenessService");
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      expect(isExplicitReviewLinkRequest("Envíame el link para dejar la calificación")).toBe(true);
+      expect(isExplicitReviewLinkRequest("Hola, me ha gustado mucho. ¿Dónde te califico en Google?")).toBe(true);
+
+      const satPositive = isUserSatisfactionOrFeedbackReply(
+        "Si he realizado algunas consultas para comparar frente a lo que tengo con otras herramientas, me ha gustado.",
+        true
+      );
+      expect(satPositive.isSatisfied).toBe(true);
+
+      const satConstructive = isUserSatisfactionOrFeedbackReply(
+        "Me gustaría si pueden afinar un poco más los ACM, creo que es uno de los puntos más débiles de la industria",
+        true
+      );
+      expect(satConstructive.isSatisfied).toBe(true);
+      expect(satConstructive.hasConstructiveSuggestion).toBe(true);
+      expect(satConstructive.constructiveTopic).toBe("ACM");
+
+      const invite = buildAutonomousGoogleReviewInvitation("Carolina Z. | eXp Realty", {
+        isDirectLinkRequest: true,
+        constructiveTopic: "ACM",
+        isConstructiveFeedback: true
+      });
+      expect(invite).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(invite).toContain("⭐⭐⭐⭐⭐");
+
+      const testUserJid = `573504374572_test_${Date.now()}@s.whatsapp.net`;
+      const dmAutoReply = await processPrivateDmConversationalMessage(
+        "Si he realizado algunas consultas para comparar frente a lo que tengo con otras herramientas, me ha gustado. Envíame el link para dejar la calificación",
+        testUserJid,
+        "Carolina Z. | eXp Realty"
+      );
+      expect(dmAutoReply).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(dmAutoReply).toMatch(/Caro(?:lina)?/);
+      expect(dmAutoReply).toContain("⭐⭐⭐⭐⭐");
+    });
+
+    it("4. Semilla directiva v34.11 y consagración de versión v34.11 (34.11.0)", async () => {
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed = SEED_TEACHINGS.find(
+        t => t.id === "seed-precision-acm-profesional-satisfaccion-y-resenas-google-libre-albedrio-v34-11"
+      );
+      expect(seed).toBeDefined();
+      expect(seed?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.11");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.11.0");
     });
   });
 });
