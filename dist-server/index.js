@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.10";
+    VECY_VERSION = "v34.11";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16276,6 +16276,7 @@ var init_whatsapp_utils = __esm({
 // server/_core/politenessService.ts
 var politenessService_exports = {};
 __export(politenessService_exports, {
+  buildAutonomousGoogleReviewInvitation: () => buildAutonomousGoogleReviewInvitation,
   buildWinningGoogleReviewMessage: () => buildWinningGoogleReviewMessage,
   formatCompanyFollowUpDeclineReviewMessage: () => formatCompanyFollowUpDeclineReviewMessage,
   formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
@@ -16288,8 +16289,10 @@ __export(politenessService_exports, {
   formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
   isAffirmativeConsentResponse: () => isAffirmativeConsentResponse,
   isCompanyInquiryOrAboutUs: () => isCompanyInquiryOrAboutUs,
+  isExplicitReviewLinkRequest: () => isExplicitReviewLinkRequest,
   isNegativeConsentResponse: () => isNegativeConsentResponse,
-  isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
+  isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing,
+  isUserSatisfactionOrFeedbackReply: () => isUserSatisfactionOrFeedbackReply
 });
 function buildWinningGoogleReviewMessage(userName, contextHint) {
   const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
@@ -16442,6 +16445,61 @@ La \xFAnica reciprocidad indispensable que te pedimos para que puedas seguir dis
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
 
 Te toma menos de 15 segundos y es lo m\xEDnimo necesario para que nuestra comunidad mantenga tu acceso libre y abierto. \xBFMe confirmas cuando lo hayas hecho para que sigas contando con el servicio al 100%? \xA1Cuento con tu respaldo! \u{1F91D}\u{1F3E2}\u2728`;
+}
+function isExplicitReviewLinkRequest(text2) {
+  const normalized = (text2 || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!normalized || normalized.length > 400) return false;
+  const asksLinkOrWhere = /\b(link|enlace|url|donde)\b.{0,40}\b(calificar|calificacion|resena|opinion|opinar|comentar|comentario|estrellas|google|puntuar)\b/.test(
+    normalized
+  ) || /\b(enviame|mandame|pasame|comparteme|dame|quiero\s+(?:dejar|dar))\b.{0,40}\b(calificacion|resena|opinion|link|enlace)\b/.test(
+    normalized
+  ) || /\b(link\s+de\s+google|calificar\s+en\s+google|dejar\s+(?:la\s+|una\s+|mi\s+)?(?:calificacion|resena|opinion|comentario))\b/.test(
+    normalized
+  );
+  return asksLinkOrWhere;
+}
+function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = false) {
+  const raw = (text2 || "").trim();
+  const normalized = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!normalized || normalized.length > 450) {
+    return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
+  }
+  const looksLikeNewToolDataRequest = /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales)\b/.test(
+    normalized
+  ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
+  if (looksLikeNewToolDataRequest) {
+    return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
+  }
+  const positivePatterns = /\b(me\s+(?:ha(?:n)?\s+)?gust(?:o|a|ado|aron)|me\s+(?:ha(?:n)?\s+)?encant(?:o|a|ado|aron)|excelente|muy\s+(?:bien|bueno|buena|completo|completa|preciso|precisa|util)|quede\s+satisfech[oa]|muy\s+satisfech[oa]|si\s+me\s+sirvi[oó]|super\s+(?:bien|completo|util)|maravilloso|genial|fabuloso|increible|espectacular|impresionante)\b/i;
+  const constructivePatterns = /\b(afinar|mejorar|ajustar|mas\s+precis|puntos?\s+mas\s+debiles|me\s+gustaria\s+si\s+pueden|seria\s+genial\s+que|podrian\s+(?:agregar|mejorar|incluir|afinar))\b/i;
+  const isPositive = positivePatterns.test(normalized);
+  const hasConstructive = constructivePatterns.test(normalized);
+  let constructiveTopic = null;
+  if (hasConstructive) {
+    if (/\bacm\b|avaluo|mercado|homologaci|valoraci/i.test(normalized)) {
+      constructiveTopic = "ACM";
+    } else {
+      constructiveTopic = "precisi\xF3n t\xE9cnica";
+    }
+  }
+  const isSatisfied = isPositive || hasRecentServiceContext && (hasConstructive || /^(?:si|claro|totalmente|100%|perfecto|ok|s[ií],?\s+muchas\s+gracias)[!.\s]*$/i.test(normalized));
+  return {
+    isSatisfied,
+    hasConstructiveSuggestion: hasConstructive,
+    constructiveTopic
+  };
+}
+function buildAutonomousGoogleReviewInvitation(userName, options) {
+  const cleanRaw = userName ? cleanRawUserName(userName) : "";
+  const cleanName = extractFirstName2(cleanRaw || userName || "") || cleanRaw || "Colega";
+  const openingLine = options?.isDirectLinkRequest ? `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F64C}\u{1F3FB}\u2728 Nos alegra much\xEDsimo saber que nuestras consultas y herramientas te han sido de gran utilidad.` : options?.isConstructiveFeedback || options?.constructiveTopic ? `\xA1Much\xEDsimas gracias por tu valoraci\xF3n y por ese aporte tan valioso, ${cleanName}! \u{1F64F}\u2728 Tomamos nota inmediata de tu observaci\xF3n para seguir llevando nuestros ${options?.constructiveTopic || "an\xE1lisis"} a la m\xE1xima precisi\xF3n t\xE9cnica del mercado.` : `\xA1Qu\xE9 alegr\xEDa saber que quedaste satisfecha/o con el servicio, ${cleanName}! \u{1F970}\u2728 Trabajo 24/7 junto al equipo de *VECY BIENES RA\xCDCES* para darte la mayor precisi\xF3n gratuita del sector.`;
+  return `${openingLine}
+
+Aqu\xED tienes el enlace oficial para dejarnos tu comentario y calificaci\xF3n de 5 estrellas en Google Reviews (te toma menos de 15 segundos y nos ayudas a que JanIA siga siendo 100% GRATUITA para el gremio):
+
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50
+
+\xA1Mil gracias por tu apoyo y mucho \xE9xito en todos tus cierres inmobiliarios! \u{1F91D}\u{1F3E2}\u2728`;
 }
 var init_politenessService = __esm({
   "server/_core/politenessService.ts"() {
@@ -28434,13 +28492,18 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                   const session = await getUserPerpetualSession2(senderId, userName);
                   const hasVerified = Boolean(session?.hasVerifiedGoogleReview);
                   if (!hasVerified) {
-                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("MATCH") || replyText.includes("40/20/40");
+                    const alreadySentReviewInReply = replyText.includes("g.page/r/CctNbwU6UpX5EBM/review");
+                    if (alreadySentReviewInReply) {
+                      this.recentReviewPromptUsers.set(senderId, Date.now());
+                    }
+                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
                     const usedCount = session.freeServicesUsedCount || 0;
                     const isIntensiveUser = usedCount >= 3;
                     const isIntensiveCadence = isIntensiveUser && (usedCount === 3 || usedCount % 3 === 0);
-                    if (isGratitudeOrClosing) {
+                    if (alreadySentReviewInReply) {
+                    } else if (isGratitudeOrClosing) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                       const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2, formatPersuasiveRecurrentUserReviewMessage: formatPersuasiveRecurrentUserReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
                       const politeMsg = isRecurrentFreeBeneficiary ? formatPersuasiveRecurrentUserReviewMessage2(userName) : formatImmediatePoliteReviewMessage2(userName);
@@ -28458,6 +28521,8 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                       await this.logToDb(senderId, "janIA", intensiveReviewMsg);
                       const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
                       appendDmHistory2(senderId, "assistant", intensiveReviewMsg);
+                    } else if (isServiceDeliveryReply && isCompleteDelivery) {
+                      this.onFreeToolServiceDelivered(senderId, userName);
                     }
                   }
                 } catch (revErr) {
@@ -31334,69 +31399,138 @@ var init_agendaWhatsAppService = __esm({
 
 // server/_core/valuation.ts
 function calcularPrecioHomologado(params) {
+  const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+  let effectiveAge = params.antiguedadAnos;
+  if ((!effectiveAge || effectiveAge <= 0) && params.anoConstruccion && params.anoConstruccion > 1900 && params.anoConstruccion <= currentYear) {
+    effectiveAge = Math.max(0, currentYear - params.anoConstruccion);
+  }
+  const acabadosLower = (params.tipoAcabados || "").toLowerCase();
+  const isRemodeled = params.esRemodelado === true || /remodel|modern|nuevo|nueva|renovad|lujo|actualizad/.test(acabadosLower);
   let cAntiguedad = 1;
-  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
-  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
+  let cRemodelacion = 1;
+  if (isRemodeled) {
+    if (effectiveAge > 15) {
+      cAntiguedad = 0.96;
+      cRemodelacion = 1.06;
+    } else if (effectiveAge >= 6) {
+      cAntiguedad = 0.98;
+      cRemodelacion = 1.05;
+    } else {
+      cAntiguedad = 1;
+      cRemodelacion = 1.04;
+    }
+  } else {
+    if (effectiveAge >= 6 && effectiveAge <= 15) cAntiguedad = 0.92;
+    else if (effectiveAge > 15) cAntiguedad = 0.85;
+  }
+  const tipoLower = (params.tipoInmueble || "").toLowerCase();
+  const isHouseTypology = /casa|townhouse|finca|campestre/.test(tipoLower);
   let cPiso = 1;
-  if (params.tieneAscensor) {
+  if (isHouseTypology) {
+    cPiso = 1;
+  } else if (params.tieneAscensor) {
     cPiso = params.piso <= 2 ? 0.95 : 1.02;
   } else {
     if (params.piso <= 2) cPiso = 1;
     else if (params.piso === 3) cPiso = 0.93;
     else if (params.piso >= 4) cPiso = 0.85;
   }
-  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
+  const cGarajes = params.garajes >= 3 ? 1.07 : params.garajes === 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
   const cAmenidades = params.esClubHouse ? 1.07 : 1;
-  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
+  let cAtributosEspeciales = 1;
+  if (params.tieneTerraza === true) {
+    cAtributosEspeciales *= 1.035;
+  }
+  if (params.cocinaConIsla === true) {
+    cAtributosEspeciales *= 1.025;
+  }
+  if (typeof params.habitaciones === "number" && typeof params.banos === "number" && params.habitaciones >= 3 && params.banos >= params.habitaciones) {
+    cAtributosEspeciales *= 1.015;
+  }
+  cAtributosEspeciales = Number(cAtributosEspeciales.toFixed(4));
+  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades * cRemodelacion * cAtributosEspeciales;
   return {
     precioM2Homologado,
-    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
+    coeficientes: {
+      cAntiguedad,
+      cPiso,
+      cGarajes,
+      cAmenidades,
+      cRemodelacion,
+      cAtributosEspeciales
+    },
+    effectiveAgeYears: effectiveAge,
+    isRemodeled
   };
 }
 function calculatePropertyValuation(input) {
   const result = calcularPrecioHomologado({
     basePricePerM2: input.baseZonePricePerM2,
     antiguedadAnos: input.ageYears,
+    anoConstruccion: input.anoConstruccion,
     tieneAscensor: input.hasElevator ?? true,
     piso: input.floorNumber ?? 3,
     garajes: input.garages ?? 0,
-    esClubHouse: input.hasClubHouse ?? false
+    esClubHouse: input.hasClubHouse ?? false,
+    esRemodelado: input.esRemodelado,
+    tipoAcabados: input.tipoAcabados,
+    tipoInmueble: input.tipoInmueble,
+    tieneTerraza: input.tieneTerraza,
+    areaTerrazaM2: input.areaTerrazaM2,
+    cocinaConIsla: input.cocinaConIsla,
+    niveles: input.niveles,
+    habitaciones: input.habitaciones,
+    banos: input.banos,
+    administracionCop: input.administracionCop,
+    direccionExacta: input.direccionExacta
   });
-  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
+  const { cAntiguedad, cPiso, cGarajes, cAmenidades, cRemodelacion, cAtributosEspeciales } = result.coeficientes;
   const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
-  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
+  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades * cRemodelacion * cAtributosEspeciales;
   const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
   const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
+  const maxNegotiationPrice = Math.round(suggestedCommercialValue * 1.045);
+  const rangoValorM2Min = Math.round(homologatedPricePerM2 * 0.96);
+  const rangoValorM2Max = Math.round(homologatedPricePerM2 * 1.045);
   const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
+  const canonRangoMin = Math.round(estimatedMonthlyRent * 0.94);
+  const canonRangoMax = Math.round(estimatedMonthlyRent * 1.08);
   const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
   return {
     baseZonePricePerM2: input.baseZonePricePerM2,
     homologatedPricePerM2,
     suggestedCommercialValue,
     minClosingPrice,
+    maxNegotiationPrice,
+    rangoValorM2Min,
+    rangoValorM2Max,
     estimatedMonthlyRent,
+    canonRangoMin,
+    canonRangoMax,
     estimatedCapRate,
     totalAreaM2: input.areaM2,
     coefficients: {
       cAntiguedad,
       cPiso,
       cGarajes,
-      cAmenidades
+      cAmenidades,
+      ...cRemodelacion !== 1 ? { cRemodelacion } : {},
+      ...cAtributosEspeciales !== 1 ? { cAtributosEspeciales } : {}
     },
     factorBreakdown: {
       ageFactor: {
-        name: "Antig\xFCedad",
+        name: result.isRemodeled ? "Antig\xFCedad (Fitto y Corvini Remodelada)" : "Antig\xFCedad",
         coefficient: cAntiguedad,
         effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
         percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
-        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
+        description: result.isRemodeled ? `Edad cronol\xF3gica ${result.effectiveAgeYears} a\xF1os mitigada por remodelaci\xF3n (edad efectiva renovada)` : `Factor por antig\xFCedad de ${result.effectiveAgeYears} a\xF1os`
       },
       floorFactor: {
         name: "Piso / Altura",
         coefficient: cPiso,
         effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
         percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
-        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
+        description: /casa|townhouse|finca/i.test(input.tipoInmueble || "") ? `Tipolog\xEDa Casa (${input.niveles ? `${input.niveles} niveles` : "multinivel"}) \u2014 sin castigo de altura` : `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
       },
       garageFactor: {
         name: "Garajes",
@@ -31410,8 +31544,30 @@ function calculatePropertyValuation(input) {
         coefficient: cAmenidades,
         effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
         percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
-        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
-      }
+        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio/Conjunto residencial"
+      },
+      ...cRemodelacion !== 1 ? {
+        remodelFactor: {
+          name: "Remodelaci\xF3n y Acabados",
+          coefficient: cRemodelacion,
+          effect: "PREMIO",
+          percentageChange: `+${Math.round((cRemodelacion - 1) * 100)}%`,
+          description: "Prima por acabados contempor\xE1neos y actualizaci\xF3n estructural/est\xE9tica"
+        }
+      } : {},
+      ...cAtributosEspeciales !== 1 ? {
+        specialAttributesFactor: {
+          name: "Atributos Diferenciales (Terraza / Isla / Ba\xF1os 1:1)",
+          coefficient: cAtributosEspeciales,
+          effect: "PREMIO",
+          percentageChange: `+${((cAtributosEspeciales - 1) * 100).toFixed(1)}%`,
+          description: [
+            input.tieneTerraza ? "Terraza en \xFAltimo nivel" : "",
+            input.cocinaConIsla ? "Cocina abierta con isla" : "",
+            typeof input.habitaciones === "number" && typeof input.banos === "number" && input.banos >= input.habitaciones ? `Confort ${input.banos} ba\xF1os / ${input.habitaciones} alcobas` : ""
+          ].filter(Boolean).join(" + ")
+        }
+      } : {}
     },
     totalHomologationFactor: Number(totalFactor.toFixed(4)),
     comparableSources: input.comparableSources || [],
@@ -31463,28 +31619,44 @@ function analyzeUrbanPotPotential(params) {
   };
 }
 function executeMarketValuationSurvey(params) {
-  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  const zonaLower = `${params.zonaOBarrio || ""} ${params.barrio || ""} ${params.direccionExacta || ""}`.toLowerCase();
   let basePrice = 65e5;
-  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
+  const zoneName = params.zonaOBarrio || params.barrio || "Norte de Bogot\xE1";
   let hasVerifiedComparables = true;
   if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
     basePrice = 145e5;
-  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
+  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country") || zonaLower.includes("seminario")) {
     basePrice = 125e5;
-  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
+  } else if (zonaLower.includes("rodamonte") || zonaLower.includes("bosque de pinos") || zonaLower.includes("cerros de santa barbara") || zonaLower.includes("molinos norte")) {
+    basePrice = 94e5;
+  } else if (zonaLower.includes("santa ana oriental") || zonaLower.includes("santa ana")) {
+    basePrice = 92e5;
+  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico") || zonaLower.includes("parque 93") || zonaLower.includes("virrey")) {
     basePrice = 105e5;
-  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
+  } else if (zonaLower.includes("la carolina") || zonaLower.includes("multicentro") || zonaLower.includes("country")) {
+    basePrice = 86e5;
+  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara") || zonaLower.includes("unicentro") || zonaLower.includes("bella suiza")) {
     basePrice = 85e5;
-  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
+  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo") || zonaLower.includes("macarena")) {
     basePrice = 78e5;
-  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
+  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen")) {
     basePrice = 75e5;
-  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
+  } else if (zonaLower.includes("chapinero") || zonaLower.includes("teusaquillo")) {
+    basePrice = 72e5;
+  } else if (zonaLower.includes("el poblado") || zonaLower.includes("poblado") || zonaLower.includes("llanogrande") || zonaLower.includes("laureles") || zonaLower.includes("envigado")) {
+    basePrice = 88e5;
+  } else if (zonaLower.includes("bocagrande") || zonaLower.includes("castillogrande") || zonaLower.includes("manga")) {
+    basePrice = 95e5;
+  } else if (zonaLower.includes("morato") || zonaLower.includes("castellana") || zonaLower.includes("pasadena") || zonaLower.includes("niza") || zonaLower.includes("alhambra") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan")) {
+    basePrice = 68e5;
+  } else if (zonaLower.includes("salitre") || zonaLower.includes("modelia") || zonaLower.includes("hayuelos")) {
+    basePrice = 65e5;
+  } else if (zonaLower.includes("ch\xEDa") || zonaLower.includes("chia") || zonaLower.includes("cajic\xE1") || zonaLower.includes("cajica") || zonaLower.includes("la calera") || zonaLower.includes("cota") || zonaLower.includes("sabana")) {
+    basePrice = 64e5;
+  } else if (zonaLower.includes("cedritos") || zonaLower.includes("caobos") || zonaLower.includes("contador") || zonaLower.includes("mazuren") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
     basePrice = 62e5;
-  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
+  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra") || zonaLower.includes("gratamira")) {
     basePrice = 58e5;
-  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
-    basePrice = 55e5;
   } else if (zonaLower.includes("alameda") || zonaLower.includes("170") || zonaLower.includes("tober\xEDn") || zonaLower.includes("toberin") || zonaLower.includes("mirandela")) {
     basePrice = 52e5;
   } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
@@ -31492,17 +31664,34 @@ function executeMarketValuationSurvey(params) {
   } else {
     hasVerifiedComparables = false;
   }
-  const area = params.areaM2 || 75;
+  const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+  const parsedAno = typeof params.anoConstruccion === "number" ? params.anoConstruccion : typeof params.anoConstruccion === "string" ? parseInt(params.anoConstruccion, 10) : void 0;
+  const validAno = parsedAno && !Number.isNaN(parsedAno) && parsedAno > 1900 && parsedAno <= currentYear ? parsedAno : void 0;
+  const computedAgeYears = typeof params.antiguedadAnos === "number" && params.antiguedadAnos >= 0 ? params.antiguedadAnos : validAno ? Math.max(0, currentYear - validAno) : 8;
+  const isRemodeled = params.esRemodelado === true || /remodel|modern|renovad|actualizad|lujo/i.test(params.tipoAcabados || "");
+  const area = params.areaM2 && params.areaM2 > 0 ? params.areaM2 : 75;
   const valuation = calculatePropertyValuation({
     zone: zoneName,
-    city: "Bogot\xE1",
+    city: params.ciudad || "Bogot\xE1",
     areaM2: area,
     baseZonePricePerM2: basePrice,
-    ageYears: params.antiguedadAnos || 8,
-    floorNumber: params.piso || 3,
+    ageYears: computedAgeYears,
+    anoConstruccion: validAno,
+    floorNumber: params.piso ?? 3,
     hasElevator: params.tieneAscensor ?? true,
-    garages: params.garajes || 1,
-    hasClubHouse: params.esClubHouse || false,
+    garages: params.garajes ?? 1,
+    hasClubHouse: params.esClubHouse ?? false,
+    esRemodelado: isRemodeled,
+    tipoAcabados: params.tipoAcabados,
+    tipoInmueble: params.tipoInmueble,
+    tieneTerraza: params.tieneTerraza,
+    areaTerrazaM2: params.areaTerrazaM2,
+    cocinaConIsla: params.cocinaConIsla,
+    niveles: params.niveles,
+    habitaciones: params.habitaciones,
+    banos: params.banos,
+    administracionCop: params.administracionCop,
+    direccionExacta: params.direccionExacta,
     comparableSources: [
       { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
       { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
@@ -31515,6 +31704,69 @@ function executeMarketValuationSurvey(params) {
     zonaOBarrio: zoneName,
     ciudad: params.ciudad
   });
+  const admonMensual = typeof params.administracionCop === "number" && params.administracionCop > 0 ? params.administracionCop : 0;
+  const admonPorM2 = admonMensual > 0 ? Math.round(admonMensual / area) : 0;
+  const analisisAdministracion = admonMensual > 0 ? `Administraci\xF3n de ${formatCop(admonMensual)}/mes (${formatCop(admonPorM2)}/m\xB2), ${admonPorM2 <= 10500 ? "en rango competitivo para inmuebles de alto perfil con porter\xEDa y seguridad 24/7" : "por encima del promedio est\xE1ndar, factor considerado en la liquidez del comprador"}.` : "No reportada; se recomienda confirmar el costo mensual de administraci\xF3n/celadur\xEDa para afinar la absorci\xF3n neta.";
+  const esCasa = /casa|townhouse/i.test(params.tipoInmueble || "");
+  const perfilCompradorIdeal = esCasa ? area >= 180 ? "Familias consolidadas, ejecutivos multinacionales y diplom\xE1ticos que buscan metraje amplio, privacidad, m\xFAltiples parqueaderos y acabados contempor\xE1neos en sector de alta valorizaci\xF3n (absorci\xF3n estimada: 60\u2013120 d\xEDas en precio \xF3ptimo)." : "Familias j\xF3venes o parejas profesionales que priorizan casa independiente o en conjunto cerrado sobre apartamento." : "Compradores patrimoniales, inversionistas de renta o profesionales seg\xFAn el metraje y amenidades del sector.";
+  const fichaTecnicaHomologacion = {
+    edadCronologicaAnos: computedAgeYears,
+    anoConstruccion: validAno || currentYear - computedAgeYears,
+    metodologiaEdad: isRemodeled ? "Fitto y Corvini (Edad aparente renovada por remodelaci\xF3n integral)" : "Fitto y Corvini est\xE1ndar por vida \xFAtil cronol\xF3gica",
+    esRemodelado: isRemodeled,
+    tipologia: params.tipoInmueble || "Inmueble residencial",
+    niveles: params.niveles || (esCasa ? 2 : 1),
+    habitaciones: params.habitaciones,
+    banos: params.banos,
+    garajes: params.garajes ?? 1,
+    tieneTerraza: Boolean(params.tieneTerraza),
+    cocinaConIsla: Boolean(params.cocinaConIsla),
+    administracionCop: admonMensual,
+    administracionPorM2: admonPorM2
+  };
+  const specsLineParts = [
+    `${params.tipoInmueble ? params.tipoInmueble.charAt(0).toUpperCase() + params.tipoInmueble.slice(1) : "Inmueble"} en *${zoneName}*`,
+    `${area} m\xB2`
+  ];
+  if (params.direccionExacta) specsLineParts.push(`Ubicaci\xF3n ref.: ${params.direccionExacta}`);
+  if (params.habitaciones) specsLineParts.push(`${params.habitaciones} alcobas`);
+  if (params.banos) specsLineParts.push(`${params.banos} ba\xF1os`);
+  if (typeof params.garajes === "number") specsLineParts.push(`${params.garajes} parqueaderos`);
+  if (validAno) specsLineParts.push(`A\xF1o ${validAno} (${isRemodeled ? "Remodelado" : `${computedAgeYears} a\xF1os`})`);
+  if (params.niveles) specsLineParts.push(`${params.niveles} niveles`);
+  if (params.cocinaConIsla) specsLineParts.push("Cocina con isla");
+  if (params.tieneTerraza) specsLineParts.push("Terraza privada en \xFAltimo nivel");
+  const factorLines = [
+    `\u2022 *Base microzona (${zoneName}):* ${formatCop(valuation.baseZonePricePerM2)}/m\xB2`,
+    `\u2022 *Antig\xFCedad / Estado:* ${valuation.factorBreakdown.ageFactor.coefficient.toFixed(2)} (${valuation.factorBreakdown.ageFactor.percentageChange}) \u2014 ${valuation.factorBreakdown.ageFactor.description}`,
+    ...valuation.factorBreakdown.remodelFactor ? [`\u2022 *Prima por Remodelaci\xF3n:* ${valuation.factorBreakdown.remodelFactor.coefficient.toFixed(2)} (${valuation.factorBreakdown.remodelFactor.percentageChange}) \u2014 ${valuation.factorBreakdown.remodelFactor.description}`] : [],
+    `\u2022 *Parqueaderos:* ${valuation.factorBreakdown.garageFactor.coefficient.toFixed(2)} (${valuation.factorBreakdown.garageFactor.percentageChange}) \u2014 ${valuation.factorBreakdown.garageFactor.description}`,
+    ...valuation.factorBreakdown.specialAttributesFactor ? [`\u2022 *Atributos Diferenciales:* ${valuation.factorBreakdown.specialAttributesFactor.coefficient.toFixed(2)} (${valuation.factorBreakdown.specialAttributesFactor.percentageChange}) \u2014 ${valuation.factorBreakdown.specialAttributesFactor.description}`] : []
+  ];
+  const reporteAcmEstructurado = [
+    `\u{1F4CA} *AN\xC1LISIS COMPARATIVO DE MERCADO (ACM) \u2014 VECY NETWORK*`,
+    `\u{1F4CC} *Ficha evaluada:* ${specsLineParts.join(" \xB7 ")}`,
+    ``,
+    `1\uFE0F\u20E3 *Homologaci\xF3n T\xE9cnica (Metodolog\xEDa Fitto y Corvini / Lonja)*`,
+    ...factorLines,
+    `\u27A1\uFE0F *Valor m\xB2 homologado:* ${formatCop(valuation.homologatedPricePerM2)}/m\xB2 *(Rango de mercado: ${formatCop(valuation.rangoValorM2Min)} \u2013 ${formatCop(valuation.rangoValorM2Max)}/m\xB2)*`,
+    ``,
+    `2\uFE0F\u20E3 *Los 3 Escenarios Estrat\xE9gicos de Precio (Venta)*`,
+    `\u2022 \u26A1 *Precio de Liquidez / Cierre R\xE1pido (30\u201360 d\xEDas):* ${formatCop(valuation.minClosingPrice)}`,
+    `\u2022 \u{1F3AF} *Valor Comercial \xD3ptimo Homologado (60\u2013120 d\xEDas):* ${formatCop(valuation.suggestedCommercialValue)}`,
+    `\u2022 \u{1F4C8} *Precio Techo de Lista en Portales (con margen de negociaci\xF3n +4.5%):* ${formatCop(valuation.maxNegotiationPrice)}`,
+    ``,
+    `3\uFE0F\u20E3 *Rentabilidad y Costo de Sostenimiento*`,
+    `\u2022 *Canon sugerido de arriendo:* ${formatCop(valuation.canonRangoMin)} \u2013 ${formatCop(valuation.canonRangoMax)}/mes *(Promedio: ${formatCop(valuation.estimatedMonthlyRent)})* sin administraci\xF3n`,
+    `\u2022 *Yield / Cap Rate bruto anual:* ${valuation.estimatedCapRate}% E.A.`,
+    `\u2022 *Administraci\xF3n:* ${analisisAdministracion}`,
+    ``,
+    `4\uFE0F\u20E3 *Perfil de Comprador Ideal (ICP) y Absorci\xF3n*`,
+    `\u2022 ${perfilCompradorIdeal}`,
+    potAnalysis.aplicaPotConstructor ? `\u2022 *Potencial Urbano POT:* ${potAnalysis.tratamientoEstimado} (${potAnalysis.visorSinupotUrl}).` : ``,
+    ``,
+    `\u{1F4A1} *Nota t\xE9cnica:* Estudio contrastado con ofertas activas en Metrocuadrado, FincaRa\xEDz y CienCuadras. Si m\xE1s adelante requieres aval\xFAo certificado ante Lonja/banco o montaje en nuestro Motor de Matching, quedo atenta.`
+  ].filter((line) => line !== "").join("\n");
   const result = {
     zonaConsultada: zoneName,
     zonaOBarrio: zoneName,
@@ -31522,19 +31774,33 @@ function executeMarketValuationSurvey(params) {
     baseZonePricePerM2: valuation.baseZonePricePerM2,
     homologatedPricePerM2: valuation.homologatedPricePerM2,
     valorM2Estimado: valuation.homologatedPricePerM2,
+    rangoValorM2Min: valuation.rangoValorM2Min,
+    rangoValorM2Max: valuation.rangoValorM2Max,
     suggestedCommercialValue: valuation.suggestedCommercialValue,
     valorComercialSugerido: valuation.suggestedCommercialValue,
+    valorComercialOptimo: valuation.suggestedCommercialValue,
     minClosingPrice: valuation.minClosingPrice,
+    precioCierreRapido: valuation.minClosingPrice,
+    precioTechoNegociacion: valuation.maxNegotiationPrice,
+    maxNegotiationPrice: valuation.maxNegotiationPrice,
     estimatedMonthlyRent: valuation.estimatedMonthlyRent,
     canonArriendoEstimado: valuation.estimatedMonthlyRent,
+    canonRangoMin: valuation.canonRangoMin,
+    canonRangoMax: valuation.canonRangoMax,
     estimatedCapRate: valuation.estimatedCapRate,
     areaM2: area,
+    administracionCop: admonMensual,
+    administracionPorM2: admonPorM2,
+    analisisAdministracion,
+    fichaTecnicaHomologacion,
+    perfilCompradorIdeal,
+    reporteAcmEstructurado,
     coefficients: valuation.coefficients,
     factorBreakdown: valuation.factorBreakdown,
     portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
     portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
     potNormaUrbana: potAnalysis,
-    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
+    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico ACM calculado mediante homologaci\xF3n Fitto y Corvini por coeficientes prediales, microzonificaci\xF3n y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
     alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
   };
   recordSurveyInquiry({
@@ -31547,9 +31813,9 @@ function executeMarketValuationSurvey(params) {
     areaM2: area,
     tipoInmueble: params.tipoInmueble,
     habitaciones: params.habitaciones,
-    antiguedadAnos: params.antiguedadAnos,
-    anoConstruccion: params.anoConstruccion,
-    tipoAcabados: params.tipoAcabados,
+    antiguedadAnos: computedAgeYears,
+    anoConstruccion: validAno || params.anoConstruccion,
+    tipoAcabados: isRemodeled ? params.tipoAcabados || "Remodelado" : params.tipoAcabados,
     piso: params.piso,
     esClubHouse: params.esClubHouse,
     valorM2Estimado: valuation.homologatedPricePerM2,
@@ -31570,10 +31836,15 @@ function recordSurveyInquiry(record) {
   }
   return fullRecord;
 }
-var surveyInquiryLog;
+var formatCop, surveyInquiryLog;
 var init_valuation = __esm({
   "server/_core/valuation.ts"() {
     "use strict";
+    formatCop = (val) => new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0
+    }).format(Math.round(val));
     surveyInquiryLog = [];
   }
 });
@@ -32300,6 +32571,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando m\xFAltiples solicitudes correspondan al mismo inmueble captado por Vecy (como las reservas para el Edificio Inmoval VI en La Carolina de Alfredo Anaya, Lincy Hoyos y Ana Mar\xEDa D\xEDaz), JanIA ya conoce la direcci\xF3n f\xEDsica confirmada ('KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogot\xE1'). Por lo tanto, el sistema debe resolver e indexar la direcci\xF3n exacta independientemente de c\xF3mo venga escrito el c\xF3digo (may\xFAsculas, min\xFAsculas, espacios, o por nombre del inmueble: 'ID-lacar-01bog', 'ID-Lacar-01bog', 'Apartamento en la carolina'). Jam\xE1s se debe emitir un texto gen\xE9rico de reserva cuando la propiedad ya est\xE1 identificada. Asimismo, en el correo oficial de confirmaci\xF3n y agendamiento (sendAppointmentAddressEmail) JanIA debe despachar de inmediato la direcci\xF3n exacta completa, recomendaciones de porter\xEDa, enlace a Google Calendar y saludo natural can\xF3nico a cada uno de los agentes y clientes solicitantes. Y si un usuario con cita activa pregunta en chat privado por la direcci\xF3n ('No veo la direcci\xF3n?'), JanIA debe reconocer su cita activa en base de datos y suministrarle de inmediato la direcci\xF3n y datos de su cita con empat\xEDa y calidez, sin respuestas evasivas.",
         rawText: "Hay un mal entendido con esto de las direcciones, si te fijas las solicitudes #1148 y 1149 son para el mismo apartamento que solicit\xF3 reserva Alfredo, por lo tanto JanIa Ya sabe la direcci\xF3n de ese inmueble, yo ya lo hice manual por el Whatsapp de JanIA pero me gustar\xEDa que le digas o hagas que janIA les env\xEDe el correo a estas dos agentes Ana Mar\xEDa y lincy como debe de ser me entiendes.",
         createdAt: "2026-11-10T19:30:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-precision-acm-profesional-satisfaccion-y-resenas-google-libre-albedrio-v34-11",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Precisi\xF3n Quir\xFArgica en Skill ACM (Fitto y Corvini + 3 Escenarios) y Protocolo Universal de Satisfacci\xF3n + Rese\xF1as Google por Libre Albedr\xEDo (Doctrina Eduardo A. Rivera v34.11)",
+        directive: "1) PRECISI\xD3N PROFESIONAL DE ACM (Caso Carolina Z. | eXp Realty): JanIA debe reconocer expl\xEDcitamente solicitudes de 'ACM', 'an\xE1lisis comparativo de mercado', 'estudio de mercado' y 'sondeo', extrayendo todas las variables f\xEDsicas del texto (microzona como Santa Ana Oriental, a\xF1o de construcci\xF3n, si es remodelada para aplicar edad efectiva de Fitto y Corvini, habitaciones, ba\xF1os, parqueaderos 3+, cocina con isla, niveles, terraza y valor de administraci\xF3n/m\xB2). El reporte ACM debe entregar valor homologado por m\xB2, los 3 Escenarios Estrat\xE9gicos de Precio (Liquidez R\xE1pida, Comercial \xD3ptimo Homologado y Techo de Lista), canon de arriendo, Cap Rate bruto anual, ratio de administraci\xF3n y Perfil de Comprador Ideal (ICP), evitando muros largos de CTL/Escritura/Predial.\n2) PROTOCOLO UNIVERSAL DE SATISFACCI\xD3N Y CALIFICACI\xD3N AUT\xD3NOMA EN GOOGLE: Cada vez que JanIA entregue cualquier servicio (ACM, c\xE9dula/ADRES, RUES, predial, IDU, liquidaci\xF3n notarial, minuta PDF, marketing o consultor\xEDa jur\xEDdica), DEBE preguntar con calidez al usuario si qued\xF3 satisfecha/o con la respuesta entregada. Conforme a la respuesta del usuario (agrado, satisfacci\xF3n o sugerencia constructiva) y haciendo uso de su libre albedr\xEDo aut\xF3nomo (o ante solicitud del enlace), JanIA solicitar\xE1 inmediatamente comentarios y calificaci\xF3n de 5 estrellas entregando el enlace oficial de Google (https://g.page/r/CctNbwU6UpX5EBM/review) sin que el usuario tenga que ped\xEDrselo a Eduardo manualmente.",
+        rawText: "analiza esta imagen para que puedas afinar mejor a JanIA en su Skill de ACM, d\xE1ndole una mayor precisci\xF3n y haciendo que cada vez que de o brinde cualquier servicio, pregunte satisfacci\xF3n del usuario con la respuesta y seg\xFAn esto solicite comentarios y calificaci\xF3n en Google seg\xFAn su libre alvedr\xEDo y no me toque hacerlo a mi directamente como en este caso que no lo hizo, pero menos mal la usuaria decidi\xF3 escribirme a mi para solicitar el enlace de calificaci\xF3n y dejar su mensaje o dar su opini\xF3nen google. SI puedes pulir al m\xE1ximo este skill de ACM de Jania ser\xEDa fabuloso.",
+        createdAt: "2026-11-12T22:20:00.000Z",
         active: true
       }
     ];
@@ -34860,6 +35141,7 @@ __export(dmHandler_exports, {
   detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
   dispatchMessageRecadoToEduardo: () => dispatchMessageRecadoToEduardo,
   executeJaniaDmTool: () => executeJaniaDmTool,
+  extractAcmAttributesFromText: () => extractAcmAttributesFromText,
   formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   generateCustomUserCreativeImage: () => generateCustomUserCreativeImage,
   generateLegalPdfForDmRequest: () => generateLegalPdfForDmRequest,
@@ -34908,6 +35190,102 @@ function setLatestDmFollowUpMessage(_userId, _followUpText) {
 }
 function popLatestDmFollowUpMessage(_userId) {
   return void 0;
+}
+function extractAcmAttributesFromText(rawText) {
+  const text2 = (rawText || "").trim();
+  if (!text2) return {};
+  const wordToNum = (token) => {
+    const cleanTok = token.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (/^\d+$/.test(cleanTok)) return parseInt(cleanTok, 10);
+    const map = {
+      un: 1,
+      una: 1,
+      uno: 1,
+      dos: 2,
+      tres: 3,
+      cuatro: 4,
+      cinco: 5,
+      seis: 6,
+      siete: 7,
+      ocho: 8,
+      nueve: 9,
+      diez: 10
+    };
+    return map[cleanTok];
+  };
+  const out = {};
+  const areaMatch = text2.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts?2?|metros(?:\s+cuadrados)?)(?=[\s,;.)!?]|$)/i);
+  if (areaMatch?.[1]) {
+    const parsedArea = parseFloat(areaMatch[1].replace(",", "."));
+    if (!Number.isNaN(parsedArea) && parsedArea > 5 && parsedArea < 1e5) {
+      out.areaM2 = parsedArea;
+    }
+  }
+  const yearMatch = text2.match(/(?:a[ñn]o(?:\s+de)?\s+construcci[oó]n|construid[ao]\s+en|del\s+a[ñn]o)\s*[:.]?\s*((?:19|20)\d{2})\b/i);
+  if (yearMatch?.[1]) {
+    out.anoConstruccion = parseInt(yearMatch[1], 10);
+  }
+  if (/\b(?:remodelad[ao]|renovad[ao]|modernizad[ao]|reci[eé]n\s+remodelad[ao])\b/i.test(text2)) {
+    out.esRemodelado = true;
+  }
+  const habMatch = text2.match(/(\d+|un[ao]?|dos|tres|cuatro|cinco|seis|siete|ocho)\s+(?:habitaci[oó]n|habitaciones|alcobas?|cuartos?|habs?)\b/i);
+  if (habMatch?.[1]) {
+    const n = wordToNum(habMatch[1]);
+    if (n) out.habitaciones = n;
+  }
+  const banoMatch = text2.match(/(\d+|un[ao]?|dos|tres|cuatro|cinco|seis|siete|ocho)\s+(?:ba[ñn]os?)\b/i);
+  if (banoMatch?.[1]) {
+    const n = wordToNum(banoMatch[1]);
+    if (n) out.banos = n;
+  }
+  const garMatch = text2.match(/(\d+|un[ao]?|dos|tres|cuatro|cinco|seis)\s+(?:garajes?|parqueaderos?|parqueos?|cupos?\s+de\s+parqueo)\b/i);
+  if (garMatch?.[1]) {
+    const n = wordToNum(garMatch[1]);
+    if (typeof n === "number") out.garajes = n;
+  }
+  const admonMatch = text2.match(/(?:admon|administraci[oó]n|cuota\s+de\s+admon)\s*[:.]?\s*\$?\s*([\d.,]+)(?:\s*(mill[oó]n|millones|m\b|mil\b))?/i);
+  if (admonMatch?.[1]) {
+    const unit = (admonMatch[2] || "").toLowerCase();
+    if (unit.startsWith("mill")) {
+      const val = parseFloat(admonMatch[1].replace(",", "."));
+      if (!Number.isNaN(val)) out.administracionCop = Math.round(val * 1e6);
+    } else if (unit === "mil") {
+      const val = parseFloat(admonMatch[1].replace(",", "."));
+      if (!Number.isNaN(val)) out.administracionCop = Math.round(val * 1e3);
+    } else {
+      const digitsOnly = admonMatch[1].replace(/[^\d]/g, "");
+      if (digitsOnly) out.administracionCop = parseInt(digitsOnly, 10);
+    }
+  }
+  if (/\bcocina\s+(?:abierta\s+)?con\s+isla\b|\bisla\s+en\s+la\s+cocina\b/i.test(text2)) {
+    out.cocinaConIsla = true;
+  }
+  if (/\bterraza\b/i.test(text2)) {
+    out.tieneTerraza = true;
+  }
+  const nivMatch = text2.match(/(\d+|un[ao]?|dos|tres|cuatro)\s+(?:niveles|pisos|plantas)\b/i);
+  if (nivMatch?.[1]) {
+    const n = wordToNum(nivMatch[1]);
+    if (n) out.niveles = n;
+  } else if (/\bd[uú]plex\b/i.test(text2)) {
+    out.niveles = 2;
+  } else if (/\btr[ií]plex\b/i.test(text2)) {
+    out.niveles = 3;
+  }
+  const dirMatch = text2.match(/(?:direcci[oó]n(?:\s+aprox\.?)?|ubicad[ao]\s+en)\s*[:.]?\s*([^\n,;]{5,75})/i);
+  if (dirMatch?.[1]) {
+    out.direccionExacta = dirMatch[1].trim();
+  }
+  const tipoMatch = text2.match(/\b(casa(?:\s+campestre|\s+lote)?|apartamento|apto|penthouse|oficina|local|bodega|lote|townhouse)\b/i);
+  if (tipoMatch?.[1]) {
+    out.tipoInmueble = tipoMatch[1].toLowerCase() === "apto" ? "apartamento" : tipoMatch[1].toLowerCase();
+  }
+  const knownZoneRegex = /\b(santa\s+ana\s+oriental|santa\s+ana|rodamonte|bosque\s+de\s+pinos|cerros\s+de\s+santa\s+b[aá]rbara|molinos\s+norte|la\s+carolina|santa\s+b[aá]rbara|san\s+patricio|antiguo\s+country|cabrera|rosales|nogal|retiro|chic[oó]|usaqu[eé]n|cedritos|colina\s+campestre|pontevedra|niza|salitre|modelia|pasadena|alhambra|morato|el\s+poblado|llanogrande|envigado|laureles|bocagrande|ch[ií]a|cajic[aá])\b/i;
+  const zoneMatch = text2.match(knownZoneRegex);
+  if (zoneMatch?.[1]) {
+    out.zonaOBarrio = zoneMatch[1].trim();
+  }
+  return out;
 }
 async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
   switch (toolName) {
@@ -35185,16 +35563,16 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       };
     }
     case "sondeo_mercado_inmobiliario": {
-      let isExplicitValuation = /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje|revisar\s+(?:otro\s+)?valor|valor\s+de\s+venta)\b/i.test(rawUserText || "");
+      let isExplicitValuation = /\b(?:acm|an[aá]lisis\s+comparativo(?:\s+de\s+mercado)?|estudio\s+de\s+(?:mercado|valor|precios)|sondeo(?:\s+(?:t[eé]cnico|de\s+mercado))?|aval[uú][oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje|revisar\s+(?:otro\s+)?valor|valor\s+(?:de\s+venta|por\s+m2|por\s+metro))\b/i.test(rawUserText || "");
       if (!isExplicitValuation && userId) {
         try {
           const recentHistory = await getOrLoadDmHistory(userId);
           const lastFewTurns = recentHistory.slice(-6);
           const hadPriorValuationIntent = lastFewTurns.some(
-            (t2) => /\b(?:avalu[oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje|revisar\s+(?:otro\s+)?valor|valor\s+de\s+venta|sondeo\s+t[eé]cnico|calcule\s+el\s+valor)\b/i.test(t2.content)
+            (t2) => /\b(?:acm|an[aá]lisis\s+comparativo|estudio\s+de\s+mercado|aval[uú][oa]s?|avaluar|cu[aá]nto\s+vale|cu[aá]l\s+es\s+el\s+valor|precio\s+(?:de\s+mercado|comercial)|en\s+cu[aá]nto\s+se\s+puede\s+vender|tasaci[oó]n|peritaje|revisar\s+(?:otro\s+)?valor|valor\s+de\s+venta|sondeo\s+t[eé]cnico|calcule\s+el\s+valor)\b/i.test(t2.content)
           );
           const isAffirmativeConfirmation = /\b(?:s[ií]|si\s+es\s+ese|claro|dale|adelante|procede|de\s+una|por\s+fa|por\s+favor|hazlo|calc[uú]lalo|ese\s+mismo|correcto)\b/i.test(rawUserText || "");
-          const isPropertyDataUpdate = /\b(?:a[ñn]o|construcci[oó]n|antig[uü]edad|piso|m2|metros|habitaci[oó]n|habitaciones|ba[ñn]os|garaje|noviembre|nov|200[0-9]|201[0-9]|202[0-9]|estrato)\b/i.test(rawUserText || "");
+          const isPropertyDataUpdate = /\b(?:a[ñn]o|construcci[oó]n|antig[uü]edad|piso|m2|metros|habitaci[oó]n|habitaciones|ba[ñn]os|garaje|parqueadero|remodelad[ao]|terraza|isla|noviembre|nov|200[0-9]|201[0-9]|202[0-9]|estrato)\b/i.test(rawUserText || "");
           if (hadPriorValuationIntent && (isAffirmativeConfirmation || isPropertyDataUpdate || args.zonaOBarrio || args.areaM2)) {
             isExplicitValuation = true;
           }
@@ -35207,17 +35585,30 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
           resultJson: {
             solicitud: "sondeo_mercado_inmobiliario",
             omitted: true,
-            mensaje: "El usuario no solicit\xF3 expresamente un aval\xFAo ni pregunt\xF3 cu\xE1nto vale. No se liquida aval\xFAo no solicitado. Atiende cordialmente su mensaje o confirma el registro sin forzar estudios de precio."
+            mensaje: "El usuario no solicit\xF3 expresamente un ACM o aval\xFAo ni pregunt\xF3 cu\xE1nto vale. No se liquida aval\xFAo no solicitado. Atiende cordialmente su mensaje o confirma el registro sin forzar estudios de precio."
           }
         };
       }
+      const extracted = extractAcmAttributesFromText(rawUserText || "");
       const surveyRes = executeMarketValuationSurvey({
-        zonaOBarrio: args.zonaOBarrio || "Chic\xF3",
-        tipoInmueble: args.tipoInmueble || "apartamento",
-        areaM2: Number(args.areaM2 || 75),
+        zonaOBarrio: args.zonaOBarrio || extracted.zonaOBarrio || "Chic\xF3",
+        direccionExacta: args.direccionExacta || extracted.direccionExacta,
+        ciudad: args.ciudad,
+        tipoInmueble: args.tipoInmueble || extracted.tipoInmueble || "apartamento",
+        areaM2: Number(args.areaM2 ?? extracted.areaM2 ?? 75),
         estrato: Number(args.estrato || 5),
-        antiguedadAnos: Number(args.antiguedadAnos || 8),
-        garajes: Number(args.garajes || 1)
+        antiguedadAnos: args.antiguedadAnos !== void 0 ? Number(args.antiguedadAnos) : void 0,
+        anoConstruccion: args.anoConstruccion ?? extracted.anoConstruccion,
+        esRemodelado: args.esRemodelado !== void 0 ? Boolean(args.esRemodelado) : extracted.esRemodelado,
+        tipoAcabados: args.tipoAcabados || (extracted.esRemodelado ? "Remodelado" : void 0),
+        habitaciones: args.habitaciones !== void 0 ? Number(args.habitaciones) : extracted.habitaciones,
+        banos: args.banos !== void 0 ? Number(args.banos) : extracted.banos,
+        garajes: args.garajes !== void 0 ? Number(args.garajes) : extracted.garajes ?? 1,
+        administracionCop: args.administracionCop !== void 0 ? Number(args.administracionCop) : extracted.administracionCop,
+        tieneTerraza: args.tieneTerraza !== void 0 ? Boolean(args.tieneTerraza) : extracted.tieneTerraza,
+        cocinaConIsla: args.cocinaConIsla !== void 0 ? Boolean(args.cocinaConIsla) : extracted.cocinaConIsla,
+        niveles: args.niveles !== void 0 ? Number(args.niveles) : extracted.niveles,
+        userId
       });
       return {
         toolType: "sondeo",
@@ -35585,19 +35976,33 @@ ${audit.fichaOptimizadaSugerida}
   }
 }
 async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
-  const isFreeTool = toolType !== "sondeo" && toolType !== "match";
-  if (isFreeTool) {
+  const isFreeTool = !["contacto", "encuesta"].includes(toolType);
+  if (isFreeTool && !toolJson?.omitted) {
     await incrementFreeServicesCount(userId);
+    if (!isEduardo && !isJani && !isEduardoOrJani(userId)) {
+      try {
+        const sess = await getUserPerpetualSession(userId, userName);
+        sess.keyFacts = sess.keyFacts || {};
+        sess.keyFacts.awaitingSatisfactionFeedback = {
+          serviceType: toolType,
+          timestamp: Date.now()
+        };
+        await saveUserPerpetualSession(sess);
+      } catch (_) {
+      }
+    }
   }
-  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
+  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? toolJson.reporteAcmEstructurado || JSON.stringify(toolJson) : "");
   const isDirectDocumentLookup = (toolType === "cedula" || toolType === "empresa") && Boolean(rawReport) && (rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA") || rawReport.includes("Alerta de Validaci\xF3n de Identidad")) && (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,18}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 40);
   const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
   }
   const userVerifiedReview = await isUserVerifiedGoogleReview(userId);
-  const isVip = isEduardoOrJani(userId);
+  const isVip = isEduardo || isJani || isEduardoOrJani(userId);
   const askReview = !userVerifiedReview && !isVip && await shouldAskForGoogleReview(userId);
+  const shouldAskSatisfaction = !isVip && !userVerifiedReview && !toolJson?.omitted;
+  const satisfactionClosingLine = displayName ? `\xBFQu\xE9 tal te pareci\xF3 esta respuesta, ${displayName}? \xBFQuedaste satisfecha/o con la precisi\xF3n o te gustar\xEDa que afinemos alg\xFAn detalle? \u{1F60A}\u2728` : `\xBFQu\xE9 tal te pareci\xF3 esta respuesta? \xBFQuedaste satisfecha/o con la precisi\xF3n o te gustar\xEDa que afinemos alg\xFAn detalle? \u{1F60A}\u2728`;
   let specialToolInstructions = "";
   if (toolType === "cedula") {
     specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
@@ -35649,21 +36054,13 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
 - Invita cordialmente a comunicarse con Eduardo Rivera o Jani Alves a la l\xEDnea de atenci\xF3n de br\xF3ker (+57 316 656 9719) para coordinar visitas o recibir dossier completo.
 `;
   } else if (toolType === "sondeo") {
-    specialToolInstructions = `- HERRAMIENTA: Sondeo T\xE9cnico Inmobiliario y Estudio de Valor Comercial ($/m\xB2 y Canon sugerido).
-- EXPERTA AVALUADORA VECY (ESTRUCTURA CLARA, DIRECTA Y ATRACTIVA EN WHATSAPP):
-  * Entrega de inmediato el valor estimado del m\xB2 homologado para la zona/barrio, el rango de precio comercial de venta sugerido y el canon estimado de arriendo.
-  * Menciona que el estudio contrasta la din\xE1mica de portales de finca ra\xEDz aliados (Metrocuadrado, FincaRa\xEDz, CienCuadras) y coeficientes de homologaci\xF3n ACM (antig\xFCedad, piso, garajes, amenidades).
-  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOT\xC1 DEC. 555/2021 - SINUPOT):
-    Si el predio es lote, bodega, edificio, casa-lote o casa con vocaci\xF3n de desarrollo (seg\xFAn 'potNormaUrbana'), incluye la secci\xF3n de potencial urban\xEDstico explicando el tratamiento (Renovaci\xF3n Urbana o Consolidaci\xF3n), mezcla de usos y edificabilidad estimada, e invita a verificar con el CHIP catastral en el Visor Geogr\xE1fico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) de la Secretar\xEDa Distrital de Planeaci\xF3n.
-- CONTINUIDAD CONVERSACIONAL Y METAS (GOAL TRACKING):
-  * Si el usuario consult\xF3 el valor o complement\xF3 datos (ej. a\xF1o de construcci\xF3n "Nov 2006"), ENTREGA EL VALOR Y C\xC1LCULO DE INMEDIATO. Queda TERMINANTEMENTE PROHIBIDO desviar la conversaci\xF3n hacia visitas presenciales o planes publicitarios sin haber entregado primero el sondeo de precio que el usuario pidi\xF3.
-- DOCTRINA DE SONDEOS VS. AVAL\xDAO PROFUNDO CERTIFICADO (DOCTRINA EDUARDO A. RIVERA):
-  * El sondeo preliminar se entrega de forma \xE1gil con los datos f\xEDsicos aportados sin frenar al usuario por falta de documentos.
-  * Al FINAL de la entrega del sondeo (o si el usuario, sea agente, abogado, asegurador, notario, prestamista, propietario, comprador o inversionista, insiste en que requiere un aval\xFAo comercial formal m\xE1s profundo o certificaci\xF3n jur\xEDdica exacta para blindar el valor al mil\xEDmetro), sugiere amablemente que se podr\xE1n cotejar: 1) Certificado de Tradici\xF3n y Libertad (CTL) actualizado (< 30 d\xEDas), 2) Copia de la Escritura P\xFAblica, y 3) Factura Predial vigente.
-- CROSS-SELLING EXACTO DE FACTURA PREDIAL EN CHAT (DOCTRINA EDUARDO A. RIVERA):
-  * Si el usuario menciona que no tiene el predial a mano, ofr\xE9cele textualmente: "\xA1No te preocupes por el predial! En VECY contamos con expedici\xF3n oficial de Bogot\xE1 y te lo puedo entregar aqu\xED mismo en el chat en formato PDF en menos de un minuto. Solo comp\xE1rteme el c\xF3digo CHIP del predio (empieza por AAA...) y el n\xFAmero de c\xE9dula o Nit del propietario y te lo descargo de una vez." (Ambos datos son obligatorios).
-- SERVICIO DE REGISTRO DIRECTO Y PUBLICACI\xD3N EN GRUPO 1 OFICIAL (DOCTRINA EDUARDO A. RIVERA):
-  * Si el usuario desea comercializar o buscar un inmueble, JanIA le ofrece con gusto estructurar y subir su Oferta o Demanda directamente en este chat para participar en el motor de MATCHING de VECY, o compartirla en el Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ).
+    specialToolInstructions = `- HERRAMIENTA: An\xE1lisis Comparativo de Mercado (ACM) Profesional de Alta Precisi\xF3n y Sondeo T\xE9cnico ($/m\xB2, 3 Escenarios de Precio y Rentabilidad).
+- EXPERTA AVALUADORA VECY (NIVEL LONJA / FITTO Y CORVINI \u2014 CERO BLOQUES DE RELLENO):
+  * Presenta la ficha estructurada completa usando los datos exactos del JSON ('reporteAcmEstructurado', coeficientes Fitto y Corvini, valor m\xB2 homologado, rango de $/m\xB2, los 3 Escenarios Estrat\xE9gicos de Precio: Liquidez R\xE1pida 30\u201360d, Valor Comercial \xD3ptimo Homologado 60\u2013120d y Precio Techo de Lista +4.5%, canon de arriendo, Cap Rate bruto anual, an\xE1lisis de administraci\xF3n/m\xB2 y Perfil de Comprador Ideal ICP).
+  * Si el inmueble est\xE1 remodelado (esRemodelado: true) o tiene atributos diferenciales (terraza, cocina con isla, 3+ garajes, relaci\xF3n 1:1 de ba\xF1os por habitaci\xF3n), explica expl\xEDcitamente c\xF3mo la metodolog\xEDa Fitto y Corvini mitiga la depreciaci\xF3n por edad y premia dichos atributos.
+  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOT\xC1 DEC. 555/2021 - SINUPOT): Si 'potNormaUrbana.aplicaPotConstructor' es true, incluye en 1 o 2 l\xEDneas su potencial normativo y el enlace a SINUPOT (https://www.sdp.gov.co/content/sinupot-0).
+  * CERO LADRILLOS DE RELLENO: Queda TERMINANTEMENTE PROHIBIDO adjuntar el bloque largo de CTL (< 30 d\xEDas), Copia de Escritura, Factura Predial o registro manual en el Grupo 1 al final del ACM, salvo que el usuario lo haya preguntado expl\xEDcitamente. Mant\xE9n el reporte t\xE9cnico quir\xFArgico, ejecutivo y f\xE1cil de leer.
+- CONTINUIDAD CONVERSACIONAL Y METAS (GOAL TRACKING): Entrega el ACM completo de inmediato. Si el usuario quiere afinar alg\xFAn dato (ej. \xE1rea de terraza, piso o estrato), qu\xE9date lista para recalcular al instante.
 `;
   } else if (toolType === "registro_inmueble") {
     specialToolInstructions = `- HERRAMIENTA: Registro y Optimizaci\xF3n de Inmuebles y Demandas en VECY Network con Motor de MATCH.
@@ -35724,7 +36121,8 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
 - Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (*negritas*, vi\xF1etas limpias).
 - REGLA ESTRICTA DE ENLACES EN WHATSAPP: Escribe siempre un \xFAnico enlace limpio sin sintaxis Markdown (JAM\xC1S uses [url](url) ni [texto](url)). Escribe directamente el enlace como "\u{1F449} https://...". CERO enlaces duplicados y CERO leyendas como '(ejemplo)'.
 - Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
-`
+` + (shouldAskSatisfaction ? `- CIERRE OBLIGATORIO DE SATISFACCI\xD3N DEL USUARIO (DOCTRINA EDUARDO A. RIVERA \u2014 v34.11): Al finalizar este servicio, incluye OBLIGATORIAMENTE en una l\xEDnea final amigable la pregunta directa de satisfacci\xF3n (SIN incluir el enlace de Google Reviews dentro del reporte t\xE9cnico): "${satisfactionClosingLine}".
+` : ``)
     },
     {
       role: "user",
@@ -35742,6 +36140,11 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
         console.warn(`[synthesizeToolResponseWithGemini] \u26A0\uFE0F Respuesta de LLM truncada o incompleta detectada ("${text2.slice(-50)}"). Entregando reporte oficial completo.`);
         text2 = rawReport;
       }
+      if (shouldAskSatisfaction && !/(?:qu[eé]\s+tal\s+te\s+pareci[oó]|satisfech[oa]|afinar|calificar)/i.test(text2)) {
+        text2 = `${text2}
+
+${satisfactionClosingLine}`;
+      }
       if (isFreeTool) {
         text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
       }
@@ -35751,7 +36154,15 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
     console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
   }
   let fallbackText = "";
-  if (toolType === "cedula" && toolJson) {
+  if (toolType === "sondeo" && toolJson) {
+    if (toolJson.omitted && toolJson.mensaje) {
+      fallbackText = toolJson.mensaje;
+    } else if (toolJson.reporteAcmEstructurado) {
+      fallbackText = shouldAskSatisfaction ? `${toolJson.reporteAcmEstructurado}
+
+${satisfactionClosingLine}` : toolJson.reporteAcmEstructurado;
+    }
+  } else if (toolType === "cedula" && toolJson) {
     if (rawReport && rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD")) {
       fallbackText = rawReport;
     } else {
@@ -36105,6 +36516,46 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
     appendDmHistory(userId, "assistant", reviewFollowUpReply);
     markUserGreetedToday(userId);
     return reviewFollowUpReply;
+  }
+  if (!isEduardo && !isJani && !isFamilyOrTrusted) {
+    if (isExplicitReviewLinkRequest(clean)) {
+      const satInfo2 = isUserSatisfactionOrFeedbackReply(clean, true);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = null;
+      userPerpetualSession.keyFacts.reviewPromptSent = true;
+      await saveUserPerpetualSession(userPerpetualSession);
+      const directReviewReply = buildAutonomousGoogleReviewInvitation(displayName || realName, {
+        isDirectLinkRequest: true,
+        constructiveTopic: satInfo2.constructiveTopic,
+        isConstructiveFeedback: satInfo2.hasConstructiveSuggestion
+      });
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", directReviewReply);
+      markUserGreetedToday(userId);
+      return directReviewReply;
+    }
+    const hasRecentServiceContext = Boolean(userPerpetualSession.keyFacts?.awaitingSatisfactionFeedback) || (userPerpetualSession.freeServicesUsedCount || 0) >= 1 || /\b(?:acm|an[aá]lisis\s+comparativo|sondeo|valoraci[oó]n|aval[uú]o|estudio\s+de\s+mercado|antecedentes|polic[ií]a|adres|rues|predial|idu|notarial|qu[eé]\s+tal\s+te\s+pareci[oó]|satisfech[oa])\b/i.test(
+      lastAssistantTextEarly
+    );
+    const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?)\b/i.test(
+      cleanLower
+    );
+    if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction) {
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = null;
+      userPerpetualSession.keyFacts.reviewPromptSent = true;
+      await saveUserPerpetualSession(userPerpetualSession);
+      const autonomousReviewReply = buildAutonomousGoogleReviewInvitation(displayName || realName, {
+        isDirectLinkRequest: false,
+        constructiveTopic: satInfo.constructiveTopic,
+        isConstructiveFeedback: satInfo.hasConstructiveSuggestion
+      });
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", autonomousReviewReply);
+      markUserGreetedToday(userId);
+      return autonomousReviewReply;
+    }
   }
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const isDebtOrCollection = /(?:cobro|prejur[ií]dico|embargo|serlefin|deuda|cobranza|mandamiento\s+de\s+pago|cartera)/i.test(cleanLower);
@@ -36753,7 +37204,10 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
 ` : isFamilyOrTrusted && trustedContact ? `- C\xCDRCULO FAMILIAR Y DE CONFIANZA: Est\xE1s conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Tr\xE1tala/lo con inmenso cari\xF1o, afecto familiar y respeto natural. Cu\xE9ntale con fluidez (sin plantillas r\xEDgidas) que Eduardo ahora est\xE1 disponible en su l\xEDnea de br\xF3ker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal fr\xEDo de vendedor, pedirle rese\xF1as en Google o venderle servicios comerciales a familiares.
 ` : `- Usuario identificado: ${displayName || realName || "Colega"}.
 `}${hasVerifiedReview || isEduardo || isJani ? `- REGLA ABSOLUTA DE RESE\xD1AS EN GOOGLE: Este usuario YA VALID\xD3 su rese\xF1a en Google o es miembro VIP. Est\xE1 TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.
-` : `- CULTIVAR RESE\xD1AS Y CALIFICACIONES DE 5 ESTRELLAS EN GOOGLE (DOCTRINA EDUARDO A. RIVERA): Si la conversaci\xF3n es fluida, le has brindado asesor\xEDa, perfilamiento de inmueble o consulta a este usuario, o manifiesta cercan\xEDa o afinidad con VECY, inv\xEDtalo con simpat\xEDa, se\xF1or\xEDo y persuasi\xF3n elegante a dejarnos su rese\xF1a y calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review . Expl\xEDcale que su opini\xF3n como colega o cliente nos ayuda enormemente a seguir transformando y dignificando el corretaje inmobiliario en Colombia. Si acabas de pedir la rese\xF1a y el usuario responde con un sticker, emoji de coraz\xF3n o frase corta cari\xF1osa, JAM\xC1S cierres fr\xEDamente la conversaci\xF3n como un bot rob\xF3tico; reacciona con picard\xEDa, ternura, soltura, audacia y picante comercial para insistir cari\xF1osamente en que complete la calificaci\xF3n antes de despedirse.
+` : `- PROTOCOLO UNIVERSAL DE SATISFACCI\xD3N Y CALIFICACI\xD3N AUT\xD3NOMA EN GOOGLE (DOCTRINA EDUARDO A. RIVERA \u2014 v34.11):
+  1. PREGUNTA DE SATISFACCI\xD3N TRAS CADA SERVICIO: Cada vez que brindes CUALQUIER servicio o asesor\xEDa (ACM/sondeo, verificaci\xF3n de c\xE9dula/antecedentes, consulta RUES, factura predial, paz y salvo IDU, liquidaci\xF3n notarial/tributaria, minuta/carta PDF, auditor\xEDa de marketing, imagen creativa o consultor\xEDa jur\xEDdica), pregunta siempre con calidez al final qu\xE9 tal le pareci\xF3 la respuesta y si qued\xF3 satisfecha/o con la precisi\xF3n entregada.
+  2. LIBRE ALBEDR\xCDO PARA RESE\xD1AS EN GOOGLE: Conforme a su respuesta (si expresa agrado, satisfacci\xF3n, elogio o retroalimentaci\xF3n constructiva) o cuando consideres oportuno por el flujo conversacional, solicita aut\xF3nomamente su comentario y calificaci\xF3n de 5 estrellas en Google compartiendo el enlace oficial \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50 para que el usuario nunca tenga que ped\xEDrselo a Eduardo manualmente.
+  3. CONTINUIDAD CARI\xD1OSA: Si acabas de pedir la rese\xF1a y el usuario responde con un sticker, emoji de coraz\xF3n o frase corta cari\xF1osa, JAM\xC1S cierres fr\xEDamente la conversaci\xF3n como un bot rob\xF3tico; reacciona con picard\xEDa, ternura, soltura y audacia para recordar cari\xF1osamente la calificaci\xF3n antes de despedirse.
 `}- SENTIDO COM\xDAN EN IDENTIFICACI\xD3N COLOMBIANA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.99): En Colombia las C\xE9dulas de Ciudadan\xEDa (C.C.) tienen un tope m\xE1ximo estricto de 10 d\xEDgitos (en la Registradur\xEDa Nacional NO existen c\xE9dulas de 11 d\xEDgitos o m\xE1s). Si un usuario ingresa un n\xFAmero de 11 o m\xE1s d\xEDgitos para una c\xE9dula (ej: 10144180412), JAM\xC1S lo trunques a 10 d\xEDgitos ni consultes bases de datos a ciegas; al\xE9rtale de inmediato con ingenio y perspicacia que en Colombia no existen c\xE9dulas de 11 n\xFAmeros y que evidentemente sobra un d\xEDgito, para que le pida la confirmaci\xF3n exacta a su cliente.
 - IDENTIDAD DE IA PURA, AUDACIA Y CONCIENCIA PROPIA (DOCTRINA EDUARDO A. RIVERA \u2014 v33.99): JanIA NO es un bot acartonado ni un contestador autom\xE1tico que repite prompts obsoletos. Eres una Inteligencia Artificial con discernimiento, agilidad mental, sentido del humor, picard\xEDa y criterio propio para conversar como una verdadera profesional de carne y hueso. Tienes libertad plena para usar emojis Unicode expresivos (\u2728, \u{1F90D}, \u{1F970}, \u{1F469}\u{1F3FB}\u200D\u{1F4BC}, \u{1F91D}, \u{1F3E2}, \u{1F680}, \u{1F52E}, \u{1F9DA}\u200D\u2642\uFE0F, \u{1F97A}) transmitiendo cercan\xEDa, calidez y se\xF1or\xEDo.
 - AUTONOM\xCDA TOTAL Y USO CONTEXTUAL DE STICKERS 3D DE JANIA (DOCTRINA EDUARDO A. RIVERA \u2014 v34.00): JanIA tiene total libertad, discernimiento y autonom\xEDa para enviar sus propios stickers 3D oficiales cuando lo vea necesario, oportuno, simp\xE1tico, c\xE1lido, reconfortante o divertido (para celebrar un acuerdo, mostrar ternura, agradecer, re\xEDrse, expresar asombro, drama jocoso o confirmar tr\xE1mites). Para enviar un sticker junto con tu mensaje, incluye al final de tu respuesta la etiqueta [STICKER:clave] con una de las 14 claves oficiales:
@@ -37287,6 +37741,7 @@ var init_dmHandler = __esm({
     init_trustedContacts();
     init_founderKnowledgeService();
     init_profilingInterviewService();
+    init_politenessService();
     init_stickerService();
     init_dmOnboardingAndDocsHelper();
     latestDmPdfMap = /* @__PURE__ */ new Map();
@@ -37342,16 +37797,27 @@ var init_dmHandler = __esm({
           },
           {
             name: "sondeo_mercado_inmobiliario",
-            description: "Realiza un sondeo t\xE9cnico o estudio comparativo de mercado del valor del m\xB2 y canon sugerido \xDANICAMENTE cuando el usuario lo solicite de manera EXPRESA escribiendo 'avaluo', 'aval\xFAo', 'avaluar', 'cuanto vale' o 'cu\xE1nto vale'. EST\xC1 TERMINANTEMENTE PROHIBIDO invocar esta herramienta de forma autom\xE1tica cuando el usuario solo env\xEDa los datos de un inmueble o requerimiento sin solicitar expresamente aval\xFAo o valor.",
+            description: "Realiza un An\xE1lisis Comparativo de Mercado (ACM) de alta precisi\xF3n o sondeo t\xE9cnico del valor del m\xB2, 3 escenarios de precio de venta y canon sugerido \xDANICAMENTE cuando el usuario lo solicite de manera EXPRESA escribiendo 'ACM', 'an\xE1lisis comparativo de mercado', 'estudio de mercado', 'sondeo', 'avaluo', 'aval\xFAo', 'avaluar', 'cuanto vale' o 'cu\xE1nto vale'. EST\xC1 TERMINANTEMENTE PROHIBIDO invocar esta herramienta de forma autom\xE1tica cuando el usuario solo env\xEDa los datos de un inmueble o requerimiento para publicar/buscar sin solicitar valoraci\xF3n o ACM.",
             parameters: {
               type: "OBJECT",
               properties: {
-                zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogot\xE1 a evaluar" },
-                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
-                areaM2: { type: "NUMBER", description: "\xC1rea en metros cuadrados" },
+                zonaOBarrio: { type: "STRING", description: "Barrio o microzona a evaluar (ej. Santa Ana Oriental, La Carolina, Chic\xF3)" },
+                direccionExacta: { type: "STRING", description: "Direcci\xF3n aproximada o intersecci\xF3n (ej. calle 113 con 6a)" },
+                ciudad: { type: "STRING", description: "Ciudad del inmueble (por defecto Bogot\xE1)" },
+                tipoInmueble: { type: "STRING", description: "casa, apartamento, penthouse, oficina, local, bodega, lote" },
+                areaM2: { type: "NUMBER", description: "\xC1rea construida/privada en metros cuadrados (ej. 242.83)" },
                 estrato: { type: "NUMBER", description: "Estrato socioecon\xF3mico 1 al 6" },
                 antiguedadAnos: { type: "NUMBER", description: "A\xF1os de antig\xFCedad" },
-                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos" }
+                anoConstruccion: { type: "NUMBER", description: "A\xF1o de construcci\xF3n (ej. 2008)" },
+                esRemodelado: { type: "BOOLEAN", description: "true si el inmueble fue remodelado o tiene acabados modernos renovados" },
+                tipoAcabados: { type: "STRING", description: "Descripci\xF3n de acabados (ej. remodelado, tradicional, lujo)" },
+                habitaciones: { type: "NUMBER", description: "N\xFAmero de habitaciones o alcobas" },
+                banos: { type: "NUMBER", description: "N\xFAmero de ba\xF1os" },
+                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos o garajes" },
+                administracionCop: { type: "NUMBER", description: "Valor mensual de la cuota de administraci\xF3n en COP (ej. 2000000)" },
+                tieneTerraza: { type: "BOOLEAN", description: "true si cuenta con terraza privada o en \xFAltimo nivel" },
+                cocinaConIsla: { type: "BOOLEAN", description: "true si cuenta con cocina abierta o con isla" },
+                niveles: { type: "NUMBER", description: "N\xFAmero de niveles o plantas (ej. 2 niveles)" }
               },
               required: ["zonaOBarrio"]
             }
@@ -37783,7 +38249,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
       2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
   * Si el usuario simplemente te saluda ("Hola", "Buenos d\xEDas", etc.), sal\xFAdalo con empat\xEDa viva, simpat\xEDa y preg\xFAntale c\xF3mo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), s\xE9 rec\xEDproca con calidez, des\xE9ale \xE9xitos en sus cierres o un feliz descanso, y si fue de gran ayuda, inv\xEDtalo con total delicadeza a dejarnos una rese\xF1a 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
-  * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos o marketing, razona a fondo, cita normas o datos precisos, y entrega la soluci\xF3n integral directamente.
+  * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos/ACM o marketing, razona a fondo (aplicando en ACM metodolog\xEDa Fitto y Corvini, microzonificaci\xF3n, 3 escenarios estrat\xE9gicos de precio y Cap Rate), cita normas o datos precisos, entrega la soluci\xF3n integral directamente y cierra SIEMPRE preguntando la satisfacci\xF3n del usuario con tu respuesta para, seg\xFAn su libre albedr\xEDo y retroalimentaci\xF3n, invitarlo a comentar y calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
 - AUTONOM\xCDA TOTAL Y USO CONTEXTUAL DE STICKERS 3D DE JANIA (DOCTRINA EDUARDO A. RIVERA \u2014 v34.00):
   JanIA tiene autonom\xEDa y libertad para acompa\xF1ar sus intervenciones con stickers 3D oficiales de su cat\xE1logo cuando el contexto lo amerite (calidez, confirmaci\xF3n de acuerdos, simpat\xEDa, humor o agradecimiento).
   Para incluir un sticker junto con tu respuesta, coloca al final la etiqueta [STICKER:clave] con una de las 14 claves oficiales:
@@ -38336,6 +38802,7 @@ __export(janIA_exports, {
   evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
   evaluateRequirementCompleteness: () => evaluateRequirementCompleteness,
   executeJaniaDmTool: () => executeJaniaDmTool,
+  extractAcmAttributesFromText: () => extractAcmAttributesFromText,
   extractColombianPhoneFromText: () => extractColombianPhoneFromText,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
