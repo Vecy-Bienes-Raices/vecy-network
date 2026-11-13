@@ -144,6 +144,12 @@ export function detectLegalDocumentTypeFromText(text: string): LegalDocumentType
   if (/\b(?:carta|formato|documento|comunicado)\b[\s\S]{0,55}\b(?:presentaci[oó]n\s+de\s+cliente|presentar\s+(?:a\s+)?un?\s+cliente|registro\s+de\s+punta|protecci[oó]n\s+de\s+cliente)\b/i.test(lower)) {
     return "carta_presentacion_cliente";
   }
+  if (/\b(?:otros[ií]|modificaci[oó]n\s+(?:de\s+)?(?:canon|plazo)|pr[oó]rroga\s+contractual|cesi[oó]n\s+de\s+(?:contrato|posici[oó]n))\b/i.test(lower)) {
+    return "otrosi_modificatorio";
+  }
+  if (/\b(?:acta\s+de\s+(?:entrega|restituci[oó]n)|entrega\s+anticipada\s+e?\s*inventario)\b/i.test(lower)) {
+    return "acta_entrega_inmueble";
+  }
   if (/\b(?:pacto\s+de\s+retroventa|retroventa|art(?:[ií]culo|\.?)\s*1939)\b/i.test(lower)) {
     return "pacto_retroventa";
   }

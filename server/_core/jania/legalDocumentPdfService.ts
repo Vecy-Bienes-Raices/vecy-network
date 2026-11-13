@@ -23,6 +23,9 @@ export type LegalDocumentType =
   | "cesion_leasing"
   | "pacto_retroventa"
   | "contrato_corretaje"
+  | "otrosi_modificatorio"
+  | "acta_entrega_inmueble"
+  | "auditoria_riesgos_contractuales"
   | "estudio_titulos_snr"
   | "concepto_norma_urbana_pot"
   | "ficha_financiera_tributaria"
@@ -40,6 +43,19 @@ export interface LegalDocumentPdfParams {
   valorNegocioOCanon?: string;
   cuerpoDocumento?: string;
   clausulasEspeciales?: string;
+  matriculaInmobiliaria?: string;
+  chipCatastral?: string;
+  plazoMeses?: number;
+  fechaEntrega?: string;
+  fechaEscritura?: string;
+  notaria?: string;
+  formaPagoDetalle?: string;
+  tipoArras?: "confirmatorias" | "retractatorias" | "penal";
+  valorArrasOPenalidad?: string;
+  canonAdministracion?: string;
+  porcentajeComision?: string;
+  tipoOtrosi?: string;
+  conCondicionEstudioTitulos?: boolean;
 }
 
 export interface GeneratedLegalPdfResult {
@@ -124,9 +140,27 @@ export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
       };
     case "contrato_corretaje":
       return {
-        title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA",
-        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio y Ley 527 de 1999 (Validez de Firma Electronica)",
+        title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA VECY",
+        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio, Doctrina VECY 40/20/40 (3% Venta / 1 Canon Arriendo / Publicacion $0 COP) y Ley 527 de 1999",
         defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
+      };
+    case "otrosi_modificatorio":
+      return {
+        title: "OTROSI MODIFICATORIO / ACUERDO DE CESION O ENTREGA ANTICIPADA",
+        normativeFramework: "Codigo Civil (Arts. 1602, 1625), Codigo de Comercio (Art. 887 - Cesion), Ley 820 de 2003 y Ley 527 de 1999",
+        defaultFileNamePrefix: "Otrosi_Modificatorio_VECY"
+      };
+    case "acta_entrega_inmueble":
+      return {
+        title: "ACTA DE ENTREGA ANTICIPADA, RESTITUCION E INVENTARIO DE INMUEBLE",
+        normativeFramework: "Ley 820 de 2003, Articulo 2005 del Codigo Civil y Codigo General del Proceso",
+        defaultFileNamePrefix: "Acta_Entrega_Inmueble_VECY"
+      };
+    case "auditoria_riesgos_contractuales":
+      return {
+        title: "AUDITORIA JURIDICA DE CLAUSULAS Y RIESGOS CONTRACTUALES",
+        normativeFramework: "Ley 820 de 2003, Codigo de Comercio (Arts. 518-524 y 1340-1346), Codigo Civil (Arts. 1592, 1611, 1859-1861) y C.G.P.",
+        defaultFileNamePrefix: "Auditoria_Riesgos_Contractuales_VECY"
       };
     case "estudio_titulos_snr":
       return {
@@ -163,6 +197,18 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
   const docDest = params.documentoDestinatario || "[CC / NIT]";
   const direccion = params.direccionInmueble || "[DIRECCION E IDENTIFICACION DEL INMUEBLE]";
   const valor = params.valorNegocioOCanon || "[VALOR PACTADO EN PESOS COLOMBIANOS COP]";
+  const matricula = params.matriculaInmobiliaria || "[NUMERO DE MATRICULA SNR]";
+  const chip = params.chipCatastral || "[CHIP / CEDULA CATASTRAL]";
+  const plazoMeses = params.plazoMeses && params.plazoMeses > 0 ? params.plazoMeses : 12;
+  const fechaEntrega = params.fechaEntrega || "[FECHA PACTADA DE ENTREGA]";
+  const fechaEscritura = params.fechaEscritura || "[FECHA Y HORA DE ESCRITURACION]";
+  const notaria = params.notaria || "[NOTARIA Y CIUDAD PACTADA]";
+  const formaPago = params.formaPagoDetalle
+    ? params.formaPagoDetalle
+    : "Desembolso segun cronograma pactado (recursos propios, credito hipotecario, FNA o leasing habitacional segun aplique)";
+  const valorArras = params.valorArrasOPenalidad || "10% del valor total del negocio";
+  const adminCanon = params.canonAdministracion || "Segun reglamento de Propiedad Horizontal (segun lo acordado por las partes)";
+  const comisionPct = params.porcentajeComision || "3% en venta / 1 canon mensual en arriendo";
   const extras = params.clausulasEspeciales ? `\n\nDISPOSICIONES Y CLAUSULAS ESPECIALES:\n${params.clausulasEspeciales}` : "";
 
   switch (params.tipoDocumento) {
@@ -227,85 +273,85 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
         "CLAUSULA TERCERA - CONDICION SUSPENSIVA DE APROBACION BANCARIA: El perfeccionamiento de la cesion queda sujeto al estudio de credito y aprobacion formal del cesionario por parte de la entidad financiera leasing." + extras
       ].join("\n");
 
-    case "promesa_compraventa":
+    case "promesa_compraventa": {
+      const arrasLabel =
+        params.tipoArras === "retractatorias"
+          ? "ARRAS RETRACTATORIAS / PENITENCIALES (ART. 1859 C.C.): Cualquiera de las partes podra retractarse de la promesa antes de la escritura publica; quien las dio las perdera y quien las recibio las restituira dobladas."
+          : params.tipoArras === "penal"
+          ? "CLAUSULA PENAL PECUNIARIA DIRECTA (ART. 1592 C.C. Y ART. 867 C.CO.): En caso de incumplimiento culpable, la parte incumplida pagara a la parte cumplida sin retracto libre la suma pactada, conservando el derecho de exigir ejecutivamente el cumplimiento o la resolucion del contrato."
+          : "ARRAS CONFIRMATORIAS DE EJECUCION (ART. 1861 C.C.) Y CLAUSULA PENAL (ART. 1592 C.C.): La suma entregada constituye parte del precio y senal confirmatoria de la promesa; en caso de incumplimiento injustificado se hara exigible ejecutivamente la clausula penal pactada sin derecho a retracto unilateral.";
+      const estudioTitulosClause =
+        params.conCondicionEstudioTitulos === false
+          ? "Las partes declaran haber revisado previamente la tradicion del inmueble segun Certificado de Tradicion y Libertad aportado."
+          : "CONDICION SUSPENSIVA DE ESTUDIO DE TITULOS FAVORABLE (10 Y 20 ANOS): La eficacia definitiva de esta promesa y los desembolsos posteriores quedan supeditados a que el estudio juridico del Certificado de Tradicion y Libertad (SNR) acredite tradicion continua de dominio pleno sin falsa tradicion, embargos vigentes ni limitaciones no subsanables antes de la escrituracion. De encontrarse vicio no saneado en el plazo acordado, el promitente comprador podra resolver sin penalidad obteniendo restitucion total de lo pagado.";
       return [
         `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${new Date().toLocaleDateString("es-CO")}`,
         `PROMITENTE VENDEDOR (PARTE A): ${remitente} — Identificacion: ${docRem}`,
         `PROMITENTE COMPRADOR (PARTE B): ${destinatario} — Identificacion: ${docDest}`,
-        `INMUEBLE(S) OBJETO DEL ACTO: ${direccion} (${ciudad})`,
+        `INMUEBLE(S) OBJETO DEL ACTO: ${direccion} (${ciudad}) | Matricula SNR: ${matricula} | CHIP/Catastro: ${chip}`,
         `CUANTIA / PRECIO TOTAL CONVENIDO: ${valor}`,
         "",
-        "CLAUSULADO CONTRACTUAL DE PROMESA DE COMPRAVENTA:",
+        "CLAUSULADO CONTRACTUAL DE PROMESA DE COMPRAVENTA (ART. 1611 C.C. Y ART. 89 LEY 153 DE 1887):",
         "",
         "CLAUSULA PRIMERA - OBJETO DEL CONTRATO: El PROMITENTE VENDEDOR promete transferir a titulo de compraventa real y efectiva a favor del PROMITENTE COMPRADOR, y este promete adquirir al mismo titulo, el derecho de dominio y la posesion material plena sobre el(los) bien(es) inmueble(s) debidamente individualizado(s) en la clausula segunda de este contrato.",
         "",
-        `CLAUSULA SEGUNDA - IDENTIFICACION, INDIVIDUALIZACION Y LINDEROS: El inmueble principal objeto de esta promesa se encuentra ubicado en la direccion: ${direccion}, en la ciudad de ${ciudad}. Folio de Matricula Inmobiliaria SNR No. [NUMERO DE MATRICULA], Cedula Catastral / CHIP No. [CHIP / CEDULA CATASTRAL]. LINDEROS TECNICOS Y ESPECIFICACIONES: Los linderos generales y especiales, cabida, medidas y demas especificaciones tecnicas se encuentran contenidos en la Escritura Publica antecedente No. [NUMERO ESCRITURA] otorgada en la Notaria [NOTARIA Y CIUDAD], documento que se entiende incorporado integramente a este instrumento. ${params.clausulasEspeciales && /permuta|daci[oó]n/i.test(params.clausulasEspeciales) ? "(En caso de dacion o permuta parcial, los datos registrales y linderos del inmueble entregado en parte de pago se transcriben en las Disposiciones Especiales adjuntas)." : ""}`,
+        `CLAUSULA SEGUNDA - IDENTIFICACION, INDIVIDUALIZACION Y LINDEROS: El inmueble principal objeto de esta promesa se encuentra ubicado en la direccion: ${direccion}, en la ciudad de ${ciudad}. Folio de Matricula Inmobiliaria SNR No. ${matricula}, Cedula Catastral / CHIP No. ${chip}. LINDEROS TECNICOS Y ESPECIFICACIONES: Los linderos generales y especiales, cabida, medidas y demas especificaciones tecnicas constan en la Escritura Publica antecedente y se incorporan integramente a este instrumento. ${params.clausulasEspeciales && /permuta|daci[oó]n/i.test(params.clausulasEspeciales) ? "(En caso de dacion o permuta parcial, los datos registrales y linderos del inmueble entregado en parte de pago se transcriben en las Disposiciones Especiales adjuntas)." : ""}`,
         "",
-        "CLAUSULA TERCERA - TRADICION Y TITULO DE ADQUISICION: El PROMITENTE VENDEDOR garantiza que adquirio el dominio y posesion material del inmueble objeto de la venta mediante Escritura Publica debidamente registrada, acreditando una tradicion ininterrumpida, pacifica y publica por mas de veinte (20) anos exenta de pleitos pendientes, gravamenes o litigios.",
+        "CLAUSULA TERCERA - TRADICION, ESTUDIO DE TITULOS Y SANEAMIENTO: El PROMITENTE VENDEDOR garantiza que adquirio el dominio mediante Escritura Publica registrada con tradicion ininterrumpida y sana (10 anos prescripcion ordinaria Ley 791/2002 y 20 anos Art. 2532 C.C.). " + estudioTitulosClause,
         "",
-        `CLAUSULA CUARTA - PRECIO, FORMA DE PAGO Y DESEMBOLSOS: El precio de la venta prometida se fija en la suma de ${valor} moneda legal colombiana, la cual sera cancelada de la siguiente manera:`,
-        "1. Saldo inicial a la firma del presente contrato mediante cheque de gerencia o transferencia bancaria verificada.",
-        "2. Saldo en dinero efectivo o mediante desembolso de credito hipotecario / leasing habitacional / recursos propios a la fecha de la firma de la Escritura Publica.",
-        "3. Cruce en especie o dacion en pago segun lo pactado expresamente en las Disposiciones Especiales de este contrato.",
+        `CLAUSULA CUARTA - PRECIO, FORMA DE PAGO Y DESEMBOLSOS (CREDITO / FNA / LEASING): El precio de la venta prometida se fija en la suma de ${valor} moneda legal colombiana, el cual sera pagado asi: ${formaPago}. En caso de financiacion mediante credito hipotecario, Fondo Nacional del Ahorro (FNA) o leasing habitacional, el desembolso final operara contra carta de aprobacion vigente, avaluo y registro de la escritura publica o giro directo bancario.`,
         "",
-        "CLAUSULA QUINTA - SITUACION JURIDICA, SANEAMIENTO Y VICIOS REDHIBITORIOS: El PROMITENTE VENDEDOR declara que el bien objeto de enajenacion se encuentra libre de todo gravamen, embargo, hipoteca, condiciones resolutorias, pleito pendiente, censo, anticresis, contrato de arrendamiento por escritura publica o privada no informado, servidumbres pasivas no declaradas y libre de cualquier afectacion o limitacion al dominio. No obstante, se obliga al saneamiento por eviccion y vicios redhibitorios de conformidad con los Articulos 1880 y 1893 del Codigo Civil Colombiano.",
+        "CLAUSULA QUINTA - SITUACION JURIDICA, GRAVAMENES Y VICIOS REDHIBITORIOS: El PROMITENTE VENDEDOR declara que el bien se entregara libre de embargos, demandas, condiciones resolutorias, pleitos pendientes o limitaciones al dominio (o mediante cancelacion simultanea de hipoteca con cargo al saldo del precio) y responde por saneamiento por eviccion y vicios redhibitorios (Arts. 1880 y 1893 C.C.).",
         "",
-        "CLAUSULA SEXTA - REGIMEN DE FAMILIA Y AFECTACIONES PATRIMONIALES: Las partes declaran bajo juramento su estado civil actual y manifiestan que sobre el inmueble no pesa Afectacion a Vivienda Familiar (Ley 258 de 1996 modificada por Ley 854 de 2003) ni Patrimonio de Familia Inembargable (Ley 70 de 1931). En caso de existir, el PROMITENTE VENDEDOR se obliga a su cancelacion previa o concurrente en la misma Escritura de compraventa con la comparecencia de su conyuge o companero(a) permanente.",
+        "CLAUSULA SEXTA - REGIMEN DE FAMILIA Y AFECTACIONES PATRIMONIALES: Las partes declaran su estado civil y manifiestan que, de existir Afectacion a Vivienda Familiar (Ley 258 de 1996 / Ley 854 de 2003) o Patrimonio de Familia Inembargable (Ley 70 de 1931), se levantaran previamente o en la misma escritura con comparecencia del conyuge o companero(a) permanente.",
         "",
-        "CLAUSULA SEPTIMA - OTORGAMIENTO DE LA ESCRITURA PUBLICA DEFINITIVA: La Escritura Publica de Compraventa que perfeccionara la transferencia del dominio sera suscrita por las partes en la fecha, hora y Notaria estipulada expresamente [FECHA, HORA Y NOTARIA PACTADA], acto para el cual las partes compareceran personalmente o mediante apoderado debidamente facultado con poder especial notarial amplio y suficiente.",
+        `CLAUSULA SEPTIMA - OTORGAMIENTO DE LA ESCRITURA PUBLICA DEFINITIVA: La Escritura Publica de Compraventa se suscribira el dia ${fechaEscritura} en la ${notaria}, acto para el cual las partes compareceran personalmente o mediante apoderado con poder especial amplio y suficiente.`,
         "",
-        "CLAUSULA OCTAVA - ENTREGA MATERIAL, INVENTARIO Y POSESION: La entrega real y material del inmueble se realizara el dia [FECHA PACTADA DE ENTREGA], fecha en la cual el PROMITENTE VENDEDOR hara entrega de las llaves del inmueble, sus anexos, garajes y depositos, totalmente desocupado y en el estado de conservacion acordado, levantando el Acta de Entrega e Inventario Fisico debidamente firmada por las partes.",
+        `CLAUSULA OCTAVA - ENTREGA MATERIAL, INVENTARIO Y POSESION: La entrega real y material del inmueble se realizara el dia ${fechaEntrega}, totalmente desocupado y con paz y salvo de Impuesto Predial, valorizacion IDU, cuotas de administracion y servicios publicos domiciliarios hasta esa fecha, levantando Acta de Entrega e Inventario Fisico.`,
         "",
-        "CLAUSULA NOVENA - IMPUESTOS, TASAS, CONTRIBUCIONES Y SERVICIOS PUBLICOS: El PROMITENTE VENDEDOR se obliga a entregar el inmueble a paz y salvo por concepto de Impuesto Predial Unificado, contribucion de valorizacion (IDU), cuotas ordinarias y extraordinarias de administracion de propiedad horizontal y facturacion al dia de servicios publicos domiciliarios (acueducto, energia, gas, telefono) hasta la fecha de la entrega material.",
+        `CLAUSULA NOVENA - ARRAS Y CLAUSULA PENAL PECUNIARIA (${valorArras}): ${arrasLabel} Cuantia pactada de arras/penalidad: ${valorArras}. Exigible ejecutivamente (Art. 422 C.G.P.) sin necesidad de requerimiento previo para constituir en mora.`,
         "",
-        "CLAUSULA DECIMA - ARRAS Y CLAUSULA PENAL PECUNIARIA: En caso de incumplimiento total o parcial o retardo culpable en el otorgamiento de la Escritura Publica o en la entrega del bien, la parte incumplida pagara a la parte cumplida, a titulo de clausula penal pecuniaria (Art. 1592 C.C. y Art. 867 C.Co.), una suma equivalente al porcentaje pactado del valor total de la venta, la cual sera exigible ejecutivamente sin necesidad de requerimiento judicial ni privado ni constitucion previa en mora, a la cual las partes renuncian expresamente.",
+        "CLAUSULA DECIMA - GASTOS NOTARIALES, RETENCION EN LA FUENTE Y REGISTRO: Salvo pacto distinto en Disposiciones Especiales: (a) Derechos Notariales en un 50% por cada parte; (b) Retencion en la Fuente (1% Art. 398 E.T. segun UVT vigentes) 100% a cargo del PROMITENTE VENDEDOR; (c) Impuesto de Beneficencia/Registro y derechos de registro ORIP 100% a cargo del PROMITENTE COMPRADOR; cancelacion de hipoteca previa 100% a cargo del vendedor.",
         "",
-        "CLAUSULA DECIMAPRIMERA - GASTOS NOTARIALES, RETENCION EN LA FUENTE Y REGISTRO: Los gastos derivados de la presente negociacion se distribuiran conforme a la ley y las costumbres notariales colombianas: (a) Derechos Notariales en un 50% a cargo de cada parte; (b) Retencion en la Fuente por enajenacion en un 100% a cargo del PROMITENTE VENDEDOR; (c) Impuesto de Registro y Beneficencia en un 100% a cargo del PROMITENTE COMPRADOR.",
-        "",
-        "CLAUSULA DECIMASEGUNDA - MERITO EJECUTIVO Y ACUERDO COMPLETO: Las partes reconocen expresamente que el presente contrato presta merito ejecutivo pleno para exigir judicialmente el cumplimiento de las obligaciones de dar, hacer y dinerarias aqui contenidas conforme al Codigo General del Proceso.",
-        "",
-        "CLAUSULA DECIMATERCERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento goza de plena validez, autenticidad y eficacia probatoria cuando sea suscrito mediante mecanismos de firma electronica certificada con estampado cronologico y trazabilidad digital.",
+        "CLAUSULA DECIMAPRIMERA - MERITO EJECUTIVO Y FIRMA ELECTRONICA: El presente instrumento presta merito ejecutivo pleno conforme al Codigo General del Proceso y goza de plena validez probatoria bajo la Ley 527 de 1999 y Decreto 2364 de 2012.",
         extras,
         "",
-        "ADVERTENCIA DE VALIDEZ Y MINUTA ESTRUCTURAL (VECY BIENES RAICES):",
-        "El presente instrumento constituye una Minuta Estructural Preliminar y base documental emitida por la plataforma JanIA de VECY BIENES RAICES. Para elevar este instrumento a contrato definitivo blindado con todas las de la ley, las partes deben completar: (i) transcripcion literal exacta de linderos tecnicos segun escrituras antecedentes y folios SNR; (ii) identificacion plena y regimen patrimonial/afectacion de conyuges; (iii) fijacion precisa de fecha, hora y notaria especifica para la firma escritural; y (iv) realizacion del estudio de titulos de 20 anos. Para estructurar y coordinar el contrato definitivo con acompanamiento notarial y pericial personalizado, comuniquese con la Direccion Legal y Notarial de VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
+        "ADVERTENCIA DE VALIDEZ Y REVISION NOTARIAL VECY BIENES RAICES:",
+        "Minuta estructural personalizada emitida por JanIA (VECY BIENES RAICES). Antes de suscribir definitivamente, complete cualquier dato entre corchetes segun la escritura antecedente y CTL vigente. Para validacion juridica presencial y acompanamiento notarial personalizado: Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | https://vecy-bienes-raices.vercel.app/."
       ].filter(Boolean).join("\n");
+    }
 
     case "contrato_arrendamiento_vivienda":
       return [
         `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${new Date().toLocaleDateString("es-CO")}`,
         `ARRENDADOR(A): ${remitente} — Identificacion: ${docRem}`,
         `ARRENDATARIO(A): ${destinatario} — Identificacion: ${docDest}`,
-        `INMUEBLE OBJETO DEL ARRENDAMIENTO: ${direccion} (${ciudad})`,
-        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
+        `INMUEBLE OBJETO DEL ARRENDAMIENTO: ${direccion} (${ciudad}) | Matricula SNR: ${matricula} | CHIP: ${chip}`,
+        `CANON MENSUAL DE ARRENDAMIENTO: ${valor} | PLAZO INICIAL: ${plazoMeses} meses`,
         "",
         "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA (LEY 820 DE 2003):",
         "",
-        "CLAUSULA PRIMERA - OBJETO Y DESTINO EXCLUSIVO: El ARRENDADOR entrega a titulo de arrendamiento el goce del bien inmueble debidamente individualizado, y el ARRENDATARIO lo recibe destinandolo de manera exclusiva para vivienda familiar, sin que pueda destinarlo a fines comerciales, industriales ni a actividades contrarias a la ley o a la moral.",
+        "CLAUSULA PRIMERA - OBJETO Y DESTINO EXCLUSIVO: El ARRENDADOR concede el goce del inmueble individualizado y el ARRENDATARIO lo recibe destinandolo de manera exclusiva para vivienda familiar urbana (Art. 2 Ley 820 de 2003), prohibiendose destinarlo a actividades comerciales, industriales o contrarias a la ley.",
         "",
-        `CLAUSULA SEGUNDA - CANON, FORMA DE PAGO Y LUGAR: El ARRENDATARIO pagara mensualmente por concepto de canon de arrendamiento la suma de ${valor}, dentro de los primeros cinco (5) dias calendario de cada periodo mensual, mediante consignacion o transferencia bancaria en la cuenta designada por el ARRENDADOR.`,
+        `CLAUSULA SEGUNDA - CANON, TOPE LEGAL Y FORMA DE PAGO: El ARRENDATARIO pagara mensualmente la suma de ${valor} dentro de los primeros cinco (5) dias calendario de cada periodo mensual. De conformidad con el Articulo 18 de la Ley 820 de 2003, el canon mensual no excede del uno por ciento (1%) del valor comercial del inmueble (o su parte arrendada).`,
         "",
-        "CLAUSULA TERCERA - INCREMENTO ANUAL DEL CANON (ART. 20 LEY 820 DE 2003): Vencido cada periodo de doce (12) meses de ejecucion contractual, el canon de arrendamiento se incrementara de pleno derecho en un porcentaje maximo equivalente a la variacion del Indice de Precios al Consumidor (IPC) certificado por el DANE para el ano inmediatamente anterior, previa notificacion al ARRENDATARIO.",
+        "CLAUSULA TERCERA - PROHIBICION DE DEPOSITOS EN EFECTIVO (ART. 16 LEY 820 DE 2003): En estricto acatamiento del Articulo 16 de la Ley 820 de 2003, en este contrato de vivienda urbana NO se exigen ni reciben depositos en dinero efectivo ni cauciones reales prohibidas; las garantias se instrumentan exclusivamente mediante codeudor solidario y/o poliza de seguro de arrendamiento o fianza colectiva.",
         "",
-        "CLAUSULA CUARTA - TERMINO DE DURACION Y PRORROGAS: El termino inicial de duracion de este contrato sera de doce (12) meses contados a partir de la entrega del inmueble. Dicho termino se entendera prorrogado automaticamente por periodos iguales si ninguna de las partes notifica a la otra por escrito su intencion de no prorrogarlo con antelacion no menor a tres (3) meses (Art. 6 Ley 820/2003).",
+        "CLAUSULA CUARTA - INCREMENTO ANUAL DEL CANON (ART. 20 LEY 820 DE 2003): Vencidos cada doce (12) meses de ejecucion, el canon podra reajustarse hasta en un porcentaje igual al cien por ciento (100%) del IPC certificado por el DANE para el ano calendario inmediatamente anterior, previa comunicacion escrita al arrendatario.",
         "",
-        "CLAUSULA QUINTA - SERVICIOS PUBLICOS DOMICILIARIOS Y ADMINISTRACION: El pago oportuno de los servicios publicos de acueducto, energia, gas y telecomunicaciones sera a cargo exclusivo del ARRENDATARIO. Las cuotas ordinarias de administracion de propiedad horizontal seran a cargo del responsable pactado expresamente en las estipulaciones especiales.",
+        `CLAUSULA QUINTA - TERMINO DE DURACION, PRORROGAS Y PREAVISO (ARTS. 5, 6, 22 Y 24 LEY 820): El termino inicial sera de ${plazoMeses} meses contados desde el ${fechaEntrega}. Se prorrogara automaticamente salvo preaviso escrito enviado con antelacion no menor a tres (3) meses al vencimiento del plazo inicial o de su prorroga, cumpliendo las causales y preavisos de los Articulos 22 a 25 de la Ley 820 de 2003.`,
         "",
-        "CLAUSULA SEXTA - PROHIBICION DE CESION Y SUBARRIENDO (ART. 17 LEY 820 DE 2003): El ARRENDATARIO no podra ceder total ni parcialmente el contrato de arrendamiento ni subarrendar el inmueble sin autorizacion previa, expresa y escrita del ARRENDADOR. La violacion de esta clausula facultara al ARRENDADOR para dar por terminado el contrato de manera inmediata.",
+        `CLAUSULA SEXTA - SERVICIOS PUBLICOS Y ADMINISTRACION: Los servicios publicos domiciliarios (acueducto, energia, gas, telecomunicaciones) son a cargo exclusivo del ARRENDATARIO. Cuota de administracion PH: ${adminCanon}.`,
         "",
-        "CLAUSULA SEPTIMA - REPARACIONES LOCATIVAS Y MEJORAS: Las reparaciones locativas que se deriven del uso legitimo y natural del bien seran asumidas por el ARRENDATARIO conforme a los Articulos 1985 y 1993 del Codigo Civil. No podra realizar reformas ni modificaciones arquitectonicas sin previa autorizacion escrita del ARRENDADOR.",
+        "CLAUSULA SEPTIMA - PROHIBICION DE CESION Y SUBARRIENDO (ART. 17 LEY 820 DE 2003): El ARRENDATARIO no podra ceder el contrato ni subarrendar total o parcialmente sin autorizacion previa y escrita del ARRENDADOR.",
         "",
-        "CLAUSULA OCTAVA - CLAUSULA PENAL PECUNIARIA: El incumplimiento de cualquiera de las obligaciones emanadas del presente contrato hara exigible a la parte incumplida el pago de una pena pecuniaria equivalente a tres (3) canones mensuales de arrendamiento vigentes, exigible ejecutivamente sin necesidad de requerimiento alguno.",
+        "CLAUSULA OCTAVA - REPARACIONES LOCATIVAS, CLAUSULA PENAL Y RESTITUCION: Las reparaciones locativas corresponden al ARRENDATARIO (Arts. 1985 y 1993 C.C.). En caso de incumplimiento se causara clausula penal pecuniaria maxima equivalente a tres (3) canones vigentes (Art. 22/23 Ley 820). Al finalizar el contrato se suscribira Acta de Entrega e Inventario Fisico.",
         "",
-        "CLAUSULA NOVENA - RESTITUCION Y ENTREGA CON INVENTARIO: Al vencimiento del contrato o de sus prorrogas, el ARRENDATARIO restituira el inmueble en el mismo estado en que lo recibio, salvo el deterioro derivado del uso y goce legitimo, suscribiendo el Acta de Entrega e Inventario debidamente conciliada.",
-        "",
-        "CLAUSULA DECIMA - MERITO EJECUTIVO: El presente contrato presta merito ejecutivo para el cobro de canones, cuotas de administracion, servicios publicos insolutos y la clausula penal pecuniaria conforme al Codigo General del Proceso.",
-        "",
-        "CLAUSULA DECIMAPRIMERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este contrato puede ser suscrito mediante mecanismos de firma electronica certificada con plena validez juridica.",
+        "CLAUSULA NOVENA - MERITO EJECUTIVO Y FIRMA ELECTRONICA: Este contrato presta merito ejecutivo (Art. 14 Ley 820/2003 y Art. 422 C.G.P.) y tiene plena validez por firma electronica bajo Ley 527 de 1999.",
         extras,
         "",
-        "ADVERTENCIA DE MINUTA Y ASESORIA VECY:",
-        "Este documento es un borrador estructural de contrato. Para la expedicion de polizas o fianzas colectivas de arrendamiento, analisis financiero de solvencia y blindaje contractual con todas las de la ley, contacte a VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
+        "VALIDACION JURIDICA Y POLIZA DE ARRENDAMIENTO VECY BIENES RAICES:",
+        "Minuta personalizada emitida por JanIA. Para expedicion de polizas colectivas de arrendamiento, verificacion de codeudores y asesoria juridica presencial: +57 316 656 9719 | https://wa.me/573166569719 | https://vecy-bienes-raices.vercel.app/."
       ].filter(Boolean).join("\n");
 
     case "contrato_arrendamiento_comercial":
@@ -313,45 +359,93 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
         `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${new Date().toLocaleDateString("es-CO")}`,
         `ARRENDADOR(A): ${remitente} — Identificacion: ${docRem}`,
         `ARRENDATARIO(A): ${destinatario} — Identificacion: ${docDest}`,
-        `INMUEBLE / LOCAL COMERCIAL: ${direccion} (${ciudad})`,
-        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
+        `INMUEBLE / LOCAL COMERCIAL: ${direccion} (${ciudad}) | Matricula SNR: ${matricula} | CHIP: ${chip}`,
+        `CANON MENSUAL DE ARRENDAMIENTO: ${valor} | PLAZO INICIAL: ${plazoMeses} meses`,
         "",
-        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL (CODIGO DE COMERCIO):",
+        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL (ARTS. 518 A 524 CODIGO DE COMERCIO):",
         "",
-        "CLAUSULA PRIMERA - OBJETO Y DESTINACION COMERCIAL: El ARRENDADOR entrega en arrendamiento el inmueble comercial, y el ARRENDATARIO lo destina exclusivamente para la explotacion de su actividad mercantil autorizada, cumpliendo todas las normas de uso de suelo, sanidad y policia.",
+        "CLAUSULA PRIMERA - OBJETO, DESTINACION Y USO DE SUELO (POT): El ARRENDADOR entrega en arrendamiento el local comercial individualizado y el ARRENDATARIO lo destina exclusivamente para la explotacion de su establecimiento de comercio autorizado, asumiendo la verificacion previa de compatibilidad de uso de suelo POT y licencias sanitarias/SAYCO-ACINPRO.",
         "",
-        `CLAUSULA SEGUNDA - CANON, IVA E INCREMENTOS: El canon mensual pactado es de ${valor} (mas IVA de conformidad con el Estatuto Tributario, si aplica). Las partes acuerdan un incremento anual pactado contractualmente al vencimiento de cada periodo de doce (12) meses.`,
+        `CLAUSULA SEGUNDA - CANON, IVA, ADMINISTRACION Y REAJUSTES: El canon mensual pactado es de ${valor} (mas IVA a la tarifa vigente del Estatuto Tributario, cuando el arrendador o el inmueble pertenezca al regimen responsable). Cuota de administracion: ${adminCanon}. Al vencimiento de cada anualidad contractual, el canon se incrementara conforme al IPC mas los puntos porcentuales libremente convenidos por las partes.`,
         "",
-        "CLAUSULA TERCERA - RENOVACION Y DESAHUCIO COMERCIAL (ARTS. 518 A 520 C.CO.): Cumplidos dos (2) anos consecutivos de ocupacion con el mismo establecimiento mercantil, el ARRENDATARIO tendra derecho a la renovacion del contrato salvo las causales taxativas de ley con desahucio previo no menor a seis (6) meses.",
+        "CLAUSULA TERCERA - DERECHO A LA RENOVACION Y DESAHUCIO MINIMO DE 6 MESES (ARTS. 518 A 520 Y 524 C.CO.): Conforme a las normas imperativas del Articulo 524 del Codigo de Comercio, el ARRENDATARIO que ocupe el inmueble a titulo de arrendamiento por no menos de dos (2) anos consecutivos con un mismo establecimiento de comercio tendra derecho a la renovacion del contrato al vencimiento, salvo las excepciones taxativas del Articulo 518 C.Co., caso en el cual el ARRENDADOR debera dar desahucio con una anticipacion NO menor a seis (6) meses a la fecha de terminacion (Art. 520 C.Co.).",
         "",
-        "CLAUSULA CUARTA - CESION Y SUBARRIENDO COMERCIAL (ART. 523 C.CO.): El ARRENDATARIO no podra subarrendar totalmente el local ni ceder el contrato sin autorizacion expresa del ARRENDADOR, salvo enajenacion del respectivo establecimiento de comercio en bloque.",
+        "CLAUSULA CUARTA - PRIMA COMERCIAL, ADECUACIONES Y REPARACIONES: Salvo estipulacion expresa escrita en las Disposiciones Especiales, no se pacta prima comercial de ingreso; las mejoras o adecuaciones locativas requeriran autorizacion previa del ARRENDADOR y deberan respetar la estructura del edificio.",
         "",
-        "CLAUSULA QUINTA - CLAUSULA PENAL Y MERITO EJECUTIVO: El incumplimiento de las obligaciones contractuales facultara el cobro ejecutivo de la clausula penal pecuniaria pactada y la restitucion inmediata del inmueble.",
+        "CLAUSULA QUINTA - SUBARRIENDO Y CESION DE ESTABLECIMIENTO DE COMERCIO (ART. 523 C.CO.): El ARRENDATARIO no podra subarrendar totalmente los locales ni darles destinacion distinta sin autorizacion escrita del ARRENDADOR, aunque podra subarrendar hasta la mitad del inmueble sin lesionar derechos del arrendador o ceder el contrato cuando sea consecuencia de la enajenacion del respectivo establecimiento de comercio en los terminos del Articulo 523 del Codigo de Comercio.",
+        "",
+        `CLAUSULA SEXTA - CLAUSULA PENAL (${valorArras}), MERITO EJECUTIVO Y RESTITUCION: El incumplimiento facultara el cobro ejecutivo de la clausula penal pactada (${valorArras}) y la restitucion del inmueble conforme al Articulo 384 del C.G.P.`,
         extras,
         "",
-        "ADVERTENCIA DE ASESORIA VECY:",
-        "Minuta base comercial. Para asesoramiento de local, POT y estudio comercial, contacte a Eduardo Rivera y Jani Alves (+57 316 656 9719)."
+        "VALIDACION JURIDICA COMERCIAL Y NORMA URBANA VECY BIENES RAICES:",
+        "Minuta comercial emitida por JanIA. Para validacion de uso de suelo POT, revision notarial y estructuracion comercial personalizada: +57 316 656 9719 | https://wa.me/573166569719 | https://vecy-bienes-raices.vercel.app/."
       ].filter(Boolean).join("\n");
 
     case "contrato_corretaje":
       return [
         `LUGAR Y FECHA: ${ciudad}, ${new Date().toLocaleDateString("es-CO")}`,
         `EL COMITENTE (PROPIETARIO / CLIENTE): ${remitente} — Identificacion: ${docRem}`,
-        `EL CORREDOR INMOBILIARIO (VECY NETWORK): ${destinatario} — Identificacion: ${docDest}`,
-        `INMUEBLE CONSIGNADO: ${direccion} (${ciudad}) | VALOR COMERCIAL: ${valor}`,
+        `EL CORREDOR INMOBILIARIO (VECY BIENES RAICES / NETWORK): ${destinatario} — Identificacion: ${docDest}`,
+        `INMUEBLE CONSIGNADO: ${direccion} (${ciudad}) | Matricula SNR: ${matricula} | CHIP: ${chip} | VALOR COMERCIAL: ${valor}`,
         "",
-        "CLAUSULADO DE CONTRATO DE CORRETAJE INMOBILIARIO (ARTS. 1340 A 1346 C.CO.):",
+        "CLAUSULADO DE CONTRATO DE CORRETAJE Y CONSIGNACION VECY (ARTS. 1340 A 1346 C.CO.):",
         "",
-        "CLAUSULA PRIMERA - ENCARGO DE MEDIACION Y PROMOCION: EL COMITENTE confiere encargo mercantil al CORREDOR para la promocion, consecucion de interesados y mediacion en la venta o arrendamiento del bien inmueble consignado.",
+        "CLAUSULA PRIMERA - ENCARGO DE MEDIACION Y PROMOCION COMERCIAL: EL COMITENTE confiere encargo mercantil de corretaje no exclusivo (salvo pacto expreso de exclusividad por termino determinado) a EL CORREDOR para promocionar, exhibir, perfilar interesados y mediar en la compraventa o arrendamiento del inmueble consignado.",
         "",
-        `CLAUSULA SEGUNDA - HONORARIOS Y COMISION PROFESIONAL: Al perfeccionarse la negociacion o suscribirse la promesa de compraventa / contrato de arrendamiento, EL COMITENTE cancelara a favor del CORREDOR los honorarios equivalentes al porcentaje comercial legal (3% urbano / 5% rural o campestre sobre el valor final de la transaccion).`,
+        `CLAUSULA SEGUNDA - HONORARIOS PROFESIONALES (${comisionPct}): Al perfeccionarse la compraventa (firma de promesa con desembolso o escritura publica) o suscribirse el contrato de arrendamiento con cliente presentado por EL CORREDOR o la red VECY, EL COMITENTE pagara honorarios del tres por ciento (3%) sobre el precio final de venta en inmuebles urbanos (5% rural/campestre) o el equivalente a un (1) canon mensual de arrendamiento (mas IVA si aplica), conforme al porcentaje pactado (${comisionPct}).`,
         "",
-        "CLAUSULA TERCERA - DOCTRINA COLABORATIVA VECY 40/20/40: Las partes reconocen la participacion de la red colaborativa VECY Network para la difusion del inmueble entre corredores certificados, garantizando transparencia y reparto ordenado de puntas.",
+        "CLAUSULA TERCERA - POLITICA CERO COBROS POR PUBLICACION: En cumplimiento estricto de la Doctrina VECY BIENES RAICES, EL CORREDOR NO cobra suma alguna por publicacion, inventario fotografico, difusion en portales o gestion comercial anticipada; los honorarios se causan exclusivamente a exito al cerrarse la negociacion.",
         "",
-        "CLAUSULA CUARTA - RESERVA DE CLIENTES PRESENTADOS: Toda transaccion efectuada con clientes presentados por EL CORREDOR dentro de los doce (12) meses posteriores a la terminacion de este encargo causara el pago pleno de los honorarios pactados.",
+        "CLAUSULA CUARTA - DOCTRINA COLABORATIVA VECY 40/20/40 Y 80/20: EL COMITENTE autoriza la difusion colaborativa del inmueble a traves de la red de corredores aliados VECY Network bajo esquemas transparentes de reparto de puntas (40% punta captadora / 20% mesa central / 40% punta colocadora, u 80/20 directo), garantizando unico interlocutor comercial responsable.",
+        "",
+        "CLAUSULA QUINTA - RESERVA DE PUNTA COMERCIAL Y CLIENTES PRESENTADOS (12 MESES): Toda negociacion que EL COMITENTE celebre directa o indirectamente con personas presentadas o registradas por EL CORREDOR dentro de los doce (12) meses siguientes a la visita o terminacion del encargo causara el pago integro de la comision.",
         extras,
         "",
-        "MESA CENTRAL VECY BIENES RAICES: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/"
+        "MESA CENTRAL VECY BIENES RAICES: Broker Oficial +57 316 656 9719 | https://wa.me/573166569719 | https://vecy-bienes-raices.vercel.app/"
+      ].filter(Boolean).join("\n");
+
+    case "otrosi_modificatorio":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${new Date().toLocaleDateString("es-CO")}`,
+        `PARTE A (ARRENDADOR / PROMITENTE VENDEDOR / CEDENTE): ${remitente} — Identificacion: ${docRem}`,
+        `PARTE B (ARRENDATARIO / PROMITENTE COMPRADOR / CESIONARIO): ${destinatario} — Identificacion: ${docDest}`,
+        `CONTRATO PRINCIPAL E INMUEBLE: ${direccion} (${ciudad}) | Matricula SNR: ${matricula} | CHIP: ${chip}`,
+        `VALOR / CANON ACTUALIZADO O OBJETO DEL ACUERDO: ${valor}`,
+        "",
+        `CLAUSULADO DE ${params.tipoOtrosi ? params.tipoOtrosi.toUpperCase() : "OTROSI MODIFICATORIO / CESION / ENTREGA ANTICIPADA"}:`,
+        "",
+        "PRIMERA - ANTECEDENTE Y VINCULACION: Las partes suscribieron previamente un contrato principal vigente sobre el inmueble individualizado, y de comun acuerdo (Art. 1602 Codigo Civil) deciden modificar, adicionar o regular sus estipulaciones mediante el presente Otrosi.",
+        "",
+        `SEGUNDA - OBJETO DE LA MODIFICACION / CESION / ENTREGA ANTICIPADA: Se acuerda expresamente la siguiente estipulacion vinculante: ${params.formaPagoDetalle || `Actualizacion de condiciones sobre el inmueble en ${direccion}, plazo de ${plazoMeses} meses, fecha efectiva ${fechaEntrega} y valor/canon de referencia ${valor}.`} En caso de cesion contractual (Art. 887 C.Co.), el cesionario asume integramente los derechos y obligaciones desde la fecha de entrega y aprobacion escrita del contratante cedido.`,
+        "",
+        "TERCERA - TERMINACION ANTICIPADA / INVENTARIO Y PAZ Y SALVO (SI APLICA): De convenirse entrega anticipada del inmueble, las partes suscribiran Acta de Entrega con verificacion fisica, lectura final de contadores, acreditacion de paz y salvo de servicios publicos y administracion, y declaracion expresa sobre condonacion o pago acordado de clausula penal.",
+        "",
+        "CUARTA - VIGENCIA DEL CLAUSULADO NO MODIFICADO Y MERITO EJECUTIVO: Las demas clausulas del contrato principal no modificadas expresamente permanecen vigentes e inalteradas. Este otrosi forma parte integral del titulo ejecutivo original (Ley 527/1999 y C.G.P.).",
+        extras,
+        "",
+        "ACOMPANAMIENTO JURIDICO Y NOTARIAL VECY BIENES RAICES: +57 316 656 9719 | https://wa.me/573166569719 | https://vecy-bienes-raices.vercel.app/"
+      ].filter(Boolean).join("\n");
+
+    case "acta_entrega_inmueble":
+      return [
+        `LUGAR Y FECHA DEL ACTA: ${ciudad}, ${fechaEntrega !== "[FECHA PACTADA DE ENTREGA]" ? fechaEntrega : new Date().toLocaleDateString("es-CO")}`,
+        `QUIEN ENTREGA: ${remitente} — Identificacion: ${docRem}`,
+        `QUIEN RECIBE: ${destinatario} — Identificacion: ${docDest}`,
+        `INMUEBLE OBJETO DE ENTREGA: ${direccion} (${ciudad}) | Matricula SNR: ${matricula} | CHIP: ${chip}`,
+        `REFERENCIA CONTRACTUAL / VALOR: ${valor}`,
+        "",
+        "ACTA FORMAL DE ENTREGA MATERIAL, RESTITUCION E INVENTARIO FISICO:",
+        "",
+        "PRIMERA - ENTREGA MATERIAL DE LLAVES Y POSESION/TENENCIA: En la fecha se hace entrega real y material del inmueble totalmente desocupado, incluyendo juegos de llaves, controles vehiculares/peatonales, garajes y depositos anexos.",
+        "",
+        "SEGUNDA - ESTADO DE CONSERVACION E INVENTARIO: Las partes verifican conjuntamente el estado de pisos, pintura, carpinteria, banos, cocina, vidrios, griferia e instalaciones electricas/hidraulicas, dejando constancia de observaciones especificas en las Disposiciones Especiales.",
+        "",
+        "TERCERA - LECTURA DE MEDIDORES Y PAZ Y SALVO DE SERVICIOS Y ADMINISTRACION: Se dejan registrados los consumos acumulados de acueducto, energia electrica y gas natural hasta el corte de entrega, asi como el paz y salvo de cuotas de administracion de propiedad horizontal y acuerdos sobre saldo final o terminacion anticipada sin reclamaciones adicionales si asi se pacta.",
+        "",
+        "CUARTA - CONSTANCIA PROBATORIA Y FIRMA ELECTRONICA: Suscrita en dos ejemplares o mediante firma electronica certificada (Ley 527 de 1999).",
+        extras,
+        "",
+        "SOPORTE JURIDICO E INVENTARIOS VECY BIENES RAICES: +57 316 656 9719 | https://wa.me/573166569719 | https://vecy-bienes-raices.vercel.app/"
       ].filter(Boolean).join("\n");
 
     default:
@@ -1972,4 +2066,260 @@ export async function generateFinancialAndTaxPdf(
     normativeFramework: meta.normativeFramework
   };
 }
+
+export interface ContractRiskAuditFindingPdf {
+  severidad: "ALTA" | "MEDIA" | "BAJA" | "OK";
+  titulo: string;
+  hallazgo: string;
+  fundamentoLegal: string;
+  redaccionSugerida: string;
+}
+
+export interface ContractRiskAuditPdfParams {
+  contractLabel: string;
+  normativeRegime: string;
+  riskLevel: "VERDE" | "AMARILLO" | "ROJO";
+  riskHeadline: string;
+  summaryPoints: string[];
+  findings: ContractRiskAuditFindingPdf[];
+  missingClauses: string[];
+  recommendedNextSteps: string[];
+  requesterName?: string;
+}
+
+/**
+ * Genera el PDF membretado de Auditoria de Riesgos Contractuales Inmobiliarios VECY.
+ */
+export async function generateContractRiskAuditPdf(
+  report: ContractRiskAuditPdfParams
+): Promise<GeneratedLegalPdfResult> {
+  const meta = getLegalDocumentMetadata("auditoria_riesgos_contractuales");
+  const verificationCode = `VECY-AUD-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - ${report.contractLabel || "CONTRATO INMOBILIARIO"}`
+  );
+
+  const scaffold = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: report.normativeRegime || meta.normativeFramework,
+    headerSubtitle: `Radicado Auditoria Contract.: ${verificationCode} | Validacion Notarial VECY: +57 316 656 9719`
+  });
+
+  const { pdfDoc, fontRegular, fontBold, pageWidth, marginX, maxWidth, drawHeader } = scaffold;
+  let currentPage = pdfDoc.addPage([pageWidth, 792]);
+  let cursorY = drawHeader(currentPage, true);
+
+  const ensureSpace = (needed: number) => {
+    if (cursorY - needed < 82) {
+      currentPage = pdfDoc.addPage([pageWidth, 792]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+
+  // Banner semaforo de riesgo
+  const bannerBg =
+    report.riskLevel === "ROJO"
+      ? rgb(0.98, 0.91, 0.91)
+      : report.riskLevel === "AMARILLO"
+      ? rgb(0.99, 0.96, 0.87)
+      : rgb(0.9, 0.97, 0.92);
+  const bannerBorder =
+    report.riskLevel === "ROJO"
+      ? rgb(0.75, 0.18, 0.18)
+      : report.riskLevel === "AMARILLO"
+      ? rgb(0.76, 0.52, 0.08)
+      : rgb(0.14, 0.52, 0.25);
+  const bannerText =
+    report.riskLevel === "ROJO"
+      ? "SEMAFORO ROJO - RIESGO CONTRACTUAL ALTO (NO FIRMAR SIN CORRECCIONES)"
+      : report.riskLevel === "AMARILLO"
+      ? "SEMAFORO AMARILLO - AJUSTES PREVENTIVOS RECOMENDADOS ANTES DE FIRMA"
+      : "SEMAFORO VERDE - ESTRUCTURA EQUILIBRADA Y AJUSTADA A DERECHO";
+
+  const headlineLines = wrapTextToLines(
+    sanitizePdfWinAnsiText(`${bannerText} | ${report.riskHeadline}`),
+    fontBold,
+    9.2,
+    maxWidth - 20
+  );
+  const bannerH = Math.max(34, headlineLines.length * 13 + 14);
+  ensureSpace(bannerH + 12);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: cursorY - bannerH,
+    width: maxWidth,
+    height: bannerH,
+    color: bannerBg,
+    borderColor: bannerBorder,
+    borderWidth: 1.2
+  });
+  let by = cursorY - 14;
+  for (const line of headlineLines) {
+    currentPage.drawText(line, {
+      x: marginX + 10,
+      y: by,
+      size: 9.2,
+      font: fontBold,
+      color: bannerBorder
+    });
+    by -= 13;
+  }
+  cursorY -= bannerH + 12;
+
+  const drawSectionHeading = (heading: string) => {
+    ensureSpace(26);
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 16,
+      width: maxWidth,
+      height: 18,
+      color: rgb(0.94, 0.92, 0.86)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(heading), {
+      x: marginX + 8,
+      y: cursorY - 11.5,
+      size: 9.5,
+      font: fontBold,
+      color: rgb(0.12, 0.12, 0.14)
+    });
+    cursorY -= 25;
+  };
+
+  const drawBodyLines = (text: string, isBold = false, size = 9.0, color = rgb(0.15, 0.16, 0.2)) => {
+    const lines = wrapTextToLines(sanitizePdfWinAnsiText(text), isBold ? fontBold : fontRegular, size, maxWidth - 8);
+    for (const ln of lines) {
+      ensureSpace(14);
+      currentPage.drawText(ln, {
+        x: marginX + 4,
+        y: cursorY,
+        size,
+        font: isBold ? fontBold : fontRegular,
+        color
+      });
+      cursorY -= 12.8;
+    }
+  };
+
+  drawSectionHeading("1. RESUMEN EJECUTIVO Y MARCO NORMATIVO APLICABLE");
+  if (report.requesterName) {
+    drawBodyLines(`Solicitante / Usuario: ${report.requesterName}`, true);
+  }
+  drawBodyLines(`Regimen evaluado: ${report.normativeRegime}`);
+  for (const pt of report.summaryPoints) {
+    drawBodyLines(`- ${pt}`);
+  }
+  cursorY -= 6;
+
+  drawSectionHeading("2. HALLAZGOS DETECTADOS, CLAUSULAS ABUSIVAS O VACIOS");
+  for (let i = 0; i < report.findings.length; i++) {
+    const f = report.findings[i];
+    drawBodyLines(`${i + 1}. [${f.severidad}] ${f.titulo}`, true, 9.2, rgb(0.1, 0.1, 0.15));
+    drawBodyLines(`   Hallazgo: ${f.hallazgo}`);
+    drawBodyLines(`   Fundamento legal: ${f.fundamentoLegal}`);
+    drawBodyLines(`   Redaccion recomendada: ${f.redaccionSugerida}`, false, 8.8, rgb(0.12, 0.35, 0.18));
+    cursorY -= 4;
+  }
+
+  if (report.missingClauses.length > 0) {
+    drawSectionHeading("3. CLAUSULAS ESENCIALES FALTANTES O POR BLINDAR");
+    for (const m of report.missingClauses) {
+      drawBodyLines(`- ${m}`);
+    }
+    cursorY -= 6;
+  }
+
+  drawSectionHeading("4. PLAN DE ACCION Y VALIDACION NOTARIAL VECY");
+  for (const step of report.recommendedNextSteps) {
+    drawBodyLines(`- ${step}`);
+  }
+
+  ensureSpace(84);
+  const footerBoxY = Math.max(46, cursorY - 72);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 66,
+    color: rgb(0.97, 0.96, 0.92),
+    borderColor: rgb(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("VALIDACION JURIDICA PRESENCIAL Y FIRMA NOTARIAL VECY BIENES RAICES", {
+    x: marginX + 10,
+    y: footerBoxY + 51,
+    size: 8.6,
+    font: fontBold,
+    color: rgb(0.1, 0.1, 0.12)
+  });
+  currentPage.drawText(
+    "1. Esta auditoria es preventiva y preliminar; no reemplaza la revision presencial sobre folios SNR originales.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 38,
+      size: 7.4,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Blindaje de arras, clausula penal, polizas y notariado con Eduardo A. Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 26,
+      size: 7.4,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Radicado: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 13,
+      size: 7.5,
+      font: fontBold,
+      color: rgb(0.2, 0.22, 0.28)
+    }
+  );
+
+  try {
+    const qrDataUrl = await QRCode.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?aud=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 5,
+      width: 56,
+      height: 56
+    });
+  } catch {
+    // Continuar sin QR si el entorno restringe QRCode
+  }
+
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Auditoria Contractual VECY BIENES RAICES"
+  });
+  const safeLabel = sanitizePdfWinAnsiText(report.contractLabel || "CONTRATO")
+    .replace(/[^A-Za-z0-9-]+/g, "_")
+    .toUpperCase();
+  const fileName = `${meta.defaultFileNamePrefix}_${safeLabel}_${verificationCode}.pdf`;
+
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+
 

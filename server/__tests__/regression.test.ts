@@ -13239,6 +13239,233 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:1[5-9]|[2-9]\d)\.0$/);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 202 — PUNTO 5 (SKILL 5): MINUTAS JURÍDICAS PERSONALIZADAS Y AUDITORÍA CONTRACTUAL (v34.16)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("Suite 202 — Skill 5: Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales (v34.16)", () => {
+    it("1. Discrimina preguntas teóricas y protege precedencia frente a CTL, POT, FinTax, IDU, Predial y Notarial", async () => {
+      const {
+        isContractMinutaOrAuditRequest,
+        isConceptualContractQuestion,
+        hasContractDraftMarkers
+      } = await import("../_core/legalContractService");
+      const { isFinancialOrTaxSimulationRequest } = await import("../_core/financialAndTaxRealEstateService");
+      const { isExplicitNotarialLiquidationRequest } = await import("../_core/notarialExpenseService");
+
+      expect(isConceptualContractQuestion("¿Qué son las arras confirmatorias vs retractatorias en Colombia?")).toBe(true);
+      expect(isContractMinutaOrAuditRequest("¿Qué son las arras confirmatorias vs retractatorias en Colombia?")).toBe(false);
+      expect(isContractMinutaOrAuditRequest("¿Qué dice el artículo 518 del Código de Comercio?")).toBe(false);
+
+      expect(isContractMinutaOrAuditRequest("Consulta predial CHIP AAA0044XYZZ")).toBe(false);
+      expect(isContractMinutaOrAuditRequest("Paz y salvo IDU valorización CHIP AAA0044XYZZ")).toBe(false);
+      expect(isContractMinutaOrAuditRequest("Análisis POT norma urbana CHIP AAA0044XYZZ lote 300 m2")).toBe(false);
+      expect(isContractMinutaOrAuditRequest("Simula crédito hipotecario vs leasing de $500 millones a 20 años")).toBe(false);
+      expect(isContractMinutaOrAuditRequest("Liquida los gastos notariales para venta de apartamento en $450 millones")).toBe(false);
+
+      // Cruce crítico: Promesa de compraventa con forma de pago en leasing habitacional pertenece a Skill 5 y NO a FinTax ni Notarial
+      const promesaWithLeasing =
+        "Redáctame una promesa de compraventa para apartamento en Calle 116 # 18-40 Bogotá por $620 millones, " +
+        "Promitente Vendedor: Carlos Gómez CC 79450111, Promitente Comprador: Laura Díaz CC 52890333, " +
+        "forma de pago con leasing habitacional, arras confirmatorias del 10%, matrícula 50N-20991100";
+      expect(isContractMinutaOrAuditRequest(promesaWithLeasing)).toBe(true);
+      expect(isFinancialOrTaxSimulationRequest(promesaWithLeasing)).toBe(false);
+      expect(isExplicitNotarialLiquidationRequest(promesaWithLeasing)).toBe(false);
+      expect(hasContractDraftMarkers("ANOTACIÓN 001 ESCRITURA 123 MATRÍCULA INMOBILIARIA 50C-123456 TRADICIÓN")).toBe(false);
+    });
+
+    it("2. Genera Minutas Personalizadas en PDF Membretado (Promesa, Vivienda Ley 820, Comercial C.Co., Corretaje VECY y Otrosí)", async () => {
+      const { analyzeContractOrMinutaFromWhatsAppInput } = await import("../_core/legalContractService");
+      const { extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+
+      // A) Promesa de Compraventa con arras, FNA/leasing y condición suspensiva estudio de títulos
+      const promesaRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text:
+          "Hazme una minuta personalizada de promesa de compraventa para apartamento en Carrera 15 # 106-30 Bogotá, " +
+          "Promitente Vendedor: Andrés Morales CC 80123456, Promitente Comprador: Sofía Peña CC 1018456789, " +
+          "matrícula 50N-20456789, CHIP AAA0122XYZW, valor $580 millones, forma de pago con FNA y leasing habitacional, " +
+          "arras confirmatorias del 10%, escritura el 2026-12-15 en Notaría 19 de Bogotá",
+        requesterName: "Sofía Peña"
+      });
+      expect(promesaRes.handled).toBe(true);
+      expect(promesaRes.mode).toBe("generate");
+      expect(promesaRes.tipoDocumento).toBe("promesa_compraventa");
+      expect(promesaRes.pdfResult?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+      expect(promesaRes.whatsappReply).toContain("+57 316 656 9719");
+
+      const promesaPdfText = extractTextSnippetsFromPdfBuffer(
+        promesaRes.pdfResult!.pdfBuffer.toString("base64")
+      );
+      expect(promesaPdfText).toContain("50N-20456789");
+      expect(promesaPdfText).toMatch(/Notar[ií]a 19/i);
+      expect(promesaPdfText).toContain("ESTUDIO DE TITULOS");
+
+      // B) Local Comercial Arts. 518-524 C.Co. + Corretaje VECY + Otrosí
+      const comercialRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: "Redáctame un contrato de arrendamiento de local comercial en Calle 85 # 12-18 Bogotá por canon $8.500.000, plazo 24 meses, Arrendador: Inversiones Norte NIT 900111222-3, Arrendatario: Café Centro SAS NIT 901222333-1"
+      });
+      expect(comercialRes.tipoDocumento).toBe("contrato_arrendamiento_comercial");
+      expect(comercialRes.pdfResult?.pdfBuffer.length).toBeGreaterThan(2000);
+
+      const corretajeRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: "Elabora un contrato de corretaje / consignación VECY para casa en Chía por $950 millones, comisión 3%, Comitente: Jorge Ruiz CC 79111222"
+      });
+      expect(corretajeRes.tipoDocumento).toBe("contrato_corretaje");
+      const corretajePdfText = extractTextSnippetsFromPdfBuffer(
+        corretajeRes.pdfResult!.pdfBuffer.toString("base64")
+      );
+      expect(corretajePdfText).toContain("CERO COBROS POR PUBLICACION");
+
+      const otrosiRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: "Genera un otrosí modificatorio de entrega anticipada sin penalidad para el inmueble en Calle 140 # 19-20 Bogotá, fecha 2026-11-30, canon $3.200.000"
+      });
+      expect(otrosiRes.tipoDocumento).toBe("otrosi_modificatorio");
+      expect(otrosiRes.pdfResult?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+    });
+
+    it("3. Ejecuta Auditoría de Riesgos Contractuales en texto y PDF detectando violaciones de Ley 820, C.Co. y Promesa", async () => {
+      const { PDFDocument, StandardFonts } = await import("pdf-lib");
+      const { analyzeContractOrMinutaFromWhatsAppInput } = await import("../_core/legalContractService");
+
+      // Borrador abusivo vivienda urbana (Ley 820) + texto directo
+      const draftViviendaAbusivo =
+        "CLAUSULA PRIMERA: Contrato de arrendamiento de vivienda urbana sobre apartamento en Bogotá. " +
+        "CLAUSULA SEGUNDA: El arrendatario entregará un depósito en efectivo equivalente a 2 cánones de garantía. " +
+        "CLAUSULA TERCERA: El reajuste anual será del IPC + 5 puntos porcentuales. " +
+        "CLAUSULA CUARTA: El arrendador podrá exigir terminación unilateral con preaviso de 15 días y desalojo inmediato sin proceso judicial.";
+
+      const auditVivienda = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: `Audita estas cláusulas de mi contrato:\n${draftViviendaAbusivo}`,
+        requesterName: "Camila"
+      });
+      expect(auditVivienda.handled).toBe(true);
+      expect(auditVivienda.mode).toBe("audit");
+      expect(auditVivienda.auditReport?.riskLevel).toBe("ROJO");
+      expect(auditVivienda.whatsappReply).toMatch(/Art\.?\s*16|Ley 820/i);
+      expect(auditVivienda.whatsappReply).toMatch(/Art\.?\s*20|IPC/i);
+      expect(auditVivienda.whatsappReply).toContain("+57 316 656 9719");
+      expect(auditVivienda.pdfResult?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+
+      // Borrador comercial en PDF ($0 COP extracción sin LLM) violando Arts. 518/520/524 C.Co.
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([612, 792]);
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      page.drawText(
+        "CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL. CLAUSULA TERCERA: El arrendatario hace renuncia expresa al derecho de renovacion del Articulo 518 del Codigo de Comercio. CLAUSULA CUARTA: El desahucio se hara con preaviso de 30 dias.",
+        { x: 40, y: 700, size: 10, font, maxWidth: 530 }
+      );
+      const draftPdfBuffer = Buffer.from(await pdfDoc.save());
+
+      const auditPdfRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: "Por favor revisa los riesgos contractuales del borrador adjunto",
+        pdfBuffer: draftPdfBuffer,
+        pdfMimeType: "application/pdf",
+        requesterName: "Diego"
+      });
+      expect(auditPdfRes.handled).toBe(true);
+      expect(auditPdfRes.mode).toBe("audit");
+      expect(auditPdfRes.auditReport?.riskLevel).toBe("ROJO");
+      expect(auditPdfRes.whatsappReply).toMatch(/524|renovaci[oó]n/i);
+      expect(auditPdfRes.whatsappReply).toMatch(/520|6\s*meses/i);
+      expect(auditPdfRes.pdfResult?.fileName).toContain("Auditoria_Riesgos_Contractuales_VECY");
+    });
+
+    it("4. Opera de extremo a extremo en DM (con popLatestDmPdf y herramientas) y Grupos (@JanIA) con Satisfacción y Google Reviews", async () => {
+      const {
+        JANIA_DM_TOOLS,
+        processPrivateDmConversationalMessage,
+        popLatestDmPdf
+      } = await import("../_core/jania/handlers/dmHandler");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      const { processCirculoMessage } = await import("../_core/jania/handlers/circuloHandler");
+
+      const toolList = JANIA_DM_TOOLS[0].functionDeclarations.map((t: any) => t.name);
+      expect(toolList).toContain("generar_o_auditar_minuta_contractual");
+
+      // DM end-to-end minuta personalizada + verificación de PDF en cola + CTA + satisfacción
+      const dmUser = "573009992021@s.whatsapp.net";
+      const dmReply = await processPrivateDmConversationalMessage(
+        "Hola JanIA, redacta una minuta de arrendamiento de vivienda urbana Ley 820 en Calle 127 # 45-10 Bogotá, canon $3.400.000, plazo 12 meses, Arrendador: Pedro León CC 79123456, Arrendatario: Ana Gil CC 52123456",
+        dmUser,
+        "Ana Gil"
+      );
+      expect(dmReply).toContain("MINUTA PERSONALIZADA GENERADA");
+      expect(dmReply).toContain("+57 316 656 9719");
+      expect(dmReply).toMatch(/satisfech/i);
+
+      const dmPdf = popLatestDmPdf(dmUser);
+      expect(dmPdf).toBeTruthy();
+      expect(dmPdf?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+
+      // Seguimiento de satisfacción en DM -> link de Google Review autónomo
+      const dmThanks = await processPrivateDmConversationalMessage(
+        "Excelente minuta, quedé muy satisfecha muchas gracias",
+        dmUser,
+        "Ana Gil"
+      );
+      expect(dmThanks).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // Grupo (@JanIA en consultingHandler): auditoría de promesa sin notaría ni fecha -> Semáforo Rojo + PDF nativo
+      const groupUser = "573009992022@s.whatsapp.net";
+      const groupRes = await processConsultingMessage(
+        "@JanIA audita esta promesa de compraventa: CLAUSULA PRIMERA: Promitente Vendedor vende a Promitente Comprador apartamento por $400 millones con arras de $40 millones, sin especificar si son confirmatorias ni fecha de entrega.",
+        groupUser,
+        "Carlos Méndez"
+      );
+      expect(groupRes.response).toContain("AUDITORÍA DE RIESGOS CONTRACTUALES");
+      expect(groupRes.response).toContain("+57 316 656 9719");
+      expect(groupRes.response).toMatch(/satisfech/i);
+      expect(groupRes.document).toBeInstanceOf(Buffer);
+      expect(groupRes.fileName).toContain("Auditoria_Riesgos_Contractuales_VECY");
+
+      // Seguimiento de satisfacción en grupo -> Google Reviews
+      const groupSat = await processConsultingMessage(
+        "@JanIA excelente revisión jurídica, muy completa gracias",
+        groupUser,
+        "Carlos Méndez"
+      );
+      expect(groupSat.response).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // Círculo handler
+      const circuloRes = await processCirculoMessage(
+        "@JanIA hazme contrato de corretaje VECY para inmueble en Chapinero por $750 millones, comisión 3%",
+        "573009992023@s.whatsapp.net",
+        "Jani"
+      );
+      expect(circuloRes.response).toContain("MINUTA PERSONALIZADA GENERADA");
+      expect(circuloRes.document).toBeInstanceOf(Buffer);
+      expect(circuloRes.fileName).toContain("Contrato_Corretaje_Inmobiliario_VECY");
+    });
+
+    it("5. Verifica whatsapp-match.ts, politenessService.ts, semilla v34.16 y versión oficial v34.16 / 34.16.0", async () => {
+      const { isRealEstateConsultationForGroup } = await import("../_core/whatsapp-match");
+      const { isUserSatisfactionOrFeedbackReply } = await import("../_core/politenessService");
+
+      expect(
+        isRealEstateConsultationForGroup(
+          "@JanIA audita estas cláusulas de otrosí y arras",
+          undefined,
+          false
+        )
+      ).toBe(true);
+      expect(isUserSatisfactionOrFeedbackReply("Excelente minuta, muchas gracias").isSatisfied).toBe(true);
+      expect(
+        isUserSatisfactionOrFeedbackReply("Ahora redáctame un otrosí modificatorio de terminación anticipada").isSatisfied
+      ).toBe(false);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed16 = SEED_TEACHINGS.find(t => t.id === "seed-minutas-juridicas-personalizadas-auditoria-contractual-v34-16");
+      expect(seed16).toBeDefined();
+      expect(seed16?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[6-9]|[2-9]\d)$/);
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:1[6-9]|[2-9]\d)\.0$/);
+    });
+  });
 });
 
 

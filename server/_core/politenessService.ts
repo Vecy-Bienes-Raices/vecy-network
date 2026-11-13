@@ -334,6 +334,10 @@ export function isUserSatisfactionOrFeedbackReply(
     /\b(?:simula|calcula|pre-?liquida|evalua|hazme|quiero)\b.{0,45}\b(?:credito\s+hipotecari|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|cuota\s+mensual)\b/.test(
       normalized
     ) ||
+    /\b(?:hazme|redacta|elabora|genera|prepara|enviame|audita|revisa|analiza)\b.{0,45}\b(?:minuta|contrato|otrosi|clausula|riesgos\s+contractuales|corretaje|acta\s+de\s+entrega)\b/.test(
+      normalized
+    ) ||
+    /\b(?:otrosi\s+modificatorio|auditoria\s+contractual|clausulas\s+abusivas)\b/.test(normalized) ||
     /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
 
   if (looksLikeNewToolDataRequest) {

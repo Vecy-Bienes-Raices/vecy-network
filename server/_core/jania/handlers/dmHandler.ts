@@ -44,6 +44,11 @@ import {
   analyzeFinancialAndTaxFromWhatsAppInput,
   isFinancialOrTaxSimulationRequest
 } from "../../financialAndTaxRealEstateService";
+import {
+  analyzeContractOrMinutaFromWhatsAppInput,
+  hasContractDraftMarkers,
+  isContractMinutaOrAuditRequest
+} from "../../legalContractService";
 import { getGreetingByTime } from "../../whatsapp-utils";
 import { FlyerVisionResult } from "../types";
 import {
@@ -443,6 +448,17 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["consultaFinancieraTributaria"]
         }
+      },
+      {
+        name: "generar_o_auditar_minuta_contractual",
+        description: "Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios en Colombia: redacta Promesa de Compraventa (arras confirmatorias vs retractatorias vs cláusula penal, crédito/FNA/leasing, condición suspensiva estudio de títulos), Arrendamiento Vivienda Urbana (Ley 820/2003), Arrendamiento Local Comercial (Arts. 518-524 C.Co.), Corretaje VECY (3% venta / 1 canon arriendo / $0 publicación) y Otrosí/Cesión/Entrega Anticipada en PDF Membretado VECY, o audita borradores detectando cláusulas abusivas y vacíos legales.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            solicitudOBorradorContractual: { type: "STRING", description: "Datos de partes, inmueble, canon/precio, forma de pago, arras/plazo o cláusulas/borrador contractual completo a auditar" }
+          },
+          required: ["solicitudOBorradorContractual"]
+        }
       }
     ]
   }
@@ -470,7 +486,8 @@ export type JaniaDmToolType =
   | "marketing_inmobiliario"
   | "estudio_titulos"
   | "norma_urbana_pot"
-  | "financiero_tributario";
+  | "financiero_tributario"
+  | "minuta_auditoria_contractual";
 
 export function extractAcmAttributesFromText(rawText: string): {
   zonaOBarrio?: string;
@@ -1425,6 +1442,35 @@ export async function executeJaniaDmTool(
           reporteOficial:
             finRes.responseText ||
             "Para correr la simulación hipotecaria/leasing, Cap Rate o pre-liquidación tributaria, compárteme el valor del inmueble y el canon mensual o las cifras base."
+        }
+      };
+    }
+    case "generar_o_auditar_minuta_contractual": {
+      const contractInput = String(args.solicitudOBorradorContractual || rawUserText || "").trim();
+      const contractRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: contractInput,
+        requesterName: _userName || undefined
+      });
+      if (contractRes.pdfResult) {
+        setLatestDmPdf(userId, {
+          pdfBuffer: contractRes.pdfResult.pdfBuffer,
+          pdfFileName: contractRes.pdfResult.fileName
+        });
+      }
+      return {
+        toolType: "minuta_auditoria_contractual",
+        resultJson: {
+          solicitud: "generar_o_auditar_minuta_contractual",
+          modo: contractRes.mode,
+          tipoDocumento: contractRes.tipoDocumento,
+          pdfGenerado: Boolean(contractRes.pdfResult),
+          archivoAdjuntado: contractRes.pdfResult?.fileName || null,
+          codigoVerificacion: contractRes.pdfResult?.verificationCode || null,
+          semaforoRiesgo: contractRes.auditReport?.riskLevel || null,
+          exitoso: contractRes.handled,
+          reporteOficial:
+            contractRes.whatsappReply ||
+            "Compárteme los datos de partes, inmueble y condiciones (o el borrador de cláusulas) para generar tu minuta personalizada o auditar riesgos en PDF."
         }
       };
     }
@@ -2664,6 +2710,7 @@ export async function processPrivateDmConversationalMessage(
       !isFinancialOrTaxSimulationRequest(clean) &&
       !isPotUrbanNormRequest(clean) &&
       !isExplicitCtlStudyRequest(clean) &&
+      !isContractMinutaOrAuditRequest(clean) &&
       (isOwnerOrConsignmentInquiry ||
         /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
           cleanLower
@@ -2948,6 +2995,63 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     }
   }
 
+  // 📑 INTERCEPTOR DETERMINÍSTICO DE MINUTAS JURÍDICAS PERSONALIZADAS Y AUDITORÍA CONTRACTUAL (v34.16 — Skill 5):
+  // Genera minutas en PDF Membretado (Promesa, Vivienda Ley 820, Local Comercial C.Co. 518-524, Corretaje VECY, Otrosí/Entrega)
+  // o audita borradores contractuales en texto, PDF o imagen antes del perfilamiento genérico o llamada LLM.
+  const hasAnyDmMedia = Boolean(mediaOptions?.pdfBuffer || mediaOptions?.imageBuffer);
+  if (
+    !isCommercialFlyerImg &&
+    !isReviewValidationContext &&
+    (isContractMinutaOrAuditRequest(clean, hasAnyDmMedia) || hasContractDraftMarkers(clean))
+  ) {
+    const contractDmRes = await analyzeContractOrMinutaFromWhatsAppInput({
+      text: clean,
+      pdfBuffer: mediaOptions?.pdfBuffer,
+      pdfMimeType: mediaOptions?.pdfMimeType,
+      imageBuffer: mediaOptions?.imageBuffer,
+      requesterName: displayName || realName || undefined
+    });
+
+    if (contractDmRes.handled && contractDmRes.whatsappReply) {
+      if (contractDmRes.pdfResult) {
+        setLatestDmPdf(userId, {
+          pdfBuffer: contractDmRes.pdfResult.pdfBuffer,
+          pdfFileName: contractDmRes.pdfResult.fileName
+        });
+      }
+      if (contractDmRes.mode !== "guidance") {
+        await incrementFreeServicesCount(userId);
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+          serviceType:
+            contractDmRes.mode === "audit" ? "auditoria_contractual" : "minuta_contractual",
+          timestamp: Date.now()
+        };
+        await saveUserPerpetualSession(userPerpetualSession);
+      }
+
+      const satisfactionLine =
+        contractDmRes.mode === "guidance"
+          ? ""
+          : `\n\n🤝 *¿Quedaste satisfecho(a) con esta ${
+              contractDmRes.mode === "audit"
+                ? "Auditoría de Riesgos Contractuales"
+                : "Minuta Jurídica Personalizada"
+            }?* Tu opinión me ayuda a seguir afinando mi rigor jurídico para toda la red VECY.`;
+
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const finalContractReply = `${greetingPrefix}${contractDmRes.whatsappReply}${satisfactionLine}`;
+
+      appendDmHistory(userId, "user", clean || "[Contrato / Minuta adjunto]");
+      appendDmHistory(userId, "assistant", finalContractReply);
+      markUserGreetedToday(userId);
+      return finalContractReply;
+    }
+  }
+
   // 🏢 DOCTRINA EDUARDO A. RIVERA (v33.79) — ENTREVISTA MINUCIOSA DE PERFILAMIENTO INMOBILIARIO Y ATERRIZAJE AL ASESOR:
   // Si el usuario (sea colega inmobiliario o cliente) presenta un requerimiento o búsqueda inmobiliaria escueta, incompleta o genérica
   // (sin cifras numéricas de presupuesto, sin alcobas exactas o sin especificaciones indispensables):
@@ -3209,7 +3313,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `===================================================\n` +
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_o_auditar_minuta_contractual, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.\n` +
       `a) Si el usuario envía un número, documento o nombre de empresa con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la razón social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.\n` +
       `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +

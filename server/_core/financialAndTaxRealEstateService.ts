@@ -7,6 +7,7 @@ import { hasCtlTextMarkers, isExplicitCtlStudyRequest } from "./ctlTitleStudySer
 import { isPotUrbanNormRequest } from "./potUrbanNormService";
 import { isIduInquiry } from "./iduValorizacionService";
 import { generateFinancialAndTaxPdf } from "./jania/legalDocumentPdfService";
+import { hasContractDraftMarkers, isContractMinutaOrAuditRequest } from "./legalContractService";
 
 export const UVR_REFERENCIA_2026 = 390.5;
 export const SMMLV_REFERENCIA_2026 = 1_423_500;
@@ -389,9 +390,10 @@ export function parseFinancialAndTaxQuery(text?: string | null): FinancialTaxPar
     );
   if (looksLikeGratitudeOrPraiseOnly) return empty;
 
-  // Guardas estrictas de precedencia para no colisionar con CTL, POT, IDU, Factura Predial o Gastos Notariales puros
+  // Guardas estrictas de precedencia para no colisionar con CTL, POT, Minutas/Auditoria Contractual, IDU, Factura Predial o Gastos Notariales puros
   if (hasCtlTextMarkers(clean) || isExplicitCtlStudyRequest(clean)) return empty;
   if (isPotUrbanNormRequest(clean)) return empty;
+  if (hasContractDraftMarkers(clean) || isContractMinutaOrAuditRequest(clean)) return empty;
   if (isIduInquiry(clean)) return empty;
   if (/\bCHIP\s+AAA[0-9A-Z]{5,10}\b/i.test(clean) && /\b(?:predial|factura|shd)\b/i.test(norm)) {
     return empty;

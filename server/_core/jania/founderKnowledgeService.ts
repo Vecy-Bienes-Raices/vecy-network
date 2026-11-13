@@ -794,6 +794,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 4 — Skill 4: Simulador Hipotecario, Leasing Habitacional, Cap Rate/ROI y Tributación Inmobiliaria Colombia (financialAndTaxRealEstateService.ts, v34.15) en DM y Grupos con PDF Membretado VECY, precedencia segura, CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
     createdAt: "2026-11-13T16:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-minutas-juridicas-personalizadas-auditoria-contractual-v34-16",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios en Colombia + PDF Membretado — Doctrina Eduardo A. Rivera v34.16",
+    directive:
+      "Cuando un usuario consulte por DM o cite a @JanIA en Grupos para generar una Minuta Personalizada o Auditar Cláusulas/Riesgos Contractuales en Colombia (Promesa de Compraventa Art. 1611 C.C. con arras confirmatorias vs retractatorias vs cláusula penal, forma de pago con crédito/FNA/leasing y condición suspensiva de estudio de títulos; Arrendamiento de Vivienda Urbana Ley 820 de 2003 sin depósitos en efectivo Art. 16, tope 1% e IPC Art. 20; Arrendamiento Local Comercial Arts. 518-524 C.Co. con renovación 2 años y desahucio 6 meses; Contrato de Corretaje VECY 3% venta / 1 canon arriendo / $0 cobros por publicación; y Otrosí Modificatorio / Cesión / Acta de Entrega Anticipada): 1) Ejecutar legalContractService.ts y legalDocumentPdfService.ts a $0 COP con adjunto nativo en PDF Membretado VECY BIENES RAÍCES; 2) Ante borradores o cláusulas enviadas en texto/PDF/imagen, auditar violaciones de Ley 820/C.Co., ausencia de fecha/notaría o estudio de títulos y entregar Semáforo de Riesgo + propuestas de redacción en PDF; 3) Mantener precedencia estricta sin colisionar con CTL, POT, FinTax, IDU, Predial o Notarial y sin interceptar preguntas puramente teóricas ni agradecimientos; 4) Incluir CTA presencial/notarial hacia +57 316 656 9719 y el Protocolo Universal de Satisfacción y Google Reviews.",
+    rawText:
+      "Punto 5 — Skill 5: Motor de Minutas Jurídicas Personalizadas (Promesa, Arrendamiento Vivienda Ley 820 / Comercial C.Co. 518-524, Corretaje VECY y Otrosí) y Auditoría de Riesgos Contractuales en PDF Membretado (legalContractService.ts + legalDocumentPdfService.ts, v34.16) en DM y Grupos con CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
+    createdAt: "2026-11-13T18:45:00.000Z",
+    active: true
   }
 ];
 

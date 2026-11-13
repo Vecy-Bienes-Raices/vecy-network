@@ -1069,9 +1069,9 @@ export function isServiceHelpRequest(text: string): 'predial' | 'cedula' | null 
   if (!text || typeof text !== 'string') return null;
   const lower = text.toLowerCase().trim();
 
-  // No capturar consultas financieras, tributarias de venta, Cap Rate, notariales, POT o CTL
+  // No capturar consultas financieras, tributarias de venta, Cap Rate, notariales, POT, CTL ni Minutas/Auditoria Contractual
   if (
-    /\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a)\b/i.test(
+    /\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula)\b/i.test(
       lower
     )
   ) {

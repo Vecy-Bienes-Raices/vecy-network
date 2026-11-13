@@ -27,6 +27,7 @@ import {
 import { analyzeCtlFromWhatsAppInput, hasCtlTextMarkers, isExplicitCtlStudyRequest } from "../../ctlTitleStudyService";
 import { analyzePotUrbanNormFromWhatsAppInput, isPotUrbanNormRequest } from "../../potUrbanNormService";
 import { analyzeFinancialAndTaxFromWhatsAppInput, isFinancialOrTaxSimulationRequest } from "../../financialAndTaxRealEstateService";
+import { analyzeContractOrMinutaFromWhatsAppInput, hasContractDraftMarkers, isContractMinutaOrAuditRequest } from "../../legalContractService";
 
 
 
@@ -177,6 +178,38 @@ export async function processCirculoMessage(
           reactionEmoji: finCirculoCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
+        };
+      }
+    }
+
+    // 📑 INTERCEPTOR DIRECTO 0.8: MINUTAS JURÍDICAS PERSONALIZADAS Y AUDITORÍA CONTRACTUAL + PDF MEMBRETADO (v34.16)
+    const contractCirculoInputText =
+      quotedContext && hasContractDraftMarkers(quotedContext) && !hasContractDraftMarkers(text)
+        ? `${text}\n${quotedContext}`
+        : text;
+    if (
+      isContractMinutaOrAuditRequest(contractCirculoInputText, Boolean(imageBuffer || pdfBuffer)) ||
+      hasContractDraftMarkers(contractCirculoInputText)
+    ) {
+      const contractCirculoCheck = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: contractCirculoInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: cleanFirstName || realName || undefined
+      });
+      if (contractCirculoCheck.handled && contractCirculoCheck.whatsappReply) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response:
+            contractCirculoCheck.mode === "guidance"
+              ? contractCirculoCheck.whatsappReply
+              : appendGroupSatisfactionClosing(contractCirculoCheck.whatsappReply),
+          reactionEmoji: contractCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: contractCirculoCheck.pdfResult?.pdfBuffer,
+          fileName: contractCirculoCheck.pdfResult?.fileName
         };
       }
     }

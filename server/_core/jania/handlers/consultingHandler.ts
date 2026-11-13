@@ -50,6 +50,11 @@ import {
   analyzeFinancialAndTaxFromWhatsAppInput,
   isFinancialOrTaxSimulationRequest,
 } from "../../financialAndTaxRealEstateService";
+import {
+  analyzeContractOrMinutaFromWhatsAppInput,
+  hasContractDraftMarkers,
+  isContractMinutaOrAuditRequest,
+} from "../../legalContractService";
 
 /**
  * Añade de forma idempotente el cierre doctrinal de satisfacción (v34.11/v34.12)
@@ -211,6 +216,8 @@ export async function processConsultingMessage(
       hasCtlTextMarkers(messageToProcess) ||
       isPotUrbanNormRequest(messageToProcess) ||
       isFinancialOrTaxSimulationRequest(messageToProcess) ||
+      isContractMinutaOrAuditRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) ||
+      hasContractDraftMarkers(messageToProcess) ||
       isCreativeImgReq ||
       isExplicitLegalPdfRequest(messageToProcess) ||
       extractAllCedulasForVerification(messageToProcess, false).length > 0;
@@ -371,6 +378,45 @@ export async function processConsultingMessage(
           reactionEmoji: finCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: "",
+        };
+      }
+    }
+
+    // 📑 INTERCEPTOR DIRECTO 0.8: MINUTAS JURÍDICAS PERSONALIZADAS Y AUDITORÍA DE RIESGOS CONTRACTUALES + PDF MEMBRETADO (v34.16)
+    const contractGroupInputText =
+      quotedContext && hasContractDraftMarkers(quotedContext) && !hasContractDraftMarkers(messageToProcess)
+        ? `${messageToProcess}\n${quotedContext}`
+        : messageToProcess;
+    if (
+      isContractMinutaOrAuditRequest(contractGroupInputText, Boolean(imageBuffer || pdfBuffer)) ||
+      hasContractDraftMarkers(contractGroupInputText)
+    ) {
+      const contractCheck = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: contractGroupInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: targetName || realName || undefined,
+      });
+      if (contractCheck.handled && contractCheck.whatsappReply) {
+        const finalContractResp =
+          contractCheck.mode === "guidance"
+            ? contractCheck.whatsappReply
+            : appendGroupSatisfactionClosing(contractCheck.whatsappReply);
+        console.log(
+          `[JanIA-ContractSkill5] Operación contractual (${contractCheck.mode} / ${contractCheck.tipoDocumento}) ejecutada en grupo para ${userId} (PDF: ${Boolean(contractCheck.pdfResult)})`
+        );
+        appendConsultingHistory(userId, "user", text || "[Contrato / Minuta adjunto]");
+        appendConsultingHistory(userId, "assistant", finalContractResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalContractResp,
+          reactionEmoji: contractCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: contractCheck.pdfResult?.pdfBuffer,
+          fileName: contractCheck.pdfResult?.fileName,
         };
       }
     }
@@ -955,6 +1001,35 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
           reactionEmoji: finFallback.reactionEmoji,
           document: finFallback.pdfBuffer,
           fileName: finFallback.pdfFileName,
+        };
+      }
+    }
+
+    if (
+      isContractMinutaOrAuditRequest(text, Boolean(imageBuffer || pdfBuffer)) ||
+      hasContractDraftMarkers(text)
+    ) {
+      const contractFallback = await analyzeContractOrMinutaFromWhatsAppInput({
+        text,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: firstName || undefined,
+      }).catch(() => null);
+      if (contractFallback?.handled && contractFallback.whatsappReply) {
+        const finalContractFallbackResp =
+          contractFallback.mode === "guidance"
+            ? contractFallback.whatsappReply
+            : appendGroupSatisfactionClosing(contractFallback.whatsappReply);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalContractFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalContractFallbackResp,
+          reactionEmoji: contractFallback.reactionEmoji,
+          document: contractFallback.pdfResult?.pdfBuffer,
+          fileName: contractFallback.pdfResult?.fileName,
         };
       }
     }

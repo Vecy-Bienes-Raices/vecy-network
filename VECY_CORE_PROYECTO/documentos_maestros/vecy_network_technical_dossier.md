@@ -330,6 +330,17 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.16 — Noviembre 2026
+
+#### [v34.16.0] — 2026-11-13: Punto 5 — Skill 5: Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios + PDF Membretado (Doctrina Eduardo A. Rivera)
+- **Problema / Diagnóstico Identificado**:
+  - JanIA necesitaba generar minutas jurídicas personalizadas en PDF Membretado de VECY BIENES RAÍCES con datos reales del negocio y auditar cláusulas/borradores contractuales en texto, PDF o imagen bajo Ley 820 de 2003, Código de Comercio (Arts. 518–524 y 1340–1346) y Código Civil (Art. 1611, arras confirmatorias vs retractatorias vs cláusula penal), manteniendo separación estricta frente a `ctlTitleStudyService.ts`, `potUrbanNormService.ts`, `financialAndTaxRealEstateService.ts`, `iduValorizacionService.ts`, `predialService.ts` y `notarialExpenseService.ts`, y sin interceptar preguntas teóricas ni agradecimientos.
+- **Solución Quirúrgica Implementada**:
+  1. **`server/_core/legalContractService.ts`**: Extractor de datos contractuales (`parseContractGenerationData`), auditoría determinística a `$0 COP` (`auditContractDraftText` con Semáforo `ROJO`/`AMARILLO`/`VERDE`) y orquestador `analyzeContractOrMinutaFromWhatsAppInput` con soporte de texto, PDF (`extractTextSnippetsFromPdfBuffer`) e imagen.
+  2. **`server/_core/jania/legalDocumentPdfService.ts`**: Extendidos `LegalDocumentType`, `LegalDocumentPdfParams` y `buildDefaultLegalBody` (Promesa, Vivienda Ley 820, Local Comercial C.Co., Corretaje VECY 3%/1 canon/$0 publicación, Otrosí/Cesión y Acta de Entrega), además de `generateContractRiskAuditPdf` sobre `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+  3. **Canales DM y Grupos**: Guardas en `financialAndTaxRealEstateService.ts`, `notarialExpenseService.ts`, `predialService.ts` y `politenessService.ts`; integración en `dmOnboardingAndDocsHelper.ts`, `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts` y `whatsapp-match.ts`, con CTA `+57 316 656 9719` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  4. **Gobernanza y Pruebas**: Semilla `seed-minutas-juridicas-personalizadas-auditoria-contractual-v34-16` en `founderKnowledgeService.ts`, Suite 202 (5/5 tests) en `regression.test.ts` y versión `v34.16` (`34.16.0`) en `shared/const.ts` y `package.json`.
+
 ### 🔖 v34.15 — Noviembre 2026
 
 #### [v34.15.0] — 2026-11-13: Punto 4 — Skill 4: Simulador Hipotecario, Leasing Habitacional, Cap Rate / ROI y Pre-liquidación Tributaria Inmobiliaria + PDF Membretado (Doctrina Eduardo A. Rivera)

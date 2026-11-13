@@ -772,6 +772,18 @@ export function isExplicitNotarialLiquidationRequest(text: string, senderId?: st
     return false;
   }
 
+  // No capturar minutas contractuales personalizadas ni auditorias de clausulas (Skill 5) salvo peticion explicita de liquidacion notarial
+  const looksLikeSkill5ContractOrAudit =
+    /\b(?:minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|arriendo|corretaje|consignaci[oó]n)|otros[ií]|audita(?:me)?|auditor[ií]a\s+contractual|riesgos?\s+contractual(?:es)?|cl[aá]usulas?\s+abusivas?)\b/i.test(
+      clean
+    ) &&
+    !/\b(?:liquidar|liqu[ií]da(?:me|nos|r)?|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?)\s+los\s+gastos\s+notariales)\b/i.test(
+      clean
+    );
+  if (looksLikeSkill5ContractOrAudit) {
+    return false;
+  }
+
   return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 

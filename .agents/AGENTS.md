@@ -184,7 +184,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.15 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.16 — Noviembre 2026
+
+### Novedades v34.16 (Punto 5 — Skill 5: Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios en Colombia + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Prioridad #5 del Roadmap de Skills de JanIA:**
+     - Dotar a JanIA (DM `dmHandler.ts` y citada con `@JanIA` en grupos `consultingHandler.ts` / `circuloHandler.ts` / `whatsapp-match.ts`) de un motor contractual determinístico a `$0 COP` que genere **Minutas Personalizadas en PDF Membretado de VECY BIENES RAÍCES** (Promesa de Compraventa Art. 1611 C.C. con arras confirmatorias vs retractatorias vs cláusula penal, pago crédito/FNA/leasing y condición suspensiva de estudio de títulos; Arrendamiento Vivienda Urbana Ley 820/2003; Arrendamiento Local Comercial Arts. 518–524 C.Co.; Contrato de Corretaje VECY 3% venta / 1 canon arriendo / $0 publicación; Otrosí Modificatorio / Cesión / Acta de Entrega Anticipada) y realice **Auditoría de Riesgos Contractuales** sobre texto/PDF/imagen entregando Semáforo y recomendaciones en PDF.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `server/_core/legalContractService.ts`: Motor contractual completo (`hasContractDraftMarkers`, `isConceptualContractQuestion`, `isContractMinutaOrAuditRequest`, `parseContractGenerationData`, `auditContractDraftText`, `analyzeContractOrMinutaFromWhatsAppInput`).
+     - `server/_core/jania/legalDocumentPdfService.ts`: Ampliación de `LegalDocumentType` (`"otrosi_modificatorio"`, `"acta_entrega_inmueble"`, `"auditoria_riesgos_contractuales"`), `LegalDocumentPdfParams` personalizados, `buildDefaultLegalBody` y `generateContractRiskAuditPdf` con QR de trazabilidad VECY.
+     - Blindaje de precedencia en `financialAndTaxRealEstateService.ts`, `notarialExpenseService.ts`, `predialService.ts` y `politenessService.ts`; integración en `dmOnboardingAndDocsHelper.ts`, `dmHandler.ts` (`generar_o_auditar_minuta_contractual`, guarda en `isCommissionOrCostInquiry` y pre-interceptor), `consultingHandler.ts` (`isOtherToolRequest`, Interceptor 0.8 y fallback `catch`), `circuloHandler.ts` y `whatsapp-match.ts`, con CTA notarial `+57 316 656 9719` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  3. **Gobernanza y Suite de Regresión 202:**
+     - Semilla `seed-minutas-juridicas-personalizadas-auditoria-contractual-v34-16` en `founderKnowledgeService.ts` y Suite 202 (5/5 tests) en `regression.test.ts` + actualización de `shared/const.ts` (`v34.16`) y `package.json` (`34.16.0`).
+- **Validación Limpia ($0 COP):** `NODE_ENV=test npm test` | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.15 — Noviembre 2026
 
 ### Novedades v34.15 (Punto 4 — Skill 4: Motor Especializado de Simulación Hipotecaria, Leasing Habitacional, Rentabilidad Cap Rate / Cash-on-Cash / ROI y Pre-liquidación Tributaria Inmobiliaria Colombia + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
