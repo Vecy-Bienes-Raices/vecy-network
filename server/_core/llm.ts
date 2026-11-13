@@ -48,8 +48,49 @@ export const MECHANICAL_MODELS = [
   "gemini-3.5-flash",
 ];
 
-// Modelos ordenados por prioridad de fallback (priorizando alto razonamiento)
-const FALLBACK_MODELS = HIGH_REASONING_MODELS;
+// Modelos ordenados por prioridad de fallback ligero (priorizando modelos Flash-Lite gratuitos de baja latencia)
+const FALLBACK_MODELS = MECHANICAL_MODELS;
+
+export interface LlmReasoningClassification {
+  highReasoning: boolean;
+  allowPaidFailover: boolean;
+  reason: string;
+}
+
+/**
+ * Clasificador determinístico ($0 COP) de complejidad cognitiva para gobernanza de Gemini.
+ * Evita desperdiciar modelos de alto razonamiento o la clave de pago en saludos o charla simple.
+ */
+export function classifyLlmReasoningComplexity(
+  text: string,
+  options?: {
+    hasImage?: boolean;
+    hasPdf?: boolean;
+    hasTools?: boolean;
+    enableSearch?: boolean;
+    forceHighReasoning?: boolean;
+  }
+): LlmReasoningClassification {
+  if (options?.forceHighReasoning) {
+    return { highReasoning: true, allowPaidFailover: true, reason: "forced_high_reasoning" };
+  }
+  if (options?.hasImage || options?.hasPdf) {
+    return { highReasoning: true, allowPaidFailover: true, reason: "multimodal_attachment" };
+  }
+  const normalized = String(text || "").trim();
+  const isComplexDomain = /\b(juridic[oa]|legal|ley\s+\d+|c[oó]digo\s+(?:civil|comercio|general)|estatuto\s+tributario|notarial|escritura|contrato|minuta|cl[aá]usula|promesa|tutela|demanda|embargo|sucesi[oó]n|falsa\s+tradici[oó]n|tradici[oó]n\s+y\s+libertad|ctl|estudio\s+de\s+t[ií]tulos|pot|norma\s+urbana|sinupot|ideca|tributari[oa]|ganancia\s+ocasional|retenci[oó]n\s+en\s+la\s+fuente|timbre|hipotec|leasing|cap\s*rate|roi|tasa\s+de\s+inter[eé]s|propiedad\s+horizontal|rph|asamblea|coeficiente|aval[uú]o|peritaje|fiduci|sagrilaft|sarlaft|extinci[oó]n\s+de\s+dominio|comparativo|acm|sondeo\s+de\s+mercado|desenglobe|englobe)\b/i.test(normalized);
+  if (isComplexDomain) {
+    return { highReasoning: true, allowPaidFailover: true, reason: "complex_domain_query" };
+  }
+  if (options?.enableSearch || normalized.length > 260) {
+    return { highReasoning: true, allowPaidFailover: true, reason: "long_or_search_query" };
+  }
+  return { highReasoning: false, allowPaidFailover: false, reason: "lightweight_conversational" };
+}
+
+export function selectGeminiModelsForTask(highReasoning: boolean): string[] {
+  return highReasoning ? [...HIGH_REASONING_MODELS] : [...MECHANICAL_MODELS];
+}
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
 let lastCallTimestamp = 0;
@@ -73,6 +114,7 @@ export async function invokeLLM({
   provider = "google",
   model,
   highReasoning = false,
+  allowPaidFailover,
   imageBuffer,
   pdfBuffer,
   pdfMimeType,
@@ -85,6 +127,7 @@ export async function invokeLLM({
   provider?: LLMProvider,
   model?: string,
   highReasoning?: boolean,
+  allowPaidFailover?: boolean,
   imageBuffer?: string, 
   pdfBuffer?: string, 
   pdfMimeType?: string, 
@@ -95,7 +138,7 @@ export async function invokeLLM({
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning, temperature);
+  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools, highReasoning, temperature, allowPaidFailover);
 }
 
 /**
@@ -111,8 +154,13 @@ async function invokeGemini(
   enableSearch?: boolean,
   tools?: any[],
   highReasoning: boolean = false,
-  temperature?: number
+  temperature?: number,
+  allowPaidFailover?: boolean
 ) {
+  const effectiveAllowPaid =
+    allowPaidFailover !== undefined
+      ? allowPaidFailover
+      : Boolean(highReasoning || imageBuffer || pdfBuffer);
   const baseModelList = highReasoning ? HIGH_REASONING_MODELS : FALLBACK_MODELS;
   const modelsToTry = customModel ? [customModel, ...baseModelList.filter(m => m !== customModel)] : baseModelList;
   const allKeys = getGeminiKeys();
@@ -181,7 +229,7 @@ async function invokeGemini(
     // Intentar a través de las claves del Pool (Nivel 1 Gratis -> Nivel 2 Pago de Emergencia)
     for (let keyAttempt = 0; keyAttempt < totalAttempts; keyAttempt++) {
       if (modelUnavailable) break;
-      const activeKeyInfo = geminiKeyManager.getActiveKey();
+      const activeKeyInfo = geminiKeyManager.getActiveKey({ allowPaidFailover: effectiveAllowPaid });
       const activeKey = activeKeyInfo.key;
       const keyNum = activeKeyInfo.index;
       const tierTag = activeKeyInfo.isPaid ? "Nivel 2 Pago 🚨" : `Nivel 1 Gratis #${keyNum}`;
@@ -194,6 +242,7 @@ async function invokeGemini(
       for (let attempt = 1; attempt <= 1; attempt++) {
         try {
           if (!inTest) await paceRequest();
+          geminiKeyManager.recordLlmUsage(activeKeyInfo.isPaid);
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
           
           // Timeout seguro de 25 segundos para razonamientos jurídicos complejos y function calling

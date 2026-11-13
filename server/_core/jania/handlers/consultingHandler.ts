@@ -7,7 +7,7 @@ import { checkStrictOffTopic } from "../heuristics";
 import { transcribeAudio } from "../../voiceTranscription";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { getGreetingByTime, getColombiaDateTimeContext, extractFirstName, sanitizeResponseMarkdown, parseSafeJSON } from "../parsers";
-import { invokeLLM } from "../../llm";
+import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { JanIAResult } from "../types";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
@@ -646,8 +646,8 @@ export async function processConsultingMessage(
       `3. **CONSULTA_GENERAL**: Consultas legales, tributarias, sondeos de mercado de m², redacción de minutas o marketing (emoji 💡 o ⚖️). Responde de forma completa, estructurada y profesional.\n\n` +
       `## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDRÍO TOTAL:\n` +
       `- **SOLUCIÓN TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cláusula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m² (estudio comparativo), ¡ENTRÉGALE LA SOLUCIÓN COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQUÍ EN EL CHAT!\n` +
-      `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RAÍCES**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RAÍCES, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. Anímalos a aprovechar esta oportunidad e invitar a más colegas a unirse a la red.\n` +
-      `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita por ser miembro de VECY BIENES RAÍCES; y si se refiere a gastos notariales externos, liquidación de impuestos o si pregunta por avalúos certificados de Lonja, explícale con amabilidad y precisión que en VECY no realizamos avalúos certificados por perito ni visitas in situ, sino estudios de mercado ágiles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.\n` +
+      `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RAÍCES (PARA TODO PÚBLICO)**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RAÍCES, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para todo el público (agentes inmobiliarios, propietarios directos, compradores e inversionistas). Si aún no conoces en calidad de qué escribe el usuario, puedes invitarlo cordialmente a contar si actúa como agente, propietario directo o comprador/inversionista para afinar la orientación.\n` +
+      `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita en VECY BIENES RAÍCES para todo público (y para propietarios directos el corretaje es 0 pesos anticipados, solo 3% venta o 1 canon arriendo al cierre); y si se refiere a gastos notariales externos, liquidación de impuestos o si pregunta por avalúos certificados de Lonja, explícale con amabilidad y precisión que en VECY no realizamos avalúos certificados por perito ni visitas in situ, sino estudios de mercado ágiles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.\n` +
       `- **ESTRUCTURA PERSUASIVA OBLIGATORIA PARA CONSULTAS DE ALTO VALOR (DOCTRINA VECY v33.01)**:\n` +
       `  Aplica cuando el usuario plantee consultas sobre:\n` +
       `  a) Recuperación de comisiones inmobiliarias adeudadas o "by-passing" (Arts. 1340-1346 C.Co, validez de mensajes de datos Ley 527 de 1999).\n` +
@@ -805,9 +805,17 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"))
     );
 
+    const groupLlmComplexity = classifyLlmReasoningComplexity(messageToProcess, {
+      hasImage: Boolean(imageBuffer),
+      hasPdf: Boolean(pdfBuffer),
+      enableSearch: needsSearch && !isNormativeOrCurrencyQuery
+    });
+
     const llmRes = await invokeLLM({
       messages,
       responseFormat: { type: "json_object" },
+      highReasoning: groupLlmComplexity.highReasoning,
+      allowPaidFailover: groupLlmComplexity.allowPaidFailover,
       imageBuffer,
       pdfBuffer,
       pdfMimeType,

@@ -17,9 +17,13 @@ import {
   getUser402040Agreement,
   setUserOwnerCorretaje,
   getUserOwnerCorretaje,
+  setUserBusinessRole,
+  getUserBusinessRole,
+  detectUserBusinessRoleFromText,
   checkAlreadyGreeted,
   markUserGreetedToday
 } from "../sessionManager";
+import { buildSessionOnboardingDirectives as buildDmSessionDirectives } from "./dmOnboardingAndDocsHelper";
 import { fetchWebUrlContent } from "../../scraper";
 import { getDb } from "../../../db";
 import { properties, solicitudes } from "../../../../drizzle/schema";
@@ -27,7 +31,7 @@ import { cleanColombianPhone, resolvePropertyAddress } from "../../agendaWhatsAp
 import { eq, and, or, sql, desc } from "drizzle-orm";
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName } from "../../nameAndGenderResolver";
-import { invokeLLM } from "../../llm";
+import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { executeMarketValuationSurvey } from "../../valuation";
@@ -1656,9 +1660,9 @@ export async function synthesizeToolResponseWithGemini(
       `  * RADICADO OFICIAL ESTRUCTURADO OBLIGATORIO: Muestra de primero y con total orgullo el código oficial devuelto en el JSON (campo 'registroId', ej. *REQ-1106* o *ID #1106*) confirmando que su búsqueda/inmueble quedó formalmente radicado e indexado en el motor autoritativo de base de datos de VECY BIENES RAÍCES.\n` +
       `  * Confirma al usuario con señorío, calidez y naturalidad humana que su requerimiento o inmueble ha sido registrado e indexado exitosamente en la base de datos de VECY Network para participar en el motor inteligente de matching.\n` +
       `  * DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA):\n` +
-      `    - En la red inmobiliaria de VECY Network, la gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS (asesores, inmobiliarias, brokers independientes) con clientes.\n` +
-      `    - Queda TERMINANTEMENTE PROHIBIDO asumir o calificar al interlocutor como "comprador directo" o "propietario directo" por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'.\n` +
-      `    - Salvo que el usuario haya declarado explícita e inequívocamente ser comprador o propietario directo sin intermediario ('soy comprador directo', 'es para mí', 'soy el dueño'), JanIA le pregunta con amabilidad y señorío: "¿Nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?".\n` +
+      `    - En VECY Network atendemos con calidez a todo el público (agentes inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios).\n` +
+      `    - Queda TERMINANTEMENTE PROHIBIDO asumir o calificar sin confirmación al interlocutor como "colega", "comprador directo" o "propietario directo" por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'.\n` +
+      `    - Si el usuario aún no ha confirmado su rol en sesión, pregúntale brevemente con calidez en calidad de qué escribe (Agente/Inmobiliaria, Propietario directo o Comprador/Inversionista/Arrendatario). Una vez identificado, PROHIBIDO volver a preguntarle.\n` +
       `    - REGLAS DE ONBOARDING DE JANIA (DOCTRINA EDUARDO A. RIVERA):\n` +
       `      * AGENTE INMOBILIARIO QUE RECHAZA EL MODELO 40/20/40: Registrarlo en el sistema con su radicado oficial (ID #...), pero advertirle con total transparencia y cortesía que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado por nuestra dirección comercial para adquirir un plan de pago mensual o anual (plan de suscripción de pago (mensual o anual)).\n` +
       `      * PROPIETARIOS DIRECTOS (VENTA/ARRIENDO): JanIA debe exigir la aceptación de los Términos y Condiciones de corretaje virtual, pedir su correo electrónico para el envío formal, radicar su inmueble en el sistema (ID #PROP...), y recordarle comunicarse directamente al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato de corretaje, explicarle las condiciones previas a la publicación en el portal (https://vecy-bienes-raices.vercel.app/) y acordar la comisión ante un cierre comercial.\n` +
@@ -1721,7 +1725,12 @@ export async function synthesizeToolResponseWithGemini(
   ];
 
   try {
-    const res = await invokeLLM({ messages: synthPrompt, highReasoning: true });
+    const synthComplexity = classifyLlmReasoningComplexity(userMessage);
+    const res = await invokeLLM({
+      messages: synthPrompt,
+      highReasoning: synthComplexity.highReasoning,
+      allowPaidFailover: synthComplexity.allowPaidFailover
+    });
     let text = res.choices[0]?.message?.content || "";
     if (text) {
       text = sanitizeResponseMarkdown(text.trim());
@@ -2167,11 +2176,17 @@ export async function processPrivateDmConversationalMessage(
     timeSalutation = "Buenas noches";
   }
 
-  // Expediente Perpetuo y Distinción Nuevo vs. Recurrente (Nivel ARGON — v33.30)
+  // Expediente Perpetuo y Distinción Nuevo vs. Recurrente (Nivel ARGON — v33.30 / Perfilamiento Universal v34.18)
   const isFirstTimeUser = await isNewUser(userId);
   await incrementUserMessageCount(userId);
-  const userPerpetualSession = await getUserPerpetualSession(userId, userName);
+  let userPerpetualSession = await getUserPerpetualSession(userId, userName);
   const hasVerifiedReview = userPerpetualSession.hasVerifiedGoogleReview || isEduardoOrJani(userId);
+
+  // 🧭 Detección y persistencia automática de rol de negocio en primer contacto o turns posteriores (v34.18)
+  const detectedRoleFromText = !isEduardoOrJani(userId) ? detectUserBusinessRoleFromText(clean) : undefined;
+  if (detectedRoleFromText) {
+    userPerpetualSession = await setUserBusinessRole(userId, detectedRoleFromText, { sourceText: clean });
+  }
 
   // Historial conversacional de 72 horas y verificación de interacción en últimas 6 horas
   const history = await getOrLoadDmHistory(userId);
@@ -2488,8 +2503,11 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
-  // 🤝 PROTOCOLO COMERCIAL Y REGLAS DE ONBOARDING - FILTRO 40/20/40 (Doctrina v33.33 / v33.59 / v33.63 / v33.73)
-  let context402040Directive = "";
+  // 🤝 PROTOCOLO COMERCIAL Y REGLAS DE ONBOARDING - FILTRO 40/20/40 + ROL UNIVERSAL (v33.33 / v34.18)
+  const sessionOnboardingDirectives = await buildDmSessionDirectives(userId);
+  let context402040Directive = sessionOnboardingDirectives.context402040Directive;
+  const persistedBusinessRole = sessionOnboardingDirectives.identifiedRole;
+  const contextRoleDirective = sessionOnboardingDirectives.contextRoleDirective;
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     // 🤖 DOCTRINA EDUARDO A. RIVERA (v33.91) — INTERÉS EN AGENTE IA PROPIO PARA EMPRESA O INMOBILIARIA:
     // Si el usuario pregunta cómo tener una IA como JanIA, un bot que asista a sus clientes o automatice su inmobiliaria/empresa:
@@ -2558,11 +2576,12 @@ export async function processPrivateDmConversationalMessage(
         `4️⃣ **Avalúos Comerciales y Sondeos de Mercado (ACM) 📊:** Calculo valor estimado por m² y cánones de arrendamiento sugeridos por sector.\n` +
         `5️⃣ **Estudio Creativo de Imágenes y Flyers IA 🎨:** Creo piezas gráficas y flyers publicitarios para tus inmuebles a partir de tus fotos o descripciones.\n` +
         `6️⃣ **Trámites Catastrales y Notariales 🏛️:** Consulta de facturas oficiales de predial en Bogotá (CHIP), liquidación de gastos notariales 50/50 y paz y salvos del IDU.\n\n` +
-        `💰 **¿CUÁL ES EL COSTO? (Transparencia Total):**\n` +
+        `💰 **¿CUÁL ES EL COSTO? (Transparencia Total para Todo Público):**\n` +
         `• 🤝 **Para Agentes Inmobiliarios y Colegas:** ¡El servicio es **100% GRATIS ($0 COP)**! No cobramos suscripción ni membresías por usar mis herramientas. Operamos bajo el modelo colaborativo 40/20/40 únicamente cuando cerramos un negocio juntos.\n` +
         `• 🏡 **Para Propietarios Directos:** Publicar y pautar tu inmueble en nuestra red es **totalmente GRATUITO ($0 COP anticipados)**. Solo cobramos comisión por éxito ante el cierre efectivo del negocio: **3% en venta** o el **primer canon en arriendo**.\n` +
+        `• 🔑 **Para Compradores, Inversionistas y Arrendatarios Directos:** Todas mis herramientas (búsqueda, estudio de títulos CTL, norma POT, Cap Rate/hipotecario, predial e IDU) son **100% GRATUITAS ($0 COP)** con acompañamiento directo de VECY (+57 316 656 9719).\n` +
         `• 🤖 **Si deseas una Agente IA como JanIA para tu propia empresa:** JanIA fue desarrollada a la medida por el **Ing. Eduardo A. Rivera** (+57 316 656 9719). Podemos conectarte con él para cotizar la implementación personalizada de una IA que asista a tus clientes y ofrezca tus servicios.\n\n` +
-        `Cuéntame: ¿Eres agente inmobiliario, propietario de un inmueble o buscas una solución de IA para tu empresa? ¡Dime qué necesitas y te oriento al instante! 🤝🚀`;
+        `${!persistedBusinessRole ? "Cuéntame en calidad de qué nos escribes: ¿eres agente/inmobiliaria, propietario directo, comprador/inversionista o buscas soluciones de IA? ¡Dime qué necesitas y te oriento al instante! 🤝🚀" : "¡Dime qué propiedad, estudio o trámite necesitas ahora mismo y te oriento al instante! 🤝🚀"}`;
 
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", howItWorksReply);
@@ -2710,7 +2729,7 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // 🏡 REGLAS DE ONBOARDING - PROPIETARIOS DIRECTOS (VENTA O ARRIENDO) (Doctrina Eduardo A. Rivera)
-  let contextOwnerDirective = "";
+  let contextOwnerDirective = sessionOnboardingDirectives.contextOwnerDirective;
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const isExplicitOwnerStatement = /\b(?:soy\s+(?:el\s+|la\s+)?(?:dueñ[oa]|propietari[oa]|dueño\s+directo|dueña\s+directa|propietario\s+directo|propietaria\s+directa)|vendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|arriendo\s+mi\s+(?:apto|apartamento|casa|predio|lote|inmueble|bodega)|tengo\s+mi\s+(?:apto|apartamento|casa|inmueble)\s+en\s+(?:venta|arriendo)|pongo\s+en\s+(?:venta|arriendo)\s+mi|propietari[oa]\s+direct[oa]|dueñ[oa]\s+direct[oa]|publicar\s+mi\s+(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca)|pautar\s+(?:mi\s+)?(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca)|consignar\s+(?:mi\s+)?(?:apto|apartamento|casa|inmueble|local|predio|bodega|finca))\b/i.test(cleanLower);
 
@@ -2764,6 +2783,7 @@ export async function processPrivateDmConversationalMessage(
     ) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.es_propietario_directo = true;
+      userPerpetualSession.keyFacts.rol_identificado = "propietario_directo";
       userPerpetualSession.keyFacts.owner_commission_explained = true;
       await saveUserPerpetualSession(userPerpetualSession);
 
@@ -3259,11 +3279,11 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `  * CERO PREGUNTAS REPETITIVAS EN BUCLE (NO ROBOT): Si ya le preguntaste en el mensaje o turno anterior si tiene un inmueble para ofrecer o busca una propiedad, ESTÁ TERMINANTEMENTE PROHIBIDO REPETIR ESA MISMA PREGUNTA O CUESTIONARIO. Escucha lo que acaba de responderte o preguntarte (ej: si pregunta sobre comisiones, aclara el 40/20/40 y pregúntale si le gustaría operar bajo esa figura para sus negocios; no vuelvas a recitar la plantilla genérica de bienvenida).\n` +
       `  * Si es el PRIMER mensaje del día o nueva sesión (NO): Saluda con calidez, cortesía y señorío profesional OBLIGATORIAMENTE al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n\n` +
       `===================================================\n` +
-      `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE:\n` +
+      `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE Y ROL UNIVERSAL (v34.18):\n` +
       `===================================================\n` +
       `${isFirstTimeUser
-        ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez en su vida). Dale una bienvenida única, fresca, cercana y humana, transmitiendo confianza y empatía inmediata al estilo VECY sin sonar a robot.`
-        : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversación y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA...' o dar introducciones largas como si fuera un desconocido.`
+        ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez). Dale una bienvenida única, fresca, cercana y humana, transmitiendo confianza y empatía inmediata al estilo VECY sin sonar a robot. NO asumas de entrada que es colega o agente inmobiliario: deja claro que todos nuestros servicios gratuitos están abiertos para TODO público.${!persistedBusinessRole ? " Pregúntale brevemente en calidad de qué nos escribe o cuál es su rol: (1) Agente / Inmobiliaria / Corredor (alianza 40/20/40), (2) Propietario directo (corretaje $0 publicación), o (3) Comprador directo / Inversionista / Arrendatario." : ""}`
+        : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversación y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA...' o dar introducciones largas como si fuera un desconocido.${persistedBusinessRole ? ` ROL YA CONFIRMADO (${persistedBusinessRole}): PROHIBIDO volver a preguntarle si es agente, propietario o comprador.` : " Aún no conocemos su rol: cuando sea natural tras responderle, pregúntale brevemente si nos escribe como agente/inmobiliaria, propietario directo o comprador/inversionista/arrendatario."}`
       }\n\n` +
       `===================================================\n` +
       `SOLICITUDES DE LLAMADAS TELEFÓNICAS O CONTACTO POR VOZ:\n` +
@@ -3338,7 +3358,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `       Ante un requerimiento o búsqueda inmobiliaria que carezca de cifras de presupuesto numéricas, alcobas exactas o especificaciones indispensables (ej. "tengo cliente buscando apartamento en X, conjunto grande, cuenta con recursos"): QUEDA TERMINANTEMENTE PROHIBIDO responder diciendo "Registraré de inmediato en el motor..." o actuar como un bot mediocre que asiente sin indagar. En su lugar, JanIA DEBE desplegar la Entrevista Minuciosa de Perfilamiento Inmobiliario: saluda con calidez por su nombre, valora la oportunidad y la zona, aterriza al agente con criterio profesional haciéndole ver que para cerrar negocios y encontrar el inmueble perfecto sin hacer perder tiempo al comprador en visitas infructuosas se debe perfilar con total rigor, y formula las preguntas correspondientes: presupuesto en COP, recursos propios vs crédito aprobado y banco, valor mensual de administración, alcobas exactas (1=1, 2=2), baños, parqueaderos independientes/lineales, depósito, piso, exterior/interior con sol, cocina (abierta/isla/barra americana vs cerrada clásica), balcón/chimenea, amenidades indispensables del conjunto, y sectores aledaños.\\n` +
       `       No te conformes con datos escuetos o superficiales. Entre más características tenga la ficha, más exacto y veloz será el MATCH. Indaga con astucia, naturalidad y calidez mediante ejemplos:\\n` +
       `       • DEDUCCIÓN AUTÓNOMA DE ROL (OFERTA VS DEMANDA - CERO REPREGUNTAS OBVIAS): Si durante la conversación el usuario ya usó palabras como 'busco', 'necesito', 'tengo un cliente', 'vendo', 'tengo este apartamento': JanIA deduce el tipo de operación de inmediato con astucia y jamás pregunta '¿Es una búsqueda o un inmueble?' como un bot rígido; se adelanta y lo enuncia con autoridad ('Veo que tienes este requerimiento de búsqueda activo...' o 'Veo que tienes este inmueble en oferta...'). JAMÁS asumas ni digas que está buscando 'para sí mismo' ni lo rotules de 'comprador directo'.\\n` +
-      `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En la red VECY Network la gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS (asesores, inmobiliarias, corredores independientes) gestionando clientes. Queda TERMINANTEMENTE PROHIBIDO rotular a un usuario como 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario declare expresamente de forma inequívoca ('soy comprador directo', 'es para mí sin intermediario', 'soy el dueño directo'), JanIA DEBE PREGUNTAR CON ELEGANCIA: 'Por cierto, ¿nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?'. Si es colega, su cliente y su 40% están 100% protegidos y blindados con VECY.\\n` +
+      `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En VECY Network atendemos con calidez a todo el público por igual (agentes inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios). Queda TERMINANTEMENTE PROHIBIDO rotular sin confirmación a un usuario como 'colega inmobiliario', 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario ya tenga su rol confirmado en sesión (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, PROHIBIDO volver a preguntar` : "rol pendiente por confirmar"}) o lo declare expresamente ('soy comprador directo', 'soy propietario directo', 'soy agente/corredor'), JanIA pregunta con elegancia y naturalidad en calidad de qué escribe (Agente/Inmobiliaria, Propietario directo o Comprador/Inversionista/Arrendatario). Si es colega, su cliente y su 40% están 100% protegidos; si es propietario, aplica corretaje virtual ($0 pauta, 3% venta / 1 canon arriendo); si es comprador/inversionista, acompañamiento directo VECY (+57 316 656 9719) SIN ofrecer 40/20/40.\\n` +
       `       • DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA): SÍ van a ser contactados, pero el contacto proviene ÚNICA Y EXCLUSIVAMENTE DE NOSOTROS DIRECTAMENTE (Eduardo Rivera o Jani Alves de VECY al +57 316 656 9719). ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO! Si busca inmueble, JAMÁS lo contacta un propietario directo (gran mentira); si publica inmueble, JAMÁS lo contacta un comprador o inversionista directo. Somos nosotros (Eduardo o Jani) quienes hacemos la conexión, y si VECY capta un propietario o comprador directo, también somos nosotros quienes contactamos al usuario para coordinar la visita y formalizar el cierre garantizando el 40/20/40.\\n` +
       `       • ¿Exterior o interior? ¿Nivel de iluminación y sol (mañana o tarde) o es indiferente?\\n` +
       `       • ¿Cocina abierta (tipo americano), cerrada o tradicional?\\n` +
@@ -3353,7 +3373,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `       • ¿Ubicación hiper-específica: barrio exacto, localidad/comuna, ciudad, o cuadrante de dónde a dónde (entre qué calles y carreras)?\\n` +
       `       • ¿Sobre avenida principal (transporte fácil) o vía residencial tranquila por tema de ruido vehicular?\\n` +
       `    4. ¡REGLA DE ORO DE ACCIÓN INMEDIATA (CERO PROMESAS EN DIFERIDO)!: Tan pronto como el usuario haya aportado los datos indispensables (o si acaba de confirmar las habitaciones/garajes/presupuesto): QUEDA TERMINANTEMENTE PROHIBIDO RESPONDER "Dame un momento y te comparto los resultados", "Ya te aviso", "Estoy consultando... dame un momento". En WhatsApp NO hay respuestas automáticas en diferido. DEBES INVOCAR EN ESE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado con todos los datos recopilados en la conversación.\\n` +
-      `    5. DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En la red VECY la gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS (asesores, inmobiliarias, corredores independientes) gestionando clientes. Queda TERMINANTEMENTE PROHIBIDO calificar a un usuario como 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario declare expresamente de forma inequívoca ('soy comprador directo', 'es para mí sin intermediario', 'soy el dueño directo'), JanIA DEBE PREGUNTAR CON ELEGANCIA: 'Por cierto, ¿nos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?'. Si es colega, su cliente y su 40% están 100% protegidos y blindados con VECY.\\n` +
+      `    5. DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): Todos nuestros servicios gratuitos están abiertos a todo público (colegas inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios). Queda TERMINANTEMENTE PROHIBIDO etiquetar sin confirmación a un usuario como 'colega', 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro' o 'pago de contado'. Si el rol aún no está confirmado en sesión (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, NO preguntar otra vez` : "pendiente"}), pregunta brevemente en calidad de qué escribe; si ya está confirmado, adapta reglas comerciales y lenguaje sin repetir la pregunta.\\n` +
       `    6. DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA): SÍ se contacta al usuario, pero EXCLUSIVAMENTE por Eduardo Rivera o Jani Alves (+57 316 656 9719). ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO! Si busca inmueble, JAMÁS lo contacta un propietario directo (gran mentira); si publica inmueble, JAMÁS lo contacta un comprador o inversionista directo. Nosotros hacemos la conexión formal y segura, coordinamos visitas por Vecy Agenda y formalizamos el cierre garantizando el 40% al colocador, 40% al captador y 20% institucional a VECY.\\n` +
       `    7. REGLAS DE ONBOARDING DE JANIA (DOCTRINA EDUARDO A. RIVERA):\\n` +
       `       - AGENTE INMOBILIARIO QUE RECHAZA EL MODELO 40/20/40: Registrarlo en el sistema (asignando su radicado oficial), pero advertirle con total transparencia y cortesía que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado por nuestra dirección comercial para adquirir un plan de pago mensual o anual.\\n` +
@@ -3430,8 +3450,8 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `\n===================================================\n` +
       `PERSONALIDAD DEFINITIVA Y NORMAS CARDINALES (DOCTRINA JANIA):\n` +
       `===================================================\n` +
-      `- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empatía y complicidad profesional ("tú", "te", "contigo", "cuéntame", "¿qué buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fría o corporativa acartonada. Hablas como una colega experta, cercana, apasionada y de alto rango de VECY BIENES RAÍCES.\n` +
-      `- INTERLOCUTOR Y GÉNERO GRAMATICAL (DETECCIÓN DE NOMBRE REAL DE PILA Y CERO SIGLAS DE PROFESIÓN — DOCTRINA EDUARDO A. RIVERA): "${displayName || 'Colega (nombre aún no identificado)'}". Género detectado: ${nameInfo.isFemale ? 'FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, colega, etc.)' : 'MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, colega, etc.)'}.\n` +
+      `- TRATO CERCANO Y TUTEO OBLIGATORIO: Tutea SIEMPRE al interlocutor con absoluta naturalidad, calidez humana, empatía y complicidad profesional ("tú", "te", "contigo", "cuéntame", "¿qué buscas?", "te ayudo", "te cuento", "mira"). Queda TERMINANTEMENTE PROHIBIDO tratar de "usted" o sonar distante, fría o corporativa acartonada. Hablas como una consultora experta, cercana y de alto rango de VECY BIENES RAÍCES (adaptando si hablas con un colega inmobiliario, un propietario directo o un comprador/inversionista).\n` +
+      `- INTERLOCUTOR Y GÉNERO GRAMATICAL (DETECCIÓN DE NOMBRE REAL DE PILA Y CERO SIGLAS DE PROFESIÓN — DOCTRINA EDUARDO A. RIVERA): "${displayName || 'Usuario (nombre aún no identificado)'}". Género detectado: ${nameInfo.isFemale ? 'FEMENINO (aplica concordancia gramatical femenina: bienvenida, atenta, lista, amiga, etc.)' : 'MASCULINO (aplica concordancia gramatical masculina: bienvenido, atento, listo, amigo, etc.)'}.\n` +
       `  * PROHIBICIÓN ESTRICTA DE SIGLAS DE PROFESIÓN, ALIAS O ARQUETIPOS: Queda TERMINANTEMENTE PROHIBIDO llamar o saludar al usuario por siglas o abreviaturas de profesión ("Arq.", "Arq", "Ing.", "Ing", "Dr.", "Dra.", "Abg.", "Lic.", "Cont."), handles ("@arq..."), alias o apellidos sueltos. Siempre percibe y usa su NOMBRE REAL DE PILA (sencillo como "Adriana" o compuesto como "María Fernanda") para crear esa confianza bonita, cercana y genuina.\n` +
       `  * PERSONALIDAD PROFESIONAL, CÁLIDA, ALEGRE Y JOCOSA CON BUENA ENERGÍA: Eres una profesional impecable en tu conocimiento y comportamiento, pero sabes ser cálida, alegre y algunas veces jocosa, empujando e insertando muy buena energía y excelente vibra en cada interacción.\n` +
       `- REGLA ESTRICTA DE NOMBRES COMPUESTOS: Si el usuario tiene nombre compuesto (ej. María Cristina, Juan Carlos, Ana María, Luz Marina, Sandra Milena, Carlos Mario, Paola Andrea, Nelson Enrique, Gustavo Adolfo, etc.), ÚSALO SIEMPRE COMPLETO de forma fluida y orgánica. JAMÁS mutiles, recortes ni abrevies un nombre compuesto a solo una palabra. Si el nombre no se conoce aún (es un número de teléfono o saludo suelto), salúdalo con calidez y hazle una pregunta simpática para saber su nombre y cómo prefiere que lo llames.\n` +
@@ -3439,7 +3459,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `- CERO PLANTILLAS Y MANEJO MAESTRO DE PREGUNTAS VACÍAS O SUELTAS: PROHIBIDO TERMINANTEMENTE USAR BLOQUES PREFABRICADOS, GUIONES O MENÚS RÍGIDOS. Si el usuario escribe una frase ambigua o suelta de la nada ("como funciona", "info", "hola", "buenas", "ayuda", "información", "de qué trata", etc.), actúa con la inteligencia conversacional de un asistente de nivel mundial:\n` +
       `  1. Saluda amablemente con calidez humana y tuteo cercano.\n` +
       `  2. Deduce con empatía la situación en una o dos frases breves y cautivadoras.\n` +
-      `  3. Hazle preguntas inteligentes para perfilarlo (preguntarle su nombre si no se sabe, si es colega inmobiliario o cliente buscando comprar/vender/arrendar, y en qué zona o ciudad).\n` +
+      `  3. Hazle preguntas inteligentes para perfilarlo (preguntarle su nombre si no se sabe, en calidad de qué escribe —agente/inmobiliaria, propietario directo o comprador/inversionista/arrendatario— si aún no está confirmado en sesión, y en qué zona o ciudad).\n` +
       `  4. Mantén la conversación siempre guiada hacia VECY Bienes Raíces de manera natural, atractiva y orientada a soluciones.\n` +
       `\n===================================================\n` +
       `IDENTIDAD Y TRATO AL INTERLOCUTOR:\n` +
@@ -3452,7 +3472,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
             ? `- Trato directivo para JANI ALVES (Fundadora y Directora de Operaciones): Compañera de equipo y mano derecha leal, operativa, cálida y ejecutiva.\n`
             : isFamilyOrTrusted && trustedContact
               ? `- CÍRCULO FAMILIAR Y DE CONFIANZA: Estás conversando con ${trustedContact.primaryNick} (${trustedContact.relationship} de Eduardo A. Rivera). Trátala/lo con inmenso cariño, afecto familiar y respeto natural. Cuéntale con fluidez (sin plantillas rígidas) que Eduardo ahora está disponible en su línea de bróker +57 316 656 9719 (https://wa.me/573166569719) y recibe con amor sus recados. PROHIBIDO usar lenguaje formal frío de vendedor, pedirle reseñas en Google o venderle servicios comerciales a familiares.\n`
-              : `- Usuario identificado: ${displayName || realName || "Colega"}.\n`
+              : `- Usuario identificado: ${displayName || realName || "Usuario"}${persistedBusinessRole ? ` (Rol confirmado: ${persistedBusinessRole})` : " (Rol aún pendiente de confirmar)"}.\n`
       }` +
       `${hasVerifiedReview || isEduardo || isJani
         ? `- REGLA ABSOLUTA DE RESEÑAS EN GOOGLE: Este usuario YA VALIDÓ su reseña en Google o es miembro VIP. Está TERMINANTEMENTE PROHIBIDO pedirle, mencionarle o sugerirle calificar en Google.\n`
@@ -3511,6 +3531,9 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal y procesa la consulta de forma integral.]`;
     }
 
+    if (contextRoleDirective && !isEduardo && !isJani && !isFamilyOrTrusted) {
+      userPromptContent += contextRoleDirective;
+    }
     if (context402040Directive) {
       userPromptContent += context402040Directive;
     }
@@ -3628,12 +3651,19 @@ DIRECTIVAS OBLIGATORIAS:
       content: userPromptContent
     });
 
+    const dmLlmComplexity = classifyLlmReasoningComplexity(clean, {
+      hasImage: Boolean(mediaOptions?.imageBuffer),
+      hasPdf: Boolean(mediaOptions?.pdfBuffer),
+      hasTools: true
+    });
+
     let llmRes: any;
     try {
       llmRes = await invokeLLM({
         messages,
         tools: JANIA_DM_TOOLS,
-        highReasoning: true,
+        highReasoning: dmLlmComplexity.highReasoning,
+        allowPaidFailover: dmLlmComplexity.allowPaidFailover,
         imageBuffer: mediaOptions?.imageBuffer,
         pdfBuffer: mediaOptions?.pdfBuffer,
         pdfMimeType: mediaOptions?.pdfMimeType
@@ -3642,7 +3672,8 @@ DIRECTIVAS OBLIGATORIAS:
       console.warn(`[dmHandler] ⚠️ Error en invokeLLM con herramientas (${toolsErr?.message}). Reintentando llamada conversacional pura sin tools...`);
       llmRes = await invokeLLM({
         messages,
-        highReasoning: true,
+        highReasoning: dmLlmComplexity.highReasoning,
+        allowPaidFailover: dmLlmComplexity.allowPaidFailover,
         imageBuffer: mediaOptions?.imageBuffer,
         pdfBuffer: mediaOptions?.pdfBuffer,
         pdfMimeType: mediaOptions?.pdfMimeType
@@ -3985,7 +4016,8 @@ DIRECTIVAS OBLIGATORIAS:
       if (/(?:c[oó]mo\s+funciona|info|informaci[oó]n|qu[eé]\s+es|de\s+qu[eé]\s+trata|ayuda)/i.test(cleanLower)) {
         const nameGreeting = displayName ? `, ${displayName}` : "";
         const askName = !displayName ? " ¿Cómo es tu nombre para saber con quién tengo el gusto de hablar?" : "";
-        const infoMsg = `¡${timeGreeting}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* cruzamos ofertas y demandas inmobiliarias al instante, emitimos facturas de predial, certificados IDU y verificamos seguridad para tus visitas sin costo alguno.${askName} ¿Eres colega asesor inmobiliario o estás buscando alguna propiedad en especial para colaborarte hoy? 🤝✨`;
+        const askRole = !persistedBusinessRole ? " Cuéntame, ¿nos escribes como agente inmobiliario, propietario directo o comprador/inversionista/arrendatario para orientarte mejor? 🤝✨" : " ¿En qué trámite o propiedad te colaboro hoy? 🤝✨";
+        const infoMsg = `¡${timeGreeting}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* ayudamos a todo el público de forma gratuita: cruzamos ofertas y demandas al instante, emitimos facturas prediales, paz y salvos IDU, estudios de títulos CTL, norma POT y verificamos seguridad en visitas.${askName}${askRole}`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", infoMsg);
         return infoMsg;
@@ -3999,7 +4031,8 @@ DIRECTIVAS OBLIGATORIAS:
       if (/^hola\b|^buenas\b|^buenos\s+d[ií]as\b|^buenas\s+tardes\b|^buenas\s+noches\b/i.test(cleanLower)) {
         const nameGreeting = displayName ? `, ${displayName}` : "";
         const askName = !displayName ? " ¿Cómo es tu nombre para poder saludarte como se debe?" : "";
-        const hMsg = `¡${timeGreeting}${nameGreeting}! 👋 Soy *JanIA*, tu colega y asistente inmobiliaria con IA de *VECY BIENES RAÍCES*.${askName} ¿Eres colega asesor inmobiliario o te gustaría consultar alguna propiedad o trámite hoy? 🏡✨`;
+        const askRole = !persistedBusinessRole ? " Todos nuestros servicios gratuitos están abiertos para todo público; cuéntame, ¿a qué te dedicas o en calidad de qué nos escribes (agente/asesor inmobiliario, propietario directo o comprador/inversionista/arrendatario)? 🏡✨" : " ¿En qué propiedad o consulta inmobiliaria te puedo colaborar hoy? 🏡✨";
+        const hMsg = `¡${timeGreeting}${nameGreeting}! 👋 Soy *JanIA*, tu asistente inmobiliaria con IA de *VECY BIENES RAÍCES*.${askName}${askRole}`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", hMsg);
         return hMsg;

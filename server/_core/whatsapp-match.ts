@@ -1929,18 +1929,18 @@ export class JaniaMatchBot {
           console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura para ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
 
           // 🎙️ Soporte Nativo de Notas de Voz PTT en DMs (si el usuario envió audio o solicita respuesta por voz)
-          const { detectaVoz, textToSpeechMedia, cleanVoiceText } = await import('./whatsapp-utils');
+          const { detectaVoz, textToSpeechMedia, buildConciseVoiceSummaryText } = await import('./whatsapp-utils');
           const wantsVoice = detectaVoz(body);
           const shouldSendVoice = wantsVoice || isAudioPTT;
 
           if (shouldSendVoice) {
             try {
-              console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
+              console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT (con gobernanza Laomedeia) para ${senderId}...`);
               // Detener 'composing' e iniciar 'recording' continuo ("Grabando audio... 🎙️")
               stopPresence();
               stopPresence = startContinuousPresence(this.sock, senderId, 'recording');
-              const cleanText = cleanVoiceText(String(reply));
-              const media = await textToSpeechMedia(cleanText);
+              const voiceSummary = buildConciseVoiceSummaryText(String(reply));
+              const media = await textToSpeechMedia(voiceSummary.spokenText, "OGG_OPUS", { userId: senderId });
               if (media && media.data) {
                 // Mantener activa la presencia 'Grabando audio... 🎙️' durante al menos 1.8s para visibilidad total en el móvil del usuario
                 await new Promise(r => setTimeout(r, 1800));
@@ -1950,11 +1950,11 @@ export class JaniaMatchBot {
                   mimetype: media.mimetype || 'audio/ogg; codecs=opus',
                   ptt: true
                 }, { quoted: mainMsg, allowDirectMessage: true, skipDelay: true });
-                await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT]: ${String(reply)}`);
+                await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT${voiceSummary.wasSummarized ? ' Resumen Ejecutivo' : ''}]: ${voiceSummary.spokenText}`);
 
-                // Si la respuesta contenía enlaces URLs (como el canal de WhatsApp o el bróker),
-                // despachar también el texto para que el usuario tenga el enlace clickable en su pantalla
-                if (reply.includes('http')) {
+                // Si la respuesta fue resumida (por longitud, tablas o listados) o contenía URLs,
+                // despachar también el texto completo para preservar cifras, tablas y enlaces clickables
+                if (voiceSummary.wasSummarized || reply.includes('http')) {
                   await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                 }
 
@@ -2858,12 +2858,15 @@ export class JaniaMatchBot {
             await this.queuedSend(chatId, textToDeliver, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
           }
         } else {
-          // Decisión Autónoma de JanIA (IA Pura): O responde por Nota de Voz PTT exclusiva o por Texto exclusivo (NUNCA ambos a la vez)
+          // Decisión Autónoma de JanIA (IA Pura): Nota de Voz PTT mesurada o Texto (y si hubo resumen ejecutivo por longitud/tablas, acompaña el texto completo)
           const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
 
           if (shouldSendVoice) {
             try {
-              const media = await textToSpeechMedia(voiceToDeliver);
+              const { buildConciseVoiceSummaryText } = await import('./whatsapp-utils');
+              const groupVoiceSummary = buildConciseVoiceSummaryText(String(voiceToDeliver));
+              const groupUserId = msg.key.participant || msg.key.remoteJid || chatId;
+              const media = await textToSpeechMedia(groupVoiceSummary.spokenText, "OGG_OPUS", { userId: groupUserId });
               if (media && media.data) {
                 const audioBuffer = Buffer.from(media.data, 'base64');
                 await this.queuedSend(chatId, {
@@ -2872,8 +2875,15 @@ export class JaniaMatchBot {
                   ptt: true
                 }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
                 console.log(`[JANIA-MATCH] ✓ JanIA respondió autónomamente con Nota de Voz PTT en grupo ${chatId}.`);
+                if (groupVoiceSummary.wasSummarized || textToDeliver.includes('http')) {
+                  await this.queuedSend(chatId, textToDeliver, {
+                    mentions: groupMentions,
+                    quoted: msg,
+                    allowExternalGroupResponse: true
+                  });
+                }
               } else {
-                // Fallback a texto solo si la síntesis de voz no produjo buffer
+                // Fallback a texto solo si la síntesis de voz no produjo buffer o se alcanzó el tope de cuota
                 await this.queuedSend(chatId, textToDeliver, {
                   mentions: groupMentions,
                   quoted: msg,

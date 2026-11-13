@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import { execSync } from "child_process";
 import { createSign } from "crypto";
+import { isTestEnvironment } from "./geminiKeyManager";
 
 // ── Lista de nombres colombianos comunes para extractFirstName ──
 const COMMON_FIRST_NAMES = new Set([
@@ -577,16 +578,249 @@ function convertAudioToOggOpus(inputBuffer: Buffer): Buffer {
   return inputBuffer;
 }
 
+export interface VoiceSummaryResult {
+  spokenText: string;
+  wasSummarized: boolean;
+  originalCleanLength: number;
+}
+
+export interface TtsGuardrailDecision {
+  allowed: boolean;
+  reason?: "test_environment" | "user_daily_cap" | "global_daily_cap" | "policy_disabled";
+  userCount: number;
+  globalCount: number;
+  userCap: number;
+  globalCap: number;
+}
+
+export interface TtsUsageStats {
+  dateKey: string;
+  paidTtsCalls: number;
+  paidTtsChars: number;
+  freeFallbackCalls: number;
+  blockedByQuotaCount: number;
+  globalDailyCap: number;
+  userDailyCap: number;
+  maxCharsPerAudio: number;
+  activeUsersCount: number;
+}
+
+function getBogotaTtsDateKey(): string {
+  return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+export function getTtsPaidMaxChars(): number {
+  const raw = Number(process.env.TTS_PAID_MAX_CHARS);
+  if (Number.isFinite(raw) && raw >= 120) return Math.floor(raw);
+  return 480;
+}
+
+export function getTtsUserDailyCap(): number {
+  const raw = Number(process.env.TTS_USER_DAILY_CAP);
+  if (Number.isFinite(raw) && raw >= 0) return Math.floor(raw);
+  return 6;
+}
+
+export function getTtsGlobalDailyCap(): number {
+  const raw = Number(process.env.TTS_GLOBAL_DAILY_CAP);
+  if (Number.isFinite(raw) && raw >= 0) return Math.floor(raw);
+  return 120;
+}
+
+let ttsTelemetry = {
+  dateKey: getBogotaTtsDateKey(),
+  paidTtsCalls: 0,
+  paidTtsChars: 0,
+  freeFallbackCalls: 0,
+  blockedByQuotaCount: 0,
+  perUserCounts: new Map<string, number>(),
+};
+
+function ensureTtsDateWindow(): void {
+  const today = getBogotaTtsDateKey();
+  if (ttsTelemetry.dateKey !== today) {
+    ttsTelemetry = {
+      dateKey: today,
+      paidTtsCalls: 0,
+      paidTtsChars: 0,
+      freeFallbackCalls: 0,
+      blockedByQuotaCount: 0,
+      perUserCounts: new Map<string, number>(),
+    };
+  }
+}
+
+export function evaluatePaidTtsGuardrail(
+  userId?: string,
+  options?: { allowPaidTts?: boolean; ignoreTestEnv?: boolean }
+): TtsGuardrailDecision {
+  ensureTtsDateWindow();
+  const userCap = getTtsUserDailyCap();
+  const globalCap = getTtsGlobalDailyCap();
+  const normUser = (userId || "__anonymous__").trim();
+  const userCount = ttsTelemetry.perUserCounts.get(normUser) || 0;
+  const globalCount = ttsTelemetry.paidTtsCalls;
+
+  if (!options?.ignoreTestEnv && isTestEnvironment()) {
+    return { allowed: false, reason: "test_environment", userCount, globalCount, userCap, globalCap };
+  }
+  if (options?.allowPaidTts === false) {
+    return { allowed: false, reason: "policy_disabled", userCount, globalCount, userCap, globalCap };
+  }
+  if (globalCap === 0 || globalCount >= globalCap) {
+    return { allowed: false, reason: "global_daily_cap", userCount, globalCount, userCap, globalCap };
+  }
+  if (userCap === 0 || userCount >= userCap) {
+    return { allowed: false, reason: "user_daily_cap", userCount, globalCount, userCap, globalCap };
+  }
+  return { allowed: true, userCount, globalCount, userCap, globalCap };
+}
+
+export function recordPaidTtsUsage(userId: string | undefined, chars: number): void {
+  ensureTtsDateWindow();
+  const normUser = (userId || "__anonymous__").trim();
+  ttsTelemetry.paidTtsCalls += 1;
+  ttsTelemetry.paidTtsChars += Math.max(0, Math.floor(chars));
+  ttsTelemetry.perUserCounts.set(normUser, (ttsTelemetry.perUserCounts.get(normUser) || 0) + 1);
+}
+
+export function getTtsUsageStats(): TtsUsageStats {
+  ensureTtsDateWindow();
+  return {
+    dateKey: ttsTelemetry.dateKey,
+    paidTtsCalls: ttsTelemetry.paidTtsCalls,
+    paidTtsChars: ttsTelemetry.paidTtsChars,
+    freeFallbackCalls: ttsTelemetry.freeFallbackCalls,
+    blockedByQuotaCount: ttsTelemetry.blockedByQuotaCount,
+    globalDailyCap: getTtsGlobalDailyCap(),
+    userDailyCap: getTtsUserDailyCap(),
+    maxCharsPerAudio: getTtsPaidMaxChars(),
+    activeUsersCount: ttsTelemetry.perUserCounts.size,
+  };
+}
+
+export function resetTtsUsageStatsForTests(): void {
+  ttsTelemetry = {
+    dateKey: getBogotaTtsDateKey(),
+    paidTtsCalls: 0,
+    paidTtsChars: 0,
+    freeFallbackCalls: 0,
+    blockedByQuotaCount: 0,
+    perUserCounts: new Map<string, number>(),
+  };
+}
+
+/**
+ * Resume respuestas extensas, con tablas Markdown, listados largos o URLs a un resumen ejecutivo cálido
+ * apto para nota de voz Laomedeia sin desperdiciar caracteres de TTS pago.
+ */
+export function buildConciseVoiceSummaryText(
+  text: string,
+  maxChars: number = getTtsPaidMaxChars()
+): VoiceSummaryResult {
+  const raw = String(text || "");
+  const hasMarkdownTable = /\|[^\n]+\|/.test(raw);
+  const urlMatches = raw.match(/https?:\/\/\S+/gi) || [];
+  const rawLines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const hasDenseStructure = hasMarkdownTable || urlMatches.length >= 2 || rawLines.length > 7;
+
+  // Filtrar líneas meramente tabulares/separadores antes de cleanVoiceText para evitar lectura robótica de tablas
+  const nonTableRaw = raw
+    .split(/\r?\n/)
+    .filter(line => {
+      const trimmed = line.trim();
+      if (/^\|?[\s:-]+\|[\s|:-]*$/.test(trimmed)) return false;
+      if ((trimmed.match(/\|/g) || []).length >= 3) return false;
+      return true;
+    })
+    .join("\n");
+
+  const cleaned = cleanVoiceText(nonTableRaw || raw);
+  const originalCleanLength = cleanVoiceText(raw).length || cleaned.length;
+
+  if (!cleaned) {
+    return { spokenText: "", wasSummarized: false, originalCleanLength: 0 };
+  }
+
+  if (cleaned.length <= maxChars && !hasDenseStructure) {
+    return { spokenText: cleaned, wasSummarized: false, originalCleanLength };
+  }
+
+  // Extraer oraciones clave y cerrar con invitación a leer el detalle completo en texto/PDF
+  const suffix = " Te dejé todo el detalle completo por escrito aquí en el chat.";
+  const budget = Math.max(120, maxChars - suffix.length);
+  const sentences = cleaned
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  let collected = "";
+  for (const sentence of sentences) {
+    const candidate = collected ? `${collected} ${sentence}` : sentence;
+    if (candidate.length <= budget) {
+      collected = candidate;
+    } else if (!collected) {
+      const sliced = sentence.slice(0, budget).replace(/\s+\S*$/, "").trim();
+      collected = sliced.endsWith(".") ? sliced : `${sliced}.`;
+      break;
+    } else {
+      break;
+    }
+  }
+
+  if (!collected) {
+    const sliced = cleaned.slice(0, budget).replace(/\s+\S*$/, "").trim();
+    collected = sliced.endsWith(".") ? sliced : `${sliced}.`;
+  }
+
+  const spokenText = (collected.length + suffix.length <= maxChars)
+    ? `${collected}${suffix}`
+    : collected.slice(0, maxChars).trim();
+
+  return {
+    spokenText,
+    wasSummarized: true,
+    originalCleanLength,
+  };
+}
+
 /**
  * Genera un buffer de audio sintetizado con voz humana ultra-realista, fluida y con cadencia colombiana.
+ * Aplica gobernanza mesurada sobre Gemini 3.1 Flash TTS (Laomedeia) y bloquea llamadas pagas en tests.
  */
-export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
-  const cleaned = cleanVoiceText(text);
+export async function textToSpeechMedia(
+  text: string,
+  format: "OGG_OPUS" | "MP3" = "OGG_OPUS",
+  options?: { userId?: string; maxChars?: number; allowPaidTts?: boolean }
+): Promise<any> {
+  const { spokenText: cleaned, wasSummarized, originalCleanLength } = buildConciseVoiceSummaryText(
+    text,
+    options?.maxChars ?? getTtsPaidMaxChars()
+  );
   if (!cleaned) return null;
 
+  // 🛡️ BLINDAJE $0 COP EN TESTS: Jamás invocar TTS pago ni tráfico de red externo bajo NODE_ENV=test
+  if (isTestEnvironment()) {
+    return null;
+  }
+
+  const guardrail = evaluatePaidTtsGuardrail(options?.userId, { allowPaidTts: options?.allowPaidTts });
+  if (!guardrail.allowed && guardrail.reason !== "policy_disabled") {
+    ensureTtsDateWindow();
+    ttsTelemetry.blockedByQuotaCount += 1;
+    console.warn(
+      `[TTS-Media] 🛡️ Guardrail TTS pago (${guardrail.reason}): usuario ${guardrail.userCount}/${guardrail.userCap}, global ${guardrail.globalCount}/${guardrail.globalCap}. Degradando a voz neuronal gratuita.`
+    );
+  }
+  if (wasSummarized) {
+    console.log(
+      `[TTS-Media] ✂️ Resumen ejecutivo para voz aplicado: ${originalCleanLength} → ${cleaned.length} chars.`
+    );
+  }
+
   // 1. Motor Oficial Prioritario: Gemini 3.1 Flash TTS (Preview) — Voz Femenina Cálida Laomedeia (es-us)
-  // Si la cuenta de Google Cloud presenta suspensión o deuda de facturación, se omite de inmediato sin penalizar latencia.
-  if (Date.now() >= googleCloudBillingBlockedUntil) {
+  // Solo se activa si la cuota diaria (usuario + global) está disponible y la cuenta de facturación está activa.
+  if (guardrail.allowed && Date.now() >= googleCloudBillingBlockedUntil) {
     try {
       const accessToken = await getVertexAIAccessToken();
       if (accessToken) {
@@ -619,6 +853,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
           if (response.ok) {
             const data = await response.json();
             if (data.audioContent) {
+              recordPaidTtsUsage(options?.userId, cleaned.length);
               console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia Femenina) — ${cleaned.length} chars → audio generado.`);
               const buffer = Buffer.from(data.audioContent, "base64");
               return {
@@ -665,6 +900,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             if (response.ok) {
               const data = await response.json();
               if (data.audioContent) {
+                recordPaidTtsUsage(options?.userId, cleaned.length);
                 console.log(`[TTS-Media] ✓ Google Cloud Neural2-A Femenina — ${cleaned.length} chars → audio generado.`);
                 const buffer = Buffer.from(data.audioContent, "base64");
                 return {
@@ -691,6 +927,8 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
 
   // 2. Motor Neuronal Humano Oficial de Respaldo: Salomé (es-CO-SalomeNeural) — $0 COP
   // Voz nativa colombiana femenina, cálida, empática, ejecutiva y transcodificada a WhatsApp OGG Opus (< 1s).
+  ensureTtsDateWindow();
+  ttsTelemetry.freeFallbackCalls += 1;
   try {
     console.log(`[TTS-Media] 🎙️ Sintetizando con voz neuronal colombiana (Salomé es-CO-SalomeNeural) — ${cleaned.length} caracteres...`);
     const salomeBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural", "+0%");

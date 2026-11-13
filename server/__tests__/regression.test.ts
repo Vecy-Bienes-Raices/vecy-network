@@ -13698,6 +13698,207 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:1[7-9]|[2-9]\d)\.0$/);
     });
   });
+
+  // =========================================================================
+  // SUITE 204: PUNTO 7 (v34.18) — PERFILAMIENTO UNIVERSAL DE ROLES EN PRIMER
+  // CONTACTO Y GOBERNANZA MESURADA DE GEMINI PAGO + VOZ LAOMEDEIA
+  // =========================================================================
+  describe("Suite 204 — Punto 7 (v34.18): Roles Universales en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia", () => {
+    it("Detecta y persiste roles universales sin sesgo de colega por defecto y evita repetir la pregunta de rol una vez confirmada", async () => {
+      const {
+        detectUserBusinessRoleFromText,
+        setUserBusinessRole,
+        getUserBusinessRole,
+        getUserPerpetualSession,
+        setUser402040Agreement
+      } = await import("../_core/jania/sessionManager");
+      const { buildSessionOnboardingDirectives } = await import("../_core/jania/handlers/dmOnboardingAndDocsHelper");
+
+      // Detección precisa de cada rol sin falsos positivos en frases neutras
+      expect(detectUserBusinessRoleFromText("Busco apartamento en Cedritos")).toBeUndefined();
+      expect(detectUserBusinessRoleFromText("Soy agente inmobiliario y represento a un cliente")).toBe("agente_inmobiliario");
+      expect(detectUserBusinessRoleFromText("Soy propietario directo y quiero vender mi apartamento")).toBe("propietario_directo");
+      expect(detectUserBusinessRoleFromText("Soy comprador directo, quiero invertir para mi patrimonio")).toBe("comprador_inversionista");
+      expect(detectUserBusinessRoleFromText("Soy arrendatario, busco apartaestudio para vivir yo")).toBe("arrendatario");
+
+      // Usuario nuevo sin rol: debe activar guía de perfilamiento universal sin asumir que es colega
+      const freshUser = "573009992041@s.whatsapp.net";
+      await getUserPerpetualSession(freshUser, "Laura");
+      expect(await getUserBusinessRole(freshUser)).toBeUndefined();
+      const firstContactDirectives = await buildSessionOnboardingDirectives(freshUser);
+      expect(firstContactDirectives.identifiedRole).toBeUndefined();
+      expect(firstContactDirectives.contextRoleDirective).toContain("PERFILAMIENTO UNIVERSAL DE ROL EN PRIMER CONTACTO");
+      expect(firstContactDirectives.contextRoleDirective).toContain("TODO el público");
+
+      // Al persistirse como comprador/inversionista, adapta reglas comerciales (sin 40/20/40) y prohíbe repreguntar
+      await setUserBusinessRole(freshUser, "comprador_inversionista", { sourceText: "Soy comprador directo" });
+      expect(await getUserBusinessRole(freshUser)).toBe("comprador_inversionista");
+      const buyerDirectives = await buildSessionOnboardingDirectives(freshUser);
+      expect(buyerDirectives.identifiedRole).toBe("comprador_inversionista");
+      expect(buyerDirectives.contextRoleDirective).toContain("COMPRADOR DIRECTO / INVERSIONISTA");
+      expect(buyerDirectives.contextRoleDirective).toContain("JAMÁS le ofrezcas esquema de comisión 40/20/40");
+      expect(buyerDirectives.contextRoleDirective).toContain("PROHIBIDO volver a preguntarle su rol");
+
+      // Al aceptar 40/20/40 también consolida rol agente_inmobiliario en sesión
+      const agentUser = "573009992042@s.whatsapp.net";
+      await setUser402040Agreement(agentUser, true);
+      expect(await getUserBusinessRole(agentUser)).toBe("agente_inmobiliario");
+      const agentDirectives = await buildSessionOnboardingDirectives(agentUser);
+      expect(agentDirectives.contextRoleDirective).toContain("AGENTE / INMOBILIARIA / CORREDOR");
+      expect(agentDirectives.context402040Directive).toContain("YA ACEPTÓ");
+
+      // Auditoría directa de dmHandler.ts: eliminado el sesgo por defecto de "Colega (nombre aún no identificado)" y ">90%" en prompts
+      const fs = await import("fs");
+      const dmHandlerSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(dmHandlerSrc).toContain("Usuario (nombre aún no identificado)");
+      expect(dmHandlerSrc).not.toContain("Colega (nombre aún no identificado)");
+      expect(dmHandlerSrc).not.toContain("gran mayoría (>90%) de usuarios son COLEGAS INMOBILIARIOS");
+    });
+
+    it("Enruta modelos ligeros vs alto razonamiento según complejidad y aplica gobernanza de presupuesto diario a GEMINI_PAID_KEY", async () => {
+      const {
+        classifyLlmReasoningComplexity,
+        selectGeminiModelsForTask,
+        MECHANICAL_MODELS,
+        HIGH_REASONING_MODELS
+      } = await import("../_core/llm");
+      const { geminiKeyManager } = await import("../_core/geminiKeyManager");
+
+      // 1. Clasificación cognitiva y separación real entre MECHANICAL_MODELS y HIGH_REASONING_MODELS
+      const greetingClass = classifyLlmReasoningComplexity("Hola buenos días, muchas gracias");
+      expect(greetingClass.highReasoning).toBe(false);
+      expect(greetingClass.allowPaidFailover).toBe(false);
+      expect(selectGeminiModelsForTask(false)[0]).toBe(MECHANICAL_MODELS[0]);
+      expect(selectGeminiModelsForTask(true)[0]).toBe(HIGH_REASONING_MODELS[0]);
+
+      const legalClass = classifyLlmReasoningComplexity("Por favor revisa esta falsa tradición y embargo en el estudio de títulos CTL");
+      expect(legalClass.highReasoning).toBe(true);
+      expect(legalClass.allowPaidFailover).toBe(true);
+
+      const multimodalClass = classifyLlmReasoningComplexity("Mira este archivo", { hasPdf: true });
+      expect(multimodalClass.highReasoning).toBe(true);
+      expect(multimodalClass.allowPaidFailover).toBe(true);
+
+      // 2. Telemetría y tope diario configurable para clave de pago en producción simulada (conservando blindaje en test)
+      const prevEnv = process.env.NODE_ENV;
+      const prevVitest = process.env.VITEST;
+      const prevVitestWorker = process.env.VITEST_WORKER_ID;
+      const prevPaid = process.env.GEMINI_PAID_KEY;
+      const prevCap = process.env.GEMINI_PAID_DAILY_CAP;
+      try {
+        geminiKeyManager.resetLlmUsageStatsForTests();
+        geminiKeyManager.clearAllCooldowns();
+        geminiKeyManager.recordLlmUsage(false);
+        expect(geminiKeyManager.getLlmUsageStats().tier1FreeCalls).toBe(1);
+
+        process.env.NODE_ENV = "production";
+        delete process.env.VITEST;
+        delete process.env.VITEST_WORKER_ID;
+        process.env.GEMINI_PAID_KEY = "AIzaPaidGov999";
+        process.env.GEMINI_PAID_DAILY_CAP = "2";
+
+        for (const fk of geminiKeyManager.getFreeKeys()) {
+          geminiKeyManager.markKeyCooldown(fk, 60, "Simulated 429");
+        }
+
+        // Turno ligero con allowPaidFailover=false NO debe escalar a la clave de pago
+        const blockedPolicy = geminiKeyManager.getActiveKey({ allowPaidFailover: false });
+        expect(blockedPolicy.isPaid).toBe(false);
+        expect(blockedPolicy.paidFailoverBlockedReason).toBe("policy_disallowed");
+
+        // Turno complejo consume hasta el tope diario (2) y luego bloquea failover pago
+        const allowedPaid = geminiKeyManager.getActiveKey({ allowPaidFailover: true });
+        expect(allowedPaid.isPaid).toBe(true);
+        geminiKeyManager.recordLlmUsage(true);
+        geminiKeyManager.recordLlmUsage(true);
+        expect(geminiKeyManager.isPaidBudgetAvailable()).toBe(false);
+
+        const exhausted = geminiKeyManager.getActiveKey({ allowPaidFailover: true });
+        expect(exhausted.isPaid).toBe(false);
+        expect(exhausted.paidFailoverBlockedReason).toBe("daily_budget_exhausted");
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+        if (prevVitest) process.env.VITEST = prevVitest;
+        if (prevVitestWorker) process.env.VITEST_WORKER_ID = prevVitestWorker;
+        if (prevPaid !== undefined) process.env.GEMINI_PAID_KEY = prevPaid;
+        else delete process.env.GEMINI_PAID_KEY;
+        if (prevCap !== undefined) process.env.GEMINI_PAID_DAILY_CAP = prevCap;
+        else delete process.env.GEMINI_PAID_DAILY_CAP;
+        geminiKeyManager.clearAllCooldowns();
+        geminiKeyManager.resetLlmUsageStatsForTests();
+      }
+    });
+
+    it("Gobierna Voz Laomedeia con resumen ejecutivo ante textos largos/tablas, tope diario por usuario y bloqueo $0 COP en NODE_ENV=test", async () => {
+      const {
+        buildConciseVoiceSummaryText,
+        evaluatePaidTtsGuardrail,
+        recordPaidTtsUsage,
+        getTtsUsageStats,
+        resetTtsUsageStatsForTests,
+        textToSpeechMedia
+      } = await import("../_core/whatsapp-utils");
+
+      // 1. Respuesta corta pasa limpia; respuesta extensa con tabla Markdown y URLs se resume ejecutivamente
+      const shortSummary = buildConciseVoiceSummaryText("¡Buenos días, Carlos! Con gusto reviso tu consulta hoy.", 480);
+      expect(shortSummary.wasSummarized).toBe(false);
+      expect(shortSummary.spokenText.length).toBeLessThanOrEqual(480);
+
+      const longTabularReply =
+        "Hola María, aquí tienes el análisis completo de rentabilidad y comparación financiera para tu inversión en Chicó Norte.\n\n" +
+        "| Concepto | Crédito Hipotecario | Leasing Habitacional |\n|---|---|---|\n" +
+        "| Cuota Inicial | 30% ($300M) | 20% ($200M) |\n| Cuota Mensual | $8.450.000 | $9.120.000 |\n\n" +
+        "Detalle adicional: https://vecy-bienes-raices.vercel.app/propiedad/123 y https://wa.me/573166569719. " +
+        "Además recomendamos validar el Certificado de Tradición y Libertad y los coeficientes de Propiedad Horizontal antes de firmar la promesa de compraventa, " +
+        "garantizando trazabilidad jurídica y tributaria completa en Colombia durante toda la operación comercial y notarial.";
+
+      const executiveVoice = buildConciseVoiceSummaryText(longTabularReply, 320);
+      expect(executiveVoice.wasSummarized).toBe(true);
+      expect(executiveVoice.spokenText.length).toBeLessThanOrEqual(320);
+      expect(executiveVoice.spokenText).not.toContain("|");
+
+      // 2. En NODE_ENV=test, textToSpeechMedia queda bloqueado a $0 COP (retorna null sin llamadas pagas)
+      resetTtsUsageStatsForTests();
+      const ttsInTest = await textToSpeechMedia("Hola prueba de audio en test", "OGG_OPUS", { userId: "573001112233@s.whatsapp.net" });
+      expect(ttsInTest).toBeNull();
+      expect(getTtsUsageStats().paidTtsCalls).toBe(0);
+      expect(evaluatePaidTtsGuardrail("573001112233@s.whatsapp.net").reason).toBe("test_environment");
+
+      // 3. En producción simulada, respeta tope diario por usuario y tope global
+      const prevUserCap = process.env.TTS_USER_DAILY_CAP;
+      const prevGlobalCap = process.env.TTS_GLOBAL_DAILY_CAP;
+      try {
+        process.env.TTS_USER_DAILY_CAP = "2";
+        process.env.TTS_GLOBAL_DAILY_CAP = "5";
+        resetTtsUsageStatsForTests();
+
+        const user = "573009992043@s.whatsapp.net";
+        expect(evaluatePaidTtsGuardrail(user, { ignoreTestEnv: true }).allowed).toBe(true);
+        recordPaidTtsUsage(user, 180);
+        recordPaidTtsUsage(user, 200);
+        const userBlocked = evaluatePaidTtsGuardrail(user, { ignoreTestEnv: true });
+        expect(userBlocked.allowed).toBe(false);
+        expect(userBlocked.reason).toBe("user_daily_cap");
+        expect(getTtsUsageStats().paidTtsCalls).toBe(2);
+      } finally {
+        process.env.TTS_USER_DAILY_CAP = prevUserCap;
+        process.env.TTS_GLOBAL_DAILY_CAP = prevGlobalCap;
+        resetTtsUsageStatsForTests();
+      }
+
+      // 4. Semilla doctrinal y versión v34.18 / 34.18.0
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed18 = SEED_TEACHINGS.find(t => t.id === "seed-consolidacion-roles-gobernanza-gemini-voz-laomedeia-v34-18");
+      expect(seed18).toBeDefined();
+      expect(seed18?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.18");
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.18.0");
+    });
+  });
 });
 
 

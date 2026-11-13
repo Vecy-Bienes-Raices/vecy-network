@@ -20,10 +20,114 @@ export interface ActiveKeyResult {
   isPaid: boolean;
   tier: 1 | 2;
   index: number;
+  paidFailoverBlockedReason?: "policy_disallowed" | "daily_budget_exhausted" | "test_environment";
+}
+
+export interface GetActiveKeyOptions {
+  allowPaidFailover?: boolean;
+}
+
+export interface LlmUsageStats {
+  dateKey: string;
+  tier1FreeCalls: number;
+  tier2PaidCalls: number;
+  paidBudgetBlockedCount: number;
+  paidDailyCap: number;
+  paidAlertThreshold: number;
+  paidBudgetRemaining: number;
 }
 
 const keyCooldowns = new Map<string, number>();
 let roundRobinFreeIndex = 0;
+
+function getBogotaDateKey(): string {
+  return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+function getPaidDailyCap(): number {
+  const raw = Number(process.env.GEMINI_PAID_DAILY_CAP);
+  if (Number.isFinite(raw) && raw >= 0) return Math.floor(raw);
+  return 120;
+}
+
+function getPaidAlertThreshold(cap: number): number {
+  const raw = Number(process.env.GEMINI_PAID_ALERT_THRESHOLD);
+  if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+  return cap > 0 ? Math.max(1, Math.floor(cap * 0.7)) : 0;
+}
+
+let usageTelemetry = {
+  dateKey: getBogotaDateKey(),
+  tier1FreeCalls: 0,
+  tier2PaidCalls: 0,
+  paidBudgetBlockedCount: 0,
+  alertEmittedForDate: "",
+};
+
+function ensureTelemetryDateWindow(): void {
+  const today = getBogotaDateKey();
+  if (usageTelemetry.dateKey !== today) {
+    usageTelemetry = {
+      dateKey: today,
+      tier1FreeCalls: 0,
+      tier2PaidCalls: 0,
+      paidBudgetBlockedCount: 0,
+      alertEmittedForDate: "",
+    };
+  }
+}
+
+export function isPaidBudgetAvailable(): boolean {
+  ensureTelemetryDateWindow();
+  const cap = getPaidDailyCap();
+  if (cap <= 0) return false;
+  return usageTelemetry.tier2PaidCalls < cap;
+}
+
+export function recordLlmUsage(isPaid: boolean): void {
+  ensureTelemetryDateWindow();
+  if (!isPaid) {
+    usageTelemetry.tier1FreeCalls += 1;
+    return;
+  }
+  usageTelemetry.tier2PaidCalls += 1;
+  const cap = getPaidDailyCap();
+  const threshold = getPaidAlertThreshold(cap);
+  if (
+    threshold > 0 &&
+    usageTelemetry.tier2PaidCalls >= threshold &&
+    usageTelemetry.alertEmittedForDate !== usageTelemetry.dateKey
+  ) {
+    usageTelemetry.alertEmittedForDate = usageTelemetry.dateKey;
+    console.warn(
+      `[JanIA-GeminiManager] ⚠️ ALERTA PRESUPUESTO PAGO: ${usageTelemetry.tier2PaidCalls}/${cap} llamadas Nivel 2 usadas hoy (${usageTelemetry.dateKey}).`
+    );
+  }
+}
+
+export function getLlmUsageStats(): LlmUsageStats {
+  ensureTelemetryDateWindow();
+  const cap = getPaidDailyCap();
+  return {
+    dateKey: usageTelemetry.dateKey,
+    tier1FreeCalls: usageTelemetry.tier1FreeCalls,
+    tier2PaidCalls: usageTelemetry.tier2PaidCalls,
+    paidBudgetBlockedCount: usageTelemetry.paidBudgetBlockedCount,
+    paidDailyCap: cap,
+    paidAlertThreshold: getPaidAlertThreshold(cap),
+    paidBudgetRemaining: Math.max(0, cap - usageTelemetry.tier2PaidCalls),
+  };
+}
+
+export function resetLlmUsageStatsForTests(): void {
+  usageTelemetry = {
+    dateKey: getBogotaDateKey(),
+    tier1FreeCalls: 0,
+    tier2PaidCalls: 0,
+    paidBudgetBlockedCount: 0,
+    alertEmittedForDate: "",
+  };
+}
 
 /**
  * Sanitiza cualquier valor de clave eliminando comillas envolventes o espacios accidentales.
@@ -178,9 +282,10 @@ export function clearAllCooldowns(): void {
 /**
  * Obtiene la siguiente clave activa respetando la jerarquía Nivel 1 -> Nivel 2 -> Retorno Automático.
  */
-export function getActiveKey(): ActiveKeyResult {
+export function getActiveKey(options?: GetActiveKeyOptions): ActiveKeyResult {
   const freeKeys = getFreeKeys();
   const now = Date.now();
+  const allowPaidFailover = options?.allowPaidFailover !== false;
 
   // Filtrar claves gratuitas disponibles (que no estén en cooldown)
   const availableFree: { key: string; index: number }[] = [];
@@ -209,18 +314,32 @@ export function getActiveKey(): ActiveKeyResult {
     throw new Error("🚨 [SEGURIDAD TEST]: Todas las claves gratuitas están en cooldown y la clave de pago GEMINI_PAID_KEY está estrictamente vetada en entorno de pruebas.");
   }
 
-  // NIVEL 2 (Respaldo de Emergencia de Pago en Producción):
+  // NIVEL 2 (Respaldo de Emergencia de Pago en Producción — con gobernanza mesurada):
   const paidKey = getPaidKey();
+  let blockedReason: ActiveKeyResult["paidFailoverBlockedReason"];
   if (paidKey) {
-    const paidCooldown = keyCooldowns.get(paidKey) || 0;
-    if (now >= paidCooldown) {
-      console.warn("[JanIA-GeminiManager] 🚨 Nivel 2 de Emergencia: Todas las claves gratuitas (4/4) en cooldown (429). Activando GEMINI_PAID_KEY como respaldo...");
-      return {
-        key: paidKey,
-        isPaid: true,
-        tier: 2,
-        index: 99
-      };
+    if (!allowPaidFailover) {
+      ensureTelemetryDateWindow();
+      usageTelemetry.paidBudgetBlockedCount += 1;
+      blockedReason = "policy_disallowed";
+    } else if (!isPaidBudgetAvailable()) {
+      ensureTelemetryDateWindow();
+      usageTelemetry.paidBudgetBlockedCount += 1;
+      blockedReason = "daily_budget_exhausted";
+      console.warn(
+        `[JanIA-GeminiManager] 🛡️ Tope diario de GEMINI_PAID_KEY alcanzado (${usageTelemetry.tier2PaidCalls}/${getPaidDailyCap()}). Permaneciendo en pool gratuito Nivel 1.`
+      );
+    } else {
+      const paidCooldown = keyCooldowns.get(paidKey) || 0;
+      if (now >= paidCooldown) {
+        console.warn("[JanIA-GeminiManager] 🚨 Nivel 2 de Emergencia: Todas las claves gratuitas (4/4) en cooldown (429). Activando GEMINI_PAID_KEY como respaldo...");
+        return {
+          key: paidKey,
+          isPaid: true,
+          tier: 2,
+          index: 99
+        };
+      }
     }
   }
 
@@ -246,7 +365,8 @@ export function getActiveKey(): ActiveKeyResult {
     key: bestKey,
     isPaid: false,
     tier: 1,
-    index: bestIdx
+    index: bestIdx,
+    ...(blockedReason ? { paidFailoverBlockedReason: blockedReason } : {})
   };
 }
 
@@ -273,5 +393,9 @@ export const geminiKeyManager = {
   isKeyInCooldown,
   clearAllCooldowns,
   getActiveKey,
-  getAllAvailableKeys
+  getAllAvailableKeys,
+  isPaidBudgetAvailable,
+  recordLlmUsage,
+  getLlmUsageStats,
+  resetLlmUsageStatsForTests
 };

@@ -330,6 +330,17 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.18 — Noviembre 2026
+
+#### [v34.18.0] — 2026-11-13: Punto 7 — Consolidación Estructural: Perfilamiento Universal de Roles en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia (Doctrina Eduardo A. Rivera)
+- **Problema / Diagnóstico Identificado**:
+  - `dmHandler.ts` presentaba sesgo asumiendo por defecto que >90% de los contactos nuevos eran colegas inmobiliarios (`Colega (nombre aún no identificado)`), no inyectaba `buildSessionOnboardingDirectives` ni persistía roles de comprador/inversionista/arrendatario. Paralelamente, `llm.ts` tenía `FALLBACK_MODELS = HIGH_REASONING_MODELS` y los handlers llamaban `highReasoning: true` de forma rutinaria sin clasificación de complejidad ni presupuesto diario de `GEMINI_PAID_KEY`, mientras `textToSpeechMedia()` en `whatsapp-utils.ts` no bloqueaba TTS pago en `NODE_ENV=test` ni aplicaba resumen ejecutivo o cuota diaria para Voz Laomedeia.
+- **Solución Quirúrgica Implementada**:
+  1. **Perfilamiento Universal de Roles (`sessionManager.ts`, `dmOnboardingAndDocsHelper.ts`, `dmHandler.ts`, `consultingHandler.ts`)**: `detectUserBusinessRoleFromText`, `setUserBusinessRole`, `getUserBusinessRole` (`agente_inmobiliario`, `propietario_directo`, `comprador_inversionista`, `arrendatario`), inyección de `contextRoleDirective` sin repetir pregunta una vez persistido el rol, y adaptación estricta de reglas comerciales (`40/20/40` vs corretaje propietario vs acompañamiento directo `+57 316 656 9719`).
+  2. **Gobernanza Mesurada LLM (`geminiKeyManager.ts`, `llm.ts`, handlers)**: `FALLBACK_MODELS = MECHANICAL_MODELS`, clasificador `classifyLlmReasoningComplexity`, control `allowPaidFailover`, telemetría `getLlmUsageStats` y tope diario `GEMINI_PAID_DAILY_CAP` / `GEMINI_PAID_ALERT_THRESHOLD` manteniendo veto en tests.
+  3. **Gobernanza Mesurada TTS Laomedeia (`whatsapp-utils.ts`, `whatsapp-match.ts`)**: `buildConciseVoiceSummaryText` (`TTS_PAID_MAX_CHARS`), `evaluatePaidTtsGuardrail` (`TTS_USER_DAILY_CAP`, `TTS_GLOBAL_DAILY_CAP`), veto `$0 COP` en `NODE_ENV=test` y despacho conjunto de audio resumido + texto completo ante respuestas largas, tablas o URLs.
+  4. **Gobernanza y Pruebas**: Semilla `seed-consolidacion-roles-gobernanza-gemini-voz-laomedeia-v34-18` en `founderKnowledgeService.ts`, Suite 204 en `regression.test.ts`, versión `v34.18` (`34.18.0`) en `shared/const.ts` y `package.json`.
+
 ### 🔖 v34.17 — Noviembre 2026
 
 #### [v34.17.0] — 2026-11-13: Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal (Ley 675 de 2001), Auditoría RPH/Actas, Vivienda Turística (Airbnb / RNT) y Subdivisión/Englobe + PDF Membretado (Doctrina Eduardo A. Rivera)

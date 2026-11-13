@@ -9,7 +9,7 @@ import {
 } from "../parsers";
 import { checkStrictOffTopic } from "../heuristics";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
-import { invokeLLM } from "../../llm";
+import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
 import { appendGroupSatisfactionClosing } from "./consultingHandler";
@@ -421,9 +421,16 @@ export async function processCirculoMessage(
       content: userPromptContent
     });
 
+    const circuloComplexity = classifyLlmReasoningComplexity(text, {
+      hasImage: Boolean(imageBuffer),
+      hasPdf: Boolean(pdfBuffer)
+    });
+
     const llmRes = await invokeLLM({
       messages,
       responseFormat: { type: "json_object" },
+      highReasoning: circuloComplexity.highReasoning,
+      allowPaidFailover: circuloComplexity.allowPaidFailover,
       imageBuffer,
       pdfBuffer,
       pdfMimeType,

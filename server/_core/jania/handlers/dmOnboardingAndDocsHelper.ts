@@ -19,7 +19,12 @@ import {
   type UserCreativeImageInput,
   type GeneratedCreativeImageResult
 } from "../creativeStudioImageService";
-import { getUser402040Agreement, getUserOwnerCorretaje } from "../sessionManager";
+import {
+  getUser402040Agreement,
+  getUserOwnerCorretaje,
+  getUserBusinessRole,
+  type UserBusinessRole
+} from "../sessionManager";
 
 export {
   generateCustomUserCreativeImage,
@@ -243,15 +248,18 @@ export function processAndQueueDmSticker(
 }
 
 /**
- * Construye las directivas de contexto de Onboarding (40/20/40 vs. Plan de Pago y Propietario Directo)
+ * Construye las directivas de contexto de Onboarding (Rol Universal, 40/20/40 vs. Plan de Pago y Propietario Directo)
  * para inyectar en el prompt conversacional de JanIA.
  */
 export async function buildSessionOnboardingDirectives(userId: string): Promise<{
   context402040Directive: string;
   contextOwnerDirective: string;
+  contextRoleDirective: string;
+  identifiedRole?: UserBusinessRole;
 }> {
   const alliedStatus = await getUser402040Agreement(userId);
   const ownerStatus = await getUserOwnerCorretaje(userId);
+  const identifiedRole = await getUserBusinessRole(userId);
 
   const context402040Directive =
     alliedStatus === true
@@ -264,5 +272,18 @@ export async function buildSessionOnboardingDirectives(userId: string): Promise<
     ? `\n🏠 ESTADO DE PROPIETARIO DIRECTO EN SESIÓN (CORRETAJE VIRTUAL VECY): Este usuario es Propietario Directo (NO es colega inmobiliario; JAMÁS le ofrezcas comisión colaborativa 40/20/40 ni 50/50). Estado actual: T&C Corretaje Virtual=${ownerStatus.acceptsTerms ? "ACEPTADOS" : "PENDIENTE DE ACEPTACIÓN"}, Correo=${ownerStatus.email || "PENDIENTE DE SOLICITAR"}. Exige la aceptación de Términos y Condiciones de corretaje virtual, pide su correo para el envío formal del contrato y recuérdale comunicarse al 3166569719 (+57 316 656 9719) con Jani Alves o Eduardo Rivera para concretar el contrato y acordar la comisión previa a la publicación en https://vecy-bienes-raices.vercel.app/.`
     : "";
 
-  return { context402040Directive, contextOwnerDirective };
+  let contextRoleDirective = "";
+  if (identifiedRole === "agente_inmobiliario") {
+    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: AGENTE / INMOBILIARIA / CORREDOR. Adapta tu lenguaje al de alianza inmobiliaria colaborativa (40/20/40, cruces, captaciones, estudio de títulos y avalúos). PROHIBIDO volver a preguntarle cuál es su rol o a qué se dedica.`;
+  } else if (identifiedRole === "propietario_directo") {
+    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: PROPIETARIO DIRECTO. Acompáñalo bajo corretaje virtual VECY ($0 publicación/costos anticipados; 3% venta o 1 canon arriendo al cierre; línea directa +57 316 656 9719). PROHIBIDO ofrecerle 40/20/40 o llamarlo "colega". PROHIBIDO volver a preguntarle su rol.`;
+  } else if (identifiedRole === "comprador_inversionista") {
+    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: COMPRADOR DIRECTO / INVERSIONISTA. Acompáñalo con búsqueda de opciones, ROI/Cap Rate, Estudio de Títulos CTL, Norma POT y simulador financiero a través de VECY (+57 316 656 9719). JAMÁS le ofrezcas esquema de comisión 40/20/40 ni le prometas contacto directo de propietarios o terceros agentes (toda gestión se canaliza por VECY). PROHIBIDO volver a preguntarle su rol.`;
+  } else if (identifiedRole === "arrendatario") {
+    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: ARRENDATARIO DIRECTO. Acompáñalo en búsqueda de arriendo, revisión Ley 820/2003 y gestión directa con VECY (+57 316 656 9719). JAMÁS le ofrezcas esquema 40/20/40 ni contacto directo con propietarios externos. PROHIBIDO volver a preguntarle su rol.`;
+  } else {
+    contextRoleDirective = `\n🧭 PERFILAMIENTO UNIVERSAL DE ROL EN PRIMER CONTACTO (ROL AÚN NO CONFIRMADO): NO des por sentado que este usuario es agente inmobiliario ("colega"). Todos los servicios gratuitos de JanIA están abiertos para TODO el público. Salúdalo con calidez, atiende cualquier duda o solicitud que ya haya expresado, y pregúntale de forma breve y natural en calidad de qué nos escribe o cuál es su rol: (1) Agente / Inmobiliaria / Corredor, (2) Propietario directo que desea vender/permutar/arrendar, o (3) Comprador directo / Inversionista / Arrendatario.`;
+  }
+
+  return { context402040Directive, contextOwnerDirective, contextRoleDirective, identifiedRole };
 }

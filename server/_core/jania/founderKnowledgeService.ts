@@ -818,6 +818,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal Ley 675/2001, Auditoría RPH/Actas, Vivienda Turística RNT/Airbnb y Subdivisión/Englobe en PDF Membretado (propiedadHorizontalService.ts + legalDocumentPdfService.ts, v34.17) en DM y Grupos con CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
     createdAt: "2026-11-13T19:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-consolidacion-roles-gobernanza-gemini-voz-laomedeia-v34-18",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Consolidación Estructural: Perfilamiento Universal de Roles en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia — Doctrina Eduardo A. Rivera v34.18",
+    directive:
+      "1) PERFILAMIENTO UNIVERSAL EN PRIMER CONTACTO (SIN SESGO DE COLEGA POR DEFECTO): Todos los servicios gratuitos de JanIA están abiertos para TODO el público. Cuando hables por primera vez o el usuario aún no tenga un rol confirmado en sesión (sessionManager.ts), JAMÁS des por sentado que es 'colega inmobiliario': saluda con calidez y pregunta brevemente en calidad de qué escribe: (a) Agente / Inmobiliaria / Corredor (alianza 40/20/40), (b) Propietario directo (corretaje virtual $0 pauta, 3% venta / 1 canon arriendo al cierre), o (c) Comprador directo / Inversionista / Arrendatario (acompañamiento directo VECY +57 316 656 9719 sin ofrecer 40/20/40). Persiste el rol detectado y PROHIBIDO repetir la pregunta una vez confirmado. 2) GOBERNANZA MESURADA DE GEMINI PAGO Y VOZ LAOMEDEIA: Enrutamiento inteligente en llm.ts (classifyLlmReasoningComplexity) usando modelos ligeros Flash-Lite en Nivel 1 gratuito para saludos/charla simple y reservando highReasoning + failover pago (con tope diario configurable GEMINI_PAID_DAILY_CAP) exclusivamente para casos jurídicos/financieros/multimodales complejos. En whatsapp-utils.ts y whatsapp-match.ts, resumir ejecutivamente textos largos, tablas o URLs (buildConciseVoiceSummaryText) antes de sintetizar con Laomedeia, respetar topes diarios por usuario/global (TTS_USER_DAILY_CAP / TTS_GLOBAL_DAILY_CAP) con degradación elegante a Salomé gratuita o texto, y mantener 100% vetadas las APIs pagas en NODE_ENV=test.",
+    rawText:
+      "Punto 7 — Consolidación Estructural (v34.18): Perfilamiento Universal de Roles en Primer Contacto (sessionManager + dmOnboardingAndDocsHelper + dmHandler + consultingHandler) y Gobernanza Mesurada de Gemini Pago (llm + geminiKeyManager) + Voz Laomedeia (whatsapp-utils + whatsapp-match), con blindaje $0 COP en tests.",
+    createdAt: "2026-11-13T21:30:00.000Z",
+    active: true
   }
 ];
 

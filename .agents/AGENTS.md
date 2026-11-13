@@ -184,7 +184,22 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.17 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.18 — Noviembre 2026
+
+### Novedades v34.18 (Punto 7 — Consolidación Estructural: Perfilamiento Universal de Roles en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Consolidación de Conversación y Rentabilidad de APIs (Post-v34.17):**
+     - Erradicar el sesgo de asumir por defecto que todo contacto nuevo es "colega inmobiliario", recibiendo con calidez a **Agentes/Inmobiliarias**, **Propietarios Directos** y **Compradores/Inversionistas/Arrendatarios** en DM (`dmHandler.ts`, `dmOnboardingAndDocsHelper.ts`, `sessionManager.ts`) y Grupos (`consultingHandler.ts`), persistiendo el rol confirmado y evitando repetir preguntas innecesarias.
+     - Gobernar de forma mesurada **Gemini Pago** (`geminiKeyManager.ts`, `llm.ts`, handlers) y **Voz Laomedeia** (`whatsapp-utils.ts`, `whatsapp-match.ts`) con cero desperdicio y 100% bloqueo en `NODE_ENV=test`.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `sessionManager.ts` & `dmOnboardingAndDocsHelper.ts`: `detectUserBusinessRoleFromText`, `setUserBusinessRole`, `getUserBusinessRole` (`agente_inmobiliario`, `propietario_directo`, `comprador_inversionista`, `arrendatario`) y `contextRoleDirective` integrada en `dmHandler.ts`.
+     - `llm.ts` & `geminiKeyManager.ts`: `FALLBACK_MODELS = MECHANICAL_MODELS`, clasificador `classifyLlmReasoningComplexity` en `dmHandler.ts`/`consultingHandler.ts`/`circuloHandler.ts`, telemetría diaria (`getLlmUsageStats`) y tope diario `GEMINI_PAID_DAILY_CAP` / `GEMINI_PAID_ALERT_THRESHOLD`.
+     - `whatsapp-utils.ts` & `whatsapp-match.ts`: `buildConciseVoiceSummaryText` (resumen ejecutivo en audio + texto completo en chat para tablas/URLs/textos extensos), cuotas `TTS_USER_DAILY_CAP` / `TTS_GLOBAL_DAILY_CAP` (`evaluatePaidTtsGuardrail`) con degradación a Salomé gratuita/texto y veto `$0 COP` en tests.
+  3. **Gobernanza y Suite de Regresión 204:**
+     - Semilla `seed-consolidacion-roles-gobernanza-gemini-voz-laomedeia-v34-18` en `founderKnowledgeService.ts` y Suite 204 en `regression.test.ts` + versión `v34.18` (`34.18.0`) en `shared/const.ts` y `package.json`.
+- **Validación Limpia ($0 COP):** `NODE_ENV=test npm test` | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.17 — Noviembre 2026
 
 ### Novedades v34.17 (Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal Ley 675 de 2001, Auditoría de Reglamentos PH y Actas, Vivienda Turística Airbnb/RNT y Prefactibilidad de Subdivisión/Englobe + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

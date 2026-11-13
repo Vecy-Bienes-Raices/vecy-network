@@ -815,6 +815,7 @@ export async function setUser402040Agreement(userId: string, accepts: boolean): 
   const session = await getUserPerpetualSession(userId);
   session.keyFacts = session.keyFacts || {};
   session.keyFacts.acepta_40_20_40 = accepts;
+  session.keyFacts.rol_identificado = "agente_inmobiliario";
   session.keyFacts.categoriaContacto = accepts ? "aliada_prioritaria" : "plan_pago_requerido";
   if (!accepts) {
     session.keyFacts.rechaza_402040_requiere_plan_pago = true;
@@ -875,6 +876,84 @@ export async function getUserOwnerCorretaje(userId: string): Promise<{ isOwner?:
     acceptsTerms: session.keyFacts?.acepta_terminos_corretaje,
     email: session.keyFacts?.correo_propietario
   };
+}
+
+export type UserBusinessRole =
+  | "agente_inmobiliario"
+  | "propietario_directo"
+  | "comprador_inversionista"
+  | "arrendatario";
+
+export function detectUserBusinessRoleFromText(text: string): UserBusinessRole | undefined {
+  const clean = String(text || "").trim();
+  if (!clean) return undefined;
+
+  // 1. Propietario directo explícito
+  if (
+    /\b(?:soy\s+(?:el\s+|la\s+)?(?:propietari[oa]|dueñ[oa])(?:\s+direct[oa])?|propietari[oa]\s+direct[oa]|mi\s+propio\s+inmueble|(?:vender|arrendar|alquilar|permutar)\s+mi\s+(?:apartamento|casa|lote|bodega|local|finca|oficina|predio|inmueble)|tengo\s+(?:un|una|mi)\s+(?:apartamento|casa|lote|bodega|local|finca)\s+propia?)\b/i.test(clean) &&
+    !/\b(?:cliente|colega|agente|asesor[a]?|corredor[a]?|inmobiliari[oa])\b/i.test(clean)
+  ) {
+    return "propietario_directo";
+  }
+
+  // 2. Agente / Inmobiliaria / Corredor explícito
+  if (
+    /\b(?:soy\s+(?:un[a]?\s+)?(?:agente|asesor[a]?|corredor[a]?|broker|br[oó]ker|colega)(?:\s+inmobiliari[oa])?|como\s+(?:agente|asesor[a]?|corredor[a]?|colega)|trabajo\s+(?:en|con)\s+(?:una\s+)?inmobiliaria|tengo\s+(?:una\s+)?inmobiliaria|represento\s+a\s+(?:un|una|mi)\s+(?:cliente|comprador[a]?|propietari[oa])|tengo\s+(?:un|una)\s+cliente\s+que|es\s+para\s+(?:un|una)\s+cliente|40\s*\/\s*20\s*\/\s*40|punta\s+captadora|punta\s+vendedora)\b/i.test(clean) &&
+    !/\bno\s+soy\s+(?:agente|asesor[a]?|corredor[a]?|colega|inmobiliari[oa])\b/i.test(clean)
+  ) {
+    return "agente_inmobiliario";
+  }
+
+  // 3. Arrendatario directo explícito
+  if (
+    /\b(?:soy\s+(?:un[a]?\s+)?arrendatari[oa](?:\s+direct[oa])?|quiero\s+tomar\s+en\s+arriendo|busco\s+(?:para\s+)?arrendar\s+para\s+(?:vivir|m[ií]|mi\s+familia|mi\s+empresa|mi\s+negocio)|para\s+(?:vivir\s+yo|habitarlo\s+yo))\b/i.test(clean) &&
+    !/\b(?:cliente|colega|agente|asesor[a]?|corredor[a]?)\b/i.test(clean)
+  ) {
+    return "arrendatario";
+  }
+
+  // 4. Comprador directo o Inversionista explícito
+  if (
+    /\b(?:soy\s+(?:un[a]?\s+)?(?:comprador[a]?|inversionista)(?:\s+direct[oa])?|como\s+(?:comprador[a]?|inversionista)(?:\s+direct[oa])?|busco\s+(?:invertir|comprar)\s+(?:directamente|para\s+m[ií]|vivienda\s+propia|mi\s+patrimonio|como\s+inversi[oó]n)|quiero\s+(?:comprar|invertir)\s+(?:directamente|para\s+m[ií]|sin\s+intermediarios)|cliente\s+direct[oa]|particular\s+(?:que\s+)?busca|no\s+soy\s+(?:agente|asesor[a]?|corredor[a]?|colega|inmobiliari[oa]))\b/i.test(clean)
+  ) {
+    if (/\b(?:arrendar|alquilar|arriendo)\b/i.test(clean) && !/\bcomprar|invertir\b/i.test(clean)) {
+      return "arrendatario";
+    }
+    return "comprador_inversionista";
+  }
+
+  return undefined;
+}
+
+export async function setUserBusinessRole(
+  userId: string,
+  role: UserBusinessRole,
+  metadata?: { sourceText?: string }
+): Promise<UserPerpetualSession> {
+  const session = await getUserPerpetualSession(userId);
+  session.keyFacts = session.keyFacts || {};
+  session.keyFacts.rol_identificado = role;
+  session.keyFacts.rol_confirmado_en = new Date().toISOString();
+  session.keyFacts.es_propietario_directo = role === "propietario_directo";
+  delete session.keyFacts.esperando_identificacion_rol;
+  if (metadata?.sourceText) {
+    session.keyFacts.rol_fuente_texto = metadata.sourceText.slice(0, 120);
+  }
+  session.lastSeenAt = new Date().toISOString();
+  await saveUserPerpetualSession(session);
+  return session;
+}
+
+export async function getUserBusinessRole(userId: string): Promise<UserBusinessRole | undefined> {
+  const session = await getUserPerpetualSession(userId);
+  const raw = session.keyFacts?.rol_identificado;
+  if (raw === "colega_inmobiliario" || raw === "agente_inmobiliario") return "agente_inmobiliario";
+  if (raw === "propietario_directo") return "propietario_directo";
+  if (raw === "comprador_inversionista") return "comprador_inversionista";
+  if (raw === "arrendatario") return "arrendatario";
+  if (session.keyFacts?.es_propietario_directo === true) return "propietario_directo";
+  if (session.keyFacts?.acepta_40_20_40 !== undefined) return "agente_inmobiliario";
+  return undefined;
 }
 
 
