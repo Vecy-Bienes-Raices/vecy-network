@@ -274,7 +274,7 @@ export async function buildSessionOnboardingDirectives(userId: string): Promise<
 
   let contextRoleDirective = "";
   if (identifiedRole === "agente_inmobiliario") {
-    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: AGENTE / INMOBILIARIA / CORREDOR. Adapta tu lenguaje al de alianza inmobiliaria colaborativa (40/20/40, cruces, captaciones, estudio de títulos y avalúos). PROHIBIDO volver a preguntarle cuál es su rol o a qué se dedica.`;
+    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: AGENTE / INMOBILIARIA / CORREDOR. Adapta tu lenguaje al de alianza inmobiliaria colaborativa (40/20/40, cruces, captaciones, estudio de títulos y avalúos). PROHIBIDO volver a preguntarle su rol ni a qué se dedica.`;
   } else if (identifiedRole === "propietario_directo") {
     contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: PROPIETARIO DIRECTO. Acompáñalo bajo corretaje virtual VECY ($0 publicación/costos anticipados; 3% venta o 1 canon arriendo al cierre; línea directa +57 316 656 9719). PROHIBIDO ofrecerle 40/20/40 o llamarlo "colega". PROHIBIDO volver a preguntarle su rol.`;
   } else if (identifiedRole === "comprador_inversionista") {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { publicProcedure, router } from '../_core/trpc';
+import { adminProcedure, publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb, getRawSql } from '../db';
 import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions, inmobiliarioLexicon, matchFeedback } from '../../drizzle/schema';
@@ -2321,6 +2321,30 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
                       (input.secretKey === 'vecy-admin-secret-2026');
       const { executeAdminMatchSearch } = await import("../_core/adminMatchAssistantService");
       return await executeAdminMatchSearch(input.query, isAdmin);
+    }),
+
+  /**
+   * Telemetría consolidada de consumo Gemini/TTS y distribución de roles (solo administradores) (v34.19)
+   */
+  getOperationalTelemetry: adminProcedure.query(async () => {
+    const { getOperationalTelemetrySnapshot } = await import("../_core/telemetryAndAlertsService");
+    return await getOperationalTelemetrySnapshot();
+  }),
+
+  /**
+   * Evaluación manual o dry-run de alertas tempranas de consumo API hacia Eduardo (solo administradores) (v34.19)
+   */
+  evaluateCostAlerts: adminProcedure
+    .input(
+      z.object({
+        enabled: z.boolean().optional(),
+        force: z.boolean().optional(),
+        dryRun: z.boolean().optional(),
+      }).optional()
+    )
+    .mutation(async ({ input }) => {
+      const { evaluateAndDispatchCostAlerts } = await import("../_core/telemetryAndAlertsService");
+      return await evaluateAndDispatchCostAlerts(input);
     }),
 });
 

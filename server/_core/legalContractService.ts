@@ -1071,6 +1071,7 @@ export async function analyzeContractOrMinutaFromWhatsAppInput(input: {
   imageBuffer?: Buffer | string | null;
   imageMimeType?: string | null;
   requesterName?: string;
+  requesterRole?: "agente_inmobiliario" | "propietario_directo" | "comprador_inversionista" | "arrendatario" | null;
 }): Promise<LegalContractWhatsAppResult> {
   const rawText = String(input.text || "").trim();
   const pdfBase64 = mediaInputToBase64(input.pdfBuffer);
@@ -1197,6 +1198,17 @@ export async function analyzeContractOrMinutaFromWhatsAppInput(input: {
   }
 
   // Caso C: Generacion de Minuta Personalizada en PDF Membretado
+  if (parsed.params.tipoDocumento === "contrato_corretaje") {
+    const mentionsColleagueScheme = /\b(?:40\/20\/40|colega|inmobiliaria|punta\s+captadora|corredor\s+aliado)\b/i.test(
+      rawText
+    );
+    const mentionsDirectOwnerText = /\b(?:mi\s+(?:apartamento|casa|inmueble|propiedad|lote|finca|local|oficina|bodega)|propietario\s+directo|soy\s+(?:el\s+)?propietario|due[ñn]o\s+directo)\b/i.test(
+      rawText
+    );
+    parsed.params.esPropietarioDirecto =
+      input.requesterRole === "propietario_directo" ||
+      (input.requesterRole !== "agente_inmobiliario" && mentionsDirectOwnerText && !mentionsColleagueScheme);
+  }
   const pdfResult = await generateLegalDocumentPdf(parsed.params);
   return {
     handled: true,

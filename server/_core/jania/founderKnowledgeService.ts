@@ -830,6 +830,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 7 — Consolidación Estructural (v34.18): Perfilamiento Universal de Roles en Primer Contacto (sessionManager + dmOnboardingAndDocsHelper + dmHandler + consultingHandler) y Gobernanza Mesurada de Gemini Pago (llm + geminiKeyManager) + Voz Laomedeia (whatsapp-utils + whatsapp-match), con blindaje $0 COP en tests.",
     createdAt: "2026-11-13T21:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-observabilidad-telemetria-simulador-campo-v34-19",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Observabilidad en Vivo de Consumo API, Telemetría de Roles, Alertas Tempranas Anti-Spam y Calibración Post-Campo — Doctrina Eduardo A. Rivera v34.19",
+    directive:
+      "1) TELEMETRÍA OPERATIVA Y ALERTAS TEMPRANAS ANTI-SPAM (telemetryAndAlertsService.ts): Consolida métricas en vivo de getLlmUsageStats() (Nivel 1 gratuito vs Nivel 2 pago), getTtsUsageStats() (Voz Laomedeia vs Salomé gratuita/texto) y distribución real de roles (agente_inmobiliario, propietario_directo, comprador_inversionista, arrendatario), expuestas únicamente a administradores mediante adminProcedure (tRPC janIA.getOperationalTelemetry) y rutas REST protegidas (/api/admin/telemetry) + panel AdminTelemetry. Cuando el uso diario supere GEMINI_PAID_ALERT_THRESHOLD o el umbral configurado de TTS_GLOBAL_DAILY_CAP, emitir alerta temprana al WhatsApp de Eduardo (+57 316 656 9719) con deduplicación diaria por canal/nivel para evitar spam y estricto bloqueo $0 COP en NODE_ENV=test. 2) SIMULADOR EN CAMPO E2E Y CALIBRACIÓN (fieldSimulatorService.ts): Verificar periódicamente los 4 recorridos reales (Agente 40/20/40 + Notarial, Propietario Directo + Corretaje sin 40/20/40 + Tributario, Comprador/Inversionista + Hipotecario/Cap Rate + Resumen de Voz limpio sin tuberías '|', y Consultor Grupal @JanIA + Ley 675 PDF), manteniendo interceptores determinísticos en DM/Grupos a $0 COP y cero repreguntas de rol.",
+    rawText:
+      "Punto 8 — Observabilidad en Vivo de Consumo API, Endpoint de Telemetría Protegido, Alertas Tempranas Anti-Spam a Eduardo, Simulador E2E en Campo (DM + Grupos) y Calibración Post-Campo (v34.19).",
+    createdAt: "2026-11-13T22:00:00.000Z",
+    active: true
   }
 ];
 

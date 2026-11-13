@@ -944,8 +944,8 @@ export async function setUserBusinessRole(
   return session;
 }
 
-export async function getUserBusinessRole(userId: string): Promise<UserBusinessRole | undefined> {
-  const session = await getUserPerpetualSession(userId);
+export function resolveRoleFromPerpetualSession(session?: UserPerpetualSession | null): UserBusinessRole | undefined {
+  if (!session) return undefined;
   const raw = session.keyFacts?.rol_identificado;
   if (raw === "colega_inmobiliario" || raw === "agente_inmobiliario") return "agente_inmobiliario";
   if (raw === "propietario_directo") return "propietario_directo";
@@ -954,6 +954,129 @@ export async function getUserBusinessRole(userId: string): Promise<UserBusinessR
   if (session.keyFacts?.es_propietario_directo === true) return "propietario_directo";
   if (session.keyFacts?.acepta_40_20_40 !== undefined) return "agente_inmobiliario";
   return undefined;
+}
+
+export async function getUserBusinessRole(userId: string): Promise<UserBusinessRole | undefined> {
+  const session = await getUserPerpetualSession(userId);
+  return resolveRoleFromPerpetualSession(session);
+}
+
+export interface RoleDistributionStats {
+  totalSessions: number;
+  confirmedRolesTotal: number;
+  unassignedCount: number;
+  counts: {
+    agente_inmobiliario: number;
+    propietario_directo: number;
+    comprador_inversionista: number;
+    arrendatario: number;
+  };
+  percentages: {
+    agente_inmobiliario: number;
+    propietario_directo: number;
+    comprador_inversionista: number;
+    arrendatario: number;
+  };
+  acceptance402040Count: number;
+  rejection402040Count: number;
+  ownerCorretajeCount: number;
+}
+
+function computeRoleDistributionFromSessions(sessions: Iterable<UserPerpetualSession>): RoleDistributionStats {
+  const counts = {
+    agente_inmobiliario: 0,
+    propietario_directo: 0,
+    comprador_inversionista: 0,
+    arrendatario: 0,
+  };
+  let totalSessions = 0;
+  let unassignedCount = 0;
+  let acceptance402040Count = 0;
+  let rejection402040Count = 0;
+  let ownerCorretajeCount = 0;
+
+  for (const session of sessions) {
+    if (!session || isEduardoOrJani(session.userId)) continue;
+    totalSessions += 1;
+    const role = resolveRoleFromPerpetualSession(session);
+    if (role) {
+      counts[role] += 1;
+    } else {
+      unassignedCount += 1;
+    }
+    if (session.keyFacts?.acepta_40_20_40 === true) acceptance402040Count += 1;
+    else if (session.keyFacts?.acepta_40_20_40 === false) rejection402040Count += 1;
+    if (session.keyFacts?.es_propietario_directo === true) ownerCorretajeCount += 1;
+  }
+
+  const confirmedRolesTotal =
+    counts.agente_inmobiliario +
+    counts.propietario_directo +
+    counts.comprador_inversionista +
+    counts.arrendatario;
+
+  const pct = (val: number) =>
+    confirmedRolesTotal > 0 ? Math.round((val / confirmedRolesTotal) * 1000) / 10 : 0;
+
+  return {
+    totalSessions,
+    confirmedRolesTotal,
+    unassignedCount,
+    counts,
+    percentages: {
+      agente_inmobiliario: pct(counts.agente_inmobiliario),
+      propietario_directo: pct(counts.propietario_directo),
+      comprador_inversionista: pct(counts.comprador_inversionista),
+      arrendatario: pct(counts.arrendatario),
+    },
+    acceptance402040Count,
+    rejection402040Count,
+    ownerCorretajeCount,
+  };
+}
+
+/**
+ * Retorna la distribución en tiempo real de roles detectados en memoria de sesión (0ms).
+ */
+export function getUserRoleDistributionStatsSync(): RoleDistributionStats {
+  ensureLoadedFromDisk();
+  return computeRoleDistributionFromSessions(userPerpetualSessionMap.values());
+}
+
+/**
+ * Retorna la distribución consolidada de roles (memoria + PostgreSQL en producción).
+ */
+export async function getUserRoleDistributionStats(): Promise<RoleDistributionStats> {
+  ensureLoadedFromDisk();
+  const merged = new Map<string, UserPerpetualSession>(userPerpetualSessionMap);
+
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const db = await getDb();
+      if (db) {
+        const rows = await db
+          .select({ jid: pendingSessions.jid, sessionData: pendingSessions.sessionData })
+          .from(pendingSessions)
+          .where(sql`${pendingSessions.jid} LIKE 'user_memory:%'`);
+        for (const row of rows) {
+          const data = row.sessionData as UserPerpetualSession | null;
+          const uid = data?.userId || row.jid.replace(/^user_memory:/, "");
+          if (uid && data && !merged.has(uid)) {
+            merged.set(uid, data);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn("[sessionManager] Error agregando distribución de roles desde BD:", err?.message);
+    }
+  }
+
+  return computeRoleDistributionFromSessions(merged.values());
+}
+
+export function resetUserPerpetualSessionsForTests(): void {
+  if (process.env.NODE_ENV !== "test") return;
+  userPerpetualSessionMap.clear();
 }
 
 

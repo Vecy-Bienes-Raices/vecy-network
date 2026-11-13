@@ -58,6 +58,10 @@ import {
   hasPhDocumentMarkers,
   isPropiedadHorizontalRequest
 } from "../../propiedadHorizontalService";
+import {
+  executeNotarialAssistanceFromWhatsApp,
+  isExplicitNotarialLiquidationRequest
+} from "../../notarialExpenseService";
 import { getGreetingByTime } from "../../whatsapp-utils";
 import { FlyerVisionResult } from "../types";
 import {
@@ -2776,6 +2780,7 @@ export async function processPrivateDmConversationalMessage(
       !isExplicitCtlStudyRequest(clean) &&
       !isContractMinutaOrAuditRequest(clean) &&
       !isPropiedadHorizontalRequest(clean) &&
+      !isExplicitNotarialLiquidationRequest(clean, userId) &&
       (isOwnerOrConsignmentInquiry ||
         /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
           cleanLower
@@ -3075,7 +3080,8 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       pdfBuffer: mediaOptions?.pdfBuffer,
       pdfMimeType: mediaOptions?.pdfMimeType,
       imageBuffer: mediaOptions?.imageBuffer,
-      requesterName: displayName || realName || undefined
+      requesterName: displayName || realName || undefined,
+      requesterRole: persistedBusinessRole || null
     });
 
     if (contractDmRes.handled && contractDmRes.whatsappReply) {
@@ -3166,6 +3172,44 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       appendDmHistory(userId, "assistant", finalPhReply);
       markUserGreetedToday(userId);
       return finalPhReply;
+    }
+  }
+
+  // ⚖️ INTERCEPTOR DETERMINÍSTICO DE LIQUIDACIÓN NOTARIAL, RETENCIÓN Y REGISTRO (v34.19 — Calibración Post-Campo):
+  // Resuelve liquidaciones exactas de derechos notariales 50/50, retención 1%, beneficencia y ORIP a $0 COP en DM sin gastar LLM.
+  if (
+    !isCommercialFlyerImg &&
+    !isReviewValidationContext &&
+    isExplicitNotarialLiquidationRequest(clean, userId)
+  ) {
+    const notarialDmRes = await executeNotarialAssistanceFromWhatsApp(clean, userId, true);
+    if (notarialDmRes.isNotarialRequest && notarialDmRes.reportText) {
+      const isCompletedReport = Boolean(
+        notarialDmRes.calculatedResult || notarialDmRes.isEducationalAnswer
+      );
+      if (isCompletedReport) {
+        await incrementFreeServicesCount(userId);
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+          serviceType: "notarial",
+          timestamp: Date.now()
+        };
+        await saveUserPerpetualSession(userPerpetualSession);
+      }
+
+      const satisfactionLine = isCompletedReport
+        ? `\n\n🤝 *¿Quedaste satisfecho(a) con esta Liquidación Notarial y de Registro?* Tu opinión me ayuda a seguir afinando mi precisión para toda la red VECY.`
+        : "";
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const finalNotarialReply = `${greetingPrefix}${notarialDmRes.reportText}${satisfactionLine}`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", finalNotarialReply);
+      markUserGreetedToday(userId);
+      return finalNotarialReply;
     }
   }
 

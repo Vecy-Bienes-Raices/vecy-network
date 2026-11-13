@@ -1395,6 +1395,38 @@ Dirección obligatoria:
     }
   });
 
+  // 📊 Endpoints Protegidos de Telemetría de Costos API (Gemini + TTS) y Distribución de Roles (v34.19)
+  app.get('/api/admin/telemetry', async (req: any, res: any) => {
+    try {
+      const { authorizeTelemetryHttpRequest, getOperationalTelemetrySnapshot } = await import('./telemetryAndAlertsService');
+      const auth = await authorizeTelemetryHttpRequest(req);
+      if (!auth.authorized) {
+        return res.status(403).json({ error: 'Forbidden: se requiere sesión admin o token administrativo válido.' });
+      }
+      const snapshot = await getOperationalTelemetrySnapshot();
+      return res.status(200).json({ ok: true, authMode: auth.mode, telemetry: snapshot });
+    } catch (err: any) {
+      console.error('[ADMIN-TELEMETRY] Error:', err?.message || err);
+      return res.status(500).json({ error: err?.message || 'Error obteniendo telemetría operativa' });
+    }
+  });
+
+  app.post('/api/admin/telemetry/evaluate-alerts', async (req: any, res: any) => {
+    try {
+      const { authorizeTelemetryHttpRequest, evaluateAndDispatchCostAlerts } = await import('./telemetryAndAlertsService');
+      const auth = await authorizeTelemetryHttpRequest(req);
+      if (!auth.authorized) {
+        return res.status(403).json({ error: 'Forbidden: se requiere sesión admin o token administrativo válido.' });
+      }
+      const { enabled, force, dryRun } = req.body || {};
+      const result = await evaluateAndDispatchCostAlerts({ enabled, force, dryRun });
+      return res.status(200).json({ ok: true, result });
+    } catch (err: any) {
+      console.error('[ADMIN-TELEMETRY-ALERTS] Error:', err?.message || err);
+      return res.status(500).json({ error: err?.message || 'Error evaluando alertas de consumo' });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.18 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.19 — Noviembre 2026
+
+### Novedades v34.19 (Punto 8 — Observabilidad en Vivo de Consumo API, Endpoint de Telemetría Protegido, Alertas Tempranas Anti-Spam y Calibración Post-Campo — Doctrina Eduardo A. Rivera):
+- **Telemetría Operativa y Alertas Tempranas (`telemetryAndAlertsService.ts`, `sessionManager.ts`, `geminiKeyManager.ts`, `whatsapp-utils.ts`, `janIA.ts`, `index.ts`, `AdminTelemetry.tsx`):**
+  1. Consolidación en vivo de `getLlmUsageStats()`, `getTtsUsageStats()` (con `globalAlertThreshold` y `globalBudgetRemaining`) y distribución real de roles (`getUserRoleDistributionStats` en `sessionManager.ts`).
+  2. Rutas protegidas solo para administradores: tRPC `janIA.getOperationalTelemetry` / `janIA.evaluateCostAlerts` (`adminProcedure`), REST `GET /api/admin/telemetry` / `POST /api/admin/telemetry/evaluate-alerts` (`authorizeTelemetryHttpRequest`) y vista `AdminTelemetry` en `Admin.tsx`.
+  3. Alertas tempranas anti-spam al WhatsApp de Eduardo (`+57 316 656 9719`) deduplicadas por día/canal/nivel cuando Gemini Pago o Voz Laomedeia superan el umbral configurado, manteniendo bloqueo `$0 COP` en `NODE_ENV=test`.
+- **Simulador E2E en Campo & Calibración Post-Campo (`fieldSimulatorService.ts`, `simulate_field_e2e.ts`):**
+  1. Verificación conversacional multi-turno sin costo (`NODE_ENV=test`) cubriendo Agente `40/20/40`, Propietario Directo, Comprador/Inversionista y Consultor Grupal `@JanIA` con audio/PDF.
+  2. Calibraciones quirúrgicas implementadas: (a) texto uniforme anti-repregunta de rol en `dmOnboardingAndDocsHelper.ts`; (b) limpieza de tuberías `|` en `cleanVoiceText` (`whatsapp-utils.ts`); (c) exclusión de `40/20/40` en `contrato_corretaje` para `propietario_directo` (`legalContractService.ts` + `legalDocumentPdfService.ts`); e (d) interceptor notarial determinístico pre-LLM en `dmHandler.ts`.
+- **Gobernanza y Pruebas:** Semilla `seed-observabilidad-telemetria-simulador-campo-v34-19` en `founderKnowledgeService.ts`, **Suite 205** en `regression.test.ts` (**6/6 archivos, 723/723 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.19` (`34.19.0`) en `shared/const.ts` y `package.json`.
+
+## 🔖 VERSIÓN ANTERIOR: v34.18 — Noviembre 2026
 
 ### Novedades v34.18 (Punto 7 — Consolidación Estructural: Perfilamiento Universal de Roles en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

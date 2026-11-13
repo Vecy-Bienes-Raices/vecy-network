@@ -1,4 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.18.0 — 2026-11-13)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.19.0 — 2026-11-13)
+- **JanIA Server:** `v34.19` (`34.19.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Punto 8 — Observabilidad en Vivo de Consumo API, Telemetría Protegida de Costos/Roles, Alertas Tempranas Anti-Spam y Calibración Post-Campo (`telemetryAndAlertsService.ts` + `sessionManager.ts` + `whatsapp-utils.ts` + `geminiKeyManager.ts` + `janIA.ts` + `index.ts` + `AdminTelemetry.tsx` + `fieldSimulatorService.ts` + `simulate_field_e2e.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Telemetría Consolidada Protegida y Alertas Tempranas Anti-Spam:**
+     - Nuevo servicio `server/_core/telemetryAndAlertsService.ts` consolidando en tiempo real `getLlmUsageStats()` (Nivel 1 gratuito `$0 COP` vs Nivel 2 `GEMINI_PAID_KEY`), `getTtsUsageStats()` (Laomedeia vs Salomé/texto + `globalAlertThreshold` / `globalBudgetRemaining`) y distribución de roles (`getUserRoleDistributionStats` / `getUserRoleDistributionStatsSync` en `sessionManager.ts`: `agente_inmobiliario`, `propietario_directo`, `comprador_inversionista`, `arrendatario`).
+     - Expuesto exclusivamente para administradores en tRPC (`janIA.getOperationalTelemetry` / `janIA.evaluateCostAlerts` vía `adminProcedure`), REST (`GET /api/admin/telemetry` / `POST /api/admin/telemetry/evaluate-alerts` vía `authorizeTelemetryHttpRequest`) y pestaña `AdminTelemetry.tsx` en `Admin.tsx`.
+     - Alertas tempranas opcionales a Eduardo (`573166569719`) con deduplicación diaria por `${dateKey}:${channel}:${level}` (sin spam) al superar `GEMINI_PAID_ALERT_THRESHOLD` o el umbral de `TTS_GLOBAL_DAILY_CAP`, manteniendo veto estricto `$0 COP` en `NODE_ENV=test`.
+  2. **Simulador E2E en Campo (`$0 COP`) y Calibración Post-Campo (4 Hallazgos Corregidos):**
+     - Nuevos módulos `server/_core/jania/fieldSimulatorService.ts` y `server/scripts/simulate_field_e2e.ts` evaluando 4 recorridos multi-turno completos (Agente `40/20/40` + Notarial + Google Reviews, Propietario Directo + Corretaje PDF + Tributario, Comprador/Inversionista + Hipotecario/Cap Rate + Voz, y Consultor Grupal `@JanIA` + Ley 675 PDF), con latencia de interceptores, cero repreguntas de rol y calidad de resúmenes ejecutivos de voz.
+     - Calibraciones aplicadas sobre hallazgos reales detectados por el simulador: (a) consistencia anti-repregunta en `agente_inmobiliario` (`dmOnboardingAndDocsHelper.ts`); (b) limpieza de tuberías `|` en `cleanVoiceText` (`whatsapp-utils.ts`) para audio TTS limpio; (c) omisión de `40/20/40` en `contrato_corretaje` cuando el solicitante es `propietario_directo` (`legalContractService.ts` + `legalDocumentPdfService.ts` + `dmHandler.ts`); e (d) interceptor notarial determinístico pre-LLM en `dmHandler.ts` (`executeNotarialAssistanceFromWhatsApp` a `$0 COP`).
+  3. **Gobernanza y Suite de Regresión 205:**
+     - Semilla `seed-observabilidad-telemetria-simulador-campo-v34-19` en `founderKnowledgeService.ts` y **Suite 205** en `regression.test.ts`.
+- **Validación Limpia ($0 COP):** Suite completa `NODE_ENV=test npm test` (**6/6 archivos, 723/723 tests en verde**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.18.0 — 2026-11-13)
 - **JanIA Server:** `v34.18` (`34.18.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Punto 7 — Consolidación Estructural: Perfilamiento Universal de Roles en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia (`sessionManager.ts` + `dmOnboardingAndDocsHelper.ts` + `dmHandler.ts` + `consultingHandler.ts` + `circuloHandler.ts` + `llm.ts` + `geminiKeyManager.ts` + `whatsapp-utils.ts` + `whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**

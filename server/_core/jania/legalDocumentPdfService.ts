@@ -58,6 +58,7 @@ export interface LegalDocumentPdfParams {
   porcentajeComision?: string;
   tipoOtrosi?: string;
   conCondicionEstudioTitulos?: boolean;
+  esPropietarioDirecto?: boolean;
 }
 
 export interface GeneratedLegalPdfResult {
@@ -86,7 +87,10 @@ export function sanitizePdfWinAnsiText(input: string): string {
     .trim();
 }
 
-export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
+export function getLegalDocumentMetadata(
+  tipo: LegalDocumentType,
+  options?: { esPropietarioDirecto?: boolean }
+): {
   title: string;
   normativeFramework: string;
   defaultFileNamePrefix: string;
@@ -143,7 +147,9 @@ export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
     case "contrato_corretaje":
       return {
         title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA VECY",
-        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio, Doctrina VECY 40/20/40 (3% Venta / 1 Canon Arriendo / Publicacion $0 COP) y Ley 527 de 1999",
+        normativeFramework: options?.esPropietarioDirecto
+          ? "Articulos 1340 a 1346 del Codigo de Comercio, Politica VECY Propietario Directo (3% Venta / 1 Canon Arriendo / Publicacion $0 COP) y Ley 527 de 1999"
+          : "Articulos 1340 a 1346 del Codigo de Comercio, Doctrina VECY 40/20/40 (3% Venta / 1 Canon Arriendo / Publicacion $0 COP) y Ley 527 de 1999",
         defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
       };
     case "otrosi_modificatorio":
@@ -404,7 +410,9 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
         "",
         "CLAUSULA TERCERA - POLITICA CERO COBROS POR PUBLICACION: En cumplimiento estricto de la Doctrina VECY BIENES RAICES, EL CORREDOR NO cobra suma alguna por publicacion, inventario fotografico, difusion en portales o gestion comercial anticipada; los honorarios se causan exclusivamente a exito al cerrarse la negociacion.",
         "",
-        "CLAUSULA CUARTA - DOCTRINA COLABORATIVA VECY 40/20/40 Y 80/20: EL COMITENTE autoriza la difusion colaborativa del inmueble a traves de la red de corredores aliados VECY Network bajo esquemas transparentes de reparto de puntas (40% punta captadora / 20% mesa central / 40% punta colocadora, u 80/20 directo), garantizando unico interlocutor comercial responsable.",
+        params.esPropietarioDirecto
+          ? "CLAUSULA CUARTA - PROMOCION MULTICANAL Y UNICO INTERLOCUTOR VECY: EL COMITENTE autoriza a VECY BIENES RAICES la difusion comercial del inmueble en portales inmobiliarios y canales aliados especializados, garantizando siempre a EL COMITENTE un unico interlocutor responsable (Broker Oficial +57 316 656 9719), perfilamiento previo de interesados y cero costos por publicacion."
+          : "CLAUSULA CUARTA - DOCTRINA COLABORATIVA VECY 40/20/40 Y 80/20: EL COMITENTE autoriza la difusion colaborativa del inmueble a traves de la red de corredores aliados VECY Network bajo esquemas transparentes de reparto de puntas (40% punta captadora / 20% mesa central / 40% punta colocadora, u 80/20 directo), garantizando unico interlocutor comercial responsable.",
         "",
         "CLAUSULA QUINTA - RESERVA DE PUNTA COMERCIAL Y CLIENTES PRESENTADOS (12 MESES): Toda negociacion que EL COMITENTE celebre directa o indirectamente con personas presentadas o registradas por EL CORREDOR dentro de los doce (12) meses siguientes a la visita o terminacion del encargo causara el pago integro de la comision.",
         extras,
@@ -745,7 +753,9 @@ async function stampVecyPageNumbersAndSave(params: {
 export async function generateLegalDocumentPdf(
   params: LegalDocumentPdfParams
 ): Promise<GeneratedLegalPdfResult> {
-  const meta = getLegalDocumentMetadata(params.tipoDocumento);
+  const meta = getLegalDocumentMetadata(params.tipoDocumento, {
+    esPropietarioDirecto: params.esPropietarioDirecto
+  });
   const title = sanitizePdfWinAnsiText(params.tituloPersonalizado || meta.title).toUpperCase();
   const bodyContent = sanitizePdfWinAnsiText(params.cuerpoDocumento || buildDefaultLegalBody(params));
   const verificationCode = `DOC-VECY-${crypto.randomBytes(3).toString("hex").toUpperCase()}-2026`;

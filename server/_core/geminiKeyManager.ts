@@ -103,6 +103,11 @@ export function recordLlmUsage(isPaid: boolean): void {
       `[JanIA-GeminiManager] ⚠️ ALERTA PRESUPUESTO PAGO: ${usageTelemetry.tier2PaidCalls}/${cap} llamadas Nivel 2 usadas hoy (${usageTelemetry.dateKey}).`
     );
   }
+  if (!isTestEnvironment() && threshold > 0 && usageTelemetry.tier2PaidCalls >= threshold) {
+    void import("./telemetryAndAlertsService")
+      .then((m) => m.evaluateAndDispatchCostAlerts())
+      .catch(() => {});
+  }
 }
 
 export function getLlmUsageStats(): LlmUsageStats {

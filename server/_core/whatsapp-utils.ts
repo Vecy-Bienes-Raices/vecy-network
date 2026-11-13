@@ -380,12 +380,14 @@ export function cleanVoiceText(text: string): string {
   cleaned = cleaned
     .replace(/^[\s•\-\*]+\s*/gm, "") // Viñetas al inicio de línea
     .replace(/[•]/g, "")
+    .replace(/\s*\|\s*/g, ", ") // Evitar lectura literal de tuberías (|) en TTS
     .replace(/\*([^*]+)\*/g, "$1") // negrita *texto* -> texto
     .replace(/_([^_]+)_/g, "$1")   // cursiva _texto_ -> texto
     .replace(/~([^~]+)~/g, "$1")   // tachado ~texto~ -> texto
     .replace(/`([^`]+)`/g, "$1")   // código `texto` -> texto
     .replace(/[#*~`]/g, "")        // símbolos sueltos de markdown
-    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, ""); // emojis
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "") // emojis
+    .replace(/,\s*,+/g, ",");
 
   return cleaned.replace(/\s+/g, " ").trim();
 }
@@ -600,6 +602,8 @@ export interface TtsUsageStats {
   freeFallbackCalls: number;
   blockedByQuotaCount: number;
   globalDailyCap: number;
+  globalAlertThreshold: number;
+  globalBudgetRemaining: number;
   userDailyCap: number;
   maxCharsPerAudio: number;
   activeUsersCount: number;
@@ -625,6 +629,12 @@ export function getTtsGlobalDailyCap(): number {
   const raw = Number(process.env.TTS_GLOBAL_DAILY_CAP);
   if (Number.isFinite(raw) && raw >= 0) return Math.floor(raw);
   return 120;
+}
+
+export function getTtsAlertThreshold(cap: number = getTtsGlobalDailyCap()): number {
+  const raw = Number(process.env.TTS_ALERT_THRESHOLD);
+  if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+  return cap > 0 ? Math.max(1, Math.floor(cap * 0.7)) : 0;
 }
 
 let ttsTelemetry = {
@@ -682,17 +692,30 @@ export function recordPaidTtsUsage(userId: string | undefined, chars: number): v
   ttsTelemetry.paidTtsCalls += 1;
   ttsTelemetry.paidTtsChars += Math.max(0, Math.floor(chars));
   ttsTelemetry.perUserCounts.set(normUser, (ttsTelemetry.perUserCounts.get(normUser) || 0) + 1);
+
+  if (!isTestEnvironment()) {
+    const cap = getTtsGlobalDailyCap();
+    const threshold = getTtsAlertThreshold(cap);
+    if (threshold > 0 && ttsTelemetry.paidTtsCalls >= threshold) {
+      void import("./telemetryAndAlertsService")
+        .then((m) => m.evaluateAndDispatchCostAlerts())
+        .catch(() => {});
+    }
+  }
 }
 
 export function getTtsUsageStats(): TtsUsageStats {
   ensureTtsDateWindow();
+  const globalDailyCap = getTtsGlobalDailyCap();
   return {
     dateKey: ttsTelemetry.dateKey,
     paidTtsCalls: ttsTelemetry.paidTtsCalls,
     paidTtsChars: ttsTelemetry.paidTtsChars,
     freeFallbackCalls: ttsTelemetry.freeFallbackCalls,
     blockedByQuotaCount: ttsTelemetry.blockedByQuotaCount,
-    globalDailyCap: getTtsGlobalDailyCap(),
+    globalDailyCap,
+    globalAlertThreshold: getTtsAlertThreshold(globalDailyCap),
+    globalBudgetRemaining: Math.max(0, globalDailyCap - ttsTelemetry.paidTtsCalls),
     userDailyCap: getTtsUserDailyCap(),
     maxCharsPerAudio: getTtsPaidMaxChars(),
     activeUsersCount: ttsTelemetry.perUserCounts.size,

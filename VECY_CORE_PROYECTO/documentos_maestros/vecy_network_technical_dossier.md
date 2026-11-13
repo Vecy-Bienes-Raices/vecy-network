@@ -330,6 +330,17 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.19 — Noviembre 2026
+
+#### [v34.19.0] — 2026-11-13: Punto 8 — Observabilidad en Vivo de Consumo API, Endpoint de Telemetría Protegido, Alertas Tempranas Anti-Spam y Calibración Post-Campo (Doctrina Eduardo A. Rivera)
+- **Problema / Diagnóstico Identificado**:
+  - Se requería visibilidad administrativa centralizada del consumo LLM/TTS y distribución real de roles junto con alertas tempranas anti-spam y un simulador conversacional E2E a `$0 COP`. En la primera ejecución del simulador surgieron 4 brechas de campo: (1) redacción heterogénea en `dmOnboardingAndDocsHelper.ts` para `agente_inmobiliario`; (2) ausencia de interceptor notarial pre-LLM en `dmHandler.ts`; (3) filtración de `40/20/40` en `contrato_corretaje` generado para `propietario_directo` (`legalContractService.ts` + `legalDocumentPdfService.ts`); y (4) tuberías `|` residuales en `cleanVoiceText()` (`whatsapp-utils.ts`).
+- **Solución Quirúrgica Implementada**:
+  1. **Telemetría y Alertas Anti-Spam (`telemetryAndAlertsService.ts`, `sessionManager.ts`, `geminiKeyManager.ts`, `whatsapp-utils.ts`)**: Agregación consolidada de métricas LLM/TTS/Roles, alerta temprana deduplicada por día/canal/nivel a Eduardo (`+57 316 656 9719`) y bloqueo total `$0 COP` en `NODE_ENV=test`.
+  2. **Endpoints Protegidos y UI (`server/routers/janIA.ts`, `server/_core/index.ts`, `client/src/components/admin/AdminTelemetry.tsx`, `Admin.tsx`)**: Procedimientos tRPC (`adminProcedure`), rutas REST (`/api/admin/telemetry*`) y pestaña `Telemetría API`.
+  3. **Simulador E2E y Calibración Post-Campo (`fieldSimulatorService.ts`, `simulate_field_e2e.ts`)**: Simulador 4/4 recorridos DM + `@JanIA` y corrección integral de los 4 hallazgos (interceptor notarial DM, `esPropietarioDirecto` en corretaje PDF, `cleanVoiceText` sin `|` y directiva uniforme de rol).
+  4. **Gobernanza y Pruebas**: Semilla `seed-observabilidad-telemetria-simulador-campo-v34-19`, **Suite 205** (**6/6 archivos, 723/723 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.19` (`34.19.0`).
+
 ### 🔖 v34.18 — Noviembre 2026
 
 #### [v34.18.0] — 2026-11-13: Punto 7 — Consolidación Estructural: Perfilamiento Universal de Roles en Primer Contacto y Gobernanza Mesurada de Gemini Pago + Voz Laomedeia (Doctrina Eduardo A. Rivera)

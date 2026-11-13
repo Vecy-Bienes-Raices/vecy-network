@@ -3,7 +3,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl, VECY_VERSION } from '@/const';
 import {
-  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw, CalendarCheck
+  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw, CalendarCheck, Activity
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { getColombiaCurrentDateString } from '@/lib/dateUtils';
@@ -13,6 +13,7 @@ const AdminProperties = lazy(() => import('@/components/admin/AdminProperties'))
 const AdminRequirements = lazy(() => import('@/components/admin/AdminRequirements'));
 const AdminMatches = lazy(() => import('@/components/admin/AdminMatches'));
 const AdminAgenda = lazy(() => import('@/components/admin/AdminAgenda'));
+const AdminTelemetry = lazy(() => import('@/components/admin/AdminTelemetry'));
 
 function TabLoadingSkeleton() {
   return (
@@ -28,6 +29,7 @@ const tabs = [
   { id: 'requirements', label: 'Requerimientos', icon: ClipboardList },
   { id: 'matches', label: 'Coincidencias', icon: Sparkles },
   { id: 'agenda', label: 'Citas y Agenda', icon: CalendarCheck },
+  { id: 'telemetry', label: 'Telemetría API', icon: Activity },
 ];
 
 function BotStatusWidget() {
@@ -91,7 +93,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window === 'undefined') return 'matches';
     const saved = localStorage.getItem('vecy_admin_active_tab');
-    if (saved && ['properties', 'requirements', 'matches', 'agenda'].includes(saved)) {
+    if (saved && ['properties', 'requirements', 'matches', 'agenda', 'telemetry'].includes(saved)) {
       return saved;
     }
     return 'matches';
@@ -209,6 +211,7 @@ export default function Admin() {
       case 'requirements':  Component = <AdminRequirements />; break;
       case 'matches':       Component = <AdminMatches />; break;
       case 'agenda':        Component = <AdminAgenda />; break;
+      case 'telemetry':     Component = <AdminTelemetry />; break;
       default:              Component = <AdminProperties />; break;
     }
 

@@ -13893,10 +13893,173 @@ A: BANCO DE BOGOTA
       expect(seed18?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.18");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[89]|[2-9]\d)$/);
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.18.0");
+      expect(pkg.version).toMatch(/^34\.(?:1[89]|[2-9]\d)\.0$/);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 205 (v34.19 — Punto 8): OBSERVABILIDAD EN VIVO, TELEMETRÍA PROTEGIDA,
+  // ALERTAS TEMPRANAS ANTI-SPAM, SIMULADOR E2E EN CAMPO Y CALIBRACIÓN POST-CAMPO
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("Suite 205 (v34.19): Telemetría Protegida de Costos/Roles, Alertas Anti-Spam y Simulador E2E ($0 COP)", () => {
+    it("Consolida telemetría en vivo, exige rol admin en tRPC/REST, dispara alertas tempranas sin spam y aprueba los 4 recorridos E2E en campo", async () => {
+      const {
+        resetLlmUsageStatsForTests,
+        recordLlmUsage,
+      } = await import("../_core/geminiKeyManager");
+      const {
+        resetTtsUsageStatsForTests,
+        recordPaidTtsUsage,
+      } = await import("../_core/whatsapp-utils");
+      const {
+        resetUserPerpetualSessionsForTests,
+        setUserBusinessRole,
+      } = await import("../_core/jania/sessionManager");
+      const {
+        resetCostAlertsStateForTests,
+        getOperationalTelemetrySnapshot,
+        evaluateAndDispatchCostAlerts,
+        authorizeTelemetryHttpRequest,
+      } = await import("../_core/telemetryAndAlertsService");
+      const { appRouter } = await import("../routers");
+      const { runFieldE2ESimulation } = await import("../_core/jania/fieldSimulatorService");
+
+      const prevGeminiCap = process.env.GEMINI_PAID_DAILY_CAP;
+      const prevGeminiThreshold = process.env.GEMINI_PAID_ALERT_THRESHOLD;
+      const prevTtsCap = process.env.TTS_GLOBAL_DAILY_CAP;
+      const prevTtsAlertPct = process.env.TTS_ALERT_THRESHOLD_PCT;
+      const prevAlertsEnabled = process.env.COST_ALERTS_ENABLED;
+
+      try {
+        resetLlmUsageStatsForTests();
+        resetTtsUsageStatsForTests();
+        resetUserPerpetualSessionsForTests();
+        resetCostAlertsStateForTests();
+
+        process.env.GEMINI_PAID_DAILY_CAP = "10";
+        process.env.GEMINI_PAID_ALERT_THRESHOLD = "7";
+        process.env.TTS_GLOBAL_DAILY_CAP = "10";
+        process.env.TTS_ALERT_THRESHOLD_PCT = "70";
+        process.env.COST_ALERTS_ENABLED = "true";
+
+        // 1. Seed de roles en memoria + uso simulado de LLM y TTS cruzando umbral temprano (70%)
+        await setUserBusinessRole("573009100001@s.whatsapp.net", "agente_inmobiliario", {
+          sourceText: "Soy agente inmobiliario",
+        });
+        await setUserBusinessRole("573009100002@s.whatsapp.net", "propietario_directo", {
+          sourceText: "Soy propietario directo",
+        });
+        await setUserBusinessRole("573009100003@s.whatsapp.net", "comprador_inversionista", {
+          sourceText: "Soy inversionista",
+        });
+        await setUserBusinessRole("573009100004@s.whatsapp.net", "arrendatario", {
+          sourceText: "Soy arrendatario",
+        });
+
+        for (let i = 0; i < 8; i++) {
+          recordLlmUsage(true);
+          recordPaidTtsUsage(`57300920000${i}@s.whatsapp.net`, 120);
+        }
+
+        const snap = await getOperationalTelemetrySnapshot();
+        expect(snap.llm.tier2PaidCalls).toBe(8);
+        expect(snap.llm.alertThresholdReached).toBe(true);
+        expect(snap.tts.paidTtsCalls).toBe(8);
+        expect(snap.tts.alertThresholdReached).toBe(true);
+        expect(snap.roles.counts.agente_inmobiliario).toBeGreaterThanOrEqual(1);
+        expect(snap.roles.counts.propietario_directo).toBeGreaterThanOrEqual(1);
+        expect(snap.roles.counts.comprador_inversionista).toBeGreaterThanOrEqual(1);
+        expect(snap.roles.counts.arrendatario).toBeGreaterThanOrEqual(1);
+
+        // 2. Control de acceso estricto (solo administradores en tRPC y REST)
+        const fakeReq: any = { headers: {}, cookies: {} };
+        const fakeRes: any = { cookie: () => {}, clearCookie: () => {} };
+
+        const anonCaller = appRouter.createCaller({ req: fakeReq, res: fakeRes, user: null });
+        await expect(anonCaller.janIA.getOperationalTelemetry()).rejects.toThrow();
+
+        const agentCaller = appRouter.createCaller({
+          req: fakeReq,
+          res: fakeRes,
+          user: { id: 2, role: "agent", email: "agente@vecy.co", name: "Agente" } as any,
+        });
+        await expect(agentCaller.janIA.getOperationalTelemetry()).rejects.toThrow();
+
+        const adminCaller = appRouter.createCaller({
+          req: fakeReq,
+          res: fakeRes,
+          user: { id: 1, role: "admin", email: "admin@vecy.co", name: "Eduardo" } as any,
+        });
+        const adminTelemetry = await adminCaller.janIA.getOperationalTelemetry();
+        expect(adminTelemetry.version).toBe("v34.19");
+        expect(adminTelemetry.llm.tier2PaidCalls).toBe(8);
+
+        const unauthRest = await authorizeTelemetryHttpRequest({ headers: {}, query: {} } as any);
+        expect(unauthRest.authorized).toBe(false);
+        expect(unauthRest.mode).toBeUndefined();
+
+        const authRest = await authorizeTelemetryHttpRequest({
+          headers: { "x-admin-token": "vecy2025admin" },
+          query: {},
+        } as any);
+        expect(authRest.authorized).toBe(true);
+        expect(authRest.mode).toBe("admin_token");
+
+        // 3. Alertas tempranas opcionales anti-spam ($0 COP en NODE_ENV=test)
+        const firstEval = await evaluateAndDispatchCostAlerts({ enabled: true });
+        expect(firstEval.triggered.length).toBe(2);
+        expect(firstEval.triggered.every((a) => a.simulatedInTest && !a.sentViaWhatsApp)).toBe(true);
+        expect(firstEval.triggered.some((a) => a.channel === "gemini_paid" && a.level === "threshold")).toBe(true);
+        expect(firstEval.triggered.some((a) => a.channel === "tts_paid" && a.level === "threshold")).toBe(true);
+
+        const secondEval = await evaluateAndDispatchCostAlerts({ enabled: true });
+        expect(secondEval.triggered.length).toBe(0);
+        expect(secondEval.skippedDuplicates.length).toBeGreaterThanOrEqual(2);
+
+        // 4. Simulador de pruebas en campo E2E (4 recorridos reales a $0 COP)
+        resetLlmUsageStatsForTests();
+        resetTtsUsageStatsForTests();
+        resetUserPerpetualSessionsForTests();
+        resetCostAlertsStateForTests();
+
+        const simSummary = await runFieldE2ESimulation({ runId: "205999" });
+        expect(simSummary.zeroPaidCostVerified).toBe(true);
+        expect(simSummary.llmTier2PaidCalls).toBe(0);
+        expect(simSummary.ttsPaidCalls).toBe(0);
+        expect(simSummary.journeys.length).toBe(4);
+        expect(simSummary.allPassed).toBe(true);
+        for (const j of simSummary.journeys) {
+          expect(j.passed).toBe(true);
+          expect(j.failures).toEqual([]);
+        }
+      } finally {
+        process.env.GEMINI_PAID_DAILY_CAP = prevGeminiCap;
+        process.env.GEMINI_PAID_ALERT_THRESHOLD = prevGeminiThreshold;
+        process.env.TTS_GLOBAL_DAILY_CAP = prevTtsCap;
+        process.env.TTS_ALERT_THRESHOLD_PCT = prevTtsAlertPct;
+        process.env.COST_ALERTS_ENABLED = prevAlertsEnabled;
+        resetLlmUsageStatsForTests();
+        resetTtsUsageStatsForTests();
+        resetUserPerpetualSessionsForTests();
+        resetCostAlertsStateForTests();
+      }
+
+      // 5. Semilla doctrinal y versión v34.19 / 34.19.0
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed19 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-observabilidad-telemetria-simulador-campo-v34-19"
+      );
+      expect(seed19).toBeDefined();
+      expect(seed19?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.19");
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.19.0");
     });
   });
 });
