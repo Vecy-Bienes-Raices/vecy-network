@@ -28,6 +28,7 @@ import { analyzeCtlFromWhatsAppInput, hasCtlTextMarkers, isExplicitCtlStudyReque
 import { analyzePotUrbanNormFromWhatsAppInput, isPotUrbanNormRequest } from "../../potUrbanNormService";
 import { analyzeFinancialAndTaxFromWhatsAppInput, isFinancialOrTaxSimulationRequest } from "../../financialAndTaxRealEstateService";
 import { analyzeContractOrMinutaFromWhatsAppInput, hasContractDraftMarkers, isContractMinutaOrAuditRequest } from "../../legalContractService";
+import { analyzePropiedadHorizontalFromWhatsAppInput, hasPhDocumentMarkers, isPropiedadHorizontalRequest } from "../../propiedadHorizontalService";
 
 
 
@@ -210,6 +211,38 @@ export async function processCirculoMessage(
           voiceResponse: "",
           document: contractCirculoCheck.pdfResult?.pdfBuffer,
           fileName: contractCirculoCheck.pdfResult?.fileName
+        };
+      }
+    }
+
+    // 🏢 INTERCEPTOR DIRECTO 0.9: PROPIEDAD HORIZONTAL (LEY 675), AUDITORÍA RPH/ACTAS, RNT/AIRBNB Y SUBDIVISIÓN/ENGLOBE + PDF MEMBRETADO (v34.17)
+    const phCirculoInputText =
+      quotedContext && hasPhDocumentMarkers(quotedContext) && !hasPhDocumentMarkers(text)
+        ? `${text}\n${quotedContext}`
+        : text;
+    if (
+      isPropiedadHorizontalRequest(phCirculoInputText, Boolean(imageBuffer || pdfBuffer)) ||
+      hasPhDocumentMarkers(phCirculoInputText)
+    ) {
+      const phCirculoCheck = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: phCirculoInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: cleanFirstName || realName || undefined
+      });
+      if (phCirculoCheck.handled && phCirculoCheck.whatsappReply) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response:
+            phCirculoCheck.mode === "guidance"
+              ? phCirculoCheck.whatsappReply
+              : appendGroupSatisfactionClosing(phCirculoCheck.whatsappReply),
+          reactionEmoji: phCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: phCirculoCheck.pdfResult?.pdfBuffer,
+          fileName: phCirculoCheck.pdfResult?.fileName
         };
       }
     }

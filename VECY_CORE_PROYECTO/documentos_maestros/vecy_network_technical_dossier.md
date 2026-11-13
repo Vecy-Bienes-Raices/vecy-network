@@ -330,6 +330,17 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.17 — Noviembre 2026
+
+#### [v34.17.0] — 2026-11-13: Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal (Ley 675 de 2001), Auditoría RPH/Actas, Vivienda Turística (Airbnb / RNT) y Subdivisión/Englobe + PDF Membretado (Doctrina Eduardo A. Rivera)
+- **Problema / Diagnóstico Identificado**:
+  - JanIA necesitaba un motor determinístico a `$0 COP` especializado en Propiedad Horizontal colombiana (Ley 675 de 2001), vivienda turística / Airbnb / RNT (Decreto 1074 de 2015, Ley 2068 de 2020 Art. 38) y prefactibilidad técnica-notarial de desenglobe/subdivisión/englobe, sin colisionar con `potUrbanNormService.ts`, `financialAndTaxRealEstateService.ts`, `legalContractService.ts`, `notarialExpenseService.ts`, `predialService.ts` ni interceptar preguntas teóricas o agradecimientos. Adicionalmente se detectó contaminación de sesiones de prueba entre corridas por persistencia de `userPerpetualSession` en `sessionManager.ts` cuando `NODE_ENV === "test"`.
+- **Solución Quirúrgica Implementada**:
+  1. **`server/_core/propiedadHorizontalService.ts`**: Calculadoras determinísticas Ley 675 (`calculatePropiedadHorizontalMetrics`), auditoría de Reglamentos PH y Actas en texto/PDF/imagen (`auditPhRegulationOrMinutes`), prefactibilidad de desenglobe/subdivisión/englobe (`buildPhPrefeasibilityReport`) y orquestador `analyzePropiedadHorizontalFromWhatsAppInput`.
+  2. **`server/_core/jania/legalDocumentPdfService.ts`**: Incorporado `"concepto_propiedad_horizontal"` y `generatePropiedadHorizontalPdf` sobre `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+  3. **Canales, Precedencia y Aislamiento Test**: Guardas en `potUrbanNormService.ts`, `financialAndTaxRealEstateService.ts`, `legalContractService.ts`, `notarialExpenseService.ts`, `predialService.ts` y `politenessService.ts`; aislamiento `NODE_ENV === "test"` para `userPerpetualSession` en `sessionManager.ts`; integración en `dmHandler.ts` (`consultar_propiedad_horizontal`), `consultingHandler.ts` (`isOtherToolRequest`, Interceptor 0.9 y fallback `catch`), `circuloHandler.ts` y `whatsapp-match.ts`, con CTA `+57 316 656 9719` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  4. **Gobernanza y Pruebas**: Semilla `seed-propiedad-horizontal-ley675-rph-rnt-desenglobe-v34-17` en `founderKnowledgeService.ts`, Suite 203 (5/5 tests) en `regression.test.ts`, **6/6 archivos (719/719 tests)** en verde, `npm run check` (0 errores), `npm run build` limpio y versión `v34.17` (`34.17.0`) en `shared/const.ts` y `package.json`.
+
 ### 🔖 v34.16 — Noviembre 2026
 
 #### [v34.16.0] — 2026-11-13: Punto 5 — Skill 5: Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios + PDF Membretado (Doctrina Eduardo A. Rivera)

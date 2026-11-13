@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.16";
+    VECY_VERSION = "v34.17";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14800,6 +14800,7 @@ function isEduardoOrJani(phoneOrJid) {
 function ensureLoadedFromDisk() {
   if (persistentSessionsLoaded) return;
   persistentSessionsLoaded = true;
+  if (process.env.NODE_ENV === "test") return;
   try {
     if (fs4.existsSync(PERSISTENT_SESSIONS_FILE)) {
       const raw = fs4.readFileSync(PERSISTENT_SESSIONS_FILE, "utf-8");
@@ -14817,6 +14818,7 @@ function ensureLoadedFromDisk() {
   }
 }
 function saveSessionsToDisk() {
+  if (process.env.NODE_ENV === "test") return;
   try {
     const dir = path4.dirname(PERSISTENT_SESSIONS_FILE);
     if (!fs4.existsSync(dir)) {
@@ -14836,20 +14838,22 @@ async function getUserPerpetualSession(userId, userName) {
     if (userName && !session.name) session.name = userName;
     return session;
   }
-  try {
-    const db = await getDb();
-    if (db) {
-      const dbKey = `user_memory:${cleanJid2}`;
-      const [existing] = await db.select().from(pendingSessions).where(eq6(pendingSessions.jid, dbKey)).limit(1);
-      if (existing && existing.sessionData && typeof existing.sessionData === "object") {
-        session = existing.sessionData;
-        userPerpetualSessionMap.set(cleanJid2, session);
-        saveSessionsToDisk();
-        return session;
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const db = await getDb();
+      if (db) {
+        const dbKey = `user_memory:${cleanJid2}`;
+        const [existing] = await db.select().from(pendingSessions).where(eq6(pendingSessions.jid, dbKey)).limit(1);
+        if (existing && existing.sessionData && typeof existing.sessionData === "object") {
+          session = existing.sessionData;
+          userPerpetualSessionMap.set(cleanJid2, session);
+          saveSessionsToDisk();
+          return session;
+        }
       }
+    } catch (err) {
+      console.warn("[getUserPerpetualSession] Error recuperando de BD:", err?.message);
     }
-  } catch (err) {
-    console.warn("[getUserPerpetualSession] Error recuperando de BD:", err?.message);
   }
   const isVip = isEduardoOrJani(cleanJid2);
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -14873,6 +14877,7 @@ async function saveUserPerpetualSession(session) {
   ensureLoadedFromDisk();
   userPerpetualSessionMap.set(session.userId, session);
   saveSessionsToDisk();
+  if (process.env.NODE_ENV === "test") return;
   try {
     const db = await getDb();
     if (db) {
@@ -16476,7 +16481,9 @@ function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = fals
     normalized
   ) || /\b(?:hazme|redacta|elabora|genera|prepara|enviame|audita|revisa|analiza)\b.{0,45}\b(?:minuta|contrato|otrosi|clausula|riesgos\s+contractuales|corretaje|acta\s+de\s+entrega)\b/.test(
     normalized
-  ) || /\b(?:otrosi\s+modificatorio|auditoria\s+contractual|clausulas\s+abusivas)\b/.test(normalized) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
+  ) || /\b(?:otrosi\s+modificatorio|auditoria\s+contractual|clausulas\s+abusivas)\b/.test(normalized) || /\b(?:calcula|liquida|audita|revisa|analiza|valida|genera|hazme|prefactibilidad)\b.{0,45}\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+ph|acta\s+de\s+asamblea|coeficiente|expensas|cuota\s+extraordinaria|airbnb|renta\s+corta|vivienda\s+turistica|\brnt\b|desenglobe|englobe|subdivision)\b/.test(
+    normalized
+  ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
   if (looksLikeNewToolDataRequest) {
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
   }
@@ -22809,6 +22816,14 @@ function isExplicitNotarialLiquidationRequest(text2, senderId) {
   if (looksLikeSkill5ContractOrAudit) {
     return false;
   }
+  const looksLikeSkill6Ph = /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:de\s+)?copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|expensas?\s+comunes?|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b)\b/i.test(
+    clean
+  ) && !/\b(?:liquidar|liqu[ií]da(?:me|nos|r)?|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?)\s+los\s+gastos\s+notariales)\b/i.test(
+    clean
+  );
+  if (looksLikeSkill6Ph) {
+    return false;
+  }
   return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 async function executeNotarialAssistanceFromWhatsApp(text2, senderId, isPrivateDm = true) {
@@ -26272,7 +26287,7 @@ _JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_
 function isServiceHelpRequest(text2) {
   if (!text2 || typeof text2 !== "string") return null;
   const lower = text2.toLowerCase().trim();
-  if (/\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula)\b/i.test(
+  if (/\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula|propiedad\s+horizontal|ley\s*675|\brph\b|coeficiente|expensas|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b|asamblea\s+(?:de\s+)?copropietarios)\b/i.test(
     lower
   )) {
     return null;
@@ -27351,7 +27366,7 @@ var init_whatsapp_match = __esm({
         if (!clean && !quoted && !hasMedia) return false;
         if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
         const combined = `${clean} ${quoted}`.toLowerCase();
-        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|consignaci[oó]n|otros[ií]|cl[aá]usula|cl[aá]usulas|arras|penal|desahucio|renovaci[oó]n|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|timbre|costo\s+fiscal|dian|uvt|uvr|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|hipotecari[oa]|leasing|cuota\s+(?:inicial|mensual)|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|rentabilidad|renta\s+corta|punto\s+de\s+equilibrio|simula(?:r|ci[oó]n)?|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|ideca|uso\s+del?\s+suelo|usos\s+permitidos|edificabilidad|constructibilidad|prefactibilidad|antejard[ií]n|aislamiento|tratamiento\s+urban[ií]stico|\bupl\b|\bupz\b|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
+        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|consignaci[oó]n|otros[ií]|cl[aá]usula|cl[aá]usulas|arras|penal|desahucio|renovaci[oó]n|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|timbre|costo\s+fiscal|dian|uvt|uvr|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|\bph\b|\brph\b|coeficiente(?:s)?|expensas?|asamblea|qu[oó]rum|impugna(?:r|ci[oó]n)?|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b|airbnb|mascotas|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|hipotecari[oa]|leasing|cuota\s+(?:inicial|mensual)|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|rentabilidad|renta\s+corta|punto\s+de\s+equilibrio|simula(?:r|ci[oó]n)?|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|ideca|uso\s+del?\s+suelo|usos\s+permitidos|edificabilidad|constructibilidad|prefactibilidad|antejard[ií]n|aislamiento|tratamiento\s+urban[ií]stico|\bupl\b|\bupz\b|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
         return hasQuestionOrConsultIntent;
       }
       registerPhoneLidMapping(phoneOrJid, lidOrJid) {
@@ -28617,7 +28632,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     if (alreadySentReviewInReply) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                     }
-                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("AN\xC1LISIS POT") || replyText.includes("NORMA URBANA") || replyText.includes("SIMULACI\xD3N HIPOTECARIA") || replyText.includes("CAP RATE") || replyText.includes("PRE-LIQUIDACI\xD3N TRIBUTARIA") || replyText.includes("AN\xC1LISIS FINANCIERO") || replyText.includes("MINUTA PERSONALIZADA GENERADA") || replyText.includes("AUDITOR\xCDA DE RIESGOS CONTRACTUALES") || replyText.includes("OTROS\xCD") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
+                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("AN\xC1LISIS POT") || replyText.includes("NORMA URBANA") || replyText.includes("SIMULACI\xD3N HIPOTECARIA") || replyText.includes("CAP RATE") || replyText.includes("PRE-LIQUIDACI\xD3N TRIBUTARIA") || replyText.includes("AN\xC1LISIS FINANCIERO") || replyText.includes("MINUTA PERSONALIZADA GENERADA") || replyText.includes("AUDITOR\xCDA DE RIESGOS CONTRACTUALES") || replyText.includes("OTROS\xCD") || replyText.includes("PROPIEDAD HORIZONTAL") || replyText.includes("AUDITOR\xCDA JUR\xCDDICA DE REGLAMENTO PH") || replyText.includes("PREFACTIBILIDAD T\xC9CNICO-NOTARIAL") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
                     const usedCount = session.freeServicesUsedCount || 0;
@@ -31992,6 +32007,7 @@ __export(legalDocumentPdfService_exports, {
   generateFinancialAndTaxPdf: () => generateFinancialAndTaxPdf,
   generateLegalDocumentPdf: () => generateLegalDocumentPdf,
   generatePotUrbanNormPdf: () => generatePotUrbanNormPdf,
+  generatePropiedadHorizontalPdf: () => generatePropiedadHorizontalPdf,
   getLegalDocumentMetadata: () => getLegalDocumentMetadata,
   sanitizePdfWinAnsiText: () => sanitizePdfWinAnsiText
 });
@@ -32095,6 +32111,12 @@ function getLegalDocumentMetadata(tipo) {
         title: "FICHA FINANCIERA, RENTABILIDAD Y TRIBUTACION INMOBILIARIA PRELIMINAR",
         normativeFramework: "Ley 546 de 1999, Decreto 2555 de 2010 (Leasing), Estatuto Tributario (Arts. 311-1, 314, 398 y 519)",
         defaultFileNamePrefix: "Ficha_Financiera_Tributaria_VECY"
+      };
+    case "concepto_propiedad_horizontal":
+      return {
+        title: "CONCEPTO TECNICO-JURIDICO DE PROPIEDAD HORIZONTAL (LEY 675 DE 2001)",
+        normativeFramework: "Ley 675 de 2001, Decreto 1074 de 2015 / Ley 2068 de 2020 (RNT) y Decreto 1077 de 2015",
+        defaultFileNamePrefix: "Concepto_Propiedad_Horizontal_VECY"
       };
     default:
       return {
@@ -33887,6 +33909,232 @@ async function generateContractRiskAuditPdf(report) {
     normativeFramework: meta.normativeFramework
   };
 }
+async function generatePropiedadHorizontalPdf(report, options) {
+  const meta = getLegalDocumentMetadata("concepto_propiedad_horizontal");
+  const verificationCode = `VECY-PH-${crypto4.randomBytes(3).toString("hex").toUpperCase()}`;
+  const title = sanitizePdfWinAnsiText(report.headline || meta.title);
+  const scaffold = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: report.normativeFramework || meta.normativeFramework,
+    headerSubtitle: `Radicado PH Ley 675: ${verificationCode} | Asesoria Notarial y PH VECY: +57 316 656 9719`
+  });
+  const { pdfDoc, fontRegular, fontBold, pageWidth, marginX, maxWidth, drawHeader } = scaffold;
+  let currentPage = pdfDoc.addPage([pageWidth, 792]);
+  let cursorY = drawHeader(currentPage, true);
+  const ensureSpace = (needed) => {
+    if (cursorY - needed < 82) {
+      currentPage = pdfDoc.addPage([pageWidth, 792]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+  const bannerBg = report.riskLevel === "ROJO" ? rgb2(0.98, 0.91, 0.91) : report.riskLevel === "AMARILLO" ? rgb2(0.99, 0.96, 0.87) : rgb2(0.9, 0.97, 0.92);
+  const bannerBorder = report.riskLevel === "ROJO" ? rgb2(0.75, 0.18, 0.18) : report.riskLevel === "AMARILLO" ? rgb2(0.76, 0.52, 0.08) : rgb2(0.14, 0.52, 0.25);
+  const bannerPrefix = report.riskLevel === "ROJO" ? "SEMAFORO ROJO - INVALIDEZ O RIESGO EN PROPIEDAD HORIZONTAL" : report.riskLevel === "AMARILLO" ? "SEMAFORO AMARILLO - VALIDACION TECNICA / REGISTRAL REQUERIDA" : "SEMAFORO VERDE - CONFORME AL REGIMEN DE PROPIEDAD HORIZONTAL";
+  const headlineLines = wrapTextToLines(
+    sanitizePdfWinAnsiText(`${bannerPrefix} | ${report.riskHeadline}`),
+    fontBold,
+    9,
+    maxWidth - 20
+  );
+  const bannerH = Math.max(34, headlineLines.length * 13 + 14);
+  ensureSpace(bannerH + 12);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: cursorY - bannerH,
+    width: maxWidth,
+    height: bannerH,
+    color: bannerBg,
+    borderColor: bannerBorder,
+    borderWidth: 1.2
+  });
+  let by = cursorY - 14;
+  for (const line of headlineLines) {
+    currentPage.drawText(line, {
+      x: marginX + 10,
+      y: by,
+      size: 9,
+      font: fontBold,
+      color: bannerBorder
+    });
+    by -= 13;
+  }
+  cursorY -= bannerH + 12;
+  const drawSectionHeading = (heading) => {
+    ensureSpace(26);
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 16,
+      width: maxWidth,
+      height: 18,
+      color: rgb2(0.94, 0.92, 0.86)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(heading), {
+      x: marginX + 8,
+      y: cursorY - 11.5,
+      size: 9.5,
+      font: fontBold,
+      color: rgb2(0.12, 0.12, 0.14)
+    });
+    cursorY -= 25;
+  };
+  const drawBodyLines = (text2, isBold = false, size = 9, color = rgb2(0.15, 0.16, 0.2)) => {
+    const lines = wrapTextToLines(sanitizePdfWinAnsiText(text2), isBold ? fontBold : fontRegular, size, maxWidth - 8);
+    for (const ln of lines) {
+      ensureSpace(14);
+      currentPage.drawText(ln, {
+        x: marginX + 4,
+        y: cursorY,
+        size,
+        font: isBold ? fontBold : fontRegular,
+        color
+      });
+      cursorY -= 12.8;
+    }
+  };
+  drawSectionHeading("1. RESUMEN EJECUTIVO Y MARCO NORMATIVO APLICABLE");
+  const reqName = options?.requestedBy || report.requesterName;
+  if (reqName) {
+    drawBodyLines(`Solicitante / Copropietario o Asesor: ${reqName}`, true);
+  }
+  drawBodyLines(`Regimen normativo: ${report.normativeFramework}`);
+  for (const pt of report.summaryPoints) {
+    drawBodyLines(`- ${pt}`);
+  }
+  cursorY -= 6;
+  if (report.calculations) {
+    const c = report.calculations;
+    drawSectionHeading("2. PARAMETROS Y CALCULOS LEY 675 DE 2001");
+    if (c.presupuestoTotalCop !== void 0) {
+      drawBodyLines(`- Presupuesto / Cuota global base: $${Math.round(c.presupuestoTotalCop).toLocaleString("es-CO")} COP`);
+    }
+    if (c.coeficienteUnidadPct !== void 0) {
+      drawBodyLines(`- Coeficiente de copropiedad de la unidad: ${c.coeficienteUnidadPct}%`);
+    }
+    if (c.expensaUnidadCop !== void 0) {
+      drawBodyLines(`- Expensa comun calculada: $${Math.round(c.expensaUnidadCop).toLocaleString("es-CO")} COP / mes`, true);
+    }
+    if (c.sumaCoeficientesPct !== void 0) {
+      drawBodyLines(`- Sumatoria de coeficientes validada: ${c.sumaCoeficientesPct}% (${c.sumaCoeficientesValida ? "Valida 100%" : "Descuadrada"})`);
+    }
+    if (c.interesMoraMaxLegalCop !== void 0) {
+      drawBodyLines(
+        `- Tope mora maximo legal (1.5x IBC ref. ${c.tasaMoraMaxLegalMensualPct}% M.V. / ${c.tasaMoraMaxLegalEaPct}% E.A.): $${Math.round(c.interesMoraMaxLegalCop).toLocaleString("es-CO")} COP`,
+        true
+      );
+    } else {
+      drawBodyLines(
+        `- Tope mora maximo legal Art. 30 Ley 675: 1.5x IBC (Ref. ${c.tasaMoraMaxLegalEaPct}% E.A. / ~${c.tasaMoraMaxLegalMensualPct}% M.V. - verificar Superfinanciera).`
+      );
+    }
+    drawBodyLines("- Mayoria calificada Art. 46: 70% del total de coeficientes para reformas RPH, cambio de destinacion y cuotas > 4x mensuales.");
+    drawBodyLines(`- Caducidad impugnacion de actas (Art. 49 Ley 675): ${c.plazoImpugnacionMeses} meses desde comunicacion/publicacion.`);
+    drawBodyLines(`- ${c.solidaridadCompraventaArt29}`);
+    cursorY -= 6;
+  }
+  if (report.findings.length > 0) {
+    drawSectionHeading("3. AUDITORIA DE CLAUSULAS, RNT / AIRBNB Y HALLAZGOS JURIDICOS");
+    for (let i = 0; i < report.findings.length; i++) {
+      const f = report.findings[i];
+      drawBodyLines(`${i + 1}. [${f.severidad}] ${f.titulo}`, true, 9.1, rgb2(0.1, 0.1, 0.15));
+      drawBodyLines(`   Hallazgo: ${f.hallazgo}`);
+      drawBodyLines(`   Fundamento legal: ${f.fundamentoLegal}`);
+      drawBodyLines(`   Accion recomendada: ${f.recomendacion}`, false, 8.8, rgb2(0.12, 0.35, 0.18));
+      cursorY -= 4;
+    }
+  }
+  if (report.prefeasibility) {
+    drawSectionHeading(`4. CHECKLIST TECNICO-NOTARIAL: ${report.prefeasibility.operacionLabel}`);
+    for (const item of report.prefeasibility.checklistTecnicoNotarial) {
+      drawBodyLines(`- ${item}`);
+    }
+    cursorY -= 6;
+  }
+  drawSectionHeading("5. PLAN DE ACCION Y VALIDACION NOTARIAL VECY");
+  for (const step of report.recommendedNextSteps) {
+    drawBodyLines(`- ${step}`);
+  }
+  ensureSpace(84);
+  const footerBoxY = Math.max(46, cursorY - 72);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 66,
+    color: rgb2(0.97, 0.96, 0.92),
+    borderColor: rgb2(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("ASESORIA ESPECIALIZADA EN PROPIEDAD HORIZONTAL Y NOTARIADO VECY BIENES RAICES", {
+    x: marginX + 10,
+    y: footerBoxY + 51,
+    size: 8.4,
+    font: fontBold,
+    color: rgb2(0.1, 0.1, 0.12)
+  });
+  currentPage.drawText(
+    "1. Concepto preliminar basado en Ley 675/2001; verificar escritura del RPH inscrita en ORIP y certificacion IBC vigente.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 38,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Reformas a RPH, desenglobes, impugnaciones y validacion RNT con Eduardo A. Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 26,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Radicado: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 13,
+      size: 7.5,
+      font: fontBold,
+      color: rgb2(0.2, 0.22, 0.28)
+    }
+  );
+  try {
+    const qrDataUrl = await QRCode3.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?ph=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 5,
+      width: 56,
+      height: 56
+    });
+  } catch {
+  }
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Propiedad Horizontal VECY BIENES RAICES"
+  });
+  const modeSlug = report.mode.toUpperCase();
+  const fileName = `${meta.defaultFileNamePrefix}_${modeSlug}_${verificationCode}.pdf`;
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
 var init_legalDocumentPdfService = __esm({
   "server/_core/jania/legalDocumentPdfService.ts"() {
     "use strict";
@@ -35067,6 +35315,12 @@ function parsePotUrbanQuery(text2) {
   const hasStrongPotKeyword = /\b(?:pot\b|decreto\s*555|sinupot|ideca|mapas\s*bogota|norma\s+urbana|normativa\s+urbana|cedula\s+normativa|tratamiento\s+urbanistico|area\s+de\s+actividad|indice\s+de\s+ocupacion|indice\s+de\s+construccion|edificabilidad|potencial\s+constructivo|prefactibilidad|uso\s+del?\s+suelo|usos\s+permitidos|pisos\s+permitidos|altura\s+maxima|cuantos\s+pisos\s+(?:se\s+pueden?|puedo)\s+construir|que\s+se\s+puede\s+construir|antejardin\s+y\s+aislamiento|ronda\s+hidrica|reserva\s+vial|bien\s+de\s+interes\s+cultural|\bupl\b|\bupz\b)\b/i.test(
     normLower
   );
+  const hasStrongPotNormLexicon = /\b(?:pot\b|decreto\s*555|sinupot|ideca|mapas\s*bogota|norma\s+urbana|normativa\s+urbana|cedula\s+normativa|tratamiento\s+urbanistico|area\s+de\s+actividad|indice\s+de\s+ocupacion|indice\s+de\s+construccion|uso\s+del?\s+suelo|antejardin|\bupl\b|\bupz\b)\b/i.test(
+    normLower
+  );
+  const isPurePhOrSubdivisionIntent = /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:de\s+)?copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|desenglobe|englobe|subdivision\s+(?:de\s+|en\s+)?(?:ph|propiedad\s+horizontal|casa|lote|apartamento|predio|inmueble)|reforma\s+(?:al\s+|del\s+)?rph)\b/i.test(
+    normLower
+  ) && !hasStrongPotNormLexicon;
   const isPureAcmRequest = /\b(?:hazme\s+un\s+acm|\bacm\b|analisis\s+comparativo\s+de\s+mercado|avaluo\s+comercial|cuanto\s+vale\s+(?:el\s+m2|esta\s+casa|este\s+apto))\b/i.test(
     normLower
   ) && !hasStrongPotKeyword;
@@ -35092,7 +35346,7 @@ function parsePotUrbanQuery(text2) {
   const hasExplicitActionVerb = /\b(?:analiza(?:r|me)?|revisa(?:r|me)?|consulta(?:r|me)?|evalua(?:r|me)?|calcula(?:r|me)?|estudia(?:r|me)?|dime|muestra(?:me)?|saca(?:r|me)?|verifica(?:r|me)?|necesito|quiero|haz(?:me)?|prefactibilidad)\b/i.test(
     normLower
   );
-  const isPotRequest = !isCtlIntent && !isIduIntent && !isPredialIntent && !isPureAcmRequest && !isConceptualOnly && hasStrongPotKeyword && (hasPredioTarget || hasExplicitActionVerb);
+  const isPotRequest = !isCtlIntent && !isIduIntent && !isPredialIntent && !isPurePhOrSubdivisionIntent && !isPureAcmRequest && !isConceptualOnly && hasStrongPotKeyword && (hasPredioTarget || hasExplicitActionVerb);
   const needsPredioGuidance = isPotRequest && !hasPredioTarget;
   return {
     isPotRequest,
@@ -36101,6 +36355,13 @@ function hasContractDraftMarkers(text2) {
   const raw = String(text2 || "");
   if (!raw || raw.trim().length < 25) return false;
   if (hasCtlTextMarkers(raw)) return false;
+  if (/\b(?:reglamento\s+de\s+propiedad\s+horizontal|\brph\b|asamblea\s+(?:general\s+)?de\s+copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|ley\s+675\s+de\s+2001)\b/i.test(
+    raw
+  ) && !/\b(?:promesa\s+de\s+compraventa|promitente\s+(?:vendedor|comprador)|contrato\s+de\s+(?:arrendamiento|corretaje)|ley\s+820)\b/i.test(
+    raw
+  )) {
+    return false;
+  }
   const markers = [
     /\bcl[aá]usula\s+(?:primera|segunda|tercera|cuarta|quinta|sexta|s[eé]ptima|octava|novena|d[eé]cima|\d+)/i,
     /\bentre\s+los\s+suscritos\b/i,
@@ -36172,6 +36433,11 @@ function isContractMinutaOrAuditRequest(text2, hasMedia = false) {
   if (/\b(?:aviso|anuncio|marketing|swap\s+test|\baida\b|\bicp\b|puntuaci[oó]n\s+global|flyer|copy\s+comercial)\b/i.test(
     raw
   ) && !hasDraft) {
+    return false;
+  }
+  if (/\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:general\s+)?de\s+copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|expensas?\s+comunes?|desenglobe|englobe|subdivisi[oó]n\s+(?:de\s+|en\s+)?ph|vivienda\s+tur[ií]stica|\brnt\b)\b/i.test(
+    raw
+  ) && !hasExplicitContractDocVerb && !hasDraft) {
     return false;
   }
   const looksPureFinTax = /\b(simula(?:r|dor|ci[oó]n)?|cuota\s+mensual|cap\s+rate|cash\s*on\s*cash|yield|roi|ganancia\s+ocasional|impuesto\s+de\s+timbre|retenci[oó]n\s+en\s+la\s+fuente)\b/i.test(
@@ -36993,6 +37259,13 @@ function parseFinancialAndTaxQuery(text2) {
   if (hasCtlTextMarkers(clean) || isExplicitCtlStudyRequest(clean)) return empty;
   if (isPotUrbanNormRequest(clean)) return empty;
   if (hasContractDraftMarkers(clean) || isContractMinutaOrAuditRequest(clean)) return empty;
+  if (/\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:de\s+)?copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|desenglobe|englobe|\brnt\b|decreto\s*1074|ley\s*2068)\b/i.test(
+    norm2
+  ) && !/\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|credito\s+hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre)\b/i.test(
+    norm2
+  )) {
+    return empty;
+  }
   if (isIduInquiry(clean)) return empty;
   if (/\bCHIP\s+AAA[0-9A-Z]{5,10}\b/i.test(clean) && /\b(?:predial|factura|shd)\b/i.test(norm2)) {
     return empty;
@@ -37698,6 +37971,826 @@ var init_financialAndTaxRealEstateService = __esm({
     LIMITE_20K_UVT_2026 = 2e4 * VALOR_UVT_2026;
     LIMITE_50K_UVT_2026 = 5e4 * VALOR_UVT_2026;
     EXENCION_5K_UVT_2026 = 5e3 * VALOR_UVT_2026;
+  }
+});
+
+// server/_core/propiedadHorizontalService.ts
+function normalizeText2(text2) {
+  return String(text2 || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+function stripMentions3(text2) {
+  return String(text2 || "").replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+}
+function formatCop3(amount) {
+  return `$${Math.round(amount).toLocaleString("es-CO")} COP`;
+}
+function mediaInputToBase642(val) {
+  if (!val) return null;
+  if (Buffer.isBuffer(val)) return val.length > 0 ? val.toString("base64") : null;
+  const trimmed = String(val).trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/^data:[^;]+;base64,/i, "");
+}
+function parseCopNumberFromMatch(numStr, unitStr) {
+  if (!numStr) return void 0;
+  const unit = normalizeText2(unitStr || "");
+  if (unit.includes("millon") || unit === "m" || unit === "mm") {
+    const cleaned2 = parseFloat(numStr.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(cleaned2) ? cleaned2 * 1e6 : void 0;
+  }
+  const hasDotThousands = /^\d{1,3}(?:\.\d{3})+$/.test(numStr);
+  const cleaned = hasDotThousands ? parseFloat(numStr.replace(/\./g, "")) : parseFloat(numStr.replace(/,/g, ""));
+  return Number.isFinite(cleaned) ? cleaned : void 0;
+}
+function hasPhDocumentMarkers(text2) {
+  const raw = String(text2 || "");
+  if (!raw || raw.trim().length < 25) return false;
+  if (hasCtlTextMarkers(raw)) return false;
+  const norm2 = normalizeText2(raw);
+  const isPureContractDraft = /\b(?:promesa\s+de\s+compraventa|promitente\s+(?:vendedor|comprador)|contrato\s+de\s+arrendamiento|ley\s+820\s+de\s+2003|contrato\s+de\s+corretaje|codigo\s+de\s+comercio.*51[89])\b/i.test(
+    norm2
+  ) && !/\b(?:reglamento\s+de\s+propiedad\s+horizontal|\brph\b|asamblea\s+(?:general\s+)?de\s+copropietarios|consejo\s+de\s+administracion|coeficiente(?:s)?\s+de\s+copropiedad|ley\s+675)\b/i.test(
+    norm2
+  );
+  if (isPureContractDraft) return false;
+  const markers = [
+    /\breglamento\s+de\s+propiedad\s+horizontal\b/i,
+    /\basamblea\s+(?:general\s+)?(?:ordinaria\s+|extraordinaria\s+)?de\s+copropietarios\b/i,
+    /\bacta\s+(?:no\.?|numero)?\s*\d*\s*(?:de\s+)?(?:asamblea|consejo\s+de\s+administracion)\b/i,
+    /\b(?:art[ií]culo|cl[aá]usula|par[aá]grafo)\s+\d+[^.\n]{0,80}\b(?:prohib\w*|sancion\w*|multa\w*|mascotas?|airbnb|vivienda\s+turistica|renta\s+corta|coeficiente)\b/i,
+    /\b(?:prohib\w*|sancion\w*|multa\w*)\b.{0,65}\b(?:mascotas?|perros?|gatos?|airbnb|renta\s+corta|vivienda\s+turistica|alquiler\s+por\s+dias|hospedaje|ascensor)\b/i,
+    /\b(?:corte|suspension|suspender|restring\w*)\b.{0,55}\b(?:agua|energia|gas|citofonia|ascensor|porteria|acceso|servicios?\s+publicos?)\b/i,
+    /\b(?:ley\s+675(?:\s+de\s+2001)?|\brph\b)\b.{0,80}\b(?:articulo|clausula|paragrafo|prohib\w*|sancion\w*|multa\w*|bienes?\s+comunes?)\b/i,
+    /\b(?:bienes?\s+comunes?\s+(?:no\s+esenciales|de\s+uso\s+exclusivo)|fachada|cerramiento\s+de\s+(?:terraza|balcon))\b/i
+  ];
+  let hits = 0;
+  for (const rx of markers) {
+    if (rx.test(norm2)) hits += 1;
+  }
+  if (hits >= 2) return true;
+  if (hits >= 1 && norm2.length >= 75 && /\b(?:copropietarios?|administracion|administrador|consejo|asamblea|reglamento|rph|bienes\s+comunes|vivienda\s+turistica|airbnb|mascotas|prohib\w*|sancion\w*)\b/i.test(
+    norm2
+  )) {
+    return true;
+  }
+  return false;
+}
+function isConceptualPhQuestion(text2) {
+  const raw = stripMentions3(text2);
+  if (!raw) return false;
+  if (hasPhDocumentMarkers(raw)) return false;
+  const norm2 = normalizeText2(raw).replace(/^[¿?\s!¡]+/, "");
+  const hasOperationalNumbers = /\b\d+(?:[.,]\d+)?\s*%/.test(norm2) || /\$?\s*\d+(?:[.,]\d+)?\s*(?:millones?|\bmm\b)\b/i.test(norm2) || /\$\s*\d{1,3}(?:[.,]\d{3})+/.test(norm2) || /\b\d+(?:[.,]\d+)?\s*(?:m2|mts2?|metros?\s*cuadrados?)\b/i.test(norm2) || /\b\d+\s*(?:unidades?|apartamentos?|aptos?|lotes?|locales?|meses?\s+(?:de\s+)?mora)\b/i.test(norm2);
+  const hasExplicitToolAction = /\b(?:calcula(?:me|r)?|liquida(?:me|r)?|simula(?:me|r)?|valida(?:me|r)?|verifica(?:me|r)?|audita(?:me|r)?|auditoria|revisa(?:me|r)?\s+(?:este|esta|el|la|mi)|analiza(?:me|r)?\s+(?:este|esta|el|la|mi)|genera(?:me|r)?|haz(?:me)?|emite|en\s+pdf|prefactibilidad|concepto\s+(?:tecnico|juridico)?\s*(?:ph|de\s+propiedad\s+horizontal|de\s+desenglobe|de\s+englobe|de\s+subdivision))\b/i.test(
+    norm2
+  );
+  if (hasOperationalNumbers || hasExplicitToolAction) return false;
+  const conceptualPattern = /^(?:hola[\s,!]*)?(?:que\s+(?:es|son|significa|dice|establece)|cual\s+es\s+(?:el|la|los|las)|como\s+(?:funciona|se\s+calcula|se\s+elige|opera|se\s+aplica)|explicame\s+(?:que\s+es|como\s+funciona)|cuando\s+(?:aplica|se\s+necesita)|se\s+puede|es\s+legal)\b/i.test(
+    norm2
+  ) || /\b(?:que\s+dice\s+el\s+articulo\s+\d+\s+de\s+la\s+ley\s+675|que\s+es\s+(?:el\s+|la\s+)?(?:coeficiente\s+de\s+copropiedad|propiedad\s+horizontal|ley\s+675|quorum\s+calificado|expensas\s+comunes|rnt|registro\s+nacional\s+de\s+turismo))\b/i.test(
+    norm2
+  );
+  return conceptualPattern;
+}
+function isPropiedadHorizontalRequest(text2, hasMedia = false) {
+  const raw = stripMentions3(text2);
+  if (!raw && !hasMedia) return false;
+  const norm2 = normalizeText2(raw);
+  if (hasCtlTextMarkers(raw) || isExplicitCtlStudyRequest(raw)) return false;
+  if (isIduInquiry(raw)) return false;
+  if (/\bCHIP\s+AAA[0-9A-Z]{5,10}\b/i.test(raw) && /\b(?:predial|factura|shd)\b/i.test(norm2) && !/\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|desenglobe|englobe|subdivision|coeficiente)\b/i.test(norm2)) {
+    return false;
+  }
+  const hasExplicitPotTerms = /\b(?:pot\b|decreto\s*555|sinupot|ideca|mapas\s*bogota|norma\s+urbana|normativa\s+urbana|cedula\s+normativa|tratamiento\s+urbanistico|area\s+de\s+actividad|indice\s+de\s+ocupacion|indice\s+de\s+construccion|edificabilidad|uso\s+del?\s+suelo|antejardin|\bupl\b|\bupz\b)\b/i.test(
+    norm2
+  );
+  const hasPhSubdivisionOrRph = /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?(?:ph|propiedad\s+horizontal)|asamblea\s+(?:general\s+)?de\s+copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|desenglobe|englobe|subdivision\s+(?:en\s+ph|de\s+(?:lote|casa|inmueble|apartamento|predio)|urbana)|reforma\s+(?:al\s+|del\s+)?rph)\b/i.test(
+    norm2
+  );
+  if (hasExplicitPotTerms && !hasPhSubdivisionOrRph) return false;
+  const hasFinTaxLexicon = /\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|credito\s+hipotecari|leasing\s+habitacional|ley\s+546|ganancia\s+ocasional|impuesto\s+de\s+timbre|costo\s+fiscal|5\.?000\s*uvt|renta\s+corta\s+vs\s+tradicional|punto\s+de\s+equilibrio)\b/i.test(
+    norm2
+  );
+  if (hasFinTaxLexicon && !hasPhSubdivisionOrRph && !/\b(?:rnt|decreto\s*1074|ley\s*2068|prohib)\b/i.test(norm2)) {
+    return false;
+  }
+  const isExplicitSkill5ContractCreation = /\b(?:redacta\w*|elabora\w*|hazme|genera\w*|prepara\w*|audita\w*)\b.{0,45}\b(?:minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|arriendo|corretaje|consignacion)|otrosi|acta\s+de\s+entrega)\b/i.test(
+    norm2
+  ) && !/\b(?:desenglobe|englobe|subdivision|reforma\s+(?:al\s+|del\s+)?(?:rph|reglamento\s+(?:de\s+)?ph)|asamblea\s+(?:general\s+)?de\s+copropietarios)\b/i.test(
+    norm2
+  );
+  if (isExplicitSkill5ContractCreation) {
+    return false;
+  }
+  const hasContractSkill5Lexicon = /\b(?:promesa\s+de\s+compraventa|minuta\s+(?:de\s+)?(?:compraventa|arrendamiento|arriendo|corretaje)|contrato\s+de\s+(?:arrendamiento|arriendo|corretaje|consignacion)|otrosi|acta\s+de\s+entrega|pacto\s+de\s+retroventa|cesion\s+de\s+leasing)\b/i.test(
+    norm2
+  );
+  if (hasContractSkill5Lexicon && !hasPhSubdivisionOrRph && !hasPhDocumentMarkers(raw)) {
+    return false;
+  }
+  if (/\b(?:gastos?\s+(?:de\s+)?notaria|derechos?\s+notariales|liquidacion\s+notarial|beneficencia\s+y\s+registro)\b/i.test(
+    norm2
+  ) && !hasPhSubdivisionOrRph && !/\b(?:paz\s+y\s+salvo\s+(?:de\s+)?administracion|art(?:iculo)?\.?\s*29\s+ley\s*675)\b/i.test(norm2)) {
+    return false;
+  }
+  if (/\b(?:swap\s+test|auditoria\s+de\s+marketing|\baida\b|\bicp\b)\b/i.test(norm2) && !hasPhSubdivisionOrRph && !hasPhDocumentMarkers(raw)) {
+    return false;
+  }
+  const looksLikeGratitudeOnly = !hasPhDocumentMarkers(raw) && !/\b(?:calcula|liquida|audita|revisa|analiza|valida|genera|hazme|dame|prefactibilidad)\b/i.test(norm2) && /\b(?:gracias|muchas\s+gracias|mil\s+gracias|excelente|genial|perfecto|quede\s+(?:muy\s+)?satisfech|me\s+encanto|me\s+gusto)\b/i.test(
+    norm2
+  );
+  if (looksLikeGratitudeOnly) return false;
+  if (isConceptualPhQuestion(raw)) return false;
+  if (hasPhDocumentMarkers(raw)) return true;
+  const hasPhCoreKeyword = /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?(?:ph|propiedad\s+horizontal)|asamblea\s+(?:general\s+)?de\s+copropietarios|consejo\s+de\s+administracion|coeficiente(?:s)?\s+de\s+copropiedad|expensas?\s+(?:comunes?|ordinarias?|extraordinarias?)|cuota\s+(?:de\s+administracion|extraordinaria)|paz\s+y\s+salvo\s+(?:de\s+)?administracion|impugna(?:r|cion)\s+(?:de\s+)?acta|quorum\s+(?:calificado|asamblea)|mayoria\s+calificada\s+del?\s*70%|desenglobe|englobe|subdivision\s+(?:de\s+|en\s+)?(?:ph|propiedad\s+horizontal|lote|casa|predio|inmueble|apartamento)|reforma\s+(?:al\s+|del\s+)?(?:rph|reglamento)|vivienda\s+turistica|\brnt\b|registro\s+nacional\s+de\s+turismo|decreto\s*1074|ley\s*2068)\b/i.test(
+    norm2
+  );
+  if (hasPhCoreKeyword) {
+    return true;
+  }
+  if (/\b(?:airbnb|renta\s+corta|alquiler\s+(?:por\s+dias|turistico))\b/i.test(norm2) && /\b(?:conjunto|edificio|copropiedad|administracion|administrador|asamblea|consejo|reglamento|prohib|restring|multa|sancion|rnt)\b/i.test(
+    norm2
+  )) {
+    return true;
+  }
+  if (hasMedia && /\b(?:reglamento|\brph\b|propiedad\s+horizontal|ley\s*675|asamblea|acta|copropiedad|desenglobe|englobe)\b/i.test(
+    norm2
+  )) {
+    return true;
+  }
+  return false;
+}
+function detectPhSubdivisionOperation(norm2) {
+  if (/\benglobe\b/i.test(norm2)) return "englobe";
+  if (/\bdesenglobe\b/i.test(norm2)) return "desenglobe";
+  if (/\bsubdivision\b|\bsubdividir\b|\bsegregar\b|\bsegregacion\b/i.test(norm2)) return "subdivision";
+  if (/\breforma\s+(?:al\s+|del\s+)?(?:rph|reglamento)\b/i.test(norm2)) return "reforma_rph";
+  return "constitucion_ph";
+}
+function extractPhNumbers(raw) {
+  const norm2 = normalizeText2(raw);
+  let presupuestoTotalCop;
+  const presMatch = raw.match(
+    /(?:presupuesto(?:\s+mensual)?|expensa(?:s)?\s+(?:comunes?\s+)?totales?|cuota\s+extraordinaria\s+total)\s*(?:de|:|es)?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})*)\s*(millones?|mm|m\b)?/i
+  );
+  if (presMatch) {
+    presupuestoTotalCop = parseCopNumberFromMatch(presMatch[1], presMatch[2]);
+  }
+  let capitalMoraCop;
+  const moraCapMatch = raw.match(
+    /(?:mora|deuda|capital(?:\s+adeudado)?|saldo\s+vencido|cuota\s+(?:mensual|de\s+administracion|ordinaria))\s*(?:de|:|por)?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})*)\s*(millones?|mm|m\b)?/i
+  );
+  if (moraCapMatch) {
+    capitalMoraCop = parseCopNumberFromMatch(moraCapMatch[1], moraCapMatch[2]);
+  }
+  let coeficienteUnidadPct;
+  const coefMatch = raw.match(
+    /(?:coeficiente(?:\s+de\s+copropiedad)?|indice)\s*(?:de|:|es|del)?\s*(\d+(?:[.,]\d+)?)\s*%/i
+  );
+  if (coefMatch) {
+    const val = parseFloat(coefMatch[1].replace(",", "."));
+    if (Number.isFinite(val) && val > 0 && val <= 100) {
+      coeficienteUnidadPct = val;
+    }
+  }
+  const listaCoeficientesPct = [];
+  if (/\bcoeficientes?\b/i.test(norm2)) {
+    const listBlock = raw.match(/coeficientes?[^.;\n]{0,120}/i)?.[0] || "";
+    const pctMatches = Array.from(listBlock.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g));
+    if (pctMatches.length >= 2) {
+      for (const m of pctMatches) {
+        const val = parseFloat(m[1].replace(",", "."));
+        if (Number.isFinite(val) && val > 0 && val <= 100) {
+          listaCoeficientesPct.push(val);
+        }
+      }
+    }
+  }
+  let areaPrivadaUnidadM2;
+  let areaPrivadaTotalM2;
+  const areaUnitMatch = raw.match(
+    /(?:unidad|apartamento|apto|casa|local|oficina|area\s+privada(?:\s+de\s+la\s+unidad)?)\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts2?|metros?\s*cuadrados?)/i
+  );
+  if (areaUnitMatch) {
+    areaPrivadaUnidadM2 = parseFloat(areaUnitMatch[1].replace(",", "."));
+  }
+  const areaTotMatch = raw.match(
+    /(?:area\s+(?:privada\s+)?total(?:\s+construida)?|total\s+copropiedad|lote\s+total|superficie\s+total)\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts2?|metros?\s*cuadrados?)/i
+  );
+  if (areaTotMatch) {
+    areaPrivadaTotalM2 = parseFloat(areaTotMatch[1].replace(",", "."));
+  }
+  if (!areaPrivadaUnidadM2) {
+    const genericArea = raw.match(/\b(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts2?|metros?\s*cuadrados?)\b/i);
+    if (genericArea) {
+      areaPrivadaUnidadM2 = parseFloat(genericArea[1].replace(",", "."));
+    }
+  }
+  let mesesMora;
+  const mesesMatch = raw.match(/(\d{1,2})\s*meses?(?:\s+de)?\s+(?:mora|atraso|vencid)/i);
+  if (mesesMatch) {
+    mesesMora = parseInt(mesesMatch[1], 10);
+  }
+  let tasaMoraReportadaMensualPct;
+  let tasaMoraReportadaAnualPct;
+  const tasaMesMatch = raw.match(
+    /(?:inter[eé]s(?:es)?(?:\s+de\s+mora)?|mora|cobran)\s*(?:del?|al)?\s*(\d+(?:[.,]\d+)?)\s*%\s*(?:mensual|mes|m\.?v\.?)/i
+  );
+  if (tasaMesMatch) {
+    tasaMoraReportadaMensualPct = parseFloat(tasaMesMatch[1].replace(",", "."));
+  }
+  const tasaAnualMatch = raw.match(
+    /(?:inter[eé]s(?:es)?(?:\s+de\s+mora)?|mora|cobran)\s*(?:del?|al)?\s*(\d+(?:[.,]\d+)?)\s*%\s*(?:anual|e\.?a\.?)/i
+  );
+  if (tasaAnualMatch) {
+    tasaMoraReportadaAnualPct = parseFloat(tasaAnualMatch[1].replace(",", "."));
+  }
+  let quorumAsistenciaPct;
+  let quorumAprobacionPct;
+  const qAsistMatch = raw.match(
+    /(?:qu[oó]rum|asistencia|asisti[oó]|presentes?)\s*(?:del?|con)?\s*(\d+(?:[.,]\d+)?)\s*%/i
+  );
+  if (qAsistMatch) {
+    quorumAsistenciaPct = parseFloat(qAsistMatch[1].replace(",", "."));
+  }
+  const qAprobMatch = raw.match(
+    /(?:aprobad[oa]|aprob[oó]|votos?\s+a\s+favor|votaci[oó]n(?:\s+del?)?|mayor[ií]a\s+del?)\s*(?:con\s+(?:el\s+)?)?(\d+(?:[.,]\d+)?)\s*%/i
+  );
+  if (qAprobMatch) {
+    quorumAprobacionPct = parseFloat(qAprobMatch[1].replace(",", "."));
+  }
+  let cuotaExtraordinariaVecesMensual;
+  const vecesMatch = raw.match(/(\d+(?:[.,]\d+)?)\s*veces\s+(?:el\s+valor\s+de\s+)?(?:la\s+)?(?:expensa|cuota|administraci[oó]n)/i);
+  if (vecesMatch) {
+    cuotaExtraordinariaVecesMensual = parseFloat(vecesMatch[1].replace(",", "."));
+  }
+  let unidadesResultantes;
+  const uniMatch = raw.match(/(?:en|dividir\s+en|sacar)\s+(\d{1,3})\s*(?:unidades?|apartamentos?|aptos?|lotes?|locales?|folios?|matr[ií]culas?)/i);
+  if (uniMatch) {
+    unidadesResultantes = parseInt(uniMatch[1], 10);
+  }
+  return {
+    presupuestoTotalCop,
+    coeficienteUnidadPct,
+    listaCoeficientesPct,
+    areaPrivadaUnidadM2,
+    areaPrivadaTotalM2,
+    capitalMoraCop,
+    mesesMora,
+    tasaMoraReportadaMensualPct,
+    tasaMoraReportadaAnualPct,
+    quorumAsistenciaPct,
+    quorumAprobacionPct,
+    cuotaExtraordinariaVecesMensual,
+    unidadesResultantes
+  };
+}
+function calculatePropiedadHorizontalMetrics(raw) {
+  const norm2 = normalizeText2(raw);
+  const nums = extractPhNumbers(raw);
+  const findings = [];
+  const summaryPoints = [];
+  let coeficienteFinal = nums.coeficienteUnidadPct;
+  if (!coeficienteFinal && nums.areaPrivadaUnidadM2 && nums.areaPrivadaTotalM2 && nums.areaPrivadaTotalM2 > 0) {
+    coeficienteFinal = Number((nums.areaPrivadaUnidadM2 / nums.areaPrivadaTotalM2 * 100).toFixed(4));
+    summaryPoints.push(
+      `Coeficiente calculado por \xE1rea privada (${nums.areaPrivadaUnidadM2} m\xB2 / ${nums.areaPrivadaTotalM2} m\xB2): ${coeficienteFinal}% (sujeto a ponderaci\xF3n si coexiste uso comercial Art. 26 Ley 675).`
+    );
+  }
+  let sumaCoeficientesPct;
+  let sumaCoeficientesValida;
+  if (nums.listaCoeficientesPct.length >= 2) {
+    sumaCoeficientesPct = Number(
+      nums.listaCoeficientesPct.reduce((acc, v) => acc + v, 0).toFixed(4)
+    );
+    sumaCoeficientesValida = Math.abs(sumaCoeficientesPct - 100) <= 0.05;
+    if (!sumaCoeficientesValida) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Descuadre en sumatoria de coeficientes de copropiedad",
+        hallazgo: `Los coeficientes suministrados suman ${sumaCoeficientesPct}% (diferencia de ${Math.abs(
+          100 - sumaCoeficientesPct
+        ).toFixed(4)}% frente al 100.000% obligatorio).`,
+        fundamentoLegal: "Art\xEDculos 25 y 26 de la Ley 675 de 2001 (la suma de coeficientes debe ser igual a 100%).",
+        recomendacion: "Recalcular la tabla de coeficientes en asamblea (70%) y protocolizar correcci\xF3n mediante escritura p\xFAblica de reforma al RPH."
+      });
+    } else {
+      findings.push({
+        severidad: "OK",
+        titulo: "Sumatoria de coeficientes v\xE1lida",
+        hallazgo: `Los coeficientes suman exactamente ${sumaCoeficientesPct}% (conforme al 100%).`,
+        fundamentoLegal: "Art\xEDculo 25 de la Ley 675 de 2001.",
+        recomendacion: "Conservar tabla de coeficientes protocolizada."
+      });
+    }
+    summaryPoints.push(`Sumatoria de coeficientes evaluada: ${sumaCoeficientesPct}% (${sumaCoeficientesValida ? "V\xE1lida" : "Descuadrada"}).`);
+  }
+  let expensaUnidadCop;
+  if (nums.presupuestoTotalCop && coeficienteFinal) {
+    expensaUnidadCop = Math.round(nums.presupuestoTotalCop * (coeficienteFinal / 100));
+    summaryPoints.push(
+      `Expensa com\xFAn calculada sobre ${formatCop3(nums.presupuestoTotalCop)} al coeficiente ${coeficienteFinal}%: ${formatCop3(expensaUnidadCop)} mensuales.`
+    );
+  }
+  let excedeTopeUsuraMora;
+  const tasaReportadaMensual = nums.tasaMoraReportadaMensualPct ?? (nums.tasaMoraReportadaAnualPct !== void 0 ? Number(((Math.pow(1 + nums.tasaMoraReportadaAnualPct / 100, 1 / 12) - 1) * 100).toFixed(2)) : void 0);
+  if (tasaReportadaMensual !== void 0) {
+    excedeTopeUsuraMora = tasaReportadaMensual > TASA_MORA_MAX_MENSUAL_PCT + 0.05;
+    if (excedeTopeUsuraMora) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Inter\xE9s de mora superior al tope legal (1.5x IBC)",
+        hallazgo: `Se reporta cobro de ${tasaReportadaMensual}% mensual, superando el tope referencial m\xE1ximo de ${TASA_MORA_MAX_MENSUAL_PCT}% M.V. (${TASA_MORA_MAX_EA_PCT}% E.A. = 1.5x IBC ${IBC_REFERENCIA_EA_PCT}% E.A.).`,
+        fundamentoLegal: "Art\xEDculo 30 de la Ley 675 de 2001, Art\xEDculo 884 del C\xF3digo de Comercio y Art\xEDculo 305 del C\xF3digo Penal.",
+        recomendacion: "Solicitar por escrito a la Administraci\xF3n reliquidaci\xF3n inmediata ajustada a 1.5x IBC certificado por la Superfinanciera para el mes respectivo, sin capitalizaci\xF3n de intereses."
+      });
+    } else {
+      findings.push({
+        severidad: "OK",
+        titulo: "Tasa de mora dentro del l\xEDmite legal",
+        hallazgo: `La tasa indicada (${tasaReportadaMensual}% mensual) no supera el tope referencial de ${TASA_MORA_MAX_MENSUAL_PCT}% M.V. (1.5x IBC).`,
+        fundamentoLegal: "Art\xEDculo 30 de la Ley 675 de 2001.",
+        recomendacion: "Verificar mensualmente la certificaci\xF3n del IBC de la Superfinanciera."
+      });
+    }
+  }
+  let interesMoraMaxLegalCop;
+  const capitalBaseMora = nums.capitalMoraCop ?? expensaUnidadCop;
+  if (capitalBaseMora && (nums.mesesMora || /\bmora|inter[eé]s\b/i.test(norm2))) {
+    const meses = nums.mesesMora || 1;
+    interesMoraMaxLegalCop = Math.round(capitalBaseMora * (TASA_MORA_MAX_MENSUAL_PCT / 100) * meses);
+    summaryPoints.push(
+      `Inter\xE9s moratorio m\xE1ximo legal estimado (1.5x IBC \u2248 ${TASA_MORA_MAX_MENSUAL_PCT}% M.V. sobre ${formatCop3(
+        capitalBaseMora
+      )} por ${meses} mes(es)): ${formatCop3(interesMoraMaxLegalCop)} (sin anatocismo).`
+    );
+  }
+  const requires70ByTopic = /\b(?:reforma\s+(?:al\s+|del\s+)?(?:rph|reglamento)|cambio\s+de\s+destinaci[oó]n|desafectaci[oó]n|uso\s+exclusivo|reconstrucci[oó]n|extinci[oó]n|airbnb|vivienda\s+tur[ií]stica|renta\s+corta)\b/i.test(
+    norm2
+  ) || nums.cuotaExtraordinariaVecesMensual !== void 0 && nums.cuotaExtraordinariaVecesMensual > 4;
+  let mayoriaValida;
+  const votoEfectivoPct = nums.quorumAprobacionPct ?? nums.quorumAsistenciaPct;
+  if (votoEfectivoPct !== void 0) {
+    if (requires70ByTopic) {
+      mayoriaValida = votoEfectivoPct >= 70;
+      if (!mayoriaValida) {
+        findings.push({
+          severidad: "ALTA",
+          titulo: "Decisi\xF3n inv\xE1lida por falta de mayor\xEDa calificada del 70%",
+          hallazgo: `El asunto exige mayor\xEDa calificada del 70% del total de coeficientes de la copropiedad, pero solo se alcanz\xF3 ${votoEfectivoPct}%. Incluso en segunda convocatoria aplica el 70% del Art. 46.`,
+          fundamentoLegal: "Art\xEDculo 46 de la Ley 675 de 2001 y Art\xEDculo 49 (Impugnaci\xF3n dentro de los 2 meses siguientes).",
+          recomendacion: "Impugnar el acta ante el Juez Civil dentro de los 2 meses calendario siguientes a su publicaci\xF3n/comunicaci\xF3n (Art. 49 Ley 675 y Art. 382 C.G.P.)."
+        });
+      } else {
+        findings.push({
+          severidad: "OK",
+          titulo: "Mayor\xEDa calificada del 70% cumplida",
+          hallazgo: `La decisi\xF3n alcanz\xF3 ${votoEfectivoPct}% del total de coeficientes (>= 70%).`,
+          fundamentoLegal: "Art\xEDculo 46 de la Ley 675 de 2001.",
+          recomendacion: "Si modifica el RPH, elevar el acta a escritura p\xFAblica e inscribirla en la ORIP."
+        });
+      }
+    } else if (nums.quorumAsistenciaPct !== void 0) {
+      mayoriaValida = nums.quorumAsistenciaPct > 50;
+      summaryPoints.push(
+        `Qu\xF3rum en primera convocatoria evaluado (${nums.quorumAsistenciaPct}%): ${mayoriaValida ? "V\xE1lido (>50% de coeficientes Art. 45)." : "Insuficiente para primera convocatoria (<=50%). Requiere segunda convocatoria (Art. 45 inc. 2)."}`
+      );
+    }
+  } else if (nums.cuotaExtraordinariaVecesMensual !== void 0) {
+    summaryPoints.push(
+      nums.cuotaExtraordinariaVecesMensual > 4 ? `Cuota extraordinaria equivale a ${nums.cuotaExtraordinariaVecesMensual} veces la expensa mensual (>4x): EXIGE mayor\xEDa calificada del 70% (Art. 46 num. 2 Ley 675).` : `Cuota extraordinaria de ${nums.cuotaExtraordinariaVecesMensual} veces la expensa mensual (<=4x): procede por mayor\xEDa simple en asamblea v\xE1lida (Art. 45 Ley 675).`
+    );
+  }
+  if (summaryPoints.length === 0) {
+    summaryPoints.push(
+      "Par\xE1metros legales Ley 675/2001: Tope mora 1.5x IBC (Art. 30), Mayor\xEDa calificada 70% (Art. 46), Impugnaci\xF3n 2 meses (Art. 49) y Solidaridad paz y salvo (Art. 29)."
+    );
+  }
+  return {
+    calculations: {
+      presupuestoTotalCop: nums.presupuestoTotalCop,
+      coeficienteUnidadPct: coeficienteFinal,
+      expensaUnidadCop,
+      sumaCoeficientesPct,
+      sumaCoeficientesValida,
+      areaPrivadaUnidadM2: nums.areaPrivadaUnidadM2,
+      areaPrivadaTotalM2: nums.areaPrivadaTotalM2,
+      capitalMoraCop: capitalBaseMora,
+      mesesMora: nums.mesesMora,
+      tasaMoraReportadaMensualPct: tasaReportadaMensual,
+      tasaMoraReportadaAnualPct: nums.tasaMoraReportadaAnualPct,
+      ibcReferenciaEaPct: IBC_REFERENCIA_EA_PCT,
+      tasaMoraMaxLegalEaPct: TASA_MORA_MAX_EA_PCT,
+      tasaMoraMaxLegalMensualPct: TASA_MORA_MAX_MENSUAL_PCT,
+      excedeTopeUsuraMora,
+      interesMoraMaxLegalCop,
+      quorumAsistenciaPct: nums.quorumAsistenciaPct,
+      quorumAprobacionPct: nums.quorumAprobacionPct,
+      cuotaExtraordinariaVecesMensual: nums.cuotaExtraordinariaVecesMensual,
+      requiereMayoriaCalificada70: requires70ByTopic,
+      mayoriaValida,
+      plazoImpugnacionMeses: 2,
+      solidaridadCompraventaArt29: "Art. 29 Ley 675: Solidaridad entre vendedor y comprador por expensas comunes insolutas al momento de la escritura; exigir Paz y Salvo de Administraci\xF3n."
+    },
+    findings,
+    summaryPoints
+  };
+}
+function auditPhRegulationOrMinutes(draftText, requesterName) {
+  const norm2 = normalizeText2(draftText);
+  const findings = [];
+  const calcData = calculatePropiedadHorizontalMetrics(draftText);
+  findings.push(...calcData.findings);
+  const isMinutesOrCouncil = /\b(?:acta\s+(?:de\s+)?(?:asamblea|consejo)|consejo\s+de\s+administraci[oó]n|administrador(?:a)?|circular|manual\s+de\s+convivencia|mayor[ií]a\s+simple|mitad\s+m[aá]s\s+uno)\b/i.test(
+    norm2
+  );
+  const isRegisteredRph = /\b(?:reglamento\s+de\s+propiedad\s+horizontal|\brph\b|escritura\s+p[uú]blica|inscrit[oa]\s+en\s+(?:la\s+)?orip|reforma\s+estatutaria\s+(?:con\s+)?70%)\b/i.test(
+    norm2
+  );
+  if (/\b(?:airbnb|renta\s+corta|vivienda\s+tur[ií]stica|alquiler\s+(?:por\s+d[ií]as|tur[ií]stico|temporal)|hospedaje|\brnt\b|registro\s+nacional\s+de\s+turismo)\b/i.test(
+    norm2
+  )) {
+    const bansAirbnb = /\b(?:proh[ií]b\w*|no\s+se\s+permite\w*|veta\w*|restring\w*)\b/i.test(
+      norm2
+    );
+    if (bansAirbnb && isMinutesOrCouncil && !/\b70%\b.*\bescritura\b/i.test(norm2)) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Prohibici\xF3n de vivienda tur\xEDstica (Airbnb / renta corta) sin reforma v\xE1lida al RPH",
+        hallazgo: "Se pretende prohibir la vivienda tur\xEDstica o renta corta mediante acta por mayor\xEDa simple, circular, manual de convivencia o decisi\xF3n del Consejo/Administrador, sin reforma estatutaria al Reglamento PH aprobada con 70% e inscrita en ORIP.",
+        fundamentoLegal: "Art\xEDculos 46 y 49 de la Ley 675 de 2001, Decreto 1074 de 2015 (Decreto 2590 de 2009) y Art\xEDculo 38 de la Ley 2068 de 2020.",
+        recomendacion: "La restricci\xF3n es jur\xEDdicamente ineficaz e impugnable dentro de los 2 meses siguientes (Art. 49 Ley 675). Si la copropiedad desea prohibirla, debe convocar asamblea, lograr 70% del total de coeficientes y elevar la reforma a Escritura P\xFAblica inscrita en ORIP. Si el RPH no la proh\xEDbe, el propietario debe operar con RNT activo, TRA, SIRE y p\xF3liza civil."
+      });
+    } else if (bansAirbnb && isRegisteredRph) {
+      findings.push({
+        severidad: "OK",
+        titulo: "Prohibici\xF3n expresa de vivienda tur\xEDstica en Reglamento PH (RPH)",
+        hallazgo: "El Reglamento de Propiedad Horizontal debidamente protocolizado e inscrito restringe expresamente la destinaci\xF3n de vivienda tur\xEDstica / alojamiento por d\xEDas.",
+        fundamentoLegal: "Ley 675 de 2001, Sentencia C-318 de 2002 y Decreto 1074 de 2015.",
+        recomendacion: "Cl\xE1usula oponible a propietarios y arrendatarios. Operar renta corta sin reforma del 70% expone a multas policivas, suspensi\xF3n del RNT y acciones estatutarias."
+      });
+    } else {
+      findings.push({
+        severidad: "MEDIA",
+        titulo: "R\xE9gimen de Vivienda Tur\xEDstica y Registro Nacional de Turismo (RNT)",
+        hallazgo: "Cuando el RPH no proh\xEDbe expresamente la vivienda tur\xEDstica, la actividad es l\xEDcita pero exige cumplimiento estricto de formalidades tur\xEDsticas ante MinCIT y la copropiedad.",
+        fundamentoLegal: "Decreto 1074 de 2015 (Art. 2.2.4.4.12.2), Ley 2068 de 2020 Art. 38 y Ley 675 de 2001.",
+        recomendacion: "Acreditar ante la Administraci\xF3n: (1) RNT activo en RUES, (2) Tarjeta de Registro de Alojamiento (TRA), (3) reporte SIRE de extranjeros, (4) p\xF3liza de responsabilidad civil y (5) registro previo de hu\xE9spedes en porter\xEDa."
+      });
+    }
+  }
+  if (/\b(?:mascota|mascotas|perro|perros|gato|gatos|animal(?:es)?\s+de\s+compa[nñ][ií]a)\b/i.test(norm2)) {
+    const bansPets = /\b(?:proh[ií]b\w*|no\s+se\s+permiten?)\b.{0,50}\b(?:tenencia|mascotas?|perros?|gatos?|ascensor|ingreso|acceso|zonas?\s+comunes?)\b/i.test(
+      norm2
+    );
+    if (bansPets) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Prohibici\xF3n absoluta de mascotas o restricci\xF3n de acceso en ascensor",
+        hallazgo: "Prohibir la tenencia de mascotas en unidades privadas o impedir su circulaci\xF3n por ascensores/porter\xEDa constituye una cl\xE1usula abusiva e inconstitucional.",
+        fundamentoLegal: "Sentencias Corte Constitucional T-035/1997, T-119/1998 y C-439/2011; Ley 1801 de 2016 y Ley 2054 de 2020.",
+        recomendacion: "Reemplazar la prohibici\xF3n por reglas proporcionales de convivencia: uso de correa, bozal \xFAnicamente para perros de manejo especial (Ley 1801/2016), carn\xE9 de vacunas y recolecci\xF3n obligatoria de excretas."
+      });
+    } else {
+      findings.push({
+        severidad: "OK",
+        titulo: "Regulaci\xF3n razonable de convivencia con mascotas",
+        hallazgo: "Las medidas evaluadas regulan convivencia sin prohibir la tenencia.",
+        fundamentoLegal: "Ley 675 de 2001 y Ley 1801 de 2016.",
+        recomendacion: "Asegurar que el acceso por zonas comunes y ascensores no se bloquee de forma absoluta."
+      });
+    }
+  }
+  if (/\b(?:corte|cortar|suspender|suspensi[oó]n|bloquear|impedir)\b.{0,65}\b(?:agua|acueducto|energ[ií]a|luz|gas|citofon[ií]a|ascensor|porter[ií]a|acceso|ingreso|parqueadero|tarjeta\s+de\s+acceso)\b/i.test(
+    norm2
+  )) {
+    findings.push({
+      severidad: "ALTA",
+      titulo: "Suspensi\xF3n ilegal de servicios p\xFAblicos esenciales, citofon\xEDa o acceso por mora",
+      hallazgo: "La copropiedad no puede suspender servicios p\xFAblicos domiciliarios, citofon\xEDa, uso de ascensor ni impedir el ingreso peatonal/vehicular a la unidad privada como mecanismo de cobro.",
+      fundamentoLegal: "Sentencias Corte Constitucional T-035/1997, T-630/1997, T-454/2017 y Art\xEDculos 59-60 de la Ley 675 de 2001.",
+      recomendacion: "Eliminar esta sanci\xF3n de inmediato. Solo puede restringirse el uso de bienes comunes NO esenciales (piscina, sal\xF3n social, BBQ) previo debido proceso (descargos ante Consejo/Asamblea) y acudir al proceso ejecutivo de cobro (Art. 48 Ley 675)."
+    });
+  }
+  if (/\b(?:multa|sanci[oó]n)\b.{0,60}\b(?:sin\s+descargos|directamente\s+el\s+administrador|administrador\s+impondr[aá]|3\s*veces|4\s*veces|5\s*veces|15\s*veces)\b/i.test(
+    norm2
+  )) {
+    findings.push({
+      severidad: "ALTA",
+      titulo: "Sanci\xF3n pecuniaria irregular o sin debido proceso (Art. 59-60 Ley 675)",
+      hallazgo: "Las multas en PH no pueden imponerse de plano por el Administrador sin derecho de defensa ni superar 2 expensas mensuales por infracci\xF3n (m\xE1ximo 10 acumuladas).",
+      fundamentoLegal: "Art\xEDculos 59 y 60 de la Ley 675 de 2001.",
+      recomendacion: "Garantizar pliego de cargos, t\xE9rmino de descargos, valoraci\xF3n de pruebas ante el Consejo/Asamblea y resoluci\xF3n motivada impugnable dentro de 1 mes (sanciones) o 2 meses (actas)."
+    });
+  }
+  if (/\b(?:fachada|cerramiento|terraza|balc[oó]n|bienes?\s+comunes?|reforma\s+locativa|uso\s+comercial|oficina|local)\b/i.test(
+    norm2
+  )) {
+    findings.push({
+      severidad: "MEDIA",
+      titulo: "Control de bienes comunes, fachada y cambio de destinaci\xF3n",
+      hallazgo: "Toda intervenci\xF3n en fachada o bienes comunes de uso exclusivo requiere autorizaci\xF3n previa de Asamblea (70% si altera fachada/coeficientes o asigna uso exclusivo) y licencia en Curadur\xEDa Urbana si modifica \xE1rea o estructura.",
+      fundamentoLegal: "Art\xEDculos 18, 22, 23, 46 y 73 de la Ley 675 de 2001; Decreto 1077 de 2015.",
+      recomendacion: "Distinguir adecuaciones internas no estructurales (permitidas en horarios reglamentarios) frente a alteraciones de fachada o cambio de uso comercial (exigen reforma RPH 70% y compatibilidad POT)."
+    });
+  }
+  if (findings.length === 0) {
+    findings.push({
+      severidad: "OK",
+      titulo: "Revisi\xF3n preliminar sin cl\xE1usulas abusivas evidentes en el fragmento analizado",
+      hallazgo: "El texto analizado no exhibe prohibiciones absolutas de mascotas, corte de servicios esenciales ni restricciones de Airbnb por mayor\xEDa simple.",
+      fundamentoLegal: "Ley 675 de 2001 y Decreto 1074 de 2015.",
+      recomendacion: "Validar contra el texto completo de la Escritura P\xFAblica del RPH inscrita en la ORIP para confirmar coeficientes y qu\xF3rums."
+    });
+  }
+  const highCount = findings.filter((f) => f.severidad === "ALTA").length;
+  const medCount = findings.filter((f) => f.severidad === "MEDIA").length;
+  const riskLevel = highCount > 0 ? "ROJO" : medCount > 0 ? "AMARILLO" : "VERDE";
+  const riskHeadline = riskLevel === "ROJO" ? `Detectados ${highCount} hallazgo(s) cr\xEDtico(s) contrarios a la Ley 675/2001 o jurisprudencia constitucional.` : riskLevel === "AMARILLO" ? `Detectados ${medCount} punto(s) de ajuste preventivo o verificaci\xF3n formal ante ORIP/MinCIT.` : "Cl\xE1usulas y par\xE1metros ajustados al r\xE9gimen de Propiedad Horizontal vigente.";
+  return {
+    mode: "audit",
+    headline: "AUDITOR\xCDA JUR\xCDDICA DE REGLAMENTO PH / ACTA DE ASAMBLEA (LEY 675 DE 2001)",
+    normativeFramework: "Ley 675 de 2001, Decreto 1074 de 2015 / Ley 2068 de 2020 (RNT) y Jurisprudencia Constitucional",
+    riskLevel,
+    riskHeadline,
+    summaryPoints: [
+      `Sem\xE1foro de cumplimiento PH: ${riskLevel} (Cr\xEDticos: ${highCount} | Preventivos: ${medCount})`,
+      ...calcData.summaryPoints
+    ],
+    calculations: calcData.calculations,
+    findings,
+    recommendedNextSteps: [
+      "Verificar si la disposici\xF3n evaluada consta en Escritura P\xFAblica de RPH inscrita en el Folio de Matr\xEDcula ORIP o solo en acta/circular.",
+      "Si existe decisi\xF3n de asamblea contraria al Art. 46 o abusiva, interponer acci\xF3n de impugnaci\xF3n dentro de los 2 meses siguientes (Art. 49 Ley 675).",
+      "Para reforma estatutaria, demanda de impugnaci\xF3n o habilitaci\xF3n de RNT, agendar revisi\xF3n con VECY al +57 316 656 9719."
+    ],
+    requesterName
+  };
+}
+function buildPhPrefeasibilityReport(raw, requesterName) {
+  const norm2 = normalizeText2(raw);
+  const nums = extractPhNumbers(raw);
+  const operacion = detectPhSubdivisionOperation(norm2);
+  const labelMap = {
+    desenglobe: "DESENGLOBE Y APERTURA DE MATR\xCDCULAS INMOBILIARIAS",
+    subdivision: "SUBDIVISI\xD3N URBANA / ARQUITECT\xD3NICA DE UNIDADES O LOTES",
+    englobe: "ENGLOBE PREDIAL Y UNIFICACI\xD3N DE FOLIOS",
+    reforma_rph: "REFORMA AL REGLAMENTO DE PROPIEDAD HORIZONTAL (RPH)",
+    constitucion_ph: "CONSTITUCI\xD3N DE PROPIEDAD HORIZONTAL (LEY 675 DE 2001)"
+  };
+  const isEnglobe = operacion === "englobe";
+  const requiereAsamblea70Pct = operacion === "reforma_rph" || operacion === "desenglobe" || /\b(?:propiedad\s+horizontal|\bph\b|\brph\b|edificio|conjunto|apartamento|garaje|dep[oó]sito)\b/i.test(norm2);
+  const checklistTecnicoNotarial = [
+    "1. Estudio de T\xEDtulos SNR previo (Folios de Matr\xEDcula matriz y derivados) verificando linderos, cabida y ausencia de embargos o limitaciones que impidan englobar/desenglobar.",
+    isEnglobe ? "2. Identidad de titularidad y r\xE9gimen: los predios a englobar deben pertenecer al mismo propietario (o copropietarios en id\xE9ntica proporci\xF3n), ser colindantes y estar libres de hipotecas contradictorias o con autorizaci\xF3n del acreedor." : "2. Levantamiento topogr\xE1fico y planos arquitect\xF3nicos / de Propiedad Horizontal con cuadro de \xE1reas privadas, \xE1reas comunes, linderos exactos y c\xE1lculo de nuevos coeficientes (sumatoria 100.000% \u2014 Arts. 25-26 Ley 675).",
+    "3. Tr\xE1mite en Curadur\xEDa Urbana (Decreto 1077 de 2015): Licencia de Subdivisi\xF3n Urbana / Reloteo o Licencia de Construcci\xF3n (modificaci\xF3n/adecuaci\xF3n) verificando \xE1reas m\xEDnimas, frentes, parqueaderos y norma POT vigente.",
+    ...requiereAsamblea70Pct ? [
+      "4. Acta de Asamblea General de Copropietarios aprobando la reforma al RPH / desenglobe con mayor\xEDa calificada m\xEDnima del 70% del total de coeficientes (Art. 46 Ley 675 de 2001)."
+    ] : [],
+    "5. Paz y Salvos obligatorios para escrituraci\xF3n: Impuesto Predial al d\xEDa, Paz y Salvo de Valorizaci\xF3n IDU (Bogot\xE1) y Paz y Salvo de Administraci\xF3n PH (Art. 29 Ley 675).",
+    `6. Escritura P\xFAblica ante Notar\xEDa de ${isEnglobe ? "Englobe y actualizaci\xF3n de linderos" : "Desenglobe / Constituci\xF3n o Reforma al RPH"}, protocolizando planos aprobados, licencia de Curadur\xEDa y acta (si aplica).`,
+    "7. Registro en ORIP (SNR) para apertura de nuevos Folios de Matr\xEDcula segregados (o cierre en folio \xFAnico en englobe) y radicaci\xF3n ante Catastro (UAECD / IGAC) para expedici\xF3n de nuevos c\xF3digos CHIP."
+  ];
+  const alertasClave = [
+    "Si uno de los inmuebles tiene hipoteca o leasing vigente, se requiere autorizaci\xF3n expresa de la entidad financiera (divisi\xF3n o sustituci\xF3n de garant\xEDa) antes de otorgar escritura.",
+    "La subdivisi\xF3n f\xEDsica sin licencia de Curadur\xEDa ni reforma al RPH genera unidades ilegales sin matr\xEDcula independiente ni servicios p\xFAblicos aut\xF3nomos (inviables para cr\xE9dito hipotecario)."
+  ];
+  if (nums.areaPrivadaUnidadM2 && nums.unidadesResultantes && nums.unidadesResultantes >= 2) {
+    const prom = Math.round(nums.areaPrivadaUnidadM2 / nums.unidadesResultantes * 10) / 10;
+    alertasClave.unshift(
+      `Estimaci\xF3n geom\xE9trica preliminar: ${nums.areaPrivadaUnidadM2} m\xB2 divididos en ${nums.unidadesResultantes} unidades arrojan ~${prom} m\xB2 brutos por unidad (validar \xE1rea m\xEDnima habitable y parqueaderos exigidos en Curadur\xEDa).`
+    );
+  }
+  return {
+    mode: "prefeasibility",
+    headline: `PREFACTIBILIDAD T\xC9CNICO-NOTARIAL: ${labelMap[operacion]}`,
+    normativeFramework: "Ley 675 de 2001 (Arts. 5, 25, 26, 46), Decreto 1077 de 2015 (Curadur\xEDas) y Estatuto Registral Ley 1579 de 2012",
+    riskLevel: "AMARILLO",
+    riskHeadline: "Operaci\xF3n viable condicionada a planos, licencia urban\xEDstica de Curadur\xEDa, qu\xF3rum 70% (si est\xE1 en PH) y escritura en Notar\xEDa/ORIP.",
+    summaryPoints: [
+      `Operaci\xF3n evaluada: ${labelMap[operacion]}`,
+      nums.areaPrivadaUnidadM2 ? `\xC1rea base reportada: ${nums.areaPrivadaUnidadM2} m\xB2` : "\xC1rea base: Por precisar en levantamiento topogr\xE1fico/planos",
+      `Requiere Curadur\xEDa Urbana: S\xCD | Requiere Asamblea PH 70%: ${requiereAsamblea70Pct ? "S\xCD (Art. 46 Ley 675)" : "No (salvo sometimiento a RPH)"}`
+    ],
+    findings: alertasClave.map((a, idx) => ({
+      severidad: "MEDIA",
+      titulo: `Alerta T\xE9cnica / Registral #${idx + 1}`,
+      hallazgo: a,
+      fundamentoLegal: "Ley 675 de 2001, Decreto 1077 de 2015 y Ley 1579 de 2012.",
+      recomendacion: "Validar viabilidad con arquitecto/curador y abogado inmobiliario antes de suscribir promesas de compraventa sobre unidades futuras."
+    })),
+    prefeasibility: {
+      operacion,
+      operacionLabel: labelMap[operacion],
+      areaBaseM2: nums.areaPrivadaUnidadM2,
+      unidadesResultantes: nums.unidadesResultantes,
+      requiereCuraduria: true,
+      requiereAsamblea70Pct,
+      requiereReformaRphEscritura: requiereAsamblea70Pct,
+      checklistTecnicoNotarial,
+      alertasClave
+    },
+    recommendedNextSteps: [
+      "Realizar Estudio de T\xEDtulos SNR del folio matriz antes de iniciar planos o licencias.",
+      "Coordinar levantamiento arquitect\xF3nico, rec\xE1lculo de coeficientes y minuta de reforma/desenglobe con VECY al +57 316 656 9719."
+    ],
+    requesterName
+  };
+}
+function formatPhWhatsAppReply(report, pdfResult) {
+  const semaphoreBadge = report.riskLevel === "ROJO" ? "\u{1F534} *SEM\xC1FORO ROJO \u2014 Riesgo / Invalidez Jur\xEDdica Detectada*" : report.riskLevel === "AMARILLO" ? "\u{1F7E1} *SEM\xC1FORO AMARILLO \u2014 Requiere Validaci\xF3n T\xE9cnica/Registral*" : "\u{1F7E2} *SEM\xC1FORO VERDE \u2014 Conforme a la Ley 675 de 2001*";
+  const summaryBlock = report.summaryPoints.map((p) => `\u2022 ${p}`).join("\n");
+  let extraBlock = "";
+  if (report.mode === "calc" && report.calculations) {
+    const c = report.calculations;
+    const calcLines = [];
+    if (c.expensaUnidadCop !== void 0) {
+      calcLines.push(`\u2022 *Expensa calculada:* ${formatCop3(c.expensaUnidadCop)} / mes`);
+    }
+    if (c.interesMoraMaxLegalCop !== void 0) {
+      calcLines.push(
+        `\u2022 *Tope mora m\xE1ximo legal (1.5x IBC \u2248 ${c.tasaMoraMaxLegalMensualPct}% M.V.):* ${formatCop3(c.interesMoraMaxLegalCop)}`
+      );
+    }
+    calcLines.push(`\u2022 *Mayor\xEDa calificada reformas / >4x cuota / bienes comunes:* 70% coeficientes (Art. 46)`);
+    calcLines.push(`\u2022 *Caducidad impugnaci\xF3n de actas:* ${c.plazoImpugnacionMeses} meses (Art. 49)`);
+    calcLines.push(`\u2022 *Solidaridad compraventa:* Exigir Paz y Salvo Administraci\xF3n (Art. 29)`);
+    extraBlock = `
+
+\u{1F4D0} *Par\xE1metros Ley 675 de 2001:*
+${calcLines.join("\n")}`;
+  }
+  if (report.findings.length > 0) {
+    const findingsText = report.findings.slice(0, 4).map(
+      (f, i) => `${i + 1}. *[${f.severidad}] ${f.titulo}:* ${f.hallazgo}
+   \u{1F4CC} _Norma:_ ${f.fundamentoLegal}
+   \u270D\uFE0F _Acci\xF3n:_ ${f.recomendacion}`
+    ).join("\n\n");
+    extraBlock += `
+
+\u2696\uFE0F *Hallazgos y Validaciones:*
+${findingsText}`;
+  }
+  if (report.prefeasibility) {
+    extraBlock += `
+
+\u{1F3D7}\uFE0F *Checklist T\xE9cnico-Notarial (${report.prefeasibility.operacionLabel}):*
+${report.prefeasibility.checklistTecnicoNotarial.join(
+      "\n"
+    )}`;
+  }
+  const pdfBlock = pdfResult ? `
+
+\u{1F4C4} *Adjunto:* Concepto T\xE9cnico-Jur\xEDdico PH Membretado *${pdfResult.fileName}* (Radicado: \`${pdfResult.verificationCode}\`).` : "";
+  return `\u{1F3E2} *${report.headline}*
+${semaphoreBadge}
+\u{1F4DA} *Marco normativo:* ${report.normativeFramework}
+
+${summaryBlock}` + extraBlock + pdfBlock + VECY_PH_BROKER_CTA;
+}
+async function analyzePropiedadHorizontalFromWhatsAppInput(input) {
+  const rawText = String(input.text || "").trim();
+  const pdfBase64 = mediaInputToBase642(input.pdfBuffer);
+  const imgBase64 = mediaInputToBase642(input.imageBuffer);
+  const hasMedia = Boolean(pdfBase64 || imgBase64);
+  let extractedMediaText = "";
+  if (pdfBase64) {
+    try {
+      const snippets = extractTextSnippetsFromPdfBuffer(pdfBase64);
+      if (snippets && snippets.trim().length > 0) {
+        extractedMediaText = snippets.trim();
+      }
+    } catch {
+      extractedMediaText = "";
+    }
+  }
+  if (process.env.NODE_ENV !== "test" && extractedMediaText.trim().length < 40 && (imgBase64 || pdfBase64)) {
+    try {
+      const targetBase64 = pdfBase64 || imgBase64;
+      const mime = pdfBase64 ? input.pdfMimeType || "application/pdf" : input.imageMimeType || "image/jpeg";
+      if (targetBase64) {
+        const llmRes = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "Extrae integramente en texto plano los articulos, clausulas, coeficientes, quorums, sanciones, restricciones de mascotas o vivienda turistica/Airbnb y decisiones de este Reglamento PH o Acta de Asamblea."
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: rawText || "Transcribe el contenido del Reglamento PH o Acta adjunta." },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mime};base64,${targetBase64}` }
+                }
+              ]
+            }
+          ]
+        });
+        const content = llmRes?.choices?.[0]?.message?.content;
+        if (typeof content === "string" && content.trim().length > 20) {
+          extractedMediaText = content.trim();
+        }
+      }
+    } catch {
+    }
+  }
+  const combinedText = [rawText, extractedMediaText].filter(Boolean).join("\n\n");
+  if (!isPropiedadHorizontalRequest(rawText || combinedText, hasMedia)) {
+    return {
+      handled: false,
+      mode: "guidance",
+      whatsappReply: "",
+      reactionEmoji: "\u{1F3E2}"
+    };
+  }
+  const norm2 = normalizeText2(combinedText);
+  if (hasMedia && extractedMediaText.trim().length < 30 && !hasPhDocumentMarkers(rawText)) {
+    return {
+      handled: true,
+      mode: "audit",
+      whatsappReply: `\u{1F3E2} Recib\xED tu archivo de Reglamento PH / Acta, pero no logr\xE9 extraer texto legible para auditarlo con rigor de Ley 675.
+Por favor env\xEDame una foto m\xE1s n\xEDtida, un PDF con texto seleccionable o pega directamente los art\xEDculos/puntos del acta (mascotas, Airbnb/RNT, sanciones, qu\xF3rum o cuotas) y te entrego el *Concepto T\xE9cnico-Jur\xEDdico PH en PDF*.` + VECY_PH_BROKER_CTA,
+      reactionEmoji: "\u{1F3E2}"
+    };
+  }
+  const isAuditMode = hasPhDocumentMarkers(combinedText) || /\b(?:audita(?:me|r)?|revisa(?:me|r)?|analiza(?:me|r)?)\b.{0,45}\b(?:reglamento|\brph\b|acta|manual\s+de\s+convivencia|circular|prohibici[oó]n|sanci[oó]n|cl[aá]usula)\b/i.test(
+    norm2
+  ) || /\b(?:proh[ií]b|prohibido|multa|sanci[oó]n|airbnb|renta\s+corta|vivienda\s+tur[ií]stica|mascotas|corte\s+de\s+(?:agua|energ[ií]a|citofon[ií]a))\b/i.test(
+    norm2
+  );
+  const isPrefeasibilityMode = /\b(?:desenglobe|englobe|subdivisi[oó]n|subdividir|segregar|segregaci[oó]n|reforma\s+(?:al\s+|del\s+)?(?:rph|reglamento)|constituci[oó]n\s+de\s+(?:ph|propiedad\s+horizontal))\b/i.test(
+    norm2
+  );
+  const nums = extractPhNumbers(combinedText);
+  const hasCalcNumbers = Boolean(
+    nums.presupuestoTotalCop || nums.coeficienteUnidadPct || nums.listaCoeficientesPct.length >= 2 || nums.capitalMoraCop || nums.tasaMoraReportadaMensualPct !== void 0 || nums.tasaMoraReportadaAnualPct !== void 0 || nums.quorumAsistenciaPct !== void 0 || nums.quorumAprobacionPct !== void 0 || nums.cuotaExtraordinariaVecesMensual !== void 0 || nums.areaPrivadaUnidadM2 && nums.areaPrivadaTotalM2
+  );
+  let report;
+  if (isPrefeasibilityMode && !hasPhDocumentMarkers(combinedText)) {
+    report = buildPhPrefeasibilityReport(combinedText, input.requesterName);
+  } else if (isAuditMode) {
+    report = auditPhRegulationOrMinutes(combinedText, input.requesterName);
+  } else if (hasCalcNumbers || /\b(?:expensa|coeficiente|mora|qu[oó]rum|impugna|paz\s+y\s+salvo|art(?:[ií]culo|\.?)\s*29)\b/i.test(norm2)) {
+    const calc = calculatePropiedadHorizontalMetrics(combinedText);
+    const highCount = calc.findings.filter((f) => f.severidad === "ALTA").length;
+    const medCount = calc.findings.filter((f) => f.severidad === "MEDIA").length;
+    const riskLevel = highCount > 0 ? "ROJO" : medCount > 0 ? "AMARILLO" : "VERDE";
+    report = {
+      mode: "calc",
+      headline: "C\xC1LCULO Y VALIDACI\xD3N DE PROPIEDAD HORIZONTAL (LEY 675 DE 2001)",
+      normativeFramework: "Ley 675 de 2001 (Arts. 25, 26, 29, 30, 45, 46, 49) y C\xF3digo General del Proceso (Art. 382)",
+      riskLevel,
+      riskHeadline: riskLevel === "ROJO" ? `Alerta normativa: se detectaron ${highCount} incumplimiento(s) a la Ley 675 de 2001.` : "Liquidaci\xF3n y par\xE1metros validados conforme a la Ley 675 de 2001.",
+      summaryPoints: calc.summaryPoints,
+      calculations: calc.calculations,
+      findings: calc.findings,
+      recommendedNextSteps: [
+        "Exigir Paz y Salvo de Administraci\xF3n en toda compraventa de unidad en PH (solidaridad Art. 29 Ley 675).",
+        "Verificar certificaci\xF3n mensual del IBC Superfinanciera para liquidar mora m\xE1xima (1.5x IBC \u2014 Art. 30 Ley 675).",
+        "Para revisi\xF3n de actas, impugnaciones (2 meses Art. 49) o reformas al RPH, contactar a VECY al +57 316 656 9719."
+      ],
+      requesterName: input.requesterName
+    };
+  } else {
+    return {
+      handled: true,
+      mode: "guidance",
+      whatsappReply: `\u{1F3E2} *Motor Especializado de Propiedad Horizontal VECY (Ley 675 de 2001 \u2014 $0 COP)*
+
+Puedo generarte de inmediato un *Concepto T\xE9cnico-Jur\xEDdico PH en PDF Membretado* si me compartes cualquiera de estos datos:
+1\uFE0F\u20E3 *C\xE1lculos Ley 675:* Presupuesto total y coeficiente % (o \xE1rea privada / total), monto y meses de mora (tope 1.5x IBC Art. 30), o qu\xF3rum % de asamblea.
+2\uFE0F\u20E3 *Auditor\xEDa RPH / Acta / Vivienda Tur\xEDstica (Airbnb / RNT):* Pega las cl\xE1usulas o adjunta el PDF/foto del Reglamento PH o Acta de Asamblea.
+3\uFE0F\u20E3 *Prefactibilidad de Desenglobe / Subdivisi\xF3n / Englobe:* Indica la operaci\xF3n, \xE1rea en m\xB2, unidades resultantes y si ya est\xE1 sometido a PH.` + VECY_PH_BROKER_CTA,
+      reactionEmoji: "\u{1F3E2}"
+    };
+  }
+  const pdfResult = await generatePropiedadHorizontalPdf(report, {
+    requestedBy: input.requesterName
+  });
+  return {
+    handled: true,
+    mode: report.mode,
+    whatsappReply: formatPhWhatsAppReply(report, pdfResult),
+    pdfResult,
+    report,
+    reactionEmoji: report.riskLevel === "ROJO" ? "\u{1F6A8}" : "\u{1F3E2}"
+  };
+}
+var IBC_REFERENCIA_EA_PCT, TASA_MORA_MAX_EA_PCT, TASA_MORA_MAX_MENSUAL_PCT, VECY_PH_BROKER_CTA;
+var init_propiedadHorizontalService = __esm({
+  "server/_core/propiedadHorizontalService.ts"() {
+    "use strict";
+    init_ctlTitleStudyService();
+    init_iduValorizacionService();
+    init_legalDocumentPdfService();
+    init_llm();
+    IBC_REFERENCIA_EA_PCT = 18.5;
+    TASA_MORA_MAX_EA_PCT = Number((IBC_REFERENCIA_EA_PCT * 1.5).toFixed(2));
+    TASA_MORA_MAX_MENSUAL_PCT = Number(
+      ((Math.pow(1 + TASA_MORA_MAX_EA_PCT / 100, 1 / 12) - 1) * 100).toFixed(2)
+    );
+    VECY_PH_BROKER_CTA = "\n\n\u{1F3E2} *Acompa\xF1amiento T\xE9cnico, Notarial y PH VECY BIENES RA\xCDCES:*\nPara reformas a RPH, rec\xE1lculo de coeficientes, impugnaci\xF3n de actas, validaci\xF3n de RNT o desenglobes ante Curadur\xEDa, Notar\xEDa y ORIP, agenda asesor\xEDa directa con *Eduardo A. Rivera & Jani Alves*:\n\u{1F4DE} *+57 316 656 9719* | \u{1F449} https://wa.me/573166569719";
   }
 });
 
@@ -38483,6 +39576,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando un usuario consulte por DM o cite a @JanIA en Grupos para generar una Minuta Personalizada o Auditar Cl\xE1usulas/Riesgos Contractuales en Colombia (Promesa de Compraventa Art. 1611 C.C. con arras confirmatorias vs retractatorias vs cl\xE1usula penal, forma de pago con cr\xE9dito/FNA/leasing y condici\xF3n suspensiva de estudio de t\xEDtulos; Arrendamiento de Vivienda Urbana Ley 820 de 2003 sin dep\xF3sitos en efectivo Art. 16, tope 1% e IPC Art. 20; Arrendamiento Local Comercial Arts. 518-524 C.Co. con renovaci\xF3n 2 a\xF1os y desahucio 6 meses; Contrato de Corretaje VECY 3% venta / 1 canon arriendo / $0 cobros por publicaci\xF3n; y Otros\xED Modificatorio / Cesi\xF3n / Acta de Entrega Anticipada): 1) Ejecutar legalContractService.ts y legalDocumentPdfService.ts a $0 COP con adjunto nativo en PDF Membretado VECY BIENES RA\xCDCES; 2) Ante borradores o cl\xE1usulas enviadas en texto/PDF/imagen, auditar violaciones de Ley 820/C.Co., ausencia de fecha/notar\xEDa o estudio de t\xEDtulos y entregar Sem\xE1foro de Riesgo + propuestas de redacci\xF3n en PDF; 3) Mantener precedencia estricta sin colisionar con CTL, POT, FinTax, IDU, Predial o Notarial y sin interceptar preguntas puramente te\xF3ricas ni agradecimientos; 4) Incluir CTA presencial/notarial hacia +57 316 656 9719 y el Protocolo Universal de Satisfacci\xF3n y Google Reviews.",
         rawText: "Punto 5 \u2014 Skill 5: Motor de Minutas Jur\xEDdicas Personalizadas (Promesa, Arrendamiento Vivienda Ley 820 / Comercial C.Co. 518-524, Corretaje VECY y Otros\xED) y Auditor\xEDa de Riesgos Contractuales en PDF Membretado (legalContractService.ts + legalDocumentPdfService.ts, v34.16) en DM y Grupos con CTA +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
         createdAt: "2026-11-13T18:45:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-propiedad-horizontal-ley675-rph-rnt-desenglobe-v34-17",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Motor Especializado de Propiedad Horizontal (Ley 675 de 2001), Auditor\xEDa de Reglamentos PH, Vivienda Tur\xEDstica / RNT y Prefactibilidad de Subdivisi\xF3n/Englobe + PDF Membretado \u2014 Doctrina Eduardo A. Rivera v34.17",
+        directive: "Cuando un usuario consulte por DM o cite a @JanIA en Grupos sobre Propiedad Horizontal (Ley 675 de 2001): 1) Ejecutar propiedadHorizontalService.ts a $0 COP calculando y validando coeficientes de copropiedad (sumatoria 100%), expensas ordinarias vs extraordinarias, qu\xF3rums y mayor\xEDas calificadas del 70% (Art. 46 vs mayor\xEDa simple Art. 45 y cuotas >4x), intereses moratorios m\xE1ximos 1.5x IBC (Art. 30), caducidad de impugnaci\xF3n de actas de 2 meses (Art. 49) y solidaridad de administraci\xF3n / paz y salvo en compraventa (Art. 29); 2) Auditar Reglamentos PH (RPH) o Actas de Asamblea en texto/PDF/imagen detectando restricciones v\xE1lidas vs abusivas en mascotas, uso comercial, reformas en bienes comunes y vivienda tur\xEDstica/Airbnb/RNT (Decreto 1074/2015 y Ley 2068/2020), diferenciando prohibici\xF3n expresa en RPH inscrito en ORIP vs prohibici\xF3n inv\xE1lida en simple acta/consejo; 3) Evaluar prefactibilidad t\xE9cnica-notarial de desenglobe, subdivisi\xF3n, englobe o reforma al RPH (Curadur\xEDa, 70% Asamblea, coeficientes, Escritura P\xFAblica, ORIP y Catastro) entregando Concepto T\xE9cnico-Jur\xEDdico PH en PDF Membretado VECY BIENES RA\xCDCES; 4) Mantener precedencia estricta sin colisionar con CTL, POT, FinTax, Minutas/Contratos, IDU, Predial o Notarial y sin interceptar preguntas te\xF3ricas puras ni agradecimientos; 5) Incluir CTA hacia +57 316 656 9719 y el Protocolo Universal de Satisfacci\xF3n y Google Reviews.",
+        rawText: "Punto 6 \u2014 Skill 6: Motor Especializado de Propiedad Horizontal Ley 675/2001, Auditor\xEDa RPH/Actas, Vivienda Tur\xEDstica RNT/Airbnb y Subdivisi\xF3n/Englobe en PDF Membretado (propiedadHorizontalService.ts + legalDocumentPdfService.ts, v34.17) en DM y Grupos con CTA +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
+        createdAt: "2026-11-13T19:45:00.000Z",
         active: true
       }
     ];
@@ -41249,6 +42352,32 @@ ${audit.fichaOptimizadaSugerida}
         }
       };
     }
+    case "consultar_propiedad_horizontal": {
+      const phInput = String(args.consultaPropiedadHorizontal || rawUserText || "").trim();
+      const phRes = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: phInput,
+        requesterName: _userName || void 0
+      });
+      if (phRes.pdfResult) {
+        setLatestDmPdf(userId, {
+          pdfBuffer: phRes.pdfResult.pdfBuffer,
+          pdfFileName: phRes.pdfResult.fileName
+        });
+      }
+      return {
+        toolType: "propiedad_horizontal",
+        resultJson: {
+          solicitud: "consultar_propiedad_horizontal",
+          modo: phRes.mode,
+          pdfGenerado: Boolean(phRes.pdfResult),
+          archivoAdjuntado: phRes.pdfResult?.fileName || null,
+          codigoVerificacion: phRes.pdfResult?.verificationCode || null,
+          semaforo: phRes.report?.riskLevel || null,
+          exitoso: phRes.handled,
+          reporteOficial: phRes.whatsappReply || "Comp\xE1rteme los datos de coeficiente/expensas/mora/qu\xF3rum, el texto del RPH o acta, o la operaci\xF3n de desenglobe/englobe para emitir el Concepto T\xE9cnico-Jur\xEDdico PH en PDF."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -42168,7 +43297,7 @@ En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora
     }
     const isOwnerOrConsignmentInquiry = isExplicitOwnerStatement || Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) || /\b(?:publicar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|pautar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|consignar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|cobran\s+por\s+(?:publicar|pautar|consignar|conseguir))\b/i.test(cleanLower);
     const isCommissionOrCostInquiry = /\b(?:cu[aá]nto\s+(?:cobran|vale|cuesta|ser[íi]a|es|piden)|qu[eé]\s+comisi[oó]n|cu[aá]l\s+es\s+la\s+comisi[oó]n|porcentaje|costo|tarifa|comisi[oó]n|cobran\s+por\s+(?:publicar|conseguir|pautar|consignar|vender|arrendar)|valor\s+por\s+conseguir|pago\s+por\s+conseguir)\b/i.test(cleanLower) || /\bcu[aá]nto\b/i.test(cleanLower) && /\b(?:publicar|pautar|consignar|comisi[oó]n|conseguir(?:\s+el)?\s+cliente|cliente)\b/i.test(cleanLower) || Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n)\b/i.test(cleanLower);
-    if (isCommissionOrCostInquiry && !isFinancialOrTaxSimulationRequest(clean) && !isPotUrbanNormRequest(clean) && !isExplicitCtlStudyRequest(clean) && !isContractMinutaOrAuditRequest(clean) && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
+    if (isCommissionOrCostInquiry && !isFinancialOrTaxSimulationRequest(clean) && !isPotUrbanNormRequest(clean) && !isExplicitCtlStudyRequest(clean) && !isContractMinutaOrAuditRequest(clean) && !isPropiedadHorizontalRequest(clean) && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
       cleanLower
     ))) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
@@ -42430,6 +43559,43 @@ Si tienes alg\xFAn inmueble (casa, apartamento, lote u oficina) del cual requier
       return finalContractReply;
     }
   }
+  if (!isCommercialFlyerImg && !isReviewValidationContext && (isPropiedadHorizontalRequest(clean, hasAnyDmMedia) || hasPhDocumentMarkers(clean))) {
+    const phDmRes = await analyzePropiedadHorizontalFromWhatsAppInput({
+      text: clean,
+      pdfBuffer: mediaOptions?.pdfBuffer,
+      pdfMimeType: mediaOptions?.pdfMimeType,
+      imageBuffer: mediaOptions?.imageBuffer,
+      requesterName: displayName || realName || void 0
+    });
+    if (phDmRes.handled && phDmRes.whatsappReply) {
+      if (phDmRes.pdfResult) {
+        setLatestDmPdf(userId, {
+          pdfBuffer: phDmRes.pdfResult.pdfBuffer,
+          pdfFileName: phDmRes.pdfResult.fileName
+        });
+      }
+      if (phDmRes.mode !== "guidance") {
+        await incrementFreeServicesCount(userId);
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+          serviceType: "propiedad_horizontal",
+          timestamp: Date.now()
+        };
+        await saveUserPerpetualSession(userPerpetualSession);
+      }
+      const satisfactionLine = phDmRes.mode === "guidance" ? "" : `
+
+\u{1F91D} *\xBFQuedaste satisfecho(a) con este Concepto T\xE9cnico-Jur\xEDdico de Propiedad Horizontal?* Tu opini\xF3n me ayuda a seguir afinando mi rigor legal para toda la red VECY.`;
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const finalPhReply = `${greetingPrefix}${phDmRes.whatsappReply}${satisfactionLine}`;
+      appendDmHistory(userId, "user", clean || "[Reglamento PH / Acta adjunto]");
+      appendDmHistory(userId, "assistant", finalPhReply);
+      markUserGreetedToday(userId);
+      return finalPhReply;
+    }
+  }
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const reqProfiling = analyzeRequirementCompleteness(clean);
     if (reqProfiling.isRequirement && reqProfiling.isIncompleteOrHollow && (!isOngoingChat || !isAssistantRefiningListingOrReqEarly)) {
@@ -42610,7 +43776,7 @@ ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 ===================================================
 MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_o_auditar_minuta_contractual, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_o_auditar_minuta_contractual, consultar_propiedad_horizontal, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.
 a) Si el usuario env\xEDa un n\xFAmero, documento o nombre de empresa con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la raz\xF3n social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.
 b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, tr\xE1mites VUR/Sinupot, divisas/TRM del d\xF3lar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jur\xEDdico sin alucinaciones.
 c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
@@ -43188,6 +44354,7 @@ var init_dmHandler = __esm({
     init_potUrbanNormService();
     init_financialAndTaxRealEstateService();
     init_legalContractService();
+    init_propiedadHorizontalService();
     init_whatsapp_utils();
     init_trustedContacts();
     init_founderKnowledgeService();
@@ -43508,6 +44675,17 @@ var init_dmHandler = __esm({
               },
               required: ["solicitudOBorradorContractual"]
             }
+          },
+          {
+            name: "consultar_propiedad_horizontal",
+            description: "Motor Especializado de Propiedad Horizontal (Ley 675 de 2001): calcula y valida coeficientes de copropiedad, expensas ordinarias/extraordinarias, qu\xF3rums y mayor\xEDas calificadas del 70% (Arts. 45-46), intereses moratorios m\xE1ximos 1.5x IBC (Art. 30), caducidad de impugnaci\xF3n de actas 2 meses (Art. 49) y solidaridad en compraventa (Art. 29); audita Reglamentos PH (RPH) y Actas de Asamblea frente a mascotas, vivienda tur\xEDstica/Airbnb/RNT (Decreto 1074/2015 y Ley 2068/2020) y sanciones; y eval\xFAa prefactibilidad t\xE9cnica-notarial de desenglobe, subdivisi\xF3n, englobe o reforma RPH generando Concepto en PDF Membretado VECY.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                consultaPropiedadHorizontal: { type: "STRING", description: "Consulta PH con cifras de coeficientes/expensas/mora/qu\xF3rum, texto del RPH/Acta o solicitud de prefactibilidad de desenglobe/englobe/subdivisi\xF3n" }
+              },
+              required: ["consultaPropiedadHorizontal"]
+            }
           }
         ]
       }
@@ -43648,7 +44826,7 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
     const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
-    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isPotUrbanNormRequest(messageToProcess) || isFinancialOrTaxSimulationRequest(messageToProcess) || isContractMinutaOrAuditRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) || hasContractDraftMarkers(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
+    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isPotUrbanNormRequest(messageToProcess) || isFinancialOrTaxSimulationRequest(messageToProcess) || isContractMinutaOrAuditRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) || hasContractDraftMarkers(messageToProcess) || isPropiedadHorizontalRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) || hasPhDocumentMarkers(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
     const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
     if (isReviewLinkReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
       messageToProcess
@@ -43809,6 +44987,35 @@ ${quotedContext}` : messageToProcess;
           voiceResponse: "",
           document: contractCheck.pdfResult?.pdfBuffer,
           fileName: contractCheck.pdfResult?.fileName
+        };
+      }
+    }
+    const phGroupInputText = quotedContext && hasPhDocumentMarkers(quotedContext) && !hasPhDocumentMarkers(messageToProcess) ? `${messageToProcess}
+${quotedContext}` : messageToProcess;
+    if (isPropiedadHorizontalRequest(phGroupInputText, Boolean(imageBuffer || pdfBuffer)) || hasPhDocumentMarkers(phGroupInputText)) {
+      const phCheck = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: phGroupInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: targetName || realName || void 0
+      });
+      if (phCheck.handled && phCheck.whatsappReply) {
+        const finalPhResp = phCheck.mode === "guidance" ? phCheck.whatsappReply : appendGroupSatisfactionClosing(phCheck.whatsappReply);
+        console.log(
+          `[JanIA-PhSkill6] Consulta PH (${phCheck.mode}) ejecutada en grupo para ${userId} (PDF: ${Boolean(phCheck.pdfResult)})`
+        );
+        appendConsultingHistory(userId, "user", text2 || "[Reglamento PH / Acta adjunto]");
+        appendConsultingHistory(userId, "assistant", finalPhResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPhResp,
+          reactionEmoji: phCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: phCheck.pdfResult?.pdfBuffer,
+          fileName: phCheck.pdfResult?.fileName
         };
       }
     }
@@ -44383,6 +45590,28 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         };
       }
     }
+    if (isPropiedadHorizontalRequest(text2, Boolean(imageBuffer || pdfBuffer)) || hasPhDocumentMarkers(text2)) {
+      const phFallback = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: text2,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: firstName || void 0
+      }).catch(() => null);
+      if (phFallback?.handled && phFallback.whatsappReply) {
+        const finalPhFallbackResp = phFallback.mode === "guidance" ? phFallback.whatsappReply : appendGroupSatisfactionClosing(phFallback.whatsappReply);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalPhFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPhFallbackResp,
+          reactionEmoji: phFallback.reactionEmoji,
+          document: phFallback.pdfResult?.pdfBuffer,
+          fileName: phFallback.pdfResult?.fileName
+        };
+      }
+    }
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
 
@@ -44460,6 +45689,7 @@ var init_consultingHandler = __esm({
     init_potUrbanNormService();
     init_financialAndTaxRealEstateService();
     init_legalContractService();
+    init_propiedadHorizontalService();
   }
 });
 
@@ -44609,6 +45839,28 @@ ${quotedContext}` : text2;
           voiceResponse: "",
           document: contractCirculoCheck.pdfResult?.pdfBuffer,
           fileName: contractCirculoCheck.pdfResult?.fileName
+        };
+      }
+    }
+    const phCirculoInputText = quotedContext && hasPhDocumentMarkers(quotedContext) && !hasPhDocumentMarkers(text2) ? `${text2}
+${quotedContext}` : text2;
+    if (isPropiedadHorizontalRequest(phCirculoInputText, Boolean(imageBuffer || pdfBuffer)) || hasPhDocumentMarkers(phCirculoInputText)) {
+      const phCirculoCheck = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: phCirculoInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: cleanFirstName || realName || void 0
+      });
+      if (phCirculoCheck.handled && phCirculoCheck.whatsappReply) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: phCirculoCheck.mode === "guidance" ? phCirculoCheck.whatsappReply : appendGroupSatisfactionClosing(phCirculoCheck.whatsappReply),
+          reactionEmoji: phCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: phCirculoCheck.pdfResult?.pdfBuffer,
+          fileName: phCirculoCheck.pdfResult?.fileName
         };
       }
     }
@@ -44849,6 +46101,7 @@ var init_circuloHandler = __esm({
     init_potUrbanNormService();
     init_financialAndTaxRealEstateService();
     init_legalContractService();
+    init_propiedadHorizontalService();
   }
 });
 

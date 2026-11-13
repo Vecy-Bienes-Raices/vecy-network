@@ -646,6 +646,7 @@ export function isEduardoOrJani(phoneOrJid: string): boolean {
 function ensureLoadedFromDisk(): void {
   if (persistentSessionsLoaded) return;
   persistentSessionsLoaded = true;
+  if (process.env.NODE_ENV === "test") return;
   try {
     if (fs.existsSync(PERSISTENT_SESSIONS_FILE)) {
       const raw = fs.readFileSync(PERSISTENT_SESSIONS_FILE, "utf-8");
@@ -664,6 +665,7 @@ function ensureLoadedFromDisk(): void {
 }
 
 function saveSessionsToDisk(): void {
+  if (process.env.NODE_ENV === "test") return;
   try {
     const dir = path.dirname(PERSISTENT_SESSIONS_FILE);
     if (!fs.existsSync(dir)) {
@@ -687,21 +689,23 @@ export async function getUserPerpetualSession(userId: string, userName?: string)
     return session;
   }
 
-  // 2. Base de Datos PostgreSQL
-  try {
-    const db = await getDb();
-    if (db) {
-      const dbKey = `user_memory:${cleanJid}`;
-      const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, dbKey)).limit(1);
-      if (existing && existing.sessionData && typeof existing.sessionData === "object") {
-        session = existing.sessionData as UserPerpetualSession;
-        userPerpetualSessionMap.set(cleanJid, session);
-        saveSessionsToDisk();
-        return session;
+  // 2. Base de Datos PostgreSQL (omitir en NODE_ENV=test para evitar contaminación entre corridas)
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const db = await getDb();
+      if (db) {
+        const dbKey = `user_memory:${cleanJid}`;
+        const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, dbKey)).limit(1);
+        if (existing && existing.sessionData && typeof existing.sessionData === "object") {
+          session = existing.sessionData as UserPerpetualSession;
+          userPerpetualSessionMap.set(cleanJid, session);
+          saveSessionsToDisk();
+          return session;
+        }
       }
+    } catch (err: any) {
+      console.warn("[getUserPerpetualSession] Error recuperando de BD:", err?.message);
     }
-  } catch (err: any) {
-    console.warn("[getUserPerpetualSession] Error recuperando de BD:", err?.message);
   }
 
   // 3. Crear Nueva Sesión si no existía
@@ -728,6 +732,8 @@ export async function saveUserPerpetualSession(session: UserPerpetualSession): P
   ensureLoadedFromDisk();
   userPerpetualSessionMap.set(session.userId, session);
   saveSessionsToDisk();
+
+  if (process.env.NODE_ENV === "test") return;
 
   try {
     const db = await getDb();

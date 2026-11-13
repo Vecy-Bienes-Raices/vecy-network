@@ -6,6 +6,7 @@ import path from "node:path";
 import type { CtlTitleStudyReport } from "../ctlTitleStudyService";
 import type { PotUrbanNormReport } from "../potUrbanNormService";
 import type { FinancialAndTaxReport } from "../financialAndTaxRealEstateService";
+import type { PropiedadHorizontalReport } from "../propiedadHorizontalService";
 
 /**
  * 📑 GENERADOR INSTANTÁNEO DE CARTAS, CONTRATOS Y MINUTAS INMOBILIARIAS EN PDF MEMBRETADO (v33.66 — Doctrina Eduardo A. Rivera)
@@ -29,6 +30,7 @@ export type LegalDocumentType =
   | "estudio_titulos_snr"
   | "concepto_norma_urbana_pot"
   | "ficha_financiera_tributaria"
+  | "concepto_propiedad_horizontal"
   | "minuta_general";
 
 export interface LegalDocumentPdfParams {
@@ -179,6 +181,12 @@ export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
         title: "FICHA FINANCIERA, RENTABILIDAD Y TRIBUTACION INMOBILIARIA PRELIMINAR",
         normativeFramework: "Ley 546 de 1999, Decreto 2555 de 2010 (Leasing), Estatuto Tributario (Arts. 311-1, 314, 398 y 519)",
         defaultFileNamePrefix: "Ficha_Financiera_Tributaria_VECY"
+      };
+    case "concepto_propiedad_horizontal":
+      return {
+        title: "CONCEPTO TECNICO-JURIDICO DE PROPIEDAD HORIZONTAL (LEY 675 DE 2001)",
+        normativeFramework: "Ley 675 de 2001, Decreto 1074 de 2015 / Ley 2068 de 2020 (RNT) y Decreto 1077 de 2015",
+        defaultFileNamePrefix: "Concepto_Propiedad_Horizontal_VECY"
       };
     default:
       return {
@@ -2321,5 +2329,273 @@ export async function generateContractRiskAuditPdf(
     normativeFramework: meta.normativeFramework
   };
 }
+
+/**
+ * Genera el Concepto Tecnico-Juridico de Propiedad Horizontal (Ley 675 de 2001),
+ * Auditoria RPH / Actas / RNT / Airbnb y Prefactibilidad de Subdivision o Englobe en PDF Membretado VECY.
+ */
+export async function generatePropiedadHorizontalPdf(
+  report: PropiedadHorizontalReport,
+  options?: { requestedBy?: string }
+): Promise<GeneratedLegalPdfResult> {
+  const meta = getLegalDocumentMetadata("concepto_propiedad_horizontal");
+  const verificationCode = `VECY-PH-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+  const title = sanitizePdfWinAnsiText(report.headline || meta.title);
+
+  const scaffold = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: report.normativeFramework || meta.normativeFramework,
+    headerSubtitle: `Radicado PH Ley 675: ${verificationCode} | Asesoria Notarial y PH VECY: +57 316 656 9719`
+  });
+
+  const { pdfDoc, fontRegular, fontBold, pageWidth, marginX, maxWidth, drawHeader } = scaffold;
+  let currentPage = pdfDoc.addPage([pageWidth, 792]);
+  let cursorY = drawHeader(currentPage, true);
+
+  const ensureSpace = (needed: number) => {
+    if (cursorY - needed < 82) {
+      currentPage = pdfDoc.addPage([pageWidth, 792]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+
+  // Banner semaforo de riesgo PH
+  const bannerBg =
+    report.riskLevel === "ROJO"
+      ? rgb(0.98, 0.91, 0.91)
+      : report.riskLevel === "AMARILLO"
+      ? rgb(0.99, 0.96, 0.87)
+      : rgb(0.9, 0.97, 0.92);
+  const bannerBorder =
+    report.riskLevel === "ROJO"
+      ? rgb(0.75, 0.18, 0.18)
+      : report.riskLevel === "AMARILLO"
+      ? rgb(0.76, 0.52, 0.08)
+      : rgb(0.14, 0.52, 0.25);
+  const bannerPrefix =
+    report.riskLevel === "ROJO"
+      ? "SEMAFORO ROJO - INVALIDEZ O RIESGO EN PROPIEDAD HORIZONTAL"
+      : report.riskLevel === "AMARILLO"
+      ? "SEMAFORO AMARILLO - VALIDACION TECNICA / REGISTRAL REQUERIDA"
+      : "SEMAFORO VERDE - CONFORME AL REGIMEN DE PROPIEDAD HORIZONTAL";
+
+  const headlineLines = wrapTextToLines(
+    sanitizePdfWinAnsiText(`${bannerPrefix} | ${report.riskHeadline}`),
+    fontBold,
+    9.0,
+    maxWidth - 20
+  );
+  const bannerH = Math.max(34, headlineLines.length * 13 + 14);
+  ensureSpace(bannerH + 12);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: cursorY - bannerH,
+    width: maxWidth,
+    height: bannerH,
+    color: bannerBg,
+    borderColor: bannerBorder,
+    borderWidth: 1.2
+  });
+  let by = cursorY - 14;
+  for (const line of headlineLines) {
+    currentPage.drawText(line, {
+      x: marginX + 10,
+      y: by,
+      size: 9.0,
+      font: fontBold,
+      color: bannerBorder
+    });
+    by -= 13;
+  }
+  cursorY -= bannerH + 12;
+
+  const drawSectionHeading = (heading: string) => {
+    ensureSpace(26);
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 16,
+      width: maxWidth,
+      height: 18,
+      color: rgb(0.94, 0.92, 0.86)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(heading), {
+      x: marginX + 8,
+      y: cursorY - 11.5,
+      size: 9.5,
+      font: fontBold,
+      color: rgb(0.12, 0.12, 0.14)
+    });
+    cursorY -= 25;
+  };
+
+  const drawBodyLines = (text: string, isBold = false, size = 9.0, color = rgb(0.15, 0.16, 0.2)) => {
+    const lines = wrapTextToLines(sanitizePdfWinAnsiText(text), isBold ? fontBold : fontRegular, size, maxWidth - 8);
+    for (const ln of lines) {
+      ensureSpace(14);
+      currentPage.drawText(ln, {
+        x: marginX + 4,
+        y: cursorY,
+        size,
+        font: isBold ? fontBold : fontRegular,
+        color
+      });
+      cursorY -= 12.8;
+    }
+  };
+
+  drawSectionHeading("1. RESUMEN EJECUTIVO Y MARCO NORMATIVO APLICABLE");
+  const reqName = options?.requestedBy || report.requesterName;
+  if (reqName) {
+    drawBodyLines(`Solicitante / Copropietario o Asesor: ${reqName}`, true);
+  }
+  drawBodyLines(`Regimen normativo: ${report.normativeFramework}`);
+  for (const pt of report.summaryPoints) {
+    drawBodyLines(`- ${pt}`);
+  }
+  cursorY -= 6;
+
+  if (report.calculations) {
+    const c = report.calculations;
+    drawSectionHeading("2. PARAMETROS Y CALCULOS LEY 675 DE 2001");
+    if (c.presupuestoTotalCop !== undefined) {
+      drawBodyLines(`- Presupuesto / Cuota global base: $${Math.round(c.presupuestoTotalCop).toLocaleString("es-CO")} COP`);
+    }
+    if (c.coeficienteUnidadPct !== undefined) {
+      drawBodyLines(`- Coeficiente de copropiedad de la unidad: ${c.coeficienteUnidadPct}%`);
+    }
+    if (c.expensaUnidadCop !== undefined) {
+      drawBodyLines(`- Expensa comun calculada: $${Math.round(c.expensaUnidadCop).toLocaleString("es-CO")} COP / mes`, true);
+    }
+    if (c.sumaCoeficientesPct !== undefined) {
+      drawBodyLines(`- Sumatoria de coeficientes validada: ${c.sumaCoeficientesPct}% (${c.sumaCoeficientesValida ? "Valida 100%" : "Descuadrada"})`);
+    }
+    if (c.interesMoraMaxLegalCop !== undefined) {
+      drawBodyLines(
+        `- Tope mora maximo legal (1.5x IBC ref. ${c.tasaMoraMaxLegalMensualPct}% M.V. / ${c.tasaMoraMaxLegalEaPct}% E.A.): $${Math.round(c.interesMoraMaxLegalCop).toLocaleString("es-CO")} COP`,
+        true
+      );
+    } else {
+      drawBodyLines(
+        `- Tope mora maximo legal Art. 30 Ley 675: 1.5x IBC (Ref. ${c.tasaMoraMaxLegalEaPct}% E.A. / ~${c.tasaMoraMaxLegalMensualPct}% M.V. - verificar Superfinanciera).`
+      );
+    }
+    drawBodyLines("- Mayoria calificada Art. 46: 70% del total de coeficientes para reformas RPH, cambio de destinacion y cuotas > 4x mensuales.");
+    drawBodyLines(`- Caducidad impugnacion de actas (Art. 49 Ley 675): ${c.plazoImpugnacionMeses} meses desde comunicacion/publicacion.`);
+    drawBodyLines(`- ${c.solidaridadCompraventaArt29}`);
+    cursorY -= 6;
+  }
+
+  if (report.findings.length > 0) {
+    drawSectionHeading("3. AUDITORIA DE CLAUSULAS, RNT / AIRBNB Y HALLAZGOS JURIDICOS");
+    for (let i = 0; i < report.findings.length; i++) {
+      const f = report.findings[i];
+      drawBodyLines(`${i + 1}. [${f.severidad}] ${f.titulo}`, true, 9.1, rgb(0.1, 0.1, 0.15));
+      drawBodyLines(`   Hallazgo: ${f.hallazgo}`);
+      drawBodyLines(`   Fundamento legal: ${f.fundamentoLegal}`);
+      drawBodyLines(`   Accion recomendada: ${f.recomendacion}`, false, 8.8, rgb(0.12, 0.35, 0.18));
+      cursorY -= 4;
+    }
+  }
+
+  if (report.prefeasibility) {
+    drawSectionHeading(`4. CHECKLIST TECNICO-NOTARIAL: ${report.prefeasibility.operacionLabel}`);
+    for (const item of report.prefeasibility.checklistTecnicoNotarial) {
+      drawBodyLines(`- ${item}`);
+    }
+    cursorY -= 6;
+  }
+
+  drawSectionHeading("5. PLAN DE ACCION Y VALIDACION NOTARIAL VECY");
+  for (const step of report.recommendedNextSteps) {
+    drawBodyLines(`- ${step}`);
+  }
+
+  ensureSpace(84);
+  const footerBoxY = Math.max(46, cursorY - 72);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 66,
+    color: rgb(0.97, 0.96, 0.92),
+    borderColor: rgb(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("ASESORIA ESPECIALIZADA EN PROPIEDAD HORIZONTAL Y NOTARIADO VECY BIENES RAICES", {
+    x: marginX + 10,
+    y: footerBoxY + 51,
+    size: 8.4,
+    font: fontBold,
+    color: rgb(0.1, 0.1, 0.12)
+  });
+  currentPage.drawText(
+    "1. Concepto preliminar basado en Ley 675/2001; verificar escritura del RPH inscrita en ORIP y certificacion IBC vigente.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 38,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Reformas a RPH, desenglobes, impugnaciones y validacion RNT con Eduardo A. Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 26,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Radicado: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 13,
+      size: 7.5,
+      font: fontBold,
+      color: rgb(0.2, 0.22, 0.28)
+    }
+  );
+
+  try {
+    const qrDataUrl = await QRCode.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?ph=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 5,
+      width: 56,
+      height: 56
+    });
+  } catch {
+    // Continuar sin QR si el entorno restringe QRCode
+  }
+
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Propiedad Horizontal VECY BIENES RAICES"
+  });
+  const modeSlug = report.mode.toUpperCase();
+  const fileName = `${meta.defaultFileNamePrefix}_${modeSlug}_${verificationCode}.pdf`;
+
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+
 
 

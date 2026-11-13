@@ -338,6 +338,9 @@ export function isUserSatisfactionOrFeedbackReply(
       normalized
     ) ||
     /\b(?:otrosi\s+modificatorio|auditoria\s+contractual|clausulas\s+abusivas)\b/.test(normalized) ||
+    /\b(?:calcula|liquida|audita|revisa|analiza|valida|genera|hazme|prefactibilidad)\b.{0,45}\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+ph|acta\s+de\s+asamblea|coeficiente|expensas|cuota\s+extraordinaria|airbnb|renta\s+corta|vivienda\s+turistica|\brnt\b|desenglobe|englobe|subdivision)\b/.test(
+      normalized
+    ) ||
     /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
 
   if (looksLikeNewToolDataRequest) {

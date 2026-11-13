@@ -784,6 +784,18 @@ export function isExplicitNotarialLiquidationRequest(text: string, senderId?: st
     return false;
   }
 
+  // No capturar consultas de Propiedad Horizontal Ley 675, RPH, Desenglobe o Englobe (Skill 6) salvo peticion explicita de liquidacion notarial
+  const looksLikeSkill6Ph =
+    /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:de\s+)?copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|expensas?\s+comunes?|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b)\b/i.test(
+      clean
+    ) &&
+    !/\b(?:liquidar|liqu[ií]da(?:me|nos|r)?|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?)\s+los\s+gastos\s+notariales)\b/i.test(
+      clean
+    );
+  if (looksLikeSkill6Ph) {
+    return false;
+  }
+
   return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 

@@ -13466,6 +13466,238 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:1[6-9]|[2-9]\d)\.0$/);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 203 — PUNTO 6 / SKILL 6: MOTOR PROPIEDAD HORIZONTAL (LEY 675/2001) (v34.17)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("Suite 203 — Skill 6: Propiedad Horizontal (Ley 675/2001), Auditoría RPH/Actas, RNT/Airbnb y Subdivisión/Englobe (v34.17)", () => {
+    it("1. Discrimina preguntas teóricas, agradecimientos y protege precedencia frente a CTL, POT, FinTax, Minutas, IDU, Predial y Notarial", async () => {
+      const {
+        isPropiedadHorizontalRequest,
+        isConceptualPhQuestion
+      } = await import("../_core/propiedadHorizontalService");
+      const { isPotUrbanNormRequest } = await import("../_core/potUrbanNormService");
+      const { isFinancialOrTaxSimulationRequest } = await import("../_core/financialAndTaxRealEstateService");
+      const { isContractMinutaOrAuditRequest } = await import("../_core/legalContractService");
+      const { isExplicitNotarialLiquidationRequest } = await import("../_core/notarialExpenseService");
+
+      // Preguntas conceptuales puras sin cifras ni acción de auditoría/cálculo
+      expect(isConceptualPhQuestion("¿Qué es el coeficiente de copropiedad en la Ley 675 de 2001?")).toBe(true);
+      expect(isPropiedadHorizontalRequest("¿Qué es el coeficiente de copropiedad en la Ley 675 de 2001?")).toBe(false);
+      expect(isPropiedadHorizontalRequest("¿Qué dice el artículo 30 de la Ley 675?")).toBe(false);
+
+      // Agradecimientos puros
+      expect(isPropiedadHorizontalRequest("Excelente concepto de propiedad horizontal, muchas gracias")).toBe(false);
+
+      // Precedencia frente a otros skills
+      expect(isPropiedadHorizontalRequest("Consulta predial CHIP AAA0044XYZZ")).toBe(false);
+      expect(isPropiedadHorizontalRequest("Paz y salvo IDU valorización CHIP AAA0044XYZZ")).toBe(false);
+      expect(isPropiedadHorizontalRequest("Análisis POT norma urbana CHIP AAA0044XYZZ lote 300 m2")).toBe(false);
+      expect(isPropiedadHorizontalRequest("Liquida gastos notariales para compraventa de apartamento en $480 millones")).toBe(false);
+
+      // FinTax Cap Rate de renta corta/Airbnb pertenece a Skill 4, NO a Skill 6
+      const capRateAirbnb = "Calcula el Cap Rate y ROI de renta corta Airbnb para apartamento de $450 millones con ingreso mensual de $4.800.000";
+      expect(isFinancialOrTaxSimulationRequest(capRateAirbnb)).toBe(true);
+      expect(isPropiedadHorizontalRequest(capRateAirbnb)).toBe(false);
+
+      // Contrato de arrendamiento Ley 820 que menciona cuota de administración pertenece a Skill 5, NO a Skill 6
+      const leaseWithAdmin =
+        "Redáctame una minuta de contrato de arrendamiento de vivienda urbana Ley 820 para apto en Bogotá, canon $3.200.000, cuota de administración incluida según reglamento de PH";
+      expect(isContractMinutaOrAuditRequest(leaseWithAdmin)).toBe(true);
+      expect(isPropiedadHorizontalRequest(leaseWithAdmin)).toBe(false);
+
+      // Prefactibilidad de desenglobe en PH pertenece a Skill 6 y NO a POT ni Notarial
+      const desenglobePh =
+        "Evalúa la prefactibilidad técnico-notarial de desenglobe de inmueble de 240 m2 en 3 unidades en Propiedad Horizontal con reforma al RPH";
+      expect(isPropiedadHorizontalRequest(desenglobePh)).toBe(true);
+      expect(isPotUrbanNormRequest(desenglobePh)).toBe(false);
+      expect(isExplicitNotarialLiquidationRequest(desenglobePh)).toBe(false);
+    });
+
+    it("2. Ejecuta cálculos determinísticos Ley 675 (coeficientes, expensas, mora 1.5x IBC, quórum 70%, impugnación 2 meses y Art. 29)", async () => {
+      const { analyzePropiedadHorizontalFromWhatsAppInput } = await import("../_core/propiedadHorizontalService");
+      const { extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+
+      const res = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text:
+          "Calcula la expensa mensual y valida los intereses de mora en Propiedad Horizontal (Ley 675): " +
+          "presupuesto mensual de $50 millones, coeficiente de copropiedad de 2.40%, mora de 3 meses y nos cobran 3.5% mensual de interés. " +
+          "Además en la asamblea aprobaron cuota extraordinaria de 6 veces la expensa mensual con votación del 60%.",
+        requesterName: "Andrés Felipe"
+      });
+
+      expect(res.handled).toBe(true);
+      expect(res.mode).toBe("calc");
+      expect(res.report?.riskLevel).toBe("ROJO");
+      expect(res.report?.calculations?.expensaUnidadCop).toBe(1_200_000);
+      expect(res.report?.calculations?.excedeTopeUsuraMora).toBe(true);
+      expect(res.report?.calculations?.mayoriaValida).toBe(false);
+      expect(res.report?.calculations?.plazoImpugnacionMeses).toBe(2);
+      expect(res.whatsappReply).toContain("$1.200.000 COP");
+      expect(res.whatsappReply).toContain("1.5x IBC");
+      expect(res.whatsappReply).toContain("70%");
+      expect(res.whatsappReply).toContain("Art. 29");
+      expect(res.whatsappReply).toContain("+57 316 656 9719");
+      expect(res.pdfResult?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+
+      const pdfText = extractTextSnippetsFromPdfBuffer(res.pdfResult!.pdfBuffer.toString("base64"));
+      expect(pdfText).toContain("PROPIEDAD HORIZONTAL");
+      expect(pdfText).toContain("1.5x IBC");
+    });
+
+    it("3. Audita Reglamentos PH y Actas de Asamblea en texto y PDF (Airbnb/RNT, Mascotas y Corte de Servicios)", async () => {
+      const { PDFDocument, StandardFonts } = await import("pdf-lib");
+      const { analyzePropiedadHorizontalFromWhatsAppInput } = await import("../_core/propiedadHorizontalService");
+
+      // A) Acta abusiva en texto: prohíbe Airbnb por mayoría simple, prohíbe mascotas y corta agua/citofonía
+      const actaAbusiva = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text:
+          "Audita esta Acta de Asamblea General de Copropietarios aprobada por mayoría simple (55%): " +
+          "1) Se prohíbe terminantemente la vivienda turística y alquiler por días tipo Airbnb en el edificio sin modificar el RPH. " +
+          "2) Se prohíbe la tenencia de mascotas y su ingreso por el ascensor. " +
+          "3) Al propietario en mora se le ordena el corte de agua, citofonía y bloqueo de ingreso en portería.",
+        requesterName: "Marcela"
+      });
+
+      expect(actaAbusiva.handled).toBe(true);
+      expect(actaAbusiva.mode).toBe("audit");
+      expect(actaAbusiva.report?.riskLevel).toBe("ROJO");
+      expect(actaAbusiva.whatsappReply).toMatch(/RNT|Decreto 1074|Ley 2068/i);
+      expect(actaAbusiva.whatsappReply).toMatch(/mascotas/i);
+      expect(actaAbusiva.whatsappReply).toMatch(/citofon[ií]a|servicios p[uú]blicos|T-035/i);
+      expect(actaAbusiva.pdfResult?.fileName).toContain("Concepto_Propiedad_Horizontal_VECY");
+
+      // B) Reglamento PH en PDF ($0 COP sin LLM) con prohibición expresa inscrita en ORIP
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([612, 792]);
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      page.drawText(
+        "REGLAMENTO DE PROPIEDAD HORIZONTAL ELEVADO A ESCRITURA PUBLICA E INSCRITO EN LA ORIP. ARTICULO 12: Se prohibe expresamente la destinacion de las unidades privadas a vivienda turistica o alquiler por dias tipo Airbnb conforme a reforma estatutaria aprobada con 70% de coeficientes.",
+        { x: 40, y: 700, size: 10, font, maxWidth: 530 }
+      );
+      const rphPdfBuffer = Buffer.from(await pdfDoc.save());
+
+      const rphRes = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: "Por favor audita este Reglamento de Propiedad Horizontal adjunto sobre Airbnb",
+        pdfBuffer: rphPdfBuffer,
+        pdfMimeType: "application/pdf",
+        requesterName: "Julián"
+      });
+      expect(rphRes.handled).toBe(true);
+      expect(rphRes.mode).toBe("audit");
+      expect(rphRes.report?.riskLevel).toBe("VERDE");
+      expect(rphRes.whatsappReply).toMatch(/oponible|inscrito/i);
+    });
+
+    it("4. Evalúa Prefactibilidad de Desenglobe / Subdivisión / Englobe con Checklist Técnico-Notarial y PDF", async () => {
+      const { analyzePropiedadHorizontalFromWhatsAppInput } = await import("../_core/propiedadHorizontalService");
+      const { extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+
+      const preRes = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text:
+          "Necesito concepto de prefactibilidad para desenglobe y subdivisión de una casa de 280 m2 en 4 unidades en Propiedad Horizontal con reforma al RPH",
+        requesterName: "Roberto"
+      });
+      expect(preRes.handled).toBe(true);
+      expect(preRes.mode).toBe("prefeasibility");
+      expect(preRes.report?.prefeasibility?.operacion).toBe("desenglobe");
+      expect(preRes.report?.prefeasibility?.requiereCuraduria).toBe(true);
+      expect(preRes.report?.prefeasibility?.requiereAsamblea70Pct).toBe(true);
+      expect(preRes.whatsappReply).toContain("Curaduría Urbana");
+      expect(preRes.whatsappReply).toContain("ORIP");
+      expect(preRes.whatsappReply).toContain("CHIP");
+      expect(preRes.pdfResult?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+
+      const pdfText = extractTextSnippetsFromPdfBuffer(preRes.pdfResult!.pdfBuffer.toString("base64"));
+      expect(pdfText).toContain("DESENGLOBE");
+      expect(pdfText).toContain("ORIP");
+    });
+
+    it("5. Opera de extremo a extremo en DM, Grupos (@JanIA), whatsapp-match, politeness, semilla v34.17 y versión 34.17.0", async () => {
+      const {
+        JANIA_DM_TOOLS,
+        processPrivateDmConversationalMessage,
+        popLatestDmPdf
+      } = await import("../_core/jania/handlers/dmHandler");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      const { processCirculoMessage } = await import("../_core/jania/handlers/circuloHandler");
+      const { isRealEstateConsultationForGroup } = await import("../_core/whatsapp-match");
+      const { isUserSatisfactionOrFeedbackReply } = await import("../_core/politenessService");
+
+      const toolList = JANIA_DM_TOOLS[0].functionDeclarations.map((t: any) => t.name);
+      expect(toolList).toContain("consultar_propiedad_horizontal");
+
+      // DM end-to-end + PDF en cola + Satisfacción -> Google Review
+      const dmUser = "573009992031@s.whatsapp.net";
+      const dmReply = await processPrivateDmConversationalMessage(
+        "Hola JanIA, calcula la expensa mensual de un presupuesto de $40 millones con coeficiente de 2.5% en Propiedad Horizontal Ley 675 y mora de 2 meses",
+        dmUser,
+        "Paola Andrea"
+      );
+      expect(dmReply).toContain("$1.000.000 COP");
+      expect(dmReply).toContain("+57 316 656 9719");
+      expect(dmReply).toMatch(/satisfech/i);
+
+      const dmPdf = popLatestDmPdf(dmUser);
+      expect(dmPdf).toBeTruthy();
+      expect(dmPdf?.pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+
+      const dmThanks = await processPrivateDmConversationalMessage(
+        "Excelente concepto de propiedad horizontal, quedé muy satisfecha muchas gracias",
+        dmUser,
+        "Paola Andrea"
+      );
+      expect(dmThanks).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // Grupos (@JanIA en consultingHandler y circuloHandler)
+      const groupUser = "573009992032@s.whatsapp.net";
+      const groupRes = await processConsultingMessage(
+        "@JanIA audita esta Acta de Asamblea donde por mayoría simple prohíben Airbnb / vivienda turística y ordenan corte de citofonía y agua por mora",
+        groupUser,
+        "Ricardo"
+      );
+      expect(groupRes.response).toContain("AUDITORÍA JURÍDICA DE REGLAMENTO PH");
+      expect(groupRes.response).toContain("+57 316 656 9719");
+      expect(groupRes.response).toMatch(/satisfech/i);
+      expect(groupRes.document).toBeInstanceOf(Buffer);
+      expect(groupRes.fileName).toContain("Concepto_Propiedad_Horizontal_VECY");
+
+      const groupSat = await processConsultingMessage(
+        "@JanIA excelente auditoría PH, muy clara gracias",
+        groupUser,
+        "Ricardo"
+      );
+      expect(groupSat.response).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      const circuloRes = await processCirculoMessage(
+        "@JanIA prefactibilidad de englobe de dos lotes de 180 m2 cada uno en Bogotá y reforma al RPH",
+        "573009992033@s.whatsapp.net",
+        "Jani"
+      );
+      expect(circuloRes.response).toContain("ENGLOBE");
+      expect(circuloRes.document).toBeInstanceOf(Buffer);
+
+      expect(
+        isRealEstateConsultationForGroup("@JanIA valida coeficientes 30%, 30%, 40% en Ley 675", undefined, false)
+      ).toBe(true);
+      expect(isUserSatisfactionOrFeedbackReply("Excelente análisis de propiedad horizontal, muchas gracias").isSatisfied).toBe(true);
+      expect(
+        isUserSatisfactionOrFeedbackReply("Ahora audita este reglamento PH sobre mascotas y RNT").isSatisfied
+      ).toBe(false);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed17 = SEED_TEACHINGS.find(t => t.id === "seed-propiedad-horizontal-ley675-rph-rnt-desenglobe-v34-17");
+      expect(seed17).toBeDefined();
+      expect(seed17?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[7-9]|[2-9]\d)$/);
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:1[7-9]|[2-9]\d)\.0$/);
+    });
+  });
 });
 
 

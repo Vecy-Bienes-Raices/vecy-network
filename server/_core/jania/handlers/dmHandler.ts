@@ -49,6 +49,11 @@ import {
   hasContractDraftMarkers,
   isContractMinutaOrAuditRequest
 } from "../../legalContractService";
+import {
+  analyzePropiedadHorizontalFromWhatsAppInput,
+  hasPhDocumentMarkers,
+  isPropiedadHorizontalRequest
+} from "../../propiedadHorizontalService";
 import { getGreetingByTime } from "../../whatsapp-utils";
 import { FlyerVisionResult } from "../types";
 import {
@@ -459,6 +464,17 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["solicitudOBorradorContractual"]
         }
+      },
+      {
+        name: "consultar_propiedad_horizontal",
+        description: "Motor Especializado de Propiedad Horizontal (Ley 675 de 2001): calcula y valida coeficientes de copropiedad, expensas ordinarias/extraordinarias, quórums y mayorías calificadas del 70% (Arts. 45-46), intereses moratorios máximos 1.5x IBC (Art. 30), caducidad de impugnación de actas 2 meses (Art. 49) y solidaridad en compraventa (Art. 29); audita Reglamentos PH (RPH) y Actas de Asamblea frente a mascotas, vivienda turística/Airbnb/RNT (Decreto 1074/2015 y Ley 2068/2020) y sanciones; y evalúa prefactibilidad técnica-notarial de desenglobe, subdivisión, englobe o reforma RPH generando Concepto en PDF Membretado VECY.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            consultaPropiedadHorizontal: { type: "STRING", description: "Consulta PH con cifras de coeficientes/expensas/mora/quórum, texto del RPH/Acta o solicitud de prefactibilidad de desenglobe/englobe/subdivisión" }
+          },
+          required: ["consultaPropiedadHorizontal"]
+        }
       }
     ]
   }
@@ -487,7 +503,8 @@ export type JaniaDmToolType =
   | "estudio_titulos"
   | "norma_urbana_pot"
   | "financiero_tributario"
-  | "minuta_auditoria_contractual";
+  | "minuta_auditoria_contractual"
+  | "propiedad_horizontal";
 
 export function extractAcmAttributesFromText(rawText: string): {
   zonaOBarrio?: string;
@@ -1471,6 +1488,34 @@ export async function executeJaniaDmTool(
           reporteOficial:
             contractRes.whatsappReply ||
             "Compárteme los datos de partes, inmueble y condiciones (o el borrador de cláusulas) para generar tu minuta personalizada o auditar riesgos en PDF."
+        }
+      };
+    }
+    case "consultar_propiedad_horizontal": {
+      const phInput = String(args.consultaPropiedadHorizontal || rawUserText || "").trim();
+      const phRes = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: phInput,
+        requesterName: _userName || undefined
+      });
+      if (phRes.pdfResult) {
+        setLatestDmPdf(userId, {
+          pdfBuffer: phRes.pdfResult.pdfBuffer,
+          pdfFileName: phRes.pdfResult.fileName
+        });
+      }
+      return {
+        toolType: "propiedad_horizontal",
+        resultJson: {
+          solicitud: "consultar_propiedad_horizontal",
+          modo: phRes.mode,
+          pdfGenerado: Boolean(phRes.pdfResult),
+          archivoAdjuntado: phRes.pdfResult?.fileName || null,
+          codigoVerificacion: phRes.pdfResult?.verificationCode || null,
+          semaforo: phRes.report?.riskLevel || null,
+          exitoso: phRes.handled,
+          reporteOficial:
+            phRes.whatsappReply ||
+            "Compárteme los datos de coeficiente/expensas/mora/quórum, el texto del RPH o acta, o la operación de desenglobe/englobe para emitir el Concepto Técnico-Jurídico PH en PDF."
         }
       };
     }
@@ -2711,6 +2756,7 @@ export async function processPrivateDmConversationalMessage(
       !isPotUrbanNormRequest(clean) &&
       !isExplicitCtlStudyRequest(clean) &&
       !isContractMinutaOrAuditRequest(clean) &&
+      !isPropiedadHorizontalRequest(clean) &&
       (isOwnerOrConsignmentInquiry ||
         /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
           cleanLower
@@ -3052,6 +3098,57 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     }
   }
 
+  // 🏢 INTERCEPTOR DETERMINÍSTICO DE PROPIEDAD HORIZONTAL (v34.17 — Skill 6):
+  // Ley 675 de 2001 (coeficientes, expensas, quórum 70%, mora 1.5x IBC, impugnación 2 meses, solidaridad Art. 29),
+  // Auditoría RPH/Actas (Airbnb/RNT, mascotas, sanciones) y Prefactibilidad de Desenglobe/Subdivisión/Englobe + PDF Membretado.
+  if (
+    !isCommercialFlyerImg &&
+    !isReviewValidationContext &&
+    (isPropiedadHorizontalRequest(clean, hasAnyDmMedia) || hasPhDocumentMarkers(clean))
+  ) {
+    const phDmRes = await analyzePropiedadHorizontalFromWhatsAppInput({
+      text: clean,
+      pdfBuffer: mediaOptions?.pdfBuffer,
+      pdfMimeType: mediaOptions?.pdfMimeType,
+      imageBuffer: mediaOptions?.imageBuffer,
+      requesterName: displayName || realName || undefined
+    });
+
+    if (phDmRes.handled && phDmRes.whatsappReply) {
+      if (phDmRes.pdfResult) {
+        setLatestDmPdf(userId, {
+          pdfBuffer: phDmRes.pdfResult.pdfBuffer,
+          pdfFileName: phDmRes.pdfResult.fileName
+        });
+      }
+      if (phDmRes.mode !== "guidance") {
+        await incrementFreeServicesCount(userId);
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+          serviceType: "propiedad_horizontal",
+          timestamp: Date.now()
+        };
+        await saveUserPerpetualSession(userPerpetualSession);
+      }
+
+      const satisfactionLine =
+        phDmRes.mode === "guidance"
+          ? ""
+          : `\n\n🤝 *¿Quedaste satisfecho(a) con este Concepto Técnico-Jurídico de Propiedad Horizontal?* Tu opinión me ayuda a seguir afinando mi rigor legal para toda la red VECY.`;
+
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const finalPhReply = `${greetingPrefix}${phDmRes.whatsappReply}${satisfactionLine}`;
+
+      appendDmHistory(userId, "user", clean || "[Reglamento PH / Acta adjunto]");
+      appendDmHistory(userId, "assistant", finalPhReply);
+      markUserGreetedToday(userId);
+      return finalPhReply;
+    }
+  }
+
   // 🏢 DOCTRINA EDUARDO A. RIVERA (v33.79) — ENTREVISTA MINUCIOSA DE PERFILAMIENTO INMOBILIARIO Y ATERRIZAJE AL ASESOR:
   // Si el usuario (sea colega inmobiliario o cliente) presenta un requerimiento o búsqueda inmobiliaria escueta, incompleta o genérica
   // (sin cifras numéricas de presupuesto, sin alcobas exactas o sin especificaciones indispensables):
@@ -3313,7 +3410,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `===================================================\n` +
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_o_auditar_minuta_contractual, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_o_auditar_minuta_contractual, consultar_propiedad_horizontal, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.\n` +
       `a) Si el usuario envía un número, documento o nombre de empresa con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la razón social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.\n` +
       `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +

@@ -184,7 +184,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.16 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.17 — Noviembre 2026
+
+### Novedades v34.17 (Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal Ley 675 de 2001, Auditoría de Reglamentos PH y Actas, Vivienda Turística Airbnb/RNT y Prefactibilidad de Subdivisión/Englobe + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Prioridad #6 del Roadmap de Skills de JanIA:**
+     - Dotar a JanIA (DM `dmHandler.ts` y citada con `@JanIA` en grupos `consultingHandler.ts` / `circuloHandler.ts` / `whatsapp-match.ts`) de un motor determinístico a `$0 COP` con rigor de **Ley 675 de 2001**, **Decreto 1074 de 2015**, **Ley 2068 de 2020 (RNT/Airbnb)** y normativa registral SNR para: (a) cálculo/validación de coeficientes, expensas ordinarias vs extraordinarias, mora máxima legal `1.5x` IBC Art. 30, quórums y mayorías calificadas 70% Arts. 45–46 (incluyendo >4x expensas ordinarias), impugnación 2 meses Art. 49 y paz y salvo solidario Art. 29; (b) auditoría de RPH o Actas de Asamblea en texto/PDF/imagen (Airbnb/RNT en RPH vs mayoría simple inválida, mascotas, reformas y corte ilegal de servicios); y (c) prefactibilidad técnica-notarial de desenglobe, subdivisión, englobe o reforma a RPH con **Concepto Técnico-Jurídico PH en PDF Membretado de VECY BIENES RAÍCES**.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `server/_core/propiedadHorizontalService.ts`: Motor completo (`hasPhDocumentMarkers`, `isConceptualPhQuestion`, `isPropiedadHorizontalRequest`, `calculatePropiedadHorizontalMetrics`, `auditPhRegulationOrMinutes`, `buildPhPrefeasibilityReport`, `analyzePropiedadHorizontalFromWhatsAppInput`).
+     - `server/_core/jania/legalDocumentPdfService.ts`: Tipo `"concepto_propiedad_horizontal"` y `generatePropiedadHorizontalPdf` con QR de trazabilidad VECY.
+     - Blindaje de precedencia en `potUrbanNormService.ts`, `financialAndTaxRealEstateService.ts`, `legalContractService.ts`, `notarialExpenseService.ts`, `predialService.ts` y `politenessService.ts`; aislamiento `NODE_ENV === "test"` en `sessionManager.ts` para `userPerpetualSession`; integración en `dmHandler.ts` (`consultar_propiedad_horizontal`), `consultingHandler.ts`, `circuloHandler.ts` y `whatsapp-match.ts`, con CTA `+57 316 656 9719` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  3. **Gobernanza y Suite de Regresión 203:**
+     - Semilla `seed-propiedad-horizontal-ley675-rph-rnt-desenglobe-v34-17` en `founderKnowledgeService.ts` y Suite 203 (5/5 tests) en `regression.test.ts` + actualización de `shared/const.ts` (`v34.17`) y `package.json` (`34.17.0`).
+- **Validación Limpia ($0 COP):** `NODE_ENV=test npm test` (**6/6 archivos, 719/719 tests en verde**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.16 — Noviembre 2026
 
 ### Novedades v34.16 (Punto 5 — Skill 5: Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios en Colombia + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

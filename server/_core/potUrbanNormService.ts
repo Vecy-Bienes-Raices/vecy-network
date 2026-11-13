@@ -604,6 +604,16 @@ export function parsePotUrbanQuery(text?: string | null): PotParsedQuery {
       normLower
     );
 
+  // Descartar solicitudes puras de Propiedad Horizontal (Ley 675), RPH, Desenglobe, Englobe o Subdivision PH salvo peticion explicita de norma POT/SINUPOT/IDECA/IO/IC/UPL/UPZ
+  const hasStrongPotNormLexicon =
+    /\b(?:pot\b|decreto\s*555|sinupot|ideca|mapas\s*bogota|norma\s+urbana|normativa\s+urbana|cedula\s+normativa|tratamiento\s+urbanistico|area\s+de\s+actividad|indice\s+de\s+ocupacion|indice\s+de\s+construccion|uso\s+del?\s+suelo|antejardin|\bupl\b|\bupz\b)\b/i.test(
+      normLower
+    );
+  const isPurePhOrSubdivisionIntent =
+    /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:de\s+)?copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|desenglobe|englobe|subdivision\s+(?:de\s+|en\s+)?(?:ph|propiedad\s+horizontal|casa|lote|apartamento|predio|inmueble)|reforma\s+(?:al\s+|del\s+)?rph)\b/i.test(
+      normLower
+    ) && !hasStrongPotNormLexicon;
+
   // Descartar si es un ACM / Avalúo puro sin solicitud explícita de norma urbana/POT
   const isPureAcmRequest =
     /\b(?:hazme\s+un\s+acm|\bacm\b|analisis\s+comparativo\s+de\s+mercado|avaluo\s+comercial|cuanto\s+vale\s+(?:el\s+m2|esta\s+casa|este\s+apto))\b/i.test(
@@ -653,6 +663,7 @@ export function parsePotUrbanQuery(text?: string | null): PotParsedQuery {
     !isCtlIntent &&
     !isIduIntent &&
     !isPredialIntent &&
+    !isPurePhOrSubdivisionIntent &&
     !isPureAcmRequest &&
     !isConceptualOnly &&
     hasStrongPotKeyword &&

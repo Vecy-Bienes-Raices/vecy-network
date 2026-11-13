@@ -88,6 +88,17 @@ export function hasContractDraftMarkers(text: string): boolean {
   const raw = String(text || "");
   if (!raw || raw.trim().length < 25) return false;
   if (hasCtlTextMarkers(raw)) return false;
+  // No capturar Reglamentos PH ni Actas de Asamblea Ley 675 como borradores de compraventa/arriendo
+  if (
+    /\b(?:reglamento\s+de\s+propiedad\s+horizontal|\brph\b|asamblea\s+(?:general\s+)?de\s+copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|ley\s+675\s+de\s+2001)\b/i.test(
+      raw
+    ) &&
+    !/\b(?:promesa\s+de\s+compraventa|promitente\s+(?:vendedor|comprador)|contrato\s+de\s+(?:arrendamiento|corretaje)|ley\s+820)\b/i.test(
+      raw
+    )
+  ) {
+    return false;
+  }
 
   const markers = [
     /\bcl[aá]usula\s+(?:primera|segunda|tercera|cuarta|quinta|sexta|s[eé]ptima|octava|novena|d[eé]cima|\d+)/i,
@@ -197,6 +208,17 @@ export function isContractMinutaOrAuditRequest(text: string, hasMedia = false): 
     /\b(?:aviso|anuncio|marketing|swap\s+test|\baida\b|\bicp\b|puntuaci[oó]n\s+global|flyer|copy\s+comercial)\b/i.test(
       raw
     ) &&
+    !hasDraft
+  ) {
+    return false;
+  }
+
+  // Evitar captura de Propiedad Horizontal (Ley 675), RPH, Actas de Asamblea, RNT/Airbnb PH o Desenglobe/Englobe (Skill 6)
+  if (
+    /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:general\s+)?de\s+copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|expensas?\s+comunes?|desenglobe|englobe|subdivisi[oó]n\s+(?:de\s+|en\s+)?ph|vivienda\s+tur[ií]stica|\brnt\b)\b/i.test(
+      raw
+    ) &&
+    !hasExplicitContractDocVerb &&
     !hasDraft
   ) {
     return false;

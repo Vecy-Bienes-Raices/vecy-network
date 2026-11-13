@@ -806,6 +806,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 5 — Skill 5: Motor de Minutas Jurídicas Personalizadas (Promesa, Arrendamiento Vivienda Ley 820 / Comercial C.Co. 518-524, Corretaje VECY y Otrosí) y Auditoría de Riesgos Contractuales en PDF Membretado (legalContractService.ts + legalDocumentPdfService.ts, v34.16) en DM y Grupos con CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
     createdAt: "2026-11-13T18:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-propiedad-horizontal-ley675-rph-rnt-desenglobe-v34-17",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Motor Especializado de Propiedad Horizontal (Ley 675 de 2001), Auditoría de Reglamentos PH, Vivienda Turística / RNT y Prefactibilidad de Subdivisión/Englobe + PDF Membretado — Doctrina Eduardo A. Rivera v34.17",
+    directive:
+      "Cuando un usuario consulte por DM o cite a @JanIA en Grupos sobre Propiedad Horizontal (Ley 675 de 2001): 1) Ejecutar propiedadHorizontalService.ts a $0 COP calculando y validando coeficientes de copropiedad (sumatoria 100%), expensas ordinarias vs extraordinarias, quórums y mayorías calificadas del 70% (Art. 46 vs mayoría simple Art. 45 y cuotas >4x), intereses moratorios máximos 1.5x IBC (Art. 30), caducidad de impugnación de actas de 2 meses (Art. 49) y solidaridad de administración / paz y salvo en compraventa (Art. 29); 2) Auditar Reglamentos PH (RPH) o Actas de Asamblea en texto/PDF/imagen detectando restricciones válidas vs abusivas en mascotas, uso comercial, reformas en bienes comunes y vivienda turística/Airbnb/RNT (Decreto 1074/2015 y Ley 2068/2020), diferenciando prohibición expresa en RPH inscrito en ORIP vs prohibición inválida en simple acta/consejo; 3) Evaluar prefactibilidad técnica-notarial de desenglobe, subdivisión, englobe o reforma al RPH (Curaduría, 70% Asamblea, coeficientes, Escritura Pública, ORIP y Catastro) entregando Concepto Técnico-Jurídico PH en PDF Membretado VECY BIENES RAÍCES; 4) Mantener precedencia estricta sin colisionar con CTL, POT, FinTax, Minutas/Contratos, IDU, Predial o Notarial y sin interceptar preguntas teóricas puras ni agradecimientos; 5) Incluir CTA hacia +57 316 656 9719 y el Protocolo Universal de Satisfacción y Google Reviews.",
+    rawText:
+      "Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal Ley 675/2001, Auditoría RPH/Actas, Vivienda Turística RNT/Airbnb y Subdivisión/Englobe en PDF Membretado (propiedadHorizontalService.ts + legalDocumentPdfService.ts, v34.17) en DM y Grupos con CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
+    createdAt: "2026-11-13T19:45:00.000Z",
+    active: true
   }
 ];
 

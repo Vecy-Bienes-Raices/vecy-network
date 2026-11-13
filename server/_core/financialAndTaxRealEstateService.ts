@@ -390,10 +390,20 @@ export function parseFinancialAndTaxQuery(text?: string | null): FinancialTaxPar
     );
   if (looksLikeGratitudeOrPraiseOnly) return empty;
 
-  // Guardas estrictas de precedencia para no colisionar con CTL, POT, Minutas/Auditoria Contractual, IDU, Factura Predial o Gastos Notariales puros
+  // Guardas estrictas de precedencia para no colisionar con CTL, POT, Minutas/Auditoria Contractual, Propiedad Horizontal (Ley 675 / RNT), IDU, Factura Predial o Gastos Notariales puros
   if (hasCtlTextMarkers(clean) || isExplicitCtlStudyRequest(clean)) return empty;
   if (isPotUrbanNormRequest(clean)) return empty;
   if (hasContractDraftMarkers(clean) || isContractMinutaOrAuditRequest(clean)) return empty;
+  if (
+    /\b(?:propiedad\s+horizontal|ley\s*675|\brph\b|reglamento\s+(?:de\s+)?ph|asamblea\s+(?:de\s+)?copropietarios|coeficiente(?:s)?\s+de\s+copropiedad|desenglobe|englobe|\brnt\b|decreto\s*1074|ley\s*2068)\b/i.test(
+      norm
+    ) &&
+    !/\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|credito\s+hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre)\b/i.test(
+      norm
+    )
+  ) {
+    return empty;
+  }
   if (isIduInquiry(clean)) return empty;
   if (/\bCHIP\s+AAA[0-9A-Z]{5,10}\b/i.test(clean) && /\b(?:predial|factura|shd)\b/i.test(norm)) {
     return empty;

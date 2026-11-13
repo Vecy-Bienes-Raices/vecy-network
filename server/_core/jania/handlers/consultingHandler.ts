@@ -55,6 +55,11 @@ import {
   hasContractDraftMarkers,
   isContractMinutaOrAuditRequest,
 } from "../../legalContractService";
+import {
+  analyzePropiedadHorizontalFromWhatsAppInput,
+  hasPhDocumentMarkers,
+  isPropiedadHorizontalRequest,
+} from "../../propiedadHorizontalService";
 
 /**
  * Añade de forma idempotente el cierre doctrinal de satisfacción (v34.11/v34.12)
@@ -218,6 +223,8 @@ export async function processConsultingMessage(
       isFinancialOrTaxSimulationRequest(messageToProcess) ||
       isContractMinutaOrAuditRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) ||
       hasContractDraftMarkers(messageToProcess) ||
+      isPropiedadHorizontalRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) ||
+      hasPhDocumentMarkers(messageToProcess) ||
       isCreativeImgReq ||
       isExplicitLegalPdfRequest(messageToProcess) ||
       extractAllCedulasForVerification(messageToProcess, false).length > 0;
@@ -417,6 +424,45 @@ export async function processConsultingMessage(
           voiceResponse: "",
           document: contractCheck.pdfResult?.pdfBuffer,
           fileName: contractCheck.pdfResult?.fileName,
+        };
+      }
+    }
+
+    // 🏢 INTERCEPTOR DIRECTO 0.9: PROPIEDAD HORIZONTAL (LEY 675), AUDITORÍA RPH/ACTAS, RNT/AIRBNB Y SUBDIVISIÓN/ENGLOBE + PDF MEMBRETADO (v34.17)
+    const phGroupInputText =
+      quotedContext && hasPhDocumentMarkers(quotedContext) && !hasPhDocumentMarkers(messageToProcess)
+        ? `${messageToProcess}\n${quotedContext}`
+        : messageToProcess;
+    if (
+      isPropiedadHorizontalRequest(phGroupInputText, Boolean(imageBuffer || pdfBuffer)) ||
+      hasPhDocumentMarkers(phGroupInputText)
+    ) {
+      const phCheck = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text: phGroupInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: targetName || realName || undefined,
+      });
+      if (phCheck.handled && phCheck.whatsappReply) {
+        const finalPhResp =
+          phCheck.mode === "guidance"
+            ? phCheck.whatsappReply
+            : appendGroupSatisfactionClosing(phCheck.whatsappReply);
+        console.log(
+          `[JanIA-PhSkill6] Consulta PH (${phCheck.mode}) ejecutada en grupo para ${userId} (PDF: ${Boolean(phCheck.pdfResult)})`
+        );
+        appendConsultingHistory(userId, "user", text || "[Reglamento PH / Acta adjunto]");
+        appendConsultingHistory(userId, "assistant", finalPhResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPhResp,
+          reactionEmoji: phCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: phCheck.pdfResult?.pdfBuffer,
+          fileName: phCheck.pdfResult?.fileName,
         };
       }
     }
@@ -1030,6 +1076,35 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
           reactionEmoji: contractFallback.reactionEmoji,
           document: contractFallback.pdfResult?.pdfBuffer,
           fileName: contractFallback.pdfResult?.fileName,
+        };
+      }
+    }
+
+    if (
+      isPropiedadHorizontalRequest(text, Boolean(imageBuffer || pdfBuffer)) ||
+      hasPhDocumentMarkers(text)
+    ) {
+      const phFallback = await analyzePropiedadHorizontalFromWhatsAppInput({
+        text,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: firstName || undefined,
+      }).catch(() => null);
+      if (phFallback?.handled && phFallback.whatsappReply) {
+        const finalPhFallbackResp =
+          phFallback.mode === "guidance"
+            ? phFallback.whatsappReply
+            : appendGroupSatisfactionClosing(phFallback.whatsappReply);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalPhFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPhFallbackResp,
+          reactionEmoji: phFallback.reactionEmoji,
+          document: phFallback.pdfResult?.pdfBuffer,
+          fileName: phFallback.pdfResult?.fileName,
         };
       }
     }

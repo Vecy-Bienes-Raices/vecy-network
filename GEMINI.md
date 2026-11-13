@@ -1,4 +1,17 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.16.0 — 2026-11-13)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.17.0 — 2026-11-13)
+- **JanIA Server:** `v34.17` (`34.17.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Punto 6 — Skill 6: Motor Especializado de Propiedad Horizontal (Ley 675 de 2001), Auditoría de Reglamentos PH y Actas, Vivienda Turística (Airbnb / RNT) y Prefactibilidad de Subdivisión/Englobe (`propiedadHorizontalService.ts` + `legalDocumentPdfService.ts` + DM & Grupos — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz:**
+     - JanIA requería un motor determinístico a `$0 COP` de Propiedad Horizontal (Ley 675/2001), Decreto 1074/2015, Ley 2068/2020 (RNT/Airbnb) y normativa registral SNR sin colisionar con `potUrbanNormService.ts`, `financialAndTaxRealEstateService.ts`, `legalContractService.ts`, `notarialExpenseService.ts`, `predialService.ts` ni capturar preguntas teóricas puras ni agradecimientos. Asimismo, se detectó que `sessionManager.ts` leía/escribía `data/jania_persistent_sessions.json` y `pendingSessions` durante `NODE_ENV=test`, filtrando estado (`reviewPromptSent: true`) entre corridas de test.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - Nuevo módulo `server/_core/propiedadHorizontalService.ts`: discriminadores (`hasPhDocumentMarkers`, `isConceptualPhQuestion`, `isPropiedadHorizontalRequest`), calculadoras Ley 675 (`calculatePropiedadHorizontalMetrics`: coeficientes 100%, expensas ordinarias/extraordinarias, mora máx. `1.5x` IBC Art. 30, quórum y mayoría calificada 70% Arts. 45–46 incluyendo >4x presupuesto mensual, caducidad impugnación 2 meses Art. 49 y solidaridad paz y salvo Art. 29), auditoría RPH/Actas (`auditPhRegulationOrMinutes`: Airbnb/RNT prohibición expresa en RPH vs mayoría simple inválida, mascotas, reformas y corte ilegal de servicios/acceso), prefactibilidad desenglobe/subdivisión/englobe (`buildPhPrefeasibilityReport`) y orquestador `analyzePropiedadHorizontalFromWhatsAppInput`.
+     - En `server/_core/jania/legalDocumentPdfService.ts`: añadido `"concepto_propiedad_horizontal"` y `generatePropiedadHorizontalPdf` sobre `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+     - Blindaje y canales: exclusiones de precedencia en `potUrbanNormService.ts`, `financialAndTaxRealEstateService.ts`, `legalContractService.ts`, `notarialExpenseService.ts`, `predialService.ts` y `politenessService.ts`; aislamiento `NODE_ENV === "test"` para `userPerpetualSession` en `sessionManager.ts`; integración en `dmHandler.ts` (`consultar_propiedad_horizontal`, guarda en `isCommissionOrCostInquiry`, pre-interceptor), `consultingHandler.ts` (`isOtherToolRequest`, Interceptor 0.9 y fallback `catch`), `circuloHandler.ts` y `whatsapp-match.ts`, junto al Protocolo de Satisfacción + Google Reviews (`v34.11`) y CTA `+57 316 656 9719`.
+  3. **Gobernanza y Suite de Regresión 203:**
+     - Semilla `seed-propiedad-horizontal-ley675-rph-rnt-desenglobe-v34-17` en `founderKnowledgeService.ts` y Suite 203 (5/5 tests) en `regression.test.ts`.
+- **Validación Limpia ($0 COP):** Suite completa `NODE_ENV=test npm test` (**6/6 archivos, 719/719 tests en verde**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.16.0 — 2026-11-13)
 - **JanIA Server:** `v34.16` (`34.16.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Punto 5 — Skill 5: Motor Especializado de Minutas Jurídicas Personalizadas y Auditoría de Riesgos Contractuales Inmobiliarios en Colombia (`legalContractService.ts` + `legalDocumentPdfService.ts` + DM & Grupos — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**
