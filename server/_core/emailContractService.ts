@@ -303,8 +303,8 @@ export async function createContractPdf(rawFormData: SolicitudEmailPayload): Pro
   // Cláusula Segunda
   const tipoNegocio = formData.opcion_negocio || "Venta";
   const honorariosCorresponde = tipoNegocio.toLowerCase().includes("arriendo")
-    ? "un canon de arrendamiento (si fuera venta es el 3% sobre el valor total de venta)"
-    : "el 3% sobre el valor total de la venta (si fuera arriendo es un canon de arrendamiento)";
+    ? "un canon neto de arrendamiento sin incluir administración (si fuera venta es el 3% sobre el valor total de venta)"
+    : "el 3% sobre el valor total de la venta (si fuera arriendo es un canon neto de arrendamiento sin incluir administración)";
   const clausula2Text = `Los honorarios derivados de la comisión final efectivamente cobrada por el perfeccionamiento del negocio de Venta (en este caso es ${tipoNegocio}) que corresponde a ${honorariosCorresponde} serán distribuidos en partes iguales (50% para cada parte), salvo pacto distinto anexo y por escrito. En caso de que EL AGENTE 2 actúe bajo la figura de simple referenciador (únicamente refiere al cliente o al colega) sin participar activamente en el acompañamiento presencial, las negociaciones o el cierre legal, su participación corresponderá estrictamente al 10% de la comisión.`;
   y = drawClause("CLÁUSULA SEGUNDA: HONORARIOS Y PROPORCIÓN", [{ text: clausula2Text, font }], y);
 

@@ -184,7 +184,17 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.19 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.20 — Noviembre 2026
+
+### Novedades v34.20 (Doctrina Comisión Propietarios Directos: 3% de Ley en Venta y 1 Canon Neto Sin Administración — Doctrina Eduardo A. Rivera):
+- **Cálculo Determinístico de Canon Neto (`dmOnboardingAndDocsHelper.ts`, `dmHandler.ts`):**
+  1. Nuevos helpers `parseColombianCopAmount` y `analyzeOwnerRentalCommissionFromText`: cuando un propietario directo indica arriendo con administración incluida junto al valor de la administración, descuenta automáticamente la administración (`canonNetoSinAdmin`) antes de calcular la comisión de 1 canon; cuando indica administración incluida sin precisar el valor, guarda `pendingAdminDeductionTotal` y pregunta primero cuánto cuesta mensualmente la administración para liquidar el canon neto en el turno siguiente.
+  2. Corregido falso positivo en `isAiAgentInquiryForBusiness` (`dmHandler.ts`) para evitar que mensajes de propietarios (`"Hola JanIA... quiero..."`) sean interceptados como consultas de venta de bot.
+- **Homologación Contractual y de Prompts (`legalContractService.ts`, `legalDocumentPdfService.ts`, `emailContractService.ts`, `consultingHandler.ts`, `base.md`, `prompts.ts`):**
+  1. Unificación explícita de honorarios de corretaje para propietarios directos: **3% sobre el precio de venta** y **1 canon mensual NETO de arrendamiento sin incluir administración** (con deducción automática en `contrato_corretaje` PDF).
+- **Gobernanza y Pruebas:** Semilla `seed-corretaje-propietarios-canon-neto-sin-administracion-v34-20` en `founderKnowledgeService.ts`, **Suite 206** en `regression.test.ts` (**6/6 archivos, 725/725 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.20` (`34.20.0`) en `shared/const.ts` y `package.json`.
+
+## 🔖 VERSIÓN ANTERIOR: v34.19 — Noviembre 2026
 
 ### Novedades v34.19 (Punto 8 — Observabilidad en Vivo de Consumo API, Endpoint de Telemetría Protegido, Alertas Tempranas Anti-Spam y Calibración Post-Campo — Doctrina Eduardo A. Rivera):
 - **Telemetría Operativa y Alertas Tempranas (`telemetryAndAlertsService.ts`, `sessionManager.ts`, `geminiKeyManager.ts`, `whatsapp-utils.ts`, `janIA.ts`, `index.ts`, `AdminTelemetry.tsx`):**

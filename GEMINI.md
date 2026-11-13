@@ -1,4 +1,17 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.19.0 — 2026-11-13)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.20.0 — 2026-11-13)
+- **JanIA Server:** `v34.20` (`34.20.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Doctrina Comisión Propietarios Directos en Arriendo: 3% Venta y 1 Canon Neto Sin Administración (`dmOnboardingAndDocsHelper.ts` + `dmHandler.ts` + `legalDocumentPdfService.ts` + `legalContractService.ts` + `emailContractService.ts` + `consultingHandler.ts` + `base.md` + `prompts.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Deducción Automática de Administración y Seguimiento Multi-Turno (`$0 COP`):**
+     - Nuevos helpers `parseColombianCopAmount` y `analyzeOwnerRentalCommissionFromText` en `server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts` e integrados en `isCommissionOrCostInquiry` (`server/_core/jania/handlers/dmHandler.ts`) con estado conversacional `pendingAdminDeductionTotal` en `userPerpetualSession.keyFacts`.
+     - Si el propietario indica un canon total que **incluye administración** junto al valor de la administración (ej. `$4.000.000` incluida admon y admon `$800.000`), liquida de inmediato el **canon neto (`$3.200.000`)** como base única de comisión (excluyendo `$800.000` de administración). Si indica `"incluida la administración"` sin mencionar cuánto vale la administración (ej. `$3.800.000`), pregunta el valor mensual de la administración y liquida el canon neto exacto en el turno siguiente.
+     - Corregido falso positivo en `isAiAgentInquiryForBusiness` (`dmHandler.ts`) que interceptaba mensajes de propietarios (`"Hola JanIA... quiero consignar..."`) como leads de venta de bot empresarial.
+  2. **Homologación Integral en Contratos PDF, Email y Prompts:**
+     - `legalContractService.ts`, `legalDocumentPdfService.ts` (`contrato_corretaje`), `emailContractService.ts`, `consultingHandler.ts`, `base.md` y `prompts.ts` unifican explícitamente **3% sobre el valor final de venta** y **1 canon mensual neto de arrendamiento, sin incluir cuota de administración** (descontando automáticamente administración incluida al generar minutas PDF).
+  3. **Gobernanza y Suite de Regresión 206:**
+     - Semilla `seed-corretaje-propietarios-canon-neto-sin-administracion-v34-20` en `founderKnowledgeService.ts` y **Suite 206** en `regression.test.ts` (descuento en 2 turnos y descuento directo en 1 turno + minuta PDF `contrato_corretaje`).
+- **Validación Limpia ($0 COP):** Suite completa `NODE_ENV=test npm test` (**6/6 archivos, 725/725 tests en verde**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.19.0 — 2026-11-13)
 - **JanIA Server:** `v34.19` (`34.19.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Punto 8 — Observabilidad en Vivo de Consumo API, Telemetría Protegida de Costos/Roles, Alertas Tempranas Anti-Spam y Calibración Post-Campo (`telemetryAndAlertsService.ts` + `sessionManager.ts` + `whatsapp-utils.ts` + `geminiKeyManager.ts` + `janIA.ts` + `index.ts` + `AdminTelemetry.tsx` + `fieldSimulatorService.ts` + `simulate_field_e2e.ts` — Doctrina Eduardo A. Rivera):**
   1. **Telemetría Consolidada Protegida y Alertas Tempranas Anti-Spam:**

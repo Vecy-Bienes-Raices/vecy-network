@@ -148,8 +148,8 @@ export function getLegalDocumentMetadata(
       return {
         title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA VECY",
         normativeFramework: options?.esPropietarioDirecto
-          ? "Articulos 1340 a 1346 del Codigo de Comercio, Politica VECY Propietario Directo (3% Venta / 1 Canon Arriendo / Publicacion $0 COP) y Ley 527 de 1999"
-          : "Articulos 1340 a 1346 del Codigo de Comercio, Doctrina VECY 40/20/40 (3% Venta / 1 Canon Arriendo / Publicacion $0 COP) y Ley 527 de 1999",
+          ? "Articulos 1340 a 1346 del Codigo de Comercio, Politica VECY Propietario Directo (3% Venta / 1 Canon Neto Arriendo Sin Administracion / Publicacion $0 COP) y Ley 527 de 1999"
+          : "Articulos 1340 a 1346 del Codigo de Comercio, Doctrina VECY 40/20/40 (3% Venta / 1 Canon Neto Arriendo Sin Administracion / Publicacion $0 COP) y Ley 527 de 1999",
         defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
       };
     case "otrosi_modificatorio":
@@ -222,7 +222,9 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
     : "Desembolso segun cronograma pactado (recursos propios, credito hipotecario, FNA o leasing habitacional segun aplique)";
   const valorArras = params.valorArrasOPenalidad || "10% del valor total del negocio";
   const adminCanon = params.canonAdministracion || "Segun reglamento de Propiedad Horizontal (segun lo acordado por las partes)";
-  const comisionPct = params.porcentajeComision || "3% en venta / 1 canon mensual en arriendo";
+  const comisionPct =
+    params.porcentajeComision ||
+    "3% en venta / 1 canon mensual neto en arriendo (sin incluir cuota de administracion)";
   const extras = params.clausulasEspeciales ? `\n\nDISPOSICIONES Y CLAUSULAS ESPECIALES:\n${params.clausulasEspeciales}` : "";
 
   switch (params.tipoDocumento) {
@@ -406,7 +408,7 @@ export function buildDefaultLegalBody(params: LegalDocumentPdfParams): string {
         "",
         "CLAUSULA PRIMERA - ENCARGO DE MEDIACION Y PROMOCION COMERCIAL: EL COMITENTE confiere encargo mercantil de corretaje no exclusivo (salvo pacto expreso de exclusividad por termino determinado) a EL CORREDOR para promocionar, exhibir, perfilar interesados y mediar en la compraventa o arrendamiento del inmueble consignado.",
         "",
-        `CLAUSULA SEGUNDA - HONORARIOS PROFESIONALES (${comisionPct}): Al perfeccionarse la compraventa (firma de promesa con desembolso o escritura publica) o suscribirse el contrato de arrendamiento con cliente presentado por EL CORREDOR o la red VECY, EL COMITENTE pagara honorarios del tres por ciento (3%) sobre el precio final de venta en inmuebles urbanos (5% rural/campestre) o el equivalente a un (1) canon mensual de arrendamiento (mas IVA si aplica), conforme al porcentaje pactado (${comisionPct}).`,
+        `CLAUSULA SEGUNDA - HONORARIOS PROFESIONALES (${comisionPct}): Al perfeccionarse la compraventa (firma de promesa con desembolso o escritura publica) o suscribirse el contrato de arrendamiento con cliente presentado por EL CORREDOR o la red VECY, EL COMITENTE pagara honorarios del tres por ciento (3%) sobre el precio final de venta en inmuebles urbanos (5% rural/campestre) o el equivalente a un (1) canon mensual NETO de arrendamiento, excluyendo en todo caso el valor de la cuota de administracion PH cuando el canon anunciado o pactado la incluya (si el valor mensual incluye administracion, esta se descuenta para liquidar la comision exclusivamente sobre el canon neto) (mas IVA si aplica), conforme al porcentaje pactado (${comisionPct}).`,
         "",
         "CLAUSULA TERCERA - POLITICA CERO COBROS POR PUBLICACION: En cumplimiento estricto de la Doctrina VECY BIENES RAICES, EL CORREDOR NO cobra suma alguna por publicacion, inventario fotografico, difusion en portales o gestion comercial anticipada; los honorarios se causan exclusivamente a exito al cerrarse la negociacion.",
         "",

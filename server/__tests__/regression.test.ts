@@ -13994,7 +13994,7 @@ A: BANCO DE BOGOTA
           user: { id: 1, role: "admin", email: "admin@vecy.co", name: "Eduardo" } as any,
         });
         const adminTelemetry = await adminCaller.janIA.getOperationalTelemetry();
-        expect(adminTelemetry.version).toBe("v34.19");
+        expect(adminTelemetry.version).toMatch(/^v34\.(?:19|[2-9]\d)$/);
         expect(adminTelemetry.llm.tier2PaidCalls).toBe(8);
 
         const unauthRest = await authorizeTelemetryHttpRequest({ headers: {}, query: {} } as any);
@@ -14056,10 +14056,103 @@ A: BANCO DE BOGOTA
       expect(seed19?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.19");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:19|[2-9]\d)$/);
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.19.0");
+      expect(pkg.version).toMatch(/^34\.(?:19|[2-9]\d)\.0$/);
+    }, 30000);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 206 (v34.20): DOCTRINA COMISIÓN PROPIETARIOS DIRECTOS EN ARRIENDO:
+  // 3% DE LEY EN VENTA Y 1 CANON NETO SIN ADMINISTRACIÓN (DESCUENTO AUTOMÁTICO)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("Suite 206 (v34.20): Propietario Directo — 3% Venta y 1 Canon Neto Sin Administración", () => {
+    it("1. Si el canon incluye administración sin indicar su valor, pregunta el valor de la administración y en el siguiente turno liquida el canon neto", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const { getUserPerpetualSession, resetUserPerpetualSessionsForTests } = await import("../_core/jania/sessionManager");
+      resetUserPerpetualSessionsForTests();
+
+      const userId = "573009911001@s.whatsapp.net";
+      const r1 = await processPrivateDmConversationalMessage(
+        "Hola JanIA, soy propietario directo y quiero consignar mi apartamento en arriendo por $3.800.000 incluida la administración, ¿cuánto cobran de comisión?",
+        userId,
+        "Roberto Díaz"
+      );
+
+      expect(r1).toContain("$3.800.000");
+      expect(r1.toLowerCase()).toContain("sin incluir administración");
+      expect(r1.toLowerCase()).toContain("valor mensual de la administración");
+
+      const sess1 = await getUserPerpetualSession(userId);
+      expect(sess1?.keyFacts?.pendingAdminDeductionTotal).toBe(3_800_000);
+
+      const r2 = await processPrivateDmConversationalMessage(
+        "El valor mensual de la administración es de $800.000",
+        userId,
+        "Roberto Díaz"
+      );
+
+      expect(r2).toContain("$3.800.000");
+      expect(r2).toContain("-$800.000");
+      expect(r2).toContain("$3.000.000");
+      expect(r2.toLowerCase()).toContain("sin administración");
+
+      const sess2 = await getUserPerpetualSession(userId);
+      expect(sess2?.keyFacts?.pendingAdminDeductionTotal).toBeUndefined();
+      expect(sess2?.keyFacts?.canonNetoSinAdmin).toBe(3_000_000);
+      expect(sess2?.keyFacts?.adminFeeCop).toBe(800_000);
+    });
+
+    it("2. Descuenta en un solo mensaje ($4.000.000 con administración incluida y admon $800.000 -> $3.200.000) y refleja canon neto en minuta PDF de corretaje", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const { analyzeContractOrMinutaFromWhatsAppInput } = await import("../_core/legalContractService");
+      const { extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+      const { resetUserPerpetualSessionsForTests } = await import("../_core/jania/sessionManager");
+      resetUserPerpetualSessionsForTests();
+
+      const userId = "573009911002@s.whatsapp.net";
+      const singleTurn = await processPrivateDmConversationalMessage(
+        "Soy propietario directo, si arriendo mi apartamento en $4.000.000 con administración incluida y la administración vale $800.000, ¿cuánto cobran de comisión?",
+        userId,
+        "Marta Lucía"
+      );
+
+      expect(singleTurn).toContain("3%");
+      expect(singleTurn).toContain("$4.000.000");
+      expect(singleTurn).toContain("-$800.000");
+      expect(singleTurn).toContain("$3.200.000");
+      expect(singleTurn.toLowerCase()).toContain("sin incluir administración");
+
+      const minutaRes = await analyzeContractOrMinutaFromWhatsAppInput({
+        text: "Hazme una minuta personalizada de contrato de corretaje para arriendo en $4.000.000 con administración incluida, administración $800.000 en Cedritos Bogotá, Propietario Marta Lucía",
+        requesterName: "Marta Lucía",
+        requesterRole: "propietario_directo",
+      });
+
+      expect(minutaRes.handled).toBe(true);
+      expect(minutaRes.tipoDocumento).toBe("contrato_corretaje");
+      expect(minutaRes.whatsappReply).toContain("$3.200.000");
+      expect(minutaRes.whatsappReply).not.toContain("40/20/40");
+
+      const pdfText = extractTextSnippetsFromPdfBuffer(
+        minutaRes.pdfResult!.pdfBuffer.toString("base64")
+      );
+      expect(pdfText.toLowerCase()).toContain("canon mensual neto de arrendamiento, excluyendo");
+      expect(pdfText).not.toContain("40/20/40");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed20 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-corretaje-propietarios-canon-neto-sin-administracion-v34-20"
+      );
+      expect(seed20).toBeDefined();
+      expect(seed20?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.20");
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.20.0");
     });
   });
 });

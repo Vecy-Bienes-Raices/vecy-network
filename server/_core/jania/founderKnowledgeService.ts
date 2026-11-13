@@ -842,6 +842,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 8 — Observabilidad en Vivo de Consumo API, Endpoint de Telemetría Protegido, Alertas Tempranas Anti-Spam a Eduardo, Simulador E2E en Campo (DM + Grupos) y Calibración Post-Campo (v34.19).",
     createdAt: "2026-11-13T22:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-corretaje-propietarios-canon-neto-sin-administracion-v34-20",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Comisión de Corretaje a Propietarios Directos: 3% de Ley en Venta y 1 Canon Neto Sin Administración en Arriendo — Doctrina Eduardo A. Rivera v34.20",
+    directive:
+      "Cuando un propietario directo consigne su inmueble en VECY BIENES RAÍCES: 1) Publicación y pauta son 100% gratuitas ($0 COP anticipados). 2) En VENTA la comisión por éxito es el 3% de ley sobre el valor final pactado. 3) En ARRIENDO la comisión por éxito es el primer canon de arrendamiento (1 mes de canon NETO), lógicamente SIN incluir el valor mensual de la administración. Si el propietario indica un valor mensual que incluye administración (ej: $3.800.000 con administración incluida y la administración cuesta $800.000 -> canon neto $3.000.000; o $4.000.000 menos $800.000 -> $3.200.000), JanIA debe preguntarle cuánto vale mensualmente la administración si aún no lo dijo, descontarla del valor total y liquidar nuestra comisión exclusivamente sobre el canon neto sin administración.",
+    rawText:
+      "Si, a propietarios si desean consignar sus inmuebles con nosotros, se les cobra lo de ley el 3% por venta y para arriendo un canon logicamente sin administracion; si el valor incluye administracion, se pregunta de cuanto es la administracion y se descuenta para cobrar unicamente el canon neto como comision.",
+    createdAt: "2026-11-13T22:20:00.000Z",
+    active: true
   }
 ];
 

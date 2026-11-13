@@ -531,8 +531,27 @@ export function parseContractGenerationData(
   const fechaEntrega = fechaEntMatch ? fechaEntMatch[1].trim() : undefined;
 
   // Administracion y comision
-  const adminMatch = raw.match(/administraci[oó]n\s*(?:de|:)?\s*\$?\s*([\d.,]+(?:\s*(?:mil|millones))?)/i);
+  const adminMatch = raw.match(/administraci[oó]n(?:\s+(?:mensual|del?\s+(?:conjunto|edificio)))?\s*(?:de|vale|cuesta|es\s+de|:|=)?\s*\$?\s*([\d.,]+(?:\s*(?:mil|millones))?)/i);
   const canonAdministracion = adminMatch ? `$${adminMatch[1].trim()} COP` : undefined;
+
+  // Si en contrato de corretaje o arriendo el total informado incluye administracion, calcular el canon neto sin administracion
+  let effectiveValorNegocioOCanon = valorNegocioOCanon;
+  const includesAdminInRental =
+    /\b(?:arriendo|arrendamiento|canon)\b/i.test(raw) &&
+    /(?:inclu[iy](?:e|endo)\s+(?:la\s+)?(?:administraci[oó]n|admon)|inclu[ií]d[oa]\s+(?:(?:el\s+valor\s+de\s+)?(?:la\s+)?)?(?:administraci[oó]n|admon)|con\s+(?:la\s+)?(?:administraci[oó]n|admon)\s+incluida|(?:administraci[oó]n|admon)\s+incluida)/i.test(
+      raw
+    );
+  const parseRoughCop = (val?: string): number | undefined => {
+    if (!val) return undefined;
+    const mMill = val.match(/(\d+(?:[.,]\d{1,2})?)\s*mill/i);
+    if (mMill) return Math.round(Number(mMill[1].replace(",", ".")) * 1_000_000);
+    const mMil = val.match(/(\d+(?:[.,]\d{1,2})?)\s*mil/i);
+    if (mMil) return Math.round(Number(mMil[1].replace(",", ".")) * 1_000);
+    const digits = Number(val.replace(/[^\d]/g, ""));
+    return Number.isFinite(digits) && digits >= 50_000 ? digits : undefined;
+  };
+  const totalRentalNum = parseRoughCop(valorNegocioOCanon);
+  const adminFeeNum = parseRoughCop(canonAdministracion);
 
   const comisionMatch = raw.match(
     /comisi[oó]n\s*(?:del|de|:)?\s*(\d{1,2}(?:[.,]\d)?\s*%|\d\s+c[aá]non(?:es)?|un\s+c[aá]non)/i
@@ -541,6 +560,13 @@ export function parseContractGenerationData(
 
   // Clausulas especiales (condicion suspensiva, entrega anticipada, cesion, etc.)
   const specialNotes: string[] = [];
+  if (includesAdminInRental && totalRentalNum && adminFeeNum && totalRentalNum > adminFeeNum) {
+    const netCanon = totalRentalNum - adminFeeNum;
+    effectiveValorNegocioOCanon = `${formatCopAmount(netCanon)} (canon neto sin administracion; total ${formatCopAmount(totalRentalNum)} - admon ${formatCopAmount(adminFeeNum)})`;
+    specialNotes.push(
+      `Liquidacion de honorarios en arriendo sobre canon neto sin administracion: ${formatCopAmount(totalRentalNum)} total menos ${formatCopAmount(adminFeeNum)} de administracion = ${formatCopAmount(netCanon)} netos.`
+    );
+  }
   if (/\b(?:entrega\s+anticipada|terminaci[oó]n\s+anticipada|sin\s+penalidad)\b/i.test(raw)) {
     specialNotes.push("Acuerdo expreso sobre entrega anticipada / terminacion sin penalidad adicional previo paz y salvo.");
   }
@@ -562,7 +588,7 @@ export function parseContractGenerationData(
     documentoDestinatario,
     direccionInmueble,
     ciudad,
-    valorNegocioOCanon,
+    valorNegocioOCanon: effectiveValorNegocioOCanon,
     matriculaInmobiliaria,
     chipCatastral,
     plazoMeses,
@@ -861,9 +887,9 @@ export function auditContractDraftText(
         hallazgo:
           "El borrador contempla cobros por publicacion o pauta previa antes del cierre de la operacion.",
         fundamentoLegal:
-          "Articulo 1341 del Codigo de Comercio y Doctrina VECY BIENES RAICES (comision exclusivamente a exito: 3% venta / 1 canon arriendo, $0 COP por publicacion).",
+          "Articulo 1341 del Codigo de Comercio y Doctrina VECY BIENES RAICES (comision exclusivamente a exito: 3% venta / 1 canon neto de arriendo sin incluir administracion, $0 COP por publicacion).",
         redaccionSugerida:
-          "'El corredor no cobrara suma alguna por publicacion o promocion previa; los honorarios (3% venta o 1 canon arriendo) se causan unicamente a exito al cerrarse el negocio.'"
+          "'El corredor no cobrara suma alguna por publicacion o promocion previa; los honorarios (3% venta o 1 canon neto de arriendo sin incluir administracion) se causan unicamente a exito al cerrarse el negocio.'"
       });
     }
     if (!/\b12\s+meses\b|\breserva\b/.test(norm)) {

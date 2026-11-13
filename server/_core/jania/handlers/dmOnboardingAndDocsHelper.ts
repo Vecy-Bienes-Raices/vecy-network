@@ -276,7 +276,7 @@ export async function buildSessionOnboardingDirectives(userId: string): Promise<
   if (identifiedRole === "agente_inmobiliario") {
     contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: AGENTE / INMOBILIARIA / CORREDOR. Adapta tu lenguaje al de alianza inmobiliaria colaborativa (40/20/40, cruces, captaciones, estudio de títulos y avalúos). PROHIBIDO volver a preguntarle su rol ni a qué se dedica.`;
   } else if (identifiedRole === "propietario_directo") {
-    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: PROPIETARIO DIRECTO. Acompáñalo bajo corretaje virtual VECY ($0 publicación/costos anticipados; 3% venta o 1 canon arriendo al cierre; línea directa +57 316 656 9719). PROHIBIDO ofrecerle 40/20/40 o llamarlo "colega". PROHIBIDO volver a preguntarle su rol.`;
+    contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: PROPIETARIO DIRECTO. Acompáñalo bajo corretaje virtual VECY ($0 publicación/costos anticipados; 3% de ley en venta o 1 canon neto de arriendo sin incluir administración al cierre; línea directa +57 316 656 9719). Si el arriendo incluye administración sin decir cuánto vale, pregúntale su valor mensual para descontarlo. PROHIBIDO ofrecerle 40/20/40 o llamarlo "colega". PROHIBIDO volver a preguntarle su rol.`;
   } else if (identifiedRole === "comprador_inversionista") {
     contextRoleDirective = `\n👤 ROL PERSISTIDO EN SESIÓN: COMPRADOR DIRECTO / INVERSIONISTA. Acompáñalo con búsqueda de opciones, ROI/Cap Rate, Estudio de Títulos CTL, Norma POT y simulador financiero a través de VECY (+57 316 656 9719). JAMÁS le ofrezcas esquema de comisión 40/20/40 ni le prometas contacto directo de propietarios o terceros agentes (toda gestión se canaliza por VECY). PROHIBIDO volver a preguntarle su rol.`;
   } else if (identifiedRole === "arrendatario") {
@@ -286,4 +286,181 @@ export async function buildSessionOnboardingDirectives(userId: string): Promise<
   }
 
   return { context402040Directive, contextOwnerDirective, contextRoleDirective, identifiedRole };
+}
+
+export interface OwnerRentalCommissionAnalysis {
+  hasAdminFeeContext: boolean;
+  includesAdminInTotal: boolean;
+  needsAdminAmount: boolean;
+  totalWithAdminCop?: number;
+  adminFeeCop?: number;
+  netCanonCop?: number;
+  whatsappReply?: string;
+}
+
+function formatCopNumber(value: number): string {
+  return `$${Math.round(value).toLocaleString("es-CO")}`;
+}
+
+/**
+ * Convierte expresiones monetarias colombianas ("$3.800.000", "3,8 millones", "800 mil") a pesos enteros COP.
+ */
+export function parseColombianCopAmount(snippet: string): number | undefined {
+  const clean = (snippet || "").trim();
+  if (!clean) return undefined;
+
+  const millonesMatch = clean.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:millones?|mill[oó]n|\bMM?\b)/i);
+  if (millonesMatch) {
+    const val = Number(millonesMatch[1].replace(",", "."));
+    if (Number.isFinite(val) && val > 0) return Math.round(val * 1_000_000);
+  }
+
+  const milMatch = clean.match(/(\d+(?:[.,]\d{1,2})?)\s*mil(?:\s+pesos)?\b/i);
+  if (milMatch) {
+    const val = Number(milMatch[1].replace(",", "."));
+    if (Number.isFinite(val) && val > 0) return Math.round(val * 1_000);
+  }
+
+  const groupedCopMatch = clean.match(/\$?\s*(\d{1,3}(?:[.,]\d{3}){1,3})\b/);
+  if (groupedCopMatch) {
+    const digits = Number(groupedCopMatch[1].replace(/[.,]/g, ""));
+    if (Number.isFinite(digits) && digits >= 50_000) return digits;
+  }
+
+  const plainDigitsMatch = clean.match(/\$?\s*(\d{5,11})\b/);
+  if (plainDigitsMatch) {
+    const digits = Number(plainDigitsMatch[1]);
+    if (Number.isFinite(digits) && digits >= 50_000) return digits;
+  }
+
+  return undefined;
+}
+
+/**
+ * Calcula y explica la comisión de corretaje para propietarios directos en arriendo:
+ * 1 canon mensual NETO sin administración (descontando la administración si el total la incluye,
+ * o preguntando su valor mensual si aún no se especificó).
+ */
+export function analyzeOwnerRentalCommissionFromText(
+  text: string,
+  options?: {
+    pendingTotalWithAdminCop?: number;
+    greetingPrefix?: string;
+  }
+): OwnerRentalCommissionAnalysis {
+  const raw = String(text || "").trim();
+  const greetingPrefix = options?.greetingPrefix || "";
+  const pendingTotal =
+    typeof options?.pendingTotalWithAdminCop === "number" && options.pendingTotalWithAdminCop > 0
+      ? options.pendingTotalWithAdminCop
+      : undefined;
+
+  const adminFeeMatch = raw.match(
+    /(?:valor(?:\s+mensual)?\s+(?:de\s+(?:la\s+)?)?|cuota\s+(?:de\s+)?)?(?:administraci[oó]n|admon)(?:\s+(?:mensual|del?\s+(?:conjunto|edificio)))?(?:\s+(?:es\s+de|son|vale|cuesta|ser[ií]a\s+de|de|por|:|=))?\s*(\$?\s*\d{1,3}(?:[.,]\d{3}){1,3}|\$?\s*\d+(?:[.,]\d{1,2})?\s*(?:millones?|mill[oó]n|mil|\bMM?\b)|\$?\s*\d{5,11})/i
+  );
+  let adminFeeCop = adminFeeMatch ? parseColombianCopAmount(adminFeeMatch[1]) : undefined;
+
+  const includesAdminInTotal =
+    /(?:inclu[iy](?:e|endo)\s+(?:la\s+)?(?:administraci[oó]n|admon)|inclu[ií]d[oa]\s+(?:(?:el\s+valor\s+de\s+)?(?:la\s+)?)?(?:administraci[oó]n|admon)|con\s+(?:la\s+)?(?:administraci[oó]n|admon)(?:\s+incluida)?|(?:administraci[oó]n|admon)\s+incluida)/i.test(
+      raw
+    );
+  const explicitExcludedAdmin =
+    /\bsin\s+(?:la\s+)?(?:administraci[oó]n|admon)\b|\bm[aá]s\s+(?:\$?\s*[\d.,]+(?:\s*(?:mil|millones?))?\s*(?:de\s+)?)?(?:administraci[oó]n|admon)\b/i.test(
+      raw
+    );
+
+  // Si venimos de una pregunta previa del valor de administración y el propietario responde solo la cifra
+  if (!adminFeeCop && pendingTotal) {
+    const standalone = parseColombianCopAmount(raw);
+    if (standalone && standalone < pendingTotal) {
+      adminFeeCop = standalone;
+    }
+  }
+
+  // Extraer valor total/canon del arriendo (evitando confundirlo con el fragmento de administración)
+  const textWithoutAdminClause = adminFeeMatch
+    ? `${raw.slice(0, adminFeeMatch.index)} ${raw.slice((adminFeeMatch.index || 0) + adminFeeMatch[0].length)}`
+    : raw;
+
+  const rentAnchorMatch = textWithoutAdminClause.match(
+    /(?:canon(?:\s+total)?|arriendo|arrendamiento|arrendar|alquiler|renta|valor\s+total)(?:\s+(?:mensual|total|es\s+de|vale|cuesta|por|de|en|:|=)){0,3}\s*(\$?\s*\d{1,3}(?:[.,]\d{3}){1,3}|\$?\s*\d+(?:[.,]\d{1,2})?\s*(?:millones?|mill[oó]n|mil|\bMM?\b)|\$?\s*\d{5,11})/i
+  );
+  const parsedRent =
+    (rentAnchorMatch ? parseColombianCopAmount(rentAnchorMatch[1]) : undefined) ||
+    parseColombianCopAmount(textWithoutAdminClause);
+
+  // Caso 1: Seguimiento en segundo turno tras preguntar por la administración
+  if (pendingTotal && adminFeeCop && pendingTotal > adminFeeCop) {
+    const netCanonCop = pendingTotal - adminFeeCop;
+    return {
+      hasAdminFeeContext: true,
+      includesAdminInTotal: true,
+      needsAdminAmount: false,
+      totalWithAdminCop: pendingTotal,
+      adminFeeCop,
+      netCanonCop,
+      whatsappReply:
+        `${greetingPrefix}¡Perfecto! Hacemos la cuenta al centavo y con total claridad: 🧮✨\n\n` +
+        `• 💰 *Valor total informado (con administración incluida):* ${formatCopNumber(pendingTotal)} COP/mes\n` +
+        `• 🏢 *Menos cuota mensual de administración:* -${formatCopNumber(adminFeeCop)} COP\n` +
+        `• ✅ *Canon neto de arrendamiento (base real de comisión):* **${formatCopNumber(netCanonCop)} COP**\n\n` +
+        `Por pura lógica y transparencia en **VECY BIENES RAÍCES**, la publicación y pauta es **100% GRATUITA ($0 COP anticipados)** y en **ARRIENDO** nuestra comisión por éxito es únicamente de **un (1) canon neto sin administración**, es decir **${formatCopNumber(netCanonCop)} COP** pagaderos al cerrarse efectivamente el contrato de arrendamiento.\n\n` +
+        `¿Quieres que registremos de una vez tu inmueble con este canon para buscar al inquilino ideal y enviarte el contrato de corretaje? 🤝🏡`
+    };
+  }
+
+  // Caso 2: Mismo turno — canon total con administración incluida + valor de administración explícito
+  if (includesAdminInTotal && !explicitExcludedAdmin && parsedRent && adminFeeCop && parsedRent > adminFeeCop) {
+    const netCanonCop = parsedRent - adminFeeCop;
+    return {
+      hasAdminFeeContext: true,
+      includesAdminInTotal: true,
+      needsAdminAmount: false,
+      totalWithAdminCop: parsedRent,
+      adminFeeCop,
+      netCanonCop,
+      whatsappReply:
+        `${greetingPrefix}En **VECY BIENES RAÍCES** la publicación y pauta de tu inmueble es **100% GRATUITA ($0 COP anticipados)** y únicamente cobramos comisión por éxito al cerrar el negocio:\n\n` +
+        `• 🏷️ **Si fuera VENTA:** El **3%** de ley sobre el valor final de venta pactado.\n` +
+        `• 🔑 **En ARRIENDO (tu caso):** Se cobra el **primer canon de arrendamiento (1 mes de canon neto, lógicamente sin incluir administración)**:\n` +
+        `  - Valor total con administración incluida: ${formatCopNumber(parsedRent)} COP\n` +
+        `  - Menos administración mensual: -${formatCopNumber(adminFeeCop)} COP\n` +
+        `  - ✅ *Comisión exacta por éxito (canon neto):* **${formatCopNumber(netCanonCop)} COP**\n\n` +
+        `¿Deseas que radicemos tu inmueble de una vez y te envíe tu contrato de corretaje virtual? 🤝✨`
+    };
+  }
+
+  // Caso 3: Mismo turno — dice "administración incluida" pero NO dijo cuánto vale la administración
+  if (includesAdminInTotal && !explicitExcludedAdmin && parsedRent && !adminFeeCop) {
+    return {
+      hasAdminFeeContext: true,
+      includesAdminInTotal: true,
+      needsAdminAmount: true,
+      totalWithAdminCop: parsedRent,
+      whatsappReply:
+        `${greetingPrefix}En **VECY BIENES RAÍCES** la publicación y pauta es **100% GRATUITA ($0 COP anticipados)** y únicamente cobramos comisión por éxito al cerrar el negocio: **3% en venta** o el **primer canon de arrendamiento (1 mes de canon neto, sin incluir administración)**.\n\n` +
+        `Como me indicas que los **${formatCopNumber(parsedRent)} COP** ya incluyen la cuota de administración, **por pura lógica la administración no hace parte de nuestra comisión**: la descontamos para liquidar únicamente sobre el canon puro de arriendo.\n\n` +
+        `👉 Cuéntame, por favor: **¿de cuánto es el valor mensual de la administración?** Así te calculo de inmediato el canon neto y el valor exacto de la comisión. 🤝🏢`
+    };
+  }
+
+  // Caso 4: Especificó canon neto aparte + administración aparte ("sin administración" / "más $800.000 de admon")
+  if (explicitExcludedAdmin && parsedRent) {
+    return {
+      hasAdminFeeContext: Boolean(adminFeeCop),
+      includesAdminInTotal: false,
+      needsAdminAmount: false,
+      adminFeeCop,
+      netCanonCop: parsedRent,
+      whatsappReply:
+        `${greetingPrefix}En **VECY BIENES RAÍCES** la publicación y pauta es **100% GRATUITA ($0 COP anticipados)** y en **ARRIENDO** nuestra comisión por éxito es de **un (1) canon neto mensual sin incluir administración**: **${formatCopNumber(parsedRent)} COP**${adminFeeCop ? ` (la administración de ${formatCopNumber(adminFeeCop)} COP no entra en la comisión)` : ""}.\n\n` +
+        `¿Quieres que registremos tu inmueble de una vez? 🤝✨`
+    };
+  }
+
+  return {
+    hasAdminFeeContext: Boolean(adminFeeCop || includesAdminInTotal),
+    includesAdminInTotal,
+    needsAdminAmount: false
+  };
 }

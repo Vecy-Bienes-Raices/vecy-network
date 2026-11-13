@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.20 — Noviembre 2026
+- **Doctrina Comisión Propietarios Directos (3% Venta / 1 Canon Neto Sin Administración):**
+  - `server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts` y `dmHandler.ts`: nuevos helpers `parseColombianCopAmount` y `analyzeOwnerRentalCommissionFromText` con seguimiento multi-turno (`pendingAdminDeductionTotal`, `canonNetoSinAdmin`, `adminFeeCop` en `userPerpetualSession.keyFacts`) para preguntar el valor mensual de la administración cuando venga incluida sin monto y descontarla automáticamente al liquidar la comisión de 1 canon en arriendo; corrección de falso positivo en `isAiAgentInquiryForBusiness`.
+  - `server/_core/legalContractService.ts`, `legalDocumentPdfService.ts`, `emailContractService.ts`, `consultingHandler.ts`, `prompts/base.md` y `jania/prompts.ts`: estandarización de honorarios de corretaje (`3%` en venta; `1 canon neto sin administración` en arriendo) y deducción automática en `contrato_corretaje` PDF.
+  - Gobernanza: semilla `seed-corretaje-propietarios-canon-neto-sin-administracion-v34-20` en `founderKnowledgeService.ts`, Suite 206 en `regression.test.ts` (`NODE_ENV=test npm test`: 6/6 archivos, 725/725 tests en verde; `npm run check` y `npm run build` sin errores) y bump `v34.20` (`34.20.0`).
+
 ### 🔖 v34.19 — Noviembre 2026
 
 #### [v34.19.0] — 2026-11-13: Punto 8 — Observabilidad en Vivo de Consumo API, Endpoint de Telemetría Protegido, Alertas Tempranas Anti-Spam y Calibración Post-Campo (Doctrina Eduardo A. Rivera)

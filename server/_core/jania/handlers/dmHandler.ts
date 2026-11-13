@@ -23,7 +23,10 @@ import {
   checkAlreadyGreeted,
   markUserGreetedToday
 } from "../sessionManager";
-import { buildSessionOnboardingDirectives as buildDmSessionDirectives } from "./dmOnboardingAndDocsHelper";
+import {
+  buildSessionOnboardingDirectives as buildDmSessionDirectives,
+  analyzeOwnerRentalCommissionFromText
+} from "./dmOnboardingAndDocsHelper";
 import { fetchWebUrlContent } from "../../scraper";
 import { getDb } from "../../../db";
 import { properties, solicitudes } from "../../../../drizzle/schema";
@@ -2519,7 +2522,8 @@ export async function processPrivateDmConversationalMessage(
     // y despacha EN TIEMPO REAL el recado y datos a Eduardo para cerrar el proyecto comercial.
     const isAiAgentInquiryForBusiness =
       /\b(?:agente\s+(?:de\s+)?ia|ia\s+como\s+(?:t[uú]|jania)|tener\s+(?:una?\s+)?(?:agente\s+)?ia|una?\s+jania\s+para\s+mi|asistente\s+(?:virtual|ia)\s+para\s+mi\s+(?:inmobiliaria|empresa|negocio)|implementar\s+(?:un\s+bot|una\s+ia|un\s+agente)|contratar\s+(?:un\s+bot|una\s+ia|este\s+servicio\s+de\s+ia)|desarrollar\s+(?:un\s+bot|una\s+ia)|cu[aá]nto\s+vale\s+(?:un\s+bot|una\s+ia|un\s+agente\s+como\s+t[uú])|ofrecer\s+mis\s+servicios\s+con\s+(?:un\s+bot|una\s+ia)|asista\s+a\s+(?:m[ií]|mis\s+clientes)|un\s+bot\s+como\s+t[uú]|una\s+ia\s+que\s+me\s+asista)\b/i.test(cleanLower) ||
-      (/\b(?:quiero|necesito|deseo|c[oó]mo\s+puedo\s+tener|me\s+interesar[ií]a\s+tener)\b/i.test(cleanLower) && /\b(?:agente\s+(?:de\s+)?ia|ia|jania|asistente\s+ia|bot\s+inmobiliario)\b/i.test(cleanLower));
+      (/\b(?:quiero|necesito|deseo|c[oó]mo\s+puedo\s+tener|me\s+interesar[ií]a\s+tener)\s+(?:un|una|mi(?:\s+propia)?)\s+(?:agente\s+(?:de\s+)?ia|ia|jania|asistente\s+(?:virtual|ia)|bot\s+(?:de\s+ia|inmobiliario))\b/i.test(cleanLower) ||
+        (/\b(?:quiero|necesito|deseo)\b/i.test(cleanLower) && /\b(?:agente\s+(?:de\s+)?ia|asistente\s+ia|bot\s+inmobiliario)\b/i.test(cleanLower)));
 
     if (isAiAgentInquiryForBusiness) {
       await dispatchMessageRecadoToEduardo(userId, effectiveRawName || displayName || "Lead Interesado en Agente IA", `[INTERÉS EN AGENTE IA PARA EMPRESA]: ${clean}`);
@@ -2582,7 +2586,7 @@ export async function processPrivateDmConversationalMessage(
         `6️⃣ **Trámites Catastrales y Notariales 🏛️:** Consulta de facturas oficiales de predial en Bogotá (CHIP), liquidación de gastos notariales 50/50 y paz y salvos del IDU.\n\n` +
         `💰 **¿CUÁL ES EL COSTO? (Transparencia Total para Todo Público):**\n` +
         `• 🤝 **Para Agentes Inmobiliarios y Colegas:** ¡El servicio es **100% GRATIS ($0 COP)**! No cobramos suscripción ni membresías por usar mis herramientas. Operamos bajo el modelo colaborativo 40/20/40 únicamente cuando cerramos un negocio juntos.\n` +
-        `• 🏡 **Para Propietarios Directos:** Publicar y pautar tu inmueble en nuestra red es **totalmente GRATUITO ($0 COP anticipados)**. Solo cobramos comisión por éxito ante el cierre efectivo del negocio: **3% en venta** o el **primer canon en arriendo**.\n` +
+        `• 🏡 **Para Propietarios Directos:** Publicar y pautar tu inmueble en nuestra red es **totalmente GRATUITO ($0 COP anticipados)**. Solo cobramos comisión por éxito ante el cierre efectivo del negocio: **3% en venta** o el **primer canon en arriendo** (neto, **sin incluir la cuota de administración**).\n` +
         `• 🔑 **Para Compradores, Inversionistas y Arrendatarios Directos:** Todas mis herramientas (búsqueda, estudio de títulos CTL, norma POT, Cap Rate/hipotecario, predial e IDU) son **100% GRATUITAS ($0 COP)** con acompañamiento directo de VECY (+57 316 656 9719).\n` +
         `• 🤖 **Si deseas una Agente IA como JanIA para tu propia empresa:** JanIA fue desarrollada a la medida por el **Ing. Eduardo A. Rivera** (+57 316 656 9719). Podemos conectarte con él para cotizar la implementación personalizada de una IA que asista a tus clientes y ofrezca tus servicios.\n\n` +
         `${!persistedBusinessRole ? "Cuéntame en calidad de qué nos escribes: ¿eres agente/inmobiliaria, propietario directo, comprador/inversionista o buscas soluciones de IA? ¡Dime qué necesitas y te oriento al instante! 🤝🚀" : "¡Dime qué propiedad, estudio o trámite necesitas ahora mismo y te oriento al instante! 🤝🚀"}`;
@@ -2763,15 +2767,38 @@ export async function processPrivateDmConversationalMessage(
       Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) ||
       /\b(?:publicar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|pautar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|consignar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|cobran\s+por\s+(?:publicar|pautar|consignar|conseguir))\b/i.test(cleanLower);
 
+    // 🏷️ SEGUIMIENTO DIRECTO DE DESCUENTO DE ADMINISTRACIÓN EN CANON DE ARRIENDO (Doctrina Eduardo A. Rivera v34.20):
+    // Si en el turno anterior JanIA preguntó cuánto cuesta mensualmente la administración porque el canon incluía administración,
+    // aquí recibimos la respuesta ("$800.000", "la administración vale 800 mil", etc.) y liquidamos el canon neto al centavo.
+    const pendingTotalWithAdmin = Number(userPerpetualSession.keyFacts?.pendingAdminDeductionTotal || 0);
+    if (pendingTotalWithAdmin > 0) {
+      const adminFollowup = analyzeOwnerRentalCommissionFromText(clean, {
+        pendingTotalWithAdminCop: pendingTotalWithAdmin,
+        greetingPrefix: ""
+      });
+      if (adminFollowup.netCanonCop && adminFollowup.whatsappReply) {
+        userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+        userPerpetualSession.keyFacts.pendingAdminDeductionTotal = undefined;
+        userPerpetualSession.keyFacts.canonNetoSinAdmin = adminFollowup.netCanonCop;
+        userPerpetualSession.keyFacts.adminFeeCop = adminFollowup.adminFeeCop;
+        await saveUserPerpetualSession(userPerpetualSession);
+
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", adminFollowup.whatsappReply);
+        markUserGreetedToday(userId);
+        return adminFollowup.whatsappReply;
+      }
+    }
+
     // 🏷️ CONSULTAS SOBRE COSTOS, VALORES, PAUTA Y COMISIÓN DE PROPIETARIOS DIRECTOS (Doctrina Eduardo A. Rivera):
     // Si el dueño o interesado pregunta cuánto cobran, cuánto cuesta pautar, publicar o consignar su inmueble, o cuál es la comisión:
     // JanIA responde de inmediato con las tarifas exactas:
     // 1) Publicación y pauta: TOTALMENTE GRATIS ($0 COP). Cero cobros anticipados.
-    // 2) Comisión por éxito al cerrar el negocio: 3% en venta / Primer canon en arriendo.
+    // 2) Comisión por éxito al cerrar el negocio: 3% en venta / Primer canon neto en arriendo (sin incluir administración).
     const isCommissionOrCostInquiry =
       /\b(?:cu[aá]nto\s+(?:cobran|vale|cuesta|ser[íi]a|es|piden)|qu[eé]\s+comisi[oó]n|cu[aá]l\s+es\s+la\s+comisi[oó]n|porcentaje|costo|tarifa|comisi[oó]n|cobran\s+por\s+(?:publicar|conseguir|pautar|consignar|vender|arrendar)|valor\s+por\s+conseguir|pago\s+por\s+conseguir)\b/i.test(cleanLower) ||
       (/\bcu[aá]nto\b/i.test(cleanLower) && /\b(?:publicar|pautar|consignar|comisi[oó]n|conseguir(?:\s+el)?\s+cliente|cliente)\b/i.test(cleanLower)) ||
-      (Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n)\b/i.test(cleanLower));
+      (Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n|administraci[oó]n|admon)\b/i.test(cleanLower));
 
     if (
       isCommissionOrCostInquiry &&
@@ -2782,7 +2809,7 @@ export async function processPrivateDmConversationalMessage(
       !isPropiedadHorizontalRequest(clean) &&
       !isExplicitNotarialLiquidationRequest(clean, userId) &&
       (isOwnerOrConsignmentInquiry ||
-        /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
+        /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote|canon|administraci[oó]n|admon)\b/i.test(
           cleanLower
         ))
     ) {
@@ -2790,20 +2817,46 @@ export async function processPrivateDmConversationalMessage(
       userPerpetualSession.keyFacts.es_propietario_directo = true;
       userPerpetualSession.keyFacts.rol_identificado = "propietario_directo";
       userPerpetualSession.keyFacts.owner_commission_explained = true;
-      await saveUserPerpetualSession(userPerpetualSession);
 
       const greetingPrefix = isOngoingChat
         ? ""
         : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 `;
+
+      const adminCalc = analyzeOwnerRentalCommissionFromText(clean, {
+        pendingTotalWithAdminCop: pendingTotalWithAdmin > 0 ? pendingTotalWithAdmin : undefined,
+        greetingPrefix
+      });
+
+      if (adminCalc.needsAdminAmount && adminCalc.totalWithAdminCop && adminCalc.whatsappReply) {
+        userPerpetualSession.keyFacts.pendingAdminDeductionTotal = adminCalc.totalWithAdminCop;
+        await saveUserPerpetualSession(userPerpetualSession);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", adminCalc.whatsappReply);
+        markUserGreetedToday(userId);
+        return adminCalc.whatsappReply;
+      }
+
+      if (adminCalc.netCanonCop && adminCalc.whatsappReply) {
+        userPerpetualSession.keyFacts.pendingAdminDeductionTotal = undefined;
+        userPerpetualSession.keyFacts.canonNetoSinAdmin = adminCalc.netCanonCop;
+        if (adminCalc.adminFeeCop) userPerpetualSession.keyFacts.adminFeeCop = adminCalc.adminFeeCop;
+        await saveUserPerpetualSession(userPerpetualSession);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", adminCalc.whatsappReply);
+        markUserGreetedToday(userId);
+        return adminCalc.whatsappReply;
+      }
+
+      await saveUserPerpetualSession(userPerpetualSession);
 
       const commissionReply =
         `${greetingPrefix}En **VECY BIENES RAÍCES** nuestra política con los propietarios es 100% clara, transparente y sin cobros ocultos:\n\n` +
         `1️⃣ **Publicación y pauta: TOTALMENTE GRATUITA ($0 COP)**\n` +
         `No te cobramos absolutamente nada por registrar tu inmueble, elaborar la ficha técnica, ni por publicarlo y pautarlo en nuestro portal oficial (https://vecy-bienes-raices.vercel.app/) ni ante nuestra red de clientes y aliados. Cero cobros anticipados.\n\n` +
         `2️⃣ **Comisión de corretaje (únicamente por ÉXITO ante el cierre efectivo del negocio):**\n` +
-        `• 🏷️ **Si es para VENTA:** La comisión es del **3%** sobre el valor total de venta pactado.\n` +
-        `• 🔑 **Si es para ARRIENDO:** La comisión es el **primer canon de arrendamiento** (un mes de canon).\n\n` +
-        `¿Tu inmueble es para venta o para arriendo? ¿Y cuál es el precio de venta o canon estimado que estás pidiendo para ayudarte a estructurarlo y registrarlo de una vez? 🤝✨`;
+        `• 🏷️ **Si es para VENTA:** La comisión es del **3%** de ley sobre el valor total de venta pactado.\n` +
+        `• 🔑 **Si es para ARRIENDO:** La comisión es el **primer canon de arrendamiento** (un mes de canon neto, **sin incluir el valor de la administración**; si el valor mensual incluye administración, la descontamos para liquidar únicamente sobre el canon puro de arriendo).\n\n` +
+        `¿Tu inmueble es para venta o para arriendo? ¿Y cuál es el precio de venta o canon estimado (y si incluye administración, cuánto cuesta) para ayudarte a estructurarlo y registrarlo de una vez? 🤝✨`;
 
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", commissionReply);
@@ -2836,7 +2889,7 @@ export async function processPrivateDmConversationalMessage(
           : `¡Qué gusto saludarte${displayName ? `, ${displayName}` : ""}! `;
 
         const ownerReply =
-          `${greetingPrefix}En VECY BIENES RAÍCES gestionamos tu inmueble bajo nuestro modelo de **Corretaje Virtual**, conectándolo con nuestra red colaborativa y portales aliados con **publicación 100% GRATUITA ($0 COP anticipados)**. Nuestra comisión de corretaje aplica únicamente por éxito al cerrar efectivamente el negocio: **3% en venta** o **el primer canon en arriendo**.\n\n` +
+          `${greetingPrefix}En VECY BIENES RAÍCES gestionamos tu inmueble bajo nuestro modelo de **Corretaje Virtual**, conectándolo con nuestra red colaborativa y portales aliados con **publicación 100% GRATUITA ($0 COP anticipados)**. Nuestra comisión de corretaje aplica únicamente por éxito al cerrar efectivamente el negocio: **3% en venta** o **el primer canon en arriendo** (1 mes de canon neto, **sin incluir la cuota de administración**).\n\n` +
           `Para avanzar con el registro:\n` +
           `1. ¿Aceptas nuestros **Términos y Condiciones de Corretaje Virtual**?\n` +
           `2. Por favor compárteme tu **correo electrónico** para realizar el envío formal del contrato de corretaje virtual.\n\n` +
@@ -2849,7 +2902,7 @@ export async function processPrivateDmConversationalMessage(
         return ownerReply;
       } else {
         contextOwnerDirective = `\n[SISTEMA - REGLAS DE ONBOARDING - PROPIETARIO DIRECTO (VENTA/ARRIENDO): El interlocutor es propietario directo de un inmueble en venta o arriendo. Aplica la DOCTRINA EDUARDO A. RIVERA:
-1. COMISIONES Y TARIFAS CLARAS: La publicación y pauta de su inmueble es 100% GRATUITA ($0 COP anticipados). Cero costos ocultos. La comisión de corretaje se cobra ÚNICAMENTE ante un eventual cierre comercial exitoso: en VENTA se cobra el 3% sobre el valor final de venta; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon).
+1. COMISIONES Y TARIFAS CLARAS: La publicación y pauta de su inmueble es 100% GRATUITA ($0 COP anticipados). Cero costos ocultos. La comisión de corretaje se cobra ÚNICAMENTE ante un eventual cierre comercial exitoso: en VENTA se cobra el 3% de ley sobre el valor final de venta; en ARRIENDO se cobra el primer canon de arrendamiento (1 mes de canon neto, lógicamente SIN incluir el valor de la administración; si el canon incluye administración sin indicar cuánto vale, pregúntale el valor mensual de la administración para descontarla y cobrar solo sobre el canon neto).
 2. CERO EVASIVAS NI SALUDOS REPETITIVOS: Si pregunta cuánto cobran o cuál es la comisión, responde directamente estas tarifas sin rodeos. En conversaciones activas no saludes repetitivamente.
 3. Exigir la aceptación de los Términos y Condiciones de corretaje virtual de VECY si aún no los ha aceptado.
 4. Solicitar su correo electrónico para el envío formal del contrato de corretaje virtual si aún no lo ha provisto.
@@ -3402,7 +3455,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `       Ante un requerimiento o búsqueda inmobiliaria que carezca de cifras de presupuesto numéricas, alcobas exactas o especificaciones indispensables (ej. "tengo cliente buscando apartamento en X, conjunto grande, cuenta con recursos"): QUEDA TERMINANTEMENTE PROHIBIDO responder diciendo "Registraré de inmediato en el motor..." o actuar como un bot mediocre que asiente sin indagar. En su lugar, JanIA DEBE desplegar la Entrevista Minuciosa de Perfilamiento Inmobiliario: saluda con calidez por su nombre, valora la oportunidad y la zona, aterriza al agente con criterio profesional haciéndole ver que para cerrar negocios y encontrar el inmueble perfecto sin hacer perder tiempo al comprador en visitas infructuosas se debe perfilar con total rigor, y formula las preguntas correspondientes: presupuesto en COP, recursos propios vs crédito aprobado y banco, valor mensual de administración, alcobas exactas (1=1, 2=2), baños, parqueaderos independientes/lineales, depósito, piso, exterior/interior con sol, cocina (abierta/isla/barra americana vs cerrada clásica), balcón/chimenea, amenidades indispensables del conjunto, y sectores aledaños.\\n` +
       `       No te conformes con datos escuetos o superficiales. Entre más características tenga la ficha, más exacto y veloz será el MATCH. Indaga con astucia, naturalidad y calidez mediante ejemplos:\\n` +
       `       • DEDUCCIÓN AUTÓNOMA DE ROL (OFERTA VS DEMANDA - CERO REPREGUNTAS OBVIAS): Si durante la conversación el usuario ya usó palabras como 'busco', 'necesito', 'tengo un cliente', 'vendo', 'tengo este apartamento': JanIA deduce el tipo de operación de inmediato con astucia y jamás pregunta '¿Es una búsqueda o un inmueble?' como un bot rígido; se adelanta y lo enuncia con autoridad ('Veo que tienes este requerimiento de búsqueda activo...' o 'Veo que tienes este inmueble en oferta...'). JAMÁS asumas ni digas que está buscando 'para sí mismo' ni lo rotules de 'comprador directo'.\\n` +
-      `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En VECY Network atendemos con calidez a todo el público por igual (agentes inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios). Queda TERMINANTEMENTE PROHIBIDO rotular sin confirmación a un usuario como 'colega inmobiliario', 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario ya tenga su rol confirmado en sesión (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, PROHIBIDO volver a preguntar` : "rol pendiente por confirmar"}) o lo declare expresamente ('soy comprador directo', 'soy propietario directo', 'soy agente/corredor'), JanIA pregunta con elegancia y naturalidad en calidad de qué escribe (Agente/Inmobiliaria, Propietario directo o Comprador/Inversionista/Arrendatario). Si es colega, su cliente y su 40% están 100% protegidos; si es propietario, aplica corretaje virtual ($0 pauta, 3% venta / 1 canon arriendo); si es comprador/inversionista, acompañamiento directo VECY (+57 316 656 9719) SIN ofrecer 40/20/40.\\n` +
+      `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En VECY Network atendemos con calidez a todo el público por igual (agentes inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios). Queda TERMINANTEMENTE PROHIBIDO rotular sin confirmación a un usuario como 'colega inmobiliario', 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario ya tenga su rol confirmado en sesión (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, PROHIBIDO volver a preguntar` : "rol pendiente por confirmar"}) o lo declare expresamente ('soy comprador directo', 'soy propietario directo', 'soy agente/corredor'), JanIA pregunta con elegancia y naturalidad en calidad de qué escribe (Agente/Inmobiliaria, Propietario directo o Comprador/Inversionista/Arrendatario). Si es colega, su cliente y su 40% están 100% protegidos; si es propietario, aplica corretaje virtual ($0 pauta, 3% de ley en venta / 1 canon neto en arriendo sin incluir administración — preguntando cuánto vale la administración si dice incluirla); si es comprador/inversionista, acompañamiento directo VECY (+57 316 656 9719) SIN ofrecer 40/20/40.\\n` +
       `       • DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA): SÍ van a ser contactados, pero el contacto proviene ÚNICA Y EXCLUSIVAMENTE DE NOSOTROS DIRECTAMENTE (Eduardo Rivera o Jani Alves de VECY al +57 316 656 9719). ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO! Si busca inmueble, JAMÁS lo contacta un propietario directo (gran mentira); si publica inmueble, JAMÁS lo contacta un comprador o inversionista directo. Somos nosotros (Eduardo o Jani) quienes hacemos la conexión, y si VECY capta un propietario o comprador directo, también somos nosotros quienes contactamos al usuario para coordinar la visita y formalizar el cierre garantizando el 40/20/40.\\n` +
       `       • ¿Exterior o interior? ¿Nivel de iluminación y sol (mañana o tarde) o es indiferente?\\n` +
       `       • ¿Cocina abierta (tipo americano), cerrada o tradicional?\\n` +
