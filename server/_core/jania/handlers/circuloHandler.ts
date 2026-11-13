@@ -26,6 +26,7 @@ import {
 } from "../../notarialExpenseService";
 import { analyzeCtlFromWhatsAppInput, hasCtlTextMarkers, isExplicitCtlStudyRequest } from "../../ctlTitleStudyService";
 import { analyzePotUrbanNormFromWhatsAppInput, isPotUrbanNormRequest } from "../../potUrbanNormService";
+import { analyzeFinancialAndTaxFromWhatsAppInput, isFinancialOrTaxSimulationRequest } from "../../financialAndTaxRealEstateService";
 
 
 
@@ -145,6 +146,35 @@ export async function processCirculoMessage(
           classification: "CONSULTA_GENERAL",
           response: potCirculoCheck.responseText,
           reactionEmoji: potCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+
+    // 💳 INTERCEPTOR DIRECTO 0.7: SIMULADOR HIPOTECARIO, LEASING, CAP RATE / ROI Y PRE-LIQUIDACIÓN TRIBUTARIA + PDF MEMBRETADO
+    if (isFinancialOrTaxSimulationRequest(text)) {
+      const finCirculoCheck = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text,
+        requesterName: firstName || undefined,
+        generatePdf: true
+      });
+      if (finCirculoCheck.isFinancialTaxRequest && finCirculoCheck.report) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(finCirculoCheck.responseText),
+          reactionEmoji: finCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: finCirculoCheck.pdfBuffer,
+          fileName: finCirculoCheck.pdfFileName
+        };
+      }
+      if (finCirculoCheck.needsDataGuidance && finCirculoCheck.responseText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finCirculoCheck.responseText,
+          reactionEmoji: finCirculoCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
         };

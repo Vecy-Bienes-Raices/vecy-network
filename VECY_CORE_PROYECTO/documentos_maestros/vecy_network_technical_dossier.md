@@ -330,6 +330,17 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.15 — Noviembre 2026
+
+#### [v34.15.0] — 2026-11-13: Punto 4 — Skill 4: Simulador Hipotecario, Leasing Habitacional, Cap Rate / ROI y Pre-liquidación Tributaria Inmobiliaria + PDF Membretado (Doctrina Eduardo A. Rivera)
+- **Problema / Diagnóstico Identificado**:
+  - JanIA requería un motor financiero y tributario determinístico a `$0 COP` con normativa colombiana vigente para simular Crédito Hipotecario vs. Leasing Habitacional (Pesos/UVR y Ley 546/1999), evaluar Rentabilidad de Inversión (`Cap Rate` bruto/neto, `Cash-on-Cash`, `Yield` mensual, punto de equilibrio y renta tradicional vs corta) y pre-liquidar tributos de enajenación (Retención 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T., exención Art. 311-1 E.T. 5.000 UVT e Impuesto de Timbre), sin interferir con `notarialExpenseService.ts`, `ctlTitleStudyService.ts`, `potUrbanNormService.ts`, `iduValorizacionService.ts`, `predialService.ts`, `valuation.ts` ni capturar preguntas conceptuales pasivas o mensajes de agradecimiento.
+- **Solución Quirúrgica Implementada**:
+  1. **`server/_core/financialAndTaxRealEstateService.ts`**: Calculadoras determinísticas (`simulateMortgageVsLeasing`, `evaluateInvestmentAndYield`, `calculateRealEstateTaxPreliquidation`, `buildFinancialAndTaxReport`, `analyzeFinancialAndTaxFromWhatsAppInput`) y discriminador estricto (`isConceptualFinancialOrTaxQuestion`, `parseFinancialAndTaxQuery`, `isFinancialOrTaxSimulationRequest`) integrado con `taxEngine.ts`.
+  2. **`server/_core/jania/legalDocumentPdfService.ts`**: Tipo `"ficha_financiera_tributaria"` y `generateFinancialAndTaxPdf` con diseño corporativo Gold Edition y QR de trazabilidad VECY.
+  3. **Canales DM y Grupos**: Integrado en `dmHandler.ts` (`simular_financiero_inversion_y_tributos`, pre-interceptor y exclusión en `isCommissionOrCostInquiry`), `consultingHandler.ts` (Interceptor 0.7 y fallback `catch`), `circuloHandler.ts`, `whatsapp-match.ts`, `predialService.ts`, `notarialExpenseService.ts` y `politenessService.ts`, con CTA comercial `+57 316 656 9719` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  4. **Gobernanza y Pruebas**: Semilla `seed-simulador-hipotecario-leasing-caprate-tributario-v34-15` en `founderKnowledgeService.ts`, Suite 201 (5/5 tests) en `regression.test.ts` y versión `v34.15` (`34.15.0`) en `shared/const.ts` y `package.json`.
+
 ### 🔖 v34.04 — Noviembre 2026
 
 #### [v34.04.0] — 2026-11-08: Despacho Automático y Concurrente de Dirección Física 24 Horas Antes de la Cita por WhatsApp y Correo Electrónico (Doctrina Eduardo A. Rivera)

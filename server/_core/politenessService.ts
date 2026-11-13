@@ -331,6 +331,9 @@ export function isUserSatisfactionOrFeedbackReply(
     /\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b.{0,45}\b(?:aaa\d+|calle|carrera|lote|predio)\b/.test(
       normalized
     ) ||
+    /\b(?:simula|calcula|pre-?liquida|evalua|hazme|quiero)\b.{0,45}\b(?:credito\s+hipotecari|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|cuota\s+mensual)\b/.test(
+      normalized
+    ) ||
     /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
 
   if (looksLikeNewToolDataRequest) {

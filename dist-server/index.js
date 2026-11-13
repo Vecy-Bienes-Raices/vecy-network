@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.14";
+    VECY_VERSION = "v34.15";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16472,6 +16472,8 @@ function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = fals
     normalized
   ) || /\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b.{0,45}\b(?:aaa\d+|calle|carrera|lote|predio)\b/.test(
     normalized
+  ) || /\b(?:simula|calcula|pre-?liquida|evalua|hazme|quiero)\b.{0,45}\b(?:credito\s+hipotecari|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|cuota\s+mensual)\b/.test(
+    normalized
   ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
   if (looksLikeNewToolDataRequest) {
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
@@ -22788,6 +22790,15 @@ function isExplicitNotarialLiquidationRequest(text2, senderId) {
   if (explainNotarialFigures(clean).isQuestion) {
     return true;
   }
+  const hasTaxOrFinanceSkill4 = /\b(?:ganancia\s+ocasional|impuesto\s+de\s+timbre|costo\s+fiscal|5\.?000\s*uvt|art\.?\s*311-1|art\.?\s*314|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ley\s+546|simula(?:r|ci[oó]n)?\s+(?:de\s+)?(?:cr[eé]dito|leasing))\b/i.test(
+    clean
+  );
+  const hasExplicitNotaryFees = /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidaci[oó]n\s+notarial|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro)\b/i.test(
+    clean
+  );
+  if (hasTaxOrFinanceSkill4 && !hasExplicitNotaryFees) {
+    return false;
+  }
   return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 async function executeNotarialAssistanceFromWhatsApp(text2, senderId, isPrivateDm = true) {
@@ -26251,6 +26262,11 @@ _JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_
 function isServiceHelpRequest(text2) {
   if (!text2 || typeof text2 !== "string") return null;
   const lower = text2.toLowerCase().trim();
+  if (/\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a)\b/i.test(
+    lower
+  )) {
+    return null;
+  }
   const helpWords = [
     "c\xF3mo",
     "como",
@@ -27325,7 +27341,7 @@ var init_whatsapp_match = __esm({
         if (!clean && !quoted && !hasMedia) return false;
         if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
         const combined = `${clean} ${quoted}`.toLowerCase();
-        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|ideca|uso\s+del?\s+suelo|usos\s+permitidos|edificabilidad|constructibilidad|prefactibilidad|antejard[ií]n|aislamiento|tratamiento\s+urban[ií]stico|\bupl\b|\bupz\b|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
+        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|timbre|costo\s+fiscal|dian|uvt|uvr|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|hipotecari[oa]|leasing|cuota\s+(?:inicial|mensual)|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|rentabilidad|renta\s+corta|punto\s+de\s+equilibrio|simula(?:r|ci[oó]n)?|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|ideca|uso\s+del?\s+suelo|usos\s+permitidos|edificabilidad|constructibilidad|prefactibilidad|antejard[ií]n|aislamiento|tratamiento\s+urban[ií]stico|\bupl\b|\bupz\b|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
         return hasQuestionOrConsultIntent;
       }
       registerPhoneLidMapping(phoneOrJid, lidOrJid) {
@@ -28591,7 +28607,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     if (alreadySentReviewInReply) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                     }
-                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("AN\xC1LISIS POT") || replyText.includes("NORMA URBANA") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
+                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("AN\xC1LISIS POT") || replyText.includes("NORMA URBANA") || replyText.includes("SIMULACI\xD3N HIPOTECARIA") || replyText.includes("CAP RATE") || replyText.includes("PRE-LIQUIDACI\xD3N TRIBUTARIA") || replyText.includes("AN\xC1LISIS FINANCIERO") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
                     const usedCount = session.freeServicesUsedCount || 0;
@@ -31962,6 +31978,7 @@ var legalDocumentPdfService_exports = {};
 __export(legalDocumentPdfService_exports, {
   buildDefaultLegalBody: () => buildDefaultLegalBody,
   generateCtlStudyPdf: () => generateCtlStudyPdf,
+  generateFinancialAndTaxPdf: () => generateFinancialAndTaxPdf,
   generateLegalDocumentPdf: () => generateLegalDocumentPdf,
   generatePotUrbanNormPdf: () => generatePotUrbanNormPdf,
   getLegalDocumentMetadata: () => getLegalDocumentMetadata,
@@ -32043,6 +32060,12 @@ function getLegalDocumentMetadata(tipo) {
         title: "CONCEPTO PRELIMINAR DE NORMA URBANA Y PREFACTIBILIDAD POT",
         normativeFramework: "POT Bogota (Decreto 555 de 2021), Ley 388 de 1997, SINUPOT SDP e IDECA Catastro",
         defaultFileNamePrefix: "Concepto_Norma_Urbana_POT_VECY"
+      };
+    case "ficha_financiera_tributaria":
+      return {
+        title: "FICHA FINANCIERA, RENTABILIDAD Y TRIBUTACION INMOBILIARIA PRELIMINAR",
+        normativeFramework: "Ley 546 de 1999, Decreto 2555 de 2010 (Leasing), Estatuto Tributario (Arts. 311-1, 314, 398 y 519)",
+        defaultFileNamePrefix: "Ficha_Financiera_Tributaria_VECY"
       };
     default:
       return {
@@ -33293,6 +33316,297 @@ async function generatePotUrbanNormPdf(report, options) {
   });
   const safeId = sanitizePdfWinAnsiText(identifierLabel).replace(/[^A-Za-z0-9-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 28) || "PREDIO";
   const fileName = `${meta.defaultFileNamePrefix}_${safeId}_${verificationCode}.pdf`;
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+async function generateFinancialAndTaxPdf(report, options) {
+  const meta = getLegalDocumentMetadata("ficha_financiera_tributaria");
+  const copLabel = `$${Math.round(report.valorInmuebleCop).toLocaleString("es-CO")}`;
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - ${report.propertyType.toUpperCase()} (${copLabel})`
+  ).toUpperCase();
+  const verificationCode = `FIN-VECY-${crypto4.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework,
+    headerSubtitle: `Radicado Financiero/Tributario: ${verificationCode} | Calculo Deterministico Colombia 2026`
+  });
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+  const ensureSpace = (minY = 92) => {
+    if (cursorY < minY) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+  const drawWrapped = (text2, opts) => {
+    const f = opts?.font ?? fontRegular;
+    const sz = opts?.size ?? 9.2;
+    const lh = opts?.lineHeight ?? sz + 4;
+    const col = opts?.color ?? rgb2(0.14, 0.16, 0.2);
+    const ind = opts?.indent ?? 0;
+    const lines = wrapTextToLines(text2, f, sz, maxWidth - ind);
+    for (const ln of lines) {
+      ensureSpace(opts?.minY ?? 70);
+      currentPage.drawText(ln, { x: marginX + ind, y: cursorY, size: sz, font: f, color: col });
+      cursorY -= lh;
+    }
+  };
+  const drawSectionBanner = (sectionTitle) => {
+    ensureSpace(110);
+    cursorY -= 6;
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: maxWidth,
+      height: 18,
+      color: rgb2(0.95, 0.96, 0.98)
+    });
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: 3.5,
+      height: 18,
+      color: rgb2(0.83, 0.68, 0.21)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(sectionTitle), {
+      x: marginX + 8,
+      y: cursorY + 1,
+      size: 9.6,
+      font: fontBold,
+      color: rgb2(0.08, 0.1, 0.14)
+    });
+    cursorY -= 18;
+  };
+  const fmtCop = (n) => `$${Math.round(n || 0).toLocaleString("es-CO")}`;
+  const summaryLines = wrapTextToLines(
+    `Alcance: ${report.querySummary} | Valor base inmueble: ${fmtCop(report.valorInmuebleCop)} COP | Fecha: ${report.analyzedAtIso.slice(0, 10)}${options?.requestedBy ? ` | Solicitado por: ${options.requestedBy}` : ""}`,
+    fontRegular,
+    8.9,
+    maxWidth - 24
+  );
+  const boxH = 28 + summaryLines.length * 12;
+  ensureSpace(boxH + 40);
+  const boxBottomY = cursorY - boxH + 10;
+  currentPage.drawRectangle({
+    x: marginX,
+    y: boxBottomY,
+    width: maxWidth,
+    height: boxH,
+    color: rgb2(0.93, 0.96, 0.99),
+    borderColor: rgb2(0.14, 0.35, 0.62),
+    borderWidth: 1.1
+  });
+  currentPage.drawText("RESUMEN EJECUTIVO DE MODELACION FINANCIERA Y TRIBUTARIA", {
+    x: marginX + 12,
+    y: cursorY - 8,
+    size: 9.8,
+    font: fontBold,
+    color: rgb2(0.1, 0.28, 0.52)
+  });
+  let sy = cursorY - 22;
+  for (const sLine of summaryLines) {
+    currentPage.drawText(sLine, { x: marginX + 12, y: sy, size: 8.9, font: fontRegular, color: rgb2(0.14, 0.16, 0.2) });
+    sy -= 12;
+  }
+  cursorY = boxBottomY - 14;
+  if (report.mortgageVsLeasing) {
+    const m = report.mortgageVsLeasing;
+    const ch = m.creditoHipotecario;
+    const lh80 = m.leasingHabitacional80;
+    const lh85 = m.leasingHabitacional85;
+    drawSectionBanner("1. SIMULACION CREDITO HIPOTECARIO VS. LEASING HABITACIONAL (LEY 546/1999)");
+    drawWrapped(
+      `Valor Inmueble: ${fmtCop(m.valorInmuebleCop)}   |   Segmento: ${m.esVis ? "VIS/VIP" : "No-VIS"}   |   Plazo: ${m.plazoAnos} anos (${ch.plazoMeses} meses)   |   Tasa Ref.: ${m.tasaEaUsadaPct}% E.A.`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `- ${ch.modalidad}: LTV ${ch.ltvPct}% | Financiado ${fmtCop(ch.montoFinanciadoCop)} | Cuota Inicial ${fmtCop(ch.cuotaInicialCop)} | Cuota sin seguros ${fmtCop(ch.cuotaMensualSinSegurosCop)} | Con seguros ${fmtCop(ch.cuotaMensualConSegurosCop)}/mes | Ingreso Min. 30% Ley 546: ${fmtCop(ch.ingresoMinimo30PctLey546Cop)} (ref. 40%: ${fmtCop(ch.ingresoReferencial40PctCop)})`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `- ${lh80.modalidad}: LTV ${lh80.ltvPct}% | Financiado ${fmtCop(lh80.montoFinanciadoCop)} | Inicial ${fmtCop(lh80.cuotaInicialCop)} | Opcion Compra ${lh80.opcionCompraPct}% (${fmtCop(lh80.opcionCompraCop)}) | Canon sin seguros ${fmtCop(lh80.cuotaMensualSinSegurosCop)} | Con seguros ${fmtCop(lh80.cuotaMensualConSegurosCop)}/mes | Ingreso Min. 30%: ${fmtCop(lh80.ingresoMinimo30PctLey546Cop)} (ref. 40%: ${fmtCop(lh80.ingresoReferencial40PctCop)})`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `- ${lh85.modalidad}: LTV ${lh85.ltvPct}% | Financiado ${fmtCop(lh85.montoFinanciadoCop)} | Inicial ${fmtCop(lh85.cuotaInicialCop)} | Canon c/seguros ${fmtCop(lh85.cuotaMensualConSegurosCop)}/mes | Ingreso Min. 30%: ${fmtCop(lh85.ingresoMinimo30PctLey546Cop)}`,
+      { indent: 6, size: 8.8 }
+    );
+    if (m.simulacionUvr) {
+      const u = m.simulacionUvr;
+      drawWrapped(
+        `- Escenario UVR (UVR + ${u.tasaRealUvrEaPct}% E.A., UVR ref. ${fmtCop(u.uvrReferenciaCop)}): Cuota mes 1 = ${u.cuotaInicialMensualUvr} UVR (${fmtCop(u.cuotaMes1ConSegurosCop)} c/seguros) -> Anio 5 proyectado (IPC ${u.inflacionAnualReferenciaPct}%): ${fmtCop(u.cuotaProyectadaAnio5ConSegurosCop)}/mes.`,
+        { indent: 6, size: 8.8, color: rgb2(0.55, 0.35, 0.05) }
+      );
+    }
+    if (m.capacidadIngresoUsuario) {
+      const cap = m.capacidadIngresoUsuario;
+      drawWrapped(
+        `Evaluacion Ingreso Declarado (${fmtCop(cap.ingresoMensualCop)}/mes): Relacion Credito ${cap.relacionCuotaIngresoCreditoPct}% | Leasing ${cap.relacionCuotaIngresoLeasingPct}% -> ${cap.viabilidadLey546}`,
+        { font: fontBold, indent: 6, size: 8.8 }
+      );
+    }
+    for (const note of m.comparativoResumen) {
+      drawWrapped(`* ${note}`, { indent: 10, size: 8.5, color: rgb2(0.25, 0.28, 0.34) });
+    }
+  }
+  if (report.investmentRoi) {
+    const r = report.investmentRoi;
+    drawSectionBanner("2. EVALUACION DE INVERSION Y RENTABILIDAD (CAP RATE / CASH-ON-CASH / YIELD)");
+    drawWrapped(
+      `Canon Bruto Mensual: ${fmtCop(r.canonMensualBrutoCop)}   |   Renta Bruta Anual: ${fmtCop(r.rentaBrutaAnualCop)}   |   Yield Mensual Bruto: ${r.yieldMensualBrutoPct.toFixed(2)}%`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `Cap Rate Bruto: ${r.capRateBrutoPct.toFixed(2)}%   |   Cap Rate Neto (NOI): ${r.capRateNetoPct.toFixed(2)}%   |   Cash-on-Cash Return: ${r.cashOnCashPct.toFixed(2)}%`,
+      { font: fontBold, indent: 6, color: rgb2(0.11, 0.45, 0.25) }
+    );
+    drawWrapped(
+      `Vacancia Modelada: ${r.vacanciaAplicadaPct}%   |   Ingreso Efectivo Anual: ${fmtCop(r.ingresoEfectivoAnualCop)}   |   NOI Anual: ${fmtCop(r.noiAnualCop)}`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `OPEX Anual (${fmtCop(r.opexDesglose.totalOpexAnualCop)}): Admon ${fmtCop(r.opexDesglose.administracionAnualCop)} + Predial ${fmtCop(r.opexDesglose.predialAnualCop)} + Mant. ${fmtCop(r.opexDesglose.mantenimientoAnualCop)} + Gestion ${fmtCop(r.opexDesglose.gestionInmobiliariaAnualCop)}`,
+      { indent: 6, size: 8.6 }
+    );
+    drawWrapped(
+      `Punto de Equilibrio: Ocupacion minima ${r.puntoEquilibrio.ocupacionMinimaPct.toFixed(1)}% (${r.puntoEquilibrio.mesesMinimosAno} meses/ano) o canon minimo ${fmtCop(r.puntoEquilibrio.canonMensualEquilibrioCop)}/mes | Flujo Neto Mensual: ${fmtCop(r.flujoCajaMensualNetoCop)}`,
+      { indent: 6, size: 8.8 }
+    );
+    if (r.comparativaRentaTradicionalVsCorta) {
+      const c = r.comparativaRentaTradicionalVsCorta;
+      drawWrapped(
+        `Comparativa Tradicional (${c.rentaTradicional.ocupacionPct}% ocup., Cap Neto ${c.rentaTradicional.capRateNetoPct}%, NOI ${fmtCop(c.rentaTradicional.noiAnualCop)}) vs. Renta Corta (${c.rentaCorta.ocupacionPct}% ocup., Cap Neto ${c.rentaCorta.capRateNetoPct}%, NOI ${fmtCop(c.rentaCorta.noiAnualCop)})`,
+        { font: fontBold, indent: 6, size: 8.7 }
+      );
+      drawWrapped(`* ${c.rentaCorta.notaRegulatoriaPhYRnt}`, { indent: 10, size: 8.4, color: rgb2(0.55, 0.35, 0.05) });
+    }
+    for (const obs of r.observacionesInversion) {
+      drawWrapped(`* ${obs}`, { indent: 10, size: 8.5, color: rgb2(0.25, 0.28, 0.34) });
+    }
+  }
+  if (report.taxPreliquidation) {
+    const t2 = report.taxPreliquidation;
+    drawSectionBanner("3. PRE-LIQUIDACION TRIBUTARIA DE VENTA INMOBILIARIA (ESTATUTO TRIBUTARIO 2026)");
+    drawWrapped(
+      `Valor Venta: ${fmtCop(t2.valorVentaCop)}   |   Costo Fiscal${t2.costoFiscalFueEstimado ? " (Est. 70%)" : ""}: ${fmtCop(t2.costoFiscalUsadoCop)}   |   Utilidad Fiscal: ${fmtCop(t2.taxEngineBase.utilidadCalculada)}   |   Posesion: ${t2.anosPosesion} ano(s)`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `- Retencion en la Fuente Notarial (Art. 398 E.T.): ${fmtCop(t2.retencionFuenteNotarialCop)} (${t2.tarifaRetencionPct}%)`,
+      { indent: 6, size: 8.9 }
+    );
+    if (t2.exencionVivienda5000UvtCop > 0) {
+      drawWrapped(
+        `- Exencion Vivienda de Habitacion (Art. 311-1 E.T., tope 5.000 UVT): -${fmtCop(t2.exencionVivienda5000UvtCop)}`,
+        { indent: 6, size: 8.9, color: rgb2(0.1, 0.42, 0.22) }
+      );
+    }
+    drawWrapped(
+      t2.esRentaOrdinariaMenor2Anos ? "- Regimen Aplicable (< 2 anos posesion): Renta Liquida Ordinaria (tarifa progresiva 0%-39% Art. 241 E.T.)." : `- Ganancia Ocasional Estimada (15% Art. 314 E.T.): ${fmtCop(t2.gananciaOcasionalCop)} (sobre utilidad gravable ${fmtCop(t2.taxEngineBase.utilidadGravableGananciaOcasional)})`,
+      { font: fontBold, indent: 6, size: 8.9 }
+    );
+    drawWrapped(
+      `- Impuesto de Timbre Referencial (> 20.000 UVT): ${fmtCop(t2.impuestoTimbreEstimadoCop)} (${t2.tarifaMarginalTimbreLabel})`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `- Neto Estimado antes de Derechos Notariales (50/50) y Registro ORIP: ${fmtCop(t2.netoEstimadoAntesNotarialesCop)}`,
+      { font: fontBold, indent: 6, size: 9, color: rgb2(0.11, 0.45, 0.25) }
+    );
+    for (const nt of t2.notasNormativas) {
+      drawWrapped(`* ${nt}`, { indent: 10, size: 8.4, color: rgb2(0.25, 0.28, 0.34) });
+    }
+  }
+  ensureSpace(125);
+  cursorY -= 8;
+  const footerBoxY = Math.max(72, cursorY - 78);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 70,
+    color: rgb2(0.97, 0.97, 0.99),
+    borderColor: rgb2(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("ADVERTENCIA TECNICA, CREDITO ALIADO Y PLANEACION TRIBUTARIA VECY:", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb2(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Simulacion financiera y tributaria orientativa; confirmar tasa bancaria aprobada, seguros y declaracion DIAN con contador.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Gastos notariales (50/50), beneficencia y registro ORIP se liquidan por separado segun cuantia y actos de escritura.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Credito Aliado y Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Trazabilidad: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.4,
+      font: fontBold,
+      color: rgb2(0.2, 0.22, 0.28)
+    }
+  );
+  try {
+    const qrDataUrl = await QRCode3.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?fin=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+  }
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Ficha Financiera y Tributaria VECY BIENES RAICES"
+  });
+  const safeType = sanitizePdfWinAnsiText(report.propertyType || "INMUEBLE").replace(/[^A-Za-z0-9-]+/g, "_").toUpperCase();
+  const fileName = `${meta.defaultFileNamePrefix}_${safeType}_${verificationCode}.pdf`;
   return {
     pdfBuffer,
     fileName,
@@ -35448,6 +35762,908 @@ var init_potUrbanNormService = __esm({
   }
 });
 
+// server/_core/taxEngine.ts
+function liquidarImpuestosVenta(params) {
+  const precioVenta = Math.max(0, params.precioVenta || 0);
+  const costoFiscal = Math.max(0, params.costoFiscal || 0);
+  const anosPosesion = Math.max(0, params.anosPosesion || 0);
+  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
+  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
+  const tarifaRetencion = 0.01;
+  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
+  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
+  let utilidadGravable = utilidadOriginal;
+  let exencionViviendaAplicada = 0;
+  let gananciaOcasional = 0;
+  let esRentaOrdinaria = false;
+  let tarifaGananciaOcasionalPorcentaje = 15;
+  let notas = "";
+  if (anosPosesion < 2) {
+    esRentaOrdinaria = true;
+    tarifaGananciaOcasionalPorcentaje = 0;
+    gananciaOcasional = 0;
+    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
+  } else {
+    if (params.esViviendaHabitacion) {
+      const exencionMaxima = 5e3 * VALOR_UVT_2026;
+      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
+      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
+      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
+    }
+    gananciaOcasional = Math.round(utilidadGravable * 0.15);
+    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
+  }
+  return {
+    valorUVT: VALOR_UVT_2026,
+    precioVenta,
+    costoFiscal,
+    utilidadCalculada: utilidadOriginal,
+    anosPosesion,
+    retencionFuente,
+    tarifaRetencionPorcentaje: tarifaRetencion * 100,
+    esSupera20kUvt,
+    exencionViviendaAplicada,
+    utilidadGravableGananciaOcasional: utilidadGravable,
+    gananciaOcasional,
+    tarifaGananciaOcasionalPorcentaje,
+    esRentaOrdinaria,
+    notas: notas.trim()
+  };
+}
+var VALOR_UVT_2026;
+var init_taxEngine = __esm({
+  "server/_core/taxEngine.ts"() {
+    "use strict";
+    VALOR_UVT_2026 = 50318;
+  }
+});
+
+// server/_core/financialAndTaxRealEstateService.ts
+function stripMentions2(text2) {
+  return String(text2 || "").replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").replace(/\s+/g, " ").trim();
+}
+function normalizeNoAccents2(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+}
+function formatCop2(amount) {
+  return `$${Math.round(amount || 0).toLocaleString("es-CO")}`;
+}
+function formatPct(pct, decimals = 2) {
+  return `${Number.isFinite(pct) ? pct.toFixed(decimals) : "0.00"}%`;
+}
+function parseRawMonetaryToken(rawNumber, unitToken) {
+  let numStr = String(rawNumber || "").trim().replace(/\s+/g, "");
+  if (!numStr) return 0;
+  const unit = normalizeNoAccents2(unitToken).toLowerCase();
+  const hasMillionUnit = /^(?:millones|millon|m|mdp|mm)$/.test(unit);
+  const hasThousandUnit = /^mil$/.test(unit);
+  if (hasMillionUnit) {
+    if (/^\d{1,3}\.\d{3}$/.test(numStr)) {
+      const val2 = parseFloat(numStr.replace(/\./g, ""));
+      return val2 * 1e6;
+    }
+    const normalized = numStr.replace(/,/g, ".");
+    const val = parseFloat(normalized);
+    return Number.isFinite(val) ? Math.round(val * 1e6) : 0;
+  }
+  if (hasThousandUnit) {
+    if (/^\d{1,3}\.\d{3}$/.test(numStr)) {
+      const val2 = parseFloat(numStr.replace(/\./g, ""));
+      return val2 * 1e3;
+    }
+    const val = parseFloat(numStr.replace(/,/g, "."));
+    return Number.isFinite(val) ? Math.round(val * 1e3) : 0;
+  }
+  if (/^\d{1,3}(?:\.\d{3}){1,4}$/.test(numStr)) {
+    return parseInt(numStr.replace(/\./g, ""), 10) || 0;
+  }
+  if (/^\d{1,3}(?:,\d{3}){1,4}$/.test(numStr)) {
+    return parseInt(numStr.replace(/,/g, ""), 10) || 0;
+  }
+  const digits = parseInt(numStr.replace(/[^\d]/g, ""), 10);
+  return Number.isFinite(digits) ? digits : 0;
+}
+function extractMoneyByLabels(clean, labelPattern) {
+  const moneyRegex = /(?:\$\s*)?(\d{1,3}(?:[.,]\d{3}){1,4}|\d+(?:[.,]\d+)?)(?:\s*(millones|mill[oó]n|mdp|mm|m\b|mil\b))?/gi;
+  let match;
+  while ((match = moneyRegex.exec(clean)) !== null) {
+    const startIdx = match.index;
+    const prefix = clean.slice(Math.max(0, startIdx - 52), startIdx);
+    const suffix = clean.slice(startIdx + match[0].length, Math.min(clean.length, startIdx + match[0].length + 28));
+    if (!labelPattern.test(prefix) && !labelPattern.test(suffix)) continue;
+    if (/^\s*(?:uvt|m2|metros|a[ñn]os?|meses|%)/i.test(suffix)) continue;
+    const parsed = parseRawMonetaryToken(match[1], match[2]);
+    if (parsed >= 5e4) {
+      return parsed;
+    }
+  }
+  return 0;
+}
+function extractAllCopAmounts(clean) {
+  const amounts = [];
+  const moneyRegex = /(?:\$\s*)?(\d{1,3}(?:[.,]\d{3}){1,4}|\d+(?:[.,]\d+)?)(?:\s*(millones|mill[oó]n|mdp|mm|m\b|mil\b))?/gi;
+  let match;
+  while ((match = moneyRegex.exec(clean)) !== null) {
+    const rawFull = match[0];
+    const hasDollar = rawFull.trim().startsWith("$");
+    const hasUnit = Boolean(match[2]);
+    const suffix = clean.slice(match.index + rawFull.length, Math.min(clean.length, match.index + rawFull.length + 20));
+    const prefix = clean.slice(Math.max(0, match.index - 22), match.index);
+    if (/^\s*(?:uvt|m2|metros|a[ñn]os?|meses|%)/i.test(suffix)) continue;
+    if (/\b(?:chip|matr[ií]cula|c[eé]dula|c\.?c\.?|nit|tel|cel)\b/i.test(prefix)) continue;
+    const val = parseRawMonetaryToken(match[1], match[2]);
+    if (val >= 2e5 && (hasDollar || hasUnit || val >= 1e6)) {
+      amounts.push(val);
+    }
+  }
+  return amounts;
+}
+function isConceptualFinancialOrTaxQuestion(text2) {
+  const clean = stripMentions2(text2);
+  if (!clean) return false;
+  const norm2 = normalizeNoAccents2(clean).toLowerCase();
+  const hasConcreteMoney = extractAllCopAmounts(clean).length > 0;
+  if (hasConcreteMoney) return false;
+  const normNoLeadingPunct = norm2.replace(/^[¿¡\s]+/, "");
+  const isHowToPassiveQuestion = /\bcomo\s+se\s+(?:liquida|calcula|aplica|determina|paga|mide|opera|maneja|cobra|declara)\b/i.test(normNoLeadingPunct);
+  const isConceptualForm = /^(?:(?:hola\s+)?)?(?:jania\s*,?\s*)?(?:[¿¡\s]*)(?:que\s+es|cual\s+es\s+la\s+diferencia|cuales?\s+son\s+(?:las\s+tarifas|los\s+topes|los\s+requisitos)|diferencia\s+entre|como\s+funciona|como\s+aplica|como\s+se\s+(?:liquida|calcula|aplica|determina|paga|mide|opera|maneja|cobra|declara)|para\s+que\s+sirve|explicame|explica|me\s+explicas|que\s+significa|cuando\s+aplica|cuando\s+se\s+paga|cuanto\s+es\s+la\s+tarifa\s+de|de\s+cuanto\s+es)\b/i.test(
+    normNoLeadingPunct
+  ) || /\b(?:que\s+es\s+(?:el\s+|la\s+|un\s+)?(?:cap\s*rate|roi|cash[-\s]*on[-\s]*cash|yield|leasing\s+habitacional|uvr|ganancia\s+ocasional|impuesto\s+de\s+timbre|ley\s+546|ltv)|diferencia\s+entre\s+(?:credito\s+hipotecario|pesos)\s+y\s+(?:leasing|uvr))\b/i.test(
+    normNoLeadingPunct
+  );
+  const asksToCalculate = !isHowToPassiveQuestion && /\b(?:simula(?:me|r)?|calcula(?:me|r)?|hazme\s+(?:la\s+|una\s+|un\s+)?(?:simulaci[oó]n|c[aá]lculo|pre-?liquidaci[oó]n)|pre-?liquida(?:me|r)?|liqu[ií]da(?:me|r)|eval[uú]a(?:me|r)?\s+(?:la\s+|esta\s+)?(?:inversi[oó]n|rentabilidad))\b/i.test(
+    norm2
+  );
+  return isConceptualForm && !asksToCalculate;
+}
+function parseFinancialAndTaxQuery(text2) {
+  const clean = stripMentions2(text2);
+  const norm2 = normalizeNoAccents2(clean).toLowerCase();
+  const empty = {
+    isFinancialTaxRequest: false,
+    isConceptualOnly: false,
+    hasConcreteNumbers: false,
+    needsDataGuidance: false,
+    wantsMortgageOrLeasing: false,
+    wantsInvestmentRoi: false,
+    wantsTaxPlanning: false,
+    incluyeUvr: false,
+    quiereRentaCorta: false,
+    propertyType: "inmueble",
+    esVis: false,
+    esViviendaHabitacion: false,
+    valorInmuebleCop: 0,
+    montoCreditoCop: 0,
+    cuotaInicialCop: 0,
+    plazoAnos: 20,
+    tasaEaPct: 11.5,
+    tasaUvrRealEaPct: 6.8,
+    opcionCompraLeasingPct: 1,
+    canonMensualCop: 0,
+    administracionMensualCop: 0,
+    predialAnualCop: 0,
+    costoFiscalCop: 0,
+    anosPosesion: 2,
+    vendedorEsPersonaJuridica: false
+  };
+  if (!clean) return empty;
+  const hasCopAmountsInText = extractAllCopAmounts(clean).length > 0;
+  const hasActionRequestVerb = /\b(?:simula(?:me|r)?|calcula(?:me|r)?|pre-?liquida(?:me|r)?|liqu[ií]da(?:me|r)?|eval[uú]a(?:me|r)?|proyecta(?:me|r)?|necesito|quiero\s+(?:simular|calcular|saber|evaluar|ver)|hazme|puedes\s+(?:simular|calcular|evaluar)|ayudame\s+(?:a\s+)?(?:simular|calcular|evaluar)|cuanto\s+(?:queda|seria|paga|da))\b/i.test(
+    norm2
+  );
+  const looksLikeGratitudeOrPraiseOnly = !hasCopAmountsInText && !hasActionRequestVerb && /\b(?:gracias|muchas\s+gracias|mil\s+gracias|excelente|genial|perfecto|muy\s+(?:bien|buen[oa]?|complet[oa]?|util|clar[oa]?)|quede\s+(?:muy\s+)?satisfech[oa]?|me\s+encanto|me\s+gusto|super\s+(?:bien|complet[oa]?|util))\b/i.test(
+    norm2
+  );
+  if (looksLikeGratitudeOrPraiseOnly) return empty;
+  if (hasCtlTextMarkers(clean) || isExplicitCtlStudyRequest(clean)) return empty;
+  if (isPotUrbanNormRequest(clean)) return empty;
+  if (isIduInquiry(clean)) return empty;
+  if (/\bCHIP\s+AAA[0-9A-Z]{5,10}\b/i.test(clean) && /\b(?:predial|factura|shd)\b/i.test(norm2)) {
+    return empty;
+  }
+  const wantsMortgageOrLeasing = /\b(?:credito\s+hipotecari|hipotecari[oa]|leasing\s+habitacional|simulaci[oó]n\s+(?:financiera|hipotecaria|de\s+credito|de\s+leasing)|simula(?:me|r)?\s+(?:un\s+)?(?:credito|leasing|hipoteca|cuota)|cuota\s+mensual|capacidad\s+de\s+endeudamiento|ingreso\s+minimo\s+(?:familiar|requerido)|ley\s+546|\buvr\b|\bltv\b|opcion\s+de\s+compra|credito\s+vs\.?\s*leasing|leasing\s+vs\.?\s*credito)\b/i.test(
+    norm2
+  );
+  const wantsInvestmentRoi = /\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|rentabilidad\s+(?:inmobiliaria|bruta|neta|anual|mensual|del\s+inmueble|de\s+inversion)|punto\s+de\s+equilibrio|break[-\s]*even|vacancia|renta\s+corta\s+vs|renta\s+tradicional\s+vs|flujo\s+de\s+caja|retorno\s+(?:de\s+|sobre\s+la\s+)?inversion)\b/i.test(
+    norm2
+  ) || /\b(?:evalua|calcula|analiza|simula|proyecta)\b.{0,35}\b(?:inversion|rentabilidad|renta\s+corta|airbnb)\b/i.test(
+    norm2
+  ) && extractAllCopAmounts(clean).length > 0;
+  const wantsTaxPlanning = /\b(?:ganancia\s+ocasional|costo\s+fiscal|impuesto\s+de\s+timbre|\btimbre\b|5\.?000\s*uvt|art(?:iculo)?\.?\s*311-1|art(?:iculo)?\.?\s*314|planeacion\s+tributaria|pre-?liquidacion\s+tributaria|impuestos?\s+(?:por|de)\s+(?:la\s+)?venta|utilidad\s+fiscal|renta\s+liquida\s+ordinaria|tributos?\s+de\s+venta)\b/i.test(
+    norm2
+  ) || /\bretencion\s+en\s+la\s+fuente\b/i.test(norm2) && /\b(?:ganancia|timbre|costo\s+fiscal|posesion|vivienda\s+de\s+habitacion|uvt|tributari)\b/i.test(norm2);
+  const hasSkill4Domain = wantsMortgageOrLeasing || wantsInvestmentRoi || wantsTaxPlanning;
+  if (!hasSkill4Domain) return empty;
+  const isPureNotarialOnly = /\b(?:gastos?\s+notariales|derechos?\s+notariales|beneficencia|impuesto\s+de\s+registro|liquidacion\s+notarial|cuanto\s+cobra\s+la\s+notaria)\b/i.test(
+    norm2
+  ) && !wantsInvestmentRoi && !/\b(?:ganancia\s+ocasional|timbre|costo\s+fiscal|cuota\s+mensual|ley\s+546|simula)\b/i.test(norm2);
+  if (isPureNotarialOnly) return empty;
+  const isPureAcmOnly = /\b(?:acm|analisis\s+comparativo\s+de\s+mercado|sondeo\s+de\s+mercado|avaluo\s+comercial)\b/i.test(norm2) && !wantsMortgageOrLeasing && !wantsInvestmentRoi && !wantsTaxPlanning;
+  if (isPureAcmOnly) return empty;
+  if (isConceptualFinancialOrTaxQuestion(clean)) {
+    return {
+      ...empty,
+      isConceptualOnly: true,
+      wantsMortgageOrLeasing,
+      wantsInvestmentRoi,
+      wantsTaxPlanning
+    };
+  }
+  let propertyType = "inmueble";
+  if (/\bapartaestudio\b/i.test(norm2)) propertyType = "apartaestudio";
+  else if (/\b(?:apartamento|apto)\b/i.test(norm2)) propertyType = "apartamento";
+  else if (/\bcasa\b/i.test(norm2)) propertyType = "casa";
+  else if (/\blocal\b/i.test(norm2)) propertyType = "local";
+  else if (/\bbodega\b/i.test(norm2)) propertyType = "bodega";
+  else if (/\boficina\b/i.test(norm2)) propertyType = "oficina";
+  const esVis = /\b(?:vis|vip|interes\s+social|interes\s+prioritario)\b/i.test(norm2) && !/\bno[\s-]*vis\b/i.test(norm2);
+  const esViviendaHabitacion = /\b(?:vivienda\s+de\s+habitacion|casa\s+de\s+habitacion|mi\s+vivienda\s+habitual|habitacion\s+principal|art\.?\s*311-1)\b/i.test(
+    norm2
+  );
+  const incluyeUvr = /\buvr\b/i.test(norm2);
+  const quiereRentaCorta = /\b(?:renta\s+corta|airbnb|booking|turistic[ao]|corta\s+estancia|dias)\b/i.test(norm2) || propertyType === "apartaestudio";
+  const vendedorEsPersonaJuridica = /\b(?:persona\s+juridica|empresa\s+vende|sociedad\s+vende|constructora)\b/i.test(norm2);
+  let valorInmuebleCop = extractMoneyByLabels(
+    clean,
+    /\b(?:valor(?:\s+comercial|\s+del?\s+inmueble|\s+de\s+venta|\s+compra)?|precio(?:\s+de\s+venta)?|inmueble\s+de|apartamento\s+de|apto\s+de|casa\s+de|apartaestudio\s+de|local\s+de|bodega\s+de|oficina\s+de|venta\s+(?:de|en|por)|compra\s+(?:de|en|por)|propiedad\s+de|no[\s-]*vis\s+de|vis\s+de)\b/i
+  );
+  const montoCreditoCop = extractMoneyByLabels(
+    clean,
+    /\b(?:credito\s+(?:de|por)|monto\s+(?:a\s+financiar|del\s+credito)|financiar|prestamo\s+(?:de|por)|financiacion\s+(?:de|por))\b/i
+  );
+  const cuotaInicialCop = extractMoneyByLabels(clean, /\b(?:cuota\s+inicial|inicial\s+de|aporte\s+inicial)\b/i);
+  const canonMensualCop = extractMoneyByLabels(
+    clean,
+    /\b(?:canon(?:\s+mensual)?|arriendo(?:\s+mensual)?|renta\s+(?:mensual|estimada)|arrendado\s+en|alquiler(?:\s+mensual)?)\b/i
+  );
+  const administracionMensualCop = extractMoneyByLabels(
+    clean,
+    /\b(?:administracion|admon|cuota\s+de\s+administracion)\b/i
+  );
+  const predialAnualCop = extractMoneyByLabels(
+    clean,
+    /\b(?:predial(?:\s+anual)?|impuesto\s+predial)\b/i
+  );
+  const costoFiscalCop = extractMoneyByLabels(
+    clean,
+    /\b(?:costo\s+fiscal|comprad[oa]\s+(?:en|por)|adquirid[oa]\s+(?:en|por)|escritura\s+(?:anterior|original)\s+(?:en|de|por)|base\s+fiscal)\b/i
+  );
+  const ingresoMensualDeclaradoCop = extractMoneyByLabels(
+    clean,
+    /\b(?:ingresos?\s+(?:mensuales|familiares)?|salario|sueldo|gano|ganamos)\b/i
+  );
+  if (valorInmuebleCop <= 0) {
+    const allAmounts = extractAllCopAmounts(clean);
+    const largePurchase = allAmounts.find((v) => v >= 5e7);
+    if (largePurchase) {
+      valorInmuebleCop = largePurchase;
+    } else if (montoCreditoCop > 0) {
+      valorInmuebleCop = Math.round(montoCreditoCop / (esVis ? 0.8 : 0.7));
+    }
+  }
+  let plazoAnos = 20;
+  const yearsMatch = norm2.match(/\b(?:a\s+|plazo\s+(?:de\s+)?)?(\d{1,2})\s*anos\b/);
+  const monthsMatch = norm2.match(/\b(\d{2,3})\s*meses\b/);
+  if (yearsMatch) {
+    const y = parseInt(yearsMatch[1], 10);
+    if (y >= 3 && y <= 30) plazoAnos = y;
+  } else if (monthsMatch) {
+    const m = parseInt(monthsMatch[1], 10);
+    if (m >= 24 && m <= 360) plazoAnos = Math.max(2, Math.round(m / 12));
+  }
+  let anosPosesion = 2;
+  const posesionMatch = norm2.match(/\b(?:posesion\s+(?:de\s+)?|hace\s+|comprad[oa]\s+hace\s+|tenencia\s+(?:de\s+)?|poseid[oa]\s+(?:por\s+)?)(\d{1,2})\s*anos?\b/) || norm2.match(/\b(\d{1,2})\s*anos?\s+de\s+(?:posesion|tenencia|comprad[oa])\b/);
+  if (posesionMatch) {
+    anosPosesion = parseInt(posesionMatch[1], 10);
+  } else if (/\bmenos\s+de\s+2\s*anos?\b/.test(norm2)) {
+    anosPosesion = 1;
+  }
+  let tasaEaPct = 11.5;
+  const tasaMatch = norm2.match(/\b(?:tasa\s*(?:del?\s*|de\s*)?|al\s+|ea\s*(?:del?\s*)?)(\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*(?:e\.?\s*a\.?|efectiv[ao]\s+anual)?/i);
+  if (tasaMatch) {
+    const t2 = parseFloat(tasaMatch[1].replace(",", "."));
+    if (t2 >= 3 && t2 <= 28) tasaEaPct = t2;
+  }
+  let tasaUvrRealEaPct = 6.8;
+  const uvrRateMatch = norm2.match(/\buvr\s*(?:\+|mas)\s*(\d{1,2}(?:[.,]\d{1,2})?)\s*%/i);
+  if (uvrRateMatch) {
+    const ur = parseFloat(uvrRateMatch[1].replace(",", "."));
+    if (ur >= 2 && ur <= 15) tasaUvrRealEaPct = ur;
+  }
+  let ltvSolicitadoPct;
+  const ltvMatch = norm2.match(/\b(?:ltv|financiar(?:ia|emos)?|financiacion)\s*(?:del?\s*)?(\d{2})\s*%/i);
+  if (ltvMatch) {
+    const ltv = parseInt(ltvMatch[1], 10);
+    if (ltv >= 20 && ltv <= 90) ltvSolicitadoPct = ltv;
+  } else {
+    const inicialPctMatch = norm2.match(/\bcuota\s+inicial\s*(?:del?\s*)?(\d{1,2})\s*%/i);
+    if (inicialPctMatch) {
+      const ini = parseInt(inicialPctMatch[1], 10);
+      if (ini >= 10 && ini <= 80) ltvSolicitadoPct = 100 - ini;
+    }
+  }
+  let opcionCompraLeasingPct = 1;
+  const opcionMatch = norm2.match(/\bopcion\s+de\s+compra\s*(?:del?\s*)?(\d{1,2}(?:[.,]\d+)?)\s*%/i);
+  if (opcionMatch) {
+    const op = parseFloat(opcionMatch[1].replace(",", "."));
+    if (op >= 0 && op <= 30) opcionCompraLeasingPct = op;
+  }
+  let vacanciaPct;
+  const vacMatch = norm2.match(/\bvacancia\s*(?:del?\s*)?(\d{1,2}(?:[.,]\d+)?)\s*%/i);
+  if (vacMatch) {
+    vacanciaPct = parseFloat(vacMatch[1].replace(",", "."));
+  }
+  let ocupacionRentaCortaPct;
+  const occMatch = norm2.match(/\bocupacion\s*(?:del?\s*)?(\d{2,3})\s*%/i);
+  if (occMatch) {
+    ocupacionRentaCortaPct = Math.min(98, Math.max(20, parseInt(occMatch[1], 10)));
+  }
+  const hasConcreteNumbers = valorInmuebleCop > 0 || montoCreditoCop > 0 || canonMensualCop > 0;
+  return {
+    isFinancialTaxRequest: true,
+    isConceptualOnly: false,
+    hasConcreteNumbers,
+    needsDataGuidance: !hasConcreteNumbers,
+    wantsMortgageOrLeasing,
+    wantsInvestmentRoi,
+    wantsTaxPlanning,
+    incluyeUvr,
+    quiereRentaCorta,
+    propertyType,
+    esVis,
+    esViviendaHabitacion,
+    valorInmuebleCop,
+    montoCreditoCop,
+    cuotaInicialCop,
+    ltvSolicitadoPct,
+    plazoAnos,
+    tasaEaPct,
+    tasaUvrRealEaPct,
+    opcionCompraLeasingPct,
+    ingresoMensualDeclaradoCop: ingresoMensualDeclaradoCop > 0 ? ingresoMensualDeclaradoCop : void 0,
+    canonMensualCop,
+    administracionMensualCop,
+    predialAnualCop,
+    vacanciaPct,
+    ocupacionRentaCortaPct,
+    costoFiscalCop,
+    anosPosesion,
+    vendedorEsPersonaJuridica
+  };
+}
+function isFinancialOrTaxSimulationRequest(text2) {
+  return parseFinancialAndTaxQuery(text2).isFinancialTaxRequest;
+}
+function calculateFrenchMonthlyPayment(params) {
+  const { principal, eaDecimal, months, residualValue = 0 } = params;
+  if (principal <= 0 || months <= 0) {
+    return { monthlyRate: 0, monthlyPayment: 0, totalPaid: 0, totalInterest: 0 };
+  }
+  const monthlyRate = Math.pow(1 + eaDecimal, 1 / 12) - 1;
+  if (monthlyRate <= 0) {
+    const pmt = (principal - residualValue) / months;
+    return { monthlyRate: 0, monthlyPayment: Math.round(pmt), totalPaid: Math.round(principal), totalInterest: 0 };
+  }
+  const discountFactor = Math.pow(1 + monthlyRate, -months);
+  const pvNet = Math.max(0, principal - residualValue * discountFactor);
+  const monthlyPayment = pvNet * monthlyRate / (1 - discountFactor);
+  const totalPaid = monthlyPayment * months + residualValue;
+  const totalInterest = Math.max(0, totalPaid - principal);
+  return {
+    monthlyRate,
+    monthlyPayment: Math.round(monthlyPayment),
+    totalPaid: Math.round(totalPaid),
+    totalInterest: Math.round(totalInterest)
+  };
+}
+function estimateMonthlyInsurances(loanAmount, propertyValue) {
+  const vidaDeudor = loanAmount * 55e-5;
+  const incendioTerremoto = propertyValue * 0.8 * 22e-5;
+  return Math.round(vidaDeudor + incendioTerremoto);
+}
+function simulateMortgageVsLeasing(params) {
+  const valorInmuebleCop = Math.max(0, Math.round(params.valorInmuebleCop));
+  const esVis = Boolean(params.esVis);
+  const plazoAnos = Math.min(30, Math.max(3, params.plazoAnos || 20));
+  const meses = plazoAnos * 12;
+  const tasaEaUsadaPct = params.tasaEaPct ?? 11.5;
+  const tasaEaDec = tasaEaUsadaPct / 100;
+  const opcionCompraPct = params.opcionCompraLeasingPct ?? 1;
+  const maxLtvCredito = esVis ? 80 : 70;
+  const ltvCredito = params.ltvCreditoPct ? Math.min(maxLtvCredito, Math.max(20, params.ltvCreditoPct)) : maxLtvCredito;
+  const montoCredito = Math.round(valorInmuebleCop * (ltvCredito / 100));
+  const cuotaInicialCredito = valorInmuebleCop - montoCredito;
+  const pmtCredito = calculateFrenchMonthlyPayment({
+    principal: montoCredito,
+    eaDecimal: tasaEaDec,
+    months: meses
+  });
+  const segCredito = estimateMonthlyInsurances(montoCredito, valorInmuebleCop);
+  const cuotaConSegCredito = pmtCredito.monthlyPayment + segCredito;
+  const creditoHipotecario = {
+    modalidad: `Cr\xE9dito Hipotecario Tradicional (${esVis ? "VIS" : "No-VIS"} - Ley 546)`,
+    ltvPct: ltvCredito,
+    montoFinanciadoCop: montoCredito,
+    cuotaInicialCop: cuotaInicialCredito,
+    opcionCompraPct: 0,
+    opcionCompraCop: 0,
+    plazoMeses: meses,
+    tasaEaPct: tasaEaUsadaPct,
+    tasaMensualPct: Number((pmtCredito.monthlyRate * 100).toFixed(3)),
+    cuotaMensualSinSegurosCop: pmtCredito.monthlyPayment,
+    segurosEstimadosMensualesCop: segCredito,
+    cuotaMensualConSegurosCop: cuotaConSegCredito,
+    totalInteresesEstimadosCop: pmtCredito.totalInterest,
+    ingresoMinimo30PctLey546Cop: Math.round(cuotaConSegCredito / 0.3),
+    ingresoReferencial40PctCop: Math.round(cuotaConSegCredito / 0.4)
+  };
+  const buildLeasingOption = (ltvLeasingPct, labelSuffix) => {
+    const montoLeasing = Math.round(valorInmuebleCop * (ltvLeasingPct / 100));
+    const cuotaInicialLeasing = valorInmuebleCop - montoLeasing;
+    const opcionCompraCop = Math.round(valorInmuebleCop * (opcionCompraPct / 100));
+    const pmtLeasing = calculateFrenchMonthlyPayment({
+      principal: montoLeasing,
+      eaDecimal: tasaEaDec,
+      months: meses,
+      residualValue: opcionCompraCop
+    });
+    const segLeasing = estimateMonthlyInsurances(montoLeasing, valorInmuebleCop);
+    const cuotaConSegLeasing = pmtLeasing.monthlyPayment + segLeasing;
+    return {
+      modalidad: `Leasing Habitacional ${labelSuffix} (Dto. 2555/2010)`,
+      ltvPct: ltvLeasingPct,
+      montoFinanciadoCop: montoLeasing,
+      cuotaInicialCop: cuotaInicialLeasing,
+      opcionCompraPct,
+      opcionCompraCop,
+      plazoMeses: meses,
+      tasaEaPct: tasaEaUsadaPct,
+      tasaMensualPct: Number((pmtLeasing.monthlyRate * 100).toFixed(3)),
+      cuotaMensualSinSegurosCop: pmtLeasing.monthlyPayment,
+      segurosEstimadosMensualesCop: segLeasing,
+      cuotaMensualConSegurosCop: cuotaConSegLeasing,
+      totalInteresesEstimadosCop: pmtLeasing.totalInterest,
+      ingresoMinimo30PctLey546Cop: Math.round(cuotaConSegLeasing / 0.3),
+      ingresoReferencial40PctCop: Math.round(cuotaConSegLeasing / 0.4)
+    };
+  };
+  const leasingHabitacional80 = buildLeasingOption(80, "80% LTV");
+  const leasingHabitacional85 = buildLeasingOption(85, "85% LTV");
+  let simulacionUvr;
+  if (params.incluyeUvr) {
+    const tasaRealUvr = params.tasaUvrRealEaPct ?? 6.8;
+    const inflacionRef = 5;
+    const montoUvr = montoCredito / UVR_REFERENCIA_2026;
+    const pmtUvr = calculateFrenchMonthlyPayment({
+      principal: montoUvr,
+      eaDecimal: tasaRealUvr / 100,
+      months: meses
+    });
+    const cuotaMes1Cop = Math.round(pmtUvr.monthlyPayment * UVR_REFERENCIA_2026);
+    const cuotaMes1ConSeg = cuotaMes1Cop + segCredito;
+    const factorInflacion5Anos = Math.pow(1 + inflacionRef / 100, 5);
+    const cuotaAnio5ConSeg = Math.round(cuotaMes1Cop * factorInflacion5Anos) + segCredito;
+    simulacionUvr = {
+      uvrReferenciaCop: UVR_REFERENCIA_2026,
+      tasaRealUvrEaPct: tasaRealUvr,
+      inflacionAnualReferenciaPct: inflacionRef,
+      montoInicialUvr: Math.round(montoUvr),
+      cuotaInicialMensualUvr: Math.round(pmtUvr.monthlyPayment),
+      cuotaMes1SinSegurosCop: cuotaMes1Cop,
+      cuotaMes1ConSegurosCop: cuotaMes1ConSeg,
+      cuotaProyectadaAnio5ConSegurosCop: cuotaAnio5ConSeg,
+      notaRiesgoInflacion: "En UVR la cuota inicia m\xE1s baja que en Pesos, pero tanto el saldo como el canon mensual se reajustan diariamente con la inflaci\xF3n (IPC). En Pesos cuota fija conoces el valor exacto desde el mes 1 hasta el final."
+    };
+  }
+  let capacidadIngresoUsuario;
+  if (params.ingresoMensualDeclaradoCop && params.ingresoMensualDeclaradoCop > 0) {
+    const ing = params.ingresoMensualDeclaradoCop;
+    const relCred = creditoHipotecario.cuotaMensualConSegurosCop / ing * 100;
+    const relLeas = leasingHabitacional80.cuotaMensualConSegurosCop / ing * 100;
+    const viabilidadLey546 = relCred <= 30 ? "\u2705 Cumple holgadamente el l\xEDmite legal del 30% de Ley 546 de 1999." : relLeas <= 40 ? "\u26A0\uFE0F Supera el 30% de Ley 546 para cr\xE9dito tradicional; podr\xEDa evaluarse en rango referencial hasta 40% en leasing habitacional o sumando ingresos familiares." : "\u{1F6A8} Supera el 40% de los ingresos declarados: se recomienda aumentar cuota inicial, ampliar plazo o consolidar ingresos familiares.";
+    capacidadIngresoUsuario = {
+      ingresoMensualCop: ing,
+      relacionCuotaIngresoCreditoPct: Number(relCred.toFixed(1)),
+      relacionCuotaIngresoLeasingPct: Number(relLeas.toFixed(1)),
+      viabilidadLey546
+    };
+  }
+  const ahorroCuotaInicial80 = Math.max(0, creditoHipotecario.cuotaInicialCop - leasingHabitacional80.cuotaInicialCop);
+  const comparativoResumen = [
+    `Cuota inicial: Cr\xE9dito ${ltvCredito}% requiere ${formatCop2(creditoHipotecario.cuotaInicialCop)} (${100 - ltvCredito}%), mientras Leasing 80% requiere ${formatCop2(leasingHabitacional80.cuotaInicialCop)} (ahorro de liquidez inicial de ${formatCop2(ahorroCuotaInicial80)}) y Leasing 85% solo ${formatCop2(leasingHabitacional85.cuotaInicialCop)} (15%).`,
+    `Ley 546 de 1999 (tope 30%): exige ingresos familiares m\xEDnimos de ${formatCop2(creditoHipotecario.ingresoMinimo30PctLey546Cop)}/mes para cr\xE9dito y ${formatCop2(leasingHabitacional80.ingresoMinimo30PctLey546Cop)}/mes para leasing 80% (rango ampliado referencial 40%: ${formatCop2(leasingHabitacional80.ingresoReferencial40PctCop)}/mes).`,
+    `Ventaja jur\xEDdica y registral del Leasing: el banco figura como propietario inicial; no constituyes hipoteca a tu nombre al inicio y si cedes el contrato antes de ejercer la opci\xF3n de compra (${opcionCompraPct}% = ${formatCop2(leasingHabitacional80.opcionCompraCop)}), optimizas costos de registro frente a una compraventa tradicional.`
+  ];
+  return {
+    valorInmuebleCop,
+    esVis,
+    plazoAnos,
+    tasaEaUsadaPct,
+    creditoHipotecario,
+    leasingHabitacional80,
+    leasingHabitacional85,
+    simulacionUvr,
+    capacidadIngresoUsuario,
+    comparativoResumen
+  };
+}
+function evaluateInvestmentAndYield(params) {
+  const valorInmuebleCop = Math.max(1, Math.round(params.valorInmuebleCop));
+  const propertyType = params.propertyType || "apartamento";
+  const esComercial = propertyType === "local" || propertyType === "bodega" || propertyType === "oficina";
+  const canonMensualBrutoCop = params.canonMensualCop && params.canonMensualCop > 0 ? Math.round(params.canonMensualCop) : Math.round(valorInmuebleCop * (esComercial ? 75e-4 : 55e-4));
+  const rentaBrutaAnualCop = canonMensualBrutoCop * 12;
+  const yieldMensualBrutoPct = canonMensualBrutoCop / valorInmuebleCop * 100;
+  const capRateBrutoPct = rentaBrutaAnualCop / valorInmuebleCop * 100;
+  const vacanciaPct = params.vacanciaPct !== void 0 ? Math.min(60, Math.max(0, params.vacanciaPct)) : params.quiereRentaCorta && propertyType === "apartaestudio" ? 25 : 8.33;
+  const ocupacionPct = 100 - vacanciaPct;
+  const ingresoEfectivoAnualCop = Math.round(rentaBrutaAnualCop * (ocupacionPct / 100));
+  const admonMensual = params.administracionMensualCop ?? 0;
+  const administracionACargoPropietario = Boolean(params.quiereRentaCorta && propertyType === "apartaestudio");
+  const administracionAnualCop = administracionACargoPropietario ? Math.round(admonMensual * 12) : Math.round(admonMensual * 12 * (vacanciaPct / 100));
+  const predialAnualCop = params.predialAnualCop && params.predialAnualCop > 0 ? Math.round(params.predialAnualCop) : Math.round(valorInmuebleCop * (esComercial ? 85e-4 : 6e-3));
+  const mantenimientoAnualCop = Math.round(ingresoEfectivoAnualCop * 0.05);
+  const gestionInmobiliariaAnualCop = Math.round(
+    ingresoEfectivoAnualCop * (administracionACargoPropietario ? 0.15 : 0.08)
+  );
+  const totalOpexAnualCop = administracionAnualCop + predialAnualCop + mantenimientoAnualCop + gestionInmobiliariaAnualCop;
+  const noiAnualCop = ingresoEfectivoAnualCop - totalOpexAnualCop;
+  const capRateNetoPct = noiAnualCop / valorInmuebleCop * 100;
+  const servicioDeudaAnualCop = Math.max(0, Math.round(params.servicioDeudaAnualCop || 0));
+  const esApalancado = servicioDeudaAnualCop > 0 && (params.cuotaInicialCop || 0) > 0;
+  const gastosCierreCompraEst = Math.round(valorInmuebleCop * 0.022);
+  const capitalPropioInvertidoCop = esApalancado ? Math.round((params.cuotaInicialCop || 0) + gastosCierreCompraEst) : Math.round(valorInmuebleCop + gastosCierreCompraEst);
+  const flujoCajaAnualNetoCop = noiAnualCop - servicioDeudaAnualCop;
+  const flujoCajaMensualNetoCop = Math.round(flujoCajaAnualNetoCop / 12);
+  const cashOnCashPct = flujoCajaAnualNetoCop / Math.max(1, capitalPropioInvertidoCop) * 100;
+  const costosFijosAnualesCop = Math.round(admonMensual * 12) + predialAnualCop + Math.round(valorInmuebleCop * 3e-3) + servicioDeudaAnualCop;
+  const ocupacionMinimaPct = Math.min(100, Math.max(0, costosFijosAnualesCop / Math.max(1, rentaBrutaAnualCop) * 100));
+  const mesesMinimosAno = Number((ocupacionMinimaPct / 100 * 12).toFixed(1));
+  const canonMensualEquilibrioCop = Math.round(costosFijosAnualesCop / 12);
+  let comparativaRentaTradicionalVsCorta;
+  if (params.quiereRentaCorta || propertyType === "apartaestudio") {
+    const occTrad = 91.67;
+    const ingTrad = Math.round(rentaBrutaAnualCop * (occTrad / 100));
+    const opexTrad = Math.round(admonMensual * 12 * 0.0833) + predialAnualCop + Math.round(ingTrad * 0.13);
+    const noiTrad = ingTrad - opexTrad;
+    const occCorta = params.ocupacionRentaCortaPct ?? 70;
+    const tarifaNocheEquiv = Math.round(canonMensualBrutoCop / 30 * 1.55);
+    const ingBrutoCorta = tarifaNocheEquiv * 365;
+    const ingEfecCorta = Math.round(ingBrutoCorta * (occCorta / 100));
+    const serviciosInternetAnual = 35e4 * 12;
+    const opexCorta = Math.round(admonMensual * 12) + predialAnualCop + serviciosInternetAnual + Math.round(ingEfecCorta * 0.22);
+    const noiCorta = ingEfecCorta - opexCorta;
+    comparativaRentaTradicionalVsCorta = {
+      rentaTradicional: {
+        ocupacionPct: occTrad,
+        canonMensualCop: canonMensualBrutoCop,
+        ingresoEfectivoAnualCop: ingTrad,
+        opexAnualCop: opexTrad,
+        noiAnualCop: noiTrad,
+        capRateNetoPct: Number((noiTrad / valorInmuebleCop * 100).toFixed(2))
+      },
+      rentaCorta: {
+        ocupacionPct: occCorta,
+        tarifaNocheEquivalenteCop: tarifaNocheEquiv,
+        ingresoBrutoPotencialAnualCop: ingBrutoCorta,
+        ingresoEfectivoAnualCop: ingEfecCorta,
+        opexAnualCop: opexCorta,
+        noiAnualCop: noiCorta,
+        capRateNetoPct: Number((noiCorta / valorInmuebleCop * 100).toFixed(2)),
+        notaRegulatoriaPhYRnt: "Renta corta (< 30 d\xEDas) exige Registro Nacional de Turismo (RNT), p\xF3liza y autorizaci\xF3n expresa en el Reglamento de Propiedad Horizontal (Ley 675/2001 y Decreto 1836/2021)."
+      }
+    };
+  }
+  const observacionesInversion = [
+    `Yield mensual bruto de ${formatPct(yieldMensualBrutoPct)} y Cap Rate neto de ${formatPct(capRateNetoPct)} (${esComercial ? "referencia comercial saludable en Colombia: 8%\u201311% anual" : "referencia residencial tradicional en Colombia: 5%\u20137% anual m\xE1s valorizaci\xF3n"}).`,
+    `El punto de equilibrio exige al menos ${formatPct(ocupacionMinimaPct, 1)} de ocupaci\xF3n anual (~${mesesMinimosAno} meses/a\xF1o) o un canon m\xEDnimo de ${formatCop2(canonMensualEquilibrioCop)}/mes para cubrir costos fijos${esApalancado ? " y cuota financiera" : ""}.`,
+    esApalancado ? `Con apalancamiento, el Cash-on-Cash sobre capital propio (${formatCop2(capitalPropioInvertidoCop)}) es de ${formatPct(cashOnCashPct)} (${flujoCajaMensualNetoCop >= 0 ? "flujo positivo" : "requiere aporte mensual de bolsillo"} de ${formatCop2(flujoCajaMensualNetoCop)}/mes).` : `Escenario evaluado 100% con recursos propios (incluye ~2.2% estimado de cierre registral/notarial); si apalancas con cr\xE9dito o leasing, recuerda comparar Cap Rate vs tasa EA para evitar apalancamiento negativo.`
+  ];
+  return {
+    valorInmuebleCop,
+    propertyType,
+    canonMensualBrutoCop,
+    rentaBrutaAnualCop,
+    yieldMensualBrutoPct: Number(yieldMensualBrutoPct.toFixed(2)),
+    capRateBrutoPct: Number(capRateBrutoPct.toFixed(2)),
+    vacanciaAplicadaPct: vacanciaPct,
+    ingresoEfectivoAnualCop,
+    opexDesglose: {
+      administracionAnualCop,
+      administracionACargoPropietario,
+      predialAnualCop,
+      mantenimientoAnualCop,
+      gestionInmobiliariaAnualCop,
+      totalOpexAnualCop
+    },
+    noiAnualCop,
+    capRateNetoPct: Number(capRateNetoPct.toFixed(2)),
+    esApalancado,
+    capitalPropioInvertidoCop,
+    servicioDeudaAnualCop,
+    flujoCajaAnualNetoCop,
+    flujoCajaMensualNetoCop,
+    cashOnCashPct: Number(cashOnCashPct.toFixed(2)),
+    puntoEquilibrio: {
+      ocupacionMinimaPct: Number(ocupacionMinimaPct.toFixed(1)),
+      mesesMinimosAno,
+      canonMensualEquilibrioCop
+    },
+    comparativaRentaTradicionalVsCorta,
+    observacionesInversion
+  };
+}
+function calculateRealEstateTaxPreliquidation(params) {
+  const valorVentaCop = Math.max(0, Math.round(params.valorVentaCop));
+  const anosPosesion = Math.max(0, params.anosPosesion ?? 2);
+  const esViviendaHabitacion = Boolean(params.esViviendaHabitacion);
+  const esVis = Boolean(params.esVis);
+  const vendedorEsPersonaJuridica = Boolean(params.vendedorEsPersonaJuridica);
+  const costoFiscalFueEstimado = !params.costoFiscalCop || params.costoFiscalCop <= 0;
+  const costoFiscalUsadoCop = costoFiscalFueEstimado ? Math.round(valorVentaCop * 0.7) : Math.round(params.costoFiscalCop);
+  const taxEngineBase = liquidarImpuestosVenta({
+    precioVenta: valorVentaCop,
+    costoFiscal: costoFiscalUsadoCop,
+    anosPosesion,
+    esViviendaHabitacion
+  });
+  let tarifaRetencionPct = 1;
+  let retencionFuenteNotarialCop = taxEngineBase.retencionFuente;
+  if (vendedorEsPersonaJuridica) {
+    tarifaRetencionPct = 0;
+    retencionFuenteNotarialCop = 0;
+  } else if (esVis) {
+    tarifaRetencionPct = 0;
+    retencionFuenteNotarialCop = 0;
+  }
+  let impuestoTimbreEstimadoCop = 0;
+  let tarifaMarginalTimbreLabel = "0% (No supera 20.000 UVT = $1.006.360.000)";
+  if (valorVentaCop > LIMITE_50K_UVT_2026) {
+    const tramoMedio = Math.round((LIMITE_50K_UVT_2026 - LIMITE_20K_UVT_2026) * 0.015);
+    const tramoAlto = Math.round((valorVentaCop - LIMITE_50K_UVT_2026) * 0.03);
+    impuestoTimbreEstimadoCop = tramoMedio + tramoAlto;
+    tarifaMarginalTimbreLabel = "1.5% (20.000\u201350.000 UVT) + 3.0% sobre exceso de 50.000 UVT";
+  } else if (valorVentaCop > LIMITE_20K_UVT_2026) {
+    impuestoTimbreEstimadoCop = Math.round((valorVentaCop - LIMITE_20K_UVT_2026) * 0.015);
+    tarifaMarginalTimbreLabel = "1.5% sobre cuant\xEDa que excede 20.000 UVT ($1.006.360.000)";
+  }
+  const gananciaOcasionalCop = taxEngineBase.gananciaOcasional;
+  const saldoNetoGananciaOcasionalDespuesRetencion = Math.max(0, gananciaOcasionalCop - retencionFuenteNotarialCop);
+  const totalTributosEstimadosCop = retencionFuenteNotarialCop + saldoNetoGananciaOcasionalDespuesRetencion + impuestoTimbreEstimadoCop;
+  const netoEstimadoAntesNotarialesCop = Math.max(0, valorVentaCop - totalTributosEstimadosCop);
+  const notasNormativas = [
+    `UVT de referencia 2026: ${formatCop2(VALOR_UVT_2026)} | Umbral 20.000 UVT: ${formatCop2(LIMITE_20K_UVT_2026)}.`,
+    vendedorEsPersonaJuridica ? "Vendedor Persona Jur\xEDdica: No aplica retenci\xF3n del 1% del Art. 398 E.T. en notar\xEDa (declara por r\xE9gimen ordinario seg\xFAn RUT/autorretenci\xF3n)." : esVis ? "Primera venta de Vivienda de Inter\xE9s Social (VIS): exenta de retenci\xF3n en la fuente." : "Retenci\xF3n en la Fuente (Art. 398 E.T.): 1.0% sobre el valor de venta recaudado directamente por el Notario; constituye anticipo descontable en la declaraci\xF3n de renta.",
+    taxEngineBase.esRentaOrdinaria ? "Posesi\xF3n inferior a 2 a\xF1os: la utilidad fiscal NO tributa como Ganancia Ocasional del 15%, sino como Renta L\xEDquida Ordinaria (tarifa progresiva DIAN 0%\u201339% seg\xFAn c\xE9dula general)." : `Ganancia Ocasional (Art. 314 E.T. / Ley 2277 de 2022): tarifa del 15% sobre utilidad fiscal (${formatCop2(taxEngineBase.utilidadCalculada)}). ${esViviendaHabitacion ? `Exenci\xF3n Art. 311-1 E.T. aplicada: ${formatCop2(taxEngineBase.exencionViviendaAplicada)} (tope 5.000 UVT = ${formatCop2(EXENCION_5K_UVT_2026)}, sujeto a dep\xF3sito en AFC o pago de cr\xE9dito/nueva vivienda).` : "Si corresponde a casa o apartamento de habitaci\xF3n, recuerda evaluar la exenci\xF3n parcial de hasta 5.000 UVT del Art. 311-1 E.T."}`,
+    impuestoTimbreEstimadoCop > 0 ? `Impuesto de Timbre referencial (Art. 519 E.T. / cuant\xEDa > 20.000 UVT): ${formatCop2(impuestoTimbreEstimadoCop)} (${tarifaMarginalTimbreLabel}). Validar vigencia transitoria aplicable y reparto entre partes en escritura con tu contador y notar\xEDa.` : "Impuesto de Timbre: $0 COP al no superar las 20.000 UVT ($1.006.360.000).",
+    "Nota de alcance: esta pre-liquidaci\xF3n tributaria es independiente de los derechos notariales (50/50), beneficencia y registro ORIP."
+  ];
+  if (costoFiscalFueEstimado) {
+    notasNormativas.unshift(
+      `\u26A0\uFE0F Costo fiscal no suministrado: se model\xF3 una base ilustrativa del 70% (${formatCop2(costoFiscalUsadoCop)}). Verifica el valor de escritura anterior, reajuste fiscal (Art. 70/73 E.T.) o aval\xFAo catastral aplicable.`
+    );
+  }
+  return {
+    taxEngineBase,
+    valorVentaCop,
+    costoFiscalUsadoCop,
+    costoFiscalFueEstimado,
+    anosPosesion,
+    esViviendaHabitacion,
+    esVis,
+    vendedorEsPersonaJuridica,
+    retencionFuenteNotarialCop,
+    tarifaRetencionPct,
+    gananciaOcasionalCop,
+    exencionVivienda5000UvtCop: taxEngineBase.exencionViviendaAplicada,
+    esRentaOrdinariaMenor2Anos: taxEngineBase.esRentaOrdinaria,
+    impuestoTimbreEstimadoCop,
+    tarifaMarginalTimbreLabel,
+    totalTributosEstimadosCop,
+    netoEstimadoAntesNotarialesCop,
+    notasNormativas
+  };
+}
+function buildFinancialAndTaxReport(parsed) {
+  const valorInmueble = parsed.valorInmuebleCop > 0 ? parsed.valorInmuebleCop : 4e8;
+  let mortgageVsLeasing;
+  if (parsed.wantsMortgageOrLeasing) {
+    mortgageVsLeasing = simulateMortgageVsLeasing({
+      valorInmuebleCop: valorInmueble,
+      esVis: parsed.esVis,
+      plazoAnos: parsed.plazoAnos,
+      tasaEaPct: parsed.tasaEaPct,
+      tasaUvrRealEaPct: parsed.tasaUvrRealEaPct,
+      incluyeUvr: parsed.incluyeUvr,
+      ltvCreditoPct: parsed.ltvSolicitadoPct,
+      opcionCompraLeasingPct: parsed.opcionCompraLeasingPct,
+      ingresoMensualDeclaradoCop: parsed.ingresoMensualDeclaradoCop
+    });
+  }
+  let investmentRoi;
+  if (parsed.wantsInvestmentRoi) {
+    const deudaAnual = mortgageVsLeasing ? mortgageVsLeasing.creditoHipotecario.cuotaMensualConSegurosCop * 12 : 0;
+    const cuotaIni = mortgageVsLeasing ? mortgageVsLeasing.creditoHipotecario.cuotaInicialCop : parsed.cuotaInicialCop;
+    investmentRoi = evaluateInvestmentAndYield({
+      valorInmuebleCop: valorInmueble,
+      canonMensualCop: parsed.canonMensualCop,
+      propertyType: parsed.propertyType,
+      administracionMensualCop: parsed.administracionMensualCop,
+      predialAnualCop: parsed.predialAnualCop,
+      vacanciaPct: parsed.vacanciaPct,
+      ocupacionRentaCortaPct: parsed.ocupacionRentaCortaPct,
+      quiereRentaCorta: parsed.quiereRentaCorta,
+      cuotaInicialCop: cuotaIni,
+      servicioDeudaAnualCop: deudaAnual
+    });
+  }
+  let taxPreliquidation;
+  if (parsed.wantsTaxPlanning) {
+    taxPreliquidation = calculateRealEstateTaxPreliquidation({
+      valorVentaCop: valorInmueble,
+      costoFiscalCop: parsed.costoFiscalCop,
+      anosPosesion: parsed.anosPosesion,
+      esViviendaHabitacion: parsed.esViviendaHabitacion,
+      esVis: parsed.esVis,
+      vendedorEsPersonaJuridica: parsed.vendedorEsPersonaJuridica
+    });
+  }
+  const blocks = [];
+  blocks.push(
+    `\u{1F4CA} *AN\xC1LISIS FINANCIERO, RENTABILIDAD Y PLANEACI\xD3N TRIBUTARIA INMOBILIARIA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+\u{1F3E0} *Inmueble base:* ${parsed.propertyType.toUpperCase()} | *Valor de referencia:* ${formatCop2(valorInmueble)} COP`
+  );
+  if (mortgageVsLeasing) {
+    const ch = mortgageVsLeasing.creditoHipotecario;
+    const lh80 = mortgageVsLeasing.leasingHabitacional80;
+    const lh85 = mortgageVsLeasing.leasingHabitacional85;
+    let mBlock = `
+\u{1F4B3} *1. SIMULACI\xD3N HIPOTECARIA VS. LEASING HABITACIONAL (${mortgageVsLeasing.plazoAnos} a\xF1os | ${mortgageVsLeasing.tasaEaUsadaPct}% E.A.):*
+\u2022 *Cr\xE9dito Hipotecario (${ch.ltvPct}% LTV ${mortgageVsLeasing.esVis ? "VIS" : "No-VIS"}):*
+  - Monto financiable: ${formatCop2(ch.montoFinanciadoCop)} | Cuota inicial: ${formatCop2(ch.cuotaInicialCop)}
+  - Cuota mensual sin seguros: ${formatCop2(ch.cuotaMensualSinSegurosCop)} | Con seguros ref.: *${formatCop2(ch.cuotaMensualConSegurosCop)}/mes*
+  - Ingreso m\xEDnimo familiar Ley 546 (30%): *${formatCop2(ch.ingresoMinimo30PctLey546Cop)}/mes* (ref. 40%: ${formatCop2(ch.ingresoReferencial40PctCop)})
+\u2022 *Leasing Habitacional (80% LTV | Opci\xF3n compra ${lh80.opcionCompraPct}% = ${formatCop2(lh80.opcionCompraCop)}):*
+  - Monto financiable: ${formatCop2(lh80.montoFinanciadoCop)} | Cuota inicial (20%): ${formatCop2(lh80.cuotaInicialCop)}
+  - Canon sin seguros: ${formatCop2(lh80.cuotaMensualSinSegurosCop)} | Con seguros ref.: *${formatCop2(lh80.cuotaMensualConSegurosCop)}/mes*
+  - Ingreso m\xEDnimo Ley 546 (30%): *${formatCop2(lh80.ingresoMinimo30PctLey546Cop)}/mes* (rango m\xE1x. 40%: ${formatCop2(lh80.ingresoReferencial40PctCop)})
+\u2022 *Leasing Ampliado (85% LTV):* Financia ${formatCop2(lh85.montoFinanciadoCop)} | Cuota inicial ${formatCop2(lh85.cuotaInicialCop)} | Canon c/seguros *${formatCop2(lh85.cuotaMensualConSegurosCop)}/mes*`;
+    if (mortgageVsLeasing.simulacionUvr) {
+      const u = mortgageVsLeasing.simulacionUvr;
+      mBlock += `
+\u2022 *Referencia en UVR (UVR + ${u.tasaRealUvrEaPct}% E.A., UVR ref. ${formatCop2(u.uvrReferenciaCop)}):*
+  - Cuota mes 1: ${u.cuotaInicialMensualUvr.toLocaleString("es-CO")} UVR (~${formatCop2(u.cuotaMes1ConSegurosCop)} c/seguros) -> A\xF1o 5 est. (IPC ${u.inflacionAnualReferenciaPct}%): ~${formatCop2(u.cuotaProyectadaAnio5ConSegurosCop)}/mes.`;
+    }
+    if (mortgageVsLeasing.capacidadIngresoUsuario) {
+      const cap = mortgageVsLeasing.capacidadIngresoUsuario;
+      mBlock += `
+\u2022 *Tu capacidad (${formatCop2(cap.ingresoMensualCop)}/mes):* ${cap.relacionCuotaIngresoCreditoPct}% en cr\xE9dito / ${cap.relacionCuotaIngresoLeasingPct}% en leasing. ${cap.viabilidadLey546}`;
+    }
+    blocks.push(mBlock);
+  }
+  if (investmentRoi) {
+    let rBlock = `
+\u{1F4C8} *${mortgageVsLeasing ? "2" : "1"}. EVALUACI\xD3N DE INVERSI\xD3N Y RENTABILIDAD (CAP RATE / ROI):*
+\u2022 *Canon mensual evaluado:* ${formatCop2(investmentRoi.canonMensualBrutoCop)}/mes (Renta bruta anual: ${formatCop2(investmentRoi.rentaBrutaAnualCop)})
+\u2022 *Yield Mensual Bruto:* *${formatPct(investmentRoi.yieldMensualBrutoPct)}* | *Cap Rate Bruto:* *${formatPct(investmentRoi.capRateBrutoPct)}*
+\u2022 *OPEX Anual Est. (Vacancia ${investmentRoi.vacanciaAplicadaPct}% + Predial + Mant. + Gesti\xF3n):* ${formatCop2(investmentRoi.opexDesglose.totalOpexAnualCop)}
+\u2022 *NOI Anual:* ${formatCop2(investmentRoi.noiAnualCop)} | *Cap Rate Neto:* *${formatPct(investmentRoi.capRateNetoPct)}*
+\u2022 *Cash-on-Cash Return:* *${formatPct(investmentRoi.cashOnCashPct)}* (Flujo neto: ${formatCop2(investmentRoi.flujoCajaMensualNetoCop)}/mes sobre capital propio ${formatCop2(investmentRoi.capitalPropioInvertidoCop)})
+\u2022 *Punto de Equilibrio:* ${formatPct(investmentRoi.puntoEquilibrio.ocupacionMinimaPct, 1)} de ocupaci\xF3n (~${investmentRoi.puntoEquilibrio.mesesMinimosAno} meses/a\xF1o) o canon m\xEDnimo de ${formatCop2(investmentRoi.puntoEquilibrio.canonMensualEquilibrioCop)}/mes.`;
+    if (investmentRoi.comparativaRentaTradicionalVsCorta) {
+      const c = investmentRoi.comparativaRentaTradicionalVsCorta;
+      rBlock += `
+\u2022 *Comparativa Renta Tradicional vs. Renta Corta:*
+  - Tradicional (${c.rentaTradicional.ocupacionPct}% ocup.): NOI ${formatCop2(c.rentaTradicional.noiAnualCop)}/a\xF1o (*Cap Neto ${c.rentaTradicional.capRateNetoPct}%*)
+  - Renta Corta (${c.rentaCorta.ocupacionPct}% ocup., ~${formatCop2(c.rentaCorta.tarifaNocheEquivalenteCop)}/noche): NOI ${formatCop2(c.rentaCorta.noiAnualCop)}/a\xF1o (*Cap Neto ${c.rentaCorta.capRateNetoPct}%*)
+  - \u26A0\uFE0F ${c.rentaCorta.notaRegulatoriaPhYRnt}`;
+    }
+    blocks.push(rBlock);
+  }
+  if (taxPreliquidation) {
+    const idx = (mortgageVsLeasing ? 1 : 0) + (investmentRoi ? 1 : 0) + 1;
+    const t2 = taxPreliquidation;
+    const tBlock = `
+\u{1F3DB}\uFE0F *${idx}. PRE-LIQUIDACI\xD3N TRIBUTARIA DE VENTA INMOBILIARIA (DIAN / E.T. 2026):*
+\u2022 *Valor Venta:* ${formatCop2(t2.valorVentaCop)} | *Costo Fiscal${t2.costoFiscalFueEstimado ? " (Est. 70%)" : ""}:* ${formatCop2(t2.costoFiscalUsadoCop)} | *Posesi\xF3n:* ${t2.anosPosesion} a\xF1o(s)
+\u2022 *Retenci\xF3n en la Fuente (Notar\xEDa - Art. 398 E.T.):* *${formatCop2(t2.retencionFuenteNotarialCop)}* (${t2.tarifaRetencionPct}%)${t2.retencionFuenteNotarialCop > 0 ? " _(anticipo descontable en renta)_" : ""}
+\u2022 *Utilidad Fiscal:* ${formatCop2(t2.taxEngineBase.utilidadCalculada)}${t2.exencionVivienda5000UvtCop > 0 ? ` | *Exenci\xF3n Vivienda Habitaci\xF3n (Art. 311-1 E.T.):* -${formatCop2(t2.exencionVivienda5000UvtCop)}` : ""}
+\u2022 *${t2.esRentaOrdinariaMenor2Anos ? "Renta L\xEDquida Ordinaria (<2 a\xF1os)" : "Ganancia Ocasional (15% Art. 314 E.T.)"}:* ${t2.esRentaOrdinariaMenor2Anos ? "\u26A0\uFE0F Posesi\xF3n < 2 a\xF1os: tributa en c\xE9dula general (tarifa progresiva 0%\u201339% Art. 241 E.T.)." : `*${formatCop2(t2.gananciaOcasionalCop)}*`}
+\u2022 *Impuesto de Timbre Ref. (>20.000 UVT):* *${formatCop2(t2.impuestoTimbreEstimadoCop)}* _(${t2.tarifaMarginalTimbreLabel})_
+\u2022 *Neto Estimado antes de gastos notariales/registro (50/50 aparte):* *${formatCop2(t2.netoEstimadoAntesNotarialesCop)}*`;
+    blocks.push(tBlock);
+  }
+  blocks.push(
+    `
+\u{1F4F2} *Gesti\xF3n de Cr\xE9dito Aliado, Leasing y Planeaci\xF3n Patrimonial VECY:* Comun\xEDcate con *Eduardo A. Rivera* y *Jani Alves* en nuestra l\xEDnea oficial de br\xF3ker: *${BROKER_OFFICIAL_PHONE}* (${BROKER_OFFICIAL_WHATSAPP_LINK}).`
+  );
+  const summaryParts = [];
+  if (mortgageVsLeasing) summaryParts.push("Cr\xE9dito vs Leasing");
+  if (investmentRoi) summaryParts.push("Cap Rate / ROI");
+  if (taxPreliquidation) summaryParts.push("Tributaci\xF3n Venta");
+  return {
+    querySummary: `${summaryParts.join(" + ")} | ${parsed.propertyType} ${formatCop2(valorInmueble)}`,
+    hasConcreteNumbers: parsed.hasConcreteNumbers,
+    propertyType: parsed.propertyType,
+    valorInmuebleCop: valorInmueble,
+    mortgageVsLeasing,
+    investmentRoi,
+    taxPreliquidation,
+    whatsappSummary: blocks.join("\n"),
+    analyzedAtIso: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+async function analyzeFinancialAndTaxFromWhatsAppInput(params) {
+  const parsed = parseFinancialAndTaxQuery(params.text);
+  if (!parsed.isFinancialTaxRequest) {
+    return {
+      isFinancialTaxRequest: false,
+      needsDataGuidance: false,
+      responseText: "",
+      reactionEmoji: ""
+    };
+  }
+  if (parsed.needsDataGuidance) {
+    return {
+      isFinancialTaxRequest: true,
+      needsDataGuidance: true,
+      reactionEmoji: "\u{1F4B3}",
+      responseText: `\u{1F4B3} *SIMULADOR FINANCIERO, RENTABILIDAD Y TRIBUTACI\xD3N INMOBILIARIA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+Con el mayor gusto realizo el c\xE1lculo exacto y te genero tu *Ficha Financiera y Tributaria Preliminar en PDF Membretado*.
+
+Env\xEDame por favor las cifras clave seg\xFAn lo que necesites:
+1\uFE0F\u20E3 *Cr\xE9dito Hipotecario vs. Leasing:* Valor del inmueble (VIS o No-VIS), plazo (ej. 20 a\xF1os), tasa E.A. (o Pesos/UVR) e ingresos familiares.
+2\uFE0F\u20E3 *Inversi\xF3n / Cap Rate / Cash-on-Cash:* Valor comercial del inmueble, canon mensual esperado (o renta corta), administraci\xF3n y predial anual.
+3\uFE0F\u20E3 *Tributaci\xF3n Venta (DIAN):* Valor de venta, costo fiscal o valor de compra anterior, a\xF1os de posesi\xF3n y si es vivienda de habitaci\xF3n.
+
+\u{1F4F2} Para gesti\xF3n directa con bancos aliados y estructuraci\xF3n patrimonial: *${BROKER_OFFICIAL_PHONE}* (${BROKER_OFFICIAL_WHATSAPP_LINK}).`
+    };
+  }
+  const report = buildFinancialAndTaxReport(parsed);
+  let pdfBuffer;
+  let pdfFileName;
+  if (params.generatePdf !== false && report.hasConcreteNumbers) {
+    try {
+      const pdfRes = await generateFinancialAndTaxPdf(report, {
+        requestedBy: params.requesterName || void 0
+      });
+      pdfBuffer = pdfRes.pdfBuffer;
+      pdfFileName = pdfRes.fileName;
+    } catch (pdfErr) {
+      console.warn("[financialAndTaxRealEstateService] Error generando PDF:", pdfErr?.message || pdfErr);
+    }
+  }
+  const pdfNotice = pdfBuffer && pdfFileName ? `
+
+\u{1F4C4} *Adjunto:* Ficha Financiera y Tributaria Preliminar en PDF Membretado (*${pdfFileName}*).` : "";
+  return {
+    isFinancialTaxRequest: true,
+    needsDataGuidance: false,
+    report,
+    responseText: `${report.whatsappSummary}${pdfNotice}`,
+    reactionEmoji: "\u{1F4B3}",
+    pdfBuffer,
+    pdfFileName
+  };
+}
+var UVR_REFERENCIA_2026, LIMITE_20K_UVT_2026, LIMITE_50K_UVT_2026, EXENCION_5K_UVT_2026;
+var init_financialAndTaxRealEstateService = __esm({
+  "server/_core/financialAndTaxRealEstateService.ts"() {
+    "use strict";
+    init_commercialFunnelService();
+    init_taxEngine();
+    init_ctlTitleStudyService();
+    init_potUrbanNormService();
+    init_iduValorizacionService();
+    init_legalDocumentPdfService();
+    UVR_REFERENCIA_2026 = 390.5;
+    LIMITE_20K_UVT_2026 = 2e4 * VALOR_UVT_2026;
+    LIMITE_50K_UVT_2026 = 5e4 * VALOR_UVT_2026;
+    EXENCION_5K_UVT_2026 = 5e3 * VALOR_UVT_2026;
+  }
+});
+
 // server/_core/jania/founderKnowledgeService.ts
 import fs12 from "fs";
 import path12 from "path";
@@ -36210,6 +37426,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando un usuario consulte por DM o cite a @JanIA en Grupos sobre POT, norma urbana, uso del suelo, edificabilidad, constructibilidad, alturas, IO/IC, antejard\xEDn o aislamientos en Bogot\xE1 (por CHIP AAA..., direcci\xF3n exacta o sector/UPZ/UPL): 1) Consultar en vivo IDECA Catastro / SINUPOT cuando aplique (con fallback determin\xEDstico al POT Decreto 555 de 2021 a $0 COP en tests); 2) Mantener precedencia segura despu\xE9s de Estudio de T\xEDtulos CTL y antes de IDU Valorizaci\xF3n y Predial cuando el mensaje combine CHIP AAA... con intenci\xF3n expl\xEDcita POT/norma urbana, y no interceptar preguntas puramente conceptuales; 3) Entregar UPL/UPZ, Tratamiento Urban\xEDstico, \xC1rea de Actividad, IO, IC, altura m\xE1xima en pisos, usos permitidos/restringidos, alertas (reserva vial, ronda h\xEDdrica, remoci\xF3n en masa, BIC) y potencial constructivo/comercial en m\xB2 si aporta \xE1rea de lote y frente; 4) Adjuntar nativamente Concepto Preliminar de Norma Urbana y Prefactibilidad POT en PDF Membretado VECY BIENES RA\xCDCES cuando el predio sea espec\xEDfico; 5) Incluir CTA de consultor\xEDa urban\xEDstica hacia +57 316 656 9719 y Protocolo Universal de Satisfacci\xF3n y Google Reviews.",
         rawText: "Punto 3 \u2014 Skill 3: An\xE1lisis POT / Norma Urbana en Vivo \u2014 SINUPOT / Mapas Bogot\xE1 IDECA (potUrbanNormService.ts, v34.14) en DM y Grupos con PDF Membretado VECY, precedencia segura sobre IDU/Predial, CTA +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
         createdAt: "2026-11-13T14:00:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-simulador-hipotecario-leasing-caprate-tributario-v34-15",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Motor Especializado de Simulaci\xF3n Hipotecaria, Leasing Habitacional, Rentabilidad (Cap Rate / Cash-on-Cash / ROI) y Planeaci\xF3n Tributaria Inmobiliaria Colombia + PDF Membretado \u2014 Doctrina Eduardo A. Rivera v34.15",
+        directive: "Cuando un usuario consulte por DM o cite a @JanIA en Grupos con cifras para simular Cr\xE9dito Hipotecario vs. Leasing Habitacional (Pesos/UVR, LTV VIS 80% / No-VIS 70% / Leasing 80%-85%, cuota con y sin seguros de vida/incendio-terremoto, ingreso m\xEDnimo familiar Ley 546 de 1999 al 30% y rango 40%), evaluar Inversi\xF3n/Renta (Cap Rate bruto y neto, Cash-on-Cash, Yield mensual, punto de equilibrio, renta tradicional vs renta corta) o pre-liquidar Tributaci\xF3n de Venta en Colombia (Retenci\xF3n 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T. > 2 a\xF1os vs Renta Ordinaria < 2 a\xF1os, exenci\xF3n Art. 311-1 E.T. hasta 5.000 UVT vivienda de habitaci\xF3n e Impuesto de Timbre > 20.000 / 50.000 UVT): 1) Ejecutar c\xE1lculos determin\xEDsticos a $0 COP en financialAndTaxRealEstateService.ts manteniendo separaci\xF3n estricta frente a notarialExpenseService.ts; 2) Respetar precedencia despu\xE9s de CTL (v34.13) y POT (v34.14) y antes de IDU, Predial, Notarial y ACM, sin interceptar preguntas puramente conceptuales sin cifras; 3) Adjuntar nativamente la Ficha Financiera y Tributaria Preliminar en PDF Membretado de VECY BIENES RA\xCDCES cuando entregue cifras concretas; 4) Incluir CTA de cr\xE9dito aliado y asesor\xEDa hacia +57 316 656 9719 y el Protocolo Universal de Satisfacci\xF3n y Google Reviews.",
+        rawText: "Punto 4 \u2014 Skill 4: Simulador Hipotecario, Leasing Habitacional, Cap Rate/ROI y Tributaci\xF3n Inmobiliaria Colombia (financialAndTaxRealEstateService.ts, v34.15) en DM y Grupos con PDF Membretado VECY, precedencia segura, CTA +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
+        createdAt: "2026-11-13T16:00:00.000Z",
         active: true
       }
     ];
@@ -38922,6 +40148,27 @@ ${audit.fichaOptimizadaSugerida}
         }
       };
     }
+    case "simular_financiero_inversion_y_tributos": {
+      const finInput = String(args.consultaFinancieraTributaria || rawUserText || "").trim();
+      const finRes = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: finInput,
+        requesterName: _userName || void 0,
+        generatePdf: true
+      });
+      if (finRes.pdfBuffer && finRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: finRes.pdfBuffer, pdfFileName: finRes.pdfFileName });
+      }
+      return {
+        toolType: "financiero_tributario",
+        resultJson: {
+          solicitud: "simular_financiero_inversion_y_tributos",
+          tieneCifrasConcretas: Boolean(finRes.report && !finRes.needsDataGuidance),
+          pdfGenerado: Boolean(finRes.pdfBuffer),
+          exitoso: finRes.isFinancialTaxRequest,
+          reporteOficial: finRes.responseText || "Para correr la simulaci\xF3n hipotecaria/leasing, Cap Rate o pre-liquidaci\xF3n tributaria, comp\xE1rteme el valor del inmueble y el canon mensual o las cifras base."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -39492,7 +40739,7 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
       lastAssistantTextEarly
     );
     const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
-    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad)\b/i.test(
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|simula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad|hipotecari[oa]|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|retenci[oó]n\s+en\s+la\s+fuente|ley\s+546)\b/i.test(
       cleanLower
     );
     if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction) {
@@ -39841,7 +41088,9 @@ En VECY operamos bajo el esquema colaborativo **40/20/40** (40% punta compradora
     }
     const isOwnerOrConsignmentInquiry = isExplicitOwnerStatement || Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) || /\b(?:publicar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|pautar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|consignar\s+(?:mi\s+)?(?:inmueble|apto|casa|local|bodega|finca)|cobran\s+por\s+(?:publicar|pautar|consignar|conseguir))\b/i.test(cleanLower);
     const isCommissionOrCostInquiry = /\b(?:cu[aá]nto\s+(?:cobran|vale|cuesta|ser[íi]a|es|piden)|qu[eé]\s+comisi[oó]n|cu[aá]l\s+es\s+la\s+comisi[oó]n|porcentaje|costo|tarifa|comisi[oó]n|cobran\s+por\s+(?:publicar|conseguir|pautar|consignar|vender|arrendar)|valor\s+por\s+conseguir|pago\s+por\s+conseguir)\b/i.test(cleanLower) || /\bcu[aá]nto\b/i.test(cleanLower) && /\b(?:publicar|pautar|consignar|comisi[oó]n|conseguir(?:\s+el)?\s+cliente|cliente)\b/i.test(cleanLower) || Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n)\b/i.test(cleanLower);
-    if (isCommissionOrCostInquiry && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(cleanLower))) {
+    if (isCommissionOrCostInquiry && !isFinancialOrTaxSimulationRequest(clean) && !isPotUrbanNormRequest(clean) && !isExplicitCtlStudyRequest(clean) && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
+      cleanLower
+    ))) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.es_propietario_directo = true;
       userPerpetualSession.keyFacts.owner_commission_explained = true;
@@ -40016,6 +41265,47 @@ Si tienes alg\xFAn inmueble (casa, apartamento, lote u oficina) del cual requier
 
 `;
       const guidanceReply = `${greetingPrefix}${potRes.responseText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", guidanceReply);
+      markUserGreetedToday(userId);
+      return guidanceReply;
+    }
+  }
+  const shouldEvaluateFinancialTaxInDm = !isCommercialFlyerImg && !isReviewValidationContext && isFinancialOrTaxSimulationRequest(clean);
+  if (shouldEvaluateFinancialTaxInDm) {
+    const finRes = await analyzeFinancialAndTaxFromWhatsAppInput({
+      text: clean,
+      requesterName: displayName || realName || void 0,
+      generatePdf: true
+    });
+    if (finRes.isFinancialTaxRequest && finRes.report && !finRes.needsDataGuidance) {
+      if (finRes.pdfBuffer && finRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: finRes.pdfBuffer, pdfFileName: finRes.pdfFileName });
+      }
+      await incrementFreeServicesCount(userId);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+        serviceType: "financiero_tributario",
+        timestamp: Date.now()
+      };
+      await saveUserPerpetualSession(userPerpetualSession);
+      const satisfactionLine = `
+
+\u{1F91D} *\xBFQuedaste satisfecho(a) con esta Simulaci\xF3n Financiera / Tributaria?* Tu opini\xF3n me ayuda a seguir afinando mi precisi\xF3n para toda la red VECY.`;
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const finalFinReply = `${greetingPrefix}${finRes.responseText}${satisfactionLine}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", finalFinReply);
+      markUserGreetedToday(userId);
+      return finalFinReply;
+    }
+    if (finRes.needsDataGuidance && finRes.responseText) {
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const guidanceReply = `${greetingPrefix}${finRes.responseText}`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", guidanceReply);
       markUserGreetedToday(userId);
@@ -40202,7 +41492,7 @@ ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 ===================================================
 MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot.
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.
 a) Si el usuario env\xEDa un n\xFAmero, documento o nombre de empresa con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la raz\xF3n social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.
 b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, tr\xE1mites VUR/Sinupot, divisas/TRM del d\xF3lar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jur\xEDdico sin alucinaciones.
 c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
@@ -40778,6 +42068,7 @@ var init_dmHandler = __esm({
     init_valuation();
     init_ctlTitleStudyService();
     init_potUrbanNormService();
+    init_financialAndTaxRealEstateService();
     init_whatsapp_utils();
     init_trustedContacts();
     init_founderKnowledgeService();
@@ -41076,6 +42367,17 @@ var init_dmHandler = __esm({
               },
               required: ["consultaPredioPot"]
             }
+          },
+          {
+            name: "simular_financiero_inversion_y_tributos",
+            description: "Ejecuta el Motor Financiero y Tributario Inmobiliario en Colombia: Simulaci\xF3n Cr\xE9dito Hipotecario vs. Leasing Habitacional (Pesos/UVR, LTV VIS/No-VIS/80%-85%, ingreso m\xEDnimo Ley 546/1999 30%/40%, seguros, cuota inicial vs opci\xF3n de compra), Evaluaci\xF3n de Inversi\xF3n (Cap Rate bruto/neto, Cash-on-Cash, Yield mensual, punto de equilibrio, renta tradicional vs corta) y Pre-liquidaci\xF3n Tributaria de Venta (Retenci\xF3n 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T., exenci\xF3n Art. 311-1 E.T. 5.000 UVT, Impuesto de Timbre), adjuntando Ficha Financiera y Tributaria en PDF Membretado VECY.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                consultaFinancieraTributaria: { type: "STRING", description: "Texto completo con cifras de valor inmueble, canon, gastos, porcentaje financiado, plazo o costo fiscal" }
+              },
+              required: ["consultaFinancieraTributaria"]
+            }
           }
         ]
       }
@@ -41099,7 +42401,8 @@ var init_dmHandler = __esm({
       "imagen_creativa",
       "ubicacion_gps",
       "estudio_titulos",
-      "norma_urbana_pot"
+      "norma_urbana_pot",
+      "financiero_tributario"
     ];
   }
 });
@@ -41215,7 +42518,7 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
     const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
-    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isPotUrbanNormRequest(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
+    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isPotUrbanNormRequest(messageToProcess) || isFinancialOrTaxSimulationRequest(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
     const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
     if (isReviewLinkReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
       messageToProcess
@@ -41308,6 +42611,43 @@ ${quotedContext}` : messageToProcess;
           classification: "CONSULTA_GENERAL",
           response: potCheck.responseText,
           reactionEmoji: potCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isFinancialOrTaxSimulationRequest(messageToProcess)) {
+      const finCheck = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: messageToProcess,
+        requesterName: targetName || realName || void 0,
+        generatePdf: true
+      });
+      if (finCheck.isFinancialTaxRequest && finCheck.report) {
+        const finalFinResp = appendGroupSatisfactionClosing(finCheck.responseText);
+        console.log(
+          `[JanIA-FinancialTaxCheck] Simulaci\xF3n financiera/tributaria ejecutada en grupo para ${userId} (PDF: ${Boolean(finCheck.pdfBuffer)})`
+        );
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalFinResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalFinResp,
+          reactionEmoji: finCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: finCheck.pdfBuffer,
+          fileName: finCheck.pdfFileName
+        };
+      }
+      if (finCheck.needsDataGuidance && finCheck.responseText) {
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finCheck.responseText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finCheck.responseText,
+          reactionEmoji: finCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
         };
@@ -41842,6 +43182,26 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         };
       }
     }
+    if (isFinancialOrTaxSimulationRequest(text2)) {
+      const finFallback = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: text2,
+        requesterName: firstName || void 0,
+        generatePdf: true
+      }).catch(() => null);
+      if (finFallback?.isFinancialTaxRequest && finFallback.report) {
+        const finalFinFallbackResp = appendGroupSatisfactionClosing(finFallback.responseText);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalFinFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalFinFallbackResp,
+          reactionEmoji: finFallback.reactionEmoji,
+          document: finFallback.pdfBuffer,
+          fileName: finFallback.pdfFileName
+        };
+      }
+    }
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
 
@@ -41917,6 +43277,7 @@ var init_consultingHandler = __esm({
     init_politenessService();
     init_ctlTitleStudyService();
     init_potUrbanNormService();
+    init_financialAndTaxRealEstateService();
   }
 });
 
@@ -42015,6 +43376,33 @@ ${quotedContext}` : text2;
           classification: "CONSULTA_GENERAL",
           response: potCirculoCheck.responseText,
           reactionEmoji: potCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isFinancialOrTaxSimulationRequest(text2)) {
+      const finCirculoCheck = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: text2,
+        requesterName: firstName || void 0,
+        generatePdf: true
+      });
+      if (finCirculoCheck.isFinancialTaxRequest && finCirculoCheck.report) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(finCirculoCheck.responseText),
+          reactionEmoji: finCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: finCirculoCheck.pdfBuffer,
+          fileName: finCirculoCheck.pdfFileName
+        };
+      }
+      if (finCirculoCheck.needsDataGuidance && finCirculoCheck.responseText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finCirculoCheck.responseText,
+          reactionEmoji: finCirculoCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
         };
@@ -42255,6 +43643,7 @@ var init_circuloHandler = __esm({
     init_notarialExpenseService();
     init_ctlTitleStudyService();
     init_potUrbanNormService();
+    init_financialAndTaxRealEstateService();
   }
 });
 
@@ -46784,63 +48173,12 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { z as z4 } from "zod";
-import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
-
-// server/_core/taxEngine.ts
-var VALOR_UVT_2026 = 50318;
-function liquidarImpuestosVenta(params) {
-  const precioVenta = Math.max(0, params.precioVenta || 0);
-  const costoFiscal = Math.max(0, params.costoFiscal || 0);
-  const anosPosesion = Math.max(0, params.anosPosesion || 0);
-  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
-  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
-  const tarifaRetencion = 0.01;
-  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
-  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
-  let utilidadGravable = utilidadOriginal;
-  let exencionViviendaAplicada = 0;
-  let gananciaOcasional = 0;
-  let esRentaOrdinaria = false;
-  let tarifaGananciaOcasionalPorcentaje = 15;
-  let notas = "";
-  if (anosPosesion < 2) {
-    esRentaOrdinaria = true;
-    tarifaGananciaOcasionalPorcentaje = 0;
-    gananciaOcasional = 0;
-    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
-  } else {
-    if (params.esViviendaHabitacion) {
-      const exencionMaxima = 5e3 * VALOR_UVT_2026;
-      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
-      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
-      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
-    }
-    gananciaOcasional = Math.round(utilidadGravable * 0.15);
-    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
-  }
-  return {
-    valorUVT: VALOR_UVT_2026,
-    precioVenta,
-    costoFiscal,
-    utilidadCalculada: utilidadOriginal,
-    anosPosesion,
-    retencionFuente,
-    tarifaRetencionPorcentaje: tarifaRetencion * 100,
-    esSupera20kUvt,
-    exencionViviendaAplicada,
-    utilidadGravableGananciaOcasional: utilidadGravable,
-    gananciaOcasional,
-    tarifaGananciaOcasionalPorcentaje,
-    esRentaOrdinaria,
-    notas: notas.trim()
-  };
-}
-
-// server/routers/janIA.ts
+init_taxEngine();
 init_matching();
 init_voiceTranscription();
 init_storage();
+import { z as z4 } from "zod";
+import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
 import fs15 from "fs";
 import path15 from "path";

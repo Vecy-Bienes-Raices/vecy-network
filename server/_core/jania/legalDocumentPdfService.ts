@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { CtlTitleStudyReport } from "../ctlTitleStudyService";
 import type { PotUrbanNormReport } from "../potUrbanNormService";
+import type { FinancialAndTaxReport } from "../financialAndTaxRealEstateService";
 
 /**
  * 📑 GENERADOR INSTANTÁNEO DE CARTAS, CONTRATOS Y MINUTAS INMOBILIARIAS EN PDF MEMBRETADO (v33.66 — Doctrina Eduardo A. Rivera)
@@ -24,6 +25,7 @@ export type LegalDocumentType =
   | "contrato_corretaje"
   | "estudio_titulos_snr"
   | "concepto_norma_urbana_pot"
+  | "ficha_financiera_tributaria"
   | "minuta_general";
 
 export interface LegalDocumentPdfParams {
@@ -137,6 +139,12 @@ export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
         title: "CONCEPTO PRELIMINAR DE NORMA URBANA Y PREFACTIBILIDAD POT",
         normativeFramework: "POT Bogota (Decreto 555 de 2021), Ley 388 de 1997, SINUPOT SDP e IDECA Catastro",
         defaultFileNamePrefix: "Concepto_Norma_Urbana_POT_VECY"
+      };
+    case "ficha_financiera_tributaria":
+      return {
+        title: "FICHA FINANCIERA, RENTABILIDAD Y TRIBUTACION INMOBILIARIA PRELIMINAR",
+        normativeFramework: "Ley 546 de 1999, Decreto 2555 de 2010 (Leasing), Estatuto Tributario (Arts. 311-1, 314, 398 y 519)",
+        defaultFileNamePrefix: "Ficha_Financiera_Tributaria_VECY"
       };
     default:
       return {
@@ -1620,6 +1628,341 @@ export async function generatePotUrbanNormPdf(
     .replace(/^_+|_+$/g, "")
     .slice(0, 28) || "PREDIO";
   const fileName = `${meta.defaultFileNamePrefix}_${safeId}_${verificationCode}.pdf`;
+
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+
+/**
+ * Genera la Ficha Financiera y Tributaria Preliminar en PDF Membretado de VECY BIENES RAICES
+ * (Simulacion Hipotecaria vs Leasing/UVR, Cap Rate/Cash-on-Cash/Yield y Pre-liquidacion Tributaria DIAN).
+ */
+export async function generateFinancialAndTaxPdf(
+  report: FinancialAndTaxReport,
+  options?: { requestedBy?: string }
+): Promise<GeneratedLegalPdfResult> {
+  const meta = getLegalDocumentMetadata("ficha_financiera_tributaria");
+  const copLabel = `$${Math.round(report.valorInmuebleCop).toLocaleString("es-CO")}`;
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - ${report.propertyType.toUpperCase()} (${copLabel})`
+  ).toUpperCase();
+  const verificationCode = `FIN-VECY-${crypto.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework,
+    headerSubtitle: `Radicado Financiero/Tributario: ${verificationCode} | Calculo Deterministico Colombia 2026`
+  });
+
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+
+  const ensureSpace = (minY = 92) => {
+    if (cursorY < minY) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+
+  const drawWrapped = (
+    text: string,
+    opts?: {
+      font?: PDFFont;
+      size?: number;
+      lineHeight?: number;
+      color?: ReturnType<typeof rgb>;
+      indent?: number;
+      minY?: number;
+    }
+  ) => {
+    const f = opts?.font ?? fontRegular;
+    const sz = opts?.size ?? 9.2;
+    const lh = opts?.lineHeight ?? sz + 4;
+    const col = opts?.color ?? rgb(0.14, 0.16, 0.2);
+    const ind = opts?.indent ?? 0;
+    const lines = wrapTextToLines(text, f, sz, maxWidth - ind);
+    for (const ln of lines) {
+      ensureSpace(opts?.minY ?? 70);
+      currentPage.drawText(ln, { x: marginX + ind, y: cursorY, size: sz, font: f, color: col });
+      cursorY -= lh;
+    }
+  };
+
+  const drawSectionBanner = (sectionTitle: string) => {
+    ensureSpace(110);
+    cursorY -= 6;
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: maxWidth,
+      height: 18,
+      color: rgb(0.95, 0.96, 0.98)
+    });
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: 3.5,
+      height: 18,
+      color: rgb(0.83, 0.68, 0.21)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(sectionTitle), {
+      x: marginX + 8,
+      y: cursorY + 1,
+      size: 9.6,
+      font: fontBold,
+      color: rgb(0.08, 0.1, 0.14)
+    });
+    cursorY -= 18;
+  };
+
+  const fmtCop = (n: number) => `$${Math.round(n || 0).toLocaleString("es-CO")}`;
+
+  // Caja Resumen Ejecutiva
+  const summaryLines = wrapTextToLines(
+    `Alcance: ${report.querySummary} | Valor base inmueble: ${fmtCop(report.valorInmuebleCop)} COP | Fecha: ${report.analyzedAtIso.slice(0, 10)}${
+      options?.requestedBy ? ` | Solicitado por: ${options.requestedBy}` : ""
+    }`,
+    fontRegular,
+    8.9,
+    maxWidth - 24
+  );
+  const boxH = 28 + summaryLines.length * 12;
+  ensureSpace(boxH + 40);
+  const boxBottomY = cursorY - boxH + 10;
+  currentPage.drawRectangle({
+    x: marginX,
+    y: boxBottomY,
+    width: maxWidth,
+    height: boxH,
+    color: rgb(0.93, 0.96, 0.99),
+    borderColor: rgb(0.14, 0.35, 0.62),
+    borderWidth: 1.1
+  });
+  currentPage.drawText("RESUMEN EJECUTIVO DE MODELACION FINANCIERA Y TRIBUTARIA", {
+    x: marginX + 12,
+    y: cursorY - 8,
+    size: 9.8,
+    font: fontBold,
+    color: rgb(0.1, 0.28, 0.52)
+  });
+  let sy = cursorY - 22;
+  for (const sLine of summaryLines) {
+    currentPage.drawText(sLine, { x: marginX + 12, y: sy, size: 8.9, font: fontRegular, color: rgb(0.14, 0.16, 0.2) });
+    sy -= 12;
+  }
+  cursorY = boxBottomY - 14;
+
+  // 1. SIMULACION HIPOTECARIA VS LEASING HABITACIONAL
+  if (report.mortgageVsLeasing) {
+    const m = report.mortgageVsLeasing;
+    const ch = m.creditoHipotecario;
+    const lh80 = m.leasingHabitacional80;
+    const lh85 = m.leasingHabitacional85;
+    drawSectionBanner("1. SIMULACION CREDITO HIPOTECARIO VS. LEASING HABITACIONAL (LEY 546/1999)");
+    drawWrapped(
+      `Valor Inmueble: ${fmtCop(m.valorInmuebleCop)}   |   Segmento: ${m.esVis ? "VIS/VIP" : "No-VIS"}   |   Plazo: ${m.plazoAnos} anos (${ch.plazoMeses} meses)   |   Tasa Ref.: ${m.tasaEaUsadaPct}% E.A.`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `- ${ch.modalidad}: LTV ${ch.ltvPct}% | Financiado ${fmtCop(ch.montoFinanciadoCop)} | Cuota Inicial ${fmtCop(ch.cuotaInicialCop)} | Cuota sin seguros ${fmtCop(ch.cuotaMensualSinSegurosCop)} | Con seguros ${fmtCop(ch.cuotaMensualConSegurosCop)}/mes | Ingreso Min. 30% Ley 546: ${fmtCop(ch.ingresoMinimo30PctLey546Cop)} (ref. 40%: ${fmtCop(ch.ingresoReferencial40PctCop)})`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `- ${lh80.modalidad}: LTV ${lh80.ltvPct}% | Financiado ${fmtCop(lh80.montoFinanciadoCop)} | Inicial ${fmtCop(lh80.cuotaInicialCop)} | Opcion Compra ${lh80.opcionCompraPct}% (${fmtCop(lh80.opcionCompraCop)}) | Canon sin seguros ${fmtCop(lh80.cuotaMensualSinSegurosCop)} | Con seguros ${fmtCop(lh80.cuotaMensualConSegurosCop)}/mes | Ingreso Min. 30%: ${fmtCop(lh80.ingresoMinimo30PctLey546Cop)} (ref. 40%: ${fmtCop(lh80.ingresoReferencial40PctCop)})`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `- ${lh85.modalidad}: LTV ${lh85.ltvPct}% | Financiado ${fmtCop(lh85.montoFinanciadoCop)} | Inicial ${fmtCop(lh85.cuotaInicialCop)} | Canon c/seguros ${fmtCop(lh85.cuotaMensualConSegurosCop)}/mes | Ingreso Min. 30%: ${fmtCop(lh85.ingresoMinimo30PctLey546Cop)}`,
+      { indent: 6, size: 8.8 }
+    );
+    if (m.simulacionUvr) {
+      const u = m.simulacionUvr;
+      drawWrapped(
+        `- Escenario UVR (UVR + ${u.tasaRealUvrEaPct}% E.A., UVR ref. ${fmtCop(u.uvrReferenciaCop)}): Cuota mes 1 = ${u.cuotaInicialMensualUvr} UVR (${fmtCop(u.cuotaMes1ConSegurosCop)} c/seguros) -> Anio 5 proyectado (IPC ${u.inflacionAnualReferenciaPct}%): ${fmtCop(u.cuotaProyectadaAnio5ConSegurosCop)}/mes.`,
+        { indent: 6, size: 8.8, color: rgb(0.55, 0.35, 0.05) }
+      );
+    }
+    if (m.capacidadIngresoUsuario) {
+      const cap = m.capacidadIngresoUsuario;
+      drawWrapped(
+        `Evaluacion Ingreso Declarado (${fmtCop(cap.ingresoMensualCop)}/mes): Relacion Credito ${cap.relacionCuotaIngresoCreditoPct}% | Leasing ${cap.relacionCuotaIngresoLeasingPct}% -> ${cap.viabilidadLey546}`,
+        { font: fontBold, indent: 6, size: 8.8 }
+      );
+    }
+    for (const note of m.comparativoResumen) {
+      drawWrapped(`* ${note}`, { indent: 10, size: 8.5, color: rgb(0.25, 0.28, 0.34) });
+    }
+  }
+
+  // 2. EVALUACION DE INVERSION Y RENTABILIDAD (CAP RATE / CASH-ON-CASH / YIELD)
+  if (report.investmentRoi) {
+    const r = report.investmentRoi;
+    drawSectionBanner("2. EVALUACION DE INVERSION Y RENTABILIDAD (CAP RATE / CASH-ON-CASH / YIELD)");
+    drawWrapped(
+      `Canon Bruto Mensual: ${fmtCop(r.canonMensualBrutoCop)}   |   Renta Bruta Anual: ${fmtCop(r.rentaBrutaAnualCop)}   |   Yield Mensual Bruto: ${r.yieldMensualBrutoPct.toFixed(2)}%`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `Cap Rate Bruto: ${r.capRateBrutoPct.toFixed(2)}%   |   Cap Rate Neto (NOI): ${r.capRateNetoPct.toFixed(2)}%   |   Cash-on-Cash Return: ${r.cashOnCashPct.toFixed(2)}%`,
+      { font: fontBold, indent: 6, color: rgb(0.11, 0.45, 0.25) }
+    );
+    drawWrapped(
+      `Vacancia Modelada: ${r.vacanciaAplicadaPct}%   |   Ingreso Efectivo Anual: ${fmtCop(r.ingresoEfectivoAnualCop)}   |   NOI Anual: ${fmtCop(r.noiAnualCop)}`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `OPEX Anual (${fmtCop(r.opexDesglose.totalOpexAnualCop)}): Admon ${fmtCop(r.opexDesglose.administracionAnualCop)} + Predial ${fmtCop(r.opexDesglose.predialAnualCop)} + Mant. ${fmtCop(r.opexDesglose.mantenimientoAnualCop)} + Gestion ${fmtCop(r.opexDesglose.gestionInmobiliariaAnualCop)}`,
+      { indent: 6, size: 8.6 }
+    );
+    drawWrapped(
+      `Punto de Equilibrio: Ocupacion minima ${r.puntoEquilibrio.ocupacionMinimaPct.toFixed(1)}% (${r.puntoEquilibrio.mesesMinimosAno} meses/ano) o canon minimo ${fmtCop(r.puntoEquilibrio.canonMensualEquilibrioCop)}/mes | Flujo Neto Mensual: ${fmtCop(r.flujoCajaMensualNetoCop)}`,
+      { indent: 6, size: 8.8 }
+    );
+    if (r.comparativaRentaTradicionalVsCorta) {
+      const c = r.comparativaRentaTradicionalVsCorta;
+      drawWrapped(
+        `Comparativa Tradicional (${c.rentaTradicional.ocupacionPct}% ocup., Cap Neto ${c.rentaTradicional.capRateNetoPct}%, NOI ${fmtCop(c.rentaTradicional.noiAnualCop)}) vs. Renta Corta (${c.rentaCorta.ocupacionPct}% ocup., Cap Neto ${c.rentaCorta.capRateNetoPct}%, NOI ${fmtCop(c.rentaCorta.noiAnualCop)})`,
+        { font: fontBold, indent: 6, size: 8.7 }
+      );
+      drawWrapped(`* ${c.rentaCorta.notaRegulatoriaPhYRnt}`, { indent: 10, size: 8.4, color: rgb(0.55, 0.35, 0.05) });
+    }
+    for (const obs of r.observacionesInversion) {
+      drawWrapped(`* ${obs}`, { indent: 10, size: 8.5, color: rgb(0.25, 0.28, 0.34) });
+    }
+  }
+
+  // 3. PRE-LIQUIDACION TRIBUTARIA DE VENTA INMOBILIARIA
+  if (report.taxPreliquidation) {
+    const t = report.taxPreliquidation;
+    drawSectionBanner("3. PRE-LIQUIDACION TRIBUTARIA DE VENTA INMOBILIARIA (ESTATUTO TRIBUTARIO 2026)");
+    drawWrapped(
+      `Valor Venta: ${fmtCop(t.valorVentaCop)}   |   Costo Fiscal${t.costoFiscalFueEstimado ? " (Est. 70%)" : ""}: ${fmtCop(t.costoFiscalUsadoCop)}   |   Utilidad Fiscal: ${fmtCop(t.taxEngineBase.utilidadCalculada)}   |   Posesion: ${t.anosPosesion} ano(s)`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `- Retencion en la Fuente Notarial (Art. 398 E.T.): ${fmtCop(t.retencionFuenteNotarialCop)} (${t.tarifaRetencionPct}%)`,
+      { indent: 6, size: 8.9 }
+    );
+    if (t.exencionVivienda5000UvtCop > 0) {
+      drawWrapped(
+        `- Exencion Vivienda de Habitacion (Art. 311-1 E.T., tope 5.000 UVT): -${fmtCop(t.exencionVivienda5000UvtCop)}`,
+        { indent: 6, size: 8.9, color: rgb(0.1, 0.42, 0.22) }
+      );
+    }
+    drawWrapped(
+      t.esRentaOrdinariaMenor2Anos
+        ? "- Regimen Aplicable (< 2 anos posesion): Renta Liquida Ordinaria (tarifa progresiva 0%-39% Art. 241 E.T.)."
+        : `- Ganancia Ocasional Estimada (15% Art. 314 E.T.): ${fmtCop(t.gananciaOcasionalCop)} (sobre utilidad gravable ${fmtCop(t.taxEngineBase.utilidadGravableGananciaOcasional)})`,
+      { font: fontBold, indent: 6, size: 8.9 }
+    );
+    drawWrapped(
+      `- Impuesto de Timbre Referencial (> 20.000 UVT): ${fmtCop(t.impuestoTimbreEstimadoCop)} (${t.tarifaMarginalTimbreLabel})`,
+      { indent: 6, size: 8.8 }
+    );
+    drawWrapped(
+      `- Neto Estimado antes de Derechos Notariales (50/50) y Registro ORIP: ${fmtCop(t.netoEstimadoAntesNotarialesCop)}`,
+      { font: fontBold, indent: 6, size: 9, color: rgb(0.11, 0.45, 0.25) }
+    );
+    for (const nt of t.notasNormativas) {
+      drawWrapped(`* ${nt}`, { indent: 10, size: 8.4, color: rgb(0.25, 0.28, 0.34) });
+    }
+  }
+
+  // Caja de Advertencia Financiera/Tributaria + QR + CTA Comercial VECY
+  ensureSpace(125);
+  cursorY -= 8;
+  const footerBoxY = Math.max(72, cursorY - 78);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 70,
+    color: rgb(0.97, 0.97, 0.99),
+    borderColor: rgb(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("ADVERTENCIA TECNICA, CREDITO ALIADO Y PLANEACION TRIBUTARIA VECY:", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Simulacion financiera y tributaria orientativa; confirmar tasa bancaria aprobada, seguros y declaracion DIAN con contador.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Gastos notariales (50/50), beneficencia y registro ORIP se liquidan por separado segun cuantia y actos de escritura.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.3,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Credito Aliado y Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Trazabilidad: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.4,
+      font: fontBold,
+      color: rgb(0.2, 0.22, 0.28)
+    }
+  );
+
+  try {
+    const qrDataUrl = await QRCode.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?fin=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+    // Si falla el QR en entorno restringido, el PDF continúa limpio
+  }
+
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Ficha Financiera y Tributaria VECY BIENES RAICES"
+  });
+  const safeType = sanitizePdfWinAnsiText(report.propertyType || "INMUEBLE")
+    .replace(/[^A-Za-z0-9-]+/g, "_")
+    .toUpperCase();
+  const fileName = `${meta.defaultFileNamePrefix}_${safeType}_${verificationCode}.pdf`;
 
   return {
     pdfBuffer,

@@ -758,6 +758,20 @@ export function isExplicitNotarialLiquidationRequest(text: string, senderId?: st
     return true;
   }
 
+  // No capturar simulaciones hipotecarias, Cap Rate o pre-liquidaciones de Ganancia Ocasional / Timbre (Skill 4)
+  // salvo cuando el usuario pida explícitamente gastos notariales / derechos notariales / beneficencia / registro ORIP.
+  const hasTaxOrFinanceSkill4 =
+    /\b(?:ganancia\s+ocasional|impuesto\s+de\s+timbre|costo\s+fiscal|5\.?000\s*uvt|art\.?\s*311-1|art\.?\s*314|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ley\s+546|simula(?:r|ci[oó]n)?\s+(?:de\s+)?(?:cr[eé]dito|leasing))\b/i.test(
+      clean
+    );
+  const hasExplicitNotaryFees =
+    /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidaci[oó]n\s+notarial|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro)\b/i.test(
+      clean
+    );
+  if (hasTaxOrFinanceSkill4 && !hasExplicitNotaryFees) {
+    return false;
+  }
+
   return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 

@@ -782,6 +782,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 3 — Skill 3: Análisis POT / Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA (potUrbanNormService.ts, v34.14) en DM y Grupos con PDF Membretado VECY, precedencia segura sobre IDU/Predial, CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
     createdAt: "2026-11-13T14:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-simulador-hipotecario-leasing-caprate-tributario-v34-15",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Motor Especializado de Simulación Hipotecaria, Leasing Habitacional, Rentabilidad (Cap Rate / Cash-on-Cash / ROI) y Planeación Tributaria Inmobiliaria Colombia + PDF Membretado — Doctrina Eduardo A. Rivera v34.15",
+    directive:
+      "Cuando un usuario consulte por DM o cite a @JanIA en Grupos con cifras para simular Crédito Hipotecario vs. Leasing Habitacional (Pesos/UVR, LTV VIS 80% / No-VIS 70% / Leasing 80%-85%, cuota con y sin seguros de vida/incendio-terremoto, ingreso mínimo familiar Ley 546 de 1999 al 30% y rango 40%), evaluar Inversión/Renta (Cap Rate bruto y neto, Cash-on-Cash, Yield mensual, punto de equilibrio, renta tradicional vs renta corta) o pre-liquidar Tributación de Venta en Colombia (Retención 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T. > 2 años vs Renta Ordinaria < 2 años, exención Art. 311-1 E.T. hasta 5.000 UVT vivienda de habitación e Impuesto de Timbre > 20.000 / 50.000 UVT): 1) Ejecutar cálculos determinísticos a $0 COP en financialAndTaxRealEstateService.ts manteniendo separación estricta frente a notarialExpenseService.ts; 2) Respetar precedencia después de CTL (v34.13) y POT (v34.14) y antes de IDU, Predial, Notarial y ACM, sin interceptar preguntas puramente conceptuales sin cifras; 3) Adjuntar nativamente la Ficha Financiera y Tributaria Preliminar en PDF Membretado de VECY BIENES RAÍCES cuando entregue cifras concretas; 4) Incluir CTA de crédito aliado y asesoría hacia +57 316 656 9719 y el Protocolo Universal de Satisfacción y Google Reviews.",
+    rawText:
+      "Punto 4 — Skill 4: Simulador Hipotecario, Leasing Habitacional, Cap Rate/ROI y Tributación Inmobiliaria Colombia (financialAndTaxRealEstateService.ts, v34.15) en DM y Grupos con PDF Membretado VECY, precedencia segura, CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
+    createdAt: "2026-11-13T16:00:00.000Z",
+    active: true
   }
 ];
 

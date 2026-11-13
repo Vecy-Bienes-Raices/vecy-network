@@ -40,6 +40,10 @@ import {
   analyzePotUrbanNormFromWhatsAppInput,
   isPotUrbanNormRequest
 } from "../../potUrbanNormService";
+import {
+  analyzeFinancialAndTaxFromWhatsAppInput,
+  isFinancialOrTaxSimulationRequest
+} from "../../financialAndTaxRealEstateService";
 import { getGreetingByTime } from "../../whatsapp-utils";
 import { FlyerVisionResult } from "../types";
 import {
@@ -428,6 +432,17 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["consultaPredioPot"]
         }
+      },
+      {
+        name: "simular_financiero_inversion_y_tributos",
+        description: "Ejecuta el Motor Financiero y Tributario Inmobiliario en Colombia: Simulación Crédito Hipotecario vs. Leasing Habitacional (Pesos/UVR, LTV VIS/No-VIS/80%-85%, ingreso mínimo Ley 546/1999 30%/40%, seguros, cuota inicial vs opción de compra), Evaluación de Inversión (Cap Rate bruto/neto, Cash-on-Cash, Yield mensual, punto de equilibrio, renta tradicional vs corta) y Pre-liquidación Tributaria de Venta (Retención 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T., exención Art. 311-1 E.T. 5.000 UVT, Impuesto de Timbre), adjuntando Ficha Financiera y Tributaria en PDF Membretado VECY.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            consultaFinancieraTributaria: { type: "STRING", description: "Texto completo con cifras de valor inmueble, canon, gastos, porcentaje financiado, plazo o costo fiscal" }
+          },
+          required: ["consultaFinancieraTributaria"]
+        }
       }
     ]
   }
@@ -454,7 +469,8 @@ export type JaniaDmToolType =
   | "ubicacion_gps"
   | "marketing_inmobiliario"
   | "estudio_titulos"
-  | "norma_urbana_pot";
+  | "norma_urbana_pot"
+  | "financiero_tributario";
 
 export function extractAcmAttributesFromText(rawText: string): {
   zonaOBarrio?: string;
@@ -1389,6 +1405,29 @@ export async function executeJaniaDmTool(
         }
       };
     }
+    case "simular_financiero_inversion_y_tributos": {
+      const finInput = String(args.consultaFinancieraTributaria || rawUserText || "").trim();
+      const finRes = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: finInput,
+        requesterName: _userName || undefined,
+        generatePdf: true
+      });
+      if (finRes.pdfBuffer && finRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: finRes.pdfBuffer, pdfFileName: finRes.pdfFileName });
+      }
+      return {
+        toolType: "financiero_tributario",
+        resultJson: {
+          solicitud: "simular_financiero_inversion_y_tributos",
+          tieneCifrasConcretas: Boolean(finRes.report && !finRes.needsDataGuidance),
+          pdfGenerado: Boolean(finRes.pdfBuffer),
+          exitoso: finRes.isFinancialTaxRequest,
+          reporteOficial:
+            finRes.responseText ||
+            "Para correr la simulación hipotecaria/leasing, Cap Rate o pre-liquidación tributaria, compárteme el valor del inmueble y el canon mensual o las cifras base."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -1705,7 +1744,8 @@ export const ALL_DM_TOOL_TYPES = [
   "imagen_creativa",
   "ubicacion_gps",
   "estudio_titulos",
-  "norma_urbana_pot"
+  "norma_urbana_pot",
+  "financiero_tributario"
 ] as const;
 
 function isKnownToolType(val: string): boolean {
@@ -2190,7 +2230,7 @@ export async function processPrivateDmConversationalMessage(
         lastAssistantTextEarly
       );
     const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
-    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad)\b/i.test(
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|simula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad|hipotecari[oa]|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|retenci[oó]n\s+en\s+la\s+fuente|ley\s+546)\b/i.test(
       cleanLower
     );
 
@@ -2619,7 +2659,16 @@ export async function processPrivateDmConversationalMessage(
       (/\bcu[aá]nto\b/i.test(cleanLower) && /\b(?:publicar|pautar|consignar|comisi[oó]n|conseguir(?:\s+el)?\s+cliente|cliente)\b/i.test(cleanLower)) ||
       (Boolean(userPerpetualSession.keyFacts?.es_propietario_directo) && /\b(?:cu[aá]nto|cobran|valor|tarifa|comisi[oó]n)\b/i.test(cleanLower));
 
-    if (isCommissionOrCostInquiry && (isOwnerOrConsignmentInquiry || /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(cleanLower))) {
+    if (
+      isCommissionOrCostInquiry &&
+      !isFinancialOrTaxSimulationRequest(clean) &&
+      !isPotUrbanNormRequest(clean) &&
+      !isExplicitCtlStudyRequest(clean) &&
+      (isOwnerOrConsignmentInquiry ||
+        /\b(?:inmueble|propiedad|dueñ[oa]|arrendador|vender|arrendar|cliente|consignar|pautar|publicar|casa|apto|apartamento|local|bodega|lote)\b/i.test(
+          cleanLower
+        ))
+    ) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.es_propietario_directo = true;
       userPerpetualSession.keyFacts.owner_commission_explained = true;
@@ -2839,6 +2888,59 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
           ? ""
           : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
       const guidanceReply = `${greetingPrefix}${potRes.responseText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", guidanceReply);
+      markUserGreetedToday(userId);
+      return guidanceReply;
+    }
+  }
+
+  // 💳 INTERCEPTOR DETERMINÍSTICO FINANCIERO, HIPOTECARIO, LEASING, CAP RATE / ROI Y PRE-LIQUIDACIÓN TRIBUTARIA (v34.15):
+  // Se ubica después de CTL y POT y ANTES de perfilamiento de requerimientos, IDU, Predial y Notarial, sin interceptar preguntas conceptuales.
+  const shouldEvaluateFinancialTaxInDm =
+    !isCommercialFlyerImg &&
+    !isReviewValidationContext &&
+    isFinancialOrTaxSimulationRequest(clean);
+
+  if (shouldEvaluateFinancialTaxInDm) {
+    const finRes = await analyzeFinancialAndTaxFromWhatsAppInput({
+      text: clean,
+      requesterName: displayName || realName || undefined,
+      generatePdf: true
+    });
+
+    if (finRes.isFinancialTaxRequest && finRes.report && !finRes.needsDataGuidance) {
+      if (finRes.pdfBuffer && finRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: finRes.pdfBuffer, pdfFileName: finRes.pdfFileName });
+      }
+      await incrementFreeServicesCount(userId);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+        serviceType: "financiero_tributario",
+        timestamp: Date.now()
+      };
+      await saveUserPerpetualSession(userPerpetualSession);
+
+      const satisfactionLine =
+        `\n\n🤝 *¿Quedaste satisfecho(a) con esta Simulación Financiera / Tributaria?* Tu opinión me ayuda a seguir afinando mi precisión para toda la red VECY.`;
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const finalFinReply = `${greetingPrefix}${finRes.responseText}${satisfactionLine}`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", finalFinReply);
+      markUserGreetedToday(userId);
+      return finalFinReply;
+    }
+
+    if (finRes.needsDataGuidance && finRes.responseText) {
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const guidanceReply = `${greetingPrefix}${finRes.responseText}`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", guidanceReply);
       markUserGreetedToday(userId);
@@ -3107,7 +3209,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `===================================================\n` +
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot, simular_financiero_inversion_y_tributos.\n` +
       `a) Si el usuario envía un número, documento o nombre de empresa con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la razón social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.\n` +
       `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +

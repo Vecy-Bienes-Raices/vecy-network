@@ -13010,6 +13010,235 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:1[4-9]|[2-9]\d)\.0$/);
     });
   });
+
+  // =================================================================================================
+  // SUITE 201 (v34.15): Punto 4 — Skill 4: Simulación Hipotecaria, Leasing, Cap Rate/ROI y Tributación
+  // =================================================================================================
+  describe("Suite 201 (v34.15): Punto 4 — Skill 4: Simulador Hipotecario, Leasing, Cap Rate/ROI y Pre-liquidación Tributaria + PDF Membretado", () => {
+    it("no intercepta preguntas conceptuales sin cifras ni colisiona con CTL, POT, IDU, Predial, Notarial puro o ACM", async () => {
+      const {
+        isConceptualFinancialOrTaxQuestion,
+        isFinancialOrTaxSimulationRequest
+      } = await import("../_core/financialAndTaxRealEstateService");
+      const { isExplicitNotarialLiquidationRequest } = await import("../_core/notarialExpenseService");
+      const { isServiceHelpRequest } = await import("../_core/predialService");
+
+      // Preguntas conceptuales puras sin cifras NO deben interceptarse
+      expect(isConceptualFinancialOrTaxQuestion("¿Qué es el Cap Rate inmobiliario y para qué sirve?")).toBe(true);
+      expect(isFinancialOrTaxSimulationRequest("¿Qué es el Cap Rate inmobiliario y para qué sirve?")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("Diferencia entre crédito hipotecario y leasing habitacional")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("¿Cómo funciona la Ley 546 de 1999 para vivienda en Colombia?")).toBe(false);
+
+      // No colisiona con CTL, POT, IDU, Predial puro, Notarial puro ni ACM
+      expect(isFinancialOrTaxSimulationRequest("Hazme el estudio de títulos de este CTL con hipoteca y matrícula 50N-123456")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("Analiza la norma urbana POT y uso del suelo del CHIP AAA0058EEXS")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("Descárgame el paz y salvo IDU valorización de CHIP AAA0058EEXS")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("Descárgame el recibo predial de CHIP AAA0058EEXS")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("Liquida gastos notariales, beneficencia y registro de escritura de $500 millones")).toBe(false);
+      expect(isFinancialOrTaxSimulationRequest("Hazme un ACM del apartamento de 90 m2 en Cedritos, 3 hab, 2 baños")).toBe(false);
+
+      // Separación estricta de notarialExpenseService.ts y predialService.ts
+      expect(isExplicitNotarialLiquidationRequest("Calcula ganancia ocasional e impuesto de timbre por venta de $1.200 millones, costo fiscal $700M")).toBe(false);
+      expect(isExplicitNotarialLiquidationRequest("Liquida gastos notariales y registro de compraventa de $500 millones")).toBe(true);
+      expect(isServiceHelpRequest("Calcula Cap Rate y punto de equilibrio con predial anual $3.5 millones")).toBeNull();
+    });
+
+    it("simula Crédito Hipotecario vs Leasing Habitacional (Pesos/UVR), LTV VIS/No-VIS e ingreso mínimo Ley 546 (30%/40%)", async () => {
+      const { simulateMortgageVsLeasing } = await import("../_core/financialAndTaxRealEstateService");
+
+      // Inmueble No-VIS de $600M con simulación UVR e ingreso declarado
+      const resNoVis = simulateMortgageVsLeasing({
+        valorInmuebleCop: 600_000_000,
+        esVis: false,
+        plazoAnos: 20,
+        tasaEaPct: 11.5,
+        incluyeUvr: true,
+        tasaUvrRealEaPct: 6.5,
+        opcionCompraLeasingPct: 1,
+        ingresoMensualDeclaradoCop: 16_000_000
+      });
+
+      expect(resNoVis.creditoHipotecario.ltvPct).toBe(70);
+      expect(resNoVis.creditoHipotecario.montoFinanciadoCop).toBe(420_000_000);
+      expect(resNoVis.creditoHipotecario.cuotaInicialCop).toBe(180_000_000);
+      expect(resNoVis.creditoHipotecario.cuotaMensualConSegurosCop).toBeGreaterThan(resNoVis.creditoHipotecario.cuotaMensualSinSegurosCop);
+      // Regla 30% Ley 546 de 1999: ingreso mínimo = cuota / 0.30
+      expect(resNoVis.creditoHipotecario.ingresoMinimo30PctLey546Cop).toBe(
+        Math.round(resNoVis.creditoHipotecario.cuotaMensualConSegurosCop / 0.3)
+      );
+      expect(resNoVis.creditoHipotecario.ingresoReferencial40PctCop).toBe(
+        Math.round(resNoVis.creditoHipotecario.cuotaMensualConSegurosCop / 0.4)
+      );
+
+      // Leasing 80% y 85%
+      expect(resNoVis.leasingHabitacional80.ltvPct).toBe(80);
+      expect(resNoVis.leasingHabitacional80.montoFinanciadoCop).toBe(480_000_000);
+      expect(resNoVis.leasingHabitacional80.cuotaInicialCop).toBe(120_000_000);
+      expect(resNoVis.leasingHabitacional80.opcionCompraCop).toBe(6_000_000);
+      expect(resNoVis.leasingHabitacional85.ltvPct).toBe(85);
+      expect(resNoVis.leasingHabitacional85.montoFinanciadoCop).toBe(510_000_000);
+
+      // UVR proyectado
+      expect(resNoVis.simulacionUvr).toBeDefined();
+      expect(resNoVis.simulacionUvr!.cuotaProyectadaAnio5ConSegurosCop).toBeGreaterThan(
+        resNoVis.simulacionUvr!.cuotaMes1ConSegurosCop
+      );
+
+      // VIS permite hasta 80% en Crédito Hipotecario
+      const resVis = simulateMortgageVsLeasing({
+        valorInmuebleCop: 190_000_000,
+        esVis: true,
+        plazoAnos: 20,
+        tasaEaPct: 10.5
+      });
+      expect(resVis.creditoHipotecario.ltvPct).toBe(80);
+      expect(resVis.creditoHipotecario.montoFinanciadoCop).toBe(152_000_000);
+    });
+
+    it("evalúa Inversión / Renta (Cap Rate bruto/neto, Cash-on-Cash, Yield mensual, equilibrio y renta tradicional vs corta)", async () => {
+      const { evaluateInvestmentAndYield } = await import("../_core/financialAndTaxRealEstateService");
+
+      const roi = evaluateInvestmentAndYield({
+        valorInmuebleCop: 450_000_000,
+        propertyType: "apartaestudio",
+        canonMensualCop: 3_200_000,
+        administracionMensualCop: 420_000,
+        predialAnualCop: 2_800_000,
+        quiereRentaCorta: true,
+        cuotaInicialCop: 135_000_000,
+        servicioDeudaAnualCop: 28_800_000
+      });
+
+      expect(roi.rentaBrutaAnualCop).toBe(38_400_000);
+      expect(roi.capRateBrutoPct).toBeCloseTo(8.53, 1);
+      expect(roi.yieldMensualBrutoPct).toBeCloseTo(0.71, 2);
+      expect(roi.capRateNetoPct).toBeLessThan(roi.capRateBrutoPct);
+      expect(roi.capRateNetoPct).toBeGreaterThan(3);
+      expect(roi.esApalancado).toBe(true);
+      expect(roi.cashOnCashPct).toBeLessThan(0); // Con apalancamiento de $28.8M/año vs NOI $15.2M/año el cash flow es negativo
+      expect(roi.puntoEquilibrio.ocupacionMinimaPct).toBeGreaterThan(0);
+      expect(roi.puntoEquilibrio.ocupacionMinimaPct).toBeLessThanOrEqual(100);
+      expect(roi.puntoEquilibrio.canonMensualEquilibrioCop).toBeGreaterThan(0);
+      expect(roi.comparativaRentaTradicionalVsCorta).toBeDefined();
+      expect(roi.comparativaRentaTradicionalVsCorta!.rentaCorta.notaRegulatoriaPhYRnt).toMatch(/RNT|Propiedad Horizontal/i);
+    });
+
+    it("pre-liquida Retención 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T., exención Art. 311-1 E.T. (5.000 UVT) y Timbre", async () => {
+      const {
+        calculateRealEstateTaxPreliquidation,
+        EXENCION_5K_UVT_2026
+      } = await import("../_core/financialAndTaxRealEstateService");
+
+      // Caso 1: Vivienda de habitación > 2 años, venta $1.400M, costo fiscal $800M -> Retención 1%, exención 5.000 UVT, Timbre marginal >20.000 UVT
+      const taxLong = calculateRealEstateTaxPreliquidation({
+        valorVentaCop: 1_400_000_000,
+        costoFiscalCop: 800_000_000,
+        anosPosesion: 5,
+        esViviendaHabitacion: true
+      });
+      expect(taxLong.retencionFuenteNotarialCop).toBe(14_000_000);
+      expect(taxLong.exencionVivienda5000UvtCop).toBe(EXENCION_5K_UVT_2026);
+      expect(taxLong.esRentaOrdinariaMenor2Anos).toBe(false);
+      // Utilidad = $600M; exenta = 5.000 * 50.318 = $251.590.000; gravada = $348.410.000 * 15% = $52.261.500
+      expect(taxLong.gananciaOcasionalCop).toBe(Math.round((600_000_000 - EXENCION_5K_UVT_2026) * 0.15));
+      expect(taxLong.impuestoTimbreEstimadoCop).toBeGreaterThan(0);
+
+      // Caso 2: Posesión < 2 años -> No aplica ganancia ocasional sino Renta Líquida Ordinaria
+      const taxShort = calculateRealEstateTaxPreliquidation({
+        valorVentaCop: 900_000_000,
+        costoFiscalCop: 700_000_000,
+        anosPosesion: 1,
+        esViviendaHabitacion: false
+      });
+      expect(taxShort.esRentaOrdinariaMenor2Anos).toBe(true);
+      expect(taxShort.gananciaOcasionalCop).toBe(0);
+      expect(taxShort.retencionFuenteNotarialCop).toBe(9_000_000);
+      expect(taxShort.impuestoTimbreEstimadoCop).toBe(0);
+    });
+
+    it("genera Ficha Financiera y Tributaria PDF Membretada e integra DM, Grupos (@JanIA), Satisfacción + Google Reviews, semilla y v34.15", async () => {
+      const { analyzeFinancialAndTaxFromWhatsAppInput } = await import("../_core/financialAndTaxRealEstateService");
+      const { extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+      const { processPrivateDmConversationalMessage, popLatestDmPdf } = await import("../_core/jania/handlers/dmHandler");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      const { isRealEstateConsultationForGroup } = await import("../_core/whatsapp-match");
+      const { isUserSatisfactionOrFeedbackReply } = await import("../_core/politenessService");
+
+      const finQuery =
+        "Hola JanIA, simula crédito hipotecario vs leasing habitacional y Cap Rate para apartamento de $520 millones a 20 años, canon mensual $3.4 millones, admon $450 mil, predial $3 millones, y pre-liquida retención y ganancia ocasional si se vende luego con costo fiscal de $350 millones por 4 años de posesión";
+
+      // A) PDF Membretado de VECY BIENES RAÍCES con verificador de contenido
+      const directFin = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: finQuery,
+        requesterName: "Andrés Inversionista"
+      });
+      expect(directFin.isFinancialTaxRequest).toBe(true);
+      expect(directFin.needsDataGuidance).toBe(false);
+      expect(directFin.report?.mortgageVsLeasing).toBeDefined();
+      expect(directFin.report?.investmentRoi).toBeDefined();
+      expect(directFin.report?.taxPreliquidation).toBeDefined();
+      expect(Buffer.isBuffer(directFin.pdfBuffer)).toBe(true);
+      expect((directFin.pdfBuffer as Buffer).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      expect(directFin.pdfFileName).toMatch(/^Ficha_Financiera_Tributaria_VECY_.*FIN-VECY-.*\.pdf$/);
+      const pdfText = extractTextSnippetsFromPdfBuffer((directFin.pdfBuffer as Buffer).toString("base64"));
+      expect(pdfText).toMatch(/FICHA FINANCIERA|TRIBUTARIA PRELIMINAR|VECY BIENES RAICES/i);
+
+      // B) Integración nativa en DM (PDF adjunto + Satisfacción + CTA +57 316 656 9719)
+      const dmUser = `573159990011_${Date.now()}@s.whatsapp.net`;
+      const dmReply = await processPrivateDmConversationalMessage(finQuery, dmUser, "Andrés Inversionista");
+      expect(dmReply).toMatch(/SIMULACIÓN HIPOTECARIA|CAP RATE|PRE-LIQUIDACIÓN TRIBUTARIA/i);
+      expect(dmReply).toContain("+57 316 656 9719");
+      expect(dmReply).toMatch(/satisfecho\(a\)/i);
+
+      const dmPdf = popLatestDmPdf(dmUser);
+      expect(dmPdf).not.toBeNull();
+      expect(dmPdf?.pdfFileName).toMatch(/^Ficha_Financiera_Tributaria_VECY_.*\.pdf$/);
+      expect(dmPdf?.pdfBuffer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+
+      // C) Integración en Grupos (@JanIA) con adjunto PDF nativo y cierre de Satisfacción + Google Reviews
+      const groupUser = `573159990012_${Date.now()}@s.whatsapp.net`;
+      const groupRes = await processConsultingMessage(`@JanIA ${finQuery}`, groupUser, "Camila Bróker");
+      expect(groupRes.classification).toBe("CONSULTA_GENERAL");
+      expect(groupRes.reactionEmoji).toBe("💳");
+      expect(groupRes.response).toMatch(/SIMULACIÓN HIPOTECARIA|CAP RATE|PRE-LIQUIDACIÓN TRIBUTARIA/i);
+      expect(groupRes.response).toMatch(/satisfecho\(a\)/i);
+      expect(Buffer.isBuffer(groupRes.document)).toBe(true);
+      expect(groupRes.fileName).toMatch(/^Ficha_Financiera_Tributaria_VECY_.*\.pdf$/);
+
+      // Seguimiento de satisfacción positivo -> entrega enlace Google Reviews por libre albedrío
+      const groupFollowUp = await processConsultingMessage(
+        "@JanIA excelente simulación financiera, muchas gracias",
+        groupUser,
+        "Camila Bróker"
+      );
+      expect(groupFollowUp.response).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // D) WhatsApp Match, Politeness, Semilla v34.15 y Versionamiento
+      expect(
+        isRealEstateConsultationForGroup(
+          "@JanIA calcula Cap Rate y cuota mensual crédito hipotecario apartamento $480 millones canon $3.2M",
+          undefined,
+          false
+        )
+      ).toBe(true);
+      expect(isUserSatisfactionOrFeedbackReply("Excelente simulación financiera y Cap Rate, gracias").isSatisfied).toBe(true);
+      expect(
+        isUserSatisfactionOrFeedbackReply("Ahora simula un crédito hipotecario de $400 millones con leasing habitacional").isSatisfied
+      ).toBe(false);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed15 = SEED_TEACHINGS.find(t => t.id === "seed-simulador-hipotecario-leasing-caprate-tributario-v34-15");
+      expect(seed15).toBeDefined();
+      expect(seed15?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[5-9]|[2-9]\d)$/);
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:1[5-9]|[2-9]\d)\.0$/);
+    });
+  });
 });
 
 

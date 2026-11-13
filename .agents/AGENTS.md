@@ -184,7 +184,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.14 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.15 — Noviembre 2026
+
+### Novedades v34.15 (Punto 4 — Skill 4: Motor Especializado de Simulación Hipotecaria, Leasing Habitacional, Rentabilidad Cap Rate / Cash-on-Cash / ROI y Pre-liquidación Tributaria Inmobiliaria Colombia + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Prioridad #4 del Roadmap de Skills de JanIA:**
+     - Dotar a JanIA (DM `dmHandler.ts` y citada con `@JanIA` en grupos `consultingHandler.ts` / `circuloHandler.ts` / `whatsapp-match.ts`) de un motor determinístico a `$0 COP` con normativa colombiana vigente para simular Crédito Hipotecario vs. Leasing Habitacional (Pesos y UVR, LTV VIS 80% / No-VIS 70% / Leasing 80%–85%, seguros de referencia e ingreso mínimo familiar Ley 546 de 1999 al 30% y rango 40%), evaluar Inversión y Renta (`Cap Rate` bruto/neto, `Cash-on-Cash`, `Yield` mensual, punto de equilibrio y renta tradicional vs corta) y pre-liquidar Tributos de Venta (Retención 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T. > 2 años vs Renta Ordinaria < 2 años, exención 5.000 UVT Art. 311-1 E.T. e Impuesto de Timbre > 20.000/50.000 UVT), entregando **Ficha Financiera y Tributaria Preliminar en PDF Membretado de VECY BIENES RAÍCES**.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `server/_core/financialAndTaxRealEstateService.ts`: Parser inteligente y calculadoras determinísticas (`parseFinancialAndTaxQuery`, `isConceptualFinancialOrTaxQuestion`, `isFinancialOrTaxSimulationRequest`, `simulateMortgageVsLeasing`, `evaluateInvestmentAndYield`, `calculateRealEstateTaxPreliquidation`, `buildFinancialAndTaxReport`, `analyzeFinancialAndTaxFromWhatsAppInput`) integradas con `VALOR_UVT_2026` y `liquidarImpuestosVenta` de `taxEngine.ts`, con discriminación estricta ante preguntas conceptuales pasivas y agradecimientos puros.
+     - `server/_core/jania/legalDocumentPdfService.ts`: Añadido `"ficha_financiera_tributaria"` y `generateFinancialAndTaxPdf` sobre `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+     - Blindaje de precedencia y separación estricta de `notarialExpenseService.ts`, `predialService.ts` y `politenessService.ts`; integración nativa en `dmHandler.ts` (herramienta `simular_financiero_inversion_y_tributos`, pre-interceptor y guarda en `isCommissionOrCostInquiry`), `consultingHandler.ts` (`isOtherToolRequest`, Interceptor 0.7 y fallback `catch`), `circuloHandler.ts` y `whatsapp-match.ts`, junto al CTA de crédito aliado `+57 316 656 9719` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  3. **Gobernanza y Suite de Regresión 201:**
+     - Semilla directiva `seed-simulador-hipotecario-leasing-caprate-tributario-v34-15` en `founderKnowledgeService.ts` y Suite 201 (5/5 tests) en `regression.test.ts` + actualización de `shared/const.ts` (`v34.15`) y `package.json` (`34.15.0`).
+- **Validación Limpia ($0 COP):** `NODE_ENV=test npm test` | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.14 — Noviembre 2026
 
 ### Novedades v34.14 (Punto 3 — Skill 3: Motor Especializado de Análisis POT / Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

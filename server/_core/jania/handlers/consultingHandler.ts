@@ -46,6 +46,10 @@ import {
   analyzePotUrbanNormFromWhatsAppInput,
   isPotUrbanNormRequest,
 } from "../../potUrbanNormService";
+import {
+  analyzeFinancialAndTaxFromWhatsAppInput,
+  isFinancialOrTaxSimulationRequest,
+} from "../../financialAndTaxRealEstateService";
 
 /**
  * Añade de forma idempotente el cierre doctrinal de satisfacción (v34.11/v34.12)
@@ -206,6 +210,7 @@ export async function processConsultingMessage(
       isExplicitCtlStudyRequest(messageToProcess) ||
       hasCtlTextMarkers(messageToProcess) ||
       isPotUrbanNormRequest(messageToProcess) ||
+      isFinancialOrTaxSimulationRequest(messageToProcess) ||
       isCreativeImgReq ||
       isExplicitLegalPdfRequest(messageToProcess) ||
       extractAllCedulasForVerification(messageToProcess, false).length > 0;
@@ -324,6 +329,46 @@ export async function processConsultingMessage(
           classification: "CONSULTA_GENERAL",
           response: potCheck.responseText,
           reactionEmoji: potCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+        };
+      }
+    }
+
+    // 💳 INTERCEPTOR DIRECTO 0.7: SIMULADOR HIPOTECARIO, LEASING, CAP RATE / ROI Y PRE-LIQUIDACIÓN TRIBUTARIA + PDF MEMBRETADO
+    if (isFinancialOrTaxSimulationRequest(messageToProcess)) {
+      const finCheck = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text: messageToProcess,
+        requesterName: targetName || realName || undefined,
+        generatePdf: true,
+      });
+      if (finCheck.isFinancialTaxRequest && finCheck.report) {
+        const finalFinResp = appendGroupSatisfactionClosing(finCheck.responseText);
+        console.log(
+          `[JanIA-FinancialTaxCheck] Simulación financiera/tributaria ejecutada en grupo para ${userId} (PDF: ${Boolean(finCheck.pdfBuffer)})`
+        );
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalFinResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalFinResp,
+          reactionEmoji: finCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: finCheck.pdfBuffer,
+          fileName: finCheck.pdfFileName,
+        };
+      }
+
+      if (finCheck.needsDataGuidance && finCheck.responseText) {
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finCheck.responseText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finCheck.responseText,
+          reactionEmoji: finCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: "",
         };
@@ -889,6 +934,27 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
           reactionEmoji: potFallback.reactionEmoji,
           document: potFallback.pdfBuffer,
           fileName: potFallback.pdfFileName,
+        };
+      }
+    }
+
+    if (isFinancialOrTaxSimulationRequest(text)) {
+      const finFallback = await analyzeFinancialAndTaxFromWhatsAppInput({
+        text,
+        requesterName: firstName || undefined,
+        generatePdf: true,
+      }).catch(() => null);
+      if (finFallback?.isFinancialTaxRequest && finFallback.report) {
+        const finalFinFallbackResp = appendGroupSatisfactionClosing(finFallback.responseText);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalFinFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalFinFallbackResp,
+          reactionEmoji: finFallback.reactionEmoji,
+          document: finFallback.pdfBuffer,
+          fileName: finFallback.pdfFileName,
         };
       }
     }

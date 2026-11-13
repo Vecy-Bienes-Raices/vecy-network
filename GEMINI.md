@@ -1,4 +1,17 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.14.0 — 2026-11-13)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.15.0 — 2026-11-13)
+- **JanIA Server:** `v34.15` (`34.15.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Punto 4 — Skill 4: Motor Especializado de Simulación Hipotecaria, Leasing Habitacional, Rentabilidad (Cap Rate / Cash-on-Cash / ROI) y Tributación Inmobiliaria Colombia (`financialAndTaxRealEstateService.ts` + PDF Membretado + DM & Grupos — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz:**
+     - JanIA requería un motor financiero y tributario determinístico a `$0 COP` para comparar Crédito Hipotecario vs. Leasing Habitacional (Pesos y UVR, LTV VIS 80% / No-VIS 70% / Leasing 80%–85%, seguros de referencia e ingreso mínimo Ley 546 de 1999 al 30% y rango 40%), evaluar Inversión/Renta (`Cap Rate` bruto/neto, `Cash-on-Cash`, `Yield` mensual, punto de equilibrio y renta tradicional vs corta) y pre-liquidar Tributos de Venta (Retención 1% Art. 398 E.T., Ganancia Ocasional 15% Art. 314 E.T. > 2 años vs Renta Ordinaria < 2 años, exención 5.000 UVT Art. 311-1 E.T. e Impuesto de Timbre > 20.000/50.000 UVT), separado estrictamente de `notarialExpenseService.ts`, con precedencia segura frente a CTL/POT/IDU/Predial/Notarial/ACM y protegido ante preguntas conceptuales pasivas, agradecimientos puros y la intercepción genérica de costos en `dmHandler.ts`.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - Nuevo módulo `server/_core/financialAndTaxRealEstateService.ts`: parser inteligente (`parseFinancialAndTaxQuery`, `isConceptualFinancialOrTaxQuestion`, `isFinancialOrTaxSimulationRequest`) + calculadoras determinísticas (`simulateMortgageVsLeasing`, `evaluateInvestmentAndYield`, `calculateRealEstateTaxPreliquidation`, `buildFinancialAndTaxReport`, `analyzeFinancialAndTaxFromWhatsAppInput`).
+     - En `server/_core/jania/legalDocumentPdfService.ts`: añadido `"ficha_financiera_tributaria"` y `generateFinancialAndTaxPdf` con diseño corporativo y QR de trazabilidad VECY.
+     - Blindaje de precedencia en `predialService.ts`, `notarialExpenseService.ts` y `politenessService.ts`; integración nativa en `dmHandler.ts` (herramienta `simular_financiero_inversion_y_tributos`, pre-interceptor y guarda en `isCommissionOrCostInquiry`), `consultingHandler.ts` (incluyendo fallback `catch`), `circuloHandler.ts` y `whatsapp-match.ts`, junto al Protocolo de Satisfacción + Google Reviews (`v34.11`) y CTA hacia `+57 316 656 9719`.
+  3. **Gobernanza y Suite de Regresión 201:**
+     - Semilla `seed-simulador-hipotecario-leasing-caprate-tributario-v34-15` en `founderKnowledgeService.ts` y Suite 201 (5/5 tests) en `regression.test.ts`.
+- **Validación Limpia ($0 COP):** Suite completa `NODE_ENV=test npm test` | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.14.0 — 2026-11-13)
 - **JanIA Server:** `v34.14` (`34.14.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Punto 3 — Skill 3: Análisis POT / Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA (`potUrbanNormService.ts` + PDF Membretado + DM & Grupos — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**
