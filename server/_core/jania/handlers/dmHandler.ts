@@ -36,6 +36,10 @@ import {
   hasCtlTextMarkers,
   isExplicitCtlStudyRequest
 } from "../../ctlTitleStudyService";
+import {
+  analyzePotUrbanNormFromWhatsAppInput,
+  isPotUrbanNormRequest
+} from "../../potUrbanNormService";
 import { getGreetingByTime } from "../../whatsapp-utils";
 import { FlyerVisionResult } from "../types";
 import {
@@ -413,6 +417,17 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["textoAnotacionesOCtl"]
         }
+      },
+      {
+        name: "analizar_norma_urbana_pot",
+        description: "Ejecuta el Análisis POT y Norma Urbana en vivo para Bogotá (Decreto 555 de 2021, SINUPOT / Mapas Bogotá IDECA / Catastro) por CHIP AAA..., dirección exacta, barrio/UPL/UPZ, área de lote y frente: identifica tratamiento urbanístico, área de actividad, IO/IC, altura en pisos, usos permitidos/restringidos, alertas (reserva vial, ronda hídrica, remoción en masa, BIC), potencial constructivo en m² y genera Concepto Preliminar en PDF Membretado de VECY BIENES RAÍCES.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            consultaPredioPot: { type: "STRING", description: "Consulta POT con CHIP AAA..., dirección en Bogotá, sector/UPL/UPZ, área de lote (m²) y frente (m)" }
+          },
+          required: ["consultaPredioPot"]
+        }
       }
     ]
   }
@@ -438,7 +453,8 @@ export type JaniaDmToolType =
   | "imagen_creativa_whatsapp"
   | "ubicacion_gps"
   | "marketing_inmobiliario"
-  | "estudio_titulos";
+  | "estudio_titulos"
+  | "norma_urbana_pot";
 
 export function extractAcmAttributesFromText(rawText: string): {
   zonaOBarrio?: string;
@@ -1349,6 +1365,30 @@ export async function executeJaniaDmTool(
         }
       };
     }
+    case "analizar_norma_urbana_pot": {
+      const potInput = String(args.consultaPredioPot || rawUserText || "").trim();
+      const potRes = await analyzePotUrbanNormFromWhatsAppInput({
+        text: potInput,
+        requesterName: _userName || undefined
+      });
+      if (potRes.pdfBuffer && potRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: potRes.pdfBuffer, pdfFileName: potRes.pdfFileName });
+      }
+      return {
+        toolType: "norma_urbana_pot",
+        resultJson: {
+          solicitud: "analizar_norma_urbana_pot",
+          predioEspecifico: potRes.report?.isSpecificPredio ?? false,
+          tratamiento: potRes.report?.normaPot555.tratamientoNombre || null,
+          areaActividad: potRes.report?.normaPot555.areaActividadNombre || null,
+          upl: potRes.report?.identificacion.upl || null,
+          exitoso: potRes.isPotRequest,
+          reporteOficial:
+            potRes.responseText ||
+            "Para analizar la norma urbana POT (Decreto 555/2021), envíame por favor el CHIP AAA..., dirección exacta en Bogotá o sector/UPL junto con área de lote y frente."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -1401,6 +1441,7 @@ export async function synthesizeToolResponseWithGemini(
     rawReport.includes("FACTURA PREDIAL") ||
     rawReport.includes("LIQUIDACIÓN ESTIMADA") ||
     rawReport.includes("ESTUDIO DE TÍTULOS SNR") ||
+    rawReport.includes("ANÁLISIS POT") ||
     rawReport.includes("COINCIDENCIA") ||
     rawReport.includes("MATCH") ||
     isDirectDocumentLookup
@@ -1663,7 +1704,8 @@ export const ALL_DM_TOOL_TYPES = [
   "documento_legal_pdf",
   "imagen_creativa",
   "ubicacion_gps",
-  "estudio_titulos"
+  "estudio_titulos",
+  "norma_urbana_pot"
 ] as const;
 
 function isKnownToolType(val: string): boolean {
@@ -2148,7 +2190,7 @@ export async function processPrivateDmConversationalMessage(
         lastAssistantTextEarly
       );
     const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
-    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n)\b/i.test(
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad)\b/i.test(
       cleanLower
     );
 
@@ -2752,6 +2794,58 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     }
   }
 
+  // 📐 INTERCEPTOR DETERMINÍSTICO DE ANÁLISIS POT & NORMA URBANA BOGOTÁ (v34.14 — SINUPOT / IDECA / Dto. 555/2021):
+  // Se ubica después de CTL y ANTES del perfilamiento de requerimientos para evitar captura de lotes/CHIP por otros flujos.
+  const shouldEvaluatePotInDm =
+    !isCommercialFlyerImg &&
+    !isReviewValidationContext &&
+    isPotUrbanNormRequest(clean);
+
+  if (shouldEvaluatePotInDm) {
+    const potRes = await analyzePotUrbanNormFromWhatsAppInput({
+      text: clean,
+      requesterName: displayName || realName || undefined
+    });
+
+    if (potRes.isPotRequest && potRes.report) {
+      if (potRes.pdfBuffer && potRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: potRes.pdfBuffer, pdfFileName: potRes.pdfFileName });
+      }
+      await incrementFreeServicesCount(userId);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+        serviceType: "norma_urbana_pot",
+        timestamp: Date.now()
+      };
+      await saveUserPerpetualSession(userPerpetualSession);
+
+      const satisfactionLine =
+        `\n\n🤝 *¿Quedaste satisfecho(a) con este Análisis POT y Norma Urbana?* Tu opinión me ayuda a seguir afinando mi precisión para toda la red VECY.`;
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const finalPotReply = `${greetingPrefix}${potRes.responseText}${satisfactionLine}`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", finalPotReply);
+      markUserGreetedToday(userId);
+      return finalPotReply;
+    }
+
+    if (potRes.needsPredioGuidance && potRes.responseText) {
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const guidanceReply = `${greetingPrefix}${potRes.responseText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", guidanceReply);
+      markUserGreetedToday(userId);
+      return guidanceReply;
+    }
+  }
+
   // 🏢 DOCTRINA EDUARDO A. RIVERA (v33.79) — ENTREVISTA MINUCIOSA DE PERFILAMIENTO INMOBILIARIO Y ATERRIZAJE AL ASESOR:
   // Si el usuario (sea colega inmobiliario o cliente) presenta un requerimiento o búsqueda inmobiliaria escueta, incompleta o genérica
   // (sin cifras numéricas de presupuesto, sin alcobas exactas o sin especificaciones indispensables):
@@ -3013,7 +3107,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `===================================================\n` +
       `MANEJO INTELIGENTE DE TRÁMITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:\n` +
       `===================================================\n` +
-      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps.\n` +
+      `Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot.\n` +
       `a) Si el usuario envía un número, documento o nombre de empresa con INTENCIÓN CLARA (ej. "revisa esta cédula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la razón social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.\n` +
       `b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, trámites VUR/Sinupot, divisas/TRM del dólar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jurídico sin alucinaciones.\n` +
       `c) Si el usuario consulta qué inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m² de inmediato.\n` +

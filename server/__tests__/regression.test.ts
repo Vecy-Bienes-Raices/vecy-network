@@ -12849,11 +12849,165 @@ A: BANCO DE BOGOTA
       expect(seed13?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.13");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[3-9]|[2-9]\d)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.13.0");
+      expect(pkg.version).toMatch(/^34\.(?:1[3-9]|[2-9]\d)\.0$/);
+    });
+  });
+
+  // =================================================================================================
+  // SUITE 200: PUNTO 3 / SKILL 3 — ANÁLISIS POT Y NORMA URBANA BOGOTÁ (SINUPOT / IDECA / DTO. 555/2021)
+  // =================================================================================================
+  describe("Suite 200: Punto 3 — Motor Especializado de Análisis POT y Norma Urbana en Vivo (v34.14)", () => {
+    it("discrimina preguntas conceptuales puras vs consultas de predio, preserva precedencia segura y calcula potencial constructivo a $0 COP", async () => {
+      const {
+        isConceptualPotQuestion,
+        isPotUrbanNormRequest,
+        parsePotUrbanQuery,
+        analyzePotUrbanNormFromWhatsAppInput
+      } = await import("../_core/potUrbanNormService");
+      const { isIduInquiry } = await import("../_core/iduValorizacionService");
+      const { isExplicitCtlStudyRequest } = await import("../_core/ctlTitleStudyService");
+
+      // 1. Preguntas puramente conceptuales NO deben ser interceptadas como análisis de predio
+      expect(isConceptualPotQuestion("¿Qué es el índice de construcción en el POT Decreto 555 de 2021?")).toBe(true);
+      expect(isPotUrbanNormRequest("¿Qué es el índice de construcción en el POT Decreto 555 de 2021?")).toBe(false);
+      expect(isConceptualPotQuestion("¿Cómo funciona la norma de aislamientos en Bogotá?")).toBe(true);
+      expect(isPotUrbanNormRequest("¿Cómo funciona la norma de aislamientos en Bogotá?")).toBe(false);
+
+      // 2. CHIP AAA... + intención explícita POT debe reconocerse como POT y enrutarse antes que IDU/Predial
+      const chipPotPrompt = "@JanIA revisa la norma urbana POT, uso del suelo y pisos permitidos para el CHIP AAA0058EEXS lote 500 m2 con frente 15 m";
+      expect(isPotUrbanNormRequest(chipPotPrompt)).toBe(true);
+      expect(isIduInquiry(chipPotPrompt)).toBe(false);
+
+      // 3. Consulta pura IDU o CTL conserva su propio enrutamiento sin colisión
+      expect(isPotUrbanNormRequest("Necesito paz y salvo IDU del CHIP AAA0058EEXS")).toBe(false);
+      expect(isPotUrbanNormRequest("Hazme estudio de títulos CTL para revisar si el uso comercial tiene embargo")).toBe(false);
+      expect(isExplicitCtlStudyRequest("Hazme estudio de títulos CTL de la matrícula 50C-1992881")).toBe(true);
+
+      // 4. Parsing y cálculos volumétricos determinísticos para lote en Chapinero (NODE_ENV=test -> $0 COP)
+      const parsed = parsePotUrbanQuery(
+        "Analiza el POT y potencial constructivo de un lote en Chapinero Calle 85 # 12-40 con área 500 m2 y frente 15 m"
+      );
+      expect(parsed.isPotRequest).toBe(true);
+      expect(parsed.isSpecificPredio).toBe(true);
+      expect(parsed.areaLoteM2).toBe(500);
+      expect(parsed.frenteMetros).toBe(15);
+
+      const res = await analyzePotUrbanNormFromWhatsAppInput({
+        text: "Analiza el POT y constructibilidad del lote en Chapinero Calle 85 # 12-40, área 500 m2, frente 15 m",
+        requesterName: "Carlos Developer",
+        enableLiveGis: false
+      });
+
+      expect(res.isPotRequest).toBe(true);
+      expect(res.needsPredioGuidance).toBe(false);
+      expect(res.reactionEmoji).toBe("📐");
+      expect(res.report).toBeDefined();
+      expect(res.report!.liveGis.source).toBe("DETERMINISTIC_POT_555");
+      expect(res.report!.normaPot555.tratamientoNombre).toMatch(/Renovaci[oó]n|Consolidaci[oó]n/i);
+      expect(res.report!.normaPot555.indiceOcupacionMax).toBeGreaterThan(0);
+      expect(res.report!.normaPot555.indiceConstruccionBase).toBeGreaterThan(0);
+      expect(res.report!.potencialConstructivoYComercial.aplicaCalculoVolumetrico).toBe(true);
+      expect(res.report!.potencialConstructivoYComercial.areaMaximaOcupablePiso1M2).toBeGreaterThan(0);
+      expect(res.report!.potencialConstructivoYComercial.areaMaximaConstruibleBaseM2).toBeGreaterThan(500);
+      expect(res.report!.alertasYRestricciones.reservaVial).toBeDefined();
+      expect(res.report!.alertasYRestricciones.rondaHidrica).toBeDefined();
+      expect(res.report!.alertasYRestricciones.riesgoRemocionMasa).toBeDefined();
+      expect(res.report!.alertasYRestricciones.bienInteresCultural).toBeDefined();
+      expect(res.responseText).toContain("+57 316 656 9719");
+      expect(res.responseText).toContain("https://wa.me/573166569719");
+
+      // 5. Consulta POT genérica sin datos de predio devuelve guía sin PDF
+      const guidanceRes = await analyzePotUrbanNormFromWhatsAppInput({
+        text: "Hola JanIA, necesito revisar la norma POT y uso del suelo de un lote",
+        enableLiveGis: false
+      });
+      expect(guidanceRes.isPotRequest).toBe(true);
+      expect(guidanceRes.needsPredioGuidance).toBe(true);
+      expect(guidanceRes.pdfBuffer).toBeUndefined();
+      expect(guidanceRes.responseText).toContain("Código CHIP");
+      expect(guidanceRes.responseText).toContain("+57 316 656 9719");
+    });
+
+    it("genera Concepto Preliminar POT en PDF Membretado e integra DM, Grupos (@JanIA), Satisfacción + Google Reviews, semilla y v34.14", async () => {
+      const { analyzePotUrbanNormFromWhatsAppInput } = await import("../_core/potUrbanNormService");
+      const { extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+      const { processPrivateDmConversationalMessage, popLatestDmPdf } = await import("../_core/jania/handlers/dmHandler");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      const { isRealEstateConsultationForGroup } = await import("../_core/whatsapp-match");
+      const { isUserSatisfactionOrFeedbackReply } = await import("../_core/politenessService");
+
+      const potQuery =
+        "Hola JanIA, analiza la norma urbana POT, usos permitidos y potencial constructivo del predio CHIP AAA0058EEXS en Niza, lote de 420 m2 con frente 12 m";
+
+      // A) PDF Membretado de VECY BIENES RAÍCES con verificador de contenido
+      const directPot = await analyzePotUrbanNormFromWhatsAppInput({
+        text: potQuery,
+        requesterName: "Laura Constructora",
+        enableLiveGis: false
+      });
+      expect(directPot.isPotRequest).toBe(true);
+      expect(Buffer.isBuffer(directPot.pdfBuffer)).toBe(true);
+      expect((directPot.pdfBuffer as Buffer).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      expect(directPot.pdfFileName).toMatch(/^Concepto_Norma_Urbana_POT_VECY_AAA0058EEXS_POT-VECY-.*\.pdf$/);
+      const pdfText = extractTextSnippetsFromPdfBuffer((directPot.pdfBuffer as Buffer).toString("base64"));
+      expect(pdfText).toMatch(/CONCEPTO PRELIMINAR DE NORMA URBANA|AAA0058EEXS|VECY BIENES RAICES/i);
+
+      // B) Integración nativa en DM (precedencia sobre IDU/Predial/Perfilamiento + PDF adjunto + Satisfacción)
+      const dmUser = `573158889911_${Date.now()}@s.whatsapp.net`;
+      const dmReply = await processPrivateDmConversationalMessage(potQuery, dmUser, "Laura Constructora");
+      expect(dmReply).toContain("ANÁLISIS POT");
+      expect(dmReply).toContain("AAA0058EEXS");
+      expect(dmReply).toContain("+57 316 656 9719");
+      expect(dmReply).toMatch(/satisfecho\(a\)/i);
+
+      const dmPdf = popLatestDmPdf(dmUser);
+      expect(dmPdf).not.toBeNull();
+      expect(dmPdf?.pdfFileName).toMatch(/^Concepto_Norma_Urbana_POT_VECY_.*\.pdf$/);
+      expect(dmPdf?.pdfBuffer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+
+      // C) Integración en Grupos (@JanIA) con adjunto PDF nativo y cierre de Satisfacción + Google Reviews
+      const groupUser = `573158889912_${Date.now()}@s.whatsapp.net`;
+      const groupRes = await processConsultingMessage(`@JanIA ${potQuery}`, groupUser, "Felipe Inversionista");
+      expect(groupRes.classification).toBe("CONSULTA_GENERAL");
+      expect(groupRes.reactionEmoji).toBe("📐");
+      expect(groupRes.response).toContain("ANÁLISIS POT");
+      expect(groupRes.response).toContain("AAA0058EEXS");
+      expect(groupRes.response).toMatch(/satisfecho\(a\)/i);
+      expect(Buffer.isBuffer(groupRes.document)).toBe(true);
+      expect(groupRes.fileName).toMatch(/^Concepto_Norma_Urbana_POT_VECY_.*\.pdf$/);
+
+      // Seguimiento de satisfacción positivo -> entrega enlace Google Reviews por libre albedrío
+      const groupFollowUp = await processConsultingMessage(
+        "@JanIA muchas gracias, quedé muy satisfecho con ese análisis POT",
+        groupUser,
+        "Felipe Inversionista"
+      );
+      expect(groupFollowUp.response).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // D) WhatsApp Match, Politeness, Semilla v34.14 y Versionamiento
+      expect(
+        isRealEstateConsultationForGroup("@JanIA revisa uso del suelo y edificabilidad del CHIP AAA0058EEXS", undefined, false)
+      ).toBe(true);
+      expect(isUserSatisfactionOrFeedbackReply("Me encantó, muy completo el análisis POT").isSatisfied).toBe(true);
+      expect(
+        isUserSatisfactionOrFeedbackReply("Ahora revisa la norma urbana POT y uso del suelo del CHIP AAA0058EEXS").isSatisfied
+      ).toBe(false);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed14 = SEED_TEACHINGS.find(t => t.id === "seed-pot-norma-urbana-sinupot-ideca-v34-14");
+      expect(seed14).toBeDefined();
+      expect(seed14?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[4-9]|[2-9]\d)$/);
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:1[4-9]|[2-9]\d)\.0$/);
     });
   });
 });

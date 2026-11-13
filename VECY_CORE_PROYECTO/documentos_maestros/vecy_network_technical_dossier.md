@@ -9314,6 +9314,22 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.14 (2026-11-13) — Punto 3: Skill 3 — Motor Especializado de Análisis POT y Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA (`potUrbanNormService.ts` y PDF Membretado — Doctrina Eduardo A. Rivera)
+- **Problema / Requerimiento Identificado**:
+  - Se requería implementar el análisis urbanístico de norma POT Bogotá (Decreto 555 de 2021) en vivo vía IDECA / Mapas Bogotá / SINUPOT por `CHIP AAA...`, dirección o sector/UPL/UPZ con cálculo volumétrico para lotes, casas y usos comerciales/industriales, Concepto Preliminar en PDF Membretado de VECY BIENES RAÍCES para predios específicos, precedencia segura sobre IDU/Predial cuando confluye `CHIP AAA...` + intención POT, sin interceptar preguntas puramente conceptuales y conservando el flujo de Satisfacción + Google Reviews en DM y Grupos (`@JanIA`).
+- **Solución Quirúrgica Implementada**:
+  - **`server/_core/potUrbanNormService.ts`**: Creado motor con consultas GIS sobre `serviciosgis.catastrobogota.gov.co` + SINUPOT best-effort y matriz determinística Decreto 555/2021 (`$0 COP` en `NODE_ENV=test`): UPL/UPZ, Tratamiento Urbanístico, Área de Actividad, IO, IC, altura en pisos, antejardín/aislamientos, usos permitidos/restringidos, alertas (reserva vial, ronda hídrica, remoción en masa, BIC), huella ocupable Piso 1 y m² construibles, y CTA comercial a `+57 316 656 9719`.
+  - **`server/_core/jania/legalDocumentPdfService.ts`**: Añadido `"concepto_norma_urbana_pot"` en `LegalDocumentType` y `generatePotUrbanNormPdf` usando `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+  - **`server/_core/jania/handlers/dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`, `whatsapp-match.ts`, `politenessService.ts`**: Integrados herramienta `analizar_norma_urbana_pot`, interceptores posteriores a CTL y anteriores a IDU/Predial y al perfilamiento de requerimientos, entrega PDF nativa en DM y Grupos, ajuste en `looksLikeNewToolDataRequest` y Protocolo de Satisfacción + Google Reviews.
+  - **Gobernanza y Suite 200**: Semilla `seed-pot-norma-urbana-sinupot-ideca-v34-14` en `founderKnowledgeService.ts`, Suite 200 en `server/__tests__/regression.test.ts` y actualización a `v34.14` (`34.14.0`) en `shared/const.ts` y `package.json`.
+- **Validación y Blindaje ($0 COP)**:
+  - `NODE_ENV=test npm test`: **6/6 archivos, 704/704 tests en verde (100%)**.
+  - `npm run check` (`tsc --noEmit`): **0 errores**.
+  - `npm run build`: **Compilación limpia** (`vite build` + `esbuild`).
+  - Versión: `v34.14` (`34.14.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.13 (2026-11-13) — Punto 2: Skill 2 — Motor Especializado de Estudio de Títulos SNR (`ctlTitleStudyService.ts`, Semáforo Jurídico y PDF Membretado — Doctrina Eduardo A. Rivera)
 - **Problema / Requerimiento Identificado**:
   - Se requería implementar el análisis jurídico automatizado de Certificados de Tradición y Libertad (SNR Colombia) en PDF, imagen y texto de anotaciones con auditoría anotación por anotación, validación de tradición 10/20 años, detección de Falsa Tradición (`0600`), cruce de gravámenes/embargos/limitaciones vs cancelaciones, Dictamen en Semáforo y Concepto Jurídico en PDF Membretado de VECY BIENES RAÍCES tanto en DM como en Grupos con `@JanIA`.

@@ -1,4 +1,17 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.13.0 — 2026-11-13)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.14.0 — 2026-11-13)
+- **JanIA Server:** `v34.14` (`34.14.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Punto 3 — Skill 3: Análisis POT / Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA (`potUrbanNormService.ts` + PDF Membretado + DM & Grupos — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz:**
+     - JanIA requería un motor urbanístico determinístico y GIS en vivo para evaluar norma POT de Bogotá (Decreto 555/2021) por `CHIP AAA...`, dirección o sector/UPL/UPZ con cálculo volumétrico para lotes/casas/locales/bodegas, precediendo a IDU/Predial cuando el `CHIP AAA...` viene con intención POT, sin interceptar preguntas puramente conceptuales y sin bloquear agradecimientos sobre análisis POT en `politenessService.ts`.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - Nuevo módulo `server/_core/potUrbanNormService.ts`: consultas GIS en vivo contra IDECA/Catastro Bogotá + SINUPOT best-effort y respaldo determinístico POT Decreto 555/2021 (`$0 COP` en `NODE_ENV=test`), entregando UPL/UPZ, Tratamiento Urbanístico, Área de Actividad, IO, IC base e incentivos, altura máxima, antejardín/aislamientos, usos permitidos/restringidos, alertas (reserva vial, ronda hídrica, remoción en masa, BIC), huella ocupable y área construible en m² y CTA hacia `+57 316 656 9719`.
+     - En `server/_core/jania/legalDocumentPdfService.ts`: añadido `"concepto_norma_urbana_pot"` y `generatePotUrbanNormPdf` con QR de trazabilidad VECY.
+     - Integración nativa DM & Grupos: herramienta `analizar_norma_urbana_pot` y pre-interceptor en `dmHandler.ts`, interceptores prioritarios en `consultingHandler.ts` (incluyendo fallback `catch`) y `circuloHandler.ts` (después de CTL y antes de IDU/Predial), ampliación de `whatsapp-match.ts`, ajuste en `politenessService.ts` y Protocolo de Satisfacción + Google Reviews (`v34.11`).
+  3. **Gobernanza y Suite de Regresión 200:**
+     - Semilla `seed-pot-norma-urbana-sinupot-ideca-v34-14` en `founderKnowledgeService.ts` y Suite 200 en `regression.test.ts`.
+- **Validación Limpia ($0 COP):** Suite completa `NODE_ENV=test npm test` (**6/6 archivos, 704/704 tests en verde**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.13.0 — 2026-11-13)
 - **JanIA Server:** `v34.13` (`34.13.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Punto 2 — Skill 2: Motor Especializado de Estudio de Títulos SNR (`ctlTitleStudyService.ts` + PDF Membretado + DM & Grupos — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**

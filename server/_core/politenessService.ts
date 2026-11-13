@@ -324,7 +324,14 @@ export function isUserSatisfactionOrFeedbackReply(
   const looksLikeNewToolDataRequest =
     /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
       normalized
-    ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
+    ) ||
+    /\b(?:revisa|analiza|evalua|consulta|calcula|hazme|quiero|necesito|dime)\b.{0,45}\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b/.test(
+      normalized
+    ) ||
+    /\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b.{0,45}\b(?:aaa\d+|calle|carrera|lote|predio)\b/.test(
+      normalized
+    ) ||
+    /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
 
   if (looksLikeNewToolDataRequest) {
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };

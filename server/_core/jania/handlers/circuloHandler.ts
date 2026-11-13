@@ -25,6 +25,7 @@ import {
   isExplicitNotarialLiquidationRequest,
 } from "../../notarialExpenseService";
 import { analyzeCtlFromWhatsAppInput, hasCtlTextMarkers, isExplicitCtlStudyRequest } from "../../ctlTitleStudyService";
+import { analyzePotUrbanNormFromWhatsAppInput, isPotUrbanNormRequest } from "../../potUrbanNormService";
 
 
 
@@ -116,6 +117,34 @@ export async function processCirculoMessage(
           classification: "CONSULTA_GENERAL",
           response: ctlCirculoCheck.responseText,
           reactionEmoji: ctlCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+
+    // 📐 INTERCEPTOR DIRECTO 0.6: ANÁLISIS POT & NORMA URBANA BOGOTÁ (SINUPOT / IDECA / DTO. 555/2021) + PDF MEMBRETADO
+    if (isPotUrbanNormRequest(text)) {
+      const potCirculoCheck = await analyzePotUrbanNormFromWhatsAppInput({
+        text,
+        requesterName: firstName || undefined
+      });
+      if (potCirculoCheck.isPotRequest && potCirculoCheck.report) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(potCirculoCheck.responseText),
+          reactionEmoji: potCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: potCirculoCheck.pdfBuffer,
+          fileName: potCirculoCheck.pdfFileName
+        };
+      }
+      if (potCirculoCheck.needsPredioGuidance && potCirculoCheck.responseText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: potCirculoCheck.responseText,
+          reactionEmoji: potCirculoCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
         };

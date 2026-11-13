@@ -42,6 +42,10 @@ import {
   hasCtlTextMarkers,
   isExplicitCtlStudyRequest,
 } from "../../ctlTitleStudyService";
+import {
+  analyzePotUrbanNormFromWhatsAppInput,
+  isPotUrbanNormRequest,
+} from "../../potUrbanNormService";
 
 /**
  * Añade de forma idempotente el cierre doctrinal de satisfacción (v34.11/v34.12)
@@ -201,6 +205,7 @@ export async function processConsultingMessage(
       isExplicitGroupMarketingAuditRequest(messageToProcess) ||
       isExplicitCtlStudyRequest(messageToProcess) ||
       hasCtlTextMarkers(messageToProcess) ||
+      isPotUrbanNormRequest(messageToProcess) ||
       isCreativeImgReq ||
       isExplicitLegalPdfRequest(messageToProcess) ||
       extractAllCedulasForVerification(messageToProcess, false).length > 0;
@@ -278,6 +283,47 @@ export async function processConsultingMessage(
           classification: "CONSULTA_GENERAL",
           response: ctlCheck.responseText,
           reactionEmoji: ctlCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+        };
+      }
+    }
+
+    // 📐 INTERCEPTOR DIRECTO 0.6: ANÁLISIS POT & NORMA URBANA BOGOTÁ (SINUPOT / IDECA / DTO. 555/2021) + PDF MEMBRETADO
+    // Precedencia: DESPUÉS de CTL y ANTES de IDU/Predial para que un CHIP AAA... acompañado de consulta POT no sea capturado por IDU o Predial.
+    if (isPotUrbanNormRequest(messageToProcess)) {
+      const potCheck = await analyzePotUrbanNormFromWhatsAppInput({
+        text: messageToProcess,
+        requesterName: targetName || realName || undefined,
+      });
+
+      if (potCheck.isPotRequest && potCheck.report) {
+        const finalPotResp = appendGroupSatisfactionClosing(potCheck.responseText);
+        console.log(
+          `[JanIA-POTCheck] Análisis POT ejecutado en grupo para ${userId} (Fuente: ${potCheck.report.liveGis.source} | PDF: ${Boolean(potCheck.pdfBuffer)})`
+        );
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalPotResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPotResp,
+          reactionEmoji: potCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: potCheck.pdfBuffer,
+          fileName: potCheck.pdfFileName,
+        };
+      }
+
+      if (potCheck.needsPredioGuidance && potCheck.responseText) {
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", potCheck.responseText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: potCheck.responseText,
+          reactionEmoji: potCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: "",
         };
@@ -823,6 +869,26 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
           reactionEmoji: ctlFallback.report.verdictEmoji,
           document: ctlFallback.pdfBuffer,
           fileName: ctlFallback.pdfFileName,
+        };
+      }
+    }
+
+    if (isPotUrbanNormRequest(text)) {
+      const potFallback = await analyzePotUrbanNormFromWhatsAppInput({
+        text,
+        requesterName: firstName || undefined,
+      }).catch(() => null);
+      if (potFallback?.isPotRequest && potFallback.report) {
+        const finalPotFallbackResp = appendGroupSatisfactionClosing(potFallback.responseText);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalPotFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPotFallbackResp,
+          reactionEmoji: potFallback.reactionEmoji,
+          document: potFallback.pdfBuffer,
+          fileName: potFallback.pdfFileName,
         };
       }
     }

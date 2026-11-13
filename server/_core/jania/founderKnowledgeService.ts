@@ -770,6 +770,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Punto 2 — Skill 2: Motor Especializado de Estudio de Títulos SNR (ctlTitleStudyService.ts, v34.13) con auditoría anotación por anotación, tradición 10 y 20 años, alerta Falsa Tradición 0600, cruce de gravámenes vs cancelaciones, Semáforo, PDF Membretado VECY, Alerta Patrimonial +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
     createdAt: "2026-11-13T11:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-pot-norma-urbana-sinupot-ideca-v34-14",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Motor Especializado de Análisis POT y Norma Urbana Bogotá (SINUPOT / Mapas Bogotá IDECA / Decreto 555 de 2021) + PDF Membretado — Doctrina Eduardo A. Rivera v34.14",
+    directive:
+      "Cuando un usuario consulte por DM o cite a @JanIA en Grupos sobre POT, norma urbana, uso del suelo, edificabilidad, constructibilidad, alturas, IO/IC, antejardín o aislamientos en Bogotá (por CHIP AAA..., dirección exacta o sector/UPZ/UPL): 1) Consultar en vivo IDECA Catastro / SINUPOT cuando aplique (con fallback determinístico al POT Decreto 555 de 2021 a $0 COP en tests); 2) Mantener precedencia segura después de Estudio de Títulos CTL y antes de IDU Valorización y Predial cuando el mensaje combine CHIP AAA... con intención explícita POT/norma urbana, y no interceptar preguntas puramente conceptuales; 3) Entregar UPL/UPZ, Tratamiento Urbanístico, Área de Actividad, IO, IC, altura máxima en pisos, usos permitidos/restringidos, alertas (reserva vial, ronda hídrica, remoción en masa, BIC) y potencial constructivo/comercial en m² si aporta área de lote y frente; 4) Adjuntar nativamente Concepto Preliminar de Norma Urbana y Prefactibilidad POT en PDF Membretado VECY BIENES RAÍCES cuando el predio sea específico; 5) Incluir CTA de consultoría urbanística hacia +57 316 656 9719 y Protocolo Universal de Satisfacción y Google Reviews.",
+    rawText:
+      "Punto 3 — Skill 3: Análisis POT / Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA (potUrbanNormService.ts, v34.14) en DM y Grupos con PDF Membretado VECY, precedencia segura sobre IDU/Predial, CTA +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
+    createdAt: "2026-11-13T14:00:00.000Z",
+    active: true
   }
 ];
 

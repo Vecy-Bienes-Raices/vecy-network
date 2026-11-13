@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { CtlTitleStudyReport } from "../ctlTitleStudyService";
+import type { PotUrbanNormReport } from "../potUrbanNormService";
 
 /**
  * 📑 GENERADOR INSTANTÁNEO DE CARTAS, CONTRATOS Y MINUTAS INMOBILIARIAS EN PDF MEMBRETADO (v33.66 — Doctrina Eduardo A. Rivera)
@@ -22,6 +23,7 @@ export type LegalDocumentType =
   | "pacto_retroventa"
   | "contrato_corretaje"
   | "estudio_titulos_snr"
+  | "concepto_norma_urbana_pot"
   | "minuta_general";
 
 export interface LegalDocumentPdfParams {
@@ -129,6 +131,12 @@ export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
         title: "CONCEPTO JURIDICO DE ESTUDIO DE TITULOS SNR",
         normativeFramework: "Estatuto de Registro de Instrumentos Publicos (Ley 1579 de 2012), Codigo Civil y Ley 1561 de 2012",
         defaultFileNamePrefix: "Concepto_Estudio_Titulos_VECY"
+      };
+    case "concepto_norma_urbana_pot":
+      return {
+        title: "CONCEPTO PRELIMINAR DE NORMA URBANA Y PREFACTIBILIDAD POT",
+        normativeFramework: "POT Bogota (Decreto 555 de 2021), Ley 388 de 1997, SINUPOT SDP e IDECA Catastro",
+        defaultFileNamePrefix: "Concepto_Norma_Urbana_POT_VECY"
       };
     default:
       return {
@@ -1295,6 +1303,323 @@ export async function generateCtlStudyPdf(
     .replace(/^_+|_+$/g, "")
     .slice(0, 28) || "FOLIO";
   const fileName = `${meta.defaultFileNamePrefix}_${safeMat}_${verificationCode}.pdf`;
+
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+
+/**
+ * Genera el Concepto Preliminar de Norma Urbana y Prefactibilidad POT Bogotá (Decreto 555 de 2021)
+ * en PDF Membretado de VECY BIENES RAICES, con identificacion IDECA/SINUPOT, indices IO/IC, altura,
+ * usos permitidos/restringidos, alertas urbanisticas, potencial volumetrico y QR de trazabilidad.
+ */
+export async function generatePotUrbanNormPdf(
+  report: PotUrbanNormReport,
+  options?: { requestedBy?: string }
+): Promise<GeneratedLegalPdfResult> {
+  const meta = getLegalDocumentMetadata("concepto_norma_urbana_pot");
+  const identifierLabel =
+    report.identificacion.chip && report.identificacion.chip !== "No suministrado"
+      ? report.identificacion.chip
+      : report.identificacion.direccion !== "No suministrada"
+      ? report.identificacion.direccion
+      : report.identificacion.upl;
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - ${identifierLabel}`
+  ).toUpperCase();
+  const verificationCode = `POT-VECY-${crypto.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework,
+    headerSubtitle: `Radicado Urbanistico: ${verificationCode} | Fuente: ${report.liveGis.source}`
+  });
+
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+
+  const ensureSpace = (minY = 92) => {
+    if (cursorY < minY) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+
+  const drawWrapped = (
+    text: string,
+    opts?: {
+      font?: PDFFont;
+      size?: number;
+      lineHeight?: number;
+      color?: ReturnType<typeof rgb>;
+      indent?: number;
+      minY?: number;
+    }
+  ) => {
+    const f = opts?.font ?? fontRegular;
+    const sz = opts?.size ?? 9.2;
+    const lh = opts?.lineHeight ?? sz + 4;
+    const col = opts?.color ?? rgb(0.14, 0.16, 0.2);
+    const ind = opts?.indent ?? 0;
+    const lines = wrapTextToLines(text, f, sz, maxWidth - ind);
+    for (const ln of lines) {
+      ensureSpace(opts?.minY ?? 70);
+      currentPage.drawText(ln, { x: marginX + ind, y: cursorY, size: sz, font: f, color: col });
+      cursorY -= lh;
+    }
+  };
+
+  const drawSectionBanner = (sectionTitle: string) => {
+    ensureSpace(110);
+    cursorY -= 6;
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: maxWidth,
+      height: 18,
+      color: rgb(0.95, 0.96, 0.98)
+    });
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: 3.5,
+      height: 18,
+      color: rgb(0.83, 0.68, 0.21)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(sectionTitle), {
+      x: marginX + 8,
+      y: cursorY + 1,
+      size: 9.6,
+      font: fontBold,
+      color: rgb(0.08, 0.1, 0.14)
+    });
+    cursorY -= 18;
+  };
+
+  // Caja resumen urbanístico destacado
+  const n = report.normaPot555;
+  const id = report.identificacion;
+  const al = report.alertasYRestricciones;
+  const hasHighAlert =
+    al.reservaVial.nivel === "ALTA" ||
+    al.rondaHidrica.nivel === "ALTA" ||
+    al.riesgoRemocionMasa.nivel === "ALTA" ||
+    al.bienInteresCultural.nivel === "ALTA";
+
+  const summaryPalette = hasHighAlert
+    ? {
+        bg: rgb(1.0, 0.97, 0.88),
+        border: rgb(0.8, 0.55, 0.04),
+        tag: "PREFACTIBILIDAD CON CONDICIONANTES URBANISTICAS RELEVANTES (VERIFICAR CURADURIA)"
+      }
+    : {
+        bg: rgb(0.91, 0.98, 0.93),
+        border: rgb(0.11, 0.55, 0.28),
+        tag: "PREFACTIBILIDAD NORMATIVA FAVORABLE BAJO MARCO POT DECRETO 555 DE 2021"
+      };
+
+  const headlineText = `${n.tratamientoNombre} | ${n.areaActividadNombre} | IO max ${n.indiceOcupacionMax} | IC base ${n.indiceConstruccionBase} (hasta ${n.indiceConstruccionMaxConIncentivos})`;
+  const headlineLines = wrapTextToLines(headlineText, fontRegular, 9, maxWidth - 26);
+  const summaryBoxHeight = 32 + headlineLines.length * 13;
+  ensureSpace(summaryBoxHeight + 60);
+  const boxBottomY = cursorY - summaryBoxHeight + 10;
+
+  currentPage.drawRectangle({
+    x: marginX,
+    y: boxBottomY,
+    width: maxWidth,
+    height: summaryBoxHeight,
+    color: summaryPalette.bg,
+    borderColor: summaryPalette.border,
+    borderWidth: 1.2
+  });
+  currentPage.drawText(sanitizePdfWinAnsiText(summaryPalette.tag), {
+    x: marginX + 12,
+    y: cursorY - 9,
+    size: 9.8,
+    font: fontBold,
+    color: summaryPalette.border
+  });
+  let sy = cursorY - 24;
+  for (const hLine of headlineLines) {
+    currentPage.drawText(hLine, {
+      x: marginX + 12,
+      y: sy,
+      size: 9,
+      font: fontRegular,
+      color: rgb(0.14, 0.16, 0.2)
+    });
+    sy -= 13;
+  }
+  cursorY = boxBottomY - 14;
+
+  // 1. IDENTIFICACION CATASTRAL Y TERRITORIAL
+  drawSectionBanner("1. IDENTIFICACION CATASTRAL Y TERRITORIAL DEL PREDIO");
+  drawWrapped(`CHIP Catastral: ${id.chip}   |   Direccion: ${id.direccion}`, { font: fontBold });
+  drawWrapped(`Barrio: ${id.barrio}   |   Localidad: ${id.localidad}   |   Estrato: ${id.estrato}`);
+  drawWrapped(`UPL (Decreto 555/2021): ${id.upl}   |   UPZ Referencia: ${id.upz}`);
+  drawWrapped(`Clasificacion del Suelo: ${id.clasificacionSuelo}`);
+  drawWrapped(
+    `Area Terreno: ${id.areaTerrenoM2 !== null ? `${id.areaTerrenoM2} m2` : "No reportada"}   |   Area Construida Actual: ${
+      id.areaConstruidaActualM2 !== null ? `${id.areaConstruidaActualM2} m2` : "No reportada"
+    }   |   Frente: ${id.frenteMetros !== null ? `${id.frenteMetros} m` : "Por verificar"}`
+  );
+  if (options?.requestedBy) {
+    drawWrapped(`Solicitado por: ${options.requestedBy}   |   Fecha Analisis: ${report.analyzedAtIso.slice(0, 10)}`);
+  }
+
+  // 2. PARAMETROS NORMATIVOS POT (DECRETO 555 DE 2021)
+  drawSectionBanner("2. PARAMETROS NORMATIVOS POT BOGOTA (DECRETO 555 DE 2021)");
+  drawWrapped(`Tratamiento Urbanistico: ${n.tratamientoNombre}`, { font: fontBold, indent: 6 });
+  drawWrapped(n.tratamientoDetalle, { indent: 12, size: 8.7 });
+  drawWrapped(`Area de Actividad: ${n.areaActividadNombre}`, { font: fontBold, indent: 6 });
+  drawWrapped(
+    `Indice de Ocupacion Maximo (IO): ${n.indiceOcupacionMax}   |   Indice de Construccion Base (IC): ${n.indiceConstruccionBase}   |   IC con Incentivos / Obligaciones: ${n.indiceConstruccionMaxConIncentivos}`,
+    { font: fontBold, indent: 6 }
+  );
+  drawWrapped(`Altura Maxima Estimada: ${n.alturaMaximaPisos}   |   Tipologia: ${n.tipologiaEdificatoria}`, { indent: 6 });
+  drawWrapped(`Antejardin Minimo: ${n.antejardinMinimo}`, { indent: 6 });
+  drawWrapped(`Aislamientos Posteriores y Laterales: ${n.aislamientos}`, { indent: 6 });
+
+  // 3. USOS DEL SUELO PERMITIDOS Y CONDICIONADOS
+  drawSectionBanner("3. USOS DEL SUELO PERMITIDOS Y CONDICIONADOS");
+  drawWrapped("Usos Principales / Complementarios Viables:", { font: fontBold, indent: 6 });
+  for (const uso of n.usosPermitidosPrincipales) {
+    drawWrapped(`+ ${uso}`, { indent: 12, size: 8.7, color: rgb(0.1, 0.42, 0.22) });
+  }
+  drawWrapped("Usos Restringidos o Sujetos a Condicion Normativa / Mitigacion:", { font: fontBold, indent: 6 });
+  for (const cond of n.usosRestringidosOCondicionados) {
+    drawWrapped(`- ${cond}`, { indent: 12, size: 8.7, color: rgb(0.55, 0.35, 0.05) });
+  }
+
+  // 4. ALERTAS URBANISTICAS, AMBIENTALES Y PATRIMONIALES
+  drawSectionBanner("4. ALERTAS URBANISTICAS, AMBIENTALES Y PATRIMONIALES");
+  drawWrapped(`- Reserva Vial / Malla Arterial: [${al.reservaVial.nivel}] ${al.reservaVial.detalle}`, { indent: 6, size: 8.8 });
+  drawWrapped(`- Ronda Hidrica / Estructura Ecologica (EEP): [${al.rondaHidrica.nivel}] ${al.rondaHidrica.detalle}`, { indent: 6, size: 8.8 });
+  drawWrapped(`- Riesgo / Remocion en Masa o Inundacion (IDIGER): [${al.riesgoRemocionMasa.nivel}] ${al.riesgoRemocionMasa.detalle}`, { indent: 6, size: 8.8 });
+  drawWrapped(`- Bien de Interes Cultural (BIC / PEMP): [${al.bienInteresCultural.nivel}] ${al.bienInteresCultural.detalle}`, { indent: 6, size: 8.8 });
+  for (const obs of al.observaciones) {
+    drawWrapped(`* ${obs}`, { indent: 10, size: 8.6, color: rgb(0.26, 0.28, 0.34) });
+  }
+
+  // 5. POTENCIAL CONSTRUCTIVO Y EVALUACION COMERCIAL
+  drawSectionBanner("5. POTENCIAL CONSTRUCTIVO, VOLUMETRIA Y VIABILIDAD COMERCIAL");
+  const pot = report.potencialConstructivoYComercial;
+  if (pot.aplicaCalculoVolumetrico) {
+    drawWrapped(
+      `Area de Lote Evaluada: ${pot.areaLoteBaseM2} m2   |   Huella Ocupable Piso 1 (IO ${n.indiceOcupacionMax}): ${pot.areaMaximaOcupablePiso1M2} m2`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `Area Maxima Construible Base (IC ${n.indiceConstruccionBase}): ${pot.areaMaximaConstruibleBaseM2} m2   |   Con Incentivos POT (IC ${n.indiceConstruccionMaxConIncentivos}): ${pot.areaMaximaConstruibleIncentivosM2} m2`,
+      { font: fontBold, indent: 6, color: rgb(0.11, 0.45, 0.25) }
+    );
+    if (pot.unidadesEstimadasVivienda) {
+      drawWrapped(`Capacidad Estimada de Unidades: ${pot.unidadesEstimadasVivienda}`, { indent: 6 });
+    }
+  }
+  drawWrapped(`Evaluacion de Frente / Geometria: ${pot.evaluacionFrente}`, { indent: 6 });
+  drawWrapped(`Veredicto Comercial: ${pot.veredictoComercial}`, { font: fontBold, indent: 6 });
+  for (const rec of pot.recomendacionesTecnicas) {
+    drawWrapped(`- ${rec}`, { indent: 12, size: 8.7 });
+  }
+
+  // Caja de Advertencia Tecnica + QR + CTA Comercial VECY
+  ensureSpace(125);
+  cursorY -= 8;
+  const footerBoxY = Math.max(72, cursorY - 78);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 70,
+    color: rgb(0.97, 0.97, 0.99),
+    borderColor: rgb(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("ADVERTENCIA TECNICA Y CONSULTORIA URBANISTICA VECY BIENES RAICES:", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Este concepto preliminar no sustituye la consulta oficial de manzanas en SINUPOT ni concepto de Curaduria Urbana.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.4,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Estudios de cabida arquitectonica, factibilidad y compra/venta de lotes con Eduardo Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.4,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Trazabilidad: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.5,
+      font: fontBold,
+      color: rgb(0.2, 0.22, 0.28)
+    }
+  );
+
+  try {
+    const qrDataUrl = await QRCode.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?pot=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+    // Si falla el QR en entorno restringido, el PDF continúa limpio
+  }
+
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Analisis POT Bogota VECY BIENES RAICES"
+  });
+  const safeId = sanitizePdfWinAnsiText(identifierLabel)
+    .replace(/[^A-Za-z0-9-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 28) || "PREDIO";
+  const fileName = `${meta.defaultFileNamePrefix}_${safeId}_${verificationCode}.pdf`;
 
   return {
     pdfBuffer,

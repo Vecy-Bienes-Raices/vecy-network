@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.13";
+    VECY_VERSION = "v34.14";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -16468,6 +16468,10 @@ function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = fals
   }
   const looksLikeNewToolDataRequest = /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
     normalized
+  ) || /\b(?:revisa|analiza|evalua|consulta|calcula|hazme|quiero|necesito|dime)\b.{0,45}\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b/.test(
+    normalized
+  ) || /\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b.{0,45}\b(?:aaa\d+|calle|carrera|lote|predio)\b/.test(
+    normalized
   ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
   if (looksLikeNewToolDataRequest) {
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
@@ -27321,7 +27325,7 @@ var init_whatsapp_match = __esm({
         if (!clean && !quoted && !hasMedia) return false;
         if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
         const combined = `${clean} ${quoted}`.toLowerCase();
-        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
+        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|ideca|uso\s+del?\s+suelo|usos\s+permitidos|edificabilidad|constructibilidad|prefactibilidad|antejard[ií]n|aislamiento|tratamiento\s+urban[ií]stico|\bupl\b|\bupz\b|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
         return hasQuestionOrConsultIntent;
       }
       registerPhoneLidMapping(phoneOrJid, lidOrJid) {
@@ -28587,7 +28591,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     if (alreadySentReviewInReply) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                     }
-                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
+                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("AN\xC1LISIS POT") || replyText.includes("NORMA URBANA") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
                     const usedCount = session.freeServicesUsedCount || 0;
@@ -31959,6 +31963,7 @@ __export(legalDocumentPdfService_exports, {
   buildDefaultLegalBody: () => buildDefaultLegalBody,
   generateCtlStudyPdf: () => generateCtlStudyPdf,
   generateLegalDocumentPdf: () => generateLegalDocumentPdf,
+  generatePotUrbanNormPdf: () => generatePotUrbanNormPdf,
   getLegalDocumentMetadata: () => getLegalDocumentMetadata,
   sanitizePdfWinAnsiText: () => sanitizePdfWinAnsiText
 });
@@ -32032,6 +32037,12 @@ function getLegalDocumentMetadata(tipo) {
         title: "CONCEPTO JURIDICO DE ESTUDIO DE TITULOS SNR",
         normativeFramework: "Estatuto de Registro de Instrumentos Publicos (Ley 1579 de 2012), Codigo Civil y Ley 1561 de 2012",
         defaultFileNamePrefix: "Concepto_Estudio_Titulos_VECY"
+      };
+    case "concepto_norma_urbana_pot":
+      return {
+        title: "CONCEPTO PRELIMINAR DE NORMA URBANA Y PREFACTIBILIDAD POT",
+        normativeFramework: "POT Bogota (Decreto 555 de 2021), Ley 388 de 1997, SINUPOT SDP e IDECA Catastro",
+        defaultFileNamePrefix: "Concepto_Norma_Urbana_POT_VECY"
       };
     default:
       return {
@@ -33026,6 +33037,262 @@ async function generateCtlStudyPdf(report, options) {
   });
   const safeMat = sanitizePdfWinAnsiText(report.metadata.matriculaInmobiliaria || "FOLIO").replace(/[^A-Za-z0-9-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 28) || "FOLIO";
   const fileName = `${meta.defaultFileNamePrefix}_${safeMat}_${verificationCode}.pdf`;
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+async function generatePotUrbanNormPdf(report, options) {
+  const meta = getLegalDocumentMetadata("concepto_norma_urbana_pot");
+  const identifierLabel = report.identificacion.chip && report.identificacion.chip !== "No suministrado" ? report.identificacion.chip : report.identificacion.direccion !== "No suministrada" ? report.identificacion.direccion : report.identificacion.upl;
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - ${identifierLabel}`
+  ).toUpperCase();
+  const verificationCode = `POT-VECY-${crypto4.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework,
+    headerSubtitle: `Radicado Urbanistico: ${verificationCode} | Fuente: ${report.liveGis.source}`
+  });
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+  const ensureSpace = (minY = 92) => {
+    if (cursorY < minY) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+  const drawWrapped = (text2, opts) => {
+    const f = opts?.font ?? fontRegular;
+    const sz = opts?.size ?? 9.2;
+    const lh = opts?.lineHeight ?? sz + 4;
+    const col = opts?.color ?? rgb2(0.14, 0.16, 0.2);
+    const ind = opts?.indent ?? 0;
+    const lines = wrapTextToLines(text2, f, sz, maxWidth - ind);
+    for (const ln of lines) {
+      ensureSpace(opts?.minY ?? 70);
+      currentPage.drawText(ln, { x: marginX + ind, y: cursorY, size: sz, font: f, color: col });
+      cursorY -= lh;
+    }
+  };
+  const drawSectionBanner = (sectionTitle) => {
+    ensureSpace(110);
+    cursorY -= 6;
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: maxWidth,
+      height: 18,
+      color: rgb2(0.95, 0.96, 0.98)
+    });
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: 3.5,
+      height: 18,
+      color: rgb2(0.83, 0.68, 0.21)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(sectionTitle), {
+      x: marginX + 8,
+      y: cursorY + 1,
+      size: 9.6,
+      font: fontBold,
+      color: rgb2(0.08, 0.1, 0.14)
+    });
+    cursorY -= 18;
+  };
+  const n = report.normaPot555;
+  const id = report.identificacion;
+  const al = report.alertasYRestricciones;
+  const hasHighAlert = al.reservaVial.nivel === "ALTA" || al.rondaHidrica.nivel === "ALTA" || al.riesgoRemocionMasa.nivel === "ALTA" || al.bienInteresCultural.nivel === "ALTA";
+  const summaryPalette = hasHighAlert ? {
+    bg: rgb2(1, 0.97, 0.88),
+    border: rgb2(0.8, 0.55, 0.04),
+    tag: "PREFACTIBILIDAD CON CONDICIONANTES URBANISTICAS RELEVANTES (VERIFICAR CURADURIA)"
+  } : {
+    bg: rgb2(0.91, 0.98, 0.93),
+    border: rgb2(0.11, 0.55, 0.28),
+    tag: "PREFACTIBILIDAD NORMATIVA FAVORABLE BAJO MARCO POT DECRETO 555 DE 2021"
+  };
+  const headlineText = `${n.tratamientoNombre} | ${n.areaActividadNombre} | IO max ${n.indiceOcupacionMax} | IC base ${n.indiceConstruccionBase} (hasta ${n.indiceConstruccionMaxConIncentivos})`;
+  const headlineLines = wrapTextToLines(headlineText, fontRegular, 9, maxWidth - 26);
+  const summaryBoxHeight = 32 + headlineLines.length * 13;
+  ensureSpace(summaryBoxHeight + 60);
+  const boxBottomY = cursorY - summaryBoxHeight + 10;
+  currentPage.drawRectangle({
+    x: marginX,
+    y: boxBottomY,
+    width: maxWidth,
+    height: summaryBoxHeight,
+    color: summaryPalette.bg,
+    borderColor: summaryPalette.border,
+    borderWidth: 1.2
+  });
+  currentPage.drawText(sanitizePdfWinAnsiText(summaryPalette.tag), {
+    x: marginX + 12,
+    y: cursorY - 9,
+    size: 9.8,
+    font: fontBold,
+    color: summaryPalette.border
+  });
+  let sy = cursorY - 24;
+  for (const hLine of headlineLines) {
+    currentPage.drawText(hLine, {
+      x: marginX + 12,
+      y: sy,
+      size: 9,
+      font: fontRegular,
+      color: rgb2(0.14, 0.16, 0.2)
+    });
+    sy -= 13;
+  }
+  cursorY = boxBottomY - 14;
+  drawSectionBanner("1. IDENTIFICACION CATASTRAL Y TERRITORIAL DEL PREDIO");
+  drawWrapped(`CHIP Catastral: ${id.chip}   |   Direccion: ${id.direccion}`, { font: fontBold });
+  drawWrapped(`Barrio: ${id.barrio}   |   Localidad: ${id.localidad}   |   Estrato: ${id.estrato}`);
+  drawWrapped(`UPL (Decreto 555/2021): ${id.upl}   |   UPZ Referencia: ${id.upz}`);
+  drawWrapped(`Clasificacion del Suelo: ${id.clasificacionSuelo}`);
+  drawWrapped(
+    `Area Terreno: ${id.areaTerrenoM2 !== null ? `${id.areaTerrenoM2} m2` : "No reportada"}   |   Area Construida Actual: ${id.areaConstruidaActualM2 !== null ? `${id.areaConstruidaActualM2} m2` : "No reportada"}   |   Frente: ${id.frenteMetros !== null ? `${id.frenteMetros} m` : "Por verificar"}`
+  );
+  if (options?.requestedBy) {
+    drawWrapped(`Solicitado por: ${options.requestedBy}   |   Fecha Analisis: ${report.analyzedAtIso.slice(0, 10)}`);
+  }
+  drawSectionBanner("2. PARAMETROS NORMATIVOS POT BOGOTA (DECRETO 555 DE 2021)");
+  drawWrapped(`Tratamiento Urbanistico: ${n.tratamientoNombre}`, { font: fontBold, indent: 6 });
+  drawWrapped(n.tratamientoDetalle, { indent: 12, size: 8.7 });
+  drawWrapped(`Area de Actividad: ${n.areaActividadNombre}`, { font: fontBold, indent: 6 });
+  drawWrapped(
+    `Indice de Ocupacion Maximo (IO): ${n.indiceOcupacionMax}   |   Indice de Construccion Base (IC): ${n.indiceConstruccionBase}   |   IC con Incentivos / Obligaciones: ${n.indiceConstruccionMaxConIncentivos}`,
+    { font: fontBold, indent: 6 }
+  );
+  drawWrapped(`Altura Maxima Estimada: ${n.alturaMaximaPisos}   |   Tipologia: ${n.tipologiaEdificatoria}`, { indent: 6 });
+  drawWrapped(`Antejardin Minimo: ${n.antejardinMinimo}`, { indent: 6 });
+  drawWrapped(`Aislamientos Posteriores y Laterales: ${n.aislamientos}`, { indent: 6 });
+  drawSectionBanner("3. USOS DEL SUELO PERMITIDOS Y CONDICIONADOS");
+  drawWrapped("Usos Principales / Complementarios Viables:", { font: fontBold, indent: 6 });
+  for (const uso of n.usosPermitidosPrincipales) {
+    drawWrapped(`+ ${uso}`, { indent: 12, size: 8.7, color: rgb2(0.1, 0.42, 0.22) });
+  }
+  drawWrapped("Usos Restringidos o Sujetos a Condicion Normativa / Mitigacion:", { font: fontBold, indent: 6 });
+  for (const cond of n.usosRestringidosOCondicionados) {
+    drawWrapped(`- ${cond}`, { indent: 12, size: 8.7, color: rgb2(0.55, 0.35, 0.05) });
+  }
+  drawSectionBanner("4. ALERTAS URBANISTICAS, AMBIENTALES Y PATRIMONIALES");
+  drawWrapped(`- Reserva Vial / Malla Arterial: [${al.reservaVial.nivel}] ${al.reservaVial.detalle}`, { indent: 6, size: 8.8 });
+  drawWrapped(`- Ronda Hidrica / Estructura Ecologica (EEP): [${al.rondaHidrica.nivel}] ${al.rondaHidrica.detalle}`, { indent: 6, size: 8.8 });
+  drawWrapped(`- Riesgo / Remocion en Masa o Inundacion (IDIGER): [${al.riesgoRemocionMasa.nivel}] ${al.riesgoRemocionMasa.detalle}`, { indent: 6, size: 8.8 });
+  drawWrapped(`- Bien de Interes Cultural (BIC / PEMP): [${al.bienInteresCultural.nivel}] ${al.bienInteresCultural.detalle}`, { indent: 6, size: 8.8 });
+  for (const obs of al.observaciones) {
+    drawWrapped(`* ${obs}`, { indent: 10, size: 8.6, color: rgb2(0.26, 0.28, 0.34) });
+  }
+  drawSectionBanner("5. POTENCIAL CONSTRUCTIVO, VOLUMETRIA Y VIABILIDAD COMERCIAL");
+  const pot = report.potencialConstructivoYComercial;
+  if (pot.aplicaCalculoVolumetrico) {
+    drawWrapped(
+      `Area de Lote Evaluada: ${pot.areaLoteBaseM2} m2   |   Huella Ocupable Piso 1 (IO ${n.indiceOcupacionMax}): ${pot.areaMaximaOcupablePiso1M2} m2`,
+      { font: fontBold, indent: 6 }
+    );
+    drawWrapped(
+      `Area Maxima Construible Base (IC ${n.indiceConstruccionBase}): ${pot.areaMaximaConstruibleBaseM2} m2   |   Con Incentivos POT (IC ${n.indiceConstruccionMaxConIncentivos}): ${pot.areaMaximaConstruibleIncentivosM2} m2`,
+      { font: fontBold, indent: 6, color: rgb2(0.11, 0.45, 0.25) }
+    );
+    if (pot.unidadesEstimadasVivienda) {
+      drawWrapped(`Capacidad Estimada de Unidades: ${pot.unidadesEstimadasVivienda}`, { indent: 6 });
+    }
+  }
+  drawWrapped(`Evaluacion de Frente / Geometria: ${pot.evaluacionFrente}`, { indent: 6 });
+  drawWrapped(`Veredicto Comercial: ${pot.veredictoComercial}`, { font: fontBold, indent: 6 });
+  for (const rec of pot.recomendacionesTecnicas) {
+    drawWrapped(`- ${rec}`, { indent: 12, size: 8.7 });
+  }
+  ensureSpace(125);
+  cursorY -= 8;
+  const footerBoxY = Math.max(72, cursorY - 78);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 70,
+    color: rgb2(0.97, 0.97, 0.99),
+    borderColor: rgb2(0.83, 0.68, 0.21),
+    borderWidth: 1
+  });
+  currentPage.drawText("ADVERTENCIA TECNICA Y CONSULTORIA URBANISTICA VECY BIENES RAICES:", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb2(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Este concepto preliminar no sustituye la consulta oficial de manzanas en SINUPOT ni concepto de Curaduria Urbana.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.4,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Estudios de cabida arquitectonica, factibilidad y compra/venta de lotes con Eduardo Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.4,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Trazabilidad: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.5,
+      font: fontBold,
+      color: rgb2(0.2, 0.22, 0.28)
+    }
+  );
+  try {
+    const qrDataUrl = await QRCode3.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?pot=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+  }
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Analisis POT Bogota VECY BIENES RAICES"
+  });
+  const safeId = sanitizePdfWinAnsiText(identifierLabel).replace(/[^A-Za-z0-9-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 28) || "PREDIO";
+  const fileName = `${meta.defaultFileNamePrefix}_${safeId}_${verificationCode}.pdf`;
   return {
     pdfBuffer,
     fileName,
@@ -34090,6 +34357,1097 @@ var init_ctlTitleStudyService = __esm({
   }
 });
 
+// server/_core/potUrbanNormService.ts
+function normalizeNoAccents(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+}
+function stripMentions(text2) {
+  return String(text2 || "").replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").replace(/\s+/g, " ").trim();
+}
+function sanitizeArcGisLiteral(value) {
+  return value.replace(/[^A-Za-z0-9\s\-]/g, "").trim().toUpperCase();
+}
+function formatNumberCo(val) {
+  return new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(val);
+}
+function isConceptualPotQuestion(text2) {
+  const clean = stripMentions(text2);
+  if (!clean) return false;
+  const norm2 = normalizeNoAccents(clean).toLowerCase();
+  const hasChip = /\bAAA[0-9]{4}[A-Z0-9]{4}\b/i.test(clean);
+  const hasAddress = Boolean(extractBogotaAddress(clean));
+  const hasLotWithMeasures = /\b(?:lote|casalote|casa\s*lote|terreno|predio|bodega|local|oficina)\b/i.test(norm2) && /\b\d+(?:[.,]\d+)?\s*(?:m2|mts|metros)\b/i.test(norm2);
+  if (hasChip || hasAddress || hasLotWithMeasures) return false;
+  return /\b(?:que\s+(?:es|son)\s+(?:el\s+|la\s+|los\s+|las\s+|un\s+|una\s+)?(?:pot|decreto\s*555|sinupot|ideca|upl|upz|indice\s+de\s+ocupacion|indice\s+de\s+construccion|tratamiento\s+urbanistico|area\s+de\s+actividad|antejardin|aislamientos?|ronda\s+hidrica|reserva\s+vial|bien\s+de\s+interes\s+cultural|\bbic\b|curaduria\s+urbana|licencia\s+de\s+construccion|plusvalia|edificabilidad)|diferencia\s+entre\s+(?:upz\s+y\s+upl|indice\s+de\s+ocupacion|antejardin\s+y\s+aislamiento)|como\s+(?:funciona|se\s+calcula|se\s+aplica|se\s+mide)\s+(?:la\s+norma\s+(?:de\s+)?|el\s+|la\s+|los\s+|las\s+)?(?:pot|decreto\s*555|sinupot|ideca|upl|upz|tratamiento\s+(?:de\s+)?(?:renovacion|consolidacion|desarrollo|conservacion)|aislamientos?|antejardin|indice\s+de\s+(?:ocupacion|construccion)|area\s+de\s+actividad|edificabilidad|ronda\s+hidrica|reserva\s+vial|licencia\s+de\s+construccion|plusvalia)|para\s+que\s+sirve\s+(?:el\s+|la\s+)?(?:sinupot|ideca|upl|upz|pot))\b/i.test(
+    norm2
+  ) && !/\b(?:analiza|revisa|consulta|evalua|dime\s+la\s+norma|prefactibilidad|que\s+se\s+puede\s+construir|cuantos\s+pisos)\b/i.test(norm2);
+}
+function extractBogotaAddress(text2) {
+  const clean = stripMentions(text2);
+  if (!clean) return void 0;
+  const match = clean.match(
+    /\b((?:calle|cll?\.?|carrera|cra?\.?|kr\.?|diagonal|diag\.?|dg\.?|transversal|transv?\.?|tv\.?|avenida|av\.?|ak\.?|ac\.?)\s+[0-9]{1,3}[A-Za-z]?(?:\s+(?:bis|sur|este))?\s*(?:#|no\.?|nro\.?|n[uú]mero)?\s*[0-9]{1,3}[A-Za-z]?(?:\s*(?:[-–]|con)\s*[0-9]{1,3}[A-Za-z]?)?)\b/i
+  );
+  if (!match || !match[1]) return void 0;
+  const candidate = match[1].trim();
+  if (!/(?:#|[-–]|no\.?|nro\.?|\d+\s+[0-9]{1,2}\s+[0-9]{1,2})/i.test(candidate) && candidate.split(/\s+/).length < 4) {
+    return void 0;
+  }
+  return candidate;
+}
+function findMatchingSectorProfile(textNormLower) {
+  for (const prof of BOGOTA_SECTOR_PROFILES) {
+    for (const alias of prof.aliases) {
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(`\\b${escaped}\\b`, "i").test(textNormLower)) {
+        return prof;
+      }
+    }
+  }
+  return void 0;
+}
+function parsePotUrbanQuery(text2) {
+  const clean = stripMentions(text2);
+  if (!clean) {
+    return {
+      isPotRequest: false,
+      isConceptualOnly: false,
+      isSpecificPredio: false,
+      needsPredioGuidance: false,
+      objetivoEvaluacion: "norma_general"
+    };
+  }
+  const normLower = normalizeNoAccents(clean).toLowerCase();
+  const isCtlIntent = /\b(?:estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion|anotacion(?:es)?\s+nro)\b/i.test(
+    normLower
+  );
+  const isIduIntent = /\b(?:paz\s+y\s+salvo\s+(?:del\s+)?idu|valorizacion\s+idu|webidu)\b/i.test(normLower);
+  const isPredialIntent = /\b(?:factura\s+(?:del\s+)?predial|descarga(?:r|me)?\s+(?:el\s+)?predial|impuesto\s+predial)\b/i.test(
+    normLower
+  );
+  const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
+  const chip = chipMatch ? chipMatch[1].toUpperCase() : void 0;
+  const direccion = extractBogotaAddress(clean);
+  const uplMatch = clean.match(/\b(UPL\s*\d{1,2}(?:\s+[A-Za-zÁÉÍÓÚáéíóúñÑ]+)?)\b/i);
+  const upzMatch = clean.match(/\b(UPZ\s*\d{1,3}(?:\s+[A-Za-zÁÉÍÓÚáéíóúñÑ]+)?)\b/i);
+  const uplOUzpMentioned = uplMatch?.[1]?.trim() || upzMatch?.[1]?.trim();
+  let areaLoteM2;
+  const lotAreaMatch1 = clean.match(
+    /(?:lote|terreno|predio|casalote|casa|bodega|local|oficina|area(?:\s+de\s+lote|\s+del\s+terreno)?)\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts2?|metros?\s*cuadrados?)\b/i
+  );
+  const lotAreaMatch2 = clean.match(
+    /\b(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts2?|metros?\s*cuadrados?)\s*(?:de\s+(?:lote|terreno|area|predio))?\b/i
+  );
+  const rawAreaStr = lotAreaMatch1?.[1] || lotAreaMatch2?.[1];
+  if (rawAreaStr) {
+    const parsedArea = parseFloat(rawAreaStr.replace(",", "."));
+    if (!isNaN(parsedArea) && parsedArea >= 20 && parsedArea <= 2e5) {
+      areaLoteM2 = parsedArea;
+    }
+  }
+  let frenteMetros;
+  const frenteMatch = clean.match(/\bfrente\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*(?:m\b|ml\b|mts\b|metros?\b)/i) || clean.match(/\b(\d+(?:[.,]\d+)?)\s*(?:m\b|ml\b|mts\b|metros?\b)\s+de\s+frente\b/i);
+  if (frenteMatch?.[1]) {
+    const parsedFrente = parseFloat(frenteMatch[1].replace(",", "."));
+    if (!isNaN(parsedFrente) && parsedFrente >= 2 && parsedFrente <= 500) {
+      frenteMetros = parsedFrente;
+    }
+  }
+  let pisosDeseados;
+  const pisosMatch = clean.match(/\b(\d{1,2})\s*pisos?\b/i);
+  if (pisosMatch?.[1]) {
+    pisosDeseados = parseInt(pisosMatch[1], 10);
+  }
+  let tipoInmueble;
+  if (/\bcasa\s*lote|casalote\b/i.test(normLower)) tipoInmueble = "casalote";
+  else if (/\blote|terreno|solar\b/i.test(normLower)) tipoInmueble = "lote";
+  else if (/\bbodega|nave\b/i.test(normLower)) tipoInmueble = "bodega";
+  else if (/\bedificio\b/i.test(normLower)) tipoInmueble = "edificio";
+  else if (/\blocal\b/i.test(normLower)) tipoInmueble = "local";
+  else if (/\boficina\b/i.test(normLower)) tipoInmueble = "oficina";
+  else if (/\bcasa\b/i.test(normLower)) tipoInmueble = "casa";
+  else if (/\bapartamento|apto\b/i.test(normLower)) tipoInmueble = "apartamento";
+  else if (chip || direccion) tipoInmueble = "predio";
+  const matchedSector = findMatchingSectorProfile(normLower);
+  let barrioOSector = matchedSector?.barrioDisplay;
+  if (!barrioOSector) {
+    const sectorMatch = clean.match(
+      /\b(?:en\s+(?:el\s+)?(?:barrio|sector)(?:\s+de)?|barrio|sector)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9\s]{3,36}?)(?=\s+(?:para|con|de\s+\d|chip|norma|pot|uso|y\b)|[.,;?!]|$)/i
+    );
+    if (sectorMatch?.[1]) {
+      barrioOSector = sectorMatch[1].trim();
+    }
+  }
+  const hasStrongPotKeyword = /\b(?:pot\b|decreto\s*555|sinupot|ideca|mapas\s*bogota|norma\s+urbana|normativa\s+urbana|cedula\s+normativa|tratamiento\s+urbanistico|area\s+de\s+actividad|indice\s+de\s+ocupacion|indice\s+de\s+construccion|edificabilidad|potencial\s+constructivo|prefactibilidad|uso\s+del?\s+suelo|usos\s+permitidos|pisos\s+permitidos|altura\s+maxima|cuantos\s+pisos\s+(?:se\s+pueden?|puedo)\s+construir|que\s+se\s+puede\s+construir|antejardin\s+y\s+aislamiento|ronda\s+hidrica|reserva\s+vial|bien\s+de\s+interes\s+cultural|\bupl\b|\bupz\b)\b/i.test(
+    normLower
+  );
+  const isPureAcmRequest = /\b(?:hazme\s+un\s+acm|\bacm\b|analisis\s+comparativo\s+de\s+mercado|avaluo\s+comercial|cuanto\s+vale\s+(?:el\s+m2|esta\s+casa|este\s+apto))\b/i.test(
+    normLower
+  ) && !hasStrongPotKeyword;
+  const isConceptualOnly = isConceptualPotQuestion(clean);
+  let objetivoEvaluacion = "norma_general";
+  if (/\b(?:remodelar|ampliar|adecuar|reforzar|reciclar)\b/i.test(normLower)) {
+    objetivoEvaluacion = "remodelar_ampliar";
+  } else if (/\b(?:construir|desarrollar|edificio|torre|proyecto|pisos|constructibilidad|prefactibilidad|englobar|demoler)\b/i.test(
+    normLower
+  )) {
+    objetivoEvaluacion = "construir_desarrollar";
+  } else if (/\b(?:local|oficina|bodega|comercio|restaurante|consultorio|uso\s+comercial|habilitar|licencia\s+de\s+funcionamiento|uso\s+del?\s+suelo)\b/i.test(
+    normLower
+  )) {
+    objetivoEvaluacion = "uso_comercial_servicios";
+  }
+  const hasPredioTarget = Boolean(
+    chip || direccion || uplOUzpMentioned || barrioOSector || tipoInmueble && (areaLoteM2 !== void 0 || frenteMetros !== void 0)
+  );
+  const isSpecificPredio = Boolean(
+    chip || direccion || tipoInmueble && (areaLoteM2 !== void 0 || frenteMetros !== void 0 || Boolean(barrioOSector))
+  );
+  const hasExplicitActionVerb = /\b(?:analiza(?:r|me)?|revisa(?:r|me)?|consulta(?:r|me)?|evalua(?:r|me)?|calcula(?:r|me)?|estudia(?:r|me)?|dime|muestra(?:me)?|saca(?:r|me)?|verifica(?:r|me)?|necesito|quiero|haz(?:me)?|prefactibilidad)\b/i.test(
+    normLower
+  );
+  const isPotRequest = !isCtlIntent && !isIduIntent && !isPredialIntent && !isPureAcmRequest && !isConceptualOnly && hasStrongPotKeyword && (hasPredioTarget || hasExplicitActionVerb);
+  const needsPredioGuidance = isPotRequest && !hasPredioTarget;
+  return {
+    isPotRequest,
+    isConceptualOnly,
+    isSpecificPredio,
+    needsPredioGuidance,
+    chip,
+    direccion,
+    barrioOSector,
+    uplOUzpMentioned,
+    tipoInmueble,
+    objetivoEvaluacion,
+    areaLoteM2,
+    frenteMetros,
+    pisosDeseados
+  };
+}
+function isPotUrbanNormRequest(text2) {
+  return parsePotUrbanQuery(text2).isPotRequest;
+}
+async function fetchJsonWithTimeout(url, timeoutMs = 4500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { Accept: "application/json" }
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function normalizeAddressForCatastroPrefix(rawDir) {
+  let clean = normalizeNoAccents(rawDir).toUpperCase();
+  clean = clean.replace(/\bAVENIDA\s+CARRERA\b/g, "AK").replace(/\bAVENIDA\s+CALLE\b/g, "AC").replace(/\bCARRERA\b|\bCRA\.?\b|\bKR\.?\b/g, "KR").replace(/\bCALLE\b|\bCLL?\.?\b/g, "CL").replace(/\bDIAGONAL\b|\bDIAG\.?\b|\bDG\.?\b/g, "DG").replace(/\bTRANSVERSAL\b|\bTRANSV?\.?\b|\bTV\.?\b/g, "TV").replace(/\bAVENIDA\b|\bAV\.?\b/g, "AV").replace(/[#\-–]/g, " ").replace(/\b(?:NO|NRO|NUMERO)\b/g, " ").replace(/\s+/g, " ").trim();
+  const tokens = clean.split(" ").filter(Boolean).slice(0, 4);
+  return tokens.join(" ");
+}
+function computePolygonCentroid(rings) {
+  if (!rings || !rings[0] || rings[0].length === 0) return void 0;
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  for (const pt of rings[0]) {
+    if (Array.isArray(pt) && pt.length >= 2 && typeof pt[0] === "number" && typeof pt[1] === "number") {
+      sumX += pt[0];
+      sumY += pt[1];
+      count += 1;
+    }
+  }
+  if (count === 0) return void 0;
+  return { lon: sumX / count, lat: sumY / count };
+}
+async function queryIdecaAndSinupotLive(parsed, options) {
+  const allowLive = options?.enableLiveGis ?? process.env.NODE_ENV !== "test";
+  const result = {
+    source: "DETERMINISTIC_POT_555",
+    endpointsQueried: []
+  };
+  if (!allowLive) {
+    return result;
+  }
+  try {
+    let predioAttr = null;
+    let lotCode = "";
+    if (parsed.chip) {
+      const safeChip = sanitizeArcGisLiteral(parsed.chip);
+      const predioUrl = `${IDECA_BASE}/catastro/lote/MapServer/3/query?where=PRECHIP%3D%27${encodeURIComponent(safeChip)}%27&outFields=PRECHIP,PRECEDCATA,PREDIRECC,PRENBARRIO,PREATERRE,PREACONST,BARMANPRE,PRECDESTIN,PRECUSO,PREVETUSTZ&f=json`;
+      result.endpointsQueried.push("IDECA:catastro/lote/MapServer/3");
+      const data = await fetchJsonWithTimeout(predioUrl);
+      if (data?.features?.length > 0) {
+        predioAttr = data.features[0].attributes || null;
+      }
+      const estratoUrl = `${IDECA_BASE}/catastro/lote/MapServer/1/query?where=ESOCHIP%3D%27${encodeURIComponent(safeChip)}%27&outFields=ESOCHIP,ESOESTRATO&f=json`;
+      const estratoData = await fetchJsonWithTimeout(estratoUrl, 3e3);
+      const rawEstrato = estratoData?.features?.[0]?.attributes?.ESOESTRATO;
+      if (typeof rawEstrato === "number" && rawEstrato >= 1 && rawEstrato <= 6) {
+        result.estratoCatastral = rawEstrato;
+      }
+    } else if (parsed.direccion) {
+      const dirPrefix = sanitizeArcGisLiteral(normalizeAddressForCatastroPrefix(parsed.direccion));
+      if (dirPrefix.length >= 5) {
+        const dirUrl = `${IDECA_BASE}/catastro/lote/MapServer/3/query?where=${encodeURIComponent(`PREDIRECC LIKE '${dirPrefix}%'`)}&outFields=PRECHIP,PRECEDCATA,PREDIRECC,PRENBARRIO,PREATERRE,PREACONST,BARMANPRE,PRECDESTIN,PRECUSO,PREVETUSTZ&resultRecordCount=3&f=json`;
+        result.endpointsQueried.push("IDECA:catastro/lote/MapServer/3");
+        const data = await fetchJsonWithTimeout(dirUrl);
+        if (data?.features?.length > 0) {
+          predioAttr = data.features[0].attributes || null;
+        }
+      }
+    }
+    if (predioAttr) {
+      result.source = "IDECA_LIVE";
+      result.chip = predioAttr.PRECHIP || parsed.chip;
+      result.cedulaCatastral = predioAttr.PRECEDCATA || void 0;
+      result.direccionOficial = predioAttr.PREDIRECC || void 0;
+      result.barrioCatastral = predioAttr.PRENBARRIO || void 0;
+      result.codigoLote = predioAttr.BARMANPRE || void 0;
+      result.codigoManzana = predioAttr.BARMANPRE ? String(predioAttr.BARMANPRE).slice(0, 9) : void 0;
+      if (typeof predioAttr.PREATERRE === "number" && predioAttr.PREATERRE > 0) {
+        result.areaTerrenoM2 = predioAttr.PREATERRE;
+      }
+      if (typeof predioAttr.PREACONST === "number" && predioAttr.PREACONST > 0) {
+        result.areaConstruidaActualM2 = predioAttr.PREACONST;
+      }
+      if (typeof predioAttr.PREVETUSTZ === "number" && predioAttr.PREVETUSTZ > 1800) {
+        result.vetustez = predioAttr.PREVETUSTZ;
+      }
+      lotCode = String(predioAttr.BARMANPRE || "");
+    }
+    if (lotCode) {
+      const safeLot = sanitizeArcGisLiteral(lotCode);
+      const [geomData, constrData, usoData] = await Promise.all([
+        fetchJsonWithTimeout(
+          `${IDECA_BASE}/catastro/lote/MapServer/0/query?where=LOTCODIGO%3D%27${encodeURIComponent(safeLot)}%27&outFields=LOTCODIGO,MANZCODIGO&returnGeometry=true&outSR=4326&f=json`
+        ),
+        fetchJsonWithTimeout(
+          `${IDECA_BASE}/catastro/construccion/MapServer/0/query?where=LOTECODIGO%3D%27${encodeURIComponent(safeLot)}%27&outFields=CONNPISOS,CONALTURA&returnGeometry=false&f=json`,
+          3500
+        ),
+        fetchJsonWithTimeout(
+          `${IDECA_BASE}/catastro/usopredominante/MapServer/0/query?where=MANCODIGO%3D%27${encodeURIComponent(safeLot.slice(0, 9))}%27&outFields=GRUPOUSOECON&returnGeometry=false&resultRecordCount=3&f=json`,
+          3500
+        )
+      ]);
+      result.endpointsQueried.push("IDECA:catastro/lote/MapServer/0");
+      const rings = geomData?.features?.[0]?.geometry?.rings;
+      result.centroid = computePolygonCentroid(rings);
+      if (constrData?.features?.length > 0) {
+        const maxFloors = Math.max(
+          ...constrData.features.map((f) => Number(f?.attributes?.CONNPISOS || 0))
+        );
+        if (maxFloors > 0) result.pisosExistentes = maxFloors;
+      }
+      if (usoData?.features?.length > 0) {
+        result.usoPredominanteManzana = String(usoData.features[0]?.attributes?.GRUPOUSOECON || "");
+      }
+    }
+    if (result.centroid) {
+      const pt = `${result.centroid.lon},${result.centroid.lat}`;
+      const spatialParams = `geometry=${encodeURIComponent(pt)}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&returnGeometry=false&f=json`;
+      const [uplRes, upzRes, locRes, sueloRes, riesgoRes, renoboRes, sinupotRes] = await Promise.all([
+        fetchJsonWithTimeout(`${IDECA_BASE}/ordenamientoterritorial/unidadplaneamientolocal/MapServer/0/query?${spatialParams}&outFields=CODIGO_UPL,NOMBRE,VOCACION`),
+        fetchJsonWithTimeout(`${IDECA_BASE}/ordenamientoterritorial/unidadplaneamientozonal/MapServer/0/query?${spatialParams}&outFields=CODIGO_UPZ,NOMBRE,ZONA_ESTACIONAMIENTO`),
+        fetchJsonWithTimeout(`${IDECA_BASE}/ordenamientoterritorial/localidad/MapServer/0/query?${spatialParams}&outFields=LOCNOMBRE`),
+        fetchJsonWithTimeout(`${IDECA_BASE}/ordenamientoterritorial/suelo/MapServer/0/query?${spatialParams}&outFields=SUECSUELO,SUEAADMIN`),
+        fetchJsonWithTimeout(`${IDECA_BASE}/emergencias/gestionriesgos/MapServer/2/query?${spatialParams}&outFields=RESPONSABLE,AMENAZA`, 3500),
+        fetchJsonWithTimeout(`${IDECA_BASE}/ordenamientoterritorial/GeoRenoBo/MapServer/0/query?${spatialParams}&outFields=PROYECTO,ESTADO,FASE`, 3e3),
+        fetchJsonWithTimeout(`${SINUPOT_BASE}/NORMA_URBANISTICA_Y_OT/MapServer/0/query?${spatialParams}&outFields=*`, 3e3)
+      ]);
+      result.endpointsQueried.push(
+        "IDECA:unidadplaneamientolocal",
+        "IDECA:unidadplaneamientozonal",
+        "IDECA:localidad",
+        "IDECA:suelo",
+        "IDECA:gestionriesgos"
+      );
+      const uplAttr = uplRes?.features?.[0]?.attributes;
+      if (uplAttr) {
+        result.uplCodigo = uplAttr.CODIGO_UPL;
+        result.uplNombre = uplAttr.NOMBRE;
+        result.uplVocacion = uplAttr.VOCACION;
+      }
+      const upzAttr = upzRes?.features?.[0]?.attributes;
+      if (upzAttr) {
+        result.upzCodigo = upzAttr.CODIGO_UPZ;
+        result.upzNombre = upzAttr.NOMBRE;
+        result.zonaEstacionamiento = upzAttr.ZONA_ESTACIONAMIENTO;
+      }
+      const locAttr = locRes?.features?.[0]?.attributes;
+      if (locAttr?.LOCNOMBRE) {
+        result.localidad = locAttr.LOCNOMBRE;
+      }
+      const sueloAttr = sueloRes?.features?.[0]?.attributes;
+      if (sueloAttr?.SUECSUELO !== void 0) {
+        const code = Number(sueloAttr.SUECSUELO);
+        result.clasificacionSuelo = code === 1 ? "Suelo Urbano" : code === 2 ? "Suelo de Expansi\xF3n Urbana" : "Suelo Rural / Protecci\xF3n";
+      }
+      const riesgoAttr = riesgoRes?.features?.[0]?.attributes;
+      if (riesgoAttr?.AMENAZA) {
+        result.amenazaRemocion = `${riesgoAttr.AMENAZA} (${riesgoAttr.RESPONSABLE || "IDIGER"})`;
+      }
+      const renoboAttr = renoboRes?.features?.[0]?.attributes;
+      if (renoboAttr?.PROYECTO) {
+        result.proyectoRenoBo = `${renoboAttr.PROYECTO} (${renoboAttr.ESTADO || "Activo"})`;
+      }
+      const sinupotAttr = sinupotRes?.features?.[0]?.attributes;
+      if (sinupotAttr) {
+        result.source = "IDECA_SINUPOT_LIVE";
+        result.endpointsQueried.push("SINUPOT:POT555/NORMA_URBANISTICA_Y_OT");
+        result.sinupotTratamientoLive = sinupotAttr.TRATAMIENTO || sinupotAttr.NOM_TRATAMIENTO || void 0;
+        result.sinupotAreaActividadLive = sinupotAttr.AREA_ACTIVIDAD || sinupotAttr.NOM_AREA_ACT || void 0;
+      }
+    }
+  } catch {
+  }
+  return result;
+}
+function getTreatmentMeta(code) {
+  switch (code) {
+    case "RENOVACION_URBANA":
+      return {
+        nombre: "Renovaci\xF3n Urbana (Reactivaci\xF3n / Redesarrollo \u2014 POT Dec. 555/2021)",
+        detalle: "Promueve mayor aprovechamiento edificatorio y mezcla de usos mediante densificaci\xF3n, englobe predial y aportes de cargas urban\xEDsticas / espacio p\xFAblico."
+      };
+    case "CONSOLIDACION":
+      return {
+        nombre: "Consolidaci\xF3n Urbana (POT Dec. 555/2021)",
+        detalle: "Mantiene la estructura urbana existente permitiendo reemplazo o ampliaci\xF3n gradual de edificaciones acorde al frente del lote, empate y perfil vial."
+      };
+    case "DESARROLLO":
+      return {
+        nombre: "Desarrollo (Urbanizaci\xF3n / Plan Parcial \u2014 POT Dec. 555/2021)",
+        detalle: "Aplica a grandes predios o \xE1reas por urbanizar que requieren licencia de urbanizaci\xF3n o Plan Parcial con cesiones obligatorias para parques, v\xEDas y equipamientos."
+      };
+    case "CONSERVACION":
+      return {
+        nombre: "Conservaci\xF3n Patrimonial (BIC / SIC \u2014 POT Dec. 555/2021)",
+        detalle: "Protege valores arquitect\xF3nicos, urbanos o hist\xF3ricos; las demoliciones totales est\xE1n restringidas y toda intervenci\xF3n exige autorizaci\xF3n previa del IDPC."
+      };
+    case "MEJORAMIENTO_INTEGRAL":
+      return {
+        nombre: "Mejoramiento Integral (POT Dec. 555/2021)",
+        detalle: "Orientado a cualificar barrios de origen informal ya legalizados mediante infraestructura de soportes urbanos, regularizaci\xF3n y vivienda."
+      };
+  }
+}
+function getActivityAreaMeta(code) {
+  switch (code) {
+    case "ESTRUCTURANTE_ACTIVIDADES_ECONOMICAS":
+      return {
+        nombre: "\xC1rea de Actividad Estructurante \u2014 Receptora de Actividades Econ\xF3micas",
+        usosPrincipales: [
+          "Vivienda multifamiliar y coliving (en pisos superiores o ejes mixtos)",
+          "Comercio zonal y metropolitano de bienes y servicios en primeros pisos",
+          "Oficinas corporativas, consultorios m\xE9dicos/profesionales y servicios financieros",
+          "Hoteler\xEDa, restaurantes, servicios empresariales y equipamientos dotacionales"
+        ],
+        usosRestringidos: [
+          "Industria pesada o manufactura de alto impacto ambiental",
+          "Servicios de alto impacto (diversi\xF3n nocturna/moteles) sin mitigaci\xF3n ni distancia m\xEDnima",
+          "Bodegaje de carga pesada sobre v\xEDas peatonales o locales residenciales"
+        ]
+      };
+    case "ESTRUCTURANTE_VIVIENDA_VIS":
+      return {
+        nombre: "\xC1rea de Actividad Estructurante \u2014 Receptora de Vivienda de Inter\xE9s Social",
+        usosPrincipales: [
+          "Vivienda multifamiliar VIS, VIP y No-VIS",
+          "Comercio y servicios de proximidad en primer piso (obligaci\xF3n de z\xF3calo activo)",
+          "Equipamientos educativos, culturales y de cuidado"
+        ],
+        usosRestringidos: [
+          "Industria mediana o pesada y log\xEDstica de alto tonelaje",
+          "Establecimientos nocturnos ruidosos contiguos a vivienda"
+        ]
+      };
+    case "GRANDES_SERVICIOS_METROPOLITANOS":
+      return {
+        nombre: "\xC1rea de Actividad de Grandes Servicios Metropolitanos / Productiva",
+        usosPrincipales: [
+          "Bodegas log\xEDsticas, almacenamiento, centros de distribuci\xF3n y \xFAltima milla",
+          "Industria liviana y mediana de bajo impacto ambiental (tecnolog\xEDa, manufactura limpia)",
+          "Comercio mayorista/t\xE9cnico, concesionarios, talleres autorizados y oficinas operativas"
+        ],
+        usosRestringidos: [
+          "Vivienda nueva en pol\xEDgonos netamente industriales o bajo afectaci\xF3n de ruido aeroportuario",
+          "Industria contaminante de alto riesgo sin plan de manejo ambiental SDA"
+        ]
+      };
+    case "PROXIMIDAD_SOPORTES_URBANOS":
+      return {
+        nombre: "\xC1rea de Actividad de Proximidad \u2014 Receptora de Soportes Urbanos",
+        usosPrincipales: [
+          "Vivienda unifamiliar, bifamiliar y multifamiliar",
+          "Comercio y servicios b\xE1sicos vecinales en primer piso sobre ejes locales/zonales",
+          "Oficinas de baja escala, consultorios y equipamientos de cercan\xEDa (cuidado, educaci\xF3n)"
+        ],
+        usosRestringidos: [
+          "Comercio de gran escala (> 500 m\xB2) en v\xEDas locales no arteriales",
+          "Bodegas industriales, talleres mec\xE1nicos, bares/discotecas y alto impacto"
+        ]
+      };
+    case "PROXIMIDAD_GENERADORA_SOPORTES":
+      return {
+        nombre: "\xC1rea de Actividad de Proximidad \u2014 Generadora de Soportes Urbanos",
+        usosPrincipales: [
+          "Vivienda multifamiliar de densidad media y vivienda unifamiliar/bifamiliar",
+          "Comercio barrial de proximidad (tiendas, panader\xEDas, farmacias, caf\xE9s) en 1er piso",
+          "Servicios profesionales, coworking vecinal y dotacionales locales"
+        ],
+        usosRestringidos: [
+          "Comercio metropolitano o centros comerciales de gran formato sin frente arterial",
+          "Bodegaje pesado, industria transformadora y establecimientos nocturnos de alto impacto"
+        ]
+      };
+  }
+}
+function buildPotUrbanNormReport(parsed, liveGis) {
+  const sectorHintText = normalizeNoAccents(
+    [
+      parsed.barrioOSector,
+      parsed.uplOUzpMentioned,
+      liveGis.barrioCatastral,
+      liveGis.uplNombre,
+      liveGis.upzNombre,
+      liveGis.localidad
+    ].filter(Boolean).join(" ")
+  ).toLowerCase();
+  const sectorProfile = findMatchingSectorProfile(sectorHintText) || BOGOTA_SECTOR_PROFILES[2];
+  let tratamientoCode = sectorProfile.tratamientoCode;
+  let areaActividadCode = sectorProfile.areaActividadCode;
+  if (liveGis.proyectoRenoBo) {
+    tratamientoCode = "RENOVACION_URBANA";
+    areaActividadCode = "ESTRUCTURANTE_ACTIVIDADES_ECONOMICAS";
+  } else if (parsed.tipoInmueble === "bodega" && tratamientoCode !== "CONSERVACION") {
+    areaActividadCode = "GRANDES_SERVICIOS_METROPOLITANOS";
+  }
+  if (liveGis.sinupotTratamientoLive) {
+    const sTrat = normalizeNoAccents(liveGis.sinupotTratamientoLive).toUpperCase();
+    if (sTrat.includes("RENOV")) tratamientoCode = "RENOVACION_URBANA";
+    else if (sTrat.includes("CONSOL")) tratamientoCode = "CONSOLIDACION";
+    else if (sTrat.includes("DESARR")) tratamientoCode = "DESARROLLO";
+    else if (sTrat.includes("CONSERV")) tratamientoCode = "CONSERVACION";
+    else if (sTrat.includes("MEJOR")) tratamientoCode = "MEJORAMIENTO_INTEGRAL";
+  }
+  const tratMeta = getTreatmentMeta(tratamientoCode);
+  const actMeta = getActivityAreaMeta(areaActividadCode);
+  const areaBase = parsed.areaLoteM2 ?? liveGis.areaTerrenoM2 ?? null;
+  const frenteBase = parsed.frenteMetros ?? null;
+  let io = sectorProfile.io;
+  let icBase = sectorProfile.icBase;
+  let icMax = sectorProfile.icMax;
+  let pisosBase = sectorProfile.pisosBase;
+  let pisosMax = sectorProfile.pisosMax;
+  if (frenteBase !== null && frenteBase < 8) {
+    icBase = Math.min(icBase, 2.2);
+    icMax = Math.min(icMax, 2.8);
+    pisosBase = Math.min(pisosBase, 4);
+    pisosMax = Math.min(pisosMax, 5);
+  } else if (areaBase !== null && areaBase >= 1e3 && (frenteBase === null || frenteBase >= 18)) {
+    icMax = Number((icMax + 0.5).toFixed(2));
+    pisosMax = Math.min(18, pisosMax + 2);
+  }
+  const aplicaCalculo = areaBase !== null && areaBase > 0;
+  const ocupableP1 = aplicaCalculo ? Math.round(areaBase * io) : null;
+  const construibleBase = aplicaCalculo ? Math.round(areaBase * icBase) : null;
+  const construibleMax = aplicaCalculo ? Math.round(areaBase * icMax) : null;
+  let unidadesEstimadas = null;
+  if (construibleBase !== null && parsed.tipoInmueble !== "bodega") {
+    const areaVendibleAprox = construibleBase * 0.78;
+    const minUnidades = Math.max(1, Math.floor(areaVendibleAprox / 75));
+    const maxUnidades = Math.max(minUnidades, Math.floor(areaVendibleAprox / 48));
+    unidadesEstimadas = `${minUnidades} a ${maxUnidades} unidades (promedio 48\u201375 m\xB2 vendibles, descontando ~22% de puntos fijos/circulaciones)`;
+  }
+  let evaluacionFrente = "";
+  if (frenteBase !== null) {
+    if (frenteBase < 8) {
+      evaluacionFrente = `Frente estrecho (${frenteBase} m < 8 m): restringe la altura y dificulta rampa de s\xF3tano vehicular. Ideal para remodelaci\xF3n comercial/unifamiliar o ENGLOBE con predio vecino para desbloquear mayor altura e IC.`;
+    } else if (frenteBase < 12) {
+      evaluacionFrente = `Frente intermedio (${frenteBase} m): viable para edificio boutique de mediana altura o casa comercial/oficina en tipolog\xEDa continua/semicontinua con parqueaderos en primer piso o semis\xF3tano.`;
+    } else {
+      evaluacionFrente = `Frente \xF3ptimo (${frenteBase} m \u2265 12 m): permite doble cruj\xEDa, rampa de s\xF3tano vehicular c\xF3moda y aprovechamiento completo del \xEDndice de construcci\xF3n y altura del sector.`;
+    }
+  } else {
+    evaluacionFrente = "Frente no suministrado: en Bogot\xE1 (Dec. 555/2021), frentes < 8 m limitan altura y s\xF3tanos; frentes \u2265 12\u201315 m habilitan desarrollo vertical pleno o englobe estrat\xE9gico.";
+  }
+  let veredictoComercial = "";
+  if (tratamientoCode === "CONSERVACION") {
+    veredictoComercial = "Vocaci\xF3n patrimonial (Conservaci\xF3n): alto valor para comercio boutique, restauraci\xF3n, hoteler\xEDa cultural, coworking o coliving mediante adecuaci\xF3n/restauraci\xF3n con aval del IDPC (no apto para demolici\xF3n total en altura).";
+  } else if (parsed.objetivoEvaluacion === "uso_comercial_servicios" || parsed.tipoInmueble === "bodega" || parsed.tipoInmueble === "local" || parsed.tipoInmueble === "oficina") {
+    veredictoComercial = `Viabilidad comercial favorable en ${actMeta.nombre}: verificar \xFAnicamente ancho del perfil vial frente al predio y \xE1rea neta de atenci\xF3n para confirmar escala permitida (barrial, zonal o metropolitana).`;
+  } else if (parsed.objetivoEvaluacion === "remodelar_ampliar") {
+    veredictoComercial = "Viabilidad de remodelaci\xF3n o ampliaci\xF3n estructural: permite reciclar o densificar la edificaci\xF3n existente respetando antejard\xEDn, empate volum\xE9trico y aislamientos posteriores del Dec. 555/2021.";
+  } else {
+    veredictoComercial = tratamientoCode === "RENOVACION_URBANA" ? `Alto potencial constructor y de valorizaci\xF3n residual (${tratMeta.nombre}): zona apta para desarrollo vertical o venta a constructora, potenciable mediante englobe si se busca superar el IC base.` : `Potencial constructivo equilibrado (${tratMeta.nombre}): apto para proyecto multifamiliar boutique o uso mixto de proximidad de ${pisosBase} a ${pisosMax} pisos.`;
+  }
+  const bicLevel = sectorProfile.bicFlag || "BAJA";
+  const rondaLevel = sectorProfile.rondaFlag || "BAJA";
+  const riesgoLevel = liveGis.amenazaRemocion ? "ALTA" : sectorProfile.riesgoFlag || "BAJA";
+  const vialLevel = sectorProfile.vialFlag || "BAJA";
+  const observacionesAlertas = [sectorProfile.notaSector];
+  if (liveGis.proyectoRenoBo) {
+    observacionesAlertas.push(
+      `Predio localizado dentro de pol\xEDgono de proyecto RenoBo: ${liveGis.proyectoRenoBo}.`
+    );
+  }
+  if (liveGis.usoPredominanteManzana) {
+    observacionesAlertas.push(
+      `Uso predominante catastral reportado por IDECA en la manzana: ${liveGis.usoPredominanteManzana}.`
+    );
+  }
+  const chipDisplay = liveGis.chip || parsed.chip || "No suministrado (consulta por sector/direcci\xF3n)";
+  const direccionDisplay = liveGis.direccionOficial || parsed.direccion || "No suministrada (an\xE1lisis por sector/UPL)";
+  const barrioDisplay = liveGis.barrioCatastral || parsed.barrioOSector || sectorProfile.barrioDisplay;
+  const localidadDisplay = liveGis.localidad || sectorProfile.localidad;
+  const uplDisplay = liveGis.uplCodigo && liveGis.uplNombre ? `${liveGis.uplCodigo} - ${liveGis.uplNombre}` : parsed.uplOUzpMentioned || sectorProfile.upl;
+  const upzDisplay = liveGis.upzCodigo && liveGis.upzNombre ? `UPZ ${liveGis.upzCodigo} - ${liveGis.upzNombre}` : sectorProfile.upz;
+  const sueloDisplay = liveGis.clasificacionSuelo || "Suelo Urbano (Bogot\xE1 D.C.)";
+  const estratoNum = liveGis.estratoCatastral ?? sectorProfile.estratoTipico;
+  const estratoDisplay = `Estrato ${estratoNum}${liveGis.estratoCatastral ? " (IDECA)" : " (referencial sector)"}`;
+  const recomendacionesTecnicas = [
+    `Descargar la C\xE9dula Normativa oficial con el CHIP en SINUPOT (${SINUPOT_URL}) antes de estructurar promesa de compraventa o dise\xF1o arquitect\xF3nico.`,
+    `Confirmar en Curadur\xEDa Urbana el perfil vial exacto (V-1 a V-9) del frente del predio, pues define la altura definitiva, antejard\xEDn y exigencia de parqueaderos/biciestacionamientos.`,
+    frenteBase !== null && frenteBase < 10 ? "Evaluar englobe con predio colindante para superar restricciones de frente, optimizar rampa de parqueaderos y capturar incentivos de edificabilidad del POT 555." : "Modelar cabida arquitect\xF3nica descontando aislamientos (3\u20135 m), antejard\xEDn y ~22% de circulaciones/puntos fijos para validar m\xB2 netos vendibles."
+  ];
+  if (bicLevel === "ALTA" || bicLevel === "MEDIA") {
+    recomendacionesTecnicas.push(
+      "Solicitar concepto previo ante el Instituto Distrital de Patrimonio Cultural (IDPC) si el predio o su colindante figuran como Bien de Inter\xE9s Cultural (BIC)."
+    );
+  }
+  const sourceLabel = liveGis.source === "IDECA_SINUPOT_LIVE" ? "IDECA / Catastro Bogot\xE1 + SINUPOT en vivo + POT Decreto 555 de 2021" : liveGis.source === "IDECA_LIVE" ? "IDECA / Catastro Bogot\xE1 en vivo + Matriz POT Decreto 555 de 2021" : "Matriz Normativa POT Decreto 555 de 2021 (Referencia SINUPOT / IDECA)";
+  const volumetricLines = aplicaCalculo ? [
+    `\u2022 *\xC1rea base del lote:* ${formatNumberCo(areaBase)} m\xB2${frenteBase ? ` (Frente: ${formatNumberCo(frenteBase)} m)` : ""}`,
+    `\u2022 *Huella m\xE1xima ocupable Piso 1 (IO ${io}):* ~${formatNumberCo(ocupableP1)} m\xB2`,
+    `\u2022 *\xC1rea m\xE1xima construible base (IC ${icBase}):* ~${formatNumberCo(construibleBase)} m\xB2`,
+    `\u2022 *Techo construible con incentivos/cargas (IC ${icMax}):* ~${formatNumberCo(construibleMax)} m\xB2`,
+    unidadesEstimadas ? `\u2022 *Estimaci\xF3n de unidades:* ${unidadesEstimadas}` : ""
+  ].filter(Boolean).join("\n") : `\u2022 *C\xE1lculo volum\xE9trico:* Comparte el *\xE1rea exacta del lote (m\xB2)* y el *frente (m)* (o su CHIP AAA...) para estimar la huella m\xE1xima ocupable y los m\xB2 construibles.`;
+  const whatsappSummary = `\u{1F4D0} *AN\xC1LISIS POT & NORMA URBANA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+_(Fuente: ${sourceLabel})_
+
+1\uFE0F\u20E3 *IDENTIFICACI\xD3N URBAN\xCDSTICA DEL PREDIO:*
+\u2022 *CHIP:* ${chipDisplay}
+\u2022 *Direcci\xF3n:* ${direccionDisplay}
+\u2022 *Barrio / Sector:* ${barrioDisplay} (*Localidad:* ${localidadDisplay})
+\u2022 *UPL / UPZ:* ${uplDisplay} | ${upzDisplay}
+\u2022 *Clasificaci\xF3n del Suelo:* ${sueloDisplay} | *${estratoDisplay}*
+` + (liveGis.areaConstruidaActualM2 ? `\u2022 *Construcci\xF3n actual (Catastro):* ${formatNumberCo(liveGis.areaConstruidaActualM2)} m\xB2${liveGis.pisosExistentes ? ` (${liveGis.pisosExistentes} pisos)` : ""}
+` : "") + `
+2\uFE0F\u20E3 *PAR\xC1METROS NORMATIVOS POT (DECRETO 555 DE 2021):*
+\u2022 *Tratamiento Urban\xEDstico:* ${tratMeta.nombre}
+\u2022 *\xC1rea de Actividad:* ${actMeta.nombre}
+\u2022 *\xCDndice de Ocupaci\xF3n (IO m\xE1x):* ${io} (${Math.round(io * 100)}%)
+\u2022 *\xCDndice de Construcci\xF3n (IC):* Base ${icBase} | Hasta ${icMax} con incentivos/cargas
+\u2022 *Altura M\xE1xima Estimada:* ${pisosBase} a ${pisosMax} pisos _(sujeta a frente y perfil vial)_
+\u2022 *Tipolog\xEDa Edificatoria:* ${sectorProfile.tipologia}
+\u2022 *Antejard\xEDn y Aislamientos:* Antejard\xEDn ${sectorProfile.antejardin}. Aislamiento posterior m\xEDn. 3.0 m a 5.0 m seg\xFAn altura (lateral desde 0 m en empate continuo o 3.0 m aislado).
+
+3\uFE0F\u20E3 *USOS DEL SUELO (POT 555):*
+\u2022 *Permitidos Principales:* ${actMeta.usosPrincipales.slice(0, 3).join("; ")}.
+\u2022 *Restringidos / Condicionados:* ${actMeta.usosRestringidos.slice(0, 2).join("; ")}.
+
+4\uFE0F\u20E3 *POTENCIAL CONSTRUCTIVO / COMERCIAL:*
+${volumetricLines}
+\u2022 *An\xE1lisis de Frente:* ${evaluacionFrente}
+\u2022 *Veredicto Comercial:* ${veredictoComercial}
+
+5\uFE0F\u20E3 *ALERTAS NORMATIVAS Y AMBIENTALES:*
+\u2022 *Reserva Vial:* ${vialLevel} | *Ronda H\xEDdrica (EEP):* ${rondaLevel}
+\u2022 *Riesgo / Remoci\xF3n en Masa:* ${riesgoLevel}${liveGis.amenazaRemocion ? ` (${liveGis.amenazaRemocion})` : ""} | *Patrimonio BIC:* ${bicLevel}
+
+\u{1F310} *Validaci\xF3n Oficial en L\xEDnea:* SINUPOT (${SINUPOT_URL}) | Mapas Bogot\xE1 (${MAPAS_BOGOTA_URL})
+
+\u26A0\uFE0F *Alerta de Riesgo Patrimonial y Urban\xEDstico:* Este concepto preliminar orienta la prefactibilidad; antes de comprar, firmar promesa o radicar licencia, se debe validar la c\xE9dula normativa oficial y reserva vial exacta ante Curadur\xEDa Urbana / SDP.
+
+\u{1F4F2} *Factibilidad Constructora y Consultor\xEDa Urban\xEDstica VECY:* Comun\xEDcate con *Eduardo A. Rivera* y *Jani Alves* en nuestra l\xEDnea oficial de br\xF3ker: *${BROKER_OFFICIAL_PHONE}* (${BROKER_OFFICIAL_WHATSAPP_LINK}).`;
+  return {
+    querySummary: [chipDisplay, barrioDisplay, areaBase ? `${areaBase} m\xB2` : ""].filter(Boolean).join(" | "),
+    isSpecificPredio: parsed.isSpecificPredio,
+    identificacion: {
+      chip: chipDisplay,
+      direccion: direccionDisplay,
+      barrio: barrioDisplay,
+      localidad: localidadDisplay,
+      upl: uplDisplay,
+      upz: upzDisplay,
+      clasificacionSuelo: sueloDisplay,
+      estrato: estratoDisplay,
+      areaTerrenoM2: areaBase,
+      areaConstruidaActualM2: liveGis.areaConstruidaActualM2 ?? null,
+      frenteMetros: frenteBase,
+      pisosActuales: liveGis.pisosExistentes ?? null
+    },
+    normaPot555: {
+      decretoMarco: "Decreto Distrital 555 de 2021 (POT Bogot\xE1 Reverdece)",
+      tratamientoCode,
+      tratamientoNombre: tratMeta.nombre,
+      tratamientoDetalle: tratMeta.detalle,
+      areaActividadCode,
+      areaActividadNombre: actMeta.nombre,
+      indiceOcupacionMax: io,
+      indiceConstruccionBase: icBase,
+      indiceConstruccionMaxConIncentivos: icMax,
+      alturaMaximaPisos: `${pisosBase} a ${pisosMax} pisos (sujeta a frente de lote y perfil vial)`,
+      pisosEstimadosBase: pisosBase,
+      pisosEstimadosMax: pisosMax,
+      tipologiaEdificatoria: sectorProfile.tipologia,
+      antejardinMinimo: sectorProfile.antejardin,
+      aislamientos: "Aislamiento posterior m\xEDnimo 3.0 m a 5.0 m seg\xFAn altura; lateral 0 m en empate continuo o 3.0\u20134.0 m en tipolog\xEDa aislada.",
+      usosPermitidosPrincipales: actMeta.usosPrincipales,
+      usosRestringidosOCondicionados: actMeta.usosRestringidos
+    },
+    alertasYRestricciones: {
+      reservaVial: {
+        nivel: vialLevel,
+        detalle: vialLevel === "MEDIA" ? "Posible afectaci\xF3n de paramento o ampliaci\xF3n sobre corredores arteriales (validar trazado exacto en SINUPOT / IDU)." : "Sin alerta preliminar de reserva vial mayor; corroborar l\xEDnea de paramento en Curadur\xEDa Urbana."
+      },
+      rondaHidrica: {
+        nivel: rondaLevel,
+        detalle: rondaLevel === "ALTA" ? "Proximidad a Estructura Ecol\xF3gica Principal / ZMPA / Humedal (franja no edificable de 30 m a 100 m seg\xFAn cuerpo h\xEDdrico)." : "Sin cruce directo con ronda h\xEDdrica mayor reportado en capa base; validar quebradas locales si aplica."
+      },
+      riesgoRemocionMasa: {
+        nivel: riesgoLevel,
+        detalle: liveGis.amenazaRemocion ? `Capa IDIGER reporta: ${liveGis.amenazaRemocion}. Requiere estudio geot\xE9cnico detallado para licencia.` : riesgoLevel === "MEDIA" ? "Sector cercano a pie de monte / ladera oriental; verificar zonificaci\xF3n geot\xE9cnica e IDIGER." : "Amenaza baja o sin restricci\xF3n cr\xEDtica reportada en capa base."
+      },
+      bienInteresCultural: {
+        nivel: bicLevel,
+        detalle: bicLevel === "ALTA" ? "Sector/Inmueble de Inter\xE9s Cultural (SIC/BIC): toda intervenci\xF3n requiere anteproyecto aprobado por el IDPC." : bicLevel === "MEDIA" ? "Presencia puntual de inmuebles BIC en el sector: verificar en SINUPOT si el predio o sus colindantes son BIC." : "Sin declaratoria BIC generalizada en el sector (confirmar ficha individual en SINUPOT)."
+      },
+      observaciones: observacionesAlertas
+    },
+    potencialConstructivoYComercial: {
+      aplicaCalculoVolumetrico: aplicaCalculo,
+      areaLoteBaseM2: areaBase,
+      frenteBaseMetros: frenteBase,
+      areaMaximaOcupablePiso1M2: ocupableP1,
+      areaMaximaConstruibleBaseM2: construibleBase,
+      areaMaximaConstruibleIncentivosM2: construibleMax,
+      unidadesEstimadasVivienda: unidadesEstimadas,
+      evaluacionFrente,
+      veredictoComercial,
+      recomendacionesTecnicas
+    },
+    liveGis,
+    enlacesOficiales: {
+      sinupot: SINUPOT_URL,
+      mapasBogota: MAPAS_BOGOTA_URL,
+      ideca: IDECA_URL,
+      curadurias: CURADURIAS_SDP_URL
+    },
+    whatsappSummary,
+    analyzedAtIso: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+async function analyzePotUrbanNormFromWhatsAppInput(params) {
+  const cleanText = stripMentions(params.text);
+  const parsed = parsePotUrbanQuery(cleanText);
+  if (!parsed.isPotRequest) {
+    return {
+      isPotRequest: false,
+      needsPredioGuidance: false,
+      responseText: "",
+      reactionEmoji: ""
+    };
+  }
+  if (parsed.needsPredioGuidance) {
+    return {
+      isPotRequest: true,
+      needsPredioGuidance: true,
+      reactionEmoji: "\u{1F4D0}",
+      responseText: `\u{1F4D0} *AN\xC1LISIS POT & NORMA URBANA EN VIVO (SINUPOT / IDECA) \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+Con el mayor gusto reviso la norma urban\xEDstica (Decreto 555 de 2021) y el potencial constructivo o comercial de tu predio.
+
+Para generar tu an\xE1lisis completo y el *Concepto Preliminar en PDF Membretado*, env\xEDame por favor uno o varios de estos datos:
+1\uFE0F\u20E3 *C\xF3digo CHIP* del predio (ej: \`AAA0058EEXS\`).
+2\uFE0F\u20E3 *Direcci\xF3n exacta* en Bogot\xE1 (ej: \`Calle 85 # 12-40\`) o *Barrio / UPL / UPZ*.
+3\uFE0F\u20E3 *\xC1rea del lote (m\xB2) y frente (m)* junto con el objetivo (construir pisos, remodelar o habilitar uso comercial/bodega/oficina).
+
+\u{1F310} Tambi\xE9n puedes consultar tu c\xE9dula oficial directamente en SINUPOT: ${SINUPOT_URL}
+\u{1F4F2} Para factibilidad constructora formal con nuestros directores: *${BROKER_OFFICIAL_PHONE}* (${BROKER_OFFICIAL_WHATSAPP_LINK}).`
+    };
+  }
+  const liveGis = await queryIdecaAndSinupotLive(parsed, {
+    enableLiveGis: params.enableLiveGis
+  });
+  const report = buildPotUrbanNormReport(parsed, liveGis);
+  let pdfBuffer;
+  let pdfFileName;
+  if (report.isSpecificPredio) {
+    try {
+      const pdfRes = await generatePotUrbanNormPdf(report, {
+        requestedBy: params.requesterName || void 0
+      });
+      pdfBuffer = pdfRes.pdfBuffer;
+      pdfFileName = pdfRes.fileName;
+    } catch (pdfErr) {
+      console.warn("[potUrbanNormService] Error generando PDF POT:", pdfErr?.message || pdfErr);
+    }
+  }
+  const pdfNotice = pdfBuffer && pdfFileName ? `
+
+\u{1F4C4} *Adjunto:* Concepto Preliminar de Norma Urbana y Prefactibilidad POT en PDF Membretado (*${pdfFileName}*).` : "";
+  return {
+    isPotRequest: true,
+    needsPredioGuidance: false,
+    report,
+    responseText: `${report.whatsappSummary}${pdfNotice}`,
+    reactionEmoji: "\u{1F4D0}",
+    pdfBuffer,
+    pdfFileName
+  };
+}
+var IDECA_BASE, SINUPOT_BASE, SINUPOT_URL, MAPAS_BOGOTA_URL, IDECA_URL, CURADURIAS_SDP_URL, BOGOTA_SECTOR_PROFILES;
+var init_potUrbanNormService = __esm({
+  "server/_core/potUrbanNormService.ts"() {
+    "use strict";
+    init_commercialFunnelService();
+    init_legalDocumentPdfService();
+    IDECA_BASE = "https://serviciosgis.catastrobogota.gov.co/arcgis/rest/services";
+    SINUPOT_BASE = "https://sinupot.sdp.gov.co/serverp/rest/services/POT555";
+    SINUPOT_URL = "https://sinupot.sdp.gov.co/";
+    MAPAS_BOGOTA_URL = "https://mapas.bogota.gov.co/";
+    IDECA_URL = "https://www.ideca.gov.co/";
+    CURADURIAS_SDP_URL = "https://www.sdp.gov.co/content/sinupot-0";
+    BOGOTA_SECTOR_PROFILES = [
+      {
+        key: "chico_93_cabrera",
+        aliases: [
+          "chico",
+          "el chico",
+          "chico norte",
+          "chico reservado",
+          "rincon del chico",
+          "parque de la 93",
+          "la cabrera",
+          "el nogal",
+          "el retiro",
+          "zona t",
+          "antiguo country",
+          "espacio 93",
+          "calle 85",
+          "calle 93"
+        ],
+        barrioDisplay: "Chic\xF3 / La Cabrera / Zona 93",
+        localidad: "Chapinero",
+        upl: "UPL14 - Chapinero",
+        upz: "UPZ 97 - Chic\xF3 Lago / UPZ 88 - El Refugio",
+        estratoTipico: 6,
+        tratamientoCode: "RENOVACION_URBANA",
+        areaActividadCode: "ESTRUCTURANTE_ACTIVIDADES_ECONOMICAS",
+        io: 0.7,
+        icBase: 3.5,
+        icMax: 5.5,
+        pisosBase: 8,
+        pisosMax: 15,
+        tipologia: "Continua / Aislada seg\xFAn frente de lote y perfil vial (V-1 a V-4)",
+        antejardin: "5.0 m sobre ejes estructurantes / 3.5 m en v\xEDas locales consolidadas",
+        vialFlag: "MEDIA",
+        notaSector: "Alta demanda corporativa, residencial premium y comercio de alto perfil. Ejes Carrera 11, Carrera 15, Calle 93 y Calle 100 admiten mayor altura mediante englobe y cargas urban\xEDsticas."
+      },
+      {
+        key: "chapinero_central_marly_quinta",
+        aliases: [
+          "chapinero",
+          "chapinero central",
+          "chapinero alto",
+          "marly",
+          "quinta camacho",
+          "sucre",
+          "pardo rubio",
+          "lourdes",
+          "emaus",
+          "zona g",
+          "rosales"
+        ],
+        barrioDisplay: "Chapinero / Quinta Camacho / Rosales",
+        localidad: "Chapinero",
+        upl: "UPL14 - Chapinero",
+        upz: "UPZ 99 - Chapinero / UPZ 90 - Pardo Rubio",
+        estratoTipico: 5,
+        tratamientoCode: "RENOVACION_URBANA",
+        areaActividadCode: "ESTRUCTURANTE_ACTIVIDADES_ECONOMICAS",
+        io: 0.7,
+        icBase: 3.2,
+        icMax: 5,
+        pisosBase: 6,
+        pisosMax: 12,
+        tipologia: "Continua en ejes mixtos; Conservaci\xF3n puntual en inmuebles BIC de Quinta Camacho",
+        antejardin: "3.0 m a 5.0 m seg\xFAn empate de manzana y perfil vial",
+        bicFlag: "MEDIA",
+        riesgoFlag: "MEDIA",
+        notaSector: "Sector mixto estrat\xE9gico universitario, gastron\xF3mico (Zona G) y residencial. Verificar si el predio colinda con BIC en Quinta Camacho o franja de Cerros Orientales en Rosales/Pardo Rubio."
+      },
+      {
+        key: "santa_barbara_usaquen",
+        aliases: [
+          "santa barbara",
+          "santa ana",
+          "la carolina",
+          "bella suiza",
+          "multicentro",
+          "san patricio",
+          "unicentro",
+          "usaquen",
+          "molinos norte",
+          "la calleja",
+          "country"
+        ],
+        barrioDisplay: "Santa B\xE1rbara / Usaqu\xE9n / Santa Ana",
+        localidad: "Usaqu\xE9n",
+        upl: "UPL26 - Usaqu\xE9n",
+        upz: "UPZ 14 - Santa B\xE1rbara / UPZ 13 - Los Cedros",
+        estratoTipico: 6,
+        tratamientoCode: "CONSOLIDACION",
+        areaActividadCode: "PROXIMIDAD_SOPORTES_URBANOS",
+        io: 0.65,
+        icBase: 2.8,
+        icMax: 4.2,
+        pisosBase: 5,
+        pisosMax: 10,
+        tipologia: "Aislada o Semicontinua con antejardines amplios (ejes Cra 7a, Cra 9a, Cll 116, Cll 127)",
+        antejardin: "5.0 m en ejes arteriales / 3.5 m a 4.0 m en v\xEDas locales residenciales",
+        bicFlag: "BAJA",
+        notaSector: "Mercado s\xF3lido para multifamiliar de gama media-alta, consultorios m\xE9dicos (eje Fundaci\xF3n Santa Fe) y comercio zonal. En Usaqu\xE9n Fundacional verificar per\xEDmetro BIC."
+      },
+      {
+        key: "cedritos_contador_colina",
+        aliases: [
+          "cedritos",
+          "cedro golf",
+          "cedro bolivar",
+          "contador",
+          "belmira",
+          "lisboa",
+          "colina",
+          "colina campestre",
+          "mazuren",
+          "prado veraniego",
+          "victoria norte",
+          "nueva autopista",
+          "alcala"
+        ],
+        barrioDisplay: "Cedritos / Contador / Colina Campestre",
+        localidad: "Usaqu\xE9n / Suba",
+        upl: "UPL26 - Usaqu\xE9n / UPL29 - Britalia",
+        upz: "UPZ 13 - Los Cedros / UPZ 19 - El Prado",
+        estratoTipico: 4,
+        tratamientoCode: "CONSOLIDACION",
+        areaActividadCode: "PROXIMIDAD_GENERADORA_SOPORTES",
+        io: 0.7,
+        icBase: 2.6,
+        icMax: 3.6,
+        pisosBase: 5,
+        pisosMax: 8,
+        tipologia: "Continua / Semicontinua para vivienda multifamiliar y comercio vecinal",
+        antejardin: "3.5 m a 5.0 m seg\xFAn perfil vial (Cll 134, Cll 140, Cll 147, Av. 19)",
+        notaSector: "Alta absorci\xF3n en vivienda multifamiliar de 5 a 8 pisos y comercio de proximidad en primer piso sobre ejes principales (Av. 19, Cra 15, Cll 140, Cll 147)."
+      },
+      {
+        key: "niza_floresta_pontevedra_pasadena",
+        aliases: [
+          "niza",
+          "la floresta",
+          "pontevedra",
+          "pasadena",
+          "potosi",
+          "andes",
+          "morato",
+          "san nicolas",
+          "santa rosa",
+          "suba",
+          "batan",
+          "malibu"
+        ],
+        barrioDisplay: "Niza / La Floresta / Pontevedra / Suba",
+        localidad: "Suba",
+        upl: "UPL27 - Niza / UPL28 - Suba",
+        upz: "UPZ 25 - La Floresta / UPZ 24 - Niza",
+        estratoTipico: 5,
+        tratamientoCode: "CONSOLIDACION",
+        areaActividadCode: "PROXIMIDAD_SOPORTES_URBANOS",
+        io: 0.65,
+        icBase: 2.5,
+        icMax: 3.6,
+        pisosBase: 4,
+        pisosMax: 8,
+        tipologia: "Semicontinua / Aislada en manzanas residenciales; mayor altura en ejes Av. Suba y Cll 116",
+        antejardin: "4.0 m a 5.0 m",
+        rondaFlag: "BAJA",
+        notaSector: "Sector residencial consolidado con excelente acceso por Av. Suba, Calle 116 y Av. Boyac\xE1. Revisar cercan\xEDa al Humedal C\xF3rdoba o canales en predios colindantes."
+      },
+      {
+        key: "toberin_industrial_puente_aranda_fontibon",
+        aliases: [
+          "toberin",
+          "puente aranda",
+          "zona industrial",
+          "montevideo",
+          "fontibon",
+          "alamos",
+          "zona franca",
+          "ricaurte",
+          "pensilvania",
+          "salazar gomez",
+          "granjas de techo",
+          "carvajal",
+          "sevillana"
+        ],
+        barrioDisplay: "Tober\xEDn / Puente Aranda / Fontib\xF3n Industrial",
+        localidad: "Usaqu\xE9n / Puente Aranda / Fontib\xF3n",
+        upl: "UPL21 - Puente Aranda / UPL12 - Fontib\xF3n / UPL29 - Britalia",
+        upz: "UPZ 111 - Puente Aranda / UPZ 112 - Granjas de Techo / UPZ 12 - Tober\xEDn",
+        estratoTipico: 3,
+        tratamientoCode: "RENOVACION_URBANA",
+        areaActividadCode: "GRANDES_SERVICIOS_METROPOLITANOS",
+        io: 0.75,
+        icBase: 3.2,
+        icMax: 4.5,
+        pisosBase: 4,
+        pisosMax: 8,
+        tipologia: "Nave industrial / Plataforma log\xEDstica / Edificio corporativo y comercial",
+        antejardin: "3.0 m a 5.0 m seg\xFAn v\xEDa arterial o zona de maniobra de carga",
+        vialFlag: "MEDIA",
+        notaSector: "Vocaci\xF3n log\xEDstica, bodegaje urbano, industria liviana/mediana y comercio mayorista. En Fontib\xF3n/Engativ\xE1 validar cono de aproximaci\xF3n y ruido aeroportuario El Dorado."
+      },
+      {
+        key: "salitre_teusaquillo_galerias",
+        aliases: [
+          "salitre",
+          "ciudad salitre",
+          "teusaquillo",
+          "galerias",
+          "nicolas de federman",
+          "campin",
+          "palermo",
+          "la soledad",
+          "park way",
+          "santa teresita",
+          "modelia",
+          "hayuelos"
+        ],
+        barrioDisplay: "Salitre / Teusaquillo / Galer\xEDas",
+        localidad: "Teusaquillo / Fontib\xF3n",
+        upl: "UPL30 - Salitre / UPL23 - Teusaquillo",
+        upz: "UPZ 109 - Ciudad Salitre / UPZ 101 - Teusaquillo / UPZ 100 - Galer\xEDas",
+        estratoTipico: 4,
+        tratamientoCode: "RENOVACION_URBANA",
+        areaActividadCode: "ESTRUCTURANTE_ACTIVIDADES_ECONOMICAS",
+        io: 0.68,
+        icBase: 3,
+        icMax: 4.8,
+        pisosBase: 5,
+        pisosMax: 12,
+        tipologia: "Continua en ejes comerciales (Av. El Dorado, NQS, Cll 53); Conservaci\xF3n en La Soledad/Teusaquillo BIC",
+        antejardin: "3.5 m a 5.0 m",
+        bicFlag: "MEDIA",
+        notaSector: "Corredor de alta conectividad (Av. 26, NQS, Av. Esperanza). En La Soledad / Park Way verificar inventario de Conservaci\xF3n Patrimonial (BIC) antes de proyectar demolici\xF3n."
+      },
+      {
+        key: "candelaria_centro_historico",
+        aliases: [
+          "la candelaria",
+          "candelaria",
+          "centro historico",
+          "las nieves",
+          "la macarena",
+          "bosque izquierdo",
+          "la merced",
+          "veracruz",
+          "santa fe",
+          "centro internacional"
+        ],
+        barrioDisplay: "Centro Hist\xF3rico / La Candelaria / Macarena",
+        localidad: "La Candelaria / Santa Fe",
+        upl: "UPL24 - Centro Hist\xF3rico",
+        upz: "UPZ 94 - La Candelaria / UPZ 93 - Las Nieves",
+        estratoTipico: 3,
+        tratamientoCode: "CONSERVACION",
+        areaActividadCode: "ESTRUCTURANTE_ACTIVIDADES_ECONOMICAS",
+        io: 0.6,
+        icBase: 1.8,
+        icMax: 2.6,
+        pisosBase: 2,
+        pisosMax: 4,
+        tipologia: "Patrimonial / Empate hist\xF3rico continuo (sujeto a aprobaci\xF3n IDPC)",
+        antejardin: "0.0 m (paramento hist\xF3rico a l\xEDnea de fachada)",
+        bicFlag: "ALTA",
+        notaSector: "Sector de Inter\xE9s Cultural (PEMPC / IDPC). Excelente vocaci\xF3n cultural, gastron\xF3mica, coliving universitario y turismo patrimonial, pero cualquier obra exige anteproyecto ante el IDPC."
+      },
+      {
+        key: "torca_guaymaral_expansion",
+        aliases: [
+          "guaymaral",
+          "torca",
+          "lagos de torca",
+          "san antonio norte",
+          "tibor",
+          "arrayanes",
+          "san jose de bavaria"
+        ],
+        barrioDisplay: "Torca / Guaymaral / San Jos\xE9 de Bavaria",
+        localidad: "Usaqu\xE9n / Suba",
+        upl: "UPL25 - Torca / UPL27 - Niza",
+        upz: "UPZ 1 - Paseo de los Libertadores / UPZ 3 - Guaymaral",
+        estratoTipico: 5,
+        tratamientoCode: "DESARROLLO",
+        areaActividadCode: "PROXIMIDAD_SOPORTES_URBANOS",
+        io: 0.5,
+        icBase: 1.8,
+        icMax: 3,
+        pisosBase: 3,
+        pisosMax: 8,
+        tipologia: "Aislada / Desarrollo por Plan Parcial con cesiones obligatorias (POZ Norte - Lagos de Torca)",
+        antejardin: "5.0 m o superior seg\xFAn perfil ambiental y plan parcial",
+        rondaFlag: "ALTA",
+        notaSector: "\xC1reas sujetas a Planes Parciales (Lagos de Torca) o suelo suburbano/ronda del Humedal Torca-Guaymaral. Verificar cargas y beneficios y EEP antes de valorar m\xB2 urbanizable."
+      },
+      {
+        key: "kennedy_tintal_castilla_bosa_restrepo",
+        aliases: [
+          "kennedy",
+          "tintal",
+          "castilla",
+          "marsella",
+          "bosa",
+          "restrepo",
+          "olaya",
+          "san jorge",
+          "tunja",
+          "tunjuelito",
+          "ciudad montes",
+          "vergel",
+          "patio bonito",
+          "engativa"
+        ],
+        barrioDisplay: "Kennedy / Castilla / Tintal / Restrepo / Engativ\xE1",
+        localidad: "Kennedy / Antonio Nari\xF1o / Bosa / Engativ\xE1",
+        upl: "UPL15 - Kennedy / UPL13 - Tintal / UPL22 - Restrepo / UPL31 - Engativ\xE1",
+        upz: "UPZ 46 - Castilla / UPZ 38 - Restrepo / UPZ 47 - Kennedy Central",
+        estratoTipico: 3,
+        tratamientoCode: "CONSOLIDACION",
+        areaActividadCode: "PROXIMIDAD_GENERADORA_SOPORTES",
+        io: 0.7,
+        icBase: 2.4,
+        icMax: 3.4,
+        pisosBase: 4,
+        pisosMax: 6,
+        tipologia: "Continua de densidad media (vivienda bifamiliar/multifamiliar + comercio zonal en 1er piso)",
+        antejardin: "3.0 m seg\xFAn empate de cuadra",
+        notaSector: "Alta demanda de vivienda VIS/No-VIS asequible, comercio vecinal y servicios en ejes principales (Av. Primero de Mayo, Av. Boyac\xE1, Av. Am\xE9ricas, Av. Ciudad de Cali)."
+      }
+    ];
+  }
+});
+
 // server/_core/jania/founderKnowledgeService.ts
 import fs12 from "fs";
 import path12 from "path";
@@ -34842,6 +36200,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando un usuario env\xEDe por DM o cite a @JanIA en Grupos con un Certificado de Tradici\xF3n y Libertad (CTL SNR) en PDF, imagen o texto de anotaciones: 1) Discriminar primero que sea realmente un CTL SNR (sin interferir con flyers comerciales ni listados en arriendo/venta); 2) Auditar anotaci\xF3n por anotaci\xF3n verificando tradici\xF3n ininterrumpida a 10 a\xF1os (Ley 791/2002) y 20 a\xF1os (Art. 2532 C.C.) y emitiendo alerta roja inmediata ante Falsa Tradici\xF3n (C\xF3d. 0600 / derechos y acciones / posesi\xF3n); 3) Cruzar grav\xE1menes, medidas cautelares y limitaciones (hipotecas, embargos, demandas, patrimonio de familia Ley 70/1931, afectaci\xF3n vivienda familiar Ley 258/1996, condiciones resolutorias, usufructos, servidumbres, sucesiones il\xEDquidas) contra sus cancelaciones posteriores; 4) Emitir Dictamen Jur\xEDdico en Sem\xE1foro (Verde Viable, Amarillo Saneamiento Previo, Rojo Riesgo Cr\xEDtico), desglose de matr\xEDcula, ORIP, CHIP, propietarios con % y recomendaciones notariales accionables; 5) Adjuntar nativamente Concepto de Estudio de T\xEDtulos en PDF Membretado VECY BIENES RA\xCDCES con Alerta de Riesgo Patrimonial y CTA a +57 316 656 9719 + Protocolo de Satisfacci\xF3n y Google Reviews.",
         rawText: "Punto 2 \u2014 Skill 2: Motor Especializado de Estudio de T\xEDtulos SNR (ctlTitleStudyService.ts, v34.13) con auditor\xEDa anotaci\xF3n por anotaci\xF3n, tradici\xF3n 10 y 20 a\xF1os, alerta Falsa Tradici\xF3n 0600, cruce de grav\xE1menes vs cancelaciones, Sem\xE1foro, PDF Membretado VECY, Alerta Patrimonial +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
         createdAt: "2026-11-13T11:00:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-pot-norma-urbana-sinupot-ideca-v34-14",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Motor Especializado de An\xE1lisis POT y Norma Urbana Bogot\xE1 (SINUPOT / Mapas Bogot\xE1 IDECA / Decreto 555 de 2021) + PDF Membretado \u2014 Doctrina Eduardo A. Rivera v34.14",
+        directive: "Cuando un usuario consulte por DM o cite a @JanIA en Grupos sobre POT, norma urbana, uso del suelo, edificabilidad, constructibilidad, alturas, IO/IC, antejard\xEDn o aislamientos en Bogot\xE1 (por CHIP AAA..., direcci\xF3n exacta o sector/UPZ/UPL): 1) Consultar en vivo IDECA Catastro / SINUPOT cuando aplique (con fallback determin\xEDstico al POT Decreto 555 de 2021 a $0 COP en tests); 2) Mantener precedencia segura despu\xE9s de Estudio de T\xEDtulos CTL y antes de IDU Valorizaci\xF3n y Predial cuando el mensaje combine CHIP AAA... con intenci\xF3n expl\xEDcita POT/norma urbana, y no interceptar preguntas puramente conceptuales; 3) Entregar UPL/UPZ, Tratamiento Urban\xEDstico, \xC1rea de Actividad, IO, IC, altura m\xE1xima en pisos, usos permitidos/restringidos, alertas (reserva vial, ronda h\xEDdrica, remoci\xF3n en masa, BIC) y potencial constructivo/comercial en m\xB2 si aporta \xE1rea de lote y frente; 4) Adjuntar nativamente Concepto Preliminar de Norma Urbana y Prefactibilidad POT en PDF Membretado VECY BIENES RA\xCDCES cuando el predio sea espec\xEDfico; 5) Incluir CTA de consultor\xEDa urban\xEDstica hacia +57 316 656 9719 y Protocolo Universal de Satisfacci\xF3n y Google Reviews.",
+        rawText: "Punto 3 \u2014 Skill 3: An\xE1lisis POT / Norma Urbana en Vivo \u2014 SINUPOT / Mapas Bogot\xE1 IDECA (potUrbanNormService.ts, v34.14) en DM y Grupos con PDF Membretado VECY, precedencia segura sobre IDU/Predial, CTA +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
+        createdAt: "2026-11-13T14:00:00.000Z",
         active: true
       }
     ];
@@ -37532,6 +38900,28 @@ ${audit.fichaOptimizadaSugerida}
         }
       };
     }
+    case "analizar_norma_urbana_pot": {
+      const potInput = String(args.consultaPredioPot || rawUserText || "").trim();
+      const potRes = await analyzePotUrbanNormFromWhatsAppInput({
+        text: potInput,
+        requesterName: _userName || void 0
+      });
+      if (potRes.pdfBuffer && potRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: potRes.pdfBuffer, pdfFileName: potRes.pdfFileName });
+      }
+      return {
+        toolType: "norma_urbana_pot",
+        resultJson: {
+          solicitud: "analizar_norma_urbana_pot",
+          predioEspecifico: potRes.report?.isSpecificPredio ?? false,
+          tratamiento: potRes.report?.normaPot555.tratamientoNombre || null,
+          areaActividad: potRes.report?.normaPot555.areaActividadNombre || null,
+          upl: potRes.report?.identificacion.upl || null,
+          exitoso: potRes.isPotRequest,
+          reporteOficial: potRes.responseText || "Para analizar la norma urbana POT (Decreto 555/2021), env\xEDame por favor el CHIP AAA..., direcci\xF3n exacta en Bogot\xE1 o sector/UPL junto con \xE1rea de lote y frente."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -37558,7 +38948,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   }
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? toolJson.reporteAcmEstructurado || JSON.stringify(toolJson) : "");
   const isDirectDocumentLookup = (toolType === "cedula" || toolType === "empresa") && Boolean(rawReport) && (rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA") || rawReport.includes("Alerta de Validaci\xF3n de Identidad")) && (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,18}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 40);
-  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("ESTUDIO DE T\xCDTULOS SNR") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
+  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("ESTUDIO DE T\xCDTULOS SNR") || rawReport.includes("AN\xC1LISIS POT") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
   }
@@ -38102,7 +39492,7 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
       lastAssistantTextEarly
     );
     const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
-    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n)\b/i.test(
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad)\b/i.test(
       cleanLower
     );
     if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction) {
@@ -38592,6 +39982,46 @@ Si tienes alg\xFAn inmueble (casa, apartamento, lote u oficina) del cual requier
       return guidanceReply;
     }
   }
+  const shouldEvaluatePotInDm = !isCommercialFlyerImg && !isReviewValidationContext && isPotUrbanNormRequest(clean);
+  if (shouldEvaluatePotInDm) {
+    const potRes = await analyzePotUrbanNormFromWhatsAppInput({
+      text: clean,
+      requesterName: displayName || realName || void 0
+    });
+    if (potRes.isPotRequest && potRes.report) {
+      if (potRes.pdfBuffer && potRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: potRes.pdfBuffer, pdfFileName: potRes.pdfFileName });
+      }
+      await incrementFreeServicesCount(userId);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+        serviceType: "norma_urbana_pot",
+        timestamp: Date.now()
+      };
+      await saveUserPerpetualSession(userPerpetualSession);
+      const satisfactionLine = `
+
+\u{1F91D} *\xBFQuedaste satisfecho(a) con este An\xE1lisis POT y Norma Urbana?* Tu opini\xF3n me ayuda a seguir afinando mi precisi\xF3n para toda la red VECY.`;
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const finalPotReply = `${greetingPrefix}${potRes.responseText}${satisfactionLine}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", finalPotReply);
+      markUserGreetedToday(userId);
+      return finalPotReply;
+    }
+    if (potRes.needsPredioGuidance && potRes.responseText) {
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const guidanceReply = `${greetingPrefix}${potRes.responseText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", guidanceReply);
+      markUserGreetedToday(userId);
+      return guidanceReply;
+    }
+  }
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const reqProfiling = analyzeRequirementCompleteness(clean);
     if (reqProfiling.isRequirement && reqProfiling.isIncompleteOrHollow && (!isOngoingChat || !isAssistantRefiningListingOrReqEarly)) {
@@ -38772,7 +40202,7 @@ ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA:
 ===================================================
 MANEJO INTELIGENTE DE TR\xC1MITES Y SUPERPODERES NATIVOS DE WHATSAPP BUSINESS:
 ===================================================
-Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps.
+Cuentas con las herramientas de function calling: consultar_identidad_y_antecedentes, consultar_empresa_o_nit, consultar_paz_y_salvo_idu, consultar_factura_predial_bogota, liquidar_gastos_notariales_y_registro, sondeo_mercado_inmobiliario, consultar_matches_o_codigo, registrar_inmueble_o_requerimiento, enviar_encuesta_interactiva, enviar_tarjeta_contacto_vecy, enviar_evento_visita_inmobiliaria, enviar_catalogo_servicios, navegar_o_buscar_web, consultar_catalogo_inmuebles_vecy, generar_documento_legal_pdf, generar_imagen_creativa_whatsapp, enviar_ubicacion_mapa_gps, realizar_estudio_titulos_snr, analizar_norma_urbana_pot.
 a) Si el usuario env\xEDa un n\xFAmero, documento o nombre de empresa con INTENCI\xD3N CLARA (ej. "revisa esta c\xE9dula 79458979", "NIT 900123456", "empresa MULTIPROYECTOS & INVERSIONES SAS", "te confirmo el nombre de la empresa X", "investiga a X", "predial CHIP AAA123", "paz y salvo IDU AAA..."): Invoca de inmediato la herramienta correspondiente ('consultar_empresa_o_nit' pasando la raz\xF3n social limpia) sin repreguntar ni pedir el NIT de antemano, investigando en RUES y entregando el reporte oficial.
 b) Si el usuario pide buscar en la web, consulta sobre normativa (POT 555, Estatuto Tributario, resoluciones SNR notariales, tr\xE1mites VUR/Sinupot, divisas/TRM del d\xF3lar) o comparte un enlace URL: Invoca 'navegar_o_buscar_web' para validar y extraer el contenido real o la TRM oficial al instante, garantizando rigor jur\xEDdico sin alucinaciones.
 c) Si el usuario consulta qu\xE9 inmuebles tenemos disponibles o pide opciones de venta/arriendo: Invoca 'consultar_catalogo_inmuebles_vecy' para consultar la base de datos oficial de VECY (+57 316 656 9719) y entregar fichas y $/m\xB2 de inmediato.
@@ -39347,6 +40777,7 @@ var init_dmHandler = __esm({
     init_prompts();
     init_valuation();
     init_ctlTitleStudyService();
+    init_potUrbanNormService();
     init_whatsapp_utils();
     init_trustedContacts();
     init_founderKnowledgeService();
@@ -39634,6 +41065,17 @@ var init_dmHandler = __esm({
               },
               required: ["textoAnotacionesOCtl"]
             }
+          },
+          {
+            name: "analizar_norma_urbana_pot",
+            description: "Ejecuta el An\xE1lisis POT y Norma Urbana en vivo para Bogot\xE1 (Decreto 555 de 2021, SINUPOT / Mapas Bogot\xE1 IDECA / Catastro) por CHIP AAA..., direcci\xF3n exacta, barrio/UPL/UPZ, \xE1rea de lote y frente: identifica tratamiento urban\xEDstico, \xE1rea de actividad, IO/IC, altura en pisos, usos permitidos/restringidos, alertas (reserva vial, ronda h\xEDdrica, remoci\xF3n en masa, BIC), potencial constructivo en m\xB2 y genera Concepto Preliminar en PDF Membretado de VECY BIENES RA\xCDCES.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                consultaPredioPot: { type: "STRING", description: "Consulta POT con CHIP AAA..., direcci\xF3n en Bogot\xE1, sector/UPL/UPZ, \xE1rea de lote (m\xB2) y frente (m)" }
+              },
+              required: ["consultaPredioPot"]
+            }
           }
         ]
       }
@@ -39656,7 +41098,8 @@ var init_dmHandler = __esm({
       "documento_legal_pdf",
       "imagen_creativa",
       "ubicacion_gps",
-      "estudio_titulos"
+      "estudio_titulos",
+      "norma_urbana_pot"
     ];
   }
 });
@@ -39772,7 +41215,7 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
     const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
-    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
+    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isPotUrbanNormRequest(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
     const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
     if (isReviewLinkReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
       messageToProcess
@@ -39829,6 +41272,42 @@ ${quotedContext}` : messageToProcess;
           classification: "CONSULTA_GENERAL",
           response: ctlCheck.responseText,
           reactionEmoji: ctlCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isPotUrbanNormRequest(messageToProcess)) {
+      const potCheck = await analyzePotUrbanNormFromWhatsAppInput({
+        text: messageToProcess,
+        requesterName: targetName || realName || void 0
+      });
+      if (potCheck.isPotRequest && potCheck.report) {
+        const finalPotResp = appendGroupSatisfactionClosing(potCheck.responseText);
+        console.log(
+          `[JanIA-POTCheck] An\xE1lisis POT ejecutado en grupo para ${userId} (Fuente: ${potCheck.report.liveGis.source} | PDF: ${Boolean(potCheck.pdfBuffer)})`
+        );
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalPotResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPotResp,
+          reactionEmoji: potCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: potCheck.pdfBuffer,
+          fileName: potCheck.pdfFileName
+        };
+      }
+      if (potCheck.needsPredioGuidance && potCheck.responseText) {
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", potCheck.responseText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: potCheck.responseText,
+          reactionEmoji: potCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
         };
@@ -40344,6 +41823,25 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         };
       }
     }
+    if (isPotUrbanNormRequest(text2)) {
+      const potFallback = await analyzePotUrbanNormFromWhatsAppInput({
+        text: text2,
+        requesterName: firstName || void 0
+      }).catch(() => null);
+      if (potFallback?.isPotRequest && potFallback.report) {
+        const finalPotFallbackResp = appendGroupSatisfactionClosing(potFallback.responseText);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalPotFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPotFallbackResp,
+          reactionEmoji: potFallback.reactionEmoji,
+          document: potFallback.pdfBuffer,
+          fileName: potFallback.pdfFileName
+        };
+      }
+    }
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
 
@@ -40418,6 +41916,7 @@ var init_consultingHandler = __esm({
     init_realEstateMarketing();
     init_politenessService();
     init_ctlTitleStudyService();
+    init_potUrbanNormService();
   }
 });
 
@@ -40490,6 +41989,32 @@ ${quotedContext}` : text2;
           classification: "CONSULTA_GENERAL",
           response: ctlCirculoCheck.responseText,
           reactionEmoji: ctlCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isPotUrbanNormRequest(text2)) {
+      const potCirculoCheck = await analyzePotUrbanNormFromWhatsAppInput({
+        text: text2,
+        requesterName: firstName || void 0
+      });
+      if (potCirculoCheck.isPotRequest && potCirculoCheck.report) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(potCirculoCheck.responseText),
+          reactionEmoji: potCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: potCirculoCheck.pdfBuffer,
+          fileName: potCirculoCheck.pdfFileName
+        };
+      }
+      if (potCirculoCheck.needsPredioGuidance && potCirculoCheck.responseText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: potCirculoCheck.responseText,
+          reactionEmoji: potCirculoCheck.reactionEmoji,
           wantsVoice: false,
           voiceResponse: ""
         };
@@ -40729,6 +42254,7 @@ var init_circuloHandler = __esm({
     init_identityVerificationService();
     init_notarialExpenseService();
     init_ctlTitleStudyService();
+    init_potUrbanNormService();
   }
 });
 

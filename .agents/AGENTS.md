@@ -184,7 +184,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.13 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.14 — Noviembre 2026
+
+### Novedades v34.14 (Punto 3 — Skill 3: Motor Especializado de Análisis POT / Norma Urbana en Vivo — SINUPOT / Mapas Bogotá IDECA + PDF Membretado VECY — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Prioridad #3 del Roadmap de Skills de JanIA:**
+     - Dotar a JanIA (DM `dmHandler.ts` y citada con `@JanIA` en grupos `consultingHandler.ts` / `circuloHandler.ts` / `whatsapp-match.ts`) de análisis POT / Norma Urbana para Bogotá (Decreto 555 de 2021) consultando en vivo IDECA Catastro / SINUPOT por `CHIP AAA...`, dirección o sector/UPZ/UPL (con fallback determinístico `$0 COP` en tests), entregando Concepto Preliminar de Norma Urbana y Prefactibilidad POT en PDF Membretado de VECY BIENES RAÍCES.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `server/_core/potUrbanNormService.ts`: Consultor GIS en vivo sobre `serviciosgis.catastrobogota.gov.co` + SINUPOT best-effort y matriz determinística POT Decreto 555/2021 (`isConceptualPotQuestion`, `parsePotUrbanQuery`, `isPotUrbanNormRequest`, `queryIdecaAndSinupotLive`, `buildPotUrbanNormReport`, `analyzePotUrbanNormFromWhatsAppInput`). Modela UPL/UPZ, Tratamiento Urbanístico, Área de Actividad, IO, IC base/incentivos, altura máxima, antejardín/aislamientos, usos permitidos/restringidos, alertas (reserva vial, ronda hídrica, remoción en masa, BIC), cálculo volumétrico de huella y m² construibles por lote/frente y CTA comercial hacia `+57 316 656 9719`.
+     - `server/_core/jania/legalDocumentPdfService.ts`: Añadido `"concepto_norma_urbana_pot"` y `generatePotUrbanNormPdf` reutilizando `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+     - `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`, `whatsapp-match.ts`, `politenessService.ts`: Herramienta `analizar_norma_urbana_pot`, pre-interceptores prioritarios ubicados después de Estudio de Títulos CTL y antes de IDU/Predial y del perfilamiento de requerimientos (sin interceptar preguntas puramente conceptuales), adjunto PDF nativo en DM/Grupos cuando el predio es específico, refinamiento de `looksLikeNewToolDataRequest` y Protocolo Universal de Satisfacción + Google Reviews (`v34.11`).
+  3. **Gobernanza y Suite de Regresión 200:**
+     - Semilla directiva `seed-pot-norma-urbana-sinupot-ideca-v34-14` en `founderKnowledgeService.ts` y Suite 200 en `regression.test.ts` + actualización de `shared/const.ts` (`v34.14`) y `package.json` (`34.14.0`).
+- **Validación Limpia ($0 COP):** `NODE_ENV=test npm test` (**6/6 archivos, 704/704 tests pasando**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.13 — Noviembre 2026
 
 ### Novedades v34.13 (Punto 2 — Skill 2: Motor Especializado de Estudio de Títulos SNR + PDF Membretado VECY + Integración DM y Grupos — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
