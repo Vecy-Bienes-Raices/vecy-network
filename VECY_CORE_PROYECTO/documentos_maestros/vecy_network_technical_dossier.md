@@ -9314,6 +9314,23 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.13 (2026-11-13) — Punto 2: Skill 2 — Motor Especializado de Estudio de Títulos SNR (`ctlTitleStudyService.ts`, Semáforo Jurídico y PDF Membretado — Doctrina Eduardo A. Rivera)
+- **Problema / Requerimiento Identificado**:
+  - Se requería implementar el análisis jurídico automatizado de Certificados de Tradición y Libertad (SNR Colombia) en PDF, imagen y texto de anotaciones con auditoría anotación por anotación, validación de tradición 10/20 años, detección de Falsa Tradición (`0600`), cruce de gravámenes/embargos/limitaciones vs cancelaciones, Dictamen en Semáforo y Concepto Jurídico en PDF Membretado de VECY BIENES RAÍCES tanto en DM como en Grupos con `@JanIA`.
+  - Durante las pruebas se identificaron tres puntos clave resueltos en la arquitectura: precedencia sobre Predial/IDU en grupos (ya que el CTL incluye `CHIP AAA...`), parsing del encabezado SNR literal `ANOTACION: Nro X` y filtrado de XObjects `/Subtype /Image` + hex strings de `pdf-lib` en la extracción nativa FlateDecode.
+- **Solución Quirúrgica Implementada**:
+  - **`server/_core/ctlTitleStudyService.ts`**: Creado motor completo (`hasCtlTextMarkers`, `isExplicitCtlStudyRequest`, `extractTextSnippetsFromPdfBuffer`, `parseCtlFromPlainText`, `classifyCtlAnnotation`, `auditCtlParsedDocument`, `extractCtlDocumentWithGemini`, `analyzeCtlFromWhatsAppInput`).
+  - **`server/_core/jania/legalDocumentPdfService.ts`**: Añadido `estudio_titulos_snr`, helpers compartidos `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`, y `generateCtlStudyPdf` con banner visual de Semáforo (`VERDE`/`AMARILLO`/`ROJO`), desglose del folio, tradición 10/20 años, falsa tradición, tabla auditada anotación por anotación, recomendaciones notariales y QR + alerta patrimonial VECY (`+57 316 656 9719`).
+  - **`server/_core/jania/handlers/dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`, `whatsapp-match.ts`, `politenessService.ts`**: Integrados herramienta `realizar_estudio_titulos_snr`, pre-interceptores prioritarios, `extractQuotedContextAndMedia`, cobertura de `@JanIA` con multimedia/CTL en grupos externos y Protocolo Universal de Satisfacción + Google Reviews (`v34.11`).
+  - **Gobernanza y Suite 199**: Semilla `seed-estudio-titulos-snr-ctl-v34-13` en `founderKnowledgeService.ts`, Suite 199 (5/5 tests) en `server/__tests__/regression.test.ts` y actualización a `v34.13` (`34.13.0`) en `shared/const.ts` y `package.json`.
+- **Validación y Blindaje ($0 COP)**:
+  - `NODE_ENV=test npm test`: **6/6 archivos, 702/702 tests en verde (100%)**.
+  - `npm run check` (`tsc --noEmit`): **0 errores**.
+  - `npm run build`: **Compilación limpia** (`vite build` + `esbuild`).
+  - Versión: `v34.13` (`34.13.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.12 (2026-11-13) — Punto 1: Paridad Total de `@JanIA` en Grupos con Motores Determinísticos (IDU, RUES, Notarial, ACM Fitto y Corvini, Marketing Audit e Imágenes Creativas 1080x1080 — Doctrina Eduardo A. Rivera)
 - **Problema / Requerimiento Identificado**:
   - Lo prometido por `@JanIA` en el saludo de presentación en grupos (`presentacionGrupoWhatsApp`) superaba los interceptores determinísticos conectados en `consultingHandler.ts` (solo Predial y Cédula), provocando respuestas libres sin consulta en vivo a RUES, IDU, Notarial, ACM Fitto y Corvini ni Auditoría de Marketing, colisión de CHIPs `AAA...` entre Predial e IDU, riesgo de falso positivo por menciones `@573192919978`/`@LID` en `extractAllCedulasForVerification` y encolamiento de imágenes creativas hacia DM en lugar del grupo.

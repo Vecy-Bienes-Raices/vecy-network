@@ -348,18 +348,72 @@ export class JaniaMatchBot {
    * ⚖️ Verifica que una mención a JanIA en un grupo externo corresponda a una consulta inmobiliaria, jurídica,
    * tributaria, de avalúo o solicitud de explicación, y jamás a un flyer o saludo vacío.
    */
-  public isRealEstateConsultationForGroup(text?: string | null, quotedText?: string | null): boolean {
+  private async extractQuotedContextAndMedia(
+    msg: any,
+    rawMsg: any
+  ): Promise<{
+    quotedContext?: string;
+    quotedImageBuffer?: string;
+    quotedPdfBuffer?: string;
+    quotedPdfMimeType?: string;
+    hasQuotedMedia: boolean;
+  }> {
+    let quotedContext: string | undefined;
+    let quotedImageBuffer: string | undefined;
+    let quotedPdfBuffer: string | undefined;
+    let quotedPdfMimeType: string | undefined;
+    let hasQuotedMedia = false;
+
+    try {
+      const contextInfo =
+        rawMsg?.extendedTextMessage?.contextInfo ||
+        rawMsg?.imageMessage?.contextInfo ||
+        rawMsg?.documentMessage?.contextInfo ||
+        msg?.message?.extendedTextMessage?.contextInfo ||
+        rawMsg?.contextInfo;
+
+      if (contextInfo?.quotedMessage) {
+        const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage) as any;
+        quotedContext =
+          unwrappedQuoted?.conversation ||
+          unwrappedQuoted?.extendedTextMessage?.text ||
+          unwrappedQuoted?.imageMessage?.caption ||
+          unwrappedQuoted?.documentMessage?.caption ||
+          undefined;
+
+        if (unwrappedQuoted?.imageMessage) {
+          hasQuotedMedia = true;
+          const buf = await downloadMediaSafely({ message: contextInfo.quotedMessage } as any, 'image').catch(() => null);
+          if (buf && buf.length > 0) quotedImageBuffer = buf.toString('base64');
+        } else if (unwrappedQuoted?.documentMessage) {
+          hasQuotedMedia = true;
+          const buf = await downloadMediaSafely({ message: contextInfo.quotedMessage } as any, 'document').catch(() => null);
+          if (buf && buf.length > 0) {
+            quotedPdfBuffer = buf.toString('base64');
+            quotedPdfMimeType = unwrappedQuoted.documentMessage.mimetype || 'application/pdf';
+          }
+        }
+      }
+    } catch {
+      // No interrumpir flujo si el quotedMessage carece de metadata multimedia
+    }
+
+    return { quotedContext, quotedImageBuffer, quotedPdfBuffer, quotedPdfMimeType, hasQuotedMedia };
+  }
+
+  public isRealEstateConsultationForGroup(text?: string | null, quotedText?: string | null, hasMedia?: boolean): boolean {
     const clean = String(text || '').trim();
     const quoted = String(quotedText || '').trim();
-    if (!clean && !quoted) return false;
+    if (!clean && !quoted && !hasMedia) return false;
     if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
 
     const combined = `${clean} ${quoted}`.toLowerCase();
-    // Si tiene signo de interrogación, verbos de consulta/explicación o términos del ámbito inmobiliario/jurídico/VECY
+    // Si tiene signo de interrogación, media adjunta (PDF/imagen CTL), verbos de consulta o términos inmobiliarios/jurídicos
     const hasQuestionOrConsultIntent =
+      Boolean(hasMedia) ||
       /[¿?]/.test(combined) ||
-      /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) ||
-      /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
+      /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) ||
+      /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
 
     return hasQuestionOrConsultIntent;
   }
@@ -1743,6 +1797,17 @@ export class JaniaMatchBot {
           }
         } catch (e) { }
       }
+      if (!imageBuffer && !pdfBuffer) {
+        const quotedDmMedia = await this.extractQuotedContextAndMedia(msg, rawMsg);
+        if (quotedDmMedia.quotedImageBuffer) imageBuffer = quotedDmMedia.quotedImageBuffer;
+        if (quotedDmMedia.quotedPdfBuffer) {
+          pdfBuffer = quotedDmMedia.quotedPdfBuffer;
+          pdfMimeType = quotedDmMedia.quotedPdfMimeType || 'application/pdf';
+        }
+        if (quotedDmMedia.quotedContext && !combinedBody.includes(quotedDmMedia.quotedContext)) {
+          combinedBody += (combinedBody ? `\n${quotedDmMedia.quotedContext}` : quotedDmMedia.quotedContext);
+        }
+      }
     }
 
     if (!combinedBody.trim() && !imageBuffer && !pdfBuffer) {
@@ -2085,6 +2150,9 @@ export class JaniaMatchBot {
                   replyText.includes("Sondeo de Mercado") ||
                   replyText.includes("Valor m² homologado") ||
                   replyText.includes("LIQUIDACIÓN") ||
+                  replyText.includes("ESTUDIO DE TÍTULOS") ||
+                  replyText.includes("DICTAMEN JURÍDICO") ||
+                  replyText.includes("MATRÍCULA INMOBILIARIA") ||
                   replyText.includes("MATCH") ||
                   replyText.includes("40/20/40") ||
                   Boolean(latestPdf) ||
@@ -2527,19 +2595,15 @@ export class JaniaMatchBot {
           }
         }
 
-        let quotedContext: string | undefined;
-        try {
-          const contextInfo = (rawMsg as any)?.extendedTextMessage?.contextInfo
-            || (msg.message as any)?.extendedTextMessage?.contextInfo
-            || (rawMsg as any)?.contextInfo;
-          if (contextInfo?.quotedMessage) {
-            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-            quotedContext = (unwrappedQuoted as any)?.conversation
-              || (unwrappedQuoted as any)?.extendedTextMessage?.text
-              || (unwrappedQuoted as any)?.imageMessage?.caption
-              || undefined;
-          }
-        } catch (e) { }
+        const quotedMeta = await this.extractQuotedContextAndMedia(msg, rawMsg);
+        const quotedContext = quotedMeta.quotedContext;
+        if (!imageBuffer && quotedMeta.quotedImageBuffer) {
+          imageBuffer = quotedMeta.quotedImageBuffer;
+        }
+        if (!pdfBuffer && quotedMeta.quotedPdfBuffer) {
+          pdfBuffer = quotedMeta.quotedPdfBuffer;
+          pdfMimeType = quotedMeta.quotedPdfMimeType || 'application/pdf';
+        }
 
         if (isBuzonGroup) {
           result = await processConsultingMessage(
@@ -2599,21 +2663,21 @@ export class JaniaMatchBot {
         let pdfBuffer: string | undefined;
         let pdfMimeType: string | undefined;
 
-        let quotedContext: string | undefined;
-        try {
-          const contextInfo = (rawMsg as any)?.extendedTextMessage?.contextInfo
-            || (msg.message as any)?.extendedTextMessage?.contextInfo
-            || (rawMsg as any)?.contextInfo;
-          if (contextInfo?.quotedMessage) {
-            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-            quotedContext = (unwrappedQuoted as any)?.conversation
-              || (unwrappedQuoted as any)?.extendedTextMessage?.text
-              || (unwrappedQuoted as any)?.imageMessage?.caption
-              || undefined;
-          }
-        } catch (e) { }
+        const quotedMeta = await this.extractQuotedContextAndMedia(msg, rawMsg);
+        const quotedContext = quotedMeta.quotedContext;
+        if (!imageBuffer && quotedMeta.quotedImageBuffer) {
+          imageBuffer = quotedMeta.quotedImageBuffer;
+        }
+        if (!pdfBuffer && quotedMeta.quotedPdfBuffer) {
+          pdfBuffer = quotedMeta.quotedPdfBuffer;
+          pdfMimeType = quotedMeta.quotedPdfMimeType || 'application/pdf';
+        }
 
-        if (!this.isRealEstateConsultationForGroup(bodyText, quotedContext)) {
+        const hasAnyExternalMedia = Boolean(
+          rawMsg?.imageMessage || rawMsg?.documentMessage || quotedMeta.hasQuotedMedia
+        );
+
+        if (!this.isRealEstateConsultationForGroup(bodyText, quotedContext, hasAnyExternalMedia)) {
           console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mención en grupo externo ${chatId} descartada por no constituir una consulta inmobiliaria/jurídica ("${bodyText.slice(0, 60)}").`);
           await this.sock.sendPresenceUpdate('paused', chatId).catch(() => {});
           return;
@@ -5143,8 +5207,12 @@ export function isSelfPresentationOrFlyerOfJanIA(text?: string | null): boolean 
   return janiaMatchBot.isSelfPresentationOrFlyerOfJanIA(text);
 }
 
-export function isRealEstateConsultationForGroup(text?: string | null, quotedText?: string | null): boolean {
-  return janiaMatchBot.isRealEstateConsultationForGroup(text, quotedText);
+export function isRealEstateConsultationForGroup(
+  text?: string | null,
+  quotedText?: string | null,
+  hasMedia?: boolean
+): boolean {
+  return janiaMatchBot.isRealEstateConsultationForGroup(text, quotedText, hasMedia);
 }
 
 export function isBotDirectlyMentioned(msg: proto.IWebMessageInfo, text: string): boolean {

@@ -24,6 +24,7 @@ import {
   executeNotarialAssistanceFromWhatsApp,
   isExplicitNotarialLiquidationRequest,
 } from "../../notarialExpenseService";
+import { analyzeCtlFromWhatsAppInput, hasCtlTextMarkers, isExplicitCtlStudyRequest } from "../../ctlTitleStudyService";
 
 
 
@@ -79,6 +80,46 @@ export async function processCirculoMessage(
         wantsVoice: false,
         voiceResponse: ""
       };
+    }
+
+    // ⚖️ INTERCEPTOR PRIORITARIO: ESTUDIO DE TÍTULOS SNR + PDF MEMBRETADO (v34.13 — ANTES DE IDU/PREDIAL POR CHIP/MATRÍCULA)
+    const ctlCirculoText =
+      quotedContext && hasCtlTextMarkers(quotedContext) && !hasCtlTextMarkers(text)
+        ? `${text}\n${quotedContext}`
+        : text;
+    if (
+      Boolean(pdfBuffer) ||
+      Boolean(imageBuffer) ||
+      hasCtlTextMarkers(ctlCirculoText) ||
+      isExplicitCtlStudyRequest(text)
+    ) {
+      const ctlCirculoCheck = await analyzeCtlFromWhatsAppInput({
+        text: ctlCirculoText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: cleanFirstName || realName || undefined
+      });
+      if (ctlCirculoCheck.isCtlDocument && ctlCirculoCheck.report) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(ctlCirculoCheck.report.whatsappSummary),
+          reactionEmoji: ctlCirculoCheck.report.verdictEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: ctlCirculoCheck.pdfBuffer,
+          fileName: ctlCirculoCheck.pdfFileName
+        };
+      }
+      if (ctlCirculoCheck.needsMediaGuidance && ctlCirculoCheck.responseText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: ctlCirculoCheck.responseText,
+          reactionEmoji: ctlCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
     }
 
     // 🏛️ INTERCEPTOR DIRECTO 1: PAZ Y SALVO IDU BOGOTÁ + PDF OFICIAL (PRIORIDAD SOBRE PREDIAL)

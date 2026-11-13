@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import type { CtlTitleStudyReport } from "../ctlTitleStudyService";
 
 /**
  * 📑 GENERADOR INSTANTÁNEO DE CARTAS, CONTRATOS Y MINUTAS INMOBILIARIAS EN PDF MEMBRETADO (v33.66 — Doctrina Eduardo A. Rivera)
@@ -20,6 +21,7 @@ export type LegalDocumentType =
   | "cesion_leasing"
   | "pacto_retroventa"
   | "contrato_corretaje"
+  | "estudio_titulos_snr"
   | "minuta_general";
 
 export interface LegalDocumentPdfParams {
@@ -121,6 +123,12 @@ export function getLegalDocumentMetadata(tipo: LegalDocumentType): {
         title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA",
         normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio y Ley 527 de 1999 (Validez de Firma Electronica)",
         defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
+      };
+    case "estudio_titulos_snr":
+      return {
+        title: "CONCEPTO JURIDICO DE ESTUDIO DE TITULOS SNR",
+        normativeFramework: "Estatuto de Registro de Instrumentos Publicos (Ley 1579 de 2012), Codigo Civil y Ley 1561 de 2012",
+        defaultFileNamePrefix: "Concepto_Estudio_Titulos_VECY"
       };
     default:
       return {
@@ -443,14 +451,24 @@ function drawJustifiedLine(
 /**
  * Genera el archivo PDF oficial membretado de VECY BIENES RAÍCES listo para enviar por WhatsApp Baileys.
  */
-export async function generateLegalDocumentPdf(
-  params: LegalDocumentPdfParams
-): Promise<GeneratedLegalPdfResult> {
-  const meta = getLegalDocumentMetadata(params.tipoDocumento);
-  const title = sanitizePdfWinAnsiText(params.tituloPersonalizado || meta.title).toUpperCase();
-  const bodyContent = sanitizePdfWinAnsiText(params.cuerpoDocumento || buildDefaultLegalBody(params));
-  const verificationCode = `DOC-VECY-${crypto.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+interface VecyPdfScaffold {
+  pdfDoc: PDFDocument;
+  fontRegular: PDFFont;
+  fontBold: PDFFont;
+  pageWidth: number;
+  pageHeight: number;
+  marginX: number;
+  maxWidth: number;
+  drawHeader: (page: PDFPage, isFirstPage: boolean) => number;
+}
 
+async function initVecyPdfScaffold(options: {
+  verificationCode: string;
+  title: string;
+  normativeFramework: string;
+  headerSubtitle?: string;
+}): Promise<VecyPdfScaffold> {
+  const { verificationCode, title, normativeFramework, headerSubtitle } = options;
   const pdfDoc = await PDFDocument.create();
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -522,16 +540,20 @@ export async function generateLegalDocumentPdf(
       font: fontRegular,
       color: rgb(0.88, 0.9, 0.94)
     });
-    page.drawText(`Radicado Documental: ${verificationCode} | Validez Notarial y Registral`, {
-      x: textStartX,
-      y: pageHeight - 59,
-      size: 7.8,
-      font: fontRegular,
-      color: rgb(0.72, 0.74, 0.78)
-    });
+    page.drawText(
+      sanitizePdfWinAnsiText(
+        headerSubtitle || `Radicado Documental: ${verificationCode} | Validez Notarial y Registral`
+      ),
+      {
+        x: textStartX,
+        y: pageHeight - 59,
+        size: 7.8,
+        font: fontRegular,
+        color: rgb(0.72, 0.74, 0.78)
+      }
+    );
 
     if (isFirstPage) {
-      // Bloque de título del documento en tamaño 13pt bold con color distinguido
       const titleLines = wrapTextToLines(title, fontBold, 12.8, maxWidth);
       let ty = pageHeight - 104;
       for (const tLine of titleLines) {
@@ -544,7 +566,7 @@ export async function generateLegalDocumentPdf(
         });
         ty -= 16;
       }
-      page.drawText(`Marco Normativo: ${sanitizePdfWinAnsiText(meta.normativeFramework)}`, {
+      page.drawText(`Marco Normativo: ${sanitizePdfWinAnsiText(normativeFramework)}`, {
         x: marginX,
         y: ty - 2,
         size: 8.8,
@@ -561,6 +583,69 @@ export async function generateLegalDocumentPdf(
     }
     return pageHeight - 96;
   };
+
+  return { pdfDoc, fontRegular, fontBold, pageWidth, pageHeight, marginX, maxWidth, drawHeader };
+}
+
+async function stampVecyPageNumbersAndSave(params: {
+  pdfDoc: PDFDocument;
+  fontRegular: PDFFont;
+  pageWidth: number;
+  marginX: number;
+  verificationCode: string;
+  footerLabel: string;
+}): Promise<Buffer> {
+  const { pdfDoc, fontRegular, pageWidth, marginX, verificationCode, footerLabel } = params;
+  const allPages = pdfDoc.getPages();
+  const totalPages = allPages.length;
+  allPages.forEach((p, idx) => {
+    p.drawLine({
+      start: { x: marginX, y: 28 },
+      end: { x: pageWidth - marginX, y: 28 },
+      thickness: 0.5,
+      color: rgb(0.82, 0.84, 0.88)
+    });
+    p.drawText(
+      sanitizePdfWinAnsiText(`Pagina ${idx + 1} de ${totalPages} - ${footerLabel} - Radicado: ${verificationCode}`),
+      {
+        x: marginX,
+        y: 16,
+        size: 7.4,
+        font: fontRegular,
+        color: rgb(0.45, 0.47, 0.52)
+      }
+    );
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+/**
+ * Genera el archivo PDF membretado de VECY BIENES RAICES en Buffer listo para enviar como adjunto por WhatsApp.
+ */
+export async function generateLegalDocumentPdf(
+  params: LegalDocumentPdfParams
+): Promise<GeneratedLegalPdfResult> {
+  const meta = getLegalDocumentMetadata(params.tipoDocumento);
+  const title = sanitizePdfWinAnsiText(params.tituloPersonalizado || meta.title).toUpperCase();
+  const bodyContent = sanitizePdfWinAnsiText(params.cuerpoDocumento || buildDefaultLegalBody(params));
+  const verificationCode = `DOC-VECY-${crypto.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  });
 
   let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
   let cursorY = drawHeader(currentPage, true);
@@ -817,28 +902,399 @@ export async function generateLegalDocumentPdf(
     // Si falla el QR en un entorno restringido, el PDF continúa limpio
   }
 
-  // Foliado oficial en pie de página (Página X de Y) con línea sutil en TODAS las páginas
-  const allPages = pdfDoc.getPages();
-  const totalPages = allPages.length;
-  allPages.forEach((p, idx) => {
-    p.drawLine({
-      start: { x: marginX, y: 28 },
-      end: { x: pageWidth - marginX, y: 28 },
-      thickness: 0.5,
-      color: rgb(0.82, 0.84, 0.88)
-    });
-    p.drawText(`Pagina ${idx + 1} de ${totalPages} - Minuta Legal Inmobiliaria VECY BIENES RAICES - Radicado: ${verificationCode}`, {
-      x: marginX,
-      y: 16,
-      size: 7.4,
-      font: fontRegular,
-      color: rgb(0.45, 0.47, 0.52)
-    });
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Minuta Legal Inmobiliaria VECY BIENES RAICES"
+  });
+  const fileName = `${meta.defaultFileNamePrefix}_${verificationCode}.pdf`;
+
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+
+/**
+ * Genera el Concepto Jurídico de Estudio de Títulos SNR en PDF Membretado de VECY BIENES RAÍCES
+ * con Semáforo visual (Verde / Amarillo / Rojo), auditoría anotación por anotación,
+ * cruce de gravámenes vs cancelaciones y alerta comercial patrimonial.
+ */
+export async function generateCtlStudyPdf(
+  report: CtlTitleStudyReport,
+  options?: { requestedBy?: string }
+): Promise<GeneratedLegalPdfResult> {
+  const meta = getLegalDocumentMetadata("estudio_titulos_snr");
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - MATRICULA ${report.metadata.matriculaInmobiliaria}`
+  ).toUpperCase();
+  const verificationCode = `CTL-VECY-${crypto.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework,
+    headerSubtitle: `Radicado SNR: ${verificationCode} | Estudio Juridico Preliminar (${report.sourceType})`
   });
 
-  const pdfBytes = await pdfDoc.save();
-  const pdfBuffer = Buffer.from(pdfBytes);
-  const fileName = `${meta.defaultFileNamePrefix}_${verificationCode}.pdf`;
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+
+  const ensureSpace = (minY = 92) => {
+    if (cursorY < minY) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+
+  const drawWrapped = (
+    text: string,
+    opts?: {
+      font?: PDFFont;
+      size?: number;
+      lineHeight?: number;
+      color?: ReturnType<typeof rgb>;
+      indent?: number;
+      minY?: number;
+    }
+  ) => {
+    const f = opts?.font ?? fontRegular;
+    const sz = opts?.size ?? 9.2;
+    const lh = opts?.lineHeight ?? sz + 4;
+    const col = opts?.color ?? rgb(0.14, 0.16, 0.2);
+    const ind = opts?.indent ?? 0;
+    const lines = wrapTextToLines(text, f, sz, maxWidth - ind);
+    for (const ln of lines) {
+      ensureSpace(opts?.minY ?? 70);
+      currentPage.drawText(ln, { x: marginX + ind, y: cursorY, size: sz, font: f, color: col });
+      cursorY -= lh;
+    }
+  };
+
+  const drawSectionBanner = (sectionTitle: string) => {
+    ensureSpace(110);
+    cursorY -= 6;
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: maxWidth,
+      height: 18,
+      color: rgb(0.95, 0.96, 0.98)
+    });
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: 3.5,
+      height: 18,
+      color: rgb(0.83, 0.68, 0.21)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(sectionTitle), {
+      x: marginX + 8,
+      y: cursorY + 1,
+      size: 9.6,
+      font: fontBold,
+      color: rgb(0.08, 0.1, 0.14)
+    });
+    cursorY -= 18;
+  };
+
+  // Semáforo Jurídico Destacado
+  const verdictPalette =
+    report.verdictCode === "VERDE"
+      ? {
+          bg: rgb(0.91, 0.98, 0.93),
+          border: rgb(0.11, 0.55, 0.28),
+          dot: rgb(0.11, 0.62, 0.31),
+          tag: "VEREDICTO [VERDE]: VIABLE PARA COMPRAVENTA Y CREDITO"
+        }
+      : report.verdictCode === "AMARILLO"
+      ? {
+          bg: rgb(1.0, 0.97, 0.88),
+          border: rgb(0.8, 0.55, 0.04),
+          dot: rgb(0.86, 0.58, 0.05),
+          tag: "VEREDICTO [AMARILLO]: VIABLE CON SANEAMIENTO PREVIO EN ESCRITURA"
+        }
+      : {
+          bg: rgb(0.99, 0.92, 0.92),
+          border: rgb(0.75, 0.14, 0.14),
+          dot: rgb(0.82, 0.15, 0.15),
+          tag: "VEREDICTO [ROJO]: RIESGO CRITICO / BLOQUEO DE NEGOCIO"
+        };
+
+  const headlineLines = wrapTextToLines(report.riskHeadline, fontRegular, 9, maxWidth - 34);
+  const verdictBoxHeight = 32 + headlineLines.length * 13;
+  ensureSpace(verdictBoxHeight + 60);
+  const boxBottomY = cursorY - verdictBoxHeight + 10;
+
+  currentPage.drawRectangle({
+    x: marginX,
+    y: boxBottomY,
+    width: maxWidth,
+    height: verdictBoxHeight,
+    color: verdictPalette.bg,
+    borderColor: verdictPalette.border,
+    borderWidth: 1.2
+  });
+  currentPage.drawCircle({
+    x: marginX + 14,
+    y: cursorY - 5,
+    size: 5.5,
+    color: verdictPalette.dot
+  });
+  currentPage.drawText(sanitizePdfWinAnsiText(verdictPalette.tag), {
+    x: marginX + 26,
+    y: cursorY - 9,
+    size: 10.2,
+    font: fontBold,
+    color: verdictPalette.border
+  });
+  let vy = cursorY - 24;
+  for (const hLine of headlineLines) {
+    currentPage.drawText(hLine, {
+      x: marginX + 12,
+      y: vy,
+      size: 9,
+      font: fontRegular,
+      color: rgb(0.14, 0.16, 0.2)
+    });
+    vy -= 13;
+  }
+  cursorY = boxBottomY - 14;
+
+  // 1. IDENTIFICACION DEL FOLIO DE MATRICULA (SNR)
+  drawSectionBanner("1. IDENTIFICACION DEL FOLIO DE MATRICULA INMOBILIARIA (SNR)");
+  const m = report.metadata;
+  drawWrapped(`Matricula Inmobiliaria: ${m.matriculaInmobiliaria}   |   ORIP: ${m.orip}`, { font: fontBold });
+  drawWrapped(`Estado del Folio: ${m.estadoFolio}   |   Fecha Impresion CTL: ${m.fechaImpresion}`);
+  drawWrapped(`CHIP Catastral: ${m.chip}   |   Cedula Catastral: ${m.cedulaCatastral}`);
+  drawWrapped(`Ubicacion / Direccion: ${m.direccion} (${m.departamentoMunicipio})`);
+  if (options?.requestedBy) {
+    drawWrapped(`Solicitado por: ${options.requestedBy}   |   Fecha Analisis: ${report.analyzedAtIso.slice(0, 10)}`);
+  }
+  if (m.complementacionResumen) {
+    drawWrapped(`Complementacion / Antecedente: ${m.complementacionResumen}`, { size: 8.6, color: rgb(0.28, 0.3, 0.36) });
+  }
+
+  // 2. PROPIETARIOS ACTUALES Y PORCENTAJES DE DOMINIO
+  drawSectionBanner("2. PROPIETARIOS ACTUALES Y DERECHOS DE DOMINIO");
+  if (m.propietariosActuales.length > 0) {
+    for (const owner of m.propietariosActuales) {
+      drawWrapped(
+        `- ${owner.nombre}${owner.identificacion ? ` (ID: ${owner.identificacion})` : ""}${owner.porcentaje ? ` - Participacion: ${owner.porcentaje}` : ""}${owner.tipoDerecho ? ` [${owner.tipoDerecho}]` : ""}`,
+        { indent: 6 }
+      );
+    }
+  } else {
+    drawWrapped("- No se identificaron titulares actuales con marca (X) en las paginas legibles.", { indent: 6 });
+  }
+
+  // 3. AUDITORIA DE TRADICION (10 Y 20 ANOS) Y FALSA TRADICION (COD. 0600)
+  drawSectionBanner("3. AUDITORIA DE TRADICION (10 Y 20 ANOS) Y CONTROL DE FALSA TRADICION");
+  const tr = report.tradition;
+  drawWrapped(
+    `Tradicion 10 anos (Ley 791/2002): ${tr.tradicion10AnosContinua ? "CONTINUA Y ACREDITADA" : "INCOMPLETA / REQUIERE VALIDACION"}`,
+    { font: fontBold, indent: 6 }
+  );
+  drawWrapped(
+    `Tradicion 20 anos (Art. 2532 C.C.): ${tr.tradicion20AnosContinua ? "CONTINUA Y ACREDITADA" : "PARCIAL O FOLIO CON HISTORIAL < 20 ANOS"}`,
+    { font: fontBold, indent: 6 }
+  );
+  drawWrapped(
+    `Control Falsa Tradicion (Cod. 0600 / Derechos y Acciones): ${
+      tr.tieneFalsaTradicion
+        ? tr.falsaTradicionSaneada
+          ? `DETECTADA HISTORICAMENTE EN ANOT. #${tr.anotacionesFalsaTradicion.join(", #")} (YA SANEADA)`
+          : `ALERTA CRITICA VIGENTE EN ANOT. #${tr.anotacionesFalsaTradicion.join(", #")}`
+        : "NO DETECTADA (DOMINIO PLENO)"
+    }`,
+    {
+      font: fontBold,
+      indent: 6,
+      color: tr.tieneFalsaTradicion && !tr.falsaTradicionSaneada ? rgb(0.75, 0.14, 0.14) : rgb(0.14, 0.16, 0.2)
+    }
+  );
+  drawWrapped(`Resumen de Cadena: ${tr.cadenaDominioResumen}`, { indent: 6 });
+  for (const obs of tr.observacionesTradicion) {
+    drawWrapped(`* ${obs}`, { indent: 10, size: 8.7 });
+  }
+
+  // 4. GRAVAMENES, LIMITACIONES VIGENTES Y CANCELACIONES CRUZADAS
+  drawSectionBanner("4. GRAVAMENES VIGENTES, LIMITACIONES Y CRUCE DE CANCELACIONES");
+  const allActive = [
+    ...report.alertasCriticasVigentes,
+    ...report.gravamenesVigentes,
+    ...report.limitacionesVigentes
+  ];
+  if (allActive.length > 0) {
+    for (const act of allActive) {
+      const prefix = act.estado === "ALERTA_CRITICA" ? "[CRITICA]" : "[VIGENTE]";
+      drawWrapped(
+        `${prefix} Anot. #${act.numero} (${act.fecha}${act.codigoNaturaleza ? ` | Cod. ${act.codigoNaturaleza}` : ""}): ${act.especificacion}`,
+        {
+          font: fontBold,
+          indent: 6,
+          color: act.estado === "ALERTA_CRITICA" ? rgb(0.75, 0.14, 0.14) : rgb(0.65, 0.42, 0.04)
+        }
+      );
+      drawWrapped(`Impacto: ${act.impactoJuridico}`, { indent: 14, size: 8.6 });
+    }
+  } else {
+    drawWrapped("No existen hipotecas, embargos, demandas ni limitaciones vigentes al cierre de este analisis.", {
+      indent: 6,
+      color: rgb(0.11, 0.52, 0.26)
+    });
+  }
+
+  if (report.gravamenesCancelados.length > 0) {
+    cursorY -= 4;
+    drawWrapped("Gravamenes/Limitaciones Historicas ya Canceladas Registralmente:", { font: fontBold, indent: 6 });
+    for (const can of report.gravamenesCancelados) {
+      drawWrapped(
+        `- [CANCELADA] Anot. #${can.numero} (${can.especificacion}) -> Levantada en Anot. #${can.canceladaPorAnotacion ?? "posterior"}`,
+        { indent: 12, size: 8.6, color: rgb(0.22, 0.35, 0.25) }
+      );
+    }
+  }
+
+  // 5. AUDITORIA DETALLADA ANOTACION POR ANOTACION
+  drawSectionBanner(`5. AUDITORIA ANOTACION POR ANOTACION (${report.auditoriaAnotaciones.length} ANOTACIONES)`);
+  if (report.auditoriaAnotaciones.length === 0) {
+    drawWrapped("No se encontraron anotaciones individuales legibles en el documento aportado.", { indent: 6 });
+  } else {
+    for (const item of report.auditoriaAnotaciones) {
+      const stTag =
+        item.estado === "ALERTA_CRITICA"
+          ? "[BLOQUEO/CRITICA]"
+          : item.estado === "ACTIVA"
+          ? "[VIGENTE]"
+          : item.estado === "CANCELADA"
+          ? "[CANCELADA]"
+          : item.estado === "HISTORICA_TRADICION"
+          ? "[TRADICION]"
+          : "[INFO]";
+      drawWrapped(
+        `Anot. #${item.numero} | ${item.fecha} | Cod. ${item.codigoNaturaleza || "S/C"} | ${item.especificacion} -- ${stTag}`,
+        { font: fontBold, size: 8.8, indent: 4 }
+      );
+      const partiesLine = [item.de ? `De: ${item.de}` : "", item.a ? `A: ${item.a}` : ""].filter(Boolean).join("  |  ");
+      if (partiesLine) {
+        drawWrapped(partiesLine, { size: 8.3, indent: 12, color: rgb(0.28, 0.3, 0.36) });
+      }
+      drawWrapped(`Criterio: ${item.impactoJuridico}`, { size: 8.4, indent: 12, color: rgb(0.2, 0.22, 0.27) });
+      cursorY -= 3;
+    }
+  }
+
+  // 6. RECOMENDACIONES NOTARIALES ACCIONABLES Y FALTANTES
+  drawSectionBanner("6. RECOMENDACIONES NOTARIALES ACCIONABLES");
+  report.recomendacionesNotariales.forEach((rec, idx) => {
+    drawWrapped(`${idx + 1}. ${rec}`, { indent: 6, size: 8.9 });
+  });
+  if (report.documentosFaltantesOIncompletos.length > 0) {
+    cursorY -= 4;
+    drawWrapped("Validacion Documental Pendiente:", { font: fontBold, indent: 6, color: rgb(0.7, 0.35, 0.05) });
+    for (const miss of report.documentosFaltantesOIncompletos) {
+      drawWrapped(`- ${miss}`, { indent: 12, size: 8.6 });
+    }
+  }
+
+  // 7. ALERTA DE RIESGO PATRIMONIAL Y ACOMPAÑAMIENTO COMERCIAL VECY (+ QR DE TRAZABILIDAD)
+  ensureSpace(125);
+  cursorY -= 10;
+  const footerBoxY = Math.max(46, cursorY - 76);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 68,
+    color: rgb(0.96, 0.96, 0.98),
+    borderColor: rgb(0.83, 0.68, 0.21),
+    borderWidth: 0.9
+  });
+
+  currentPage.drawText("ALERTA DE RIESGO PATRIMONIAL Y ASESORIA NOTARIAL VECY BIENES RAICES:", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Este concepto preliminar no reemplaza la revision fisica/notarial de escrituras y paz y salvos antes de firma.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.5,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Cierre blindado, saneamiento de falsa tradicion o levantamiento de gravamenes con Eduardo Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.5,
+      font: fontRegular,
+      color: rgb(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Trazabilidad: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.5,
+      font: fontBold,
+      color: rgb(0.2, 0.22, 0.28)
+    }
+  );
+
+  try {
+    const qrDataUrl = await QRCode.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?ctl=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+    // Si falla el QR en entorno restringido, el PDF continúa limpio
+  }
+
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Estudio de Titulos SNR VECY BIENES RAICES"
+  });
+  const safeMat = sanitizePdfWinAnsiText(report.metadata.matriculaInmobiliaria || "FOLIO")
+    .replace(/[^A-Za-z0-9-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 28) || "FOLIO";
+  const fileName = `${meta.defaultFileNamePrefix}_${safeMat}_${verificationCode}.pdf`;
 
   return {
     pdfBuffer,

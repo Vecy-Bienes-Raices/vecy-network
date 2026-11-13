@@ -37,6 +37,11 @@ import {
   isUserSatisfactionOrFeedbackReply,
   buildAutonomousGoogleReviewInvitation,
 } from "../../politenessService";
+import {
+  analyzeCtlFromWhatsAppInput,
+  hasCtlTextMarkers,
+  isExplicitCtlStudyRequest,
+} from "../../ctlTitleStudyService";
 
 /**
  * Añade de forma idempotente el cierre doctrinal de satisfacción (v34.11/v34.12)
@@ -194,6 +199,8 @@ export async function processConsultingMessage(
       isExplicitNotarialLiquidationRequest(messageToProcess, userId) ||
       isExplicitGroupAcmRequest(messageToProcess) ||
       isExplicitGroupMarketingAuditRequest(messageToProcess) ||
+      isExplicitCtlStudyRequest(messageToProcess) ||
+      hasCtlTextMarkers(messageToProcess) ||
       isCreativeImgReq ||
       isExplicitLegalPdfRequest(messageToProcess) ||
       extractAllCedulasForVerification(messageToProcess, false).length > 0;
@@ -223,6 +230,58 @@ export async function processConsultingMessage(
         wantsVoice: false,
         voiceResponse: "",
       };
+    }
+
+    // ⚖️ INTERCEPTOR PRIORITARIO: ESTUDIO DE TÍTULOS SNR + PDF MEMBRETADO (v34.13 — ANTES DE IDU/PREDIAL POR CHIP/MATRÍCULA)
+    const ctlGroupInputText =
+      quotedContext && hasCtlTextMarkers(quotedContext) && !hasCtlTextMarkers(messageToProcess)
+        ? `${messageToProcess}\n${quotedContext}`
+        : messageToProcess;
+    if (
+      Boolean(pdfBuffer) ||
+      Boolean(imageBuffer) ||
+      hasCtlTextMarkers(ctlGroupInputText) ||
+      isExplicitCtlStudyRequest(messageToProcess)
+    ) {
+      const ctlCheck = await analyzeCtlFromWhatsAppInput({
+        text: ctlGroupInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: targetName || realName || undefined,
+      });
+
+      if (ctlCheck.isCtlDocument && ctlCheck.report) {
+        const finalCtlResp = appendGroupSatisfactionClosing(ctlCheck.report.whatsappSummary);
+        console.log(
+          `[JanIA-GroupCTL] Estudio de Títulos SNR ejecutado para ${userId}: ${ctlCheck.report.verdictCode} (${ctlCheck.report.metadata.matriculaInmobiliaria})`
+        );
+        appendConsultingHistory(userId, "user", text || "[CTL SNR adjunto]");
+        appendConsultingHistory(userId, "assistant", finalCtlResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalCtlResp,
+          reactionEmoji: ctlCheck.report.verdictEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: ctlCheck.pdfBuffer,
+          fileName: ctlCheck.pdfFileName,
+        };
+      }
+
+      if (ctlCheck.needsMediaGuidance && ctlCheck.responseText) {
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", ctlCheck.responseText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: ctlCheck.responseText,
+          reactionEmoji: ctlCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+        };
+      }
     }
 
     // 🏛️ INTERCEPTOR DIRECTO 1: PAZ Y SALVO VALORIZACIÓN IDU BOGOTÁ + PDF OFICIAL (PRIORIDAD SOBRE PREDIAL)
@@ -742,6 +801,28 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
           reactionEmoji: "📄",
           document: pdfAsset.pdfBuffer,
           fileName: pdfAsset.fileName,
+        };
+      }
+    }
+    if (isExplicitCtlStudyRequest(text) || hasCtlTextMarkers(text)) {
+      const ctlFallback = await analyzeCtlFromWhatsAppInput({
+        text,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: firstName || undefined,
+      }).catch(() => null);
+      if (ctlFallback?.isCtlDocument && ctlFallback.report) {
+        const finalCtlFallbackResp = appendGroupSatisfactionClosing(ctlFallback.report.whatsappSummary);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalCtlFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalCtlFallbackResp,
+          reactionEmoji: ctlFallback.report.verdictEmoji,
+          document: ctlFallback.pdfBuffer,
+          fileName: ctlFallback.pdfFileName,
         };
       }
     }

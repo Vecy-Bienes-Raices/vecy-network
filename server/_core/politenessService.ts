@@ -322,7 +322,7 @@ export function isUserSatisfactionOrFeedbackReply(
 
   // No confundir con una solicitud nueva de herramienta con datos propios
   const looksLikeNewToolDataRequest =
-    /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales)\b/.test(
+    /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
       normalized
     ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
 

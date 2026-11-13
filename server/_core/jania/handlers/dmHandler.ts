@@ -31,6 +31,11 @@ import { invokeLLM } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { executeMarketValuationSurvey } from "../../valuation";
+import {
+  analyzeCtlFromWhatsAppInput,
+  hasCtlTextMarkers,
+  isExplicitCtlStudyRequest
+} from "../../ctlTitleStudyService";
 import { getGreetingByTime } from "../../whatsapp-utils";
 import { FlyerVisionResult } from "../types";
 import {
@@ -397,6 +402,17 @@ export const JANIA_DM_TOOLS = [
           },
           required: ["descripcionActual"]
         }
+      },
+      {
+        name: "realizar_estudio_titulos_snr",
+        description: "Ejecuta el Estudio de Títulos SNR colombiano sobre un Certificado de Tradición y Libertad (CTL) pegado en texto o enviado en PDF/imagen: audita anotación por anotación, verifica tradición de 10 y 20 años, detecta Falsa Tradición (Cód. 0600), cruza hipotecas/embargos/patrimonio de familia/afectación vivienda familiar/usufructos/sucesiones contra cancelaciones posteriores, emite dictamen jurídico en semáforo (Verde/Amarillo/Rojo) y genera PDF membretado de VECY BIENES RAÍCES.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            textoAnotacionesOCtl: { type: "STRING", description: "Texto pegado del Certificado de Tradición y Libertad o descripción/anotaciones enviadas por el usuario" }
+          },
+          required: ["textoAnotacionesOCtl"]
+        }
       }
     ]
   }
@@ -421,7 +437,8 @@ export type JaniaDmToolType =
   | "imagen_creativa"
   | "imagen_creativa_whatsapp"
   | "ubicacion_gps"
-  | "marketing_inmobiliario";
+  | "marketing_inmobiliario"
+  | "estudio_titulos";
 
 export function extractAcmAttributesFromText(rawText: string): {
   zonaOBarrio?: string;
@@ -1309,6 +1326,29 @@ export async function executeJaniaDmTool(
         }
       };
     }
+    case "realizar_estudio_titulos_snr": {
+      const ctlInput = String(args.textoAnotacionesOCtl || rawUserText || "").trim();
+      const ctlRes = await analyzeCtlFromWhatsAppInput({
+        text: ctlInput,
+        requesterName: _userName || undefined
+      });
+      if (ctlRes.isCtlDocument && ctlRes.pdfBuffer && ctlRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: ctlRes.pdfBuffer, pdfFileName: ctlRes.pdfFileName });
+      }
+      return {
+        toolType: "estudio_titulos",
+        resultJson: {
+          solicitud: "realizar_estudio_titulos_snr",
+          esDocumentoCtl: ctlRes.isCtlDocument,
+          semaforo: ctlRes.report?.verdictLabel || "REQUIERE_DOCUMENTO",
+          matricula: ctlRes.report?.metadata.matriculaInmobiliaria || null,
+          exitoso: ctlRes.isCtlDocument,
+          reporteOficial:
+            ctlRes.responseText ||
+            "Para realizar el Estudio de Títulos SNR preliminar, envíame por favor el PDF del Certificado de Tradición y Libertad o fotografías claras de todas las páginas."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -1360,6 +1400,7 @@ export async function synthesizeToolResponseWithGemini(
     rawReport.includes("PAZ Y SALVO") ||
     rawReport.includes("FACTURA PREDIAL") ||
     rawReport.includes("LIQUIDACIÓN ESTIMADA") ||
+    rawReport.includes("ESTUDIO DE TÍTULOS SNR") ||
     rawReport.includes("COINCIDENCIA") ||
     rawReport.includes("MATCH") ||
     isDirectDocumentLookup
@@ -1621,7 +1662,8 @@ export const ALL_DM_TOOL_TYPES = [
   "registro_inmueble",
   "documento_legal_pdf",
   "imagen_creativa",
-  "ubicacion_gps"
+  "ubicacion_gps",
+  "estudio_titulos"
 ] as const;
 
 function isKnownToolType(val: string): boolean {
@@ -2106,7 +2148,7 @@ export async function processPrivateDmConversationalMessage(
         lastAssistantTextEarly
       );
     const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
-    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?)\b/i.test(
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n)\b/i.test(
       cleanLower
     );
 
@@ -2646,6 +2688,68 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     appendDmHistory(userId, "assistant", vehicularReply);
     markUserGreetedToday(userId);
     return vehicularReply;
+  }
+
+  // ⚖️ INTERCEPTOR DETERMINÍSTICO DE ESTUDIO DE TÍTULOS SNR (v34.13 — CTL PDF, Imagen o Anotaciones):
+  // Analiza Certificado de Tradición y Libertad (SNR) con verificación de tradición 10/20 años, detección
+  // de Falsa Tradición (Cód. 0600), cruce de gravámenes/embargos/limitaciones vs cancelaciones, Dictamen
+  // en Semáforo y entrega nativa de Concepto Jurídico en PDF Membretado de VECY BIENES RAÍCES.
+  const isCommercialFlyerImg = Boolean(mediaOptions?.flyerVisionData?.isFlyerOrBanner);
+  const isReviewValidationContext = /\b(?:rese[ñn]a|google\s+review|5\s+estrellas|calificaci[oó]n)\b/i.test(cleanLower);
+  const shouldEvaluateCtlInDm =
+    !isCommercialFlyerImg &&
+    !isReviewValidationContext &&
+    (Boolean(mediaOptions?.pdfBuffer) ||
+      Boolean(mediaOptions?.imageBuffer) ||
+      hasCtlTextMarkers(clean) ||
+      isExplicitCtlStudyRequest(clean));
+
+  if (shouldEvaluateCtlInDm) {
+    const ctlRes = await analyzeCtlFromWhatsAppInput({
+      text: clean,
+      imageBuffer: mediaOptions?.imageBuffer,
+      pdfBuffer: mediaOptions?.pdfBuffer,
+      pdfMimeType: mediaOptions?.pdfMimeType,
+      requesterName: displayName || realName || undefined
+    });
+
+    if (ctlRes.isCtlDocument && ctlRes.report) {
+      if (ctlRes.pdfBuffer && ctlRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: ctlRes.pdfBuffer, pdfFileName: ctlRes.pdfFileName });
+      }
+      await incrementFreeServicesCount(userId);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+        serviceType: "estudio_titulos",
+        timestamp: Date.now()
+      };
+      await saveUserPerpetualSession(userPerpetualSession);
+
+      const satisfactionLine =
+        `\n\n🤝 *¿Quedaste satisfecho(a) con este Estudio de Títulos y el Concepto en PDF?* Tu opinión me ayuda a seguir afinando mi precisión para toda la red VECY.`;
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const finalCtlReply = `${greetingPrefix}${ctlRes.report.whatsappSummary}${satisfactionLine}`;
+
+      appendDmHistory(userId, "user", clean || "[Adjunto Certificado de Tradición y Libertad]");
+      appendDmHistory(userId, "assistant", finalCtlReply);
+      markUserGreetedToday(userId);
+      return finalCtlReply;
+    }
+
+    if (ctlRes.needsMediaGuidance && ctlRes.responseText) {
+      const greetingPrefix =
+        isOngoingChat || !displayName
+          ? ""
+          : `¡${timeSalutation}, ${displayName}! 👋\n\n`;
+      const guidanceReply = `${greetingPrefix}${ctlRes.responseText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", guidanceReply);
+      markUserGreetedToday(userId);
+      return guidanceReply;
+    }
   }
 
   // 🏢 DOCTRINA EDUARDO A. RIVERA (v33.79) — ENTREVISTA MINUCIOSA DE PERFILAMIENTO INMOBILIARIO Y ATERRIZAJE AL ASESOR:

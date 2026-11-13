@@ -184,7 +184,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.12 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.13 — Noviembre 2026
+
+### Novedades v34.13 (Punto 2 — Skill 2: Motor Especializado de Estudio de Títulos SNR + PDF Membretado VECY + Integración DM y Grupos — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Prioridad #2 del Roadmap de Skills de JanIA:**
+     - Dotar a JanIA (tanto en privado `dmHandler.ts` como citada con `@JanIA` en grupos `consultingHandler.ts` / `circuloHandler.ts` / `whatsapp-match.ts`) de un auditor especializado de **Certificados de Tradición y Libertad (SNR Colombia)** que analice PDFs, imágenes o texto de anotaciones con rigor notarial y entregue un Concepto Jurídico en PDF Membretado de VECY BIENES RAÍCES.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `server/_core/ctlTitleStudyService.ts`: Motor jurídico completo (`hasCtlTextMarkers`, `isExplicitCtlStudyRequest`, `extractTextSnippetsFromPdfBuffer` con `zlib.inflateSync` y hex strings de `pdf-lib`, `extractCtlDocumentWithGemini` con discriminación estricta `esCertificadoTradicionLibertad`, `parseCtlFromPlainText`, `classifyCtlAnnotation`, `auditCtlParsedDocument`, `analyzeCtlFromWhatsAppInput`). Audita anotación por anotación, valida tradición continua **10 y 20 años**, detecta **Falsa Tradición** (`0600`) vs saneamiento (`0151`), cruza hipotecas, embargos (`0427`), demandas (`0415`), prohibiciones, patrimonio de familia (Ley 70/1931), afectación a vivienda familiar (Ley 258/1996), condiciones resolutorias, usufructos, servidumbres, fideicomisos civiles y sucesiones ilíquidas contra cancelaciones (`0841`–`0899`), emite **Dictamen Jurídico en Semáforo** (`🟢`/`🟡`/`🔴`), recomendaciones notariales, Alerta de Riesgo Patrimonial y CTA comercial hacia `+57 316 656 9719`.
+     - `server/_core/jania/legalDocumentPdfService.ts`: Añadido `"estudio_titulos_snr"` y `generateCtlStudyPdf` reutilizando `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`.
+     - `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`, `whatsapp-match.ts`, `politenessService.ts`: Herramienta `realizar_estudio_titulos_snr` y pre-interceptores prioritarios (precediendo a IDU/Predial para evitar captura de `CHIP AAA...` presente en CTLs), soporte de descarga de PDF/imagen citado (`extractQuotedContextAndMedia`), adjunto PDF nativo en DM y Grupos, y cierre de Satisfacción + Google Reviews por Libre Albedrío (`v34.11`).
+  3. **Gobernanza y Suite de Regresión 199:**
+     - Semilla directiva `seed-estudio-titulos-snr-ctl-v34-13` en `founderKnowledgeService.ts` y Suite 199 (5/5 tests) en `regression.test.ts` + actualización de `shared/const.ts` (`v34.13`) y `package.json` (`34.13.0`).
+- **Validación Limpia ($0 COP):** `NODE_ENV=test npm test` (**6/6 archivos, 702/702 tests pasando**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.12 — Noviembre 2026
 
 ### Novedades v34.12 (Punto 1: Paridad Total de `@JanIA` en Grupos con Motores Determinísticos — IDU, RUES, Notarial, ACM Fitto y Corvini, Marketing Audit e Imágenes Creativas 1080x1080 — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

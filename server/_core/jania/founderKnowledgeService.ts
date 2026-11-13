@@ -758,6 +758,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Paridad total de @JanIA en grupos: IDU, RUES, Notarial, ACM Fitto y Corvini, Auditoría de Marketing, Imágenes Creativas 1080x1080, Minutas PDF y Protocolo de Satisfacción + Google Reviews.",
     createdAt: "2026-11-13T00:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-estudio-titulos-snr-ctl-v34-13",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Motor Especializado de Estudio de Títulos SNR (CTL PDF/Imagen/Texto, Tradición 10/20 Años, Falsa Tradición 0600, Semáforo y PDF Membretado) — Doctrina Eduardo A. Rivera v34.13",
+    directive:
+      "Cuando un usuario envíe por DM o cite a @JanIA en Grupos con un Certificado de Tradición y Libertad (CTL SNR) en PDF, imagen o texto de anotaciones: 1) Discriminar primero que sea realmente un CTL SNR (sin interferir con flyers comerciales ni listados en arriendo/venta); 2) Auditar anotación por anotación verificando tradición ininterrumpida a 10 años (Ley 791/2002) y 20 años (Art. 2532 C.C.) y emitiendo alerta roja inmediata ante Falsa Tradición (Cód. 0600 / derechos y acciones / posesión); 3) Cruzar gravámenes, medidas cautelares y limitaciones (hipotecas, embargos, demandas, patrimonio de familia Ley 70/1931, afectación vivienda familiar Ley 258/1996, condiciones resolutorias, usufructos, servidumbres, sucesiones ilíquidas) contra sus cancelaciones posteriores; 4) Emitir Dictamen Jurídico en Semáforo (Verde Viable, Amarillo Saneamiento Previo, Rojo Riesgo Crítico), desglose de matrícula, ORIP, CHIP, propietarios con % y recomendaciones notariales accionables; 5) Adjuntar nativamente Concepto de Estudio de Títulos en PDF Membretado VECY BIENES RAÍCES con Alerta de Riesgo Patrimonial y CTA a +57 316 656 9719 + Protocolo de Satisfacción y Google Reviews.",
+    rawText:
+      "Punto 2 — Skill 2: Motor Especializado de Estudio de Títulos SNR (ctlTitleStudyService.ts, v34.13) con auditoría anotación por anotación, tradición 10 y 20 años, alerta Falsa Tradición 0600, cruce de gravámenes vs cancelaciones, Semáforo, PDF Membretado VECY, Alerta Patrimonial +57 316 656 9719 y Protocolo de Satisfacción + Google Reviews.",
+    createdAt: "2026-11-13T11:00:00.000Z",
+    active: true
   }
 ];
 

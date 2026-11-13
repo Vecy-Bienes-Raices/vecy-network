@@ -1405,7 +1405,7 @@ Ed del 2014.
 
       const msg = buildClientConfirmationMessage(mockData);
 
-      expect(msg).toContain("¡Hola, Esmeralda Rojas Salazar! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*.");
+      expect(msg).toContain("¡Hola, Esmeralda! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*.");
       expect(msg).toContain("solicitud de agendamiento *No. 1144*");
       expect(msg).toContain("🏠 *Inmueble:* Apto en San Patricio");
       expect(msg).toContain("📌 *Código:* ID-K1/C02");
@@ -11551,7 +11551,7 @@ Ana Morales Castillo
         horaCita: "11:00 AM"
       }, KNOWN_PROPERTY_ADDRESSES["ID-LACAR-01BOG"]);
 
-      expect(msg).toContain("Alfredo Anaya Peñaranda");
+      expect(msg).toContain("¡Hola, Alfredo! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*.");
       expect(msg).toContain("KRA 14 A # 127 - 65, Edificio Inmoval VI, La Carolina, Bogotá");
       expect(msg).toContain("ID-LACAR-01BOG");
       expect(msg).toContain("lunes, 9 de noviembre de 2026");
@@ -12570,11 +12570,290 @@ Ana Morales Castillo
       expect(seed12?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.12");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[2-9]|[2-9]\d)$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.12.0");
+      expect(pkg.version).toMatch(/^34\.(?:1[2-9]|[2-9]\d)\./);
+    });
+  });
+
+  // =================================================================================================
+  // SUITE 199: PUNTO 2 — SKILL 2: MOTOR ESPECIALIZADO DE ESTUDIO DE TÍTULOS SNR (v34.13)
+  // =================================================================================================
+  describe("Suite 199: Motor de Estudio de Títulos SNR, Semáforo Jurídico y PDF Membretado VECY (v34.13)", () => {
+    it("1. Discriminación estricta entre preguntas conceptuales/flyers vs solicitudes o textos reales de CTL SNR", async () => {
+      const {
+        hasCtlTextMarkers,
+        isExplicitCtlStudyRequest,
+        analyzeCtlFromWhatsAppInput,
+      } = await import("../_core/ctlTitleStudyService");
+
+      expect(isExplicitCtlStudyRequest("¿Qué es un estudio de títulos y qué es falsa tradición?")).toBe(false);
+      expect(isExplicitCtlStudyRequest("¿Cuánto cuesta un certificado de tradición?")).toBe(false);
+      expect(hasCtlTextMarkers("Apartamento en arriendo en Cedritos 80 m2 3 habitaciones")).toBe(false);
+
+      expect(isExplicitCtlStudyRequest("@JanIA hazme un estudio de títulos de este certificado de tradición")).toBe(true);
+
+      const conceptualRes = await analyzeCtlFromWhatsAppInput({
+        text: "¿Qué es un estudio de títulos?",
+      });
+      expect(conceptualRes.isCtlRequest).toBe(false);
+      expect(conceptualRes.isCtlDocument).toBe(false);
+
+      const needsFileRes = await analyzeCtlFromWhatsAppInput({
+        text: "Por favor realiza el estudio de títulos de este certificado de tradición",
+      });
+      expect(needsFileRes.isCtlRequest).toBe(true);
+      expect(needsFileRes.isCtlDocument).toBe(false);
+      expect(needsFileRes.needsMediaGuidance).toBe(true);
+      expect(needsFileRes.responseText).toMatch(/PDF original|Fotografías nítidas/i);
+    });
+
+    it("2. Auditoría SNR 🟢 VIABLE: tradición > 20 años e hipoteca histórica cancelada registralmente (0843)", async () => {
+      const { parseCtlFromPlainText, auditCtlParsedDocument } = await import("../_core/ctlTitleStudyService");
+
+      const sampleCleanCtl = `
+SUPERINTENDENCIA DE NOTARIADO Y REGISTRO
+CERTIFICADO DE TRADICION Y LIBERTAD
+OFICINA DE REGISTRO DE INSTRUMENTOS PUBLICOS: BOGOTA ZONA NORTE
+NRO MATRICULA: 50N-20145890
+FECHA DE IMPRESION: 10/11/2026
+ESTADO DEL FOLIO: ACTIVO
+CHIP: AAA0123BCDE
+CEDULA CATASTRAL: 008415021400100024
+DIRECCION DEL INMUEBLE: KR 14A # 127 - 65 APTO 402
+
+ANOTACION: Nro 1 Fecha: 15-03-1998 Radicacion: 1998-4410
+ESPECIFICACION: 0125 COMPRAVENTA
+DE: CONSTRUCTORA DELTA S.A.
+A: CARLOS ALBERTO GOMEZ (X)
+
+ANOTACION: Nro 2 Fecha: 12-06-2014 Radicacion: 2014-8821
+ESPECIFICACION: 0125 COMPRAVENTA
+DE: CARLOS ALBERTO GOMEZ
+A: MARIA FERNANDA LOPEZ RUIZ (X)
+
+ANOTACION: Nro 3 Fecha: 12-06-2014 Radicacion: 2014-8822
+ESPECIFICACION: 0205 HIPOTECA ABIERTA SIN LIMITE DE CUANTIA
+DE: MARIA FERNANDA LOPEZ RUIZ
+A: BANCOLOMBIA S.A.
+
+ANOTACION: Nro 4 Fecha: 20-08-2021 Radicacion: 2021-9910
+ESPECIFICACION: 0843 CANCELACION HIPOTECA ABIERTA
+DE: BANCOLOMBIA S.A.
+A: MARIA FERNANDA LOPEZ RUIZ
+SE CANCELA ANOTACION Nro 3
+`;
+      const parsed = parseCtlFromPlainText(sampleCleanCtl);
+      expect(parsed.esCertificadoTradicionLibertad).toBe(true);
+      expect(parsed.matriculaInmobiliaria).toBe("50N-20145890");
+      expect(parsed.chip).toBe("AAA0123BCDE");
+      expect(parsed.anotaciones.length).toBe(4);
+
+      const report = auditCtlParsedDocument(parsed, "TEXTO");
+      expect(report.verdictCode).toBe("VERDE");
+      expect(report.verdictLabel).toBe("🟢 VIABLE PARA COMPRAVENTA Y CRÉDITO");
+      expect(report.tradition.tradicion10AnosContinua).toBe(true);
+      expect(report.tradition.tradicion20AnosContinua).toBe(true);
+      expect(report.tradition.tieneFalsaTradicion).toBe(false);
+      expect(report.gravamenesVigentes.length).toBe(0);
+      expect(report.gravamenesCancelados.length).toBe(1);
+      expect(report.gravamenesCancelados[0].numero).toBe(3);
+      expect(report.gravamenesCancelados[0].canceladaPorAnotacion).toBe(4);
+      expect(report.metadata.propietariosActuales[0]?.nombre).toContain("MARIA FERNANDA LOPEZ RUIZ");
+      expect(report.whatsappSummary).toContain("+57 316 656 9719");
+    });
+
+    it("3. Auditoría SNR 🟡 SANEAMIENTO PREVIO: hipoteca vigente, Patrimonio de Familia (Ley 70) y Vivienda Familiar (Ley 258)", async () => {
+      const { parseCtlFromPlainText, auditCtlParsedDocument } = await import("../_core/ctlTitleStudyService");
+
+      const sampleYellowCtl = `
+CERTIFICADO DE TRADICION Y LIBERTAD
+ORIP: MEDELLIN ZONA SUR
+MATRICULA INMOBILIARIA: 001-984512
+FECHA DE IMPRESION: 11/11/2026
+ESTADO DEL FOLIO: ACTIVO
+DIRECCION: CL 10 # 43A - 20
+
+ANOTACION: Nro 1 Fecha: 04-02-2004
+ESPECIFICACION: 0125 COMPRAVENTA
+DE: INVERSORA ANTIOQUIA
+A: JUAN PABLO TORO (X) 50%
+
+ANOTACION: Nro 2 Fecha: 04-02-2004
+ESPECIFICACION: 0315 CONSTITUCION PATRIMONIO DE FAMILIA INEMBARGABLE
+DE: JUAN PABLO TORO
+
+ANOTACION: Nro 3 Fecha: 18-09-2019
+ESPECIFICACION: 0304 AFECTACION A VIVIENDA FAMILIAR
+DE: JUAN PABLO TORO
+
+ANOTACION: Nro 4 Fecha: 22-10-2020
+ESPECIFICACION: 0205 HIPOTECA
+DE: JUAN PABLO TORO
+A: DAVIVIENDA S.A.
+`;
+      const parsed = parseCtlFromPlainText(sampleYellowCtl);
+      const report = auditCtlParsedDocument(parsed, "TEXTO");
+
+      expect(report.verdictCode).toBe("AMARILLO");
+      expect(report.verdictLabel).toBe("🟡 VIABLE CON SANEAMIENTO PREVIO EN ESCRITURA");
+      expect(report.gravamenesVigentes.length).toBe(1);
+      expect(report.limitacionesVigentes.length).toBe(2);
+      expect(report.recomendacionesNotariales.some(r => /Ley 70\/1931/i.test(r))).toBe(true);
+      expect(report.recomendacionesNotariales.some(r => /Ley 258\/1996/i.test(r))).toBe(true);
+      expect(report.recomendacionesNotariales.some(r => /CANCELACIÓN SIMULTÁNEA DE HIPOTECA/i.test(r))).toBe(true);
+    });
+
+    it("4. Auditoría SNR 🔴 RIESGO CRÍTICO: Falsa Tradición (Cód. 0600) vs Saneamiento posterior (0151) y Embargos (0427)", async () => {
+      const { parseCtlFromPlainText, auditCtlParsedDocument } = await import("../_core/ctlTitleStudyService");
+
+      const falsaTradicionCtl = `
+CERTIFICADO DE TRADICION Y LIBERTAD
+MATRICULA INMOBILIARIA: 050-332211
+FECHA DE IMPRESION: 12/11/2026
+ESTADO DEL FOLIO: ACTIVO
+
+ANOTACION: Nro 1 Fecha: 10-05-2010
+ESPECIFICACION: 0600 COMPRAVENTA DERECHOS Y ACCIONES (FALSA TRADICION)
+DE: PEDRO PEREZ
+A: LUIS RAMIREZ
+`;
+      const redReportFalsa = auditCtlParsedDocument(parseCtlFromPlainText(falsaTradicionCtl), "TEXTO");
+      expect(redReportFalsa.verdictCode).toBe("ROJO");
+      expect(redReportFalsa.verdictLabel).toBe("🔴 RIESGO CRÍTICO / BLOQUEO DE NEGOCIO");
+      expect(redReportFalsa.tradition.tieneFalsaTradicion).toBe(true);
+      expect(redReportFalsa.tradition.falsaTradicionSaneada).toBe(false);
+      expect(redReportFalsa.tradition.anotacionesFalsaTradicion).toContain(1);
+      expect(redReportFalsa.recomendacionesNotariales.some(r => /FALSA TRADICIÓN/i.test(r))).toBe(true);
+
+      const embargoCtl = `
+CERTIFICADO DE TRADICION Y LIBERTAD
+MATRICULA INMOBILIARIA: 50C-778899
+FECHA DE IMPRESION: 12/11/2026
+ESTADO DEL FOLIO: ACTIVO
+
+ANOTACION: Nro 1 Fecha: 01-03-2002
+ESPECIFICACION: 0125 COMPRAVENTA
+DE: PROMOTORA SUR
+A: ANA RODRIGUEZ (X)
+
+ANOTACION: Nro 2 Fecha: 14-04-2025
+ESPECIFICACION: 0427 EMBARGO EJECUTIVO CON ACCION REAL
+DE: JUZGADO 12 CIVIL DEL CIRCUITO
+A: ANA RODRIGUEZ
+`;
+      const redReportEmbargo = auditCtlParsedDocument(parseCtlFromPlainText(embargoCtl), "TEXTO");
+      expect(redReportEmbargo.verdictCode).toBe("ROJO");
+      expect(redReportEmbargo.alertasCriticasVigentes.some(a => a.categoria === "MEDIDA_CAUTELAR_EMBARGO")).toBe(true);
+
+      // Falsa tradición saneada por Declaración de Pertenencia 0151 posterior
+      const saneadaCtl = `
+CERTIFICADO DE TRADICION Y LIBERTAD
+MATRICULA INMOBILIARIA: 050-332212
+FECHA DE IMPRESION: 12/11/2026
+ESTADO DEL FOLIO: ACTIVO
+
+ANOTACION: Nro 1 Fecha: 10-05-2001
+ESPECIFICACION: 0600 FALSA TRADICION DERECHOS Y ACCIONES
+DE: PEDRO PEREZ
+A: LUIS RAMIREZ
+
+ANOTACION: Nro 2 Fecha: 15-08-2018
+ESPECIFICACION: 0151 DECLARACION DE PERTENENCIA
+DE: JUZGADO PROMISCUO
+A: LUIS RAMIREZ (X)
+`;
+      const curedReport = auditCtlParsedDocument(parseCtlFromPlainText(saneadaCtl), "TEXTO");
+      expect(curedReport.verdictCode).toBe("VERDE");
+      expect(curedReport.tradition.tieneFalsaTradicion).toBe(true);
+      expect(curedReport.tradition.falsaTradicionSaneada).toBe(true);
+    });
+
+    it("5. PDF Membretado de VECY + Integración end-to-end en DM, Grupos (@JanIA) y Versión v34.13 (34.13.0)", async () => {
+      const { isRealEstateConsultationForGroup } = await import("../_core/whatsapp-match");
+      const { analyzeCtlFromWhatsAppInput, extractTextSnippetsFromPdfBuffer } = await import("../_core/ctlTitleStudyService");
+      const { processPrivateDmConversationalMessage, popLatestDmPdf } = await import("../_core/jania/handlers/dmHandler");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+
+      const ctlPayload = `
+CERTIFICADO DE TRADICION Y LIBERTAD
+OFICINA DE REGISTRO DE INSTRUMENTOS PUBLICOS BOGOTA CENTRO
+NRO MATRICULA: 50C-1992881
+FECHA DE IMPRESION: 13/11/2026
+ESTADO DEL FOLIO: ACTIVO
+CHIP: AAA0088XYZW
+
+ANOTACION: Nro 1 Fecha: 10-02-2003
+ESPECIFICACION: 0125 COMPRAVENTA
+DE: INVERSIONES ANDINAS LTDA
+A: JORGE ENRIQUE MARTINEZ (X)
+
+ANOTACION: Nro 2 Fecha: 05-09-2022
+ESPECIFICACION: 0205 HIPOTECA ABIERTA
+DE: JORGE ENRIQUE MARTINEZ
+A: BANCO DE BOGOTA
+`;
+
+      // A) Orquestador con generación de PDF membretado VECY y extracción FlateDecode nativa
+      const directRes = await analyzeCtlFromWhatsAppInput({
+        text: `@JanIA hazme el estudio de títulos:\n${ctlPayload}`,
+        requesterName: "Andrés Molina",
+      });
+      expect(directRes.isCtlDocument).toBe(true);
+      expect(Buffer.isBuffer(directRes.pdfBuffer)).toBe(true);
+      expect((directRes.pdfBuffer as Buffer).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      expect(directRes.pdfFileName).toMatch(/^Concepto_Estudio_Titulos_VECY_50C-1992881_CTL-VECY-.*\.pdf$/);
+      const pdfExtractedText = extractTextSnippetsFromPdfBuffer((directRes.pdfBuffer as Buffer).toString("base64"));
+      expect(pdfExtractedText).toMatch(/ESTUDIO DE TITULOS|50C-1992881|VECY BIENES RAICES/i);
+
+      // B) Integración nativa en DM (envío de dictamen + encolamiento de PDF + protocolo de satisfacción)
+      const dmUser = `573158889901_${Date.now()}@s.whatsapp.net`;
+      const dmReply = await processPrivateDmConversationalMessage(
+        `Hola JanIA, por favor revisa este CTL:\n${ctlPayload}`,
+        dmUser,
+        "Andrés Molina"
+      );
+      expect(dmReply).toContain("ESTUDIO DE TÍTULOS SNR");
+      expect(dmReply).toContain("50C-1992881");
+      expect(dmReply).toContain("🟡 VIABLE CON SANEAMIENTO PREVIO EN ESCRITURA");
+      expect(dmReply).toContain("+57 316 656 9719");
+      expect(dmReply).toMatch(/satisfecho\(a\)/i);
+
+      const dmPdf = popLatestDmPdf(dmUser);
+      expect(dmPdf).not.toBeNull();
+      expect(dmPdf?.pdfFileName).toMatch(/^Concepto_Estudio_Titulos_VECY_.*\.pdf$/);
+      expect(dmPdf?.pdfBuffer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+
+      // C) Integración en Grupos (@JanIA) con adjunto PDF nativo y cierre de satisfacción
+      const groupUser = `573158889902_${Date.now()}@s.whatsapp.net`;
+      const groupRes = await processConsultingMessage(
+        `@JanIA analízame este certificado de tradición:\n${ctlPayload}`,
+        groupUser,
+        "Diana Suárez"
+      );
+      expect(groupRes.classification).toBe("CONSULTA_GENERAL");
+      expect(groupRes.response).toContain("ESTUDIO DE TÍTULOS SNR");
+      expect(groupRes.response).toMatch(/satisfecho\(a\)/i);
+      expect(Buffer.isBuffer(groupRes.document)).toBe(true);
+      expect(groupRes.fileName).toMatch(/^Concepto_Estudio_Titulos_VECY_.*\.pdf$/);
+
+      // D) Cobertura de consultas CTL en grupos externos y verificación de semilla + versión v34.13
+      expect(isRealEstateConsultationForGroup("@JanIA revisa este CTL", undefined, false)).toBe(true);
+      expect(isRealEstateConsultationForGroup("@JanIA", undefined, true)).toBe(true);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed13 = SEED_TEACHINGS.find(t => t.id === "seed-estudio-titulos-snr-ctl-v34-13");
+      expect(seed13).toBeDefined();
+      expect(seed13?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.13");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.13.0");
     });
   });
 });

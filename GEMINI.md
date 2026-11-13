@@ -1,4 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.12.0 — 2026-11-13)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.13.0 — 2026-11-13)
+- **JanIA Server:** `v34.13` (`34.13.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Punto 2 — Skill 2: Motor Especializado de Estudio de Títulos SNR (`ctlTitleStudyService.ts` + PDF Membretado + DM & Grupos — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz:**
+     - JanIA requería un motor especializado para auditar Certificados de Tradición y Libertad (CTL SNR) recibidos en PDF, imagen o texto de anotaciones sin interferir con flyers comerciales ni listados inmobiliarios, y cuidando que los CTLs de Bogotá (con `CHIP AAA...` y número de matrícula) no colisionaran con los interceptores previos de Predial o IDU en grupos.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - Nuevo módulo `server/_core/ctlTitleStudyService.ts`: discriminador multimodal/textual (`hasCtlTextMarkers`, `isExplicitCtlStudyRequest`, `extractTextSnippetsFromPdfBuffer` con `zlib.inflateSync` y hex strings de `pdf-lib`, `extractCtlDocumentWithGemini`), parser `parseCtlFromPlainText` y motor jurídico determinístico (`classifyCtlAnnotation`, `auditCtlParsedDocument`, `analyzeCtlFromWhatsAppInput`).
+     - Auditoría anotación por anotación: verificación de tradición ininterrumpida a **10 años** (Ley 791/2002) y **20 años** (Art. 2532 C.C.), alerta roja inmediata ante **Falsa Tradición** (`0600` / derechos y acciones / posesión sin dominio pleno y control de saneamiento posterior `0151`), cruce inteligente de hipotecas, embargos (`0427`), demandas (`0415`), prohibiciones de enajenar, patrimonio de familia (Ley 70/1931), afectación a vivienda familiar (Ley 258/1996), condiciones resolutorias, usufructos, servidumbres, fideicomisos civiles y sucesiones ilíquidas contra cancelaciones (`0841`–`0899`), **Dictamen Jurídico en Semáforo** (`🟢` / `🟡` / `🔴`), desglose de matrícula/ORIP/CHIP/propietarios (`%`), recomendaciones notariales accionables y **Alerta de Riesgo Patrimonial + CTA a `+57 316 656 9719`**.
+     - En `server/_core/jania/legalDocumentPdfService.ts`: añadido `"estudio_titulos_snr"`, helpers compartidos `initVecyPdfScaffold` y `stampVecyPageNumbersAndSave`, y generador `generateCtlStudyPdf` con banner de Semáforo, auditoría completa y QR de trazabilidad VECY.
+     - Integración nativa DM & Grupos: herramienta `realizar_estudio_titulos_snr` y pre-interceptor en `dmHandler.ts` (adjunto nativo via `setLatestDmPdf` + `awaitingSatisfactionFeedback` + incremento de servicios gratuitos), interceptores prioritarios en `consultingHandler.ts` y `circuloHandler.ts` (precediendo a IDU/Predial para evitar captura errónea por `CHIP`), ampliación de `extractQuotedContextAndMedia`, `isRealEstateConsultationForGroup` y `isServiceDeliveryReply` en `whatsapp-match.ts` y `looksLikeNewToolDataRequest` en `politenessService.ts`.
+  3. **Gobernanza y Suite de Regresión 199:**
+     - Semilla directiva `seed-estudio-titulos-snr-ctl-v34-13` en `founderKnowledgeService.ts` y Suite 199 (5/5 tests en verde) en `regression.test.ts` (incluyendo actualización de aserciones canónicas de saludo heredadas en líneas 1408 y 11554).
+- **Validación Limpia ($0 COP):** Suite completa `NODE_ENV=test npm test` (**6/6 archivos, 702/702 tests en verde**) | `npm run check` (0 errores) | `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.12.0 — 2026-11-13)
 - **JanIA Server:** `v34.12` (`34.12.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Punto 1 — Paridad Total de `@JanIA` en Grupos con Motores Determinísticos (`consultingHandler.ts` ↔ `dmHandler.ts` ↔ `whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**

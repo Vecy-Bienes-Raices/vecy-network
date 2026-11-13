@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.12";
+    VECY_VERSION = "v34.13";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -15311,10 +15311,12 @@ ${COMMERCIAL_CLOSING_CTA}`;
   }
   return enriched;
 }
-var COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT, HIGH_VALUE_PATTERNS;
+var BROKER_OFFICIAL_PHONE, BROKER_OFFICIAL_WHATSAPP_LINK, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT, HIGH_VALUE_PATTERNS;
 var init_commercialFunnelService = __esm({
   "server/_core/commercialFunnelService.ts"() {
     "use strict";
+    BROKER_OFFICIAL_PHONE = "+57 316 656 9719";
+    BROKER_OFFICIAL_WHATSAPP_LINK = "https://wa.me/573166569719";
     COMMERCIAL_CLOSING_CTA = "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).";
     PATRIMONIAL_RISK_ALERT = "\u26A0\uFE0F *Alerta de Riesgo Patrimonial:* Recuerda que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.";
     HIGH_VALUE_PATTERNS = {
@@ -16464,7 +16466,7 @@ function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = fals
   if (!normalized || normalized.length > 450) {
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
   }
-  const looksLikeNewToolDataRequest = /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales)\b/.test(
+  const looksLikeNewToolDataRequest = /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
     normalized
   ) || /\b(hazme\s+un\s+acm|quiero\s+un\s+acm|valor\s+de\s+(?:un|una)\s+(?:casa|apto|apartamento))\b/.test(normalized);
   if (looksLikeNewToolDataRequest) {
@@ -27095,8 +27097,8 @@ function isFromOwnBotAccount(msg, senderId) {
 function isSelfPresentationOrFlyerOfJanIA(text2) {
   return janiaMatchBot.isSelfPresentationOrFlyerOfJanIA(text2);
 }
-function isRealEstateConsultationForGroup(text2, quotedText) {
-  return janiaMatchBot.isRealEstateConsultationForGroup(text2, quotedText);
+function isRealEstateConsultationForGroup(text2, quotedText, hasMedia) {
+  return janiaMatchBot.isRealEstateConsultationForGroup(text2, quotedText, hasMedia);
 }
 function isBotDirectlyMentioned(msg, text2) {
   return janiaMatchBot.isBotDirectlyMentioned(msg, text2);
@@ -27285,13 +27287,41 @@ var init_whatsapp_match = __esm({
        * ⚖️ Verifica que una mención a JanIA en un grupo externo corresponda a una consulta inmobiliaria, jurídica,
        * tributaria, de avalúo o solicitud de explicación, y jamás a un flyer o saludo vacío.
        */
-      isRealEstateConsultationForGroup(text2, quotedText) {
+      async extractQuotedContextAndMedia(msg, rawMsg) {
+        let quotedContext;
+        let quotedImageBuffer;
+        let quotedPdfBuffer;
+        let quotedPdfMimeType;
+        let hasQuotedMedia = false;
+        try {
+          const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || rawMsg?.imageMessage?.contextInfo || rawMsg?.documentMessage?.contextInfo || msg?.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
+          if (contextInfo?.quotedMessage) {
+            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+            quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || unwrappedQuoted?.documentMessage?.caption || void 0;
+            if (unwrappedQuoted?.imageMessage) {
+              hasQuotedMedia = true;
+              const buf = await downloadMediaSafely({ message: contextInfo.quotedMessage }, "image").catch(() => null);
+              if (buf && buf.length > 0) quotedImageBuffer = buf.toString("base64");
+            } else if (unwrappedQuoted?.documentMessage) {
+              hasQuotedMedia = true;
+              const buf = await downloadMediaSafely({ message: contextInfo.quotedMessage }, "document").catch(() => null);
+              if (buf && buf.length > 0) {
+                quotedPdfBuffer = buf.toString("base64");
+                quotedPdfMimeType = unwrappedQuoted.documentMessage.mimetype || "application/pdf";
+              }
+            }
+          }
+        } catch {
+        }
+        return { quotedContext, quotedImageBuffer, quotedPdfBuffer, quotedPdfMimeType, hasQuotedMedia };
+      }
+      isRealEstateConsultationForGroup(text2, quotedText, hasMedia) {
         const clean = String(text2 || "").trim();
         const quoted = String(quotedText || "").trim();
-        if (!clean && !quoted) return false;
+        if (!clean && !quoted && !hasMedia) return false;
         if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
         const combined = `${clean} ${quoted}`.toLowerCase();
-        const hasQuestionOrConsultIntent = /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
+        const hasQuestionOrConsultIntent = Boolean(hasMedia) || /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|revisa|analiza|audita|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|falsa\s+tradici[oó]n|estudio\s+de\s+t[ií]tulos|\bctl\b|\bsnr\b|\borip\b|grav[aá]men(?:es)?|patrimonio\s+de\s+familia|afectaci[oó]n|usufructo|servidumbre|anotaci[oó]n(?:es)?|dictamen|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
         return hasQuestionOrConsultIntent;
       }
       registerPhoneLidMapping(phoneOrJid, lidOrJid) {
@@ -28310,6 +28340,18 @@ ${quotedNote}` : quotedNote;
             } catch (e) {
             }
           }
+          if (!imageBuffer && !pdfBuffer) {
+            const quotedDmMedia = await this.extractQuotedContextAndMedia(msg, rawMsg);
+            if (quotedDmMedia.quotedImageBuffer) imageBuffer = quotedDmMedia.quotedImageBuffer;
+            if (quotedDmMedia.quotedPdfBuffer) {
+              pdfBuffer = quotedDmMedia.quotedPdfBuffer;
+              pdfMimeType = quotedDmMedia.quotedPdfMimeType || "application/pdf";
+            }
+            if (quotedDmMedia.quotedContext && !combinedBody.includes(quotedDmMedia.quotedContext)) {
+              combinedBody += combinedBody ? `
+${quotedDmMedia.quotedContext}` : quotedDmMedia.quotedContext;
+            }
+          }
         }
         if (!combinedBody.trim() && !imageBuffer && !pdfBuffer) {
           return;
@@ -28545,7 +28587,7 @@ Ha quedado captado en nuestro sistema de VECY BIENES RA\xCDCES para cruzarlo con
                     if (alreadySentReviewInReply) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                     }
-                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
+                    const isServiceDeliveryReply = replyText.includes("VERIFICACI\xD3N") || replyText.includes("antecedentes") || replyText.includes("C.C.") || replyText.includes("c\xE9dula") || replyText.includes("ADRES") || replyText.includes("BDUA") || replyText.includes("PREDIAL") || replyText.includes("PAZ Y SALVO") || replyText.includes("RUES") || replyText.includes("AN\xC1LISIS COMPARATIVO DE MERCADO") || replyText.includes("Escenarios Estrat\xE9gicos de Precio") || replyText.includes("Sondeo de Mercado") || replyText.includes("Valor m\xB2 homologado") || replyText.includes("LIQUIDACI\xD3N") || replyText.includes("ESTUDIO DE T\xCDTULOS") || replyText.includes("DICTAMEN JUR\xCDDICO") || replyText.includes("MATR\xCDCULA INMOBILIARIA") || replyText.includes("MATCH") || replyText.includes("40/20/40") || Boolean(latestPdf) || Boolean(latestCreativeImage);
                     const isRecurrentFreeBeneficiary = (session.freeServicesUsedCount || 0) >= 2;
                     const isCompleteDelivery = !replyText.endsWith(":") && !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) && (!replyText.includes("c\xE9dula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
                     const usedCount = session.freeServicesUsedCount || 0;
@@ -28903,14 +28945,14 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
                 console.error("[JANIA-MEDIA] Error descargando documento adjunto en grupo:", e);
               }
             }
-            let quotedContext;
-            try {
-              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
-              if (contextInfo?.quotedMessage) {
-                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
-              }
-            } catch (e) {
+            const quotedMeta = await this.extractQuotedContextAndMedia(msg, rawMsg);
+            const quotedContext = quotedMeta.quotedContext;
+            if (!imageBuffer && quotedMeta.quotedImageBuffer) {
+              imageBuffer = quotedMeta.quotedImageBuffer;
+            }
+            if (!pdfBuffer && quotedMeta.quotedPdfBuffer) {
+              pdfBuffer = quotedMeta.quotedPdfBuffer;
+              pdfMimeType = quotedMeta.quotedPdfMimeType || "application/pdf";
             }
             if (isBuzonGroup) {
               result = await processConsultingMessage2(
@@ -28964,16 +29006,19 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             let imageBuffer;
             let pdfBuffer;
             let pdfMimeType;
-            let quotedContext;
-            try {
-              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
-              if (contextInfo?.quotedMessage) {
-                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
-              }
-            } catch (e) {
+            const quotedMeta = await this.extractQuotedContextAndMedia(msg, rawMsg);
+            const quotedContext = quotedMeta.quotedContext;
+            if (!imageBuffer && quotedMeta.quotedImageBuffer) {
+              imageBuffer = quotedMeta.quotedImageBuffer;
             }
-            if (!this.isRealEstateConsultationForGroup(bodyText, quotedContext)) {
+            if (!pdfBuffer && quotedMeta.quotedPdfBuffer) {
+              pdfBuffer = quotedMeta.quotedPdfBuffer;
+              pdfMimeType = quotedMeta.quotedPdfMimeType || "application/pdf";
+            }
+            const hasAnyExternalMedia = Boolean(
+              rawMsg?.imageMessage || rawMsg?.documentMessage || quotedMeta.hasQuotedMedia
+            );
+            if (!this.isRealEstateConsultationForGroup(bodyText, quotedContext, hasAnyExternalMedia)) {
               console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Menci\xF3n en grupo externo ${chatId} descartada por no constituir una consulta inmobiliaria/jur\xEDdica ("${bodyText.slice(0, 60)}").`);
               await this.sock.sendPresenceUpdate("paused", chatId).catch(() => {
               });
@@ -30072,8 +30117,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             if (targetJid.endsWith("@s.whatsapp.net")) {
               const rawPhone = targetJid.split("@")[0];
               const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-              const BROKER_OFFICIAL_PHONE = "573166569719";
-              const isAuthorizedStaff = rawPhone === "573192919978" || rawPhone === BROKER_OFFICIAL_PHONE || rawPhone.includes(ADMIN_PHONE);
+              const BROKER_OFFICIAL_PHONE2 = "573166569719";
+              const isAuthorizedStaff = rawPhone === "573192919978" || rawPhone === BROKER_OFFICIAL_PHONE2 || rawPhone.includes(ADMIN_PHONE);
               const isTransactionalAllowed = options.allowDirectMessage === true || options.isTransactionalNotification === true;
               if (!isAuthorizedStaff && !isTransactionalAllowed) {
                 console.log(`[JANIA-ANTI-BAN-SHIELD] \u{1F6E1}\uFE0F Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibici\xF3n absoluta de DMs a terceros.`);
@@ -31908,15 +31953,2152 @@ var init_valuation = __esm({
   }
 });
 
+// server/_core/jania/legalDocumentPdfService.ts
+var legalDocumentPdfService_exports = {};
+__export(legalDocumentPdfService_exports, {
+  buildDefaultLegalBody: () => buildDefaultLegalBody,
+  generateCtlStudyPdf: () => generateCtlStudyPdf,
+  generateLegalDocumentPdf: () => generateLegalDocumentPdf,
+  getLegalDocumentMetadata: () => getLegalDocumentMetadata,
+  sanitizePdfWinAnsiText: () => sanitizePdfWinAnsiText
+});
+import { PDFDocument as PDFDocument2, rgb as rgb2, StandardFonts as StandardFonts2 } from "pdf-lib";
+import QRCode3 from "qrcode";
+import crypto4 from "node:crypto";
+import fs11 from "node:fs";
+import path11 from "node:path";
+function sanitizePdfWinAnsiText(input) {
+  if (!input) return "";
+  return input.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/[•▪▸►]/g, "-").replace(/[—–]/g, "-").replace(/[“”«»]/g, '"').replace(/[‘’]/g, "'").replace(/m²/g, "m2").replace(/[^\x20-\x7E\xA1-\xFF\n\r\t]/g, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+function getLegalDocumentMetadata(tipo) {
+  switch (tipo) {
+    case "carta_terminacion_arriendo":
+      return {
+        title: "CARTA FORMAL DE TERMINACION Y NO PRORROGA DE CONTRATO DE ARRENDAMIENTO",
+        normativeFramework: "Ley 820 de 2003 (Arts. 22 a 25 - Vivienda Urbana) y Codigo de Comercio (Art. 520 - Local Comercial)",
+        defaultFileNamePrefix: "Carta_Terminacion_Arriendo_VECY"
+      };
+    case "carta_restitucion_inmueble":
+      return {
+        title: "SOLICITUD FORMAL DE ENTREGA Y RESTITUCION DE INMUEBLE ARRENDADO",
+        normativeFramework: "Ley 820 de 2003, Articulo 2005 del Codigo Civil y Articulo 384 del Codigo General del Proceso",
+        defaultFileNamePrefix: "Acta_Solicitud_Restitucion_Inmueble_VECY"
+      };
+    case "carta_presentacion_cliente":
+      return {
+        title: "CARTA DE PRESENTACION FORMAL Y REGISTRO DE PUNTA COMERCIAL INMOBILIARIA",
+        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio Colombiano y Doctrina Colaborativa VECY 40/20/40",
+        defaultFileNamePrefix: "Carta_Presentacion_Cliente_VECY"
+      };
+    case "contrato_arrendamiento_vivienda":
+      return {
+        title: "MINUTA DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA",
+        normativeFramework: "Regimen de Vivienda Urbana - Ley 820 de 2003 y Codigo Civil Colombiano",
+        defaultFileNamePrefix: "Contrato_Arrendamiento_Vivienda_VECY"
+      };
+    case "contrato_arrendamiento_comercial":
+      return {
+        title: "MINUTA DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL",
+        normativeFramework: "Articulos 518 a 524 del Codigo de Comercio Colombiano (Derecho a Renovacion y Desahucio)",
+        defaultFileNamePrefix: "Contrato_Arrendamiento_Comercial_VECY"
+      };
+    case "promesa_compraventa":
+      return {
+        title: "MINUTA DE PROMESA DE COMPRAVENTA DE BIEN INMUEBLE",
+        normativeFramework: "Articulo 1611 del Codigo Civil Colombiano, Ley 153 de 1887 (Art. 89) y Estatuto de Notariado",
+        defaultFileNamePrefix: "Promesa_Compraventa_Inmueble_VECY"
+      };
+    case "cesion_leasing":
+      return {
+        title: "MINUTA DE PROMESA DE CESION DE CONTRATO DE LEASING HABITACIONAL / COMERCIAL",
+        normativeFramework: "Decreto 2555 de 2010, Estatuto Organico del Sistema Financiero y Articulo 887 del Codigo de Comercio",
+        defaultFileNamePrefix: "Minuta_Cesion_Leasing_VECY"
+      };
+    case "pacto_retroventa":
+      return {
+        title: "MINUTA DE COMPRAVENTA CON PACTO DE RETROVENTA",
+        normativeFramework: "Articulos 1939 a 1943 del Codigo Civil Colombiano (Plazo Maximo Legal de 4 Anos)",
+        defaultFileNamePrefix: "Minuta_Pacto_Retroventa_VECY"
+      };
+    case "contrato_corretaje":
+      return {
+        title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA",
+        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio y Ley 527 de 1999 (Validez de Firma Electronica)",
+        defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
+      };
+    case "estudio_titulos_snr":
+      return {
+        title: "CONCEPTO JURIDICO DE ESTUDIO DE TITULOS SNR",
+        normativeFramework: "Estatuto de Registro de Instrumentos Publicos (Ley 1579 de 2012), Codigo Civil y Ley 1561 de 2012",
+        defaultFileNamePrefix: "Concepto_Estudio_Titulos_VECY"
+      };
+    default:
+      return {
+        title: "MINUTA Y DOCUMENTO JURIDICO INMOBILIARIO OFICIAL",
+        normativeFramework: "Legislacion Civil, Comercial y Urbana de la Republica de Colombia",
+        defaultFileNamePrefix: "Minuta_Legal_Inmobiliaria_VECY"
+      };
+  }
+}
+function buildDefaultLegalBody(params) {
+  const ciudad = params.ciudad || "Bogota, D.C.";
+  const remitente = params.nombreRemitente || "[NOMBRE DEL REMITENTE / ARRENDADOR / PROMITENTE]";
+  const docRem = params.documentoRemitente || "[CC / NIT]";
+  const destinatario = params.nombreDestinatario || "[NOMBRE DEL DESTINATARIO / ARRENDATARIO / COMPRADOR]";
+  const docDest = params.documentoDestinatario || "[CC / NIT]";
+  const direccion = params.direccionInmueble || "[DIRECCION E IDENTIFICACION DEL INMUEBLE]";
+  const valor = params.valorNegocioOCanon || "[VALOR PACTADO EN PESOS COLOMBIANOS COP]";
+  const extras = params.clausulasEspeciales ? `
+
+DISPOSICIONES Y CLAUSULAS ESPECIALES:
+${params.clausulasEspeciales}` : "";
+  switch (params.tipoDocumento) {
+    case "carta_terminacion_arriendo":
+      return [
+        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `Senor(a): ${destinatario} (Identificacion: ${docDest})`,
+        `Referencia: Notificacion formal de preaviso y terminacion del Contrato de Arrendamiento sobre el inmueble ubicado en ${direccion}.`,
+        "",
+        "Respetado(a) senor(a):",
+        "",
+        `Por medio de la presente comunicacion, actuando en calidad de parte contratante (${remitente}, identificado(a) con ${docRem}), y en estricto cumplimiento de los terminos legales previstos en la Ley 820 de 2003 (preaviso minimo de tres [3] meses calendario con antelacion al vencimiento del periodo inicial o de cualquiera de sus prorrogas), le notifico de manera formal e irrevocable la decision de NO PRORROGAR y dar por terminado el contrato de arrendamiento suscrito sobre el inmueble ubicado en ${direccion}.`,
+        "",
+        "1. PLAZO Y FECHA DE ENTREGA: El inmueble debera ser restituido totalmente desocupado, a paz y salvo por concepto de canones de arrendamiento, cuotas de administracion y servicios publicos domiciliarios al vencimiento del periodo en curso.",
+        "2. ACTA DE INVENTARIO Y RECIBO: Se coordinara visita de inspeccion fisica para verificar el buen estado de conservacion de los acabados, instalaciones y llaves del predio conforme al inventario inicial.",
+        "3. NOTIFICACION FEHACIENTE: El presente preaviso se remite a traves de correo certificado y/o mensaje de datos con validez probatoria conforme a la Ley 527 de 1999." + extras
+      ].join("\n");
+    case "carta_restitucion_inmueble":
+      return [
+        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `Destinatario: ${destinatario} (Identificacion: ${docDest})`,
+        `Asunto: Solicitud formal de restitucion y entrega material del inmueble ubicado en ${direccion}.`,
+        "",
+        `En mi condicion de titular / representante (${remitente} - ${docRem}), solicito formalmente programar y ejecutar la restitucion material y entrega de llaves del bien inmueble ubicado en ${direccion}, en los terminos de la Ley 820 de 2003 y el Articulo 2005 del Codigo Civil.`,
+        "",
+        "REQUISITOS PARA LA SUSCRIPCION DEL ACTA DE ENTREGA:",
+        "- Presentacion de los ultimos tres (3) recibos de servicios publicos domiciliarios (energia, acueducto, gas) debidamente cancelados.",
+        "- Paz y salvo expedido por la Administracion de Propiedad Horizontal (si aplica).",
+        "- Revision conjunta del inventario fisico del inmueble sin deterioros distintos al uso natural y legitimo del bien." + extras
+      ].join("\n");
+    case "carta_presentacion_cliente":
+      return [
+        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `Dirigido a: ${destinatario} (${docDest})`,
+        `Presentado por: ${remitente} (${docRem}) \u2014 Red Colaborativa VECY BIENES RAICES`,
+        `Inmueble Objeto de Negociacion: ${direccion} | Valor Referencial: ${valor}`,
+        "",
+        "CERTIFICACION DE PRESENTACION Y REGISTRO DE PUNTA COMERCIAL:",
+        `Por medio del presente documento oficial se deja constancia mercantil (Arts. 1340 a 1346 del Codigo de Comercio) de la presentacion formal del cliente interesado para la operacion inmobiliaria sobre el predio ubicado en ${direccion}.`,
+        "",
+        "1. PROTECCION DE PUNTA Y NO DESINTERMEDIACION: Las partes reconocen la gestion de intermediacion y se obligan a respetar la reserva de punta comercial y la distribucion de comision acordada a traves de la mesa central de VECY BIENES RAICES (+57 316 656 9719).",
+        "2. VIGENCIA DEL REGISTRO: El presente registro ampara toda negociacion directa o indirecta que se perfeccione con el cliente presentado o su grupo familiar/societario dentro de los doce (12) meses siguientes a la visita." + extras
+      ].join("\n");
+    case "pacto_retroventa":
+      return [
+        `ENTRE LOS SUSCRITOS: De una parte ${remitente} (${docRem}), quien obra como EL VENDEDOR CON FACULTAD DE RECOBRO, y de otra parte ${destinatario} (${docDest}), quien obra como EL COMPRADOR, se celebra el presente negocio juridico regido por los Articulos 1939 a 1943 del Codigo Civil Colombiano:`,
+        "",
+        `CLAUSULA PRIMERA - OBJETO: EL VENDEDOR transfiere a titulo de compraventa con pacto de retroventa a favor de EL COMPRADOR el derecho de dominio y posesion sobre el inmueble ubicado en ${direccion}, en la ciudad de ${ciudad}.`,
+        `CLAUSULA SEGUNDA - PRECIO Y SUMA DE REEMBOLSO: El precio de la presente operacion se pacta en la suma de ${valor}.`,
+        "CLAUSULA TERCERA - PACTO DE RETROVENTA (ART. 1939 C.C.): EL VENDEDOR se reserva expresamente la facultad legal de recobrar la propiedad del inmueble vendido, reembolsando a EL COMPRADOR la cantidad determinada en este contrato dentro del plazo estipulado, el cual en ningun caso podra exceder de cuatro (4) anos contados desde la fecha de la escritura publica (Art. 1943 C.C.)." + extras
+      ].join("\n");
+    case "cesion_leasing":
+      return [
+        `PARTES INTERVINIENTES: ${remitente} (${docRem}) en calidad de PROMITENTE CEDENTE (Locatario Actual), y ${destinatario} (${docDest}) en calidad de PROMITENTE CESIONARIO, respecto del inmueble ubicado en ${direccion} (${ciudad}).`,
+        "",
+        `CLAUSULA PRIMERA - OBJETO DE LA CESION: El PROMITENTE CEDENTE se obliga a ceder a favor del PROMITENTE CESIONARIO su posicion contractual como locatario dentro del Contrato de Leasing Habitacional / Inmobiliario vigente ante la entidad financiera titular del dominio.`,
+        `CLAUSULA SEGUNDA - VALOR DE LA CESION Y SALDO FINANCIERO: El valor total del negocio se establece en ${valor}, discriminado entre los derechos de cesion pagaderos al locatario cedente y el saldo de capital con opcion de adquisicion ante la entidad bancaria.`,
+        "CLAUSULA TERCERA - CONDICION SUSPENSIVA DE APROBACION BANCARIA: El perfeccionamiento de la cesion queda sujeto al estudio de credito y aprobacion formal del cesionario por parte de la entidad financiera leasing." + extras
+      ].join("\n");
+    case "promesa_compraventa":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `PROMITENTE VENDEDOR (PARTE A): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `PROMITENTE COMPRADOR (PARTE B): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE(S) OBJETO DEL ACTO: ${direccion} (${ciudad})`,
+        `CUANTIA / PRECIO TOTAL CONVENIDO: ${valor}`,
+        "",
+        "CLAUSULADO CONTRACTUAL DE PROMESA DE COMPRAVENTA:",
+        "",
+        "CLAUSULA PRIMERA - OBJETO DEL CONTRATO: El PROMITENTE VENDEDOR promete transferir a titulo de compraventa real y efectiva a favor del PROMITENTE COMPRADOR, y este promete adquirir al mismo titulo, el derecho de dominio y la posesion material plena sobre el(los) bien(es) inmueble(s) debidamente individualizado(s) en la clausula segunda de este contrato.",
+        "",
+        `CLAUSULA SEGUNDA - IDENTIFICACION, INDIVIDUALIZACION Y LINDEROS: El inmueble principal objeto de esta promesa se encuentra ubicado en la direccion: ${direccion}, en la ciudad de ${ciudad}. Folio de Matricula Inmobiliaria SNR No. [NUMERO DE MATRICULA], Cedula Catastral / CHIP No. [CHIP / CEDULA CATASTRAL]. LINDEROS TECNICOS Y ESPECIFICACIONES: Los linderos generales y especiales, cabida, medidas y demas especificaciones tecnicas se encuentran contenidos en la Escritura Publica antecedente No. [NUMERO ESCRITURA] otorgada en la Notaria [NOTARIA Y CIUDAD], documento que se entiende incorporado integramente a este instrumento. ${params.clausulasEspeciales && /permuta|daci[oó]n/i.test(params.clausulasEspeciales) ? "(En caso de dacion o permuta parcial, los datos registrales y linderos del inmueble entregado en parte de pago se transcriben en las Disposiciones Especiales adjuntas)." : ""}`,
+        "",
+        "CLAUSULA TERCERA - TRADICION Y TITULO DE ADQUISICION: El PROMITENTE VENDEDOR garantiza que adquirio el dominio y posesion material del inmueble objeto de la venta mediante Escritura Publica debidamente registrada, acreditando una tradicion ininterrumpida, pacifica y publica por mas de veinte (20) anos exenta de pleitos pendientes, gravamenes o litigios.",
+        "",
+        `CLAUSULA CUARTA - PRECIO, FORMA DE PAGO Y DESEMBOLSOS: El precio de la venta prometida se fija en la suma de ${valor} moneda legal colombiana, la cual sera cancelada de la siguiente manera:`,
+        "1. Saldo inicial a la firma del presente contrato mediante cheque de gerencia o transferencia bancaria verificada.",
+        "2. Saldo en dinero efectivo o mediante desembolso de credito hipotecario / leasing habitacional / recursos propios a la fecha de la firma de la Escritura Publica.",
+        "3. Cruce en especie o dacion en pago segun lo pactado expresamente en las Disposiciones Especiales de este contrato.",
+        "",
+        "CLAUSULA QUINTA - SITUACION JURIDICA, SANEAMIENTO Y VICIOS REDHIBITORIOS: El PROMITENTE VENDEDOR declara que el bien objeto de enajenacion se encuentra libre de todo gravamen, embargo, hipoteca, condiciones resolutorias, pleito pendiente, censo, anticresis, contrato de arrendamiento por escritura publica o privada no informado, servidumbres pasivas no declaradas y libre de cualquier afectacion o limitacion al dominio. No obstante, se obliga al saneamiento por eviccion y vicios redhibitorios de conformidad con los Articulos 1880 y 1893 del Codigo Civil Colombiano.",
+        "",
+        "CLAUSULA SEXTA - REGIMEN DE FAMILIA Y AFECTACIONES PATRIMONIALES: Las partes declaran bajo juramento su estado civil actual y manifiestan que sobre el inmueble no pesa Afectacion a Vivienda Familiar (Ley 258 de 1996 modificada por Ley 854 de 2003) ni Patrimonio de Familia Inembargable (Ley 70 de 1931). En caso de existir, el PROMITENTE VENDEDOR se obliga a su cancelacion previa o concurrente en la misma Escritura de compraventa con la comparecencia de su conyuge o companero(a) permanente.",
+        "",
+        "CLAUSULA SEPTIMA - OTORGAMIENTO DE LA ESCRITURA PUBLICA DEFINITIVA: La Escritura Publica de Compraventa que perfeccionara la transferencia del dominio sera suscrita por las partes en la fecha, hora y Notaria estipulada expresamente [FECHA, HORA Y NOTARIA PACTADA], acto para el cual las partes compareceran personalmente o mediante apoderado debidamente facultado con poder especial notarial amplio y suficiente.",
+        "",
+        "CLAUSULA OCTAVA - ENTREGA MATERIAL, INVENTARIO Y POSESION: La entrega real y material del inmueble se realizara el dia [FECHA PACTADA DE ENTREGA], fecha en la cual el PROMITENTE VENDEDOR hara entrega de las llaves del inmueble, sus anexos, garajes y depositos, totalmente desocupado y en el estado de conservacion acordado, levantando el Acta de Entrega e Inventario Fisico debidamente firmada por las partes.",
+        "",
+        "CLAUSULA NOVENA - IMPUESTOS, TASAS, CONTRIBUCIONES Y SERVICIOS PUBLICOS: El PROMITENTE VENDEDOR se obliga a entregar el inmueble a paz y salvo por concepto de Impuesto Predial Unificado, contribucion de valorizacion (IDU), cuotas ordinarias y extraordinarias de administracion de propiedad horizontal y facturacion al dia de servicios publicos domiciliarios (acueducto, energia, gas, telefono) hasta la fecha de la entrega material.",
+        "",
+        "CLAUSULA DECIMA - ARRAS Y CLAUSULA PENAL PECUNIARIA: En caso de incumplimiento total o parcial o retardo culpable en el otorgamiento de la Escritura Publica o en la entrega del bien, la parte incumplida pagara a la parte cumplida, a titulo de clausula penal pecuniaria (Art. 1592 C.C. y Art. 867 C.Co.), una suma equivalente al porcentaje pactado del valor total de la venta, la cual sera exigible ejecutivamente sin necesidad de requerimiento judicial ni privado ni constitucion previa en mora, a la cual las partes renuncian expresamente.",
+        "",
+        "CLAUSULA DECIMAPRIMERA - GASTOS NOTARIALES, RETENCION EN LA FUENTE Y REGISTRO: Los gastos derivados de la presente negociacion se distribuiran conforme a la ley y las costumbres notariales colombianas: (a) Derechos Notariales en un 50% a cargo de cada parte; (b) Retencion en la Fuente por enajenacion en un 100% a cargo del PROMITENTE VENDEDOR; (c) Impuesto de Registro y Beneficencia en un 100% a cargo del PROMITENTE COMPRADOR.",
+        "",
+        "CLAUSULA DECIMASEGUNDA - MERITO EJECUTIVO Y ACUERDO COMPLETO: Las partes reconocen expresamente que el presente contrato presta merito ejecutivo pleno para exigir judicialmente el cumplimiento de las obligaciones de dar, hacer y dinerarias aqui contenidas conforme al Codigo General del Proceso.",
+        "",
+        "CLAUSULA DECIMATERCERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento goza de plena validez, autenticidad y eficacia probatoria cuando sea suscrito mediante mecanismos de firma electronica certificada con estampado cronologico y trazabilidad digital.",
+        extras,
+        "",
+        "ADVERTENCIA DE VALIDEZ Y MINUTA ESTRUCTURAL (VECY BIENES RAICES):",
+        "El presente instrumento constituye una Minuta Estructural Preliminar y base documental emitida por la plataforma JanIA de VECY BIENES RAICES. Para elevar este instrumento a contrato definitivo blindado con todas las de la ley, las partes deben completar: (i) transcripcion literal exacta de linderos tecnicos segun escrituras antecedentes y folios SNR; (ii) identificacion plena y regimen patrimonial/afectacion de conyuges; (iii) fijacion precisa de fecha, hora y notaria especifica para la firma escritural; y (iv) realizacion del estudio de titulos de 20 anos. Para estructurar y coordinar el contrato definitivo con acompanamiento notarial y pericial personalizado, comuniquese con la Direccion Legal y Notarial de VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
+      ].filter(Boolean).join("\n");
+    case "contrato_arrendamiento_vivienda":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `ARRENDADOR(A): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `ARRENDATARIO(A): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE OBJETO DEL ARRENDAMIENTO: ${direccion} (${ciudad})`,
+        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
+        "",
+        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA (LEY 820 DE 2003):",
+        "",
+        "CLAUSULA PRIMERA - OBJETO Y DESTINO EXCLUSIVO: El ARRENDADOR entrega a titulo de arrendamiento el goce del bien inmueble debidamente individualizado, y el ARRENDATARIO lo recibe destinandolo de manera exclusiva para vivienda familiar, sin que pueda destinarlo a fines comerciales, industriales ni a actividades contrarias a la ley o a la moral.",
+        "",
+        `CLAUSULA SEGUNDA - CANON, FORMA DE PAGO Y LUGAR: El ARRENDATARIO pagara mensualmente por concepto de canon de arrendamiento la suma de ${valor}, dentro de los primeros cinco (5) dias calendario de cada periodo mensual, mediante consignacion o transferencia bancaria en la cuenta designada por el ARRENDADOR.`,
+        "",
+        "CLAUSULA TERCERA - INCREMENTO ANUAL DEL CANON (ART. 20 LEY 820 DE 2003): Vencido cada periodo de doce (12) meses de ejecucion contractual, el canon de arrendamiento se incrementara de pleno derecho en un porcentaje maximo equivalente a la variacion del Indice de Precios al Consumidor (IPC) certificado por el DANE para el ano inmediatamente anterior, previa notificacion al ARRENDATARIO.",
+        "",
+        "CLAUSULA CUARTA - TERMINO DE DURACION Y PRORROGAS: El termino inicial de duracion de este contrato sera de doce (12) meses contados a partir de la entrega del inmueble. Dicho termino se entendera prorrogado automaticamente por periodos iguales si ninguna de las partes notifica a la otra por escrito su intencion de no prorrogarlo con antelacion no menor a tres (3) meses (Art. 6 Ley 820/2003).",
+        "",
+        "CLAUSULA QUINTA - SERVICIOS PUBLICOS DOMICILIARIOS Y ADMINISTRACION: El pago oportuno de los servicios publicos de acueducto, energia, gas y telecomunicaciones sera a cargo exclusivo del ARRENDATARIO. Las cuotas ordinarias de administracion de propiedad horizontal seran a cargo del responsable pactado expresamente en las estipulaciones especiales.",
+        "",
+        "CLAUSULA SEXTA - PROHIBICION DE CESION Y SUBARRIENDO (ART. 17 LEY 820 DE 2003): El ARRENDATARIO no podra ceder total ni parcialmente el contrato de arrendamiento ni subarrendar el inmueble sin autorizacion previa, expresa y escrita del ARRENDADOR. La violacion de esta clausula facultara al ARRENDADOR para dar por terminado el contrato de manera inmediata.",
+        "",
+        "CLAUSULA SEPTIMA - REPARACIONES LOCATIVAS Y MEJORAS: Las reparaciones locativas que se deriven del uso legitimo y natural del bien seran asumidas por el ARRENDATARIO conforme a los Articulos 1985 y 1993 del Codigo Civil. No podra realizar reformas ni modificaciones arquitectonicas sin previa autorizacion escrita del ARRENDADOR.",
+        "",
+        "CLAUSULA OCTAVA - CLAUSULA PENAL PECUNIARIA: El incumplimiento de cualquiera de las obligaciones emanadas del presente contrato hara exigible a la parte incumplida el pago de una pena pecuniaria equivalente a tres (3) canones mensuales de arrendamiento vigentes, exigible ejecutivamente sin necesidad de requerimiento alguno.",
+        "",
+        "CLAUSULA NOVENA - RESTITUCION Y ENTREGA CON INVENTARIO: Al vencimiento del contrato o de sus prorrogas, el ARRENDATARIO restituira el inmueble en el mismo estado en que lo recibio, salvo el deterioro derivado del uso y goce legitimo, suscribiendo el Acta de Entrega e Inventario debidamente conciliada.",
+        "",
+        "CLAUSULA DECIMA - MERITO EJECUTIVO: El presente contrato presta merito ejecutivo para el cobro de canones, cuotas de administracion, servicios publicos insolutos y la clausula penal pecuniaria conforme al Codigo General del Proceso.",
+        "",
+        "CLAUSULA DECIMAPRIMERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este contrato puede ser suscrito mediante mecanismos de firma electronica certificada con plena validez juridica.",
+        extras,
+        "",
+        "ADVERTENCIA DE MINUTA Y ASESORIA VECY:",
+        "Este documento es un borrador estructural de contrato. Para la expedicion de polizas o fianzas colectivas de arrendamiento, analisis financiero de solvencia y blindaje contractual con todas las de la ley, contacte a VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
+      ].filter(Boolean).join("\n");
+    case "contrato_arrendamiento_comercial":
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `ARRENDADOR(A): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `ARRENDATARIO(A): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE / LOCAL COMERCIAL: ${direccion} (${ciudad})`,
+        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
+        "",
+        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL (CODIGO DE COMERCIO):",
+        "",
+        "CLAUSULA PRIMERA - OBJETO Y DESTINACION COMERCIAL: El ARRENDADOR entrega en arrendamiento el inmueble comercial, y el ARRENDATARIO lo destina exclusivamente para la explotacion de su actividad mercantil autorizada, cumpliendo todas las normas de uso de suelo, sanidad y policia.",
+        "",
+        `CLAUSULA SEGUNDA - CANON, IVA E INCREMENTOS: El canon mensual pactado es de ${valor} (mas IVA de conformidad con el Estatuto Tributario, si aplica). Las partes acuerdan un incremento anual pactado contractualmente al vencimiento de cada periodo de doce (12) meses.`,
+        "",
+        "CLAUSULA TERCERA - RENOVACION Y DESAHUCIO COMERCIAL (ARTS. 518 A 520 C.CO.): Cumplidos dos (2) anos consecutivos de ocupacion con el mismo establecimiento mercantil, el ARRENDATARIO tendra derecho a la renovacion del contrato salvo las causales taxativas de ley con desahucio previo no menor a seis (6) meses.",
+        "",
+        "CLAUSULA CUARTA - CESION Y SUBARRIENDO COMERCIAL (ART. 523 C.CO.): El ARRENDATARIO no podra subarrendar totalmente el local ni ceder el contrato sin autorizacion expresa del ARRENDADOR, salvo enajenacion del respectivo establecimiento de comercio en bloque.",
+        "",
+        "CLAUSULA QUINTA - CLAUSULA PENAL Y MERITO EJECUTIVO: El incumplimiento de las obligaciones contractuales facultara el cobro ejecutivo de la clausula penal pecuniaria pactada y la restitucion inmediata del inmueble.",
+        extras,
+        "",
+        "ADVERTENCIA DE ASESORIA VECY:",
+        "Minuta base comercial. Para asesoramiento de local, POT y estudio comercial, contacte a Eduardo Rivera y Jani Alves (+57 316 656 9719)."
+      ].filter(Boolean).join("\n");
+    case "contrato_corretaje":
+      return [
+        `LUGAR Y FECHA: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `EL COMITENTE (PROPIETARIO / CLIENTE): ${remitente} \u2014 Identificacion: ${docRem}`,
+        `EL CORREDOR INMOBILIARIO (VECY NETWORK): ${destinatario} \u2014 Identificacion: ${docDest}`,
+        `INMUEBLE CONSIGNADO: ${direccion} (${ciudad}) | VALOR COMERCIAL: ${valor}`,
+        "",
+        "CLAUSULADO DE CONTRATO DE CORRETAJE INMOBILIARIO (ARTS. 1340 A 1346 C.CO.):",
+        "",
+        "CLAUSULA PRIMERA - ENCARGO DE MEDIACION Y PROMOCION: EL COMITENTE confiere encargo mercantil al CORREDOR para la promocion, consecucion de interesados y mediacion en la venta o arrendamiento del bien inmueble consignado.",
+        "",
+        `CLAUSULA SEGUNDA - HONORARIOS Y COMISION PROFESIONAL: Al perfeccionarse la negociacion o suscribirse la promesa de compraventa / contrato de arrendamiento, EL COMITENTE cancelara a favor del CORREDOR los honorarios equivalentes al porcentaje comercial legal (3% urbano / 5% rural o campestre sobre el valor final de la transaccion).`,
+        "",
+        "CLAUSULA TERCERA - DOCTRINA COLABORATIVA VECY 40/20/40: Las partes reconocen la participacion de la red colaborativa VECY Network para la difusion del inmueble entre corredores certificados, garantizando transparencia y reparto ordenado de puntas.",
+        "",
+        "CLAUSULA CUARTA - RESERVA DE CLIENTES PRESENTADOS: Toda transaccion efectuada con clientes presentados por EL CORREDOR dentro de los doce (12) meses posteriores a la terminacion de este encargo causara el pago pleno de los honorarios pactados.",
+        extras,
+        "",
+        "MESA CENTRAL VECY BIENES RAICES: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/"
+      ].filter(Boolean).join("\n");
+    default:
+      return [
+        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
+        `PARTE A (PROMITENTE / ARRENDADOR / COMITENTE): ${remitente} \u2014 Documento: ${docRem}`,
+        `PARTE B (CONTRAPARTE / ARRENDATARIO / CORREDOR): ${destinatario} \u2014 Documento: ${docDest}`,
+        `INMUEBLE OBJETO DEL ACTO JURIDICO: ${direccion} (${ciudad})`,
+        `CUANTIA / VALOR DE LA OPERACION: ${valor}`,
+        "",
+        "CLAUSULADO GENERAL OBLIGACIONAL:",
+        "",
+        "PRIMERA - OBJETO Y VINCULACION JURIDICA: Las partes suscriben de buena fe exenta de culpa el presente instrumento juridico inmobiliario conforme a la legislacion civil y mercantil colombiana.",
+        "",
+        "SEGUNDA - SANEAMIENTO Y DEBIDA DILIGENCIA: El inmueble objeto del negocio se declara libre de embargos, pleitos pendientes, condiciones resolutorias o limitaciones no declaradas expresamente en el Certificado de Tradicion y Libertad.",
+        "",
+        "TERCERA - OBLIGACION DE ESCRITURACION Y CUMPLIMIENTO NOTARIAL: Las partes se obligan a concurrir en la fecha y notaria pactada para el perfeccionamiento de la respectiva escritura publica.",
+        "",
+        "CUARTA - CLAUSULA PENAL Y CUMPLIMIENTO: El incumplimiento grave de cualquiera de las obligaciones aqui pactadas dara lugar al cobro ejecutivo de las arras o clausula penal conforme al Articulo 1592 del Codigo Civil y Articulo 867 del Codigo de Comercio.",
+        "",
+        "QUINTA - MERITO EJECUTIVO: Las obligaciones dinerarias y de hacer contenidas en este contrato prestan merito ejecutivo pleno de conformidad con el Codigo General del Proceso.",
+        "",
+        "SEXTA - FIRMA ELECTRONICA Y PLENA VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento puede ser suscrito mediante firma electronica certificada con plena eficacia juridica." + extras,
+        "",
+        "ADVERTENCIA DE ASESORIA LEGAL VECY:",
+        "Minuta base estructural. Para elevarla a contrato definitivo con todas las de la ley y coordinar la notaria, contacte a Eduardo Rivera y Jani Alves en VECY BIENES RAICES (+57 316 656 9719 / +57 319 291 9978)."
+      ].filter(Boolean).join("\n");
+  }
+}
+function wrapTextToLines(text2, font, fontSize, maxWidth) {
+  const cleanPara = sanitizePdfWinAnsiText(text2);
+  if (!cleanPara) return [];
+  const words = cleanPara.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let currentLine = "";
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const width = font.widthOfTextAtSize(testLine, fontSize);
+    if (width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+}
+function drawJustifiedLine(page, line, font, fontSize, startX, y, maxWidth, isJustified = true, textColor = rgb2(0.12, 0.13, 0.16)) {
+  const words = line.split(/\s+/).filter(Boolean);
+  const normalSpaceWidth = font.widthOfTextAtSize(" ", fontSize);
+  if (words.length <= 1 || !isJustified) {
+    page.drawText(line, {
+      x: startX,
+      y,
+      size: fontSize,
+      font,
+      color: textColor
+    });
+    return;
+  }
+  let totalWordsWidth = 0;
+  for (const w of words) {
+    totalWordsWidth += font.widthOfTextAtSize(w, fontSize);
+  }
+  const numGaps = words.length - 1;
+  const extraSpace = maxWidth - totalWordsWidth;
+  const calculatedSpace = extraSpace / numGaps;
+  if (calculatedSpace > normalSpaceWidth * 2.6 || calculatedSpace < normalSpaceWidth * 0.7) {
+    page.drawText(line, {
+      x: startX,
+      y,
+      size: fontSize,
+      font,
+      color: textColor
+    });
+    return;
+  }
+  let curX = startX;
+  for (let wIdx = 0; wIdx < words.length; wIdx++) {
+    const w = words[wIdx];
+    page.drawText(w, {
+      x: curX,
+      y,
+      size: fontSize,
+      font,
+      color: textColor
+    });
+    curX += font.widthOfTextAtSize(w, fontSize) + calculatedSpace;
+  }
+}
+async function initVecyPdfScaffold(options) {
+  const { verificationCode, title, normativeFramework, headerSubtitle } = options;
+  const pdfDoc = await PDFDocument2.create();
+  const fontRegular = await pdfDoc.embedFont(StandardFonts2.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts2.HelveticaBold);
+  const pageWidth = 612;
+  const pageHeight = 792;
+  const marginX = 52;
+  const maxWidth = pageWidth - marginX * 2;
+  let logoImage = null;
+  const logoCandidates = [
+    path11.resolve(process.cwd(), "client/public/assets/logo_vecy_header.png"),
+    path11.resolve(process.cwd(), "assets/logo_vecy_header.png"),
+    path11.resolve(process.cwd(), "client/public/logo-vecy.png")
+  ];
+  for (const lp of logoCandidates) {
+    if (fs11.existsSync(lp)) {
+      try {
+        const logoBuf = fs11.readFileSync(lp);
+        logoImage = await pdfDoc.embedPng(logoBuf);
+        break;
+      } catch {
+      }
+    }
+  }
+  const drawHeader = (page, isFirstPage) => {
+    page.drawRectangle({
+      x: 0,
+      y: pageHeight - 74,
+      width: pageWidth,
+      height: 74,
+      color: rgb2(0.04, 0.04, 0.05)
+    });
+    page.drawRectangle({
+      x: 0,
+      y: pageHeight - 77,
+      width: pageWidth,
+      height: 3,
+      color: rgb2(0.83, 0.68, 0.21)
+    });
+    let textStartX = marginX;
+    if (logoImage) {
+      page.drawImage(logoImage, {
+        x: marginX,
+        y: pageHeight - 68,
+        width: 44,
+        height: 44
+      });
+      textStartX = marginX + 54;
+    }
+    page.drawText("VECY BIENES RAICES - CONSULTORIA LEGAL E IA INMOBILIARIA", {
+      x: textStartX,
+      y: pageHeight - 31,
+      size: 11.2,
+      font: fontBold,
+      color: rgb2(0.92, 0.78, 0.32)
+    });
+    page.drawText("Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/", {
+      x: textStartX,
+      y: pageHeight - 46,
+      size: 8.5,
+      font: fontRegular,
+      color: rgb2(0.88, 0.9, 0.94)
+    });
+    page.drawText(
+      sanitizePdfWinAnsiText(
+        headerSubtitle || `Radicado Documental: ${verificationCode} | Validez Notarial y Registral`
+      ),
+      {
+        x: textStartX,
+        y: pageHeight - 59,
+        size: 7.8,
+        font: fontRegular,
+        color: rgb2(0.72, 0.74, 0.78)
+      }
+    );
+    if (isFirstPage) {
+      const titleLines = wrapTextToLines(title, fontBold, 12.8, maxWidth);
+      let ty = pageHeight - 104;
+      for (const tLine of titleLines) {
+        page.drawText(tLine, {
+          x: marginX,
+          y: ty,
+          size: 12.8,
+          font: fontBold,
+          color: rgb2(0.08, 0.09, 0.12)
+        });
+        ty -= 16;
+      }
+      page.drawText(`Marco Normativo: ${sanitizePdfWinAnsiText(normativeFramework)}`, {
+        x: marginX,
+        y: ty - 2,
+        size: 8.8,
+        font: fontRegular,
+        color: rgb2(0.35, 0.38, 0.44)
+      });
+      page.drawLine({
+        start: { x: marginX, y: ty - 10 },
+        end: { x: pageWidth - marginX, y: ty - 10 },
+        thickness: 0.9,
+        color: rgb2(0.83, 0.68, 0.21)
+      });
+      return ty - 26;
+    }
+    return pageHeight - 96;
+  };
+  return { pdfDoc, fontRegular, fontBold, pageWidth, pageHeight, marginX, maxWidth, drawHeader };
+}
+async function stampVecyPageNumbersAndSave(params) {
+  const { pdfDoc, fontRegular, pageWidth, marginX, verificationCode, footerLabel } = params;
+  const allPages = pdfDoc.getPages();
+  const totalPages = allPages.length;
+  allPages.forEach((p, idx) => {
+    p.drawLine({
+      start: { x: marginX, y: 28 },
+      end: { x: pageWidth - marginX, y: 28 },
+      thickness: 0.5,
+      color: rgb2(0.82, 0.84, 0.88)
+    });
+    p.drawText(
+      sanitizePdfWinAnsiText(`Pagina ${idx + 1} de ${totalPages} - ${footerLabel} - Radicado: ${verificationCode}`),
+      {
+        x: marginX,
+        y: 16,
+        size: 7.4,
+        font: fontRegular,
+        color: rgb2(0.45, 0.47, 0.52)
+      }
+    );
+  });
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+async function generateLegalDocumentPdf(params) {
+  const meta = getLegalDocumentMetadata(params.tipoDocumento);
+  const title = sanitizePdfWinAnsiText(params.tituloPersonalizado || meta.title).toUpperCase();
+  const bodyContent = sanitizePdfWinAnsiText(params.cuerpoDocumento || buildDefaultLegalBody(params));
+  const verificationCode = `DOC-VECY-${crypto4.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  });
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+  const rawParagraphs = bodyContent.split(/\r?\n/);
+  for (let pIdx = 0; pIdx < rawParagraphs.length; pIdx++) {
+    const rawP = rawParagraphs[pIdx].trim();
+    if (!rawP) {
+      cursorY -= 8;
+      continue;
+    }
+    const isSectionHeader = /^(?:CLAUSULADO|DISPOSICIONES|ADVERTENCIA|REQUISITOS|CERTIFICACION)/i.test(rawP);
+    if (isSectionHeader) {
+      if (cursorY < 140) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      cursorY -= 8;
+      currentPage.drawText(rawP, {
+        x: marginX,
+        y: cursorY,
+        size: 11,
+        font: fontBold,
+        color: rgb2(0.06, 0.07, 0.1)
+      });
+      cursorY -= 16;
+      continue;
+    }
+    const clauseInlineMatch = rawP.match(/^(CLAUSULA\s+[A-ZÁÉÍÓÚ]+(?:\s*-\s*[^:]+)?:)\s*(.*)$/i);
+    if (clauseInlineMatch) {
+      const headingPart = clauseInlineMatch[1].trim();
+      const bodyPart = clauseInlineMatch[2].trim();
+      if (cursorY < 140) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      cursorY -= 8;
+      currentPage.drawText(headingPart, {
+        x: marginX,
+        y: cursorY,
+        size: 10.5,
+        font: fontBold,
+        color: rgb2(0.06, 0.07, 0.1)
+      });
+      cursorY -= 15;
+      if (bodyPart) {
+        const pLines2 = wrapTextToLines(bodyPart, fontRegular, 10.2, maxWidth);
+        for (let lIdx = 0; lIdx < pLines2.length; lIdx++) {
+          if (cursorY < 130) {
+            currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+            cursorY = drawHeader(currentPage, false);
+          }
+          const isLastLine = lIdx === pLines2.length - 1;
+          drawJustifiedLine(currentPage, pLines2[lIdx], fontRegular, 10.2, marginX, cursorY, maxWidth, !isLastLine);
+          cursorY -= 15.2;
+        }
+      }
+      continue;
+    }
+    const metaMatch = rawP.match(/^([A-ZÁÉÍÓÚ\s/()—-]+:)\s*(.*)$/);
+    if (metaMatch && metaMatch[1].length < 50 && !rawP.startsWith("- ")) {
+      if (cursorY < 130) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      const label = metaMatch[1];
+      const val = metaMatch[2];
+      const labelWidth = fontBold.widthOfTextAtSize(label, 10);
+      currentPage.drawText(label, {
+        x: marginX,
+        y: cursorY,
+        size: 10,
+        font: fontBold,
+        color: rgb2(0.12, 0.14, 0.18)
+      });
+      if (val) {
+        const valStartX = marginX + labelWidth + 4;
+        const availableWidth = maxWidth - labelWidth - 4;
+        const valLines = wrapTextToLines(val, fontRegular, 10, availableWidth);
+        for (let vIdx = 0; vIdx < valLines.length; vIdx++) {
+          if (vIdx > 0) {
+            cursorY -= 14.5;
+            if (cursorY < 130) {
+              currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+              cursorY = drawHeader(currentPage, false);
+            }
+          }
+          currentPage.drawText(valLines[vIdx], {
+            x: vIdx === 0 ? valStartX : marginX + 16,
+            y: cursorY,
+            size: 10,
+            font: fontRegular,
+            color: rgb2(0.15, 0.16, 0.2)
+          });
+        }
+      }
+      cursorY -= 15;
+      continue;
+    }
+    const isListItem = /^[-•*]\s+|\d+\.\s+/.test(rawP);
+    const pLines = wrapTextToLines(rawP, fontRegular, 10.2, maxWidth);
+    for (let lIdx = 0; lIdx < pLines.length; lIdx++) {
+      if (cursorY < 130) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        cursorY = drawHeader(currentPage, false);
+      }
+      const isLastLine = lIdx === pLines.length - 1;
+      const shouldJustify = !isListItem && !isLastLine;
+      drawJustifiedLine(
+        currentPage,
+        pLines[lIdx],
+        fontRegular,
+        10.2,
+        isListItem ? marginX + 8 : marginX,
+        cursorY,
+        isListItem ? maxWidth - 8 : maxWidth,
+        shouldJustify
+      );
+      cursorY -= 15.2;
+    }
+  }
+  if (cursorY < 210) {
+    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    cursorY = drawHeader(currentPage, false);
+  }
+  cursorY -= 26;
+  currentPage.drawLine({
+    start: { x: marginX, y: cursorY },
+    end: { x: marginX + 210, y: cursorY },
+    thickness: 0.9,
+    color: rgb2(0.2, 0.2, 0.25)
+  });
+  currentPage.drawLine({
+    start: { x: pageWidth - marginX - 210, y: cursorY },
+    end: { x: pageWidth - marginX, y: cursorY },
+    thickness: 0.9,
+    color: rgb2(0.2, 0.2, 0.25)
+  });
+  const remLabel = sanitizePdfWinAnsiText(params.nombreRemitente || "FIRMA PARTE A / REMITENTE");
+  const destLabel = sanitizePdfWinAnsiText(params.nombreDestinatario || "FIRMA PARTE B / DESTINATARIO");
+  currentPage.drawText(remLabel.substring(0, 38), {
+    x: marginX,
+    y: cursorY - 13,
+    size: 8.5,
+    font: fontBold,
+    color: rgb2(0.15, 0.15, 0.2)
+  });
+  currentPage.drawText("CC / NIT: ________________________", {
+    x: marginX,
+    y: cursorY - 25,
+    size: 8,
+    font: fontRegular,
+    color: rgb2(0.35, 0.35, 0.4)
+  });
+  currentPage.drawText(destLabel.substring(0, 38), {
+    x: pageWidth - marginX - 210,
+    y: cursorY - 13,
+    size: 8.5,
+    font: fontBold,
+    color: rgb2(0.15, 0.15, 0.2)
+  });
+  currentPage.drawText("CC / NIT: ________________________", {
+    x: pageWidth - marginX - 210,
+    y: cursorY - 25,
+    size: 8,
+    font: fontRegular,
+    color: rgb2(0.35, 0.35, 0.4)
+  });
+  const footerBoxY = 36;
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 70,
+    color: rgb2(0.96, 0.96, 0.98),
+    borderColor: rgb2(0.83, 0.68, 0.21),
+    borderWidth: 0.8
+  });
+  currentPage.drawText("GUIA RAPIDA DE FIRMA ELECTRONICA OFICIAL (LEY 527 DE 1999):", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb2(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Ingresa a https://autenticaciondigital.and.gov.co/ (Agencia Nacional Digital - Carpeta Ciudadana).",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.6,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Valida tu identidad o usa un firmador con estampado cronologico y OTP al celular/correo de las partes.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.6,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Codigo de trazabilidad VECY: ${verificationCode} | Asesoria Jur\xEDdica e Inmobiliaria: +57 316 656 9719`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.6,
+      font: fontBold,
+      color: rgb2(0.2, 0.22, 0.28)
+    }
+  );
+  try {
+    const qrDataUrl = await QRCode3.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?doc=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+  }
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Minuta Legal Inmobiliaria VECY BIENES RAICES"
+  });
+  const fileName = `${meta.defaultFileNamePrefix}_${verificationCode}.pdf`;
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+async function generateCtlStudyPdf(report, options) {
+  const meta = getLegalDocumentMetadata("estudio_titulos_snr");
+  const title = sanitizePdfWinAnsiText(
+    `${meta.title} - MATRICULA ${report.metadata.matriculaInmobiliaria}`
+  ).toUpperCase();
+  const verificationCode = `CTL-VECY-${crypto4.randomBytes(3).toString("hex").toUpperCase()}-2026`;
+  const {
+    pdfDoc,
+    fontRegular,
+    fontBold,
+    pageWidth,
+    pageHeight,
+    marginX,
+    maxWidth,
+    drawHeader
+  } = await initVecyPdfScaffold({
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework,
+    headerSubtitle: `Radicado SNR: ${verificationCode} | Estudio Juridico Preliminar (${report.sourceType})`
+  });
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = drawHeader(currentPage, true);
+  const ensureSpace = (minY = 92) => {
+    if (cursorY < minY) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      cursorY = drawHeader(currentPage, false);
+    }
+  };
+  const drawWrapped = (text2, opts) => {
+    const f = opts?.font ?? fontRegular;
+    const sz = opts?.size ?? 9.2;
+    const lh = opts?.lineHeight ?? sz + 4;
+    const col = opts?.color ?? rgb2(0.14, 0.16, 0.2);
+    const ind = opts?.indent ?? 0;
+    const lines = wrapTextToLines(text2, f, sz, maxWidth - ind);
+    for (const ln of lines) {
+      ensureSpace(opts?.minY ?? 70);
+      currentPage.drawText(ln, { x: marginX + ind, y: cursorY, size: sz, font: f, color: col });
+      cursorY -= lh;
+    }
+  };
+  const drawSectionBanner = (sectionTitle) => {
+    ensureSpace(110);
+    cursorY -= 6;
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: maxWidth,
+      height: 18,
+      color: rgb2(0.95, 0.96, 0.98)
+    });
+    currentPage.drawRectangle({
+      x: marginX,
+      y: cursorY - 4,
+      width: 3.5,
+      height: 18,
+      color: rgb2(0.83, 0.68, 0.21)
+    });
+    currentPage.drawText(sanitizePdfWinAnsiText(sectionTitle), {
+      x: marginX + 8,
+      y: cursorY + 1,
+      size: 9.6,
+      font: fontBold,
+      color: rgb2(0.08, 0.1, 0.14)
+    });
+    cursorY -= 18;
+  };
+  const verdictPalette = report.verdictCode === "VERDE" ? {
+    bg: rgb2(0.91, 0.98, 0.93),
+    border: rgb2(0.11, 0.55, 0.28),
+    dot: rgb2(0.11, 0.62, 0.31),
+    tag: "VEREDICTO [VERDE]: VIABLE PARA COMPRAVENTA Y CREDITO"
+  } : report.verdictCode === "AMARILLO" ? {
+    bg: rgb2(1, 0.97, 0.88),
+    border: rgb2(0.8, 0.55, 0.04),
+    dot: rgb2(0.86, 0.58, 0.05),
+    tag: "VEREDICTO [AMARILLO]: VIABLE CON SANEAMIENTO PREVIO EN ESCRITURA"
+  } : {
+    bg: rgb2(0.99, 0.92, 0.92),
+    border: rgb2(0.75, 0.14, 0.14),
+    dot: rgb2(0.82, 0.15, 0.15),
+    tag: "VEREDICTO [ROJO]: RIESGO CRITICO / BLOQUEO DE NEGOCIO"
+  };
+  const headlineLines = wrapTextToLines(report.riskHeadline, fontRegular, 9, maxWidth - 34);
+  const verdictBoxHeight = 32 + headlineLines.length * 13;
+  ensureSpace(verdictBoxHeight + 60);
+  const boxBottomY = cursorY - verdictBoxHeight + 10;
+  currentPage.drawRectangle({
+    x: marginX,
+    y: boxBottomY,
+    width: maxWidth,
+    height: verdictBoxHeight,
+    color: verdictPalette.bg,
+    borderColor: verdictPalette.border,
+    borderWidth: 1.2
+  });
+  currentPage.drawCircle({
+    x: marginX + 14,
+    y: cursorY - 5,
+    size: 5.5,
+    color: verdictPalette.dot
+  });
+  currentPage.drawText(sanitizePdfWinAnsiText(verdictPalette.tag), {
+    x: marginX + 26,
+    y: cursorY - 9,
+    size: 10.2,
+    font: fontBold,
+    color: verdictPalette.border
+  });
+  let vy = cursorY - 24;
+  for (const hLine of headlineLines) {
+    currentPage.drawText(hLine, {
+      x: marginX + 12,
+      y: vy,
+      size: 9,
+      font: fontRegular,
+      color: rgb2(0.14, 0.16, 0.2)
+    });
+    vy -= 13;
+  }
+  cursorY = boxBottomY - 14;
+  drawSectionBanner("1. IDENTIFICACION DEL FOLIO DE MATRICULA INMOBILIARIA (SNR)");
+  const m = report.metadata;
+  drawWrapped(`Matricula Inmobiliaria: ${m.matriculaInmobiliaria}   |   ORIP: ${m.orip}`, { font: fontBold });
+  drawWrapped(`Estado del Folio: ${m.estadoFolio}   |   Fecha Impresion CTL: ${m.fechaImpresion}`);
+  drawWrapped(`CHIP Catastral: ${m.chip}   |   Cedula Catastral: ${m.cedulaCatastral}`);
+  drawWrapped(`Ubicacion / Direccion: ${m.direccion} (${m.departamentoMunicipio})`);
+  if (options?.requestedBy) {
+    drawWrapped(`Solicitado por: ${options.requestedBy}   |   Fecha Analisis: ${report.analyzedAtIso.slice(0, 10)}`);
+  }
+  if (m.complementacionResumen) {
+    drawWrapped(`Complementacion / Antecedente: ${m.complementacionResumen}`, { size: 8.6, color: rgb2(0.28, 0.3, 0.36) });
+  }
+  drawSectionBanner("2. PROPIETARIOS ACTUALES Y DERECHOS DE DOMINIO");
+  if (m.propietariosActuales.length > 0) {
+    for (const owner of m.propietariosActuales) {
+      drawWrapped(
+        `- ${owner.nombre}${owner.identificacion ? ` (ID: ${owner.identificacion})` : ""}${owner.porcentaje ? ` - Participacion: ${owner.porcentaje}` : ""}${owner.tipoDerecho ? ` [${owner.tipoDerecho}]` : ""}`,
+        { indent: 6 }
+      );
+    }
+  } else {
+    drawWrapped("- No se identificaron titulares actuales con marca (X) en las paginas legibles.", { indent: 6 });
+  }
+  drawSectionBanner("3. AUDITORIA DE TRADICION (10 Y 20 ANOS) Y CONTROL DE FALSA TRADICION");
+  const tr = report.tradition;
+  drawWrapped(
+    `Tradicion 10 anos (Ley 791/2002): ${tr.tradicion10AnosContinua ? "CONTINUA Y ACREDITADA" : "INCOMPLETA / REQUIERE VALIDACION"}`,
+    { font: fontBold, indent: 6 }
+  );
+  drawWrapped(
+    `Tradicion 20 anos (Art. 2532 C.C.): ${tr.tradicion20AnosContinua ? "CONTINUA Y ACREDITADA" : "PARCIAL O FOLIO CON HISTORIAL < 20 ANOS"}`,
+    { font: fontBold, indent: 6 }
+  );
+  drawWrapped(
+    `Control Falsa Tradicion (Cod. 0600 / Derechos y Acciones): ${tr.tieneFalsaTradicion ? tr.falsaTradicionSaneada ? `DETECTADA HISTORICAMENTE EN ANOT. #${tr.anotacionesFalsaTradicion.join(", #")} (YA SANEADA)` : `ALERTA CRITICA VIGENTE EN ANOT. #${tr.anotacionesFalsaTradicion.join(", #")}` : "NO DETECTADA (DOMINIO PLENO)"}`,
+    {
+      font: fontBold,
+      indent: 6,
+      color: tr.tieneFalsaTradicion && !tr.falsaTradicionSaneada ? rgb2(0.75, 0.14, 0.14) : rgb2(0.14, 0.16, 0.2)
+    }
+  );
+  drawWrapped(`Resumen de Cadena: ${tr.cadenaDominioResumen}`, { indent: 6 });
+  for (const obs of tr.observacionesTradicion) {
+    drawWrapped(`* ${obs}`, { indent: 10, size: 8.7 });
+  }
+  drawSectionBanner("4. GRAVAMENES VIGENTES, LIMITACIONES Y CRUCE DE CANCELACIONES");
+  const allActive = [
+    ...report.alertasCriticasVigentes,
+    ...report.gravamenesVigentes,
+    ...report.limitacionesVigentes
+  ];
+  if (allActive.length > 0) {
+    for (const act of allActive) {
+      const prefix = act.estado === "ALERTA_CRITICA" ? "[CRITICA]" : "[VIGENTE]";
+      drawWrapped(
+        `${prefix} Anot. #${act.numero} (${act.fecha}${act.codigoNaturaleza ? ` | Cod. ${act.codigoNaturaleza}` : ""}): ${act.especificacion}`,
+        {
+          font: fontBold,
+          indent: 6,
+          color: act.estado === "ALERTA_CRITICA" ? rgb2(0.75, 0.14, 0.14) : rgb2(0.65, 0.42, 0.04)
+        }
+      );
+      drawWrapped(`Impacto: ${act.impactoJuridico}`, { indent: 14, size: 8.6 });
+    }
+  } else {
+    drawWrapped("No existen hipotecas, embargos, demandas ni limitaciones vigentes al cierre de este analisis.", {
+      indent: 6,
+      color: rgb2(0.11, 0.52, 0.26)
+    });
+  }
+  if (report.gravamenesCancelados.length > 0) {
+    cursorY -= 4;
+    drawWrapped("Gravamenes/Limitaciones Historicas ya Canceladas Registralmente:", { font: fontBold, indent: 6 });
+    for (const can of report.gravamenesCancelados) {
+      drawWrapped(
+        `- [CANCELADA] Anot. #${can.numero} (${can.especificacion}) -> Levantada en Anot. #${can.canceladaPorAnotacion ?? "posterior"}`,
+        { indent: 12, size: 8.6, color: rgb2(0.22, 0.35, 0.25) }
+      );
+    }
+  }
+  drawSectionBanner(`5. AUDITORIA ANOTACION POR ANOTACION (${report.auditoriaAnotaciones.length} ANOTACIONES)`);
+  if (report.auditoriaAnotaciones.length === 0) {
+    drawWrapped("No se encontraron anotaciones individuales legibles en el documento aportado.", { indent: 6 });
+  } else {
+    for (const item of report.auditoriaAnotaciones) {
+      const stTag = item.estado === "ALERTA_CRITICA" ? "[BLOQUEO/CRITICA]" : item.estado === "ACTIVA" ? "[VIGENTE]" : item.estado === "CANCELADA" ? "[CANCELADA]" : item.estado === "HISTORICA_TRADICION" ? "[TRADICION]" : "[INFO]";
+      drawWrapped(
+        `Anot. #${item.numero} | ${item.fecha} | Cod. ${item.codigoNaturaleza || "S/C"} | ${item.especificacion} -- ${stTag}`,
+        { font: fontBold, size: 8.8, indent: 4 }
+      );
+      const partiesLine = [item.de ? `De: ${item.de}` : "", item.a ? `A: ${item.a}` : ""].filter(Boolean).join("  |  ");
+      if (partiesLine) {
+        drawWrapped(partiesLine, { size: 8.3, indent: 12, color: rgb2(0.28, 0.3, 0.36) });
+      }
+      drawWrapped(`Criterio: ${item.impactoJuridico}`, { size: 8.4, indent: 12, color: rgb2(0.2, 0.22, 0.27) });
+      cursorY -= 3;
+    }
+  }
+  drawSectionBanner("6. RECOMENDACIONES NOTARIALES ACCIONABLES");
+  report.recomendacionesNotariales.forEach((rec, idx) => {
+    drawWrapped(`${idx + 1}. ${rec}`, { indent: 6, size: 8.9 });
+  });
+  if (report.documentosFaltantesOIncompletos.length > 0) {
+    cursorY -= 4;
+    drawWrapped("Validacion Documental Pendiente:", { font: fontBold, indent: 6, color: rgb2(0.7, 0.35, 0.05) });
+    for (const miss of report.documentosFaltantesOIncompletos) {
+      drawWrapped(`- ${miss}`, { indent: 12, size: 8.6 });
+    }
+  }
+  ensureSpace(125);
+  cursorY -= 10;
+  const footerBoxY = Math.max(46, cursorY - 76);
+  currentPage.drawRectangle({
+    x: marginX,
+    y: footerBoxY,
+    width: maxWidth,
+    height: 68,
+    color: rgb2(0.96, 0.96, 0.98),
+    borderColor: rgb2(0.83, 0.68, 0.21),
+    borderWidth: 0.9
+  });
+  currentPage.drawText("ALERTA DE RIESGO PATRIMONIAL Y ASESORIA NOTARIAL VECY BIENES RAICES:", {
+    x: marginX + 10,
+    y: footerBoxY + 52,
+    size: 8.2,
+    font: fontBold,
+    color: rgb2(0.12, 0.14, 0.2)
+  });
+  currentPage.drawText(
+    "1. Este concepto preliminar no reemplaza la revision fisica/notarial de escrituras y paz y salvos antes de firma.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 39,
+      size: 7.5,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    "2. Cierre blindado, saneamiento de falsa tradicion o levantamiento de gravamenes con Eduardo Rivera y Jani Alves.",
+    {
+      x: marginX + 10,
+      y: footerBoxY + 27,
+      size: 7.5,
+      font: fontRegular,
+      color: rgb2(0.25, 0.27, 0.32)
+    }
+  );
+  currentPage.drawText(
+    `3. Broker Oficial: +57 316 656 9719 | https://wa.me/573166569719 | Trazabilidad: ${verificationCode}`,
+    {
+      x: marginX + 10,
+      y: footerBoxY + 14,
+      size: 7.5,
+      font: fontBold,
+      color: rgb2(0.2, 0.22, 0.28)
+    }
+  );
+  try {
+    const qrDataUrl = await QRCode3.toDataURL(
+      `https://vecy-bienes-raices.vercel.app/?ctl=${verificationCode}`,
+      { margin: 1, width: 120 }
+    );
+    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
+    currentPage.drawImage(qrImage, {
+      x: pageWidth - marginX - 62,
+      y: footerBoxY + 6,
+      width: 56,
+      height: 56
+    });
+  } catch {
+  }
+  const pdfBuffer = await stampVecyPageNumbersAndSave({
+    pdfDoc,
+    fontRegular,
+    pageWidth,
+    marginX,
+    verificationCode,
+    footerLabel: "Estudio de Titulos SNR VECY BIENES RAICES"
+  });
+  const safeMat = sanitizePdfWinAnsiText(report.metadata.matriculaInmobiliaria || "FOLIO").replace(/[^A-Za-z0-9-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 28) || "FOLIO";
+  const fileName = `${meta.defaultFileNamePrefix}_${safeMat}_${verificationCode}.pdf`;
+  return {
+    pdfBuffer,
+    fileName,
+    verificationCode,
+    title,
+    normativeFramework: meta.normativeFramework
+  };
+}
+var init_legalDocumentPdfService = __esm({
+  "server/_core/jania/legalDocumentPdfService.ts"() {
+    "use strict";
+  }
+});
+
+// server/_core/ctlTitleStudyService.ts
+import zlib from "node:zlib";
+function normalizeUpperNoAccents(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+}
+function extractYearFromDateString(dateStr) {
+  const raw = String(dateStr || "");
+  const m = raw.match(/\b(19\d{2}|20\d{2})\b/);
+  if (!m) return null;
+  const yr = Number(m[1]);
+  return yr >= 1900 && yr <= 2100 ? yr : null;
+}
+function extractNatCode(codigo, especificacion) {
+  const combined = `${codigo || ""} ${especificacion || ""}`;
+  const m = combined.match(/\b(0[1-9]\d{2})\b/);
+  return m ? m[1] : void 0;
+}
+function isConceptualCtlQuestion(text2) {
+  const norm2 = normalizeUpperNoAccents(text2);
+  const asksConceptOrPrice = /\b(?:QUE\s+ES\s+(?:UN|EL|UNA|LA)?\s*(?:ESTUDIO\s+DE\s+TITULOS|FALSA\s+TRADICION|PATRIMONIO\s+DE\s+FAMILIA|AFECTACION\s+A\s+VIVIENDA|CERTIFICADO\s+DE\s+TRADICION|FOLIO\s+DE\s+MATRICULA)|PARA\s+QUE\s+SIRVE\s+(?:EL|UN)\s*(?:ESTUDIO\s+DE\s+TITULOS|CTL|CERTIFICADO\s+DE\s+TRADICION)|COMO\s+SE\s+(?:HACE|LEE|DESCARGA|SACA)\s+UN\s+(?:ESTUDIO\s+DE\s+TITULOS|CERTIFICADO\s+DE\s+TRADICION|CTL)|CUANTO\s+(?:CUESTA|VALE|COBRAN)\s+(?:UN|EL)\s+(?:ESTUDIO\s+DE\s+TITULOS|CERTIFICADO\s+DE\s+TRADICION)|QUE\s+MIRA\s+UN\s+BANCO)\b/.test(
+    norm2
+  );
+  return asksConceptOrPrice && !hasCtlTextMarkers(text2);
+}
+function hasCtlTextMarkers(text2) {
+  const raw = String(text2 || "");
+  if (raw.trim().length < 25) return false;
+  const norm2 = normalizeUpperNoAccents(raw);
+  const hasSnrHeader = /\bCERTIFICADO\s+DE\s+TRADICION(?:\s+Y\s+LIBERTAD)?\b/.test(norm2) && /\b(?:MATRICULA|ANOTACION|ESTADO\s+DEL\s+FOLIO|FECHA\s+DE\s+IMPRESION|ORIP|RADICACION|SUPERINTENDENCIA)\b/.test(
+    norm2
+  ) || /\bSUPERINTENDENCIA\s+DE\s+NOTARIADO\s+Y\s+REGISTRO\b/.test(norm2) && /\b(?:MATRICULA|ANOTACION|FOLIO|ORIP|CEDULA\s+CATASTRAL|CHIP)\b/.test(norm2) || /\bOFICINA\s+DE\s+REGISTRO\s+DE\s+INSTRUMENTOS\s+PUBLICOS\b/.test(norm2) || /\bNRO\.?\s*MATRICULA\b/.test(norm2) || /\bMATRICULA\s+INMOBILIARIA\s*[:#-]?\s*\d{2,3}[A-Z]?\s*-\s*\d{3,}\b/.test(norm2) || /\bESTADO\s+DEL\s+FOLIO\b/.test(norm2) && /\b(?:FECHA\s+DE\s+IMPRESION|CIRCULO\s+REGISTRAL|ORIP|PIN)\b/.test(norm2);
+  const hasAnnotationsStructure = /\bANOTACION\s*(?:[:#-]\s*)?(?:(?:NRO|NO\.?|#|NUMERO)\s*[:#-]?\s*)?0*\d{1,3}\b/.test(norm2) && /\b(?:ESPECIFICACION|NATURALEZA\s+JURIDICA|RADICACION|COMPRAVENTA|HIPOTECA|EMBARGO|PATRIMONIO|AFECTACION|FALSA\s+TRADICION|0[1-9]\d{2})\b/.test(
+    norm2
+  );
+  const multipleSnrCodes = (norm2.match(/\b0[1-9]\d{2}\s+[A-Z]{4,}/g) || []).length >= 2;
+  return hasSnrHeader || hasAnnotationsStructure || multipleSnrCodes;
+}
+function isExplicitCtlStudyRequest(text2) {
+  const raw = String(text2 || "").trim();
+  if (!raw) return false;
+  if (hasCtlTextMarkers(raw)) return true;
+  if (isConceptualCtlQuestion(raw)) return false;
+  const norm2 = normalizeUpperNoAccents(raw);
+  return /\b(?:HAZ(?:ME|NOS)?|REALIZA(?:R|ME|NOS)?|EJECUTA(?:R|ME|NOS)?|GENERA(?:R|ME|NOS)?|EMITE|PRACTICA(?:R|ME)?)\s+(?:UN\s+|EL\s+)?(?:ESTUDIO\s+DE\s+TITULOS|ANALISIS\s+(?:JURIDICO\s+)?DEL?\s*(?:CTL|CERTIFICADO\s+DE\s+TRADICION)|DICTAMEN\s+(?:DEL\s+)?(?:CTL|CERTIFICADO\s+DE\s+TRADICION))\b/.test(
+    norm2
+  ) || /\b(?:REVISA(?:R|ME|NOS)?|ANALIZA(?:R|ME|NOS)?|AUDITA(?:R|ME|NOS)?|ESTUDIA(?:R|ME|NOS)?|VERIFICA(?:R|ME|NOS)?)\s+(?:ESTE\s+|EL\s+|MI\s+|ESE\s+)?(?:CTL|CERTIFICADO\s+DE\s+TRADICION(?:\s+Y\s+LIBERTAD)?|FOLIO\s+DE\s+MATRICULA)\b/.test(
+    norm2
+  ) || /\b(?:ESTUDIO\s+DE\s+TITULOS)\s+(?:ADJUNT[OA]|DEL?\s+(?:PDF|ARCHIVO|INMUEBLE|APTO|APARTAMENTO|CASA|LOTE|FOLIO|CERTIFICADO))\b/.test(
+    norm2
+  ) || /\b(?:ADJUNT[OA]|TE\s+(?:ENVIO|MANDO|PASO|COMPARTO)|AQUI\s+(?:ESTA|TIENES|VA))\s+(?:EL\s+|MI\s+)?(?:CTL|CERTIFICADO\s+DE\s+TRADICION)\b/.test(
+    norm2
+  );
+}
+function extractTextSnippetsFromPdfBuffer(pdfBase64) {
+  if (!pdfBase64) return "";
+  try {
+    const rawBuf = Buffer.from(pdfBase64, "base64");
+    if (rawBuf.length < 10) return "";
+    const latin = rawBuf.toString("latin1");
+    const collectedChunks = [];
+    const extractLiteralText = (chunk) => {
+      const literals = [];
+      const parenRegex = /\(([^()\\]*(?:\\.[^()\\]*)*)\)/g;
+      let match;
+      while ((match = parenRegex.exec(chunk)) !== null) {
+        const inner = match[1].replace(/\\n/g, "\n").replace(/\\r/g, " ").replace(/\\t/g, " ").replace(/\\\(/g, "(").replace(/\\\)/g, ")").replace(/\\\\/g, "\\");
+        if (!/[\x00-\x08\x0E-\x1F]/.test(inner) && /[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ]{2,}/.test(inner)) {
+          literals.push(inner);
+        }
+      }
+      const hexRegex = /<([0-9A-Fa-f]{4,})>/g;
+      let hexMatch;
+      while ((hexMatch = hexRegex.exec(chunk)) !== null) {
+        const hexStr = hexMatch[1];
+        if (hexStr.length % 2 === 0 && hexStr.length <= 2e3) {
+          const decodedHex = Buffer.from(hexStr, "hex").toString("latin1").replace(/\0/g, "");
+          if (!/[\x00-\x08\x0E-\x1F]/.test(decodedHex) && /[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ]{2,}/.test(decodedHex)) {
+            literals.push(decodedHex);
+          }
+        }
+      }
+      return literals.length > 0 ? literals.join(" ") : "";
+    };
+    let searchPos = 0;
+    let totalExtractedLen = 0;
+    const MAX_LEN = 25e4;
+    while (searchPos < latin.length && totalExtractedLen < MAX_LEN) {
+      const streamIdx = latin.indexOf("stream", searchPos);
+      if (streamIdx === -1) break;
+      const dictLookback = latin.slice(Math.max(0, streamIdx - 320), streamIdx);
+      let dataStart = streamIdx + 6;
+      if (latin[dataStart] === "\r" && latin[dataStart + 1] === "\n") dataStart += 2;
+      else if (latin[dataStart] === "\n" || latin[dataStart] === "\r") dataStart += 1;
+      const endIdx = latin.indexOf("endstream", dataStart);
+      if (endIdx === -1) break;
+      searchPos = endIdx + 9;
+      if (/\/Subtype\s*\/Image\b/i.test(dictLookback)) {
+        continue;
+      }
+      const sliceBuf = rawBuf.subarray(dataStart, endIdx);
+      let decodedText = "";
+      try {
+        const inflated = zlib.inflateSync(sliceBuf);
+        decodedText = inflated.toString("latin1");
+      } catch {
+        decodedText = sliceBuf.toString("latin1");
+      }
+      const looksLikeContentStream = /\b(?:BT|ET|Tf|Tj|TJ|Td|TD|Tm)\b/.test(decodedText);
+      const cleanLit = looksLikeContentStream ? extractLiteralText(decodedText) : "";
+      if (cleanLit) {
+        collectedChunks.push(cleanLit);
+        totalExtractedLen += cleanLit.length;
+      } else if (/CERTIFICADO\s+DE\s+TRADICI|MATRICULA|ANOTACION|SUPERINTENDENCIA|ESTUDIO\s+DE\s+TITULOS/i.test(decodedText)) {
+        const plainAscii = decodedText.replace(/[^\x20-\x7E\xC0-\xFF\n\r]/g, " ");
+        collectedChunks.push(plainAscii);
+        totalExtractedLen += plainAscii.length;
+      }
+    }
+    if (collectedChunks.length === 0) {
+      const topLit = extractLiteralText(latin);
+      if (topLit) {
+        collectedChunks.push(topLit);
+      } else {
+        const readableLines = latin.replace(/[^\x20-\x7E\xC0-\xFF\n\r]/g, " ").replace(/[ ]{2,}/g, " ");
+        collectedChunks.push(readableLines.slice(0, 8e4));
+      }
+    }
+    return collectedChunks.join("\n").replace(/[ \t]{2,}/g, " ").trim();
+  } catch {
+    return "";
+  }
+}
+function parseCtlFromPlainText(rawText) {
+  const clean = String(rawText || "").replace(/\r\n/g, "\n").trim();
+  const isCtl = hasCtlTextMarkers(clean);
+  if (!isCtl) {
+    return {
+      esCertificadoTradicionLibertad: false,
+      razonNoEsCtl: "El texto no contiene encabezados o anotaciones caracter\xEDsticas de un Certificado de Tradici\xF3n y Libertad SNR.",
+      anotaciones: []
+    };
+  }
+  const pickField = (regex) => {
+    const m = clean.match(regex);
+    return m && m[1] ? m[1].replace(/\s+/g, " ").trim() : "";
+  };
+  const matriculaInmobiliaria = pickField(/(?:NRO\.?\s*MATR[IÍ]CULA|MATR[IÍ]CULA\s+INMOBILIARIA)\s*[:#-]?\s*([0-9A-Z]{2,4}\s*-\s*\d{3,10})/i) || pickField(/\b(\d{2,3}[NC]?\s*-\s*\d{4,9})\b/);
+  const orip = pickField(/(?:OFICINA\s+DE\s+REGISTRO(?:\s+DE\s+INSTRUMENTOS\s+P[UÚ]BLICOS)?|ORIP|C[IÍ]RCULO\s+REGISTRAL)\s*[:#-]?\s*([^\n]{3,80})/i);
+  const fechaImpresion = pickField(/FECHA\s+DE\s+IMPRESI[OÓ]N\s*[:#-]?\s*([^\n]{6,50})/i);
+  const estadoFolio = pickField(/ESTADO\s+DEL\s+FOLIO\s*[:#-]?\s*([^\n]{3,35})/i);
+  const departamentoMunicipio = pickField(/(?:DEPTO|DEPARTAMENTO)\s*[:#-]?\s*([^\n]{3,80})/i);
+  const chip = pickField(/\bCHIP\s*[:#-]?\s*([A-Z0-9-]{6,25})/i);
+  const cedulaCatastral = pickField(/(?:C[EÉ]DULA\s+CATASTRAL|REFERENCIA\s+CATASTRAL|C[OÓ]DIGO\s+CATASTRAL)\s*[:#-]?\s*([A-Z0-9-]{6,40})/i);
+  const direccion = pickField(/(?:DIRECCI[OÓ]N\s+(?:DEL\s+INMUEBLE)?|NOMENCLATURA)\s*[:#-]?\s*([^\n]{5,120})/i);
+  const complementacionResumen = pickField(/COMPLEMENTACI[OÓ]N\s*[:#-]?\s*([^\n]{10,450})/i);
+  const totalMatch = clean.match(/(?:NRO\s+TOTAL\s+DE\s+ANOTACIONES|TOTAL\s+ANOTACIONES)\s*[:#-]?\s*(\d{1,3})/i);
+  const totalAnotacionesReportadas = totalMatch ? Number(totalMatch[1]) : null;
+  const anotaciones = [];
+  const blockRegex = /(?:^|\n)\s*ANOTACI[OÓ]N\s*(?:[:#-]\s*)?(?:(?:NRO\.?|NO\.?|#|N[UÚ]MERO)\s*[:#-]?\s*)?0*(\d{1,3})\b([\s\S]*?)(?=(?:\n\s*ANOTACI[OÓ]N\s*(?:[:#-]\s*)?(?:(?:NRO\.?|NO\.?|#|N[UÚ]MERO)\s*[:#-]?\s*)?0*\d{1,3}\b)|$)/gi;
+  let blockMatch;
+  while ((blockMatch = blockRegex.exec(clean)) !== null) {
+    const numero = Number(blockMatch[1]);
+    const body = blockMatch[2] || "";
+    const fechaMatch = body.match(/FECHA\s*[:#-]?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})/i) || body.match(/\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b/);
+    const fecha = fechaMatch ? fechaMatch[1] : "";
+    const year = extractYearFromDateString(fecha || body);
+    const radMatch = body.match(/RADICACI[OÓ]N\s*[:#-]?\s*([A-Z0-9-]{4,35})/i);
+    const especMatch = body.match(
+      /(?:ESPECIFICACI[OÓ]N|NATURALEZA\s+JUR[IÍ]DICA|ACTO)\s*[:#-]?\s*([^\n]{4,180})/i
+    );
+    let especificacion = especMatch ? especMatch[1].trim() : "";
+    if (!especificacion) {
+      const codeLine = body.match(/\b(0[1-9]\d{2})\s+([A-ZÁÉÍÓÚÑ][^\n]{3,140})/i);
+      especificacion = codeLine ? `${codeLine[1]} ${codeLine[2].trim()}` : body.split("\n")[0]?.trim() || "ANOTACI\xD3N REGISTRADA";
+    }
+    const codigoNaturaleza = extractNatCode(especificacion, body);
+    const valorMatch = body.match(/VALOR\s*(?:ACTO)?\s*[:#-]?\s*(\$?\s*[\d.,]{4,25})/i);
+    const deMatch = body.match(/(?:^|\n)\s*DE\s*[:#-]?\s*([^\n]{3,220})/i);
+    const aMatch = body.match(/(?:^|\n)\s*A\s*[:#-]?\s*([^\n]{3,220})/i);
+    const cancelRefMatch = body.match(
+      /SE\s+CANCELA\s+(?:LA\s+)?ANOTACI[OÓ]N\s*(?:NRO\.?|NO\.?|#)?\s*0*(\d{1,3})/i
+    );
+    const aLine = aMatch ? aMatch[1].trim() : "";
+    const tieneXTitularDominio = /\bX\b|\(X\)|TITULAR\s+DE\s+DOMINIO/i.test(`${aLine} ${body}`);
+    anotaciones.push({
+      numero,
+      fecha: fecha || (year ? `${year}` : "Sin fecha legible"),
+      year,
+      radicacion: radMatch ? radMatch[1] : void 0,
+      codigoNaturaleza,
+      especificacion: especificacion.replace(/\s+/g, " ").trim(),
+      valor: valorMatch ? valorMatch[1].trim() : void 0,
+      de: deMatch ? deMatch[1].trim() : void 0,
+      a: aLine || void 0,
+      tieneXTitularDominio,
+      anotacionCanceladaRef: cancelRefMatch ? Number(cancelRefMatch[1]) : null
+    });
+  }
+  if (anotaciones.length === 0) {
+    const lineCodeRegex = /(?:^|\n)\s*(\d{1,3})[.)-]\s*(?:(\d{1,2}[-/]\d{1,2}[-/]\d{4})\s*[-|:]?\s*)?(0[1-9]\d{2})?\s*([^\n]{8,180})/g;
+    let lm;
+    while ((lm = lineCodeRegex.exec(clean)) !== null) {
+      const numero = Number(lm[1]);
+      const rest = lm[4].trim();
+      const fecha = lm[2] || (rest.match(/\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b/)?.[1] ?? "");
+      const code = lm[3] || extractNatCode(void 0, rest);
+      if (code || /\b(?:COMPRAVENTA|HIPOTECA|EMBARGO|PATRIMONIO|AFECTACION|FALSA\s+TRADICION|CANCELACION|SUCESION|USUFRUCTO|DEMANDA)\b/i.test(rest)) {
+        anotaciones.push({
+          numero,
+          fecha: fecha || "Sin fecha legible",
+          year: extractYearFromDateString(fecha || rest),
+          codigoNaturaleza: code,
+          especificacion: code && !rest.startsWith(code) ? `${code} ${rest}` : rest,
+          tieneXTitularDominio: /\bX\b|\(X\)/i.test(rest)
+        });
+      }
+    }
+  }
+  const propietariosActuales = [];
+  const propSectionMatch = clean.match(
+    /(?:PROPIETARIOS?\s+ACTUALES?|TITULARES?\s+DE\s+DOMINIO)\s*[:#-]?\s*([^\n]{4,220}(?:\n[^\n]{4,140}){0,4})/i
+  );
+  if (propSectionMatch) {
+    const lines = propSectionMatch[1].split("\n").map((l) => l.trim()).filter((l) => l.length > 3 && !/^ANOTACI[OÓ]N/i.test(l));
+    for (const line of lines) {
+      const pct = line.match(/(\d{1,3}(?:[.,]\d{1,2})?\s*%)/)?.[1];
+      const docId = line.match(/\b(?:CC|C\.C\.|NIT|CE)\s*[:#.]?\s*([\d.-]{5,15})/i)?.[1];
+      const nombre = line.replace(/(\d{1,3}(?:[.,]\d{1,2})?\s*%)/g, "").replace(/\b(?:CC|C\.C\.|NIT|CE)\s*[:#.]?\s*[\d.-]{5,15}/gi, "").replace(/\s{2,}/g, " ").trim();
+      if (nombre.length >= 3) {
+        propietariosActuales.push({
+          nombre,
+          identificacion: docId,
+          porcentaje: pct || void 0,
+          tipoDerecho: "Titular de dominio (X)"
+        });
+      }
+    }
+  }
+  return {
+    esCertificadoTradicionLibertad: true,
+    matriculaInmobiliaria: matriculaInmobiliaria || void 0,
+    orip: orip || void 0,
+    fechaImpresion: fechaImpresion || void 0,
+    estadoFolio: estadoFolio || void 0,
+    departamentoMunicipio: departamentoMunicipio || void 0,
+    chip: chip || void 0,
+    cedulaCatastral: cedulaCatastral || void 0,
+    direccion: direccion || void 0,
+    complementacionResumen: complementacionResumen || void 0,
+    totalAnotacionesReportadas,
+    propietariosActuales,
+    anotaciones
+  };
+}
+function classifyCtlAnnotation(ann) {
+  const code = (ann.codigoNaturaleza || extractNatCode(ann.codigoNaturaleza, ann.especificacion) || "").trim();
+  const norm2 = normalizeUpperNoAccents(`${code} ${ann.especificacion}`);
+  const isCancellation = (/^08(?:4[1-9]|[5-9]\d)/.test(code) || /\b(?:CANCELACION|LEVANTAMIENTO|DESEMBARGO|EXTINCION\s+DEL?\s+(?:USUFRUCTO|PATRIMONIO|GRAVAMEN|HIPOTECA|FIDEICOMISO)|RENUNCIA\s+(?:AL?\s+)?USUFRUCTO|CONSOLIDACION\s+(?:DEL\s+)?USUFRUCTO|TERMINACION\s+(?:DE\s+)?(?:AFECTACION|EMBARGO|DEMANDA))\b/.test(
+    norm2
+  )) && !/\bNO\s+CANCELADA\b/.test(norm2);
+  if (isCancellation) {
+    let target = "ANY";
+    if (/HIPOTECA|0205|0206|0215|0843/.test(norm2)) target = "GRAVAMEN_HIPOTECA";
+    else if (/EMBARGO|DESEMBARGO|042[7-9]|043\d|0841/.test(norm2)) target = "MEDIDA_CAUTELAR_EMBARGO";
+    else if (/DEMANDA|041[5-9]|0842/.test(norm2)) target = "MEDIDA_CAUTELAR_DEMANDA";
+    else if (/PATRIMONIO\s+DE\s+FAMILIA|031[5-7]|0845/.test(norm2)) target = "LIMITACION_PATRIMONIO_FAMILIA";
+    else if (/VIVIENDA\s+FAMILIAR|0304|0844/.test(norm2)) target = "LIMITACION_VIVIENDA_FAMILIAR";
+    else if (/CONDICION\s+RESOLUTORIA|PACTO|0309|031[01]/.test(norm2)) target = "LIMITACION_CONDICION_RESOLUTORIA";
+    else if (/USUFRUCTO|033[1-4]/.test(norm2)) target = "LIMITACION_USUFRUCTO";
+    else if (/SERVIDUMBRE|032[5-8]/.test(norm2)) target = "LIMITACION_SERVIDUMBRE";
+    else if (/FIDEICOMISO|031[2-4]/.test(norm2)) target = "LIMITACION_FIDEICOMISO";
+    else if (/PROHIBICION|EXTINCION|04[4-6]\d/.test(norm2)) target = "PROHIBICION_ENAJENAR";
+    return {
+      categoria: "CANCELACION",
+      cancelsTargetCategory: target,
+      impactoBase: "Extingue registralmente un gravamen, medida cautelar o limitaci\xF3n inscrita anteriormente."
+    };
+  }
+  if (/^06\d{2}/.test(code) || /\b(?:FALSA\s+TRADICION|DERECHOS\s+Y\s+ACCIONES|POSESION\s+(?:MATERIAL|INSCRITA)|VENTA\s+(?:DE\s+)?COSA\s+AJENA|DERECHOS\s+CUOTA\s+DE\s+POSESION|MEJORAS\s+EN\s+TERRENO\s+AJENO)\b/.test(
+    norm2
+  )) {
+    return {
+      categoria: "FALSA_TRADICION",
+      impactoBase: "ALERTA ROJA: No transfiere dominio pleno ni propiedad real inscrita (Art. 756 C.C. / C\xF3digo 0600). Inviable para cr\xE9dito hipotecario y alto riesgo patrimonial salvo saneamiento judicial/Ley 1561 posterior."
+    };
+  }
+  if (/^04(?:4\d|5\d|6\d)/.test(code) || /\b(?:EXTINCION\s+DE\s+DOMINIO|RESTITUCION\s+DE\s+TIERRAS|PROHIBICION\s+(?:DE\s+)?(?:ENAJENAR|TRANSFERIR)|SUSPENSION\s+(?:DEL\s+)?PODER\s+DISPOSITIVO|MEDIDA\s+CAUTELAR\s+(?:FISCALIA|PENAL))\b/.test(
+    norm2
+  )) {
+    return {
+      categoria: "PROHIBICION_ENAJENAR",
+      impactoBase: "BLOQUEO LEGAL: Restricci\xF3n o prohibici\xF3n absoluta de enajenar/disponer del inmueble o medida de extinci\xF3n/restituci\xF3n."
+    };
+  }
+  if (/^04(?:2[7-9]|3[0-5])/.test(code) || /\bEMBARGO\b/.test(norm2)) {
+    return {
+      categoria: "MEDIDA_CAUTELAR_EMBARGO",
+      impactoBase: "BLOQUEO JUR\xCDDICO (Art. 1521 C.C.): El bien est\xE1 fuera del comercio mientras el embargo permanezca vigente sin oficio de desembargo registrado."
+    };
+  }
+  if (/^041[5-9]/.test(code) || /\b(?:INSCRIPCION\s+DE\s+DEMANDA|DEMANDA\s+EN\s+PROCESO)\b/.test(norm2)) {
+    return {
+      categoria: "MEDIDA_CAUTELAR_DEMANDA",
+      impactoBase: "RIESGO LITIGIOSO (Art. 591 CGP): Quien adquiera el inmueble queda sujeto a las resultas del proceso judicial pendiente."
+    };
+  }
+  if (!/\b(?:ADJUDICACION|PARTICION|LIQUIDACION)\b/.test(norm2) && /\b(?:SUCESION\s+ILIQUIDA|DERECHOS\s+HERENCIALES|DERECHOS\s+SUCESORALES|APERTURA\s+(?:DE\s+)?SUCESION|JUICIO\s+DE\s+SUCESION)\b/.test(
+    norm2
+  )) {
+    return {
+      categoria: "SUCESION_ILIQUIDA",
+      impactoBase: "SUCESI\xD3N SIN LIQUIDAR: El inmueble a\xFAn integra masa herencial il\xEDquida o derechos sucesorales sin partici\xF3n/adjudicaci\xF3n registrada."
+    };
+  }
+  if (/^031[5-7]/.test(code) || /\bPATRIMONIO\s+DE\s+FAMILIA\b/.test(norm2)) {
+    return {
+      categoria: "LIMITACION_PATRIMONIO_FAMILIA",
+      impactoBase: "Limitaci\xF3n Ley 70/1931: Impide enajenaci\xF3n y cr\xE9dito hipotecario hasta su cancelaci\xF3n previa/simult\xE1nea (si existen hijos menores requiere autorizaci\xF3n judicial o de Defensor de Familia)."
+    };
+  }
+  if (/^0304/.test(code) || /\bAFECTACION\s+A\s+VIVIENDA\s+FAMILIAR\b/.test(norm2)) {
+    return {
+      categoria: "LIMITACION_VIVIENDA_FAMILIAR",
+      impactoBase: "Limitaci\xF3n Ley 258/1996: Requiere levantamiento/cancelaci\xF3n por escritura p\xFAblica firmada por ambos c\xF3nyuges o compa\xF1eros permanentes."
+    };
+  }
+  if (/^0309|^031[01]/.test(code) || /\b(?:CONDICION\s+RESOLUTORIA|PACTO\s+COMISORIO|PACTO\s+DE\s+RETROVENTA)\b/.test(norm2)) {
+    return {
+      categoria: "LIMITACION_CONDICION_RESOLUTORIA",
+      impactoBase: "Limitaci\xF3n al dominio: Debe cancelarse por escritura de cumplimiento o renuncia antes/simult\xE1neamente con la nueva venta."
+    };
+  }
+  if (/^033[1-4]/.test(code) || /\b(?:USUFRUCTO|DERECHO\s+DE\s+USO|DERECHO\s+DE\s+HABITACION|CONSTITUCION\s+DE\s+USUFRUCTO)\b/.test(norm2)) {
+    return {
+      categoria: "LIMITACION_USUFRUCTO",
+      impactoBase: "Desmembraci\xF3n del dominio: El propietario solo ostenta la nuda propiedad; el usufructuario debe concurrir a cancelar o renunciar en escritura."
+    };
+  }
+  if (/^032[5-8]/.test(code) || /\bSERVIDUMBRE\b/.test(norm2)) {
+    return {
+      categoria: "LIMITACION_SERVIDUMBRE",
+      impactoBase: "Limitaci\xF3n real: Gravamen permanente sobre franja/uso del predio; verificar en escritura de constituci\xF3n que no afecte \xE1rea edificable o acceso."
+    };
+  }
+  if ((/^031[2-4]/.test(code) || /\b(?:FIDEICOMISO\s+CIVIL|PROPIEDAD\s+FIDUCIARIA|CONSTITUCION\s+DE\s+FIDEICOMISO)\b/.test(norm2)) && !/\bFIDUCIA\s+MERCANTIL\b/.test(norm2)) {
+    return {
+      categoria: "LIMITACION_FIDEICOMISO",
+      impactoBase: "Limitaci\xF3n fiduciaria civil: El bien est\xE1 sujeto a condici\xF3n de restituci\xF3n a favor de fideicomisario; requiere revocatoria o comparecencia conjunta."
+    };
+  }
+  if (/^02(?:0[56]|15)/.test(code) || /\bHIPOTECA\b/.test(norm2)) {
+    return {
+      categoria: "GRAVAMEN_HIPOTECA",
+      impactoBase: "Gravamen real vigente (persecuci\xF3n sobre el inmueble): Exige paz y salvo del acreedor y cancelaci\xF3n simult\xE1nea o subrogaci\xF3n en escritura p\xFAblica."
+    };
+  }
+  if (/^01\d{2}/.test(code) || /\b(?:COMPRAVENTA|ADJUDICACION\s+(?:EN\s+)?SUCESION|LIQUIDACION\s+(?:DE\s+)?(?:LA\s+)?SOCIEDAD\s+CONYUGAL|DACION\s+EN\s+PAGO|DONACION|PERMUTA|REMATE|DECLARACION\s+DE\s+PERTENENCIA|SANEAMIENTO\s+(?:DE\s+)?TITULACION|LEY\s+1561|FIDUCIA\s+MERCANTIL|APORTE\s+EN\s+SOCIEDAD|ADJUDICACION\s+LIQUIDACION)\b/.test(
+    norm2
+  )) {
+    return {
+      categoria: "TRADICION_DOMINIO",
+      impactoBase: "Modo translaticio de dominio pleno."
+    };
+  }
+  if (/^0319|^0320|^09\d{2}/.test(code) || /\b(?:REGLAMENTO\s+DE\s+PROPIEDAD\s+HORIZONTAL|DESENGLOBE|ENGLOBE|LOTEO|ACLARACION|ACTUALIZACION\s+DE\s+NOMENCLATURA|CAMBIO\s+DE\s+RAZON\s+SOCIAL|COMPLEMENTACION|CORRECCION|ENGLOBAMIENTO|RELOTEO)\b/.test(
+    norm2
+  )) {
+    return {
+      categoria: "PROPIEDAD_HORIZONTAL_O_TRAMITE",
+      impactoBase: "Acto administrativo, urban\xEDstico o de reglamento de propiedad horizontal."
+    };
+  }
+  return {
+    categoria: "OTRA_ANOTACION",
+    impactoBase: "Anotaci\xF3n registral informativa o complementaria."
+  };
+}
+function tokenizeEntities(str) {
+  return normalizeUpperNoAccents(str).split(/[^A-Z0-9]+/).filter((t2) => t2.length >= 4 && !/^(?:LTDA|BANCO|SAS|CORP|NIT|PARA|CON|DEL|LOS|LAS)$/.test(t2));
+}
+function entitiesOverlap(a, b) {
+  const ta = tokenizeEntities(a);
+  const tb = new Set(tokenizeEntities(b));
+  return ta.some((w) => tb.has(w));
+}
+function inferOwnersFromAnnotations(annotations) {
+  if (annotations.length === 0) return [];
+  const sorted = [...annotations].sort((a, b) => a.numero - b.numero);
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const ann = sorted[i];
+    const cls = classifyCtlAnnotation(ann);
+    if ((cls.categoria === "TRADICION_DOMINIO" || cls.categoria === "FALSA_TRADICION") && ann.a && ann.a.trim().length >= 3) {
+      const parts = ann.a.split(/\n|;|(?=\b(?:CC|NIT|CE)\b)/i).map((p) => p.replace(/\bX\b/g, "").trim()).filter((p) => p.length >= 3);
+      const list = [];
+      for (const p of parts.slice(0, 6)) {
+        const pct = p.match(/(\d{1,3}(?:[.,]\d{1,2})?\s*%)/)?.[1];
+        const cleanName = p.replace(/(\d{1,3}(?:[.,]\d{1,2})?\s*%)/g, "").trim();
+        if (cleanName.length >= 3) {
+          list.push({
+            nombre: cleanName,
+            porcentaje: pct || (parts.length === 1 ? "100%" : void 0),
+            tipoDerecho: cls.categoria === "FALSA_TRADICION" ? "Falsa tradici\xF3n (sin dominio pleno)" : ann.tieneXTitularDominio ? "Titular de dominio (X)" : "Adquirente en \xFAltima tradici\xF3n"
+          });
+        }
+      }
+      if (list.length > 0) return list;
+    }
+  }
+  return [];
+}
+function auditCtlParsedDocument(parsed, sourceType = "PDF") {
+  const sorted = [...parsed.anotaciones || []].sort((a, b) => a.numero - b.numero);
+  const auditItems = [];
+  const auditByNumber = /* @__PURE__ */ new Map();
+  const encumbranceCategories = /* @__PURE__ */ new Set([
+    "GRAVAMEN_HIPOTECA",
+    "MEDIDA_CAUTELAR_EMBARGO",
+    "MEDIDA_CAUTELAR_DEMANDA",
+    "PROHIBICION_ENAJENAR",
+    "LIMITACION_PATRIMONIO_FAMILIA",
+    "LIMITACION_VIVIENDA_FAMILIAR",
+    "LIMITACION_CONDICION_RESOLUTORIA",
+    "LIMITACION_USUFRUCTO",
+    "LIMITACION_SERVIDUMBRE",
+    "LIMITACION_FIDEICOMISO",
+    "SUCESION_ILIQUIDA",
+    "FALSA_TRADICION"
+  ]);
+  for (const ann of sorted) {
+    const cls = classifyCtlAnnotation(ann);
+    const annYear = ann.year ?? extractYearFromDateString(ann.fecha);
+    if (!ann.year && annYear) ann.year = annYear;
+    if (cls.categoria === "CANCELACION") {
+      let targetItem;
+      if (ann.anotacionCanceladaRef) {
+        const candidate = auditByNumber.get(ann.anotacionCanceladaRef);
+        if (candidate && (candidate.estado === "ACTIVA" || candidate.estado === "ALERTA_CRITICA")) {
+          targetItem = candidate;
+        }
+      }
+      if (!targetItem) {
+        const candidates = [...auditItems].reverse().filter(
+          (item2) => (item2.estado === "ACTIVA" || item2.estado === "ALERTA_CRITICA") && encumbranceCategories.has(item2.categoria) && (cls.cancelsTargetCategory === "ANY" || item2.categoria === cls.cancelsTargetCategory)
+        );
+        if (candidates.length > 0) {
+          targetItem = candidates.find(
+            (c) => entitiesOverlap(`${ann.de || ""} ${ann.a || ""}`, `${c.de || ""} ${c.a || ""}`) || entitiesOverlap(ann.especificacion, c.especificacion)
+          ) || candidates[0];
+        }
+      }
+      if (targetItem) {
+        targetItem.estado = "CANCELADA";
+        targetItem.canceladaPorAnotacion = ann.numero;
+        targetItem.impactoJuridico = `${targetItem.impactoJuridico} [SANEADA: Cancelada en Anotaci\xF3n #${ann.numero}]`;
+      }
+      const cancelAudit = {
+        numero: ann.numero,
+        fecha: ann.fecha || "Sin fecha",
+        codigoNaturaleza: ann.codigoNaturaleza || extractNatCode(void 0, ann.especificacion),
+        especificacion: ann.especificacion,
+        categoria: "CANCELACION",
+        estado: "INFORMATIVA",
+        cancelaAnotacion: targetItem?.numero ?? ann.anotacionCanceladaRef ?? null,
+        de: ann.de,
+        a: ann.a,
+        impactoJuridico: targetItem ? `Cancela registralmente la Anotaci\xF3n #${targetItem.numero} (${targetItem.especificacion}).` : cls.impactoBase
+      };
+      auditItems.push(cancelAudit);
+      auditByNumber.set(ann.numero, cancelAudit);
+      continue;
+    }
+    const upperSpec = normalizeUpperNoAccents(`${ann.codigoNaturaleza || ""} ${ann.especificacion}`);
+    const curesFalsaTradicion = /^0151/.test(ann.codigoNaturaleza || "") || /\b(?:DECLARACION\s+DE\s+PERTENENCIA|SANEAMIENTO\s+(?:DE\s+)?TITULACION|LEY\s+1561|PRESCRIPCION\s+ADQUISITIVA)\b/.test(
+      upperSpec
+    );
+    const curesSucesion = /^0101/.test(ann.codigoNaturaleza || "") || /\b(?:ADJUDICACION\s+(?:EN\s+)?SUCESION|PARTICION\s+(?:DE\s+)?HERENCIA)\b/.test(upperSpec);
+    if (curesFalsaTradicion) {
+      for (const prev of auditItems) {
+        if (prev.categoria === "FALSA_TRADICION" && prev.estado !== "CANCELADA") {
+          prev.estado = "CANCELADA";
+          prev.canceladaPorAnotacion = ann.numero;
+          prev.impactoJuridico += ` [SANEADA por t\xEDtulo pleno en Anotaci\xF3n #${ann.numero}]`;
+        }
+      }
+    }
+    if (curesSucesion) {
+      for (const prev of auditItems) {
+        if (prev.categoria === "SUCESION_ILIQUIDA" && prev.estado !== "CANCELADA") {
+          prev.estado = "CANCELADA";
+          prev.canceladaPorAnotacion = ann.numero;
+          prev.impactoJuridico += ` [LIQUIDADA en Anotaci\xF3n #${ann.numero}]`;
+        }
+      }
+    }
+    const explicitCancelledInDoc = /\b(?:CANCELADA|INVALIDA|ANULADA|EXTINGUIDA)\b/i.test(ann.estadoTexto || "");
+    let estado = "INFORMATIVA";
+    if (explicitCancelledInDoc) {
+      estado = "CANCELADA";
+    } else if (cls.categoria === "FALSA_TRADICION" || cls.categoria === "MEDIDA_CAUTELAR_EMBARGO" || cls.categoria === "MEDIDA_CAUTELAR_DEMANDA" || cls.categoria === "PROHIBICION_ENAJENAR" || cls.categoria === "SUCESION_ILIQUIDA") {
+      estado = "ALERTA_CRITICA";
+    } else if (cls.categoria === "GRAVAMEN_HIPOTECA" || cls.categoria === "LIMITACION_PATRIMONIO_FAMILIA" || cls.categoria === "LIMITACION_VIVIENDA_FAMILIAR" || cls.categoria === "LIMITACION_CONDICION_RESOLUTORIA" || cls.categoria === "LIMITACION_USUFRUCTO" || cls.categoria === "LIMITACION_SERVIDUMBRE" || cls.categoria === "LIMITACION_FIDEICOMISO") {
+      estado = "ACTIVA";
+    } else if (cls.categoria === "TRADICION_DOMINIO") {
+      estado = "HISTORICA_TRADICION";
+    }
+    const item = {
+      numero: ann.numero,
+      fecha: ann.fecha || "Sin fecha",
+      codigoNaturaleza: ann.codigoNaturaleza || extractNatCode(void 0, ann.especificacion),
+      especificacion: ann.especificacion,
+      categoria: cls.categoria,
+      estado,
+      de: ann.de,
+      a: ann.a,
+      impactoJuridico: cls.impactoBase
+    };
+    auditItems.push(item);
+    auditByNumber.set(ann.numero, item);
+  }
+  const alertasCriticasVigentes = auditItems.filter((a) => a.estado === "ALERTA_CRITICA");
+  const gravamenesVigentes = auditItems.filter(
+    (a) => a.estado === "ACTIVA" && a.categoria === "GRAVAMEN_HIPOTECA"
+  );
+  const limitacionesVigentes = auditItems.filter(
+    (a) => a.estado === "ACTIVA" && a.categoria !== "GRAVAMEN_HIPOTECA"
+  );
+  const gravamenesCancelados = auditItems.filter(
+    (a) => a.estado === "CANCELADA" && encumbranceCategories.has(a.categoria)
+  );
+  const refYear = extractYearFromDateString(parsed.fechaImpresion) || (/* @__PURE__ */ new Date()).getFullYear();
+  const years = sorted.map((a) => a.year ?? extractYearFromDateString(a.fecha)).filter((y) => typeof y === "number" && y >= 1900);
+  const compYear = extractYearFromDateString(parsed.complementacionResumen);
+  const earliestYear = years.length > 0 ? compYear && compYear < Math.min(...years) ? compYear : Math.min(...years) : compYear;
+  const aniosHistorialEnFolio = earliestYear ? Math.max(0, refYear - earliestYear) : null;
+  const anotacionesFalsa = auditItems.filter((a) => a.categoria === "FALSA_TRADICION").map((a) => a.numero);
+  const falsaTradicionActiva = auditItems.some(
+    (a) => a.categoria === "FALSA_TRADICION" && a.estado === "ALERTA_CRITICA"
+  );
+  const tieneFalsaTradicion = anotacionesFalsa.length > 0;
+  const falsaTradicionSaneada = tieneFalsaTradicion && !falsaTradicionActiva;
+  const hasTradicionPlena = auditItems.some((a) => a.categoria === "TRADICION_DOMINIO");
+  const firstParsedNum = sorted[0]?.numero ?? null;
+  const documentosFaltantesOIncompletos = [];
+  if (sorted.length === 0) {
+    documentosFaltantesOIncompletos.push(
+      "No fue posible leer anotaciones estructuradas del certificado; enviar el PDF original descargado de la SNR o fotograf\xEDas legibles de todas las p\xE1ginas."
+    );
+  } else if (firstParsedNum && firstParsedNum > 1) {
+    documentosFaltantesOIncompletos.push(
+      `Las p\xE1ginas recibidas inician en la Anotaci\xF3n #${firstParsedNum}; faltan las anotaciones #1 a #${firstParsedNum - 1} para verificar el historial completo.`
+    );
+  }
+  if (parsed.totalAnotacionesReportadas && sorted.length < parsed.totalAnotacionesReportadas && sorted.length > 0) {
+    documentosFaltantesOIncompletos.push(
+      `El folio reporta ${parsed.totalAnotacionesReportadas} anotaciones, pero solo se procesaron ${sorted.length}. Verificar p\xE1ginas intermedias o finales.`
+    );
+  }
+  const mentionsFolioMatriz = /\b(?:FOLIO\s+MATRIZ|DESENGLOBE|MATRIZ|SEGREGACION)\b/i.test(
+    `${parsed.complementacionResumen || ""} ${sorted.map((s) => s.especificacion).join(" ")}`
+  );
+  const observacionesTradicion = [];
+  if (falsaTradicionActiva) {
+    observacionesTradicion.push(
+      `ALERTA ROJA FALSA TRADICI\xD3N (C\xF3d. 0600 / Derechos y Acciones) vigente en anotaci\xF3n(es) #${anotacionesFalsa.join(", #")}. No acredita dominio pleno.`
+    );
+  } else if (falsaTradicionSaneada) {
+    observacionesTradicion.push(
+      `Falsa tradici\xF3n hist\xF3rica en anotaci\xF3n(es) #${anotacionesFalsa.join(", #")}, saneada posteriormente mediante t\xEDtulo de dominio pleno.`
+    );
+  }
+  const tradicion10AnosContinua = !falsaTradicionActiva && hasTradicionPlena && (aniosHistorialEnFolio !== null && aniosHistorialEnFolio >= 10 || mentionsFolioMatriz);
+  const tradicion20AnosContinua = !falsaTradicionActiva && hasTradicionPlena && aniosHistorialEnFolio !== null && aniosHistorialEnFolio >= 20;
+  if (aniosHistorialEnFolio !== null) {
+    observacionesTradicion.push(
+      `Historial verificable en folio/complementaci\xF3n desde ${earliestYear} (${aniosHistorialEnFolio} a\xF1os al corte ${refYear}).`
+    );
+  } else {
+    observacionesTradicion.push(
+      "No se detect\xF3 a\xF1o legible en las anotaciones iniciales para cuantificar el rango exacto de 10 y 20 a\xF1os."
+    );
+  }
+  if (aniosHistorialEnFolio !== null && aniosHistorialEnFolio < 20 && mentionsFolioMatriz) {
+    observacionesTradicion.push(
+      "El folio proviene de desenglobe/matriz reciente; para estudio de t\xEDtulos bancario estricto a 20 a\xF1os debe revisarse tambi\xE9n el folio de mayor extensi\xF3n (matriz)."
+    );
+  }
+  const traditionCount = auditItems.filter((a) => a.categoria === "TRADICION_DOMINIO").length;
+  const cadenaDominioResumen = falsaTradicionActiva ? `Cadena interrumpida o defectuosa por FALSA TRADICI\xD3N sin sanear (${traditionCount} actos de dominio pleno detectados).` : hasTradicionPlena ? `Cadena traslaticia continua de dominio pleno (${traditionCount} acto(s) de tradici\xF3n identificados, ${gravamenesCancelados.length} cancelaciones cruzadas).` : "No se identificaron actos traslaticios de dominio pleno en el fragmento analizado.";
+  const propietariosFinal = parsed.propietariosActuales && parsed.propietariosActuales.length > 0 ? parsed.propietariosActuales : inferOwnersFromAnnotations(sorted);
+  const estadoFolioUpper = normalizeUpperNoAccents(parsed.estadoFolio || "ACTIVO");
+  const isFolioClosedOrVoid = /\b(?:CERRADO|ANULADO)\b/.test(estadoFolioUpper);
+  if (isFolioClosedOrVoid) {
+    documentosFaltantesOIncompletos.push(
+      `El folio registra estado "${parsed.estadoFolio}"; debe solicitarse el nuevo folio derivado o matr\xEDcula abierta vigente.`
+    );
+  }
+  const metadata = {
+    matriculaInmobiliaria: parsed.matriculaInmobiliaria || "No legible / Por confirmar en folio",
+    orip: parsed.orip || "No especificada en el fragmento",
+    fechaImpresion: parsed.fechaImpresion || "No legible / Verificar vigencia (< 30 d\xEDas)",
+    estadoFolio: parsed.estadoFolio || "ACTIVO (inferido)",
+    departamentoMunicipio: parsed.departamentoMunicipio || "Colombia",
+    chip: parsed.chip || "No reportado en CTL",
+    cedulaCatastral: parsed.cedulaCatastral || "No reportada en CTL",
+    direccion: parsed.direccion || "No especificada en encabezado",
+    tipoPredio: parsed.tipoPredio || "Urbano / Inmueble registrado",
+    complementacionResumen: parsed.complementacionResumen || "Sin complementaci\xF3n detallada en p\xE1ginas enviadas.",
+    propietariosActuales: propietariosFinal,
+    totalAnotacionesReportadas: parsed.totalAnotacionesReportadas ?? (sorted.length || null)
+  };
+  const recomendacionesNotariales = [];
+  if (falsaTradicionActiva) {
+    recomendacionesNotariales.push(
+      "BLOQUEO POR FALSA TRADICI\xD3N (C\xF3d. 0600): Abstenerse de firmar promesa o compraventa directa de dominio pleno. Exigir saneamiento previo de la titulaci\xF3n (Ley 1561 de 2012 o proceso de declaraci\xF3n de pertenencia)."
+    );
+  }
+  if (alertasCriticasVigentes.some((a) => a.categoria === "MEDIDA_CAUTELAR_EMBARGO")) {
+    recomendacionesNotariales.push(
+      "BLOQUEO POR EMBARGO VIGENTE (Art. 1521 C.C.): Existe objeto il\xEDcito en la enajenaci\xF3n. Exigir pago de la obligaci\xF3n, auto judicial de terminaci\xF3n/desembargo y registro efectivo del oficio de levantamiento en la ORIP antes de escriturar."
+    );
+  }
+  if (alertasCriticasVigentes.some((a) => a.categoria === "MEDIDA_CAUTELAR_DEMANDA")) {
+    recomendacionesNotariales.push(
+      "INSCRIPCI\xD3N DE DEMANDA VIGENTE (Art. 591 CGP): NO escriturar hasta que el vendedor aporte constancia de terminaci\xF3n del proceso y cancelaci\xF3n registral de la medida cautelar."
+    );
+  }
+  if (alertasCriticasVigentes.some((a) => a.categoria === "PROHIBICION_ENAJENAR")) {
+    recomendacionesNotariales.push(
+      "PROHIBICI\xD3N DE ENAJENAR / MEDIDA PENAL O VIS-VIP: Inmueble impedido para transferencia; validar levantamiento oficial ante entidad competente."
+    );
+  }
+  if (alertasCriticasVigentes.some((a) => a.categoria === "SUCESION_ILIQUIDA")) {
+    recomendacionesNotariales.push(
+      "SUCESI\xD3N IL\xCDQUIDA: Culminar primero el tr\xE1mite sucesoral (notarial o judicial) y registrar la escritura/sentencia de adjudicaci\xF3n (C\xF3d. 0101) antes de vender."
+    );
+  }
+  if (gravamenesVigentes.length > 0) {
+    const nums = gravamenesVigentes.map((g) => `#${g.numero}`).join(", ");
+    recomendacionesNotariales.push(
+      `CANCELACI\xD3N SIMULT\xC1NEA DE HIPOTECA (${nums}): Solicitar certificaci\xF3n de saldo y paz y salvo al acreedor hipotecario y otorgar minuta de cancelaci\xF3n simult\xE1nea o subrogaci\xF3n bancaria en la misma escritura p\xFAblica.`
+    );
+  }
+  if (limitacionesVigentes.some((l) => l.categoria === "LIMITACION_PATRIMONIO_FAMILIA")) {
+    recomendacionesNotariales.push(
+      "LEVANTAMIENTO DE PATRIMONIO DE FAMILIA (Ley 70/1931): Debe cancelarse mediante escritura p\xFAblica; si existen hijos menores de edad, exige autorizaci\xF3n previa de Juez de Familia o Defensor de Familia (ICBF)."
+    );
+  }
+  if (limitacionesVigentes.some((l) => l.categoria === "LIMITACION_VIVIENDA_FAMILIAR")) {
+    recomendacionesNotariales.push(
+      "CANCELACI\xD3N DE AFECTACI\xD3N A VIVIENDA FAMILIAR (Ley 258/1996): Exigir la comparecencia y firma de AMBOS c\xF3nyuges o compa\xF1eros permanentes en la escritura de levantamiento/compraventa."
+    );
+  }
+  if (limitacionesVigentes.some((l) => l.categoria === "LIMITACION_CONDICION_RESOLUTORIA")) {
+    recomendacionesNotariales.push(
+      "CONDICI\xD3N RESOLUTORIA VIGENTE: Exigir comparecencia del vendedor anterior o acreedor en escritura para declarar cumplido el pago/obligaci\xF3n y cancelar la condici\xF3n."
+    );
+  }
+  if (limitacionesVigentes.some((l) => l.categoria === "LIMITACION_USUFRUCTO")) {
+    recomendacionesNotariales.push(
+      "USUFRUCTO VIGENTE: El titular solo ostenta nuda propiedad; debe concurrir el usufructuario a renunciar/cancelar el usufructo en la misma escritura (o aportar registro civil de defunci\xF3n si falleci\xF3)."
+    );
+  }
+  if (limitacionesVigentes.some((l) => l.categoria === "LIMITACION_FIDEICOMISO")) {
+    recomendacionesNotariales.push(
+      "FIDEICOMISO CIVIL VIGENTE: Requiere revocatoria expresa o comparecencia del constituyente/fiduciario y fideicomisario conforme a la escritura constitutiva."
+    );
+  }
+  if (limitacionesVigentes.some((l) => l.categoria === "LIMITACION_SERVIDUMBRE")) {
+    recomendacionesNotariales.push(
+      "SERVIDUMBRE INSCRITA: Revisar escritura de constituci\xF3n para validar ubicaci\xF3n exacta y confirmar que no restringe el uso proyectado."
+    );
+  }
+  let verdictCode = "VERDE";
+  let verdictLabel = "\u{1F7E2} VIABLE PARA COMPRAVENTA Y CR\xC9DITO";
+  let verdictEmoji = "\u{1F7E2}";
+  let riskHeadline = "Folio saneado con cadena traslaticia de dominio pleno y sin grav\xE1menes o medidas cautelares vigentes.";
+  if (alertasCriticasVigentes.length > 0 || isFolioClosedOrVoid || sorted.length === 0) {
+    verdictCode = "ROJO";
+    verdictLabel = "\u{1F534} RIESGO CR\xCDTICO / BLOQUEO DE NEGOCIO";
+    verdictEmoji = "\u{1F534}";
+    riskHeadline = falsaTradicionActiva ? "Se detect\xF3 FALSA TRADICI\xD3N (C\xF3d. 0600 / derechos y acciones sin dominio pleno) o bloqueo registral cr\xEDtico." : sorted.length === 0 ? "No fue posible verificar las anotaciones registrales del certificado para certificar viabilidad." : `Existen ${alertasCriticasVigentes.length} alerta(s) cr\xEDtica(s) vigente(s) (embargo, demanda, prohibici\xF3n o sucesi\xF3n il\xEDquida) que impiden el cierre inmediato.`;
+  } else if (gravamenesVigentes.length > 0 || limitacionesVigentes.length > 0 || documentosFaltantesOIncompletos.length > 0 || !tradicion10AnosContinua) {
+    verdictCode = "AMARILLO";
+    verdictLabel = "\u{1F7E1} VIABLE CON SANEAMIENTO PREVIO EN ESCRITURA";
+    verdictEmoji = "\u{1F7E1}";
+    riskHeadline = gravamenesVigentes.length > 0 || limitacionesVigentes.length > 0 ? `Presenta ${gravamenesVigentes.length + limitacionesVigentes.length} gravamen(es)/limitaci\xF3n(es) vigente(s) subsanables mediante escritura de cancelaci\xF3n simult\xE1nea o autorizaci\xF3n legal.` : "Tradici\xF3n sin grav\xE1menes bloqueantes en lo le\xEDdo, pero requiere completar p\xE1ginas o validar folio matriz a 10/20 a\xF1os.";
+  } else {
+    recomendacionesNotariales.push(
+      "Verificar vigencia del CTL (< 30 d\xEDas), paz y salvo de impuesto predial e IDU (valorizaci\xF3n), administraci\xF3n de PH (si aplica) y coincidencia exacta de c\xE9dulas y porcentajes de los vendedores en notar\xEDa."
+    );
+  }
+  if (parsed.notasOCR) {
+    recomendacionesNotariales.push(`Nota de lectura documental: ${parsed.notasOCR}`);
+  }
+  const tradition = {
+    tradicion10AnosContinua,
+    tradicion20AnosContinua,
+    anioPrimeraAnotacion: earliestYear,
+    aniosHistorialEnFolio,
+    cadenaDominioResumen,
+    tieneFalsaTradicion,
+    falsaTradicionSaneada,
+    anotacionesFalsaTradicion: anotacionesFalsa,
+    observacionesTradicion
+  };
+  const ownersText = propietariosFinal.length > 0 ? propietariosFinal.map(
+    (o) => `\u2022 ${o.nombre}${o.identificacion ? ` (ID: ${o.identificacion})` : ""}${o.porcentaje ? ` \u2014 *${o.porcentaje}*` : ""}${o.tipoDerecho ? ` [${o.tipoDerecho}]` : ""}`
+  ).join("\n") : "\u2022 No fue posible confirmar el titular actual con (X) en el fragmento analizado.";
+  const activeItemsText = [...alertasCriticasVigentes, ...gravamenesVigentes, ...limitacionesVigentes].length > 0 ? [...alertasCriticasVigentes, ...gravamenesVigentes, ...limitacionesVigentes].map((item) => {
+    const icon = item.estado === "ALERTA_CRITICA" ? "\u{1F534}" : "\u{1F7E1}";
+    return `${icon} *Anot. #${item.numero}* (${item.fecha}${item.codigoNaturaleza ? ` | C\xF3d. ${item.codigoNaturaleza}` : ""}): ${item.especificacion}
+   \u21B3 _${item.impactoJuridico}_`;
+  }).join("\n") : "\u2705 Sin grav\xE1menes, embargos ni limitaciones vigentes detectadas.";
+  const cancelledItemsText = gravamenesCancelados.length > 0 ? gravamenesCancelados.slice(0, 8).map(
+    (c) => `\u2022 \u2705 *Anot. #${c.numero}* (${c.especificacion}) \u2192 Cancelada en *Anot. #${c.canceladaPorAnotacion ?? "posterior"}*`
+  ).join("\n") : "\u2022 No se registran grav\xE1menes hist\xF3ricos con cancelaci\xF3n cruzada.";
+  const auditPreview = auditItems.length > 0 ? auditItems.slice(0, 12).map((item) => {
+    const tag = item.estado === "ALERTA_CRITICA" ? "\u{1F534} CR\xCDTICA" : item.estado === "ACTIVA" ? "\u{1F7E1} VIGENTE" : item.estado === "CANCELADA" ? "\u2705 CANCELADA" : item.estado === "HISTORICA_TRADICION" ? "\u{1F4DC} TRADICI\xD3N" : "\u2139\uFE0F INFO";
+    return `\u2022 *#${item.numero}* [${item.fecha}] ${item.codigoNaturaleza ? `(${item.codigoNaturaleza}) ` : ""}${item.especificacion} \u2014 *${tag}*`;
+  }).join("\n") + (auditItems.length > 12 ? `
+_(+ ${auditItems.length - 12} anotaciones adicionales detalladas en el PDF adjunto)_` : "") : "\u2022 Sin anotaciones legibles para listar.";
+  const recsText = recomendacionesNotariales.map((r, i) => `${i + 1}. ${r}`).join("\n");
+  const missingText = documentosFaltantesOIncompletos.length > 0 ? `
+
+\u26A0\uFE0F *VALIDACI\xD3N DOCUMENTAL PENDIENTE:*
+${documentosFaltantesOIncompletos.map((d) => `\u2022 ${d}`).join("\n")}` : "";
+  const patrimonialRiskBlock = `\u{1F6E1}\uFE0F *ALERTA DE RIESGO PATRIMONIAL Y ACOMPA\xD1AMIENTO VECY:*
+Este estudio automatizado es una auditor\xEDa jur\xEDdica preliminar y *NO sustituye la verificaci\xF3n documental integral previa a la firma de promesa o escritura p\xFAblica*. Un gravamen no advertido, falsa tradici\xF3n o embargo de \xFAltimo minuto puede comprometer todo tu patrimonio.
+\u{1F4F2} Para revisi\xF3n notarial definitiva, saneamiento de t\xEDtulos o cierre blindado con *Eduardo Rivera y Jani Alves \u2014 VECY BIENES RA\xCDCES*, cont\xE1ctanos directamente al *${BROKER_OFFICIAL_PHONE}* \u{1F449} ${BROKER_OFFICIAL_WHATSAPP_LINK}`;
+  const whatsappSummary = `\u2696\uFE0F *ESTUDIO DE T\xCDTULOS SNR \u2014 VECY BIENES RA\xCDCES*
+
+*DICTAMEN JUR\xCDDICO:* ${verdictLabel}
+_${riskHeadline}_
+
+\u{1F4CC} *DATOS DEL FOLIO DE MATR\xCDCULA:*
+\u2022 *Matr\xEDcula:* ${metadata.matriculaInmobiliaria}
+\u2022 *ORIP:* ${metadata.orip}
+\u2022 *Estado / Impresi\xF3n:* ${metadata.estadoFolio} | ${metadata.fechaImpresion}
+\u2022 *CHIP / C\xE9d. Catastral:* ${metadata.chip} / ${metadata.cedulaCatastral}
+\u2022 *Direcci\xF3n:* ${metadata.direccion}
+
+\u{1F464} *PROPIETARIOS ACTUALES DETECTADOS:*
+${ownersText}
+
+\u{1F570}\uFE0F *TRADICI\xD3N (10 Y 20 A\xD1OS) Y FALSA TRADICI\xD3N (0600):*
+\u2022 *Tradici\xF3n 10 a\xF1os:* ${tradicion10AnosContinua ? "\u2705 Continua" : "\u26A0\uFE0F Incompleta / No acreditada"}
+\u2022 *Tradici\xF3n 20 a\xF1os:* ${tradicion20AnosContinua ? "\u2705 Continua" : "\u26A0\uFE0F Parcial o folio < 20 a\xF1os"}
+\u2022 *Falsa Tradici\xF3n (0600):* ${falsaTradicionActiva ? "\u{1F534} DETECTADA VIGENTE" : falsaTradicionSaneada ? "\u{1F7E1} Hist\xF3rica ya saneada" : "\u2705 No detectada"}
+\u2022 ${cadenaDominioResumen}
+
+\u{1F50E} *GRAV\xC1MENES, EMBARGOS Y LIMITACIONES ACTIVAS:*
+${activeItemsText}
+
+\u267B\uFE0F *CRUCE CON CANCELACIONES HIST\xD3RICAS:*
+${cancelledItemsText}
+
+\u{1F4CB} *RESUMEN DE ANOTACIONES AUDITADAS (${auditItems.length}):*
+${auditPreview}
+
+\u{1F4DD} *RECOMENDACIONES NOTARIALES ACCIONABLES:*
+${recsText}${missingText}
+
+\u{1F4C4} *Adjunto te entrego el Concepto Jur\xEDdico Completo en PDF Membretado de VECY BIENES RA\xCDCES.*
+
+${patrimonialRiskBlock}
+
+Un servicio de cortes\xEDa de *VECY BIENES RA\xCDCES* \u{1F91D}.`;
+  const fullReportText = `ESTUDIO DE TITULOS SNR \u2014 VECY BIENES RAICES
+DICTAMEN: ${verdictLabel}
+RESUMEN: ${riskHeadline}
+
+MATRICULA: ${metadata.matriculaInmobiliaria} | ORIP: ${metadata.orip}
+FECHA IMPRESION: ${metadata.fechaImpresion} | ESTADO: ${metadata.estadoFolio}
+CHIP: ${metadata.chip} | CEDULA CATASTRAL: ${metadata.cedulaCatastral}
+DIRECCION: ${metadata.direccion}
+COMPLEMENTACION: ${metadata.complementacionResumen}
+
+PROPIETARIOS:
+${propietariosFinal.map((o) => `- ${o.nombre} ${o.porcentaje || ""}`).join("\n") || "- Por confirmar"}
+
+TRADICION 10/20 ANOS:
+${observacionesTradicion.join("\n")}
+
+ANOTACIONES AUDITADAS:
+` + auditItems.map(
+    (a) => `#${a.numero} [${a.fecha}] (${a.codigoNaturaleza || "S/C"}) ${a.especificacion} -> ${a.estado} | ${a.impactoJuridico}`
+  ).join("\n") + `
+
+RECOMENDACIONES:
+${recsText}`;
+  return {
+    metadata,
+    verdictCode,
+    verdictLabel,
+    verdictEmoji,
+    riskHeadline,
+    tradition,
+    gravamenesVigentes,
+    limitacionesVigentes,
+    alertasCriticasVigentes,
+    gravamenesCancelados,
+    auditoriaAnotaciones: auditItems,
+    recomendacionesNotariales,
+    documentosFaltantesOIncompletos,
+    whatsappSummary,
+    fullReportText,
+    analyzedAtIso: (/* @__PURE__ */ new Date()).toISOString(),
+    sourceType
+  };
+}
+async function extractCtlDocumentWithGemini(params) {
+  const { pdfBuffer, pdfMimeType, imageBuffer, userPromptText } = params;
+  if (!pdfBuffer && !imageBuffer) return null;
+  const systemPrompt = `Eres un abogado experto en Derecho Inmobiliario Colombiano y Registro de Instrumentos P\xFAblicos (Superintendencia de Notariado y Registro - SNR).
+Tu tarea es analizar la imagen o PDF adjunto para determinar:
+1) PRIMERO si corresponde real y leg\xEDtimamente a un **Certificado de Tradici\xF3n y Libertad (CTL)** de la SNR de Colombia (folio de matr\xEDcula inmobiliaria).
+   - Si es un flyer comercial de venta/arriendo, una foto de un apartamento/casa, una factura predial, una c\xE9dula, o un PDF comercial de listado de inmuebles (ej. "ARRIENDO CARRERA 17"), DEBES responder con "esCertificadoTradicionLibertad": false y "razonNoEsCtl" explic\xE1ndolo.
+2) Si S\xCD es un Certificado de Tradici\xF3n y Libertad (CTL), extrae con precisi\xF3n quir\xFArgica TODA la informaci\xF3n visible:
+   - matriculaInmobiliaria (ej: 50N-20145890), orip, fechaImpresion, estadoFolio, departamentoMunicipio, chip, cedulaCatastral, direccion, tipoPredio, complementacionResumen, totalAnotacionesReportadas.
+   - propietariosActuales (los titulares con "X" o se\xF1alados como propietarios actuales, con identificaci\xF3n y porcentaje si aparece).
+   - anotaciones: CADA anotaci\xF3n legible, en orden num\xE9rico, con numero (entero), fecha, codigoNaturaleza (4 d\xEDgitos ej. "0125", "0600", "0205", "0427", "0843"), especificacion exacta, valor, de, a, tieneXTitularDominio (boolean), anotacionCanceladaRef (n\xFAmero entero si dice "SE CANCELA ANOTACI\xD3N No. X", si no null), estadoTexto ("VIGENTE" o "CANCELADA" si el folio lo imprime).
+Responde \xDANICAMENTE en JSON v\xE1lido siguiendo el esquema.`;
+  const schema = {
+    type: "object",
+    properties: {
+      esCertificadoTradicionLibertad: { type: "boolean" },
+      razonNoEsCtl: { type: "string" },
+      matriculaInmobiliaria: { type: "string" },
+      orip: { type: "string" },
+      fechaImpresion: { type: "string" },
+      estadoFolio: { type: "string" },
+      departamentoMunicipio: { type: "string" },
+      chip: { type: "string" },
+      cedulaCatastral: { type: "string" },
+      direccion: { type: "string" },
+      tipoPredio: { type: "string" },
+      complementacionResumen: { type: "string" },
+      totalAnotacionesReportadas: { type: "number" },
+      notasOCR: { type: "string" },
+      propietariosActuales: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            nombre: { type: "string" },
+            identificacion: { type: "string" },
+            porcentaje: { type: "string" },
+            tipoDerecho: { type: "string" }
+          },
+          required: ["nombre"]
+        }
+      },
+      anotaciones: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            numero: { type: "number" },
+            fecha: { type: "string" },
+            radicacion: { type: "string" },
+            codigoNaturaleza: { type: "string" },
+            especificacion: { type: "string" },
+            valor: { type: "string" },
+            de: { type: "string" },
+            a: { type: "string" },
+            tieneXTitularDominio: { type: "boolean" },
+            anotacionCanceladaRef: { type: "number" },
+            estadoTexto: { type: "string" }
+          },
+          required: ["numero", "especificacion"]
+        }
+      }
+    },
+    required: ["esCertificadoTradicionLibertad", "anotaciones"]
+  };
+  try {
+    const res = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: userPromptText?.trim() || "Analiza este archivo adjunto. Confirma si es un Certificado de Tradici\xF3n y Libertad (SNR) y, de serlo, extrae metadatos, propietarios y TODAS las anotaciones."
+        }
+      ],
+      responseFormat: { type: "json_object", schema },
+      highReasoning: true,
+      temperature: 0.1,
+      imageBuffer,
+      pdfBuffer,
+      pdfMimeType: pdfBuffer ? pdfMimeType || "application/pdf" : void 0
+    });
+    const content = res?.choices?.[0]?.message?.content;
+    if (!content) return null;
+    const parsed = JSON.parse(content);
+    if (typeof parsed.esCertificadoTradicionLibertad !== "boolean") return null;
+    parsed.anotaciones = Array.isArray(parsed.anotaciones) ? parsed.anotaciones : [];
+    return parsed;
+  } catch (err) {
+    console.warn("[JanIA-CTL] \u26A0\uFE0F Error en extractor multimodal Gemini:", err?.message || err);
+    return null;
+  }
+}
+function buildCtlMediaGuidanceMessage() {
+  return `\u2696\uFE0F *ESTUDIO DE T\xCDTULOS SNR \u2014 VECY BIENES RA\xCDCES*
+
+\xA1Con mucho gusto realizo tu *Estudio de T\xEDtulos preliminar*! \u{1F4CB}
+
+Para auditar el folio anotaci\xF3n por anotaci\xF3n (tradici\xF3n a 10 y 20 a\xF1os, detecci\xF3n de falsa tradici\xF3n c\xF3digo 0600, cruce de grav\xE1menes/embargos con sus cancelaciones y dictamen en PDF membretado), env\xEDame por favor:
+1. El *PDF original del Certificado de Tradici\xF3n y Libertad (SNR)*, o
+2. *Fotograf\xEDas n\xEDtidas de todas las p\xE1ginas* desde el encabezado hasta la \xFAltima anotaci\xF3n.
+_(Tambi\xE9n puedes pegar aqu\xED el texto completo de las anotaciones si ya lo extrajiste)._`;
+}
+async function analyzeCtlFromWhatsAppInput(params) {
+  const cleanText = String(params.text || "").trim();
+  const hasPdf = Boolean(params.pdfBuffer);
+  const hasImage = Boolean(params.imageBuffer);
+  const textHasMarkers = hasCtlTextMarkers(cleanText);
+  const explicitRequest = isExplicitCtlStudyRequest(cleanText);
+  if (!hasPdf && !hasImage && !textHasMarkers && !explicitRequest) {
+    return {
+      isCtlRequest: false,
+      isCtlDocument: false,
+      needsMediaGuidance: false,
+      responseText: "",
+      reactionEmoji: "\u{1F44D}"
+    };
+  }
+  if (!hasPdf && !hasImage && !textHasMarkers && explicitRequest) {
+    return {
+      isCtlRequest: true,
+      isCtlDocument: false,
+      needsMediaGuidance: true,
+      responseText: buildCtlMediaGuidanceMessage(),
+      reactionEmoji: "\u{1F4CB}"
+    };
+  }
+  if (!hasPdf && !hasImage && textHasMarkers) {
+    const parsed2 = parseCtlFromPlainText(cleanText);
+    if (!parsed2.esCertificadoTradicionLibertad) {
+      return {
+        isCtlRequest: explicitRequest,
+        isCtlDocument: false,
+        needsMediaGuidance: false,
+        responseText: "",
+        reactionEmoji: "\u{1F44D}"
+      };
+    }
+    const report2 = auditCtlParsedDocument(parsed2, "TEXTO");
+    let pdfBuffer2;
+    let pdfFileName2;
+    try {
+      const pdfRes = await generateCtlStudyPdf(report2, {
+        requestedBy: params.requesterName || void 0
+      });
+      pdfBuffer2 = pdfRes.pdfBuffer;
+      pdfFileName2 = pdfRes.fileName;
+    } catch (pdfErr) {
+      console.warn("[JanIA-CTL] \u26A0\uFE0F Error generando PDF de Estudio de T\xEDtulos:", pdfErr?.message || pdfErr);
+    }
+    return {
+      isCtlRequest: true,
+      isCtlDocument: true,
+      needsMediaGuidance: false,
+      report: report2,
+      responseText: report2.whatsappSummary,
+      pdfBuffer: pdfBuffer2,
+      pdfFileName: pdfFileName2,
+      reactionEmoji: report2.verdictEmoji
+    };
+  }
+  const pdfExtractedText = hasPdf ? extractTextSnippetsFromPdfBuffer(params.pdfBuffer) : "";
+  const pdfTextLooksLikeCtl = hasCtlTextMarkers(pdfExtractedText);
+  let parsed = await extractCtlDocumentWithGemini({
+    pdfBuffer: params.pdfBuffer,
+    pdfMimeType: params.pdfMimeType,
+    imageBuffer: params.imageBuffer,
+    userPromptText: cleanText || void 0
+  });
+  if (!parsed && pdfTextLooksLikeCtl) {
+    parsed = parseCtlFromPlainText(pdfExtractedText);
+  } else if (!parsed && textHasMarkers) {
+    parsed = parseCtlFromPlainText(cleanText);
+  }
+  if (!parsed || !parsed.esCertificadoTradicionLibertad) {
+    if (explicitRequest) {
+      return {
+        isCtlRequest: true,
+        isCtlDocument: false,
+        needsMediaGuidance: true,
+        responseText: `\u26A0\uFE0F El archivo adjunto no corresponde a un *Certificado de Tradici\xF3n y Libertad (SNR)* legible.
+
+` + buildCtlMediaGuidanceMessage(),
+        reactionEmoji: "\u26A0\uFE0F"
+      };
+    }
+    return {
+      isCtlRequest: false,
+      isCtlDocument: false,
+      needsMediaGuidance: false,
+      responseText: "",
+      reactionEmoji: "\u{1F44D}"
+    };
+  }
+  if (pdfTextLooksLikeCtl) {
+    const plainParsed = parseCtlFromPlainText(pdfExtractedText);
+    if (plainParsed.anotaciones.length > (parsed.anotaciones?.length || 0)) {
+      parsed.anotaciones = plainParsed.anotaciones;
+    }
+    if (!parsed.matriculaInmobiliaria && plainParsed.matriculaInmobiliaria) {
+      parsed.matriculaInmobiliaria = plainParsed.matriculaInmobiliaria;
+    }
+    if (!parsed.chip && plainParsed.chip) {
+      parsed.chip = plainParsed.chip;
+    }
+    if (!parsed.cedulaCatastral && plainParsed.cedulaCatastral) {
+      parsed.cedulaCatastral = plainParsed.cedulaCatastral;
+    }
+  }
+  const report = auditCtlParsedDocument(parsed, hasPdf ? "PDF" : "IMAGEN");
+  let pdfBuffer;
+  let pdfFileName;
+  try {
+    const pdfRes = await generateCtlStudyPdf(report, {
+      requestedBy: params.requesterName || void 0
+    });
+    pdfBuffer = pdfRes.pdfBuffer;
+    pdfFileName = pdfRes.fileName;
+  } catch (pdfErr) {
+    console.warn("[JanIA-CTL] \u26A0\uFE0F Error generando PDF membretado de Estudio de T\xEDtulos:", pdfErr?.message || pdfErr);
+  }
+  return {
+    isCtlRequest: true,
+    isCtlDocument: true,
+    needsMediaGuidance: false,
+    report,
+    responseText: report.whatsappSummary,
+    pdfBuffer,
+    pdfFileName,
+    reactionEmoji: report.verdictEmoji
+  };
+}
+var init_ctlTitleStudyService = __esm({
+  "server/_core/ctlTitleStudyService.ts"() {
+    "use strict";
+    init_llm();
+    init_commercialFunnelService();
+    init_legalDocumentPdfService();
+  }
+});
+
 // server/_core/jania/founderKnowledgeService.ts
-import fs11 from "fs";
-import path11 from "path";
+import fs12 from "fs";
+import path12 from "path";
 function ensureLoaded() {
   if (isLoaded) return;
   isLoaded = true;
   try {
-    if (fs11.existsSync(TEACHINGS_FILE)) {
-      const content = fs11.readFileSync(TEACHINGS_FILE, "utf-8");
+    if (fs12.existsSync(TEACHINGS_FILE)) {
+      const content = fs12.readFileSync(TEACHINGS_FILE, "utf-8");
       const list = JSON.parse(content);
       if (Array.isArray(list) && list.length > 0) {
         memoryTeachings = list;
@@ -31941,11 +34123,11 @@ function ensureLoaded() {
 }
 function persistToDisk() {
   try {
-    const dir = path11.dirname(TEACHINGS_FILE);
-    if (!fs11.existsSync(dir)) {
-      fs11.mkdirSync(dir, { recursive: true });
+    const dir = path12.dirname(TEACHINGS_FILE);
+    if (!fs12.existsSync(dir)) {
+      fs12.mkdirSync(dir, { recursive: true });
     }
-    fs11.writeFileSync(TEACHINGS_FILE, JSON.stringify(memoryTeachings, null, 2), "utf-8");
+    fs12.writeFileSync(TEACHINGS_FILE, JSON.stringify(memoryTeachings, null, 2), "utf-8");
   } catch (err) {
     console.warn("[founderKnowledgeService] Error persistiendo tips a disco:", err?.message);
   }
@@ -32008,7 +34190,7 @@ var TEACHINGS_FILE, memoryTeachings, isLoaded, SEED_TEACHINGS;
 var init_founderKnowledgeService = __esm({
   "server/_core/jania/founderKnowledgeService.ts"() {
     "use strict";
-    TEACHINGS_FILE = path11.resolve(process.cwd(), "data/jania_founder_teachings.json");
+    TEACHINGS_FILE = path12.resolve(process.cwd(), "data/jania_founder_teachings.json");
     memoryTeachings = [];
     isLoaded = false;
     SEED_TEACHINGS = [
@@ -32651,6 +34833,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Paridad total de @JanIA en grupos: IDU, RUES, Notarial, ACM Fitto y Corvini, Auditor\xEDa de Marketing, Im\xE1genes Creativas 1080x1080, Minutas PDF y Protocolo de Satisfacci\xF3n + Google Reviews.",
         createdAt: "2026-11-13T00:00:00.000Z",
         active: true
+      },
+      {
+        id: "seed-estudio-titulos-snr-ctl-v34-13",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Motor Especializado de Estudio de T\xEDtulos SNR (CTL PDF/Imagen/Texto, Tradici\xF3n 10/20 A\xF1os, Falsa Tradici\xF3n 0600, Sem\xE1foro y PDF Membretado) \u2014 Doctrina Eduardo A. Rivera v34.13",
+        directive: "Cuando un usuario env\xEDe por DM o cite a @JanIA en Grupos con un Certificado de Tradici\xF3n y Libertad (CTL SNR) en PDF, imagen o texto de anotaciones: 1) Discriminar primero que sea realmente un CTL SNR (sin interferir con flyers comerciales ni listados en arriendo/venta); 2) Auditar anotaci\xF3n por anotaci\xF3n verificando tradici\xF3n ininterrumpida a 10 a\xF1os (Ley 791/2002) y 20 a\xF1os (Art. 2532 C.C.) y emitiendo alerta roja inmediata ante Falsa Tradici\xF3n (C\xF3d. 0600 / derechos y acciones / posesi\xF3n); 3) Cruzar grav\xE1menes, medidas cautelares y limitaciones (hipotecas, embargos, demandas, patrimonio de familia Ley 70/1931, afectaci\xF3n vivienda familiar Ley 258/1996, condiciones resolutorias, usufructos, servidumbres, sucesiones il\xEDquidas) contra sus cancelaciones posteriores; 4) Emitir Dictamen Jur\xEDdico en Sem\xE1foro (Verde Viable, Amarillo Saneamiento Previo, Rojo Riesgo Cr\xEDtico), desglose de matr\xEDcula, ORIP, CHIP, propietarios con % y recomendaciones notariales accionables; 5) Adjuntar nativamente Concepto de Estudio de T\xEDtulos en PDF Membretado VECY BIENES RA\xCDCES con Alerta de Riesgo Patrimonial y CTA a +57 316 656 9719 + Protocolo de Satisfacci\xF3n y Google Reviews.",
+        rawText: "Punto 2 \u2014 Skill 2: Motor Especializado de Estudio de T\xEDtulos SNR (ctlTitleStudyService.ts, v34.13) con auditor\xEDa anotaci\xF3n por anotaci\xF3n, tradici\xF3n 10 y 20 a\xF1os, alerta Falsa Tradici\xF3n 0600, cruce de grav\xE1menes vs cancelaciones, Sem\xE1foro, PDF Membretado VECY, Alerta Patrimonial +57 316 656 9719 y Protocolo de Satisfacci\xF3n + Google Reviews.",
+        createdAt: "2026-11-13T11:00:00.000Z",
+        active: true
       }
     ];
   }
@@ -32897,736 +35089,6 @@ var init_profilingInterviewService = __esm({
   "server/_core/jania/profilingInterviewService.ts"() {
     "use strict";
     init_whatsapp_utils();
-  }
-});
-
-// server/_core/jania/legalDocumentPdfService.ts
-var legalDocumentPdfService_exports = {};
-__export(legalDocumentPdfService_exports, {
-  buildDefaultLegalBody: () => buildDefaultLegalBody,
-  generateLegalDocumentPdf: () => generateLegalDocumentPdf,
-  getLegalDocumentMetadata: () => getLegalDocumentMetadata,
-  sanitizePdfWinAnsiText: () => sanitizePdfWinAnsiText
-});
-import { PDFDocument as PDFDocument2, rgb as rgb2, StandardFonts as StandardFonts2 } from "pdf-lib";
-import QRCode3 from "qrcode";
-import crypto4 from "node:crypto";
-import fs12 from "node:fs";
-import path12 from "node:path";
-function sanitizePdfWinAnsiText(input) {
-  if (!input) return "";
-  return input.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/[•▪▸►]/g, "-").replace(/[—–]/g, "-").replace(/[“”«»]/g, '"').replace(/[‘’]/g, "'").replace(/m²/g, "m2").replace(/[^\x20-\x7E\xA1-\xFF\n\r\t]/g, "").replace(/[ \t]{2,}/g, " ").trim();
-}
-function getLegalDocumentMetadata(tipo) {
-  switch (tipo) {
-    case "carta_terminacion_arriendo":
-      return {
-        title: "CARTA FORMAL DE TERMINACION Y NO PRORROGA DE CONTRATO DE ARRENDAMIENTO",
-        normativeFramework: "Ley 820 de 2003 (Arts. 22 a 25 - Vivienda Urbana) y Codigo de Comercio (Art. 520 - Local Comercial)",
-        defaultFileNamePrefix: "Carta_Terminacion_Arriendo_VECY"
-      };
-    case "carta_restitucion_inmueble":
-      return {
-        title: "SOLICITUD FORMAL DE ENTREGA Y RESTITUCION DE INMUEBLE ARRENDADO",
-        normativeFramework: "Ley 820 de 2003, Articulo 2005 del Codigo Civil y Articulo 384 del Codigo General del Proceso",
-        defaultFileNamePrefix: "Acta_Solicitud_Restitucion_Inmueble_VECY"
-      };
-    case "carta_presentacion_cliente":
-      return {
-        title: "CARTA DE PRESENTACION FORMAL Y REGISTRO DE PUNTA COMERCIAL INMOBILIARIA",
-        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio Colombiano y Doctrina Colaborativa VECY 40/20/40",
-        defaultFileNamePrefix: "Carta_Presentacion_Cliente_VECY"
-      };
-    case "contrato_arrendamiento_vivienda":
-      return {
-        title: "MINUTA DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA",
-        normativeFramework: "Regimen de Vivienda Urbana - Ley 820 de 2003 y Codigo Civil Colombiano",
-        defaultFileNamePrefix: "Contrato_Arrendamiento_Vivienda_VECY"
-      };
-    case "contrato_arrendamiento_comercial":
-      return {
-        title: "MINUTA DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL",
-        normativeFramework: "Articulos 518 a 524 del Codigo de Comercio Colombiano (Derecho a Renovacion y Desahucio)",
-        defaultFileNamePrefix: "Contrato_Arrendamiento_Comercial_VECY"
-      };
-    case "promesa_compraventa":
-      return {
-        title: "MINUTA DE PROMESA DE COMPRAVENTA DE BIEN INMUEBLE",
-        normativeFramework: "Articulo 1611 del Codigo Civil Colombiano, Ley 153 de 1887 (Art. 89) y Estatuto de Notariado",
-        defaultFileNamePrefix: "Promesa_Compraventa_Inmueble_VECY"
-      };
-    case "cesion_leasing":
-      return {
-        title: "MINUTA DE PROMESA DE CESION DE CONTRATO DE LEASING HABITACIONAL / COMERCIAL",
-        normativeFramework: "Decreto 2555 de 2010, Estatuto Organico del Sistema Financiero y Articulo 887 del Codigo de Comercio",
-        defaultFileNamePrefix: "Minuta_Cesion_Leasing_VECY"
-      };
-    case "pacto_retroventa":
-      return {
-        title: "MINUTA DE COMPRAVENTA CON PACTO DE RETROVENTA",
-        normativeFramework: "Articulos 1939 a 1943 del Codigo Civil Colombiano (Plazo Maximo Legal de 4 Anos)",
-        defaultFileNamePrefix: "Minuta_Pacto_Retroventa_VECY"
-      };
-    case "contrato_corretaje":
-      return {
-        title: "CONTRATO DE CORRETAJE Y GESTION COMERCIAL INMOBILIARIA",
-        normativeFramework: "Articulos 1340 a 1346 del Codigo de Comercio y Ley 527 de 1999 (Validez de Firma Electronica)",
-        defaultFileNamePrefix: "Contrato_Corretaje_Inmobiliario_VECY"
-      };
-    default:
-      return {
-        title: "MINUTA Y DOCUMENTO JURIDICO INMOBILIARIO OFICIAL",
-        normativeFramework: "Legislacion Civil, Comercial y Urbana de la Republica de Colombia",
-        defaultFileNamePrefix: "Minuta_Legal_Inmobiliaria_VECY"
-      };
-  }
-}
-function buildDefaultLegalBody(params) {
-  const ciudad = params.ciudad || "Bogota, D.C.";
-  const remitente = params.nombreRemitente || "[NOMBRE DEL REMITENTE / ARRENDADOR / PROMITENTE]";
-  const docRem = params.documentoRemitente || "[CC / NIT]";
-  const destinatario = params.nombreDestinatario || "[NOMBRE DEL DESTINATARIO / ARRENDATARIO / COMPRADOR]";
-  const docDest = params.documentoDestinatario || "[CC / NIT]";
-  const direccion = params.direccionInmueble || "[DIRECCION E IDENTIFICACION DEL INMUEBLE]";
-  const valor = params.valorNegocioOCanon || "[VALOR PACTADO EN PESOS COLOMBIANOS COP]";
-  const extras = params.clausulasEspeciales ? `
-
-DISPOSICIONES Y CLAUSULAS ESPECIALES:
-${params.clausulasEspeciales}` : "";
-  switch (params.tipoDocumento) {
-    case "carta_terminacion_arriendo":
-      return [
-        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `Senor(a): ${destinatario} (Identificacion: ${docDest})`,
-        `Referencia: Notificacion formal de preaviso y terminacion del Contrato de Arrendamiento sobre el inmueble ubicado en ${direccion}.`,
-        "",
-        "Respetado(a) senor(a):",
-        "",
-        `Por medio de la presente comunicacion, actuando en calidad de parte contratante (${remitente}, identificado(a) con ${docRem}), y en estricto cumplimiento de los terminos legales previstos en la Ley 820 de 2003 (preaviso minimo de tres [3] meses calendario con antelacion al vencimiento del periodo inicial o de cualquiera de sus prorrogas), le notifico de manera formal e irrevocable la decision de NO PRORROGAR y dar por terminado el contrato de arrendamiento suscrito sobre el inmueble ubicado en ${direccion}.`,
-        "",
-        "1. PLAZO Y FECHA DE ENTREGA: El inmueble debera ser restituido totalmente desocupado, a paz y salvo por concepto de canones de arrendamiento, cuotas de administracion y servicios publicos domiciliarios al vencimiento del periodo en curso.",
-        "2. ACTA DE INVENTARIO Y RECIBO: Se coordinara visita de inspeccion fisica para verificar el buen estado de conservacion de los acabados, instalaciones y llaves del predio conforme al inventario inicial.",
-        "3. NOTIFICACION FEHACIENTE: El presente preaviso se remite a traves de correo certificado y/o mensaje de datos con validez probatoria conforme a la Ley 527 de 1999." + extras
-      ].join("\n");
-    case "carta_restitucion_inmueble":
-      return [
-        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `Destinatario: ${destinatario} (Identificacion: ${docDest})`,
-        `Asunto: Solicitud formal de restitucion y entrega material del inmueble ubicado en ${direccion}.`,
-        "",
-        `En mi condicion de titular / representante (${remitente} - ${docRem}), solicito formalmente programar y ejecutar la restitucion material y entrega de llaves del bien inmueble ubicado en ${direccion}, en los terminos de la Ley 820 de 2003 y el Articulo 2005 del Codigo Civil.`,
-        "",
-        "REQUISITOS PARA LA SUSCRIPCION DEL ACTA DE ENTREGA:",
-        "- Presentacion de los ultimos tres (3) recibos de servicios publicos domiciliarios (energia, acueducto, gas) debidamente cancelados.",
-        "- Paz y salvo expedido por la Administracion de Propiedad Horizontal (si aplica).",
-        "- Revision conjunta del inventario fisico del inmueble sin deterioros distintos al uso natural y legitimo del bien." + extras
-      ].join("\n");
-    case "carta_presentacion_cliente":
-      return [
-        `Ciudad y Fecha: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `Dirigido a: ${destinatario} (${docDest})`,
-        `Presentado por: ${remitente} (${docRem}) \u2014 Red Colaborativa VECY BIENES RAICES`,
-        `Inmueble Objeto de Negociacion: ${direccion} | Valor Referencial: ${valor}`,
-        "",
-        "CERTIFICACION DE PRESENTACION Y REGISTRO DE PUNTA COMERCIAL:",
-        `Por medio del presente documento oficial se deja constancia mercantil (Arts. 1340 a 1346 del Codigo de Comercio) de la presentacion formal del cliente interesado para la operacion inmobiliaria sobre el predio ubicado en ${direccion}.`,
-        "",
-        "1. PROTECCION DE PUNTA Y NO DESINTERMEDIACION: Las partes reconocen la gestion de intermediacion y se obligan a respetar la reserva de punta comercial y la distribucion de comision acordada a traves de la mesa central de VECY BIENES RAICES (+57 316 656 9719).",
-        "2. VIGENCIA DEL REGISTRO: El presente registro ampara toda negociacion directa o indirecta que se perfeccione con el cliente presentado o su grupo familiar/societario dentro de los doce (12) meses siguientes a la visita." + extras
-      ].join("\n");
-    case "pacto_retroventa":
-      return [
-        `ENTRE LOS SUSCRITOS: De una parte ${remitente} (${docRem}), quien obra como EL VENDEDOR CON FACULTAD DE RECOBRO, y de otra parte ${destinatario} (${docDest}), quien obra como EL COMPRADOR, se celebra el presente negocio juridico regido por los Articulos 1939 a 1943 del Codigo Civil Colombiano:`,
-        "",
-        `CLAUSULA PRIMERA - OBJETO: EL VENDEDOR transfiere a titulo de compraventa con pacto de retroventa a favor de EL COMPRADOR el derecho de dominio y posesion sobre el inmueble ubicado en ${direccion}, en la ciudad de ${ciudad}.`,
-        `CLAUSULA SEGUNDA - PRECIO Y SUMA DE REEMBOLSO: El precio de la presente operacion se pacta en la suma de ${valor}.`,
-        "CLAUSULA TERCERA - PACTO DE RETROVENTA (ART. 1939 C.C.): EL VENDEDOR se reserva expresamente la facultad legal de recobrar la propiedad del inmueble vendido, reembolsando a EL COMPRADOR la cantidad determinada en este contrato dentro del plazo estipulado, el cual en ningun caso podra exceder de cuatro (4) anos contados desde la fecha de la escritura publica (Art. 1943 C.C.)." + extras
-      ].join("\n");
-    case "cesion_leasing":
-      return [
-        `PARTES INTERVINIENTES: ${remitente} (${docRem}) en calidad de PROMITENTE CEDENTE (Locatario Actual), y ${destinatario} (${docDest}) en calidad de PROMITENTE CESIONARIO, respecto del inmueble ubicado en ${direccion} (${ciudad}).`,
-        "",
-        `CLAUSULA PRIMERA - OBJETO DE LA CESION: El PROMITENTE CEDENTE se obliga a ceder a favor del PROMITENTE CESIONARIO su posicion contractual como locatario dentro del Contrato de Leasing Habitacional / Inmobiliario vigente ante la entidad financiera titular del dominio.`,
-        `CLAUSULA SEGUNDA - VALOR DE LA CESION Y SALDO FINANCIERO: El valor total del negocio se establece en ${valor}, discriminado entre los derechos de cesion pagaderos al locatario cedente y el saldo de capital con opcion de adquisicion ante la entidad bancaria.`,
-        "CLAUSULA TERCERA - CONDICION SUSPENSIVA DE APROBACION BANCARIA: El perfeccionamiento de la cesion queda sujeto al estudio de credito y aprobacion formal del cesionario por parte de la entidad financiera leasing." + extras
-      ].join("\n");
-    case "promesa_compraventa":
-      return [
-        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `PROMITENTE VENDEDOR (PARTE A): ${remitente} \u2014 Identificacion: ${docRem}`,
-        `PROMITENTE COMPRADOR (PARTE B): ${destinatario} \u2014 Identificacion: ${docDest}`,
-        `INMUEBLE(S) OBJETO DEL ACTO: ${direccion} (${ciudad})`,
-        `CUANTIA / PRECIO TOTAL CONVENIDO: ${valor}`,
-        "",
-        "CLAUSULADO CONTRACTUAL DE PROMESA DE COMPRAVENTA:",
-        "",
-        "CLAUSULA PRIMERA - OBJETO DEL CONTRATO: El PROMITENTE VENDEDOR promete transferir a titulo de compraventa real y efectiva a favor del PROMITENTE COMPRADOR, y este promete adquirir al mismo titulo, el derecho de dominio y la posesion material plena sobre el(los) bien(es) inmueble(s) debidamente individualizado(s) en la clausula segunda de este contrato.",
-        "",
-        `CLAUSULA SEGUNDA - IDENTIFICACION, INDIVIDUALIZACION Y LINDEROS: El inmueble principal objeto de esta promesa se encuentra ubicado en la direccion: ${direccion}, en la ciudad de ${ciudad}. Folio de Matricula Inmobiliaria SNR No. [NUMERO DE MATRICULA], Cedula Catastral / CHIP No. [CHIP / CEDULA CATASTRAL]. LINDEROS TECNICOS Y ESPECIFICACIONES: Los linderos generales y especiales, cabida, medidas y demas especificaciones tecnicas se encuentran contenidos en la Escritura Publica antecedente No. [NUMERO ESCRITURA] otorgada en la Notaria [NOTARIA Y CIUDAD], documento que se entiende incorporado integramente a este instrumento. ${params.clausulasEspeciales && /permuta|daci[oó]n/i.test(params.clausulasEspeciales) ? "(En caso de dacion o permuta parcial, los datos registrales y linderos del inmueble entregado en parte de pago se transcriben en las Disposiciones Especiales adjuntas)." : ""}`,
-        "",
-        "CLAUSULA TERCERA - TRADICION Y TITULO DE ADQUISICION: El PROMITENTE VENDEDOR garantiza que adquirio el dominio y posesion material del inmueble objeto de la venta mediante Escritura Publica debidamente registrada, acreditando una tradicion ininterrumpida, pacifica y publica por mas de veinte (20) anos exenta de pleitos pendientes, gravamenes o litigios.",
-        "",
-        `CLAUSULA CUARTA - PRECIO, FORMA DE PAGO Y DESEMBOLSOS: El precio de la venta prometida se fija en la suma de ${valor} moneda legal colombiana, la cual sera cancelada de la siguiente manera:`,
-        "1. Saldo inicial a la firma del presente contrato mediante cheque de gerencia o transferencia bancaria verificada.",
-        "2. Saldo en dinero efectivo o mediante desembolso de credito hipotecario / leasing habitacional / recursos propios a la fecha de la firma de la Escritura Publica.",
-        "3. Cruce en especie o dacion en pago segun lo pactado expresamente en las Disposiciones Especiales de este contrato.",
-        "",
-        "CLAUSULA QUINTA - SITUACION JURIDICA, SANEAMIENTO Y VICIOS REDHIBITORIOS: El PROMITENTE VENDEDOR declara que el bien objeto de enajenacion se encuentra libre de todo gravamen, embargo, hipoteca, condiciones resolutorias, pleito pendiente, censo, anticresis, contrato de arrendamiento por escritura publica o privada no informado, servidumbres pasivas no declaradas y libre de cualquier afectacion o limitacion al dominio. No obstante, se obliga al saneamiento por eviccion y vicios redhibitorios de conformidad con los Articulos 1880 y 1893 del Codigo Civil Colombiano.",
-        "",
-        "CLAUSULA SEXTA - REGIMEN DE FAMILIA Y AFECTACIONES PATRIMONIALES: Las partes declaran bajo juramento su estado civil actual y manifiestan que sobre el inmueble no pesa Afectacion a Vivienda Familiar (Ley 258 de 1996 modificada por Ley 854 de 2003) ni Patrimonio de Familia Inembargable (Ley 70 de 1931). En caso de existir, el PROMITENTE VENDEDOR se obliga a su cancelacion previa o concurrente en la misma Escritura de compraventa con la comparecencia de su conyuge o companero(a) permanente.",
-        "",
-        "CLAUSULA SEPTIMA - OTORGAMIENTO DE LA ESCRITURA PUBLICA DEFINITIVA: La Escritura Publica de Compraventa que perfeccionara la transferencia del dominio sera suscrita por las partes en la fecha, hora y Notaria estipulada expresamente [FECHA, HORA Y NOTARIA PACTADA], acto para el cual las partes compareceran personalmente o mediante apoderado debidamente facultado con poder especial notarial amplio y suficiente.",
-        "",
-        "CLAUSULA OCTAVA - ENTREGA MATERIAL, INVENTARIO Y POSESION: La entrega real y material del inmueble se realizara el dia [FECHA PACTADA DE ENTREGA], fecha en la cual el PROMITENTE VENDEDOR hara entrega de las llaves del inmueble, sus anexos, garajes y depositos, totalmente desocupado y en el estado de conservacion acordado, levantando el Acta de Entrega e Inventario Fisico debidamente firmada por las partes.",
-        "",
-        "CLAUSULA NOVENA - IMPUESTOS, TASAS, CONTRIBUCIONES Y SERVICIOS PUBLICOS: El PROMITENTE VENDEDOR se obliga a entregar el inmueble a paz y salvo por concepto de Impuesto Predial Unificado, contribucion de valorizacion (IDU), cuotas ordinarias y extraordinarias de administracion de propiedad horizontal y facturacion al dia de servicios publicos domiciliarios (acueducto, energia, gas, telefono) hasta la fecha de la entrega material.",
-        "",
-        "CLAUSULA DECIMA - ARRAS Y CLAUSULA PENAL PECUNIARIA: En caso de incumplimiento total o parcial o retardo culpable en el otorgamiento de la Escritura Publica o en la entrega del bien, la parte incumplida pagara a la parte cumplida, a titulo de clausula penal pecuniaria (Art. 1592 C.C. y Art. 867 C.Co.), una suma equivalente al porcentaje pactado del valor total de la venta, la cual sera exigible ejecutivamente sin necesidad de requerimiento judicial ni privado ni constitucion previa en mora, a la cual las partes renuncian expresamente.",
-        "",
-        "CLAUSULA DECIMAPRIMERA - GASTOS NOTARIALES, RETENCION EN LA FUENTE Y REGISTRO: Los gastos derivados de la presente negociacion se distribuiran conforme a la ley y las costumbres notariales colombianas: (a) Derechos Notariales en un 50% a cargo de cada parte; (b) Retencion en la Fuente por enajenacion en un 100% a cargo del PROMITENTE VENDEDOR; (c) Impuesto de Registro y Beneficencia en un 100% a cargo del PROMITENTE COMPRADOR.",
-        "",
-        "CLAUSULA DECIMASEGUNDA - MERITO EJECUTIVO Y ACUERDO COMPLETO: Las partes reconocen expresamente que el presente contrato presta merito ejecutivo pleno para exigir judicialmente el cumplimiento de las obligaciones de dar, hacer y dinerarias aqui contenidas conforme al Codigo General del Proceso.",
-        "",
-        "CLAUSULA DECIMATERCERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento goza de plena validez, autenticidad y eficacia probatoria cuando sea suscrito mediante mecanismos de firma electronica certificada con estampado cronologico y trazabilidad digital.",
-        extras,
-        "",
-        "ADVERTENCIA DE VALIDEZ Y MINUTA ESTRUCTURAL (VECY BIENES RAICES):",
-        "El presente instrumento constituye una Minuta Estructural Preliminar y base documental emitida por la plataforma JanIA de VECY BIENES RAICES. Para elevar este instrumento a contrato definitivo blindado con todas las de la ley, las partes deben completar: (i) transcripcion literal exacta de linderos tecnicos segun escrituras antecedentes y folios SNR; (ii) identificacion plena y regimen patrimonial/afectacion de conyuges; (iii) fijacion precisa de fecha, hora y notaria especifica para la firma escritural; y (iv) realizacion del estudio de titulos de 20 anos. Para estructurar y coordinar el contrato definitivo con acompanamiento notarial y pericial personalizado, comuniquese con la Direccion Legal y Notarial de VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
-      ].filter(Boolean).join("\n");
-    case "contrato_arrendamiento_vivienda":
-      return [
-        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `ARRENDADOR(A): ${remitente} \u2014 Identificacion: ${docRem}`,
-        `ARRENDATARIO(A): ${destinatario} \u2014 Identificacion: ${docDest}`,
-        `INMUEBLE OBJETO DEL ARRENDAMIENTO: ${direccion} (${ciudad})`,
-        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
-        "",
-        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE VIVIENDA URBANA (LEY 820 DE 2003):",
-        "",
-        "CLAUSULA PRIMERA - OBJETO Y DESTINO EXCLUSIVO: El ARRENDADOR entrega a titulo de arrendamiento el goce del bien inmueble debidamente individualizado, y el ARRENDATARIO lo recibe destinandolo de manera exclusiva para vivienda familiar, sin que pueda destinarlo a fines comerciales, industriales ni a actividades contrarias a la ley o a la moral.",
-        "",
-        `CLAUSULA SEGUNDA - CANON, FORMA DE PAGO Y LUGAR: El ARRENDATARIO pagara mensualmente por concepto de canon de arrendamiento la suma de ${valor}, dentro de los primeros cinco (5) dias calendario de cada periodo mensual, mediante consignacion o transferencia bancaria en la cuenta designada por el ARRENDADOR.`,
-        "",
-        "CLAUSULA TERCERA - INCREMENTO ANUAL DEL CANON (ART. 20 LEY 820 DE 2003): Vencido cada periodo de doce (12) meses de ejecucion contractual, el canon de arrendamiento se incrementara de pleno derecho en un porcentaje maximo equivalente a la variacion del Indice de Precios al Consumidor (IPC) certificado por el DANE para el ano inmediatamente anterior, previa notificacion al ARRENDATARIO.",
-        "",
-        "CLAUSULA CUARTA - TERMINO DE DURACION Y PRORROGAS: El termino inicial de duracion de este contrato sera de doce (12) meses contados a partir de la entrega del inmueble. Dicho termino se entendera prorrogado automaticamente por periodos iguales si ninguna de las partes notifica a la otra por escrito su intencion de no prorrogarlo con antelacion no menor a tres (3) meses (Art. 6 Ley 820/2003).",
-        "",
-        "CLAUSULA QUINTA - SERVICIOS PUBLICOS DOMICILIARIOS Y ADMINISTRACION: El pago oportuno de los servicios publicos de acueducto, energia, gas y telecomunicaciones sera a cargo exclusivo del ARRENDATARIO. Las cuotas ordinarias de administracion de propiedad horizontal seran a cargo del responsable pactado expresamente en las estipulaciones especiales.",
-        "",
-        "CLAUSULA SEXTA - PROHIBICION DE CESION Y SUBARRIENDO (ART. 17 LEY 820 DE 2003): El ARRENDATARIO no podra ceder total ni parcialmente el contrato de arrendamiento ni subarrendar el inmueble sin autorizacion previa, expresa y escrita del ARRENDADOR. La violacion de esta clausula facultara al ARRENDADOR para dar por terminado el contrato de manera inmediata.",
-        "",
-        "CLAUSULA SEPTIMA - REPARACIONES LOCATIVAS Y MEJORAS: Las reparaciones locativas que se deriven del uso legitimo y natural del bien seran asumidas por el ARRENDATARIO conforme a los Articulos 1985 y 1993 del Codigo Civil. No podra realizar reformas ni modificaciones arquitectonicas sin previa autorizacion escrita del ARRENDADOR.",
-        "",
-        "CLAUSULA OCTAVA - CLAUSULA PENAL PECUNIARIA: El incumplimiento de cualquiera de las obligaciones emanadas del presente contrato hara exigible a la parte incumplida el pago de una pena pecuniaria equivalente a tres (3) canones mensuales de arrendamiento vigentes, exigible ejecutivamente sin necesidad de requerimiento alguno.",
-        "",
-        "CLAUSULA NOVENA - RESTITUCION Y ENTREGA CON INVENTARIO: Al vencimiento del contrato o de sus prorrogas, el ARRENDATARIO restituira el inmueble en el mismo estado en que lo recibio, salvo el deterioro derivado del uso y goce legitimo, suscribiendo el Acta de Entrega e Inventario debidamente conciliada.",
-        "",
-        "CLAUSULA DECIMA - MERITO EJECUTIVO: El presente contrato presta merito ejecutivo para el cobro de canones, cuotas de administracion, servicios publicos insolutos y la clausula penal pecuniaria conforme al Codigo General del Proceso.",
-        "",
-        "CLAUSULA DECIMAPRIMERA - FIRMA ELECTRONICA Y VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este contrato puede ser suscrito mediante mecanismos de firma electronica certificada con plena validez juridica.",
-        extras,
-        "",
-        "ADVERTENCIA DE MINUTA Y ASESORIA VECY:",
-        "Este documento es un borrador estructural de contrato. Para la expedicion de polizas o fianzas colectivas de arrendamiento, analisis financiero de solvencia y blindaje contractual con todas las de la ley, contacte a VECY BIENES RAICES (Eduardo A. Rivera & Jani Alves | +57 316 656 9719 / +57 319 291 9978 | https://vecy-bienes-raices.vercel.app/)."
-      ].filter(Boolean).join("\n");
-    case "contrato_arrendamiento_comercial":
-      return [
-        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `ARRENDADOR(A): ${remitente} \u2014 Identificacion: ${docRem}`,
-        `ARRENDATARIO(A): ${destinatario} \u2014 Identificacion: ${docDest}`,
-        `INMUEBLE / LOCAL COMERCIAL: ${direccion} (${ciudad})`,
-        `CANON MENSUAL DE ARRENDAMIENTO: ${valor}`,
-        "",
-        "CLAUSULADO DE CONTRATO DE ARRENDAMIENTO DE LOCAL COMERCIAL (CODIGO DE COMERCIO):",
-        "",
-        "CLAUSULA PRIMERA - OBJETO Y DESTINACION COMERCIAL: El ARRENDADOR entrega en arrendamiento el inmueble comercial, y el ARRENDATARIO lo destina exclusivamente para la explotacion de su actividad mercantil autorizada, cumpliendo todas las normas de uso de suelo, sanidad y policia.",
-        "",
-        `CLAUSULA SEGUNDA - CANON, IVA E INCREMENTOS: El canon mensual pactado es de ${valor} (mas IVA de conformidad con el Estatuto Tributario, si aplica). Las partes acuerdan un incremento anual pactado contractualmente al vencimiento de cada periodo de doce (12) meses.`,
-        "",
-        "CLAUSULA TERCERA - RENOVACION Y DESAHUCIO COMERCIAL (ARTS. 518 A 520 C.CO.): Cumplidos dos (2) anos consecutivos de ocupacion con el mismo establecimiento mercantil, el ARRENDATARIO tendra derecho a la renovacion del contrato salvo las causales taxativas de ley con desahucio previo no menor a seis (6) meses.",
-        "",
-        "CLAUSULA CUARTA - CESION Y SUBARRIENDO COMERCIAL (ART. 523 C.CO.): El ARRENDATARIO no podra subarrendar totalmente el local ni ceder el contrato sin autorizacion expresa del ARRENDADOR, salvo enajenacion del respectivo establecimiento de comercio en bloque.",
-        "",
-        "CLAUSULA QUINTA - CLAUSULA PENAL Y MERITO EJECUTIVO: El incumplimiento de las obligaciones contractuales facultara el cobro ejecutivo de la clausula penal pecuniaria pactada y la restitucion inmediata del inmueble.",
-        extras,
-        "",
-        "ADVERTENCIA DE ASESORIA VECY:",
-        "Minuta base comercial. Para asesoramiento de local, POT y estudio comercial, contacte a Eduardo Rivera y Jani Alves (+57 316 656 9719)."
-      ].filter(Boolean).join("\n");
-    case "contrato_corretaje":
-      return [
-        `LUGAR Y FECHA: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `EL COMITENTE (PROPIETARIO / CLIENTE): ${remitente} \u2014 Identificacion: ${docRem}`,
-        `EL CORREDOR INMOBILIARIO (VECY NETWORK): ${destinatario} \u2014 Identificacion: ${docDest}`,
-        `INMUEBLE CONSIGNADO: ${direccion} (${ciudad}) | VALOR COMERCIAL: ${valor}`,
-        "",
-        "CLAUSULADO DE CONTRATO DE CORRETAJE INMOBILIARIO (ARTS. 1340 A 1346 C.CO.):",
-        "",
-        "CLAUSULA PRIMERA - ENCARGO DE MEDIACION Y PROMOCION: EL COMITENTE confiere encargo mercantil al CORREDOR para la promocion, consecucion de interesados y mediacion en la venta o arrendamiento del bien inmueble consignado.",
-        "",
-        `CLAUSULA SEGUNDA - HONORARIOS Y COMISION PROFESIONAL: Al perfeccionarse la negociacion o suscribirse la promesa de compraventa / contrato de arrendamiento, EL COMITENTE cancelara a favor del CORREDOR los honorarios equivalentes al porcentaje comercial legal (3% urbano / 5% rural o campestre sobre el valor final de la transaccion).`,
-        "",
-        "CLAUSULA TERCERA - DOCTRINA COLABORATIVA VECY 40/20/40: Las partes reconocen la participacion de la red colaborativa VECY Network para la difusion del inmueble entre corredores certificados, garantizando transparencia y reparto ordenado de puntas.",
-        "",
-        "CLAUSULA CUARTA - RESERVA DE CLIENTES PRESENTADOS: Toda transaccion efectuada con clientes presentados por EL CORREDOR dentro de los doce (12) meses posteriores a la terminacion de este encargo causara el pago pleno de los honorarios pactados.",
-        extras,
-        "",
-        "MESA CENTRAL VECY BIENES RAICES: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/"
-      ].filter(Boolean).join("\n");
-    default:
-      return [
-        `LUGAR Y FECHA DE SUSCRIPCION: ${ciudad}, ${(/* @__PURE__ */ new Date()).toLocaleDateString("es-CO")}`,
-        `PARTE A (PROMITENTE / ARRENDADOR / COMITENTE): ${remitente} \u2014 Documento: ${docRem}`,
-        `PARTE B (CONTRAPARTE / ARRENDATARIO / CORREDOR): ${destinatario} \u2014 Documento: ${docDest}`,
-        `INMUEBLE OBJETO DEL ACTO JURIDICO: ${direccion} (${ciudad})`,
-        `CUANTIA / VALOR DE LA OPERACION: ${valor}`,
-        "",
-        "CLAUSULADO GENERAL OBLIGACIONAL:",
-        "",
-        "PRIMERA - OBJETO Y VINCULACION JURIDICA: Las partes suscriben de buena fe exenta de culpa el presente instrumento juridico inmobiliario conforme a la legislacion civil y mercantil colombiana.",
-        "",
-        "SEGUNDA - SANEAMIENTO Y DEBIDA DILIGENCIA: El inmueble objeto del negocio se declara libre de embargos, pleitos pendientes, condiciones resolutorias o limitaciones no declaradas expresamente en el Certificado de Tradicion y Libertad.",
-        "",
-        "TERCERA - OBLIGACION DE ESCRITURACION Y CUMPLIMIENTO NOTARIAL: Las partes se obligan a concurrir en la fecha y notaria pactada para el perfeccionamiento de la respectiva escritura publica.",
-        "",
-        "CUARTA - CLAUSULA PENAL Y CUMPLIMIENTO: El incumplimiento grave de cualquiera de las obligaciones aqui pactadas dara lugar al cobro ejecutivo de las arras o clausula penal conforme al Articulo 1592 del Codigo Civil y Articulo 867 del Codigo de Comercio.",
-        "",
-        "QUINTA - MERITO EJECUTIVO: Las obligaciones dinerarias y de hacer contenidas en este contrato prestan merito ejecutivo pleno de conformidad con el Codigo General del Proceso.",
-        "",
-        "SEXTA - FIRMA ELECTRONICA Y PLENA VALIDEZ PROBATORIA: De conformidad con la Ley 527 de 1999 y el Decreto 2364 de 2012, este documento puede ser suscrito mediante firma electronica certificada con plena eficacia juridica." + extras,
-        "",
-        "ADVERTENCIA DE ASESORIA LEGAL VECY:",
-        "Minuta base estructural. Para elevarla a contrato definitivo con todas las de la ley y coordinar la notaria, contacte a Eduardo Rivera y Jani Alves en VECY BIENES RAICES (+57 316 656 9719 / +57 319 291 9978)."
-      ].filter(Boolean).join("\n");
-  }
-}
-function wrapTextToLines(text2, font, fontSize, maxWidth) {
-  const cleanPara = sanitizePdfWinAnsiText(text2);
-  if (!cleanPara) return [];
-  const words = cleanPara.split(/\s+/).filter(Boolean);
-  const lines = [];
-  let currentLine = "";
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const width = font.widthOfTextAtSize(testLine, fontSize);
-    if (width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  }
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  return lines;
-}
-function drawJustifiedLine(page, line, font, fontSize, startX, y, maxWidth, isJustified = true, textColor = rgb2(0.12, 0.13, 0.16)) {
-  const words = line.split(/\s+/).filter(Boolean);
-  const normalSpaceWidth = font.widthOfTextAtSize(" ", fontSize);
-  if (words.length <= 1 || !isJustified) {
-    page.drawText(line, {
-      x: startX,
-      y,
-      size: fontSize,
-      font,
-      color: textColor
-    });
-    return;
-  }
-  let totalWordsWidth = 0;
-  for (const w of words) {
-    totalWordsWidth += font.widthOfTextAtSize(w, fontSize);
-  }
-  const numGaps = words.length - 1;
-  const extraSpace = maxWidth - totalWordsWidth;
-  const calculatedSpace = extraSpace / numGaps;
-  if (calculatedSpace > normalSpaceWidth * 2.6 || calculatedSpace < normalSpaceWidth * 0.7) {
-    page.drawText(line, {
-      x: startX,
-      y,
-      size: fontSize,
-      font,
-      color: textColor
-    });
-    return;
-  }
-  let curX = startX;
-  for (let wIdx = 0; wIdx < words.length; wIdx++) {
-    const w = words[wIdx];
-    page.drawText(w, {
-      x: curX,
-      y,
-      size: fontSize,
-      font,
-      color: textColor
-    });
-    curX += font.widthOfTextAtSize(w, fontSize) + calculatedSpace;
-  }
-}
-async function generateLegalDocumentPdf(params) {
-  const meta = getLegalDocumentMetadata(params.tipoDocumento);
-  const title = sanitizePdfWinAnsiText(params.tituloPersonalizado || meta.title).toUpperCase();
-  const bodyContent = sanitizePdfWinAnsiText(params.cuerpoDocumento || buildDefaultLegalBody(params));
-  const verificationCode = `DOC-VECY-${crypto4.randomBytes(3).toString("hex").toUpperCase()}-2026`;
-  const pdfDoc = await PDFDocument2.create();
-  const fontRegular = await pdfDoc.embedFont(StandardFonts2.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts2.HelveticaBold);
-  const pageWidth = 612;
-  const pageHeight = 792;
-  const marginX = 52;
-  const maxWidth = pageWidth - marginX * 2;
-  let logoImage = null;
-  const logoCandidates = [
-    path12.resolve(process.cwd(), "client/public/assets/logo_vecy_header.png"),
-    path12.resolve(process.cwd(), "assets/logo_vecy_header.png"),
-    path12.resolve(process.cwd(), "client/public/logo-vecy.png")
-  ];
-  for (const lp of logoCandidates) {
-    if (fs12.existsSync(lp)) {
-      try {
-        const logoBuf = fs12.readFileSync(lp);
-        logoImage = await pdfDoc.embedPng(logoBuf);
-        break;
-      } catch {
-      }
-    }
-  }
-  const drawHeader = (page, isFirstPage) => {
-    page.drawRectangle({
-      x: 0,
-      y: pageHeight - 74,
-      width: pageWidth,
-      height: 74,
-      color: rgb2(0.04, 0.04, 0.05)
-    });
-    page.drawRectangle({
-      x: 0,
-      y: pageHeight - 77,
-      width: pageWidth,
-      height: 3,
-      color: rgb2(0.83, 0.68, 0.21)
-    });
-    let textStartX = marginX;
-    if (logoImage) {
-      page.drawImage(logoImage, {
-        x: marginX,
-        y: pageHeight - 68,
-        width: 44,
-        height: 44
-      });
-      textStartX = marginX + 54;
-    }
-    page.drawText("VECY BIENES RAICES - CONSULTORIA LEGAL E IA INMOBILIARIA", {
-      x: textStartX,
-      y: pageHeight - 31,
-      size: 11.2,
-      font: fontBold,
-      color: rgb2(0.92, 0.78, 0.32)
-    });
-    page.drawText("Eduardo A. Rivera & Jani Alves | Broker Oficial: +57 316 656 9719 | https://vecy-bienes-raices.vercel.app/", {
-      x: textStartX,
-      y: pageHeight - 46,
-      size: 8.5,
-      font: fontRegular,
-      color: rgb2(0.88, 0.9, 0.94)
-    });
-    page.drawText(`Radicado Documental: ${verificationCode} | Validez Notarial y Registral`, {
-      x: textStartX,
-      y: pageHeight - 59,
-      size: 7.8,
-      font: fontRegular,
-      color: rgb2(0.72, 0.74, 0.78)
-    });
-    if (isFirstPage) {
-      const titleLines = wrapTextToLines(title, fontBold, 12.8, maxWidth);
-      let ty = pageHeight - 104;
-      for (const tLine of titleLines) {
-        page.drawText(tLine, {
-          x: marginX,
-          y: ty,
-          size: 12.8,
-          font: fontBold,
-          color: rgb2(0.08, 0.09, 0.12)
-        });
-        ty -= 16;
-      }
-      page.drawText(`Marco Normativo: ${sanitizePdfWinAnsiText(meta.normativeFramework)}`, {
-        x: marginX,
-        y: ty - 2,
-        size: 8.8,
-        font: fontRegular,
-        color: rgb2(0.35, 0.38, 0.44)
-      });
-      page.drawLine({
-        start: { x: marginX, y: ty - 10 },
-        end: { x: pageWidth - marginX, y: ty - 10 },
-        thickness: 0.9,
-        color: rgb2(0.83, 0.68, 0.21)
-      });
-      return ty - 26;
-    }
-    return pageHeight - 96;
-  };
-  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  let cursorY = drawHeader(currentPage, true);
-  const rawParagraphs = bodyContent.split(/\r?\n/);
-  for (let pIdx = 0; pIdx < rawParagraphs.length; pIdx++) {
-    const rawP = rawParagraphs[pIdx].trim();
-    if (!rawP) {
-      cursorY -= 8;
-      continue;
-    }
-    const isSectionHeader = /^(?:CLAUSULADO|DISPOSICIONES|ADVERTENCIA|REQUISITOS|CERTIFICACION)/i.test(rawP);
-    if (isSectionHeader) {
-      if (cursorY < 140) {
-        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        cursorY = drawHeader(currentPage, false);
-      }
-      cursorY -= 8;
-      currentPage.drawText(rawP, {
-        x: marginX,
-        y: cursorY,
-        size: 11,
-        font: fontBold,
-        color: rgb2(0.06, 0.07, 0.1)
-      });
-      cursorY -= 16;
-      continue;
-    }
-    const clauseInlineMatch = rawP.match(/^(CLAUSULA\s+[A-ZÁÉÍÓÚ]+(?:\s*-\s*[^:]+)?:)\s*(.*)$/i);
-    if (clauseInlineMatch) {
-      const headingPart = clauseInlineMatch[1].trim();
-      const bodyPart = clauseInlineMatch[2].trim();
-      if (cursorY < 140) {
-        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        cursorY = drawHeader(currentPage, false);
-      }
-      cursorY -= 8;
-      currentPage.drawText(headingPart, {
-        x: marginX,
-        y: cursorY,
-        size: 10.5,
-        font: fontBold,
-        color: rgb2(0.06, 0.07, 0.1)
-      });
-      cursorY -= 15;
-      if (bodyPart) {
-        const pLines2 = wrapTextToLines(bodyPart, fontRegular, 10.2, maxWidth);
-        for (let lIdx = 0; lIdx < pLines2.length; lIdx++) {
-          if (cursorY < 130) {
-            currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-            cursorY = drawHeader(currentPage, false);
-          }
-          const isLastLine = lIdx === pLines2.length - 1;
-          drawJustifiedLine(currentPage, pLines2[lIdx], fontRegular, 10.2, marginX, cursorY, maxWidth, !isLastLine);
-          cursorY -= 15.2;
-        }
-      }
-      continue;
-    }
-    const metaMatch = rawP.match(/^([A-ZÁÉÍÓÚ\s/()—-]+:)\s*(.*)$/);
-    if (metaMatch && metaMatch[1].length < 50 && !rawP.startsWith("- ")) {
-      if (cursorY < 130) {
-        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        cursorY = drawHeader(currentPage, false);
-      }
-      const label = metaMatch[1];
-      const val = metaMatch[2];
-      const labelWidth = fontBold.widthOfTextAtSize(label, 10);
-      currentPage.drawText(label, {
-        x: marginX,
-        y: cursorY,
-        size: 10,
-        font: fontBold,
-        color: rgb2(0.12, 0.14, 0.18)
-      });
-      if (val) {
-        const valStartX = marginX + labelWidth + 4;
-        const availableWidth = maxWidth - labelWidth - 4;
-        const valLines = wrapTextToLines(val, fontRegular, 10, availableWidth);
-        for (let vIdx = 0; vIdx < valLines.length; vIdx++) {
-          if (vIdx > 0) {
-            cursorY -= 14.5;
-            if (cursorY < 130) {
-              currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-              cursorY = drawHeader(currentPage, false);
-            }
-          }
-          currentPage.drawText(valLines[vIdx], {
-            x: vIdx === 0 ? valStartX : marginX + 16,
-            y: cursorY,
-            size: 10,
-            font: fontRegular,
-            color: rgb2(0.15, 0.16, 0.2)
-          });
-        }
-      }
-      cursorY -= 15;
-      continue;
-    }
-    const isListItem = /^[-•*]\s+|\d+\.\s+/.test(rawP);
-    const pLines = wrapTextToLines(rawP, fontRegular, 10.2, maxWidth);
-    for (let lIdx = 0; lIdx < pLines.length; lIdx++) {
-      if (cursorY < 130) {
-        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        cursorY = drawHeader(currentPage, false);
-      }
-      const isLastLine = lIdx === pLines.length - 1;
-      const shouldJustify = !isListItem && !isLastLine;
-      drawJustifiedLine(
-        currentPage,
-        pLines[lIdx],
-        fontRegular,
-        10.2,
-        isListItem ? marginX + 8 : marginX,
-        cursorY,
-        isListItem ? maxWidth - 8 : maxWidth,
-        shouldJustify
-      );
-      cursorY -= 15.2;
-    }
-  }
-  if (cursorY < 210) {
-    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-    cursorY = drawHeader(currentPage, false);
-  }
-  cursorY -= 26;
-  currentPage.drawLine({
-    start: { x: marginX, y: cursorY },
-    end: { x: marginX + 210, y: cursorY },
-    thickness: 0.9,
-    color: rgb2(0.2, 0.2, 0.25)
-  });
-  currentPage.drawLine({
-    start: { x: pageWidth - marginX - 210, y: cursorY },
-    end: { x: pageWidth - marginX, y: cursorY },
-    thickness: 0.9,
-    color: rgb2(0.2, 0.2, 0.25)
-  });
-  const remLabel = sanitizePdfWinAnsiText(params.nombreRemitente || "FIRMA PARTE A / REMITENTE");
-  const destLabel = sanitizePdfWinAnsiText(params.nombreDestinatario || "FIRMA PARTE B / DESTINATARIO");
-  currentPage.drawText(remLabel.substring(0, 38), {
-    x: marginX,
-    y: cursorY - 13,
-    size: 8.5,
-    font: fontBold,
-    color: rgb2(0.15, 0.15, 0.2)
-  });
-  currentPage.drawText("CC / NIT: ________________________", {
-    x: marginX,
-    y: cursorY - 25,
-    size: 8,
-    font: fontRegular,
-    color: rgb2(0.35, 0.35, 0.4)
-  });
-  currentPage.drawText(destLabel.substring(0, 38), {
-    x: pageWidth - marginX - 210,
-    y: cursorY - 13,
-    size: 8.5,
-    font: fontBold,
-    color: rgb2(0.15, 0.15, 0.2)
-  });
-  currentPage.drawText("CC / NIT: ________________________", {
-    x: pageWidth - marginX - 210,
-    y: cursorY - 25,
-    size: 8,
-    font: fontRegular,
-    color: rgb2(0.35, 0.35, 0.4)
-  });
-  const footerBoxY = 36;
-  currentPage.drawRectangle({
-    x: marginX,
-    y: footerBoxY,
-    width: maxWidth,
-    height: 70,
-    color: rgb2(0.96, 0.96, 0.98),
-    borderColor: rgb2(0.83, 0.68, 0.21),
-    borderWidth: 0.8
-  });
-  currentPage.drawText("GUIA RAPIDA DE FIRMA ELECTRONICA OFICIAL (LEY 527 DE 1999):", {
-    x: marginX + 10,
-    y: footerBoxY + 52,
-    size: 8.2,
-    font: fontBold,
-    color: rgb2(0.12, 0.14, 0.2)
-  });
-  currentPage.drawText(
-    "1. Ingresa a https://autenticaciondigital.and.gov.co/ (Agencia Nacional Digital - Carpeta Ciudadana).",
-    {
-      x: marginX + 10,
-      y: footerBoxY + 39,
-      size: 7.6,
-      font: fontRegular,
-      color: rgb2(0.25, 0.27, 0.32)
-    }
-  );
-  currentPage.drawText(
-    "2. Valida tu identidad o usa un firmador con estampado cronologico y OTP al celular/correo de las partes.",
-    {
-      x: marginX + 10,
-      y: footerBoxY + 27,
-      size: 7.6,
-      font: fontRegular,
-      color: rgb2(0.25, 0.27, 0.32)
-    }
-  );
-  currentPage.drawText(
-    `3. Codigo de trazabilidad VECY: ${verificationCode} | Asesoria Jur\xEDdica e Inmobiliaria: +57 316 656 9719`,
-    {
-      x: marginX + 10,
-      y: footerBoxY + 14,
-      size: 7.6,
-      font: fontBold,
-      color: rgb2(0.2, 0.22, 0.28)
-    }
-  );
-  try {
-    const qrDataUrl = await QRCode3.toDataURL(
-      `https://vecy-bienes-raices.vercel.app/?doc=${verificationCode}`,
-      { margin: 1, width: 120 }
-    );
-    const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
-    const qrImage = await pdfDoc.embedPng(Buffer.from(qrBase64, "base64"));
-    currentPage.drawImage(qrImage, {
-      x: pageWidth - marginX - 62,
-      y: footerBoxY + 6,
-      width: 56,
-      height: 56
-    });
-  } catch {
-  }
-  const allPages = pdfDoc.getPages();
-  const totalPages = allPages.length;
-  allPages.forEach((p, idx) => {
-    p.drawLine({
-      start: { x: marginX, y: 28 },
-      end: { x: pageWidth - marginX, y: 28 },
-      thickness: 0.5,
-      color: rgb2(0.82, 0.84, 0.88)
-    });
-    p.drawText(`Pagina ${idx + 1} de ${totalPages} - Minuta Legal Inmobiliaria VECY BIENES RAICES - Radicado: ${verificationCode}`, {
-      x: marginX,
-      y: 16,
-      size: 7.4,
-      font: fontRegular,
-      color: rgb2(0.45, 0.47, 0.52)
-    });
-  });
-  const pdfBytes = await pdfDoc.save();
-  const pdfBuffer = Buffer.from(pdfBytes);
-  const fileName = `${meta.defaultFileNamePrefix}_${verificationCode}.pdf`;
-  return {
-    pdfBuffer,
-    fileName,
-    verificationCode,
-    title,
-    normativeFramework: meta.normativeFramework
-  };
-}
-var init_legalDocumentPdfService = __esm({
-  "server/_core/jania/legalDocumentPdfService.ts"() {
-    "use strict";
   }
 });
 
@@ -36049,6 +37511,27 @@ ${audit.fichaOptimizadaSugerida}
         }
       };
     }
+    case "realizar_estudio_titulos_snr": {
+      const ctlInput = String(args.textoAnotacionesOCtl || rawUserText || "").trim();
+      const ctlRes = await analyzeCtlFromWhatsAppInput({
+        text: ctlInput,
+        requesterName: _userName || void 0
+      });
+      if (ctlRes.isCtlDocument && ctlRes.pdfBuffer && ctlRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: ctlRes.pdfBuffer, pdfFileName: ctlRes.pdfFileName });
+      }
+      return {
+        toolType: "estudio_titulos",
+        resultJson: {
+          solicitud: "realizar_estudio_titulos_snr",
+          esDocumentoCtl: ctlRes.isCtlDocument,
+          semaforo: ctlRes.report?.verdictLabel || "REQUIERE_DOCUMENTO",
+          matricula: ctlRes.report?.metadata.matriculaInmobiliaria || null,
+          exitoso: ctlRes.isCtlDocument,
+          reporteOficial: ctlRes.responseText || "Para realizar el Estudio de T\xEDtulos SNR preliminar, env\xEDame por favor el PDF del Certificado de Tradici\xF3n y Libertad o fotograf\xEDas claras de todas las p\xE1ginas."
+        }
+      };
+    }
     default:
       return {
         toolType: "sondeo",
@@ -36075,7 +37558,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   }
   const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? toolJson.reporteAcmEstructurado || JSON.stringify(toolJson) : "");
   const isDirectDocumentLookup = (toolType === "cedula" || toolType === "empresa") && Boolean(rawReport) && (rawReport.includes("VERIFICACI\xD3N OFICIAL DE IDENTIDAD") || rawReport.includes("VERIFICACI\xD3N OFICIAL DE EMPRESA") || rawReport.includes("Alerta de Validaci\xF3n de Identidad")) && (/^\s*(?:cc|ce|nit|pasaporte|ti|ppt|c[eé]dula|verificar|consulta|antecedentes)?\s*[\d\.\-]{5,18}\s*$/i.test(userMessage.trim()) || userMessage.trim().length <= 40);
-  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
+  const isDirectBypass = rawReport && (rawReport.includes("PAZ Y SALVO") || rawReport.includes("FACTURA PREDIAL") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA") || rawReport.includes("ESTUDIO DE T\xCDTULOS SNR") || rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") || isDirectDocumentLookup);
   if (isDirectBypass) {
     return rawReport.includes("COINCIDENCIA") || rawReport.includes("MATCH") ? rawReport : await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
   }
@@ -36619,7 +38102,7 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
       lastAssistantTextEarly
     );
     const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
-    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?)\b/i.test(
+    const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n)\b/i.test(
       cleanLower
     );
     if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction) {
@@ -37063,6 +38546,51 @@ Si tienes alg\xFAn inmueble (casa, apartamento, lote u oficina) del cual requier
     appendDmHistory(userId, "assistant", vehicularReply);
     markUserGreetedToday(userId);
     return vehicularReply;
+  }
+  const isCommercialFlyerImg = Boolean(mediaOptions?.flyerVisionData?.isFlyerOrBanner);
+  const isReviewValidationContext = /\b(?:rese[ñn]a|google\s+review|5\s+estrellas|calificaci[oó]n)\b/i.test(cleanLower);
+  const shouldEvaluateCtlInDm = !isCommercialFlyerImg && !isReviewValidationContext && (Boolean(mediaOptions?.pdfBuffer) || Boolean(mediaOptions?.imageBuffer) || hasCtlTextMarkers(clean) || isExplicitCtlStudyRequest(clean));
+  if (shouldEvaluateCtlInDm) {
+    const ctlRes = await analyzeCtlFromWhatsAppInput({
+      text: clean,
+      imageBuffer: mediaOptions?.imageBuffer,
+      pdfBuffer: mediaOptions?.pdfBuffer,
+      pdfMimeType: mediaOptions?.pdfMimeType,
+      requesterName: displayName || realName || void 0
+    });
+    if (ctlRes.isCtlDocument && ctlRes.report) {
+      if (ctlRes.pdfBuffer && ctlRes.pdfFileName) {
+        setLatestDmPdf(userId, { pdfBuffer: ctlRes.pdfBuffer, pdfFileName: ctlRes.pdfFileName });
+      }
+      await incrementFreeServicesCount(userId);
+      userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+      userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+        serviceType: "estudio_titulos",
+        timestamp: Date.now()
+      };
+      await saveUserPerpetualSession(userPerpetualSession);
+      const satisfactionLine = `
+
+\u{1F91D} *\xBFQuedaste satisfecho(a) con este Estudio de T\xEDtulos y el Concepto en PDF?* Tu opini\xF3n me ayuda a seguir afinando mi precisi\xF3n para toda la red VECY.`;
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const finalCtlReply = `${greetingPrefix}${ctlRes.report.whatsappSummary}${satisfactionLine}`;
+      appendDmHistory(userId, "user", clean || "[Adjunto Certificado de Tradici\xF3n y Libertad]");
+      appendDmHistory(userId, "assistant", finalCtlReply);
+      markUserGreetedToday(userId);
+      return finalCtlReply;
+    }
+    if (ctlRes.needsMediaGuidance && ctlRes.responseText) {
+      const greetingPrefix = isOngoingChat || !displayName ? "" : `\xA1${timeSalutation}, ${displayName}! \u{1F44B}
+
+`;
+      const guidanceReply = `${greetingPrefix}${ctlRes.responseText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", guidanceReply);
+      markUserGreetedToday(userId);
+      return guidanceReply;
+    }
   }
   if (!isEduardo && !isJani && !isFamilyOrTrusted) {
     const reqProfiling = analyzeRequirementCompleteness(clean);
@@ -37818,6 +39346,7 @@ var init_dmHandler = __esm({
     init_llm();
     init_prompts();
     init_valuation();
+    init_ctlTitleStudyService();
     init_whatsapp_utils();
     init_trustedContacts();
     init_founderKnowledgeService();
@@ -38094,6 +39623,17 @@ var init_dmHandler = __esm({
               },
               required: ["descripcionActual"]
             }
+          },
+          {
+            name: "realizar_estudio_titulos_snr",
+            description: "Ejecuta el Estudio de T\xEDtulos SNR colombiano sobre un Certificado de Tradici\xF3n y Libertad (CTL) pegado en texto o enviado en PDF/imagen: audita anotaci\xF3n por anotaci\xF3n, verifica tradici\xF3n de 10 y 20 a\xF1os, detecta Falsa Tradici\xF3n (C\xF3d. 0600), cruza hipotecas/embargos/patrimonio de familia/afectaci\xF3n vivienda familiar/usufructos/sucesiones contra cancelaciones posteriores, emite dictamen jur\xEDdico en sem\xE1foro (Verde/Amarillo/Rojo) y genera PDF membretado de VECY BIENES RA\xCDCES.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                textoAnotacionesOCtl: { type: "STRING", description: "Texto pegado del Certificado de Tradici\xF3n y Libertad o descripci\xF3n/anotaciones enviadas por el usuario" }
+              },
+              required: ["textoAnotacionesOCtl"]
+            }
           }
         ]
       }
@@ -38115,7 +39655,8 @@ var init_dmHandler = __esm({
       "registro_inmueble",
       "documento_legal_pdf",
       "imagen_creativa",
-      "ubicacion_gps"
+      "ubicacion_gps",
+      "estudio_titulos"
     ];
   }
 });
@@ -38231,7 +39772,7 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
     const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
-    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
+    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
     const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
     if (isReviewLinkReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
       messageToProcess
@@ -38251,6 +39792,47 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         wantsVoice: false,
         voiceResponse: ""
       };
+    }
+    const ctlGroupInputText = quotedContext && hasCtlTextMarkers(quotedContext) && !hasCtlTextMarkers(messageToProcess) ? `${messageToProcess}
+${quotedContext}` : messageToProcess;
+    if (Boolean(pdfBuffer) || Boolean(imageBuffer) || hasCtlTextMarkers(ctlGroupInputText) || isExplicitCtlStudyRequest(messageToProcess)) {
+      const ctlCheck = await analyzeCtlFromWhatsAppInput({
+        text: ctlGroupInputText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: targetName || realName || void 0
+      });
+      if (ctlCheck.isCtlDocument && ctlCheck.report) {
+        const finalCtlResp = appendGroupSatisfactionClosing(ctlCheck.report.whatsappSummary);
+        console.log(
+          `[JanIA-GroupCTL] Estudio de T\xEDtulos SNR ejecutado para ${userId}: ${ctlCheck.report.verdictCode} (${ctlCheck.report.metadata.matriculaInmobiliaria})`
+        );
+        appendConsultingHistory(userId, "user", text2 || "[CTL SNR adjunto]");
+        appendConsultingHistory(userId, "assistant", finalCtlResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalCtlResp,
+          reactionEmoji: ctlCheck.report.verdictEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: ctlCheck.pdfBuffer,
+          fileName: ctlCheck.pdfFileName
+        };
+      }
+      if (ctlCheck.needsMediaGuidance && ctlCheck.responseText) {
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", ctlCheck.responseText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: ctlCheck.responseText,
+          reactionEmoji: ctlCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
     }
     if (isIduInquiry(messageToProcess) || hasPendingIduSession(userId)) {
       const iduCheck = await executeIduAssistanceFromWhatsApp(messageToProcess, userId, false);
@@ -38740,6 +40322,28 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         };
       }
     }
+    if (isExplicitCtlStudyRequest(text2) || hasCtlTextMarkers(text2)) {
+      const ctlFallback = await analyzeCtlFromWhatsAppInput({
+        text: text2,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: firstName || void 0
+      }).catch(() => null);
+      if (ctlFallback?.isCtlDocument && ctlFallback.report) {
+        const finalCtlFallbackResp = appendGroupSatisfactionClosing(ctlFallback.report.whatsappSummary);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalCtlFallbackResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalCtlFallbackResp,
+          reactionEmoji: ctlFallback.report.verdictEmoji,
+          document: ctlFallback.pdfBuffer,
+          fileName: ctlFallback.pdfFileName
+        };
+      }
+    }
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
 
@@ -38813,6 +40417,7 @@ var init_consultingHandler = __esm({
     init_valuation();
     init_realEstateMarketing();
     init_politenessService();
+    init_ctlTitleStudyService();
   }
 });
 
@@ -38858,6 +40463,37 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
         wantsVoice: false,
         voiceResponse: ""
       };
+    }
+    const ctlCirculoText = quotedContext && hasCtlTextMarkers(quotedContext) && !hasCtlTextMarkers(text2) ? `${text2}
+${quotedContext}` : text2;
+    if (Boolean(pdfBuffer) || Boolean(imageBuffer) || hasCtlTextMarkers(ctlCirculoText) || isExplicitCtlStudyRequest(text2)) {
+      const ctlCirculoCheck = await analyzeCtlFromWhatsAppInput({
+        text: ctlCirculoText,
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        requesterName: cleanFirstName || realName || void 0
+      });
+      if (ctlCirculoCheck.isCtlDocument && ctlCirculoCheck.report) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(ctlCirculoCheck.report.whatsappSummary),
+          reactionEmoji: ctlCirculoCheck.report.verdictEmoji,
+          wantsVoice: false,
+          voiceResponse: "",
+          document: ctlCirculoCheck.pdfBuffer,
+          fileName: ctlCirculoCheck.pdfFileName
+        };
+      }
+      if (ctlCirculoCheck.needsMediaGuidance && ctlCirculoCheck.responseText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: ctlCirculoCheck.responseText,
+          reactionEmoji: ctlCirculoCheck.reactionEmoji,
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
     }
     if (isIduInquiry(text2) || hasPendingIduSession(userId)) {
       const iduCheck = await executeIduAssistanceFromWhatsApp(text2, userId, false);
@@ -39092,6 +40728,7 @@ var init_circuloHandler = __esm({
     init_iduValorizacionService();
     init_identityVerificationService();
     init_notarialExpenseService();
+    init_ctlTitleStudyService();
   }
 });
 
