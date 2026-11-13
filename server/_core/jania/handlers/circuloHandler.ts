@@ -12,6 +12,18 @@ import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
+import { appendGroupSatisfactionClosing } from "./consultingHandler";
+import { executeIduAssistanceFromWhatsApp, isIduInquiry, hasPendingIduSession } from "../../iduValorizacionService";
+import {
+  executeIdentityVerificationFromWhatsApp,
+  extractAllCedulasForVerification,
+  getPendingCedulaSession,
+  isExplicitCompanyRuesQuery,
+} from "../../identityVerificationService";
+import {
+  executeNotarialAssistanceFromWhatsApp,
+  isExplicitNotarialLiquidationRequest,
+} from "../../notarialExpenseService";
 
 
 
@@ -69,14 +81,30 @@ export async function processCirculoMessage(
       };
     }
 
-    // 🏛️ INTERCEPTOR DIRECTO 1: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA/NIT)
+    // 🏛️ INTERCEPTOR DIRECTO 1: PAZ Y SALVO IDU BOGOTÁ + PDF OFICIAL (PRIORIDAD SOBRE PREDIAL)
+    if (isIduInquiry(text) || hasPendingIduSession(userId)) {
+      const iduCheck = await executeIduAssistanceFromWhatsApp(text, userId, false);
+      if (iduCheck.isIduRequest && iduCheck.reportText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(iduCheck.reportText),
+          reactionEmoji: "📄",
+          wantsVoice: false,
+          voiceResponse: "",
+          document: iduCheck.pdfBuffer,
+          fileName: iduCheck.pdfFileName,
+        };
+      }
+    }
+
+    // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA/NIT)
     const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
     const predialCheck = await executePredialAssistanceFromWhatsApp(text, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogotá ejecutada para ${userId} (CHIP: ${predialCheck.chip || 'General'}): isPredialRequest=true`);
       return {
         classification: "CONSULTA_GENERAL",
-        response: predialCheck.reportText,
+        response: appendGroupSatisfactionClosing(predialCheck.reportText),
         reactionEmoji: "📄",
         wantsVoice: false,
         voiceResponse: "",
@@ -85,18 +113,39 @@ export async function processCirculoMessage(
       };
     }
 
-    // 🛡️ INTERCEPTOR DIRECTO 2: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp } = await import('../../identityVerificationService');
-    const idCheck = await executeIdentityVerificationFromWhatsApp(text);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-Circulo-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
+    // 🛡️ INTERCEPTOR DIRECTO 3: VERIFICACIÓN OFICIAL DE CÉDULA Y EMPRESAS RUES
+    const circuloIdItems = extractAllCedulasForVerification(text, false);
+    if (circuloIdItems.length > 0 || isExplicitCompanyRuesQuery(text) || Boolean(getPendingCedulaSession(userId))) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp(
+        text,
+        false,
+        userId,
+        circuloIdItems.length > 0 ? circuloIdItems : undefined
+      );
+      if (idCheck.isVerificationRequest && idCheck.reportText) {
+        console.log(`[JanIA-Circulo-IdentityCheck] Verificación de identidad ejecutada para ${userId} (${idCheck.tipoDoc}: ${idCheck.cedula}): success=${idCheck.success}`);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(idCheck.reportText),
+          reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+
+    // ⚖️ INTERCEPTOR DIRECTO 4: LIQUIDACIÓN EXACTA DE GASTOS NOTARIALES Y REGISTRO
+    if (isExplicitNotarialLiquidationRequest(text, userId)) {
+      const notarialCheck = await executeNotarialAssistanceFromWhatsApp(text, userId, false);
+      if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(notarialCheck.reportText),
+          reactionEmoji: "⚖️",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
     }
 
     const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';

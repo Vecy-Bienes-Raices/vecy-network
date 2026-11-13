@@ -1301,6 +1301,19 @@ function cleanPotentialPersonName(str?: string): string | undefined {
   return s;
 }
 
+const VECY_EXCLUDED_MENTION_IDS = new Set([
+  '573192919978',
+  '3192919978',
+  '573166569719',
+  '3166569719',
+  '573188096811',
+  '3188096811',
+  '167108705018103',
+  '225954035179724',
+  '182781141344345',
+  '218820279050385'
+]);
+
 /**
  * Extrae TODAS las cédulas y documentos de identidad presentes en un mensaje.
  * Soporta 1, 2 o más documentos en una sola comunicación (ej. pareja de compradores, arrendatario + codeudor).
@@ -1309,7 +1322,8 @@ function cleanPotentialPersonName(str?: string): string | undefined {
 export function extractAllCedulasForVerification(text: string, isPrivateDm: boolean = false): ExtractedCedulaItem[] {
   if (!text || typeof text !== 'string') return [];
 
-  const clean = text.trim();
+  // 🛡️ Remover menciones de WhatsApp (@573192919978, @167108705018103, etc.) antes de extraer cédulas/NIT
+  const clean = text.replace(/@\d{7,18}\b/g, ' ').trim();
   const lower = clean.toLowerCase();
 
   // Descartar si el texto es claramente una oferta o demanda inmobiliaria
@@ -1410,6 +1424,7 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
         if (isMonetaryContext(clean, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = raw.replace(/\D/g, '');
+        if (VECY_EXCLUDED_MENTION_IDS.has(ced)) continue;
         // En Colombia los NIT de Personas Jurídicas tienen 9 dígitos e inician por 8 o 9
         if (ced.length === 9) {
           if (/^[89]\d{8}$/.test(ced) && !/00000$/.test(ced)) {
@@ -2499,6 +2514,34 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
 }
 
 /**
+ * Detecta explícitamente consultas empresariales o societarias para verificación RUES / DIAN
+ * (por NIT, Razón Social, Cámara de Comercio o siglas societarias SAS / LTDA / S.A.).
+ */
+export function isExplicitCompanyRuesQuery(text: string): boolean {
+  if (!text) return false;
+  const cleaned = text.replace(/@\d{7,18}\b/g, ' ').replace(/@jania\b/gi, ' ').trim();
+  if (/\b(?:rues|c[aá]mara\s+de\s+comercio|raz[oó]n\s+social|certificado\s+de\s+existencia|representante\s+legal|matr[ií]cula\s+mercantil|confec[aá]maras)\b/i.test(cleaned)) {
+    return true;
+  }
+  if (/\b(?:nit|n\.i\.t\.?)\b/i.test(cleaned) && (/\b\d{8,10}(?:-\d)?\b/.test(cleaned) || /\b(?:empresa|sociedad|inmobiliaria|constructora|firma|compa[ñn][ií]a|sas|s\.a\.s\.?|ltda|s\.a\.?)\b/i.test(cleaned))) {
+    return true;
+  }
+  if (
+    /\b(?:empresa|sociedad|inmobiliaria|constructora|firma|compa[ñn][ií]a|corporaci[oó]n|fundaci[oó]n|grupo\s+empresarial)\b/i.test(cleaned) &&
+    /\b(?:consult\w*|verific\w*|revis\w*|valid\w*|averigu\w*|busc\w*|investigu\w*|cheque\w*|exist\w*|legal\w*|antecedentes|datos|informaci[oó]n|qu[ií]en\s+es|c[oó]mo\s+est[aá]|aparece)\b/i.test(cleaned)
+  ) {
+    return true;
+  }
+  if (
+    /\b(?:s\.?\s*a\.?\s*s\.?|ltda\.?|s\.?\s*a\.?|s\.?\s*c\.?\s*a\.?|e\.?\s*u\.?)\b/i.test(cleaned) &&
+    /\b(?:consult\w*|verific\w*|revis\w*|valid\w*|averigu\w*|busc\w*|rues|nit|empresa|sociedad|inmobiliaria|constructora)\b/i.test(cleaned)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Ejecuta la verificación oficial ante las centrales de seguridad del Estado
  * con estrategia Fail-Fast:
  * 1° ADRES (BDUA)
@@ -2515,8 +2558,12 @@ export async function executeIdentityVerificationFromWhatsApp(
 ): Promise<IdentityVerificationReport> {
   const items = explicitItems && explicitItems.length > 0 ? explicitItems : extractAllCedulasForVerification(text, isPrivateDm);
   if (items.length === 0) {
-    if (/\b(?:empresa|raz[oó]n\s*social|sociedad|constructora|inmobiliaria|banco|rues|confec[aá]maras)\b/i.test(text) && /\b(?:consultar|verificar|revisar|antecedentes|identidad|nit|rues|representante)\b/i.test(text)) {
-      const cleanCorp = text.replace(/^(?:jania|vecy|[¡!¿?,\s])+/gi, "").trim();
+    if (isExplicitCompanyRuesQuery(text)) {
+      const cleanCorp = text
+        .replace(/@\d{7,18}\b/g, ' ')
+        .replace(/@jania\b/gi, ' ')
+        .replace(/^(?:jania|vecy|[¡!¿?,\s])+/gi, '')
+        .trim();
       const empresaRes = await queryEmpresaOrNit(cleanCorp, userId);
       return {
         isVerificationRequest: true,
@@ -2556,7 +2603,8 @@ export async function executeIdentityVerificationFromWhatsApp(
   }
 
   if (items.length === 1 && items[0].tipoDoc.toLowerCase() === 'nit') {
-    const empresaRes = await queryEmpresaOrNit(text, userId);
+    const cleanTextForNit = text.replace(/@\d{7,18}\b/g, ' ').replace(/@jania\b/gi, ' ').trim();
+    const empresaRes = await queryEmpresaOrNit(cleanTextForNit, userId);
     if (userId) {
       savePendingCedulaSession(userId, items, empresaRes.reportText, empresaRes.success);
     }

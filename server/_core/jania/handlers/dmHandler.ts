@@ -428,6 +428,8 @@ export function extractAcmAttributesFromText(rawText: string): {
   direccionExacta?: string;
   tipoInmueble?: string;
   areaM2?: number;
+  estrato?: number;
+  antiguedadAnos?: number;
   anoConstruccion?: number;
   esRemodelado?: boolean;
   habitaciones?: number;
@@ -462,10 +464,24 @@ export function extractAcmAttributesFromText(rawText: string): {
     }
   }
 
-  // Año de construcción
+  // Año de construcción, antigüedad y estrato
   const yearMatch = text.match(/(?:a[ñn]o(?:\s+de)?\s+construcci[oó]n|construid[ao]\s+en|del\s+a[ñn]o)\s*[:.]?\s*((?:19|20)\d{2})\b/i);
   if (yearMatch?.[1]) {
     out.anoConstruccion = parseInt(yearMatch[1], 10);
+  }
+
+  const antMatch = text.match(/(?:antig[uü]edad\s*(?:de)?\s*(\d{1,2})\s*a[ñn]os?|(\d{1,2})\s*a[ñn]os?\s*(?:de\s+)?(?:antig[uü]edad|construid[ao]))/i);
+  const rawAnt = antMatch?.[1] || antMatch?.[2];
+  if (rawAnt) {
+    const parsedAnt = parseInt(rawAnt, 10);
+    if (!Number.isNaN(parsedAnt) && parsedAnt >= 0 && parsedAnt <= 99) {
+      out.antiguedadAnos = parsedAnt;
+    }
+  }
+
+  const estratoMatch = text.match(/\bestrato\s*[:.]?\s*([1-6])\b/i);
+  if (estratoMatch?.[1]) {
+    out.estrato = parseInt(estratoMatch[1], 10);
   }
 
   // Remodelación / acabado moderno
@@ -916,8 +932,8 @@ export async function executeJaniaDmTool(
         ciudad: args.ciudad,
         tipoInmueble: args.tipoInmueble || extracted.tipoInmueble || "apartamento",
         areaM2: Number(args.areaM2 ?? extracted.areaM2 ?? 75),
-        estrato: Number(args.estrato || 5),
-        antiguedadAnos: args.antiguedadAnos !== undefined ? Number(args.antiguedadAnos) : undefined,
+        estrato: Number(args.estrato ?? extracted.estrato ?? 5),
+        antiguedadAnos: args.antiguedadAnos !== undefined ? Number(args.antiguedadAnos) : extracted.antiguedadAnos,
         anoConstruccion: args.anoConstruccion ?? extracted.anoConstruccion,
         esRemodelado: args.esRemodelado !== undefined ? Boolean(args.esRemodelado) : extracted.esRemodelado,
         tipoAcabados: args.tipoAcabados || (extracted.esRemodelado ? "Remodelado" : undefined),

@@ -746,6 +746,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "analiza esta imagen para que puedas afinar mejor a JanIA en su Skill de ACM, dándole una mayor precisción y haciendo que cada vez que de o brinde cualquier servicio, pregunte satisfacción del usuario con la respuesta y según esto solicite comentarios y calificación en Google según su libre alvedrío y no me toque hacerlo a mi directamente como en este caso que no lo hizo, pero menos mal la usuaria decidió escribirme a mi para solicitar el enlace de calificación y dejar su mensaje o dar su opiniónen google. SI puedes pulir al máximo este skill de ACM de Jania sería fabuloso.",
     createdAt: "2026-11-12T22:20:00.000Z",
     active: true
+  },
+  {
+    id: "seed-paridad-total-jania-en-grupos-motores-deterministicos-v34-12",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Paridad Total de @JanIA en Grupos con Motores Determinísticos (IDU, RUES, Notarial, ACM, Marketing e Imágenes) — Doctrina Eduardo A. Rivera v34.12",
+    directive:
+      "Todo lo que JanIA promete en su presentación oficial de grupos (presentacionGrupoWhatsApp) DEBE funcionar con la misma precisión determinística cuando es citada con @JanIA en cualquier grupo de WhatsApp que en el privado (DM). Por lo tanto: 1) Paz y Salvo IDU (con PDF adjunto) se intercepta ANTES que Predial por colisión de CHIPs AAA...; 2) Verificación de empresas en RUES por NIT o Razón Social opera en grupo y las menciones @573192919978/@LID quedan blindadas contra falsos positivos de cédulas; 3) Liquidación Notarial exacta de gastos, retención y registro opera determinísticamente en grupos sin interceptar conflictos generales de contratos; 4) ACM Fitto y Corvini (3 escenarios + Cap Rate + ICP) y Auditoría de Marketing (Swap Test + Score /100 + AIDA) operan de forma nativa en grupos; 5) Las imágenes 1080x1080 del Estudio Creativo y minutas PDF se despachan directamente en el grupo; y 6) Todo servicio en grupo pregunta satisfacción y responde con el enlace de Google Reviews por libre albedrío.",
+    rawText:
+      "Paridad total de @JanIA en grupos: IDU, RUES, Notarial, ACM Fitto y Corvini, Auditoría de Marketing, Imágenes Creativas 1080x1080, Minutas PDF y Protocolo de Satisfacción + Google Reviews.",
+    createdAt: "2026-11-13T00:00:00.000Z",
+    active: true
   }
 ];
 

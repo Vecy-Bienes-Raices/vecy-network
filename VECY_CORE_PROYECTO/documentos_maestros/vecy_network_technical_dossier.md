@@ -9314,6 +9314,23 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v34.12 (2026-11-13) — Punto 1: Paridad Total de `@JanIA` en Grupos con Motores Determinísticos (IDU, RUES, Notarial, ACM Fitto y Corvini, Marketing Audit e Imágenes Creativas 1080x1080 — Doctrina Eduardo A. Rivera)
+- **Problema / Requerimiento Identificado**:
+  - Lo prometido por `@JanIA` en el saludo de presentación en grupos (`presentacionGrupoWhatsApp`) superaba los interceptores determinísticos conectados en `consultingHandler.ts` (solo Predial y Cédula), provocando respuestas libres sin consulta en vivo a RUES, IDU, Notarial, ACM Fitto y Corvini ni Auditoría de Marketing, colisión de CHIPs `AAA...` entre Predial e IDU, riesgo de falso positivo por menciones `@573192919978`/`@LID` en `extractAllCedulasForVerification` y encolamiento de imágenes creativas hacia DM en lugar del grupo.
+- **Solución Quirúrgica Implementada**:
+  - **`server/_core/jania/types.ts`**: Añadidos `creativeImageBuffer`, `creativeImageFileName` y `creativeImageCaption` en `JanIAResult`.
+  - **`server/_core/identityVerificationService.ts` y `server/_core/ruesService.ts`**: Blindadas menciones `@\d{7,18}` y teléfonos/LIDs de VECY; exportada `isExplicitCompanyRuesQuery(text)` y mejorada `extractCleanCorporateQuery` para consultas empresariales tras `@JanIA`.
+  - **`server/_core/notarialExpenseService.ts`**: Exportada `isExplicitNotarialLiquidationRequest(text, senderId)` evitando interceptar disputas generales de arras o contratos.
+  - **`server/_core/jania/handlers/consultingHandler.ts`, `circuloHandler.ts` y `dmHandler.ts`**: Integrados 7 interceptores determinísticos en orden seguro (`0` Satisfacción/Google Reviews, `1` IDU antes de Predial, `2` Predial, `3` CC/CE y RUES Empresas, `4` Liquidación Notarial, `5` ACM Fitto y Corvini via `isExplicitGroupAcmRequest`, `6` Auditoría Marketing Swap Test + AIDA + ICP via `isExplicitGroupMarketingAuditRequest`), extracción de `estrato`/`antiguedadAnos` en `extractAcmAttributesFromText`, `appendGroupSatisfactionClosing` obligatorio y generación/entrega de `creativeImageBuffer` e instrumentos PDF incluso en contingencia.
+  - **`server/_core/whatsapp-match.ts`**: Ampliado `isRealEstateConsultationForGroup` y habilitado el envío nativo de piezas 1080x1080 y PDFs en todos los grupos con intervención de JanIA.
+  - **Gobernanza y Suite 198**: Semilla `seed-paridad-total-jania-en-grupos-motores-deterministicos-v34-12` en `founderKnowledgeService.ts`, Suite 198 (6/6 tests) en `server/__tests__/regression.test.ts` y versión incrementada a `v34.12` (`34.12.0`).
+- **Validación y Blindaje ($0 COP)**:
+  - Suite 198 (`vitest`, `NODE_ENV=test`): 6/6 pasando al 100%; Suite 197: 4/4 pasando.
+  - Typecheck `npm run check` (0 errores) y Build `npm run build` limpio (`vite build` + `esbuild`).
+  - Versión: `v34.12` (`34.12.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### Versión v34.11 (2026-11-12) — Precisión Quirúrgica en Skill ACM (Fitto y Corvini + 3 Escenarios) y Protocolo Universal de Satisfacción + Google Reviews por Libre Albedrío (Caso Carolina Z. | eXp Realty — Doctrina Eduardo A. Rivera)
 - **Problema / Consulta Identificada**:
   - En las capturas de WhatsApp compartidas por Eduardo con **Carolina Z. | eXp Realty** (`+57 350 4374572`), JanIA respondió un ACM de una casa en **Santa Ana Oriental** (`remodelada, 4 habitaciones, 4 baños, 3 parqueaderos, año 2008, 242.83 m², admon $2.000.000, cocina con isla, 2 niveles y terraza`) mediante un resumen genérico seguido de un bloque comercial largo de CTL/Escritura/Predial sin precisión homologada por edad efectiva ni atributos diferenciales.

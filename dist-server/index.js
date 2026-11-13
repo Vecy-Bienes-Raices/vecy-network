@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.11";
+    VECY_VERSION = "v34.12";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -19205,7 +19205,7 @@ async function postRuesEncrypted(path19, payload, timeoutMs = 5e3) {
 }
 function extractCleanCorporateQuery(raw) {
   if (!raw) return "";
-  let clean = raw.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, " ").trim();
+  let clean = raw.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, " ").replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").replace(/\s+/g, " ").trim();
   const quoteMatch = clean.match(/["']([^"']{3,})["']/);
   if (quoteMatch) {
     return quoteMatch[1].trim();
@@ -19214,10 +19214,10 @@ function extractCleanCorporateQuery(raw) {
   if (afterSepMatch) {
     return afterSepMatch[1].trim();
   }
-  const corpBlockMatch = clean.match(/\b([A-Z0-9&.-]+(?:\s+[A-Z0-9&.-]+)*\s+\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?)\b)/i);
+  const corpBlockMatch = clean.match(/\b([A-ZÁÉÍÓÚÑ0-9&.-]+(?:\s+[A-ZÁÉÍÓÚÑ0-9&.-]+)*\s+\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?)(?:\.)?)/i);
   if (corpBlockMatch) {
     let candidate = corpBlockMatch[1].trim();
-    candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EL\s+NOMBRE\s+(?:EXACTO\s+)?DE\s+LA\s+EMPRESA|LA\s+EMPRESA|NOMBRE|RAZON\s+SOCIAL)\b[\s.:;,-]*/gi, "").trim();
+    candidate = candidate.replace(/^(?:hola|buenas|disculpa|disc[uú]lpame|por\s+favor|te\s+confirmo|verif[ií]ca(?:me|r)?|consulta(?:me|r)?|rev[ií]sa(?:me|r)?|valida(?:me|r)?|averigua(?:me|r)?|busca(?:me|r)?|investiga(?:me|r)?|chequea(?:me|r)?)\b[\s.:;,-]*/gi, "").replace(/^(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa|la\s+raz[oó]n\s+social|la\s+empresa|la\s+sociedad|la\s+constructora|la\s+inmobiliaria|a\s+la\s+empresa|a|nombre|raz[oó]n\s+social)\b[\s.:;,-]*/gi, "").trim();
     if (candidate.length >= 3) return candidate;
   }
   const allCapsMatch = clean.match(/\b([A-Z0-9&.-]{3,}(?:\s+[A-Z0-9&.-]{2,})+)\b/);
@@ -19226,7 +19226,7 @@ function extractCleanCorporateQuery(raw) {
     candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EMPRESA)\b[\s.:;,-]*/gi, "").trim();
     if (candidate.length >= 3) return candidate;
   }
-  let stripped = clean.replace(/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches|disculpa|disc[uú]lpame|por\s+favor|oye|jania|mira|te\s+paso|te\s+env[ií]o|te\s+comparto|te\s+confirmo|este\s+es|esta\s+es)\b[^\w\n\r]*/gi, " ").replace(/\b(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa(?:\s+es)?|la\s+raz[oó]n\s+social(?:\s+es)?|la\s+empresa(?:\s+es)?|el\s+nit(?:\s+es)?|los\s+datos\s+de|informaci[oó]n\s+de|investigar\s+a|verificar\s+a)\b[^\w\n\r]*/gi, " ").replace(/\s+/g, " ").replace(/^[":;.,\s-]+|[":;.,\s-]+$/g, "").trim();
+  let stripped = clean.replace(/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches|disculpa|disc[uú]lpame|por\s+favor|oye|jania|mira|te\s+paso|te\s+env[ií]o|te\s+comparto|te\s+confirmo|este\s+es|esta\s+es)\b[^\w\n\r]*/gi, " ").replace(/\b(?:verif[ií]ca(?:me|r)?|consulta(?:me|r)?|rev[ií]sa(?:me|r)?|valida(?:me|r)?|averigua(?:me|r)?|busca(?:me|r)?|investigar|verificar|revisar|consultar)(?:\s+(?:a|en\s+rues|el\s+nit\s+de))?\b[^\w\n\r]*/gi, " ").replace(/\b(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa(?:\s+es)?|la\s+raz[oó]n\s+social(?:\s+es)?|la\s+empresa(?:\s+es)?|la\s+sociedad(?:\s+es)?|la\s+constructora(?:\s+es)?|la\s+inmobiliaria(?:\s+es)?|el\s+nit(?:\s+es)?|los\s+datos\s+de|informaci[oó]n\s+de|investigar\s+a|verificar\s+a)\b[^\w\n\r]*/gi, " ").replace(/\s+/g, " ").replace(/^[":;.,\s-]+|[":;.,\s-]+$/g, "").trim();
   return stripped || clean;
 }
 function normalizeCorporateName(raw) {
@@ -19909,6 +19909,7 @@ __export(identityVerificationService_exports, {
   isAcceptingCompanyMemberVerification: () => isAcceptingCompanyMemberVerification,
   isBareDocumentNumber: () => isBareDocumentNumber,
   isDecliningCompanyMemberVerification: () => isDecliningCompanyMemberVerification,
+  isExplicitCompanyRuesQuery: () => isExplicitCompanyRuesQuery,
   mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
   parseAdresHtml: () => parseAdresHtml,
@@ -20818,7 +20819,7 @@ function cleanPotentialPersonName(str) {
 }
 function extractAllCedulasForVerification(text2, isPrivateDm = false) {
   if (!text2 || typeof text2 !== "string") return [];
-  const clean = text2.trim();
+  const clean = text2.replace(/@\d{7,18}\b/g, " ").trim();
   const lower = clean.toLowerCase();
   if (lower.includes("vendo") || lower.includes("arriendo") || lower.includes("busco apto") || lower.includes("presupuesto")) {
     return [];
@@ -20933,6 +20934,7 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
         if (isMonetaryContext(clean, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = raw.replace(/\D/g, "");
+        if (VECY_EXCLUDED_MENTION_IDS.has(ced)) continue;
         if (ced.length === 9) {
           if (/^[89]\d{8}$/.test(ced) && !/00000$/.test(ced)) {
             items.push({ cedula: ced, tipoDoc: "nit", rawNumber: raw });
@@ -21850,11 +21852,28 @@ function buildConsolidatedReportText(results) {
   reportText += `Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
   return reportText;
 }
+function isExplicitCompanyRuesQuery(text2) {
+  if (!text2) return false;
+  const cleaned = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+  if (/\b(?:rues|c[aá]mara\s+de\s+comercio|raz[oó]n\s+social|certificado\s+de\s+existencia|representante\s+legal|matr[ií]cula\s+mercantil|confec[aá]maras)\b/i.test(cleaned)) {
+    return true;
+  }
+  if (/\b(?:nit|n\.i\.t\.?)\b/i.test(cleaned) && (/\b\d{8,10}(?:-\d)?\b/.test(cleaned) || /\b(?:empresa|sociedad|inmobiliaria|constructora|firma|compa[ñn][ií]a|sas|s\.a\.s\.?|ltda|s\.a\.?)\b/i.test(cleaned))) {
+    return true;
+  }
+  if (/\b(?:empresa|sociedad|inmobiliaria|constructora|firma|compa[ñn][ií]a|corporaci[oó]n|fundaci[oó]n|grupo\s+empresarial)\b/i.test(cleaned) && /\b(?:consult\w*|verific\w*|revis\w*|valid\w*|averigu\w*|busc\w*|investigu\w*|cheque\w*|exist\w*|legal\w*|antecedentes|datos|informaci[oó]n|qu[ií]en\s+es|c[oó]mo\s+est[aá]|aparece)\b/i.test(cleaned)) {
+    return true;
+  }
+  if (/\b(?:s\.?\s*a\.?\s*s\.?|ltda\.?|s\.?\s*a\.?|s\.?\s*c\.?\s*a\.?|e\.?\s*u\.?)\b/i.test(cleaned) && /\b(?:consult\w*|verific\w*|revis\w*|valid\w*|averigu\w*|busc\w*|rues|nit|empresa|sociedad|inmobiliaria|constructora)\b/i.test(cleaned)) {
+    return true;
+  }
+  return false;
+}
 async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false, userId, explicitItems) {
   const items = explicitItems && explicitItems.length > 0 ? explicitItems : extractAllCedulasForVerification(text2, isPrivateDm);
   if (items.length === 0) {
-    if (/\b(?:empresa|raz[oó]n\s*social|sociedad|constructora|inmobiliaria|banco|rues|confec[aá]maras)\b/i.test(text2) && /\b(?:consultar|verificar|revisar|antecedentes|identidad|nit|rues|representante)\b/i.test(text2)) {
-      const cleanCorp = text2.replace(/^(?:jania|vecy|[¡!¿?,\s])+/gi, "").trim();
+    if (isExplicitCompanyRuesQuery(text2)) {
+      const cleanCorp = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").replace(/^(?:jania|vecy|[¡!¿?,\s])+/gi, "").trim();
       const empresaRes = await queryEmpresaOrNit(cleanCorp, userId);
       return {
         isVerificationRequest: true,
@@ -21888,7 +21907,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     };
   }
   if (items.length === 1 && items[0].tipoDoc.toLowerCase() === "nit") {
-    const empresaRes = await queryEmpresaOrNit(text2, userId);
+    const cleanTextForNit = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+    const empresaRes = await queryEmpresaOrNit(cleanTextForNit, userId);
     if (userId) {
       savePendingCedulaSession(userId, items, empresaRes.reportText, empresaRes.success);
     }
@@ -22176,7 +22196,7 @@ Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
     };
   }
 }
-var queryPoliciaNacional2, IDENTITY_CACHE_TTL2, HABEAS_DATA_CLAUSE, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions, pendingUnconfirmedDocSessions, PENDING_UNCONFIRMED_DOC_TTL, pendingCompanyMembersSessions, ruesVerifiedNames, pendingCompanyFollowUpSessions;
+var queryPoliciaNacional2, IDENTITY_CACHE_TTL2, HABEAS_DATA_CLAUSE, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions, pendingUnconfirmedDocSessions, PENDING_UNCONFIRMED_DOC_TTL, pendingCompanyMembersSessions, ruesVerifiedNames, pendingCompanyFollowUpSessions, VECY_EXCLUDED_MENTION_IDS;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
@@ -22195,6 +22215,18 @@ La consulta y tratamiento de esta informaci\xF3n p\xFAblica y semiprivada se efe
     pendingCompanyMembersSessions = /* @__PURE__ */ new Map();
     ruesVerifiedNames = /* @__PURE__ */ new Map();
     pendingCompanyFollowUpSessions = /* @__PURE__ */ new Map();
+    VECY_EXCLUDED_MENTION_IDS = /* @__PURE__ */ new Set([
+      "573192919978",
+      "3192919978",
+      "573166569719",
+      "3166569719",
+      "573188096811",
+      "3188096811",
+      "167108705018103",
+      "225954035179724",
+      "182781141344345",
+      "218820279050385"
+    ]);
   }
 });
 
@@ -22209,6 +22241,7 @@ __export(notarialExpenseService_exports, {
   getPendingNotarialSession: () => getPendingNotarialSession,
   getRegistryFeeRate: () => getRegistryFeeRate,
   hasPendingNotarialSession: () => hasPendingNotarialSession,
+  isExplicitNotarialLiquidationRequest: () => isExplicitNotarialLiquidationRequest,
   liquidarGastosNotariales: () => liquidarGastosNotariales,
   setPendingNotarialSession: () => setPendingNotarialSession
 });
@@ -22654,6 +22687,12 @@ function extractNotarialExpenseParams(text2, senderId) {
     "escrituracion",
     "liquidar notaria",
     "liquidar notar\xEDa",
+    "liqu\xEDdame la notar\xEDa",
+    "liquidame la notaria",
+    "liqu\xEDdame los gastos",
+    "liquidame los gastos",
+    "gastos de notar\xEDa",
+    "gastos de notaria",
     "costo notaria",
     "costos notaria",
     "cu\xE1nto vale la notar\xEDa",
@@ -22734,6 +22773,16 @@ function extractNotarialExpenseParams(text2, senderId) {
       embargoMedidaCautelar
     }
   };
+}
+function isExplicitNotarialLiquidationRequest(text2, senderId) {
+  if (!text2 || typeof text2 !== "string") return false;
+  if (senderId && hasPendingNotarialSession(senderId)) return true;
+  const clean = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+  if (!clean) return false;
+  if (explainNotarialFigures(clean).isQuestion) {
+    return true;
+  }
+  return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 async function executeNotarialAssistanceFromWhatsApp(text2, senderId, isPrivateDm = true) {
   const explanation = explainNotarialFigures(text2);
@@ -27242,7 +27291,7 @@ var init_whatsapp_match = __esm({
         if (!clean && !quoted) return false;
         if (this.isSelfPresentationOrFlyerOfJanIA(clean)) return false;
         const combined = `${clean} ${quoted}`.toLowerCase();
-        const hasQuestionOrConsultIntent = /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura| escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensión|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match)\b/i.test(combined);
+        const hasQuestionOrConsultIntent = /[¿?]/.test(combined) || /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) || /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
         return hasQuestionOrConsultIntent;
       }
       registerPhoneLidMapping(phoneOrJid, lidOrJid) {
@@ -29035,16 +29084,26 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
               isExplicitLegalPdfRequest: isExplicitLegalPdfRequest2,
               generateLegalPdfForDmRequest: generateLegalPdfForDmRequest2,
               isExplicitCreativeImageRequest: isExplicitCreativeImageRequest2,
-              generateCustomUserCreativeImage: generateCustomUserCreativeImage2
+              generateCustomUserCreativeImage: generateCustomUserCreativeImage2,
+              popLatestDmCreativeImage: popLatestDmCreativeImage2
             } = await Promise.resolve().then(() => (init_dmHandler(), dmHandler_exports));
+            const queuedCreativeFromHandler = popLatestDmCreativeImage2(senderId);
+            const creativeBufferToSend = result.creativeImageBuffer || queuedCreativeFromHandler?.buffer;
+            const creativeCaptionToSend = textToDeliver || result.creativeImageCaption || queuedCreativeFromHandler?.caption;
             if (result.document) {
               await this.queuedSend(chatId, {
                 document: result.document,
                 mimetype: "application/pdf",
-                fileName: result.fileName || "Factura_Predial_Bogota.pdf",
+                fileName: result.fileName || "Documento_Oficial_VECY.pdf",
                 caption: textToDeliver
               }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
-            } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitLegalPdfRequest2(bodyText)) {
+            } else if (creativeBufferToSend) {
+              await this.queuedSend(chatId, {
+                image: creativeBufferToSend,
+                mimetype: "image/jpeg",
+                caption: creativeCaptionToSend
+              }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
+            } else if (isExplicitLegalPdfRequest2(bodyText)) {
               try {
                 const groupPdf = await generateLegalPdfForDmRequest2(bodyText, {
                   cuerpoDocumento: textToDeliver.length > 180 ? textToDeliver : void 0
@@ -29058,10 +29117,10 @@ _He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tic
               } catch (_) {
                 await this.queuedSend(chatId, textToDeliver, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
               }
-            } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitCreativeImageRequest2(bodyText)) {
+            } else if (isExplicitCreativeImageRequest2(bodyText)) {
               try {
                 const groupImg = await generateCustomUserCreativeImage2({
-                  userPrompt: bodyText,
+                  userPrompt: bodyText.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
                   includeJaniaAvatar: true
                 });
                 await this.queuedSend(chatId, {
@@ -32582,6 +32641,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "analiza esta imagen para que puedas afinar mejor a JanIA en su Skill de ACM, d\xE1ndole una mayor precisci\xF3n y haciendo que cada vez que de o brinde cualquier servicio, pregunte satisfacci\xF3n del usuario con la respuesta y seg\xFAn esto solicite comentarios y calificaci\xF3n en Google seg\xFAn su libre alvedr\xEDo y no me toque hacerlo a mi directamente como en este caso que no lo hizo, pero menos mal la usuaria decidi\xF3 escribirme a mi para solicitar el enlace de calificaci\xF3n y dejar su mensaje o dar su opini\xF3nen google. SI puedes pulir al m\xE1ximo este skill de ACM de Jania ser\xEDa fabuloso.",
         createdAt: "2026-11-12T22:20:00.000Z",
         active: true
+      },
+      {
+        id: "seed-paridad-total-jania-en-grupos-motores-deterministicos-v34-12",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Paridad Total de @JanIA en Grupos con Motores Determin\xEDsticos (IDU, RUES, Notarial, ACM, Marketing e Im\xE1genes) \u2014 Doctrina Eduardo A. Rivera v34.12",
+        directive: "Todo lo que JanIA promete en su presentaci\xF3n oficial de grupos (presentacionGrupoWhatsApp) DEBE funcionar con la misma precisi\xF3n determin\xEDstica cuando es citada con @JanIA en cualquier grupo de WhatsApp que en el privado (DM). Por lo tanto: 1) Paz y Salvo IDU (con PDF adjunto) se intercepta ANTES que Predial por colisi\xF3n de CHIPs AAA...; 2) Verificaci\xF3n de empresas en RUES por NIT o Raz\xF3n Social opera en grupo y las menciones @573192919978/@LID quedan blindadas contra falsos positivos de c\xE9dulas; 3) Liquidaci\xF3n Notarial exacta de gastos, retenci\xF3n y registro opera determin\xEDsticamente en grupos sin interceptar conflictos generales de contratos; 4) ACM Fitto y Corvini (3 escenarios + Cap Rate + ICP) y Auditor\xEDa de Marketing (Swap Test + Score /100 + AIDA) operan de forma nativa en grupos; 5) Las im\xE1genes 1080x1080 del Estudio Creativo y minutas PDF se despachan directamente en el grupo; y 6) Todo servicio en grupo pregunta satisfacci\xF3n y responde con el enlace de Google Reviews por libre albedr\xEDo.",
+        rawText: "Paridad total de @JanIA en grupos: IDU, RUES, Notarial, ACM Fitto y Corvini, Auditor\xEDa de Marketing, Im\xE1genes Creativas 1080x1080, Minutas PDF y Protocolo de Satisfacci\xF3n + Google Reviews.",
+        createdAt: "2026-11-13T00:00:00.000Z",
+        active: true
       }
     ];
   }
@@ -35225,6 +35294,18 @@ function extractAcmAttributesFromText(rawText) {
   if (yearMatch?.[1]) {
     out.anoConstruccion = parseInt(yearMatch[1], 10);
   }
+  const antMatch = text2.match(/(?:antig[uü]edad\s*(?:de)?\s*(\d{1,2})\s*a[ñn]os?|(\d{1,2})\s*a[ñn]os?\s*(?:de\s+)?(?:antig[uü]edad|construid[ao]))/i);
+  const rawAnt = antMatch?.[1] || antMatch?.[2];
+  if (rawAnt) {
+    const parsedAnt = parseInt(rawAnt, 10);
+    if (!Number.isNaN(parsedAnt) && parsedAnt >= 0 && parsedAnt <= 99) {
+      out.antiguedadAnos = parsedAnt;
+    }
+  }
+  const estratoMatch = text2.match(/\bestrato\s*[:.]?\s*([1-6])\b/i);
+  if (estratoMatch?.[1]) {
+    out.estrato = parseInt(estratoMatch[1], 10);
+  }
   if (/\b(?:remodelad[ao]|renovad[ao]|modernizad[ao]|reci[eé]n\s+remodelad[ao])\b/i.test(text2)) {
     out.esRemodelado = true;
   }
@@ -35596,8 +35677,8 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
         ciudad: args.ciudad,
         tipoInmueble: args.tipoInmueble || extracted.tipoInmueble || "apartamento",
         areaM2: Number(args.areaM2 ?? extracted.areaM2 ?? 75),
-        estrato: Number(args.estrato || 5),
-        antiguedadAnos: args.antiguedadAnos !== void 0 ? Number(args.antiguedadAnos) : void 0,
+        estrato: Number(args.estrato ?? extracted.estrato ?? 5),
+        antiguedadAnos: args.antiguedadAnos !== void 0 ? Number(args.antiguedadAnos) : extracted.antiguedadAnos,
         anoConstruccion: args.anoConstruccion ?? extracted.anoConstruccion,
         esRemodelado: args.esRemodelado !== void 0 ? Boolean(args.esRemodelado) : extracted.esRemodelado,
         tipoAcabados: args.tipoAcabados || (extracted.esRemodelado ? "Remodelado" : void 0),
@@ -38040,6 +38121,39 @@ var init_dmHandler = __esm({
 });
 
 // server/_core/jania/handlers/consultingHandler.ts
+function appendGroupSatisfactionClosing(reportText) {
+  const clean = (reportText || "").trim();
+  if (!clean) return clean;
+  if (/satisfec(?:ho|ha)|g\.page\/r\/CctNbwU6UpX5EBM\/review|calificaci[oó]n\s+(?:de\s+)?5\s+estrellas|opini[oó]n\s+en\s+google/i.test(
+    clean
+  )) {
+    return clean;
+  }
+  return `${clean}
+
+\u{1F91D} *\xBFQuedaste satisfecho(a) con esta respuesta y te fue de utilidad?* Tu opini\xF3n me ayuda a seguir afinando mi precisi\xF3n para toda la red VECY.`;
+}
+function isExplicitGroupAcmRequest(text2) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const clean = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+  if (!clean) return false;
+  if (/\b(?:qu[eé]\s+es\s+(?:el\s+|la\s+)?(?:metodolog[ií]a\s+)?(?:fito|fitto)\s+y\s+corvini|c[oó]mo\s+funciona\s+(?:un\s+)?acm|diferencia\s+entre\s+aval[uú]o)\b/i.test(
+    clean
+  )) {
+    return false;
+  }
+  return /\b(?:acm|an[aá]lisis\s+comparativo(?:\s+de\s+mercado)?|estudio\s+de\s+(?:mercado|valor|precios)|sondeo(?:\s+(?:t[eé]cnico|de\s+mercado))?|aval[uú]o\s+comercial|valor\s+(?:comercial|sugerido|aproximado|del\s+m2|por\s+m2|por\s+metro\s+cuadrado)|cu[aá]nto\s+(?:vale|cuesta)\s+(?:el\s+m2|un\s+(?:apartamento|apto|casa|inmueble|lote|local|oficina|bodega)))\b/i.test(
+    clean
+  );
+}
+function isExplicitGroupMarketingAuditRequest(text2) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const clean = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+  if (!clean) return false;
+  return /\b(?:swap\s+test|auditar?\s+(?:este\s+|mi\s+|el\s+|un\s+)?(?:aviso|anuncio|copy|inmueble|ficha|publicaci[oó]n)|auditor[ií]a\s+de\s+marketing|optimiza(?:r|me)?\s+(?:este\s+|mi\s+|el\s+)?(?:aviso|anuncio|copy|ficha)|m[eé]todo\s+aida\s+para\s+(?:este|mi)\s+(?:aviso|inmueble))\b/i.test(
+    clean
+  );
+}
 async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp, quotedContext) {
   try {
     const rawPhone = userId.split("@")[0];
@@ -38115,13 +38229,59 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         voiceResponse: ""
       };
     }
+    const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
+    const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
+    const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
+    const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
+    if (isReviewLinkReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
+      messageToProcess
+    ))) {
+      const reviewInvite = buildAutonomousGoogleReviewInvitation(targetName || realName, {
+        isDirectLinkRequest: isReviewLinkReq,
+        constructiveTopic: satFeedback.constructiveTopic,
+        isConstructiveFeedback: satFeedback.hasConstructiveSuggestion
+      });
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", reviewInvite);
+      markUserGreetedToday(userId);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: reviewInvite,
+        reactionEmoji: "\u2B50",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    if (isIduInquiry(messageToProcess) || hasPendingIduSession(userId)) {
+      const iduCheck = await executeIduAssistanceFromWhatsApp(messageToProcess, userId, false);
+      if (iduCheck.isIduRequest && iduCheck.reportText) {
+        const finalIduResp = appendGroupSatisfactionClosing(iduCheck.reportText);
+        console.log(`[JanIA-IduCheck] Paz y Salvo IDU ejecutado en grupo para ${userId} (CHIP: ${iduCheck.chip || "Pendiente"})`);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalIduResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalIduResp,
+          reactionEmoji: "\u{1F4C4}",
+          wantsVoice: false,
+          voiceResponse: "",
+          document: iduCheck.pdfBuffer,
+          fileName: iduCheck.pdfFileName
+        };
+      }
+    }
     const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
     const predialCheck = await executePredialAssistanceFromWhatsApp2(messageToProcess, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      const finalPredialResp = appendGroupSatisfactionClosing(predialCheck.reportText);
       console.log(`[JanIA-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalPredialResp);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
-        response: predialCheck.reportText,
+        response: finalPredialResp,
         reactionEmoji: "\u{1F4C4}",
         wantsVoice: false,
         voiceResponse: "",
@@ -38129,14 +38289,117 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         fileName: predialCheck.pdfFileName
       };
     }
-    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(messageToProcess);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+    const extractedIdItems = extractAllCedulasForVerification(messageToProcess, false);
+    const hasOversizedOrValidId = extractedIdItems.length > 0;
+    const isCompanyRuesReq = isExplicitCompanyRuesQuery(messageToProcess);
+    if (hasOversizedOrValidId || isCompanyRuesReq || Boolean(getPendingCedulaSession(userId))) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp(
+        messageToProcess,
+        false,
+        userId,
+        extractedIdItems.length > 0 ? extractedIdItems : void 0
+      );
+      if (idCheck.isVerificationRequest && idCheck.reportText) {
+        const finalIdResp = appendGroupSatisfactionClosing(idCheck.reportText);
+        console.log(`[JanIA-IdentityCheck] Verificaci\xF3n de identidad/RUES ejecutada en grupo para ${userId} (${idCheck.tipoDoc}: ${idCheck.cedula}): success=${idCheck.success}`);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalIdResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalIdResp,
+          reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isExplicitNotarialLiquidationRequest(messageToProcess, userId)) {
+      const notarialCheck = await executeNotarialAssistanceFromWhatsApp(messageToProcess, userId, false);
+      if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+        const finalNotarialResp = appendGroupSatisfactionClosing(notarialCheck.reportText);
+        console.log(`[JanIA-NotarialCheck] Liquidaci\xF3n notarial exacta ejecutada en grupo para ${userId}`);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalNotarialResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalNotarialResp,
+          reactionEmoji: "\u2696\uFE0F",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isExplicitGroupAcmRequest(messageToProcess)) {
+      const extractedAcm = extractAcmAttributesFromText(messageToProcess);
+      if (extractedAcm.zonaOBarrio) {
+        const surveyRes = executeMarketValuationSurvey({
+          zonaOBarrio: extractedAcm.zonaOBarrio,
+          direccionExacta: extractedAcm.direccionExacta,
+          tipoInmueble: extractedAcm.tipoInmueble || "apartamento",
+          areaM2: extractedAcm.areaM2 ?? 75,
+          estrato: extractedAcm.estrato ?? 4,
+          antiguedadAnos: extractedAcm.antiguedadAnos,
+          anoConstruccion: extractedAcm.anoConstruccion,
+          esRemodelado: extractedAcm.esRemodelado,
+          tipoAcabados: extractedAcm.esRemodelado ? "Remodelado" : void 0,
+          habitaciones: extractedAcm.habitaciones,
+          banos: extractedAcm.banos,
+          garajes: extractedAcm.garajes ?? 1,
+          administracionCop: extractedAcm.administracionCop,
+          tieneTerraza: extractedAcm.tieneTerraza,
+          cocinaConIsla: extractedAcm.cocinaConIsla,
+          niveles: extractedAcm.niveles,
+          userId
+        });
+        const finalAcmResp = appendGroupSatisfactionClosing(surveyRes.reporteAcmEstructurado);
+        console.log(`[JanIA-GroupACM] ACM Fitto y Corvini ejecutado en grupo para ${userId} (${surveyRes.zonaConsultada}, ${surveyRes.areaM2}m\xB2)`);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalAcmResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "ANALISIS_DE_MERCADO",
+          response: finalAcmResp,
+          reactionEmoji: "\u{1F4CA}",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isExplicitGroupMarketingAuditRequest(messageToProcess)) {
+      const cleanedPrompt = messageToProcess.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+      const colonIdx = cleanedPrompt.indexOf(":");
+      const listingCopy = colonIdx !== -1 && cleanedPrompt.slice(colonIdx + 1).trim().length >= 15 ? cleanedPrompt.slice(colonIdx + 1).trim() : cleanedPrompt;
+      const extractedMeta = extractAcmAttributesFromText(listingCopy);
+      const audit = auditPropertyListing(listingCopy);
+      const icp = buildRealEstateIcp(
+        extractedMeta.tipoInmueble || "apartamento",
+        /\barriendo\b/i.test(listingCopy) ? "arriendo" : "venta",
+        extractedMeta.zonaOBarrio || "Bogot\xE1",
+        0,
+        listingCopy
+      );
+      const mktReport = `\u{1F3AF} *AUDITOR\xCDA DE MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (VECY MATCH)* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Puntuaci\xF3n Global:* *${audit.score}/100* ${audit.score >= 80 ? "\u{1F31F} (Alta conversi\xF3n)" : audit.score >= 60 ? "\u26A0\uFE0F (Mejorable)" : "\u{1F6A8} (Baja diferenciaci\xF3n)"}
+\u2022 *Swap Test / Clich\xE9s:* ${audit.oportunidadesMejora.slice(0, 3).join("; ") || "Excelente originalidad y diferenciaci\xF3n sin clich\xE9s"}
+\u2022 *Fortalezas Clave:* ${audit.fortalezas.slice(0, 3).join("; ") || "Datos t\xE9cnicos claros"}
+\u2022 *Perfil de Comprador Ideal (ICP):* ${icp.arquetipo} (${icp.nivelIngresosEstrato})
+
+\u{1F4DD} *FICHA T\xC9CNICA SUGERIDA OPTIMIZADA (M\xC9TODO AIDA):*
+${audit.fichaOptimizadaSugerida}
+
+\u{1F4A1} *Consejo de JanIA:* Publica con barrio exacto, metraje real, alcobas y presupuesto definido para activar nuestro Algoritmo de MATCH (85%-100%).`;
+      const finalMktResp = appendGroupSatisfactionClosing(mktReport);
+      console.log(`[JanIA-GroupMKT] Auditor\xEDa de Marketing ejecutada en grupo para ${userId}: Score ${audit.score}/100`);
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalMktResp);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+        response: finalMktResp,
+        reactionEmoji: "\u{1F3AF}",
         wantsVoice: false,
         voiceResponse: ""
       };
@@ -38352,27 +38615,35 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         finalResp = stickerExtracted.cleanText;
       }
       const loadedSticker = groupStickerKey ? getJaniaStickerByKey2(groupStickerKey) : null;
+      const finalClassification = parsed.classification || "CONSULTA_GENERAL";
+      if (finalClassification !== "VIOLACION_DE_NORMAS" && finalResp.length >= 120) {
+        finalResp = appendGroupSatisfactionClosing(finalResp);
+      }
       const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
+      let generatedCreativeAsset = null;
       if (isExplicitCreativeImageRequest(messageToProcess)) {
-        const imgAsset = await generateCustomUserCreativeImage({
-          userPrompt: messageToProcess,
+        generatedCreativeAsset = await generateCustomUserCreativeImage({
+          userPrompt: messageToProcess.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
           userName: targetName || realName
         }).catch(() => null);
-        if (imgAsset) {
-          queueCreativeImageForDm(userId, imgAsset);
+        if (generatedCreativeAsset) {
+          queueCreativeImageForDm(userId, generatedCreativeAsset);
         }
       }
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
       return {
-        classification: parsed.classification || "CONSULTA_GENERAL",
+        classification: finalClassification,
         response: finalResp,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u{1F6AB}" : "\u{1F44C}"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || "",
         document: legalPdfDoc?.pdfBuffer,
         fileName: legalPdfDoc?.fileName,
+        creativeImageBuffer: generatedCreativeAsset?.buffer,
+        creativeImageFileName: generatedCreativeAsset?.fileName,
+        creativeImageCaption: generatedCreativeAsset?.caption,
         stickerKey: groupStickerKey || void 0,
         stickerBuffer: loadedSticker?.buffer
       };
@@ -38390,6 +38661,20 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         finalResp = stickerExtracted.cleanText;
       }
       const loadedSticker = groupStickerKey ? getJaniaStickerByKey2(groupStickerKey) : null;
+      if (finalResp.length >= 120) {
+        finalResp = appendGroupSatisfactionClosing(finalResp);
+      }
+      const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
+      let generatedCreativeAsset = null;
+      if (isExplicitCreativeImageRequest(messageToProcess)) {
+        generatedCreativeAsset = await generateCustomUserCreativeImage({
+          userPrompt: messageToProcess.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
+          userName: targetName || realName
+        }).catch(() => null);
+        if (generatedCreativeAsset) {
+          queueCreativeImageForDm(userId, generatedCreativeAsset);
+        }
+      }
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       markUserGreetedToday(userId);
@@ -38399,6 +38684,11 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         reactionEmoji: "\u{1F44C}",
         wantsVoice: false,
         voiceResponse: "",
+        document: legalPdfDoc?.pdfBuffer,
+        fileName: legalPdfDoc?.fileName,
+        creativeImageBuffer: generatedCreativeAsset?.buffer,
+        creativeImageFileName: generatedCreativeAsset?.fileName,
+        creativeImageCaption: generatedCreativeAsset?.caption,
         stickerKey: groupStickerKey || void 0,
         stickerBuffer: loadedSticker?.buffer
       };
@@ -38410,6 +38700,46 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
     const fallbackNameInfo = resolveNameAndGender(realName, timeGreeting);
     const firstName = fallbackNameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(fallbackNameInfo.displayName.toLowerCase()) ? fallbackNameInfo.displayName : extractFirstName(realName) || "colega";
     const cleanLower = text2.toLowerCase().trim();
+    if (isExplicitCreativeImageRequest(text2)) {
+      const imgAsset = await generateCustomUserCreativeImage({
+        userPrompt: text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
+        userName: firstName
+      }).catch(() => null);
+      if (imgAsset) {
+        const finalImgResp = appendGroupSatisfactionClosing(imgAsset.caption);
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalImgResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalImgResp,
+          reactionEmoji: "\u{1F3A8}",
+          creativeImageBuffer: imgAsset.buffer,
+          creativeImageFileName: imgAsset.fileName,
+          creativeImageCaption: imgAsset.caption
+        };
+      }
+    }
+    if (isExplicitLegalPdfRequest(text2)) {
+      const pdfAsset = await maybeGenerateLegalDocPdfForDm(userId, text2, void 0, firstName).catch(() => null);
+      if (pdfAsset) {
+        const finalPdfResp = appendGroupSatisfactionClosing(
+          `\u{1F4C4} *DOCUMENTO OFICIAL EN PDF GENERADO:* ${pdfAsset.title}
+\u2022 *Archivo adjunto:* ${pdfAsset.fileName}
+\u2022 *Radicado VECY:* ${pdfAsset.verificationCode}`
+        );
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", finalPdfResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPdfResp,
+          reactionEmoji: "\u{1F4C4}",
+          document: pdfAsset.pdfBuffer,
+          fileName: pdfAsset.fileName
+        };
+      }
+    }
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
 
@@ -38477,6 +38807,12 @@ var init_consultingHandler = __esm({
     init_prompts();
     init_dmHandler();
     init_dmOnboardingAndDocsHelper();
+    init_iduValorizacionService();
+    init_identityVerificationService();
+    init_notarialExpenseService();
+    init_valuation();
+    init_realEstateMarketing();
+    init_politenessService();
   }
 });
 
@@ -38523,13 +38859,27 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
         voiceResponse: ""
       };
     }
+    if (isIduInquiry(text2) || hasPendingIduSession(userId)) {
+      const iduCheck = await executeIduAssistanceFromWhatsApp(text2, userId, false);
+      if (iduCheck.isIduRequest && iduCheck.reportText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(iduCheck.reportText),
+          reactionEmoji: "\u{1F4C4}",
+          wantsVoice: false,
+          voiceResponse: "",
+          document: iduCheck.pdfBuffer,
+          fileName: iduCheck.pdfFileName
+        };
+      }
+    }
     const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
     const predialCheck = await executePredialAssistanceFromWhatsApp2(text2, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
       return {
         classification: "CONSULTA_GENERAL",
-        response: predialCheck.reportText,
+        response: appendGroupSatisfactionClosing(predialCheck.reportText),
         reactionEmoji: "\u{1F4C4}",
         wantsVoice: false,
         voiceResponse: "",
@@ -38537,17 +38887,36 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
         fileName: predialCheck.pdfFileName
       };
     }
-    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(text2);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-Circulo-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
+    const circuloIdItems = extractAllCedulasForVerification(text2, false);
+    if (circuloIdItems.length > 0 || isExplicitCompanyRuesQuery(text2) || Boolean(getPendingCedulaSession(userId))) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp(
+        text2,
+        false,
+        userId,
+        circuloIdItems.length > 0 ? circuloIdItems : void 0
+      );
+      if (idCheck.isVerificationRequest && idCheck.reportText) {
+        console.log(`[JanIA-Circulo-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (${idCheck.tipoDoc}: ${idCheck.cedula}): success=${idCheck.success}`);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(idCheck.reportText),
+          reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+    if (isExplicitNotarialLiquidationRequest(text2, userId)) {
+      const notarialCheck = await executeNotarialAssistanceFromWhatsApp(text2, userId, false);
+      if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: appendGroupSatisfactionClosing(notarialCheck.reportText),
+          reactionEmoji: "\u2696\uFE0F",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
     }
     const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
     const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
@@ -38719,6 +39088,10 @@ var init_circuloHandler = __esm({
     init_llm();
     init_prompts();
     init_dmHandler();
+    init_consultingHandler();
+    init_iduValorizacionService();
+    init_identityVerificationService();
+    init_notarialExpenseService();
   }
 });
 
@@ -38772,6 +39145,7 @@ __export(janIA_exports, {
   appendCirculoHistory: () => appendCirculoHistory,
   appendConsultingHistory: () => appendConsultingHistory,
   appendDmHistory: () => appendDmHistory,
+  appendGroupSatisfactionClosing: () => appendGroupSatisfactionClosing,
   brokerDirectoryCache: () => brokerDirectoryCache,
   buildChaloJokeResponse: () => buildChaloJokeResponse,
   buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
@@ -38852,6 +39226,8 @@ __export(janIA_exports, {
   isDebtCollectionOrSpamScam: () => isDebtCollectionOrSpamScam,
   isEduardoOrJani: () => isEduardoOrJani,
   isExplicitCreativeImageRequest: () => isExplicitCreativeImageRequest,
+  isExplicitGroupAcmRequest: () => isExplicitGroupAcmRequest,
+  isExplicitGroupMarketingAuditRequest: () => isExplicitGroupMarketingAuditRequest,
   isExplicitLegalPdfRequest: () => isExplicitLegalPdfRequest,
   isGenericName: () => isGenericName,
   isJonathanCreditProcessQuery: () => isJonathanCreditProcessQuery,

@@ -11,13 +11,84 @@ import { invokeLLM } from "../../llm";
 import { JanIAResult } from "../types";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
-import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
+import { stripLeadingGreetingsAndCourtesies, extractAcmAttributesFromText } from "./dmHandler";
 import {
+  isExplicitLegalPdfRequest,
   maybeGenerateLegalDocPdfForDm,
   isExplicitCreativeImageRequest,
   generateCustomUserCreativeImage,
   queueCreativeImageForDm,
 } from "./dmOnboardingAndDocsHelper";
+import { executeIduAssistanceFromWhatsApp, isIduInquiry, hasPendingIduSession } from "../../iduValorizacionService";
+import {
+  executeIdentityVerificationFromWhatsApp,
+  extractAllCedulasForVerification,
+  getPendingCedulaSession,
+  isExplicitCompanyRuesQuery,
+} from "../../identityVerificationService";
+import {
+  executeNotarialAssistanceFromWhatsApp,
+  isExplicitNotarialLiquidationRequest,
+} from "../../notarialExpenseService";
+import { executeMarketValuationSurvey } from "../../valuation";
+import { auditPropertyListing, buildRealEstateIcp } from "../../realEstateMarketing";
+import {
+  isExplicitReviewLinkRequest,
+  isUserSatisfactionOrFeedbackReply,
+  buildAutonomousGoogleReviewInvitation,
+} from "../../politenessService";
+
+/**
+ * Añade de forma idempotente el cierre doctrinal de satisfacción (v34.11/v34.12)
+ * tras entregar cualquier servicio gratuito de JanIA en grupos.
+ */
+export function appendGroupSatisfactionClosing(reportText: string): string {
+  const clean = (reportText || "").trim();
+  if (!clean) return clean;
+  if (
+    /satisfec(?:ho|ha)|g\.page\/r\/CctNbwU6UpX5EBM\/review|calificaci[oó]n\s+(?:de\s+)?5\s+estrellas|opini[oó]n\s+en\s+google/i.test(
+      clean
+    )
+  ) {
+    return clean;
+  }
+  return (
+    `${clean}\n\n` +
+    `🤝 *¿Quedaste satisfecho(a) con esta respuesta y te fue de utilidad?* Tu opinión me ayuda a seguir afinando mi precisión para toda la red VECY.`
+  );
+}
+
+/**
+ * Detecta solicitudes explícitas de ACM / Sondeo de Mercado / Valor del m² en grupos,
+ * excluyendo preguntas puramente conceptuales ("qué es Fito y Corvini").
+ */
+export function isExplicitGroupAcmRequest(text: string): boolean {
+  if (!text || typeof text !== "string") return false;
+  const clean = text.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+  if (!clean) return false;
+  if (
+    /\b(?:qu[eé]\s+es\s+(?:el\s+|la\s+)?(?:metodolog[ií]a\s+)?(?:fito|fitto)\s+y\s+corvini|c[oó]mo\s+funciona\s+(?:un\s+)?acm|diferencia\s+entre\s+aval[uú]o)\b/i.test(
+      clean
+    )
+  ) {
+    return false;
+  }
+  return /\b(?:acm|an[aá]lisis\s+comparativo(?:\s+de\s+mercado)?|estudio\s+de\s+(?:mercado|valor|precios)|sondeo(?:\s+(?:t[eé]cnico|de\s+mercado))?|aval[uú]o\s+comercial|valor\s+(?:comercial|sugerido|aproximado|del\s+m2|por\s+m2|por\s+metro\s+cuadrado)|cu[aá]nto\s+(?:vale|cuesta)\s+(?:el\s+m2|un\s+(?:apartamento|apto|casa|inmueble|lote|local|oficina|bodega)))\b/i.test(
+    clean
+  );
+}
+
+/**
+ * Detecta solicitudes explícitas de Auditoría de Marketing Inmobiliario (Swap Test / Ficha AIDA / ICP) en grupos.
+ */
+export function isExplicitGroupMarketingAuditRequest(text: string): boolean {
+  if (!text || typeof text !== "string") return false;
+  const clean = text.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+  if (!clean) return false;
+  return /\b(?:swap\s+test|auditar?\s+(?:este\s+|mi\s+|el\s+|un\s+)?(?:aviso|anuncio|copy|inmueble|ficha|publicaci[oó]n)|auditor[ií]a\s+de\s+marketing|optimiza(?:r|me)?\s+(?:este\s+|mi\s+|el\s+)?(?:aviso|anuncio|copy|ficha)|m[eé]todo\s+aida\s+para\s+(?:este|mi)\s+(?:aviso|inmueble))\b/i.test(
+    clean
+  );
+}
 
 export async function processConsultingMessage(
   text: string,
@@ -113,14 +184,80 @@ export async function processConsultingMessage(
       };
     }
 
-    // 🏛️ INTERCEPTOR DIRECTO 1: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA/NIT)
+    // 🌟 INTERCEPTOR 0: SATISFACCIÓN DEL USUARIO Y RESEÑAS GOOGLE POR LIBRE ALBEDRÍO (v34.11/v34.12)
+    const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
+    const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
+    const isOtherToolRequest =
+      isIduInquiry(messageToProcess) ||
+      hasPendingIduSession(userId) ||
+      isExplicitCompanyRuesQuery(messageToProcess) ||
+      isExplicitNotarialLiquidationRequest(messageToProcess, userId) ||
+      isExplicitGroupAcmRequest(messageToProcess) ||
+      isExplicitGroupMarketingAuditRequest(messageToProcess) ||
+      isCreativeImgReq ||
+      isExplicitLegalPdfRequest(messageToProcess) ||
+      extractAllCedulasForVerification(messageToProcess, false).length > 0;
+    const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
+
+    if (
+      isReviewLinkReq ||
+      (!isOtherToolRequest &&
+        satFeedback.isSatisfied &&
+        (hasActiveHistory ||
+          /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
+            messageToProcess
+          )))
+    ) {
+      const reviewInvite = buildAutonomousGoogleReviewInvitation(targetName || realName, {
+        isDirectLinkRequest: isReviewLinkReq,
+        constructiveTopic: satFeedback.constructiveTopic,
+        isConstructiveFeedback: satFeedback.hasConstructiveSuggestion,
+      });
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", reviewInvite);
+      markUserGreetedToday(userId);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: reviewInvite,
+        reactionEmoji: "⭐",
+        wantsVoice: false,
+        voiceResponse: "",
+      };
+    }
+
+    // 🏛️ INTERCEPTOR DIRECTO 1: PAZ Y SALVO VALORIZACIÓN IDU BOGOTÁ + PDF OFICIAL (PRIORIDAD SOBRE PREDIAL)
+    if (isIduInquiry(messageToProcess) || hasPendingIduSession(userId)) {
+      const iduCheck = await executeIduAssistanceFromWhatsApp(messageToProcess, userId, false);
+      if (iduCheck.isIduRequest && iduCheck.reportText) {
+        const finalIduResp = appendGroupSatisfactionClosing(iduCheck.reportText);
+        console.log(`[JanIA-IduCheck] Paz y Salvo IDU ejecutado en grupo para ${userId} (CHIP: ${iduCheck.chip || "Pendiente"})`);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalIduResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalIduResp,
+          reactionEmoji: "📄",
+          wantsVoice: false,
+          voiceResponse: "",
+          document: iduCheck.pdfBuffer,
+          fileName: iduCheck.pdfFileName,
+        };
+      }
+    }
+
+    // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA/NIT)
     const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
     const predialCheck = await executePredialAssistanceFromWhatsApp(messageToProcess, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      const finalPredialResp = appendGroupSatisfactionClosing(predialCheck.reportText);
       console.log(`[JanIA-PredialCheck] Asistencia de predial Bogotá ejecutada para ${userId} (CHIP: ${predialCheck.chip || 'General'}): isPredialRequest=true`);
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", finalPredialResp);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
-        response: predialCheck.reportText,
+        response: finalPredialResp,
         reactionEmoji: "📄",
         wantsVoice: false,
         voiceResponse: "",
@@ -129,17 +266,126 @@ export async function processConsultingMessage(
       };
     }
 
-    // 🛡️ INTERCEPTOR DIRECTO 2: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp } = await import('../../identityVerificationService');
-    const idCheck = await executeIdentityVerificationFromWhatsApp(messageToProcess);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+    // 🛡️ INTERCEPTOR DIRECTO 3: VERIFICACIÓN OFICIAL DE CÉDULA (ADRES/PONAL/PGN/CGR) Y EMPRESAS RUES (NIT / RAZÓN SOCIAL)
+    const extractedIdItems = extractAllCedulasForVerification(messageToProcess, false);
+    const hasOversizedOrValidId = extractedIdItems.length > 0;
+    const isCompanyRuesReq = isExplicitCompanyRuesQuery(messageToProcess);
+    if (hasOversizedOrValidId || isCompanyRuesReq || Boolean(getPendingCedulaSession(userId))) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp(
+        messageToProcess,
+        false,
+        userId,
+        extractedIdItems.length > 0 ? extractedIdItems : undefined
+      );
+      if (idCheck.isVerificationRequest && idCheck.reportText) {
+        const finalIdResp = appendGroupSatisfactionClosing(idCheck.reportText);
+        console.log(`[JanIA-IdentityCheck] Verificación de identidad/RUES ejecutada en grupo para ${userId} (${idCheck.tipoDoc}: ${idCheck.cedula}): success=${idCheck.success}`);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalIdResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalIdResp,
+          reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+
+    // ⚖️ INTERCEPTOR DIRECTO 4: LIQUIDACIÓN EXACTA DE GASTOS NOTARIALES, RETENCIÓN Y REGISTRO
+    if (isExplicitNotarialLiquidationRequest(messageToProcess, userId)) {
+      const notarialCheck = await executeNotarialAssistanceFromWhatsApp(messageToProcess, userId, false);
+      if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+        const finalNotarialResp = appendGroupSatisfactionClosing(notarialCheck.reportText);
+        console.log(`[JanIA-NotarialCheck] Liquidación notarial exacta ejecutada en grupo para ${userId}`);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalNotarialResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalNotarialResp,
+          reactionEmoji: "⚖️",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
+      }
+    }
+
+    // 📊 INTERCEPTOR DIRECTO 5: MOTOR ACM PROFESIONAL FITTO Y CORVINI + 3 ESCENARIOS + CAP RATE + ICP
+    if (isExplicitGroupAcmRequest(messageToProcess)) {
+      const extractedAcm = extractAcmAttributesFromText(messageToProcess);
+      if (extractedAcm.zonaOBarrio) {
+        const surveyRes = executeMarketValuationSurvey({
+          zonaOBarrio: extractedAcm.zonaOBarrio,
+          direccionExacta: extractedAcm.direccionExacta,
+          tipoInmueble: extractedAcm.tipoInmueble || "apartamento",
+          areaM2: extractedAcm.areaM2 ?? 75,
+          estrato: extractedAcm.estrato ?? 4,
+          antiguedadAnos: extractedAcm.antiguedadAnos,
+          anoConstruccion: extractedAcm.anoConstruccion,
+          esRemodelado: extractedAcm.esRemodelado,
+          tipoAcabados: extractedAcm.esRemodelado ? "Remodelado" : undefined,
+          habitaciones: extractedAcm.habitaciones,
+          banos: extractedAcm.banos,
+          garajes: extractedAcm.garajes ?? 1,
+          administracionCop: extractedAcm.administracionCop,
+          tieneTerraza: extractedAcm.tieneTerraza,
+          cocinaConIsla: extractedAcm.cocinaConIsla,
+          niveles: extractedAcm.niveles,
+          userId,
+        });
+        const finalAcmResp = appendGroupSatisfactionClosing(surveyRes.reporteAcmEstructurado);
+        console.log(`[JanIA-GroupACM] ACM Fitto y Corvini ejecutado en grupo para ${userId} (${surveyRes.zonaConsultada}, ${surveyRes.areaM2}m²)`);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalAcmResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "ANALISIS_DE_MERCADO",
+          response: finalAcmResp,
+          reactionEmoji: "📊",
+          wantsVoice: false,
+          voiceResponse: "",
+        };
+      }
+    }
+
+    // 🎯 INTERCEPTOR DIRECTO 6: AUDITORÍA DE MARKETING INMOBILIARIO (SWAP TEST + SCORE /100 + AIDA + ICP)
+    if (isExplicitGroupMarketingAuditRequest(messageToProcess)) {
+      const cleanedPrompt = messageToProcess.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+      const colonIdx = cleanedPrompt.indexOf(":");
+      const listingCopy =
+        colonIdx !== -1 && cleanedPrompt.slice(colonIdx + 1).trim().length >= 15
+          ? cleanedPrompt.slice(colonIdx + 1).trim()
+          : cleanedPrompt;
+      const extractedMeta = extractAcmAttributesFromText(listingCopy);
+      const audit = auditPropertyListing(listingCopy);
+      const icp = buildRealEstateIcp(
+        extractedMeta.tipoInmueble || "apartamento",
+        /\barriendo\b/i.test(listingCopy) ? "arriendo" : "venta",
+        extractedMeta.zonaOBarrio || "Bogotá",
+        0,
+        listingCopy
+      );
+      const mktReport =
+        `🎯 *AUDITORÍA DE MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (VECY MATCH)* 🇨🇴\n\n` +
+        `• *Puntuación Global:* *${audit.score}/100* ${audit.score >= 80 ? "🌟 (Alta conversión)" : audit.score >= 60 ? "⚠️ (Mejorable)" : "🚨 (Baja diferenciación)"}\n` +
+        `• *Swap Test / Clichés:* ${audit.oportunidadesMejora.slice(0, 3).join("; ") || "Excelente originalidad y diferenciación sin clichés"}\n` +
+        `• *Fortalezas Clave:* ${audit.fortalezas.slice(0, 3).join("; ") || "Datos técnicos claros"}\n` +
+        `• *Perfil de Comprador Ideal (ICP):* ${icp.arquetipo} (${icp.nivelIngresosEstrato})\n\n` +
+        `📝 *FICHA TÉCNICA SUGERIDA OPTIMIZADA (MÉTODO AIDA):*\n${audit.fichaOptimizadaSugerida}\n\n` +
+        `💡 *Consejo de JanIA:* Publica con barrio exacto, metraje real, alcobas y presupuesto definido para activar nuestro Algoritmo de MATCH (85%-100%).`;
+      const finalMktResp = appendGroupSatisfactionClosing(mktReport);
+      console.log(`[JanIA-GroupMKT] Auditoría de Marketing ejecutada en grupo para ${userId}: Score ${audit.score}/100`);
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", finalMktResp);
+      markUserGreetedToday(userId);
       return {
         classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+        response: finalMktResp,
+        reactionEmoji: "🎯",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
       };
     }
 
@@ -364,15 +610,21 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       }
       const loadedSticker = groupStickerKey ? getJaniaStickerByKey(groupStickerKey) : null;
 
+      const finalClassification = parsed.classification || "CONSULTA_GENERAL";
+      if (finalClassification !== "VIOLACION_DE_NORMAS" && finalResp.length >= 120) {
+        finalResp = appendGroupSatisfactionClosing(finalResp);
+      }
+
       // Si el usuario solicitó explícitamente una minuta/carta PDF o una pieza del Estudio Creativo de Imágenes
       const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
+      let generatedCreativeAsset: Awaited<ReturnType<typeof generateCustomUserCreativeImage>> | null = null;
       if (isExplicitCreativeImageRequest(messageToProcess)) {
-        const imgAsset = await generateCustomUserCreativeImage({
-          userPrompt: messageToProcess,
+        generatedCreativeAsset = await generateCustomUserCreativeImage({
+          userPrompt: messageToProcess.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
           userName: targetName || realName,
         }).catch(() => null);
-        if (imgAsset) {
-          queueCreativeImageForDm(userId, imgAsset);
+        if (generatedCreativeAsset) {
+          queueCreativeImageForDm(userId, generatedCreativeAsset);
         }
       }
       // Guardar turno en memoria conversacional de Grupo 2
@@ -381,13 +633,16 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       markUserGreetedToday(userId);
 
       return {
-        classification: parsed.classification || "CONSULTA_GENERAL",
+        classification: finalClassification,
         response: finalResp,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "🚫" : "👌"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || "",
         document: legalPdfDoc?.pdfBuffer,
         fileName: legalPdfDoc?.fileName,
+        creativeImageBuffer: generatedCreativeAsset?.buffer,
+        creativeImageFileName: generatedCreativeAsset?.fileName,
+        creativeImageCaption: generatedCreativeAsset?.caption,
         stickerKey: groupStickerKey || undefined,
         stickerBuffer: loadedSticker?.buffer,
       };
@@ -405,6 +660,21 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
         finalResp = stickerExtracted.cleanText;
       }
       const loadedSticker = groupStickerKey ? getJaniaStickerByKey(groupStickerKey) : null;
+      if (finalResp.length >= 120) {
+        finalResp = appendGroupSatisfactionClosing(finalResp);
+      }
+
+      const legalPdfDoc = await maybeGenerateLegalDocPdfForDm(userId, messageToProcess, finalResp, targetName || realName).catch(() => null);
+      let generatedCreativeAsset: Awaited<ReturnType<typeof generateCustomUserCreativeImage>> | null = null;
+      if (isExplicitCreativeImageRequest(messageToProcess)) {
+        generatedCreativeAsset = await generateCustomUserCreativeImage({
+          userPrompt: messageToProcess.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
+          userName: targetName || realName,
+        }).catch(() => null);
+        if (generatedCreativeAsset) {
+          queueCreativeImageForDm(userId, generatedCreativeAsset);
+        }
+      }
 
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
@@ -416,6 +686,11 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
         reactionEmoji: "👌",
         wantsVoice: false,
         voiceResponse: "",
+        document: legalPdfDoc?.pdfBuffer,
+        fileName: legalPdfDoc?.fileName,
+        creativeImageBuffer: generatedCreativeAsset?.buffer,
+        creativeImageFileName: generatedCreativeAsset?.fileName,
+        creativeImageCaption: generatedCreativeAsset?.caption,
         stickerKey: groupStickerKey || undefined,
         stickerBuffer: loadedSticker?.buffer,
       };
@@ -430,6 +705,46 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       ? fallbackNameInfo.displayName
       : (extractFirstName(realName) || 'colega');
     const cleanLower = text.toLowerCase().trim();
+
+    // Fallback determinístico para solicitudes explícitas de Estudio Creativo o Minuta PDF en grupo
+    if (isExplicitCreativeImageRequest(text)) {
+      const imgAsset = await generateCustomUserCreativeImage({
+        userPrompt: text.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim(),
+        userName: firstName,
+      }).catch(() => null);
+      if (imgAsset) {
+        const finalImgResp = appendGroupSatisfactionClosing(imgAsset.caption);
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalImgResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalImgResp,
+          reactionEmoji: "🎨",
+          creativeImageBuffer: imgAsset.buffer,
+          creativeImageFileName: imgAsset.fileName,
+          creativeImageCaption: imgAsset.caption,
+        };
+      }
+    }
+    if (isExplicitLegalPdfRequest(text)) {
+      const pdfAsset = await maybeGenerateLegalDocPdfForDm(userId, text, undefined, firstName).catch(() => null);
+      if (pdfAsset) {
+        const finalPdfResp = appendGroupSatisfactionClosing(
+          `📄 *DOCUMENTO OFICIAL EN PDF GENERADO:* ${pdfAsset.title}\n• *Archivo adjunto:* ${pdfAsset.fileName}\n• *Radicado VECY:* ${pdfAsset.verificationCode}`
+        );
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", finalPdfResp);
+        markUserGreetedToday(userId);
+        return {
+          classification: "CONSULTA_GENERAL",
+          response: finalPdfResp,
+          reactionEmoji: "📄",
+          document: pdfAsset.pdfBuffer,
+          fileName: pdfAsset.fileName,
+        };
+      }
+    }
 
     // Fallback de contingencia: Si el usuario preguntó por sondeos de valor, m² o precio de venta/arriendo
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {

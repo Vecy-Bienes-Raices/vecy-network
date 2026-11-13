@@ -184,7 +184,26 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.11 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.12 — Noviembre 2026
+
+### Novedades v34.12 (Punto 1: Paridad Total de `@JanIA` en Grupos con Motores Determinísticos — IDU, RUES, Notarial, ACM Fitto y Corvini, Marketing Audit e Imágenes Creativas 1080x1080 — Doctrina Eduardo A. Rivera):
+- **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:
+  1. **Prioridad #1 del Roadmap de Skills de JanIA:**
+     - Garantizar paridad funcional exacta entre todo lo que `@JanIA` promete en su saludo oficial de grupos (`presentacionGrupoWhatsApp`) y lo que ejecuta cuando es citada con `@JanIA` en grupos de WhatsApp (`consultingHandler.ts`, `circuloHandler.ts` y `whatsapp-match.ts`), al mismo nivel determinístico de `dmHandler.ts`.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - `server/_core/jania/types.ts`: Extendida `JanIAResult` con `creativeImageBuffer`, `creativeImageFileName` y `creativeImageCaption`.
+     - `server/_core/identityVerificationService.ts` y `ruesService.ts`: Blindadas menciones `@\d{7,18}` y LIDs/teléfonos oficiales de VECY en `extractAllCedulasForVerification`; exportada `isExplicitCompanyRuesQuery(text)` y limpiada extracción corporativa de `@jania` y verbos conjugados.
+     - `server/_core/notarialExpenseService.ts`: Exportada `isExplicitNotarialLiquidationRequest(text, senderId)` evitando falsos positivos sobre disputas generales de arras o promesas.
+     - `server/_core/jania/handlers/consultingHandler.ts`, `circuloHandler.ts` y `dmHandler.ts`:
+       * Agregados `estrato` y `antiguedadAnos` a `extractAcmAttributesFromText`.
+       * Conectados en `consultingHandler.ts` los 7 interceptores/motores determinísticos en orden seguro: (0) Satisfacción + Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`), (1) Paz y Salvo IDU (antes de Predial para evitar colisión de CHIP `AAA...`), (2) Predial Bogotá, (3) Cédula/CE y Empresas RUES (`NIT` o Razón Social), (4) Liquidación Notarial exacta, (5) ACM Fitto y Corvini (`isExplicitGroupAcmRequest`), (6) Auditoría de Marketing Swap Test + Score `/100` + AIDA + ICP (`isExplicitGroupMarketingAuditRequest`), y (7) Entrega nativa de `creativeImageBuffer` (1080x1080) y Minutas PDF (`document`/`fileName`), con cierre `appendGroupSatisfactionClosing`.
+     - `server/_core/whatsapp-match.ts`: Ampliado `isRealEstateConsultationForGroup` y habilitado el envío directo de imágenes creativas y PDFs en todos los grupos con respuesta de JanIA.
+  3. **Gobernanza y Suite de Regresión 198:**
+     - Semilla directiva `seed-paridad-total-jania-en-grupos-motores-deterministicos-v34-12` en `founderKnowledgeService.ts`.
+     - Suite 198 con 6 pruebas automatizadas pasando al 100% (`NODE_ENV=test`, $0 COP).
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Suite 198 (6/6 passing) | Build `npm run build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v34.11 — Noviembre 2026
 
 ### Novedades v34.11 (Precisión Quirúrgica en Skill ACM y Protocolo Universal de Satisfacción + Google Reviews por Libre Albedrío — Caso Carolina Z. | eXp Realty — Doctrina Eduardo A. Rivera):
 - **Diagnóstico y Doctrina Fundacional de Eduardo A. Rivera**:

@@ -1,4 +1,19 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.11.0 — 2026-11-12)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.12.0 — 2026-11-13)
+- **JanIA Server:** `v34.12` (`34.12.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
+- **Punto 1 — Paridad Total de `@JanIA` en Grupos con Motores Determinísticos (`consultingHandler.ts` ↔ `dmHandler.ts` ↔ `whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Técnico y Causa Raíz:**
+     - La promesa de `@JanIA` en grupos (`presentacionGrupoWhatsApp`) ofrecía RUES, Paz y Salvo IDU (PDF), Liquidación Notarial, ACM, Auditoría de Marketing e Imágenes Creativas 1080x1080, pero en `consultingHandler.ts` solo había interceptores directos de Predial y Cédula; además, el IDU no interceptaba antes que Predial (colisión de CHIP `AAA...`), faltaba blindaje anti-LID en `@mentions` (`@573192919978`), y las imágenes creativas no se despachaban nativamente en grupo.
+  2. **Solución Doctrinal y Arquitectural Ejecutada:**
+     - En `server/_core/jania/types.ts`: Agregados `creativeImageBuffer`, `creativeImageFileName`, `creativeImageCaption` en `JanIAResult`.
+     - En `server/_core/identityVerificationService.ts` y `server/_core/ruesService.ts`: Blindaje anti-`@mentions`/LIDs de VECY en `extractAllCedulasForVerification`, exportación de `isExplicitCompanyRuesQuery` e integración con `queryEmpresaOrNit` + limpieza de `@jania` en `extractCleanCorporateQuery`.
+     - En `server/_core/notarialExpenseService.ts`: Exportada `isExplicitNotarialLiquidationRequest` sin interceptar disputas generales de arras o contratos.
+     - En `server/_core/jania/handlers/consultingHandler.ts`, `circuloHandler.ts` y `dmHandler.ts`: Conectados 7 interceptores determinísticos en orden seguro (`0` Satisfacción/Google Reviews, `1` Paz y Salvo IDU antes de Predial, `2` Predial Bogotá, `3` Cédula/RUES Empresas, `4` Liquidación Notarial exacta, `5` ACM Fitto y Corvini via `isExplicitGroupAcmRequest`, `6` Auditoría Marketing Swap Test + AIDA + ICP via `isExplicitGroupMarketingAuditRequest`), añadido `estrato` y `antiguedadAnos` a `extractAcmAttributesFromText`, `appendGroupSatisfactionClosing` obligatorio, y generación/entrega de `creativeImageBuffer` / `document` PDF incluso en fallback `catch`.
+     - En `server/_core/whatsapp-match.ts`: Ampliado `isRealEstateConsultationForGroup` y habilitado el despacho nativo de `creativeImageBuffer` / `popLatestDmCreativeImage` y PDFs en todos los grupos con respuesta de JanIA.
+  3. **Gobernanza y Suite de Regresión 198:**
+     - Semilla directiva `seed-paridad-total-jania-en-grupos-motores-deterministicos-v34-12` en `founderKnowledgeService.ts` y Suite 198 (6/6 tests en verde) en `regression.test.ts`.
+- **Validación Limpia ($0 COP):** Typecheck `npm run check` (0 errores) | Suite 198 `vitest` (6/6 passing) + Suite 197 (4/4) (`NODE_ENV=test`) | Build `npm run build` limpio (`vite build` + `esbuild`).
+
+### 📦 HISTÓRICO RECIENTE (v34.11.0 — 2026-11-12)
 - **JanIA Server:** `v34.11` (`34.11.0`) consolidado y validado en local, listo para despliegue en Contabo VPS (`13.140.149.144`).
 - **Precisión Quirúrgica en Skill ACM y Protocolo Universal de Satisfacción + Google Reviews por Libre Albedrío (Caso Carolina Z. | eXp Realty — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Técnico y Causa Raíz:**

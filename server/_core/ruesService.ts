@@ -299,6 +299,9 @@ export function extractCleanCorporateQuery(raw: string): string {
   if (!raw) return "";
   let clean = raw
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, " ")
+    .replace(/@\d{7,18}\b/g, " ")
+    .replace(/@jania\b/gi, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   // 1. Si hay texto entre comillas "..." o '...', extraerlo prioritariamente
@@ -314,10 +317,13 @@ export function extractCleanCorporateQuery(raw: string): string {
   }
 
   // 3. Bloque con forma societaria explícita (ej. MULTIPROYECTOS & INVERSIONES SAS)
-  const corpBlockMatch = clean.match(/\b([A-Z0-9&.-]+(?:\s+[A-Z0-9&.-]+)*\s+\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?)\b)/i);
+  const corpBlockMatch = clean.match(/\b([A-ZÁÉÍÓÚÑ0-9&.-]+(?:\s+[A-ZÁÉÍÓÚÑ0-9&.-]+)*\s+\b(?:S\.?A\.?S\.?|L\.?T\.?D\.?A\.?|S\.?A\.?|S\.?C\.?A\.?|E\.?U\.?|B\.?I\.?C\.?|S\.?EN\s+C\.?)(?:\.)?)/i);
   if (corpBlockMatch) {
     let candidate = corpBlockMatch[1].trim();
-    candidate = candidate.replace(/^(?:HOLA|BUENAS|DISCULPA|DISCULPAME|POR\s+FAVOR|TE\s+CONFIRMO|EL\s+NOMBRE\s+(?:EXACTO\s+)?DE\s+LA\s+EMPRESA|LA\s+EMPRESA|NOMBRE|RAZON\s+SOCIAL)\b[\s.:;,-]*/gi, "").trim();
+    candidate = candidate
+      .replace(/^(?:hola|buenas|disculpa|disc[uú]lpame|por\s+favor|te\s+confirmo|verif[ií]ca(?:me|r)?|consulta(?:me|r)?|rev[ií]sa(?:me|r)?|valida(?:me|r)?|averigua(?:me|r)?|busca(?:me|r)?|investiga(?:me|r)?|chequea(?:me|r)?)\b[\s.:;,-]*/gi, "")
+      .replace(/^(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa|la\s+raz[oó]n\s+social|la\s+empresa|la\s+sociedad|la\s+constructora|la\s+inmobiliaria|a\s+la\s+empresa|a|nombre|raz[oó]n\s+social)\b[\s.:;,-]*/gi, "")
+      .trim();
     if (candidate.length >= 3) return candidate;
   }
 
@@ -332,7 +338,8 @@ export function extractCleanCorporateQuery(raw: string): string {
   // 5. Limpieza general de introducciones conversacionales y muletillas
   let stripped = clean
     .replace(/^(?:hola|buenas|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches|disculpa|disc[uú]lpame|por\s+favor|oye|jania|mira|te\s+paso|te\s+env[ií]o|te\s+comparto|te\s+confirmo|este\s+es|esta\s+es)\b[^\w\n\r]*/gi, " ")
-    .replace(/\b(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa(?:\s+es)?|la\s+raz[oó]n\s+social(?:\s+es)?|la\s+empresa(?:\s+es)?|el\s+nit(?:\s+es)?|los\s+datos\s+de|informaci[oó]n\s+de|investigar\s+a|verificar\s+a)\b[^\w\n\r]*/gi, " ")
+    .replace(/\b(?:verif[ií]ca(?:me|r)?|consulta(?:me|r)?|rev[ií]sa(?:me|r)?|valida(?:me|r)?|averigua(?:me|r)?|busca(?:me|r)?|investigar|verificar|revisar|consultar)(?:\s+(?:a|en\s+rues|el\s+nit\s+de))?\b[^\w\n\r]*/gi, " ")
+    .replace(/\b(?:el\s+nombre\s+(?:exacto\s+)?de\s+la\s+empresa(?:\s+es)?|la\s+raz[oó]n\s+social(?:\s+es)?|la\s+empresa(?:\s+es)?|la\s+sociedad(?:\s+es)?|la\s+constructora(?:\s+es)?|la\s+inmobiliaria(?:\s+es)?|el\s+nit(?:\s+es)?|los\s+datos\s+de|informaci[oó]n\s+de|investigar\s+a|verificar\s+a)\b[^\w\n\r]*/gi, " ")
     .replace(/\s+/g, " ")
     .replace(/^[":;.,\s-]+|[":;.,\s-]+$/g, "")
     .trim();

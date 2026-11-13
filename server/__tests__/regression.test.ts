@@ -12407,11 +12407,174 @@ Ana Morales Castillo
       expect(seed?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.11");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:1[1-9]|[2-9]\d)/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.11.0");
+      expect(pkg.version).toMatch(/^34\.(?:1[1-9]|[2-9]\d)\.0/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 198: PARIDAD TOTAL DE @JanIA EN GRUPOS (IDU, RUES, NOTARIAL, ACM, MARKETING, IMÁGENES) v34.12
+  // =========================================================================
+  describe("SUITE 198: Paridad Total de @JanIA en Grupos con Motores Determinísticos (IDU, RUES, Notarial, ACM Fitto y Corvini, Marketing Audit e Imágenes Creativas 1080x1080) v34.12", () => {
+    it("1. Interceptor IDU en grupo corre ANTES que Predial para CHIPs AAA sin colisionar y pregunta satisfacción", async () => {
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      const iduRes = await processConsultingMessage(
+        "@573192919978 @JanIA descárgame el paz y salvo IDU del CHIP AAA0092NBEA",
+        `573101112233_${Date.now()}@s.whatsapp.net`,
+        "Andrés Artunduaga"
+      );
+
+      expect(iduRes.classification).toBe("CONSULTA_GENERAL");
+      expect(iduRes.response).toContain("PAZ Y SALVO DE VALORIZACIÓN IDU");
+      expect(iduRes.response).toContain("AAA0092NBEA");
+      expect(iduRes.response).not.toContain("FACTURA PREDIAL BOGOTÁ");
+      expect(iduRes.response).toMatch(/satisfecho\(a\)/i);
+    });
+
+    it("2. Blindaje anti-LID en @mentions (@573192919978/@167108705018103) y Verificación de Empresas RUES en grupo", async () => {
+      const {
+        extractAllCedulasForVerification,
+        isExplicitCompanyRuesQuery,
+      } = await import("../_core/identityVerificationService");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+
+      const parsedItems = extractAllCedulasForVerification(
+        "@573192919978 @167108705018103 verifícame la empresa Constructora Bolívar S.A.",
+        false
+      );
+      expect(parsedItems).toEqual([]);
+      expect(isExplicitCompanyRuesQuery("@JanIA verifícame la empresa Constructora Bolívar S.A.")).toBe(true);
+
+      const ruesRes = await processConsultingMessage(
+        "@573192919978 @JanIA consulta en RUES el NIT 860002523-1 de Constructora Bolívar S.A.",
+        `573101112234_${Date.now()}@s.whatsapp.net`,
+        "Victoria Tovar"
+      );
+
+      expect(ruesRes.classification).toBe("CONSULTA_GENERAL");
+      expect(ruesRes.response).toMatch(/RUES|EMPRESA|860\.002\.523|NIT/i);
+      expect(ruesRes.response).toMatch(/satisfecho\(a\)/i);
+    });
+
+    it("3. Liquidación Exacta de Gastos Notariales y Registro en grupo sin interceptar disputas generales de arras", async () => {
+      const { isExplicitNotarialLiquidationRequest } = await import("../_core/notarialExpenseService");
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+
+      expect(
+        isExplicitNotarialLiquidationRequest("Tengo un problema con una promesa de compraventa y cláusula penal de arras")
+      ).toBe(false);
+      expect(
+        isExplicitNotarialLiquidationRequest("@JanIA liquídame los gastos notariales y de registro de una venta de $600.000.000")
+      ).toBe(true);
+
+      const notarialRes = await processConsultingMessage(
+        "@JanIA liquídame los gastos notariales y de registro de una venta de $600.000.000 de contado",
+        `573101112235_${Date.now()}@s.whatsapp.net`,
+        "Camila Restrepo"
+      );
+
+      expect(notarialRes.classification).toBe("CONSULTA_GENERAL");
+      expect(notarialRes.response).toMatch(/LIQUIDACIÓN ESTIMADA|COMPRADOR|VENDEDOR|RETENCIÓN/i);
+      expect(notarialRes.response).toMatch(/satisfecho\(a\)/i);
+    });
+
+    it("4. Motor ACM Fitto y Corvini ejecutado determinísticamente en grupo con 3 escenarios, Cap Rate e ICP", async () => {
+      const {
+        isExplicitGroupAcmRequest,
+        processConsultingMessage,
+      } = await import("../_core/jania/handlers/consultingHandler");
+
+      expect(isExplicitGroupAcmRequest("¿Qué es el método Fito y Corvini?")).toBe(false);
+      expect(
+        isExplicitGroupAcmRequest(
+          "@JanIA hazme un ACM para un apartamento en Cedritos de 95 m2, 3 habitaciones, 2 baños, 2 garajes, estrato 4, 8 años de antigüedad"
+        )
+      ).toBe(true);
+
+      const acmRes = await processConsultingMessage(
+        "@JanIA hazme un ACM para un apartamento en Cedritos de 95 m2, 3 habitaciones, 2 baños, 2 garajes, estrato 4, 8 años de antigüedad",
+        `573101112236_${Date.now()}@s.whatsapp.net`,
+        "Felipe Gómez"
+      );
+
+      expect(acmRes.classification).toBe("ANALISIS_DE_MERCADO");
+      expect(acmRes.response).toContain("ANÁLISIS COMPARATIVO DE MERCADO (ACM)");
+      expect(acmRes.response).toContain("Cedritos");
+      expect(acmRes.response).toContain("95 m²");
+      expect(acmRes.response).toContain("3 Escenarios Estratégicos de Precio");
+      expect(acmRes.response).toContain("Cap Rate");
+      expect(acmRes.response).toContain("Perfil de Comprador Ideal (ICP)");
+      expect(acmRes.response).toMatch(/satisfecho\(a\)/i);
+    });
+
+    it("5. Auditoría de Marketing Inmobiliario (Swap Test + Score /100 + AIDA + ICP) y Estudio Creativo 1080x1080 en grupo", async () => {
+      const {
+        isExplicitGroupMarketingAuditRequest,
+        processConsultingMessage,
+      } = await import("../_core/jania/handlers/consultingHandler");
+
+      const promptMkt =
+        "@JanIA audita este aviso con el Swap Test: Vendo hermoso apartamento amplio e iluminado en Chicó de 120 m2 con excelente ubicación";
+      expect(isExplicitGroupMarketingAuditRequest(promptMkt)).toBe(true);
+
+      const mktRes = await processConsultingMessage(
+        promptMkt,
+        `573101112237_${Date.now()}@s.whatsapp.net`,
+        "Laura Vélez"
+      );
+
+      expect(mktRes.classification).toBe("CONSULTA_GENERAL");
+      expect(mktRes.response).toContain("AUDITORÍA DE MARKETING INMOBILIARIO");
+      expect(mktRes.response).toMatch(/Puntuación Global:.*\d+\/100/);
+      expect(mktRes.response).toContain("Swap Test");
+      expect(mktRes.response).toContain("FICHA TÉCNICA SUGERIDA OPTIMIZADA (MÉTODO AIDA)");
+      expect(mktRes.response).toMatch(/satisfecho\(a\)/i);
+
+      const imgRes = await processConsultingMessage(
+        "@JanIA crea un flyer promocional 1080x1080 para un apartamento moderno en El Chicó Bogotá de 120 m2",
+        `573101112238_${Date.now()}@s.whatsapp.net`,
+        "Laura Vélez"
+      );
+      expect(Buffer.isBuffer(imgRes.creativeImageBuffer)).toBe(true);
+      expect((imgRes.creativeImageBuffer as Buffer).length).toBeGreaterThan(5000);
+      expect(imgRes.creativeImageFileName).toMatch(/\.jpg$/i);
+    });
+
+    it("6. Protocolo de Satisfacción + Google Reviews en grupo, Semilla v34.12 y Versión v34.12 (34.12.0)", async () => {
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      const groupUser = `573101112239_${Date.now()}@s.whatsapp.net`;
+
+      await processConsultingMessage(
+        "@JanIA hazme un ACM para un apartamento en Cedritos de 95 m2, 3 habitaciones, 2 baños, 2 garajes",
+        groupUser,
+        "Carolina Z. | eXp Realty"
+      );
+
+      const reviewRes = await processConsultingMessage(
+        "Me ha gustado muchísimo tu respuesta JanIA, envíame el link para calificarte en Google",
+        groupUser,
+        "Carolina Z. | eXp Realty"
+      );
+
+      expect(reviewRes.response).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(reviewRes.response).toContain("⭐⭐⭐⭐⭐");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed12 = SEED_TEACHINGS.find(
+        t => t.id === "seed-paridad-total-jania-en-grupos-motores-deterministicos-v34-12"
+      );
+      expect(seed12).toBeDefined();
+      expect(seed12?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.12");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.12.0");
     });
   });
 });

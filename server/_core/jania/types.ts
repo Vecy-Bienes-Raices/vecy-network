@@ -24,6 +24,9 @@ export type JanIAResult = {
   flyerVerbatimText?: string;
   document?: Buffer;
   fileName?: string;
+  creativeImageBuffer?: Buffer;
+  creativeImageFileName?: string;
+  creativeImageCaption?: string;
   stickerKey?: string;
   stickerBuffer?: Buffer;
 };

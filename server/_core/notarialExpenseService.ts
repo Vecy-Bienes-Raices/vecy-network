@@ -653,7 +653,9 @@ export function extractNotarialExpenseParams(text: string, senderId?: string): {
   const keywords = [
     'gastos notariales', 'gasto notarial', 'gastos de escrituración', 'gastos escrituración',
     'gastos de escrituracion', 'escrituración', 'escrituracion', 'liquidar notaria',
-    'liquidar notaría', 'costo notaria', 'costos notaria', 'cuánto vale la notaría',
+    'liquidar notaría', 'liquídame la notaría', 'liquidame la notaria', 'liquídame los gastos', 'liquidame los gastos',
+    'gastos de notaría', 'gastos de notaria',
+    'costo notaria', 'costos notaria', 'cuánto vale la notaría',
     'cuanto vale la notaria', 'cuanto cobra la notaria', 'cuánto cobra la notaría',
     'cuanto se va en notaria', 'cuánto se va en notaría', 'gastos de registro',
     'firmar promesa', 'promesa de compraventa', 'promesa compraventa', 'voy para la notaría',
@@ -738,6 +740,25 @@ export interface NotarialExecutionResult {
   reportText?: string;
   calculatedResult?: NotarialExpenseResult;
   isEducationalAnswer?: boolean;
+}
+
+/**
+ * Determina de forma estricta si un mensaje solicita una liquidación notarial/registral
+ * o una explicación doctrinal de figuras notariales (sin interceptar consultas jurídicas
+ * generales sobre conflictos de arras o promesas de compraventa).
+ */
+export function isExplicitNotarialLiquidationRequest(text: string, senderId?: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  if (senderId && hasPendingNotarialSession(senderId)) return true;
+
+  const clean = text.replace(/@\d{7,18}\b/g, ' ').replace(/@jania\b/gi, ' ').trim();
+  if (!clean) return false;
+
+  if (explainNotarialFigures(clean).isQuestion) {
+    return true;
+  }
+
+  return /\b(?:gastos?\s+(?:de\s+)?notar[ií](?:a|ales)?|gasto\s+notarial|derechos?\s+notariales|gastos?\s+de\s+escrituraci[oó]n|gastos?\s+de\s+registro|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|liqu[ií]da(?:me|nos|r)?\s+(?:los\s+)?(?:gastos|notar[ií]a|escrituraci[oó]n|retenci[oó]n|registro)|liquidaci[oó]n\s+notarial|cu[aá]nto\s+(?:cuestan?|valen?|salen?|son|cobra\s+la\s+notar[ií]a|pago\s+de)\s+(?:los\s+)?(?:gastos\s+notariales|gastos\s+de\s+escritur\w*|derechos\s+notariales|notar[ií]a|escrituraci[oó]n|registro)|beneficencia\s+y\s+registro|boleta\s+fiscal|impuesto\s+de\s+registro|retenci[oó]n\s+en\s+la\s+fuente\s+(?:de\s+venta|inmobiliaria|en\s+notar[ií]a|por\s+venta))\b/i.test(clean);
 }
 
 /**

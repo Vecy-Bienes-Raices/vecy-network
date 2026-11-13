@@ -359,7 +359,7 @@ export class JaniaMatchBot {
     const hasQuestionOrConsultIntent =
       /[¿?]/.test(combined) ||
       /\b(?:consulta|consultar|pregunta|preguntarte|duda|inquietud|ayuda|ay[uú]dame|ay[uú]dale|explica|expl[ií]cale|expl[ií]canos|responde|resp[oó]ndele|aclara|acl[aá]rale|opinas|opini[oó]n|concepto|asesor[ií]a|orienta|ori[eé]ntanos|c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]|qui[eé]n|d[oó]nde|por\s+qu[eé]|puedes|podr[ií]as|sabes)\b/i.test(combined) ||
-      /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura| escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensión|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match)\b/i.test(combined);
+      /\b(?:inmueble|inmobiliari[oa]|propiedad|apartamento|apto|casa|bodega|lote|local|oficina|finca|arriendo|arrendamiento|venta|compraventa|permuta|promesa|contrato|minuta|corretaje|comisi[oó]n|canon|aval[uú]o|acm|m2|metro\s+cuadrado|predial|chip|idu|paz\s+y\s+salvo|notar[ií]a|notarial|escritura|escrituraci[oó]n|registro|retenci[oó]n|ganancia\s+ocasional|impuesto|dian|uvt|ley\s+\d+|decreto|c[oó]digo\s+civil|propiedad\s+horizontal|cesant[ií]as|fondo|pensi[oó]n|pensiones|allianz|porvenir|protecci[oó]n|colfondos|fna|hipoteca|leasing|embargo|sucesi[oó]n|tradici[oó]n|matr[ií]cula|c[eé]dula|antecedentes|nit|rues|pot|sinupot|norma|vecy|match|empresa|sociedad|raz[oó]n\s+social|c[aá]mara\s+de\s+comercio|constructora|s\.?\s*a\.?\s*s\.?|ltda|flyer|infograf[ií]a|imagen|pieza\s+gr[aá]fica|banner|marketing|swap\s+test|audita(?:r)?|optimiza(?:r)?|redacta(?:r)?|correo|carta|liquidar|liqu[ií]da(?:me)?|verifica(?:r|me)?|descarga(?:r|me)?|firma\s+digital|firma\s+electr[oó]nica|calificar|rese[ñn]a)\b/i.test(combined);
 
     return hasQuestionOrConsultIntent;
   }
@@ -2729,18 +2729,31 @@ export class JaniaMatchBot {
           isExplicitLegalPdfRequest,
           generateLegalPdfForDmRequest,
           isExplicitCreativeImageRequest,
-          generateCustomUserCreativeImage
+          generateCustomUserCreativeImage,
+          popLatestDmCreativeImage
         } = await import('./jania/handlers/dmHandler');
 
-        // Si la respuesta incluye un documento (ej. Factura Predial oficial en PDF)
+        // Consumir cualquier imagen encolada en paralelo si viene ya en result.creativeImageBuffer
+        const queuedCreativeFromHandler = popLatestDmCreativeImage(senderId);
+        const creativeBufferToSend = result.creativeImageBuffer || queuedCreativeFromHandler?.buffer;
+        const creativeCaptionToSend = textToDeliver || result.creativeImageCaption || queuedCreativeFromHandler?.caption;
+
+        // Si la respuesta incluye un documento (ej. Factura Predial oficial, Paz y Salvo IDU o Minuta PDF)
         if (result.document) {
           await this.queuedSend(chatId, {
             document: result.document,
             mimetype: 'application/pdf',
-            fileName: result.fileName || 'Factura_Predial_Bogota.pdf',
+            fileName: result.fileName || 'Documento_Oficial_VECY.pdf',
             caption: textToDeliver
           }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
-        } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitLegalPdfRequest(bodyText)) {
+        } else if (creativeBufferToSend) {
+          // 🖼️ Despacho nativo de Flyer / Infografía 1080x1080 directamente en el grupo
+          await this.queuedSend(chatId, {
+            image: creativeBufferToSend,
+            mimetype: 'image/jpeg',
+            caption: creativeCaptionToSend
+          }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
+        } else if (isExplicitLegalPdfRequest(bodyText)) {
           try {
             const groupPdf = await generateLegalPdfForDmRequest(bodyText, {
               cuerpoDocumento: textToDeliver.length > 180 ? textToDeliver : undefined
@@ -2754,10 +2767,10 @@ export class JaniaMatchBot {
           } catch (_) {
             await this.queuedSend(chatId, textToDeliver, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
           }
-        } else if ((chatId === this.buzonGroupId || chatId === this.circuloGroupId) && isExplicitCreativeImageRequest(bodyText)) {
+        } else if (isExplicitCreativeImageRequest(bodyText)) {
           try {
             const groupImg = await generateCustomUserCreativeImage({
-              userPrompt: bodyText,
+              userPrompt: bodyText.replace(/@\d{7,18}\b/g, ' ').replace(/@jania\b/gi, ' ').trim(),
               includeJaniaAvatar: true
             });
             await this.queuedSend(chatId, {
