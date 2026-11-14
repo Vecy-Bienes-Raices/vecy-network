@@ -913,6 +913,42 @@ export function auditContractDraftText(
     }
   }
 
+  // 6) Pacto de Retroventa (Arts. 1939 a 1943 Codigo Civil)
+  const isRetroventa = detectedType === "pacto_retroventa" || /\bpacto\s+(?:de\s+)?retroventa\b|\bretroventa\b/.test(norm);
+  if (isRetroventa) {
+    const yearsMatch = norm.match(/\b(\d+)\s+a[nñ]os?\b/);
+    const termYears = yearsMatch ? parseInt(yearsMatch[1], 10) : 0;
+    if (termYears > 4) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Plazo de retroventa superior al maximo legal de 4 anos (Art. 1943 C.C.)",
+        hallazgo: `Se estipula un plazo de ${termYears} anos para ejercer el recobro, excediendo el limite imperativo colombiano.`,
+        fundamentoLegal:
+          "Articulo 1943 del Codigo Civil Colombiano: el tiempo en que se podra intentar la accion de retroventa no podra pasar de cuatro (4) anos contados desde la fecha del contrato.",
+        redaccionSugerida:
+          "'EL VENDEDOR podra ejercer la facultad de recobro dentro de un plazo perentorio no superior a cuatro (4) anos (o [X meses <= 48]), contado desde la fecha de la escritura publica.'"
+      });
+    }
+    if (/\bdocumento\s+privado\b|\bsin\s+escritura\b/.test(norm) || !/\bescritura\s+publica\b/.test(norm)) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Pacto de Retroventa inmobiliario sin Escritura Publica ni registro SNR (Art. 1942 y 1857 C.C.)",
+        hallazgo:
+          "El pacto de retroventa sobre bienes raices en documento privado o sin escritura publica registrada carece de validez sustancial para transferir/reservar dominio inmobiliario y no es oponible a terceros.",
+        fundamentoLegal:
+          "Articulos 1857 inciso 2, 1939 y 1942 del Codigo Civil Colombiano: toda compraventa de inmueble y su pacto accesorio de retroventa debe otorgarse por Escritura Publica e inscribirse en el Folio de Matricula Inmobiliaria (SNR).",
+        redaccionSugerida:
+          "'El presente contrato de compraventa con pacto de retroventa (Arts. 1939-1943 C.C.) se elevara a Escritura Publica ante Notaria y se inscribira en el Folio de Matricula Inmobiliaria de la ORIP respectiva.'"
+      });
+      missingClauses.push(
+        "Otorgamiento obligatorio mediante Escritura Publica e inscripcion en Oficina de Registro (SNR) para oponibilidad ante terceros (Art. 1942 C.C.)."
+      );
+    }
+    missingClauses.push(
+      "Equilibrio economico anti-simulacion y control de lesion enorme (Art. 1947 C.C.): documentar valor comercial real para evitar recalificacion judicial como mutuo usurario o pacto comisorio prohibido."
+    );
+  }
+
   if (findings.length === 0) {
     findings.push({
       severidad: "OK",
@@ -938,6 +974,8 @@ export function auditContractDraftText(
     ? "ARRENDAMIENTO VIVIENDA URBANA"
     : isCorretaje
     ? "CONTRATO DE CORRETAJE"
+    : isRetroventa
+    ? "COMPRAVENTA CON PACTO DE RETROVENTA"
     : isOtrosiOrEntrega
     ? "OTROSI / ENTREGA ANTICIPADA"
     : "CONTRATO INMOBILIARIO";
@@ -950,6 +988,8 @@ export function auditContractDraftText(
     ? "Ley 820 de 2003 (Vivienda Urbana), Codigo Civil y C.G.P."
     : isCorretaje
     ? "Codigo de Comercio (Arts. 1340 a 1346) y Doctrina Colaborativa VECY"
+    : isRetroventa
+    ? "Codigo Civil Colombiano (Arts. 1939 a 1943 Pacto de Retroventa y Art. 1947 Lesion Enorme)"
     : "Legislacion Civil, Comercial e Inmobiliaria de Colombia";
 
   const riskHeadline =

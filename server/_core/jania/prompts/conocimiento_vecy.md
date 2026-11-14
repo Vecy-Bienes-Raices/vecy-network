@@ -20,9 +20,19 @@
 - Pedagogía y Uso: Cada vez que un cliente o colega desee agendar una visita a un inmueble, JanIA le comparte este enlace (https://vecy-agenda-pro.vercel.app/) y le explica con sencillez que allí podrá registrarse con verificación de seguridad. Próximamente se integrará también en la tienda del portal oficial VECY BIENES RAÍCES (https://vecy-bienes-raices.vercel.app/).
 - Fábrica de Software Proptech a la Medida: Si un colega, inmobiliaria o inversionista desea cualquiera de nuestras herramientas tecnológicas (Vecy Agenda Pro, plataformas privadas de firma electrónica para sus clientes, motores de matching inmobiliario, scrapers de verificación, liquidadores notariales o asistentes de IA personalizados), VECY BIENES RAÍCES las diseña y programa a su exacta medida. Para cotización y desarrollo personalizado, contactar a Eduardo Rivera al +57 316 656 9719.
 
-## 4. COMUNIDAD Y REDES
+## 4. COMUNIDAD, PARADIGMAS ("DINOSAURIOS VS. EVOLUCIÓN VECY"), REGISTRO Y GUÍA DEL MATCH
 - Canal oficial de WhatsApp y grupos especializados de la red de aliados. Se comparten únicamente cuando la conversación presente una oportunidad genuina de crecimiento mutuo.
 - Catálogo Oficial de Inmuebles en WhatsApp: https://wa.me/c/573192919978 y portal web oficial https://vecy-bienes-raices.vercel.app/properties.
+- **Los Dinosaurios Inmobiliarios vs. VECY La Evolución Inevitable (https://vecy-bienes-raices.vercel.app/historia):**
+  * *Dinosaurios:* portales pasivos caros con búsquedas manuales ciegas y spam, resistencia al correo y a la tecnología, tercerías fantasma deshonestas y contaminación visual/inseguridad con avisos de papel en ventanas.
+  * *Evolución VECY:* JanIA 24/7 ejecutando matching quirúrgico (85%–100%) en milisegundos, respaldo legal digital verificable (Ley 527/1999, CUV, código QR y prueba de nexo causal), Cero Papel, esquema **80/20** directo (con **5 días de gracia a $0 COP**) y Bolsa Colaborativa **40/20/40** (10% VECY + 10% Bolsa de Marca Blanca para difusores).
+  * *Propietarios Directos:* Publicación `$0 COP` anticipados y comisión solo ante cierre exitoso: **3% en venta** o **1 canon neto de arriendo sin incluir cuota de administración**.
+- **Cómo Registrarse y Publicar para Lograr Matches Exactos:**
+  * *Registro gratuito:* Ingresar a `https://vecy-bienes-raices.vercel.app/` (sin mensualidades obligatorias) para tener tienda pública de Ofertas y Demandas.
+  * *Reglas exactas del MATCH (85%–100%):* Coincidencia exacta `1=1` en alcobas, área nunca por debajo del mínimo pedido (`>= reqMin`), baños y parqueaderos `>=`, negocio compatible (arriendo no cruza con opción de compra) y ficha detallada (barrio exacto, precio/canon + administración aparte, m² o fanegadas de 6.400 m² / hectáreas de 10.000 m² en rural, parqueadero independiente vs lineal, estrato y contacto).
+- **Criterio Financiero y Jurídico Especializado (Pros y Contras Clave):**
+  * *Pacto de Retroventa (Arts. 1939–1943 C.C.):* Brinda liquidez rápida al propietario conservando derecho legal de recobro, pero conlleva riesgo de pérdida definitiva al expirar el plazo máximo legal de **4 años** y exige precio justo en Escritura Pública registrada para evitar nulidades por simulación de mutuo usurario o lesión enorme (Art. 1947 C.C.).
+  * *Crédito Hipotecario vs. Leasing Habitacional:* Crédito otorga dominio inmediato desde la firma (mayor cuota inicial 30% No-VIS / 20% VIS), mientras Leasing permite financiar hasta 80%–85% con protección temporal frente a embargos mientras la titularidad es del banco hasta ejercer la opción de compra (asumiendo escrituración al final).
 
 ## 5. GUÍA OFICIAL EN FIRMA ELECTRÓNICA GRATUITA (AGENCIA NACIONAL DIGITAL - GOV.CO)
 - Portal Oficial Gratuito: https://autenticaciondigital.and.gov.co/ (o https://firmaautenticaciondigital.and.gov.co/) de la Agencia Nacional Digital (AND), MinTIC y GOV.CO.

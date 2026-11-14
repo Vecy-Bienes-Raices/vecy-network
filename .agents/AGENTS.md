@@ -184,7 +184,20 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.20 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.21 — Noviembre 2026
+
+### Novedades v34.21 (Auditoría Integral y Paridad Total DM/Grupos/Web, Nombres Compuestos Persistentes, Valuación Rural/Comercial Nacional, Pacto de Retroventa y Pedagogía "Dinosaurios vs. VECY" — Doctrina Eduardo A. Rivera):
+- **Memoria Nominal Simple/Compuesta, Género y Roles (`nameAndGenderResolver.ts`, `sessionManager.ts`, `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`):**
+  1. Ampliación de `extractIntroducedName` y nuevo `persistIntroducedNameInSession` con precedencia `introducedNow > persistedIntroduced > fallbackProfileName > persistedName` para conservar nombres simples y compuestos + género entre turnos y canales.
+- **Tasación Rural/Comercial Nacional, Pacto de Retroventa y Leasing (`valuation.ts`, `dmHandler.ts`, `legalContractService.ts`, `financialAndTaxRealEstateService.ts`):**
+  1. `executeMarketValuationSurvey` y `extractAcmAttributesFromText` soportan `fanegadas` (`6.400 m²`), `hectareas` (`10.000 m²`), regiones rurales, ciudades nacionales y tipología comercial.
+  2. `auditContractDraftText` audita **Pacto de Retroventa (Arts. 1939–1943 C.C.)** (máximo 4 años, Escritura Pública + SNR, lesión enorme) y `buildFinancialAndTaxReport` detalla pros y contras equilibrados de Hipotecario vs. Leasing Habitacional.
+- **Paridad Total Web & Grupo 3 + Stickers 3D (`webChatService.ts`, `server/routers/janIA.ts`, `circuloHandler.ts`, `JanIAWidget.tsx`, `JanIAConsole.tsx`):**
+  1. Canal Web conectado a todas las Skills determinísticas (`evaluateWebDeterministicSkills`), PDFs descargables en chat (`pdfUrl`), stickers `.webp` (`stickerUrl`), memoria de 20 turnos y búsqueda en vivo de noticias/indicadores sin secuestrar consultas (`detectRawWebListingPost`).
+- **Prompts y Gobernanza (`base.md`, `prompts.ts`, `web_console.md`, `conocimiento_vecy.md`, `PROYECTO_Vecy Network.md`, `founderKnowledgeService.ts`, `regression.test.ts`):**
+  1. Consagrada doctrina **"LOS DINOSAURIOS INMOBILIARIOS"** vs. **"VECY LA EVOLUCIÓN INEVITABLE"**, `80/20` (5 días de gracia), `40/20/40` (+ 10% Bolsa Colaborativa), registro, `MATCH` `85%–100%` y publicación paso a paso; semilla `seed-maestria-multidisciplinaria-paridad-web-rural-retroventa-v34-21` y **Suite 207** (**6/6 archivos, 730/730 tests en verde**), `npm run check` (0 errores) y versión `v34.21` (`34.21.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.20 — Noviembre 2026
 
 ### Novedades v34.20 (Doctrina Comisión Propietarios Directos: 3% de Ley en Venta y 1 Canon Neto Sin Administración — Doctrina Eduardo A. Rivera):
 - **Cálculo Determinístico de Canon Neto (`dmOnboardingAndDocsHelper.ts`, `dmHandler.ts`):**

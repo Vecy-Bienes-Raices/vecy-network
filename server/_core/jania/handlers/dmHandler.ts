@@ -33,7 +33,7 @@ import { properties, solicitudes } from "../../../../drizzle/schema";
 import { cleanColombianPhone, resolvePropertyAddress } from "../../agendaWhatsAppService";
 import { eq, and, or, sql, desc } from "drizzle-orm";
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
-import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName } from "../../nameAndGenderResolver";
+import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName, isGenericOrNumericName } from "../../nameAndGenderResolver";
 import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { getVecyInstitutionalKnowledge, JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
@@ -519,9 +519,12 @@ export type JaniaDmToolType =
 
 export function extractAcmAttributesFromText(rawText: string): {
   zonaOBarrio?: string;
+  ciudad?: string;
   direccionExacta?: string;
   tipoInmueble?: string;
   areaM2?: number;
+  fanegadas?: number;
+  hectareas?: number;
   estrato?: number;
   antiguedadAnos?: number;
   anoConstruccion?: number;
@@ -549,11 +552,27 @@ export function extractAcmAttributesFromText(rawText: string): {
 
   const out: ReturnType<typeof extractAcmAttributesFromText> = {};
 
-  // Área en m² (ej: 242.83m², 242,83 m2, 242 metros)
+  // Área en m² (ej: 242.83m², 242,83 m2, 242 metros) y unidades rurales agrarias (fanegadas / hectáreas)
+  const fanegadaMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:fanegadas?|fgs?)\b/i);
+  if (fanegadaMatch?.[1]) {
+    const fVal = parseFloat(fanegadaMatch[1].replace(",", "."));
+    if (!Number.isNaN(fVal) && fVal > 0 && fVal < 5000) {
+      out.fanegadas = fVal;
+      if (!out.areaM2) out.areaM2 = Math.round(fVal * 6400);
+    }
+  }
+  const hectareaMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:hect[aá]reas?|has?\b)(?=[\s,;.)!?]|$)/i);
+  if (hectareaMatch?.[1]) {
+    const hVal = parseFloat(hectareaMatch[1].replace(",", "."));
+    if (!Number.isNaN(hVal) && hVal > 0 && hVal < 50000) {
+      out.hectareas = hVal;
+      if (!out.areaM2) out.areaM2 = Math.round(hVal * 10000);
+    }
+  }
   const areaMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts?2?|metros(?:\s+cuadrados)?)(?=[\s,;.)!?]|$)/i);
   if (areaMatch?.[1]) {
     const parsedArea = parseFloat(areaMatch[1].replace(",", "."));
-    if (!Number.isNaN(parsedArea) && parsedArea > 5 && parsedArea < 100000) {
+    if (!Number.isNaN(parsedArea) && parsedArea > 5 && parsedArea < 10000000) {
       out.areaM2 = parsedArea;
     }
   }
@@ -648,14 +667,20 @@ export function extractAcmAttributesFromText(rawText: string): {
   }
 
   // Tipología
-  const tipoMatch = text.match(/\b(casa(?:\s+campestre|\s+lote)?|apartamento|apto|penthouse|oficina|local|bodega|lote|townhouse)\b/i);
+  const tipoMatch = text.match(/\b(casa(?:\s+campestre|\s+lote)?|apartamento|apto|penthouse|oficina|local(?:\s+comercial)?|bodega|consultorio|finca|parcelaci[oó]n|parcela|lote(?:\s+rural)?|townhouse)\b/i);
   if (tipoMatch?.[1]) {
     out.tipoInmueble = tipoMatch[1].toLowerCase() === "apto" ? "apartamento" : tipoMatch[1].toLowerCase();
   }
 
-  // Barrio conocido
+  // Ciudad detectada
+  const cityMatch = text.match(/\b(bogot[aá]|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|armenia|santa\s+marta|villavicencio|ch[ií]a|cajic[aá]|cota|tenjo|tabio|sop[oó]|guasca|la\s+calera|rionegro|envigado|anapoima|villeta|fusagasug[aá])\b/i);
+  if (cityMatch?.[1]) {
+    out.ciudad = cityMatch[1].trim();
+  }
+
+  // Barrio / microzona conocida
   const knownZoneRegex =
-    /\b(santa\s+ana\s+oriental|santa\s+ana|rodamonte|bosque\s+de\s+pinos|cerros\s+de\s+santa\s+b[aá]rbara|molinos\s+norte|la\s+carolina|santa\s+b[aá]rbara|san\s+patricio|antiguo\s+country|cabrera|rosales|nogal|retiro|chic[oó]|usaqu[eé]n|cedritos|colina\s+campestre|pontevedra|niza|salitre|modelia|pasadena|alhambra|morato|el\s+poblado|llanogrande|envigado|laureles|bocagrande|ch[ií]a|cajic[aá])\b/i;
+    /\b(santa\s+ana\s+oriental|santa\s+ana|rodamonte|bosque\s+de\s+pinos|cerros\s+de\s+santa\s+b[aá]rbara|molinos\s+norte|la\s+carolina|santa\s+b[aá]rbara|san\s+patricio|antiguo\s+country|cabrera|rosales|nogal|retiro|chic[oó]|usaqu[eé]n|cedritos|colina\s+campestre|pontevedra|niza|salitre|modelia|pasadena|alhambra|morato|el\s+poblado|llanogrande|envigado|laureles|bocagrande|castillogrande|ciudad\s+jard[ií]n|pance|granada|alto\s+prado|riomar|cabecera|cerritos|pozos\s+colorados|ch[ií]a|cajic[aá]|tenjo|tabio|sop[oó]|guasca|anapoima|villeta)\b/i;
   const zoneMatch = text.match(knownZoneRegex);
   if (zoneMatch?.[1]) {
     out.zonaOBarrio = zoneMatch[1].trim();
@@ -1021,11 +1046,13 @@ export async function executeJaniaDmTool(
       }
       const extracted = extractAcmAttributesFromText(rawUserText || "");
       const surveyRes = executeMarketValuationSurvey({
-        zonaOBarrio: args.zonaOBarrio || extracted.zonaOBarrio || "Chicó",
+        zonaOBarrio: args.zonaOBarrio || extracted.zonaOBarrio || extracted.ciudad || "Chicó",
         direccionExacta: args.direccionExacta || extracted.direccionExacta,
-        ciudad: args.ciudad,
+        ciudad: args.ciudad || extracted.ciudad,
         tipoInmueble: args.tipoInmueble || extracted.tipoInmueble || "apartamento",
         areaM2: Number(args.areaM2 ?? extracted.areaM2 ?? 75),
+        fanegadas: args.fanegadas !== undefined ? Number(args.fanegadas) : extracted.fanegadas,
+        hectareas: args.hectareas !== undefined ? Number(args.hectareas) : extracted.hectareas,
         estrato: Number(args.estrato ?? extracted.estrato ?? 5),
         antiguedadAnos: args.antiguedadAnos !== undefined ? Number(args.antiguedadAnos) : extracted.antiguedadAnos,
         anoConstruccion: args.anoConstruccion ?? extracted.anoConstruccion,
@@ -2223,9 +2250,21 @@ export async function processPrivateDmConversationalMessage(
   const isJani = isJaniIdentified || (!isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa" || trustedContact?.id === "jani"));
   const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
 
-  // Resolución inteligente de nombres y género (apoyado en presentación orgánica en chat o perfil)
-  const introducedName = extractIntroducedName(clean);
-  const effectiveRawName = introducedName || realName;
+  // Resolución inteligente de nombres y género (apoyado en presentación orgánica persistente en sesión o perfil)
+  const {
+    persistIntroducedNameInSession
+  } = await import("../sessionManager");
+  const persistedNameState = await persistIntroducedNameInSession(
+    userId,
+    clean,
+    !isGenericOrNumericName(realName) ? realName : undefined
+  );
+  userPerpetualSession = persistedNameState.session;
+  const introducedName = persistedNameState.introducedNow;
+  const effectiveRawName =
+    persistedNameState.effectiveRawName && !isGenericOrNumericName(persistedNameState.effectiveRawName)
+      ? persistedNameState.effectiveRawName
+      : introducedName || realName;
   const nameInfo = resolveNameAndGender(effectiveRawName, timeSalutation);
   const compositeOrFirst = extractFirstName(effectiveRawName);
 

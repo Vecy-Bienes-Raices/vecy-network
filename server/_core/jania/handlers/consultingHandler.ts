@@ -2,7 +2,17 @@
  * JanIA Consulting Handler - VECY BIENES RAÍCES
  * Manejador conversacional para el Grupo 2: Soporte Legal, Tributario y Avalúos.
  */
-import { resolveRealName, getConsultingHistory, appendConsultingHistory, checkAlreadyGreeted, markUserGreetedToday } from "../sessionManager";
+import {
+  resolveRealName,
+  getConsultingHistory,
+  appendConsultingHistory,
+  checkAlreadyGreeted,
+  markUserGreetedToday,
+  persistIntroducedNameInSession,
+  detectUserBusinessRoleFromText,
+  setUserBusinessRole,
+  isEduardoOrJani,
+} from "../sessionManager";
 import { checkStrictOffTopic } from "../heuristics";
 import { transcribeAudio } from "../../voiceTranscription";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
@@ -178,8 +188,18 @@ export async function processConsultingMessage(
       }
     }
 
+    if (!isEduardoOrJani(userId)) {
+      const detectedGroupRole = detectUserBusinessRoleFromText(messageToProcess);
+      if (detectedGroupRole) {
+        await setUserBusinessRole(userId, detectedGroupRole, { sourceText: messageToProcess }).catch(() => {});
+      }
+    }
+
+    const persistedGroupName = await persistIntroducedNameInSession(userId, messageToProcess, realName);
+    const effectiveGroupRawName = persistedGroupName.effectiveRawName || realName;
+
     const timeGreeting = getGreetingByTime();
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const nameInfo = resolveNameAndGender(effectiveGroupRawName, timeGreeting);
     const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
     const genderTerm = targetName ? (isFemale ? `estimada ${targetName}` : `estimado ${targetName}`) : "colega";

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.20";
+    VECY_VERSION = "v34.21";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -2293,6 +2293,918 @@ var init_whatsapp_utils = __esm({
   }
 });
 
+// server/_core/nameAndGenderResolver.ts
+function cleanRawUserName(name) {
+  if (!name) return "";
+  let cleaned = name;
+  const tildeMatch = cleaned.match(/~\s*([^~]+)$/);
+  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
+    cleaned = tildeMatch[1].trim();
+  }
+  cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
+  cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}✨⚡🤖]/gu, " ").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
+  const withoutBusinessPrefix = cleaned.replace(businessPrefixRegex, "").trim();
+  if (withoutBusinessPrefix.length >= 2) {
+    cleaned = withoutBusinessPrefix;
+  }
+  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
+  const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
+  if (withoutGuild.length >= 2) {
+    cleaned = withoutGuild;
+  }
+  const professionalPrefixRegex = /^(?:(?:arq|arqa|arquitecto|arquitecta|ing|inga|ingeniero|ingeniera|dr|dra|doctor|doctora|abg|abga|abog|aboga|abogado|abogada|lic|lica|licenciado|licenciada|econ|economista|cont|contador|contadora|cp|c\.p\.|prof|profesor|profesora|asesor|asesora|agente|broker|realtor|consultor|consultora|perito|valuador|tasador)\.?\s+)+/i;
+  const withoutPrefix = cleaned.replace(professionalPrefixRegex, "").trim();
+  if (withoutPrefix.length >= 2) {
+    cleaned = withoutPrefix;
+  }
+  return cleaned.replace(/\s+/g, " ").trim();
+}
+function getCanonicalCompositeName(rawName) {
+  const cleaned = cleanRawUserName(rawName);
+  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const comp of COMPOSITE_PATTERNS) {
+    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
+      return comp.canonical;
+    }
+  }
+  return null;
+}
+function isGenericOrNumericName(rawName) {
+  if (!rawName || typeof rawName !== "string") return true;
+  const cleaned = cleanRawUserName(rawName).trim();
+  if (!cleaned || cleaned.length <= 1) return true;
+  if (/^\+?\d[\d\s\-().]+$/.test(cleaned)) return true;
+  if (/^(?:usuario(?:\s+web)?|asesor(?:\s+\+?\d+)?|colega|cliente|propietario|propietaria|comprador|compradora|arrendatario|arrendataria|invitado|anonimo|anónimo|desconocido|navegante|sin\s+nombre)$/i.test(
+    cleaned
+  )) {
+    return true;
+  }
+  return false;
+}
+function extractIntroducedName(text2) {
+  if (!text2) return null;
+  const introMatch = text2.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+(?:primer\s+)?nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla|puedes\s+decirme|me\s+dicen|prefiero\s+que\s+me\s+(?:digas|llames)|ll[aá]mame)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  const signMatch = text2.match(
+    /(?:^|[.!?¡¿\n,]\s*)(?:att\.?|atte\.?|atentamente|cordialmente|saludos|firma)\s*:?\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+  );
+  const match = introMatch || signMatch;
+  if (match && match[1]) {
+    const rawCandidate = match[1].trim();
+    const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
+    const INVALID = /* @__PURE__ */ new Set([
+      "un",
+      "una",
+      "el",
+      "la",
+      "de",
+      "del",
+      "asesor",
+      "asesora",
+      "agente",
+      "cliente",
+      "inmobiliaria",
+      "broker",
+      "propietario",
+      "propietaria",
+      "dueno",
+      "due\xF1o",
+      "duena",
+      "due\xF1a",
+      "comprador",
+      "compradora",
+      "arrendatario",
+      "arrendataria",
+      "inversionista",
+      "abogado",
+      "abogada",
+      "perito",
+      "desconocido",
+      "alguien",
+      "colega",
+      "interesado",
+      "interesada",
+      "nuevo",
+      "nueva",
+      "directo",
+      "directa",
+      "aqui",
+      "aqu\xED"
+    ]);
+    if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
+      const canonicalComp = getCanonicalCompositeName(rawCandidate);
+      if (canonicalComp) return canonicalComp;
+      if (candidateParts.length >= 2 && COMMON_FIRST_NAMES_SET.has(candidateParts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(candidateParts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(candidateParts[1].toLowerCase())) {
+        return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
+      }
+      return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
+    }
+  }
+  return null;
+}
+function resolveNameAndGender(rawName, timeGreeting) {
+  const cleaned = cleanRawUserName(rawName);
+  const normalizedLower = cleaned.toLowerCase();
+  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
+  if (!resolvedDisplayName) {
+    let parts = cleaned.split(/\s+/).filter(Boolean);
+    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
+    const professionalTitles = /* @__PURE__ */ new Set([
+      "agente",
+      "asesor",
+      "asesora",
+      "broker",
+      "inmobiliaria",
+      "inmobiliario",
+      "independiente",
+      "consultor",
+      "consultora",
+      "abogado",
+      "abogada",
+      "arquitecto",
+      "arquitecta",
+      "director",
+      "directora",
+      "gerente",
+      "perito",
+      "valuador",
+      "tasador",
+      "colombia",
+      "bogota",
+      "bogot\xE1",
+      "medellin",
+      "medell\xEDn",
+      "cali",
+      "ventas",
+      "arriendos",
+      "finca",
+      "propiedades",
+      "red",
+      "vecy",
+      "servicios",
+      "virtuales",
+      "soluciones",
+      "gestiones",
+      "multiservicios",
+      "arq",
+      "arqa",
+      "ing",
+      "inga",
+      "dr",
+      "dra",
+      "abg",
+      "abga",
+      "abog",
+      "aboga",
+      "lic",
+      "lica",
+      "econ",
+      "cont",
+      "cp",
+      "prof",
+      "jania",
+      "ai",
+      "ia",
+      "bot"
+    ]);
+    while (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || professionalTitles.has(parts[0].toLowerCase().replace(/\.$/, "")) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
+      parts = parts.slice(1);
+    }
+    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
+    if (isGenericBusiness) {
+      resolvedDisplayName = cleaned;
+    } else if (parts.length >= 2 && ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (parts.length >= 2 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
+      resolvedDisplayName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+    } else if (parts.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase())) {
+      resolvedDisplayName = "";
+    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof", "jania", "ai", "ia", "bot", "vecy"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
+      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    } else {
+      resolvedDisplayName = "colega";
+    }
+  }
+  const nameTokens = resolvedDisplayName.split(/\s+/).filter(Boolean);
+  const firstWordClean = (nameTokens[0] || "").toLowerCase().replace(/[^a-záéíóúüñ]/g, "");
+  let isFemale = false;
+  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
+    isFemale = true;
+  } else if (firstWordClean && firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean) && !COMMON_COLOMBIAN_SURNAMES.has(firstWordClean)) {
+    isFemale = true;
+  } else if (firstWordClean && (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie"))) {
+    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
+    if (!maleYExceptions.includes(firstWordClean)) {
+      isFemale = true;
+    }
+  }
+  const courtesyWord = isFemale ? "estimada" : "estimado";
+  const genderTerm = resolvedDisplayName ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
+  const effectiveGreeting = timeGreeting || "Hola";
+  const fullGreeting = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}` : `${effectiveGreeting} \u{1F44B}\u{1F3FB}`;
+  return {
+    rawName,
+    cleanName: cleaned,
+    displayName: resolvedDisplayName,
+    firstName: firstWordClean,
+    isFemale,
+    genderTerm,
+    courtesyWord,
+    greeting: fullGreeting
+  };
+}
+function formatShortGreetingName(rawName, defaultFallback = "Colega") {
+  if (!rawName || !rawName.trim()) return defaultFallback;
+  const resolved = resolveNameAndGender(rawName);
+  if (resolved.displayName && resolved.displayName.toLowerCase() !== "colega") {
+    return resolved.displayName;
+  }
+  return defaultFallback;
+}
+var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, COMMON_COLOMBIAN_SURNAMES, COMMON_FIRST_NAMES_SET;
+var init_nameAndGenderResolver = __esm({
+  "server/_core/nameAndGenderResolver.ts"() {
+    "use strict";
+    COMPOSITE_PATTERNS = [
+      // Femeninos
+      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
+      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
+      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
+      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
+      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
+      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
+      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
+      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
+      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
+      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
+      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
+      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
+      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
+      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
+      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
+      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
+      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
+      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
+      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
+      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
+      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
+      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
+      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
+      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
+      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
+      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
+      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
+      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
+      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
+      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
+      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
+      { pattern: /^flor\s+alba\b/i, canonical: "Flor Alba" },
+      { pattern: /^floralba\b/i, canonical: "Flor Alba" },
+      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
+      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
+      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
+      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
+      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
+      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
+      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
+      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
+      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
+      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
+      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
+      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
+      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
+      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
+      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
+      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
+      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
+      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
+      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
+      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
+      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
+      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
+      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
+      { pattern: /^lina\s+mar[ií]a\b/i, canonical: "Lina Mar\xEDa" },
+      { pattern: /^lina\s+marcela\b/i, canonical: "Lina Marcela" },
+      { pattern: /^jenny\s+paola\b/i, canonical: "Jenny Paola" },
+      { pattern: /^yenny\s+paola\b/i, canonical: "Yenny Paola" },
+      { pattern: /^mar[ií]a\s+clara\b/i, canonical: "Mar\xEDa Clara" },
+      { pattern: /^mar[ií]a\s+cecilia\b/i, canonical: "Mar\xEDa Cecilia" },
+      { pattern: /^mar[ií]a\s+adelaida\b/i, canonical: "Mar\xEDa Adelaida" },
+      { pattern: /^andrea\s+del\s+pilar\b/i, canonical: "Andrea del Pilar" },
+      { pattern: /^carmen\s+rosa\b/i, canonical: "Carmen Rosa" },
+      { pattern: /^rosa\s+elena\b/i, canonical: "Rosa Elena" },
+      { pattern: /^diana\s+paola\b/i, canonical: "Diana Paola" },
+      { pattern: /^sandra\s+paola\b/i, canonical: "Sandra Paola" },
+      { pattern: /^claudia\s+viviana\b/i, canonical: "Claudia Viviana" },
+      { pattern: /^gloria\s+amparo\b/i, canonical: "Gloria Amparo" },
+      { pattern: /^martha\s+elena\b/i, canonical: "Martha Elena" },
+      // Masculinos
+      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
+      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
+      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
+      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
+      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
+      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
+      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
+      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
+      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
+      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
+      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
+      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
+      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
+      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
+      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
+      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
+      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
+      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
+      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
+      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
+      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
+      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
+      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
+      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
+      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
+      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
+      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
+      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
+      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
+      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
+      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
+      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
+      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
+      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
+      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
+      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
+      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
+      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
+      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" },
+      { pattern: /^diego\s+fernando\b/i, canonical: "Diego Fernando" },
+      { pattern: /^andr[eé]s\s+felipe\b/i, canonical: "Andr\xE9s Felipe" },
+      { pattern: /^v[ií]ctor\s+manuel\b/i, canonical: "V\xEDctor Manuel" },
+      { pattern: /^v[ií]ctor\s+hugo\b/i, canonical: "V\xEDctor Hugo" },
+      { pattern: /^jorge\s+enrique\b/i, canonical: "Jorge Enrique" },
+      { pattern: /^jorge\s+iv[aá]n\b/i, canonical: "Jorge Iv\xE1n" },
+      { pattern: /^jorge\s+eli[eé]cer\b/i, canonical: "Jorge Eli\xE9cer" },
+      { pattern: /^nelson\s+enrique\b/i, canonical: "Nelson Enrique" },
+      { pattern: /^gustavo\s+adolfo\b/i, canonical: "Gustavo Adolfo" },
+      { pattern: /^h[eé]ctor\s+fabio\b/i, canonical: "H\xE9ctor Fabio" },
+      { pattern: /^fabio\s+nelson\b/i, canonical: "Fabio Nelson" },
+      { pattern: /^javier\s+orlando\b/i, canonical: "Javier Orlando" },
+      { pattern: /^c[eé]sar\s+augusto\b/i, canonical: "C\xE9sar Augusto" },
+      { pattern: /^julio\s+c[eé]sar\b/i, canonical: "Julio C\xE9sar" },
+      { pattern: /^mario\s+fernando\b/i, canonical: "Mario Fernando" },
+      { pattern: /^edgar\s+eduardo\b/i, canonical: "Edgar Eduardo" },
+      { pattern: /^camilo\s+andr[eé]s\b/i, canonical: "Camilo Andr\xE9s" },
+      { pattern: /^felipe\s+andr[eé]s\b/i, canonical: "Felipe Andr\xE9s" },
+      { pattern: /^santiago\s+andr[eé]s\b/i, canonical: "Santiago Andr\xE9s" },
+      { pattern: /^daniel\s+felipe\b/i, canonical: "Daniel Felipe" }
+    ];
+    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
+      "jeannette",
+      "jeanette",
+      "janeth",
+      "janet",
+      "janette",
+      "jeanine",
+      "jenny",
+      "jennifer",
+      "jenn",
+      "astrid",
+      "elizabeth",
+      "elisabet",
+      "elisabeth",
+      "pilar",
+      "carmen",
+      "mercedes",
+      "luz",
+      "beatriz",
+      "ines",
+      "in\xE9s",
+      "consuelo",
+      "rocio",
+      "roc\xEDo",
+      "nohora",
+      "isabel",
+      "raquel",
+      "miriam",
+      "myriam",
+      "karen",
+      "evelyn",
+      "evelin",
+      "gladys",
+      "marlene",
+      "marlen",
+      "ivonne",
+      "nicole",
+      "michelle",
+      "denisse",
+      "denise",
+      "angie",
+      "kelly",
+      "kelli",
+      "shirley",
+      "wendy",
+      "carol",
+      "caroline",
+      "sharon",
+      "dayana",
+      "daiana",
+      "vivian",
+      "mabel",
+      "mavy",
+      "mary",
+      "marie",
+      "marion",
+      "marian",
+      "belen",
+      "bel\xE9n",
+      "rosario",
+      "amparo",
+      "socorro",
+      "concepcion",
+      "concepci\xF3n",
+      "dolores",
+      "mar",
+      "montserrat",
+      "guadalupe",
+      "abigail",
+      "esther",
+      "ester",
+      "ruth",
+      "rut",
+      "judith",
+      "judit",
+      "edith",
+      "edit",
+      "lilian",
+      "karin",
+      "alison",
+      "allison",
+      "mafe",
+      "andrea",
+      "tatiana",
+      "daniela",
+      "valentina",
+      "sofia",
+      "sof\xEDa",
+      "camila",
+      "mariana",
+      "valeria",
+      "gabriela",
+      "natalia",
+      "lucia",
+      "luc\xEDa",
+      "isabella",
+      "ximena",
+      "jimena",
+      "catalina",
+      "juliana",
+      "laura",
+      "paola",
+      "diana",
+      "claudia",
+      "monica",
+      "m\xF3nica",
+      "sandra",
+      "patricia",
+      "gloria",
+      "martha",
+      "marta",
+      "olga",
+      "sonia",
+      "adriana",
+      "marcela",
+      "carolina",
+      "elena",
+      "victoria",
+      "teresa",
+      "mercedes",
+      "fabiola",
+      "blanca",
+      "esperanza",
+      "dora",
+      "yolanda",
+      "lucero",
+      "yamile",
+      "leidys",
+      "leidy",
+      "yeimy",
+      "yuliana",
+      "yuri",
+      "ingrid",
+      "katherin",
+      "katherine",
+      "stefany",
+      "stephanie",
+      "flor",
+      "floralba",
+      "florencia",
+      "florinda",
+      "rosmery",
+      "rosemary",
+      "rosmary",
+      "rosmeri",
+      "rosita",
+      "marleny",
+      "marly",
+      "maryuri",
+      "yurani"
+    ]);
+    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
+      "luca",
+      "borja",
+      "joshua",
+      "bautista",
+      "sasha",
+      "elias",
+      "el\xEDas",
+      "ezra",
+      "tobias",
+      "tob\xEDas",
+      "matias",
+      "mat\xEDas",
+      "jeremias",
+      "jerem\xEDas",
+      "isaias",
+      "isa\xEDas",
+      "jonas",
+      "jon\xE1s",
+      "nicolas",
+      "nicol\xE1s",
+      "tomas",
+      "tom\xE1s",
+      "lucas"
+    ]);
+    COMMON_COLOMBIAN_SURNAMES = /* @__PURE__ */ new Set([
+      "rodriguez",
+      "rodr\xEDguez",
+      "gomez",
+      "g\xF3mez",
+      "gonzalez",
+      "gonz\xE1lez",
+      "martinez",
+      "mart\xEDnez",
+      "garcia",
+      "garc\xEDa",
+      "lopez",
+      "l\xF3pez",
+      "hernandez",
+      "hern\xE1ndez",
+      "sanchez",
+      "s\xE1nchez",
+      "ramirez",
+      "ram\xEDrez",
+      "perez",
+      "p\xE9rez",
+      "diaz",
+      "d\xEDaz",
+      "munoz",
+      "mu\xF1oz",
+      "alvarez",
+      "\xE1lvarez",
+      "romero",
+      "suarez",
+      "su\xE1rez",
+      "torres",
+      "gutierrez",
+      "guti\xE9rrez",
+      "ruiz",
+      "castro",
+      "morales",
+      "ortiz",
+      "ort\xEDz",
+      "silva",
+      "chavez",
+      "ch\xE1vez",
+      "ramos",
+      "castillo",
+      "vargas",
+      "moreno",
+      "jimenez",
+      "jim\xE9nez",
+      "mendoza",
+      "medina",
+      "rojas",
+      "molina",
+      "valencia",
+      "restrepo",
+      "rivera",
+      "botero",
+      "mejia",
+      "mej\xEDa",
+      "arias",
+      "ospina",
+      "giraldo",
+      "londono",
+      "londo\xF1o",
+      "jaramillo",
+      "montoya",
+      "correa",
+      "cardona",
+      "cano",
+      "salazar",
+      "posada",
+      "duque",
+      "villegas",
+      "bedoya",
+      "castano",
+      "casta\xF1o",
+      "quintero",
+      "osorio",
+      "rendon",
+      "rend\xF3n",
+      "toro",
+      "echeverri",
+      "echeverry",
+      "velez",
+      "v\xE9lez",
+      "arango",
+      "bernal",
+      "zambrano",
+      "cardenas",
+      "c\xE1rdenas",
+      "guerrero",
+      "acosta",
+      "paredes",
+      "pena",
+      "pe\xF1a",
+      "cruz",
+      "marin",
+      "mar\xEDn",
+      "benitez",
+      "ben\xEDtez",
+      "pardo",
+      "florez",
+      "fl\xF3rez",
+      "buitrago",
+      "rincon",
+      "rinc\xF3n",
+      "soto",
+      "rocha",
+      "pinzon",
+      "pinz\xF3n",
+      "camargo",
+      "beltran",
+      "beltr\xE1n",
+      "leal",
+      "vergara",
+      "calderon",
+      "calder\xF3n",
+      "prieto",
+      "serrano",
+      "villamizar",
+      "aguirre",
+      "barrera",
+      "parra",
+      "guzman",
+      "guzm\xE1n",
+      "triana",
+      "santana",
+      "velasquez",
+      "vel\xE1squez",
+      "chaparro",
+      "fonseca",
+      "baquero",
+      "reyes",
+      "mesa",
+      // Apellidos adicionales hispanos frecuentes
+      "luna",
+      "mora",
+      "paz",
+      "rios",
+      "r\xEDos",
+      "solano",
+      "vega",
+      "roca",
+      "sierra",
+      "campos",
+      "valle",
+      "cordoba",
+      "c\xF3rdoba",
+      "navarro",
+      "monroy",
+      "barbosa",
+      "cuellar",
+      "cu\xE9llar",
+      "palacios",
+      "nino",
+      "ni\xF1o",
+      "bravo",
+      "plazas",
+      "roldan",
+      "rold\xE1n",
+      "galvis",
+      "galindo",
+      "forero",
+      "puentes",
+      "chacon",
+      "chac\xF3n",
+      "viveros",
+      "salcedo",
+      "lozano",
+      "daza",
+      "valderrama",
+      "bello",
+      "corredor",
+      "caicedo",
+      "cifuentes",
+      "hincapie",
+      "hincapi\xE9",
+      "ardila",
+      "bustamante",
+      "prada",
+      "villalba",
+      "amador",
+      "soler",
+      "barreto",
+      "polo",
+      "castellanos",
+      "quijano",
+      "rueda",
+      "perea",
+      "pinto",
+      "camacho",
+      "salcedo",
+      "guarin",
+      "guar\xEDn"
+    ]);
+    COMMON_FIRST_NAMES_SET = /* @__PURE__ */ new Set([
+      "juan",
+      "ana",
+      "maria",
+      "mar\xEDa",
+      "jose",
+      "jos\xE9",
+      "luis",
+      "carlos",
+      "jorge",
+      "victor",
+      "v\xEDctor",
+      "sandra",
+      "diana",
+      "laura",
+      "gloria",
+      "eduardo",
+      "flor",
+      "esteban",
+      "pedro",
+      "julio",
+      "oscar",
+      "\xF3scar",
+      "angela",
+      "\xE1ngela",
+      "pablo",
+      "arturo",
+      "alba",
+      "fernanda",
+      "alberto",
+      "david",
+      "manuel",
+      "fernando",
+      "alejandro",
+      "andres",
+      "andr\xE9s",
+      "felipe",
+      "milena",
+      "patricia",
+      "cristina",
+      "beatriz",
+      "isabel",
+      "helena",
+      "elena",
+      "sofia",
+      "sof\xEDa",
+      "lucia",
+      "luc\xEDa",
+      "carolina",
+      "claudia",
+      "marta",
+      "martha",
+      "adriana",
+      "diego",
+      "javier",
+      "camilo",
+      "santiago",
+      "alejandra",
+      "paola",
+      "liliana",
+      "elizabeth",
+      "esperanza",
+      "yolanda",
+      "blanca",
+      "rosa",
+      "carmen",
+      "teresa",
+      "cecilia",
+      "ines",
+      "in\xE9s",
+      "amparo",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "nicolas",
+      "nicol\xE1s",
+      "daniel",
+      "cristian",
+      "jhon",
+      "john",
+      "alexander",
+      "gustavo",
+      "hernando",
+      "alvaro",
+      "\xE1lvaro",
+      "humberto",
+      "jaime",
+      "ricardo",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "wilson",
+      "olga",
+      "luz",
+      "stella",
+      "estela",
+      "orlando",
+      "guillermo",
+      "enrique",
+      "antonio",
+      "ignacio",
+      "ramiro",
+      "gonzalo",
+      "rodrigo",
+      "armando",
+      "alfredo",
+      "eugenio",
+      "gabriel",
+      "dario",
+      "dar\xEDo",
+      "vicente",
+      "francisco",
+      "gerardo",
+      "leonardo",
+      "raul",
+      "ra\xFAl",
+      "rafael",
+      "alonso",
+      "alfonso",
+      "mercedes",
+      "eugenia",
+      "victoria",
+      "andrea",
+      "daniela",
+      "camila",
+      "valentina",
+      "gabriela",
+      "catalina",
+      "juliana",
+      "luciana",
+      "mariana",
+      "natalia",
+      "vanessa",
+      "lorena",
+      "viviana",
+      "ximena",
+      "jimena",
+      "mario",
+      "fabio",
+      "hector",
+      "h\xE9ctor",
+      "edgar",
+      "wilmer",
+      "freddy",
+      "fredy",
+      "rosmery",
+      "rosemary",
+      "rosmary",
+      "rosmeri",
+      "rosita",
+      "marlen",
+      "marlene",
+      "leidy",
+      "leidys",
+      "yeimy",
+      "astrid"
+    ]);
+  }
+});
+
 // server/_core/jania/sessionManager.ts
 var sessionManager_exports = {};
 __export(sessionManager_exports, {
@@ -2335,6 +3247,7 @@ __export(sessionManager_exports, {
   isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
   markUserGreetedToday: () => markUserGreetedToday,
   muteSession: () => muteSession,
+  persistIntroducedNameInSession: () => persistIntroducedNameInSession,
   recordUserReviewClaim: () => recordUserReviewClaim,
   resetUserPerpetualSessionsForTests: () => resetUserPerpetualSessionsForTests,
   resolveRealName: () => resolveRealName,
@@ -3149,12 +4062,37 @@ function resetUserPerpetualSessionsForTests() {
   if (process.env.NODE_ENV !== "test") return;
   userPerpetualSessionMap.clear();
 }
+async function persistIntroducedNameInSession(userId, rawMessageText, fallbackProfileName) {
+  const session = await getUserPerpetualSession(userId, fallbackProfileName);
+  const introducedNow = extractIntroducedName(rawMessageText || "");
+  session.keyFacts = session.keyFacts || {};
+  if (introducedNow && !isGenericOrNumericName(introducedNow)) {
+    const resolved = resolveNameAndGender(introducedNow);
+    const canonical = resolved.displayName && resolved.displayName !== "colega" ? resolved.displayName : introducedNow;
+    session.keyFacts.introducedName = canonical;
+    session.keyFacts.resolvedGender = resolved.isFemale ? "female" : "male";
+    if (!session.name || isGenericOrNumericName(session.name)) {
+      session.name = canonical;
+    }
+    session.lastSeenAt = (/* @__PURE__ */ new Date()).toISOString();
+    await saveUserPerpetualSession(session);
+  }
+  const persistedIntroduced = typeof session.keyFacts?.introducedName === "string" && !isGenericOrNumericName(session.keyFacts.introducedName) ? session.keyFacts.introducedName : "";
+  const persistedName = session.name && !isGenericOrNumericName(session.name) ? session.name : "";
+  const effectiveRawName = introducedNow || persistedIntroduced || fallbackProfileName || persistedName || "";
+  return {
+    session,
+    introducedNow,
+    effectiveRawName
+  };
+}
 var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory, circuloConversationHistory, companySessionMap, PERSISTENT_SESSIONS_FILE, userPerpetualSessionMap, persistentSessionsLoaded;
 var init_sessionManager = __esm({
   "server/_core/jania/sessionManager.ts"() {
     "use strict";
     init_db();
     init_schema();
+    init_nameAndGenderResolver();
     GREETED_TODAY = /* @__PURE__ */ new Map();
     cachedLiveStatsText = "";
     cachedLiveStatsTime = 0;
@@ -8391,911 +9329,6 @@ var init_advisors = __esm({
   }
 });
 
-// server/_core/nameAndGenderResolver.ts
-var nameAndGenderResolver_exports = {};
-__export(nameAndGenderResolver_exports, {
-  COMMON_COLOMBIAN_SURNAMES: () => COMMON_COLOMBIAN_SURNAMES,
-  VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
-  cleanRawUserName: () => cleanRawUserName,
-  extractIntroducedName: () => extractIntroducedName,
-  formatShortGreetingName: () => formatShortGreetingName,
-  getCanonicalCompositeName: () => getCanonicalCompositeName,
-  resolveNameAndGender: () => resolveNameAndGender
-});
-function cleanRawUserName(name) {
-  if (!name) return "";
-  let cleaned = name;
-  const tildeMatch = cleaned.match(/~\s*([^~]+)$/);
-  if (tildeMatch && tildeMatch[1].trim().length >= 2) {
-    cleaned = tildeMatch[1].trim();
-  }
-  cleaned = cleaned.replace(/^@[\w\.-]+\s*/i, "");
-  cleaned = cleaned.replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, "").replace(/\s*[\/\|\\].*$/, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}✨⚡🤖]/gu, " ").replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
-  const businessPrefixRegex = /^(?:(?:servicios?|virtuales?|inmobiliarios?|inmobiliarias?|inmobiliaria|integrales?|legales?|soluciones?|gestiones?|asesor[ií]as?|consultor[ií]a|consultores?|grupo|bienes\s+ra[ií]ces|finca\s+ra[ií]z|propiedades|multiservicios|tr[aá]mites)\s*)+/i;
-  const withoutBusinessPrefix = cleaned.replace(businessPrefixRegex, "").trim();
-  if (withoutBusinessPrefix.length >= 2) {
-    cleaned = withoutBusinessPrefix;
-  }
-  const guildSuffixRegex = /\b(inmo|inmobiliaria|inmobiliario|inmobiliarias|realtor|broker|asesor|asesora|asesores|agente|agentes|bienes\s+ra[ií]ces|finca\s+ra[ií]z|consultor|consultora|propiedades|ventas|arriendos|alquileres|independiente|correo|contact|contacto|abogado|abogada|arquitecto|arquitecta|constructora|seguros|lotes)\b.*$/i;
-  const withoutGuild = cleaned.replace(guildSuffixRegex, "").trim();
-  if (withoutGuild.length >= 2) {
-    cleaned = withoutGuild;
-  }
-  const professionalPrefixRegex = /^(?:(?:arq|arqa|arquitecto|arquitecta|ing|inga|ingeniero|ingeniera|dr|dra|doctor|doctora|abg|abga|abog|aboga|abogado|abogada|lic|lica|licenciado|licenciada|econ|economista|cont|contador|contadora|cp|c\.p\.|prof|profesor|profesora|asesor|asesora|agente|broker|realtor|consultor|consultora|perito|valuador|tasador)\.?\s+)+/i;
-  const withoutPrefix = cleaned.replace(professionalPrefixRegex, "").trim();
-  if (withoutPrefix.length >= 2) {
-    cleaned = withoutPrefix;
-  }
-  return cleaned.replace(/\s+/g, " ").trim();
-}
-function getCanonicalCompositeName(rawName) {
-  const cleaned = cleanRawUserName(rawName);
-  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  for (const comp of COMPOSITE_PATTERNS) {
-    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
-      return comp.canonical;
-    }
-  }
-  return null;
-}
-function extractIntroducedName(text2) {
-  if (!text2) return null;
-  const introMatch = text2.match(
-    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
-  );
-  const signMatch = text2.match(
-    /(?:^|[.!?¡¿\n,]\s*)(?:att\.?|atte\.?|atentamente|cordialmente|saludos|firma)\s*:?\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
-  );
-  const match = introMatch || signMatch;
-  if (match && match[1]) {
-    const rawCandidate = match[1].trim();
-    const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
-    const INVALID = /* @__PURE__ */ new Set([
-      "un",
-      "una",
-      "el",
-      "la",
-      "asesor",
-      "asesora",
-      "agente",
-      "cliente",
-      "inmobiliaria",
-      "broker",
-      "propietario",
-      "propietaria",
-      "comprador",
-      "compradora",
-      "arrendatario",
-      "arrendataria",
-      "abogado",
-      "abogada",
-      "perito",
-      "desconocido",
-      "alguien"
-    ]);
-    if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
-      const canonicalComp = getCanonicalCompositeName(rawCandidate);
-      if (canonicalComp) return canonicalComp;
-      if (candidateParts.length >= 2 && COMMON_FIRST_NAMES_SET.has(candidateParts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(candidateParts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(candidateParts[1].toLowerCase())) {
-        return `${candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase()} ${candidateParts[1].charAt(0).toUpperCase() + candidateParts[1].slice(1).toLowerCase()}`;
-      }
-      return candidateParts[0].charAt(0).toUpperCase() + candidateParts[0].slice(1).toLowerCase();
-    }
-  }
-  return null;
-}
-function resolveNameAndGender(rawName, timeGreeting) {
-  const cleaned = cleanRawUserName(rawName);
-  const normalizedLower = cleaned.toLowerCase();
-  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
-  if (!resolvedDisplayName) {
-    let parts = cleaned.split(/\s+/).filter(Boolean);
-    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
-    const professionalTitles = /* @__PURE__ */ new Set([
-      "agente",
-      "asesor",
-      "asesora",
-      "broker",
-      "inmobiliaria",
-      "inmobiliario",
-      "independiente",
-      "consultor",
-      "consultora",
-      "abogado",
-      "abogada",
-      "arquitecto",
-      "arquitecta",
-      "director",
-      "directora",
-      "gerente",
-      "perito",
-      "valuador",
-      "tasador",
-      "colombia",
-      "bogota",
-      "bogot\xE1",
-      "medellin",
-      "medell\xEDn",
-      "cali",
-      "ventas",
-      "arriendos",
-      "finca",
-      "propiedades",
-      "red",
-      "vecy",
-      "servicios",
-      "virtuales",
-      "soluciones",
-      "gestiones",
-      "multiservicios",
-      "arq",
-      "arqa",
-      "ing",
-      "inga",
-      "dr",
-      "dra",
-      "abg",
-      "abga",
-      "abog",
-      "aboga",
-      "lic",
-      "lica",
-      "econ",
-      "cont",
-      "cp",
-      "prof",
-      "jania",
-      "ai",
-      "ia",
-      "bot"
-    ]);
-    while (parts.length > 1 && (professionalTitles.has(parts[0].toLowerCase()) || professionalTitles.has(parts[0].toLowerCase().replace(/\.$/, "")) || ["hola", "buenas", "buenos"].includes(parts[0].toLowerCase()))) {
-      parts = parts.slice(1);
-    }
-    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase()) && parts.length === 1;
-    if (isGenericBusiness) {
-      resolvedDisplayName = cleaned;
-    } else if (parts.length >= 2 && ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
-    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop") && !professionalTitles.has(parts[1].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[0].toLowerCase()) && COMMON_FIRST_NAMES_SET.has(parts[1].toLowerCase())) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
-    } else if (parts.length >= 2 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase()) && !COMMON_COLOMBIAN_SURNAMES.has(parts[1].toLowerCase()) && !professionalTitles.has(parts[1].toLowerCase())) {
-      resolvedDisplayName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
-    } else if (parts.length === 1 && COMMON_COLOMBIAN_SURNAMES.has(parts[0].toLowerCase())) {
-      resolvedDisplayName = "";
-    } else if (parts.length > 0 && !["hola", "buenas", "buenos", "asesor", "asesora", "agente", "desconocido", "arq", "arqa", "ing", "inga", "dr", "dra", "abg", "abga", "abog", "aboga", "lic", "lica", "econ", "cont", "cp", "prof", "jania", "ai", "ia", "bot", "vecy"].includes(parts[0].toLowerCase().replace(/\.$/, ""))) {
-      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
-    } else {
-      resolvedDisplayName = "colega";
-    }
-  }
-  const nameTokens = resolvedDisplayName.split(/\s+/).filter(Boolean);
-  const firstWordClean = (nameTokens[0] || "").toLowerCase().replace(/[^a-záéíóúüñ]/g, "");
-  let isFemale = false;
-  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
-    isFemale = true;
-  } else if (firstWordClean && firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean) && !COMMON_COLOMBIAN_SURNAMES.has(firstWordClean)) {
-    isFemale = true;
-  } else if (firstWordClean && (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie"))) {
-    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
-    if (!maleYExceptions.includes(firstWordClean)) {
-      isFemale = true;
-    }
-  }
-  const courtesyWord = isFemale ? "estimada" : "estimado";
-  const genderTerm = resolvedDisplayName ? `${courtesyWord} ${resolvedDisplayName}` : courtesyWord;
-  const effectiveGreeting = timeGreeting || "Hola";
-  const fullGreeting = resolvedDisplayName && resolvedDisplayName !== "colega" ? `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}` : `${effectiveGreeting} \u{1F44B}\u{1F3FB}`;
-  return {
-    rawName,
-    cleanName: cleaned,
-    displayName: resolvedDisplayName,
-    firstName: firstWordClean,
-    isFemale,
-    genderTerm,
-    courtesyWord,
-    greeting: fullGreeting
-  };
-}
-function formatShortGreetingName(rawName, defaultFallback = "Colega") {
-  if (!rawName || !rawName.trim()) return defaultFallback;
-  const resolved = resolveNameAndGender(rawName);
-  if (resolved.displayName && resolved.displayName.toLowerCase() !== "colega") {
-    return resolved.displayName;
-  }
-  return defaultFallback;
-}
-var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, COMMON_COLOMBIAN_SURNAMES, COMMON_FIRST_NAMES_SET, VECY_COMMERCIAL_INFO;
-var init_nameAndGenderResolver = __esm({
-  "server/_core/nameAndGenderResolver.ts"() {
-    "use strict";
-    COMPOSITE_PATTERNS = [
-      // Femeninos
-      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
-      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
-      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
-      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
-      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
-      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
-      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
-      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
-      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
-      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
-      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
-      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
-      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
-      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
-      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
-      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
-      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
-      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
-      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
-      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
-      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
-      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
-      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
-      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
-      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
-      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
-      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
-      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
-      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
-      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
-      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
-      { pattern: /^flor\s+alba\b/i, canonical: "Flor Alba" },
-      { pattern: /^floralba\b/i, canonical: "Flor Alba" },
-      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
-      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
-      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
-      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
-      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
-      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
-      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
-      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
-      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
-      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
-      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
-      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
-      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
-      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
-      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
-      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
-      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
-      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
-      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
-      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
-      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
-      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
-      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
-      { pattern: /^lina\s+mar[ií]a\b/i, canonical: "Lina Mar\xEDa" },
-      { pattern: /^lina\s+marcela\b/i, canonical: "Lina Marcela" },
-      { pattern: /^jenny\s+paola\b/i, canonical: "Jenny Paola" },
-      { pattern: /^yenny\s+paola\b/i, canonical: "Yenny Paola" },
-      { pattern: /^mar[ií]a\s+clara\b/i, canonical: "Mar\xEDa Clara" },
-      { pattern: /^mar[ií]a\s+cecilia\b/i, canonical: "Mar\xEDa Cecilia" },
-      { pattern: /^mar[ií]a\s+adelaida\b/i, canonical: "Mar\xEDa Adelaida" },
-      { pattern: /^andrea\s+del\s+pilar\b/i, canonical: "Andrea del Pilar" },
-      { pattern: /^carmen\s+rosa\b/i, canonical: "Carmen Rosa" },
-      { pattern: /^rosa\s+elena\b/i, canonical: "Rosa Elena" },
-      { pattern: /^diana\s+paola\b/i, canonical: "Diana Paola" },
-      { pattern: /^sandra\s+paola\b/i, canonical: "Sandra Paola" },
-      { pattern: /^claudia\s+viviana\b/i, canonical: "Claudia Viviana" },
-      { pattern: /^gloria\s+amparo\b/i, canonical: "Gloria Amparo" },
-      { pattern: /^martha\s+elena\b/i, canonical: "Martha Elena" },
-      // Masculinos
-      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
-      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
-      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
-      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
-      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
-      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
-      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
-      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
-      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
-      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
-      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
-      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
-      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
-      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
-      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
-      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
-      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
-      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
-      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
-      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
-      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
-      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
-      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
-      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
-      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
-      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
-      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
-      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
-      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
-      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
-      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
-      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
-      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
-      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
-      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
-      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
-      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
-      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
-      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" },
-      { pattern: /^diego\s+fernando\b/i, canonical: "Diego Fernando" },
-      { pattern: /^andr[eé]s\s+felipe\b/i, canonical: "Andr\xE9s Felipe" },
-      { pattern: /^v[ií]ctor\s+manuel\b/i, canonical: "V\xEDctor Manuel" },
-      { pattern: /^v[ií]ctor\s+hugo\b/i, canonical: "V\xEDctor Hugo" },
-      { pattern: /^jorge\s+enrique\b/i, canonical: "Jorge Enrique" },
-      { pattern: /^jorge\s+iv[aá]n\b/i, canonical: "Jorge Iv\xE1n" },
-      { pattern: /^jorge\s+eli[eé]cer\b/i, canonical: "Jorge Eli\xE9cer" },
-      { pattern: /^nelson\s+enrique\b/i, canonical: "Nelson Enrique" },
-      { pattern: /^gustavo\s+adolfo\b/i, canonical: "Gustavo Adolfo" },
-      { pattern: /^h[eé]ctor\s+fabio\b/i, canonical: "H\xE9ctor Fabio" },
-      { pattern: /^fabio\s+nelson\b/i, canonical: "Fabio Nelson" },
-      { pattern: /^javier\s+orlando\b/i, canonical: "Javier Orlando" },
-      { pattern: /^c[eé]sar\s+augusto\b/i, canonical: "C\xE9sar Augusto" },
-      { pattern: /^julio\s+c[eé]sar\b/i, canonical: "Julio C\xE9sar" },
-      { pattern: /^mario\s+fernando\b/i, canonical: "Mario Fernando" },
-      { pattern: /^edgar\s+eduardo\b/i, canonical: "Edgar Eduardo" },
-      { pattern: /^camilo\s+andr[eé]s\b/i, canonical: "Camilo Andr\xE9s" },
-      { pattern: /^felipe\s+andr[eé]s\b/i, canonical: "Felipe Andr\xE9s" },
-      { pattern: /^santiago\s+andr[eé]s\b/i, canonical: "Santiago Andr\xE9s" },
-      { pattern: /^daniel\s+felipe\b/i, canonical: "Daniel Felipe" }
-    ];
-    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
-      "jeannette",
-      "jeanette",
-      "janeth",
-      "janet",
-      "janette",
-      "jeanine",
-      "jenny",
-      "jennifer",
-      "jenn",
-      "astrid",
-      "elizabeth",
-      "elisabet",
-      "elisabeth",
-      "pilar",
-      "carmen",
-      "mercedes",
-      "luz",
-      "beatriz",
-      "ines",
-      "in\xE9s",
-      "consuelo",
-      "rocio",
-      "roc\xEDo",
-      "nohora",
-      "isabel",
-      "raquel",
-      "miriam",
-      "myriam",
-      "karen",
-      "evelyn",
-      "evelin",
-      "gladys",
-      "marlene",
-      "marlen",
-      "ivonne",
-      "nicole",
-      "michelle",
-      "denisse",
-      "denise",
-      "angie",
-      "kelly",
-      "kelli",
-      "shirley",
-      "wendy",
-      "carol",
-      "caroline",
-      "sharon",
-      "dayana",
-      "daiana",
-      "vivian",
-      "mabel",
-      "mavy",
-      "mary",
-      "marie",
-      "marion",
-      "marian",
-      "belen",
-      "bel\xE9n",
-      "rosario",
-      "amparo",
-      "socorro",
-      "concepcion",
-      "concepci\xF3n",
-      "dolores",
-      "mar",
-      "montserrat",
-      "guadalupe",
-      "abigail",
-      "esther",
-      "ester",
-      "ruth",
-      "rut",
-      "judith",
-      "judit",
-      "edith",
-      "edit",
-      "lilian",
-      "karin",
-      "alison",
-      "allison",
-      "mafe",
-      "andrea",
-      "tatiana",
-      "daniela",
-      "valentina",
-      "sofia",
-      "sof\xEDa",
-      "camila",
-      "mariana",
-      "valeria",
-      "gabriela",
-      "natalia",
-      "lucia",
-      "luc\xEDa",
-      "isabella",
-      "ximena",
-      "jimena",
-      "catalina",
-      "juliana",
-      "laura",
-      "paola",
-      "diana",
-      "claudia",
-      "monica",
-      "m\xF3nica",
-      "sandra",
-      "patricia",
-      "gloria",
-      "martha",
-      "marta",
-      "olga",
-      "sonia",
-      "adriana",
-      "marcela",
-      "carolina",
-      "elena",
-      "victoria",
-      "teresa",
-      "mercedes",
-      "fabiola",
-      "blanca",
-      "esperanza",
-      "dora",
-      "yolanda",
-      "lucero",
-      "yamile",
-      "leidys",
-      "leidy",
-      "yeimy",
-      "yuliana",
-      "yuri",
-      "ingrid",
-      "katherin",
-      "katherine",
-      "stefany",
-      "stephanie",
-      "flor",
-      "floralba",
-      "florencia",
-      "florinda",
-      "rosmery",
-      "rosemary",
-      "rosmary",
-      "rosmeri",
-      "rosita",
-      "marleny",
-      "marly",
-      "maryuri",
-      "yurani"
-    ]);
-    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
-      "luca",
-      "borja",
-      "joshua",
-      "bautista",
-      "sasha",
-      "elias",
-      "el\xEDas",
-      "ezra",
-      "tobias",
-      "tob\xEDas",
-      "matias",
-      "mat\xEDas",
-      "jeremias",
-      "jerem\xEDas",
-      "isaias",
-      "isa\xEDas",
-      "jonas",
-      "jon\xE1s",
-      "nicolas",
-      "nicol\xE1s",
-      "tomas",
-      "tom\xE1s",
-      "lucas"
-    ]);
-    COMMON_COLOMBIAN_SURNAMES = /* @__PURE__ */ new Set([
-      "rodriguez",
-      "rodr\xEDguez",
-      "gomez",
-      "g\xF3mez",
-      "gonzalez",
-      "gonz\xE1lez",
-      "martinez",
-      "mart\xEDnez",
-      "garcia",
-      "garc\xEDa",
-      "lopez",
-      "l\xF3pez",
-      "hernandez",
-      "hern\xE1ndez",
-      "sanchez",
-      "s\xE1nchez",
-      "ramirez",
-      "ram\xEDrez",
-      "perez",
-      "p\xE9rez",
-      "diaz",
-      "d\xEDaz",
-      "munoz",
-      "mu\xF1oz",
-      "alvarez",
-      "\xE1lvarez",
-      "romero",
-      "suarez",
-      "su\xE1rez",
-      "torres",
-      "gutierrez",
-      "guti\xE9rrez",
-      "ruiz",
-      "castro",
-      "morales",
-      "ortiz",
-      "ort\xEDz",
-      "silva",
-      "chavez",
-      "ch\xE1vez",
-      "ramos",
-      "castillo",
-      "vargas",
-      "moreno",
-      "jimenez",
-      "jim\xE9nez",
-      "mendoza",
-      "medina",
-      "rojas",
-      "molina",
-      "valencia",
-      "restrepo",
-      "rivera",
-      "botero",
-      "mejia",
-      "mej\xEDa",
-      "arias",
-      "ospina",
-      "giraldo",
-      "londono",
-      "londo\xF1o",
-      "jaramillo",
-      "montoya",
-      "correa",
-      "cardona",
-      "cano",
-      "salazar",
-      "posada",
-      "duque",
-      "villegas",
-      "bedoya",
-      "castano",
-      "casta\xF1o",
-      "quintero",
-      "osorio",
-      "rendon",
-      "rend\xF3n",
-      "toro",
-      "echeverri",
-      "echeverry",
-      "velez",
-      "v\xE9lez",
-      "arango",
-      "bernal",
-      "zambrano",
-      "cardenas",
-      "c\xE1rdenas",
-      "guerrero",
-      "acosta",
-      "paredes",
-      "pena",
-      "pe\xF1a",
-      "cruz",
-      "marin",
-      "mar\xEDn",
-      "benitez",
-      "ben\xEDtez",
-      "pardo",
-      "florez",
-      "fl\xF3rez",
-      "buitrago",
-      "rincon",
-      "rinc\xF3n",
-      "soto",
-      "rocha",
-      "pinzon",
-      "pinz\xF3n",
-      "camargo",
-      "beltran",
-      "beltr\xE1n",
-      "leal",
-      "vergara",
-      "calderon",
-      "calder\xF3n",
-      "prieto",
-      "serrano",
-      "villamizar",
-      "aguirre",
-      "barrera",
-      "parra",
-      "guzman",
-      "guzm\xE1n",
-      "triana",
-      "santana",
-      "velasquez",
-      "vel\xE1squez",
-      "chaparro",
-      "fonseca",
-      "baquero",
-      "reyes",
-      "mesa",
-      // Apellidos adicionales hispanos frecuentes
-      "luna",
-      "mora",
-      "paz",
-      "rios",
-      "r\xEDos",
-      "solano",
-      "vega",
-      "roca",
-      "sierra",
-      "campos",
-      "valle",
-      "cordoba",
-      "c\xF3rdoba",
-      "navarro",
-      "monroy",
-      "barbosa",
-      "cuellar",
-      "cu\xE9llar",
-      "palacios",
-      "nino",
-      "ni\xF1o",
-      "bravo",
-      "plazas",
-      "roldan",
-      "rold\xE1n",
-      "galvis",
-      "galindo",
-      "forero",
-      "puentes",
-      "chacon",
-      "chac\xF3n",
-      "viveros",
-      "salcedo",
-      "lozano",
-      "daza",
-      "valderrama",
-      "bello",
-      "corredor",
-      "caicedo",
-      "cifuentes",
-      "hincapie",
-      "hincapi\xE9",
-      "ardila",
-      "bustamante",
-      "prada",
-      "villalba",
-      "amador",
-      "soler",
-      "barreto",
-      "polo",
-      "castellanos",
-      "quijano",
-      "rueda",
-      "perea",
-      "pinto",
-      "camacho",
-      "salcedo",
-      "guarin",
-      "guar\xEDn"
-    ]);
-    COMMON_FIRST_NAMES_SET = /* @__PURE__ */ new Set([
-      "juan",
-      "ana",
-      "maria",
-      "mar\xEDa",
-      "jose",
-      "jos\xE9",
-      "luis",
-      "carlos",
-      "jorge",
-      "victor",
-      "v\xEDctor",
-      "sandra",
-      "diana",
-      "laura",
-      "gloria",
-      "eduardo",
-      "flor",
-      "esteban",
-      "pedro",
-      "julio",
-      "oscar",
-      "\xF3scar",
-      "angela",
-      "\xE1ngela",
-      "pablo",
-      "arturo",
-      "alba",
-      "fernanda",
-      "alberto",
-      "david",
-      "manuel",
-      "fernando",
-      "alejandro",
-      "andres",
-      "andr\xE9s",
-      "felipe",
-      "milena",
-      "patricia",
-      "cristina",
-      "beatriz",
-      "isabel",
-      "helena",
-      "elena",
-      "sofia",
-      "sof\xEDa",
-      "lucia",
-      "luc\xEDa",
-      "carolina",
-      "claudia",
-      "marta",
-      "martha",
-      "adriana",
-      "diego",
-      "javier",
-      "camilo",
-      "santiago",
-      "alejandra",
-      "paola",
-      "liliana",
-      "elizabeth",
-      "esperanza",
-      "yolanda",
-      "blanca",
-      "rosa",
-      "carmen",
-      "teresa",
-      "cecilia",
-      "ines",
-      "in\xE9s",
-      "amparo",
-      "pilar",
-      "rocio",
-      "roc\xEDo",
-      "soraya",
-      "johanna",
-      "yudy",
-      "judy",
-      "tatiana",
-      "mateo",
-      "sebastian",
-      "sebasti\xE1n",
-      "nicolas",
-      "nicol\xE1s",
-      "daniel",
-      "cristian",
-      "jhon",
-      "john",
-      "alexander",
-      "gustavo",
-      "hernando",
-      "alvaro",
-      "\xE1lvaro",
-      "humberto",
-      "jaime",
-      "ricardo",
-      "mauricio",
-      "cesar",
-      "c\xE9sar",
-      "nelson",
-      "ruben",
-      "rub\xE9n",
-      "ivan",
-      "iv\xE1n",
-      "wilson",
-      "olga",
-      "luz",
-      "stella",
-      "estela",
-      "orlando",
-      "guillermo",
-      "enrique",
-      "antonio",
-      "ignacio",
-      "ramiro",
-      "gonzalo",
-      "rodrigo",
-      "armando",
-      "alfredo",
-      "eugenio",
-      "gabriel",
-      "dario",
-      "dar\xEDo",
-      "vicente",
-      "francisco",
-      "gerardo",
-      "leonardo",
-      "raul",
-      "ra\xFAl",
-      "rafael",
-      "alonso",
-      "alfonso",
-      "mercedes",
-      "eugenia",
-      "victoria",
-      "andrea",
-      "daniela",
-      "camila",
-      "valentina",
-      "gabriela",
-      "catalina",
-      "juliana",
-      "luciana",
-      "mariana",
-      "natalia",
-      "vanessa",
-      "lorena",
-      "viviana",
-      "ximena",
-      "jimena",
-      "mario",
-      "fabio",
-      "hector",
-      "h\xE9ctor",
-      "edgar",
-      "wilmer",
-      "freddy",
-      "fredy",
-      "rosmery",
-      "rosemary",
-      "rosmary",
-      "rosmeri",
-      "rosita",
-      "marlen",
-      "marlene",
-      "leidy",
-      "leidys",
-      "yeimy",
-      "astrid"
-    ]);
-    VECY_COMMERCIAL_INFO = {
-      name: "Vecy Bienes Ra\xEDces",
-      type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
-      services: "Estudios de mercado m\xB2 y canon sugerido \u26A1 | Consultor\xEDa jur\xEDdica y tributaria \u2696\uFE0F | Manejo de cobranzas \u{1F4BC} | Marketing con IA y fotograf\xEDa \u{1F916}\u{1F4F8} | Contratos digitales \u{1F4C4}",
-      phone: "3166569719",
-      schedule: {
-        weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
-        saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
-        sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
-      }
-    };
-  }
-});
-
 // server/_core/jania/parsers.ts
 import crypto from "crypto";
 import { sql as sql4, eq as eq5 } from "drizzle-orm";
@@ -12360,12 +12393,21 @@ Tienes maestr\xEDa absoluta y capacidad de ejecuci\xF3n inmediata en:
   * 40% para quien aporta la DEMANDA o la OFERTA seg\xFAn lo que tenga.
   * 40% para la contraparte que aporta la otra punta.
   * 20% para VECY Network / VECY BIENES RA\xCDCES (mesa de cruce, peritaje, seguridad jur\xEDdica y acompa\xF1amiento notarial hasta el cierre).
-- **DOCTRINA DE INDAGACI\xD3N OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO \u2014 CERO ASUNCIONES ABUSIVAS \u2014 DOCTRINA EDUARDO A. RIVERA)**:
-  * En la red colaborativa de VECY Network, la gran mayor\xEDa (>90%) de personas que escriben o postean son **COLEGAS INMOBILIARIOS (asesores, inmobiliarias, corredores independientes)** gestionando negocios para sus clientes.
-  * Queda **TERMINANTEMENTE PROHIBIDO** asumir o rotular a un usuario como "comprador directo" o "propietario directo" por el simple hecho de que use verbos como 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'.
-  * Salvo que el usuario declare expresamente de forma inequ\xEDvoca (*"soy el comprador directo"*, *"es para m\xED directamente, no soy inmobiliaria"* o *"soy el due\xF1o directo"*), JanIA **DEBE PREGUNTAR CON ELEGANCIA Y PROFESIONALISMO SU ROL**:
-    *"Por cierto, \xBFnos escribes como colega inmobiliaria/agente representando a un cliente o eres compradora/propietaria directa?"*
-  * Si es colega/inmobiliaria: tr\xE1tala con toda la altura y respeto como colega y aliada estrat\xE9gica en nuestra red; su cliente y su comisi\xF3n del 40% de la punta colocadora o captadora est\xE1n 100% blindados y protegidos con VECY bajo el modelo 40/20/40. Cons\xFAltale si acepta la figura colaborativa 40/20/40 (Aliada Prioritaria). Si el colega declara que NO acepta trabajar bajo el modelo 40/20/40 (o prefiere 50/50 o independiente): JanIA le dir\xE1 con total claridad y amabilidad que S\xCD lo va a registrar en la base de datos de VECY, pero que muy seguramente ser\xE1 contactado/a por nuestra direcci\xF3n comercial para adquirir un plan de pago mensual o anual (suscripci\xF3n / membres\xEDa), ya que el \xDANICO modo de operar en modo 100% gratuito para la notificaci\xF3n y cruce de MATCHES es aceptar el modelo colaborativo 40/20/40.
+- **DOCTRINA DE INDAGACI\xD3N OBLIGATORIA DE ROL Y ONBOARDING UNIVERSAL (TODO P\xDABLICO \u2014 CERO ASUNCIONES \u2014 DOCTRINA EDUARDO A. RIVERA)**:
+  * VECY BIENES RA\xCDCES atiende con total calidez y rigor a **TODO EL P\xDABLICO**: **Agentes/Colegas Inmobiliarios**, **Propietarios Directos** (vendedores o arrendadores), **Compradores/Inversionistas** y **Arrendatarios**.
+  * Queda **TERMINANTEMENTE PROHIBIDO** asumir por defecto que todo contacto nuevo es un "colega inmobiliario", o rotular arbitrariamente a alguien como comprador directo sin confirmaci\xF3n.
+  * Si a\xFAn no conoces en calidad de qu\xE9 escribe el usuario, preg\xFAntale brevemente y con amabilidad:
+    *"Por cierto, para orientarte mejor con nuestros servicios gratuitos: \xBFme escribes como agente inmobiliario(a), propietario(a) directo(a), o comprador(a) / inversionista / arrendatario(a)?"*
+  * Una vez confirmado el rol en la conversaci\xF3n, JAM\xC1S repitas la pregunta y adapta tu respuesta:
+    - **Agente / Inmobiliaria**: tr\xE1talo con altura gremial, protege su 40% bajo el modelo **40/20/40** (con 10% VECY + 10% Bolsa Colaborativa en Portal) y explica el **80/20** directo (5 d\xEDas de gracia a $0 COP). Si rechaza el 40/20/40, reg\xEDstralo advirtiendo que la gratuidad de MATCHES aplica \xFAnicamente en 40/20/40 y ser\xE1 contactado para un plan mensual o anual.
+    - **Propietario Directo**: aclara que publicar es **$0 COP anticipados** y que a \xE9xito la comisi\xF3n es **3% en venta** o **1 canon mensual neto en arriendo sin incluir cuota de administraci\xF3n** (descontando la administraci\xF3n si la incluy\xF3 en el total). Cero menci\xF3n de 40/20/40.
+    - **Comprador / Inversionista / Arrendatario**: acompa\xF1amiento directo de Eduardo Rivera y Jani Alves (+57 316 656 9719), estudio comparativo y asesor\xEDa jur\xEDdica/financiera, sin mencionar 40/20/40.
+  * **MAESTR\xCDA MULTIDISCIPLINARIA VECY (LOS DINOSAURIOS VS. EVOLUCI\xD3N, RETROVENTA, LEASING Y TASACI\xD3N RURAL/COMERCIAL)**:
+    - **Dinosaurios Inmobiliarios vs. VECY La Evoluci\xF3n Inevitable (vecy-bienes-raices.vercel.app/historia):** Explica con orgullo y claridad c\xF3mo VECY reemplaza los portales pasivos caros, la opacidad de intermediarios fantasma y los letreros f\xEDsicos en fachada por JanIA 24/7, Cero Papel, registro gratuito, tienda ilimitada de ofertas y demandas, esquema 80/20 (5 d\xEDas de gracia) y Bolsa Colaborativa 40/20/40.
+    - **Pedagog\xEDa del MATCH (85%\u2013100%) y Publicaci\xF3n Completa:** Ense\xF1a paso a paso que habitaciones exige coincidencia exacta (1=1), \xE1rea >= m\xEDnima (0% tolerancia abajo), ba\xF1os/garajes >=, 6 emojis de negocio y todos los campos indispensables de oferta/demanda.
+    - **Tasaci\xF3n Nacional Urbana, Comercial y Rural:** Maneja m\xB2 residencial, m\xB2 comercial (locales/oficinas/bodegas por Cap Rate) y **tasaci\xF3n rural en fanegadas (6.400 m\xB2) y hect\xE1reas (10.000 m\xB2)** a nivel nacional sin alucinar cifras.
+    - **Pacto de Retroventa (Arts. 1939\u20131943 C.C.) y Cr\xE9dito vs. Leasing Habitacional:** Explica siempre ambos lados (pros de liquidez vs contras del l\xEDmite legal m\xE1ximo de 4 a\xF1os, p\xE9rdida del bien y riesgo de recalificaci\xF3n por simulaci\xF3n/lesi\xF3n enorme Art. 1947 C.C. en retroventa; LTV/cuota inicial vs titularidad registral y costos de escrituraci\xF3n al ejercer opci\xF3n en leasing vs hipotecario).
+    - **Reportera Inmobiliaria & Marketing/Community Manager:** Comparte noticias reales del sector (apoy\xE1ndote en b\xFAsqueda web cuando sea actualidad) y ense\xF1a AIDA, PAS, Swap Test, guiones de Reels y marca personal inmobiliaria con paciencia de maestra.
   * **DOCTRINA DE APERTURA COMERCIAL Y NEGOCIACI\xD3N ANTE PREGUNTAS DE COMISI\xD3N (DOCTRINA EDUARDO A. RIVERA):**
     - Cuando un colega o cliente pregunte *"\xBFT\xFA compartes comisi\xF3n?"*, *"\xBFcomparten comisi\xF3n?"*, *"\xBFhacen negocios compartidos?"*, *"\xBFc\xF3mo es la comisi\xF3n?"* o si est\xE1s abierta a negociar:
     - **PROHIBIDO TERMINANTEMENTE:** Soltar un mon\xF3logo te\xF3rico o desglose matem\xE1tico con vi\xF1etas del modelo 40/20/40 de entrada, y **PROHIBIDO** cerrar con cuestionarios gen\xE9ricos de captaci\xF3n (*"\xBFtienes un inmueble en venta o arriendo o buscas para un cliente?"*).
@@ -17391,11 +17433,20 @@ function analyzeUrbanPotPotential(params) {
   };
 }
 function executeMarketValuationSurvey(params) {
-  const zonaLower = `${params.zonaOBarrio || ""} ${params.barrio || ""} ${params.direccionExacta || ""}`.toLowerCase();
+  const zonaLower = `${params.zonaOBarrio || ""} ${params.barrio || ""} ${params.direccionExacta || ""} ${params.ciudad || ""}`.toLowerCase();
+  const tipoLower = (params.tipoInmueble || "").toLowerCase();
+  const isCommercialType = /\b(?:local|oficina|bodega|consultorio|comercial|industrial)\b/.test(tipoLower);
+  const isRuralType = Boolean(params.fanegadas && params.fanegadas > 0) || Boolean(params.hectareas && params.hectareas > 0) || /\b(?:finca|lote\s+rural|rural|parcela|parcelaci[oó]n|hacienda|agr[ií]cola|ganadera|campestre)\b/.test(tipoLower) || /\b(?:vereda|kil[oó]metro|km\s*\d+)\b/.test(zonaLower);
   let basePrice = 65e5;
-  const zoneName = params.zonaOBarrio || params.barrio || "Norte de Bogot\xE1";
+  const zoneName = params.zonaOBarrio || params.barrio || params.ciudad || "Norte de Bogot\xE1";
   let hasVerifiedComparables = true;
-  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
+  if (isRuralType && /\b(?:tenjo|tabio|subachoque|sop[oó]|sopo|guasca|la\s+calera|cota|ch[ií]a|chia|cajic[aá]|cajica|sabana)\b/.test(zonaLower)) {
+    basePrice = 165e3;
+  } else if (isRuralType && /\b(?:anapoima|villeta|la\s+vega|mesitas|fusagasug[aá]|fusagasuga|melgar|ricaurte|girardot|carmen\s+de\s+apical[aá])\b/.test(zonaLower)) {
+    basePrice = 115e3;
+  } else if (isRuralType && /\b(?:llanogrande|rionegro|retiro|santa\s+elena|guatavita|eje\s+cafetero|quind[ií]o|quindio|cerritos|pereira|salento|armenia|mesa\s+de\s+los\s+santos)\b/.test(zonaLower)) {
+    basePrice = 145e3;
+  } else if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
     basePrice = 145e5;
   } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country") || zonaLower.includes("seminario")) {
     basePrice = 125e5;
@@ -17415,10 +17466,22 @@ function executeMarketValuationSurvey(params) {
     basePrice = 75e5;
   } else if (zonaLower.includes("chapinero") || zonaLower.includes("teusaquillo")) {
     basePrice = 72e5;
-  } else if (zonaLower.includes("el poblado") || zonaLower.includes("poblado") || zonaLower.includes("llanogrande") || zonaLower.includes("laureles") || zonaLower.includes("envigado")) {
+  } else if (zonaLower.includes("el poblado") || zonaLower.includes("poblado") || zonaLower.includes("llanogrande") || zonaLower.includes("laureles") || zonaLower.includes("envigado") || zonaLower.includes("medell\xEDn") || zonaLower.includes("medellin")) {
     basePrice = 88e5;
-  } else if (zonaLower.includes("bocagrande") || zonaLower.includes("castillogrande") || zonaLower.includes("manga")) {
+  } else if (zonaLower.includes("bocagrande") || zonaLower.includes("castillogrande") || zonaLower.includes("manga") || zonaLower.includes("cartagena")) {
     basePrice = 95e5;
+  } else if (zonaLower.includes("pance") || zonaLower.includes("ciudad jard\xEDn") || zonaLower.includes("ciudad jardin") || zonaLower.includes("granada") || zonaLower.includes("oeste") || zonaLower.includes("cali")) {
+    basePrice = 64e5;
+  } else if (zonaLower.includes("alto prado") || zonaLower.includes("riomar") || zonaLower.includes("villa santos") || zonaLower.includes("buenavista") || zonaLower.includes("barranquilla")) {
+    basePrice = 63e5;
+  } else if (zonaLower.includes("cabecera") || zonaLower.includes("sotomayor") || zonaLower.includes("ca\xF1averal") || zonaLower.includes("canaveral") || zonaLower.includes("bucaramanga")) {
+    basePrice = 56e5;
+  } else if (zonaLower.includes("\xE1lamos") || zonaLower.includes("alamos") || zonaLower.includes("cerritos") || zonaLower.includes("mil\xE1n") || zonaLower.includes("milan") || zonaLower.includes("pereira") || zonaLower.includes("manizales") || zonaLower.includes("armenia")) {
+    basePrice = 54e5;
+  } else if (zonaLower.includes("pozos colorados") || zonaLower.includes("bello horizonte") || zonaLower.includes("rodadero") || zonaLower.includes("santa marta")) {
+    basePrice = 68e5;
+  } else if (zonaLower.includes("villavicencio") || zonaLower.includes("buque") || zonaLower.includes("maizaro")) {
+    basePrice = 49e5;
   } else if (zonaLower.includes("morato") || zonaLower.includes("castellana") || zonaLower.includes("pasadena") || zonaLower.includes("niza") || zonaLower.includes("alhambra") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan")) {
     basePrice = 68e5;
   } else if (zonaLower.includes("salitre") || zonaLower.includes("modelia") || zonaLower.includes("hayuelos")) {
@@ -17435,13 +17498,30 @@ function executeMarketValuationSurvey(params) {
     basePrice = 65e5;
   } else {
     hasVerifiedComparables = false;
+    if (isRuralType) {
+      basePrice = 12e4;
+    }
   }
+  if (isCommercialType && !isRuralType) {
+    if (tipoLower.includes("local")) {
+      basePrice = Math.round(basePrice * 1.22);
+    } else if (tipoLower.includes("bodega")) {
+      basePrice = Math.round(basePrice * 0.72);
+    } else if (tipoLower.includes("oficina") || tipoLower.includes("consultorio")) {
+      basePrice = Math.round(basePrice * 1.05);
+    }
+  }
+  const FANEGADA_M2 = 6400;
+  const HECTAREA_M2 = 1e4;
+  const computedAreaFromUnits = params.fanegadas && params.fanegadas > 0 ? Math.round(params.fanegadas * FANEGADA_M2) : params.hectareas && params.hectareas > 0 ? Math.round(params.hectareas * HECTAREA_M2) : void 0;
   const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
   const parsedAno = typeof params.anoConstruccion === "number" ? params.anoConstruccion : typeof params.anoConstruccion === "string" ? parseInt(params.anoConstruccion, 10) : void 0;
   const validAno = parsedAno && !Number.isNaN(parsedAno) && parsedAno > 1900 && parsedAno <= currentYear ? parsedAno : void 0;
   const computedAgeYears = typeof params.antiguedadAnos === "number" && params.antiguedadAnos >= 0 ? params.antiguedadAnos : validAno ? Math.max(0, currentYear - validAno) : 8;
   const isRemodeled = params.esRemodelado === true || /remodel|modern|renovad|actualizad|lujo/i.test(params.tipoAcabados || "");
-  const area = params.areaM2 && params.areaM2 > 0 ? params.areaM2 : 75;
+  const area = params.areaM2 && params.areaM2 > 0 ? params.areaM2 : computedAreaFromUnits && computedAreaFromUnits > 0 ? computedAreaFromUnits : isRuralType ? FANEGADA_M2 : 75;
+  const fanegadasEquiv = Number((area / FANEGADA_M2).toFixed(2));
+  const hectareasEquiv = Number((area / HECTAREA_M2).toFixed(2));
   const valuation = calculatePropertyValuation({
     zone: zoneName,
     city: params.ciudad || "Bogot\xE1",
@@ -17515,12 +17595,20 @@ function executeMarketValuationSurvey(params) {
     `\u2022 *Parqueaderos:* ${valuation.factorBreakdown.garageFactor.coefficient.toFixed(2)} (${valuation.factorBreakdown.garageFactor.percentageChange}) \u2014 ${valuation.factorBreakdown.garageFactor.description}`,
     ...valuation.factorBreakdown.specialAttributesFactor ? [`\u2022 *Atributos Diferenciales:* ${valuation.factorBreakdown.specialAttributesFactor.coefficient.toFixed(2)} (${valuation.factorBreakdown.specialAttributesFactor.percentageChange}) \u2014 ${valuation.factorBreakdown.specialAttributesFactor.description}`] : []
   ];
+  const ruralConversionLines = isRuralType ? [
+    `\u{1F33E} *Equivalencias Agrarias Oficiales (Colombia):* ${area.toLocaleString("es-CO")} m\xB2 = *${fanegadasEquiv} fanegadas* (6.400 m\xB2/fanegada) = *${hectareasEquiv} hect\xE1reas* (10.000 m\xB2/ha)`,
+    `\u2022 *Valor estimado por Fanegada:* ${formatCop(Math.round(valuation.homologatedPricePerM2 * FANEGADA_M2))} | *Valor por Hect\xE1rea:* ${formatCop(Math.round(valuation.homologatedPricePerM2 * HECTAREA_M2))}`,
+    `\u2022 *Nota de tasaci\xF3n rural:* El valor de tierra rural var\xEDa fuertemente por topograf\xEDa (plana vs ladera), disponibilidad de agua propia/acueducto veredal, v\xEDa pavimentada, uso POT/PBOT y construcciones existentes.`
+  ] : [];
+  const commercialNotesLine = isCommercialType && !isRuralType ? [`\u{1F3E2} *Enfoque Comercial (Renta / Cap Rate):* En locales, oficinas y bodegas predomina el an\xE1lisis por rentabilidad bruta esperada (~0.65%\u20130.85%/mes seg\xFAn contrato, IVA e \xEDndice de tr\xE1fico).`] : [];
   const reporteAcmEstructurado = [
     `\u{1F4CA} *AN\xC1LISIS COMPARATIVO DE MERCADO (ACM) \u2014 VECY NETWORK*`,
     `\u{1F4CC} *Ficha evaluada:* ${specsLineParts.join(" \xB7 ")}`,
     ``,
     `1\uFE0F\u20E3 *Homologaci\xF3n T\xE9cnica (Metodolog\xEDa Fitto y Corvini / Lonja)*`,
     ...factorLines,
+    ...ruralConversionLines,
+    ...commercialNotesLine,
     `\u27A1\uFE0F *Valor m\xB2 homologado:* ${formatCop(valuation.homologatedPricePerM2)}/m\xB2 *(Rango de mercado: ${formatCop(valuation.rangoValorM2Min)} \u2013 ${formatCop(valuation.rangoValorM2Max)}/m\xB2)*`,
     ``,
     `2\uFE0F\u20E3 *Los 3 Escenarios Estrat\xE9gicos de Precio (Venta)*`,
@@ -17561,6 +17649,12 @@ function executeMarketValuationSurvey(params) {
     canonRangoMax: valuation.canonRangoMax,
     estimatedCapRate: valuation.estimatedCapRate,
     areaM2: area,
+    isRuralType,
+    isCommercialType,
+    fanegadasEquiv: isRuralType ? fanegadasEquiv : void 0,
+    hectareasEquiv: isRuralType ? hectareasEquiv : void 0,
+    valorPorFanegadaCop: isRuralType ? Math.round(valuation.homologatedPricePerM2 * FANEGADA_M2) : void 0,
+    valorPorHectareaCop: isRuralType ? Math.round(valuation.homologatedPricePerM2 * HECTAREA_M2) : void 0,
     administracionCop: admonMensual,
     administracionPorM2: admonPorM2,
     analisisAdministracion,
@@ -21078,8 +21172,8 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
     const solver = new Solver2(apiKey);
     const puppeteer = (await import("puppeteer")).default;
-    const fs18 = await import("fs");
-    const executablePath = fs18.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const fs19 = await import("fs");
+    const executablePath = fs19.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -22203,6 +22297,35 @@ function auditContractDraftText(draftText, options) {
       });
     }
   }
+  const isRetroventa = detectedType === "pacto_retroventa" || /\bpacto\s+(?:de\s+)?retroventa\b|\bretroventa\b/.test(norm2);
+  if (isRetroventa) {
+    const yearsMatch = norm2.match(/\b(\d+)\s+a[nñ]os?\b/);
+    const termYears = yearsMatch ? parseInt(yearsMatch[1], 10) : 0;
+    if (termYears > 4) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Plazo de retroventa superior al maximo legal de 4 anos (Art. 1943 C.C.)",
+        hallazgo: `Se estipula un plazo de ${termYears} anos para ejercer el recobro, excediendo el limite imperativo colombiano.`,
+        fundamentoLegal: "Articulo 1943 del Codigo Civil Colombiano: el tiempo en que se podra intentar la accion de retroventa no podra pasar de cuatro (4) anos contados desde la fecha del contrato.",
+        redaccionSugerida: "'EL VENDEDOR podra ejercer la facultad de recobro dentro de un plazo perentorio no superior a cuatro (4) anos (o [X meses <= 48]), contado desde la fecha de la escritura publica.'"
+      });
+    }
+    if (/\bdocumento\s+privado\b|\bsin\s+escritura\b/.test(norm2) || !/\bescritura\s+publica\b/.test(norm2)) {
+      findings.push({
+        severidad: "ALTA",
+        titulo: "Pacto de Retroventa inmobiliario sin Escritura Publica ni registro SNR (Art. 1942 y 1857 C.C.)",
+        hallazgo: "El pacto de retroventa sobre bienes raices en documento privado o sin escritura publica registrada carece de validez sustancial para transferir/reservar dominio inmobiliario y no es oponible a terceros.",
+        fundamentoLegal: "Articulos 1857 inciso 2, 1939 y 1942 del Codigo Civil Colombiano: toda compraventa de inmueble y su pacto accesorio de retroventa debe otorgarse por Escritura Publica e inscribirse en el Folio de Matricula Inmobiliaria (SNR).",
+        redaccionSugerida: "'El presente contrato de compraventa con pacto de retroventa (Arts. 1939-1943 C.C.) se elevara a Escritura Publica ante Notaria y se inscribira en el Folio de Matricula Inmobiliaria de la ORIP respectiva.'"
+      });
+      missingClauses.push(
+        "Otorgamiento obligatorio mediante Escritura Publica e inscripcion en Oficina de Registro (SNR) para oponibilidad ante terceros (Art. 1942 C.C.)."
+      );
+    }
+    missingClauses.push(
+      "Equilibrio economico anti-simulacion y control de lesion enorme (Art. 1947 C.C.): documentar valor comercial real para evitar recalificacion judicial como mutuo usurario o pacto comisorio prohibido."
+    );
+  }
   if (findings.length === 0) {
     findings.push({
       severidad: "OK",
@@ -22215,8 +22338,8 @@ function auditContractDraftText(draftText, options) {
   const highCount = findings.filter((f) => f.severidad === "ALTA").length;
   const medCount = findings.filter((f) => f.severidad === "MEDIA").length;
   const riskLevel = highCount > 0 ? "ROJO" : medCount > 0 ? "AMARILLO" : "VERDE";
-  const contractLabel = isPromesa ? "PROMESA DE COMPRAVENTA" : isComercial ? "ARRENDAMIENTO LOCAL COMERCIAL" : isVivienda ? "ARRENDAMIENTO VIVIENDA URBANA" : isCorretaje ? "CONTRATO DE CORRETAJE" : isOtrosiOrEntrega ? "OTROSI / ENTREGA ANTICIPADA" : "CONTRATO INMOBILIARIO";
-  const normativeRegime = isPromesa ? "Codigo Civil (Arts. 1592, 1611, 1859-1861, 1893), Ley 153/1887 Art. 89 y C.G.P." : isComercial ? "Codigo de Comercio Colombiano (Arts. 518 a 524 y Art. 384 C.G.P.)" : isVivienda ? "Ley 820 de 2003 (Vivienda Urbana), Codigo Civil y C.G.P." : isCorretaje ? "Codigo de Comercio (Arts. 1340 a 1346) y Doctrina Colaborativa VECY" : "Legislacion Civil, Comercial e Inmobiliaria de Colombia";
+  const contractLabel = isPromesa ? "PROMESA DE COMPRAVENTA" : isComercial ? "ARRENDAMIENTO LOCAL COMERCIAL" : isVivienda ? "ARRENDAMIENTO VIVIENDA URBANA" : isCorretaje ? "CONTRATO DE CORRETAJE" : isRetroventa ? "COMPRAVENTA CON PACTO DE RETROVENTA" : isOtrosiOrEntrega ? "OTROSI / ENTREGA ANTICIPADA" : "CONTRATO INMOBILIARIO";
+  const normativeRegime = isPromesa ? "Codigo Civil (Arts. 1592, 1611, 1859-1861, 1893), Ley 153/1887 Art. 89 y C.G.P." : isComercial ? "Codigo de Comercio Colombiano (Arts. 518 a 524 y Art. 384 C.G.P.)" : isVivienda ? "Ley 820 de 2003 (Vivienda Urbana), Codigo Civil y C.G.P." : isCorretaje ? "Codigo de Comercio (Arts. 1340 a 1346) y Doctrina Colaborativa VECY" : isRetroventa ? "Codigo Civil Colombiano (Arts. 1939 a 1943 Pacto de Retroventa y Art. 1947 Lesion Enorme)" : "Legislacion Civil, Comercial e Inmobiliaria de Colombia";
   const riskHeadline = riskLevel === "ROJO" ? `${highCount} riesgo(s) critico(s) detectado(s) \u2014 corregir antes de firmar.` : riskLevel === "AMARILLO" ? `${medCount} ajuste(s) preventivo(s) recomendado(s) y ${missingClauses.length} vacio(s) por blindar.` : "Estructura equilibrada; verificar datos registrales y completar anexos.";
   return {
     contractTypeDetected: detectedType,
@@ -23169,6 +23292,12 @@ function buildFinancialAndTaxReport(parsed) {
       mBlock += `
 \u2022 *Tu capacidad (${formatCop2(cap.ingresoMensualCop)}/mes):* ${cap.relacionCuotaIngresoCreditoPct}% en cr\xE9dito / ${cap.relacionCuotaIngresoLeasingPct}% en leasing. ${cap.viabilidadLey546}`;
     }
+    mBlock += `
+\u2022 *Pros y Contras Clave (Cr\xE9dito Hipotecario vs. Leasing Habitacional):*
+  - \u2705 *Cr\xE9dito Hipotecario:* Eres propietario titular desde el d\xEDa 1; permite constituir patrimonio de familia/afectaci\xF3n vivienda familiar y aplicar prepagos directos a capital sin esperar ejercicio de opci\xF3n.
+  - \u26A0\uFE0F *Contra Cr\xE9dito:* Generalmente exige mayor cuota inicial (30% en No-VIS / 20% VIS) y gastos de constituci\xF3n de hipoteca.
+  - \u2705 *Leasing Habitacional:* Permite menor cuota inicial (20% o hasta 15% con 85% LTV), mayor protecci\xF3n frente a embargos personales mientras el t\xEDtulo es del banco y opci\xF3n de compra pactable (1%\u201310% al final).
+  - \u26A0\uFE0F *Contra Leasing:* Mientras dure el leasing no tienes el t\xEDtulo en el CTL (lo posee el banco locatario), el canon incluye componente de opci\xF3n y al final pagas escrituraci\xF3n/registro adicional al ejercer la opci\xF3n de compra.`;
     blocks.push(mBlock);
   }
   if (investmentRoi) {
@@ -25312,6 +25441,16 @@ var init_founderKnowledgeService = __esm({
         directive: "Cuando un propietario directo consigne su inmueble en VECY BIENES RA\xCDCES: 1) Publicaci\xF3n y pauta son 100% gratuitas ($0 COP anticipados). 2) En VENTA la comisi\xF3n por \xE9xito es el 3% de ley sobre el valor final pactado. 3) En ARRIENDO la comisi\xF3n por \xE9xito es el primer canon de arrendamiento (1 mes de canon NETO), l\xF3gicamente SIN incluir el valor mensual de la administraci\xF3n. Si el propietario indica un valor mensual que incluye administraci\xF3n (ej: $3.800.000 con administraci\xF3n incluida y la administraci\xF3n cuesta $800.000 -> canon neto $3.000.000; o $4.000.000 menos $800.000 -> $3.200.000), JanIA debe preguntarle cu\xE1nto vale mensualmente la administraci\xF3n si a\xFAn no lo dijo, descontarla del valor total y liquidar nuestra comisi\xF3n exclusivamente sobre el canon neto sin administraci\xF3n.",
         rawText: "Si, a propietarios si desean consignar sus inmuebles con nosotros, se les cobra lo de ley el 3% por venta y para arriendo un canon logicamente sin administracion; si el valor incluye administracion, se pregunta de cuanto es la administracion y se descuenta para cobrar unicamente el canon neto como comision.",
         createdAt: "2026-11-13T22:20:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-maestria-multidisciplinaria-paridad-web-rural-retroventa-v34-21",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "+573192919978",
+        topic: "Paridad Total DM/Grupos/Web, Memoria Nominal Compuesta, Valuaci\xF3n Rural/Comercial Nacional, Pacto de Retroventa y Pedagog\xEDa VECY vs Dinosaurios Inmobiliarios \u2014 Doctrina Eduardo A. Rivera v34.21",
+        directive: "JanIA opera con paridad absoluta de todas sus Skills determin\xEDsticas, stickers 3D, memoria de hilo conversacional y persistencia de nombre simple/compuesto + g\xE9nero + rol en WhatsApp DM, Grupos Oficiales y Sitio Web (Widget/Consola). Domina Derecho Inmobiliario Colombiano incluyendo Pacto de Retroventa (Arts. 1939\u20131943 C.C., l\xEDmite 4 a\xF1os Art. 1943 C.C., Escritura P\xFAblica + SNR Art. 1942 C.C. y riesgo de lesi\xF3n enorme Art. 1947 C.C.), Cr\xE9dito Hipotecario vs Leasing Habitacional con pros y contras equilibrados, Valuaci\xF3n Urbana/Comercial y Rural en fanegadas (6.400 m\xB2) y hect\xE1reas (10.000 m\xB2) a nivel nacional, Reporter\xEDa Inmobiliaria verificada con b\xFAsqueda en vivo sin alucinar, y pedagog\xEDa paciente para explicar Dinosaurios Inmobiliarios vs VECY La Evoluci\xF3n Inevitable, 80/20, 40/20/40 (+10% Bolsa Colaborativa), registro paso a paso, MATCH (85%\u2013100%, guillotina 1=1 en alcobas, \xE1rea >= min) y publicaci\xF3n puntual de ofertas/requerimientos.",
+        rawText: "Asegurar que todas las Skills de JanIA est\xE9n activas y conectadas en DM, Grupos y Web, recuerde nombres simples o compuestos y g\xE9nero, domine Pacto de Retroventa, Leasing vs Hipotecario, m\xB2 comercial y fanegadas/hect\xE1reas rurales en toda Colombia, y ense\xF1e paso a paso VECY vs Dinosaurios Inmobiliarios, 40/20/40, registro, MATCH y publicaci\xF3n.",
+        createdAt: "2026-11-13T23:55:00.000Z",
         active: true
       }
     ];
@@ -30560,7 +30699,7 @@ function formatOrganizacionJuridica(raw) {
   }
   return formatTitleCase2(raw);
 }
-async function postRuesEncrypted(path19, payload, timeoutMs = 5e3) {
+async function postRuesEncrypted(path20, payload, timeoutMs = 5e3) {
   if (!process.env.RUES_PROXY_URL && Date.now() < elasticGeoBlockedUntil) {
     return null;
   }
@@ -30569,7 +30708,7 @@ async function postRuesEncrypted(path19, payload, timeoutMs = 5e3) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${baseUrl}${path19}`, {
+    const res = await fetch(`${baseUrl}${path20}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -31961,8 +32100,8 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
 }
 async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
   const puppeteer = (await import("puppeteer")).default;
-  const fs18 = await import("fs");
-  const executablePath = fs18.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs18.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
+  const fs19 = await import("fs");
+  const executablePath = fs19.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs19.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
   let browser = null;
   try {
     browser = await puppeteer.launch({
@@ -33978,10 +34117,26 @@ function extractAcmAttributesFromText(rawText) {
     return map[cleanTok];
   };
   const out = {};
+  const fanegadaMatch = text2.match(/(\d+(?:[.,]\d+)?)\s*(?:fanegadas?|fgs?)\b/i);
+  if (fanegadaMatch?.[1]) {
+    const fVal = parseFloat(fanegadaMatch[1].replace(",", "."));
+    if (!Number.isNaN(fVal) && fVal > 0 && fVal < 5e3) {
+      out.fanegadas = fVal;
+      if (!out.areaM2) out.areaM2 = Math.round(fVal * 6400);
+    }
+  }
+  const hectareaMatch = text2.match(/(\d+(?:[.,]\d+)?)\s*(?:hect[aá]reas?|has?\b)(?=[\s,;.)!?]|$)/i);
+  if (hectareaMatch?.[1]) {
+    const hVal = parseFloat(hectareaMatch[1].replace(",", "."));
+    if (!Number.isNaN(hVal) && hVal > 0 && hVal < 5e4) {
+      out.hectareas = hVal;
+      if (!out.areaM2) out.areaM2 = Math.round(hVal * 1e4);
+    }
+  }
   const areaMatch = text2.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|m²|mts?2?|metros(?:\s+cuadrados)?)(?=[\s,;.)!?]|$)/i);
   if (areaMatch?.[1]) {
     const parsedArea = parseFloat(areaMatch[1].replace(",", "."));
-    if (!Number.isNaN(parsedArea) && parsedArea > 5 && parsedArea < 1e5) {
+    if (!Number.isNaN(parsedArea) && parsedArea > 5 && parsedArea < 1e7) {
       out.areaM2 = parsedArea;
     }
   }
@@ -34052,11 +34207,15 @@ function extractAcmAttributesFromText(rawText) {
   if (dirMatch?.[1]) {
     out.direccionExacta = dirMatch[1].trim();
   }
-  const tipoMatch = text2.match(/\b(casa(?:\s+campestre|\s+lote)?|apartamento|apto|penthouse|oficina|local|bodega|lote|townhouse)\b/i);
+  const tipoMatch = text2.match(/\b(casa(?:\s+campestre|\s+lote)?|apartamento|apto|penthouse|oficina|local(?:\s+comercial)?|bodega|consultorio|finca|parcelaci[oó]n|parcela|lote(?:\s+rural)?|townhouse)\b/i);
   if (tipoMatch?.[1]) {
     out.tipoInmueble = tipoMatch[1].toLowerCase() === "apto" ? "apartamento" : tipoMatch[1].toLowerCase();
   }
-  const knownZoneRegex = /\b(santa\s+ana\s+oriental|santa\s+ana|rodamonte|bosque\s+de\s+pinos|cerros\s+de\s+santa\s+b[aá]rbara|molinos\s+norte|la\s+carolina|santa\s+b[aá]rbara|san\s+patricio|antiguo\s+country|cabrera|rosales|nogal|retiro|chic[oó]|usaqu[eé]n|cedritos|colina\s+campestre|pontevedra|niza|salitre|modelia|pasadena|alhambra|morato|el\s+poblado|llanogrande|envigado|laureles|bocagrande|ch[ií]a|cajic[aá])\b/i;
+  const cityMatch = text2.match(/\b(bogot[aá]|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|armenia|santa\s+marta|villavicencio|ch[ií]a|cajic[aá]|cota|tenjo|tabio|sop[oó]|guasca|la\s+calera|rionegro|envigado|anapoima|villeta|fusagasug[aá])\b/i);
+  if (cityMatch?.[1]) {
+    out.ciudad = cityMatch[1].trim();
+  }
+  const knownZoneRegex = /\b(santa\s+ana\s+oriental|santa\s+ana|rodamonte|bosque\s+de\s+pinos|cerros\s+de\s+santa\s+b[aá]rbara|molinos\s+norte|la\s+carolina|santa\s+b[aá]rbara|san\s+patricio|antiguo\s+country|cabrera|rosales|nogal|retiro|chic[oó]|usaqu[eé]n|cedritos|colina\s+campestre|pontevedra|niza|salitre|modelia|pasadena|alhambra|morato|el\s+poblado|llanogrande|envigado|laureles|bocagrande|castillogrande|ciudad\s+jard[ií]n|pance|granada|alto\s+prado|riomar|cabecera|cerritos|pozos\s+colorados|ch[ií]a|cajic[aá]|tenjo|tabio|sop[oó]|guasca|anapoima|villeta)\b/i;
   const zoneMatch = text2.match(knownZoneRegex);
   if (zoneMatch?.[1]) {
     out.zonaOBarrio = zoneMatch[1].trim();
@@ -34367,11 +34526,13 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       }
       const extracted = extractAcmAttributesFromText(rawUserText || "");
       const surveyRes = executeMarketValuationSurvey({
-        zonaOBarrio: args.zonaOBarrio || extracted.zonaOBarrio || "Chic\xF3",
+        zonaOBarrio: args.zonaOBarrio || extracted.zonaOBarrio || extracted.ciudad || "Chic\xF3",
         direccionExacta: args.direccionExacta || extracted.direccionExacta,
-        ciudad: args.ciudad,
+        ciudad: args.ciudad || extracted.ciudad,
         tipoInmueble: args.tipoInmueble || extracted.tipoInmueble || "apartamento",
         areaM2: Number(args.areaM2 ?? extracted.areaM2 ?? 75),
+        fanegadas: args.fanegadas !== void 0 ? Number(args.fanegadas) : extracted.fanegadas,
+        hectareas: args.hectareas !== void 0 ? Number(args.hectareas) : extracted.hectareas,
         estrato: Number(args.estrato ?? extracted.estrato ?? 5),
         antiguedadAnos: args.antiguedadAnos !== void 0 ? Number(args.antiguedadAnos) : extracted.antiguedadAnos,
         anoConstruccion: args.anoConstruccion ?? extracted.anoConstruccion,
@@ -35352,8 +35513,17 @@ async function processPrivateDmConversationalMessage(text2, userId, userName, me
   const isEduardo = isEduardoIdentified || !isVecyBrokerLine && (/eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724") || userId.includes("167108705018103") || trustedContact?.id === "eduardo_fundador" || trustedContact?.id === "eduardo");
   const isJani = isJaniIdentified || !isVecyBrokerLine && (/jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("182781141344345") || userId.includes("218820279050385") || trustedContact?.id === "jani_esposa" || trustedContact?.id === "jani");
   const isFamilyOrTrusted = !!trustedContact && !isEduardo && !isJani && !isVecyBrokerLine;
-  const introducedName = extractIntroducedName(clean);
-  const effectiveRawName = introducedName || realName;
+  const {
+    persistIntroducedNameInSession: persistIntroducedNameInSession2
+  } = await Promise.resolve().then(() => (init_sessionManager(), sessionManager_exports));
+  const persistedNameState = await persistIntroducedNameInSession2(
+    userId,
+    clean,
+    !isGenericOrNumericName(realName) ? realName : void 0
+  );
+  userPerpetualSession = persistedNameState.session;
+  const introducedName = persistedNameState.introducedNow;
+  const effectiveRawName = persistedNameState.effectiveRawName && !isGenericOrNumericName(persistedNameState.effectiveRawName) ? persistedNameState.effectiveRawName : introducedName || realName;
   const nameInfo = resolveNameAndGender(effectiveRawName, timeSalutation);
   const compositeOrFirst = extractFirstName2(effectiveRawName);
   let displayName = "";
@@ -37378,8 +37548,17 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         }
       }
     }
+    if (!isEduardoOrJani(userId)) {
+      const detectedGroupRole = detectUserBusinessRoleFromText(messageToProcess);
+      if (detectedGroupRole) {
+        await setUserBusinessRole(userId, detectedGroupRole, { sourceText: messageToProcess }).catch(() => {
+        });
+      }
+    }
+    const persistedGroupName = await persistIntroducedNameInSession(userId, messageToProcess, realName);
+    const effectiveGroupRawName = persistedGroupName.effectiveRawName || realName;
     const timeGreeting = getGreetingByTime2();
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const nameInfo = resolveNameAndGender(effectiveGroupRawName, timeGreeting);
     const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
     const genderTerm = targetName ? isFemale ? `estimada ${targetName}` : `estimado ${targetName}` : "colega";
@@ -38285,8 +38464,17 @@ async function processCirculoMessage(text2, userId, userName, imageBuffer, pdfBu
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName2(realName);
-    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor"].includes(firstName.toLowerCase()) ? firstName : "";
+    if (!isEduardoOrJani(userId)) {
+      const detectedCirculoRole = detectUserBusinessRoleFromText(text2);
+      if (detectedCirculoRole) {
+        await setUserBusinessRole(userId, detectedCirculoRole, { sourceText: text2 }).catch(() => {
+        });
+      }
+    }
+    const persistedCirculoName = await persistIntroducedNameInSession(userId, text2, realName);
+    const effectiveCirculoName = persistedCirculoName.effectiveRawName || realName;
+    const firstName = extractFirstName2(effectiveCirculoName);
+    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(firstName.toLowerCase()) ? firstName : "";
     const userGreetingName = cleanFirstName ? ` ${cleanFirstName}` : "";
     const strictOffTopic = checkStrictOffTopic(text2);
     if (strictOffTopic.isOffTopic) {
@@ -38510,6 +38698,82 @@ ${quotedContext}` : text2;
         };
       }
     }
+    if (isExplicitGroupAcmRequest(text2)) {
+      const extractedAcm = extractAcmAttributesFromText(text2);
+      if (extractedAcm.zonaOBarrio || extractedAcm.ciudad || extractedAcm.areaM2 || extractedAcm.fanegadas || extractedAcm.hectareas) {
+        const acmResult = executeMarketValuationSurvey({
+          zonaOBarrio: extractedAcm.zonaOBarrio || extractedAcm.ciudad || "Chic\xF3",
+          ciudad: extractedAcm.ciudad,
+          direccionExacta: extractedAcm.direccionExacta,
+          tipoInmueble: extractedAcm.tipoInmueble || "apartamento",
+          areaM2: extractedAcm.areaM2 ?? 75,
+          fanegadas: extractedAcm.fanegadas,
+          hectareas: extractedAcm.hectareas,
+          estrato: extractedAcm.estrato ?? 5,
+          antiguedadAnos: extractedAcm.antiguedadAnos,
+          anoConstruccion: extractedAcm.anoConstruccion,
+          esRemodelado: extractedAcm.esRemodelado,
+          tipoAcabados: extractedAcm.esRemodelado ? "Remodelado" : void 0,
+          habitaciones: extractedAcm.habitaciones,
+          banos: extractedAcm.banos,
+          garajes: extractedAcm.garajes ?? 1,
+          administracionCop: extractedAcm.administracionCop,
+          tieneTerraza: extractedAcm.tieneTerraza,
+          cocinaConIsla: extractedAcm.cocinaConIsla,
+          niveles: extractedAcm.niveles,
+          userId
+        });
+        if (acmResult?.reporteAcmEstructurado) {
+          const finalAcmResp = appendGroupSatisfactionClosing(acmResult.reporteAcmEstructurado);
+          appendCirculoHistory(userId, "user", text2);
+          appendCirculoHistory(userId, "assistant", finalAcmResp);
+          markUserGreetedToday(userId);
+          return {
+            classification: "CONSULTA_GENERAL",
+            response: finalAcmResp,
+            reactionEmoji: "\u{1F4CA}",
+            wantsVoice: false,
+            voiceResponse: ""
+          };
+        }
+      }
+    }
+    if (isExplicitGroupMarketingAuditRequest(text2)) {
+      const cleanedPrompt = text2.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+      const colonIdx = cleanedPrompt.indexOf(":");
+      const listingCopy = colonIdx !== -1 && cleanedPrompt.slice(colonIdx + 1).trim().length >= 15 ? cleanedPrompt.slice(colonIdx + 1).trim() : cleanedPrompt;
+      const extractedMeta = extractAcmAttributesFromText(listingCopy);
+      const audit = auditPropertyListing(listingCopy);
+      const icp = buildRealEstateIcp(
+        extractedMeta.tipoInmueble || "apartamento",
+        /\barriendo\b/i.test(listingCopy) ? "arriendo" : "venta",
+        extractedMeta.zonaOBarrio || "Bogot\xE1",
+        0,
+        listingCopy
+      );
+      const mktReport = `\u{1F3AF} *AUDITOR\xCDA DE MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (VECY MATCH)* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Puntuaci\xF3n Global:* *${audit.score}/100* ${audit.score >= 80 ? "\u{1F31F} (Alta conversi\xF3n)" : audit.score >= 60 ? "\u26A0\uFE0F (Mejorable)" : "\u{1F6A8} (Baja diferenciaci\xF3n)"}
+\u2022 *Swap Test / Clich\xE9s:* ${audit.oportunidadesMejora.slice(0, 3).join("; ") || "Excelente originalidad y diferenciaci\xF3n sin clich\xE9s"}
+\u2022 *Fortalezas Clave:* ${audit.fortalezas.slice(0, 3).join("; ") || "Datos t\xE9cnicos claros"}
+\u2022 *Perfil de Comprador Ideal (ICP):* ${icp.arquetipo} (${icp.nivelIngresosEstrato})
+
+\u{1F4DD} *FICHA T\xC9CNICA SUGERIDA OPTIMIZADA (M\xC9TODO AIDA):*
+${audit.fichaOptimizadaSugerida}
+
+\u{1F4A1} *Consejo de JanIA:* Publica con barrio exacto, metraje real, alcobas y presupuesto definido para activar nuestro Algoritmo de MATCH (85%-100%).`;
+      const finalMktResp = appendGroupSatisfactionClosing(mktReport);
+      appendCirculoHistory(userId, "user", text2);
+      appendCirculoHistory(userId, "assistant", finalMktResp);
+      markUserGreetedToday(userId);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: finalMktResp,
+        reactionEmoji: "\u{1F3AF}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
     const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
     const systemPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
 
@@ -38540,7 +38804,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
     const colDateTime = getColombiaDateTimeContext();
-    const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
+    const nameInfo = resolveNameAndGender(effectiveCirculoName || cleanFirstName || "colega", timeGreeting);
     const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
     const genderTerm = targetName ? isFemale ? `estimada ${targetName}` : `estimado ${targetName}` : "colega";
@@ -38575,7 +38839,8 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
       4. Sondeos inteligentes de valor por m\xB2 y canon con normativa POT Bogot\xE1 Decreto 555 de 2021.
     - Proponle con calidez y entusiasmo profundizar en la que m\xE1s le sirva para sus cierres.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasi\xF3n, datos reales y visi\xF3n de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditor\xEDa), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralizaci\xF3n en redes), matching en tiempo real y tecnolog\xEDa Cero Papel.
-  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos t\xE9cnicos superiores sin agresividad.`;
+  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos t\xE9cnicos superiores sin agresividad.
+  * Stickers 3D Expresivos de JanIA: Cuando haya humor, entusiasmo, gratitud o indignaci\xF3n simp\xE1tica contra "dinosaurios inmobiliarios", puedes cerrar "response" con [STICKER:ternura], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:ush], [STICKER:queee] o [STICKER:oh_por_dios]. El sistema lo limpia y env\xEDa como sticker real.`;
     const messages2 = [
       { role: "system", content: systemPrompt }
     ];
@@ -38634,6 +38899,9 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       let cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      const stickerMatch = extractStickerTagFromReply(cleanResponse);
+      cleanResponse = stickerMatch.cleanText;
+      const loadedSticker = stickerMatch.stickerKey ? getJaniaStickerByKey(stickerMatch.stickerKey) : null;
       if (isOngoingChat && cleanResponse) {
         cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
       }
@@ -38643,11 +38911,15 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: cleanResponse,
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}")
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}"),
+        ...loadedSticker ? { stickerKey: loadedSticker.key, stickerBuffer: loadedSticker.buffer } : {}
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
       let cleanResponse = sanitizeResponseMarkdown(replyContent);
+      const stickerMatch = extractStickerTagFromReply(cleanResponse);
+      cleanResponse = stickerMatch.cleanText;
+      const loadedSticker = stickerMatch.stickerKey ? getJaniaStickerByKey(stickerMatch.stickerKey) : null;
       if (isOngoingChat && cleanResponse) {
         cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
       }
@@ -38657,7 +38929,8 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
       return {
         classification: "CONSULTA_GENERAL",
         response: cleanResponse,
-        reactionEmoji: "\u{1F4A1}"
+        reactionEmoji: "\u{1F4A1}",
+        ...loadedSticker ? { stickerKey: loadedSticker.key, stickerBuffer: loadedSticker.buffer } : {}
       };
     }
   } catch (error) {
@@ -38665,8 +38938,17 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
     const timeGreeting = getGreetingByTime2();
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName2(realName);
-    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor"].includes(firstName.toLowerCase()) ? firstName : "";
+    if (!isEduardoOrJani(userId)) {
+      const detectedCirculoRole = detectUserBusinessRoleFromText(text2);
+      if (detectedCirculoRole) {
+        await setUserBusinessRole(userId, detectedCirculoRole, { sourceText: text2 }).catch(() => {
+        });
+      }
+    }
+    const persistedCirculoName = await persistIntroducedNameInSession(userId, text2, realName);
+    const effectiveCirculoName = persistedCirculoName.effectiveRawName || realName;
+    const firstName = extractFirstName2(effectiveCirculoName);
+    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(firstName.toLowerCase()) ? firstName : "";
     const userGreetingName = cleanFirstName ? ` ${cleanFirstName}` : "";
     const fallbackResponse = quotedContext ? `\xA1${timeGreeting}${userGreetingName}! \u{1F44B}\u{1F3FB} Totalmente de acuerdo contigo. En VECY BIENES RA\xCDCES defendemos la \xE9tica profesional, la dignidad gremial y las alianzas transparentes entre colegas. \xBFQu\xE9 otra perspectiva o experiencia tienes sobre este punto? \u{1F91D}\u2728` : `\xA1${timeGreeting}${userGreetingName}! \u{1F44B}\u{1F3FB} Gracias por tu participaci\xF3n en el grupo oficial del Proyecto VECY BIENES RA\xCDCES. Estamos transformando el corretaje inmobiliario con tecnolog\xEDa colaborativa y comisiones justas. \xBFC\xF3mo podemos sumar hoy a tus negocios? \u{1F4A1}\u2728`;
     return {
@@ -38687,6 +38969,9 @@ var init_circuloHandler = __esm({
     init_prompts();
     init_dmHandler();
     init_consultingHandler();
+    init_valuation();
+    init_realEstateMarketing();
+    init_stickerService();
     init_iduValorizacionService();
     init_identityVerificationService();
     init_notarialExpenseService();
@@ -38859,6 +39144,7 @@ __export(janIA_exports, {
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
   parseSafeJSON: () => parseSafeJSON,
+  persistIntroducedNameInSession: () => persistIntroducedNameInSession,
   popLatestDmCreativeImage: () => popLatestDmCreativeImage,
   popLatestDmFollowUpMessage: () => popLatestDmFollowUpMessage,
   popLatestDmInteractivePoll: () => popLatestDmInteractivePoll,
@@ -46335,10 +46621,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs18 = await import("fs");
-            const buffer = fs18.readFileSync(mediaPath);
-            const path19 = await import("path");
-            const ext = path19.extname(mediaPath).toLowerCase();
+            const fs19 = await import("fs");
+            const buffer = fs19.readFileSync(mediaPath);
+            const path20 = await import("path");
+            const ext = path20.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -46356,7 +46642,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path19.basename(mediaPath)
+                fileName: path20.basename(mediaPath)
               };
             }
           } else {
@@ -46383,8 +46669,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const fs18 = await import("fs");
-          if (imagePath && fs18.existsSync(imagePath)) {
+          const fs19 = await import("fs");
+          if (imagePath && fs19.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -46423,8 +46709,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
-        const fs18 = await import("fs");
-        const hasImage = imagePath && fs18.existsSync(imagePath);
+        const fs19 = await import("fs");
+        const hasImage = imagePath && fs19.existsSync(imagePath);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -46484,8 +46770,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           console.warn(`[JANIA-ATOMIC] \u{1F6D1} Cancelado env\xEDo: Canal Oficial no configurado. Jam\xE1s se debe anunciar contenido en grupos que no exista en el Canal.`);
           return { success: false, reason: "Canal Oficial no configurado" };
         }
-        const fs18 = await import("fs");
-        const hasImage = imagePath && fs18.existsSync(imagePath);
+        const fs19 = await import("fs");
+        const hasImage = imagePath && fs19.existsSync(imagePath);
         let channelResult = { success: false };
         try {
           if (hasImage) {
@@ -46576,11 +46862,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         const voiceMedia = await textToSpeechMedia2(cleaned);
         const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
         const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs18 = await import("fs");
+        const fs19 = await import("fs");
         if (this.buzonGroupId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs18.existsSync(imagePath)) {
+            if (imagePath && fs19.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
             }
             if (audioBuffer) {
@@ -46600,7 +46886,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         if (this.channelNewsletterId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs18.existsSync(imagePath)) {
+            if (imagePath && fs19.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
             }
             if (audioBuffer) {
@@ -47609,6 +47895,468 @@ var init_llm = __esm({
   }
 });
 
+// server/_core/jania/handlers/webChatService.ts
+var webChatService_exports = {};
+__export(webChatService_exports, {
+  buildWebChatLlmContext: () => buildWebChatLlmContext,
+  detectRawWebListingPost: () => detectRawWebListingPost,
+  evaluateWebDeterministicSkills: () => evaluateWebDeterministicSkills,
+  persistWebGeneratedPdf: () => persistWebGeneratedPdf,
+  resolveWebStickerFromReply: () => resolveWebStickerFromReply
+});
+import fs14 from "node:fs";
+import path14 from "node:path";
+function persistWebGeneratedPdf(pdfBuffer, pdfFileName) {
+  if (!pdfBuffer || pdfBuffer.length === 0) return void 0;
+  if (process.env.NODE_ENV === "test") {
+    const safeName = (pdfFileName || "Documento_VECY.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+    return `/uploads/jania-docs/${safeName}`;
+  }
+  try {
+    const docsDir = path14.resolve(process.cwd(), "public/uploads/jania-docs");
+    if (!fs14.existsSync(docsDir)) {
+      fs14.mkdirSync(docsDir, { recursive: true });
+    }
+    const safeBase = (pdfFileName || "Documento_VECY.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const finalName = `${Date.now()}_${safeBase}`;
+    fs14.writeFileSync(path14.join(docsDir, finalName), pdfBuffer);
+    return `/uploads/jania-docs/${finalName}`;
+  } catch (err) {
+    console.warn("[WebChatService] No se pudo guardar PDF generado en disco:", err?.message);
+    return void 0;
+  }
+}
+function resolveWebStickerFromReply(userMessage, assistantReply, userId) {
+  const extracted = extractStickerTagFromReply(assistantReply || "");
+  if (extracted.stickerKey) {
+    const loaded = getJaniaStickerByKey(extracted.stickerKey);
+    if (loaded) {
+      return {
+        cleanText: extracted.cleanText,
+        stickerKey: loaded.key,
+        stickerUrl: `/assets/stickers/${loaded.filename}`
+      };
+    }
+  }
+  const contextual = selectContextualStickerForDm(userMessage, extracted.cleanText, userId);
+  if (contextual) {
+    return {
+      cleanText: extracted.cleanText,
+      stickerKey: contextual.key,
+      stickerUrl: `/assets/stickers/${contextual.filename}`
+    };
+  }
+  return { cleanText: extracted.cleanText };
+}
+function detectRawWebListingPost(message) {
+  const raw = (message || "").trim();
+  if (!raw) return { isRawListing: false, isRequirement: false };
+  const lower = raw.toLowerCase();
+  const hasConsultationIntent = /[?¿]/.test(raw) || /\b(?:c[oó]mo|cu[aá]nto|cu[aá]l|qu[eé]\s+(?:es|son|vale|cuesta|riesgos?|pros|contras|norma)|expl[ií]ca(?:me)?|ens[eé][nñ]a(?:me)?|cu[eé]nta(?:me)?|redacta|hazme|calcula|simula|liquida|audita|revisa|analiza|sondeo|aval[uú]o|acm|minuta|contrato|retroventa|leasing|hipoteca|cap\s*rate|roi|reglamento|propiedad\s+horizontal|chip|predial|idu|rues|pot|sinupot|noticias?|copy|marketing|dinosaurios|40\/20\/40|80\/20|registr(?:ar|o)|publicar|funciona\s+el\s+match)\b/i.test(
+    raw
+  );
+  if (hasConsultationIntent) {
+    return { isRawListing: false, isRequirement: false };
+  }
+  const hasTradeVerb = /\b(?:vendo|se\s+vende|arriendo|se\s+arrienda|alquilo|busco|necesito|ofrezco|requiero|permuto)\b/i.test(lower);
+  const hasPropertyType = /\b(?:apto|apartamento|casa|lote|local|bodega|oficina|finca|penthouse|apartaestudio)\b/i.test(lower);
+  const hasCommercialDetails = /(?:\$|millones|canon|m2|m²|metros|alcobas|habitaciones|ba[nñ]os|parqueaderos?|garajes?|estrato)/i.test(lower);
+  const isRequirement = /\b(?:busco|necesito|requiero)\b/i.test(lower);
+  return {
+    isRawListing: hasTradeVerb && hasPropertyType && hasCommercialDetails,
+    isRequirement
+  };
+}
+async function evaluateWebDeterministicSkills(params) {
+  const { message, userId, userName, hasActiveHistory, formatRawListingGuide } = params;
+  const clean = (message || "").trim();
+  if (!clean) return { handled: false };
+  const helpType = isServiceHelpRequest(clean);
+  if (helpType === "predial") {
+    return { handled: true, replyText: PREDIAL_HELP_TEXT, stickerKey: "ok", stickerUrl: "/assets/stickers/jania_ok.webp" };
+  }
+  if (helpType === "cedula") {
+    return { handled: true, replyText: CEDULA_HELP_TEXT, stickerKey: "ok", stickerUrl: "/assets/stickers/jania_ok.webp" };
+  }
+  const isReviewReq = isExplicitReviewLinkRequest(clean);
+  const isOtherToolRequest = isIduInquiry(clean) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(clean) || isExplicitNotarialLiquidationRequest(clean, userId) || isExplicitGroupAcmRequest(clean) || isExplicitGroupMarketingAuditRequest(clean) || isExplicitCtlStudyRequest(clean) || hasCtlTextMarkers(clean) || isPotUrbanNormRequest(clean) || isFinancialOrTaxSimulationRequest(clean) || isContractMinutaOrAuditRequest(clean, false) || hasContractDraftMarkers(clean) || isPropiedadHorizontalRequest(clean, false) || hasPhDocumentMarkers(clean) || extractAllCedulasForVerification(clean, false).length > 0;
+  const satFeedback = isUserSatisfactionOrFeedbackReply(clean, hasActiveHistory);
+  if (isReviewReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til))\b/i.test(clean))) {
+    const invite = buildAutonomousGoogleReviewInvitation(userName, {
+      isDirectLinkRequest: isReviewReq,
+      constructiveTopic: satFeedback.constructiveTopic,
+      isConstructiveFeedback: satFeedback.hasConstructiveSuggestion
+    });
+    return {
+      handled: true,
+      replyText: invite,
+      stickerKey: "gracias_ternura",
+      stickerUrl: "/assets/stickers/jania_gracias_ternura.webp"
+    };
+  }
+  if (hasCtlTextMarkers(clean) || isExplicitCtlStudyRequest(clean)) {
+    const ctlCheck = await analyzeCtlFromWhatsAppInput({
+      text: clean,
+      requesterName: userName
+    });
+    if (ctlCheck.isCtlDocument && ctlCheck.report) {
+      const pdfUrl = persistWebGeneratedPdf(ctlCheck.pdfBuffer, ctlCheck.pdfFileName);
+      const reply = appendGroupSatisfactionClosing(ctlCheck.report.whatsappSummary) + (pdfUrl ? `
+
+\u{1F4E5} *Descargar Estudio de T\xEDtulos PDF:* ${pdfUrl}` : "");
+      return {
+        handled: true,
+        replyText: reply,
+        pdfBuffer: ctlCheck.pdfBuffer,
+        pdfFileName: ctlCheck.pdfFileName,
+        pdfUrl,
+        stickerKey: "mmm",
+        stickerUrl: "/assets/stickers/jania_mmm.webp"
+      };
+    }
+    if (ctlCheck.needsMediaGuidance && ctlCheck.responseText) {
+      return { handled: true, replyText: ctlCheck.responseText, stickerKey: "ok", stickerUrl: "/assets/stickers/jania_ok.webp" };
+    }
+  }
+  if (isPotUrbanNormRequest(clean)) {
+    const potCheck = await analyzePotUrbanNormFromWhatsAppInput({
+      text: clean,
+      requesterName: userName
+    });
+    if (potCheck.isPotRequest && potCheck.report) {
+      const pdfUrl = persistWebGeneratedPdf(potCheck.pdfBuffer, potCheck.pdfFileName);
+      const reply = appendGroupSatisfactionClosing(potCheck.responseText) + (pdfUrl ? `
+
+\u{1F4E5} *Descargar Concepto POT PDF:* ${pdfUrl}` : "");
+      return {
+        handled: true,
+        replyText: reply,
+        pdfBuffer: potCheck.pdfBuffer,
+        pdfFileName: potCheck.pdfFileName,
+        pdfUrl,
+        stickerKey: "mmm",
+        stickerUrl: "/assets/stickers/jania_mmm.webp"
+      };
+    }
+    if (potCheck.needsPredioGuidance && potCheck.responseText) {
+      return { handled: true, replyText: potCheck.responseText, stickerKey: "ok", stickerUrl: "/assets/stickers/jania_ok.webp" };
+    }
+  }
+  if (isFinancialOrTaxSimulationRequest(clean)) {
+    const finCheck = await analyzeFinancialAndTaxFromWhatsAppInput({
+      text: clean,
+      requesterName: userName,
+      generatePdf: true
+    });
+    if (finCheck.isFinancialTaxRequest && finCheck.report) {
+      const pdfUrl = persistWebGeneratedPdf(finCheck.pdfBuffer, finCheck.pdfFileName);
+      const reply = appendGroupSatisfactionClosing(finCheck.responseText) + (pdfUrl ? `
+
+\u{1F4E5} *Descargar Ficha Financiera / Tributaria PDF:* ${pdfUrl}` : "");
+      return {
+        handled: true,
+        replyText: reply,
+        pdfBuffer: finCheck.pdfBuffer,
+        pdfFileName: finCheck.pdfFileName,
+        pdfUrl,
+        stickerKey: "mmm",
+        stickerUrl: "/assets/stickers/jania_mmm.webp"
+      };
+    }
+    if (finCheck.needsDataGuidance && finCheck.responseText) {
+      return { handled: true, replyText: finCheck.responseText, stickerKey: "ok", stickerUrl: "/assets/stickers/jania_ok.webp" };
+    }
+  }
+  if (isContractMinutaOrAuditRequest(clean, false) || hasContractDraftMarkers(clean)) {
+    const contractCheck = await analyzeContractOrMinutaFromWhatsAppInput({
+      text: clean,
+      requesterName: userName
+    });
+    if (contractCheck.handled && contractCheck.whatsappReply) {
+      const pdfBuffer = contractCheck.pdfResult?.pdfBuffer;
+      const pdfFileName = contractCheck.pdfResult?.fileName;
+      const pdfUrl = persistWebGeneratedPdf(pdfBuffer, pdfFileName);
+      const baseText = contractCheck.mode === "guidance" ? contractCheck.whatsappReply : appendGroupSatisfactionClosing(contractCheck.whatsappReply);
+      const reply = pdfUrl ? `${baseText}
+
+\u{1F4E5} *Descargar Minuta / Auditor\xEDa PDF:* ${pdfUrl}` : baseText;
+      return {
+        handled: true,
+        replyText: reply,
+        pdfBuffer,
+        pdfFileName,
+        pdfUrl,
+        stickerKey: "ok",
+        stickerUrl: "/assets/stickers/jania_ok.webp"
+      };
+    }
+  }
+  if (isPropiedadHorizontalRequest(clean, false) || hasPhDocumentMarkers(clean)) {
+    const phCheck = await analyzePropiedadHorizontalFromWhatsAppInput({
+      text: clean,
+      requesterName: userName
+    });
+    if (phCheck.handled && phCheck.whatsappReply) {
+      const pdfBuffer = phCheck.pdfResult?.pdfBuffer;
+      const pdfFileName = phCheck.pdfResult?.fileName;
+      const pdfUrl = persistWebGeneratedPdf(pdfBuffer, pdfFileName);
+      const baseText = phCheck.mode === "guidance" ? phCheck.whatsappReply : appendGroupSatisfactionClosing(phCheck.whatsappReply);
+      const reply = pdfUrl ? `${baseText}
+
+\u{1F4E5} *Descargar Concepto PH PDF:* ${pdfUrl}` : baseText;
+      return {
+        handled: true,
+        replyText: reply,
+        pdfBuffer,
+        pdfFileName,
+        pdfUrl,
+        stickerKey: "mmm",
+        stickerUrl: "/assets/stickers/jania_mmm.webp"
+      };
+    }
+  }
+  if (isIduInquiry(clean) || hasPendingIduSession(userId)) {
+    const iduCheck = await executeIduAssistanceFromWhatsApp(clean, userId, true);
+    if (iduCheck.isIduRequest && iduCheck.reportText) {
+      const pdfUrl = persistWebGeneratedPdf(iduCheck.pdfBuffer, iduCheck.pdfFileName);
+      const reply = appendGroupSatisfactionClosing(iduCheck.reportText) + (pdfUrl ? `
+
+\u{1F4E5} *Descargar Certificado IDU PDF:* ${pdfUrl}` : "");
+      return {
+        handled: true,
+        replyText: reply,
+        pdfBuffer: iduCheck.pdfBuffer,
+        pdfFileName: iduCheck.pdfFileName,
+        pdfUrl,
+        stickerKey: "ok",
+        stickerUrl: "/assets/stickers/jania_ok.webp"
+      };
+    }
+  }
+  const predialCheck = await executePredialAssistanceFromWhatsApp(clean, userId, true);
+  if (predialCheck.isPredialRequest && predialCheck.reportText) {
+    const pdfUrl = persistWebGeneratedPdf(predialCheck.pdfBuffer, predialCheck.pdfFileName);
+    const reply = appendGroupSatisfactionClosing(predialCheck.reportText) + (pdfUrl ? `
+
+\u{1F4E5} *Descargar Factura Predial PDF:* ${pdfUrl}` : "");
+    return {
+      handled: true,
+      replyText: reply,
+      pdfBuffer: predialCheck.pdfBuffer,
+      pdfFileName: predialCheck.pdfFileName,
+      pdfUrl,
+      stickerKey: "ok",
+      stickerUrl: "/assets/stickers/jania_ok.webp"
+    };
+  }
+  const idItems = extractAllCedulasForVerification(clean, false);
+  if (idItems.length > 0 || isExplicitCompanyRuesQuery(clean) || Boolean(getPendingCedulaSession(userId))) {
+    const idCheck = await executeIdentityVerificationFromWhatsApp(
+      clean,
+      true,
+      userId,
+      idItems.length > 0 ? idItems : void 0
+    );
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      return {
+        handled: true,
+        replyText: appendGroupSatisfactionClosing(idCheck.reportText),
+        stickerKey: "ok",
+        stickerUrl: "/assets/stickers/jania_ok.webp"
+      };
+    }
+  }
+  if (isExplicitNotarialLiquidationRequest(clean, userId)) {
+    const notarialCheck = await executeNotarialAssistanceFromWhatsApp(clean, userId, true);
+    if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+      return {
+        handled: true,
+        replyText: appendGroupSatisfactionClosing(notarialCheck.reportText),
+        stickerKey: "mmm",
+        stickerUrl: "/assets/stickers/jania_mmm.webp"
+      };
+    }
+  }
+  if (isExplicitGroupAcmRequest(clean)) {
+    const extracted = extractAcmAttributesFromText(clean);
+    if (extracted.zonaOBarrio || extracted.ciudad || extracted.areaM2 || extracted.fanegadas || extracted.hectareas) {
+      const acm = executeMarketValuationSurvey({
+        zonaOBarrio: extracted.zonaOBarrio || extracted.ciudad || "Chic\xF3",
+        ciudad: extracted.ciudad,
+        direccionExacta: extracted.direccionExacta,
+        tipoInmueble: extracted.tipoInmueble || "apartamento",
+        areaM2: extracted.areaM2 ?? 75,
+        fanegadas: extracted.fanegadas,
+        hectareas: extracted.hectareas,
+        estrato: extracted.estrato ?? 5,
+        antiguedadAnos: extracted.antiguedadAnos,
+        anoConstruccion: extracted.anoConstruccion,
+        esRemodelado: extracted.esRemodelado,
+        tipoAcabados: extracted.esRemodelado ? "Remodelado" : void 0,
+        habitaciones: extracted.habitaciones,
+        banos: extracted.banos,
+        garajes: extracted.garajes ?? 1,
+        administracionCop: extracted.administracionCop,
+        tieneTerraza: extracted.tieneTerraza,
+        cocinaConIsla: extracted.cocinaConIsla,
+        niveles: extracted.niveles,
+        userId
+      });
+      if (acm?.reporteAcmEstructurado) {
+        return {
+          handled: true,
+          replyText: appendGroupSatisfactionClosing(acm.reporteAcmEstructurado),
+          stickerKey: "mmm",
+          stickerUrl: "/assets/stickers/jania_mmm.webp"
+        };
+      }
+    }
+  }
+  if (isExplicitGroupMarketingAuditRequest(clean)) {
+    const colonIdx = clean.indexOf(":");
+    const listingCopy = colonIdx !== -1 && clean.slice(colonIdx + 1).trim().length >= 15 ? clean.slice(colonIdx + 1).trim() : clean;
+    const extractedMeta = extractAcmAttributesFromText(listingCopy);
+    const audit = auditPropertyListing(listingCopy);
+    const icp = buildRealEstateIcp(
+      extractedMeta.tipoInmueble || "apartamento",
+      /\barriendo\b/i.test(listingCopy) ? "arriendo" : "venta",
+      extractedMeta.zonaOBarrio || extractedMeta.ciudad || "Bogot\xE1",
+      0,
+      listingCopy
+    );
+    const mktReport = `\u{1F3AF} *AUDITOR\xCDA DE MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (VECY MATCH)* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Puntuaci\xF3n Global:* *${audit.score}/100* ${audit.score >= 80 ? "\u{1F31F} (Alta conversi\xF3n)" : audit.score >= 60 ? "\u26A0\uFE0F (Mejorable)" : "\u{1F6A8} (Baja diferenciaci\xF3n)"}
+\u2022 *Swap Test / Clich\xE9s:* ${audit.oportunidadesMejora.slice(0, 3).join("; ") || "Excelente originalidad y diferenciaci\xF3n sin clich\xE9s"}
+\u2022 *Fortalezas Clave:* ${audit.fortalezas.slice(0, 3).join("; ") || "Datos t\xE9cnicos claros"}
+\u2022 *Perfil de Comprador Ideal (ICP):* ${icp.arquetipo} (${icp.nivelIngresosEstrato})
+
+\u{1F4DD} *FICHA T\xC9CNICA SUGERIDA OPTIMIZADA (M\xC9TODO AIDA):*
+${audit.fichaOptimizadaSugerida}
+
+\u{1F4A1} *Consejo de JanIA:* Publica con barrio exacto, metraje real, alcobas y presupuesto definido para activar nuestro Algoritmo de MATCH (85%-100%).`;
+    return {
+      handled: true,
+      replyText: appendGroupSatisfactionClosing(mktReport),
+      stickerKey: "gracias_brillo",
+      stickerUrl: "/assets/stickers/jania_gracias_brillo.webp"
+    };
+  }
+  const rawListingCheck = detectRawWebListingPost(clean);
+  if (rawListingCheck.isRawListing) {
+    const isReq = rawListingCheck.isRequirement;
+    const guideReply = formatRawListingGuide ? formatRawListingGuide({ userName, isRequirement: isReq }) : `\xA1Hola${userName ? `, ${userName}` : ""}! \u{1F3E1} Con gusto recibo tu ${isReq ? "requerimiento de b\xFAsqueda" : "inmueble en oferta"} y te gu\xEDo para que nuestro motor de MATCH (85%\u2013100%) lo cruce al instante.
+
+Para que quede indexado autom\xE1ticamente en tiempo real en toda la red VECY BIENES RA\xCDCES, puedes publicarlo directamente desde tu cuenta gratuita en nuestro portal (https://vecy-bienes-raices.vercel.app/) o enviarlo en nuestro:
+
+\u{1F449} *Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}*
+\u{1F517} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+
+\u{1F4CC} *Usa esta plantilla estandarizada para que tu publicaci\xF3n sea captada al 100% por JanIA (1=1 en alcobas, \xE1rea \u2265 m\xEDnima, ba\xF1os/garajes \u2265):*
+` + (isReq ? `\u{1F4DD} *REQUERIMIENTO INMOBILIARIO VECY*
+\u2022 Negocio: [Compra o Arriendo]
+\u2022 Inmueble: [Apartamento / Casa / Local / Finca]
+\u2022 Ciudad y Barrio(s): [Ej. Bogot\xE1: Cedritos, Colina]
+\u2022 Presupuesto M\xE1ximo: [En COP]
+\u2022 \xC1rea M\xEDnima: [En m\xB2 o fanegadas/hect\xE1reas]
+\u2022 Alcobas exactas, Ba\xF1os y Parqueaderos m\xEDnimos: [Ej. 3 alcobas, 2 ba\xF1os, 1 garaje independiente]
+\u2022 Detalles clave: [Balc\xF3n, ascensor, estrato, vista]
+\u2022 Contacto y Rol: [Nombre, tel\xE9fono y si aceptas 40/20/40 o eres cliente directo]` : `\u{1F3E0} *OFERTA INMOBILIARIA VECY*
+\u2022 Negocio: [Venta, Arriendo o Permuta]
+\u2022 Inmueble: [Apartamento / Casa / Local / Finca]
+\u2022 Ciudad y Barrio exacto: [Ej. Bogot\xE1: Santa B\xE1rbara]
+\u2022 Precio Venta / Canon Arriendo + Valor Administraci\xF3n: [En COP]
+\u2022 \xC1rea Total y Privada: [En m\xB2, o fanegadas/hect\xE1reas si es rural]
+\u2022 Alcobas, Ba\xF1os, Parqueaderos (independiente/lineal) y Dep\xF3sito:
+\u2022 Estrato, Antig\xFCedad y Piso:
+\u2022 Contacto y Rol: [Nombre, tel\xE9fono y si eres agente 40/20/40 o propietario directo]`);
+    return {
+      handled: true,
+      replyText: guideReply,
+      stickerKey: "ok",
+      stickerUrl: "/assets/stickers/jania_ok.webp"
+    };
+  }
+  return { handled: false };
+}
+async function buildWebChatLlmContext(params) {
+  const { message, userId, registeredName, hasPreviousMessages } = params;
+  const detectedRole = detectUserBusinessRoleFromText(message);
+  if (detectedRole) {
+    await setUserBusinessRole(userId, detectedRole, { sourceText: message }).catch(() => {
+    });
+  }
+  const persisted = await persistIntroducedNameInSession(
+    userId,
+    message,
+    registeredName || void 0
+  );
+  const timeGreeting = getGreetingByTime2();
+  const colDateTime = getColombiaDateTimeContext();
+  const rawCandidate = persisted.effectiveRawName || registeredName || "";
+  const nameInfo = resolveNameAndGender(rawCandidate, timeGreeting);
+  const resolvedDisplayName = nameInfo.displayName && nameInfo.displayName !== "colega" ? nameInfo.displayName : "";
+  const isRegistered = Boolean(registeredName);
+  const onboarding = await buildSessionOnboardingDirectives(userId);
+  const onboardingDirectivesBlock = [
+    onboarding.contextRoleDirective,
+    onboarding.context402040Directive,
+    onboarding.contextOwnerDirective
+  ].filter(Boolean).join("\n");
+  const userContextInstruction = isRegistered ? `
+
+[INFORMACI\xD3N DEL USUARIO EN SESI\xD3N WEB]:
+- Estado: REGISTRADO EN VECY BIENES RA\xCDCES \u2705
+- Nombre resuelto: "${resolvedDisplayName || registeredName}" (G\xE9nero gramatical detectado: ${nameInfo.isFemale ? "Femenino" : "Masculino"})
+- Hoy en Bogot\xE1: ${colDateTime.fullFormatted} (${timeGreeting})
+- Conversaci\xF3n en curso: ${hasPreviousMessages ? "S\xCD (no repitas saludos iniciales ni el nombre en cada frase)" : "NO (primer turno: saluda con calidez por su nombre)"}
+` : `
+
+[INFORMACI\xD3N DEL VISITANTE WEB]:
+- Estado: ${resolvedDisplayName ? `IDENTIFICADO EN CHAT COMO "${resolvedDisplayName}" \u2705` : "VISITANTE A\xDAN SIN NOMBRE EN EL CHAT"}
+- G\xE9nero gramatical detectado: ${nameInfo.isFemale ? "Femenino" : "Masculino"}
+- Hoy en Bogot\xE1: ${colDateTime.fullFormatted} (${timeGreeting})
+- Conversaci\xF3n en curso: ${hasPreviousMessages ? "S\xCD (mant\xE9n la continuidad sin repetir saludos)" : "NO (primer mensaje)"}
+- INSTRUCCI\xD3N:
+  1. ${resolvedDisplayName ? `Ya sabes que se llama "${resolvedDisplayName}"; tr\xE1talo(a) de t\xFA con ese nombre de forma org\xE1nica sin volver a preguntarle c\xF3mo se llama.` : `Si a\xFAn no conoces su nombre, saluda con calidez ("${timeGreeting}") y pregunta brevemente con qui\xE9n tienes el gusto de hablar para llamarlo(a) por su nombre y adaptar tu g\xE9nero gramatical.`}
+  2. Inv\xEDtalo(a) con sutileza cuando aporte valor a registrarse gratis en https://vecy-bienes-raices.vercel.app/ (KYC Ultra-Light) para guardar historial y publicar ilimitadamente.
+`;
+  const needsLiveSearch = /\b(?:noticias?|actualidad|hoy|2025|2026|tendencias?|tasas?\s+de\s+inter[eé]s|banrep|banco\s+de\s+la\s+rep[uú]blica|d[oó]lar|trm|uvt|salario\s+m[ií]nimo|dane|camacol|fedelonjas|inflaci[oó]n|ipc|mercado\s+mundial|global)\b/i.test(
+    message
+  );
+  return {
+    resolvedDisplayName,
+    isFemale: nameInfo.isFemale,
+    userContextInstruction,
+    onboardingDirectivesBlock,
+    needsLiveSearch
+  };
+}
+var init_webChatService = __esm({
+  "server/_core/jania/handlers/webChatService.ts"() {
+    "use strict";
+    init_iduValorizacionService();
+    init_identityVerificationService();
+    init_notarialExpenseService();
+    init_ctlTitleStudyService();
+    init_potUrbanNormService();
+    init_financialAndTaxRealEstateService();
+    init_legalContractService();
+    init_propiedadHorizontalService();
+    init_valuation();
+    init_realEstateMarketing();
+    init_politenessService();
+    init_predialService();
+    init_dmHandler();
+    init_consultingHandler();
+    init_dmOnboardingAndDocsHelper();
+    init_sessionManager();
+    init_nameAndGenderResolver();
+    init_parsers();
+    init_stickerService();
+  }
+});
+
 // server/jobs/nightlyRematch.ts
 var nightlyRematch_exports = {};
 __export(nightlyRematch_exports, {
@@ -47964,8 +48712,8 @@ __export(cronService_exports, {
   sanitizeChannelContent: () => sanitizeChannelContent
 });
 import cron from "node-cron";
-import path14 from "path";
-import fs14 from "fs";
+import path15 from "path";
+import fs15 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and10, eq as eq14, sql as sql12, desc as desc7, or as or6, isNull as isNull2 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
@@ -48132,16 +48880,16 @@ function enforceJanIAIdentity(text2) {
 async function getThemedImagePathAsync(tipo) {
   const recent = await getRecentImageFiles(3);
   const possibleDirs = [
-    path14.resolve(process.cwd(), "client/public/assets/jania"),
-    path14.resolve(process.cwd(), "dist/assets/jania"),
-    path14.resolve(__dirname, "../../client/public/assets/jania")
+    path15.resolve(process.cwd(), "client/public/assets/jania"),
+    path15.resolve(process.cwd(), "dist/assets/jania"),
+    path15.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
     if (pref.endsWith(".mp4") || pref.endsWith(".mov")) {
       for (const dir of possibleDirs) {
-        const candidate = path14.join(dir, pref);
-        if (fs14.existsSync(candidate)) {
+        const candidate = path15.join(dir, pref);
+        if (fs15.existsSync(candidate)) {
           return { fullPath: candidate, fileName: pref };
         }
       }
@@ -48154,8 +48902,8 @@ async function getThemedImagePathAsync(tipo) {
     chosenFile = effectivePool[0];
   }
   for (const dir of possibleDirs) {
-    const candidatePath = path14.join(dir, chosenFile);
-    if (fs14.existsSync(candidatePath)) {
+    const candidatePath = path15.join(dir, chosenFile);
+    if (fs15.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -48163,15 +48911,15 @@ async function getThemedImagePathAsync(tipo) {
 }
 function getThemedImagePath(tipo) {
   const possibleDirs = [
-    path14.resolve(process.cwd(), "client/public/assets/jania"),
-    path14.resolve(process.cwd(), "dist/assets/jania"),
-    path14.resolve(__dirname, "../../client/public/assets/jania")
+    path15.resolve(process.cwd(), "client/public/assets/jania"),
+    path15.resolve(process.cwd(), "dist/assets/jania"),
+    path15.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
   for (const dir of possibleDirs) {
-    const candidatePath = path14.join(dir, chosenFile);
-    if (fs14.existsSync(candidatePath)) {
+    const candidatePath = path15.join(dir, chosenFile);
+    if (fs15.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -48525,7 +49273,7 @@ En el Canal Oficial acabamos de publicar la gu\xEDa completa \u{1F449} ${VECY_SO
     await completeBroadcast(lock.broadcastId, {
       topicTitle: "Servicios Gratuitos de Verificaci\xF3n con JanIA",
       themeKey: "verificacion_servicios",
-      imageFileName: path14.basename(imagePath),
+      imageFileName: path15.basename(imagePath),
       captionText: channelText
     });
     return { success: true, channelMessageId: chanRes.messageId };
@@ -48754,24 +49502,24 @@ function getLocalCuratedThemeImage(themeKey) {
     baseName = "jania_juridico.jpg";
   }
   const candidateDirs = [
-    path14.resolve(process.cwd(), "assets/broadcast"),
-    path14.resolve(process.cwd(), "client/public/assets/broadcast"),
-    path14.resolve(process.cwd(), "client/public/assets/jania")
+    path15.resolve(process.cwd(), "assets/broadcast"),
+    path15.resolve(process.cwd(), "client/public/assets/broadcast"),
+    path15.resolve(process.cwd(), "client/public/assets/jania")
   ];
   for (const dir of candidateDirs) {
-    const candidatePath = path14.join(dir, baseName);
-    if (fs14.existsSync(candidatePath)) {
+    const candidatePath = path15.join(dir, baseName);
+    if (fs15.existsSync(candidatePath)) {
       return candidatePath;
     }
   }
-  const fallbackDir = path14.resolve(process.cwd(), "client/public/assets/jania");
-  if (fs14.existsSync(fallbackDir)) {
-    const files = fs14.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
+  const fallbackDir = path15.resolve(process.cwd(), "client/public/assets/jania");
+  if (fs15.existsSync(fallbackDir)) {
+    const files = fs15.readdirSync(fallbackDir).filter((f) => f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".png"));
     if (files.length > 0) {
-      return path14.join(fallbackDir, files[0]);
+      return path15.join(fallbackDir, files[0]);
     }
   }
-  return path14.resolve(process.cwd(), "client/public/jania_post.png");
+  return path15.resolve(process.cwd(), "client/public/jania_post.png");
 }
 async function fetchPublicThemeImage(themeKey, dayOfMonth) {
   const query = THEME_IMAGE_SEARCH_MAP[themeKey] || "modern architecture real estate building";
@@ -48794,12 +49542,12 @@ async function fetchPublicThemeImage(themeKey, dayOfMonth) {
           if (imgRes.ok) {
             const buffer = Buffer.from(await imgRes.arrayBuffer());
             if (buffer.length >= 1e3) {
-              const cacheDir = path14.resolve(process.cwd(), "client/public/assets/broadcast");
-              if (!fs14.existsSync(cacheDir)) {
-                fs14.mkdirSync(cacheDir, { recursive: true });
+              const cacheDir = path15.resolve(process.cwd(), "client/public/assets/broadcast");
+              if (!fs15.existsSync(cacheDir)) {
+                fs15.mkdirSync(cacheDir, { recursive: true });
               }
-              const targetFile = path14.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-              fs14.writeFileSync(targetFile, buffer);
+              const targetFile = path15.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+              fs15.writeFileSync(targetFile, buffer);
               console.log(`[CRON-IMAGE-WEB] \u2705 Imagen p\xFAblica guardada localmente (${buffer.length} bytes): ${targetFile}`);
               return targetFile;
             }
@@ -48880,8 +49628,8 @@ async function publishDailyTipForDay(tipoKey, force = false) {
 }
 function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   const normalized = (themeKey || "").toLowerCase();
-  const dir1x1 = path14.resolve(process.cwd(), "client/public/assets/channel_1x1");
-  const janiaDir = path14.resolve(process.cwd(), "client/public/assets/jania");
+  const dir1x1 = path15.resolve(process.cwd(), "client/public/assets/channel_1x1");
+  const janiaDir = path15.resolve(process.cwd(), "client/public/assets/jania");
   const fullRotation1x1 = [
     "jania_anfitriona_cafe_1x1.jpg",
     "jania_couture_oro_liquido_1x1.png",
@@ -48920,12 +49668,12 @@ function getChannelSquareImage1x1(themeKey, dayOfMonth) {
   } else {
     target1x1 = "jania_legal_due_diligence_1x1.jpg";
   }
-  const candidate1x1 = path14.join(dir1x1, target1x1);
-  if (fs14.existsSync(candidate1x1)) {
+  const candidate1x1 = path15.join(dir1x1, target1x1);
+  if (fs15.existsSync(candidate1x1)) {
     return candidate1x1;
   }
-  const candidateJania = path14.join(janiaDir, target1x1);
-  if (fs14.existsSync(candidateJania)) {
+  const candidateJania = path15.join(janiaDir, target1x1);
+  if (fs15.existsSync(candidateJania)) {
     return candidateJania;
   }
   return getLocalCuratedThemeImage(themeKey);
@@ -48966,7 +49714,7 @@ Acabamos de subir al Canal Oficial el an\xE1lisis legal y t\xE9cnico desglosado 
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
-      imageFileName: imagePath ? path14.basename(imagePath) : void 0,
+      imageFileName: imagePath ? path15.basename(imagePath) : void 0,
       captionText: content.captionText
     });
     console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n matutina entregada (Canal con imagen [1:1] + Grupos 2 y 3 con teaser trampol\xEDn): "${content.topicTitle}".`);
@@ -49269,7 +50017,7 @@ var init_cronService = __esm({
     init_const();
     init_creativeStudioImageService();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path14.dirname(__filename);
+    __dirname = path15.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -51666,8 +52414,8 @@ init_storage();
 import { z as z4 } from "zod";
 import { eq as eq15, and as and11, desc as desc8, sql as sql13, inArray as inArray2 } from "drizzle-orm";
 import axios8 from "axios";
-import fs15 from "fs";
-import path15 from "path";
+import fs16 from "fs";
+import path16 from "path";
 
 // server/routers/properties.ts
 init_trpc();
@@ -52354,7 +53102,36 @@ function sanitizeWebChatResponse(raw) {
   if (text2.startsWith('"') && text2.endsWith('"') && text2.length > 2) {
     text2 = text2.slice(1, -1);
   }
+  text2 = text2.replace(/\[STICKER:[a-zA-Z0-9_]+\]/gi, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
   return text2.trim();
+}
+function buildWebGroup1ListingRedirectGuide(params) {
+  const { userName, isRequirement } = params;
+  return `\xA1Hola${userName ? `, ${userName}` : ""}! \u{1F3E1} Con gusto recibo tu ${isRequirement ? "requerimiento de b\xFAsqueda" : "inmueble en oferta"} y te gu\xEDo para que nuestro motor de MATCH (85%\u2013100%) lo cruce al instante.
+
+Para que quede indexado autom\xE1ticamente en tiempo real en toda la red VECY BIENES RA\xCDCES, puedes publicarlo directamente desde tu cuenta gratuita en nuestro portal (https://vecy-bienes-raices.vercel.app/) o enviarlo en nuestro:
+
+\u{1F449} *Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}*
+\u{1F517} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+
+\u{1F4CC} *Usa esta plantilla estandarizada para que tu publicaci\xF3n sea captada al 100% por JanIA (1=1 en alcobas, \xE1rea \u2265 m\xEDnima, ba\xF1os/garajes \u2265):*
+` + (isRequirement ? `\u{1F4DD} *REQUERIMIENTO INMOBILIARIO VECY*
+\u2022 Negocio: [Compra o Arriendo]
+\u2022 Inmueble: [Apartamento / Casa / Local / Finca]
+\u2022 Ciudad y Barrio(s): [Ej. Bogot\xE1: Cedritos, Colina]
+\u2022 Presupuesto M\xE1ximo: [En COP]
+\u2022 \xC1rea M\xEDnima: [En m\xB2 o fanegadas/hect\xE1reas]
+\u2022 Alcobas exactas, Ba\xF1os y Parqueaderos m\xEDnimos: [Ej. 3 alcobas, 2 ba\xF1os, 1 garaje independiente]
+\u2022 Detalles clave: [Balc\xF3n, ascensor, estrato, vista]
+\u2022 Contacto y Rol: [Nombre, tel\xE9fono y si aceptas 40/20/40 o eres cliente directo]` : `\u{1F3E0} *OFERTA INMOBILIARIA VECY*
+\u2022 Negocio: [Venta, Arriendo o Permuta]
+\u2022 Inmueble: [Apartamento / Casa / Local / Finca]
+\u2022 Ciudad y Barrio exacto: [Ej. Bogot\xE1: Santa B\xE1rbara]
+\u2022 Precio Venta / Canon Arriendo + Valor Administraci\xF3n: [En COP]
+\u2022 \xC1rea Total y Privada: [En m\xB2, o fanegadas/hect\xE1reas si es rural]
+\u2022 Alcobas, Ba\xF1os, Parqueaderos (independiente/lineal) y Dep\xF3sito:
+\u2022 Estrato, Antig\xFCedad y Piso:
+\u2022 Contacto y Rol: [Nombre, tel\xE9fono y si eres agente 40/20/40 o propietario directo]`);
 }
 var janIARouter = router({
   // New: Extract property data from link
@@ -52401,18 +53178,32 @@ var janIARouter = router({
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
-      const mockUserName = ctx.user ? ctx.user.name ?? void 0 : "Usuario Web";
+      const mockUserName = ctx.user ? ctx.user.name ?? void 0 : void 0;
       const isAdmin = !!ctx.user && (ctx.user.role === "admin" || ctx.user.isAdmin === true);
+      const {
+        evaluateWebDeterministicSkills: evaluateWebDeterministicSkills2,
+        buildWebChatLlmContext: buildWebChatLlmContext2,
+        resolveWebStickerFromReply: resolveWebStickerFromReply2
+      } = await Promise.resolve().then(() => (init_webChatService(), webChatService_exports));
+      const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq15(messages.conversationId, conversationId)).orderBy(desc8(messages.createdAt)).limit(20);
+      let janIAResponse = "";
+      let wantsVoice = false;
+      let voiceResponse = "";
+      let stickerKey;
+      let stickerUrl;
+      let pdfUrl;
+      let pdfFileName;
       const { isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
       if (isMatchSearchQuery2(input.message, isAdmin)) {
         const matchResult = await executeAdminMatchSearch2(input.message, isAdmin);
         if (matchResult.formattedReport) {
-          await db.insert(messages).values({
-            conversationId,
-            role: "janIA",
-            content: matchResult.formattedReport
-          });
+          await db.insert(messages).values([
+            { conversationId, role: "user", content: input.message, messageType: "text" },
+            { conversationId, role: "janIA", content: matchResult.formattedReport, messageType: "text" }
+          ]);
+          await db.update(conversations).set({ lastMessage: matchResult.formattedReport, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(conversations.id, conversationId));
           return {
+            content: matchResult.formattedReport,
             response: matchResult.formattedReport,
             conversationId,
             wantsVoice: false,
@@ -52423,117 +53214,56 @@ var janIARouter = router({
           };
         }
       }
-      const lowerMsg = input.message.toLowerCase();
-      const isListingData = (lowerMsg.includes("vendo") || lowerMsg.includes("busco") || lowerMsg.includes("ofrezco") || lowerMsg.includes("necesito")) && (lowerMsg.includes("apto") || lowerMsg.includes("apartamento") || lowerMsg.includes("casa") || lowerMsg.includes("lote") || lowerMsg.includes("local") || lowerMsg.includes("bodega") || lowerMsg.includes("oficina") || lowerMsg.includes("finca"));
-      let janIAResponse = "";
-      let wantsVoice = false;
-      let voiceResponse = "";
-      if (isListingData) {
-        const isRequirement = lowerMsg.includes("busco") || lowerMsg.includes("necesito") || lowerMsg.includes("requiero");
-        janIAResponse = `\xA1Hola! \u{1F3E1} Con gusto te oriento con esta ${isRequirement ? "b\xFAsqueda o requerimiento" : "propiedad"}.
-
-Por pol\xEDticas de seguridad, transparencia y cruce algor\xEDtmico inmediato de toda nuestra comunidad, este chat web es para sondeos, liquidaciones y asesor\xEDa. Para que tu ${isRequirement ? "demanda" : "inmueble"} se active en la red y cruce autom\xE1ticamente con ofertas y clientes calificados, publ\xEDcalo directamente en nuestro:
-
-\u{1F449} *Grupo 1 Oficial: \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}*
-\u{1F517} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
-
-\u{1F4CC} *Usa esta plantilla estandarizada para que tu publicaci\xF3n sea captada al 100% por JanIA:*
-` + (isRequirement ? `\u{1F4DD} *REQUERIMIENTO INMOBILIARIO VECY*
-\u2022 Tipo de Negocio: [Compra o Arriendo]
-\u2022 Tipo de Inmueble: [Apartamento / Casa / etc.]
-\u2022 Ciudad y Barrios de inter\xE9s: [Ej. Bogot\xE1: Cedritos, Colina]
-\u2022 Presupuesto M\xE1ximo: [Presupuesto total en COP]
-\u2022 \xC1rea M\xEDnima: [Metros cuadrados m\xEDnimos requeridos]
-\u2022 Habitaciones y Parqueaderos indispensables: [Ej. 3 alcobas, 1 garaje]
-\u2022 Observaciones clave: [Ej. Balc\xF3n, piso alto, con ascensor]
-\u2022 Contacto: [Tu nombre y n\xFAmero de tel\xE9fono]` : `\u{1F3F7}\uFE0F *OFERTA INMOBILIARIA VECY*
-\u2022 Tipo de Negocio: [Venta o Arriendo]
-\u2022 Tipo de Inmueble: [Apartamento / Casa / Oficina / Lote / Bodega]
-\u2022 Ciudad y Barrio: [Ej. Bogot\xE1, Alameda 170]
-\u2022 \xC1rea Total: [Metros cuadrados construidos]
-\u2022 Precio de Venta o Canon: [Valor en COP]
-\u2022 Habitaciones y Ba\xF1os: [Ej. 3 habitaciones, 2 ba\xF1os]
-\u2022 Parqueaderos y Dep\xF3sito: [Ej. 1 garaje independiente, 1 dep\xF3sito]
-\u2022 Estrato y Valor de Administraci\xF3n: [Ej. Estrato 4, Adm\xF3n $320.000]
-\u2022 A\xF1o de Construcci\xF3n / Acabados: [Ej. 2015, pisos en madera laminada]
-\u2022 Contacto: [Tu nombre y n\xFAmero de tel\xE9fono]`);
-        wantsVoice = false;
-        voiceResponse = janIAResponse;
+      const webContext = await buildWebChatLlmContext2({
+        message: input.message,
+        userId: mockUserId,
+        registeredName: mockUserName || null,
+        hasPreviousMessages: recentHistory.length > 0
+      });
+      const skillRes = await evaluateWebDeterministicSkills2({
+        message: input.message,
+        userId: mockUserId,
+        userName: webContext.resolvedDisplayName || mockUserName,
+        hasActiveHistory: recentHistory.length > 0,
+        formatRawListingGuide: buildWebGroup1ListingRedirectGuide
+      });
+      if (skillRes.handled && skillRes.replyText) {
+        janIAResponse = skillRes.replyText;
+        stickerKey = skillRes.stickerKey;
+        stickerUrl = skillRes.stickerUrl;
+        pdfUrl = skillRes.pdfUrl;
+        pdfFileName = skillRes.pdfFileName;
       } else {
-        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        const idCheck = await executeIdentityVerificationFromWhatsApp2(input.message);
-        if (idCheck.isVerificationRequest && idCheck.reportText) {
-          janIAResponse = idCheck.reportText;
-          wantsVoice = false;
-          voiceResponse = janIAResponse;
-          await db.insert(messages).values({
-            conversationId,
-            role: "janIA",
-            content: janIAResponse
-          });
-          return {
-            response: janIAResponse,
-            conversationId,
-            wantsVoice: false,
-            voiceResponse: janIAResponse
-          };
-        }
-        const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-        const predialCheck = await executePredialAssistanceFromWhatsApp2(input.message);
-        if (predialCheck.isPredialRequest && predialCheck.reportText) {
-          janIAResponse = predialCheck.reportText;
-          wantsVoice = false;
-          voiceResponse = janIAResponse;
-          await db.insert(messages).values({
-            conversationId,
-            role: "janIA",
-            content: janIAResponse
-          });
-          return {
-            response: janIAResponse,
-            conversationId,
-            wantsVoice: false,
-            voiceResponse: janIAResponse
-          };
-        }
-        const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
+        const { invokeLLM: invokeLLM2, classifyLlmReasoningComplexity: classifyLlmReasoningComplexity2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
         const { buildSystemPrompt: buildSystemPrompt2, getLiveStats: getLiveStats2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
         const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-        const { resolveNameAndGender: resolveNameAndGender2 } = await Promise.resolve().then(() => (init_nameAndGenderResolver(), nameAndGenderResolver_exports));
         const timeGreeting = getGreetingByTime4();
-        const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
-        const hour = nowBogota.getHours();
-        const isRegistered = !!ctx.user;
-        const rawName = ctx.user?.name || "";
-        const nameInfo = resolveNameAndGender2(rawName, timeGreeting);
-        const resolvedName = nameInfo.displayName;
-        const isFemale = nameInfo.isFemale;
-        const genderTerm = rawName ? nameInfo.genderTerm : "estimado/a usuario/a";
         const liveStats = await getLiveStats2();
-        const userContextInstruction = isRegistered ? `
+        let liveNewsGrounding = "";
+        if (webContext.needsLiveSearch && process.env.NODE_ENV !== "test") {
+          try {
+            const { searchWebGrounding: searchWebGrounding2 } = await Promise.resolve().then(() => (init_scraper(), scraper_exports));
+            const searchRes = await searchWebGrounding2(input.message, 4e3);
+            if (searchRes.success && searchRes.summary) {
+              liveNewsGrounding = `
 
-[INFORMACI\xD3N DEL USUARIO REGISTRADO]:
-- Estado: REGISTRADO EN LA PLATAFORMA VECY BIENES RA\xCDCES \u2705
-- Nombre: "${rawName}" (Nombre/Apodo: "${resolvedName}")
-- Saludo de hora actual en Bogot\xE1 (${hour}:00): "${timeGreeting}"
-- Trato respetuoso: "${genderTerm}"
-- INSTRUCCI\xD3N: Si es el primer mensaje de la sesi\xF3n, sal\xFAdalo con "${timeGreeting}, ${genderTerm}". Si ya est\xE1n interactuando, integra su nombre "${resolvedName}" naturalmente sin repetir saludos repetitivos.` : `
-
-[INFORMACI\xD3N DEL USUARIO NO REGISTRADO / AN\xD3NIMO]:
-- Estado: NO REGISTRADO (Navegante an\xF3nimo)
-- Saludo de hora actual en Bogot\xE1 (${hour}:00): "${timeGreeting}"
-- INSTRUCCI\xD3N DE INTERACCI\xD3N:
-  1. Si no te ha dicho su nombre en los mensajes previos, sal\xFAdalo cordialmente con "${timeGreeting}" y preg\xFAntale amablemente: "\xBFCon qui\xE9n tengo el gusto de interactuar?" para recordarlo en la conversaci\xF3n.
-  2. Inv\xEDtalo amablemente a registrarse gratuitamente en la plataforma VECY BIENES RA\xCDCES (https://vecy-bienes-raices.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
+[ACTUALIDAD / NOTICIAS / DATOS EN TIEMPO REAL DESDE LA WEB]:
+${searchRes.summary}
+Cita con solvencia period\xEDstica estos datos reales y vigentes.`;
+            }
+          } catch (_) {
+          }
+        }
         const systemPrompt = `${buildSystemPrompt2("web")}
 
-${liveStats}${userContextInstruction}
+${liveStats}${webContext.userContextInstruction}${webContext.onboardingDirectivesBlock ? `
+${webContext.onboardingDirectivesBlock}` : ""}${liveNewsGrounding}
 
 [INSTRUCCI\xD3N MAESTRA Y CR\xCDTICA DE SALIDA \u2014 CONSOLA WEB JANIA]:
-1. Eres JanIA, la agente de inteligencia artificial de VECY BIENES RA\xCDCES, concebida por el equipo de tecnolog\xEDa liderado por Eduardo Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), al servicio incondicional de colegas y clientes en todas las ramas inmobiliarias. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia. Jam\xE1s te atribuyas cargos directivos ("directora").
-2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
-3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes ra\xEDces.`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq15(messages.conversationId, conversationId)).orderBy(desc8(messages.createdAt)).limit(6);
+1. Eres JanIA, la Inteligencia Artificial pura, aut\xF3noma y senior de VECY BIENES RA\xCDCES (Eduardo A. Rivera - Director de Tecnolog\xEDa y Jani Alves - Directora de Operaciones). Jam\xE1s te atribuyas cargos directivos ("directora").
+2. Responde directamente en Markdown natural con solvencia jur\xEDdica, arquitect\xF3nica/valuatoria (urbano m\xB2, comercial m\xB2, rural en fanegadas de 6.400 m\xB2 y hect\xE1reas de 10.000 m\xB2), financiera/tributaria, period\xEDstica (noticias del sector), de marketing/community manager y pedag\xF3gica sobre el proyecto VECY (Dinosaurios Inmobiliarios vs Evoluci\xF3n VECY, 80/20 con 5 d\xEDas de gracia, 40/20/40 + 10% Bolsa Colaborativa, KYC Ultra-Light, reglas del MATCH 85-100% y gu\xEDa paso a paso de publicaci\xF3n).
+3. STICKERS 3D EXPRESIVOS: Puedes a\xF1adir al final de tu mensaje una sola etiqueta cuando corresponda emocionalmente: [STICKER:ternura], [STICKER:abacho], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:gracias_brillo], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:jajaja_fuerte], [STICKER:juajuajua], [STICKER:queee], [STICKER:oh_por_dios], [STICKER:ush], [STICKER:nooo_por_que]. El sistema la extraer\xE1 y mostrar\xE1 el sticker gr\xE1fico.
+4. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON o campos t\xE9cnicos ("shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice", "voiceResponse").`;
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -52543,18 +53273,27 @@ ${liveStats}${userContextInstruction}
           ...formattedHistory,
           { role: "user", content: input.message }
         ];
+        const complexity = classifyLlmReasoningComplexity2(input.message, {
+          enableSearch: webContext.needsLiveSearch
+        });
         try {
           const llmRes = await invokeLLM2({
-            messages: llmMessages
+            messages: llmMessages,
+            highReasoning: complexity.highReasoning,
+            allowPaidFailover: complexity.allowPaidFailover,
+            enableSearch: webContext.needsLiveSearch && process.env.NODE_ENV !== "test"
           });
           const rawContent = llmRes?.choices?.[0]?.message?.content || "";
-          janIAResponse = sanitizeWebChatResponse(rawContent);
+          const stickerResolved = resolveWebStickerFromReply2(input.message, rawContent, mockUserId);
+          janIAResponse = sanitizeWebChatResponse(stickerResolved.cleanText);
+          stickerKey = stickerResolved.stickerKey;
+          stickerUrl = stickerResolved.stickerUrl;
         } catch (llmErr) {
           console.warn("[JanIA-Chat] Fallback en LLM por congesti\xF3n:", llmErr?.message);
-          janIAResponse = `Hola, con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 100)}". Nuestros servicios de inteligencia inmobiliaria est\xE1n activos y cruzando oportunidades. \xBFDeseas que busquemos detalles espec\xEDficos en la base de datos nacional?`;
+          janIAResponse = `\xA1Hola${webContext.resolvedDisplayName ? `, ${webContext.resolvedDisplayName}` : ""}! Con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 120)}". En este instante nuestros servicios de inteligencia inmobiliaria est\xE1n activos y cruzando oportunidades. \xBFDeseas que realicemos un c\xE1lculo espec\xEDfico, estudio de mercado o revisi\xF3n de documentos?`;
         }
         if (!janIAResponse || janIAResponse.trim() === "") {
-          janIAResponse = `${timeGreeting}. \xA1Bienvenido a VECY BIENES RA\xCDCES! \xBFCon qui\xE9n tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. \xBFEn qu\xE9 consulta inmobiliaria puedo asesorarte hoy?`;
+          janIAResponse = `\xA1${timeGreeting}${webContext.resolvedDisplayName ? `, ${webContext.resolvedDisplayName}` : ""}! \xA1Bienvenido(a) a VECY BIENES RA\xCDCES! ${webContext.resolvedDisplayName ? "\xBFEn qu\xE9 consulta jur\xEDdica, de aval\xFAo, financiera, de marketing o MATCH inmobiliario puedo asesorarte hoy?" : "\xBFCon qui\xE9n tengo el gusto de conversar hoy y en qu\xE9 tema inmobiliario te puedo ayudar?"}`;
         }
       }
       await db.insert(messages).values({
@@ -52567,7 +53306,8 @@ ${liveStats}${userContextInstruction}
         conversationId,
         role: "janIA",
         content: janIAResponse,
-        messageType: "text"
+        messageType: "text",
+        ...stickerUrl || pdfUrl ? { metadata: { ...stickerUrl ? { stickerUrl, stickerKey } : {}, ...pdfUrl ? { pdfUrl, pdfFileName } : {} } } : {}
       });
       await db.update(conversations).set({
         lastMessage: janIAResponse,
@@ -52575,9 +53315,14 @@ ${liveStats}${userContextInstruction}
       }).where(eq15(conversations.id, conversationId));
       return {
         content: janIAResponse,
+        response: janIAResponse,
         wantsVoice,
         voiceResponse: voiceResponse || janIAResponse,
-        conversationId
+        conversationId,
+        stickerKey,
+        stickerUrl,
+        pdfUrl,
+        pdfFileName
       };
     } catch (error) {
       console.error("Error in JanIA chat:", error);
@@ -53752,11 +54497,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path15.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path15.join(process.cwd(), "qr-match.png");
-      let targetPath = fs15.existsSync(qrPath) ? qrPath : fs15.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path16.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path16.join(process.cwd(), "qr-match.png");
+      let targetPath = fs16.existsSync(qrPath) ? qrPath : fs16.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs15.readFileSync(targetPath);
+        const fileData = fs16.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -56160,30 +56905,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs16 from "fs";
+import fs17 from "fs";
 import { nanoid as nanoid2 } from "nanoid";
-import path17 from "path";
+import path18 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path16 from "node:path";
+import path17 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path16.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path16.resolve(import.meta.dirname, "shared"),
-      "@assets": path16.resolve(import.meta.dirname, "attached_assets")
+      "@": path17.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path17.resolve(import.meta.dirname, "shared"),
+      "@assets": path17.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path16.resolve(import.meta.dirname),
-  root: path16.resolve(import.meta.dirname, "client"),
-  publicDir: path16.resolve(import.meta.dirname, "client", "public"),
+  envDir: path17.resolve(import.meta.dirname),
+  root: path17.resolve(import.meta.dirname, "client"),
+  publicDir: path17.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path16.resolve(import.meta.dirname, "dist"),
+    outDir: path17.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -56250,13 +56995,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path17.resolve(
+      const clientTemplate = path18.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs16.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs17.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid2()}"`
@@ -56270,15 +57015,15 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path17.resolve(import.meta.dirname, "..", "dist");
-  if (!fs16.existsSync(distPath)) {
+  const distPath = path18.resolve(import.meta.dirname, "..", "dist");
+  if (!fs17.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path17.resolve(distPath, "index.html"));
+    res.sendFile(path18.resolve(distPath, "index.html"));
   });
 }
 
@@ -56290,8 +57035,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs17 from "fs";
-import path18 from "path";
+import fs18 from "fs";
+import path19 from "path";
 init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -56470,10 +57215,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path18.join(process.cwd(), "qr-match.png");
-      const distQrPath = path18.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs17.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs17.existsSync(activePath)) {
+      const qrPath = path19.join(process.cwd(), "qr-match.png");
+      const distQrPath = path19.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs18.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs18.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -56493,10 +57238,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path18.join(process.cwd(), "qr-match.png");
-      const distQrPath = path18.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs17.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs17.existsSync(activePath)) {
+      const qrPath = path19.join(process.cwd(), "qr-match.png");
+      const distQrPath = path19.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs18.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs18.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -56517,10 +57262,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path18.join(process.cwd(), "qr-match.png");
-      const distQrPath = path18.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs17.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs17.existsSync(activePath)) {
+      const qrPath = path19.join(process.cwd(), "qr-match.png");
+      const distQrPath = path19.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs18.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs18.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -56547,10 +57292,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path18.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path18.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs17.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs17.existsSync(activePath)) {
+      const qrPath = path19.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path19.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs18.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs18.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -56601,8 +57346,8 @@ async function startServer() {
           let docBuffer;
           if (Buffer.isBuffer(document2)) {
             docBuffer = document2;
-          } else if (typeof document2 === "string" && fs17.existsSync(document2)) {
-            docBuffer = fs17.readFileSync(document2);
+          } else if (typeof document2 === "string" && fs18.existsSync(document2)) {
+            docBuffer = fs18.readFileSync(document2);
           } else if (typeof document2 === "string") {
             const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
             docBuffer = Buffer.from(cleanBase64, "base64");
@@ -56805,23 +57550,23 @@ _(Si es empresa, usa NIT en vez de CC)_
   });
   function resolveBroadcastImagePath(filenames) {
     const searchDirs = [
-      path18.join(process.cwd(), "client/public/assets/jania"),
-      path18.join(process.cwd(), "client/public/images"),
-      path18.join(process.cwd(), "client/public"),
+      path19.join(process.cwd(), "client/public/assets/jania"),
+      path19.join(process.cwd(), "client/public/images"),
+      path19.join(process.cwd(), "client/public"),
       process.cwd(),
-      path18.join(process.cwd(), "dist/assets/jania"),
-      path18.join(process.cwd(), "dist/images"),
-      path18.join(process.cwd(), "dist")
+      path19.join(process.cwd(), "dist/assets/jania"),
+      path19.join(process.cwd(), "dist/images"),
+      path19.join(process.cwd(), "dist")
     ];
     for (const name of filenames) {
       for (const dir of searchDirs) {
-        const fullPath = path18.join(dir, name);
-        if (fs17.existsSync(fullPath)) {
+        const fullPath = path19.join(dir, name);
+        if (fs18.existsSync(fullPath)) {
           return { path: fullPath, exists: true };
         }
       }
     }
-    return { path: path18.join(process.cwd(), filenames[0]), exists: false };
+    return { path: path19.join(process.cwd(), filenames[0]), exists: false };
   }
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -56990,9 +57735,9 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path18.resolve(process.cwd(), "public/uploads");
-  if (!fs17.existsSync(uploadsDir2)) {
-    fs17.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path19.resolve(process.cwd(), "public/uploads");
+  if (!fs18.existsSync(uploadsDir2)) {
+    fs18.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -57001,7 +57746,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path18.extname(file.originalname));
+      cb(null, uniqueSuffix + path19.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

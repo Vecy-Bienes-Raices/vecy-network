@@ -1,5 +1,15 @@
 import { JanIAResult } from "../types";
-import { resolveRealName, checkAlreadyGreeted, getCirculoHistory, appendCirculoHistory, markUserGreetedToday } from "../sessionManager";
+import {
+  resolveRealName,
+  checkAlreadyGreeted,
+  getCirculoHistory,
+  appendCirculoHistory,
+  markUserGreetedToday,
+  persistIntroducedNameInSession,
+  detectUserBusinessRoleFromText,
+  setUserBusinessRole,
+  isEduardoOrJani,
+} from "../sessionManager";
 import {
   extractFirstName,
   parseSafeJSON,
@@ -11,8 +21,15 @@ import { checkStrictOffTopic } from "../heuristics";
 import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
-import { stripLeadingGreetingsAndCourtesies } from "./dmHandler";
-import { appendGroupSatisfactionClosing } from "./consultingHandler";
+import { stripLeadingGreetingsAndCourtesies, extractAcmAttributesFromText } from "./dmHandler";
+import {
+  appendGroupSatisfactionClosing,
+  isExplicitGroupAcmRequest,
+  isExplicitGroupMarketingAuditRequest,
+} from "./consultingHandler";
+import { executeMarketValuationSurvey } from "../../valuation";
+import { auditPropertyListing, buildRealEstateIcp } from "../../realEstateMarketing";
+import { extractStickerTagFromReply, getJaniaStickerByKey } from "../stickerService";
 import { executeIduAssistanceFromWhatsApp, isIduInquiry, hasPendingIduSession } from "../../iduValorizacionService";
 import {
   executeIdentityVerificationFromWhatsApp,
@@ -44,8 +61,16 @@ export async function processCirculoMessage(
   try {
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName);
-    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor"].includes(firstName.toLowerCase()) ? firstName : "";
+    if (!isEduardoOrJani(userId)) {
+      const detectedCirculoRole = detectUserBusinessRoleFromText(text);
+      if (detectedCirculoRole) {
+        await setUserBusinessRole(userId, detectedCirculoRole, { sourceText: text }).catch(() => {});
+      }
+    }
+    const persistedCirculoName = await persistIntroducedNameInSession(userId, text, realName);
+    const effectiveCirculoName = persistedCirculoName.effectiveRawName || realName;
+    const firstName = extractFirstName(effectiveCirculoName);
+    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(firstName.toLowerCase()) ? firstName : "";
     const userGreetingName = cleanFirstName ? ` ${cleanFirstName}` : "";
 
     // Intercepción estricta de mensajes OFF-TOPIC prohibidos (Política, Religión, Cursos, Links ajenos, Memes, Spam)
@@ -314,6 +339,86 @@ export async function processCirculoMessage(
       }
     }
 
+    // 📊 INTERCEPTOR DIRECTO 5: SONDEO TÉCNICO DE MERCADO (ACM / FITTO Y CORVINI / RURAL / COMERCIAL)
+    if (isExplicitGroupAcmRequest(text)) {
+      const extractedAcm = extractAcmAttributesFromText(text);
+      if (extractedAcm.zonaOBarrio || extractedAcm.ciudad || extractedAcm.areaM2 || extractedAcm.fanegadas || extractedAcm.hectareas) {
+        const acmResult = executeMarketValuationSurvey({
+          zonaOBarrio: extractedAcm.zonaOBarrio || extractedAcm.ciudad || "Chicó",
+          ciudad: extractedAcm.ciudad,
+          direccionExacta: extractedAcm.direccionExacta,
+          tipoInmueble: extractedAcm.tipoInmueble || "apartamento",
+          areaM2: extractedAcm.areaM2 ?? 75,
+          fanegadas: extractedAcm.fanegadas,
+          hectareas: extractedAcm.hectareas,
+          estrato: extractedAcm.estrato ?? 5,
+          antiguedadAnos: extractedAcm.antiguedadAnos,
+          anoConstruccion: extractedAcm.anoConstruccion,
+          esRemodelado: extractedAcm.esRemodelado,
+          tipoAcabados: extractedAcm.esRemodelado ? "Remodelado" : undefined,
+          habitaciones: extractedAcm.habitaciones,
+          banos: extractedAcm.banos,
+          garajes: extractedAcm.garajes ?? 1,
+          administracionCop: extractedAcm.administracionCop,
+          tieneTerraza: extractedAcm.tieneTerraza,
+          cocinaConIsla: extractedAcm.cocinaConIsla,
+          niveles: extractedAcm.niveles,
+          userId
+        });
+        if (acmResult?.reporteAcmEstructurado) {
+          const finalAcmResp = appendGroupSatisfactionClosing(acmResult.reporteAcmEstructurado);
+          appendCirculoHistory(userId, "user", text);
+          appendCirculoHistory(userId, "assistant", finalAcmResp);
+          markUserGreetedToday(userId);
+          return {
+            classification: "CONSULTA_GENERAL",
+            response: finalAcmResp,
+            reactionEmoji: "📊",
+            wantsVoice: false,
+            voiceResponse: "",
+          };
+        }
+      }
+    }
+
+    // 🎯 INTERCEPTOR DIRECTO 6: AUDITORÍA DE MARKETING INMOBILIARIO (SWAP TEST + SCORE /100 + AIDA + ICP)
+    if (isExplicitGroupMarketingAuditRequest(text)) {
+      const cleanedPrompt = text.replace(/@\d{7,18}\b/g, " ").replace(/@jania\b/gi, " ").trim();
+      const colonIdx = cleanedPrompt.indexOf(":");
+      const listingCopy =
+        colonIdx !== -1 && cleanedPrompt.slice(colonIdx + 1).trim().length >= 15
+          ? cleanedPrompt.slice(colonIdx + 1).trim()
+          : cleanedPrompt;
+      const extractedMeta = extractAcmAttributesFromText(listingCopy);
+      const audit = auditPropertyListing(listingCopy);
+      const icp = buildRealEstateIcp(
+        extractedMeta.tipoInmueble || "apartamento",
+        /\barriendo\b/i.test(listingCopy) ? "arriendo" : "venta",
+        extractedMeta.zonaOBarrio || "Bogotá",
+        0,
+        listingCopy
+      );
+      const mktReport =
+        `🎯 *AUDITORÍA DE MARKETING INMOBILIARIO DE ALTO RENDIMIENTO (VECY MATCH)* 🇨🇴\n\n` +
+        `• *Puntuación Global:* *${audit.score}/100* ${audit.score >= 80 ? "🌟 (Alta conversión)" : audit.score >= 60 ? "⚠️ (Mejorable)" : "🚨 (Baja diferenciación)"}\n` +
+        `• *Swap Test / Clichés:* ${audit.oportunidadesMejora.slice(0, 3).join("; ") || "Excelente originalidad y diferenciación sin clichés"}\n` +
+        `• *Fortalezas Clave:* ${audit.fortalezas.slice(0, 3).join("; ") || "Datos técnicos claros"}\n` +
+        `• *Perfil de Comprador Ideal (ICP):* ${icp.arquetipo} (${icp.nivelIngresosEstrato})\n\n` +
+        `📝 *FICHA TÉCNICA SUGERIDA OPTIMIZADA (MÉTODO AIDA):*\n${audit.fichaOptimizadaSugerida}\n\n` +
+        `💡 *Consejo de JanIA:* Publica con barrio exacto, metraje real, alcobas y presupuesto definido para activar nuestro Algoritmo de MATCH (85%-100%).`;
+      const finalMktResp = appendGroupSatisfactionClosing(mktReport);
+      appendCirculoHistory(userId, "user", text);
+      appendCirculoHistory(userId, "assistant", finalMktResp);
+      markUserGreetedToday(userId);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: finalMktResp,
+        reactionEmoji: "🎯",
+        wantsVoice: false,
+        voiceResponse: "",
+      };
+    }
+
     const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
     const systemPrompt =
       `${JANIA_ARGON_COGNITIVE_CORE}\n\n` +
@@ -344,8 +449,8 @@ export async function processCirculoMessage(
     const hour = nowBogota.getHours();
     const colDateTime = getColombiaDateTimeContext();
 
-    // Detección magistral de nombre de pila y género (sin apellidos)
-    const nameInfo = resolveNameAndGender(realName || cleanFirstName || "colega", timeGreeting);
+    // Detección magistral de nombre de pila y género (sin apellidos, recordando nombre presentado en chat)
+    const nameInfo = resolveNameAndGender(effectiveCirculoName || cleanFirstName || "colega", timeGreeting);
     const targetName = nameInfo.displayName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(nameInfo.displayName.toLowerCase()) ? nameInfo.displayName : "";
     const isFemale = nameInfo.isFemale;
     const genderTerm = targetName ? (isFemale ? `estimada ${targetName}` : `estimado ${targetName}`) : "colega";
@@ -380,7 +485,8 @@ export async function processCirculoMessage(
       4. Sondeos inteligentes de valor por m² y canon con normativa POT Bogotá Decreto 555 de 2021.
     - Proponle con calidez y entusiasmo profundizar en la que más le sirva para sus cierres.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro: Modelo Institucional Oficial 40/20/40 en contacto directo por Match (80%-100%) entre colegas (40% captador oferta, 40% colocador demanda, 20% VECY por enlace y auditoría), y 40/10+10/40 en el portal web (10% VECY + 10% Bolsa Colaborativa de viralización en redes), matching en tiempo real y tecnología Cero Papel.
-  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.`;
+  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.
+  * Stickers 3D Expresivos de JanIA: Cuando haya humor, entusiasmo, gratitud o indignación simpática contra "dinosaurios inmobiliarios", puedes cerrar "response" con [STICKER:ternura], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:ush], [STICKER:queee] o [STICKER:oh_por_dios]. El sistema lo limpia y envía como sticker real.`;
 
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt }
@@ -440,6 +546,9 @@ export async function processCirculoMessage(
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       let cleanResponse = sanitizeResponseMarkdown(parsed.response || "");
+      const stickerMatch = extractStickerTagFromReply(cleanResponse);
+      cleanResponse = stickerMatch.cleanText;
+      const loadedSticker = stickerMatch.stickerKey ? getJaniaStickerByKey(stickerMatch.stickerKey) : null;
       if (isOngoingChat && cleanResponse) {
         cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
       }
@@ -449,11 +558,15 @@ export async function processCirculoMessage(
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: cleanResponse,
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡")
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡"),
+        ...(loadedSticker ? { stickerKey: loadedSticker.key, stickerBuffer: loadedSticker.buffer } : {})
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
       let cleanResponse = sanitizeResponseMarkdown(replyContent);
+      const stickerMatch = extractStickerTagFromReply(cleanResponse);
+      cleanResponse = stickerMatch.cleanText;
+      const loadedSticker = stickerMatch.stickerKey ? getJaniaStickerByKey(stickerMatch.stickerKey) : null;
       if (isOngoingChat && cleanResponse) {
         cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
       }
@@ -463,7 +576,8 @@ export async function processCirculoMessage(
       return {
         classification: "CONSULTA_GENERAL",
         response: cleanResponse,
-        reactionEmoji: "💡"
+        reactionEmoji: "💡",
+        ...(loadedSticker ? { stickerKey: loadedSticker.key, stickerBuffer: loadedSticker.buffer } : {})
       };
     }
 
@@ -472,8 +586,16 @@ export async function processCirculoMessage(
     const timeGreeting = getGreetingByTime();
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName);
-    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor"].includes(firstName.toLowerCase()) ? firstName : "";
+    if (!isEduardoOrJani(userId)) {
+      const detectedCirculoRole = detectUserBusinessRoleFromText(text);
+      if (detectedCirculoRole) {
+        await setUserBusinessRole(userId, detectedCirculoRole, { sourceText: text }).catch(() => {});
+      }
+    }
+    const persistedCirculoName = await persistIntroducedNameInSession(userId, text, realName);
+    const effectiveCirculoName = persistedCirculoName.effectiveRawName || realName;
+    const firstName = extractFirstName(effectiveCirculoName);
+    const cleanFirstName = firstName && !["hola", "buenas", "buenos", "asesor", "colega"].includes(firstName.toLowerCase()) ? firstName : "";
     const userGreetingName = cleanFirstName ? ` ${cleanFirstName}` : "";
 
     const fallbackResponse = quotedContext

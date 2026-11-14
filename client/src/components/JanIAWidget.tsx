@@ -15,6 +15,9 @@ interface Message {
   content: string;
   messageType: 'text' | 'image' | 'audio' | 'file' | 'video';
   attachments?: string[];
+  stickerUrl?: string;
+  pdfUrl?: string;
+  pdfFileName?: string;
   timestamp: Date;
 }
 
@@ -88,8 +91,11 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
       const janIAMessage: Message = {
         id: `msg-${Date.now()}`,
         role: 'janIA',
-        content: response.content,
+        content: response.content || (response as any).response || '',
         messageType: 'text',
+        stickerUrl: (response as any).stickerUrl,
+        pdfUrl: (response as any).pdfUrl,
+        pdfFileName: (response as any).pdfFileName,
         timestamp: new Date(),
       };
 
@@ -374,6 +380,26 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
                     }`}
                   >
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessageContent(message.content)}</p>
+                    {message.role === 'janIA' && message.pdfUrl && (
+                      <a
+                        href={message.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-black text-xs font-bold hover:brightness-110 transition-all"
+                      >
+                        📄 Descargar {message.pdfFileName || 'Documento PDF'}
+                      </a>
+                    )}
+                    {message.role === 'janIA' && message.stickerUrl && (
+                      <div className="mt-2">
+                        <img
+                          src={message.stickerUrl}
+                          alt="Sticker JanIA"
+                          className="w-20 h-20 object-contain drop-shadow-lg"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
                     {message.attachments && message.attachments.length > 0 && (
                       <div className="mt-2 space-y-2">
                         {message.attachments.map((attachment: string, idx: number) => (

@@ -48,6 +48,9 @@ interface Message {
   content: string;
   messageType: 'text' | 'image' | 'audio' | 'file' | 'video';
   attachments?: string[];
+  stickerUrl?: string;
+  pdfUrl?: string;
+  pdfFileName?: string;
   timestamp: Date;
 }
 
@@ -397,6 +400,9 @@ export default function JanIAConsole() {
         role: m.role as 'user' | 'janIA',
         content: m.content,
         messageType: m.messageType as any,
+        stickerUrl: m.metadata?.stickerUrl,
+        pdfUrl: m.metadata?.pdfUrl,
+        pdfFileName: m.metadata?.pdfFileName,
         timestamp: new Date(m.createdAt),
       }));
       setMessages(mapped);
@@ -450,6 +456,9 @@ export default function JanIAConsole() {
         role: 'janIA',
         content: textContent,
         messageType: 'text',
+        stickerUrl: (response as any)?.stickerUrl,
+        pdfUrl: (response as any)?.pdfUrl,
+        pdfFileName: (response as any)?.pdfFileName,
         timestamp: new Date(),
       };
 
@@ -1070,7 +1079,7 @@ export default function JanIAConsole() {
                           </div>
 
                           {/* 📄 TARJETA DE DOCUMENTO OFICIAL DESCARGABLE (Factura Predial / Certificados / PDF) */}
-                          {message.role === 'janIA' && /(?:factura\s*predial|certificado\s*de\s*pago|descargar\s*pdf|\.pdf\b|chip\s*aaa)/i.test(message.content) && (
+                          {message.role === 'janIA' && (message.pdfUrl || /(?:factura\s*predial|certificado\s*de\s*pago|descargar\s*pdf|\.pdf\b|chip\s*aaa)/i.test(message.content)) && (
                             <div className="mt-4 p-3.5 rounded-2xl bg-zinc-950/80 border border-primary/30 flex items-center justify-between gap-3 shadow-lg hover:border-primary/60 transition-all">
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center shrink-0">
@@ -1078,15 +1087,19 @@ export default function JanIAConsole() {
                                 </div>
                                 <div className="flex flex-col min-w-0">
                                   <span className="text-xs font-bold text-white truncate">
-                                    Documento Oficial Tributario / Predial
+                                    {message.pdfFileName || 'Documento Oficial VECY / Predial'}
                                   </span>
                                   <span className="text-[10px] text-zinc-400 truncate">
-                                    PDF Oficial Bogotá — Descarga directa generada por JanIA
+                                    PDF Oficial — Descarga directa generada por JanIA
                                   </span>
                                 </div>
                               </div>
                               <button
                                 onClick={() => {
+                                  if (message.pdfUrl) {
+                                    window.open(message.pdfUrl, '_blank');
+                                    return;
+                                  }
                                   const urlMatch = message.content.match(/https?:\/\/[^\s)]+/);
                                   if (urlMatch) {
                                     window.open(urlMatch[0], '_blank');
@@ -1099,6 +1112,17 @@ export default function JanIAConsole() {
                                 <Download className="w-3.5 h-3.5" />
                                 <span>Descargar PDF</span>
                               </button>
+                            </div>
+                          )}
+
+                          {message.role === 'janIA' && message.stickerUrl && (
+                            <div className="mt-3">
+                              <img
+                                src={message.stickerUrl}
+                                alt="Sticker JanIA"
+                                className="w-24 h-24 object-contain drop-shadow-xl"
+                                loading="lazy"
+                              />
                             </div>
                           )}
                         </div>

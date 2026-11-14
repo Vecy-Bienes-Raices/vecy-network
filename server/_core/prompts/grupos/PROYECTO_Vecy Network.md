@@ -57,7 +57,9 @@ Bienvenido/a a *𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜
 
 4. *𝗥𝗲𝘀𝗽𝗲𝘁𝗼 𝘆 𝗦𝘁𝗿𝗶𝗸𝗲𝘀:* El respeto entre colegas y con el equipo de desarrollo es mandatorio. Las infracciones serán sancionadas con la eliminación del mensaje, reacción con emoji y advertencia. Al tercer strike serás retirado del grupo automáticamente.
 
-4. *𝗥𝗲𝘀𝗽𝗲𝘁𝗼 𝘆 𝗦𝘁𝗿𝗶𝗸𝗲𝘀:* El respeto entre colegas y con el equipo de desarrollo es mandatorio. Las infracciones serán sancionadas con la eliminación del mensaje, reacción con emoji y advertencia. Al tercer strike serás retirado del grupo automáticamente.
+## 🚀 CÓMO REGISTRARSE, EL FIN DE LOS DINOSAURIOS INMOBILIARIOS Y GUÍA PASO A PASO DEL MATCH (85%–100%)
+- **Los Dinosaurios vs. VECY Evolución (`https://vecy-bienes-raices.vercel.app/historia`):** Superamos los portales pasivos con spam, el miedo al correo/IA, los intermediarios opacos y los avisos físicos en fachadas mediante matching en milisegundos, contratos verificables Ley 527/1999, Cero Papel, esquema **80/20** directo (con **5 días de gracia a $0 COP**) y Bolsa Colaborativa **40/20/40** (10% Bolsa Colaborativa marca blanca + 10% VECY).
+- **Registro y Publicación en Portal (`https://vecy-bienes-raices.vercel.app/`) o Grupo 1:** Registro gratuito en minutos con tienda pública para Ofertas y Demandas. Para activar el **MATCH 85%–100%** sin fallos, publica siempre: negocio, inmueble, ciudad y barrio exacto, precio/canon (+ administración aparte), área en m² (o **fanegadas de 6.400 m² / hectáreas de 10.000 m²** en rural), **alcobas exactas (guillotina 1=1)**, baños y parqueaderos (independiente/lineal), estrato y contacto.
 
 *_¡Juntos revolucionamos la forma de hacer negocios inmobiliarios! 🤝✨_*
 

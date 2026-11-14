@@ -330,6 +330,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.21 — Noviembre 2026
+- **Paridad Total DM / Grupos / Web, Memoria Nominal Compuesta, Valuación Rural/Comercial, Pacto de Retroventa y Pedagogía VECY:**
+  - `server/_core/nameAndGenderResolver.ts` y `server/_core/jania/sessionManager.ts`: `extractIntroducedName` ampliado + `persistIntroducedNameInSession` (`introducedNow > persistedIntroduced > fallbackProfileName > persistedName`), conectado en DM, `consultingHandler.ts`, `circuloHandler.ts` y `webChatService.ts` (`buildWebChatLlmContext`).
+  - `server/_core/valuation.ts`, `legalContractService.ts` y `financialAndTaxRealEstateService.ts`: tasación comercial y rural nacional (`fanegadas` `6.400 m²`, `hectareas` `10.000 m²`), auditoría **Pacto de Retroventa (Arts. 1939–1943 C.C.)** (máx. 4 años, Escritura Pública + SNR, lesión enorme) y pros/contras equilibrados de Crédito Hipotecario vs. Leasing Habitacional.
+  - `server/_core/jania/handlers/webChatService.ts`, `circuloHandler.ts`, `server/routers/janIA.ts`, `client/src/components/JanIAWidget.tsx` y `client/src/pages/JanIAConsole.tsx`: paridad Web completa con todas las Skills determinísticas a `$0 COP`, PDFs descargables (`pdfUrl`), stickers `.webp` (`stickerUrl`), memoria de 20 turnos, búsqueda de noticias en vivo y paridad de interceptores + stickers en Grupo 3.
+  - Prompts (`base.md`, `prompts.ts`, `web_console.md`, `conocimiento_vecy.md`, `PROYECTO_Vecy Network.md`) + Gobernanza: manifiesto **"LOS DINOSAURIOS INMOBILIARIOS"** vs. **"VECY LA EVOLUCIÓN INEVITABLE"**, `80/20`, `40/20/40`, `MATCH` `85%–100%`, semilla `seed-maestria-multidisciplinaria-paridad-web-rural-retroventa-v34-21` y **Suite 207** en `regression.test.ts` (`NODE_ENV=test npm test`: **6/6 archivos, 730/730 tests en verde**, `npm run check`: 0 errores) y bump `v34.21` (`34.21.0`).
+
 ### 🔖 v34.20 — Noviembre 2026
 - **Doctrina Comisión Propietarios Directos (3% Venta / 1 Canon Neto Sin Administración):**
   - `server/_core/jania/handlers/dmOnboardingAndDocsHelper.ts` y `dmHandler.ts`: nuevos helpers `parseColombianCopAmount` y `analyzeOwnerRentalCommissionFromText` con seguimiento multi-turno (`pendingAdminDeductionTotal`, `canonNetoSinAdmin`, `adminFeeCop` en `userPerpetualSession.keyFacts`) para preguntar el valor mensual de la administración cuando venga incluida sin monto y descontarla automáticamente al liquidar la comisión de 1 canon en arriendo; corrección de falso positivo en `isAiAgentInquiryForBusiness`.

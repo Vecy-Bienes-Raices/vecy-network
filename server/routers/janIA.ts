@@ -139,7 +139,33 @@ export function sanitizeWebChatResponse(raw: string): string {
     text = text.slice(1, -1);
   }
 
+  // 6. Limpiar etiquetas de sticker residuales para que nunca aparezcan en texto plano
+  text = text
+    .replace(/\[STICKER:[a-zA-Z0-9_]+\]/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n");
+
   return text.trim();
+}
+
+/**
+ * Plantilla estandarizada de canalización web hacia el Grupo 1 Oficial de WhatsApp y portal VECY.
+ */
+export function buildWebGroup1ListingRedirectGuide(params: {
+  userName?: string;
+  isRequirement: boolean;
+}): string {
+  const { userName, isRequirement } = params;
+  return (
+    `¡Hola${userName ? `, ${userName}` : ""}! 🏡 Con gusto recibo tu ${isRequirement ? "requerimiento de búsqueda" : "inmueble en oferta"} y te guío para que nuestro motor de MATCH (85%–100%) lo cruce al instante.\n\n` +
+    `Para que quede indexado automáticamente en tiempo real en toda la red VECY BIENES RAÍCES, puedes publicarlo directamente desde tu cuenta gratuita en nuestro portal (https://vecy-bienes-raices.vercel.app/) o enviarlo en nuestro:\n\n` +
+    `👉 *Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴*\n` +
+    `🔗 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n` +
+    `📌 *Usa esta plantilla estandarizada para que tu publicación sea captada al 100% por JanIA (1=1 en alcobas, área ≥ mínima, baños/garajes ≥):*\n` +
+    (isRequirement
+      ? `📝 *REQUERIMIENTO INMOBILIARIO VECY*\n• Negocio: [Compra o Arriendo]\n• Inmueble: [Apartamento / Casa / Local / Finca]\n• Ciudad y Barrio(s): [Ej. Bogotá: Cedritos, Colina]\n• Presupuesto Máximo: [En COP]\n• Área Mínima: [En m² o fanegadas/hectáreas]\n• Alcobas exactas, Baños y Parqueaderos mínimos: [Ej. 3 alcobas, 2 baños, 1 garaje independiente]\n• Detalles clave: [Balcón, ascensor, estrato, vista]\n• Contacto y Rol: [Nombre, teléfono y si aceptas 40/20/40 o eres cliente directo]`
+      : `🏠 *OFERTA INMOBILIARIA VECY*\n• Negocio: [Venta, Arriendo o Permuta]\n• Inmueble: [Apartamento / Casa / Local / Finca]\n• Ciudad y Barrio exacto: [Ej. Bogotá: Santa Bárbara]\n• Precio Venta / Canon Arriendo + Valor Administración: [En COP]\n• Área Total y Privada: [En m², o fanegadas/hectáreas si es rural]\n• Alcobas, Baños, Parqueaderos (independiente/lineal) y Depósito:\n• Estrato, Antigüedad y Piso:\n• Contacto y Rol: [Nombre, teléfono y si eres agente 40/20/40 o propietario directo]`)
+  );
 }
 
 export const janIARouter = router({
@@ -206,20 +232,43 @@ export const janIARouter = router({
         }
 
         const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
-        const mockUserName = ctx.user ? (ctx.user.name ?? undefined) : "Usuario Web";
+        const mockUserName = ctx.user ? (ctx.user.name ?? undefined) : undefined;
         const isAdmin = !!ctx.user && (ctx.user.role === 'admin' || (ctx.user as any).isAdmin === true);
 
-        // 🎯 INTERCEPTOR WEB: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.93)
+        const {
+          evaluateWebDeterministicSkills,
+          buildWebChatLlmContext,
+          resolveWebStickerFromReply,
+        } = await import("../_core/jania/handlers/webChatService");
+
+        // Fetch recent 20 messages for full conversational thread continuity
+        const recentHistory = await db
+          .select({ role: messages.role, content: messages.content })
+          .from(messages)
+          .where(eq(messages.conversationId, conversationId))
+          .orderBy(desc(messages.createdAt))
+          .limit(20);
+
+        let janIAResponse = "";
+        let wantsVoice = false;
+        let voiceResponse = "";
+        let stickerKey: string | undefined;
+        let stickerUrl: string | undefined;
+        let pdfUrl: string | undefined;
+        let pdfFileName: string | undefined;
+
+        // 🎯 INTERCEPTOR WEB 0: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.93)
         const { isMatchSearchQuery, executeAdminMatchSearch } = await import("../_core/adminMatchAssistantService");
         if (isMatchSearchQuery(input.message, isAdmin)) {
           const matchResult = await executeAdminMatchSearch(input.message, isAdmin);
           if (matchResult.formattedReport) {
-            await db.insert(messages).values({
-              conversationId,
-              role: "janIA",
-              content: matchResult.formattedReport
-            });
+            await db.insert(messages).values([
+              { conversationId, role: "user", content: input.message, messageType: "text" },
+              { conversationId, role: "janIA", content: matchResult.formattedReport, messageType: "text" },
+            ]);
+            await db.update(conversations).set({ lastMessage: matchResult.formattedReport, updatedAt: new Date() }).where(eq(conversations.id, conversationId));
             return {
+              content: matchResult.formattedReport,
               response: matchResult.formattedReport,
               conversationId,
               wantsVoice: false,
@@ -231,122 +280,54 @@ export const janIARouter = router({
           }
         }
 
-        // Detect if the message is a raw property offer/demand listing vs a consultation question
-        const lowerMsg = input.message.toLowerCase();
-        const isListingData = (lowerMsg.includes("vendo") || lowerMsg.includes("busco") || lowerMsg.includes("ofrezco") || lowerMsg.includes("necesito")) &&
-          (lowerMsg.includes("apto") || lowerMsg.includes("apartamento") || lowerMsg.includes("casa") || lowerMsg.includes("lote") || lowerMsg.includes("local") || lowerMsg.includes("bodega") || lowerMsg.includes("oficina") || lowerMsg.includes("finca"));
+        // Contexto persistente de nombre, género, rol y directivas de onboarding
+        const webContext = await buildWebChatLlmContext({
+          message: input.message,
+          userId: mockUserId,
+          registeredName: mockUserName || null,
+          hasPreviousMessages: recentHistory.length > 0,
+        });
 
-        let janIAResponse = "";
-        let wantsVoice = false;
-        let voiceResponse = "";
+        // 🛡️ Skills Determinísticas Completas (CTL, POT, FinTax, Minutas, PH, IDU, Predial, Identidad/RUES, Notarial, ACM, Marketing)
+        const skillRes = await evaluateWebDeterministicSkills({
+          message: input.message,
+          userId: mockUserId,
+          userName: webContext.resolvedDisplayName || mockUserName,
+          hasActiveHistory: recentHistory.length > 0,
+          formatRawListingGuide: buildWebGroup1ListingRedirectGuide,
+        });
 
-        if (isListingData) {
-          const isRequirement = lowerMsg.includes("busco") || lowerMsg.includes("necesito") || lowerMsg.includes("requiero");
-          janIAResponse =
-            `¡Hola! 🏡 Con gusto te oriento con esta ${isRequirement ? "búsqueda o requerimiento" : "propiedad"}.\n\n` +
-            `Por políticas de seguridad, transparencia y cruce algorítmico inmediato de toda nuestra comunidad, este chat web es para sondeos, liquidaciones y asesoría. Para que tu ${isRequirement ? "demanda" : "inmueble"} se active en la red y cruce automáticamente con ofertas y clientes calificados, publícalo directamente en nuestro:\n\n` +
-            `👉 *Grupo 1 Oficial: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴*\n` +
-            `🔗 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n` +
-            `📌 *Usa esta plantilla estandarizada para que tu publicación sea captada al 100% por JanIA:*\n` +
-            (isRequirement
-              ? `📝 *REQUERIMIENTO INMOBILIARIO VECY*\n` +
-                `• Tipo de Negocio: [Compra o Arriendo]\n` +
-                `• Tipo de Inmueble: [Apartamento / Casa / etc.]\n` +
-                `• Ciudad y Barrios de interés: [Ej. Bogotá: Cedritos, Colina]\n` +
-                `• Presupuesto Máximo: [Presupuesto total en COP]\n` +
-                `• Área Mínima: [Metros cuadrados mínimos requeridos]\n` +
-                `• Habitaciones y Parqueaderos indispensables: [Ej. 3 alcobas, 1 garaje]\n` +
-                `• Observaciones clave: [Ej. Balcón, piso alto, con ascensor]\n` +
-                `• Contacto: [Tu nombre y número de teléfono]`
-              : `🏷️ *OFERTA INMOBILIARIA VECY*\n` +
-                `• Tipo de Negocio: [Venta o Arriendo]\n` +
-                `• Tipo de Inmueble: [Apartamento / Casa / Oficina / Lote / Bodega]\n` +
-                `• Ciudad y Barrio: [Ej. Bogotá, Alameda 170]\n` +
-                `• Área Total: [Metros cuadrados construidos]\n` +
-                `• Precio de Venta o Canon: [Valor en COP]\n` +
-                `• Habitaciones y Baños: [Ej. 3 habitaciones, 2 baños]\n` +
-                `• Parqueaderos y Depósito: [Ej. 1 garaje independiente, 1 depósito]\n` +
-                `• Estrato y Valor de Administración: [Ej. Estrato 4, Admón $320.000]\n` +
-                `• Año de Construcción / Acabados: [Ej. 2015, pisos en madera laminada]\n` +
-                `• Contacto: [Tu nombre y número de teléfono]`);
-          wantsVoice = false;
-          voiceResponse = janIAResponse;
+        if (skillRes.handled && skillRes.replyText) {
+          janIAResponse = skillRes.replyText;
+          stickerKey = skillRes.stickerKey;
+          stickerUrl = skillRes.stickerUrl;
+          pdfUrl = skillRes.pdfUrl;
+          pdfFileName = skillRes.pdfFileName;
         } else {
-          // 🛡️ Interceptor Web 1: Verificación Oficial de Cédula (Policía Nacional vía 2Captcha)
-          const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
-          const idCheck = await executeIdentityVerificationFromWhatsApp(input.message);
-          if (idCheck.isVerificationRequest && idCheck.reportText) {
-            janIAResponse = idCheck.reportText;
-            wantsVoice = false;
-            voiceResponse = janIAResponse;
-            await db.insert(messages).values({
-              conversationId,
-              role: "janIA",
-              content: janIAResponse
-            });
-            return {
-              response: janIAResponse,
-              conversationId,
-              wantsVoice: false,
-              voiceResponse: janIAResponse
-            };
-          }
-
-          // 🏛️ Interceptor Web 2: Asistencia y Gestión de Predial Bogotá (CHIP + Cédula)
-          const { executePredialAssistanceFromWhatsApp } = await import("../_core/predialService");
-          const predialCheck = await executePredialAssistanceFromWhatsApp(input.message);
-          if (predialCheck.isPredialRequest && predialCheck.reportText) {
-            janIAResponse = predialCheck.reportText;
-            wantsVoice = false;
-            voiceResponse = janIAResponse;
-            await db.insert(messages).values({
-              conversationId,
-              role: "janIA",
-              content: janIAResponse
-            });
-            return {
-              response: janIAResponse,
-              conversationId,
-              wantsVoice: false,
-              voiceResponse: janIAResponse
-            };
-          }
-
-          // Direct ultra-fast LLM reasoning for web consultation questions & natural chat with JanIA
-          const { invokeLLM } = await import("../_core/llm");
+          // Razonamiento IA Pura con memoria de 20 turnos, grounding en vivo para noticias/actualidad y stickers 3D
+          const { invokeLLM, classifyLlmReasoningComplexity } = await import("../_core/llm");
           const { buildSystemPrompt, getLiveStats } = await import("../_core/janIA");
           const { getGreetingByTime } = await import("../_core/whatsapp-utils");
-          const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
 
-          // Bogotá time calculation (Horario Oficial Bogotá: 01:00-11:59 Buenos días, 12:00-18:59 Buenas tardes, 19:00-00:59 Buenas noches)
           const timeGreeting = getGreetingByTime();
-          const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-          const hour = nowBogota.getHours();
-
-          const isRegistered = !!ctx.user;
-          const rawName = ctx.user?.name || "";
-          const nameInfo = resolveNameAndGender(rawName, timeGreeting);
-          const resolvedName = nameInfo.displayName;
-          const isFemale = nameInfo.isFemale;
-          const genderTerm = rawName ? nameInfo.genderTerm : "estimado/a usuario/a";
-
           const liveStats = await getLiveStats();
-          const userContextInstruction = isRegistered
-            ? `\n\n[INFORMACIÓN DEL USUARIO REGISTRADO]:\n- Estado: REGISTRADO EN LA PLATAFORMA VECY BIENES RAÍCES ✅\n- Nombre: "${rawName}" (Nombre/Apodo: "${resolvedName}")\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- Trato respetuoso: "${genderTerm}"\n- INSTRUCCIÓN: Si es el primer mensaje de la sesión, salúdalo con "${timeGreeting}, ${genderTerm}". Si ya están interactuando, integra su nombre "${resolvedName}" naturalmente sin repetir saludos repetitivos.`
-            : `\n\n[INFORMACIÓN DEL USUARIO NO REGISTRADO / ANÓNIMO]:\n- Estado: NO REGISTRADO (Navegante anónimo)\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- INSTRUCCIÓN DE INTERACCIÓN:\n  1. Si no te ha dicho su nombre en los mensajes previos, salúdalo cordialmente con "${timeGreeting}" y pregúntale amablemente: "¿Con quién tengo el gusto de interactuar?" para recordarlo en la conversación.\n  2. Invítalo amablemente a registrarse gratuitamente en la plataforma VECY BIENES RAÍCES (https://vecy-bienes-raices.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
 
-          const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}${userContextInstruction}\n\n[INSTRUCCIÓN MAESTRA Y CRÍTICA DE SALIDA — CONSOLA WEB JANIA]:
-1. Eres JanIA, la agente de inteligencia artificial de VECY BIENES RAÍCES, concebida por el equipo de tecnología liderado por Eduardo Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), al servicio incondicional de colegas y clientes en todas las ramas inmobiliarias. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia. Jamás te atribuyas cargos directivos ("directora").
-2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
-3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. ESTÁ ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes raíces.`;
+          let liveNewsGrounding = "";
+          if (webContext.needsLiveSearch && process.env.NODE_ENV !== "test") {
+            try {
+              const { searchWebGrounding } = await import("../_core/scraper");
+              const searchRes = await searchWebGrounding(input.message, 4000);
+              if (searchRes.success && searchRes.summary) {
+                liveNewsGrounding = `\n\n[ACTUALIDAD / NOTICIAS / DATOS EN TIEMPO REAL DESDE LA WEB]:\n${searchRes.summary}\nCita con solvencia periodística estos datos reales y vigentes.`;
+              }
+            } catch (_) {}
+          }
 
-          // Fetch recent 6 messages for conversation context
-          const recentHistory = await db
-            .select({ role: messages.role, content: messages.content })
-            .from(messages)
-            .where(eq(messages.conversationId, conversationId))
-            .orderBy(desc(messages.createdAt))
-            .limit(6);
+          const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}${webContext.userContextInstruction}${webContext.onboardingDirectivesBlock ? `\n${webContext.onboardingDirectivesBlock}` : ""}${liveNewsGrounding}\n\n[INSTRUCCIÓN MAESTRA Y CRÍTICA DE SALIDA — CONSOLA WEB JANIA]:
+1. Eres JanIA, la Inteligencia Artificial pura, autónoma y senior de VECY BIENES RAÍCES (Eduardo A. Rivera - Director de Tecnología y Jani Alves - Directora de Operaciones). Jamás te atribuyas cargos directivos ("directora").
+2. Responde directamente en Markdown natural con solvencia jurídica, arquitectónica/valuatoria (urbano m², comercial m², rural en fanegadas de 6.400 m² y hectáreas de 10.000 m²), financiera/tributaria, periodística (noticias del sector), de marketing/community manager y pedagógica sobre el proyecto VECY (Dinosaurios Inmobiliarios vs Evolución VECY, 80/20 con 5 días de gracia, 40/20/40 + 10% Bolsa Colaborativa, KYC Ultra-Light, reglas del MATCH 85-100% y guía paso a paso de publicación).
+3. STICKERS 3D EXPRESIVOS: Puedes añadir al final de tu mensaje una sola etiqueta cuando corresponda emocionalmente: [STICKER:ternura], [STICKER:abacho], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:gracias_brillo], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:jajaja_fuerte], [STICKER:juajuajua], [STICKER:queee], [STICKER:oh_por_dios], [STICKER:ush], [STICKER:nooo_por_que]. El sistema la extraerá y mostrará el sticker gráfico.
+4. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. ESTÁ ESTRICTAMENTE PROHIBIDO emitir objetos JSON o campos técnicos ("shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice", "voiceResponse").`;
 
           const formattedHistory = recentHistory.reverse().map(m => ({
             role: m.role === "janIA" ? "assistant" : "user",
@@ -359,20 +340,30 @@ export const janIARouter = router({
             { role: "user", content: input.message }
           ];
 
+          const complexity = classifyLlmReasoningComplexity(input.message, {
+            enableSearch: webContext.needsLiveSearch,
+          });
+
           try {
             const llmRes = await invokeLLM({
               messages: llmMessages,
+              highReasoning: complexity.highReasoning,
+              allowPaidFailover: complexity.allowPaidFailover,
+              enableSearch: webContext.needsLiveSearch && process.env.NODE_ENV !== "test",
             });
 
             const rawContent = (llmRes as any)?.choices?.[0]?.message?.content || "";
-            janIAResponse = sanitizeWebChatResponse(rawContent);
+            const stickerResolved = resolveWebStickerFromReply(input.message, rawContent, mockUserId);
+            janIAResponse = sanitizeWebChatResponse(stickerResolved.cleanText);
+            stickerKey = stickerResolved.stickerKey;
+            stickerUrl = stickerResolved.stickerUrl;
           } catch (llmErr: any) {
             console.warn("[JanIA-Chat] Fallback en LLM por congestión:", llmErr?.message);
-            janIAResponse = `Hola, con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 100)}". Nuestros servicios de inteligencia inmobiliaria están activos y cruzando oportunidades. ¿Deseas que busquemos detalles específicos en la base de datos nacional?`;
+            janIAResponse = `¡Hola${webContext.resolvedDisplayName ? `, ${webContext.resolvedDisplayName}` : ""}! Con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 120)}". En este instante nuestros servicios de inteligencia inmobiliaria están activos y cruzando oportunidades. ¿Deseas que realicemos un cálculo específico, estudio de mercado o revisión de documentos?`;
           }
 
           if (!janIAResponse || janIAResponse.trim() === "") {
-            janIAResponse = `${timeGreeting}. ¡Bienvenido a VECY BIENES RAÍCES! ¿Con quién tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. ¿En qué consulta inmobiliaria puedo asesorarte hoy?`;
+            janIAResponse = `¡${timeGreeting}${webContext.resolvedDisplayName ? `, ${webContext.resolvedDisplayName}` : ""}! ¡Bienvenido(a) a VECY BIENES RAÍCES! ${webContext.resolvedDisplayName ? "¿En qué consulta jurídica, de avalúo, financiera, de marketing o MATCH inmobiliario puedo asesorarte hoy?" : "¿Con quién tengo el gusto de conversar hoy y en qué tema inmobiliario te puedo ayudar?"}`;
           }
         }
 
@@ -384,12 +375,15 @@ export const janIARouter = router({
           messageType: 'text',
         });
 
-        // Save JanIA response (clean text)
+        // Save JanIA response (clean text + sticker/pdf metadata)
         await db.insert(messages).values({
           conversationId: conversationId,
           role: 'janIA',
           content: janIAResponse,
           messageType: 'text',
+          ...(stickerUrl || pdfUrl
+            ? { metadata: { ...(stickerUrl ? { stickerUrl, stickerKey } : {}), ...(pdfUrl ? { pdfUrl, pdfFileName } : {}) } }
+            : {}),
         });
 
         // Update conversation
@@ -403,9 +397,14 @@ export const janIARouter = router({
 
         return {
           content: janIAResponse,
+          response: janIAResponse,
           wantsVoice,
           voiceResponse: voiceResponse || janIAResponse,
           conversationId,
+          stickerKey,
+          stickerUrl,
+          pdfUrl,
+          pdfFileName,
         };
 
       } catch (error) {

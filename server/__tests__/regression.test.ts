@@ -14149,10 +14149,176 @@ A: BANCO DE BOGOTA
       expect(seed20?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.20");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[0-9]|[3-9]\d)$/);
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.20.0");
+      expect(pkg.version).toMatch(/^34\.(?:2[0-9]|[3-9]\d)\.0$/);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 207. SUITE v34.21 — MAESTRÍA MULTIDISCIPLINARIA, PARIDAD WEB/GRUPOS/DM,
+  // NOMBRES COMPUESTOS PERSISTENTES, RURALIDAD (FANEGADAS/HECTÁREAS),
+  // RETROVENTA, LEASING PROS/CONTRAS Y PEDAGOGÍA VECY VS DINOSAURIOS ($0 COP)
+  // ─────────────────────────────────────────────────────────────
+  describe("207. Paridad Web/Grupos/DM, Nombres Compuestos Persistentes, Valuación Rural/Comercial, Retroventa y Pedagogía VECY (v34.21)", () => {
+    it("persiste nombres propios compuestos o simples presentados en conversación y mantiene género correcto entre turnos ($0 COP)", async () => {
+      const {
+        persistIntroducedNameInSession,
+        getUserPerpetualSession,
+        resetUserPerpetualSessionsForTests,
+      } = await import("../_core/jania/sessionManager");
+      const { extractIntroducedName, resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
+
+      resetUserPerpetualSessionsForTests();
+
+      expect(extractIntroducedName("Hola JanIA, puedes decirme María Cristina por favor")).toBe("María Cristina");
+      expect(extractIntroducedName("Hola, llámame Juan Sebastián")).toBe("Juan Sebastián");
+
+      const firstTurn = await persistIntroducedNameInSession(
+        "573001112233@s.whatsapp.net",
+        "Hola, mi nombre es Ana Sofía Gómez pero puedes decirme Ana Sofía",
+        "Usuario WhatsApp"
+      );
+      expect(firstTurn.introducedNow).toBe("Ana Sofía");
+      expect(firstTurn.effectiveRawName).toBe("Ana Sofía");
+
+      const secondTurn = await persistIntroducedNameInSession(
+        "573001112233@s.whatsapp.net",
+        "Quiero hacer un estudio de títulos",
+        "Asesor Inmobiliario"
+      );
+      expect(secondTurn.effectiveRawName).toBe("Ana Sofía");
+      const persisted = await getUserPerpetualSession("573001112233@s.whatsapp.net");
+      expect(persisted.keyFacts?.introducedName).toBe("Ana Sofía");
+      expect(persisted.keyFacts?.resolvedGender).toBe("female");
+
+      const genderCheck = resolveNameAndGender("Juan Pablo");
+      expect(genderCheck.displayName).toBe("Juan Pablo");
+      expect(genderCheck.isFemale).toBe(false);
+    });
+
+    it("detectRawWebListingPost NO secuestra consultas de Retroventa/VECY/MATCH y SÍ reconoce publicaciones inmobiliarias reales ($0 COP)", async () => {
+      const { detectRawWebListingPost } = await import("../_core/jania/handlers/webChatService");
+
+      const q1 = detectRawWebListingPost("¿Qué riesgos tiene el Pacto de Retroventa para una casa?");
+      expect(q1.isRawListing).toBe(false);
+
+      const q2 = detectRawWebListingPost("Busco saber cómo funciona el MATCH en VECY y por qué los portales son dinosaurios");
+      expect(q2.isRawListing).toBe(false);
+
+      const q3 = detectRawWebListingPost("Calcula cuánto cuesta una finca de 3 fanegadas en Tenjo");
+      expect(q3.isRawListing).toBe(false);
+
+      const realOffer = detectRawWebListingPost(
+        "Vendo apartamento en Cedritos 85 m2 3 alcobas 2 baños 1 garaje estrato 4 $480 millones"
+      );
+      expect(realOffer.isRawListing).toBe(true);
+      expect(realOffer.isRequirement).toBe(false);
+
+      const realDemand = detectRawWebListingPost(
+        "Busco casa en Chía 160 m2 3 habitaciones 2 parqueaderos presupuesto $750 millones"
+      );
+      expect(realDemand.isRawListing).toBe(true);
+      expect(realDemand.isRequirement).toBe(true);
+    });
+
+    it("evalúa en canal Web Skills determinísticos ($0 COP): ACM rural con fanegadas/hectáreas, Leasing pros/contras, POT/CTL/PH y sticker .webp", async () => {
+      const { evaluateWebDeterministicSkills, resolveWebStickerFromReply } = await import(
+        "../_core/jania/handlers/webChatService"
+      );
+      const { sanitizeWebChatResponse } = await import("../routers/janIA");
+
+      const acmRural = await evaluateWebDeterministicSkills({
+        message: "Sondeo ACM finca en Tenjo Sabana de Bogotá de 3 fanegadas",
+        userId: "web:test_v34_21_acm",
+        userName: "Carlos Eduardo",
+        hasActiveHistory: false,
+      });
+      expect(acmRural.handled).toBe(true);
+      expect(acmRural.replyText).toContain("fanegada");
+      expect(acmRural.replyText).toContain("19.200");
+      expect(acmRural.replyText).toContain("hect");
+
+      const finRes = await evaluateWebDeterministicSkills({
+        message: "Simula crédito hipotecario vs leasing habitacional para apto de $500 millones",
+        userId: "web:test_v34_21_fin",
+        userName: "Carlos Eduardo",
+        hasActiveHistory: false,
+      });
+      expect(finRes.handled).toBe(true);
+      expect(finRes.replyText).toMatch(/Pros y Contras Clave/i);
+      expect(finRes.replyText).toMatch(/Leasing Habitacional/i);
+      expect(finRes.pdfUrl).toMatch(/^\/uploads\/jania-docs\/.*\.pdf$/);
+
+      const sticker = resolveWebStickerFromReply(
+        "¡Gracias JanIA!",
+        "¡Con todo el gusto, María Paula! [STICKER:gracias_ternura]",
+        "web:test_v34_21_sticker"
+      );
+      expect(sticker.stickerKey).toBe("gracias_ternura");
+      expect(sticker.stickerUrl).toBe("/assets/stickers/jania_gracias_ternura.webp");
+      expect(sticker.cleanText).not.toContain("[STICKER:");
+      expect(sanitizeWebChatResponse("Hola [STICKER:saludo_feliz] colega")).toBe("Hola colega");
+    });
+
+    it("audita Pacto de Retroventa bajo Código Civil Arts. 1939-1943 y valúa sectores comerciales y rurales nacionales ($0 COP)", async () => {
+      const { auditContractDraftText } = await import("../_core/legalContractService");
+      const { executeMarketValuationSurvey } = await import("../_core/valuation");
+
+      const retroAudit = auditContractDraftText(
+        "CONTRATO DE COMPRAVENTA CON PACTO DE RETROVENTA: El vendedor se reserva la facultad de recobrar la casa por un plazo de 6 años en documento privado sin escritura."
+      );
+      expect(retroAudit.findings.some((f) => /1943|4\s*a[nñ]os/i.test(`${f.titulo} ${f.hallazgo} ${f.fundamentoLegal}`))).toBe(true);
+      expect(retroAudit.findings.some((f) => /1942|escritura\s+p[uú]blica/i.test(`${f.titulo} ${f.hallazgo} ${f.fundamentoLegal}`))).toBe(true);
+
+      const ruralSurvey = executeMarketValuationSurvey({
+        zonaOBarrio: "Subachoque",
+        tipoInmueble: "finca",
+        hectareas: 2,
+      });
+      expect(ruralSurvey.areaM2).toBe(20000);
+      expect(ruralSurvey.reporteAcmEstructurado).toContain("fanegadas");
+      expect(ruralSurvey.reporteAcmEstructurado).toContain("hect");
+
+      const commercialSurvey = executeMarketValuationSurvey({
+        zonaOBarrio: "El Poblado",
+        ciudad: "Medellín",
+        tipoInmueble: "local",
+        areaM2: 120,
+      });
+      expect(commercialSurvey.valorM2Estimado).toBeGreaterThan(0);
+      expect(commercialSurvey.isCommercialType).toBe(true);
+      expect(commercialSurvey.reporteAcmEstructurado).toMatch(/Comercial/i);
+    });
+
+    it("verifica alineación doctrinal en prompts (cero sesgo >90%, Dinosaurios vs VECY, 40/20/40, MATCH y versión v34.21)", async () => {
+      const fs = await import("fs");
+      const baseMd = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+      const promptsTs = fs.readFileSync("server/_core/jania/prompts.ts", "utf-8");
+      const webConsoleMd = fs.readFileSync("server/_core/prompts/web/web_console.md", "utf-8");
+      const conocimientoMd = fs.readFileSync("server/_core/jania/prompts/conocimiento_vecy.md", "utf-8");
+
+      expect(baseMd).not.toContain(">90%");
+      expect(promptsTs).not.toContain(">90%");
+      expect(baseMd).toContain("LOS DINOSAURIOS INMOBILIARIOS");
+      expect(baseMd).toContain("VECY LA EVOLUCIÓN INEVITABLE");
+      expect(webConsoleMd).toContain("Pacto de Retroventa");
+      expect(conocimientoMd).toContain("80/20");
+      expect(conocimientoMd).toContain("40/20/40");
+      expect(conocimientoMd).toMatch(/85%.*100%|85%–100%/);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed21 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-maestria-multidisciplinaria-paridad-web-rural-retroventa-v34-21"
+      );
+      expect(seed21).toBeDefined();
+      expect(seed21?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[1-9]|[3-9]\d)$/);
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:2[1-9]|[3-9]\d)\.0$/);
     });
   });
 });

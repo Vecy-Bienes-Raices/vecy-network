@@ -442,6 +442,8 @@ export function executeMarketValuationSurvey(params: {
   habitaciones?: number;
   banos?: number;
   areaM2?: number;
+  fanegadas?: number;
+  hectareas?: number;
   estrato?: number;
   antiguedadAnos?: number;
   anoConstruccion?: number | string;
@@ -458,13 +460,26 @@ export function executeMarketValuationSurvey(params: {
   administracionCop?: number;
   userId?: string;
 }) {
-  const zonaLower = `${params.zonaOBarrio || ""} ${params.barrio || ""} ${params.direccionExacta || ""}`.toLowerCase();
+  const zonaLower = `${params.zonaOBarrio || ""} ${params.barrio || ""} ${params.direccionExacta || ""} ${params.ciudad || ""}`.toLowerCase();
+  const tipoLower = (params.tipoInmueble || "").toLowerCase();
+  const isCommercialType = /\b(?:local|oficina|bodega|consultorio|comercial|industrial)\b/.test(tipoLower);
+  const isRuralType =
+    Boolean(params.fanegadas && params.fanegadas > 0) ||
+    Boolean(params.hectareas && params.hectareas > 0) ||
+    /\b(?:finca|lote\s+rural|rural|parcela|parcelaci[oó]n|hacienda|agr[ií]cola|ganadera|campestre)\b/.test(tipoLower) ||
+    /\b(?:vereda|kil[oó]metro|km\s*\d+)\b/.test(zonaLower);
 
   let basePrice = 6500000;
-  const zoneName = params.zonaOBarrio || params.barrio || "Norte de Bogotá";
+  const zoneName = params.zonaOBarrio || params.barrio || params.ciudad || "Norte de Bogotá";
   let hasVerifiedComparables = true;
 
-  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
+  if (isRuralType && /\b(?:tenjo|tabio|subachoque|sop[oó]|sopo|guasca|la\s+calera|cota|ch[ií]a|chia|cajic[aá]|cajica|sabana)\b/.test(zonaLower)) {
+    basePrice = 165000;
+  } else if (isRuralType && /\b(?:anapoima|villeta|la\s+vega|mesitas|fusagasug[aá]|fusagasuga|melgar|ricaurte|girardot|carmen\s+de\s+apical[aá])\b/.test(zonaLower)) {
+    basePrice = 115000;
+  } else if (isRuralType && /\b(?:llanogrande|rionegro|retiro|santa\s+elena|guatavita|eje\s+cafetero|quind[ií]o|quindio|cerritos|pereira|salento|armenia|mesa\s+de\s+los\s+santos)\b/.test(zonaLower)) {
+    basePrice = 145000;
+  } else if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
     basePrice = 14500000;
   } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country") || zonaLower.includes("seminario")) {
     basePrice = 12500000;
@@ -484,10 +499,22 @@ export function executeMarketValuationSurvey(params: {
     basePrice = 7500000;
   } else if (zonaLower.includes("chapinero") || zonaLower.includes("teusaquillo")) {
     basePrice = 7200000;
-  } else if (zonaLower.includes("el poblado") || zonaLower.includes("poblado") || zonaLower.includes("llanogrande") || zonaLower.includes("laureles") || zonaLower.includes("envigado")) {
+  } else if (zonaLower.includes("el poblado") || zonaLower.includes("poblado") || zonaLower.includes("llanogrande") || zonaLower.includes("laureles") || zonaLower.includes("envigado") || zonaLower.includes("medellín") || zonaLower.includes("medellin")) {
     basePrice = 8800000;
-  } else if (zonaLower.includes("bocagrande") || zonaLower.includes("castillogrande") || zonaLower.includes("manga")) {
+  } else if (zonaLower.includes("bocagrande") || zonaLower.includes("castillogrande") || zonaLower.includes("manga") || zonaLower.includes("cartagena")) {
     basePrice = 9500000;
+  } else if (zonaLower.includes("pance") || zonaLower.includes("ciudad jardín") || zonaLower.includes("ciudad jardin") || zonaLower.includes("granada") || zonaLower.includes("oeste") || zonaLower.includes("cali")) {
+    basePrice = 6400000;
+  } else if (zonaLower.includes("alto prado") || zonaLower.includes("riomar") || zonaLower.includes("villa santos") || zonaLower.includes("buenavista") || zonaLower.includes("barranquilla")) {
+    basePrice = 6300000;
+  } else if (zonaLower.includes("cabecera") || zonaLower.includes("sotomayor") || zonaLower.includes("cañaveral") || zonaLower.includes("canaveral") || zonaLower.includes("bucaramanga")) {
+    basePrice = 5600000;
+  } else if (zonaLower.includes("álamos") || zonaLower.includes("alamos") || zonaLower.includes("cerritos") || zonaLower.includes("milán") || zonaLower.includes("milan") || zonaLower.includes("pereira") || zonaLower.includes("manizales") || zonaLower.includes("armenia")) {
+    basePrice = 5400000;
+  } else if (zonaLower.includes("pozos colorados") || zonaLower.includes("bello horizonte") || zonaLower.includes("rodadero") || zonaLower.includes("santa marta")) {
+    basePrice = 6800000;
+  } else if (zonaLower.includes("villavicencio") || zonaLower.includes("buque") || zonaLower.includes("maizaro")) {
+    basePrice = 4900000;
   } else if (zonaLower.includes("morato") || zonaLower.includes("castellana") || zonaLower.includes("pasadena") || zonaLower.includes("niza") || zonaLower.includes("alhambra") || zonaLower.includes("batán") || zonaLower.includes("batan")) {
     basePrice = 6800000;
   } else if (zonaLower.includes("salitre") || zonaLower.includes("modelia") || zonaLower.includes("hayuelos")) {
@@ -504,7 +531,29 @@ export function executeMarketValuationSurvey(params: {
     basePrice = 6500000;
   } else {
     hasVerifiedComparables = false;
+    if (isRuralType) {
+      basePrice = 120000;
+    }
   }
+
+  if (isCommercialType && !isRuralType) {
+    if (tipoLower.includes("local")) {
+      basePrice = Math.round(basePrice * 1.22);
+    } else if (tipoLower.includes("bodega")) {
+      basePrice = Math.round(basePrice * 0.72);
+    } else if (tipoLower.includes("oficina") || tipoLower.includes("consultorio")) {
+      basePrice = Math.round(basePrice * 1.05);
+    }
+  }
+
+  const FANEGADA_M2 = 6400;
+  const HECTAREA_M2 = 10000;
+  const computedAreaFromUnits =
+    params.fanegadas && params.fanegadas > 0
+      ? Math.round(params.fanegadas * FANEGADA_M2)
+      : params.hectareas && params.hectareas > 0
+      ? Math.round(params.hectareas * HECTAREA_M2)
+      : undefined;
 
   const currentYear = new Date().getFullYear();
   const parsedAno =
@@ -525,7 +574,16 @@ export function executeMarketValuationSurvey(params: {
     params.esRemodelado === true ||
     /remodel|modern|renovad|actualizad|lujo/i.test(params.tipoAcabados || "");
 
-  const area = params.areaM2 && params.areaM2 > 0 ? params.areaM2 : 75;
+  const area =
+    params.areaM2 && params.areaM2 > 0
+      ? params.areaM2
+      : computedAreaFromUnits && computedAreaFromUnits > 0
+      ? computedAreaFromUnits
+      : isRuralType
+      ? FANEGADA_M2
+      : 75;
+  const fanegadasEquiv = Number((area / FANEGADA_M2).toFixed(2));
+  const hectareasEquiv = Number((area / HECTAREA_M2).toFixed(2));
   const valuation = calculatePropertyValuation({
     zone: zoneName,
     city: params.ciudad || "Bogotá",
@@ -623,12 +681,26 @@ export function executeMarketValuationSurvey(params: {
       : [])
   ];
 
+  const ruralConversionLines = isRuralType
+    ? [
+        `🌾 *Equivalencias Agrarias Oficiales (Colombia):* ${area.toLocaleString("es-CO")} m² = *${fanegadasEquiv} fanegadas* (6.400 m²/fanegada) = *${hectareasEquiv} hectáreas* (10.000 m²/ha)`,
+        `• *Valor estimado por Fanegada:* ${formatCop(Math.round(valuation.homologatedPricePerM2 * FANEGADA_M2))} | *Valor por Hectárea:* ${formatCop(Math.round(valuation.homologatedPricePerM2 * HECTAREA_M2))}`,
+        `• *Nota de tasación rural:* El valor de tierra rural varía fuertemente por topografía (plana vs ladera), disponibilidad de agua propia/acueducto veredal, vía pavimentada, uso POT/PBOT y construcciones existentes.`
+      ]
+    : [];
+
+  const commercialNotesLine = isCommercialType && !isRuralType
+    ? [`🏢 *Enfoque Comercial (Renta / Cap Rate):* En locales, oficinas y bodegas predomina el análisis por rentabilidad bruta esperada (~0.65%–0.85%/mes según contrato, IVA e índice de tráfico).`]
+    : [];
+
   const reporteAcmEstructurado = [
     `📊 *ANÁLISIS COMPARATIVO DE MERCADO (ACM) — VECY NETWORK*`,
     `📌 *Ficha evaluada:* ${specsLineParts.join(" · ")}`,
     ``,
     `1️⃣ *Homologación Técnica (Metodología Fitto y Corvini / Lonja)*`,
     ...factorLines,
+    ...ruralConversionLines,
+    ...commercialNotesLine,
     `➡️ *Valor m² homologado:* ${formatCop(valuation.homologatedPricePerM2)}/m² *(Rango de mercado: ${formatCop(valuation.rangoValorM2Min)} – ${formatCop(valuation.rangoValorM2Max)}/m²)*`,
     ``,
     `2️⃣ *Los 3 Escenarios Estratégicos de Precio (Venta)*`,
@@ -674,6 +746,12 @@ export function executeMarketValuationSurvey(params: {
     canonRangoMax: valuation.canonRangoMax,
     estimatedCapRate: valuation.estimatedCapRate,
     areaM2: area,
+    isRuralType,
+    isCommercialType,
+    fanegadasEquiv: isRuralType ? fanegadasEquiv : undefined,
+    hectareasEquiv: isRuralType ? hectareasEquiv : undefined,
+    valorPorFanegadaCop: isRuralType ? Math.round(valuation.homologatedPricePerM2 * FANEGADA_M2) : undefined,
+    valorPorHectareaCop: isRuralType ? Math.round(valuation.homologatedPricePerM2 * HECTAREA_M2) : undefined,
     administracionCop: admonMensual,
     administracionPorM2: admonPorM2,
     analisisAdministracion,

@@ -304,14 +304,33 @@ export function getCanonicalCompositeName(rawName: string): string | null {
 }
 
 /**
+ * Indica si un nombre recibido es genérico, numérico, teléfono o marcador técnico
+ * (para evitar usarlo como nombre de pila y permitir sobreescribirlo cuando el usuario se presente).
+ */
+export function isGenericOrNumericName(rawName?: string | null): boolean {
+  if (!rawName || typeof rawName !== "string") return true;
+  const cleaned = cleanRawUserName(rawName).trim();
+  if (!cleaned || cleaned.length <= 1) return true;
+  if (/^\+?\d[\d\s\-().]+$/.test(cleaned)) return true;
+  if (
+    /^(?:usuario(?:\s+web)?|asesor(?:\s+\+?\d+)?|colega|cliente|propietario|propietaria|comprador|compradora|arrendatario|arrendataria|invitado|anonimo|anónimo|desconocido|navegante|sin\s+nombre)$/i.test(
+      cleaned
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Extrae un nombre propio presentado orgánicamente por el usuario en el mensaje de chat
- * (ej: "Hola, soy María Cristina", "me llamo Juan Carlos", "mi nombre es Ana Sofía", "hablas con Nelson Enrique", o firmas como "Att. Leonardo Prieto", "Atte: Carlos", "Cordialmente, Diana")
+ * (ej: "Hola, soy María Cristina", "me llamo Juan Carlos", "mi nombre es Ana Sofía", "puedes decirme Adriana", "llámame Juan Pablo", "Att. Leonardo Prieto", "Cordialmente, Diana")
  */
 export function extractIntroducedName(text: string): string | null {
   if (!text) return null;
-  // 1. Detección en cuerpo: "soy Juan", "mi nombre es Maria", etc.
+  // 1. Detección en cuerpo: "soy Juan", "mi nombre es Maria", "llámame Carlos", "puedes decirme Ana Sofía"
   const introMatch = text.match(
-    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
+    /(?:^|[.!?¡¿\n,]\s*)(?:¡?hola!?,?\s*)?(?:soy|me\s+llamo|mi\s+(?:primer\s+)?nombre\s+es|hablas?\s+con|por\s+ac[aá]\s+te\s+habla|aqu[ií]\s+habla|puedes\s+decirme|me\s+dicen|prefiero\s+que\s+me\s+(?:digas|llames)|ll[aá]mame)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚñÑ]+){0,2})/i
   );
   // 2. Detección en firmas o despedidas: "Att. Leonardo Prieto", "Atte: Carlos Gomez", "Cordialmente, Diana", "Saludos, Andres"
   const signMatch = text.match(
@@ -322,9 +341,10 @@ export function extractIntroducedName(text: string): string | null {
     const rawCandidate = match[1].trim();
     const candidateParts = rawCandidate.split(/\s+/).filter(Boolean);
     const INVALID = new Set([
-      "un", "una", "el", "la", "asesor", "asesora", "agente", "cliente", "inmobiliaria", "broker",
-      "propietario", "propietaria", "comprador", "compradora", "arrendatario", "arrendataria",
-      "abogado", "abogada", "perito", "desconocido", "alguien"
+      "un", "una", "el", "la", "de", "del", "asesor", "asesora", "agente", "cliente", "inmobiliaria", "broker",
+      "propietario", "propietaria", "dueno", "dueño", "duena", "dueña", "comprador", "compradora",
+      "arrendatario", "arrendataria", "inversionista", "abogado", "abogada", "perito", "desconocido",
+      "alguien", "colega", "interesado", "interesada", "nuevo", "nueva", "directo", "directa", "aqui", "aquí"
     ]);
     if (candidateParts.length > 0 && !INVALID.has(candidateParts[0].toLowerCase())) {
       const canonicalComp = getCanonicalCompositeName(rawCandidate);

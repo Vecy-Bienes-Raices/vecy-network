@@ -1206,6 +1206,12 @@ export function buildFinancialAndTaxReport(parsed: FinancialTaxParsedQuery): Fin
       const cap = mortgageVsLeasing.capacidadIngresoUsuario;
       mBlock += `\n• *Tu capacidad (${formatCop(cap.ingresoMensualCop)}/mes):* ${cap.relacionCuotaIngresoCreditoPct}% en crédito / ${cap.relacionCuotaIngresoLeasingPct}% en leasing. ${cap.viabilidadLey546}`;
     }
+    mBlock +=
+      `\n• *Pros y Contras Clave (Crédito Hipotecario vs. Leasing Habitacional):*\n` +
+      `  - ✅ *Crédito Hipotecario:* Eres propietario titular desde el día 1; permite constituir patrimonio de familia/afectación vivienda familiar y aplicar prepagos directos a capital sin esperar ejercicio de opción.\n` +
+      `  - ⚠️ *Contra Crédito:* Generalmente exige mayor cuota inicial (30% en No-VIS / 20% VIS) y gastos de constitución de hipoteca.\n` +
+      `  - ✅ *Leasing Habitacional:* Permite menor cuota inicial (20% o hasta 15% con 85% LTV), mayor protección frente a embargos personales mientras el título es del banco y opción de compra pactable (1%–10% al final).\n` +
+      `  - ⚠️ *Contra Leasing:* Mientras dure el leasing no tienes el título en el CTL (lo posee el banco locatario), el canon incluye componente de opción y al final pagas escrituración/registro adicional al ejercer la opción de compra.`;
     blocks.push(mBlock);
   }
 

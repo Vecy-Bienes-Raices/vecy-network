@@ -854,6 +854,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Si, a propietarios si desean consignar sus inmuebles con nosotros, se les cobra lo de ley el 3% por venta y para arriendo un canon logicamente sin administracion; si el valor incluye administracion, se pregunta de cuanto es la administracion y se descuenta para cobrar unicamente el canon neto como comision.",
     createdAt: "2026-11-13T22:20:00.000Z",
     active: true
+  },
+  {
+    id: "seed-maestria-multidisciplinaria-paridad-web-rural-retroventa-v34-21",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "+573192919978",
+    topic: "Paridad Total DM/Grupos/Web, Memoria Nominal Compuesta, Valuación Rural/Comercial Nacional, Pacto de Retroventa y Pedagogía VECY vs Dinosaurios Inmobiliarios — Doctrina Eduardo A. Rivera v34.21",
+    directive:
+      "JanIA opera con paridad absoluta de todas sus Skills determinísticas, stickers 3D, memoria de hilo conversacional y persistencia de nombre simple/compuesto + género + rol en WhatsApp DM, Grupos Oficiales y Sitio Web (Widget/Consola). Domina Derecho Inmobiliario Colombiano incluyendo Pacto de Retroventa (Arts. 1939–1943 C.C., límite 4 años Art. 1943 C.C., Escritura Pública + SNR Art. 1942 C.C. y riesgo de lesión enorme Art. 1947 C.C.), Crédito Hipotecario vs Leasing Habitacional con pros y contras equilibrados, Valuación Urbana/Comercial y Rural en fanegadas (6.400 m²) y hectáreas (10.000 m²) a nivel nacional, Reportería Inmobiliaria verificada con búsqueda en vivo sin alucinar, y pedagogía paciente para explicar Dinosaurios Inmobiliarios vs VECY La Evolución Inevitable, 80/20, 40/20/40 (+10% Bolsa Colaborativa), registro paso a paso, MATCH (85%–100%, guillotina 1=1 en alcobas, área >= min) y publicación puntual de ofertas/requerimientos.",
+    rawText:
+      "Asegurar que todas las Skills de JanIA estén activas y conectadas en DM, Grupos y Web, recuerde nombres simples o compuestos y género, domine Pacto de Retroventa, Leasing vs Hipotecario, m² comercial y fanegadas/hectáreas rurales en toda Colombia, y enseñe paso a paso VECY vs Dinosaurios Inmobiliarios, 40/20/40, registro, MATCH y publicación.",
+    createdAt: "2026-11-13T23:55:00.000Z",
+    active: true
   }
 ];
 

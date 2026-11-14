@@ -16,6 +16,11 @@ import {
 } from "../../../drizzle/schema";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
 import { ConsultingTurn, DmTurn } from "./types";
+import {
+  extractIntroducedName,
+  isGenericOrNumericName,
+  resolveNameAndGender,
+} from "../nameAndGenderResolver";
 
 export function cleanSessionJid(jid: string): string {
   if (!jid) return "";
@@ -1077,6 +1082,59 @@ export async function getUserRoleDistributionStats(): Promise<RoleDistributionSt
 export function resetUserPerpetualSessionsForTests(): void {
   if (process.env.NODE_ENV !== "test") return;
   userPerpetualSessionMap.clear();
+}
+
+/**
+ * Persiste orgánicamente el nombre propio presentado por el usuario (simple o compuesto) y su género
+ * en la memoria perpetua para que JanIA jamás pierda el hilo de cómo llamarlo entre turnos o canales.
+ */
+export async function persistIntroducedNameInSession(
+  userId: string,
+  rawMessageText: string,
+  fallbackProfileName?: string
+): Promise<{
+  session: UserPerpetualSession;
+  introducedNow: string | null;
+  effectiveRawName: string;
+}> {
+  const session = await getUserPerpetualSession(userId, fallbackProfileName);
+  const introducedNow = extractIntroducedName(rawMessageText || "");
+  session.keyFacts = session.keyFacts || {};
+
+  if (introducedNow && !isGenericOrNumericName(introducedNow)) {
+    const resolved = resolveNameAndGender(introducedNow);
+    const canonical = resolved.displayName && resolved.displayName !== "colega"
+      ? resolved.displayName
+      : introducedNow;
+    session.keyFacts.introducedName = canonical;
+    session.keyFacts.resolvedGender = resolved.isFemale ? "female" : "male";
+    if (!session.name || isGenericOrNumericName(session.name)) {
+      session.name = canonical;
+    }
+    session.lastSeenAt = new Date().toISOString();
+    await saveUserPerpetualSession(session);
+  }
+
+  const persistedIntroduced =
+    typeof session.keyFacts?.introducedName === "string" && !isGenericOrNumericName(session.keyFacts.introducedName)
+      ? session.keyFacts.introducedName
+      : "";
+  const persistedName =
+    session.name && !isGenericOrNumericName(session.name)
+      ? session.name
+      : "";
+  const effectiveRawName =
+    introducedNow ||
+    persistedIntroduced ||
+    fallbackProfileName ||
+    persistedName ||
+    "";
+
+  return {
+    session,
+    introducedNow,
+    effectiveRawName
+  };
 }
 
 
