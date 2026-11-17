@@ -788,9 +788,12 @@ export async function executeJaniaDmTool(
           if (Array.isArray(rawMatches) && rawMatches.length > 0) {
             matchesSummary = rawMatches.slice(0, 3).map((m: any) => ({
               matchCode: `#M${m.matchId || m.id}`,
+              propertyCode: m.propertyId ? `PROP-${m.propertyId}` : undefined,
+              propertyId: m.propertyId,
               score: Math.round(Number(m.score || 0)),
               tipoInmueble: m.propertyType || m.tipoInmuebleDeseado || "Inmueble",
-              zona: m.zone || m.addressNeighborhood || m.zonaDeseada || "Bogotá",
+              zona: m.zone || m.addressNeighborhood || m.zonaDeseada || "Colombia",
+              ciudad: m.addressCity || m.ciudadDeseada || "Colombia",
               precioOCanon: m.rentPrice || m.rent_price
                 ? `$${Number(m.rentPrice || m.rent_price).toLocaleString('es-CO')} COP/mes`
                 : m.price
@@ -807,6 +810,34 @@ export async function executeJaniaDmTool(
         }
       }
 
+      const { isEduardoOrJani, getUserPerpetualSession } = await import("../sessionManager");
+      const isFounderUser = isEduardoOrJani(userId);
+      let signatureUrl: string | undefined;
+      let signatureRequiredBeforeCodes = false;
+
+      if (matchesSummary.length > 0 && !isFounderUser) {
+        try {
+          const { createMatchSignatureRequest } = await import("../../matchSignatureService");
+          const sessRole = (await getUserPerpetualSession(userId)).keyFacts?.businessRole || "comprador_inversionista";
+          const sigCreated = await createMatchSignatureRequest({
+            userJid: userId,
+            userName: _userName,
+            userRole: String(sessRole),
+            requirementId: res.savedId,
+            requirementTitle: res.classification,
+            matches: matchesSummary,
+          });
+          signatureUrl = sigCreated.url;
+          signatureRequiredBeforeCodes = true;
+        } catch (sigErr: any) {
+          console.warn("[dmHandler] Error generando token de firma de match:", sigErr?.message);
+        }
+      }
+
+      const matchesForLlm = signatureRequiredBeforeCodes
+        ? matchesSummary.map(({ matchCode: _hiddenCode, propertyCode: _hiddenProp, ...safePreview }: any) => safePreview)
+        : matchesSummary;
+
       return {
         toolType: "registro_inmueble",
         resultJson: {
@@ -820,7 +851,9 @@ export async function executeJaniaDmTool(
           correoPropietario: args.correoPropietario || undefined,
           aceptaTerminosCorretaje: Boolean(args.aceptaTerminosCorretaje),
           totalMatchesFound: matchesSummary.length,
-          matchesEncontrados: matchesSummary,
+          signatureRequiredBeforeCodes,
+          signatureUrl,
+          matchesEncontrados: matchesForLlm,
           detalle: res.inserted && res.savedId
             ? `Registro guardado exitosamente en la base de datos de VECY BIENES RAÍCES con código oficial ${res.savedType === 'requirement' ? 'REQ-' : 'PROP-'}${res.savedId} (ID #${res.savedId}). ` +
               (args.esPropietarioDirecto
@@ -829,7 +862,9 @@ export async function executeJaniaDmTool(
                   ? "AGENTE QUE RECHAZA EL MODELO 40/20/40: Confírmale que queda registrado en el sistema con su radicado oficial, pero adviértele que la gratuidad de MATCHES aplica únicamente bajo el esquema 40/20/40 y que será contactado por la dirección comercial para adquirir un plan de pago mensual o anual. "
                   : "")) +
               (matchesSummary.length > 0
-                ? `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match).`
+                ? (signatureRequiredBeforeCodes && signatureUrl
+                  ? `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match). CÓDIGOS RETENIDOS HASTA FIRMA: Envía al usuario el enlace de firma de T&C y Privacidad (${signatureUrl}) o indícale responder "Sí acepto" para desbloquear los códigos #M y PROP y recibir su PDF firmado automáticamente.`
+                  : `Se encontraron ${matchesSummary.length} cruces de alta afinidad (Match).`)
                 : "No se encontraron coincidencias inmediatas con el umbral 85%-100%, pero el registro quedó 100% activo en el radar 24/7 de VECY Network.")
             : "No se pudo insertar el registro (datos incompletos o faltantes)."
         }
@@ -1736,10 +1771,10 @@ export async function synthesizeToolResponseWithGemini(
       `  * Si es colega/agente y aceptó 40/20/40: Confirma su estatus de Aliada Prioritaria en la red colaborativa.\n` +
       `  * Si es colega/agente y NO aceptó 40/20/40: Confirma su registro oficial pero recuérdale que la gratuidad de MATCHES aplica únicamente bajo 40/20/40 y que será contactado para adquirir un plan de pago mensual o anual.\n` +
       `  * Si es PROPIETARIO DIRECTO: Exige la aceptación de Términos de corretaje virtual, solicita su correo para enviar el corretaje virtual, e insiste enfáticamente en que debe comunicarse con Jani o Eduardo al +57 316 656 9719 para coordinar condiciones de publicación en el portal y comisión.\n` +
-      `- ENTREGA DE RESULTADOS DEL MATCH (DOCTRINA EDUARDO A. RIVERA):\n` +
+      `- ENTREGA DE RESULTADOS DEL MATCH (DOCTRINA EDUARDO A. RIVERA — FIRMA OBLIGATORIA ANTES DE LIBERAR CÓDIGOS):\n` +
       `  * Si 'totalMatchesFound' > 0 (SÍ HAY COINCIDENCIAS / MATCHES):\n` +
-      `    1. Anúnciale con alegría y profesionalismo que el radar detectó de inmediato coincidencia(s) de alta afinidad (entre el 85% y 100%).\n` +
-      `    2. Entrégale los códigos de coincidencia oficiales (ej. #M15649, #M15650), el porcentaje de afinidad (ej. 90%) y las características generales del inmueble (tipología, zona/barrio, canon o precio y especificaciones físicas).\n` +
+      `    1. Si 'signatureRequiredBeforeCodes' es true: anuncia con alegría que el radar detectó opción(es) compatible(s) (85%-100%), describe solo el perfil general (zona/tipo/precio SIN revelar códigos #M... ni PROP-... ni teléfonos), y envía el enlace oficial 'signatureUrl' en máximo 3–4 renglones para que firme T&C y Política de Privacidad en 20 segundos y reciba automáticamente el PDF firmado con sus códigos de coincidencia oficiales (o responda "Sí acepto").\n` +
+      `    2. Si ya están desbloqueados (o es usuario fundador): entrégale los códigos de coincidencia oficiales (ej. #M15649, #M15650), el porcentaje de afinidad (ej. 90%) y las características generales del inmueble (tipología, zona/barrio, canon o precio y especificaciones físicas).\n` +
       `    3. BLINDAJE DE PRIVACIDAD: JAMÁS reveles nombres personales ni números de teléfono de la contraparte en este chat.\n` +
       `    4. LLAMADO DE ACCIÓN (DOCTRINA MODELADA POR EDUARDO A. RIVERA — EJEMPLO Y CONTEXTO DE APRENDIZAJE, NUNCA AL PIE DE LA LETRA):\n` +
       `       Guíate por este modelo conceptual y de contexto de aprendizaje para expresarlo con tus propias palabras, frescura, empatía y calidez de agente de IA (JAMÁS lo recites mecánicamente al pie de la letra como un vulgar bot):\n` +
@@ -1889,6 +1924,15 @@ export async function synthesizeToolResponseWithGemini(
   } else if (toolType === "registro_inmueble" && toolJson) {
     if (toolJson.esIncompleto && toolJson.guiaFichaTecnica) {
       fallbackText = toolJson.guiaFichaTecnica;
+    } else if (toolJson.signatureRequiredBeforeCodes && toolJson.signatureUrl) {
+      const regStr = toolJson.registroId ? ` (*${toolJson.registroId}*)` : "";
+      const firstM = Array.isArray(toolJson.matchesEncontrados) ? toolJson.matchesEncontrados[0] : null;
+      const zoneStr = firstM?.zona ? ` en *${firstM.zona}*` : "";
+      fallbackText =
+        `¡Súper! Ya quedó radicado${regStr} y encontré *${toolJson.totalMatchesFound || 1} opción(es)*${zoneStr} con alta compatibilidad.\n` +
+        `Para desbloquear los códigos y recibir tu PDF firmado, acepta términos en este enlace:\n` +
+        `👉 ${toolJson.signatureUrl}\n` +
+        `_(También puedes responder *"Sí acepto"* aquí mismo)._`;
     } else {
       const regStr = toolJson.registroId ? ` con código oficial de radicado *${toolJson.registroId}*` : "";
       fallbackText = `¡Listo! Quedó estructurada e ingresada con éxito a nuestra base de datos${regStr} para participar en el motor de coincidencias de VECY BIENES RAÍCES. En el instante exacto en que detectemos una opción compatible en la red, te avisamos de inmediato para coordinar el cruce 🚀🏠✨.`;
@@ -2144,6 +2188,27 @@ export function isShortSignalOrSticker(text: string): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * MODO HUMANA REAL (v34.26 — Doctrina Eduardo A. Rivera):
+ * Suaviza tecnicismos burocráticos o líneas decorativas largas en mensajes conversacionales de WhatsApp,
+ * manteniendo lenguaje cotidiano cercano (máximo 3–4 renglones en charlas cotidianas) sin alterar reportes formales/PDFs.
+ */
+export function humanizeWhatsAppDmText(text: string): string {
+  if (!text) return text;
+  let out = text
+    .replace(/^[=\-_]{5,}\s*$/gm, "")
+    .replace(/\bBase de Datos Única de Afiliados \(BDUA\)/gi, "sistema de salud ADRES")
+    .replace(/\bBoletín de Responsables Fiscales \(SIRECI\)/gi, "Contraloría")
+    .replace(/\bSistema de Información de Registro de Sanciones y Causas de Inhabilidad \(SIRI\)/gi, "Procuraduría")
+    .replace(/\b\(SIRI\)/gi, "")
+    .replace(/\b\(SIRECI\)/gi, "")
+    .replace(/\b\(BDUA\)/gi, "")
+    .replace(/\bCódigo Único de Verificación \(CUV\)/gi, "código de verificación")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return out;
 }
 
 /**
@@ -3611,6 +3676,77 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     console.warn("[processPrivateDmConversationalMessage] Follow-up check warning:", followUpErr?.message);
   }
 
+  // ✍️ RESPALDO ACCESIBLE EN CHAT ("Sí acepto") PARA DESBLOQUEAR MATCH PENDIENTE DE FIRMA (v34.26):
+  try {
+    if (!/\d{5,}/.test(clean) && /^(?:s[ií]\s+acepto|acepto(?:\s+los\s+t[eé]rminos)?|s[ií],?\s*acepto)\b/i.test(cleanLower)) {
+      const { findPendingMatchSignatureForUser, completeMatchSignature, buildMatchTermsPdf } = await import("../../matchSignatureService");
+      const pendingSig = await findPendingMatchSignatureForUser(userId);
+      if (pendingSig && pendingSig.status === "pending") {
+        const cleanDocPhone = userId.split(":")[0].split("@")[0];
+        const signed = await completeMatchSignature({
+          token: pendingSig.token,
+          signerName: displayName || realName || userName || "Usuario WhatsApp",
+          signerDocumentType: "WhatsApp",
+          signerDocument: cleanDocPhone,
+          acceptedTerms: true,
+          method: "whatsapp_text",
+        });
+
+        try {
+          const pdfOut = await buildMatchTermsPdf({
+            ...pendingSig,
+            status: "signed",
+            signerName: displayName || realName || userName || "Usuario WhatsApp",
+            signerDocumentType: "WhatsApp",
+            signerDocument: cleanDocPhone,
+            method: "whatsapp_text",
+            signedAt: new Date().toISOString(),
+          });
+          setLatestDmPdf(userId, {
+            pdfBuffer: Buffer.from(pdfOut.pdfBytes),
+            pdfFileName: `VECY_Acuerdo_Match_${pendingSig.token}.pdf`,
+          });
+        } catch (_) {}
+
+        const codesStr = signed.unlockedCodes
+          .map((c) => `• *${c.matchCode}* (${c.score}%)${c.propertyCode ? ` — Inmueble *${c.propertyCode}*` : ""} en ${c.zona}`)
+          .join("\n");
+        const firstCode = signed.unlockedCodes[0]?.matchCode || "#M";
+        const unlockReply =
+          `¡Listo${displayName ? `, ${displayName}` : ""}! ✅ Tus códigos quedaron desbloqueados y adjunté tu constancia en PDF:\n` +
+          `${codesStr}\n` +
+          `Comunícate con Eduardo o Jani al *+57 316 656 9719*, pásales el código *${firstCode}* y diles que JanIA te lo entregó para coordinar visita. 🤝`;
+
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", unlockReply);
+        markUserGreetedToday(userId);
+        return unlockReply;
+      }
+    }
+  } catch (sigFallbackErr: any) {
+    console.warn("[dmHandler] Error en fallback 'Sí acepto' de Match:", sigFallbackErr?.message);
+  }
+
+  // 📋 FICHA ULTRA-COMPLETA DE REQUERIMIENTOS POR DM ("UNA SOLA PREGUNTA A LA VEZ" — v34.26):
+  try {
+    const { handleIncrementalRequirementDraftTurn } = await import("../requirementDraftService");
+    const draftReply = await handleIncrementalRequirementDraftTurn({
+      userId,
+      userName,
+      displayName: displayName || realName,
+      messageText: clean,
+      isFounder: isEduardo || isJani,
+    });
+    if (draftReply) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", draftReply);
+      markUserGreetedToday(userId);
+      return draftReply;
+    }
+  } catch (draftErr: any) {
+    console.warn("[dmHandler] Error en ficha incremental de requerimiento:", draftErr?.message);
+  }
+
   // Procesamiento con IA Pura (Gemini + JANIA_DM_TOOLS)
   try {
     const vecyKnowledge = getVecyInstitutionalKnowledge();
@@ -3653,6 +3789,12 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `  1. Confirma con gusto y comparte el contacto directo de nuestros directores Eduardo Rivera y Jani Alves en la línea oficial del bróker: +57 316 656 9719 ([wa.me/573166569719](https://wa.me/573166569719)).\n` +
       `  2. Pregúntale amablemente sobre qué tema desea conversar para ir adelantándoles el contexto a Eduardo y Jani.\n` +
       `  3. PROHIBIDO TERMINANTEMENTE autopresentarte ("Yo soy JanIA, tu directora...") o recitar tu lista de servicios y trámites (predial, notarías, etc.). Ve directo al punto con empatía.\n\n` +
+      `===================================================\n` +
+      `MODO HUMANA REAL — CERO BIBLIAS Y CERO JERGA TÉCNICA-JURÍDICA (v34.26 — EDUARDO A. RIVERA):\n` +
+      `===================================================\n` +
+      `- MÁXIMO 3 A 4 RENGLONES EN CHAT COTIDIANO: Escribe como una asesora humana real por WhatsApp. Prohibido enviar biblias largas ni textos que saquen botón "Leer más".\n` +
+      `- ESPAÑOL COTIDIANO SIN JERGA BUROCRÁTICA: En mensajes de chat evita siglas frías (SIRI, SIRECI, BDUA, UVT, CUV) o listas de artículos de ley; dilo claro ("antecedentes", "salud ADRES", "tope legal") y deja el detalle jurídico extenso únicamente dentro del PDF adjunto.\n` +
+      `- ENTRADAS EN FRÍO CON BUENOS MODALES Y MEMORIA SILENCIOSA: Si alguien escribe sin saludar, responde cálida, humana, resuelve o confirma en máximo 2–3 renglones y guarda en memoria silenciosa lo que ya te dio.\n\n` +
       `===================================================\n` +
       `ESTILO Y VOZ LAOMEDEIA (HUMANIDAD PURA, CONCISIÓN Y CERO REDUNDANCIA):\n` +
       `===================================================\n` +
@@ -3973,10 +4115,10 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     const isExplicitRegistrationOrJoinIntentInPrompt = /\b(?:quiero\s+(?:registrar|publicar|subir|radicar|inscribir|unirme)|voy\s+a\s+(?:registrar|publicar|subir)|c[oó]mo\s+(?:registro|publico|subo|ingreso|radico|me\s+uno)|para\s+(?:registrar|publicar|subir|unirme)|unirme|unirme\s+al\s+grupo|unirme\s+a\s+(?:la\s+)?comunidad|entrar\s+al\s+grupo|entrar\s+a\s+(?:la\s+)?comunidad|link\s+del\s+grupo|enlace\s+del\s+grupo|tengo\s+(?:un\s+)?(?:requerimiento|cliente|inmueble)|cliente\s+buscando|buscando\s+(?:apartamento|apto|casa|bodega|oficina|lote|finca))\b/i.test(clean);
 
     if (isExplicitRegistrationOrJoinIntentInPrompt) {
-      userPromptContent += `\n[SISTEMA - DOCTRINA EDUARDO A. RIVERA DE REQUERIMIENTOS Y PERFILAMIENTO: El usuario manifiesta la intención de registrar o buscar un inmueble, o unirse a los grupos oficiales. QUEDA TERMINANTEMENTE PROHIBIDO asumir que ya está registrado o responder diciendo "Registraré de inmediato en la base de datos" ante datos incompletos. Directivas obligatorias:
-1) Si es un requerimiento que carece de presupuesto numérico, alcobas exactas o especificaciones indispensables: QUEDA TERMINANTEMENTE PROHIBIDO prometer registro o match a ciegas. Despliega la Entrevista Minuciosa de Perfilamiento Inmobiliario aterrizando al asesor con señorío y formulando las preguntas por dimensiones: presupuesto en COP, recursos propios vs crédito aprobado/banco, administración, alcobas exactas 1=1, baños, parqueaderos independientes/lineales, depósito, piso, cocina, balcón y amenidades del conjunto.
+      userPromptContent += `\n[SISTEMA - DOCTRINA EDUARDO A. RIVERA DE REQUERIMIENTOS (UNA SOLA PREGUNTA A LA VEZ): El usuario manifiesta la intención de registrar o buscar un inmueble, o unirse a los grupos oficiales. QUEDA TERMINANTEMENTE PROHIBIDO asumir que ya está registrado ante datos incompletos. Directivas obligatorias:
+1) Si le faltan datos indispensables (tipo, negocio, ciudad/barrio, presupuesto, área o especificaciones clave): NO lances una lista de preguntas juntas. Pídele ÚNICAMENTE el primer dato faltante en máximo 2 renglones para ir paso a paso.
 2) Si solicitó unirse al grupo de Demandas y Ofertas (o grupos oficiales), entrégale el enlace oficial limpio: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ.
-3) Si ya aportó los datos indispensables completos en este turno o en la conversación, invoca DE INMEDIATO la herramienta 'registrar_inmueble_o_requerimiento' para guardarlo en la base de datos y entregarle su código oficial de radicado (ID #REQ).]`;
+3) Si ya aportó los datos indispensables completos, invoca 'registrar_inmueble_o_requerimiento' para radicarlo. Si hay Match para un usuario externo, entrega el enlace de firma antes de liberar #M... o PROP-... .]`;
     }
 
     if (isCommunityInquiry) {
@@ -4204,7 +4346,7 @@ DIRECTIVAS OBLIGATORIAS:
     }
 
     const stickerProcessed = processAndQueueDmSticker(userId, clean, reply);
-    reply = stickerProcessed.cleanReply || reply;
+    reply = humanizeWhatsAppDmText(stickerProcessed.cleanReply || reply);
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);

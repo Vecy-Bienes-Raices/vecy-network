@@ -7,6 +7,25 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-17] — JanIA v34.26 (Bloque 2 + 19 Tipos Unificados): Modo Humana Real, Ficha DM "1 Pregunta a la Vez" y Firma Electrónica de Match antes de liberar `#M...` / `PROP-...` (Doctrina Eduardo A. Rivera — v34.26 - 34.26.0)
+
+#### 1. Directriz de Eduardo A. Rivera
+- Eduardo aprobó continuar de inmediato con la ejecución completa del Bloque 2, desplegar Bloque 1 (`1d13abe`), unificar de raíz exactamente los **19 tipos de inmuebles** tanto en **OFERTAS** como en **DEMANDAS** (`Apartaestudio`, `Apartamento`, `Apartamento Dúplex`, `Pent House`, `Pent House Dúplex`, `Bodega`, `Cabaña`, `Casa`, `Casa Campestre`, `Casa Quinta`, `Edificio`, `Finca`, `Hostal`, `Hotel`, `Aparta Hotel`, `Local`, `Lote / Terreno`, `Oficina` + subtipo `Consultorio Médico / Salud`, `Villa`), y subir commits + despliegue + bitácoras `.md`.
+
+#### 2. Arquitectura Implementada y Verificada en `v34.26`
+1. **Unificación Canónica de 19 Tipos en Ofertas y Demandas (`shared/colombiaCatalog.ts`, `UnifiedPublishModal.tsx`, `RequirementsMarketplace.tsx`):**
+   - Publicado el catálogo maestro de 19 tipos en ambos formularios (Oferta y Demanda) junto con selector dinámico de subtipo especializado (`PROPERTY_SUBTYPES`, incluyendo `Consultorio Médico / Salud` bajo `Oficina`) y etiqueta exacta `extras.tipoExacto` en las tarjetas de `/demandas`.
+2. **Modo Humana Real ("Cero Biblias / Cero Jerga Técnica-Jurídica") (`server/_core/jania/handlers/dmHandler.ts`, `server/_core/prompts/base.md`):**
+   - Implementado `humanizeWhatsAppDmText` y reglas doctrinales en prompt/síntesis para limitar respuestas cotidianas de WhatsApp a **3–4 renglones**, sin siglas burocráticas (`SIRI`, `SIRECI`, `BDUA`, `UVT`, `CUV`), moviendo sustentación legal/tablas extensas exclusivamente a PDF adjunto.
+3. **Ficha Ultra-Completa de Requerimientos por DM ("1 Pregunta a la Vez") (`server/_core/jania/requirementDraftService.ts`, `dmHandler.ts`):**
+   - Acumulador persistente `pendingRequirementDraft` en sesión (`keyFacts`) que captura negocio, cualquiera de los 19 tipos, departamento, ciudad/municipio, barrio/vereda, presupuesto, forma de pago, área mínima (`m²`/`hectáreas`/`fanegadas`), especificaciones adaptativas (omitiendo habitaciones en Lotes, Oficinas, Locales y Bodegas) haciendo **máximo 1 pregunta puntual por turno**, radicando en PostgreSQL + lanzando cruce Web/BD (85%–100%).
+4. **Firma Electrónica de Match por WhatsApp antes de liberar `#M...` / `PROP-...` (`server/_core/matchSignatureService.ts`, `client/src/pages/FirmaMatch.tsx`, `client/src/App.tsx`, `server/routers/janIA.ts`):**
+   - Retención segura de códigos `PROP-...` y `#M...` para usuarios externos (`registrar_inmueble_o_requerimiento` y `requirementDraftService`), generación de token en PostgreSQL/RAM (`https://vecy-bienes-raices.vercel.app/firma-match/<token>`), vista móvil con `SignaturePad.jsx` + T&C adaptados al rol + Ley 1581/2012, estampado en PDF (`pdf-lib` + firma PNG + QR + CUV + SHA-256), envío automático por Baileys (`janiaMatchBot.sendDirectMessage`) + alerta a Eduardo (`+57 316 656 9719`) y respaldo `"Sí acepto"` por DM.
+5. **Gobernanza y Validación (`shared/const.ts`, `package.json`, `founderKnowledgeService.ts`, `regression.test.ts`):**
+   - Semilla `seed-modo-humana-ficha-dm-firma-match-v34-26`, **Suite 212**, `npm run check` (**0 errores**), `NODE_ENV=test npm test` (**6/6 archivos, 745/745 tests en verde** | `$0 COP`), `npm run build` limpio (`vite build` + `dist-server/index.js` 3.4mb) y versión `v34.26` (`34.26.0`).
+
+---
+
 ### 📅 [2026-11-16] — JanIA v34.25 (Bloque 1): Cobertura Nacional (32 Departamentos), Todas las Localidades de Bogotá, Todas las Tipologías (Lotes/Consultorios/Oficinas) y Formularios Completos de Demandas/Ofertas (Doctrina Eduardo A. Rivera — v34.25 - 34.25.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico Crítico

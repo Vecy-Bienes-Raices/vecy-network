@@ -33,6 +33,7 @@ const NuestraHistoria = lazy(() => import("./pages/NuestraHistoria"));
 const JanIAConsole = lazy(() => import("./pages/JanIAConsole"));
 const TerminosCondiciones = lazy(() => import("./pages/TerminosCondiciones"));
 const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
+const FirmaMatch = lazy(() => import("./pages/FirmaMatch"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoadingFallback() {
@@ -77,6 +78,7 @@ function Router() {
         <Route path={"/politica-privacidad"} component={PoliticaPrivacidad} />
         <Route path={"/politica"} component={PoliticaPrivacidad} />
         <Route path={"/privacidad"} component={PoliticaPrivacidad} />
+        <Route path={"/firma-match/:token"} component={FirmaMatch} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />

@@ -14848,6 +14848,224 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:2[5-9]|[3-9]\d)\.0$/);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 212: BLOQUE 2 — MODO HUMANA REAL, FICHA DM 1 PREGUNTA A LA VEZ
+  // Y FIRMA ELECTRÓNICA DE T&C + PRIVACIDAD ANTES DE LIBERAR #M... / PROP-... (v34.26)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("Suite 212: Modo Humana Real, Ficha DM Paso a Paso y Firma Electrónica de Match (v34.26)", () => {
+    it("1. Modo Humana Real suaviza siglas burocráticas y mantiene directivas breves en dmHandler y base.md ($0 COP)", async () => {
+      const fs = await import("fs");
+      const { humanizeWhatsAppDmText } = await import("../_core/jania/handlers/dmHandler");
+
+      const cleaned = humanizeWhatsAppDmText(
+        "====================\nConsultado en Base de Datos Única de Afiliados (BDUA) y Sistema de Información de Registro de Sanciones y Causas de Inhabilidad (SIRI).\n===================="
+      );
+      expect(cleaned).not.toContain("====================");
+      expect(cleaned).not.toContain("(BDUA)");
+      expect(cleaned).not.toContain("(SIRI)");
+      expect(cleaned).toContain("sistema de salud ADRES");
+      expect(cleaned).toContain("Procuraduría");
+
+      const dmSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      const baseMd = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+      expect(dmSrc).toContain("MODO HUMANA REAL — CERO BIBLIAS Y CERO JERGA TÉCNICA-JURÍDICA (v34.26");
+      expect(baseMd).toContain("MODO HUMANA REAL — CERO BIBLIAS Y CERO JERGA TÉCNICA-JURÍDICA (v34.26");
+    });
+
+    it("2. Ficha Ultra-Completa DM guía 1 pregunta a la vez adaptada a Apartamentos y Lotes ($0 COP)", async () => {
+      const {
+        handleIncrementalRequirementDraftTurn,
+        getActiveRequirementDraft,
+        saveRequirementDraft
+      } = await import("../_core/jania/requirementDraftService");
+      const { resetUserPerpetualSessionsForTests } = await import("../_core/jania/sessionManager");
+      resetUserPerpetualSessionsForTests();
+
+      const jidApto = `573005551122_${Date.now()}@s.whatsapp.net`;
+      const q1 = await handleIncrementalRequirementDraftTurn({
+        userId: jidApto,
+        displayName: "Camila",
+        messageText: "Busco apartamento en venta"
+      });
+      expect(q1).toContain("ciudad o municipio");
+
+      const q2 = await handleIncrementalRequirementDraftTurn({
+        userId: jidApto,
+        displayName: "Camila",
+        messageText: "Medellín"
+      });
+      expect(q2).toContain("barrios");
+
+      const q3 = await handleIncrementalRequirementDraftTurn({
+        userId: jidApto,
+        displayName: "Camila",
+        messageText: "El Poblado"
+      });
+      expect(q3).toContain("presupuesto máximo");
+
+      const q4 = await handleIncrementalRequirementDraftTurn({
+        userId: jidApto,
+        displayName: "Camila",
+        messageText: "850 millones de contado"
+      });
+      expect(q4).toContain("área mínima");
+
+      const q5 = await handleIncrementalRequirementDraftTurn({
+        userId: jidApto,
+        displayName: "Camila",
+        messageText: "110 m2"
+      });
+      expect(q5).toContain("habitaciones exactas");
+
+      const activeDraft = await getActiveRequirementDraft(jidApto);
+      expect(activeDraft?.city).toBe("Medellín");
+      expect(activeDraft?.department).toBe("Antioquia");
+      expect(activeDraft?.budgetMax).toBe(850_000_000);
+      expect(activeDraft?.areaMin).toBe(110);
+
+      // Lote no pide habitaciones, baños ni parqueaderos: pasa directo de área mínima a uso de suelo/extras
+      const jidLote = `573005551133_${Date.now()}@s.whatsapp.net`;
+      const l1 = await handleIncrementalRequirementDraftTurn({
+        userId: jidLote,
+        displayName: "Carlos",
+        messageText: "Necesito lote en venta en Rionegro Llanogrande hasta 1500 millones"
+      });
+      expect(l1).toContain("contado");
+      const l2 = await handleIncrementalRequirementDraftTurn({
+        userId: jidLote,
+        displayName: "Carlos",
+        messageText: "contado"
+      });
+      expect(l2).toContain("área mínima");
+      const l3 = await handleIncrementalRequirementDraftTurn({
+        userId: jidLote,
+        displayName: "Carlos",
+        messageText: "2 hectáreas"
+      });
+      expect(l3).toContain("uso de suelo");
+      await saveRequirementDraft(jidLote, null);
+    });
+
+    it("3. Firma electrónica móvil + PDF estampado + fallback 'Sí acepto' retienen #M... y PROP-... antes de firmar ($0 COP)", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const {
+        createMatchSignatureRequest,
+        getMatchSignaturePublicView,
+        completeMatchSignature
+      } = await import("../_core/matchSignatureService");
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const { resetUserPerpetualSessionsForTests } = await import("../_core/jania/sessionManager");
+      resetUserPerpetualSessionsForTests();
+
+      const jid = `573008889900_${Date.now()}@s.whatsapp.net`;
+      const created = await createMatchSignatureRequest({
+        userJid: jid,
+        userName: "Sofía Restrepo",
+        userRole: "agente_inmobiliario",
+        requirementId: 991,
+        requirementTitle: "Apartamento en El Poblado",
+        matches: [
+          {
+            matchCode: "#M99101",
+            propertyCode: "PROP-501",
+            propertyId: 501,
+            score: 94,
+            tipoInmueble: "Apartamento",
+            zona: "El Poblado",
+            ciudad: "Medellín",
+            precioOCanon: "$820.000.000",
+            area: "120 m²"
+          }
+        ]
+      });
+
+      expect(created.url).toContain("https://vecy-bienes-raices.vercel.app/firma-match/");
+
+      // Antes de firmar: no expone #M... ni PROP-...
+      const publicBefore = await getMatchSignaturePublicView(created.token);
+      expect(publicBefore.found).toBe(true);
+      if (publicBefore.found) {
+        expect(publicBefore.status).toBe("pending");
+        expect(publicBefore.unlockedCodes).toEqual([]);
+        expect(publicBefore.termsTitle).toContain("40 / 20 / 40");
+      }
+
+      // Firmar con imagen PNG válida (SignaturePad) -> genera PDF válido y libera códigos
+      const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const done = await completeMatchSignature({
+        token: created.token,
+        signerName: "Sofía Restrepo",
+        signerDocumentType: "CC",
+        signerDocument: "1018999888",
+        signatureBase64: tinyPng,
+        signerIp: "186.10.20.30",
+        acceptedTerms: true,
+        method: "canvas"
+      });
+      expect(done.success).toBe(true);
+      expect(done.cuv).toMatch(/^CUV-/);
+      expect(done.unlockedCodes[0]?.matchCode).toBe("#M99101");
+      expect(done.unlockedCodes[0]?.propertyCode).toBe("PROP-501");
+
+      const pdfDiskPath = path.resolve(process.cwd(), "public" + done.signedPdfUrl);
+      expect(fs.existsSync(pdfDiskPath)).toBe(true);
+      expect(fs.readFileSync(pdfDiskPath).subarray(0, 5).toString("utf8")).toBe("%PDF-");
+      try { fs.unlinkSync(pdfDiskPath); } catch (_) {}
+
+      // Respaldo accesible "Sí acepto" en WhatsApp DM para adultos mayores
+      const jidSenior = `573007776655_${Date.now()}@s.whatsapp.net`;
+      const created2 = await createMatchSignatureRequest({
+        userJid: jidSenior,
+        userName: "Alberto Mejía",
+        userRole: "comprador_inversionista",
+        requirementId: 992,
+        requirementTitle: "Casa en Castilla, Kennedy",
+        matches: [
+          {
+            matchCode: "#M99202",
+            propertyCode: "PROP-502",
+            propertyId: 502,
+            score: 91,
+            tipoInmueble: "Casa",
+            zona: "Castilla",
+            ciudad: "Bogotá, D.C.",
+            precioOCanon: "$520.000.000"
+          }
+        ]
+      });
+
+      const dmAcceptReply = await processPrivateDmConversationalMessage("Sí acepto", jidSenior, "Alberto Mejía");
+      expect(dmAcceptReply).toContain("#M99202");
+      expect(dmAcceptReply).toContain("PROP-502");
+      expect(dmAcceptReply).toContain("+57 316 656 9719");
+
+      const seniorPdf = path.resolve(process.cwd(), `public/uploads/match-pdfs/${created2.token}.pdf`);
+      try { if (fs.existsSync(seniorPdf)) fs.unlinkSync(seniorPdf); } catch (_) {}
+    });
+
+    it("4. Ruta móvil /firma-match/:token, endpoints tRPC, semilla v34.26 y versión v34.26 (34.26.0)", async () => {
+      const fs = await import("fs");
+      const appSrc = fs.readFileSync("client/src/App.tsx", "utf-8");
+      const firmaSrc = fs.readFileSync("client/src/pages/FirmaMatch.tsx", "utf-8");
+      const janIaRouterSrc = fs.readFileSync("server/routers/janIA.ts", "utf-8");
+      expect(appSrc).toContain("/firma-match/:token");
+      expect(firmaSrc).toContain("SignaturePadComponent");
+      expect(janIaRouterSrc).toContain("getMatchSignatureStatus");
+      expect(janIaRouterSrc).toContain("submitMatchSignature");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed26 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-modo-humana-ficha-dm-firma-match-v34-26"
+      );
+      expect(seed26?.active).toBe(true);
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[6-9]|[3-9]\d)$/);
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:2[6-9]|[3-9]\d)\.0$/);
+    });
+  });
 });
 
 

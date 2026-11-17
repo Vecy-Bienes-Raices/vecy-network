@@ -914,6 +914,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Erradicar hardcode de Bogotá/Zona Norte, habilitar formularios completos de Oferta y Demanda con Departamento/Ciudad/Localidad/Barrio/Vereda/Otras Especificaciones, soporte total para Lotes, Consultorios, Oficinas y todas las clases de inmuebles a nivel nacional.",
     createdAt: "2026-11-16T21:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-modo-humana-ficha-dm-firma-match-v34-26",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Modo Humana Real (3–4 Renglones, Cero Jerga), Ficha DM Paso a Paso y Firma Electrónica Antes de Liberar #M... (v34.26)",
+    directive:
+      "En conversaciones cotidianas por WhatsApp DM, JanIA escribe como una asesora humana real (máximo 3–4 renglones sin provocar 'Leer más', cero siglas burocráticas como SIRI/SIRECI/BDUA/UVT y dejando las tablas o artículos extensos solo en PDF). Al tomar requerimientos por DM, guía una pregunta a la vez mediante pendingRequirementDraft hasta completar ubicación nacional, presupuesto, área y confort. Cuando detecte Matches (#M... / PROP-...) para usuarios externos, retiene los códigos hasta que firmen Términos y Condiciones y Política de Privacidad en /firma-match/:token (o respondan 'Sí acepto'), entregando entonces el PDF estampado + códigos desbloqueados.",
+    rawText:
+      "Bloque 2 (v34.26): Modo Humana Real, Ficha DM incremental nacional de 19 tipos y Firma Electrónica de Match antes de liberar PROP-... y #M....",
+    createdAt: "2026-11-16T23:52:00.000Z",
+    active: true
   }
 ];
 

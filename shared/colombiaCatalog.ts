@@ -399,3 +399,26 @@ export function getPropertyCategoryGroup(propertyType: string | null | undefined
   return "residential";
 }
 
+// 19 Tipos exactos de inmuebles tanto en OFERTAS como en DEMANDAS (Doctrina Eduardo A. Rivera)
+export const PROPERTY_TYPES_EXACT = [
+  "Apartaestudio",
+  "Apartamento",
+  "Apartamento Dúplex",
+  "Pent House",
+  "Pent House Dúplex",
+  "Bodega",
+  "Cabaña",
+  "Casa",
+  "Casa Campestre",
+  "Casa Quinta",
+  "Edificio",
+  "Finca",
+  "Hostal",
+  "Hotel",
+  "Aparta Hotel",
+  "Local",
+  "Lote / Terreno",
+  "Oficina",
+  "Villa",
+] as const;
+

@@ -2512,6 +2512,42 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
       const { evaluateAndDispatchCostAlerts } = await import("../_core/telemetryAndAlertsService");
       return await evaluateAndDispatchCostAlerts(input);
     }),
+
+  /**
+   * Firma electrónica móvil de T&C y Política de Privacidad antes de liberar códigos #M... / PROP-... (v34.26)
+   */
+  getMatchSignatureStatus: publicProcedure
+    .input(z.object({ token: z.string().min(3) }))
+    .query(async ({ input }) => {
+      const { getMatchSignaturePublicView } = await import("../_core/matchSignatureService");
+      return await getMatchSignaturePublicView(input.token);
+    }),
+
+  submitMatchSignature: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(3),
+        signerName: z.string().min(2),
+        signerDocumentType: z.string().optional(),
+        signerDocument: z.string().min(3),
+        signatureBase64: z.string().optional(),
+        acceptedTerms: z.boolean(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { completeMatchSignature } = await import("../_core/matchSignatureService");
+      const rawFwd = ctx.req?.headers?.["x-forwarded-for"];
+      const signerIp = Array.isArray(rawFwd)
+        ? rawFwd[0]
+        : typeof rawFwd === "string"
+          ? rawFwd.split(",")[0].trim()
+          : ctx.req?.socket?.remoteAddress || "Verificada";
+      return await completeMatchSignature({
+        ...input,
+        signerIp,
+        method: input.signatureBase64 ? "canvas" : "whatsapp_text",
+      });
+    }),
 });
 
 export type JanIARouter = typeof janIARouter;

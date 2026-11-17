@@ -184,7 +184,20 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.25 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.26 — Noviembre 2026
+
+### Novedades v34.26 (Bloque 2 — Modo Humana Real, Ficha DM "1 Pregunta a la Vez", Firma Electrónica de Match y 19 Tipos Exactos en Ofertas & Demandas — Doctrina Eduardo A. Rivera):
+- **Modo Humana Real ("Cero Biblias / Cero Jerga") (`server/_core/jania/handlers/dmHandler.ts`, `server/_core/prompts/base.md`):**
+  1. Añadido `humanizeWhatsAppDmText` y reglas estrictas de mensajes cotidianos de máximo 3–4 renglones en español claro sin activar "Leer más", moviendo artículos de ley/tablas extensas a PDF adjunto y suprimiendo siglas burocráticas (`SIRI`, `SIRECI`, `BDUA`, `UVT`, `CUV`) en chat cotidiano.
+- **Ficha Ultra-Completa de Requerimientos por DM (`server/_core/jania/requirementDraftService.ts`, `dmHandler.ts`):**
+  1. Nuevo acumulador persistente `pendingRequirementDraft` en `userPerpetualSession.keyFacts` que captura todos los campos nacionales y de los 19 tipos paso a paso (**1 pregunta puntual por turno**), adaptando preguntas por tipología (sin exigir alcobas a Lotes, Oficinas, Locales ni Bodegas) antes de radicar en PostgreSQL y correr Matching 85%–100%.
+- **Firma Electrónica de Match antes de liberar `PROP-...` / `#M...` (`server/_core/matchSignatureService.ts`, `client/src/pages/FirmaMatch.tsx`, `client/src/App.tsx`, `server/routers/janIA.ts`):**
+  1. Retención automática de códigos `#M...` / `PROP-...` para usuarios externos hasta firmar T&C (40/20/40 o acompañamiento directo según rol) y Política de Privacidad (Ley 1581/2012) en `https://vecy-bienes-raices.vercel.app/firma-match/<token>` reutilizando `SignaturePad.jsx`, con generación PDF (`pdf-lib` + firma PNG + QR + CUV + SHA-256), envío automático por `janiaMatchBot.sendDirectMessage` y respaldo `"Sí acepto"` en WhatsApp DM.
+- **19 Tipos Exactos Unificados (`shared/colombiaCatalog.ts`, `UnifiedPublishModal.tsx`, `RequirementsMarketplace.tsx`):**
+  1. Lista canónica `PROPERTY_TYPES_EXACT` (`Apartaestudio`, `Apartamento`, `Apartamento Dúplex`, `Pent House`, `Pent House Dúplex`, `Bodega`, `Cabaña`, `Casa`, `Casa Campestre`, `Casa Quinta`, `Edificio`, `Finca`, `Hostal`, `Hotel`, `Aparta Hotel`, `Local`, `Lote / Terreno`, `Oficina` con subtipo `Consultorio Médico / Salud`, `Villa`) idéntica en Ofertas y Demandas.
+- **Gobernanza y Regresión (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-modo-humana-ficha-dm-firma-match-v34-26`, **Suite 212**, `npm run check` (0 errores), `NODE_ENV=test npm test` (**6/6 archivos, 745/745 tests en verde** | `$0 COP`), `npm run build` limpio y versión `v34.26` (`34.26.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.25 — Noviembre 2026
 
 ### Novedades v34.25 (Bloque 1 — Cobertura Nacional 32 Departamentos, Todas las 20 Localidades de Bogotá, Todas las Tipologías y Formularios Completos de Demandas/Ofertas — Doctrina Eduardo A. Rivera):
 - **Catálogo Nacional y Erradicación de Sesgo Bogotá/Zona Norte (`shared/colombiaCatalog.ts`, `geography.ts`, `matching.ts`, `properties.ts`, `UnifiedPublishModal.tsx`):**

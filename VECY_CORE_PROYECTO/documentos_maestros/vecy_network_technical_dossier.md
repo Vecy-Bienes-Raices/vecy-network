@@ -330,6 +330,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.26 — Noviembre 2026
+- **Bloque 2 — Modo Humana Real, Ficha DM "1 Pregunta a la Vez", Firma Electrónica de Match y 19 Tipos Unificados:**
+  - `shared/colombiaCatalog.ts`, `client/src/components/publish/UnifiedPublishModal.tsx`, `client/src/pages/RequirementsMarketplace.tsx`: exportado y unificado `PROPERTY_TYPES_EXACT` con los **19 tipos exactos** solicitados por Eduardo (`Apartaestudio`, `Apartamento`, `Apartamento Dúplex`, `Pent House`, `Pent House Dúplex`, `Bodega`, `Cabaña`, `Casa`, `Casa Campestre`, `Casa Quinta`, `Edificio`, `Finca`, `Hostal`, `Hotel`, `Aparta Hotel`, `Local`, `Lote / Terreno`, `Oficina` + subtipo `Consultorio Médico / Salud`, `Villa`) idénticos en Ofertas y Demandas.
+  - `server/_core/jania/handlers/dmHandler.ts`, `server/_core/prompts/base.md`: añadido `humanizeWhatsAppDmText` y reglas estrictas de **Modo Humana Real** (máximo 3–4 renglones en chat cotidiano, sin siglas `SIRI`/`SIRECI`/`BDUA`/`UVT`/`CUV` en texto conversacional, dejando el detalle jurídico en PDF).
+  - `server/_core/jania/requirementDraftService.ts`, `dmHandler.ts`: recolector progresivo `pendingRequirementDraft` en `userPerpetualSession.keyFacts` ("1 pregunta a la vez") para guiar búsqueda nacional multi-tipología hasta radicar en PostgreSQL y correr Matching 85%–100%.
+  - `server/_core/matchSignatureService.ts`, `server/routers/janIA.ts`, `client/src/pages/FirmaMatch.tsx`, `client/src/App.tsx`: flujo completo de retención de códigos `PROP-...` / `#M...` hasta firma en `/firma-match/:token` (o respaldo `"Sí acepto"`), generando PDF firmado con `pdf-lib` (`SignaturePad.jsx` + QR + CUV + SHA-256) y despachando PDF + códigos liberados por `janiaMatchBot.sendDirectMessage`.
+  - Gobernanza y Pruebas: semilla `seed-modo-humana-ficha-dm-firma-match-v34-26`, **Suite 212** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npm test`: **6/6 archivos, 745/745 tests en verde**; `npm run build` limpio) y bump `v34.26` (`34.26.0`).
+
 ### 🔖 v34.25 — Noviembre 2026
 - **Bloque 1: Cobertura Nacional (32 Departamentos), Todas las Localidades de Bogotá, Todas las Tipologías y Formularios Completos de Demandas/Ofertas:**
   - `shared/colombiaCatalog.ts`, `server/_core/geography.ts`, `server/_core/jania/handlers/propertiesHandler.ts`, `server/routers/properties.ts`: catálogo nacional de 32 departamentos + Bogotá D.C. con sus 20 localidades completas, `getPropertyRefCityPrefix` (prefijos dinámicos por ciudad `MED`/`CAL`/`BGA`/`BAQ`/etc. en vez de `ID-BOG-`), paso nacional general en `deducirGeografiaTripartita` y eliminación de fallbacks fijos a Bogotá.
