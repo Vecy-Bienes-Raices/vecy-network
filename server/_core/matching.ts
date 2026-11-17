@@ -2,15 +2,18 @@ import { getDb } from "../db";
 import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements, matchFeedback } from "../../drizzle/schema";
 import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS, isCityOrGenericZone } from "./geography";
+import { buscarLugarColombia } from "./colombia-geography";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 import { extractFallbackDataFromText } from "./janIA";
+import { getPropertyCategoryGroup } from "../../shared/colombiaCatalog";
 import {
   parseSecurityType,
   demands24hSecurity,
   checkFinancialSegmentCoherence,
   parseOutdoorAreas,
   parseAdminFee,
+  parseArea,
   extractPureBarrio,
   extractBuildingOrComplex
 } from "../../shared/colombianRealEstateParser";
@@ -1131,8 +1134,8 @@ export function matchesGeography(
   }
 
   // 5. CASO 4: El requerimiento incluye "aledaños", "cercanos", "u otros":
-  // Aceptamos propiedades en barrios contiguos del mismo municipio y la misma localidad/comuna.
-  if (tieneAledanos && reqLoc && propLoc && reqLoc !== "bogota" && propLoc !== "bogota" && reqLoc === propLoc) {
+  // Aceptamos propiedades en barrios contiguos del mismo municipio y la misma localidad/comuna (en TODO Bogotá y TODO el país).
+  if (tieneAledanos && reqLoc && propLoc && reqLoc !== "bogota" && propLoc !== "bogota" && (reqLoc === propLoc || reqLoc.includes(propLoc) || propLoc.includes(reqLoc))) {
     return { matches: true, score: 15 };
   }
 
@@ -1316,34 +1319,79 @@ export function normalizeCanonicalCity(city: string | null | undefined): string 
   if (c.includes("pereira")) return "Pereira";
   if (c.includes("manizales")) return "Manizales";
   if (c.includes("armenia")) return "Armenia";
+  if (c.includes("santa marta")) return "Santa Marta";
+  if (c.includes("villavicencio")) return "Villavicencio";
+  if (c.includes("ibague")) return "Ibagué";
+  if (c.includes("cucuta")) return "Cúcuta";
+  if (c.includes("valledupar")) return "Valledupar";
+  if (c.includes("monteria")) return "Montería";
+  if (c.includes("sincelejo")) return "Sincelejo";
+  if (c.includes("neiva")) return "Neiva";
+  if (c.includes("pasto")) return "Pasto";
+  if (c.includes("popayan")) return "Popayán";
+  if (c.includes("tunja")) return "Tunja";
+  if (c.includes("yopal")) return "Yopal";
   if (c.includes("chia")) return "Chía";
   if (c.includes("cajica")) return "Cajicá";
   if (c.includes("cota")) return "Cota";
   if (c.includes("sopo")) return "Sopó";
+  if (c.includes("rionegro")) return "Rionegro";
+  if (c.includes("envigado")) return "Envigado";
+  if (c.includes("sabaneta")) return "Sabaneta";
+  if (c.includes("itagui")) return "Itagüí";
+  if (c.includes("floridablanca")) return "Floridablanca";
+  if (c.includes("piedecuesta")) return "Piedecuesta";
+  if (c.includes("soacha")) return "Soacha";
+  const lugar = buscarLugarColombia(city);
+  if (lugar && lugar.nombreCanonico) return lugar.nombreCanonico;
   return city.trim();
 }
 
 export function extractTrueCityFromText(rawText: string | null | undefined, fallbackCity: string | null | undefined): string {
   const t = (rawText || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hasGeoKw = (textNorm: string, kw: string) => {
+    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`, "i").test(textNorm);
+  };
   
   const bogotaKeywords = [
-    "chico", "rosales", "cedritos", "santa barbara", "chapinero", "la cabrera", "el nogal", "el retiro", "virrey",
+    "bogota", "chico", "rosales", "cedritos", "santa barbara", "chapinero", "la cabrera", "el nogal", "el retiro", "virrey",
     "calle 94", "calle 93", "calle 100", "calle 85", "calle 116", "calle 127", "calle 134", "calle 140", "calle 147", "calle 153", "calle 170", "calle 72", "calle 80",
     "carrera 7", "carrera 9", "carrera 11", "carrera 15", "carrera 19", "carrera 30",
-    "usaquen", "suba", "niza", "alhambra", "pasadena", "batan", "colina campestre", "polo club", "castellana", "teusaquillo", "salitre", "santa ana", "santa paula", "santa bibiana", "san patricio", "toberin", "mazuren"
+    "usaquen", "suba", "niza", "alhambra", "pasadena", "batan", "colina campestre", "polo club", "castellana",
+    "teusaquillo", "salitre", "santa ana", "santa paula", "santa bibiana", "san patricio", "toberin", "mazuren",
+    "kennedy", "bosa", "engativa", "fontibon", "puente aranda", "antonio narino", "rafael uribe", "ciudad bolivar",
+    "tunjuelito", "usme", "san cristobal", "los martires", "la candelaria", "modelia", "hayuelos", "tintal", "castilla", "restrepo", "venecia"
   ];
 
   const caliKeywords = [
-    "el penon", "granada cali", "san antonio cali", "ciudad jardin cali", "santa monica cali", "pance", "cristales cali", "chipichape", "san fernando cali", "valle del lili", "santa teresita cali", "menga", "dapa"
+    "cali", "el penon", "granada cali", "san antonio cali", "ciudad jardin cali", "santa monica cali", "pance", "cristales cali", "chipichape", "san fernando cali", "valle del lili", "santa teresita cali", "menga", "dapa"
   ];
 
   const medellinKeywords = [
-    "el poblado", "laureles", "envigado", "sabaneta", "belen", "conquistadores", "el tesoro", "las lomas", "patio bonito", "ciudad del rio"
+    "medellin", "el poblado", "laureles", "envigado", "sabaneta", "belen", "conquistadores", "el tesoro", "las lomas", "patio bonito", "ciudad del rio"
   ];
 
-  if (bogotaKeywords.some(k => t.includes(k))) return "Bogotá";
-  if (caliKeywords.some(k => t.includes(k))) return "Cali";
-  if (medellinKeywords.some(k => t.includes(k))) return "Medellín";
+  // Si fallbackCity ya trae una ciudad nacional explícita diferente a Bogotá, respetarla salvo contradicción clara
+  if (fallbackCity && fallbackCity.trim() !== "") {
+    const fbNorm = fallbackCity.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    if (fbNorm && !fbNorm.includes("bogota")) {
+      return normalizeCanonicalCity(fallbackCity);
+    }
+  }
+
+  const lugarNacional = buscarLugarColombia(rawText || "");
+  if (lugarNacional && lugarNacional.nombreCanonico) {
+    const lc = lugarNacional.nombreCanonico.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    // Evitar falsos positivos de homónimos (ej: Armenia barrio en Teusaquillo o subcadenas en texto de Bogotá)
+    if (lc === "bogota" || !bogotaKeywords.some(k => hasGeoKw(t, k))) {
+      return normalizeCanonicalCity(lugarNacional.nombreCanonico);
+    }
+  }
+
+  if (caliKeywords.some(k => hasGeoKw(t, k)) && !hasGeoKw(t, "bogota")) return "Cali";
+  if (medellinKeywords.some(k => hasGeoKw(t, k)) && !hasGeoKw(t, "bogota")) return "Medellín";
+  if (bogotaKeywords.some(k => hasGeoKw(t, k))) return "Bogotá";
 
   return normalizeCanonicalCity(fallbackCity);
 }
@@ -1395,11 +1443,11 @@ export function isHollowListing(rawText: string | null | undefined, name?: strin
   // Si tiene menos de 15 palabras sin enlace web:
   if (words.length < 15) {
     const hasPrice = /(?:\$|\b(?:millones|mdp|cop|pesos|canon|precio|valor|renta|arriendo)\b|\d{3,}\.\d{3})/i.test(clean);
-    const hasArea = /(?:\b(?:m2|mts|metros)\b)/i.test(clean);
+    const hasArea = /(?:\b(?:m2|mts|metros|hect[aá]reas?|fanegadas?|ha\b)\b)/i.test(clean);
     const hasRooms = /(?:\b(?:alcobas?|hab(?:itaciones)?|cuartos?|dormitorios?|baños?)\b)/i.test(clean);
-    const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre)\b)/i.test(clean);
+    const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|vereda|corregimiento|municipio|localidad|comuna|sector|barrio|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre|kennedy|bosa|engativa|fontibon|poblado|laureles|pance|bocagrande|cabecera)\b)/i.test(clean);
 
-    const hasPropertyType = /(?:\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b)/i.test(clean);
+    const hasPropertyType = /(?:\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|consultorio|consultorios|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos|hotel|hostal|cabaña|cabana)\b)/i.test(clean);
     const hasOperation = /(?:\b(?:renta|arriendo|alquilo|alquiler|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco)\b)/i.test(clean);
     if (hasPropertyType && hasOperation) {
       return { isHollow: false, reason: 'Oferta o requerimiento con tipología y operación explícita' };
@@ -1523,23 +1571,27 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Ciudad/Municipio obligatorio en ambos (con resolución canónica de texto/zona)
+  // Ciudad/Municipio obligatorio en ambos (con resolución canónica nacional de texto/zona)
   let propCityHard = property.addressCity || (property as any).address_city || property.city || "";
   if (!propCityHard || isNA(propCityHard)) {
     const rawProp = (property.rawText || property.zone || (property as any).address_neighborhood || "").toLowerCase();
-    if (rawProp.includes("cali") || rawProp.includes("jamundi") || rawProp.includes("yumbo")) propCityHard = "Cali";
+    const lugarProp = buscarLugarColombia(rawProp);
+    if (lugarProp && lugarProp.nombreCanonico) propCityHard = lugarProp.nombreCanonico;
+    else if (rawProp.includes("cali") || rawProp.includes("jamundi") || rawProp.includes("yumbo")) propCityHard = "Cali";
     else if (rawProp.includes("medellin") || rawProp.includes("envigado") || rawProp.includes("poblado") || rawProp.includes("laureles")) propCityHard = "Medellín";
     else if (rawProp.includes("chia") || rawProp.includes("cajica")) propCityHard = "Chía";
-    else if (rawProp.length > 0) propCityHard = "Bogotá";
+    else if (rawProp.length > 0) propCityHard = extractTrueCityFromText(rawProp, "Bogotá");
   }
 
   let reqCityHard = requirement.addressCity || (requirement as any).address_city || requirement.ciudadDeseada || "";
   if (!reqCityHard || isNA(reqCityHard)) {
     const rawReq = (requirement.rawText || requirement.zonaDeseada || (requirement as any).address_neighborhood || "").toLowerCase();
-    if (rawReq.includes("cali") || rawReq.includes("jamundi") || rawReq.includes("yumbo")) reqCityHard = "Cali";
+    const lugarReq = buscarLugarColombia(rawReq);
+    if (lugarReq && lugarReq.nombreCanonico) reqCityHard = lugarReq.nombreCanonico;
+    else if (rawReq.includes("cali") || rawReq.includes("jamundi") || rawReq.includes("yumbo")) reqCityHard = "Cali";
     else if (rawReq.includes("medellin") || rawReq.includes("envigado") || rawReq.includes("poblado") || rawReq.includes("laureles")) reqCityHard = "Medellín";
     else if (rawReq.includes("chia") || rawReq.includes("cajica")) reqCityHard = "Chía";
-    else if (rawReq.length > 0) reqCityHard = "Bogotá";
+    else if (rawReq.length > 0) reqCityHard = extractTrueCityFromText(rawReq, "Bogotá");
   }
 
   if (isNA(propCityHard)) {
@@ -1687,13 +1739,18 @@ export function explicarMatch(
     "nogal", "recreo", "castellana", "patricio", "barbara", "bárbara", "belmira", "suiza", "navarra", "floresta",
     "granada", "santa barbara", "santa bárbara", "chico reservado", "chico norte", "rincon del chico",
     "rincón del chicó", "pasadena", "batan", "batán", "la carolina", "alambra", "mazuren", "mazurén", "calleja",
-    "virrey", "el retiro", "antiguo country", "los rosales", "chia", "chía", "cajica", "cajicá", "cota", "sopó"
+    "virrey", "el retiro", "antiguo country", "los rosales", "chia", "chía", "cajica", "cajicá", "cota", "sopó",
+    "bosa", "ciudad bolivar", "ciudad bolivár", "tunjuelito", "rafael uribe", "san cristobal", "san cristóbal",
+    "usme", "puente aranda", "antonio narino", "antonio nariño", "los martires", "los mártires", "santa fe",
+    "la candelaria", "modelia", "hayuelos", "tintal", "castilla", "restrepo", "venecia", "macarena", "soledad",
+    "poblado", "laureles", "envigado", "sabaneta", "belen", "belén", "pance", "ciudad jardin", "ciudad jardín",
+    "bocagrande", "castillogrande", "cabecera", "cañaveral", "canaveral", "ruitoque", "alto prado", "riomar"
   ];
 
-  // 1. Ubicación / Barrio
+  // 1. Ubicación / Barrio / Vereda
   const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
-  const hasColZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogotá";
-  const hasTextZone = SECTORES_BOGOTA_SABANA.some(sector => reqTextLow.includes(sector)) || /zona|sector|barrio|calle|cra|carrera/i.test(reqTextLow);
+  const hasColZone = reqZoneRawClean !== "" && !isCityOrGenericZone(reqZoneRawClean);
+  const hasTextZone = SECTORES_BOGOTA_SABANA.some(sector => reqTextLow.includes(sector)) || /zona|sector|barrio|vereda|corregimiento|localidad|comuna|calle|cra|carrera/i.test(reqTextLow);
   const hasSpecificReqZone = hasColZone || hasTextZone;
 
   // 2. Presupuesto Máximo Demanda (extracción desde columna o rawText)
@@ -1717,13 +1774,18 @@ export function explicarMatch(
     positives.push("💰 Presupuesto Abierto en la Demanda: 100% de Cumplimiento Financiero / Sin Restricción de Presupuesto.");
   }
 
-  // 3. Área Total Demanda
+  // 3. Área Total Demanda (soporta m², hectáreas y fanegadas hasta 5.000 ha)
   let reqAreaCheck = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
   if (reqAreaCheck <= 0) {
-    const mRA = reqTextLow.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
-    if (mRA) {
-      let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
-      if (!isNaN(valRA) && valRA > 10 && valRA < 10000) reqAreaCheck = valRA;
+    const parsedReqA = parseArea(reqRawString);
+    if (parsedReqA && parsedReqA > 0) {
+      reqAreaCheck = parsedReqA;
+    } else {
+      const mRA = reqTextLow.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+      if (mRA) {
+        let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
+        if (!isNaN(valRA) && valRA > 10 && valRA < 50_000_000) reqAreaCheck = valRA;
+      }
     }
   }
   const hasReqArea = reqAreaCheck > 0;
@@ -1757,7 +1819,7 @@ export function explicarMatch(
   const hasReqAdmin = (requirement.adminFeeMax != null && Number(requirement.adminFeeMax) > 0) || /admon|administracion|administración/i.test(reqTextLow);
 
   // 7 & 8. Tipo de Inmueble y Negocio Demanda
-  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType) || /apto|apartamento|casa|oficina|lote|bodega|local|finca|apartaestudio|loft/i.test(reqTextLow);
+  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType) || /apto|apartamento|casa|oficina|consultorio|lote|terreno|bodega|local|finca|apartaestudio|loft|edificio|hotel|cabaña|cabana|villa/i.test(reqTextLow);
   const hasReqBizType = !!(requirement.tipoNegocioDeseado || requirement.transactionType) || /venta|vendo|compro|compra|arriendo|alquilo|renta/i.test(reqTextLow);
 
   // VERIFICACIÓN DATOS OBLIGATORIOS OFERTA
@@ -1773,10 +1835,15 @@ export function explicarMatch(
 
   let propAreaCheck = parseFloat(String(property.areaTotal || property.areaPrivate || "0"));
   if (propAreaCheck <= 0) {
-    const mPA = propTextLow.match(/área\s*:?\s*([\d.,]+)/i) || propTextLow.match(/([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
-    if (mPA) {
-      let valA = parseFloat(mPA[1].replace(/\./g, "").replace(",", "."));
-      if (!isNaN(valA) && valA > 10 && valA < 10000) propAreaCheck = valA;
+    const parsedPropA = parseArea(propRawString);
+    if (parsedPropA && parsedPropA > 0) {
+      propAreaCheck = parsedPropA;
+    } else {
+      const mPA = propTextLow.match(/área\s*:?\s*([\d.,]+)/i) || propTextLow.match(/([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+      if (mPA) {
+        let valA = parseFloat(mPA[1].replace(/\./g, "").replace(",", "."));
+        if (!isNaN(valA) && valA > 10 && valA < 50_000_000) propAreaCheck = valA;
+      }
     }
   }
 
@@ -1799,22 +1866,33 @@ export function explicarMatch(
     if (mPG) propGaragesCheck = parseInt(mPG[1], 10);
   }
 
+  const reqCatGroupEarly = getPropertyCategoryGroup(reqTypeHard);
+  const propCatGroupEarly = getPropertyCategoryGroup(propTypeHard);
+
   const missingReqFields: string[] = [];
   if (!hasSpecificReqZone) missingReqFields.push("Ubicación / Barrio");
   if (!hasReqBudget) missingReqFields.push("Presupuesto Máx.");
   if (!hasReqArea) missingReqFields.push("Área Total");
-  if (!hasReqBedrooms) missingReqFields.push("Habitaciones");
-  if (!hasReqBathrooms) missingReqFields.push("Baños");
-  if (!hasReqGarages) missingReqFields.push("Parqueaderos");
+  if (reqCatGroupEarly === "residential") {
+    if (!hasReqBedrooms) missingReqFields.push("Habitaciones");
+  }
+  if (reqCatGroupEarly === "residential" || reqCatGroupEarly === "office_consultorio") {
+    if (!hasReqBathrooms) missingReqFields.push("Baños");
+  }
+  if (reqCatGroupEarly === "residential" && !hasReqGarages) missingReqFields.push("Parqueaderos");
   if (!hasReqType) missingReqFields.push("Tipo de Inmueble");
   if (!hasReqBizType) missingReqFields.push("Tipo de Negocio");
 
   const missingPropFields: string[] = [];
   if (propPriceCheck <= 0) missingPropFields.push("Precio Oferta");
   if (propAreaCheck <= 0) missingPropFields.push("Área Oferta");
-  if (propBedsCheck <= 0) missingPropFields.push("Habitaciones Oferta");
-  if (propBathsCheck <= 0) missingPropFields.push("Baños Oferta");
-  if (propGaragesCheck <= 0) missingPropFields.push("Parqueaderos Oferta");
+  if (propCatGroupEarly === "residential") {
+    if (propBedsCheck <= 0) missingPropFields.push("Habitaciones Oferta");
+  }
+  if (propCatGroupEarly === "residential" || propCatGroupEarly === "office_consultorio") {
+    if (propBathsCheck <= 0) missingPropFields.push("Baños Oferta");
+  }
+  if (propCatGroupEarly === "residential" && propGaragesCheck <= 0) missingPropFields.push("Parqueaderos Oferta");
 
   const isStrictCompliant = missingReqFields.length === 0 && missingPropFields.length === 0;
   const missingFieldsList = [...missingReqFields.map(f => `${f} (Demanda)`), ...missingPropFields.map(f => `${f} (Oferta)`)];
@@ -1869,13 +1947,23 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 2: Ciudad ──
-  const CIUDADES_CO = ["bogota", "medellin", "cali", "barranquilla", "cartagena",
+  // ── FILTRO DURO 2: Ciudad (Cobertura Nacional Real — cero secuestro a Bogotá por campos vacíos) ──
+  const CIUDADES_CO = [
+    "bogota", "medellin", "cali", "barranquilla", "cartagena",
     "bucaramanga", "pereira", "manizales", "cucuta", "ibague", "santa marta",
-    "villavicencio", "pasto", "monteria", "valledupar", "sincelejo", "chia",
-    "zipaquira", "cajica", "envigado", "bello", "sabaneta", "itagui", "tenjo", "mosquera"];
+    "villavicencio", "pasto", "monteria", "valledupar", "sincelejo", "armenia",
+    "popayan", "neiva", "tunja", "yopal", "riohacha", "florencia", "quibdo",
+    "chia", "zipaquira", "cajica", "cota", "sopo", "la calera", "tabio", "tenjo",
+    "funza", "mosquera", "madrid", "facatativa", "soacha", "fusagasuga", "girardot",
+    "melgar", "anapoima", "villeta", "envigado", "bello", "sabaneta", "itagui",
+    "la estrella", "copacabana", "rionegro", "la ceja", "el retiro", "guarne",
+    "floridablanca", "giron", "piedecuesta", "barrancabermeja", "san gil", "barichara",
+    "jamundi", "yumbo", "palmira", "tulua", "buga", "cartago", "buenaventura",
+    "soledad", "puerto colombia", "malambo", "turbaco", "dosquebradas", "santa rosa de cabal",
+    "villamaria", "duitama", "sogamoso", "paipa", "villa de leyva", "acacias", "aguachica"
+  ];
 
-  const resolveCityField = (raw1: string, raw2: string): string => {
+  const resolveCityField = (raw1: string, raw2: string, rawTextHint?: string): string => {
     const n1 = normalizarTextoGeografico(raw1 || "");
     const n2 = normalizarTextoGeografico(raw2 || "");
 
@@ -1884,26 +1972,55 @@ export function explicarMatch(
       "teusaquillo", "kennedy", "fontibon", "bosa", "salitre", "rosales",
       "colina", "niza", "cabrera", "nogal", "recreo", "castellana",
       "patricio", "barbara", "belmira", "suiza", "navarra", "floresta",
-      "granada", "colsubsidio", "santa barbara", "santa bárbara", "chico reservado",
-      "chico norte", "rincon del chico", "rincón del chicó", "norte"
+      "colsubsidio", "santa barbara", "chico reservado", "chico norte", "rincon del chico",
+      "puente aranda", "antonio narino", "rafael uribe", "ciudad bolivar", "tunjuelito",
+      "usme", "san cristobal", "los martires", "la candelaria", "santa fe", "modelia", "hayuelos"
     ];
 
-    const isBogotaSector = (val: string) => {
-      return val === "" || val === "bogota" || val === "bogotá" || SECTORES_BOGOTA.some(sector => val.includes(sector));
+    const isExplicitBogotaOrSector = (val: string) => {
+      if (!val) return false;
+      return val === "bogota" || val === "bogota d c" || val === "bogota dc" || val === "distrito capital" || SECTORES_BOGOTA.some(sector => val.includes(sector));
     };
 
-    if (isBogotaSector(n1) || isBogotaSector(n2)) {
-      return "bogota";
+    const matchNational = (val: string): string | null => {
+      if (!val) return null;
+      if (isExplicitBogotaOrSector(val)) return "bogota";
+      const foundCo = CIUDADES_CO.find(c => c !== "bogota" && (val === c || val.includes(c)));
+      if (foundCo) return foundCo;
+      const lugar = buscarLugarColombia(val);
+      if (lugar && lugar.nombreCanonico) {
+        return normalizarTextoGeografico(lugar.nombreCanonico);
+      }
+      return null;
+    };
+
+    // Prioridad 1: campo principal explícito (ciudadDeseada / addressCity)
+    const c1 = matchNational(n1);
+    if (c1) return c1;
+    // Prioridad 2: campo secundario explícito (city)
+    const c2 = matchNational(n2);
+    if (c2) return c2;
+    // Prioridad 3: valores no vacíos aunque no estén en catálogo corto
+    if (n1) return n1;
+    if (n2) return n2;
+    // Prioridad 4: inferir del rawText solo si ambos campos de ciudad están vacíos
+    if (rawTextHint) {
+      const cHint = matchNational(normalizarTextoGeografico(rawTextHint));
+      if (cHint) return cHint;
     }
-
-    if (CIUDADES_CO.some(c => n1.includes(c) || n1 === c)) return n1;
-    if (CIUDADES_CO.some(c => n2.includes(c) || n2 === c)) return n2;
-
-    return n1 || n2 || "bogota";
+    return "bogota";
   };
 
-  const reqCity = resolveCityField(requirement.ciudadDeseada || requirement.addressCity || "", requirement.city || "");
-  const propCity = resolveCityField(property.addressCity || "", property.city || "");
+  const reqCity = resolveCityField(
+    requirement.ciudadDeseada || requirement.addressCity || "",
+    requirement.city || "",
+    `${requirement.zonaDeseada || ""} ${requirement.rawText || requirement.name || ""}`
+  );
+  const propCity = resolveCityField(
+    property.addressCity || "",
+    property.city || "",
+    `${property.zone || ""} ${property.rawText || property.name || ""}`
+  );
 
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
@@ -2004,6 +2121,10 @@ export function explicarMatch(
   let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
 
   let reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  if (reqAreaMin <= 0 && requirement.rawText) {
+    const parsedReqAreaFallback = parseArea(requirement.rawText);
+    if (parsedReqAreaFallback && parsedReqAreaFallback > 0) reqAreaMin = parsedReqAreaFallback;
+  }
   let reqAreaMax = 0;
   let pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
   let reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
@@ -2040,6 +2161,10 @@ export function explicarMatch(
   }
 
   let propArea = parseFloat(String(property.areaTotal || property.area || "0"));
+  if (propArea <= 0 && (property.rawText || property.description)) {
+    const parsedPropAreaFallback = parseArea(property.rawText || property.description);
+    if (parsedPropAreaFallback && parsedPropAreaFallback > 0) propArea = parsedPropAreaFallback;
+  }
   if (fbProp.price || fbProp.area || fbProp.bedrooms || fbProp.bathrooms || fbProp.garages) {
     if (price <= 0 && fbProp.price) price = fbProp.price;
     if (propArea <= 0 && fbProp.area) propArea = fbProp.area;
@@ -2120,11 +2245,15 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  const reqCatGroup = getPropertyCategoryGroup(reqType || reqTypeHard);
+  const propCatGroup = getPropertyCategoryGroup(propType || propTypeHard);
+
   const validPropSpecsCount = (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0) ? 1 : 0) +
     (propArea > 0 ? 1 : 0) +
     (pBedrooms > 0 ? 1 : 0) +
     (pBathrooms > 0 ? 1 : 0) +
-    (pGarages > 0 ? 1 : 0);
+    (pGarages > 0 ? 1 : 0) +
+    (propCatGroup !== "residential" && (pEstrato > 0 || Boolean(property.addressLocality)) ? 1 : 0);
 
   if (validPropSpecsCount < 2) {
     blockers.push("Inmueble incompleto sin datos prediales mínimos en la oferta (menos de 2 atributos especificados). Match Inviable (0%).");
@@ -2148,26 +2277,28 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 0D: Completitud de Ficha (Exigir publicaciones con especificaciones ricas) ──
+  // ── FILTRO DURO 0D: Completitud de Ficha (Adaptado a Residencial, Lotes, Oficinas, Consultorios, Bodegas, Fincas) ──
   let reqFilledCount = 0;
   if (reqType) reqFilledCount++;
   if (reqBiz) reqFilledCount++;
-  if (reqZone || requirement.ciudadDeseada) reqFilledCount++;
-  if (budgetMax > 0) reqFilledCount++;
+  if (reqZone || requirement.ciudadDeseada || requirement.addressCity) reqFilledCount++;
+  if (budgetMax > 0 || isReqOpenBudget) reqFilledCount++;
   if (reqAreaMin > 0) reqFilledCount++;
   if (reqBedrooms > 0) reqFilledCount++;
   if (reqBathrooms > 0) reqFilledCount++;
   if (reqGarages > 0) reqFilledCount++;
+  if (reqCatGroup !== "residential" && (requirement.addressLocality || reqEstratoList.length > 0 || reqTextClean.length >= 25)) reqFilledCount++;
 
   let propFilledCount = 0;
   if (propType) propFilledCount++;
   if (propBiz) propFilledCount++;
-  if (propZone || property.addressCity) propFilledCount++;
+  if (propZone || property.addressCity || property.city) propFilledCount++;
   if (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0)) propFilledCount++;
   if (propArea > 0) propFilledCount++;
   if (pBedrooms > 0) propFilledCount++;
   if (pBathrooms > 0) propFilledCount++;
   if (pGarages > 0) propFilledCount++;
+  if (propCatGroup !== "residential" && (property.addressLocality || pEstrato > 0 || propTextClean.length >= 25)) propFilledCount++;
 
   if (reqFilledCount < 3 || propFilledCount < 3) {
     blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos básicos mínimos (al menos 3 especificaciones).`);
@@ -2360,7 +2491,14 @@ export function explicarMatch(
       (isLoftReq && isAptoProp && (pBedrooms <= 1 || propArea <= 65 || propArea === 0)) ||
       (isAptoReq && isLoftProp && (reqBedrooms <= 1 || reqAreaMin <= 65 || reqAreaMin === 0));
 
-    if (!reqAlias.some(a => propAlias.includes(a)) && !isLoftAptoCrossCompatible) {
+    // Compatibilidad inteligente Consultorio <-> Oficina cuando una oficina declarada tiene subtipo médico/consultorio
+    const reqTextSalud = /\b(?:consultorio|odontol|m[eé]dic[oa]|salud|cl[ií]nica|habilitaci[oó]n)\b/i.test(`${requirement.rawText || ""} ${requirement.name || ""} ${(requirement.caracteristicasDeseadas?.otrasEspecificaciones || "")}`);
+    const propTextSalud = /\b(?:consultorio|odontol|m[eé]dic[oa]|salud|cl[ií]nica|habilitaci[oó]n)\b/i.test(`${property.rawText || ""} ${property.name || ""} ${property.description || ""} ${(property.amenities?.subtipo || "")}`);
+    const isConsultorioOfficeCrossCompatible =
+      (effectiveReqType === "consultorio" && effectivePropType === "office" && propTextSalud) ||
+      (effectiveReqType === "office" && effectivePropType === "consultorio" && reqTextSalud);
+
+    if (!reqAlias.some(a => propAlias.includes(a)) && !isLoftAptoCrossCompatible && !isConsultorioOfficeCrossCompatible) {
       blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
@@ -2397,6 +2535,9 @@ export function explicarMatch(
     // ── LOCAL COMERCIAL ──
     if (t === "commercial" || t === "local" || r.includes("local comercial") || /\blocal\b/.test(r)) return "local";
 
+    // ── CONSULTORIO ──
+    if (t === "consultorio" || r.includes("consultorio")) return "consultorio";
+
     // ── OFICINA / EDIFICIO DE OFICINAS ──
     if (t === "office" || r.includes("oficina")) {
       if (r.includes("edificio")) return "edificio_oficinas";
@@ -2417,7 +2558,8 @@ export function explicarMatch(
       if (r.includes("suelo suburbano") || r.includes("suburbano") || r.includes("campestre")) return "lote_suburbano";
       if (r.includes("suelo expansion") || r.includes("expansion urbana")) return "lote_expansion";
       if (r.includes("suelo proteccion") || r.includes("proteccion ambiental") || r.includes("reserva")) return "lote_proteccion";
-      return "lote_urbano"; // Default: suelo urbano
+      if (r.includes("suelo urbano") || r.includes("urbano") || r.includes("residencial") || r.includes("comercial") || r.includes("industrial")) return "lote_urbano";
+      return "lote_general"; // Sin restricción explícita de suelo
     }
 
     // ── FINCA / CASA CAMPESTRE ──
@@ -2484,12 +2626,16 @@ export function explicarMatch(
     "apartamento_duplex": ["apartamento_estandar", "apartamento_duplex"],
     "penthouse": ["penthouse", "penthouse_duplex"],
     "penthouse_duplex": ["penthouse", "penthouse_duplex"],
-    // Lotes — todos son incompatibles entre sí excepto dentro de la misma familia
-    "lote_urbano": ["lote_urbano"],
-    "lote_rural": ["lote_rural", "lote_suburbano"],
-    "lote_suburbano": ["lote_rural", "lote_suburbano"],
-    "lote_expansion": ["lote_expansion"],
+    // Lotes — estrictos cuando ambas partes declaran suelo incompatible; flexibles si la búsqueda es general
+    "lote_general": ["lote_general", "lote_urbano", "lote_rural", "lote_suburbano", "lote_expansion"],
+    "lote_urbano": ["lote_urbano", "lote_general"],
+    "lote_rural": ["lote_rural", "lote_suburbano", "lote_general"],
+    "lote_suburbano": ["lote_rural", "lote_suburbano", "lote_general"],
+    "lote_expansion": ["lote_expansion", "lote_general"],
     "lote_proteccion": ["lote_proteccion"],
+    // Oficinas y Consultorios médicos
+    "consultorio": ["consultorio", "oficina"],
+    "oficina": ["oficina", "consultorio", "edificio_oficinas"],
     // Hoteles y alojamiento
     "hotel": ["hotel", "hostal", "aparta_hotel", "aparta_suit", "motel"],
     "hostal": ["hotel", "hostal"],
@@ -3514,27 +3660,59 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
   }
 
+  const matchCategoryGroup = getPropertyCategoryGroup(effectiveReqType || effectivePropType);
+  const hasAnyValidPropPrice = price > 0 || effectivePrice > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0);
+
   let totalDownstreamSpecs = 8;
   let filledDownstreamSpecs = 0;
 
-  // 1. Precio / Presupuesto
-  if ((price > 0 && budgetMaxCheck > 0) || isReqOpenBudget) filledDownstreamSpecs++;
-  // 2. Admin Fee
-  if ((pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) && hasReqAdmin) filledDownstreamSpecs++;
-  else if (pAdminFee > 0) filledDownstreamSpecs += 0.5;
-  // 3. Área Total
-  if (propArea > 0 && hasReqArea) filledDownstreamSpecs++;
-  // 4. Habitaciones
-  if (pBedrooms > 0 && hasReqBedrooms) filledDownstreamSpecs++;
-  // 5. Baños
-  if (pBathrooms > 0 && hasReqBathrooms) filledDownstreamSpecs++;
-  // 6. Parqueaderos
-  if (pGarages > 0 && hasReqGarages) filledDownstreamSpecs++;
-  // 7. Estrato
-  if (pEstrato > 0) filledDownstreamSpecs += 0.5;
-  if (reqEstratoList.length > 0 ? reqEstratoList.includes(pEstrato) : pEstrato > 0) filledDownstreamSpecs += 0.5;
-  // 8. Antigüedad
-  if (propAge >= 0) filledDownstreamSpecs++;
+  if (matchCategoryGroup === "land") {
+    // Lotes / Terrenos: evaluar Precio/Presupuesto, Área y Contexto/Uso/Estrato (sin penalizar habitaciones ni administración)
+    totalDownstreamSpecs = 3;
+    if ((hasAnyValidPropPrice && budgetMaxCheck > 0) || isReqOpenBudget) filledDownstreamSpecs++;
+    if (propArea > 0 && hasReqArea) filledDownstreamSpecs++;
+    if (pEstrato > 0 || propTextClean.length >= 25 || Boolean(property.addressLocality)) filledDownstreamSpecs++;
+  } else if (matchCategoryGroup === "office_consultorio" || matchCategoryGroup === "commercial_warehouse") {
+    // Oficinas, Consultorios, Locales y Bodegas: NO requieren habitaciones; evalúan Precio, Área, Baños/Parqueaderos, Admin/Estrato/Antigüedad
+    totalDownstreamSpecs = 6;
+    if ((hasAnyValidPropPrice && budgetMaxCheck > 0) || isReqOpenBudget) filledDownstreamSpecs++;
+    if (propArea > 0 && hasReqArea) filledDownstreamSpecs++;
+    if ((pBathrooms > 0 && hasReqBathrooms) || (!hasReqBathrooms && pBathrooms >= 0)) filledDownstreamSpecs++;
+    if ((pGarages > 0 && hasReqGarages) || (!hasReqGarages && pGarages >= 0)) filledDownstreamSpecs++;
+    if ((pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) && hasReqAdmin) filledDownstreamSpecs++;
+    else if (pAdminFee > 0 || !hasReqAdmin) filledDownstreamSpecs += 0.5;
+    if (pEstrato > 0 || propAge >= 0) filledDownstreamSpecs += 0.5;
+    if (propAge >= 0 || propTextClean.length >= 30) filledDownstreamSpecs += 1;
+  } else if (matchCategoryGroup === "rural_farm" || matchCategoryGroup === "building_hotel") {
+    // Fincas, Edificios y Hoteles: evalúan Precio, Área, Baños/Habitaciones (si aplican) y Contexto
+    totalDownstreamSpecs = 4;
+    if ((hasAnyValidPropPrice && budgetMaxCheck > 0) || isReqOpenBudget) filledDownstreamSpecs++;
+    if (propArea > 0 && hasReqArea) filledDownstreamSpecs++;
+    if ((pBathrooms > 0 && hasReqBathrooms) || (!hasReqBathrooms && pBathrooms > 0)) filledDownstreamSpecs++;
+    else if (!hasReqBathrooms) filledDownstreamSpecs += 0.5;
+    if ((pBedrooms > 0 && hasReqBedrooms) || (!hasReqBedrooms && (propAge >= 0 || pGarages >= 0 || propTextClean.length >= 30))) filledDownstreamSpecs++;
+  } else {
+    // Residencial (Apartamentos, Casas, Lofts, Cabañas): 8 criterios doctrinales exactos
+    totalDownstreamSpecs = 8;
+    // 1. Precio / Presupuesto
+    if ((hasAnyValidPropPrice && budgetMaxCheck > 0) || isReqOpenBudget) filledDownstreamSpecs++;
+    // 2. Admin Fee
+    if ((pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) && hasReqAdmin) filledDownstreamSpecs++;
+    else if (pAdminFee > 0) filledDownstreamSpecs += 0.5;
+    // 3. Área Total
+    if (propArea > 0 && hasReqArea) filledDownstreamSpecs++;
+    // 4. Habitaciones
+    if (pBedrooms > 0 && hasReqBedrooms) filledDownstreamSpecs++;
+    // 5. Baños
+    if (pBathrooms > 0 && hasReqBathrooms) filledDownstreamSpecs++;
+    // 6. Parqueaderos
+    if (pGarages > 0 && hasReqGarages) filledDownstreamSpecs++;
+    // 7. Estrato
+    if (pEstrato > 0) filledDownstreamSpecs += 0.5;
+    if (reqEstratoList.length > 0 ? reqEstratoList.includes(pEstrato) : pEstrato > 0) filledDownstreamSpecs += 0.5;
+    // 8. Antigüedad
+    if (propAge >= 0) filledDownstreamSpecs++;
+  }
 
   const completionRatio = Math.min(1.0, filledDownstreamSpecs / totalDownstreamSpecs);
 
@@ -3732,7 +3910,7 @@ export async function findMatchesForProperty(propertyId: number) {
       }
       const explanation = explicarMatch(req, property, undefined, fbProp, undefined, propBarrios);
       const score = explanation.score;
-      if (score >= 80) {
+      if (score >= 85) {
         let matchId: number;
         const matchIdExisting = existingMatchesMap.get(req.id);
         const ipcObj = calcularIPC(req, property, score);
@@ -3866,13 +4044,18 @@ export async function findMatchesForRequirement(requirementId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal v32.58: Omitir propiedades de más de 15 días sin republicación activa
+      // Regla Doctrinal v32.58 + v34.25: Inmuebles activos publicados en la web participan siempre;
+      // registros de grupos/redes tienen vigencia de 15 días salvo republicación activa
+      const isWebPortalInventory =
+        prop.origenTipo === "web_admin_unified" ||
+        String(prop.canonicalExternalId || "").startsWith("VECY:") ||
+        !prop.origenTipo;
       const propRepCount = Number(prop.republicacionesCount || 0);
       const propEffectiveDate = (propRepCount > 0 && prop.fechaUltimaPublicacion)
         ? prop.fechaUltimaPublicacion
         : (prop.fechaUltimaPublicacion || prop.createdAt);
       const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 15) {
+      if (!isWebPortalInventory && propAgeDays > 15) {
         continue;
       }
 
@@ -3885,7 +4068,7 @@ export async function findMatchesForRequirement(requirementId: number) {
       }
       const explanation = explicarMatch(req, prop, fbReq, undefined, reqBarrios, undefined);
       const score = explanation.score;
-      if (score >= 80) {
+      if (score >= 85) {
         let matchId: number;
         const matchIdExisting = existingMatchesMap.get(prop.id);
         const ipcObj = calcularIPC(req, prop, score);

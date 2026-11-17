@@ -7,7 +7,9 @@ import crypto from "crypto";
 import { getDb } from "../../db";
 import { inmobiliarioLexicon, users } from "../../../drizzle/schema";
 import { sql, eq } from "drizzle-orm";
-import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding } from "../../../shared/colombianRealEstateParser";
+import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding, parseArea } from "../../../shared/colombianRealEstateParser";
+import { buscarLugarColombia } from "../colombia-geography";
+import { getPropertyCategoryGroup } from "../../../shared/colombiaCatalog";
 import { parseStreetCarreraBoundaries } from "../matching";
 import { lookupBarriosByPerimeter } from "../geo-lookup";
 import {
@@ -664,6 +666,31 @@ export const KNOWN_BARRIOS_SORTED_ITEMS: CanonicalBarrioItem[] = [
   { canonical: "Palermo", city: "Bogotá, D.C." },
   { canonical: "Teusaquillo", city: "Bogotá, D.C." },
   { canonical: "Usaquén", city: "Bogotá, D.C." },
+  // Centro, Occidente y Sur de Bogotá D.C.
+  { canonical: "La Macarena", city: "Bogotá, D.C." },
+  { canonical: "Bosque Izquierdo", city: "Bogotá, D.C." },
+  { canonical: "Centro Internacional", city: "Bogotá, D.C." },
+  { canonical: "Las Cruces", city: "Bogotá, D.C." },
+  { canonical: "Normandía", city: "Bogotá, D.C." },
+  { canonical: "Boyacá Real", city: "Bogotá, D.C." },
+  { canonical: "Capellanía", city: "Bogotá, D.C." },
+  { canonical: "Zona Franca", city: "Bogotá, D.C." },
+  { canonical: "Tintal", city: "Bogotá, D.C." },
+  { canonical: "Castilla", city: "Bogotá, D.C." },
+  { canonical: "Bavaria", city: "Bogotá, D.C." },
+  { canonical: "Kennedy", city: "Bogotá, D.C." },
+  { canonical: "Bosa", city: "Bogotá, D.C." },
+  { canonical: "Ciudad Montes", city: "Bogotá, D.C." },
+  { canonical: "Puente Aranda", city: "Bogotá, D.C." },
+  { canonical: "Galán", city: "Bogotá, D.C." },
+  { canonical: "Restrepo", city: "Bogotá, D.C." },
+  { canonical: "Quiroga", city: "Bogotá, D.C." },
+  { canonical: "Venecia", city: "Bogotá, D.C." },
+  { canonical: "Tunjuelito", city: "Bogotá, D.C." },
+  { canonical: "20 de Julio", city: "Bogotá, D.C." },
+  { canonical: "Ricaurte", city: "Bogotá, D.C." },
+  { canonical: "Ciudad Bolívar", city: "Bogotá, D.C." },
+  { canonical: "Usme", city: "Bogotá, D.C." },
 
   // ── MEDELLÍN Y ÁREA METROPOLITANA ──
   { canonical: "El Poblado", city: "Medellín" },
@@ -1066,7 +1093,7 @@ export function extractFallbackDataFromText(text: string): any {
         const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
         const n1 = parseFloat(areaRangeMatch[1].replace(',', '.'));
         const n2 = parseFloat(areaRangeMatch[2].replace(',', '.'));
-        if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
+        if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 50_000_000 && n2 >= 15 && n2 <= 50_000_000) {
           areaMin = Math.min(n1, n2);
           areaMax = Math.max(n1, n2);
           area = areaMin;
@@ -1090,7 +1117,7 @@ export function extractFallbackDataFromText(text: string): any {
       const preceding = clean.slice(Math.max(0, mIdx - 45), mIdx);
       if (isOutdoorAreaPreceding(preceding)) continue;
 
-      if (!isNaN(val) && val >= 15 && val <= 15000) {
+      if (!isNaN(val) && val >= 15 && val <= 50_000_000) {
         area = val;
         areaMin = area;
         areaMax = area;
@@ -1099,13 +1126,14 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // C. Rescate con el parser de jerga colombiana si aún no se detectó área
+  // C. Rescate con el parser de jerga colombiana (incluye hectáreas y fanegadas)
   if (area === 0) {
     const pl = parseColombianListing(text);
-    if (pl.areaM2 && pl.areaM2 > 0) {
-      area = pl.areaM2;
-      areaMin = pl.areaM2;
-      areaMax = pl.areaM2;
+    const parsedExtraArea = (pl.areaM2 && pl.areaM2 > 0) ? pl.areaM2 : parseArea(text);
+    if (parsedExtraArea && parsedExtraArea > 0) {
+      area = parsedExtraArea;
+      areaMin = parsedExtraArea;
+      areaMax = parsedExtraArea;
     }
   }
 
@@ -1331,6 +1359,15 @@ export function extractFallbackDataFromText(text: string): any {
     city = "Fusagasugá";
   } else if (clean.includes("girardot")) {
     city = "Girardot";
+  } else {
+    const lugarNacional = buscarLugarColombia(clean);
+    if (lugarNacional && lugarNacional.nombreCanonico) {
+      const ln = lugarNacional.nombreCanonico.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const homonymBogota = new Set(["armenia", "castilla", "san felipe", "granada", "restrepo", "florencia", "santander", "bolivar"]);
+      if (!homonymBogota.has(ln) || clean.includes(lugarNacional.departamento.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) {
+        city = lugarNacional.nombreCanonico;
+      }
+    }
   }
 
   let zone = "";
@@ -1730,12 +1767,19 @@ export function resolveContactPhone(userId: string, rawText?: string, userName?:
 export function calcularCalificacionCompletitud(extracted: any, isProperty: boolean): { score: number, label: string } {
   if (!extracted) return { score: 0, label: "Mediocre" };
 
+  const rawType = isProperty
+    ? (extracted.propertyType || "")
+    : (extracted.tipoInmuebleDeseado || extracted.propertyType || "");
+  const catGroup = getPropertyCategoryGroup(rawType);
+
   let fieldsCount = 7;
   let presentCount = 0;
 
   // 1. Precio (price o presupuestoMax / presupuestoMin)
-  const priceVal = isProperty ? extracted.price : (extracted.presupuestoMax || extracted.presupuestoMin || extracted.price);
-  if (priceVal !== undefined && priceVal !== null && String(priceVal).trim() !== "" && String(priceVal) !== "0") {
+  const priceVal = isProperty
+    ? (extracted.price && String(extracted.price) !== "0" && String(extracted.price) !== "0.00" ? extracted.price : extracted.rentPrice)
+    : (extracted.presupuestoMax || extracted.presupuestoMin || extracted.price);
+  if (priceVal !== undefined && priceVal !== null && String(priceVal).trim() !== "" && String(priceVal) !== "0" && String(priceVal) !== "0.00") {
     presentCount++;
   }
 
@@ -1745,34 +1789,59 @@ export function calcularCalificacionCompletitud(extracted: any, isProperty: bool
     presentCount++;
   }
 
-  // 3. Habitaciones (bedrooms / habitacionesMin)
-  const bedroomsVal = isProperty ? extracted.bedrooms : (extracted.habitacionesMin || extracted.bedrooms);
-  if (bedroomsVal !== undefined && bedroomsVal !== null && String(bedroomsVal).trim() !== "" && Number(bedroomsVal) > 0) {
+  // 3. Ubicación exacta (zone / zonaDeseada / addressNeighborhood)
+  const zoneVal = isProperty ? (extracted.zone || extracted.addressNeighborhood) : (extracted.zonaDeseada || extracted.addressNeighborhood || extracted.zone);
+  if (zoneVal !== undefined && zoneVal !== null && String(zoneVal).trim() !== "" && String(zoneVal).toLowerCase() !== "bogotá" && String(zoneVal).toLowerCase() !== "bogota" && String(zoneVal).toUpperCase() !== "N/E") {
     presentCount++;
   }
 
-  // 4. Baños (bathrooms / banosMin)
-  const bathroomsVal = isProperty ? extracted.bathrooms : (extracted.banosMin || extracted.bathrooms);
-  if (bathroomsVal !== undefined && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
-    presentCount++;
-  }
-
-  // 5. Parqueaderos (garages / parqueaderosMin)
-  const garagesVal = isProperty ? extracted.garages : (extracted.parqueaderosMin || extracted.garages);
-  if (garagesVal !== undefined && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
-    presentCount++;
-  }
-
-  // 6. Ubicación exacta (zone / zonaDeseada)
-  const zoneVal = isProperty ? extracted.zone : (extracted.zonaDeseada || extracted.zone);
-  if (zoneVal !== undefined && zoneVal !== null && String(zoneVal).trim() !== "" && String(zoneVal).toLowerCase() !== "bogotá" && String(zoneVal).toLowerCase() !== "bogota") {
-    presentCount++;
-  }
-
-  // 7. Contacto (idUsuarioWhatsapp)
+  // 4. Contacto (idUsuarioWhatsapp)
   const contactVal = extracted.idUsuarioWhatsapp;
   if (contactVal !== undefined && contactVal !== null && String(contactVal).trim() !== "") {
     presentCount++;
+  }
+
+  if (catGroup === "land") {
+    // Lotes / Terrenos: evaluar además Ciudad/Localidad (5 criterios clave, sin exigir alcobas/baños/parqueaderos)
+    fieldsCount = 5;
+    const cityOrLoc = isProperty
+      ? (extracted.city || extracted.addressCity || extracted.addressLocality)
+      : (extracted.ciudadDeseada || extracted.addressCity || extracted.addressLocality);
+    if (cityOrLoc && String(cityOrLoc).trim() !== "") {
+      presentCount++;
+    }
+  } else if (catGroup === "office_consultorio" || catGroup === "commercial_warehouse") {
+    // Oficinas, Consultorios, Locales y Bodegas: Baños + Parqueaderos/Ciudad (sin exigir alcobas)
+    fieldsCount = 6;
+    const bathroomsVal = isProperty ? extracted.bathrooms : (extracted.banosMin || extracted.bathrooms);
+    if (bathroomsVal !== undefined && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
+      presentCount++;
+    }
+    const garagesVal = isProperty ? extracted.garages : (extracted.parqueaderosMin || extracted.garages);
+    if (garagesVal !== undefined && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
+      presentCount++;
+    } else if (extracted.city || extracted.ciudadDeseada || extracted.addressLocality) {
+      presentCount++;
+    }
+  } else {
+    // Residencial / Fincas / Edificios: 7 criterios
+    // 5. Habitaciones (bedrooms / habitacionesMin)
+    const bedroomsVal = isProperty ? extracted.bedrooms : (extracted.habitacionesMin || extracted.bedrooms);
+    if (bedroomsVal !== undefined && bedroomsVal !== null && String(bedroomsVal).trim() !== "" && Number(bedroomsVal) > 0) {
+      presentCount++;
+    }
+
+    // 6. Baños (bathrooms / banosMin)
+    const bathroomsVal = isProperty ? extracted.bathrooms : (extracted.banosMin || extracted.bathrooms);
+    if (bathroomsVal !== undefined && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
+      presentCount++;
+    }
+
+    // 7. Parqueaderos (garages / parqueaderosMin)
+    const garagesVal = isProperty ? extracted.garages : (extracted.parqueaderosMin || extracted.garages);
+    if (garagesVal !== undefined && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
+      presentCount++;
+    }
   }
 
   const score = (presentCount / fieldsCount) * 100;

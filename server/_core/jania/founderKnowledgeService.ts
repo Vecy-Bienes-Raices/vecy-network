@@ -902,6 +902,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Hacer una sola pregunta a la vez, guiar de la mano al usuario con astucia e inteligencia hasta resolver su objetivo real y prohibir pedir calificaciones o comentarios antes de lograr la satisfacción real del cliente.",
     createdAt: "2026-11-16T19:33:00.000Z",
     active: true
+  },
+  {
+    id: "seed-cobertura-nacional-todas-localidades-tipologias-v34-25",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Cobertura Nacional Total (32 Departamentos), Todas las 20 Localidades de Bogotá y Todas las Tipologías Inmobiliarias (v34.25)",
+    directive:
+      "VECY Network y JanIA operan a nivel NACIONAL en toda Colombia (32 departamentos y Bogotá D.C. con sus 20 localidades — Norte, Centro, Sur y Occidente —, veredas y comunas), jamás limitados a Bogotá ni al norte de Bogotá. Todos los tipos de inmuebles (Lotes/Terrenos, Oficinas, Consultorios, Locales, Bodegas, Fincas, Edificios, Hoteles, Casas, Apartamentos, Lofts, Cabañas) deben captarse, estructurarse adaptativamente (sin exigir habitaciones a lotes/oficinas/consultorios/locales/bodegas), evaluarse con áreas en m²/fanegadas/hectáreas hasta 50M m² y cruzarse en matching bajo umbral 85%–100%.",
+    rawText:
+      "Erradicar hardcode de Bogotá/Zona Norte, habilitar formularios completos de Oferta y Demanda con Departamento/Ciudad/Localidad/Barrio/Vereda/Otras Especificaciones, soporte total para Lotes, Consultorios, Oficinas y todas las clases de inmuebles a nivel nacional.",
+    createdAt: "2026-11-16T21:45:00.000Z",
+    active: true
   }
 ];
 

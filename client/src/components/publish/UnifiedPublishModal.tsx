@@ -11,6 +11,12 @@ import {
   FileDown, Paperclip
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  COLOMBIA_DEPARTMENTS,
+  getSuggestedLocalitiesForCity,
+  findDepartmentForCity,
+  getPropertyCategoryGroup,
+} from '../../../../shared/colombiaCatalog';
 
 interface UnifiedPublishModalProps {
   isOpen: boolean;
@@ -20,7 +26,7 @@ interface UnifiedPublishModalProps {
   editProperty?: any;
 }
 
-// 19 Tipos de inmuebles exactos solicitados por Eduardo
+// 19 Tipos exactos de inmuebles tanto en OFERTAS como en DEMANDAS (Doctrina Eduardo A. Rivera)
 export const PROPERTY_TYPES_EXACT = [
   'Apartaestudio',
   'Apartamento',
@@ -179,18 +185,46 @@ export function NumericField({
 }
 
 // Mapeo al enum de base de datos
-export function mapExactTypeToDbEnum(exact: string): string {
+export function mapExactTypeToDbEnum(exact: string, subtype?: string): string {
   const low = exact.toLowerCase();
+  const subLow = (subtype || '').toLowerCase();
+  if (low.includes('consultorio') || subLow.includes('consultorio')) return 'consultorio';
   if (low.includes('apartaestudio') || low.includes('apartamento') || low.includes('pent house')) return 'apartment';
-  if (low.includes('casa') || low.includes('cabaña') || low.includes('quinta') || low.includes('villa')) return 'house';
+  if (low.includes('casa') || low.includes('quinta') || low.includes('villa')) return 'house';
+  if (low.includes('cabaña') || low.includes('cabana')) return 'cabin';
   if (low.includes('bodega')) return 'warehouse';
   if (low.includes('edificio')) return 'building';
   if (low.includes('finca')) return 'farm';
-  if (low.includes('hotel') || low.includes('hostal')) return 'hotel';
+  if (low.includes('hotel') || low.includes('hostal') || low.includes('aparta hotel')) return 'hotel';
   if (low.includes('local')) return 'commercial';
   if (low.includes('lote') || low.includes('terreno')) return 'land';
   if (low.includes('oficina')) return 'office';
   return 'apartment';
+}
+
+export function mapDbEnumToExactType(dbEnum: string, hintText?: string): string {
+  const low = (dbEnum || '').toLowerCase();
+  const hint = (hintText || '').toLowerCase();
+  if (hint.includes('pent house duplex') || hint.includes('pent house dúplex') || hint.includes('penthouse duplex')) return 'Pent House Dúplex';
+  if (hint.includes('pent house') || hint.includes('penthouse')) return 'Pent House';
+  if (hint.includes('apartamento duplex') || hint.includes('apartamento dúplex') || hint.includes('apto duplex')) return 'Apartamento Dúplex';
+  if (hint.includes('apartaestudio') || low === 'loft') return 'Apartaestudio';
+  if (hint.includes('aparta hotel') || hint.includes('apartahotel') || hint.includes('aparta-hotel')) return 'Aparta Hotel';
+  if (hint.includes('hostal')) return 'Hostal';
+  if (hint.includes('casa campestre')) return 'Casa Campestre';
+  if (hint.includes('casa quinta')) return 'Casa Quinta';
+  if (hint.includes('villa')) return 'Villa';
+  if (hint.includes('cabaña') || hint.includes('cabana') || low === 'cabin') return 'Cabaña';
+  if (low === 'consultorio' || hint.includes('consultorio')) return 'Oficina';
+  if (low === 'office') return 'Oficina';
+  if (low === 'commercial') return 'Local';
+  if (low === 'warehouse') return 'Bodega';
+  if (low === 'building') return 'Edificio';
+  if (low === 'farm') return 'Finca';
+  if (low === 'hotel') return 'Hotel';
+  if (low === 'land') return 'Lote / Terreno';
+  if (low === 'house') return 'Casa';
+  return 'Apartamento';
 }
 
 // Opciones de permuta solicitadas
@@ -397,6 +431,8 @@ export default function UnifiedPublishModal({
   const [propUbicacionPiso, setPropUbicacionPiso] = useState<string>('Exterior');
   const [propAddress, setPropAddress] = useState('');
   const [propCoordinates, setPropCoordinates] = useState<{ lat: number; lng: number }>({ lat: 4.6953, lng: -74.0682 });
+  const [propDepartment, setPropDepartment] = useState('Bogotá D.C.');
+  const [propCity, setPropCity] = useState('Bogotá, D.C.');
   const [propNeighborhood, setPropNeighborhood] = useState('');
   const [propZone, setPropZone] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -542,15 +578,17 @@ export default function UnifiedPublishModal({
     }
   };
 
-  // Geocodificación gratuita con OpenStreetMap Nominatim ($0)
+  // Geocodificación gratuita con OpenStreetMap Nominatim ($0 — Cobertura Nacional)
   const handleGeocodeAddress = async () => {
-    if (!propAddress.trim()) {
-      toast.error('Por favor escribe la dirección primero para ubicarla en el mapa');
+    if (!propAddress.trim() && !propNeighborhood.trim()) {
+      toast.error('Por favor escribe la dirección o el barrio para ubicarlo en el mapa');
       return;
     }
     setIsGeocoding(true);
     try {
-      const query = `${propAddress}, Bogotá, Colombia`;
+      const query = [propAddress.trim(), propNeighborhood.trim(), propCity.trim() || 'Colombia', propDepartment.trim(), 'Colombia']
+        .filter(Boolean)
+        .join(', ');
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
         headers: { 'Accept-Language': 'es' }
       });
@@ -559,16 +597,16 @@ export default function UnifiedPublishModal({
         const lat = parseFloat(data[0].lat);
         const lng = parseFloat(data[0].lon);
         setPropCoordinates({ lat, lng });
-        
+
         // Autocompletar sugerencia de barrio si está vacío
         const displayName = data[0].display_name || '';
         const parts = displayName.split(',').map((s: string) => s.trim());
         if (!propNeighborhood && parts.length > 1) {
           setPropNeighborhood(parts[0]);
         }
-        toast.success('¡Dirección localizada en el mapa!');
+        toast.success(`¡Ubicación localizada en ${propCity || 'Colombia'}!`);
       } else {
-        toast.info('No se encontró la dirección exacta, el mapa se mantendrá centrado en Bogotá');
+        toast.info(`No se encontró la dirección exacta en ${propCity || 'Colombia'}. Verifica los datos o ajusta el barrio.`);
       }
     } catch (err) {
       console.warn('Error en geocodificación:', err);
@@ -589,7 +627,15 @@ export default function UnifiedPublishModal({
     if (data.transactionType) setPropTxType(data.transactionType);
     if (data.price) setPropPrice(formatCOP(data.price));
     if (data.adminFee) setPropAdminFee(formatCOP(data.adminFee));
-    if (data.zone) setPropZone(data.zone);
+    if (data.city) {
+      setPropCity(data.city);
+      const dep = data.department || findDepartmentForCity(data.city);
+      if (dep) setPropDepartment(dep);
+    } else if (data.department) {
+      setPropDepartment(data.department);
+    }
+    if (data.addressLocality) setPropZone(data.addressLocality);
+    else if (data.zone) setPropZone(data.zone);
     if (data.addressNeighborhood) setPropNeighborhood(data.addressNeighborhood);
     else if (data.zone) setPropNeighborhood(data.zone);
     if (data.areaConstruida || data.areaTotal) setPropAreaConstruida(String(data.areaConstruida || data.areaTotal));
@@ -645,10 +691,14 @@ export default function UnifiedPublishModal({
       propertyTypeExact = "Local";
       isSubtipoComercial = true;
       subtype = lower.includes("centro comercial") ? "Local en Centro Comercial" : "Local Comercial a la Calle";
-    } else if (lower.includes("oficina") || lower.includes("consultorio")) {
+    } else if (lower.includes("consultorio")) {
+      propertyTypeExact = "Consultorio";
+      isSubtipoComercial = true;
+      subtype = "Consultorio Médico / Odontológico / Salud";
+    } else if (lower.includes("oficina")) {
       propertyTypeExact = "Oficina";
       isSubtipoComercial = true;
-      subtype = lower.includes("consultorio") ? "Consultorio / Salud" : "Oficina Corporativa / Edificio Empresarial";
+      subtype = "Oficina Corporativa / Edificio Empresarial";
     } else if (lower.includes("apartaestudio")) {
       propertyTypeExact = "Apartaestudio";
     } else if (lower.includes("penthouse duplex") || lower.includes("pent house duplex")) {
@@ -795,31 +845,18 @@ export default function UnifiedPublishModal({
     const pisoM = norm.match(/(?:plantas|pisos|piso)[\s\:\/\*\D]*?([0-9]+)/i);
     if (pisoM) piso = pisoM[1];
 
-    // 9. Barrio y Localidad
+    // 9. Barrio y Localidad (sin forzar Suba/Morato)
     let addressNeighborhood = '';
     let zone = '';
-    const barrioMatch = norm.match(/barrio[\s\:\*]*([a-zA-Z\s]+)/i);
-    if (barrioMatch) addressNeighborhood = barrioMatch[1].split('\n')[0].trim();
-    if (!addressNeighborhood) {
-      if (lower.includes('morato')) addressNeighborhood = 'Morato';
-      else if (lower.includes('cedritos')) addressNeighborhood = 'Cedritos';
-      else if (lower.includes('chico')) addressNeighborhood = 'Chicó';
-      else if (lower.includes('rosales')) addressNeighborhood = 'Rosales';
-      else if (lower.includes('santa barbara')) addressNeighborhood = 'Santa Bárbara';
-    }
+    const barrioMatch = norm.match(/(?:barrio|vereda)[\s\:\*]*([a-zA-Z0-9\s]+?)(?:,|\n|$)/i);
+    if (barrioMatch) addressNeighborhood = barrioMatch[1].trim();
 
-    const locMatch = norm.match(/localidad[\s\:\*]*([a-zA-Z\s]+)/i);
-    if (locMatch) zone = locMatch[1].split('\n')[0].trim();
-    if (!zone) {
-      if (lower.includes('suba')) zone = 'Suba';
-      else if (lower.includes('usaquen')) zone = 'Usaquén';
-      else if (lower.includes('chapinero')) zone = 'Chapinero';
-      else if (lower.includes('teusaquillo')) zone = 'Teusaquillo';
-    }
+    const locMatch = norm.match(/(?:localidad|comuna)[\s\:\*]*([a-zA-Z0-9\s\-]+?)(?:,|\n|$)/i);
+    if (locMatch) zone = locMatch[1].trim();
 
     // 10. Título Estandarizado Doctrinal: [Tipo de Inmueble] en [Barrio / Sector]
-    const sectorDisplay = addressNeighborhood || zone || 'Bogotá';
-    const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes('comercial')
+    const sectorDisplay = addressNeighborhood || zone || 'Colombia';
+    const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes('comercial') && propertyTypeExact !== 'Consultorio'
       ? `${propertyTypeExact} Comercial`
       : propertyTypeExact;
     const name = `${tipoDisplay} en ${sectorDisplay}`;
@@ -869,8 +906,8 @@ export default function UnifiedPublishModal({
       estudios,
       depositos,
       piso,
-      zone: zone || addressNeighborhood || 'Suba',
-      addressNeighborhood: addressNeighborhood || 'Morato',
+      zone: zone || addressNeighborhood || '',
+      addressNeighborhood: addressNeighborhood || '',
       description: text.trim().slice(0, 500),
       selectedInternas: internasDetectadas,
       selectedExternas: externasDetectadas,
@@ -1005,8 +1042,11 @@ export default function UnifiedPublishModal({
       setPropBathrooms(editProperty.bathrooms !== null && editProperty.bathrooms !== undefined ? editProperty.bathrooms : '');
       setPropStratum(editProperty.stratum || 4);
       setPropAddress(editProperty.location || '');
+      const hydratedCity = editProperty.addressCity || editProperty.city || 'Bogotá, D.C.';
+      setPropCity(hydratedCity);
+      setPropDepartment(editProperty.amenities?.departamento || findDepartmentForCity(hydratedCity) || 'Bogotá D.C.');
       setPropNeighborhood(editProperty.addressNeighborhood || editProperty.zone || '');
-      setPropZone(editProperty.zone || editProperty.addressNeighborhood || '');
+      setPropZone(editProperty.addressLocality || editProperty.zone || editProperty.addressNeighborhood || '');
       setPropDescription(editProperty.description || editProperty.rawText || '');
       setPropVideoUrl(editProperty.videoUrl || '');
 
@@ -1123,6 +1163,8 @@ export default function UnifiedPublishModal({
     setPropTerrazaHasBBQ(false);
     setPropPiso('');
     setPropAddress('');
+    setPropDepartment('Bogotá D.C.');
+    setPropCity('Bogotá, D.C.');
     setPropNeighborhood('');
     setPropZone('');
     setPropDescription('');
@@ -1390,9 +1432,11 @@ export default function UnifiedPublishModal({
       return;
     }
 
-    const finalZone = (propZone || propNeighborhood || 'Bogotá').trim();
-    const finalNeighborhood = (propNeighborhood || propZone || 'Bogotá').trim();
-    const dbPropertyType = mapExactTypeToDbEnum(propTypeExact);
+    const finalCity = (propCity || 'Bogotá, D.C.').trim();
+    const finalLocality = (propZone || '').trim() || null;
+    const finalZone = (propNeighborhood || propZone || finalCity).trim();
+    const finalNeighborhood = (propNeighborhood || propZone || '').trim() || null;
+    const dbPropertyType = mapExactTypeToDbEnum(propTypeExact, propSubtype);
 
     const propertyPayload = {
       name: propName.trim(),
@@ -1400,7 +1444,9 @@ export default function UnifiedPublishModal({
       propertyType: dbPropertyType as any,
       transactionType: (propTxType === 'permuta' ? 'venta_permuta' : propTxType) as any,
       price: cleanPrice,
-      city: 'Bogotá',
+      city: finalCity,
+      addressCity: finalCity,
+      addressLocality: finalLocality,
       zone: finalZone,
       addressNeighborhood: finalNeighborhood,
       location: propAddress ? propAddress.trim() : null,
@@ -1421,6 +1467,7 @@ export default function UnifiedPublishModal({
       externalUrl: propPdfUrl ? propPdfUrl.trim() : null,
       rawText: propRawText || null,
       amenities: {
+        departamento: propDepartment || null,
         tipoExacto: propTypeExact,
         subtipo: propSubtype || null,
         subtipoComercial: propIsSubtipoComercial,
@@ -1456,24 +1503,45 @@ export default function UnifiedPublishModal({
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // ESTADOS PESTAÑA 2: DEMANDA (REQUERIMIENTO)
+  // ESTADOS PESTAÑA 2: DEMANDA (REQUERIMIENTO NACIONAL COMPLETO)
   // ═══════════════════════════════════════════════════════════════
   const [reqRawText, setReqRawText] = useState('');
   const [reqFlyerPreview, setReqFlyerPreview] = useState<string | null>(null);
   const [reqName, setReqName] = useState('');
+  const [reqTypeExact, setReqTypeExact] = useState<string>('Apartamento');
+  const [reqSubtype, setReqSubtype] = useState<string>('');
   const [reqType, setReqType] = useState<string>('apartment');
   const [reqTxType, setReqTxType] = useState<string>('arriendo');
-  const [reqCity, setReqCity] = useState('Bogotá');
+  const [reqDepartment, setReqDepartment] = useState('');
+  const [reqCity, setReqCity] = useState('');
+  const [reqLocality, setReqLocality] = useState('');
   const [reqNeighborhood, setReqNeighborhood] = useState('');
+  const [reqVereda, setReqVereda] = useState('');
   const [reqPresupuestoMax, setReqPresupuestoMax] = useState('');
   const [reqPresupuestoMin, setReqPresupuestoMin] = useState('');
+  const [reqAreaUnit, setReqAreaUnit] = useState<'m2' | 'fanegadas' | 'hectareas'>('m2');
   const [reqAreaMin, setReqAreaMin] = useState('');
+  const [reqAreaMax, setReqAreaMax] = useState('');
   const [reqBedroomsMin, setReqBedroomsMin] = useState<number | ''>('');
   const [reqBathroomsMin, setReqBathroomsMin] = useState<number | ''>('');
   const [reqGaragesMin, setReqGaragesMin] = useState<number | ''>('');
+  const [reqGarageType, setReqGarageType] = useState<string>('Indiferente');
   const [reqAdminFeeMax, setReqAdminFeeMax] = useState('');
   const [reqStratum, setReqStratum] = useState<number | ''>('');
   const [reqAmoblado, setReqAmoblado] = useState(false);
+  const [reqDeposito, setReqDeposito] = useState<string>('Indiferente');
+  const [reqCocina, setReqCocina] = useState<string>('Indiferente');
+  const [reqBalconTerraza, setReqBalconTerraza] = useState<string>('Indiferente');
+  const [reqPisoAscensor, setReqPisoAscensor] = useState<string>('Indiferente');
+  const [reqFormaPago, setReqFormaPago] = useState<string>('Indiferente');
+  // Campos especializados (Lotes, Fincas, Oficinas, Consultorios, Bodegas, Locales)
+  const [reqUsoSuelo, setReqUsoSuelo] = useState<string>('Indiferente');
+  const [reqTopografia, setReqTopografia] = useState<string>('Indiferente');
+  const [reqServiciosLicencia, setReqServiciosLicencia] = useState<string>('Indiferente');
+  const [reqHabilitacionSalud, setReqHabilitacionSalud] = useState<boolean>(false);
+  const [reqSalaJuntasRecepcion, setReqSalaJuntasRecepcion] = useState<boolean>(false);
+  const [reqAlturaCargaTrifasica, setReqAlturaCargaTrifasica] = useState<string>('');
+  const [reqOtrasEspecificaciones, setReqOtrasEspecificaciones] = useState('');
   const [reqContactName, setReqContactName] = useState('');
   const [reqContactPhone, setReqContactPhone] = useState('');
   const [reqFlyerUrl, setReqFlyerUrl] = useState<string | null>(null);
@@ -1517,13 +1585,35 @@ export default function UnifiedPublishModal({
   const applyReqData = (extracted: any) => {
     if (!extracted) return;
     if (extracted.name) setReqName(extracted.name);
-    if (extracted.tipoInmuebleDeseado) setReqType(extracted.tipoInmuebleDeseado);
+    if (extracted.tipoInmuebleDeseado || extracted.tipoExacto) {
+      const dbT = extracted.tipoInmuebleDeseado || mapExactTypeToDbEnum(extracted.tipoExacto || 'Apartamento');
+      setReqType(dbT);
+      const exactT = extracted.tipoExacto || mapDbEnumToExactType(dbT, extracted.rawText || extracted.name);
+      setReqTypeExact(exactT);
+      if (dbT === 'consultorio' || /consultorio/i.test(extracted.rawText || extracted.name || '')) {
+        setReqSubtype('Consultorio Médico / Salud');
+      } else {
+        setReqSubtype('');
+      }
+    }
     if (extracted.tipoNegocioDeseado) setReqTxType(extracted.tipoNegocioDeseado);
-    if (extracted.ciudadDeseada) setReqCity(extracted.ciudadDeseada);
+    if (extracted.ciudadDeseada) {
+      setReqCity(extracted.ciudadDeseada);
+      const dep = extracted.departamento || findDepartmentForCity(extracted.ciudadDeseada);
+      if (dep) setReqDepartment(dep);
+    } else if (extracted.departamento) {
+      setReqDepartment(extracted.departamento);
+    }
+    if (extracted.addressLocality) setReqLocality(extracted.addressLocality);
     if (extracted.addressNeighborhood) setReqNeighborhood(extracted.addressNeighborhood);
+    else if (extracted.zonaDeseada) setReqNeighborhood(extracted.zonaDeseada);
+    if (extracted.vereda) setReqVereda(extracted.vereda);
     if (extracted.presupuestoMax) setReqPresupuestoMax(formatCOP(extracted.presupuestoMax));
     if (extracted.presupuestoMin) setReqPresupuestoMin(formatCOP(extracted.presupuestoMin));
-    if (extracted.areaMin) setReqAreaMin(String(extracted.areaMin));
+    if (extracted.areaMin) {
+      setReqAreaUnit('m2');
+      setReqAreaMin(String(extracted.areaMin));
+    }
     if (extracted.habitacionesMin !== undefined && extracted.habitacionesMin !== null) setReqBedroomsMin(Number(extracted.habitacionesMin));
     if (extracted.banosMin !== undefined && extracted.banosMin !== null) setReqBathroomsMin(Number(extracted.banosMin));
     if (extracted.parqueaderosMin !== undefined && extracted.parqueaderosMin !== null) setReqGaragesMin(Number(extracted.parqueaderosMin));
@@ -1532,6 +1622,7 @@ export default function UnifiedPublishModal({
       setReqStratum(extracted.estratoDeseado[0]);
     }
     if (extracted.amobladoDeseado !== undefined && extracted.amobladoDeseado !== null) setReqAmoblado(Boolean(extracted.amobladoDeseado));
+    if (extracted.otrasEspecificaciones) setReqOtrasEspecificaciones(String(extracted.otrasEspecificaciones));
     if (extracted.nombreUsuarioWhatsapp) setReqContactName(extracted.nombreUsuarioWhatsapp);
     if (extracted.idUsuarioWhatsapp) setReqContactPhone(extracted.idUsuarioWhatsapp);
     if (extracted.rawText && !reqRawText) setReqRawText(extracted.rawText);
@@ -1541,19 +1632,39 @@ export default function UnifiedPublishModal({
     setReqRawText('');
     setReqFlyerPreview(null);
     setReqName('');
+    setReqTypeExact('Apartamento');
+    setReqSubtype('');
     setReqType('apartment');
     setReqTxType('arriendo');
-    setReqCity('Bogotá');
+    setReqDepartment('');
+    setReqCity('');
+    setReqLocality('');
     setReqNeighborhood('');
+    setReqVereda('');
     setReqPresupuestoMax('');
     setReqPresupuestoMin('');
+    setReqAreaUnit('m2');
     setReqAreaMin('');
+    setReqAreaMax('');
     setReqBedroomsMin('');
     setReqBathroomsMin('');
     setReqGaragesMin('');
+    setReqGarageType('Indiferente');
     setReqAdminFeeMax('');
     setReqStratum('');
     setReqAmoblado(false);
+    setReqDeposito('Indiferente');
+    setReqCocina('Indiferente');
+    setReqBalconTerraza('Indiferente');
+    setReqPisoAscensor('Indiferente');
+    setReqFormaPago('Indiferente');
+    setReqUsoSuelo('Indiferente');
+    setReqTopografia('Indiferente');
+    setReqServiciosLicencia('Indiferente');
+    setReqHabilitacionSalud(false);
+    setReqSalaJuntasRecepcion(false);
+    setReqAlturaCargaTrifasica('');
+    setReqOtrasEspecificaciones('');
     setReqContactName('');
     setReqContactPhone('');
     setReqFlyerUrl(null);
@@ -1578,27 +1689,101 @@ export default function UnifiedPublishModal({
 
   const handleSaveRequirement = () => {
     const cleanPresupuesto = cleanCOP(reqPresupuestoMax);
-    if (!reqName || !cleanPresupuesto) {
-      toast.error('Por favor completa al menos el título y el presupuesto máximo');
+    if (!reqName.trim() || !cleanPresupuesto) {
+      toast.error('Por favor completa el título de la demanda y el presupuesto máximo');
+      return;
+    }
+    if (!reqCity.trim()) {
+      toast.error('Por favor selecciona o escribe la ciudad o municipio de búsqueda');
+      return;
+    }
+    if (!reqNeighborhood.trim() && !reqVereda.trim() && !reqLocality.trim()) {
+      toast.error('Por favor indica al menos el barrio, vereda o localidad/comuna de interés');
       return;
     }
 
+    const catGroup = getPropertyCategoryGroup(reqType);
+    const parsedAreaNum = parseFloat(reqAreaMin.replace(',', '.'));
+    let areaMinM2: string | null = null;
+    if (!isNaN(parsedAreaNum) && parsedAreaNum > 0) {
+      const factor = reqAreaUnit === 'hectareas' ? 10000 : reqAreaUnit === 'fanegadas' ? 6400 : 1;
+      areaMinM2 = String(Math.round(parsedAreaNum * factor));
+    }
+
+    const extraNotesList: string[] = [];
+    if (reqTypeExact && !['Apartamento', 'Casa', 'Bodega', 'Edificio', 'Finca', 'Hotel', 'Local', 'Oficina'].includes(reqTypeExact)) {
+      extraNotesList.push(`Tipo exacto: ${reqTypeExact}`);
+    }
+    if (reqSubtype.trim()) {
+      extraNotesList.push(`Subtipo: ${reqSubtype.trim()}`);
+    }
+    if (reqGarageType !== 'Indiferente' && catGroup !== 'land') extraNotesList.push(`Garaje: ${reqGarageType}`);
+    if (reqDeposito !== 'Indiferente' && catGroup === 'residential') extraNotesList.push(`Depósito: ${reqDeposito}`);
+    if (reqCocina !== 'Indiferente' && catGroup === 'residential') extraNotesList.push(`Cocina ${reqCocina}`);
+    if (reqBalconTerraza !== 'Indiferente' && catGroup === 'residential') extraNotesList.push(reqBalconTerraza);
+    if (reqPisoAscensor !== 'Indiferente' && (catGroup === 'residential' || catGroup === 'office_consultorio')) extraNotesList.push(reqPisoAscensor);
+    if (reqFormaPago !== 'Indiferente') extraNotesList.push(`Forma de pago: ${reqFormaPago}`);
+    if (catGroup === 'land' || catGroup === 'rural_farm') {
+      if (reqUsoSuelo !== 'Indiferente') extraNotesList.push(`Uso de suelo: ${reqUsoSuelo}`);
+      if (reqTopografia !== 'Indiferente') extraNotesList.push(`Topografía: ${reqTopografia}`);
+      if (reqServiciosLicencia !== 'Indiferente') extraNotesList.push(`Servicios/Licencia: ${reqServiciosLicencia}`);
+    }
+    if (catGroup === 'office_consultorio') {
+      if (reqHabilitacionSalud) extraNotesList.push('Requiere habilitación Secretaría de Salud');
+      if (reqSalaJuntasRecepcion) extraNotesList.push('Requiere recepción / sala de juntas');
+    }
+    if (catGroup === 'commercial_warehouse' && reqAlturaCargaTrifasica.trim()) {
+      extraNotesList.push(`Especificación técnica: ${reqAlturaCargaTrifasica.trim()}`);
+    }
+    if (reqOtrasEspecificaciones.trim()) {
+      extraNotesList.push(reqOtrasEspecificaciones.trim());
+    }
+
+    const consolidatedSpecs = extraNotesList.join(' | ') || null;
+    const barrioO_Vereda = reqNeighborhood.trim() || reqVereda.trim() || null;
+
     createReqMutation.mutate({
-      name: reqName,
+      name: reqName.trim(),
       tipoInmuebleDeseado: reqType as any,
       tipoNegocioDeseado: reqTxType as any,
-      ciudadDeseada: reqCity,
-      addressNeighborhood: reqNeighborhood || null,
-      zonaDeseada: reqNeighborhood || null,
+      departamento: reqDepartment.trim() || findDepartmentForCity(reqCity) || null,
+      ciudadDeseada: reqCity.trim(),
+      addressCity: reqCity.trim(),
+      addressLocality: reqLocality.trim() || null,
+      addressNeighborhood: barrioO_Vereda,
+      zonaDeseada: barrioO_Vereda || reqLocality.trim() || null,
+      vereda: reqVereda.trim() || null,
       presupuestoMax: cleanPresupuesto,
       presupuestoMin: reqPresupuestoMin ? cleanCOP(reqPresupuestoMin) : null,
-      areaMin: reqAreaMin || null,
-      habitacionesMin: reqBedroomsMin !== '' ? Number(reqBedroomsMin) : null,
-      banosMin: reqBathroomsMin !== '' ? Number(reqBathroomsMin) : null,
-      parqueaderosMin: reqGaragesMin !== '' ? Number(reqGaragesMin) : null,
+      areaMin: areaMinM2,
+      habitacionesMin: catGroup === 'land' ? null : (reqBedroomsMin !== '' ? Number(reqBedroomsMin) : null),
+      banosMin: catGroup === 'land' ? null : (reqBathroomsMin !== '' ? Number(reqBathroomsMin) : null),
+      parqueaderosMin: catGroup === 'land' ? null : (reqGaragesMin !== '' ? Number(reqGaragesMin) : null),
       adminFeeMax: reqAdminFeeMax ? cleanCOP(reqAdminFeeMax) : null,
       estratoDeseado: reqStratum !== '' ? [Number(reqStratum)] : null,
-      amobladoDeseado: reqAmoblado,
+      amobladoDeseado: catGroup === 'land' ? false : reqAmoblado,
+      otrasEspecificaciones: consolidatedSpecs,
+      caracteristicasDeseadas: {
+        tipoExacto: reqTypeExact,
+        subtipo: reqSubtype.trim() || null,
+        departamento: reqDepartment.trim() || findDepartmentForCity(reqCity) || null,
+        vereda: reqVereda.trim() || null,
+        unidadAreaOriginal: reqAreaUnit,
+        areaMax: reqAreaMax || null,
+        tipoGaraje: reqGarageType !== 'Indiferente' ? reqGarageType : null,
+        depositos: reqDeposito !== 'Indiferente' ? reqDeposito : null,
+        cocina: reqCocina !== 'Indiferente' ? reqCocina : null,
+        balconTerraza: reqBalconTerraza !== 'Indiferente' ? reqBalconTerraza : null,
+        pisoAscensor: reqPisoAscensor !== 'Indiferente' ? reqPisoAscensor : null,
+        formaPago: reqFormaPago !== 'Indiferente' ? reqFormaPago : null,
+        usoSuelo: reqUsoSuelo !== 'Indiferente' ? reqUsoSuelo : null,
+        topografia: reqTopografia !== 'Indiferente' ? reqTopografia : null,
+        serviciosLicencia: reqServiciosLicencia !== 'Indiferente' ? reqServiciosLicencia : null,
+        habilitacionSalud: reqHabilitacionSalud || undefined,
+        salaJuntasRecepcion: reqSalaJuntasRecepcion || undefined,
+        especificacionIndustrial: reqAlturaCargaTrifasica.trim() || null,
+        otrasEspecificaciones: consolidatedSpecs,
+      },
       rawText: reqRawText || null,
       enlaceOrigen: reqFlyerUrl || null,
       nombreUsuarioWhatsapp: reqContactName || null,
@@ -2344,9 +2529,9 @@ export default function UnifiedPublishModal({
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#fcf6ba] flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-[#bf953f]/20 text-[#bf953f] flex items-center justify-center text-[10px] font-black">C</span>
-                    Sección 3: Balcones, Terrazas, Piso & Geolocalización en Mapa
+                    Sección 3: Balcones, Terrazas, Piso & Geolocalización Nacional
                   </h3>
-                  <span className="text-[10px] text-zinc-400">Bogotá D.C. + OpenStreetMap ($0)</span>
+                  <span className="text-[10px] text-zinc-400">Cobertura Nacional Colombia + OpenStreetMap ($0)</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -2451,14 +2636,14 @@ export default function UnifiedPublishModal({
                   {/* Dirección con Autocompletado y Mapa */}
                   <div className="sm:col-span-2 lg:col-span-3 space-y-2">
                     <label className="text-[11px] font-semibold text-zinc-300 block">
-                      Dirección del Inmueble (Bogotá D.C.)
+                      Dirección o Sector del Inmueble (Colombia)
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={propAddress}
                         onChange={(e) => setPropAddress(e.target.value)}
-                        placeholder="Ej: Calle 116 # 70-15, Morato"
+                        placeholder="Ej: Calle 45 # 19-20, Av. El Poblado, Cra 7 # 116..."
                         className="flex-1 bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-sans"
                       />
                       <button
@@ -2486,38 +2671,80 @@ export default function UnifiedPublishModal({
                     </div>
                   </div>
 
-                  {/* Barrio */}
+                  {/* Departamento */}
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Barrio Correspondiente *</label>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Departamento *</label>
+                    <select
+                      value={propDepartment}
+                      onChange={(e) => {
+                        const dept = e.target.value;
+                        setPropDepartment(dept);
+                        const match = COLOMBIA_DEPARTMENTS.find(d => d.departamento === dept);
+                        if (match && match.municipios.length > 0 && !match.municipios.includes(propCity)) {
+                          setPropCity(match.municipios[0]);
+                          setPropZone('');
+                        }
+                      }}
+                      className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    >
+                      {COLOMBIA_DEPARTMENTS.map((d) => (
+                        <option key={d.departamento} value={d.departamento} className="bg-zinc-900 text-white">
+                          {d.departamento}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Ciudad / Municipio */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Ciudad / Municipio *</label>
+                    <input
+                      type="text"
+                      list="offer-cities-list"
+                      value={propCity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPropCity(val);
+                        const detectedDept = findDepartmentForCity(val);
+                        if (detectedDept) setPropDepartment(detectedDept);
+                      }}
+                      placeholder="Ej: Bogotá, D.C., Medellín, Cali, Chía..."
+                      className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-bold outline-none"
+                    />
+                    <datalist id="offer-cities-list">
+                      {(COLOMBIA_DEPARTMENTS.find(d => d.departamento === propDepartment)?.municipios || []).map((m) => (
+                        <option key={m} value={m} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* Localidad / Comuna / Corregimiento */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Localidad / Comuna / Corregimiento</label>
+                    <input
+                      type="text"
+                      list="offer-localities-list"
+                      value={propZone}
+                      onChange={(e) => setPropZone(e.target.value)}
+                      placeholder="Ej: Kennedy, Suba, El Poblado, Comuna 17..."
+                      className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    />
+                    <datalist id="offer-localities-list">
+                      {getSuggestedLocalitiesForCity(propCity).map((loc) => (
+                        <option key={loc} value={loc} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* Barrio / Vereda */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Barrio / Vereda *</label>
                     <input
                       type="text"
                       value={propNeighborhood}
                       onChange={(e) => setPropNeighborhood(e.target.value)}
-                      placeholder="Ej: Morato, Cedritos, Chicó"
+                      placeholder="Ej: Castilla, Teusaquillo, El Poblado, Vereda..."
                       className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-bold outline-none"
-                    />
-                  </div>
-
-                  {/* Localidad */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Localidad Correspondiente *</label>
-                    <input
-                      type="text"
-                      value={propZone}
-                      onChange={(e) => setPropZone(e.target.value)}
-                      placeholder="Ej: Suba, Usaquén, Chapinero"
-                      className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    />
-                  </div>
-
-                  {/* Ciudad Fija */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Ciudad (Fijo)</label>
-                    <input
-                      type="text"
-                      disabled
-                      value="Bogotá D.C."
-                      className="w-full bg-black/80 border border-white/5 rounded-xl px-3 py-2 text-xs text-zinc-400 font-bold outline-none cursor-not-allowed"
                     />
                   </div>
 
@@ -3033,7 +3260,7 @@ export default function UnifiedPublishModal({
                       rows={3}
                       value={reqRawText}
                       onChange={(e) => setReqRawText(e.target.value)}
-                      placeholder="Ej: Busco urgente en arriendo apto en Chapinero Alto o Rosales, 2 habitaciones, con parqueadero, presupuesto hasta 4.2 millones..."
+                      placeholder="Ej: Busco lote comercial de 2.500 m² o 1 hectárea en Rionegro / El Poblado / Kennedy / Suba, o consultorio médico habilitado en Cali, presupuesto hasta $1.200M..."
                       className="w-full bg-black/60 border border-white/10 focus:border-amber-400 rounded-xl p-3 text-xs text-white placeholder:text-zinc-500 outline-none resize-none font-sans"
                     />
                   </div>
@@ -3148,197 +3375,595 @@ export default function UnifiedPublishModal({
                 </div>
               )}
 
-              {/* CAMPOS ESTRUCTURADOS DEL REQUERIMIENTO */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
-                  Parámetros de Búsqueda del Requerimiento
-                </h3>
+              {/* CAMPOS ESTRUCTURADOS DEL REQUERIMIENTO NACIONAL */}
+              {(() => {
+                const reqCatGroup = getPropertyCategoryGroup(reqType);
+                const isLandReq = reqCatGroup === 'land';
+                const isOfficeConsultorioReq = reqCatGroup === 'office_consultorio';
+                const isCommercialWarehouseReq = reqCatGroup === 'commercial_warehouse';
+                const isRuralReq = reqCatGroup === 'rural_farm';
+                const isResidentialOrBuildingReq = reqCatGroup === 'residential' || reqCatGroup === 'building_hotel';
+                const showBedrooms = isResidentialOrBuildingReq || isRuralReq;
+                const showBathrooms = !isLandReq;
+                const showGarages = !isLandReq;
+                const showStratum = isResidentialOrBuildingReq || isOfficeConsultorioReq;
+                const reqDeptCities = COLOMBIA_DEPARTMENTS.find(d => d.departamento === reqDepartment)?.municipios || [];
+                const reqSuggestedLocalities = getSuggestedLocalitiesForCity(reqCity);
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Título de la Demanda *</label>
-                    <input
-                      type="text"
-                      value={reqName}
-                      onChange={(e) => setReqName(e.target.value)}
-                      placeholder="Ej: Busco Apto Arriendo Chapinero 2 Habs"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white font-bold outline-none"
-                    />
-                  </div>
+                return (
+                  <div className="space-y-4">
+                    {/* Sub-bloque 1: Datos Base, Negocio y Presupuesto */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#fcf6ba] flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#bf953f]" />
+                        1. Datos Base del Requerimiento & Presupuesto
+                      </h3>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Tipo de Inmueble Deseado *</label>
-                    <select
-                      value={reqType}
-                      onChange={(e) => setReqType(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    >
-                      <option value="apartment">Apartamento</option>
-                      <option value="house">Casa</option>
-                      <option value="office">Oficina</option>
-                      <option value="commercial">Local Comercial</option>
-                      <option value="warehouse">Bodega</option>
-                      <option value="building">Edificio</option>
-                      <option value="farm">Finca / Campestre</option>
-                      <option value="land">Lote / Terreno</option>
-                      <option value="loft">Loft / Studio</option>
-                      <option value="consultorio">Consultorio</option>
-                    </select>
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Título de la Demanda *</label>
+                          <input
+                            type="text"
+                            value={reqName}
+                            onChange={(e) => setReqName(e.target.value)}
+                            placeholder="Ej: Busco Consultorio 60m² en El Poblado / Lote 1 Ha en Chía / Apto 3 Habs en Castilla"
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-bold outline-none"
+                          />
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Tipo de Negocio *</label>
-                    <select
-                      value={reqTxType}
-                      onChange={(e) => setReqTxType(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
-                    >
-                      <option value="arriendo">Arriendo</option>
-                      <option value="venta">Compra (Venta)</option>
-                      <option value="venta_o_arriendo">Venta o Arriendo</option>
-                      <option value="arriendo_con_opcion_de_compra">Arriendo con Opción de Compra</option>
-                    </select>
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Inmueble Deseado *</label>
+                          <select
+                            value={reqTypeExact}
+                            onChange={(e) => {
+                              const exactVal = e.target.value;
+                              setReqTypeExact(exactVal);
+                              setReqSubtype('');
+                              setReqType(mapExactTypeToDbEnum(exactVal));
+                            }}
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-semibold"
+                          >
+                            {PROPERTY_TYPES_EXACT.map((t) => (
+                              <option key={t} value={t} className="bg-zinc-900 text-white">
+                                {t}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Presupuesto Máximo (COP) *</label>
-                    <input
-                      type="text"
-                      value={reqPresupuestoMax}
-                      onChange={(e) => setReqPresupuestoMax(formatCOP(e.target.value))}
-                      placeholder="$ 4.500.000"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none"
-                    />
-                  </div>
+                        {PROPERTY_SUBTYPES[reqTypeExact] && (
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Subtipo / Uso Especializado</label>
+                            <select
+                              value={reqSubtype}
+                              onChange={(e) => {
+                                const sub = e.target.value;
+                                setReqSubtype(sub);
+                                setReqType(mapExactTypeToDbEnum(reqTypeExact, sub));
+                              }}
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            >
+                              <option value="" className="bg-zinc-900">Cualquiera / General</option>
+                              {PROPERTY_SUBTYPES[reqTypeExact].map((sub) => (
+                                <option key={sub} value={sub} className="bg-zinc-900 text-white">
+                                  {sub}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Presupuesto Mínimo (COP)</label>
-                    <input
-                      type="text"
-                      value={reqPresupuestoMin}
-                      onChange={(e) => setReqPresupuestoMin(formatCOP(e.target.value))}
-                      placeholder="$ 2.500.000"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white font-mono outline-none"
-                    />
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Negocio *</label>
+                          <select
+                            value={reqTxType}
+                            onChange={(e) => setReqTxType(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
+                          >
+                            <option value="arriendo" className="bg-zinc-900">Arriendo</option>
+                            <option value="venta" className="bg-zinc-900">Compra (Venta)</option>
+                            <option value="venta_o_arriendo" className="bg-zinc-900">Venta o Arriendo</option>
+                            <option value="arriendo_con_opcion_de_compra" className="bg-zinc-900">Arriendo con Opción de Compra</option>
+                            <option value="permuta" className="bg-zinc-900">Permuta</option>
+                            <option value="venta_permuta" className="bg-zinc-900">Venta / Permuta</option>
+                          </select>
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Ciudad *</label>
-                    <input
-                      type="text"
-                      value={reqCity}
-                      onChange={(e) => setReqCity(e.target.value)}
-                      placeholder="Bogotá"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    />
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Presupuesto Máximo (COP) *</label>
+                          <input
+                            type="text"
+                            value={reqPresupuestoMax}
+                            onChange={(e) => setReqPresupuestoMax(formatCOP(e.target.value))}
+                            placeholder="$ 450.000.000"
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none"
+                          />
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Barrio o Sectores de Interés</label>
-                    <input
-                      type="text"
-                      value={reqNeighborhood}
-                      onChange={(e) => setReqNeighborhood(e.target.value)}
-                      placeholder="Ej: Rosales, Chicó, Chapinero Alto"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
-                    />
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Presupuesto Mínimo (COP)</label>
+                          <input
+                            type="text"
+                            value={reqPresupuestoMin}
+                            onChange={(e) => setReqPresupuestoMin(formatCOP(e.target.value))}
+                            placeholder="$ 250.000.000"
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-mono outline-none"
+                          />
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Área Mínima (m²)</label>
-                    <input
-                      type="text"
-                      value={reqAreaMin}
-                      onChange={(e) => setReqAreaMin(e.target.value)}
-                      placeholder="Ej: 75"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
-                    />
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Forma de Pago / Financiación</label>
+                          <select
+                            value={reqFormaPago}
+                            onChange={(e) => setReqFormaPago(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                          >
+                            <option value="Indiferente" className="bg-zinc-900">Indiferente / Por definir</option>
+                            <option value="Recursos propios / Contado" className="bg-zinc-900">Recursos propios / Contado</option>
+                            <option value="Crédito aprobado" className="bg-zinc-900">Crédito hipotecario / comercial aprobado</option>
+                            <option value="Leasing habitacional / inmobiliario" className="bg-zinc-900">Leasing habitacional / inmobiliario</option>
+                            <option value="Permuta + Efectivo" className="bg-zinc-900">Permuta + Efectivo</option>
+                            <option value="Canon mensual / Póliza" className="bg-zinc-900">Arriendo con póliza / codeudor</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Habitaciones Mínimas</label>
-                    <input
-                      type="number"
-                      value={reqBedroomsMin}
-                      onChange={(e) => setReqBedroomsMin(e.target.value === '' ? '' : Number(e.target.value))}
-                      placeholder="Ej: 2"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    />
-                  </div>
+                    {/* Sub-bloque 2: Ubicación Geográfica Nacional */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#fcf6ba] flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-[#bf953f]" />
+                          2. Ubicación Geográfica Nacional (Toda Colombia)
+                        </h3>
+                        <span className="text-[10px] text-zinc-400">32 Departamentos + 20 Localidades Bogotá</span>
+                      </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Baños Mínimos</label>
-                    <input
-                      type="number"
-                      value={reqBathroomsMin}
-                      onChange={(e) => setReqBathroomsMin(e.target.value === '' ? '' : Number(e.target.value))}
-                      placeholder="Ej: 2"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    />
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Departamento *</label>
+                          <select
+                            value={reqDepartment}
+                            onChange={(e) => {
+                              const dept = e.target.value;
+                              setReqDepartment(dept);
+                              const match = COLOMBIA_DEPARTMENTS.find(d => d.departamento === dept);
+                              if (match && match.municipios.length > 0 && !match.municipios.includes(reqCity)) {
+                                setReqCity(match.municipios[0]);
+                                setReqLocality('');
+                              }
+                            }}
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                          >
+                            <option value="" className="bg-zinc-900">Seleccionar departamento...</option>
+                            {COLOMBIA_DEPARTMENTS.map((d) => (
+                              <option key={d.departamento} value={d.departamento} className="bg-zinc-900 text-white">
+                                {d.departamento}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Parqueaderos Requeridos</label>
-                    <input
-                      type="number"
-                      value={reqGaragesMin}
-                      onChange={(e) => setReqGaragesMin(e.target.value === '' ? '' : Number(e.target.value))}
-                      placeholder="Ej: 1"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    />
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Ciudad / Municipio *</label>
+                          <input
+                            type="text"
+                            list="req-cities-list"
+                            value={reqCity}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setReqCity(val);
+                              const detectedDept = findDepartmentForCity(val);
+                              if (detectedDept) setReqDepartment(detectedDept);
+                            }}
+                            placeholder="Ej: Medellín, Cali, Bogotá, D.C., Bucaramanga, Rionegro..."
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-bold outline-none"
+                          />
+                          <datalist id="req-cities-list">
+                            {reqDeptCities.map((m) => (
+                              <option key={m} value={m} />
+                            ))}
+                          </datalist>
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Estrato de Preferencia</label>
-                    <select
-                      value={reqStratum}
-                      onChange={(e) => setReqStratum(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    >
-                      <option value="">Cualquier estrato</option>
-                      <option value="3">Estrato 3</option>
-                      <option value="4">Estrato 4</option>
-                      <option value="5">Estrato 5</option>
-                      <option value="6">Estrato 6</option>
-                    </select>
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Localidad / Comuna / Zona</label>
+                          <input
+                            type="text"
+                            list="req-localities-list"
+                            value={reqLocality}
+                            onChange={(e) => setReqLocality(e.target.value)}
+                            placeholder="Ej: Kennedy, Bosa, El Poblado, Comuna 17, Centro..."
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                          />
+                          <datalist id="req-localities-list">
+                            {reqSuggestedLocalities.map((loc) => (
+                              <option key={loc} value={loc} />
+                            ))}
+                          </datalist>
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Nombre del Cliente / Contacto</label>
-                    <input
-                      type="text"
-                      value={reqContactName}
-                      onChange={(e) => setReqContactName(e.target.value)}
-                      placeholder="Ej: Dra. María Fernanda Gómez"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
-                    />
-                  </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Barrio(s) / Sectores Aledaños Aceptados</label>
+                          <input
+                            type="text"
+                            value={reqNeighborhood}
+                            onChange={(e) => setReqNeighborhood(e.target.value)}
+                            placeholder="Ej: Castilla, Teusaquillo, Restrepo, Laureles, Pance, Cabecera..."
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
+                          />
+                        </div>
 
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Teléfono WhatsApp Contacto</label>
-                    <input
-                      type="text"
-                      value={reqContactPhone}
-                      onChange={(e) => setReqContactPhone(e.target.value)}
-                      placeholder="Ej: 573101234567"
-                      className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
-                    />
-                  </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Vereda / Corregimiento (Rural / Lotes)</label>
+                          <input
+                            type="text"
+                            value={reqVereda}
+                            onChange={(e) => setReqVereda(e.target.value)}
+                            placeholder="Ej: Vereda Yerbabuena, Llanogrande, Dapa..."
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="flex items-center pt-5">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
-                      <input
-                        type="checkbox"
-                        checked={reqAmoblado}
-                        onChange={(e) => setReqAmoblado(e.target.checked)}
-                        className="w-4 h-4 rounded text-primary accent-primary"
-                      />
-                      <span>¿Requiere Amoblado?</span>
-                    </label>
+                    {/* Sub-bloque 3: Especificaciones Técnicas Adaptativas según Tipo de Inmueble */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#fcf6ba] flex items-center gap-2">
+                          <Sliders className="w-4 h-4 text-[#bf953f]" />
+                          3. Especificaciones Técnicas del Inmueble
+                        </h3>
+                        <span className="text-[10px] text-amber-300/90 font-semibold">
+                          {isLandReq
+                            ? 'Campos para Lote / Terreno'
+                            : isOfficeConsultorioReq
+                              ? 'Campos para Oficina / Consultorio'
+                              : isCommercialWarehouseReq
+                                ? 'Campos para Local / Bodega'
+                                : isRuralReq
+                                  ? 'Campos para Finca / Campestre'
+                                  : 'Campos Residencial / Edificio'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {/* Área Mínima + Unidad + Área Máxima */}
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                            Área Mínima ({reqAreaUnit === 'm2' ? 'm²' : reqAreaUnit === 'fanegadas' ? 'Fanegadas' : 'Hectáreas'})
+                          </label>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={reqAreaMin}
+                              onChange={(e) => setReqAreaMin(e.target.value)}
+                              placeholder={reqAreaUnit === 'm2' ? 'Ej: 120' : 'Ej: 2.5'}
+                              className="flex-1 bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
+                            />
+                            <select
+                              value={reqAreaUnit}
+                              onChange={(e) => setReqAreaUnit(e.target.value as 'm2' | 'fanegadas' | 'hectareas')}
+                              className="bg-black/80 border border-white/10 focus:border-[#bf953f] rounded-xl px-2 py-2 text-[11px] text-amber-300 font-bold outline-none"
+                            >
+                              <option value="m2">m²</option>
+                              <option value="fanegadas">Faneg.</option>
+                              <option value="hectareas">Ha</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Área Máxima (Opcional)</label>
+                          <input
+                            type="text"
+                            value={reqAreaMax}
+                            onChange={(e) => setReqAreaMax(e.target.value)}
+                            placeholder={reqAreaUnit === 'm2' ? 'Ej: 5000' : 'Ej: 10'}
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
+                          />
+                        </div>
+
+                        {showBedrooms && (
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Habitaciones Exactas (1=1)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={reqBedroomsMin}
+                              onChange={(e) => setReqBedroomsMin(e.target.value === '' ? '' : Number(e.target.value))}
+                              placeholder="Ej: 3"
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            />
+                          </div>
+                        )}
+
+                        {showBathrooms && (
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Baños Mínimos</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={reqBathroomsMin}
+                              onChange={(e) => setReqBathroomsMin(e.target.value === '' ? '' : Number(e.target.value))}
+                              placeholder="Ej: 2"
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            />
+                          </div>
+                        )}
+
+                        {showGarages && (
+                          <>
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Parqueaderos Mínimos</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={reqGaragesMin}
+                                onChange={(e) => setReqGaragesMin(e.target.value === '' ? '' : Number(e.target.value))}
+                                placeholder="Ej: 1"
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Parqueadero</label>
+                              <select
+                                value={reqGarageType}
+                                onChange={(e) => setReqGarageType(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              >
+                                <option value="Indiferente" className="bg-zinc-900">Indiferente</option>
+                                <option value="Independientes" className="bg-zinc-900">Exige Independientes</option>
+                                <option value="Lineales" className="bg-zinc-900">Acepta Lineales / En tándem</option>
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        {!isLandReq && !isRuralReq && (
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Administración Máxima (COP)</label>
+                            <input
+                              type="text"
+                              value={reqAdminFeeMax}
+                              onChange={(e) => setReqAdminFeeMax(formatCOP(e.target.value))}
+                              placeholder="$ 600.000"
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-mono outline-none"
+                            />
+                          </div>
+                        )}
+
+                        {showStratum && (
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Estrato de Preferencia</label>
+                            <select
+                              value={reqStratum}
+                              onChange={(e) => setReqStratum(e.target.value === '' ? '' : Number(e.target.value))}
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            >
+                              <option value="" className="bg-zinc-900">Cualquier estrato</option>
+                              <option value="1" className="bg-zinc-900">Estrato 1</option>
+                              <option value="2" className="bg-zinc-900">Estrato 2</option>
+                              <option value="3" className="bg-zinc-900">Estrato 3</option>
+                              <option value="4" className="bg-zinc-900">Estrato 4</option>
+                              <option value="5" className="bg-zinc-900">Estrato 5</option>
+                              <option value="6" className="bg-zinc-900">Estrato 6</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {(isLandReq || isRuralReq) && (
+                          <>
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Uso de Suelo / POT</label>
+                              <select
+                                value={reqUsoSuelo}
+                                onChange={(e) => setReqUsoSuelo(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              >
+                                <option value="Indiferente" className="bg-zinc-900">Indiferente / Mixto</option>
+                                <option value="Residencial" className="bg-zinc-900">Residencial / Vivienda</option>
+                                <option value="Comercial / Dotacional" className="bg-zinc-900">Comercial / Dotacional</option>
+                                <option value="Industrial / Logístico" className="bg-zinc-900">Industrial / Logístico</option>
+                                <option value="Rural / Agropecuario / Campestre" className="bg-zinc-900">Rural / Agropecuario / Campestre</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Servicios Públicos / Licencia</label>
+                              <input
+                                type="text"
+                                value={reqServiciosLicencia === 'Indiferente' ? '' : reqServiciosLicencia}
+                                onChange={(e) => setReqServiciosLicencia(e.target.value || 'Indiferente')}
+                                placeholder="Ej: Agua, luz, pozo, licencia construcción..."
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {isLandReq && (
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Topografía / Índice</label>
+                            <select
+                              value={reqTopografia}
+                              onChange={(e) => setReqTopografia(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            >
+                              <option value="Indiferente" className="bg-zinc-900">Indiferente</option>
+                              <option value="Plano 100%" className="bg-zinc-900">Plano 100%</option>
+                              <option value="Semi-ondulado / Mixto" className="bg-zinc-900">Semi-ondulado / Mixto</option>
+                              <option value="Esquinero / Sobre vía principal" className="bg-zinc-900">Esquinero / Sobre vía principal</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {isCommercialWarehouseReq && (
+                          <div className="sm:col-span-2">
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Altura Libre, Muelle de Carga, Vitrina o Trifásica</label>
+                            <input
+                              type="text"
+                              value={reqAlturaCargaTrifasica}
+                              onChange={(e) => setReqAlturaCargaTrifasica(e.target.value)}
+                              placeholder="Ej: Altura min 8m, energía trifásica 45 kVA, muelle tractomula, vitrina sobre vía..."
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            />
+                          </div>
+                        )}
+
+                        {(isResidentialOrBuildingReq || isOfficeConsultorioReq) && (
+                          <>
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Piso / Ascensor</label>
+                              <select
+                                value={reqPisoAscensor}
+                                onChange={(e) => setReqPisoAscensor(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              >
+                                <option value="Indiferente" className="bg-zinc-900">Indiferente</option>
+                                <option value="Piso bajo (1-3)" className="bg-zinc-900">Piso bajo (1-3) / Sin ascensor</option>
+                                <option value="Piso alto con ascensor" className="bg-zinc-900">Piso alto con ascensor</option>
+                                <option value="Ascensor obligatorio" className="bg-zinc-900">Ascensor obligatorio</option>
+                                <option value="Exterior con buena luz" className="bg-zinc-900">Exterior con buena iluminación</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Depósito / Archivo</label>
+                              <select
+                                value={reqDeposito}
+                                onChange={(e) => setReqDeposito(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              >
+                                <option value="Indiferente" className="bg-zinc-900">Indiferente</option>
+                                <option value="Con depósito" className="bg-zinc-900">Requiere depósito</option>
+                                <option value="No requiere" className="bg-zinc-900">No requiere</option>
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        {isResidentialOrBuildingReq && (
+                          <>
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Cocina</label>
+                              <select
+                                value={reqCocina}
+                                onChange={(e) => setReqCocina(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              >
+                                <option value="Indiferente" className="bg-zinc-900">Indiferente</option>
+                                <option value="Abierta / Americana" className="bg-zinc-900">Abierta / Americana</option>
+                                <option value="Cerrada" className="bg-zinc-900">Cerrada</option>
+                                <option value="Remodelada / Integral" className="bg-zinc-900">Remodelada / Integral</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Balcón / Terraza</label>
+                              <select
+                                value={reqBalconTerraza}
+                                onChange={(e) => setReqBalconTerraza(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                              >
+                                <option value="Indiferente" className="bg-zinc-900">Indiferente</option>
+                                <option value="Balcón" className="bg-zinc-900">Requiere Balcón</option>
+                                <option value="Terraza" className="bg-zinc-900">Requiere Terraza</option>
+                                <option value="Balcón o Terraza" className="bg-zinc-900">Balcón o Terraza</option>
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        {isOfficeConsultorioReq && (
+                          <div className="sm:col-span-2 flex flex-wrap items-center gap-4 pt-3">
+                            <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-200">
+                              <input
+                                type="checkbox"
+                                checked={reqHabilitacionSalud}
+                                onChange={(e) => setReqHabilitacionSalud(e.target.checked)}
+                                className="w-4 h-4 rounded accent-[#bf953f]"
+                              />
+                              <span>Habilitación Secretaría de Salud / Lavamanos</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-200">
+                              <input
+                                type="checkbox"
+                                checked={reqSalaJuntasRecepcion}
+                                onChange={(e) => setReqSalaJuntasRecepcion(e.target.checked)}
+                                className="w-4 h-4 rounded accent-[#bf953f]"
+                              />
+                              <span>Recepción / Sala de Juntas</span>
+                            </label>
+                          </div>
+                        )}
+
+                        {!isLandReq && (
+                          <div className="flex items-center pt-3">
+                            <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                              <input
+                                type="checkbox"
+                                checked={reqAmoblado}
+                                onChange={(e) => setReqAmoblado(e.target.checked)}
+                                className="w-4 h-4 rounded text-primary accent-[#bf953f]"
+                              />
+                              <span>¿Requiere Amoblado?</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sub-bloque 4: Otras Especificaciones y Contacto */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#fcf6ba] flex items-center gap-2">
+                        <ClipboardCheck className="w-4 h-4 text-[#bf953f]" />
+                        4. Otras Especificaciones del Cliente & Datos de Contacto
+                      </h3>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                            Otras Especificaciones / Requisitos Especiales del Cliente
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={reqOtrasEspecificaciones}
+                            onChange={(e) => setReqOtrasEspecificaciones(e.target.value)}
+                            placeholder="Ej: Acepta mascotas, vista a parque, cerca a estación de Metro/TransMilenio, portería 24h, edificio sin restricciones Airbnb, frente mínimo de 15m para lote, canon incluye administración..."
+                            className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl p-3 text-xs text-white placeholder:text-zinc-500 outline-none resize-y font-sans"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Nombre del Cliente / Colega *</label>
+                            <input
+                              type="text"
+                              value={reqContactName}
+                              onChange={(e) => setReqContactName(e.target.value)}
+                              placeholder="Ej: Dra. María Fernanda Gómez"
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Teléfono WhatsApp Contacto</label>
+                            <input
+                              type="text"
+                              value={reqContactPhone}
+                              onChange={(e) => setReqContactPhone(e.target.value)}
+                              placeholder="Ej: 573101234567"
+                              className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* BOTÓN FINAL PUBLICAR REQUERIMIENTO */}
               <div className="pt-2 flex justify-end gap-3">

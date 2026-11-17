@@ -350,27 +350,42 @@ export function parseArea(rawText: string): number | null {
     .toLowerCase()
     .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
     .replace(/[\u2013\u2014]/g, "-")
-    .replace(/[*_~]/g, "");
+    .replace(/[*_~]/g, "")
+    // Excluir áreas exclusivas de terraza, balcón, patio o depósito para no confundirlas con el área total del inmueble
+    .replace(/(?:con\s+|y\s+|mas\s+|más\s+|\+\s*)?(?:terraza|balc[oó]n|patio|jard[ií]n|dep[oó]sito)s?(?:\s+de)?(?:\s+al\s+menos|\s+minimo|\s+mínimo)?\s*(?:de\s*)?\d+(?:[.,]\d+)?\s*(?:m2|mts2|m²|mt2|mts|metros(?:\s+cuadrados)?|m\b)/gi, " ")
+    .replace(/(?:\+\s*)?\d+(?:[.,]\d+)?\s*(?:m2|mts2|m²|mt2|mts|metros(?:\s+cuadrados)?|m\b)?\s*(?:de\s+)?(?:terraza|balc[oó]n|patio|jard[ií]n|dep[oó]sito)s?/gi, " ");
 
   // Rango: "M2: 180 - 200", "160 a 200 m2" o "de 160-200 mt"
   const rangeMatch = clean.match(/(?:área|area|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i);
   if (rangeMatch && (rangeMatch[1] || rangeMatch[2])) {
     const hasAreaCtx = /(?:área|area|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(rangeMatch[0]);
     const val = parseFloat(rangeMatch[1].replace(",", "."));
-    if (hasAreaCtx && !isNaN(val) && val > 10 && val < 50000) return val;
+    if (hasAreaCtx && !isNaN(val) && val > 10 && val < 50_000_000) return val;
   }
 
   // Valor directo con o sin prefijo: "M2: 180", "Minimo 160m", "230M2", "160 m2", "160 mts", "área: 230"
   const matchWithUnit = clean.match(/(?:área|area|minimo|mínimo|maximo|máximo|superficie|desde)?\s*[:\s]*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|m²|mt2|mts|metros(?:\s+cuadrados)?|m\b)/i);
   if (matchWithUnit) {
     const val = parseFloat(matchWithUnit[1].replace(",", "."));
-    if (!isNaN(val) && val > 10 && val < 50000) return val;
+    if (!isNaN(val) && val > 10 && val < 50_000_000) return val;
   }
 
   const matchWithPrefix = clean.match(/(?:área|area|superficie|m2|mts2|mt2|mts|m²)\s*[:\s]+(\d+(?:[.,]\d+)?)/i);
   if (matchWithPrefix) {
     const val = parseFloat(matchWithPrefix[1].replace(",", "."));
-    if (!isNaN(val) && val > 10 && val < 50000) return val;
+    if (!isNaN(val) && val > 10 && val < 50_000_000) return val;
+  }
+
+  // Unidades rurales / grandes lotes: hectáreas (10.000 m²) y fanegadas / plazas / cuadras (6.400 m²)
+  const haMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:hect[aá]reas?|has\.?|ha\b)/i);
+  if (haMatch) {
+    const val = parseFloat(haMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 10_000) return Math.round(val * 10_000);
+  }
+  const fanMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:fanegadas?|plazas?|cuadras?|fgs?)\b/i);
+  if (fanMatch) {
+    const val = parseFloat(fanMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 10_000) return Math.round(val * 6_400);
   }
 
   return null;

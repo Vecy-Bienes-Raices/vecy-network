@@ -33,6 +33,7 @@ import {
   extractPureBarrio,
 } from "../../geography";
 import { validateCity } from "../../divipola";
+import { parseArea } from "../../../../shared/colombianRealEstateParser";
 import {
   findMatchesForProperty,
   findMatchesForRequirement,
@@ -774,8 +775,10 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
-  // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES ──
-  if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogotá" || data.zone.toLowerCase() === "colombia") {
+  // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES (Solo Bogotá) ──
+  const propCityHint = (data.city || data.addressCity || "").toLowerCase();
+  const propHasExplicitNonBogotaCity = !!propCityHint && !propCityHint.includes("bogot");
+  if (!propHasExplicitNonBogotaCity && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogotá" || data.zone.toLowerCase() === "colombia")) {
     const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name || data.location);
     if (geoInferred) {
       data.zone = geoInferred.barrio;
@@ -846,10 +849,13 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     })(),
     areaTotal: (() => {
       const raw = data.areaTotal !== undefined && data.areaTotal !== null ? data.areaTotal : data.area;
-      if (raw === undefined || raw === null) return null;
-      const v = parseFloat(String(raw));
-      if (isNaN(v) || v < 10 || v > 5000) return null;
-      return String(v);
+      if (raw !== undefined && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 10 && v <= 50_000_000) return String(v);
+      }
+      const parsedA = parseArea(data.rawText || data.name || "");
+      if (parsedA && parsedA >= 10 && parsedA <= 50_000_000) return String(parsedA);
+      return null;
     })(),
     bedrooms: data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: (() => {
@@ -1156,6 +1162,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
 
   const characteristicsObj = {
+    ...(typeof data.caracteristicasDeseadas === "object" && data.caracteristicasDeseadas ? data.caracteristicasDeseadas : {}),
     gives: data.gives || data.caracteristicasDeseadas?.gives,
     wants: data.wants || data.caracteristicasDeseadas?.wants,
     interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
@@ -1166,14 +1173,16 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
     comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
     antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
-    estudio: reqRequiresObligatoryStudy ? "obligatorio" : (reqHasStudy ? "deseado" : null),
-    pisoMinimo: reqPisoMin,
-    adminFeeIncluded: reqAdminFeeInc,
-    amoblado: reqIsAmoblado ? true : (rawLowerAll.includes("sin amoblar") ? false : null)
+    estudio: reqRequiresObligatoryStudy ? "obligatorio" : (reqHasStudy ? "deseado" : (data.caracteristicasDeseadas?.estudio || null)),
+    pisoMinimo: reqPisoMin ?? data.caracteristicasDeseadas?.pisoMinimo ?? null,
+    adminFeeIncluded: reqAdminFeeInc || Boolean(data.caracteristicasDeseadas?.adminFeeIncluded),
+    amoblado: reqIsAmoblado ? true : (rawLowerAll.includes("sin amoblar") ? false : (data.caracteristicasDeseadas?.amoblado ?? null))
   };
 
-  // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES ──
-  if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogotá" || data.zone.toLowerCase() === "colombia")) {
+  // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES (Solo Bogotá) ──
+  const reqCityHint = (data.ciudadDeseada || data.addressCity || data.city || "").toLowerCase();
+  const reqHasExplicitNonBogotaCity = !!reqCityHint && !reqCityHint.includes("bogot");
+  if (!reqHasExplicitNonBogotaCity && !data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogotá" || data.zone.toLowerCase() === "colombia")) {
     const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
     if (geoInferred) {
       data.zonaDeseada = geoInferred.barrio;
@@ -1202,7 +1211,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogotá", 100) || "Bogotá",
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.addressCity || data.city || fallbackReqD.city || "Bogotá", 100) || "Bogotá",
     zonaDeseada: (() => {
       const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
       if (explicit && !isCityOrGenericZone(explicit)) {
@@ -1259,11 +1268,13 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       const raw = data.areaMin !== undefined && data.areaMin !== null ? data.areaMin : data.area;
       if (raw !== undefined && raw !== null) {
         const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 10 && v <= 5000) return String(v);
+        if (!isNaN(v) && v >= 10 && v <= 50_000_000) return String(v);
       }
       if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
         return String(fallbackReqD.areaMin || fallbackReqD.area);
       }
+      const parsedReqA = parseArea(data.rawText || data.name || "");
+      if (parsedReqA && parsedReqA >= 10 && parsedReqA <= 50_000_000) return String(parsedReqA);
       // Fallback robusto: extraer desde rawText capturando frases como "Mínimo 150m2", "min 120 m²", "de 150 metros", "metraje minimo: 160mts"
       const rawL = (data.rawText || data.name || "").toLowerCase();
       const areaFallback = rawL.match(
@@ -1271,7 +1282,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       );
       if (areaFallback) {
         const v = parseFloat(areaFallback[1].replace(',', '.'));
-        if (!isNaN(v) && v >= 10 && v <= 5000) return String(v);
+        if (!isNaN(v) && v >= 10 && v <= 50_000_000) return String(v);
       }
       return null;
     })(),

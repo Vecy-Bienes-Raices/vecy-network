@@ -7,15 +7,38 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
-### 📌 [2026-11-16 — HILO DE CONTINUIDAD PARA PRÓXIMO CHAT] — Arquitectura Evaluada y Aprobada como Viable (Pendiente de Ejecución en v34.25)
+### 📅 [2026-11-16] — JanIA v34.25 (Bloque 1): Cobertura Nacional (32 Departamentos), Todas las Localidades de Bogotá, Todas las Tipologías (Lotes/Consultorios/Oficinas) y Formularios Completos de Demandas/Ofertas (Doctrina Eduardo A. Rivera — v34.25 - 34.25.0)
+
+#### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico Crítico
+- **Solicitud de Eduardo:** Tras revisar con captura de pantalla el modal `https://vecy-bienes-raices.vercel.app/demandas`, Eduardo señaló que faltaban campos esenciales (Barrio/Vereda, Localidad/Comuna, Ciudad/Municipio, Departamento, Otras Especificaciones), que la web dejaba fija la ciudad en `"Bogotá"`, que el sistema parecía operar únicamente en Bogotá Zona Norte y que lotes, oficinas, consultorios e inmuebles comerciales no estaban generando matches ni subiendo con fidelidad nacional.
+- **Diagnóstico Técnico de Causa Raíz:**
+  1. `UnifiedPublishModal.tsx` tenía literalmente `"Ciudad (Fijo)"` en `"Bogotá D.C."` en Oferta y fallbacks en Suba/Morato; Demanda carecía de Departamento, Localidad/Comuna, Vereda, unidades `Ha/Fanegadas`, campos comerciales/lotes y campo de *Otras Especificaciones*; y `RequirementsMarketplace.tsx` seguía consultando `supabase.from('requirements')` en lugar de PostgreSQL live.
+  2. En `matching.ts`, `resolveCityField` devolvía `true` (Bogotá) ante cadena vacía, `extractTrueCityFromText` usaba `.includes()` sin límites de palabra (confundiendo `"cliente calificado"`/`"localidad"` con `"Cali"`), `isBogotaSector`/`SECTORES_BOGOTA` priorizaban Zona Norte, las propiedades >5.000/15.000 m² se truncaban, Lotes/Oficinas/Consultorios quedaban penalizados por no tener habitaciones, y `findMatchesForRequirement` cortaba propiedades web activas >15 días y aceptaba score `>= 80`.
+  3. `geography.ts` (`deducirGeografiaTripartita`) y `properties.ts` (`create` con `ID-BOG-` / fallback Bogotá) empujaban municipios nacionales hacia Bogotá cuando no estaba explícita su excepción.
+
+#### 2. Acciones Ejecutadas en Bloque 1 (`v34.25`)
+1. **Catálogo Nacional y Corrección Geográfica Integral (`shared/colombiaCatalog.ts`, `geography.ts`, `matching.ts`, `parsers.ts`, `prompts.ts`, `propertiesHandler.ts`, `properties.ts`):**
+   - Creado `shared/colombiaCatalog.ts` con 32 departamentos + Bogotá D.C., `BOGOTA_LOCALITIES` (20 localidades completas), `CITY_LOCALITIES_MAP`, `getSuggestedLocalitiesForCity`, `findDepartmentForCity`, `getPropertyRefCityPrefix` (`MED`, `CAL`, `BGA`, `BAQ`, `CTG`, etc.) y `getPropertyCategoryGroup`.
+   - Agregado paso nacional en `deducirGeografiaTripartita` (`geography.ts`), 28 barrios de Bogotá Centro/Occidente/Sur en `KNOWN_BARRIOS_SORTED_ITEMS` (`parsers.ts`), cobertura en `evaluateRequirementCompleteness` (`prompts.ts`) y coincidencias con límites de palabra (`hasGeoKw`) en `extractTrueCityFromText` (`matching.ts`).
+2. **Soporte Total a Lotes, Consultorios, Oficinas, Locales, Bodegas, Fincas + Matching 85%–100% (`colombianRealEstateParser.ts`, `matching.ts`, `parsers.ts`):**
+   - Tope de área elevado a `50.000.000 m²` con soporte `hectáreas` (`10.000 m²`) y `fanegadas/plazas/cuadras` (`6.400 m²`) en `parseArea` (excluyendo terrazas/balcones/patios para evitar confusiones con el área total).
+   - Separación de `consultorio`, evaluación adaptativa por categoría sin penalizar ausencia de alcobas en Lotes/Consultorios/Oficinas/Locales/Bodegas, umbral unificado `>= 85%` y exención del corte de 15 días para inventario web activo (`web_admin_unified`).
+3. **Formularios Completos Oferta & Demanda + Lectura PostgreSQL Live (`UnifiedPublishModal.tsx`, `RequirementsMarketplace.tsx`, `server/routers/janIA.ts`, `server/routers/properties.ts`):**
+   - Formularios adaptativos nacionales con Departamento, Ciudad/Municipio, Localidad/Comuna/Corregimiento, Barrio/Vereda, unidades de área y campo amplio **`Otras Especificaciones / Requisitos Especiales del Cliente`**.
+   - Migrado `RequirementsMarketplace.tsx` a `trpc.janIA.listActiveRequirements` sobre PostgreSQL live, añadido `auditMissingRequirementFields` adaptativo y enriquecidos `parseRequirementText` / `parseRequirementFlyer` / `createRequirement` / `properties.create`.
+4. **Gobernanza y Validación Completa (`shared/const.ts`, `package.json`, `founderKnowledgeService.ts`, `regression.test.ts`):**
+   - Semilla `seed-cobertura-nacional-todas-localidades-tipologias-v34-25`, **Suite 211**, `npm run check` (0 errores), `NODE_ENV=test npm test` (**6/6 archivos, 741/741 tests en verde**), `npm run build` limpio y versión `v34.25` (`34.25.0`).
+
+---
+
+### 📌 [2026-11-16 — HILO DE CONTINUIDAD PARA BLOCKE 2 / PRÓXIMO PASO v34.26] — Arquitectura Evaluada y Aprobada como Viable (Listo para Implementar Tras Bloque 1)
 
 1. **Transformación "Modo Humana Real" (Cero Biblias / Cero Jerga Técnica-Jurídica):**
    - **Objetivo planteado por Eduardo:** Que JanIA hable como una asesora humana real por WhatsApp (máximo 3–4 renglones sin botón *"Leer más"*), en español cotidiano claro sin tecnicismos (`SIRI`, `SIRECI`, `BDUA`, `UVT`, `CUV`, artículos extensos en chat — dejando la sustentación extensa únicamente dentro del PDF), adelgazando el `systemPrompt` de `dmHandler.ts` y aplicando buenos modales cálidos con memoria silenciosa cuando alguien envía un dato en frío como un número suelto sin saludar.
    - **Nota técnica:** Requiere ajustar las pruebas antiguas de `regression.test.ts` (`Suite 29/35/49/73/156`) que hoy exigen frases rígidas como `"Recibí el dato"`, `"Ley 1581/12"` o entrevistas largas.
 
-2. **Ficha Ultra-Completa de Requerimientos (1 pregunta a la vez) + Matching Web/BD (≤ 15 días, 85%–100%):**
-   - Implementar borrador acumulativo en sesión (`pendingRequirementDraft` en `userPerpetualSession.keyFacts`) para guiar al usuario paso a paso (1 pregunta puntual por turno) hasta completar todos los datos técnicos, financieros y de confort antes de insertar en `requirements` (BD + web).
-   - Ajustar `findMatchesForRequirement` en `server/_core/matching.ts` (hoy corta toda propiedad a `propAgeDays > 15` y usa `score >= 80`) para consultar inmuebles vigentes del portal web + registros de BD/grupos ≤ 15 días con umbral **85%–100%**, creando el registro en `propertyMatches` sin revelar teléfonos ni contactos.
+2. **Ficha Ultra-Completa de Requerimientos por DM (1 pregunta a la vez) + Flujo Completo WhatsApp:**
+   - Implementar borrador acumulativo en sesión (`pendingRequirementDraft` en `userPerpetualSession.keyFacts`) para guiar al usuario paso a paso (1 pregunta puntual por turno) hasta completar todos los datos técnicos, financieros y de confort (nacional y para cualquier clase de inmueble) antes de insertar en `requirements` (BD + web) y ejecutar el matching web + BD (85%–100%).
 
 3. **Firma Electrónica de T&C y Política de Privacidad vía Enlace WhatsApp (Patrón Vecy Agenda) antes de liberar Códigos `PROP-...` / `#M...`:**
    - **100% viable reutilizando piezas existentes:** `client/src/components/agenda-pro/SignaturePad.jsx` (`signature_pad` PNG negro base64), `server/_core/emailContractService.ts` (`pdf-lib` + estampado de `firmaVirtualBase64` + QR + CUV) y `server/_core/whatsapp-match.ts` (`queuedSend` / `sendDirectMessage` para despachar PDFs por DM).

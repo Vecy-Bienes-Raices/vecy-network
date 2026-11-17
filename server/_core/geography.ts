@@ -1753,6 +1753,43 @@ export function deducirGeografiaTripartita(
     }
   }
 
+  // 13.5 REGLA NACIONAL GENERAL (32 Departamentos — Cero secuestro a Bogotá cuando hay otra ciudad/municipio)
+  if (!isBogotaMention) {
+    const cityLugar = normCity ? buscarLugarColombia(normCity) : null;
+    if (cityLugar && cityLugar.nombreCanonico && normalizarTextoGeografico(cityLugar.nombreCanonico) !== "bogota") {
+      const cleanBarrio = (inputZone && inputZone.trim() !== "" && !GENERIC_ZONES_SET.has(normZone) && normalizarTextoGeografico(inputZone) !== normalizarTextoGeografico(cityLugar.nombreCanonico))
+        ? inputZone.trim()
+        : cityLugar.nombreCanonico;
+      return {
+        neighborhood: cleanBarrio,
+        locality: cityLugar.nombreCanonico,
+        city: cityLugar.nombreCanonico,
+        department: cityLugar.departamento,
+        confidence: "alta_deduccion_nacional"
+      };
+    }
+
+    const textLugar = buscarLugarColombia(textCombined);
+    if (textLugar && textLugar.nombreCanonico && normalizarTextoGeografico(textLugar.nombreCanonico) !== "bogota") {
+      const lk = normalizarTextoGeografico(textLugar.nombreCanonico);
+      // Evitar colisiones homónimas de barrios bogotanos como Armenia, Castilla, San Felipe, Granada
+      const bogotaHomonymBarrios = new Set(["armenia", "castilla", "san felipe", "granada", "restrepo", "florencia", "santander", "bolivar"]);
+      const isHomonymWithoutDept = bogotaHomonymBarrios.has(lk) && !textCombined.includes(normalizarTextoGeografico(textLugar.departamento));
+      if (!isHomonymWithoutDept) {
+        const cleanBarrio = (inputZone && inputZone.trim() !== "" && !GENERIC_ZONES_SET.has(normZone) && normalizarTextoGeografico(inputZone) !== lk)
+          ? inputZone.trim()
+          : textLugar.nombreCanonico;
+        return {
+          neighborhood: cleanBarrio,
+          locality: textLugar.nombreCanonico,
+          city: textLugar.nombreCanonico,
+          department: textLugar.departamento,
+          confidence: "alta_deduccion_nacional"
+        };
+      }
+    }
+  }
+
   // ── 13. EMPAREJAMIENTO JERÁRQUICO BOGOTÁ D.C. ──
   const isGenericZone = !inputZone ||
     inputZone.trim() === "" ||

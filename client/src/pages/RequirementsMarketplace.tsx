@@ -1,89 +1,78 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { 
-  Users, 
-  Search, 
-  MapPin, 
-  DollarSign, 
-  Bed, 
-  Bath, 
-  MessageCircle, 
+import {
+  Users,
+  Search,
+  MapPin,
+  DollarSign,
+  Bed,
+  Bath,
   Zap,
   Filter,
   Loader2,
   Plus,
   PlusCircle,
-  Home,
   Briefcase,
-  Sparkles
+  Maximize2,
+  Car,
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
-import { supabase } from '@/lib/supabase';
-import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
 import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
+import { getPropertyCategoryGroup } from '../../../shared/colombiaCatalog';
 
-// --- Tipos para los Requerimientos ---
-interface Requirement {
-  id: number;
-  name: string;
-  tipoInmuebleDeseado: string;
-  tipoNegocioDeseado: string;
-  ciudadDeseada: string;
-  zonaDeseada: string | null;
-  addressNeighborhood: string | null;
-  presupuestoMax: number | string;
-  habitacionesMin: number | null;
-  banosMin: number | null;
-  createdAt: string;
-  userId: number;
-  user?: {
-    name: string;
-    phone: string;
-  };
-}
+const DEMAND_TYPE_LABELS: Record<string, string> = {
+  all: 'Todos',
+  apartment: 'Apartamentos',
+  house: 'Casas',
+  office: 'Oficinas',
+  consultorio: 'Consultorios',
+  commercial: 'Locales',
+  warehouse: 'Bodegas',
+  land: 'Lotes / Terrenos',
+  farm: 'Fincas',
+  building: 'Edificios',
+  hotel: 'Hoteles',
+  loft: 'Lofts / Estudios',
+  cabin: 'Cabañas',
+};
+
+const TX_TYPE_LABELS: Record<string, string> = {
+  venta: 'Compra',
+  arriendo: 'Arriendo',
+  venta_o_arriendo: 'Compra / Arriendo',
+  arriendo_con_opcion_de_compra: 'Arriendo c/ Opción',
+  permuta: 'Permuta',
+  venta_permuta: 'Venta / Permuta',
+  aporte: 'Aporte',
+  arriendo_temporal: 'Temporal',
+};
 
 export default function RequirementsMarketplace() {
-  const [, navigate] = useLocation();
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [debouncedFilter, setDebouncedFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [txFilter, setTxFilter] = useState<string>('all');
+  const [cityFilter, setCityFilter] = useState<string>('');
   const [isPublishOpen, setIsPublishOpen] = useState(false);
 
   useEffect(() => {
-    fetchRequirements();
-  }, []);
+    const t = setTimeout(() => setDebouncedFilter(filter.trim()), 250);
+    return () => clearTimeout(t);
+  }, [filter]);
 
-  const fetchRequirements = async () => {
-    setLoading(true);
-    try {
-      // Intentamos obtener los requerimientos con la info del usuario (asesor)
-      const { data, error } = await supabase
-        .from('requirements')
-        .select(`
-          *,
-          user:userId (
-            name,
-            phone
-          )
-        `)
-        .eq('status', 'active')
-        .order('createdAt', { ascending: false });
+  const { data: requirementsData, isLoading: loading, refetch } = trpc.janIA.listActiveRequirements.useQuery({
+    search: debouncedFilter || undefined,
+    propertyType: typeFilter === 'all' ? undefined : typeFilter,
+    transactionType: txFilter === 'all' ? undefined : txFilter,
+    city: cityFilter.trim() || undefined,
+    limit: 300,
+  });
 
-      if (error) throw error;
-      setRequirements(data || []);
-    } catch (err) {
-      console.error('Error fetching requirements:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredRequirements = requirements.filter(req => 
-    req.tipoInmuebleDeseado.toLowerCase().includes(filter.toLowerCase()) ||
-    (req.addressNeighborhood || req.zonaDeseada || '').toLowerCase().includes(filter.toLowerCase())
-  );
+  const requirements = requirementsData || [];
+  const filteredRequirements = requirements;
 
   // Paginación Doctrinal y Selector de Lotes por Página
   const [pageSize, setPageSize] = useState<number>(9);
@@ -91,7 +80,7 @@ export default function RequirementsMarketplace() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, pageSize]);
+  }, [debouncedFilter, typeFilter, txFilter, cityFilter, pageSize]);
 
   const totalItems = filteredRequirements.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -110,9 +99,13 @@ export default function RequirementsMarketplace() {
     }).format(Number(price));
   };
 
-  const handleWhatsAppClick = (phone: string, req: Requirement) => {
-    const message = `Hola, vi el requerimiento en VECY para un(a) ${req.tipoInmuebleDeseado} en ${req.addressNeighborhood || req.zonaDeseada || 'Bogotá'}. Tengo el inmueble match.`;
-    window.open(`https://wa.me/${phone.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+  const handleWhatsAppClick = (req: any) => {
+    const rawPhone = String(req.idUsuarioWhatsapp || '573166569719').replace(/[^\d]/g, '');
+    const targetPhone = rawPhone.length >= 10 ? (rawPhone.startsWith('57') ? rawPhone : `57${rawPhone}`) : '573166569719';
+    const typeLabel = DEMAND_TYPE_LABELS[req.tipoInmuebleDeseado] || req.tipoInmuebleDeseado;
+    const placeLabel = [req.addressNeighborhood || req.zonaDeseada, req.addressLocality, req.ciudadDeseada || req.addressCity].filter(Boolean).join(', ') || 'Colombia';
+    const message = `Hola, vi el requerimiento #R${req.id} en VECY para ${typeLabel} (${TX_TYPE_LABELS[req.tipoNegocioDeseado] || req.tipoNegocioDeseado}) en ${placeLabel}. Tengo el inmueble match.`;
+    window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
@@ -170,27 +163,59 @@ export default function RequirementsMarketplace() {
         </div>
       </section>
 
-      {/* FILTROS */}
-      <section className="py-4 sm:py-6 bg-zinc-950 border-b border-white/10 sticky top-20 z-30 shadow-2xl">
-        <div className="container">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-6">
-            <div className="relative w-full md:w-96">
+      {/* FILTROS NACIONALES Y POR TIPOLOGÍA */}
+      <section className="py-4 sm:py-5 bg-zinc-950 border-b border-white/10 sticky top-20 z-30 shadow-2xl">
+        <div className="container space-y-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="relative w-full md:flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <input 
-                type="text" 
-                placeholder="Filtrar por barrio, zona o tipo de inmueble..."
+              <input
+                type="text"
+                placeholder="Buscar por ciudad, localidad/comuna, barrio/vereda, título o especificación..."
                 className="w-full bg-zinc-900/90 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-primary/60"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
             </div>
-            
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 text-zinc-400 uppercase tracking-widest text-[10px] font-bold">
-                <Filter className="w-4 h-4 text-primary" />
-                <span>Demandas Activas en Vivo</span>
-              </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <input
+                type="text"
+                placeholder="Filtrar ciudad (ej: Medellín, Cali, Bogotá)..."
+                className="w-full md:w-52 bg-zinc-900/90 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-primary/60"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+              />
+              <select
+                value={txFilter}
+                onChange={(e) => setTxFilter(e.target.value)}
+                className="bg-zinc-900/90 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/60"
+              >
+                <option value="all">Todo negocio</option>
+                <option value="venta">Compra / Venta</option>
+                <option value="arriendo">Arriendo</option>
+                <option value="venta_o_arriendo">Venta o Arriendo</option>
+                <option value="permuta">Permuta</option>
+              </select>
             </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            <Filter className="w-3.5 h-3.5 text-primary shrink-0 mr-1" />
+            {Object.entries(DEMAND_TYPE_LABELS).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTypeFilter(key)}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  typeFilter === key
+                    ? 'bg-primary text-black font-black shadow-sm'
+                    : 'bg-zinc-900 text-zinc-400 border border-white/10 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -265,34 +290,57 @@ export default function RequirementsMarketplace() {
           ) : (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {paginatedRequirements.map((req, idx) => (
+              {paginatedRequirements.map((req: any, idx: number) => {
+                const catGroup = getPropertyCategoryGroup(req.tipoInmuebleDeseado);
+                const extras = typeof req.caracteristicasDeseadas === 'object' && req.caracteristicasDeseadas
+                  ? req.caracteristicasDeseadas
+                  : null;
+                const otrasSpecs = extras?.otrasEspecificaciones || null;
+                const cityLabel = req.addressCity || req.ciudadDeseada || 'Colombia';
+                const localityLabel = req.addressLocality || '';
+                const barrioLabel = req.addressNeighborhood || extras?.vereda || req.zonaDeseada || 'Cualquier sector';
+
+                return (
                 <ScrollReveal key={req.id} delay={0.08 * (idx % 3)} direction="up" className="h-full">
                   <div className="vecy-card-apple p-6 sm:p-7 flex flex-col justify-between h-full group hover:glow-gold transition-all duration-500 border-primary/20">
                     <div className="flex-1 flex flex-col">
-                      {/* Header: Tipo de Inmueble */}
-                      <div className="flex justify-between items-start mb-6">
-                        <div className="bg-primary/10 border border-primary/25 px-3 py-1 rounded-full">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                            {req.tipoInmuebleDeseado}
-                          </span>
+                      {/* Header: Tipo de Inmueble y Negocio */}
+                      <div className="flex justify-between items-start gap-2 mb-5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <div className="bg-primary/10 border border-primary/25 px-3 py-1 rounded-full">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                              {extras?.tipoExacto || DEMAND_TYPE_LABELS[req.tipoInmuebleDeseado] || req.tipoInmuebleDeseado}
+                            </span>
+                          </div>
+                          <div className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+                              {TX_TYPE_LABELS[req.tipoNegocioDeseado] || req.tipoNegocioDeseado}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-[10px] font-bold text-gray-500 uppercase font-mono">
+                        <div className="text-[10px] font-bold text-gray-500 uppercase font-mono shrink-0">
                           {new Date(req.createdAt).toLocaleDateString('es-CO')}
                         </div>
                       </div>
 
-                      {/* Ubicación */}
+                      {req.name && (
+                        <h3 className="text-sm font-black text-white mb-4 line-clamp-2">{req.name}</h3>
+                      )}
+
+                      {/* Ubicación Nacional Completa */}
                       <div className="space-y-4 mb-6">
                         <div className="flex items-start gap-3.5">
                           <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors border border-white/5">
                             <MapPin className="w-4 h-4 text-primary" />
                           </div>
-                          <div>
-                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Barrios de Interés</p>
-                            <p className="text-white font-bold leading-snug text-sm">
-                              {req.addressNeighborhood || req.zonaDeseada || 'Cualquier zona'}
+                          <div className="min-w-0">
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Barrio / Vereda · Localidad</p>
+                            <p className="text-white font-bold leading-snug text-sm break-words">
+                              {barrioLabel}{localityLabel ? ` · ${localityLabel}` : ''}
                             </p>
-                            <p className="text-gray-400 text-xs mt-0.5">{req.ciudadDeseada}</p>
+                            <p className="text-gray-400 text-xs mt-0.5">
+                              {cityLabel}{extras?.departamento ? `, ${extras.departamento}` : ''}
+                            </p>
                           </div>
                         </div>
 
@@ -309,17 +357,39 @@ export default function RequirementsMarketplace() {
                           </div>
                         </div>
 
-                        {/* Distribución */}
-                        <div className="flex gap-6 pt-4 border-t border-white/5">
-                          <div className="flex items-center gap-2">
-                            <Bed className="w-4 h-4 text-gray-500" />
-                            <span className="text-xs font-bold text-white">{req.habitacionesMin || 0}+ Hab</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Bath className="w-4 h-4 text-gray-500" />
-                            <span className="text-xs font-bold text-white">{req.banosMin || 0}+ Baños</span>
-                          </div>
+                        {/* Distribución / Área adaptada a tipología */}
+                        <div className="flex flex-wrap gap-4 pt-3 border-t border-white/5">
+                          {req.areaMin && Number(req.areaMin) > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Maximize2 className="w-3.5 h-3.5 text-primary" />
+                              <span className="text-xs font-bold text-white">{Number(req.areaMin).toLocaleString('es-CO')} m²+</span>
+                            </div>
+                          )}
+                          {catGroup === 'residential' && req.habitacionesMin != null && (
+                            <div className="flex items-center gap-1.5">
+                              <Bed className="w-4 h-4 text-gray-500" />
+                              <span className="text-xs font-bold text-white">{req.habitacionesMin} Hab</span>
+                            </div>
+                          )}
+                          {catGroup !== 'land' && req.banosMin != null && (
+                            <div className="flex items-center gap-1.5">
+                              <Bath className="w-4 h-4 text-gray-500" />
+                              <span className="text-xs font-bold text-white">{req.banosMin}+ Baños</span>
+                            </div>
+                          )}
+                          {catGroup !== 'land' && req.parqueaderosMin != null && req.parqueaderosMin > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Car className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="text-xs font-bold text-white">{req.parqueaderosMin}+ Garajes</span>
+                            </div>
+                          )}
                         </div>
+
+                        {otrasSpecs && (
+                          <div className="text-[11px] text-zinc-300 bg-white/[0.03] border border-white/5 rounded-xl p-2.5 line-clamp-2">
+                            <span className="text-primary font-bold">Especificaciones: </span>{otrasSpecs}
+                          </div>
+                        )}
                       </div>
 
                       {/* Perfil del Asesor */}
@@ -329,8 +399,8 @@ export default function RequirementsMarketplace() {
                             <Users className="w-4 h-4 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Asesor a Cargo</p>
-                            <p className="text-white text-xs sm:text-sm font-bold truncate">{req.user?.name || 'Agente VECY'}</p>
+                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Asesor / Contacto</p>
+                            <p className="text-white text-xs sm:text-sm font-bold truncate">{req.nombreUsuarioWhatsapp || 'Agente VECY'}</p>
                           </div>
                         </div>
                       </div>
@@ -338,10 +408,9 @@ export default function RequirementsMarketplace() {
 
                     {/* Botón de Match Ergonómico Táctil */}
                     <div className="mt-2 pt-3 border-t border-white/5">
-                      <button 
-                        onClick={() => req.user?.phone && handleWhatsAppClick(req.user.phone, req)}
-                        disabled={!req.user?.phone}
-                        className="btn-gold w-full min-h-[46px] py-3.5 px-4 rounded-xl text-[10px] tracking-[0.18em] font-black group-hover:glow-gold-sm disabled:opacity-50 active:scale-[0.98] touch-manipulation transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                      <button
+                        onClick={() => handleWhatsAppClick(req)}
+                        className="btn-gold w-full min-h-[46px] py-3.5 px-4 rounded-xl text-[10px] tracking-[0.18em] font-black group-hover:glow-gold-sm active:scale-[0.98] touch-manipulation transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
                       >
                         <Zap className="w-3.5 h-3.5 inline-block shrink-0" />
                         <span>TENGO EL INMUEBLE MATCH</span>
@@ -349,7 +418,8 @@ export default function RequirementsMarketplace() {
                     </div>
                   </div>
                 </ScrollReveal>
-              ))}
+                );
+              })}
             </div>
 
             {/* ── BARRA DE PAGINACIÓN FLUIDA & SELECTOR DE PÁGINAS ── */}
@@ -447,7 +517,7 @@ export default function RequirementsMarketplace() {
         isOpen={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
         defaultTab="demanda"
-        onSuccess={fetchRequirements}
+        onSuccess={() => refetch()}
       />
     </div>
   );

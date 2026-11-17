@@ -14596,9 +14596,256 @@ A: BANCO DE BOGOTA
       expect(seed24?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.24");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[4-9]|[3-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.24.0");
+      expect(pkg.version).toMatch(/^34\.(?:2[4-9]|[3-9]\d)\.0$/);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 211: COBERTURA NACIONAL TOTAL, TODAS LAS LOCALIDADES DE BOGOTÁ,
+  // TODAS LAS TIPOLOGÍAS (LOTES, CONSULTORIOS, OFICINAS) Y DEMANDAS COMPLETAS (v34.25)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("Suite 211: Cobertura Nacional, Localidades Bogotá, Lotes/Consultorios/Oficinas y Formulario Demandas (v34.25)", () => {
+    it("1. Matching nacional fuera de Bogotá (Medellín y Cali) aprueba >= 85% y no colapsa ciudad vacía a Bogotá", async () => {
+      const { explicarMatch } = await import("../_core/matching");
+
+      const reqMed = {
+        id: "req-med-1",
+        propertyType: "apartment",
+        transactionType: "venta",
+        ciudadDeseada: "Medellín",
+        addressCity: "Medellín",
+        zonaDeseada: "El Poblado",
+        addressNeighborhood: "El Poblado",
+        presupuestoMax: "900000000",
+        areaMin: 110,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 2,
+        estratoPreferencia: 5,
+        rawText: "Busco apartamento en venta en El Poblado, Medellín, 3 habitaciones, 2 baños, 2 garajes, 110 m2, presupuesto hasta 900 millones."
+      };
+
+      const propMed = {
+        id: "prop-med-1",
+        name: "Apartamento en El Poblado",
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Medellín",
+        zone: "El Poblado",
+        addressNeighborhood: "El Poblado",
+        price: "850000000",
+        areaTotal: "120",
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        stratum: 6,
+        origenTipo: "web_admin_unified",
+        rawText: "Vendo hermoso apartamento en El Poblado, Medellín, 120 m2, 3 alcobas, 3 baños, 2 garajes, estrato 6, precio $850 millones."
+      };
+
+      const resMed = explicarMatch(reqMed, propMed);
+      expect(resMed.score).toBeGreaterThanOrEqual(85);
+      expect(resMed.blockers.length).toBe(0);
+
+      // Si una propiedad está en Bogotá con mismo barrio/especificaciones, Filtro 0A debe bloquear 0%
+      const propBogSameText = {
+        ...propMed,
+        id: "prop-bog-diff-city",
+        addressCity: "Bogotá, D.C.",
+        zone: "Usaquén",
+        rawText: "Vendo hermoso apartamento en Chicó, Bogotá, 120 m2, 3 alcobas, 3 baños, 2 garajes, precio $850 millones."
+      };
+      const resDiffCity = explicarMatch(reqMed, propBogSameText);
+      expect(resDiffCity.score).toBe(0);
+    });
+
+    it("2. Cobertura integral de Bogotá (Sur/Occidente/Centro: Kennedy/Castilla) en geografía, completitud y matching", async () => {
+      const { explicarMatch } = await import("../_core/matching");
+      const { evaluateRequirementCompleteness } = await import("../_core/jania/prompts");
+
+      const compKennedy = evaluateRequirementCompleteness({
+        rawText: "Busco casa en venta en Castilla, Kennedy, Bogotá, 3 habitaciones, hasta 550 millones.",
+        propertyType: "house",
+        transactionType: "venta",
+        ciudadDeseada: "Bogotá, D.C.",
+        zonaDeseada: "Castilla, Kennedy",
+        presupuestoMax: 550000000
+      });
+      expect(compKennedy.isComplete).toBe(true);
+
+      const reqKennedy = {
+        id: "req-kennedy-1",
+        propertyType: "house",
+        transactionType: "venta",
+        addressCity: "Bogotá, D.C.",
+        addressLocality: "Kennedy",
+        zonaDeseada: "Castilla",
+        presupuestoMax: "550000000",
+        areaMin: 110,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        rawText: "Busco casa en venta en Castilla, Kennedy, Bogotá, 3 alcobas, 2 baños, 1 garaje, 110 m2, hasta 550 millones."
+      };
+      const propKennedy = {
+        id: "prop-kennedy-1",
+        name: "Casa en Castilla",
+        propertyType: "house",
+        transactionType: "venta",
+        addressCity: "Bogotá, D.C.",
+        zone: "Kennedy",
+        addressNeighborhood: "Castilla",
+        price: "520000000",
+        areaTotal: "118",
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 1,
+        stratum: 3,
+        rawText: "Vendo casa en Castilla, localidad de Kennedy, Bogotá, 118 m2, 3 habitaciones, 2 baños, 1 garaje, estrato 3, $520 millones."
+      };
+      const resKennedy = explicarMatch(reqKennedy, propKennedy);
+      expect(resKennedy.score).toBeGreaterThanOrEqual(85);
+      expect(resKennedy.blockers.length).toBe(0);
+    });
+
+    it("3. Lotes / Terrenos > 5.000 m² (hectáreas/fanegadas) y Consultorios/Oficinas logran match >= 85% y completitud adaptativa", async () => {
+      const { parseArea } = await import("../../shared/colombianRealEstateParser");
+      const { calcularCalificacionCompletitud } = await import("../_core/jania/parsers");
+      const { explicarMatch } = await import("../_core/matching");
+      const { auditMissingRequirementFields } = await import("../routers/janIA");
+
+      expect(parseArea("2 hectáreas")).toBe(20000);
+      expect(parseArea("3 fanegadas")).toBe(19200);
+      expect(parseArea("10000 m2")).toBe(10000);
+
+      const scoreLote = calcularCalificacionCompletitud(
+        {
+          tipoInmuebleDeseado: "land",
+          tipoNegocioDeseado: "venta",
+          zonaDeseada: "Llanogrande",
+          ciudadDeseada: "Rionegro",
+          presupuestoMax: 1800000000,
+          areaMin: 10000,
+          idUsuarioWhatsapp: "573001112233"
+        },
+        false
+      );
+      expect(scoreLote.score).toBeGreaterThanOrEqual(75);
+
+      const reqLote = {
+        id: "req-lote-1",
+        propertyType: "land",
+        transactionType: "venta",
+        addressCity: "Rionegro",
+        zonaDeseada: "Llanogrande",
+        presupuestoMax: "2000000000",
+        areaMin: 10000,
+        rawText: "Busco lote comercial/campestre de 1 hectárea (10000 m2) en Llanogrande, Rionegro, Antioquia, presupuesto hasta 2000 millones."
+      };
+      const propLote = {
+        id: "prop-lote-1",
+        name: "Lote en Llanogrande Rionegro",
+        propertyType: "land",
+        transactionType: "venta",
+        addressCity: "Rionegro",
+        zone: "Llanogrande",
+        addressNeighborhood: "Llanogrande",
+        price: "1850000000",
+        areaTotal: "10500",
+        rawText: "Vendo lote plano en Llanogrande, Rionegro, Antioquia de 10500 m2 con servicios públicos, precio $1.850 millones."
+      };
+      const resLote = explicarMatch(reqLote, propLote);
+      expect(resLote.score).toBeGreaterThanOrEqual(85);
+      expect(resLote.blockers.length).toBe(0);
+
+      const reqConsultorio = {
+        id: "req-cons-1",
+        propertyType: "consultorio",
+        transactionType: "arriendo",
+        addressCity: "Cali",
+        zonaDeseada: "Tequendama",
+        presupuestoMax: "4500000",
+        areaMin: 45,
+        banosMin: 1,
+        parqueaderosMin: 1,
+        rawText: "Busco consultorio médico en arriendo en Tequendama, Cali, 45 m2, 1 baño, 1 garaje, habilitación salud, hasta 4.5 millones."
+      };
+      const propConsultorio = {
+        id: "prop-cons-1",
+        name: "Consultorio en Tequendama",
+        propertyType: "consultorio",
+        transactionType: "arriendo",
+        addressCity: "Cali",
+        zone: "Tequendama",
+        addressNeighborhood: "Tequendama",
+        rentPrice: "4200000",
+        areaTotal: "50",
+        bathrooms: 1,
+        garages: 1,
+        rawText: "Arriendo consultorio odontológico/médico en Tequendama, Cali, 50 m2, 1 baño, 1 garaje, canon $4.2 millones."
+      };
+      const resCons = explicarMatch(reqConsultorio, propConsultorio);
+      expect(resCons.score).toBeGreaterThanOrEqual(85);
+      expect(resCons.blockers.length).toBe(0);
+
+      const missingLote = auditMissingRequirementFields({
+        tipoInmuebleDeseado: "land",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Rionegro",
+        zonaDeseada: "Llanogrande",
+        presupuestoMax: 1800000000,
+        areaMin: 10000
+      });
+      expect(missingLote).toEqual([]);
+
+      const missingApto = auditMissingRequirementFields({
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Medellín",
+        zonaDeseada: "Laureles",
+        presupuestoMax: 600000000,
+        areaMin: 80
+      });
+      expect(missingApto).toContain("Habitaciones Exactas");
+    });
+
+    it("4. Catálogo nacional, UI sin Bogotá fijo en demandas/ofertas, semilla y versión v34.25", async () => {
+      const fs = await import("fs");
+      const {
+        COLOMBIA_DEPARTMENTS,
+        BOGOTA_LOCALITIES,
+        getPropertyRefCityPrefix
+      } = await import("../../shared/colombiaCatalog");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      expect(COLOMBIA_DEPARTMENTS.length).toBeGreaterThanOrEqual(33);
+      expect(BOGOTA_LOCALITIES.length).toBe(20);
+      expect(getPropertyRefCityPrefix("Medellín")).toBe("MED");
+      expect(getPropertyRefCityPrefix("Cali")).toBe("CAL");
+      expect(getPropertyRefCityPrefix("Bucaramanga")).toBe("BGA");
+
+      const modalSrc = fs.readFileSync("client/src/components/publish/UnifiedPublishModal.tsx", "utf-8");
+      const reqMarketSrc = fs.readFileSync("client/src/pages/RequirementsMarketplace.tsx", "utf-8");
+      expect(modalSrc).not.toContain("Ciudad (Fijo)");
+      expect(modalSrc).toContain("Otras Especificaciones / Requisitos Especiales del Cliente");
+      expect(modalSrc).toContain("Localidad / Comuna / Corregimiento");
+      expect(modalSrc).toContain("Vereda / Corregimiento");
+      expect(modalSrc).toContain("Aparta Hotel");
+      expect(modalSrc).toContain("Consultorio Médico / Salud");
+      expect(modalSrc.match(/PROPERTY_TYPES_EXACT\.map/g)?.length).toBeGreaterThanOrEqual(2);
+      expect(reqMarketSrc).toContain("listActiveRequirements");
+      expect(reqMarketSrc).not.toContain("supabase.from");
+
+      const seed25 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-cobertura-nacional-todas-localidades-tipologias-v34-25"
+      );
+      expect(seed25?.active).toBe(true);
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[5-9]|[3-9]\d)$/);
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:2[5-9]|[3-9]\d)\.0$/);
     });
   });
 });

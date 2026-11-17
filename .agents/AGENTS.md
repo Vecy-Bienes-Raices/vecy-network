@@ -184,7 +184,21 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.24 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.25 — Noviembre 2026
+
+### Novedades v34.25 (Bloque 1 — Cobertura Nacional 32 Departamentos, Todas las 20 Localidades de Bogotá, Todas las Tipologías y Formularios Completos de Demandas/Ofertas — Doctrina Eduardo A. Rivera):
+- **Catálogo Nacional y Erradicación de Sesgo Bogotá/Zona Norte (`shared/colombiaCatalog.ts`, `geography.ts`, `matching.ts`, `properties.ts`, `UnifiedPublishModal.tsx`):**
+  1. Integrado catálogo nacional completo (`COLOMBIA_DEPARTMENTS` 32 departamentos + Bogotá D.C., `BOGOTA_LOCALITIES` con sus 20 localidades completas, `CITY_LOCALITIES_MAP`, `getPropertyRefCityPrefix` con códigos `MED`/`CAL`/`BGA`/`BAQ`/etc.).
+  2. Eliminado el campo deshabilitado `Ciudad (Fijo)` en `UnifiedPublishModal.tsx`, fallbacks forzados a Bogotá/Suba/Morato y el bug `resolveCityField` (`val === ""`) en `matching.ts`; corregido `extractTrueCityFromText` con coincidencias de límites de palabra (`hasGeoKw`, evitando falsos positivos como `"calificado"`/`"localidad"` → `"Cali"`).
+- **Soporte Multi-Tipología (Lotes, Consultorios, Oficinas, Locales, Bodegas, Fincas) y Matching 85%–100% (`colombianRealEstateParser.ts`, `matching.ts`, `parsers.ts`, `prompts.ts`, `propertiesHandler.ts`):**
+  1. Elevado límite de área a `50.000.000 m²` con conversión de `hectáreas` (`10.000 m²`) y `fanegadas/plazas/cuadras` (`6.400 m²`) en `parseArea` (excluyendo áreas de terrazas/balcones/patios para evitar colisiones).
+  2. Completitud y puntuación adaptativa (`getPropertyCategoryGroup`) para que Lotes, Consultorios, Oficinas, Locales y Bodegas logren match `>= 85%` sin exigir habitaciones; inventario web activo exento del corte de 15 días y umbral unificado `>= 85` en `findMatchesForProperty` / `findMatchesForRequirement`.
+- **Demandas Web Completas en PostgreSQL (`UnifiedPublishModal.tsx`, `RequirementsMarketplace.tsx`, `server/routers/janIA.ts`):**
+  1. Formularios completos de Oferta y Demanda con Departamento, Ciudad/Municipio, Localidad/Comuna/Corregimiento, Barrio(s)/Sectores, Vereda, unidades `m²`/`Fanegadas`/`Hectáreas`, campos especializados por tipología y recuadro **`Otras Especificaciones / Requisitos Especiales del Cliente`**.
+  2. `RequirementsMarketplace.tsx` migrado desde Supabase hacia PostgreSQL live (`trpc.janIA.listActiveRequirements`) y `auditMissingRequirementFields` adaptativo en `server/routers/janIA.ts`.
+- **Gobernanza y Regresión (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-cobertura-nacional-todas-localidades-tipologias-v34-25` y **Suite 211** (**6/6 archivos, 741/741 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.25` (`34.25.0`). Bloque 2 (Modo Humana + Ficha DM + Firma Electrónica de Match por WhatsApp) queda listo para `v34.26`.
+
+## 🔖 VERSIÓN ANTERIOR: v34.24 — Noviembre 2026
 
 ### Novedades v34.24 (Liderazgo Conversacional "Una Sola Pregunta a la Vez", Perfilamiento Progresivo y Cero Calificación Prematura — Doctrina Eduardo A. Rivera):
 - **Una Sola Pregunta por Turno (`dmHandler.ts`, `dmOnboardingAndDocsHelper.ts`, `base.md`, `prompts.ts`):**

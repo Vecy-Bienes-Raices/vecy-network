@@ -5,13 +5,17 @@ import { eq, desc, ilike, or, isNull, and, lte, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { properties, propertyImages } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
+import { getPropertyRefCityPrefix, findDepartmentForCity, BOGOTA_LOCALITIES } from "../../shared/colombiaCatalog";
+import { parseArea } from "../../shared/colombianRealEstateParser";
+import { buscarLugarColombia } from "../_core/colombia-geography";
+import { extractFallbackDataFromText } from "../_core/jania/parsers";
 
 const propertyInputSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   propertyType: z.enum([
     "apartment", "house", "building", "warehouse", "farm", "hotel", 
-    "office", "land", "commercial", "loft", "consultorio"
+    "office", "land", "commercial", "loft", "consultorio", "cabin"
   ]),
   transactionType: z.enum([
     "venta", "arriendo", "venta_o_arriendo", "arriendo_temporal", 
@@ -153,11 +157,16 @@ export function parsePropertyDeterministically(text: string) {
     propertyTypeExact = "Local";
     isSubtipoComercial = true;
     subtype = lower.includes("centro comercial") ? "Local en Centro Comercial" : "Local Comercial a la Calle";
-  } else if (lower.includes("oficina") || lower.includes("consultorio")) {
+  } else if (lower.includes("consultorio")) {
+    propertyType = "consultorio";
+    propertyTypeExact = "Consultorio";
+    isSubtipoComercial = true;
+    subtype = lower.includes("odontol") ? "Consultorio Odontológico" : "Consultorio Médico / Salud";
+  } else if (lower.includes("oficina")) {
     propertyType = "office";
     propertyTypeExact = "Oficina";
     isSubtipoComercial = true;
-    subtype = lower.includes("consultorio") ? "Consultorio / Salud" : "Oficina Corporativa / Edificio Empresarial";
+    subtype = "Oficina Corporativa / Edificio Empresarial";
   } else if (lower.includes("apartaestudio")) {
     propertyType = "apartment";
     propertyTypeExact = "Apartaestudio";
@@ -289,10 +298,14 @@ export function parsePropertyDeterministically(text: string) {
     }
   }
 
-  // Áreas
+  // Áreas (soporta m², hectáreas y fanegadas)
   let areaConstruida: string = "";
   const acM = norm.match(/(?:area construida|area total|construida)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
   if (acM) areaConstruida = acM[1];
+  if (!areaConstruida) {
+    const parsedA = parseArea(text);
+    if (parsedA && parsedA > 0) areaConstruida = String(parsedA);
+  }
 
   let areaPrivada: string = "";
   const apM = norm.match(/(?:area privada|privada)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
@@ -356,38 +369,48 @@ export function parsePropertyDeterministically(text: string) {
   const pisoM = norm.match(/(?:plantas|pisos|piso)[\s\:\/\*\D]*?([0-9]+)/i);
   if (pisoM) piso = pisoM[1];
 
-  // Barrio, Localidad y Ciudad
+  // Barrio, Localidad, Ciudad y Departamento (Cobertura Nacional Real)
+  const fbGeo = extractFallbackDataFromText(text);
   let addressNeighborhood: string | null = null;
   let zone: string | null = null;
-  let city = "Bogotá";
+  let city = fbGeo.city || "";
 
-  const barrioMatch = norm.match(/barrio[\s\:\*]*([a-zA-Z\s]+)/i);
+  const barrioMatch = norm.match(/(?:barrio|vereda|sector)[\s\:\*]*([a-zA-Z0-9\s]+?)(?:,|\n|$)/i);
   if (barrioMatch) {
-    addressNeighborhood = barrioMatch[1].split("\n")[0].trim();
+    addressNeighborhood = barrioMatch[1].trim();
   }
-  if (!addressNeighborhood) {
-    if (lower.includes("morato")) addressNeighborhood = "Morato";
-    else if (lower.includes("cedritos")) addressNeighborhood = "Cedritos";
-    else if (lower.includes("chico")) addressNeighborhood = "Chicó";
-    else if (lower.includes("rosales")) addressNeighborhood = "Rosales";
-    else if (lower.includes("santa barbara")) addressNeighborhood = "Santa Bárbara";
+  if (!addressNeighborhood && fbGeo.zone) {
+    addressNeighborhood = fbGeo.zone;
   }
 
-  const locMatch = norm.match(/localidad[\s\:\*]*([a-zA-Z\s]+)/i);
+  const locMatch = norm.match(/(?:localidad|comuna|corregimiento)[\s\:\*]*([a-zA-Z0-9\s\-]+?)(?:,|\n|$)/i);
   if (locMatch) {
-    zone = locMatch[1].split("\n")[0].trim();
+    zone = locMatch[1].trim();
   }
   if (!zone) {
-    if (lower.includes("suba")) zone = "Suba";
-    else if (lower.includes("usaquen")) zone = "Usaquén";
-    else if (lower.includes("chapinero")) zone = "Chapinero";
-    else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
+    for (const loc of BOGOTA_LOCALITIES) {
+      const locNorm = loc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (lower.includes(locNorm)) {
+        zone = loc;
+        if (!city) city = "Bogotá, D.C.";
+        break;
+      }
+    }
   }
+
+  if (!city) {
+    const lugar = buscarLugarColombia(text);
+    if (lugar && lugar.nombreCanonico) {
+      city = lugar.nombreCanonico;
+    }
+  }
+  if (!city) city = "Bogotá, D.C.";
+  const department = findDepartmentForCity(city) || "";
 
   // Título / Nombre Estandarizado Doctrinal: [Tipo de Inmueble] en [Barrio / Sector]
   // Regla de concisión v31.48: Título corto y limpio sin palabras de negocio redundantes
-  const sectorDisplay = addressNeighborhood || zone || city || "Bogotá";
-  const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes("comercial")
+  const sectorDisplay = addressNeighborhood || zone || city || "Colombia";
+  const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes("comercial") && propertyTypeExact !== "Consultorio"
     ? `${propertyTypeExact} Comercial`
     : propertyTypeExact;
   const name = `${tipoDisplay} en ${sectorDisplay}`;
@@ -444,8 +467,10 @@ export function parsePropertyDeterministically(text: string) {
     depositos,
     piso,
     city,
-    zone: zone || addressNeighborhood || "Bogotá",
-    addressNeighborhood: addressNeighborhood || zone || "Bogotá",
+    department,
+    addressLocality: zone || "",
+    zone: zone || addressNeighborhood || city,
+    addressNeighborhood: addressNeighborhood || zone || "",
     description: text.trim().slice(0, 500),
     selectedInternas,
     selectedExternas,
@@ -551,29 +576,41 @@ export const propertiesRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
-      // Generación automática del código oficial único del inmueble (Doctrina Eduardo A. Rivera v34.01)
-      // Formato: ID-BOG-[ZONA3][CONSECUTIVO] (ej: ID-BOG-CAR01, ID-BOG-CHI05, ID-BOG-SBA12)
-      const cleanZone = (input.zone || "BOG")
+      // Generación automática del código oficial único nacional del inmueble (Doctrina v34.25)
+      // Formato: ID-[CIUDAD3]-[ZONA3][CONSECUTIVO] (ej: ID-BOG-KEN01, ID-MED-POB05, ID-CAL-PAN12)
+      const cityPrefix = getPropertyRefCityPrefix(input.addressCity || input.city);
+      const cleanZone = (input.addressNeighborhood || input.zone || cityPrefix)
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z]/g, "")
         .toUpperCase()
-        .substring(0, 3) || "BOG";
+        .substring(0, 3) || cityPrefix;
 
       const newProperty = await db.insert(properties).values({
         ...input,
+        addressCity: input.addressCity || input.city || null,
+        origenTipo: "web_admin_unified",
+        origenNombre: "Centro de Publicación Vecy",
         agentId: ctx?.user?.id ?? 1,
       }).returning();
 
       const created = newProperty[0];
       if (created?.id) {
-        const autoRefCode = `ID-BOG-${cleanZone}${String(created.id).padStart(2, '0')}`;
+        const autoRefCode = `ID-${cityPrefix}-${cleanZone}${String(created.id).padStart(2, '0')}`;
         await db.update(properties).set({
           externalListingId: autoRefCode,
           canonicalExternalId: `VECY:${autoRefCode}`,
         }).where(eq(properties.id, created.id));
         created.externalListingId = autoRefCode;
         created.canonicalExternalId = `VECY:${autoRefCode}`;
+
+        import("../_core/matching")
+          .then(({ findMatchesForProperty }) =>
+            findMatchesForProperty(created.id).catch((err) =>
+              console.warn("[properties.create] Error calculando matches en background:", err?.message || err)
+            )
+          )
+          .catch(() => {});
       }
 
       invalidatePropertiesListCache();
@@ -613,13 +650,13 @@ Extrae de forma exhaustiva y precisa los datos clave en formato JSON con la sigu
 {
   "name": "Título estandarizado corto en formato '[Tipo de Inmueble] en [Barrio]', ej: 'Casa en Morato', 'Edificio de Oficinas en Chicó', 'Apartamento en Rosales'",
   "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
-  "propertyTypeExact": "Casa | Edificio | Hotel | Hostal | Aparta Hotel | Local | Bodega | Finca | Oficina | Apartamento | Pent House | etc.",
-  "subtype": "Subtipo específico (ej: 'Casa Comercial / Oficinas / Sede', 'Edificio de Oficinas', 'Edificio Residencial', 'Edificio de Locales', 'Aparta-hotel', 'Aparta-Suites', 'Hospedaje', 'Hostal', 'Motel', 'Residencia', 'Finca de Recreo', 'Finca Productiva')",
+  "propertyTypeExact": "Casa | Edificio | Hotel | Hostal | Aparta Hotel | Local | Bodega | Finca | Oficina | Consultorio | Lote / Terreno | Apartamento | Pent House | etc.",
+  "subtype": "Subtipo específico (ej: 'Casa Comercial / Oficinas / Sede', 'Consultorio Médico / Odontológico', 'Lote Urbano / Suburbano / Rural', 'Edificio de Oficinas', 'Finca Productiva')",
   "isSubtipoComercial": true o false,
   "transactionType": "venta | arriendo | venta_o_arriendo | permuta",
   "price": "precio de venta o canon en COP numérico sin puntos",
   "adminFee": "cuota administración mensual en COP numérico o null",
-  "areaConstruida": "área construida total en m2 en número string o null",
+  "areaConstruida": "área construida o total del lote/finca en m2 (convierte hectáreas*10000 y fanegadas*6400) en número string o null",
   "areaPrivada": "área privada en m2 en número string o null",
   "yearBuilt": año numérico de construcción o null,
   "bedrooms": número entero de habitaciones u oficinas (puede ser de 1 a 50+),
@@ -632,9 +669,11 @@ Extrae de forma exhaustiva y precisa los datos clave en formato JSON con la sigu
   "estarTv": número entero de salas de estar o espera,
   "stratum": estrato socioeconómico 0 a 6,
   "cocina": "Integral | Abierta | Abierta tipo isla | Cerrada convencional | Cerrada remodelada | Moderna | A remodelar",
-  "city": "Bogotá u otra ciudad",
-  "zone": "Localidad o zona principal (ej: Suba, Usaquén)",
-  "addressNeighborhood": "Barrio específico (ej: Morato, Cedritos, Santa Bárbara)",
+  "department": "Departamento de Colombia (ej: Bogotá D.C., Antioquia, Valle del Cauca, Cundinamarca, Santander, Bolívar, Atlántico)",
+  "city": "Ciudad o municipio exacto de Colombia (ej: Bogotá, D.C., Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira, Rionegro, Chía)",
+  "addressLocality": "Localidad, Comuna o Corregimiento (ej: Kennedy, Suba, Usaquén, Chapinero, El Poblado, Comuna 14, Pance)",
+  "zone": "Localidad, Comuna o Sector principal",
+  "addressNeighborhood": "Barrio o Vereda específico (ej: Castilla, El Poblado, Cabecera, Pance, Morato, Cedritos, Vereda La Balsa)",
   "description": "Descripción profesional atractiva destacando potencial urbanístico (POT 555, valoración, usos permitidos, etc.)",
   "potUrbanistico": "Información normativa de POT o tratamiento si se menciona (ej: POT 555, Tratamiento Renovación Urbana, Altura hasta 7 pisos, Valor Catastral)",
   "selectedInternas": ["lista de características internas encontradas"],
@@ -670,7 +709,10 @@ Texto del inmueble:\n${input.text || "Ver documento PDF adjunto"}`;
           subtype: parsed.subtype || deterministic.subtype,
           isSubtipoComercial: parsed.isSubtipoComercial !== undefined ? parsed.isSubtipoComercial : deterministic.isSubtipoComercial,
           transactionType: parsed.transactionType || deterministic.transactionType,
-          zone: parsed.zone || deterministic.zone,
+          city: parsed.city || deterministic.city,
+          department: parsed.department || deterministic.department || findDepartmentForCity(parsed.city || deterministic.city),
+          addressLocality: parsed.addressLocality || parsed.zone || deterministic.addressLocality,
+          zone: parsed.zone || parsed.addressLocality || deterministic.zone,
           addressNeighborhood: parsed.addressNeighborhood || parsed.zone || deterministic.addressNeighborhood,
           areaTotal: parsed.areaConstruida ? String(parsed.areaConstruida) : (parsed.areaTotal ? String(parsed.areaTotal) : deterministic.areaTotal),
           areaConstruida: parsed.areaConstruida ? String(parsed.areaConstruida) : deterministic.areaConstruida,

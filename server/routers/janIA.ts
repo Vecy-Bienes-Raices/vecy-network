@@ -15,7 +15,12 @@ import {
   normalizeAdvisorPhone,
   isLidIdentifier,
   isGenericName,
+  extractFallbackDataFromText,
+  calcularCalificacionCompletitud,
 } from '../_core/janIA';
+import { findDepartmentForCity, getPropertyCategoryGroup } from '../../shared/colombiaCatalog';
+import { parseArea } from '../../shared/colombianRealEstateParser';
+import { buscarLugarColombia } from '../_core/colombia-geography';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
 import { explicarMatch, findMatchesForProperty, findMatchesForRequirement, getRejectedPairsSet, invalidateRejectedPairsCache } from '../_core/matching';
 import axios from 'axios';
@@ -166,6 +171,54 @@ export function buildWebGroup1ListingRedirectGuide(params: {
       ? `📝 *REQUERIMIENTO INMOBILIARIO VECY*\n• Negocio: [Compra o Arriendo]\n• Inmueble: [Apartamento / Casa / Local / Finca]\n• Ciudad y Barrio(s): [Ej. Bogotá: Cedritos, Colina]\n• Presupuesto Máximo: [En COP]\n• Área Mínima: [En m² o fanegadas/hectáreas]\n• Alcobas exactas, Baños y Parqueaderos mínimos: [Ej. 3 alcobas, 2 baños, 1 garaje independiente]\n• Detalles clave: [Balcón, ascensor, estrato, vista]\n• Contacto y Rol: [Nombre, teléfono y si aceptas 40/20/40 o eres cliente directo]`
       : `🏠 *OFERTA INMOBILIARIA VECY*\n• Negocio: [Venta, Arriendo o Permuta]\n• Inmueble: [Apartamento / Casa / Local / Finca]\n• Ciudad y Barrio exacto: [Ej. Bogotá: Santa Bárbara]\n• Precio Venta / Canon Arriendo + Valor Administración: [En COP]\n• Área Total y Privada: [En m², o fanegadas/hectáreas si es rural]\n• Alcobas, Baños, Parqueaderos (independiente/lineal) y Depósito:\n• Estrato, Antigüedad y Piso:\n• Contacto y Rol: [Nombre, teléfono y si eres agente 40/20/40 o propietario directo]`)
   );
+}
+
+/**
+ * Auditoría adaptativa de campos faltantes en requerimientos web según tipología (v34.25)
+ */
+export function auditMissingRequirementFields(parsed: any): string[] {
+  const missingFields: string[] = [];
+  const catGroup = getPropertyCategoryGroup(parsed?.tipoInmuebleDeseado || parsed?.propertyType);
+
+  if (!parsed?.presupuestoMax || String(parsed.presupuestoMax).trim() === '' || Number(parsed.presupuestoMax) === 0) {
+    missingFields.push('Presupuesto Máximo');
+  }
+  if (!parsed?.ciudadDeseada && !parsed?.addressCity) {
+    missingFields.push('Ciudad / Municipio');
+  }
+  if (!parsed?.addressNeighborhood && !parsed?.zonaDeseada && !parsed?.vereda) {
+    missingFields.push('Barrio, Vereda o Sector');
+  }
+  if (!parsed?.tipoInmuebleDeseado) {
+    missingFields.push('Tipo de Inmueble');
+  }
+  if (!parsed?.tipoNegocioDeseado) {
+    missingFields.push('Tipo de Negocio (Venta/Arriendo)');
+  }
+  if (!parsed?.areaMin || String(parsed.areaMin).trim() === '' || Number(parsed.areaMin) === 0) {
+    missingFields.push(catGroup === 'land' || catGroup === 'rural_farm' ? 'Área Mínima (m² / Ha / Fanegadas)' : 'Área Mínima (m²)');
+  }
+
+  if (catGroup === 'residential') {
+    if (!parsed?.estratoDeseado || (Array.isArray(parsed.estratoDeseado) && parsed.estratoDeseado.length === 0)) {
+      missingFields.push('Estrato Socioeconómico');
+    }
+    if (parsed?.habitacionesMin === undefined || parsed?.habitacionesMin === null) {
+      missingFields.push('Habitaciones Exactas');
+    }
+    if (parsed?.banosMin === undefined || parsed?.banosMin === null) {
+      missingFields.push('Mínimo de Baños');
+    }
+    if (parsed?.parqueaderosMin === undefined || parsed?.parqueaderosMin === null) {
+      missingFields.push('Parqueaderos Requeridos');
+    }
+  } else if (catGroup === 'office_consultorio' || catGroup === 'commercial_warehouse') {
+    if (parsed?.banosMin === undefined || parsed?.banosMin === null) {
+      missingFields.push('Mínimo de Baños');
+    }
+  }
+
+  return missingFields;
 }
 
 export const janIARouter = router({
@@ -1876,9 +1929,22 @@ export const janIARouter = router({
           nombreUsuarioWhatsapp: requirements.nombreUsuarioWhatsapp,
           tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
           tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+          ciudadDeseada: requirements.ciudadDeseada,
+          zonaDeseada: requirements.zonaDeseada,
+          addressCity: requirements.addressCity,
+          addressLocality: requirements.addressLocality,
+          addressNeighborhood: requirements.addressNeighborhood,
           presupuestoMax: requirements.presupuestoMax,
           presupuestoMin: requirements.presupuestoMin,
           areaMin: requirements.areaMin,
+          habitacionesMin: requirements.habitacionesMin,
+          banosMin: requirements.banosMin,
+          parqueaderosMin: requirements.parqueaderosMin,
+          adminFeeMax: requirements.adminFeeMax,
+          estratoDeseado: requirements.estratoDeseado,
+          amobladoDeseado: requirements.amobladoDeseado,
+          caracteristicasDeseadas: requirements.caracteristicasDeseadas,
+          calificacion: requirements.calificacion,
           status: requirements.status,
           createdAt: requirements.createdAt,
         })
@@ -1912,6 +1978,96 @@ export const janIARouter = router({
       throw error;
     }
   }),
+
+  // Listado público de demandas activas directamente desde PostgreSQL (reemplaza legacy Supabase en /demandas) (v34.25)
+  listActiveRequirements: publicProcedure
+    .input(z.object({
+      search: z.string().optional(),
+      propertyType: z.string().optional(),
+      transactionType: z.string().optional(),
+      city: z.string().optional(),
+      limit: z.number().min(1).max(300).default(150),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const rows = await db
+        .select({
+          id: requirements.id,
+          name: requirements.name,
+          tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+          tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+          ciudadDeseada: requirements.ciudadDeseada,
+          zonaDeseada: requirements.zonaDeseada,
+          addressCity: requirements.addressCity,
+          addressLocality: requirements.addressLocality,
+          addressNeighborhood: requirements.addressNeighborhood,
+          presupuestoMin: requirements.presupuestoMin,
+          presupuestoMax: requirements.presupuestoMax,
+          areaMin: requirements.areaMin,
+          habitacionesMin: requirements.habitacionesMin,
+          banosMin: requirements.banosMin,
+          parqueaderosMin: requirements.parqueaderosMin,
+          adminFeeMax: requirements.adminFeeMax,
+          estratoDeseado: requirements.estratoDeseado,
+          amobladoDeseado: requirements.amobladoDeseado,
+          caracteristicasDeseadas: requirements.caracteristicasDeseadas,
+          rawText: requirements.rawText,
+          calificacion: requirements.calificacion,
+          status: requirements.status,
+          createdAt: requirements.createdAt,
+          fechaUltimaPublicacion: requirements.fechaUltimaPublicacion,
+          userId: requirements.userId,
+          idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: requirements.nombreUsuarioWhatsapp,
+        })
+        .from(requirements)
+        .where(eq(requirements.status, 'active'))
+        .orderBy(desc(requirements.id))
+        .limit(input?.limit || 150);
+
+      const searchNorm = (input?.search || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const cityFilterNorm = (input?.city || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+      return rows
+        .map((r: any) => {
+          let phone = r.idUsuarioWhatsapp;
+          let advisorName = r.nombreUsuarioWhatsapp;
+          if (!phone || isLidIdentifier(phone) || !normalizeAdvisorPhone(phone)) {
+            const known = lookupAdvisorSync(phone, advisorName);
+            if (known?.phone) {
+              phone = known.phone;
+              if (known.name && (!advisorName || isGenericName(advisorName))) advisorName = known.name;
+            }
+          }
+          return {
+            ...r,
+            idUsuarioWhatsapp: phone,
+            nombreUsuarioWhatsapp: advisorName,
+          };
+        })
+        .filter((r: any) => {
+          if (input?.propertyType && input.propertyType !== 'all' && r.tipoInmuebleDeseado !== input.propertyType) {
+            return false;
+          }
+          if (input?.transactionType && input.transactionType !== 'all' && r.tipoNegocioDeseado !== input.transactionType) {
+            return false;
+          }
+          if (cityFilterNorm) {
+            const rCity = `${r.ciudadDeseada || ''} ${r.addressCity || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (!rCity.includes(cityFilterNorm)) return false;
+          }
+          if (searchNorm) {
+            const haystack = `${r.name || ''} ${r.tipoInmuebleDeseado || ''} ${r.tipoNegocioDeseado || ''} ${r.ciudadDeseada || ''} ${r.addressCity || ''} ${r.addressLocality || ''} ${r.addressNeighborhood || ''} ${r.zonaDeseada || ''} ${r.rawText || ''} ${JSON.stringify(r.caracteristicasDeseadas || '')}`
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '');
+            if (!haystack.includes(searchNorm)) return false;
+          }
+          return true;
+        });
+    }),
 
   // Guardar y persistir permanentemente los datos de un asesor en PostgreSQL (v31.88)
   saveAdvisorContact: publicProcedure
@@ -2030,77 +2186,80 @@ export const janIARouter = router({
       return await publishIdentityAndPredialServiceAnnouncement(input.force);
     }),
 
-  // Parser Inteligente de Requerimientos desde Texto Libre
+  // Parser Inteligente de Requerimientos desde Texto Libre (Cobertura Nacional y Todas las Tipologías v34.25)
   parseRequirementText: publicProcedure
     .input(z.object({ text: z.string() }))
     .mutation(async ({ input }) => {
       try {
-        const prompt = `Actúa como JanIA, el motor de inteligencia artificial de VECY BIENES RAÍCES especializado en corretaje inmobiliario en Colombia.
+        const prompt = `Actúa como JanIA, el motor de inteligencia artificial de VECY BIENES RAÍCES especializado en corretaje inmobiliario en toda Colombia.
 Analiza este texto de requerimiento o solicitud de cliente/agente y extrae los datos estructurados en formato JSON con los siguientes campos:
-- name: Título breve y claro de la búsqueda (ej: "Apto arriendo Chapinero 2 habs")
-- tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio"
+- name: Título breve y claro de la búsqueda (ej: "Lote industrial Rionegro 2000 m²", "Consultorio médico Medellín", "Apto arriendo Kennedy 2 habs")
+- tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio" | "cabin"
 - tipoNegocioDeseado: "venta" | "arriendo" | "venta_o_arriendo" | "arriendo_temporal" | "arriendo_con_opcion_de_compra" | "permuta" | "venta_permuta" | "aporte"
-- ciudadDeseada: Nombre de la ciudad (por defecto "Bogotá" si no especifica)
-- addressNeighborhood: Barrio específico o sectores mencionados (ej: "Chicó, Rosales, Virrey")
-- zonaDeseada: Sector o zona general si aplica (ej: "Norte", "Chapinero")
+- departamento: Departamento de Colombia (ej: "Antioquia", "Bogotá D.C.", "Valle del Cauca", "Cundinamarca", "Santander") o null
+- ciudadDeseada: Nombre de la ciudad o municipio exacto de Colombia (solo usa "Bogotá, D.C." si el texto es de Bogotá o no menciona ninguna otra ciudad)
+- addressLocality: Localidad, Comuna o Corregimiento (ej: "Kennedy", "Suba", "Chapinero", "Comuna 14 El Poblado", "Pance") o null
+- addressNeighborhood: Barrio, Vereda o sectores mencionados (ej: "Castilla, Tintal", "El Poblado", "Vereda La Balsa") o null
+- zonaDeseada: Sector o zona general si aplica
+- vereda: Nombre de vereda o corregimiento si es rural/suburbano, o null
 - presupuestoMin: valor numérico string sin puntos ni símbolos o null
 - presupuestoMax: valor numérico string sin puntos ni símbolos (ej: "450000000" para compra, o "3500000" para arriendo) o null
-- areaMin: metros cuadrados mínimos en número string (ej: "75") o null
+- areaMin: metros cuadrados mínimos (convierte hectáreas*10000 y fanegadas*6400) en número string (ej: "75" o "10000") o null
 - habitacionesMin: número entero mínimo o null
 - banosMin: número entero mínimo o null
 - parqueaderosMin: número entero mínimo o null
 - adminFeeMax: cuota de administración máxima en número string o null
 - estratoDeseado: array de números enteros (ej: [4, 5]) o null
 - amobladoDeseado: boolean o null
+- otrasEspecificaciones: string resumido con exigencias específicas (uso de suelo, topografía, altura libre, habilitación salud, forma de pago, piso, ascensor, cocina, balcón, etc.) o null
 - caracteristicasDeseadas: array de strings con comodidades clave (ej: ["balcón", "ascensor", "depósito"])
 - rawText: Texto original analizado
 
 Si un campo no está explícito en el texto, coloca null (NO inventes información).
 Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\nTexto: ${input.text}`;
 
-        const norm = input.text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-        const lower = norm.toLowerCase();
-
-        // Extracción determinista de base para no bloquear si Gemini está en 429
-        let detType = "apartment";
-        if (lower.includes("casa")) detType = "house";
-        else if (lower.includes("oficina")) detType = "office";
-        else if (lower.includes("local") || lower.includes("comercial")) detType = "commercial";
-        else if (lower.includes("bodega")) detType = "warehouse";
-        else if (lower.includes("lote")) detType = "land";
-
-        let detTx = "arriendo";
-        if (lower.includes("compra") || lower.includes("comprar") || lower.includes("venta") || lower.includes("vendo")) detTx = "venta";
-
-        let detPresupuestoMax: string | null = null;
-        const presMatch = norm.match(/(?:hasta|presupuesto|maximo|max|tope)[\s\:\$💲]*([0-9\.\,]+(?:\s*(?:millones|mm))?)/i);
-        if (presMatch) {
-          const cleanP = presMatch[1].replace(/\./g, "").replace(/\,/g, "").trim();
-          const pVal = parseInt(cleanP, 10);
-          if (!isNaN(pVal) && pVal > 100000) detPresupuestoMax = String(pVal);
-        }
-
-        let detAreaMin: string | null = null;
-        const areaM = norm.match(/(?:desde|minimo|area)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
-        if (areaM) detAreaMin = areaM[1];
-
-        let detBeds: number | null = null;
-        const bedsM = norm.match(/([0-9]+)\s*(?:hab|habitacion|habitaciones|alcoba|alcobas)/i);
-        if (bedsM) detBeds = parseInt(bedsM[1], 10);
+        const fb = extractFallbackDataFromText(input.text || "");
+        const detType = fb.tipoInmuebleDeseado || fb.propertyType || "apartment";
+        const detTx = fb.tipoNegocioDeseado || fb.transactionType || "arriendo";
+        const typeLabels: Record<string, string> = {
+          apartment: "Apartamento",
+          house: "Casa",
+          office: "Oficina",
+          consultorio: "Consultorio",
+          commercial: "Local Comercial",
+          warehouse: "Bodega",
+          building: "Edificio",
+          farm: "Finca",
+          land: "Lote / Terreno",
+          loft: "Loft / Apartaestudio",
+          hotel: "Hotel / Hostal",
+          cabin: "Cabaña",
+        };
+        const detCity = fb.ciudadDeseada || fb.city || (buscarLugarColombia(input.text)?.nombreCanonico || "");
+        const detDept = findDepartmentForCity(detCity) || (buscarLugarColombia(input.text)?.departamento || "");
+        const parsedArea = parseArea(input.text || "");
+        const detAreaMin = fb.areaMin > 0 ? String(fb.areaMin) : (parsedArea ? String(parsedArea) : null);
 
         let parsed: any = {
-          name: `Búsqueda de ${detType === 'house' ? 'Casa' : 'Apartamento'} en ${detTx}`,
+          name: `Búsqueda de ${typeLabels[detType] || "Inmueble"} en ${detTx}${detCity ? ` (${detCity})` : ""}`,
           tipoInmuebleDeseado: detType,
           tipoNegocioDeseado: detTx,
-          ciudadDeseada: "Bogotá",
-          addressNeighborhood: null,
-          zonaDeseada: null,
-          presupuestoMax: detPresupuestoMax,
+          departamento: detDept || null,
+          ciudadDeseada: detCity || "Bogotá, D.C.",
+          addressLocality: null,
+          addressNeighborhood: fb.zonaDeseada || fb.zone || null,
+          zonaDeseada: fb.zonaDeseada || fb.zone || null,
+          vereda: null,
+          presupuestoMin: fb.presupuestoMin > 0 ? String(fb.presupuestoMin) : null,
+          presupuestoMax: fb.presupuestoMax > 0 ? String(fb.presupuestoMax) : null,
           areaMin: detAreaMin,
-          habitacionesMin: detBeds,
-          banosMin: null,
-          parqueaderosMin: null,
+          habitacionesMin: fb.bedroomsMin > 0 ? fb.bedroomsMin : null,
+          banosMin: fb.bathrooms > 0 ? fb.bathrooms : null,
+          parqueaderosMin: fb.garages > 0 ? fb.garages : null,
+          adminFeeMax: fb.adminFee > 0 ? String(fb.adminFee) : null,
           estratoDeseado: null,
+          amobladoDeseado: fb.isAmoblado || false,
+          otrasEspecificaciones: null,
         };
 
         try {
@@ -2112,39 +2271,14 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\n
           const cleaned = typeof textContent === 'string' ? textContent.replace(/```json\n?|\n?```/g, '').trim() : "{}";
           const aiParsed = JSON.parse(cleaned);
           parsed = { ...parsed, ...aiParsed };
+          if (!parsed.departamento && parsed.ciudadDeseada) {
+            parsed.departamento = findDepartmentForCity(parsed.ciudadDeseada) || null;
+          }
         } catch (aiErr: any) {
           console.warn("[parseRequirementText] Gemini en 429 o timeout, usando extracción determinista:", aiErr.message);
         }
 
-        // Auditoría de datos faltantes para cotejo
-        const missingFields: string[] = [];
-        if (!parsed.presupuestoMax || String(parsed.presupuestoMax).trim() === '' || Number(parsed.presupuestoMax) === 0) {
-          missingFields.push('Presupuesto Máximo');
-        }
-        if (!parsed.addressNeighborhood && !parsed.zonaDeseada) {
-          missingFields.push('Barrio o Sector de Interés');
-        }
-        if (!parsed.tipoInmuebleDeseado) {
-          missingFields.push('Tipo de Inmueble');
-        }
-        if (!parsed.tipoNegocioDeseado) {
-          missingFields.push('Tipo de Negocio (Venta/Arriendo)');
-        }
-        if (!parsed.areaMin || String(parsed.areaMin).trim() === '' || Number(parsed.areaMin) === 0) {
-          missingFields.push('Área Mínima (m²)');
-        }
-        if (!parsed.estratoDeseado || (Array.isArray(parsed.estratoDeseado) && parsed.estratoDeseado.length === 0)) {
-          missingFields.push('Estrato Socioeconómico');
-        }
-        if (parsed.habitacionesMin === undefined || parsed.habitacionesMin === null) {
-          missingFields.push('Mínimo de Habitaciones');
-        }
-        if (parsed.banosMin === undefined || parsed.banosMin === null) {
-          missingFields.push('Mínimo de Baños');
-        }
-        if (parsed.parqueaderosMin === undefined || parsed.parqueaderosMin === null) {
-          missingFields.push('Parqueaderos Requeridos');
-        }
+        const missingFields = auditMissingRequirementFields(parsed);
 
         return {
           extracted: parsed,
@@ -2170,15 +2304,18 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\n
         const uploadResult = await storagePut(filename, cleanBase64, input.mimeType);
 
         const prompt = `Actúa como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES.
-Analiza detenidamente esta imagen (flyer, afiche publicitario o captura de WhatsApp de un requerimiento o demanda inmobiliaria).
+Analiza detenidamente esta imagen (flyer, afiche publicitario o captura de WhatsApp de un requerimiento o demanda inmobiliaria en cualquier ciudad de Colombia).
 1. Transcribe íntegramente todo el texto visible de la imagen en el campo "rawText".
 2. Extrae y estructura los siguientes datos clave en formato JSON:
-- name: Título breve y claro de la búsqueda (ej: "Apto arriendo Chicó 2 habs")
-- tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio"
+- name: Título breve y claro de la búsqueda (ej: "Apto arriendo Chicó 2 habs" o "Lote en Rionegro 2000 m²")
+- tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio" | "cabin"
 - tipoNegocioDeseado: "venta" | "arriendo" | "venta_o_arriendo" | "arriendo_temporal" | "arriendo_con_opcion_de_compra" | "permuta" | "venta_permuta" | "aporte"
-- ciudadDeseada: Nombre de la ciudad (por defecto "Bogotá" si no se especifica)
-- addressNeighborhood: Barrio específico o sectores mencionados
+- departamento: Departamento de Colombia o null
+- ciudadDeseada: Nombre de la ciudad o municipio exacto de Colombia
+- addressLocality: Localidad, Comuna o Corregimiento si aparece
+- addressNeighborhood: Barrio, Vereda o sectores mencionados
 - zonaDeseada: Sector o zona general
+- vereda: Nombre de vereda o corregimiento si es rural/suburbano
 - presupuestoMin: valor numérico string sin puntos ni símbolos o null
 - presupuestoMax: valor numérico string sin puntos ni símbolos (ej: "450000000" para compra, o "3500000" para arriendo) o null
 - areaMin: metros cuadrados mínimos en número string (ej: "80") o null
@@ -2188,6 +2325,7 @@ Analiza detenidamente esta imagen (flyer, afiche publicitario o captura de Whats
 - adminFeeMax: cuota de administración máxima en número string o null
 - estratoDeseado: array de números enteros (ej: [4, 5]) o null
 - amobladoDeseado: boolean o null
+- otrasEspecificaciones: otras exigencias específicas (uso de suelo, forma de pago, ascensor, habilitación salud, etc.) o null
 - caracteristicasDeseadas: array de strings con comodidades o condiciones clave
 - nombreUsuarioWhatsapp: Nombre del contacto/agente si aparece en el flyer
 - idUsuarioWhatsapp: Teléfono o WhatsApp de contacto si aparece en el flyer (solo números)
@@ -2203,35 +2341,11 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
         const textContent = response.choices?.[0]?.message?.content;
         const cleaned = typeof textContent === 'string' ? textContent.replace(/```json\n?|\n?```/g, '').trim() : "{}";
         const parsed = JSON.parse(cleaned);
+        if (!parsed.departamento && parsed.ciudadDeseada) {
+          parsed.departamento = findDepartmentForCity(parsed.ciudadDeseada) || null;
+        }
 
-        const missingFields: string[] = [];
-        if (!parsed.presupuestoMax || String(parsed.presupuestoMax).trim() === '' || Number(parsed.presupuestoMax) === 0) {
-          missingFields.push('Presupuesto Máximo');
-        }
-        if (!parsed.addressNeighborhood && !parsed.zonaDeseada) {
-          missingFields.push('Barrio o Sector de Interés');
-        }
-        if (!parsed.tipoInmuebleDeseado) {
-          missingFields.push('Tipo de Inmueble');
-        }
-        if (!parsed.tipoNegocioDeseado) {
-          missingFields.push('Tipo de Negocio (Venta/Arriendo)');
-        }
-        if (!parsed.areaMin || String(parsed.areaMin).trim() === '' || Number(parsed.areaMin) === 0) {
-          missingFields.push('Área Mínima (m²)');
-        }
-        if (!parsed.estratoDeseado || (Array.isArray(parsed.estratoDeseado) && parsed.estratoDeseado.length === 0)) {
-          missingFields.push('Estrato Socioeconómico');
-        }
-        if (parsed.habitacionesMin === undefined || parsed.habitacionesMin === null) {
-          missingFields.push('Mínimo de Habitaciones');
-        }
-        if (parsed.banosMin === undefined || parsed.banosMin === null) {
-          missingFields.push('Mínimo de Baños');
-        }
-        if (parsed.parqueaderosMin === undefined || parsed.parqueaderosMin === null) {
-          missingFields.push('Parqueaderos Requeridos');
-        }
+        const missingFields = auditMissingRequirementFields(parsed);
 
         return {
           extracted: parsed,
@@ -2244,21 +2358,25 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
       }
     }),
 
-  // Crear Requerimiento (Demanda) directamente en Base de Datos
+  // Crear Requerimiento (Demanda) directamente en Base de Datos y ejecutar matching inmediato
   createRequirement: publicProcedure
     .input(z.object({
       name: z.string().min(2),
       tipoInmuebleDeseado: z.enum([
         "apartment", "house", "building", "warehouse", "farm", "hotel", 
-        "office", "land", "commercial", "loft", "consultorio"
+        "office", "land", "commercial", "loft", "consultorio", "cabin"
       ]).default("apartment"),
       tipoNegocioDeseado: z.enum([
         "venta", "arriendo", "venta_o_arriendo", "arriendo_temporal", 
         "arriendo_con_opcion_de_compra", "permuta", "venta_permuta", "aporte"
       ]).default("arriendo"),
-      ciudadDeseada: z.string().default("Bogotá"),
+      departamento: z.string().optional().nullable(),
+      ciudadDeseada: z.string().default("Bogotá, D.C."),
+      addressCity: z.string().optional().nullable(),
+      addressLocality: z.string().optional().nullable(),
       addressNeighborhood: z.string().optional().nullable(),
       zonaDeseada: z.string().optional().nullable(),
+      vereda: z.string().optional().nullable(),
       presupuestoMin: z.string().optional().nullable(),
       presupuestoMax: z.string().optional().nullable(),
       areaMin: z.string().optional().nullable(),
@@ -2268,6 +2386,7 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
       adminFeeMax: z.string().optional().nullable(),
       estratoDeseado: z.any().optional().nullable(),
       amobladoDeseado: z.boolean().optional().nullable(),
+      otrasEspecificaciones: z.string().optional().nullable(),
       caracteristicasDeseadas: z.any().optional().nullable(),
       rawText: z.string().optional().nullable(),
       enlaceOrigen: z.string().optional().nullable(),
@@ -2278,14 +2397,53 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
       const db = await getDb();
       if (!db) throw new Error("Base de datos no disponible");
 
+      const effectiveCity = (input.addressCity || input.ciudadDeseada || "Bogotá, D.C.").trim();
+      const effectiveNeighborhood = (input.addressNeighborhood || input.vereda || input.zonaDeseada || "").trim() || null;
+      const effectiveZone = (input.zonaDeseada || input.addressNeighborhood || input.vereda || "").trim() || null;
+
+      const mergedFeatures = {
+        ...(typeof input.caracteristicasDeseadas === "object" && !Array.isArray(input.caracteristicasDeseadas) && input.caracteristicasDeseadas
+          ? input.caracteristicasDeseadas
+          : Array.isArray(input.caracteristicasDeseadas)
+            ? { amenitiesList: input.caracteristicasDeseadas }
+            : {}),
+        departamento: input.departamento || findDepartmentForCity(effectiveCity) || null,
+        vereda: input.vereda || null,
+        otrasEspecificaciones: input.otrasEspecificaciones || null,
+      };
+
+      // Construir rawText enriquecido para que explicarMatch evalúe especificaciones, vereda, localidad, uso de suelo y extras
+      const summaryParts = [
+        input.rawText?.trim() || "",
+        `${input.name} (${input.tipoInmuebleDeseado} en ${input.tipoNegocioDeseado})`,
+        `Ubicación: ${[effectiveNeighborhood, input.addressLocality, effectiveCity, mergedFeatures.departamento].filter(Boolean).join(", ")}`,
+        input.areaMin ? `Área mínima: ${input.areaMin} m2` : "",
+        input.presupuestoMax ? `Presupuesto máximo: $${Number(input.presupuestoMax).toLocaleString("es-CO")}` : "",
+        input.habitacionesMin ? `${input.habitacionesMin} habitaciones` : "",
+        input.banosMin ? `${input.banosMin} baños` : "",
+        input.parqueaderosMin ? `${input.parqueaderosMin} parqueaderos` : "",
+        input.otrasEspecificaciones ? `Especificaciones adicionales: ${input.otrasEspecificaciones}` : "",
+      ].filter(Boolean);
+      const consolidatedRawText = summaryParts.join("\n");
+
+      const { label: calificacion } = calcularCalificacionCompletitud({
+        ...input,
+        ciudadDeseada: effectiveCity,
+        zonaDeseada: effectiveZone,
+        addressNeighborhood: effectiveNeighborhood,
+        idUsuarioWhatsapp: input.idUsuarioWhatsapp || "573192919978",
+      }, false);
+
       const inserted = await db.insert(requirements).values({
         userId: ctx?.user?.id ?? 1,
         name: input.name,
         tipoInmuebleDeseado: input.tipoInmuebleDeseado as any,
         tipoNegocioDeseado: input.tipoNegocioDeseado as any,
-        ciudadDeseada: input.ciudadDeseada,
-        addressNeighborhood: input.addressNeighborhood,
-        zonaDeseada: input.zonaDeseada || input.addressNeighborhood,
+        ciudadDeseada: effectiveCity,
+        addressCity: effectiveCity,
+        addressLocality: input.addressLocality || null,
+        addressNeighborhood: effectiveNeighborhood,
+        zonaDeseada: effectiveZone,
         presupuestoMin: input.presupuestoMin ? String(input.presupuestoMin) : null,
         presupuestoMax: input.presupuestoMax ? String(input.presupuestoMax) : null,
         areaMin: input.areaMin ? String(input.areaMin) : null,
@@ -2295,18 +2453,25 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
         adminFeeMax: input.adminFeeMax ? String(input.adminFeeMax) : null,
         estratoDeseado: input.estratoDeseado,
         amobladoDeseado: input.amobladoDeseado,
-        caracteristicasDeseadas: input.caracteristicasDeseadas,
-        rawText: input.rawText,
+        caracteristicasDeseadas: mergedFeatures,
+        rawText: consolidatedRawText,
         enlaceOrigen: input.enlaceOrigen,
         nombreUsuarioWhatsapp: input.nombreUsuarioWhatsapp || ctx?.user?.name || "Asesor Vecy",
         idUsuarioWhatsapp: input.idUsuarioWhatsapp || "573192919978",
         origenTipo: "web_admin_unified",
         origenNombre: "Centro de Publicación Vecy",
+        calificacion,
         status: "active",
       }).returning();
 
       invalidateRequirementsCache();
-      return inserted[0];
+      const created = inserted[0];
+      if (created?.id) {
+        findMatchesForRequirement(created.id).catch((err) =>
+          console.warn("[createRequirement] Error calculando matches en background:", err?.message || err)
+        );
+      }
+      return created;
     }),
 
   /**

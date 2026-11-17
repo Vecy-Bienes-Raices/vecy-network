@@ -213,7 +213,7 @@ export function evaluateRequirementCompleteness(dataOrText: {
 
   // 2. Tipología de inmueble
   const propType = (data.propertyType || '').toLowerCase().trim();
-  const textHasPropType = /\b(apartamento|apto|casa|bodega|oficina|lote|consultorio|local|edificio)\b/i.test(text);
+  const textHasPropType = /\b(apartamento|apto|casa|bodega|oficina|lote|terreno|predio|consultorio|local|edificio|finca|hotel|hostal|cabaña|cabana|loft|apartaestudio|villa)\b/i.test(text);
   const hasValidPropType = (propType && !['inmueble', 'na', 'otro', ''].includes(propType)) || textHasPropType;
   if (!hasValidPropType) {
     missing.push('Tipología de inmueble (apartamento, casa, bodega, etc.)');
@@ -229,10 +229,10 @@ export function evaluateRequirementCompleteness(dataOrText: {
     }
   }
 
-  // 4. Zonas difusas
+  // 4. Zonas difusas (Cobertura nacional: todo Bogotá y toda Colombia)
   const zone = (data.zone || '').trim();
-  const isGenericZone = !zone || zone.toLowerCase() === 'na' || /^(bogota|bogotá|colombia|medellin|medellín|cali|barranquilla|norte|sur|oriente|occidente|centro|ciudad|varios)$/i.test(zone);
-  const textHasZone = /\b(chico|rosales|cedritos|chapinero|salitre|santa barbara|usaquen|teusaquillo|suba|poblado|laureles|envigado)\b/i.test(text);
+  const isGenericZone = !zone || zone.toLowerCase() === 'na' || /^(bogota|bogotá|bogota, d\.c\.|colombia|medellin|medellín|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|armenia|santa marta|villavicencio|ibague|ibagué|cucuta|cúcuta|norte|sur|oriente|occidente|centro|ciudad|varios)$/i.test(zone);
+  const textHasZone = /\b(chico|rosales|cedritos|chapinero|salitre|santa barbara|usaquen|teusaquillo|suba|kennedy|bosa|engativa|fontibon|puente aranda|restrepo|venecia|castilla|tintal|modelia|hayuelos|candelaria|macarena|poblado|laureles|envigado|sabaneta|pance|ciudad jardin|bocagrande|cabecera|cañaveral|canaveral|alto prado|riomar|cerritos|rodadero|vereda|corregimiento|localidad|comuna)\b/i.test(text);
   if (isGenericZone && !textHasZone) {
     missing.push('Zonas específicas o barrios');
   }
