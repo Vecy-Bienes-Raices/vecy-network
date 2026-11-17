@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.21";
+    VECY_VERSION = "v34.23";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -25452,6 +25452,26 @@ var init_founderKnowledgeService = __esm({
         rawText: "Asegurar que todas las Skills de JanIA est\xE9n activas y conectadas en DM, Grupos y Web, recuerde nombres simples o compuestos y g\xE9nero, domine Pacto de Retroventa, Leasing vs Hipotecario, m\xB2 comercial y fanegadas/hect\xE1reas rurales en toda Colombia, y ense\xF1e paso a paso VECY vs Dinosaurios Inmobiliarios, 40/20/40, registro, MATCH y publicaci\xF3n.",
         createdAt: "2026-11-13T23:55:00.000Z",
         active: true
+      },
+      {
+        id: "seed-adres-eps-regimen-resiliencia-integridad-v34-22",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "573192919978@s.whatsapp.net",
+        topic: "Verificaci\xF3n ADRES (BDUA) \u2014 Entrega Ineludible de EPS y R\xE9gimen Contributivo/Subsidiado + Resiliencia 3 Capas (v34.22)",
+        directive: "En toda verificaci\xF3n de documentos de identidad (C.C., C.E., T.I., Pasaporte, PEP, PPT) \u2014ya sea individual, multipersona (consolidada), desde cach\xE9 enriquecida, desde OCR de imagen/PDF o sintetizada conversacionalmente en DM/Grupos/Web\u2014 es MANDATORIO informar con exactitud tanto la EPS limpia (ej. Sanitas EPS, Capital Salud EPS-S, Nueva EPS, Sura EPS, Famisanar EPS) como el R\xE9gimen oficial en ADRES (CONTRIBUTIVO, SUBSIDIADO, ESPECIAL o EXCEPCI\xD3N) y el Estado de afiliaci\xF3n. Queda prohibido inventar o asumir 'CONTRIBUTIVO' si falta el dato en ADRES o envenenar el cach\xE9 ADRES con entradas vac\xEDas cuando ocurra una intermitencia estatal.",
+        rawText: "Corregir y blindar al 100% el skill de verificaci\xF3n de documentos para garantizar siempre la obtenci\xF3n y entrega expl\xEDcita de la EPS y el r\xE9gimen (Contributivo / Subsidiado) desde ADRES (BDUA), incluyendo parser estructural HTML, cach\xE9 resiliente y fallback cl\xE1sico con RadCaptcha.",
+        createdAt: "2026-11-15T14:40:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-coherencia-confirmacion-documento-y-satisfaccion-anti-falso-si-v34-23",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "573192919978@s.whatsapp.net",
+        topic: "Coherencia Conversacional \u2014 Confirmaci\xF3n de C\xE9dula/CHIP Suelto y Blindaje Anti-Secuestro de 'S\xED' hacia Google Reviews (v34.23)",
+        directive: "Un 'S\xED', 'Claro', 'Ok' o 'Perfecto' del usuario JAM\xC1S puede activar el env\xEDo de Google Reviews salvo cuando JanIA haya formulado expresamente una pregunta de satisfacci\xF3n tras entregar un servicio completado y sin confirmaciones pendientes. Asimismo, cuando un usuario env\xEDe una c\xE9dula o c\xF3digo CHIP suelto en DM, JanIA guarda de forma determin\xEDstica el documento pendiente sin mezclar men\xFAs de roles numerados y ejecuta la verificaci\xF3n oficial de inmediato en el siguiente turno ante 'S\xED', 'CC', '1' o 'antecedentes'.",
+        rawText: "Corregir incoherencia reportada con Jeimy Bohorquez (1127581637 -> 'Si'): evitar que 'Si' dispare falsamente la invitaci\xF3n de Google Reviews cuando JanIA pregunt\xF3 si deseaba consultar ADRES/antecedentes, y manejar determin\xEDsticamente documentos sueltos y confirmaciones en producci\xF3n y tests.",
+        createdAt: "2026-11-16T19:20:00.000Z",
+        active: true
       }
     ];
   }
@@ -25716,6 +25736,7 @@ __export(politenessService_exports, {
   formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
   formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
   isAffirmativeConsentResponse: () => isAffirmativeConsentResponse,
+  isAssistantAskingSatisfaction: () => isAssistantAskingSatisfaction,
   isCompanyInquiryOrAboutUs: () => isCompanyInquiryOrAboutUs,
   isExplicitReviewLinkRequest: () => isExplicitReviewLinkRequest,
   isNegativeConsentResponse: () => isNegativeConsentResponse,
@@ -25886,13 +25907,20 @@ function isExplicitReviewLinkRequest(text2) {
   );
   return asksLinkOrWhere;
 }
-function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = false) {
+function isAssistantAskingSatisfaction(assistantText) {
+  const clean = (assistantText || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!clean) return false;
+  return /(?:quedaste\s+satisfech[oa]|qu[eé]\s+tal\s+te\s+pareci[oó]|como\s+te\s+pareci[oó]|te\s+(?:gust[oó]|sirvi[oó]|fue\s+[uú]til)|me\s+encantaria\s+saber\s+tu\s+opinion|tu\s+opinion\s+me\s+ayuda|calificarnos|dejarnos\s+tu\s+opinion)/i.test(
+    clean
+  );
+}
+function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = false, options) {
   const raw = (text2 || "").trim();
   const normalized = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (!normalized || normalized.length > 450) {
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
   }
-  const looksLikeNewToolDataRequest = /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
+  const looksLikeNewToolDataRequest = /\b\d{5,15}\b/.test(normalized) || /\bAAA[A-Z0-9]{6,14}\b/i.test(raw) || /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
     normalized
   ) || /\b(?:revisa|analiza|evalua|consulta|calcula|hazme|quiero|necesito|dime)\b.{0,45}\b(?:pot|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|prefactibilidad|constructibilidad|edificabilidad)\b/.test(
     normalized
@@ -25920,7 +25948,10 @@ function isUserSatisfactionOrFeedbackReply(text2, hasRecentServiceContext = fals
       constructiveTopic = "precisi\xF3n t\xE9cnica";
     }
   }
-  const isSatisfied = isPositive || hasRecentServiceContext && (hasConstructive || /^(?:si|claro|totalmente|100%|perfecto|ok|s[ií],?\s+muchas\s+gracias)[!.\s]*$/i.test(normalized));
+  const isBareAffirmative = /^(?:si|claro|totalmente|100%|perfecto|ok|dale|de\s+acuerdo|s[ií],?\s+muchas\s+gracias)[!.\s]*$/i.test(
+    normalized
+  );
+  const isSatisfied = isPositive || hasRecentServiceContext && hasConstructive || Boolean(options?.isSatisfactionPromptActive) && isBareAffirmative;
   return {
     isSatisfied,
     hasConstructiveSuggestion: hasConstructive,
@@ -31446,8 +31477,10 @@ __export(identityVerificationService_exports, {
   isExplicitCompanyRuesQuery: () => isExplicitCompanyRuesQuery,
   mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
+  normalizeAdresRegimen: () => normalizeAdresRegimen,
   parseAdresHtml: () => parseAdresHtml,
   queryAdres: () => queryAdres,
+  queryAdresViaClassicCaptcha: () => queryAdresViaClassicCaptcha,
   queryAdresViaPuppeteer: () => queryAdresViaPuppeteer,
   queryContraloria: () => queryContraloria,
   queryEmpresaOrNit: () => queryEmpresaOrNit,
@@ -31762,6 +31795,18 @@ function mapTipoDocToAdres(tipoDoc) {
   if (t2 === "ppt") return "PT";
   return null;
 }
+function normalizeAdresRegimen(rawRegimen) {
+  if (!rawRegimen || !rawRegimen.trim()) return void 0;
+  let clean = decodeHtmlEntities(rawRegimen).replace(/\s+/g, " ").trim().toUpperCase();
+  clean = clean.replace(/^R[EÉ]GIMEN\s+/i, "").trim();
+  if (!clean) return void 0;
+  if (clean.includes("CONTRIBUTIV")) return "CONTRIBUTIVO";
+  if (clean.includes("SUBSIDIAD")) return "SUBSIDIADO";
+  if (clean.includes("EXCEPCI")) return "EXCEPCI\xD3N";
+  if (clean.includes("ESPECIAL")) return "ESPECIAL";
+  if (clean.includes("MOVILIDAD")) return "MOVILIDAD";
+  return clean;
+}
 function formatCleanEpsName(rawEps) {
   if (!rawEps || !rawEps.trim()) return "";
   let clean = rawEps.replace(/&#201;/g, "\xC9").replace(/&#225;/g, "\xE1").replace(/&#233;/g, "\xE9").replace(/&#237;/g, "\xED").replace(/&#243;/g, "\xF3").replace(/&#250;/g, "\xFA").replace(/&#241;/g, "\xF1").replace(/&#209;/g, "\xD1").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -31769,13 +31814,13 @@ function formatCleanEpsName(rawEps) {
   if (quoteMatch && quoteMatch[1] && quoteMatch[1].trim().length > 3) {
     clean = quoteMatch[1].trim();
   }
-  const upper = clean.toUpperCase();
+  const upper = clean.toUpperCase().replace(/\bE\.?\s*P\.?\s*S\.?\b/g, "EPS");
   if (upper.includes("CAPITAL SALUD")) return "Capital Salud EPS-S";
   if (upper.includes("SANITAS")) return "Sanitas EPS";
   if (upper.includes("NUEVA EPS")) return "Nueva EPS";
   if (upper.includes("COMPENSAR")) return "Compensar EPS";
   if (upper.includes("SALUD TOTAL")) return "Salud Total EPS";
-  if (upper.includes("SURAMERICANA") || upper.includes("EPS SURA") || upper.includes("SURA")) return "Sura EPS";
+  if (upper.includes("SURAMERICANA") || upper.includes("EPS SURA") || /\bSURA\b/.test(upper)) return "Sura EPS";
   if (upper.includes("FAMISANAR")) return "Famisanar EPS";
   if (upper.includes("SAVIA SALUD")) return "Savia Salud EPS";
   if (upper.includes("COOSALUD")) return "Coosalud EPS";
@@ -31783,6 +31828,16 @@ function formatCleanEpsName(rawEps) {
   if (upper.includes("ASMET SALUD")) return "Asmet Salud EPS";
   if (upper.includes("EMSSANAR")) return "Emssanar EPS";
   if (upper.includes("ALIANSALUD") || upper.includes("COLMEDICA")) return "Aliansalud EPS";
+  if (upper.includes("SALUD MIA")) return "Salud M\xEDa EPS";
+  if (upper.includes("CAJACOPI")) return "Cajacopi EPS";
+  if (upper.includes("COMFAORIENTE")) return "Comfaoriente EPS";
+  if (upper.includes("COMFENALCO")) return "Comfenalco Valle EPS";
+  if (upper.includes("CAPRESOCA")) return "Capresoca EPS";
+  if (upper.includes("ECOOPSOS")) return "Ecoopsos EPS-S";
+  if (upper.includes("CONVIDA")) return "Convida EPS";
+  if (upper.includes("MEDIMAS") || upper.includes("MEDIM\xC1S")) return "Medim\xE1s EPS";
+  if (upper.includes("COOMEVA")) return "Coomeva EPS";
+  if (upper.includes("CAFESALUD")) return "Cafesalud EPS";
   if (upper.includes("SOS") || upper.includes("SERVICIO OCCIDENTAL")) return "S.O.S. EPS";
   if (upper.includes("MALLAMAS")) return "Mallamas EPS-I";
   if (upper.includes("PIJAOS")) return "Pijaos Salud EPS-I";
@@ -31817,17 +31872,19 @@ async function queryAdres(tipoDoc, numDoc) {
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
   const cached = identityCache.get(cacheKey) || identityCache.get(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL2) {
-    const isGenericEps = Boolean(cached.eps && (cached.eps.toLowerCase().includes("registrado y activo") || cached.eps.toLowerCase().includes("aseguramiento en salud")));
-    if (isGenericEps && process.env.NODE_ENV !== "test") {
+    const isGenericOrIncompleteEps = Boolean(
+      !cached.eps || !cached.regimen || cached.eps.toLowerCase().includes("registrado y activo") || cached.eps.toLowerCase().includes("aseguramiento en salud")
+    );
+    if (isGenericOrIncompleteEps && process.env.NODE_ENV !== "test") {
       identityCache.delete(cacheKey);
       identityCache.delete(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
-    } else {
+    } else if (cached.eps) {
       return {
         success: true,
         officialName: cached.fullName,
         eps: cached.eps,
         estado: cached.estado,
-        regimen: cached.regimen,
+        regimen: normalizeAdresRegimen(cached.regimen) || cached.regimen,
         documentType: mappedTipo,
         documentNumber: cleanNum,
         source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Cach\xE9)"
@@ -31901,6 +31958,9 @@ async function queryAdres(tipoDoc, numDoc) {
         break;
       }
       const postDataObj = {
+        RadScriptManager1_TSM: "",
+        __EVENTTARGET: "",
+        __EVENTARGUMENT: "",
         __VIEWSTATE: vs,
         __VIEWSTATEGENERATOR: vsg,
         __EVENTVALIDATION: ev,
@@ -31932,7 +31992,7 @@ async function queryAdres(tipoDoc, numDoc) {
         path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
         method: "POST",
         headers: postHeaders,
-        timeout: 6e3
+        timeout: 9e3
       }, postData);
       addCookies(r2.headers["set-cookie"]);
       const allCookies = Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
@@ -31952,25 +32012,27 @@ async function queryAdres(tipoDoc, numDoc) {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
           },
-          timeout: 6e3
+          timeout: 9e3
         });
-        if (r3.statusCode === 200 && !r3.body.includes("Error de servidor")) {
+        if (r3.statusCode === 200 && !r3.body.includes("Error de servidor") && !r3.body.includes("NullReferenceException")) {
           const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
-          if (parsed.success) {
-            identityCache.set(cacheKey, {
-              fullName: parsed.officialName || "",
-              eps: parsed.eps,
-              estado: parsed.estado,
-              regimen: parsed.regimen,
-              timestamp: Date.now()
-            });
-            identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
-              fullName: parsed.officialName || "",
-              eps: parsed.eps,
-              estado: parsed.estado,
-              regimen: parsed.regimen,
-              timestamp: Date.now()
-            });
+          if (parsed.success && (parsed.eps || parsed.regimen || parsed.officialName)) {
+            if (parsed.eps || parsed.regimen) {
+              identityCache.set(cacheKey, {
+                fullName: parsed.officialName || "",
+                eps: parsed.eps,
+                estado: parsed.estado,
+                regimen: parsed.regimen,
+                timestamp: Date.now()
+              });
+              identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+                fullName: parsed.officialName || "",
+                eps: parsed.eps,
+                estado: parsed.estado,
+                regimen: parsed.regimen,
+                timestamp: Date.now()
+              });
+            }
             return parsed;
           }
         }
@@ -31996,13 +32058,56 @@ async function queryAdres(tipoDoc, numDoc) {
   try {
     const puppeteerResult = await queryAdresViaPuppeteer(mappedTipo, cleanNum);
     if (puppeteerResult && puppeteerResult.success) {
+      if (puppeteerResult.eps || puppeteerResult.regimen) {
+        identityCache.set(cacheKey, {
+          fullName: puppeteerResult.officialName || "",
+          eps: puppeteerResult.eps,
+          estado: puppeteerResult.estado,
+          regimen: puppeteerResult.regimen,
+          timestamp: Date.now()
+        });
+        identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+          fullName: puppeteerResult.officialName || "",
+          eps: puppeteerResult.eps,
+          estado: puppeteerResult.estado,
+          regimen: puppeteerResult.regimen,
+          timestamp: Date.now()
+        });
+      }
       return puppeteerResult;
     }
-    if (puppeteerResult && puppeteerResult.error && !puppeteerResult.error.includes("Error en navegaci\xF3n")) {
+    if (puppeteerResult && puppeteerResult.isExplicitlyNotFound) {
       return puppeteerResult;
     }
   } catch (puppetErr) {
     console.warn("[queryAdres] Fallback Puppeteer advertencia:", puppetErr?.message || puppetErr);
+  }
+  try {
+    const classicResult = await queryAdresViaClassicCaptcha(mappedTipo, cleanNum);
+    if (classicResult && classicResult.success) {
+      if (classicResult.eps || classicResult.regimen) {
+        identityCache.set(cacheKey, {
+          fullName: classicResult.officialName || "",
+          eps: classicResult.eps,
+          estado: classicResult.estado,
+          regimen: classicResult.regimen,
+          timestamp: Date.now()
+        });
+        identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+          fullName: classicResult.officialName || "",
+          eps: classicResult.eps,
+          estado: classicResult.estado,
+          regimen: classicResult.regimen,
+          timestamp: Date.now()
+        });
+      }
+      return classicResult;
+    }
+    if (classicResult && classicResult.isExplicitlyNotFound) {
+      return classicResult;
+    }
+  } catch (classicErr) {
+    console.warn("[queryAdres] Fallback Cl\xE1sico RadCaptcha advertencia:", classicErr?.message || classicErr);
   }
   return {
     success: false,
@@ -32021,28 +32126,94 @@ function decodeHtmlEntities(str) {
     }
   });
 }
+function extractHtmlTableRows(html) {
+  const rows = [];
+  const trMatches = html.match(/<tr[\s\S]*?<\/tr>/gi) || [];
+  for (const tr of trMatches) {
+    const cells = [];
+    const cellRegex = /<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>/gi;
+    let m;
+    while ((m = cellRegex.exec(tr)) !== null) {
+      const cleaned = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+      cells.push(cleaned);
+    }
+    if (cells.length > 0) rows.push(cells);
+  }
+  return rows;
+}
 function parseAdresHtml(body, mappedTipo, cleanNum) {
-  const lines = (body || "").replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
-  const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
-  const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
-  const nombres = decodeHtmlEntities(nombresIdx !== -1 ? lines[nombresIdx + 1] : "");
-  const apellidos = decodeHtmlEntities(apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "");
-  const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
-  const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
-  const departamento = decodeHtmlEntities(depIdx !== -1 ? lines[depIdx + 1] : "");
-  const municipio = decodeHtmlEntities(munIdx !== -1 ? lines[munIdx + 1] : "");
-  const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
+  let nombres = "";
+  let apellidos = "";
+  let departamento = "";
+  let municipio = "";
   let estado = "";
   let eps = "";
   let regimen = "";
-  if (estadoIdx !== -1) {
+  const tableRows = extractHtmlTableRows(body || "");
+  for (const row of tableRows) {
+    if (row.length === 2) {
+      const key = row[0].toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const val = row[1];
+      if (!nombres && key === "NOMBRES") nombres = val;
+      else if (!apellidos && key === "APELLIDOS") apellidos = val;
+      else if (!departamento && key === "DEPARTAMENTO") departamento = val;
+      else if (!municipio && key === "MUNICIPIO") municipio = val;
+    }
+  }
+  for (let i = 0; i < tableRows.length - 1; i++) {
+    const headers = tableRows[i].map((h) => h.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+    const estCol = headers.findIndex((h) => h === "ESTADO" || h.includes("ESTADO DE AFILIACION") || h === "ESTADO");
+    const entCol = headers.findIndex((h) => h === "ENTIDAD" || h.includes("ENTIDAD PROMOTORA") || h.includes("ADMINISTRADORA") || h === "EPS");
+    const regCol = headers.findIndex((h) => h === "REGIMEN" || h.includes("REGIMEN"));
+    if (entCol !== -1 && (estCol !== -1 || regCol !== -1)) {
+      const candidateRows = [];
+      for (let r = i + 1; r < tableRows.length; r++) {
+        const dataRow = tableRows[r];
+        const rowUpperJoined = dataRow.join(" ").toUpperCase();
+        if (rowUpperJoined.includes("FECHA DE IMPRES") || rowUpperJoined.includes("ESTACI")) break;
+        if (dataRow.length <= Math.max(estCol, entCol, regCol)) continue;
+        const estVal = estCol !== -1 ? (dataRow[estCol] || "").trim() : "";
+        const entVal = entCol !== -1 ? (dataRow[entCol] || "").trim() : "";
+        const regVal = regCol !== -1 ? (dataRow[regCol] || "").trim() : "";
+        if (entVal || estVal || regVal) {
+          candidateRows.push({ est: estVal, ent: entVal, reg: regVal });
+        }
+      }
+      if (candidateRows.length > 0) {
+        const preferred = candidateRows.find((c) => /\b(?:ACTIVO|PROTECCI[OÓ]N|VIGENTE)\b/i.test(c.est)) || candidateRows[0];
+        if (!estado && preferred.est) estado = preferred.est;
+        if (!eps && preferred.ent) eps = preferred.ent;
+        if (!regimen && preferred.reg) regimen = preferred.reg;
+      }
+      if (eps || regimen) break;
+    }
+  }
+  const lines = (body || "").replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!nombres) {
+    const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
+    if (nombresIdx !== -1) nombres = decodeHtmlEntities(lines[nombresIdx + 1] || "");
+  }
+  if (!apellidos) {
+    const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
+    if (apellidosIdx !== -1) apellidos = decodeHtmlEntities(lines[apellidosIdx + 1] || "");
+  }
+  if (!departamento) {
+    const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
+    if (depIdx !== -1) departamento = decodeHtmlEntities(lines[depIdx + 1] || "");
+  }
+  if (!municipio) {
+    const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
+    if (munIdx !== -1) municipio = decodeHtmlEntities(lines[munIdx + 1] || "");
+  }
+  const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
+  if ((!estado || !eps || !regimen) && estadoIdx !== -1) {
     const offset = 6;
-    estado = decodeHtmlEntities(lines[estadoIdx + offset] || "");
-    eps = decodeHtmlEntities(lines[estadoIdx + offset + 1] || "");
-    regimen = decodeHtmlEntities(lines[estadoIdx + offset + 2] || "");
+    if (!estado) estado = decodeHtmlEntities(lines[estadoIdx + offset] || "");
+    if (!eps) eps = decodeHtmlEntities(lines[estadoIdx + offset + 1] || "");
+    if (!regimen) regimen = decodeHtmlEntities(lines[estadoIdx + offset + 2] || "");
   }
   if (!regimen) {
-    const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
+    const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N|MOVILIDAD)\b/i);
     if (regMatch) {
       regimen = regMatch[1].toUpperCase();
     }
@@ -32063,7 +32234,7 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
     }
   }
   if (!eps || eps.length < 3) {
-    const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+    const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA\s*E\.?P\.?S\.?|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|CAJACOPI|COMFAORIENTE|COMFENALCO|SALUD M[IÍ]A|CAPRESOCA|ECOOPSOS|CONVIDA|MEDIM[AÁ]S|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
     const directMatch = body.match(epsRegex);
     if (directMatch) {
       eps = directMatch[0];
@@ -32075,14 +32246,18 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
   }
   const officialName = formatTitleCase(fullNameRaw);
   const cleanEps = formatCleanEpsName(eps);
+  const normalizedRegimen = normalizeAdresRegimen(regimen);
+  const normalizedEstado = estado ? decodeHtmlEntities(estado).toUpperCase().trim() : void 0;
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
-  identityCache.set(cacheKey, {
-    fullName: officialName,
-    eps: cleanEps || void 0,
-    estado: estado ? estado.toUpperCase() : void 0,
-    regimen: regimen ? regimen.toUpperCase() : void 0,
-    timestamp: Date.now()
-  });
+  if (cleanEps || normalizedRegimen) {
+    identityCache.set(cacheKey, {
+      fullName: officialName,
+      eps: cleanEps || void 0,
+      estado: normalizedEstado,
+      regimen: normalizedRegimen,
+      timestamp: Date.now()
+    });
+  }
   return {
     success: true,
     officialName,
@@ -32092,16 +32267,23 @@ function parseAdresHtml(body, mappedTipo, cleanNum) {
     documentNumber: cleanNum,
     departamento: formatTitleCase(departamento),
     municipio: formatTitleCase(municipio),
-    estado: estado ? estado.toUpperCase() : void 0,
+    estado: normalizedEstado,
     eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, " ").trim() : void 0),
-    regimen: regimen ? regimen.toUpperCase() : void 0,
+    regimen: normalizedRegimen,
     source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)"
   };
 }
 async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
   const puppeteer = (await import("puppeteer")).default;
   const fs19 = await import("fs");
-  const executablePath = fs19.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : fs19.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0;
+  const chromeCandidates = [
+    process.env.CHROME_PATH,
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+    "/home/eddu/.local/bin/google-chrome"
+  ].filter(Boolean);
+  const executablePath = chromeCandidates.find((p) => fs19.existsSync(p));
   let browser = null;
   try {
     browser = await puppeteer.launch({
@@ -32117,11 +32299,56 @@ async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
       ]
     });
     const page = await browser.newPage();
-    page.setDefaultTimeout(1e4);
+    page.setDefaultTimeout(12e3);
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+    let popupUrl = "";
+    let popupPageHtml = "";
+    let isExplicitNotFoundAlert = false;
+    page.on("dialog", async (dialog) => {
+      const msg = dialog.message() || "";
+      if (msg.toLowerCase().includes("no se encuentra")) {
+        isExplicitNotFoundAlert = true;
+      }
+      await dialog.dismiss().catch(() => {
+      });
+    });
+    page.on("response", async (res) => {
+      if (res.url().includes("ConsultarAfiliadoWeb_2") && res.request().method() === "POST") {
+        try {
+          const text2 = await res.text();
+          if (text2.toLowerCase().includes("no se encuentra")) {
+            isExplicitNotFoundAlert = true;
+          }
+          const m = text2.match(/window\.open\(\x27([^\x27]+)\x27/);
+          if (m && m[1]) popupUrl = m[1];
+        } catch (_) {
+        }
+      }
+      if (res.url().includes("RespuestaConsulta")) {
+        try {
+          const text2 = await res.text();
+          if (text2.includes("GridView") || text2.includes("NOMBRES")) {
+            popupPageHtml = text2;
+          }
+        } catch (_) {
+        }
+      }
+    });
+    page.on("popup", async (popup) => {
+      try {
+        await popup.waitForLoadState?.("domcontentloaded").catch(() => {
+        });
+        await new Promise((r) => setTimeout(r, 800));
+        const html = await popup.content().catch(() => "");
+        if (html && (html.includes("NOMBRES") || html.includes("GridView"))) {
+          popupPageHtml = html;
+        }
+      } catch (_) {
+      }
+    });
     await page.goto("https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx", {
       waitUntil: "domcontentloaded",
-      timeout: 1e4
+      timeout: 12e3
     });
     await page.waitForSelector("#txtNumDoc", { timeout: 6e3 });
     await page.evaluate((tipo, num) => {
@@ -32129,56 +32356,229 @@ async function queryAdresViaPuppeteer(mappedTipo, cleanNum) {
       if (sel) sel.value = tipo;
       const inp = document.getElementById("txtNumDoc");
       if (inp) inp.value = num;
-      const hidden = document.createElement("input");
-      hidden.type = "hidden";
-      hidden.name = "btnConsultar";
-      hidden.value = "Consultar";
-      document.forms[0]?.appendChild(hidden);
     }, mappedTipo, cleanNum);
-    let popupUrl = "";
-    page.on("response", async (res) => {
-      if (res.url().includes("ConsultarAfiliadoWeb_2")) {
-        try {
-          const text2 = await res.text();
-          const m = text2.match(/window\.open\(\x27([^\x27]+)\x27/);
-          if (m && m[1]) popupUrl = m[1];
-        } catch (_) {
+    await page.click("#btnConsultar").catch(() => {
+    });
+    for (let i = 0; i < 16; i++) {
+      if (popupPageHtml || popupUrl || isExplicitNotFoundAlert) break;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (!popupPageHtml && !popupUrl && !isExplicitNotFoundAlert) {
+      await page.evaluate(() => {
+        if (!document.querySelector('input[name="btnConsultar"]')) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "btnConsultar";
+          hidden.value = "Consultar";
+          document.forms[0]?.appendChild(hidden);
         }
+        document.forms[0]?.submit();
+      }).catch(() => {
+      });
+      for (let i = 0; i < 20; i++) {
+        if (popupPageHtml || popupUrl || isExplicitNotFoundAlert) break;
+        await new Promise((r) => setTimeout(r, 300));
       }
-    });
-    await page.evaluate(() => {
-      document.forms[0]?.submit();
-    });
-    for (let i = 0; i < 24; i++) {
-      if (popupUrl) break;
-      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (popupPageHtml) {
+      return parseAdresHtml(popupPageHtml, mappedTipo, cleanNum);
     }
     if (popupUrl) {
-      await page.goto("https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/" + popupUrl, {
+      const encodedPopupUrl = popupUrl.replace(/\+/g, "%2B");
+      await page.goto("https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/" + encodedPopupUrl, {
         waitUntil: "domcontentloaded",
         timeout: 15e3
       });
       const html = await page.content();
       return parseAdresHtml(html, mappedTipo, cleanNum);
     }
+    if (isExplicitNotFoundAlert) {
+      return {
+        success: false,
+        isExplicitlyNotFound: true,
+        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Puppeteer)",
+        error: "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."
+      };
+    }
     const currentHtml = await page.content();
-    if (currentHtml.includes("Informaci\xF3n B\xE1sica del Afiliado") || currentHtml.includes("Resultados de la consulta")) {
+    if (currentHtml.includes("Informaci\xF3n B\xE1sica del Afiliado") || currentHtml.includes("Resultados de la consulta") || currentHtml.includes("GridViewAfiliacion")) {
       return parseAdresHtml(currentHtml, mappedTipo, cleanNum);
     }
     return {
       success: false,
+      isNetworkError: true,
       source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Puppeteer)",
-      error: "El ciudadano no registra afiliaci\xF3n vigente en la Base de Datos \xDAnica de Afiliados (BDUA)"
+      error: "Consulta diferida por intermitencia temporal en el servidor estatal de ADRES / BDUA."
     };
   } catch (err) {
     return {
       success: false,
+      isNetworkError: true,
       source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Puppeteer)",
       error: `Error en navegaci\xF3n headless ADRES: ${err?.message || err}`
     };
   } finally {
     if (browser) await browser.close().catch(() => {
     });
+  }
+}
+async function queryAdresViaClassicCaptcha(mappedTipo, cleanNum) {
+  if (process.env.NODE_ENV === "test" && !process.env.FORCE_LIVE_ADRES_TEST) {
+    return {
+      success: false,
+      source: "ADRES - Portal Cl\xE1sico BDUA",
+      error: "Saltado en entorno test"
+    };
+  }
+  const apiKey = process.env.TWOCAPTCHA_API_KEY;
+  if (!apiKey) {
+    return {
+      success: false,
+      isNetworkError: true,
+      source: "ADRES - Portal Cl\xE1sico BDUA",
+      error: "TWOCAPTCHA_API_KEY no configurada para fallback cl\xE1sico ADRES"
+    };
+  }
+  try {
+    const ep = await getAdresEndpoint();
+    const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
+    const solver = new Solver2(apiKey);
+    const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+    const cookieMap = /* @__PURE__ */ new Map();
+    const addCookies = (rawCookies) => {
+      if (!rawCookies) return;
+      const list = Array.isArray(rawCookies) ? rawCookies : [rawCookies];
+      for (const c of list) {
+        if (typeof c === "string") {
+          const part = c.split(";")[0];
+          const eqIdx = part.indexOf("=");
+          if (eqIdx !== -1) cookieMap.set(part.slice(0, eqIdx).trim(), part.slice(eqIdx + 1).trim());
+        }
+      }
+    };
+    const r1 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx",
+      method: "GET",
+      headers: {
+        "Host": "aplicaciones.adres.gov.co",
+        "User-Agent": ua,
+        "Referer": "https://www.adres.gov.co/consulte-su-eps"
+      },
+      timeout: 9e3
+    });
+    addCookies(r1.headers["set-cookie"]);
+    const vs = r1.body.match(/id="__VIEWSTATE"\s+value="([^"]+)"/)?.[1] || "";
+    const vsg = r1.body.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/)?.[1] || "";
+    const ev = r1.body.match(/id="__EVENTVALIDATION"\s+value="([^"]+)"/)?.[1] || "";
+    const captchaSrc = r1.body.match(/id="Capcha_CaptchaImageUP"[^>]*src="([^"]+)"/)?.[1];
+    if (!vs || !ev || !captchaSrc) {
+      return { success: false, isNetworkError: true, source: "ADRES - Portal Cl\xE1sico BDUA", error: "Tokens ASP.NET o imagen RadCaptcha ausentes" };
+    }
+    let imgPath = captchaSrc.replace(/&amp;/g, "&");
+    if (imgPath.startsWith("..")) imgPath = "/BDUA_Internet" + imgPath.substring(2);
+    else if (!imgPath.startsWith("/")) imgPath = "/BDUA_Internet/Pages/" + imgPath;
+    const imgBuf = await new Promise((resolve, reject) => {
+      const req = https2.request({
+        servername: "aplicaciones.adres.gov.co",
+        hostname: ep.host,
+        port: ep.port,
+        path: imgPath,
+        method: "GET",
+        rejectUnauthorized: false,
+        headers: {
+          "Host": "aplicaciones.adres.gov.co",
+          "User-Agent": ua,
+          "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx",
+          "Cookie": Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ")
+        },
+        timeout: 9e3
+      }, (res) => {
+        addCookies(res.headers["set-cookie"]);
+        const chunks = [];
+        res.on("data", (d) => chunks.push(d));
+        res.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+      req.on("error", reject);
+      req.end();
+    });
+    const solved = await solver.imageCaptcha({
+      body: imgBuf.toString("base64"),
+      numeric: 0,
+      min_len: 5,
+      max_len: 5
+    });
+    if (!solved?.data) {
+      return { success: false, isNetworkError: true, source: "ADRES - Portal Cl\xE1sico BDUA", error: "No se pudo resolver RadCaptcha de ADRES" };
+    }
+    const postData = querystring.stringify({
+      RadScriptManager1_TSM: "",
+      __EVENTTARGET: "",
+      __EVENTARGUMENT: "",
+      __VIEWSTATE: vs,
+      __VIEWSTATEGENERATOR: vsg,
+      __EVENTVALIDATION: ev,
+      tipoDoc: mappedTipo,
+      txtNumDoc: cleanNum,
+      "Capcha$CaptchaTextBox": solved.data.trim(),
+      Capcha_ClientState: "",
+      btnConsultar: "Consultar"
+    });
+    const r2 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx",
+      method: "POST",
+      headers: {
+        "Host": "aplicaciones.adres.gov.co",
+        "User-Agent": ua,
+        "Origin": "https://aplicaciones.adres.gov.co",
+        "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(postData),
+        "Cookie": Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ")
+      },
+      timeout: 1e4
+    }, postData);
+    addCookies(r2.headers["set-cookie"]);
+    const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+    if (alertMatch && alertMatch[1] && alertMatch[1].toLowerCase().includes("no se encuentra")) {
+      return {
+        success: false,
+        isExplicitlyNotFound: true,
+        source: "ADRES - Portal Cl\xE1sico BDUA",
+        error: "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."
+      };
+    }
+    const m = r2.body.match(/window\.open\('([^']+)'/);
+    if (m && m[1]) {
+      const popupUrl = m[1].replace(/\+/g, "%2B");
+      const r3 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: "/BDUA_Internet/Pages/" + popupUrl,
+        method: "GET",
+        headers: {
+          "Host": "aplicaciones.adres.gov.co",
+          "User-Agent": ua,
+          "Referer": "https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx",
+          "Cookie": Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ")
+        },
+        timeout: 9e3
+      });
+      if (r3.statusCode === 200 && !r3.body.includes("Error de servidor") && !r3.body.includes("NullReferenceException")) {
+        return parseAdresHtml(r3.body, mappedTipo, cleanNum);
+      }
+    }
+    return { success: false, isNetworkError: true, source: "ADRES - Portal Cl\xE1sico BDUA", error: "Sin respuesta v\xE1lida de ADRES cl\xE1sico" };
+  } catch (err) {
+    return {
+      success: false,
+      isNetworkError: true,
+      source: "ADRES - Portal Cl\xE1sico BDUA",
+      error: cleanAdresErrorMessage(err?.message || err)
+    };
   }
 }
 function savePendingCedulaSession(userId, items, reportText, success) {
@@ -32734,7 +33134,8 @@ function formatCompactIdentityVerificationReport(params) {
     epsLine = adresStatus;
   } else if (adresEps) {
     const cleanEps = formatCleanEpsName(adresEps);
-    epsLine = `${cleanEps} (${adresEstado || "ACTIVO"}${adresRegimen ? ` \u2014 ${adresRegimen}` : ""})`;
+    const cleanReg = normalizeAdresRegimen(adresRegimen);
+    epsLine = `${cleanEps} (${adresEstado || "ACTIVO"}${cleanReg ? ` \u2014 ${cleanReg}` : ""})`;
   } else {
     epsLine = isWhiteLabelDoc ? "No registra afiliaci\xF3n en R\xE9gimen General BDUA/ADRES. (Habitual en Reg\xEDmenes Especiales o de Excepci\xF3n: Fuerzas Armadas, Sanidad Oficial, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o tr\xE1mite en curso)." : "No registra afiliaci\xF3n en R\xE9gimen General BDUA/ADRES. (Habitual en Reg\xEDmenes Especiales o de Excepci\xF3n: Fuerzas Militares, Polic\xEDa Nacional, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o tr\xE1mite en curso).";
   }
@@ -33132,19 +33533,27 @@ async function verifySingleDocumentInternal(item) {
   if (cachedName) {
     const isAdresSupported2 = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
     const isGenericEps = !cachedEps || cachedEps.toLowerCase().includes("registrado y activo") || cachedEps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps && isAdresSupported2 && process.env.NODE_ENV !== "test") {
+    const needsAdresEnrichment = isGenericEps || !cachedRegimen;
+    let liveAdresError;
+    if (needsAdresEnrichment && isAdresSupported2 && process.env.NODE_ENV !== "test") {
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
           cachedEps = liveAdres.eps;
           cachedEstado = liveAdres.estado;
           cachedRegimen = liveAdres.regimen;
-          const entry = identityCache.get(adresCacheKey) || identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
-          if (entry) {
-            entry.eps = liveAdres.eps;
-            entry.estado = liveAdres.estado;
-            entry.regimen = liveAdres.regimen;
-          }
+          const mappedLower = (mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase();
+          const enrichedPayload = {
+            fullName: formatTitleCase(liveAdres.officialName || cachedName),
+            eps: liveAdres.eps,
+            estado: liveAdres.estado,
+            regimen: liveAdres.regimen,
+            timestamp: Date.now()
+          };
+          identityCache.set(adresCacheKey, enrichedPayload);
+          identityCache.set(`ADRES:${mappedLower}:${cedula}`, enrichedPayload);
+        } else if (liveAdres?.isNetworkError) {
+          liveAdresError = cleanAdresErrorMessage(liveAdres.error);
         }
       } catch (e) {
       }
@@ -33158,7 +33567,8 @@ async function verifySingleDocumentInternal(item) {
       success: true,
       adresEps: cachedEps,
       adresEstado: cachedEstado,
-      adresRegimen: cachedRegimen
+      adresRegimen: cachedRegimen,
+      adresStatus: cachedEps ? void 0 : liveAdresError
     });
     return {
       cedula,
@@ -33233,13 +33643,18 @@ async function verifySingleDocumentInternal(item) {
     const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : void 0);
     if (finalOfficialName) {
       const cleanEpsFormatted = adresRes?.eps ? formatCleanEpsName(adresRes.eps) : void 0;
-      identityCache.set(adresCacheKey, {
-        fullName: finalOfficialName,
-        eps: cleanEpsFormatted,
-        estado: adresRes?.estado,
-        regimen: adresRes?.regimen,
-        timestamp: Date.now()
-      });
+      const cleanRegFormatted = normalizeAdresRegimen(adresRes?.regimen);
+      if (cleanEpsFormatted || cleanRegFormatted) {
+        const adresCachePayload = {
+          fullName: finalOfficialName,
+          eps: cleanEpsFormatted,
+          estado: adresRes?.estado,
+          regimen: cleanRegFormatted,
+          timestamp: Date.now()
+        };
+        identityCache.set(adresCacheKey, adresCachePayload);
+        identityCache.set(`ADRES:${(mapTipoDocToAdres(effectiveTipoDoc) || effectiveTipoDoc).toLowerCase()}:${cedula}`, adresCachePayload);
+      }
       const reportText = formatCompactIdentityVerificationReport({
         tipoDoc: effectiveTipoDoc,
         cedula,
@@ -33251,7 +33666,7 @@ async function verifySingleDocumentInternal(item) {
         contraloriaStatus: cgrRes?.statusText,
         adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
-        adresRegimen: adresRes?.regimen,
+        adresRegimen: cleanRegFormatted,
         adresStatus: cleanEpsFormatted ? void 0 : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === "ce" && tipoDoc.toLowerCase() === "cc"
       });
@@ -33358,11 +33773,17 @@ function buildConsolidatedReportText(results) {
 `;
     }
     if (r.adres?.eps) {
-      reportText += `\u{1F3E5} *ADRES (BDUA):* ${r.adres.eps} (${r.adres.estado || "REGISTRADO"})
+      const cleanEps = formatCleanEpsName(r.adres.eps) || r.adres.eps;
+      const cleanRegimen = normalizeAdresRegimen(r.adres.regimen);
+      reportText += `\u{1F3E5} *ADRES (BDUA):* ${cleanEps} (${r.adres.estado || "ACTIVO"}${cleanRegimen ? ` \u2014 ${cleanRegimen}` : ""})
+
+`;
+    } else if (r.adres?.isExplicitlyNotFound) {
+      reportText += `\u{1F3E5} *ADRES (BDUA):* No registra afiliaci\xF3n en R\xE9gimen General BDUA/ADRES (habitual en Reg\xEDmenes Especiales o de Excepci\xF3n).
 
 `;
     } else {
-      reportText += `\u{1F3E5} *ADRES (BDUA):* \u26A0\uFE0F Consulta con intermitencia temporal en portal ADRES. Puedes verificar en adres.gov.co
+      reportText += `\u{1F3E5} *ADRES (BDUA):* \u26A0\uFE0F ${cleanAdresErrorMessage(r.adres?.error)}
 
 `;
     }
@@ -33496,19 +33917,27 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
   if (cachedName) {
     const isAdresSupported = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
     const isGenericEps = !cachedEps || cachedEps.toLowerCase().includes("registrado y activo") || cachedEps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps && isAdresSupported && process.env.NODE_ENV !== "test") {
+    const needsAdresEnrichment = isGenericEps || !cachedRegimen;
+    let liveAdresError;
+    if (needsAdresEnrichment && isAdresSupported && process.env.NODE_ENV !== "test") {
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
           cachedEps = liveAdres.eps;
           cachedEstado = liveAdres.estado;
           cachedRegimen = liveAdres.regimen;
-          const entry = identityCache.get(adresCacheKey) || identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
-          if (entry) {
-            entry.eps = liveAdres.eps;
-            entry.estado = liveAdres.estado;
-            entry.regimen = liveAdres.regimen;
-          }
+          const mappedLower = (mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase();
+          const enrichedPayload = {
+            fullName: formatTitleCase(liveAdres.officialName || cachedName),
+            eps: liveAdres.eps,
+            estado: liveAdres.estado,
+            regimen: liveAdres.regimen,
+            timestamp: Date.now()
+          };
+          identityCache.set(adresCacheKey, enrichedPayload);
+          identityCache.set(`ADRES:${mappedLower}:${cedula}`, enrichedPayload);
+        } else if (liveAdres?.isNetworkError) {
+          liveAdresError = cleanAdresErrorMessage(liveAdres.error);
         }
       } catch (e) {
       }
@@ -33522,7 +33951,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       success: true,
       adresEps: cachedEps,
       adresEstado: cachedEstado,
-      adresRegimen: cachedRegimen
+      adresRegimen: cachedRegimen,
+      adresStatus: cachedEps ? void 0 : liveAdresError
     });
     if (userId) {
       savePendingCedulaSession(userId, items, reportText, true);
@@ -33604,6 +34034,20 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : void 0);
     const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
     if (finalOfficialName) {
+      const cleanEpsFormatted = adresRes?.eps ? formatCleanEpsName(adresRes.eps) : void 0;
+      const cleanRegFormatted = normalizeAdresRegimen(adresRes?.regimen);
+      if (cleanEpsFormatted || cleanRegFormatted) {
+        const mappedAdresType = mapTipoDocToAdres(currentTipoDoc) || currentTipoDoc;
+        const adresCachePayload = {
+          fullName: finalOfficialName,
+          eps: cleanEpsFormatted,
+          estado: adresRes?.estado,
+          regimen: cleanRegFormatted,
+          timestamp: Date.now()
+        };
+        identityCache.set(`ADRES:${mappedAdresType}:${cedula}`, adresCachePayload);
+        identityCache.set(`ADRES:${mappedAdresType.toLowerCase()}:${cedula}`, adresCachePayload);
+      }
       const reportText = formatCompactIdentityVerificationReport({
         tipoDoc: currentTipoDoc,
         cedula,
@@ -33613,10 +34057,10 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         policiaMessage: ponalRes?.message,
         procuraduriaStatus: pgnRes?.statusText,
         contraloriaStatus: cgrRes?.statusText,
-        adresEps: adresRes?.eps,
+        adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
-        adresRegimen: adresRes?.regimen,
-        adresStatus: adresRes?.eps ? void 0 : cleanAdresErrorMessage(adresRes?.error),
+        adresRegimen: cleanRegFormatted,
+        adresStatus: cleanEpsFormatted ? void 0 : adresRes?.isExplicitlyNotFound ? void 0 : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe
       });
       if (userId) {
@@ -34222,7 +34666,7 @@ function extractAcmAttributesFromText(rawText) {
   }
   return out;
 }
-async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText) {
+async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText, hasMediaAttachment = false) {
   switch (toolName) {
     case "consultar_matches_o_codigo": {
       const query = String(args.consulta || args.codigo || args.query || rawUserText || "").trim();
@@ -34385,8 +34829,12 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
       const isFromPending = wasPendingDoc;
       const rawOnlyDigits = (rawUserText || "").replace(/\D/g, "");
       const isFromRawText = Boolean(cleanDigits.length >= 5 && rawOnlyDigits.includes(cleanDigits));
+      const recentDmHistory = await getOrLoadDmHistory(userId).catch(() => []);
+      const isFromRecentHistory = Boolean(
+        cleanDigits.length >= 5 && recentDmHistory.slice(-10).some((h) => h.role === "user" && h.content.replace(/\D/g, "").includes(cleanDigits))
+      );
       const isUserLidOrPhone = Boolean(userId && cleanDigits.length >= 6 && userId.includes(cleanDigits));
-      if (!isFromRawText && !isFromPending || isUserLidOrPhone || cleanDigits.length < 5) {
+      if (!isFromRawText && !isFromPending && !isFromRecentHistory && !hasMediaAttachment || isUserLidOrPhone || cleanDigits.length < 5) {
         return {
           toolType: "cedula",
           resultJson: {
@@ -34411,18 +34859,19 @@ async function executeJaniaDmTool(toolName, args, userId, _userName, rawUserText
         adresData = {
           eps: res.adres.eps,
           estado: res.adres.estado || "ACTIVO",
-          regimen: res.adres.regimen || "CONTRIBUTIVO"
+          regimen: res.adres.regimen || (res.adres.eps.toUpperCase().includes("EPS-S") ? "SUBSIDIADO" : void 0)
         };
       } else if (res.reportText) {
         const adresLineMatch = res.reportText.match(/ADRES\s*\((?:BDUA)?\):\*\s*([^\n\r]+)/i);
-        if (adresLineMatch && adresLineMatch[1] && !adresLineMatch[1].toLowerCase().includes("no registra afiliaci\xF3n")) {
+        if (adresLineMatch && adresLineMatch[1] && !adresLineMatch[1].toLowerCase().includes("no registra afiliaci\xF3n") && !adresLineMatch[1].toLowerCase().includes("consulta diferida") && !adresLineMatch[1].toLowerCase().includes("sin novedad")) {
           const rawMatch = adresLineMatch[1].trim();
           const parsedEpsMatch = rawMatch.match(/^([^(]+)(?:\(([^—)]+)(?:—\s*([^)]+))?\))?/);
           if (parsedEpsMatch) {
+            const parsedEps = parsedEpsMatch[1].trim();
             adresData = {
-              eps: parsedEpsMatch[1].trim(),
+              eps: parsedEps,
               estado: parsedEpsMatch[2]?.trim() || "ACTIVO",
-              regimen: parsedEpsMatch[3]?.trim() || "CONTRIBUTIVO"
+              regimen: parsedEpsMatch[3]?.trim() || (parsedEps.toUpperCase().includes("EPS-S") ? "SUBSIDIADO" : void 0)
             };
           } else {
             adresData = { eps: rawMatch };
@@ -35061,7 +35510,7 @@ async function synthesizeToolResponseWithGemini(userId, userName, toolType, tool
   if (toolType === "cedula") {
     specialToolInstructions = `- HERRAMIENTA: Verificaci\xF3n Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).
 - RESPUESTA PRIORITARIA Y DIRECTA A LA CONSULTA: Si el usuario pregunt\xF3 expresamente por la EPS, afiliaci\xF3n en salud o a qui\xE9n pertenece la c\xE9dula/documento, responde de inmediato y con m\xE1xima claridad desde el primer p\xE1rrafo indicando el nombre completo del titular y la EPS en la que se encuentra afiliado en ADRES / BDUA.
-- CERO OMISI\xD3N DE EPS: Si en los datos estructurados figura la EPS (ej. Capital Salud EPS-S, Sanitas EPS, Sura EPS, Nueva EPS), es MANDATORIO e INDISPENSABLE nombrarla textualmente junto con su estado y r\xE9gimen de afiliaci\xF3n.
+- CERO OMISI\xD3N DE EPS Y R\xC9GIMEN (CONTRIBUTIVO / SUBSIDIADO): Si en los datos estructurados ('adres.eps' y 'adres.regimen') figura la EPS y el r\xE9gimen (ej. Sanitas EPS / CONTRIBUTIVO, Capital Salud EPS-S / SUBSIDIADO, Sura EPS / CONTRIBUTIVO), es MANDATORIO e INDISPENSABLE nombrar AMBOS datos textualmente junto con su estado de afiliaci\xF3n (ACTIVO/RETIRADO).
 - REDACCI\xD3N 100% LIBRE Y CONVERSACIONAL: Cero plantillas r\xEDgidas prefabricadas, cero encabezados acartonados o vi\xF1etas rob\xF3ticas. Redacta de forma fresca, original, corta y humana como experta de VECY.
 - CERO ALUCINACI\xD3N: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:
   * Nombre oficial de la persona y n\xFAmero de documento validado.
@@ -35198,6 +35647,22 @@ INSTRUCCIONES DE REDACCI\xD3N (NIVEL ARGON \u2014 VOZ LAOMEDEIA \u2014 AGENTE DE
       if ((endsWithTruncatedIntro || isMissingCriticalOutcome) && rawReport) {
         console.warn(`[synthesizeToolResponseWithGemini] \u26A0\uFE0F Respuesta de LLM truncada o incompleta detectada ("${text2.slice(-50)}"). Entregando reporte oficial completo.`);
         text2 = rawReport;
+      }
+      if (toolType === "cedula" && toolJson?.adres?.eps) {
+        const expectedEps = String(toolJson.adres.eps).trim();
+        const expectedEstado = String(toolJson.adres.estado || "ACTIVO").trim();
+        const expectedRegimen = toolJson.adres.regimen ? String(toolJson.adres.regimen).trim() : "";
+        const normReply = text2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const epsKeyword = expectedEps.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\beps(?:-[si])?\b/g, "").trim().split(/\s+/)[0] || expectedEps.toLowerCase();
+        const hasEpsInReply = epsKeyword.length >= 3 && normReply.includes(epsKeyword);
+        const regKeyword = expectedRegimen.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^regimen\s+/, "").slice(0, 7);
+        const hasRegimenInReply = !expectedRegimen || regKeyword.length >= 4 && normReply.includes(regKeyword);
+        if (!hasEpsInReply || !hasRegimenInReply) {
+          const regimenLabel = expectedRegimen ? ` \u2014 R\xE9gimen ${expectedRegimen}` : "";
+          text2 = `${text2}
+
+\u{1F3E5} *ADRES (BDUA):* *${expectedEps}* (${expectedEstado}${regimenLabel}).`;
+        }
       }
       if (shouldAskSatisfaction && !/(?:qu[eé]\s+tal\s+te\s+pareci[oó]|satisfech[oa]|afinar|calificar)/i.test(text2)) {
         text2 = `${text2}
@@ -35606,14 +36071,25 @@ As\xED te dejo verificado de inmediato y no te vuelvo a insistir jam\xE1s. \xA1T
       markUserGreetedToday(userId);
       return directReviewReply;
     }
-    const hasRecentServiceContext = Boolean(userPerpetualSession.keyFacts?.awaitingSatisfactionFeedback) || (userPerpetualSession.freeServicesUsedCount || 0) >= 1 || /\b(?:acm|an[aá]lisis\s+comparativo|sondeo|valoraci[oó]n|aval[uú]o|estudio\s+de\s+mercado|antecedentes|polic[ií]a|adres|rues|predial|idu|notarial|qu[eé]\s+tal\s+te\s+pareci[oó]|satisfech[oa])\b/i.test(
-      lastAssistantTextEarly
+    const {
+      getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
+      getPendingCompanyFollowUp: getPendingCompanyFollowUp2
+    } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const hasPendingConfirmationState = Boolean(
+      getPendingUnconfirmedDoc2(userId) || getPendingCompanyFollowUp2(userId) || userPerpetualSession.keyFacts?.pendingAdminDeductionTotal || userPerpetualSession.keyFacts?.esperando_recado_eduardo || userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40 || userPerpetualSession.keyFacts?.esperando_terminos_corretaje
     );
-    const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
+    const isLastTurnSatisfactionQuestion = isAssistantAskingSatisfaction(lastAssistantTextEarly);
+    const hasDeliveredReportInLastTurn = /(?:VERIFICACI[ÓO]N\s+OFICIAL|ESTUDIO\s+DE\s+T[ÍI]TULOS|AN[ÁA]LISIS\s+POT|LIQUIDACI[ÓO]N\s+NOTARIAL|FACTURA\s+PREDIAL|PAZ\s+Y\s+SALVO|SIMULACI[ÓO]N\s+FINANCIERA|MINUTA\s+JUR[ÍI]DICA|AUDITOR[ÍI]A\s+DE\s+RIESGOS|PROPIEDAD\s+HORIZONTAL|HABEAS\s+DATA\s*\(LEY\s*1581)/i.test(
+      lastAssistantTextEarly
+    ) || isLastTurnSatisfactionQuestion;
+    const hasRecentServiceContext = Boolean(userPerpetualSession.keyFacts?.awaitingSatisfactionFeedback) || (userPerpetualSession.freeServicesUsedCount || 0) >= 1 || hasDeliveredReportInLastTurn;
+    const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext, {
+      isSatisfactionPromptActive: isLastTurnSatisfactionQuestion && !hasPendingConfirmationState
+    });
     const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|simula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad|hipotecari[oa]|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|retenci[oó]n\s+en\s+la\s+fuente|ley\s+546)\b/i.test(
       cleanLower
     );
-    if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction) {
+    if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction && !hasPendingConfirmationState) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = null;
       userPerpetualSession.keyFacts.reviewPromptSent = true;
@@ -36350,6 +36826,129 @@ Si tienes alg\xFAn inmueble (casa, apartamento, lote u oficina) del cual requier
       return interviewReply;
     }
   }
+  if (!hasAnyDmMedia && !isCommercialFlyerImg && !isReviewValidationContext) {
+    const {
+      getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2,
+      getPendingCompanyFollowUp: getPendingCompanyFollowUp2,
+      setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2,
+      clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2,
+      executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2
+    } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const pendingDocEarly = !getPendingCompanyFollowUp2(userId) ? getPendingUnconfirmedDoc2(userId) : null;
+    if (pendingDocEarly) {
+      const rawVal = pendingDocEarly.rawNumber || pendingDocEarly.cleanNumber;
+      const isPendingChip = /^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(rawVal);
+      const wordCount = clean.split(/\s+/).filter(Boolean).length;
+      const isShortNonNegative = wordCount <= 8 && !isNegativeConsentResponse(clean);
+      const isShortAffirmative = isShortNonNegative && isAffirmativeConsentResponse(clean);
+      const isConfirmingIdu = /(?:^|\b)(?:idu|3|valorizaci[oó]n)\b/i.test(cleanLower);
+      const isConfirmingPredial = /(?:^|\b)(?:predial|2|factura\s+predial)\b/i.test(cleanLower);
+      const isConfirmingIdentity = /(?:^|\b)(?:es\s+cc|cc|c\.?c\.?|ce|c\.?e\.?|nit|pasaporte|c[eé]dula|1|antecedentes|adres|eps|identidad|s[oó]lo\s+las\s+c[eé]dulas|las\s+c[eé]dulas)\b/i.test(
+        cleanLower
+      );
+      if (isPendingChip) {
+        if (isConfirmingIdu) {
+          clearPendingUnconfirmedDoc2(userId);
+          const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+          const resIdu = await executeIduValorizacionFromWhatsApp2(rawVal, userId, true);
+          const reportOut = resIdu.reportText || "";
+          if (reportOut) {
+            await incrementFreeServicesCount(userId);
+            userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+            userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+              serviceType: "idu_valorizacion",
+              timestamp: Date.now()
+            };
+            await saveUserPerpetualSession(userPerpetualSession);
+            appendDmHistory(userId, "user", clean);
+            appendDmHistory(userId, "assistant", reportOut);
+            markUserGreetedToday(userId);
+            return reportOut;
+          }
+        } else if (isConfirmingPredial) {
+          clearPendingUnconfirmedDoc2(userId);
+          const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+          const resPred = await executePredialAssistanceFromWhatsApp2(rawVal, userId, true);
+          const reportOut = resPred?.reportText || "";
+          if (reportOut) {
+            appendDmHistory(userId, "user", clean);
+            appendDmHistory(userId, "assistant", reportOut);
+            markUserGreetedToday(userId);
+            return reportOut;
+          }
+        } else if (isShortAffirmative) {
+          const clarifyChip = `\xA1Con todo gusto${displayName ? `, ${displayName}` : ""}! Para el c\xF3digo CHIP *${rawVal}*, \xBFdeseas consultar la *Factura Predial* (2) o el *Paz y Salvo IDU* (3)?`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", clarifyChip);
+          markUserGreetedToday(userId);
+          return clarifyChip;
+        }
+      } else if (isConfirmingIdentity || isShortAffirmative && !isConfirmingPredial && !isConfirmingIdu) {
+        clearPendingUnconfirmedDoc2(userId);
+        const docPrefix = /\b(?:ce|c\.?e\.?|extranjer[ií]a)\b/i.test(cleanLower) ? "CE" : /\bpasaporte\b/i.test(cleanLower) ? "PASAPORTE" : /\bnit\b/i.test(cleanLower) ? "NIT" : "";
+        const queryToVerify = docPrefix ? `${docPrefix} ${rawVal}` : rawVal;
+        const verifResult = await executeIdentityVerificationFromWhatsApp2(queryToVerify, true, userId);
+        if (verifResult.reportText) {
+          await incrementFreeServicesCount(userId);
+          userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+          userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+            serviceType: "identidad_antecedentes",
+            timestamp: Date.now()
+          };
+          await saveUserPerpetualSession(userPerpetualSession);
+          const satisfactionLine = `
+
+\u{1F91D} *\xBFQuedaste satisfecho(a) con esta verificaci\xF3n oficial?* Tu opini\xF3n me ayuda a seguir manteniendo este servicio 100% gratuito.`;
+          const out = `\xA1Confirmado${displayName ? `, ${displayName}` : ""}!
+
+${verifResult.reportText}${satisfactionLine}`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", out);
+          markUserGreetedToday(userId);
+          return out;
+        }
+      } else if (isNegativeConsentResponse(clean) && wordCount <= 8) {
+        clearPendingUnconfirmedDoc2(userId);
+        const cancelMsg = `\xA1Entendido${displayName ? `, ${displayName}` : ""}! No consultar\xE9 ese documento. \xBFEn qu\xE9 m\xE1s te puedo colaborar hoy? \u{1F91D}`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", cancelMsg);
+        markUserGreetedToday(userId);
+        return cancelMsg;
+      } else if (!/^(?:\d{5,12}|\d{1,3}(?:\.\d{3}){1,3}|[A-Za-z]{3}\d{4}[A-Za-z0-9]{4})$/.test(clean.replace(/\s+/g, ""))) {
+        clearPendingUnconfirmedDoc2(userId);
+      }
+    }
+    const compactCleanNoSpaces = clean.replace(/\s+/g, "");
+    const bareNumberMatch = compactCleanNoSpaces.match(/^(?:(\d{5,12})|(\d{1,3}(?:\.\d{3}){1,3}))$/);
+    if (bareNumberMatch) {
+      const bareDigits = compactCleanNoSpaces.replace(/\D/g, "");
+      if (bareDigits.length >= 5 && bareDigits.length <= 12) {
+        setPendingUnconfirmedDoc2(userId, bareDigits);
+        const greetingHeader = isOngoingChat ? "" : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} `;
+        const rawNumMsg = `${greetingHeader}Recib\xED el dato *${bareDigits}*. Conf\xEDrmame qu\xE9 tr\xE1mite requieres (puedes responder *S\xED*, *CC* o *1* si es c\xE9dula para antecedentes y ADRES):
+\u2022 C\xE9dula de Ciudadan\xEDa (C.C.) / C\xE9dula de Extranjer\xEDa (C.E.) / Pasaporte / NIT (Persona Jur\xEDdica) para antecedentes.
+\u2022 O consulta de Factura Predial Bogot\xE1 / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial \u{1F91D}\u2728.
+
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", rawNumMsg);
+        markUserGreetedToday(userId);
+        return rawNumMsg;
+      }
+    }
+    if (/^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(compactCleanNoSpaces)) {
+      const upperChip = compactCleanNoSpaces.toUpperCase();
+      setPendingUnconfirmedDoc2(userId, upperChip);
+      const greetingHeader = isOngoingChat ? "" : `\xA1${timeSalutation}${displayName ? `, ${displayName}` : ""}! \u{1F44B} `;
+      const chipMsg = `${greetingHeader}Recib\xED el c\xF3digo CHIP *${upperChip}*. \xBFDeseas la factura del impuesto predial de Bogot\xE1 o el paz y salvo de valorizaci\xF3n del IDU? Quedo atenta para emitirte el documento de inmediato \u{1F91D}\u2728.
+
+_\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", chipMsg);
+      markUserGreetedToday(userId);
+      return chipMsg;
+    }
+  }
   let preloadedWebContent = "";
   const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
   if (urlMatch && urlMatch[0]) {
@@ -36596,11 +37195,11 @@ ${isVecyBrokerLine && !isEduardoIdentified && !isJaniIdentified ? `- Est\xE1s re
     }
     if (mediaOptions?.imageBuffer) {
       userPromptContent += `
-[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas, datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una rese\xF1a o calificaci\xF3n en Google (Google Maps / Rese\xF1a / Estrellas / VECY Bienes Ra\xEDces), valida la rese\xF1a cordialmente, agrad\xE9cele con mucho cari\xF1o y calidez humana e incluye la etiqueta interna [RESE\xD1A_GOOGLE_VALIDADA].]`;
+[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISI\xD3N MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, c\xE9dulas (C.C. / C.E. / PPT / Pasaporte), datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una c\xE9dula o documento de identidad personal y el contexto es verificar identidad, antecedentes o EPS/r\xE9gimen, invoca de inmediato la herramienta 'consultar_identidad_y_antecedentes' pasando el tipoDocumento y numeroDocumento exactos le\xEDdos en la imagen. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una rese\xF1a o calificaci\xF3n en Google (Google Maps / Rese\xF1a / Estrellas / VECY Bienes Ra\xEDces), valida la rese\xF1a cordialmente, agrad\xE9cele con mucho cari\xF1o y calidez humana e incluye la etiqueta interna [RESE\xD1A_GOOGLE_VALIDADA].]`;
     }
     if (mediaOptions?.pdfBuffer) {
       userPromptContent += `
-[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visi\xF3n multimodal y procesa la consulta de forma integral.]`;
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visi\xF3n multimodal (si contiene c\xE9dula o documento de identidad para verificaci\xF3n, invoca 'consultar_identidad_y_antecedentes' con el n\xFAmero le\xEDdo) y procesa la consulta de forma integral.]`;
     }
     if (contextRoleDirective && !isEduardo && !isJani && !isFamilyOrTrusted) {
       userPromptContent += contextRoleDirective;
@@ -36749,7 +37348,8 @@ DIRECTIVAS OBLIGATORIAS:
         rawFnArgs,
         userId,
         userName || displayName || realName,
-        clean
+        clean,
+        Boolean(mediaOptions?.imageBuffer || mediaOptions?.pdfBuffer)
       );
       reply = await synthesizeToolResponseWithGemini(
         userId,
@@ -36763,6 +37363,22 @@ DIRECTIVAS OBLIGATORIAS:
       );
     } else {
       reply = llmRes.choices[0]?.message?.content || "";
+      if (reply && /[¿?]/.test(reply) && /\b(?:antecedentes|adres|eps|c[eé]dula|identidad|predial|idu)\b/i.test(reply)) {
+        try {
+          const {
+            extractCedulaForVerification: extractCedulaForVerification2,
+            setPendingUnconfirmedDoc: setPendingUnconfirmedDoc2,
+            getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2
+          } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+          if (!getPendingUnconfirmedDoc2(userId)) {
+            const det = extractCedulaForVerification2(clean, true);
+            if (det.found && det.cedula) {
+              setPendingUnconfirmedDoc2(userId, det.cedula);
+            }
+          }
+        } catch (_) {
+        }
+      }
     }
     if (reply.includes("[RESE\xD1A_GOOGLE_VALIDADA]") || hasImage && /rese[ñn]a\s+validada|calificaci[oó]n\s+validada|valid[eé]\s+tu\s+rese[ñn]a|gracias\s+por\s+tu\s+rese[ñn]a/i.test(reply)) {
       reply = reply.replace(/\[RESEÑA_GOOGLE_VALIDADA\]/g, "").trim();
@@ -36979,7 +37595,7 @@ _\u2696\uFE0F Tratamiento de datos Ley 1581/12._`;
         appendDmHistory(userId, "assistant", chipMsg);
         return chipMsg;
       }
-      if (/(?:^|\b)(?:es\s+cc|cc|c[eé]dula|1|antecedentes|idu|3|predial|2)\b/i.test(cleanLower)) {
+      if (/(?:^|\b)(?:es\s+cc|cc|c[eé]dula|1|antecedentes|adres|eps|identidad|idu|3|predial|2)\b/i.test(cleanLower) || clean.split(/\s+/).filter(Boolean).length <= 8 && !isNegativeConsentResponse(clean) && isAffirmativeConsentResponse(clean)) {
         const { getPendingUnconfirmedDoc: getPendingUnconfirmedDoc2, clearPendingUnconfirmedDoc: clearPendingUnconfirmedDoc2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
         const pendingDoc = getPendingUnconfirmedDoc2(userId);
         if (pendingDoc) {
@@ -37118,7 +37734,7 @@ var init_dmHandler = __esm({
         functionDeclarations: [
           {
             name: "consultar_identidad_y_antecedentes",
-            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT. REGLA INMUTABLE: El n\xFAmero de documento DEBE estar expl\xEDcitamente escrito en el mensaje del usuario. Est\xE1 TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o tel\xE9fonos del usuario como si fueran c\xE9dulas. Si el usuario pide verificar c\xE9dula pero NO incluy\xF3 el n\xFAmero en su texto, NO invoques esta herramienta y solic\xEDtale \xDANICAMENTE el n\xFAmero de documento, sin pedir nombres completos ni datos redundantes.",
+            description: "Valida la EPS a la que est\xE1 afiliada la persona, tipo de r\xE9gimen (contributivo/subsidiado), estado de afiliaci\xF3n en salud en ADRES (BDUA), identidad oficial ante Registradur\xEDa y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT. REGLA INMUTABLE: El n\xFAmero de documento DEBE estar expl\xEDcitamente escrito en el mensaje del usuario o en un mensaje reciente del usuario dentro de esta conversaci\xF3n (cuando el usuario confirma con 'S\xED', 'Dale', 'Claro'). Est\xE1 TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o tel\xE9fonos del usuario como si fueran c\xE9dulas. Si el usuario pide verificar c\xE9dula pero NO incluy\xF3 el n\xFAmero en su texto ni en turnos previos, NO invoques esta herramienta y solic\xEDtale \xDANICAMENTE el n\xFAmero de documento, sin pedir nombres completos ni datos redundantes.",
             parameters: {
               type: "OBJECT",
               properties: {
@@ -37586,7 +38202,11 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     const isReviewLinkReq = isExplicitReviewLinkRequest(messageToProcess);
     const isCreativeImgReq = isExplicitCreativeImageRequest(messageToProcess);
     const isOtherToolRequest = isIduInquiry(messageToProcess) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(messageToProcess) || isExplicitNotarialLiquidationRequest(messageToProcess, userId) || isExplicitGroupAcmRequest(messageToProcess) || isExplicitGroupMarketingAuditRequest(messageToProcess) || isExplicitCtlStudyRequest(messageToProcess) || hasCtlTextMarkers(messageToProcess) || isPotUrbanNormRequest(messageToProcess) || isFinancialOrTaxSimulationRequest(messageToProcess) || isContractMinutaOrAuditRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) || hasContractDraftMarkers(messageToProcess) || isPropiedadHorizontalRequest(messageToProcess, Boolean(imageBuffer || pdfBuffer)) || hasPhDocumentMarkers(messageToProcess) || isCreativeImgReq || isExplicitLegalPdfRequest(messageToProcess) || extractAllCedulasForVerification(messageToProcess, false).length > 0;
-    const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
+    const consultingHistoryTurns = getConsultingHistory(userId);
+    const lastConsultingAssistantText = consultingHistoryTurns.slice().reverse().find((t2) => t2.role === "assistant")?.content || "";
+    const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory, {
+      isSatisfactionPromptActive: isAssistantAskingSatisfaction(lastConsultingAssistantText)
+    });
     if (isReviewLinkReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til)|afinar\s+.*acm)\b/i.test(
       messageToProcess
     ))) {
@@ -47968,7 +48588,7 @@ function detectRawWebListingPost(message) {
   };
 }
 async function evaluateWebDeterministicSkills(params) {
-  const { message, userId, userName, hasActiveHistory, formatRawListingGuide } = params;
+  const { message, userId, userName, hasActiveHistory, lastAssistantText, formatRawListingGuide } = params;
   const clean = (message || "").trim();
   if (!clean) return { handled: false };
   const helpType = isServiceHelpRequest(clean);
@@ -47980,7 +48600,9 @@ async function evaluateWebDeterministicSkills(params) {
   }
   const isReviewReq = isExplicitReviewLinkRequest(clean);
   const isOtherToolRequest = isIduInquiry(clean) || hasPendingIduSession(userId) || isExplicitCompanyRuesQuery(clean) || isExplicitNotarialLiquidationRequest(clean, userId) || isExplicitGroupAcmRequest(clean) || isExplicitGroupMarketingAuditRequest(clean) || isExplicitCtlStudyRequest(clean) || hasCtlTextMarkers(clean) || isPotUrbanNormRequest(clean) || isFinancialOrTaxSimulationRequest(clean) || isContractMinutaOrAuditRequest(clean, false) || hasContractDraftMarkers(clean) || isPropiedadHorizontalRequest(clean, false) || hasPhDocumentMarkers(clean) || extractAllCedulasForVerification(clean, false).length > 0;
-  const satFeedback = isUserSatisfactionOrFeedbackReply(clean, hasActiveHistory);
+  const satFeedback = isUserSatisfactionOrFeedbackReply(clean, hasActiveHistory, {
+    isSatisfactionPromptActive: isAssistantAskingSatisfaction(lastAssistantText)
+  });
   if (isReviewReq || !isOtherToolRequest && satFeedback.isSatisfied && (hasActiveHistory || /\b(?:me\s+(?:ha(?:n)?\s+)?gust|me\s+(?:ha(?:n)?\s+)?encant|qued[eé]\s+(?:muy\s+)?satisfech|s[uú]per\s+(?:bien|completo|[uú]til))\b/i.test(clean))) {
     const invite = buildAutonomousGoogleReviewInvitation(userName, {
       isDirectLinkRequest: isReviewReq,
@@ -53220,11 +53842,13 @@ var janIARouter = router({
         registeredName: mockUserName || null,
         hasPreviousMessages: recentHistory.length > 0
       });
+      const lastWebAssistantTurn = recentHistory.find((m) => m.role !== "user")?.content || "";
       const skillRes = await evaluateWebDeterministicSkills2({
         message: input.message,
         userId: mockUserId,
         userName: webContext.resolvedDisplayName || mockUserName,
         hasActiveHistory: recentHistory.length > 0,
+        lastAssistantText: lastWebAssistantTurn,
         formatRawListingGuide: buildWebGroup1ListingRedirectGuide
       });
       if (skillRes.handled && skillRes.replyText) {

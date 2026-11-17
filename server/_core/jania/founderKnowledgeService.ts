@@ -866,6 +866,30 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Asegurar que todas las Skills de JanIA estén activas y conectadas en DM, Grupos y Web, recuerde nombres simples o compuestos y género, domine Pacto de Retroventa, Leasing vs Hipotecario, m² comercial y fanegadas/hectáreas rurales en toda Colombia, y enseñe paso a paso VECY vs Dinosaurios Inmobiliarios, 40/20/40, registro, MATCH y publicación.",
     createdAt: "2026-11-13T23:55:00.000Z",
     active: true
+  },
+  {
+    id: "seed-adres-eps-regimen-resiliencia-integridad-v34-22",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Verificación ADRES (BDUA) — Entrega Ineludible de EPS y Régimen Contributivo/Subsidiado + Resiliencia 3 Capas (v34.22)",
+    directive:
+      "En toda verificación de documentos de identidad (C.C., C.E., T.I., Pasaporte, PEP, PPT) —ya sea individual, multipersona (consolidada), desde caché enriquecida, desde OCR de imagen/PDF o sintetizada conversacionalmente en DM/Grupos/Web— es MANDATORIO informar con exactitud tanto la EPS limpia (ej. Sanitas EPS, Capital Salud EPS-S, Nueva EPS, Sura EPS, Famisanar EPS) como el Régimen oficial en ADRES (CONTRIBUTIVO, SUBSIDIADO, ESPECIAL o EXCEPCIÓN) y el Estado de afiliación. Queda prohibido inventar o asumir 'CONTRIBUTIVO' si falta el dato en ADRES o envenenar el caché ADRES con entradas vacías cuando ocurra una intermitencia estatal.",
+    rawText:
+      "Corregir y blindar al 100% el skill de verificación de documentos para garantizar siempre la obtención y entrega explícita de la EPS y el régimen (Contributivo / Subsidiado) desde ADRES (BDUA), incluyendo parser estructural HTML, caché resiliente y fallback clásico con RadCaptcha.",
+    createdAt: "2026-11-15T14:40:00.000Z",
+    active: true
+  },
+  {
+    id: "seed-coherencia-confirmacion-documento-y-satisfaccion-anti-falso-si-v34-23",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Coherencia Conversacional — Confirmación de Cédula/CHIP Suelto y Blindaje Anti-Secuestro de 'Sí' hacia Google Reviews (v34.23)",
+    directive:
+      "Un 'Sí', 'Claro', 'Ok' o 'Perfecto' del usuario JAMÁS puede activar el envío de Google Reviews salvo cuando JanIA haya formulado expresamente una pregunta de satisfacción tras entregar un servicio completado y sin confirmaciones pendientes. Asimismo, cuando un usuario envíe una cédula o código CHIP suelto en DM, JanIA guarda de forma determinística el documento pendiente sin mezclar menús de roles numerados y ejecuta la verificación oficial de inmediato en el siguiente turno ante 'Sí', 'CC', '1' o 'antecedentes'.",
+    rawText:
+      "Corregir incoherencia reportada con Jeimy Bohorquez (1127581637 -> 'Si'): evitar que 'Si' dispare falsamente la invitación de Google Reviews cuando JanIA preguntó si deseaba consultar ADRES/antecedentes, y manejar determinísticamente documentos sueltos y confirmaciones en producción y tests.",
+    createdAt: "2026-11-16T19:20:00.000Z",
+    active: true
   }
 ];
 

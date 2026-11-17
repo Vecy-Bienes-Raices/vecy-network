@@ -14321,6 +14321,201 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:2[1-9]|[3-9]\d)\.0$/);
     });
   });
+
+  // ============================================================================
+  // SUITE 208 (v34.22): BLINDAJE INTEGRAL ADRES (BDUA) — EPS Y RÉGIMEN
+  // ============================================================================
+  describe("208. ADRES (BDUA) — Extracción Estructural de EPS y Régimen, Caché Sin Envenenamiento, Reporte Consolidado y Anti-Omisión DM (v34.22)", () => {
+    it("parseAdresHtml extrae estructuralmente EPS y Régimen priorizando fila ACTIVO sobre RETIRADO e inmunidad ante celdas vacías ($0 COP)", async () => {
+      const { parseAdresHtml, normalizeAdresRegimen, formatCleanEpsName, identityCache } = await import("../_core/identityVerificationService");
+      identityCache.delete("ADRES:CC:52999888");
+      const multiRowHtml = `
+        <table id="GridViewBasica">
+          <tr><td>NOMBRES</td><td>MARIA ELENA</td></tr>
+          <tr><td>APELLIDOS</td><td>GOMEZ RUIZ</td></tr>
+          <tr><td>DEPARTAMENTO</td><td>BOGOTA D.C.</td></tr>
+          <tr><td>MUNICIPIO</td><td>BOGOTA D.C.</td></tr>
+        </table>
+        <table id="GridViewAfiliacion">
+          <tr><th>ESTADO</th><th>ENTIDAD</th><th>REGIMEN</th><th>FECHA</th><th>FIN</th><th>TIPO</th></tr>
+          <tr><td>RETIRADO</td><td>COOMEVA E.P.S. S.A.</td><td>CONTRIBUTIVO</td><td></td><td></td><td>COTIZANTE</td></tr>
+          <tr><td>ACTIVO</td><td>NUEVA E.P.S. S.A.</td><td>R&#201;GIMEN SUBSIDIADO</td><td>01/01/2025</td><td></td><td>CABEZA DE FAMILIA</td></tr>
+        </table>
+      `;
+      const parsed = parseAdresHtml(multiRowHtml, "CC", "52999888");
+      expect(parsed.success).toBe(true);
+      expect(parsed.estado).toBe("ACTIVO");
+      expect(parsed.eps).toBe("Nueva EPS");
+      expect(parsed.regimen).toBe("SUBSIDIADO");
+      expect(normalizeAdresRegimen("Régimen Contributivo")).toBe("CONTRIBUTIVO");
+      expect(formatCleanEpsName("CAJACOPI E.P.S. S.A.S.")).toBe("Cajacopi EPS");
+      expect(formatCleanEpsName("ECOOPSOS EPS-S")).toBe("Ecoopsos EPS-S");
+      identityCache.delete("ADRES:CC:52999888");
+    });
+
+    it("reporte consolidado (2+ cédulas) incluye EPS, Estado y Régimen exacto para cada persona ($0 COP)", async () => {
+      const { executeIdentityVerificationFromWhatsApp, identityCache } = await import("../_core/identityVerificationService");
+      identityCache.set("ADRES:CC:80850249", {
+        fullName: "Joan Nicolas Sanchez Monroy",
+        eps: "Sanitas EPS",
+        estado: "ACTIVO",
+        regimen: "CONTRIBUTIVO",
+        timestamp: Date.now()
+      });
+      identityCache.set("POLICIA:cc:80850249", { fullName: "Joan Nicolas Sanchez Monroy", timestamp: Date.now() });
+      identityCache.set("ADRES:CC:11189781", {
+        fullName: "Eduardo Arturo Rivera Martinez",
+        eps: "Capital Salud EPS-S",
+        estado: "ACTIVO",
+        regimen: "SUBSIDIADO",
+        timestamp: Date.now()
+      });
+      identityCache.set("POLICIA:cc:11189781", { fullName: "Eduardo Arturo Rivera Martinez", timestamp: Date.now() });
+
+      const multi = await executeIdentityVerificationFromWhatsApp("Verificar CC 80850249 y CC 11189781", true, "test-multi-v34-22");
+      expect(multi.isVerificationRequest).toBe(true);
+      expect(multi.reportText).toContain("Sanitas EPS (ACTIVO — CONTRIBUTIVO)");
+      expect(multi.reportText).toContain("Capital Salud EPS-S (ACTIVO — SUBSIDIADO)");
+    });
+
+    it("no envenena el caché ADRES cuando falta EPS/régimen y dmHandler entrega ADRES real sin fabricar CONTRIBUTIVO ($0 COP)", async () => {
+      const fs = await import("fs");
+      const { identityCache, executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+      const { executeJaniaDmTool } = await import("../_core/jania/handlers/dmHandler");
+
+      // Simular caché PONAL + ADRES Subsidiado para asegurar preservación fiel de EPS y Régimen en executeJaniaDmTool
+      identityCache.set("POLICIA:cc:1233903423", { fullName: "Daniel Eduardo Rivera Noguera", timestamp: Date.now() });
+      identityCache.set("ADRES:CC:1233903423", {
+        fullName: "Daniel Eduardo Rivera Noguera",
+        eps: "Sura EPS",
+        estado: "ACTIVO",
+        regimen: "SUBSIDIADO",
+        timestamp: Date.now()
+      });
+
+      const toolOut = await executeJaniaDmTool(
+        "consultar_identidad_y_antecedentes",
+        { numeroDocumento: "1233903423", tipoDocumento: "CC" },
+        "573001112233@s.whatsapp.net",
+        "Usuario Prueba",
+        "Por favor verifícame la cédula 1233903423 y dime su EPS y régimen"
+      );
+      expect(toolOut.toolType).toBe("cedula");
+      expect(toolOut.resultJson.adres?.eps).toBe("Sura EPS");
+      expect(toolOut.resultJson.adres?.estado).toBe("ACTIVO");
+      expect(toolOut.resultJson.adres?.regimen).toBe("SUBSIDIADO");
+
+      // Verificar que una entrada PONAL sin ADRES en entorno test no crea una entrada ADRES envenenada con eps: undefined
+      identityCache.delete("ADRES:CC:52803592");
+      identityCache.delete("ADRES:cc:52803592");
+      identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
+      await executeIdentityVerificationFromWhatsApp("Verificar CC 52803592", true, "test-poison-check");
+      expect(identityCache.get("ADRES:CC:52803592")).toBeUndefined();
+
+      // Guardarraíles determinísticos y conectores de 3 capas presentes
+      const idSrc = fs.readFileSync("server/_core/identityVerificationService.ts", "utf-8");
+      const dmSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(idSrc).toContain("queryAdresViaClassicCaptcha");
+      expect(idSrc).toContain("needsAdresEnrichment = isGenericEps || !cachedRegimen");
+      expect(dmSrc).toContain("GUARDARRAÍL DETERMINÍSTICO ANTI-OMISIÓN DE EPS Y RÉGIMEN ADRES");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed22 = SEED_TEACHINGS.find((t) => t.id === "seed-adres-eps-regimen-resiliencia-integridad-v34-22");
+      expect(seed22?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[2-9]|[3-9]\d)$/);
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toMatch(/^34\.(?:2[2-9]|[3-9]\d)\.0$/);
+    });
+  });
+
+  // ============================================================================
+  // SUITE 209 (v34.23): COHERENCIA CONVERSACIONAL — CÉDULA SUELTA -> "SI" Y ANTI-SECUESTRO GOOGLE REVIEWS
+  // ============================================================================
+  describe("209. Coherencia Conversacional DM/Grupos/Web — Cédula suelta -> 'Si' sin secuestro a Google Reviews (v34.23)", () => {
+    it("caso Jeimy Bohorquez ('1127581637' -> 'Si' -> 'Si'): Turno 1 guarda pendiente sin menú de roles, Turno 2 verifica cédula sin enviar Google Reviews, Turno 3 tras entrega sí invita a reseña ($0 COP)", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+      const { identityCache, getPendingUnconfirmedDoc } = await import("../_core/identityVerificationService");
+      const { resetUserPerpetualSessionsForTests } = await import("../_core/jania/sessionManager");
+      resetUserPerpetualSessionsForTests();
+
+      identityCache.set("POLICIA:cc:1127581637", {
+        fullName: "Jeimy Carolina Bohorquez Aldana",
+        timestamp: Date.now()
+      });
+      identityCache.set("ADRES:CC:1127581637", {
+        fullName: "Jeimy Carolina Bohorquez Aldana",
+        eps: "Sanitas EPS",
+        estado: "ACTIVO",
+        regimen: "CONTRIBUTIVO",
+        timestamp: Date.now()
+      });
+
+      const jeimyJid = `573001127581_${Date.now()}@s.whatsapp.net`;
+
+      // Turno 1: Envía cédula suelta
+      const t1 = await processPrivateDmConversationalMessage("1127581637", jeimyJid, "Jeimy Bohorquez");
+      expect(t1).toContain("Recibí el dato *1127581637*");
+      expect(t1).not.toContain("en calidad de qué nos escribes");
+      expect(t1).not.toContain("g.page/r/CctNbwU6UpX5EBM/review");
+      expect(getPendingUnconfirmedDoc(jeimyJid)?.cleanNumber).toBe("1127581637");
+
+      // Turno 2: Responde simplemente "Si" -> DEBE verificar la cédula, JAMÁS enviar Google Reviews
+      const t2 = await processPrivateDmConversationalMessage("Si", jeimyJid, "Jeimy Bohorquez");
+      expect(t2).not.toContain("quedaste satisfecha");
+      expect(t2).not.toContain("g.page/r/CctNbwU6UpX5EBM/review");
+      expect(t2).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(t2).toContain("1.127.581.637");
+      expect(t2).toContain("Jeimy Carolina Bohorquez Aldana");
+      expect(t2).toContain("Sanitas EPS (ACTIVO — CONTRIBUTIVO)");
+      expect(t2).toMatch(/quedaste satisfecho\(a\)/i);
+      expect(getPendingUnconfirmedDoc(jeimyJid)).toBeNull();
+
+      // Turno 3: Ahora sí responde "Si" a la pregunta de satisfacción -> entrega enlace de Google Reviews
+      const t3 = await processPrivateDmConversationalMessage("Si", jeimyJid, "Jeimy Bohorquez");
+      expect(t3).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(t3).toContain("⭐⭐⭐⭐⭐");
+    });
+
+    it("isUserSatisfactionOrFeedbackReply y Web Chat no secuestran 'Si'/'Ok'/'Claro' salvo pregunta explícita de satisfacción, y valida v34.23 ($0 COP)", async () => {
+      const fs = await import("fs");
+      const {
+        isUserSatisfactionOrFeedbackReply,
+        isAssistantAskingSatisfaction
+      } = await import("../_core/politenessService");
+      const { evaluateWebDeterministicSkills } = await import("../_core/jania/handlers/webChatService");
+
+      expect(isUserSatisfactionOrFeedbackReply("Si", true).isSatisfied).toBe(false);
+      expect(isUserSatisfactionOrFeedbackReply("Ok", true).isSatisfied).toBe(false);
+      expect(isUserSatisfactionOrFeedbackReply("Claro", true).isSatisfied).toBe(false);
+      expect(
+        isUserSatisfactionOrFeedbackReply("Si", true, { isSatisfactionPromptActive: true }).isSatisfied
+      ).toBe(true);
+      expect(isAssistantAskingSatisfaction("¿Te gustaría que consultemos los antecedentes de seguridad o ADRES?")).toBe(false);
+      expect(isAssistantAskingSatisfaction("🤝 *¿Quedaste satisfecho(a) con esta verificación oficial?*")).toBe(true);
+
+      const webRes = await evaluateWebDeterministicSkills({
+        message: "Si",
+        userId: `web_test_no_hijack_${Date.now()}`,
+        userName: "Jeimy",
+        hasActiveHistory: true,
+        lastAssistantText: "¿Te gustaría que consultemos los antecedentes de seguridad y estado en ADRES?"
+      });
+      expect(webRes.handled).toBe(false);
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed23 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-coherencia-confirmacion-documento-y-satisfaccion-anti-falso-si-v34-23"
+      );
+      expect(seed23?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.23");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.23.0");
+    });
+  });
 });
 
 

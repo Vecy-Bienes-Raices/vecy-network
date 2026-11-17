@@ -404,7 +404,7 @@ export async function queryPoliciaNacional(
   return { success: false, cedula: sanitizedDoc, tipoDoc };
 }
 
-async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string }> {
+async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string; eps?: string; estado?: string; regimen?: string }> {
   let tipoDoc = 'CC';
   const t = (tipoDocInput || '').toLowerCase();
   if (t.includes('extranjer') || t === 'ce') tipoDoc = 'CE';
@@ -414,119 +414,29 @@ async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promi
   else if (t.includes('protec') || t === 'ppt') tipoDoc = 'PT';
   else if (t.includes('nit') || t.includes('rut')) return { success: false };
 
-  const cacheKey = `${tipoDoc}:${cleanDoc}`;
+  const cacheKey = `ADRES:${tipoDoc}:${cleanDoc}`;
   const cached = identityCache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
-    return { success: true, officialName: cached.fullName };
+  if (cached && cached.eps && cached.regimen && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
+    return {
+      success: true,
+      officialName: cached.fullName,
+      eps: cached.eps,
+      estado: cached.estado,
+      regimen: cached.regimen,
+    };
   }
 
-  const apiKey = process.env.TWOCAPTCHA_API_KEY;
-  if (!apiKey) return { success: false };
-
   try {
-    const solver = new Solver(apiKey);
-    const jar = new CookieJar();
-    const baseUrl = 'https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx';
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-      'Accept-Language': 'es-ES,es;q=0.9',
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500); // Timeout estricto de 2.5s para evitar 504
-
-    const res1 = await fetch(baseUrl, { headers, signal: controller.signal });
-    jar.addFromHeaders(res1.headers);
-    const html1 = await res1.text();
-
-    const viewState = html1.match(/id="__VIEWSTATE"\s+value="([^"]+)"/)?.[1];
-    const viewStateGen = html1.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/)?.[1] || '';
-    const eventVal = html1.match(/id="__EVENTVALIDATION"\s+value="([^"]+)"/)?.[1];
-    const captchaSrc = html1.match(/id="Capcha_CaptchaImageUP"[^>]*src="([^"]+)"/)?.[1];
-
-    if (!viewState || !eventVal || !captchaSrc) {
-      clearTimeout(timeoutId);
-      return { success: false };
-    }
-
-    let imgUrl = captchaSrc.replace(/&amp;/g, '&');
-    if (imgUrl.startsWith('..')) imgUrl = 'https://aplicaciones.adres.gov.co/bdua_internet' + imgUrl.substring(2);
-    else if (!imgUrl.startsWith('http')) imgUrl = 'https://aplicaciones.adres.gov.co/bdua_internet/' + imgUrl;
-
-    const imgRes = await fetch(imgUrl, {
-      headers: { ...headers, 'Cookie': jar.getCookieString(), 'Referer': baseUrl },
-      signal: controller.signal,
-    });
-    jar.addFromHeaders(imgRes.headers);
-
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const base64Img = imgBuffer.toString('base64');
-
-    const captcha = await solver.imageCaptcha({
-      body: base64Img,
-      numeric: 0,
-      min_len: 5, max_len: 5,
-    });
-
-    if (!captcha || !captcha.data) {
-      clearTimeout(timeoutId);
-      return { success: false };
-    }
-
-    const body = new URLSearchParams();
-    body.append('RadScriptManager1_TSM', '');
-    body.append('__EVENTTARGET', '');
-    body.append('__EVENTARGUMENT', '');
-    body.append('__VIEWSTATE', viewState);
-    body.append('__VIEWSTATEGENERATOR', viewStateGen);
-    body.append('__EVENTVALIDATION', eventVal);
-    body.append('tipoDoc', tipoDoc);
-    body.append('txtNumDoc', cleanDoc);
-    body.append('Capcha', captcha.data);
-    body.append('btnConsultar', 'Consultar');
-
-    const resPost = await fetch(baseUrl, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': jar.getCookieString(),
-        'Referer': baseUrl,
-        'Origin': 'https://aplicaciones.adres.gov.co',
-      },
-      body: body.toString(),
-      signal: controller.signal,
-    });
-    jar.addFromHeaders(resPost.headers);
-    const postHtml = await resPost.text();
-
-    const tokenMatch = postHtml.match(/RespuestaConsulta\.aspx\?tokenId=([^'"]+)/);
-    if (!tokenMatch) {
-      clearTimeout(timeoutId);
-      return { success: false };
-    }
-
-    const tokenId = tokenMatch[1];
-    const resultUrl = `https://aplicaciones.adres.gov.co/bdua_internet/Pages/RespuestaConsulta.aspx?tokenId=${tokenId}`;
-    const resResult = await fetch(resultUrl, {
-      headers: { ...headers, 'Cookie': jar.getCookieString(), 'Referer': baseUrl },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-
-    const resultHtml = await resResult.text();
-    const cleanHtml = resultHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    const matchNombres = cleanHtml.match(/NOMBRES\s+([A-ZÁÉÍÓÚÑ\s]+?)\s+APELLIDOS/i);
-    const matchApellidos = cleanHtml.match(/APELLIDOS\s+([A-ZÁÉÍÓÚÑ\s]+?)\s+FECHA/i);
-
-    if (matchNombres && matchApellidos) {
-      const rawNombres = matchNombres[1].trim();
-      const rawApellidos = matchApellidos[1].trim();
-      const fullName = formatTitleCase(`${rawNombres} ${rawApellidos}`);
-
-      identityCache.set(cacheKey, { fullName, timestamp: Date.now() });
-      return { success: true, officialName: fullName };
+    const { queryAdres } = await import('../_core/identityVerificationService');
+    const res = await queryAdres(tipoDoc, cleanDoc);
+    if (res && res.success) {
+      return {
+        success: true,
+        officialName: res.officialName,
+        eps: res.eps,
+        estado: res.estado,
+        regimen: res.regimen,
+      };
     }
     return { success: false };
   } catch (err: any) {

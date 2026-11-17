@@ -90,6 +90,9 @@ import {
 import {
   isExplicitReviewLinkRequest,
   isUserSatisfactionOrFeedbackReply,
+  isAssistantAskingSatisfaction,
+  isAffirmativeConsentResponse,
+  isNegativeConsentResponse,
   buildAutonomousGoogleReviewInvitation
 } from "../../politenessService";
 
@@ -168,7 +171,7 @@ export const JANIA_DM_TOOLS = [
     functionDeclarations: [
       {
         name: "consultar_identidad_y_antecedentes",
-        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT. REGLA INMUTABLE: El número de documento DEBE estar explícitamente escrito en el mensaje del usuario. Está TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o teléfonos del usuario como si fueran cédulas. Si el usuario pide verificar cédula pero NO incluyó el número en su texto, NO invoques esta herramienta y solicítale ÚNICAMENTE el número de documento, sin pedir nombres completos ni datos redundantes.",
+        description: "Valida la EPS a la que está afiliada la persona, tipo de régimen (contributivo/subsidiado), estado de afiliación en salud en ADRES (BDUA), identidad oficial ante Registraduría y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT. REGLA INMUTABLE: El número de documento DEBE estar explícitamente escrito en el mensaje del usuario o en un mensaje reciente del usuario dentro de esta conversación (cuando el usuario confirma con 'Sí', 'Dale', 'Claro'). Está TERMINANTEMENTE PROHIBIDO tomar identificadores de WhatsApp, LIDs (@lid) o teléfonos del usuario como si fueran cédulas. Si el usuario pide verificar cédula pero NO incluyó el número en su texto ni en turnos previos, NO invoques esta herramienta y solicítale ÚNICAMENTE el número de documento, sin pedir nombres completos ni datos redundantes.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -694,7 +697,8 @@ export async function executeJaniaDmTool(
   args: Record<string, any>,
   userId: string,
   _userName?: string,
-  rawUserText?: string
+  rawUserText?: string,
+  hasMediaAttachment: boolean = false
 ): Promise<{ resultJson: Record<string, any>; toolType: JaniaDmToolType }> {
   switch (toolName) {
     case "consultar_matches_o_codigo": {
@@ -893,12 +897,17 @@ export async function executeJaniaDmTool(
       const isFromPending = wasPendingDoc;
       const rawOnlyDigits = (rawUserText || "").replace(/\D/g, "");
       const isFromRawText = Boolean(cleanDigits.length >= 5 && rawOnlyDigits.includes(cleanDigits));
+      const recentDmHistory = await getOrLoadDmHistory(userId).catch(() => []);
+      const isFromRecentHistory = Boolean(
+        cleanDigits.length >= 5 &&
+        recentDmHistory.slice(-10).some(h => h.role === "user" && h.content.replace(/\D/g, "").includes(cleanDigits))
+      );
 
-      // 🛡️ GUARDARRAÍL ANTI-ALUCINACIÓN Y ANTI-FUGA DE LID / TELÉFONO TÉCNICO (Doctrina v33.52):
-      // Si el número enviado a verificar no está en el texto del usuario ni en una sesión pendiente,
+      // 🛡️ GUARDARRAÍL ANTI-ALUCINACIÓN Y ANTI-FUGA DE LID / TELÉFONO TÉCNICO (Doctrina v33.52 / v34.23):
+      // Si el número enviado a verificar no está en el texto del usuario, ni en su historial reciente, ni en una sesión pendiente (ni proviene de OCR de imagen/PDF adjunto),
       // o si coincide con el LID / teléfono técnico del usuario en WhatsApp, abortar de inmediato.
       const isUserLidOrPhone = Boolean(userId && cleanDigits.length >= 6 && userId.includes(cleanDigits));
-      if ((!isFromRawText && !isFromPending) || isUserLidOrPhone || cleanDigits.length < 5) {
+      if ((!isFromRawText && !isFromPending && !isFromRecentHistory && !hasMediaAttachment) || isUserLidOrPhone || cleanDigits.length < 5) {
         return {
           toolType: "cedula",
           resultJson: {
@@ -926,18 +935,19 @@ export async function executeJaniaDmTool(
         adresData = {
           eps: res.adres.eps,
           estado: res.adres.estado || "ACTIVO",
-          regimen: res.adres.regimen || "CONTRIBUTIVO"
+          regimen: res.adres.regimen || (res.adres.eps.toUpperCase().includes("EPS-S") ? "SUBSIDIADO" : undefined)
         };
       } else if (res.reportText) {
         const adresLineMatch = res.reportText.match(/ADRES\s*\((?:BDUA)?\):\*\s*([^\n\r]+)/i);
-        if (adresLineMatch && adresLineMatch[1] && !adresLineMatch[1].toLowerCase().includes("no registra afiliación")) {
+        if (adresLineMatch && adresLineMatch[1] && !adresLineMatch[1].toLowerCase().includes("no registra afiliación") && !adresLineMatch[1].toLowerCase().includes("consulta diferida") && !adresLineMatch[1].toLowerCase().includes("sin novedad")) {
           const rawMatch = adresLineMatch[1].trim();
           const parsedEpsMatch = rawMatch.match(/^([^(]+)(?:\(([^—)]+)(?:—\s*([^)]+))?\))?/);
           if (parsedEpsMatch) {
+            const parsedEps = parsedEpsMatch[1].trim();
             adresData = {
-              eps: parsedEpsMatch[1].trim(),
+              eps: parsedEps,
               estado: parsedEpsMatch[2]?.trim() || "ACTIVO",
-              regimen: parsedEpsMatch[3]?.trim() || "CONTRIBUTIVO"
+              regimen: parsedEpsMatch[3]?.trim() || (parsedEps.toUpperCase().includes("EPS-S") ? "SUBSIDIADO" : undefined)
             };
           } else {
             adresData = { eps: rawMatch };
@@ -1633,7 +1643,7 @@ export async function synthesizeToolResponseWithGemini(
     specialToolInstructions =
       `- HERRAMIENTA: Verificación Oficial de Identidad y Antecedentes (Personas Naturales: CC, CE, PPT, Pasaporte).\n` +
       `- RESPUESTA PRIORITARIA Y DIRECTA A LA CONSULTA: Si el usuario preguntó expresamente por la EPS, afiliación en salud o a quién pertenece la cédula/documento, responde de inmediato y con máxima claridad desde el primer párrafo indicando el nombre completo del titular y la EPS en la que se encuentra afiliado en ADRES / BDUA.\n` +
-      `- CERO OMISIÓN DE EPS: Si en los datos estructurados figura la EPS (ej. Capital Salud EPS-S, Sanitas EPS, Sura EPS, Nueva EPS), es MANDATORIO e INDISPENSABLE nombrarla textualmente junto con su estado y régimen de afiliación.\n` +
+      `- CERO OMISIÓN DE EPS Y RÉGIMEN (CONTRIBUTIVO / SUBSIDIADO): Si en los datos estructurados ('adres.eps' y 'adres.regimen') figura la EPS y el régimen (ej. Sanitas EPS / CONTRIBUTIVO, Capital Salud EPS-S / SUBSIDIADO, Sura EPS / CONTRIBUTIVO), es MANDATORIO e INDISPENSABLE nombrar AMBOS datos textualmente junto con su estado de afiliación (ACTIVO/RETIRADO).\n` +
       `- REDACCIÓN 100% LIBRE Y CONVERSACIONAL: Cero plantillas rígidas prefabricadas, cero encabezados acartonados o viñetas robóticas. Redacta de forma fresca, original, corta y humana como experta de VECY.\n` +
       `- CERO ALUCINACIÓN: Respeta rigurosamente TODOS los datos reales verificados obtenidos de las entidades oficiales del Estado:\n` +
       `  * Nombre oficial de la persona y número de documento validado.\n` +
@@ -1776,6 +1786,33 @@ export async function synthesizeToolResponseWithGemini(
       if ((endsWithTruncatedIntro || isMissingCriticalOutcome) && rawReport) {
         console.warn(`[synthesizeToolResponseWithGemini] ⚠️ Respuesta de LLM truncada o incompleta detectada ("${text.slice(-50)}"). Entregando reporte oficial completo.`);
         text = rawReport;
+      }
+
+      // 🛡️ GUARDARRAÍL DETERMINÍSTICO ANTI-OMISIÓN DE EPS Y RÉGIMEN ADRES (Doctrina v34.22):
+      if (toolType === "cedula" && toolJson?.adres?.eps) {
+        const expectedEps = String(toolJson.adres.eps).trim();
+        const expectedEstado = String(toolJson.adres.estado || "ACTIVO").trim();
+        const expectedRegimen = toolJson.adres.regimen ? String(toolJson.adres.regimen).trim() : "";
+        const normReply = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const epsKeyword = expectedEps
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\beps(?:-[si])?\b/g, "")
+          .trim()
+          .split(/\s+/)[0] || expectedEps.toLowerCase();
+        const hasEpsInReply = epsKeyword.length >= 3 && normReply.includes(epsKeyword);
+        const regKeyword = expectedRegimen
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/^regimen\s+/, "")
+          .slice(0, 7);
+        const hasRegimenInReply = !expectedRegimen || (regKeyword.length >= 4 && normReply.includes(regKeyword));
+        if (!hasEpsInReply || !hasRegimenInReply) {
+          const regimenLabel = expectedRegimen ? ` — Régimen ${expectedRegimen}` : "";
+          text = `${text}\n\n🏥 *ADRES (BDUA):* *${expectedEps}* (${expectedEstado}${regimenLabel}).`;
+        }
       }
 
       if (shouldAskSatisfaction && !/(?:qu[eé]\s+tal\s+te\s+pareci[oó]|satisfech[oa]|afinar|calificar)/i.test(text)) {
@@ -2375,18 +2412,42 @@ export async function processPrivateDmConversationalMessage(
       return directReviewReply;
     }
 
+    const {
+      getPendingUnconfirmedDoc,
+      getPendingCompanyFollowUp
+    } = await import("../../identityVerificationService");
+    const hasPendingConfirmationState = Boolean(
+      getPendingUnconfirmedDoc(userId) ||
+      getPendingCompanyFollowUp(userId) ||
+      userPerpetualSession.keyFacts?.pendingAdminDeductionTotal ||
+      userPerpetualSession.keyFacts?.esperando_recado_eduardo ||
+      userPerpetualSession.keyFacts?.esperando_respuesta_40_20_40 ||
+      userPerpetualSession.keyFacts?.esperando_terminos_corretaje
+    );
+    const isLastTurnSatisfactionQuestion = isAssistantAskingSatisfaction(lastAssistantTextEarly);
+    const hasDeliveredReportInLastTurn =
+      /(?:VERIFICACI[ÓO]N\s+OFICIAL|ESTUDIO\s+DE\s+T[ÍI]TULOS|AN[ÁA]LISIS\s+POT|LIQUIDACI[ÓO]N\s+NOTARIAL|FACTURA\s+PREDIAL|PAZ\s+Y\s+SALVO|SIMULACI[ÓO]N\s+FINANCIERA|MINUTA\s+JUR[ÍI]DICA|AUDITOR[ÍI]A\s+DE\s+RIESGOS|PROPIEDAD\s+HORIZONTAL|HABEAS\s+DATA\s*\(LEY\s*1581)/i.test(
+        lastAssistantTextEarly
+      ) || isLastTurnSatisfactionQuestion;
+
     const hasRecentServiceContext =
       Boolean(userPerpetualSession.keyFacts?.awaitingSatisfactionFeedback) ||
       (userPerpetualSession.freeServicesUsedCount || 0) >= 1 ||
-      /\b(?:acm|an[aá]lisis\s+comparativo|sondeo|valoraci[oó]n|aval[uú]o|estudio\s+de\s+mercado|antecedentes|polic[ií]a|adres|rues|predial|idu|notarial|qu[eé]\s+tal\s+te\s+pareci[oó]|satisfech[oa])\b/i.test(
-        lastAssistantTextEarly
-      );
-    const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext);
+      hasDeliveredReportInLastTurn;
+    const satInfo = isUserSatisfactionOrFeedbackReply(clean, hasRecentServiceContext, {
+      isSatisfactionPromptActive: isLastTurnSatisfactionQuestion && !hasPendingConfirmationState
+    });
     const alsoRequestsNewAction = /\b(?:hazme|necesito\s+(?:un|otra|otro)|calcula|simula|consulta(?:me|r)?\s+(?:la\s+|el\s+)?(?:c[eé]dula|nit|predial|idu|chip)|verifica(?:me|r)?|descarga(?:me|r)?|estudio\s+de\s+t[ií]tulos|certificado\s+de\s+tradici[oó]n|\bctl\b|falsa\s+tradici[oó]n|\bpot\b|sinupot|ideca|norma\s+urbana|uso\s+del?\s+suelo|constructibilidad|edificabilidad|prefactibilidad|hipotecari[oa]|leasing\s+habitacional|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|ganancia\s+ocasional|impuesto\s+de\s+timbre|retenci[oó]n\s+en\s+la\s+fuente|ley\s+546)\b/i.test(
       cleanLower
     );
 
-    if (satInfo.isSatisfied && !hasVerifiedReview && !userPerpetualSession.keyFacts?.reviewPromptSent && !alsoRequestsNewAction) {
+    if (
+      satInfo.isSatisfied &&
+      !hasVerifiedReview &&
+      !userPerpetualSession.keyFacts?.reviewPromptSent &&
+      !alsoRequestsNewAction &&
+      !hasPendingConfirmationState
+    ) {
       userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
       userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = null;
       userPerpetualSession.keyFacts.reviewPromptSent = true;
@@ -3332,6 +3393,145 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
     }
   }
 
+  // 🪪 INTERCEPTOR DETERMINÍSTICO DE DOCUMENTOS SUELTOS Y CONFIRMACIÓN DE CÉDULA / CHIP PENDIENTE (v34.23 — $0 COP):
+  // Garantiza coherencia absoluta en producción y pruebas:
+  // 1) Si hay un documento pendiente de confirmación y el usuario responde "Sí", "CC", "1", "antecedentes", "IDU", "Predial", etc., ejecuta el trámite de inmediato.
+  // 2) Si el usuario envía un número suelto (ej. "1127581637") o un CHIP suelto ("AAA..."), guarda el pendiente y pregunta únicamente qué trámite desea sin mezclar el menú de roles.
+  if (!hasAnyDmMedia && !isCommercialFlyerImg && !isReviewValidationContext) {
+    const {
+      getPendingUnconfirmedDoc,
+      getPendingCompanyFollowUp,
+      setPendingUnconfirmedDoc,
+      clearPendingUnconfirmedDoc,
+      executeIdentityVerificationFromWhatsApp
+    } = await import("../../identityVerificationService");
+
+    const pendingDocEarly = !getPendingCompanyFollowUp(userId) ? getPendingUnconfirmedDoc(userId) : null;
+    if (pendingDocEarly) {
+      const rawVal = pendingDocEarly.rawNumber || pendingDocEarly.cleanNumber;
+      const isPendingChip = /^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(rawVal);
+      const wordCount = clean.split(/\s+/).filter(Boolean).length;
+      const isShortNonNegative = wordCount <= 8 && !isNegativeConsentResponse(clean);
+      const isShortAffirmative = isShortNonNegative && isAffirmativeConsentResponse(clean);
+
+      const isConfirmingIdu = /(?:^|\b)(?:idu|3|valorizaci[oó]n)\b/i.test(cleanLower);
+      const isConfirmingPredial = /(?:^|\b)(?:predial|2|factura\s+predial)\b/i.test(cleanLower);
+      const isConfirmingIdentity =
+        /(?:^|\b)(?:es\s+cc|cc|c\.?c\.?|ce|c\.?e\.?|nit|pasaporte|c[eé]dula|1|antecedentes|adres|eps|identidad|s[oó]lo\s+las\s+c[eé]dulas|las\s+c[eé]dulas)\b/i.test(
+          cleanLower
+        );
+
+      if (isPendingChip) {
+        if (isConfirmingIdu) {
+          clearPendingUnconfirmedDoc(userId);
+          const { executeIduValorizacionFromWhatsApp } = await import("../../iduValorizacionService");
+          const resIdu = await executeIduValorizacionFromWhatsApp(rawVal, userId, true);
+          const reportOut = resIdu.reportText || "";
+          if (reportOut) {
+            await incrementFreeServicesCount(userId);
+            userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+            userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+              serviceType: "idu_valorizacion",
+              timestamp: Date.now()
+            };
+            await saveUserPerpetualSession(userPerpetualSession);
+            appendDmHistory(userId, "user", clean);
+            appendDmHistory(userId, "assistant", reportOut);
+            markUserGreetedToday(userId);
+            return reportOut;
+          }
+        } else if (isConfirmingPredial) {
+          clearPendingUnconfirmedDoc(userId);
+          const { executePredialAssistanceFromWhatsApp } = await import("../../predialService");
+          const resPred = await executePredialAssistanceFromWhatsApp(rawVal, userId, true);
+          const reportOut = resPred?.reportText || "";
+          if (reportOut) {
+            appendDmHistory(userId, "user", clean);
+            appendDmHistory(userId, "assistant", reportOut);
+            markUserGreetedToday(userId);
+            return reportOut;
+          }
+        } else if (isShortAffirmative) {
+          const clarifyChip = `¡Con todo gusto${displayName ? `, ${displayName}` : ""}! Para el código CHIP *${rawVal}*, ¿deseas consultar la *Factura Predial* (2) o el *Paz y Salvo IDU* (3)?`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", clarifyChip);
+          markUserGreetedToday(userId);
+          return clarifyChip;
+        }
+      } else if (isConfirmingIdentity || (isShortAffirmative && !isConfirmingPredial && !isConfirmingIdu)) {
+        clearPendingUnconfirmedDoc(userId);
+        const docPrefix = /\b(?:ce|c\.?e\.?|extranjer[ií]a)\b/i.test(cleanLower)
+          ? "CE"
+          : /\bpasaporte\b/i.test(cleanLower)
+            ? "PASAPORTE"
+            : /\bnit\b/i.test(cleanLower)
+              ? "NIT"
+              : "";
+        const queryToVerify = docPrefix ? `${docPrefix} ${rawVal}` : rawVal;
+        const verifResult = await executeIdentityVerificationFromWhatsApp(queryToVerify, true, userId);
+        if (verifResult.reportText) {
+          await incrementFreeServicesCount(userId);
+          userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+          userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+            serviceType: "identidad_antecedentes",
+            timestamp: Date.now()
+          };
+          await saveUserPerpetualSession(userPerpetualSession);
+
+          const satisfactionLine = `\n\n🤝 *¿Quedaste satisfecho(a) con esta verificación oficial?* Tu opinión me ayuda a seguir manteniendo este servicio 100% gratuito.`;
+          const out = `¡Confirmado${displayName ? `, ${displayName}` : ""}!\n\n${verifResult.reportText}${satisfactionLine}`;
+          appendDmHistory(userId, "user", clean);
+          appendDmHistory(userId, "assistant", out);
+          markUserGreetedToday(userId);
+          return out;
+        }
+      } else if (isNegativeConsentResponse(clean) && wordCount <= 8) {
+        clearPendingUnconfirmedDoc(userId);
+        const cancelMsg = `¡Entendido${displayName ? `, ${displayName}` : ""}! No consultaré ese documento. ¿En qué más te puedo colaborar hoy? 🤝`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", cancelMsg);
+        markUserGreetedToday(userId);
+        return cancelMsg;
+      } else if (!/^(?:\d{5,12}|\d{1,3}(?:\.\d{3}){1,3}|[A-Za-z]{3}\d{4}[A-Za-z0-9]{4})$/.test(clean.replace(/\s+/g, ""))) {
+        clearPendingUnconfirmedDoc(userId);
+      }
+    }
+
+    const compactCleanNoSpaces = clean.replace(/\s+/g, "");
+    const bareNumberMatch = compactCleanNoSpaces.match(/^(?:(\d{5,12})|(\d{1,3}(?:\.\d{3}){1,3}))$/);
+    if (bareNumberMatch) {
+      const bareDigits = compactCleanNoSpaces.replace(/\D/g, "");
+      if (bareDigits.length >= 5 && bareDigits.length <= 12) {
+        setPendingUnconfirmedDoc(userId, bareDigits);
+        const greetingHeader = isOngoingChat
+          ? ""
+          : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 `;
+        const rawNumMsg =
+          `${greetingHeader}Recibí el dato *${bareDigits}*. Confírmame qué trámite requieres (puedes responder *Sí*, *CC* o *1* si es cédula para antecedentes y ADRES):\n` +
+          `• Cédula de Ciudadanía (C.C.) / Cédula de Extranjería (C.E.) / Pasaporte / NIT (Persona Jurídica) para antecedentes.\n` +
+          `• O consulta de Factura Predial Bogotá / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial 🤝✨.\n\n` +
+          `_⚖️ Tratamiento de datos Ley 1581/12._`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", rawNumMsg);
+        markUserGreetedToday(userId);
+        return rawNumMsg;
+      }
+    }
+
+    if (/^[A-Za-z]{3}\d{4}[A-Za-z0-9]{4}$/.test(compactCleanNoSpaces)) {
+      const upperChip = compactCleanNoSpaces.toUpperCase();
+      setPendingUnconfirmedDoc(userId, upperChip);
+      const greetingHeader = isOngoingChat
+        ? ""
+        : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 `;
+      const chipMsg = `${greetingHeader}Recibí el código CHIP *${upperChip}*. ¿Deseas la factura del impuesto predial de Bogotá o el paz y salvo de valorización del IDU? Quedo atenta para emitirte el documento de inmediato 🤝✨.\n\n_⚖️ Tratamiento de datos Ley 1581/12._`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", chipMsg);
+      markUserGreetedToday(userId);
+      return chipMsg;
+    }
+  }
+
   // 🌐 NAVEGACIÓN Y EXTRACCIÓN PREVIA DE URLs:
   let preloadedWebContent = "";
   const urlMatch = clean.match(/https?:\/\/[^\s]+/i);
@@ -3661,10 +3861,10 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       userPromptContent += preloadedWebContent;
     }
     if (mediaOptions?.imageBuffer) {
-      userPromptContent += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISIÓN MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, cédulas, datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una reseña o calificación en Google (Google Maps / Reseña / Estrellas / VECY Bienes Raíces), valida la reseña cordialmente, agradécele con mucho cariño y calidez humana e incluye la etiqueta interna [RESEÑA_GOOGLE_VALIDADA].]`;
+      userPromptContent += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA CON VISIÓN MULTIMODAL. Lee atentamente todo el contenido visual y textual (OCR completo): logos, nombres de empresas o personas, NIT, cédulas (C.C. / C.E. / PPT / Pasaporte), datos societarios, recibos, facturas, comprobantes o capturas de pantalla. Si detectas una cédula o documento de identidad personal y el contexto es verificar identidad, antecedentes o EPS/régimen, invoca de inmediato la herramienta 'consultar_identidad_y_antecedentes' pasando el tipoDocumento y numeroDocumento exactos leídos en la imagen. Si detectas una empresa o una solicitud de investigar una empresa a partir de la imagen o del texto, invoca de inmediato la herramienta 'consultar_empresa_o_nit'. Si la imagen corresponde a una captura de pantalla de una reseña o calificación en Google (Google Maps / Reseña / Estrellas / VECY Bienes Raíces), valida la reseña cordialmente, agradécele con mucho cariño y calidez humana e incluye la etiqueta interna [RESEÑA_GOOGLE_VALIDADA].]`;
     }
     if (mediaOptions?.pdfBuffer) {
-      userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal y procesa la consulta de forma integral.]`;
+      userPromptContent += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento con visión multimodal (si contiene cédula o documento de identidad para verificación, invoca 'consultar_identidad_y_antecedentes' con el número leído) y procesa la consulta de forma integral.]`;
     }
 
     if (contextRoleDirective && !isEduardo && !isJani && !isFamilyOrTrusted) {
@@ -3832,7 +4032,8 @@ DIRECTIVAS OBLIGATORIAS:
         rawFnArgs,
         userId,
         userName || displayName || realName,
-        clean
+        clean,
+        Boolean(mediaOptions?.imageBuffer || mediaOptions?.pdfBuffer)
       );
       reply = await synthesizeToolResponseWithGemini(
         userId,
@@ -3846,6 +4047,25 @@ DIRECTIVAS OBLIGATORIAS:
       );
     } else {
       reply = llmRes.choices[0]?.message?.content || "";
+      if (
+        reply &&
+        /[¿?]/.test(reply) &&
+        /\b(?:antecedentes|adres|eps|c[eé]dula|identidad|predial|idu)\b/i.test(reply)
+      ) {
+        try {
+          const {
+            extractCedulaForVerification,
+            setPendingUnconfirmedDoc,
+            getPendingUnconfirmedDoc
+          } = await import("../../identityVerificationService");
+          if (!getPendingUnconfirmedDoc(userId)) {
+            const det = extractCedulaForVerification(clean, true);
+            if (det.found && det.cedula) {
+              setPendingUnconfirmedDoc(userId, det.cedula);
+            }
+          }
+        } catch (_) {}
+      }
     }
 
     // 🌟 VALIDACIÓN DE RESEÑA EN GOOGLE POR VISIÓN MULTIMODAL:
@@ -4077,7 +4297,10 @@ DIRECTIVAS OBLIGATORIAS:
         appendDmHistory(userId, "assistant", chipMsg);
         return chipMsg;
       }
-      if (/(?:^|\b)(?:es\s+cc|cc|c[eé]dula|1|antecedentes|idu|3|predial|2)\b/i.test(cleanLower)) {
+      if (
+        /(?:^|\b)(?:es\s+cc|cc|c[eé]dula|1|antecedentes|adres|eps|identidad|idu|3|predial|2)\b/i.test(cleanLower) ||
+        (clean.split(/\s+/).filter(Boolean).length <= 8 && !isNegativeConsentResponse(clean) && isAffirmativeConsentResponse(clean))
+      ) {
         const { getPendingUnconfirmedDoc, clearPendingUnconfirmedDoc, executeIdentityVerificationFromWhatsApp } = await import("../../identityVerificationService");
         const pendingDoc = getPendingUnconfirmedDoc(userId);
         if (pendingDoc) {

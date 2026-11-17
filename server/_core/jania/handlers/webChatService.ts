@@ -39,6 +39,7 @@ import { auditPropertyListing, buildRealEstateIcp } from "../../realEstateMarket
 import {
   isExplicitReviewLinkRequest,
   isUserSatisfactionOrFeedbackReply,
+  isAssistantAskingSatisfaction,
   buildAutonomousGoogleReviewInvitation,
 } from "../../politenessService";
 import { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT, executePredialAssistanceFromWhatsApp } from "../../predialService";
@@ -163,9 +164,10 @@ export async function evaluateWebDeterministicSkills(params: {
   userId: string;
   userName?: string;
   hasActiveHistory: boolean;
+  lastAssistantText?: string;
   formatRawListingGuide?: (args: { userName?: string; isRequirement: boolean }) => string;
 }): Promise<WebSkillEvaluationResult> {
-  const { message, userId, userName, hasActiveHistory, formatRawListingGuide } = params;
+  const { message, userId, userName, hasActiveHistory, lastAssistantText, formatRawListingGuide } = params;
   const clean = (message || "").trim();
   if (!clean) return { handled: false };
 
@@ -197,7 +199,9 @@ export async function evaluateWebDeterministicSkills(params: {
     hasPhDocumentMarkers(clean) ||
     extractAllCedulasForVerification(clean, false).length > 0;
 
-  const satFeedback = isUserSatisfactionOrFeedbackReply(clean, hasActiveHistory);
+  const satFeedback = isUserSatisfactionOrFeedbackReply(clean, hasActiveHistory, {
+    isSatisfactionPromptActive: isAssistantAskingSatisfaction(lastAssistantText),
+  });
   if (
     isReviewReq ||
     (!isOtherToolRequest &&

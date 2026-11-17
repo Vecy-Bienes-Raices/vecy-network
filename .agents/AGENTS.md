@@ -184,7 +184,30 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.21 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.23 — Noviembre 2026
+
+### Novedades v34.23 (Coherencia Conversacional DM/Grupos/Web — Cédula/CHIP Suelto y Blindaje Anti-Secuestro de "Sí" hacia Google Reviews — Doctrina Eduardo A. Rivera):
+- **Blindaje Anti-Secuestro de Satisfacción (`politenessService.ts`, `dmHandler.ts`, `consultingHandler.ts`, `webChatService.ts`, `server/routers/janIA.ts`):**
+  1. Nuevo helper `isAssistantAskingSatisfaction` y opción `isSatisfactionPromptActive` en `isUserSatisfactionOrFeedbackReply`: un `"Sí"`, `"Ok"`, `"Claro"` o `"Perfecto"` aislado únicamente se interpreta como satisfacción si JanIA formuló expresamente una pregunta de satisfacción en el turno anterior y no hay confirmaciones pendientes; además se excluyen números de 5–15 dígitos y CHIPs `AAA...`.
+  2. En `dmHandler.ts`, `hasRecentServiceContext` deja de dispararse por palabras de herramientas (`antecedentes`, `adres`, `predial`, `idu`) presentes dentro de preguntas u ofertas de JanIA, y verifica estados pendientes (`pendingUnconfirmedDoc`, `pendingCompanyFollowUp`, `pendingAdminDeductionTotal`, `esperando_respuesta_40_20_40`, `esperando_terminos_corretaje`).
+- **Flujo Determinístico Pre-LLM de Cédulas/CHIPs Sueltos y Confirmaciones (`dmHandler.ts`):**
+  1. Números sueltos (`1127581637`) y CHIPs (`AAA...`) se registran de forma determinística (`setPendingUnconfirmedDoc`) antes de `invokeLLM` (`$0 COP`) sin mezclar el menú de 3 roles, y ante confirmaciones (`"Sí"`, `"CC"`, `"1"`, `"CE"`, `"Pasaporte"`, `"NIT"`, `"antecedentes"`, `"IDU"`, `"Predial"`) ejecutan de inmediato el servicio oficial (respetando prioridad de `getPendingCompanyFollowUp` para RUES).
+  2. `executeJaniaDmTool` (`consultar_identidad_y_antecedentes`) valida también `isFromRecentHistory` para confirmaciones multi-turno y el gancho post-LLM guarda el documento pendiente si Gemini formula pregunta de confirmación.
+- **Gobernanza y Regresión (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-coherencia-confirmacion-documento-y-satisfaccion-anti-falso-si-v34-23` y **Suite 209** (**6/6 archivos, 735/735 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.23` (`34.23.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.22 — Noviembre 2026
+
+### Novedades v34.22 (Blindaje Total de Verificación ADRES: EPS, Régimen Contributivo/Subsidiado y Estado en DM, Multi-Doc, OCR y Agenda — Doctrina Eduardo A. Rivera):
+- **Resiliencia ADRES 3 Capas y Parser Tabular Estructural (`identityVerificationService.ts`):**
+  1. Nuevos helpers `normalizeAdresRegimen` y `extractHtmlTableRows`, ampliación de `formatCleanEpsName` (`E.P.S.` con puntos + EPS regionales/contributivas/subsidiadas) y actualización de `parseAdresHtml` con mapeo dinámico `<th>`/`<td>` priorizando filas `ACTIVO` con respaldo por líneas.
+  2. `queryAdres` invalida caché sin EPS o sin régimen, amplía timeouts HTTP a `9000ms` con campos ASP.NET (`RadScriptManager1_TSM`, `__EVENTTARGET`), mejora `queryAdresViaPuppeteer` (búsqueda ampliada de Chrome, clic real en `#btnConsultar` con `popup`/`response`/`dialog` + fallback form submit) e integra `queryAdresViaClassicCaptcha` (Capa 3 sobre `ConsultarAfiliadoWeb.aspx` + 2Captcha, bloqueado en `NODE_ENV=test` a `$0 COP`).
+- **Cero Envenenamiento de Caché & Salida Completa Multi-Doc (`identityVerificationService.ts`):**
+  1. Eliminada la persistencia de entradas `ADRES:` vacías cuando ADRES falla pero PONAL/PGN resuelve el nombre; las rutas con nombre cacheado refrescan ADRES si falta `eps` o `regimen` (pasando `adresStatus` real); `buildConsolidatedReportText` (2+ documentos) y `formatCompactIdentityVerificationReport` siempre muestran EPS, Estado y Régimen.
+- **DM, OCR Adjuntos, Guardarrail Gemini y Agenda (`dmHandler.ts`, `agenda.ts`):**
+  1. `executeJaniaDmTool` recibe `hasMediaAttachment` para admitir cédulas en imagen/PDF sin dígitos en el mensaje y deja de inventar `"CONTRIBUTIVO"` ante ausencia de dato; `synthesizeToolResponseWithGemini` ejecuta guardarrail determinístico para preservar EPS y Régimen en síntesis >40 caracteres; `queryOfficialAdres` en `agenda.ts` delega en `queryAdres` retornando `{ success, officialName, eps, estado, regimen }`.
+- **Gobernanza y Regresión (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-adres-eps-regimen-resiliencia-integridad-v34-22` y **Suite 208** (**6/6 archivos, 733/733 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.22` (`34.22.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.21 — Noviembre 2026
 
 ### Novedades v34.21 (Auditoría Integral y Paridad Total DM/Grupos/Web, Nombres Compuestos Persistentes, Valuación Rural/Comercial Nacional, Pacto de Retroventa y Pedagogía "Dinosaurios vs. VECY" — Doctrina Eduardo A. Rivera):
 - **Memoria Nominal Simple/Compuesta, Género y Roles (`nameAndGenderResolver.ts`, `sessionManager.ts`, `dmHandler.ts`, `consultingHandler.ts`, `circuloHandler.ts`):**

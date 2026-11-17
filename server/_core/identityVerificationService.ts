@@ -503,6 +503,23 @@ export function mapTipoDocToAdres(tipoDoc: string): string | null {
  * Limpia y normaliza el nombre de la EPS proveniente de ADRES (BDUA),
  * decodificando entidades HTML y extrayendo nombres comerciales limpios y contundentes.
  */
+export function normalizeAdresRegimen(rawRegimen: string | null | undefined): string | undefined {
+  if (!rawRegimen || !rawRegimen.trim()) return undefined;
+  let clean = decodeHtmlEntities(rawRegimen)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+  // Eliminar prefijo redundante "RÉGIMEN" para uniformidad (ej: "RÉGIMEN SUBSIDIADO" -> "SUBSIDIADO")
+  clean = clean.replace(/^R[EÉ]GIMEN\s+/i, '').trim();
+  if (!clean) return undefined;
+  if (clean.includes('CONTRIBUTIV')) return 'CONTRIBUTIVO';
+  if (clean.includes('SUBSIDIAD')) return 'SUBSIDIADO';
+  if (clean.includes('EXCEPCI')) return 'EXCEPCIÓN';
+  if (clean.includes('ESPECIAL')) return 'ESPECIAL';
+  if (clean.includes('MOVILIDAD')) return 'MOVILIDAD';
+  return clean;
+}
+
 export function formatCleanEpsName(rawEps: string | null | undefined): string {
   if (!rawEps || !rawEps.trim()) return '';
 
@@ -525,13 +542,13 @@ export function formatCleanEpsName(rawEps: string | null | undefined): string {
     clean = quoteMatch[1].trim();
   }
 
-  const upper = clean.toUpperCase();
+  const upper = clean.toUpperCase().replace(/\bE\.?\s*P\.?\s*S\.?\b/g, 'EPS');
   if (upper.includes('CAPITAL SALUD')) return 'Capital Salud EPS-S';
   if (upper.includes('SANITAS')) return 'Sanitas EPS';
   if (upper.includes('NUEVA EPS')) return 'Nueva EPS';
   if (upper.includes('COMPENSAR')) return 'Compensar EPS';
   if (upper.includes('SALUD TOTAL')) return 'Salud Total EPS';
-  if (upper.includes('SURAMERICANA') || upper.includes('EPS SURA') || upper.includes('SURA')) return 'Sura EPS';
+  if (upper.includes('SURAMERICANA') || upper.includes('EPS SURA') || /\bSURA\b/.test(upper)) return 'Sura EPS';
   if (upper.includes('FAMISANAR')) return 'Famisanar EPS';
   if (upper.includes('SAVIA SALUD')) return 'Savia Salud EPS';
   if (upper.includes('COOSALUD')) return 'Coosalud EPS';
@@ -539,6 +556,16 @@ export function formatCleanEpsName(rawEps: string | null | undefined): string {
   if (upper.includes('ASMET SALUD')) return 'Asmet Salud EPS';
   if (upper.includes('EMSSANAR')) return 'Emssanar EPS';
   if (upper.includes('ALIANSALUD') || upper.includes('COLMEDICA')) return 'Aliansalud EPS';
+  if (upper.includes('SALUD MIA')) return 'Salud Mía EPS';
+  if (upper.includes('CAJACOPI')) return 'Cajacopi EPS';
+  if (upper.includes('COMFAORIENTE')) return 'Comfaoriente EPS';
+  if (upper.includes('COMFENALCO')) return 'Comfenalco Valle EPS';
+  if (upper.includes('CAPRESOCA')) return 'Capresoca EPS';
+  if (upper.includes('ECOOPSOS')) return 'Ecoopsos EPS-S';
+  if (upper.includes('CONVIDA')) return 'Convida EPS';
+  if (upper.includes('MEDIMAS') || upper.includes('MEDIMÁS')) return 'Medimás EPS';
+  if (upper.includes('COOMEVA')) return 'Coomeva EPS';
+  if (upper.includes('CAFESALUD')) return 'Cafesalud EPS';
   if (upper.includes('SOS') || upper.includes('SERVICIO OCCIDENTAL')) return 'S.O.S. EPS';
   if (upper.includes('MALLAMAS')) return 'Mallamas EPS-I';
   if (upper.includes('PIJAOS')) return 'Pijaos Salud EPS-I';
@@ -592,22 +619,24 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
   const cached = identityCache.get(cacheKey) || identityCache.get(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
   if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
-    // Si la entrada en caché contiene el texto genérico antiguo ("Registrado y activo en el sistema de aseguramiento en salud")
-    // invalidar la entrada en producción para forzar consulta fresca a ADRES
-    const isGenericEps = Boolean(cached.eps && (
+    // Si la entrada en caché está incompleta (sin EPS o sin Régimen) o contiene texto genérico antiguo,
+    // invalidar la entrada en producción para forzar consulta fresca a ADRES con EPS + Régimen reales.
+    const isGenericOrIncompleteEps = Boolean(
+      !cached.eps ||
+      !cached.regimen ||
       cached.eps.toLowerCase().includes("registrado y activo") ||
       cached.eps.toLowerCase().includes("aseguramiento en salud")
-    ));
-    if (isGenericEps && process.env.NODE_ENV !== "test") {
+    );
+    if (isGenericOrIncompleteEps && process.env.NODE_ENV !== "test") {
       identityCache.delete(cacheKey);
       identityCache.delete(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`);
-    } else {
+    } else if (cached.eps) {
       return {
         success: true,
         officialName: cached.fullName,
         eps: cached.eps,
         estado: cached.estado,
-        regimen: cached.regimen,
+        regimen: normalizeAdresRegimen(cached.regimen) || cached.regimen,
         documentType: mappedTipo,
         documentNumber: cleanNum,
         source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
@@ -694,6 +723,9 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
       }
 
       const postDataObj: Record<string, string> = {
+        RadScriptManager1_TSM: '',
+        __EVENTTARGET: '',
+        __EVENTARGUMENT: '',
         __VIEWSTATE: vs,
         __VIEWSTATEGENERATOR: vsg,
         __EVENTVALIDATION: ev,
@@ -729,7 +761,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
         method: 'POST',
         headers: postHeaders,
-        timeout: 6000
+        timeout: 9000
       } as any, postData);
 
       addCookies(r2.headers['set-cookie']);
@@ -740,7 +772,7 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
         // Codificar determinísticamente '+' como '%2B' para evitar corrupción de tokens base64 en ASP.NET
         const popupUrl = m[1].replace(/\+/g, '%2B');
 
-        // 3. GET resultado del afiliado (timeout: 6000ms)
+        // 3. GET resultado del afiliado (timeout: 9000ms)
         const r3 = await httpRequest({
           hostname: ep.host,
           port: ep.port,
@@ -754,27 +786,29 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
           },
-          timeout: 6000
+          timeout: 9000
         } as any);
 
-        if (r3.statusCode === 200 && !r3.body.includes('Error de servidor')) {
+        if (r3.statusCode === 200 && !r3.body.includes('Error de servidor') && !r3.body.includes('NullReferenceException')) {
           const parsed = parseAdresHtml(r3.body, mappedTipo, cleanNum);
-          if (parsed.success) {
+          if (parsed.success && (parsed.eps || parsed.regimen || parsed.officialName)) {
             // Persistir de inmediato en caché para consultas instantáneas a $0 COP
-            identityCache.set(cacheKey, {
-              fullName: parsed.officialName || '',
-              eps: parsed.eps,
-              estado: parsed.estado,
-              regimen: parsed.regimen,
-              timestamp: Date.now()
-            });
-            identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
-              fullName: parsed.officialName || '',
-              eps: parsed.eps,
-              estado: parsed.estado,
-              regimen: parsed.regimen,
-              timestamp: Date.now()
-            });
+            if (parsed.eps || parsed.regimen) {
+              identityCache.set(cacheKey, {
+                fullName: parsed.officialName || '',
+                eps: parsed.eps,
+                estado: parsed.estado,
+                regimen: parsed.regimen,
+                timestamp: Date.now()
+              });
+              identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+                fullName: parsed.officialName || '',
+                eps: parsed.eps,
+                estado: parsed.estado,
+                regimen: parsed.regimen,
+                timestamp: Date.now()
+              });
+            }
             return parsed;
           }
         }
@@ -799,17 +833,62 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
     }
   }
 
-  // Capa 2 / Capa 3: Fallback Robusto con Navegador Headless Puppeteer + 2Captcha
+  // Capa 2: Fallback Robusto con Navegador Headless Puppeteer + reCAPTCHA Enterprise
   try {
     const puppeteerResult = await queryAdresViaPuppeteer(mappedTipo, cleanNum);
     if (puppeteerResult && puppeteerResult.success) {
+      if (puppeteerResult.eps || puppeteerResult.regimen) {
+        identityCache.set(cacheKey, {
+          fullName: puppeteerResult.officialName || '',
+          eps: puppeteerResult.eps,
+          estado: puppeteerResult.estado,
+          regimen: puppeteerResult.regimen,
+          timestamp: Date.now()
+        });
+        identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+          fullName: puppeteerResult.officialName || '',
+          eps: puppeteerResult.eps,
+          estado: puppeteerResult.estado,
+          regimen: puppeteerResult.regimen,
+          timestamp: Date.now()
+        });
+      }
       return puppeteerResult;
     }
-    if (puppeteerResult && puppeteerResult.error && !puppeteerResult.error.includes('Error en navegación')) {
+    if (puppeteerResult && puppeteerResult.isExplicitlyNotFound) {
       return puppeteerResult;
     }
   } catch (puppetErr: any) {
     console.warn('[queryAdres] Fallback Puppeteer advertencia:', puppetErr?.message || puppetErr);
+  }
+
+  // Capa 3: Fallback de Alta Resiliencia vía Portal Clásico ADRES (RadCaptcha imagen + 2Captcha)
+  try {
+    const classicResult = await queryAdresViaClassicCaptcha(mappedTipo, cleanNum);
+    if (classicResult && classicResult.success) {
+      if (classicResult.eps || classicResult.regimen) {
+        identityCache.set(cacheKey, {
+          fullName: classicResult.officialName || '',
+          eps: classicResult.eps,
+          estado: classicResult.estado,
+          regimen: classicResult.regimen,
+          timestamp: Date.now()
+        });
+        identityCache.set(`ADRES:${mappedTipo.toLowerCase()}:${cleanNum}`, {
+          fullName: classicResult.officialName || '',
+          eps: classicResult.eps,
+          estado: classicResult.estado,
+          regimen: classicResult.regimen,
+          timestamp: Date.now()
+        });
+      }
+      return classicResult;
+    }
+    if (classicResult && classicResult.isExplicitlyNotFound) {
+      return classicResult;
+    }
+  } catch (classicErr: any) {
+    console.warn('[queryAdres] Fallback Clásico RadCaptcha advertencia:', classicErr?.message || classicErr);
   }
 
   return {
@@ -851,33 +930,112 @@ export function decodeHtmlEntities(str: string): string {
 }
 
 /**
+ * Extrae filas y celdas de tablas HTML preservando celdas vacías y decodificando entidades.
+ */
+function extractHtmlTableRows(html: string): string[][] {
+  const rows: string[][] = [];
+  const trMatches = html.match(/<tr[\s\S]*?<\/tr>/gi) || [];
+  for (const tr of trMatches) {
+    const cells: string[] = [];
+    const cellRegex = /<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = cellRegex.exec(tr)) !== null) {
+      const cleaned = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+      cells.push(cleaned);
+    }
+    if (cells.length > 0) rows.push(cells);
+  }
+  return rows;
+}
+
+/**
  * Motor de extracción y normalización de datos HTML devueltos por ADRES (BDUA).
+ * Parsea estructuralmente tablas GridViewBasica y GridViewAfiliacion (priorizando filas ACTIVAS)
+ * con respaldo inteligente basado en encabezados y expresiones regulares.
  */
 export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: string): AdresResult {
-  const lines = (body || '').replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
-  const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
-  const apellidosIdx = lines.findIndex((l: string) => l.toUpperCase().includes('APELLIDOS'));
-  const nombres = decodeHtmlEntities(nombresIdx !== -1 ? lines[nombresIdx + 1] : '');
-  const apellidos = decodeHtmlEntities(apellidosIdx !== -1 ? lines[apellidosIdx + 1] : '');
-
-  const depIdx = lines.findIndex((l: string) => l.toUpperCase().includes('DEPARTAMENTO'));
-  const munIdx = lines.findIndex((l: string) => l.toUpperCase().includes('MUNICIPIO'));
-  const departamento = decodeHtmlEntities(depIdx !== -1 ? lines[depIdx + 1] : '');
-  const municipio = decodeHtmlEntities(munIdx !== -1 ? lines[munIdx + 1] : '');
-
-  const estadoIdx = lines.findIndex((l: string) => l.toUpperCase().includes('ESTADO'));
+  let nombres = '';
+  let apellidos = '';
+  let departamento = '';
+  let municipio = '';
   let estado = '';
   let eps = '';
   let regimen = '';
-  if (estadoIdx !== -1) {
+
+  // 1. Extracción estructural por filas/columnas de tablas HTML (inmune a celdas vacías o múltiples afiliaciones)
+  const tableRows = extractHtmlTableRows(body || '');
+  for (const row of tableRows) {
+    if (row.length === 2) {
+      const key = row[0].toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const val = row[1];
+      if (!nombres && key === 'NOMBRES') nombres = val;
+      else if (!apellidos && key === 'APELLIDOS') apellidos = val;
+      else if (!departamento && key === 'DEPARTAMENTO') departamento = val;
+      else if (!municipio && key === 'MUNICIPIO') municipio = val;
+    }
+  }
+
+  // Buscar tabla de afiliación (encabezados ESTADO + ENTIDAD + REGIMEN)
+  for (let i = 0; i < tableRows.length - 1; i++) {
+    const headers = tableRows[i].map(h => h.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+    const estCol = headers.findIndex(h => h === 'ESTADO' || h.includes('ESTADO DE AFILIACION') || h === 'ESTADO');
+    const entCol = headers.findIndex(h => h === 'ENTIDAD' || h.includes('ENTIDAD PROMOTORA') || h.includes('ADMINISTRADORA') || h === 'EPS');
+    const regCol = headers.findIndex(h => h === 'REGIMEN' || h.includes('REGIMEN'));
+    if (entCol !== -1 && (estCol !== -1 || regCol !== -1)) {
+      const candidateRows: Array<{ est: string; ent: string; reg: string }> = [];
+      for (let r = i + 1; r < tableRows.length; r++) {
+        const dataRow = tableRows[r];
+        const rowUpperJoined = dataRow.join(' ').toUpperCase();
+        // Detener si empieza otra tabla (ej. Fecha de Impresión / Estación de origen)
+        if (rowUpperJoined.includes('FECHA DE IMPRES') || rowUpperJoined.includes('ESTACI')) break;
+        if (dataRow.length <= Math.max(estCol, entCol, regCol)) continue;
+        const estVal = estCol !== -1 ? (dataRow[estCol] || '').trim() : '';
+        const entVal = entCol !== -1 ? (dataRow[entCol] || '').trim() : '';
+        const regVal = regCol !== -1 ? (dataRow[regCol] || '').trim() : '';
+        if (entVal || estVal || regVal) {
+          candidateRows.push({ est: estVal, ent: entVal, reg: regVal });
+        }
+      }
+      if (candidateRows.length > 0) {
+        // Priorizar fila ACTIVO/VIGENTE/PROTECCIÓN LABORAL sobre RETIRADO si existe historial múltiple
+        const preferred = candidateRows.find(c => /\b(?:ACTIVO|PROTECCI[OÓ]N|VIGENTE)\b/i.test(c.est)) || candidateRows[0];
+        if (!estado && preferred.est) estado = preferred.est;
+        if (!eps && preferred.ent) eps = preferred.ent;
+        if (!regimen && preferred.reg) regimen = preferred.reg;
+      }
+      if (eps || regimen) break;
+    }
+  }
+
+  // 2. Respaldo por líneas planas (retrocompatibilidad con HTML parcial o mocks simplificados)
+  const lines = (body || '').replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
+  if (!nombres) {
+    const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
+    if (nombresIdx !== -1) nombres = decodeHtmlEntities(lines[nombresIdx + 1] || '');
+  }
+  if (!apellidos) {
+    const apellidosIdx = lines.findIndex((l: string) => l.toUpperCase().includes('APELLIDOS'));
+    if (apellidosIdx !== -1) apellidos = decodeHtmlEntities(lines[apellidosIdx + 1] || '');
+  }
+  if (!departamento) {
+    const depIdx = lines.findIndex((l: string) => l.toUpperCase().includes('DEPARTAMENTO'));
+    if (depIdx !== -1) departamento = decodeHtmlEntities(lines[depIdx + 1] || '');
+  }
+  if (!municipio) {
+    const munIdx = lines.findIndex((l: string) => l.toUpperCase().includes('MUNICIPIO'));
+    if (munIdx !== -1) municipio = decodeHtmlEntities(lines[munIdx + 1] || '');
+  }
+
+  const estadoIdx = lines.findIndex((l: string) => l.toUpperCase().includes('ESTADO'));
+  if ((!estado || !eps || !regimen) && estadoIdx !== -1) {
     const offset = 6;
-    estado = decodeHtmlEntities(lines[estadoIdx + offset] || '');
-    eps = decodeHtmlEntities(lines[estadoIdx + offset + 1] || '');
-    regimen = decodeHtmlEntities(lines[estadoIdx + offset + 2] || '');
+    if (!estado) estado = decodeHtmlEntities(lines[estadoIdx + offset] || '');
+    if (!eps) eps = decodeHtmlEntities(lines[estadoIdx + offset + 1] || '');
+    if (!regimen) regimen = decodeHtmlEntities(lines[estadoIdx + offset + 2] || '');
   }
 
   if (!regimen) {
-    const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N)\b/i);
+    const regMatch = body.match(/\b(CONTRIBUTIVO|SUBSIDIADO|ESPECIAL|EXCEPCI[OÓ]N|MOVILIDAD)\b/i);
     if (regMatch) {
       regimen = regMatch[1].toUpperCase();
     }
@@ -900,7 +1058,7 @@ export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: strin
     }
   }
   if (!eps || eps.length < 3) {
-    const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA EPS|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
+    const epsRegex = /(?:CAPITAL SALUD|SANITAS|NUEVA\s*E\.?P\.?S\.?|COMPENSAR|SALUD TOTAL|SURA|SURAMERICANA|FAMISANAR|SAVIA SALUD|COOSALUD|MUTUAL SER|ASMET SALUD|EMSSANAR|ALIANSALUD|COLMEDICA|CAJACOPI|COMFAORIENTE|COMFENALCO|SALUD M[IÍ]A|CAPRESOCA|ECOOPSOS|CONVIDA|MEDIM[AÁ]S|MALLAMAS|PIJAOS|ANAS WAYUU|DUSAKAWI|AIC)/i;
     const directMatch = body.match(epsRegex);
     if (directMatch) {
       eps = directMatch[0];
@@ -914,14 +1072,18 @@ export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: strin
 
   const officialName = formatTitleCase(fullNameRaw);
   const cleanEps = formatCleanEpsName(eps);
+  const normalizedRegimen = normalizeAdresRegimen(regimen);
+  const normalizedEstado = estado ? decodeHtmlEntities(estado).toUpperCase().trim() : undefined;
   const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
-  identityCache.set(cacheKey, {
-    fullName: officialName,
-    eps: cleanEps || undefined,
-    estado: estado ? estado.toUpperCase() : undefined,
-    regimen: regimen ? regimen.toUpperCase() : undefined,
-    timestamp: Date.now()
-  });
+  if (cleanEps || normalizedRegimen) {
+    identityCache.set(cacheKey, {
+      fullName: officialName,
+      eps: cleanEps || undefined,
+      estado: normalizedEstado,
+      regimen: normalizedRegimen,
+      timestamp: Date.now()
+    });
+  }
 
   return {
     success: true,
@@ -932,23 +1094,28 @@ export function parseAdresHtml(body: string, mappedTipo: string, cleanNum: strin
     documentNumber: cleanNum,
     departamento: formatTitleCase(departamento),
     municipio: formatTitleCase(municipio),
-    estado: estado ? estado.toUpperCase() : undefined,
+    estado: normalizedEstado,
     eps: cleanEps || (eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim() : undefined),
-    regimen: regimen ? regimen.toUpperCase() : undefined,
+    regimen: normalizedRegimen,
     source: 'ADRES - Base de Datos Única de Afiliados (BDUA)'
   };
 }
 
 /**
  * Conector de alta resiliencia vía navegador headless Puppeteer con emulación de navegador real
- * y resolución de reCAPTCHA para portales del Estado (Doctrina v33.36).
+ * y soporte de reCAPTCHA Enterprise / ventanas emergentes para portales del Estado (Doctrina v33.36 / v34.22).
  */
 export async function queryAdresViaPuppeteer(mappedTipo: string, cleanNum: string): Promise<AdresResult> {
   const puppeteer = (await import('puppeteer')).default;
   const fs = await import('fs');
-  const executablePath = fs.existsSync('/usr/bin/google-chrome')
-    ? '/usr/bin/google-chrome'
-    : (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined);
+  const chromeCandidates = [
+    process.env.CHROME_PATH,
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/home/eddu/.local/bin/google-chrome'
+  ].filter(Boolean) as string[];
+  const executablePath = chromeCandidates.find((p) => fs.existsSync(p));
 
   let browser: any = null;
   try {
@@ -966,12 +1133,56 @@ export async function queryAdresViaPuppeteer(mappedTipo: string, cleanNum: strin
     });
 
     const page = await browser.newPage();
-    page.setDefaultTimeout(10000);
+    page.setDefaultTimeout(12000);
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
+
+    let popupUrl = '';
+    let popupPageHtml = '';
+    let isExplicitNotFoundAlert = false;
+
+    page.on('dialog', async (dialog: any) => {
+      const msg = dialog.message() || '';
+      if (msg.toLowerCase().includes('no se encuentra')) {
+        isExplicitNotFoundAlert = true;
+      }
+      await dialog.dismiss().catch(() => {});
+    });
+
+    page.on('response', async (res: any) => {
+      if (res.url().includes('ConsultarAfiliadoWeb_2') && res.request().method() === 'POST') {
+        try {
+          const text = await res.text();
+          if (text.toLowerCase().includes('no se encuentra')) {
+            isExplicitNotFoundAlert = true;
+          }
+          const m = text.match(/window\.open\(\x27([^\x27]+)\x27/);
+          if (m && m[1]) popupUrl = m[1];
+        } catch (_) {}
+      }
+      if (res.url().includes('RespuestaConsulta')) {
+        try {
+          const text = await res.text();
+          if (text.includes('GridView') || text.includes('NOMBRES')) {
+            popupPageHtml = text;
+          }
+        } catch (_) {}
+      }
+    });
+
+    page.on('popup', async (popup: any) => {
+      try {
+        await popup.waitForLoadState?.('domcontentloaded').catch(() => {});
+        await new Promise(r => setTimeout(r, 800));
+        const html = await popup.content().catch(() => '');
+        if (html && (html.includes('NOMBRES') || html.includes('GridView'))) {
+          popupPageHtml = html;
+        }
+      } catch (_) {}
+    });
 
     await page.goto('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx', {
       waitUntil: 'domcontentloaded',
-      timeout: 10000
+      timeout: 12000
     });
 
     await page.waitForSelector('#txtNumDoc', { timeout: 6000 });
@@ -981,35 +1192,42 @@ export async function queryAdresViaPuppeteer(mappedTipo: string, cleanNum: strin
       if (sel) sel.value = tipo;
       const inp = document.getElementById('txtNumDoc') as HTMLInputElement;
       if (inp) inp.value = num;
-      const hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.name = 'btnConsultar';
-      hidden.value = 'Consultar';
-      document.forms[0]?.appendChild(hidden);
     }, mappedTipo, cleanNum);
 
-    let popupUrl = '';
-    page.on('response', async (res: any) => {
-      if (res.url().includes('ConsultarAfiliadoWeb_2')) {
-        try {
-          const text = await res.text();
-          const m = text.match(/window\.open\(\x27([^\x27]+)\x27/);
-          if (m && m[1]) popupUrl = m[1];
-        } catch (_) {}
+    // 1er intento natural: clic en #btnConsultar (activa setRecaptchaToken / reCAPTCHA Enterprise + __doPostBack)
+    await page.click('#btnConsultar').catch(() => {});
+
+    for (let i = 0; i < 16; i++) {
+      if (popupPageHtml || popupUrl || isExplicitNotFoundAlert) break;
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    // Si el botón JS no disparó navegación/respuesta (p. ej. bloqueo de script reCAPTCHA), fallback submit clásico WebForms
+    if (!popupPageHtml && !popupUrl && !isExplicitNotFoundAlert) {
+      await page.evaluate(() => {
+        if (!document.querySelector('input[name="btnConsultar"]')) {
+          const hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'btnConsultar';
+          hidden.value = 'Consultar';
+          document.forms[0]?.appendChild(hidden);
+        }
+        document.forms[0]?.submit();
+      }).catch(() => {});
+
+      for (let i = 0; i < 20; i++) {
+        if (popupPageHtml || popupUrl || isExplicitNotFoundAlert) break;
+        await new Promise(r => setTimeout(r, 300));
       }
-    });
+    }
 
-    await page.evaluate(() => {
-      document.forms[0]?.submit();
-    });
-
-    for (let i = 0; i < 24; i++) {
-      if (popupUrl) break;
-      await new Promise(r => setTimeout(r, 250));
+    if (popupPageHtml) {
+      return parseAdresHtml(popupPageHtml, mappedTipo, cleanNum);
     }
 
     if (popupUrl) {
-      await page.goto('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/' + popupUrl, {
+      const encodedPopupUrl = popupUrl.replace(/\+/g, '%2B');
+      await page.goto('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/' + encodedPopupUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 15000
       });
@@ -1017,25 +1235,212 @@ export async function queryAdresViaPuppeteer(mappedTipo: string, cleanNum: strin
       return parseAdresHtml(html, mappedTipo, cleanNum);
     }
 
-    // Si no hubo popup URL, verificar si la página actual tiene alert o resultado directo
+    if (isExplicitNotFoundAlert) {
+      return {
+        success: false,
+        isExplicitlyNotFound: true,
+        source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Puppeteer)',
+        error: 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'
+      };
+    }
+
     const currentHtml = await page.content();
-    if (currentHtml.includes('Información Básica del Afiliado') || currentHtml.includes('Resultados de la consulta')) {
+    if (currentHtml.includes('Información Básica del Afiliado') || currentHtml.includes('Resultados de la consulta') || currentHtml.includes('GridViewAfiliacion')) {
       return parseAdresHtml(currentHtml, mappedTipo, cleanNum);
     }
 
     return {
       success: false,
+      isNetworkError: true,
       source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Puppeteer)',
-      error: 'El ciudadano no registra afiliación vigente en la Base de Datos Única de Afiliados (BDUA)'
+      error: 'Consulta diferida por intermitencia temporal en el servidor estatal de ADRES / BDUA.'
     };
   } catch (err: any) {
     return {
       success: false,
+      isNetworkError: true,
       source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Puppeteer)',
       error: `Error en navegación headless ADRES: ${err?.message || err}`
     };
   } finally {
     if (browser) await browser.close().catch(() => {});
+  }
+}
+
+/**
+ * Capa 3 de alta resiliencia ADRES: Consulta contra el formulario clásico (ConsultarAfiliadoWeb.aspx)
+ * resolviendo el RadCaptcha de 5 caracteres vía 2Captcha cuando el endpoint reCAPTCHA Enterprise falla o bloquea IP.
+ * Cero consumo en entorno de pruebas (NODE_ENV === 'test').
+ */
+export async function queryAdresViaClassicCaptcha(mappedTipo: string, cleanNum: string): Promise<AdresResult> {
+  if (process.env.NODE_ENV === "test" && !process.env.FORCE_LIVE_ADRES_TEST) {
+    return {
+      success: false,
+      source: 'ADRES - Portal Clásico BDUA',
+      error: 'Saltado en entorno test'
+    };
+  }
+  const apiKey = process.env.TWOCAPTCHA_API_KEY;
+  if (!apiKey) {
+    return {
+      success: false,
+      isNetworkError: true,
+      source: 'ADRES - Portal Clásico BDUA',
+      error: 'TWOCAPTCHA_API_KEY no configurada para fallback clásico ADRES'
+    };
+  }
+
+  try {
+    const ep = await getAdresEndpoint();
+    const { Solver } = await import('@2captcha/captcha-solver');
+    const solver = new Solver(apiKey);
+    const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+    const cookieMap = new Map<string, string>();
+    const addCookies = (rawCookies: any) => {
+      if (!rawCookies) return;
+      const list = Array.isArray(rawCookies) ? rawCookies : [rawCookies];
+      for (const c of list) {
+        if (typeof c === 'string') {
+          const part = c.split(';')[0];
+          const eqIdx = part.indexOf('=');
+          if (eqIdx !== -1) cookieMap.set(part.slice(0, eqIdx).trim(), part.slice(eqIdx + 1).trim());
+        }
+      }
+    };
+
+    const r1 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx',
+      method: 'GET',
+      headers: {
+        'Host': 'aplicaciones.adres.gov.co',
+        'User-Agent': ua,
+        'Referer': 'https://www.adres.gov.co/consulte-su-eps'
+      },
+      timeout: 9000
+    } as any);
+    addCookies(r1.headers['set-cookie']);
+
+    const vs = r1.body.match(/id="__VIEWSTATE"\s+value="([^"]+)"/)?.[1] || '';
+    const vsg = r1.body.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/)?.[1] || '';
+    const ev = r1.body.match(/id="__EVENTVALIDATION"\s+value="([^"]+)"/)?.[1] || '';
+    const captchaSrc = r1.body.match(/id="Capcha_CaptchaImageUP"[^>]*src="([^"]+)"/)?.[1];
+
+    if (!vs || !ev || !captchaSrc) {
+      return { success: false, isNetworkError: true, source: 'ADRES - Portal Clásico BDUA', error: 'Tokens ASP.NET o imagen RadCaptcha ausentes' };
+    }
+
+    let imgPath = captchaSrc.replace(/&amp;/g, '&');
+    if (imgPath.startsWith('..')) imgPath = '/BDUA_Internet' + imgPath.substring(2);
+    else if (!imgPath.startsWith('/')) imgPath = '/BDUA_Internet/Pages/' + imgPath;
+
+    const imgBuf = await new Promise<Buffer>((resolve, reject) => {
+      const req = https.request({
+        servername: 'aplicaciones.adres.gov.co',
+        hostname: ep.host,
+        port: ep.port,
+        path: imgPath,
+        method: 'GET',
+        rejectUnauthorized: false,
+        headers: {
+          'Host': 'aplicaciones.adres.gov.co',
+          'User-Agent': ua,
+          'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx',
+          'Cookie': Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ')
+        },
+        timeout: 9000
+      }, (res) => {
+        addCookies(res.headers['set-cookie']);
+        const chunks: Buffer[] = [];
+        res.on('data', d => chunks.push(d));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+      });
+      req.on('error', reject);
+      req.end();
+    });
+
+    const solved = await solver.imageCaptcha({
+      body: imgBuf.toString('base64'),
+      numeric: 0,
+      min_len: 5,
+      max_len: 5
+    });
+    if (!solved?.data) {
+      return { success: false, isNetworkError: true, source: 'ADRES - Portal Clásico BDUA', error: 'No se pudo resolver RadCaptcha de ADRES' };
+    }
+
+    const postData = querystring.stringify({
+      RadScriptManager1_TSM: '',
+      __EVENTTARGET: '',
+      __EVENTARGUMENT: '',
+      __VIEWSTATE: vs,
+      __VIEWSTATEGENERATOR: vsg,
+      __EVENTVALIDATION: ev,
+      tipoDoc: mappedTipo,
+      txtNumDoc: cleanNum,
+      'Capcha$CaptchaTextBox': solved.data.trim(),
+      Capcha_ClientState: '',
+      btnConsultar: 'Consultar'
+    });
+
+    const r2 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx',
+      method: 'POST',
+      headers: {
+        'Host': 'aplicaciones.adres.gov.co',
+        'User-Agent': ua,
+        'Origin': 'https://aplicaciones.adres.gov.co',
+        'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+        'Cookie': Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ')
+      },
+      timeout: 10000
+    } as any, postData);
+    addCookies(r2.headers['set-cookie']);
+
+    const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+    if (alertMatch && alertMatch[1] && alertMatch[1].toLowerCase().includes('no se encuentra')) {
+      return {
+        success: false,
+        isExplicitlyNotFound: true,
+        source: 'ADRES - Portal Clásico BDUA',
+        error: 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'
+      };
+    }
+
+    const m = r2.body.match(/window\.open\('([^']+)'/);
+    if (m && m[1]) {
+      const popupUrl = m[1].replace(/\+/g, '%2B');
+      const r3 = await httpRequest({
+        hostname: ep.host,
+        port: ep.port,
+        path: '/BDUA_Internet/Pages/' + popupUrl,
+        method: 'GET',
+        headers: {
+          'Host': 'aplicaciones.adres.gov.co',
+          'User-Agent': ua,
+          'Referer': 'https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb.aspx',
+          'Cookie': Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ')
+        },
+        timeout: 9000
+      } as any);
+      if (r3.statusCode === 200 && !r3.body.includes('Error de servidor') && !r3.body.includes('NullReferenceException')) {
+        return parseAdresHtml(r3.body, mappedTipo, cleanNum);
+      }
+    }
+
+    return { success: false, isNetworkError: true, source: 'ADRES - Portal Clásico BDUA', error: 'Sin respuesta válida de ADRES clásico' };
+  } catch (err: any) {
+    return {
+      success: false,
+      isNetworkError: true,
+      source: 'ADRES - Portal Clásico BDUA',
+      error: cleanAdresErrorMessage(err?.message || err)
+    };
   }
 }
 
@@ -1737,7 +2142,8 @@ export function formatCompactIdentityVerificationReport(params: {
     epsLine = adresStatus;
   } else if (adresEps) {
     const cleanEps = formatCleanEpsName(adresEps);
-    epsLine = `${cleanEps} (${adresEstado || 'ACTIVO'}${adresRegimen ? ` — ${adresRegimen}` : ''})`;
+    const cleanReg = normalizeAdresRegimen(adresRegimen);
+    epsLine = `${cleanEps} (${adresEstado || 'ACTIVO'}${cleanReg ? ` — ${cleanReg}` : ''})`;
   } else {
     epsLine = isWhiteLabelDoc
       ? 'No registra afiliación en Régimen General BDUA/ADRES. (Habitual en Regímenes Especiales o de Excepción: Fuerzas Armadas, Sanidad Oficial, Magisterio/FOMAG, Ecopetrol, Universidades Estatales, o trámite en curso).'
@@ -2233,19 +2639,27 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
     const isGenericEps = !cachedEps ||
       cachedEps.toLowerCase().includes("registrado y activo") ||
       cachedEps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps && isAdresSupported && process.env.NODE_ENV !== "test") {
+    const needsAdresEnrichment = isGenericEps || !cachedRegimen;
+    let liveAdresError: string | undefined;
+    if (needsAdresEnrichment && isAdresSupported && process.env.NODE_ENV !== "test") {
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
           cachedEps = liveAdres.eps;
           cachedEstado = liveAdres.estado;
           cachedRegimen = liveAdres.regimen;
-          const entry = identityCache.get(adresCacheKey) || identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
-          if (entry) {
-            entry.eps = liveAdres.eps;
-            entry.estado = liveAdres.estado;
-            entry.regimen = liveAdres.regimen;
-          }
+          const mappedLower = (mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase();
+          const enrichedPayload = {
+            fullName: formatTitleCase(liveAdres.officialName || cachedName),
+            eps: liveAdres.eps,
+            estado: liveAdres.estado,
+            regimen: liveAdres.regimen,
+            timestamp: Date.now()
+          };
+          identityCache.set(adresCacheKey, enrichedPayload);
+          identityCache.set(`ADRES:${mappedLower}:${cedula}`, enrichedPayload);
+        } else if (liveAdres?.isNetworkError) {
+          liveAdresError = cleanAdresErrorMessage(liveAdres.error);
         }
       } catch (e) { }
     }
@@ -2259,7 +2673,8 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
       success: true,
       adresEps: cachedEps,
       adresEstado: cachedEstado,
-      adresRegimen: cachedRegimen
+      adresRegimen: cachedRegimen,
+      adresStatus: cachedEps ? undefined : liveAdresError
     });
     return {
       cedula,
@@ -2368,13 +2783,18 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
 
     if (finalOfficialName) {
       const cleanEpsFormatted = adresRes?.eps ? formatCleanEpsName(adresRes.eps) : undefined;
-      identityCache.set(adresCacheKey, {
-        fullName: finalOfficialName,
-        eps: cleanEpsFormatted,
-        estado: adresRes?.estado,
-        regimen: adresRes?.regimen,
-        timestamp: Date.now()
-      });
+      const cleanRegFormatted = normalizeAdresRegimen(adresRes?.regimen);
+      if (cleanEpsFormatted || cleanRegFormatted) {
+        const adresCachePayload = {
+          fullName: finalOfficialName,
+          eps: cleanEpsFormatted,
+          estado: adresRes?.estado,
+          regimen: cleanRegFormatted,
+          timestamp: Date.now()
+        };
+        identityCache.set(adresCacheKey, adresCachePayload);
+        identityCache.set(`ADRES:${(mapTipoDocToAdres(effectiveTipoDoc) || effectiveTipoDoc).toLowerCase()}:${cedula}`, adresCachePayload);
+      }
       const reportText = formatCompactIdentityVerificationReport({
         tipoDoc: effectiveTipoDoc,
         cedula,
@@ -2386,7 +2806,7 @@ export async function verifySingleDocumentInternal(item: ExtractedCedulaItem): P
         contraloriaStatus: cgrRes?.statusText,
         adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
-        adresRegimen: adresRes?.regimen,
+        adresRegimen: cleanRegFormatted,
         adresStatus: cleanEpsFormatted ? undefined : cleanAdresErrorMessage(adresRes?.error),
         isAutoDetectedCe: effectiveTipoDoc.toLowerCase() === 'ce' && tipoDoc.toLowerCase() === 'cc'
       });
@@ -2493,9 +2913,13 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
     }
 
     if (r.adres?.eps) {
-      reportText += `🏥 *ADRES (BDUA):* ${r.adres.eps} (${r.adres.estado || 'REGISTRADO'})\n\n`;
+      const cleanEps = formatCleanEpsName(r.adres.eps) || r.adres.eps;
+      const cleanRegimen = normalizeAdresRegimen(r.adres.regimen);
+      reportText += `🏥 *ADRES (BDUA):* ${cleanEps} (${r.adres.estado || 'ACTIVO'}${cleanRegimen ? ` — ${cleanRegimen}` : ''})\n\n`;
+    } else if (r.adres?.isExplicitlyNotFound) {
+      reportText += `🏥 *ADRES (BDUA):* No registra afiliación en Régimen General BDUA/ADRES (habitual en Regímenes Especiales o de Excepción).\n\n`;
     } else {
-      reportText += `🏥 *ADRES (BDUA):* ⚠️ Consulta con intermitencia temporal en portal ADRES. Puedes verificar en adres.gov.co\n\n`;
+      reportText += `🏥 *ADRES (BDUA):* ⚠️ ${cleanAdresErrorMessage(r.adres?.error)}\n\n`;
     }
   });
 
@@ -2677,19 +3101,27 @@ export async function executeIdentityVerificationFromWhatsApp(
     const isGenericEps = !cachedEps ||
       cachedEps.toLowerCase().includes("registrado y activo") ||
       cachedEps.toLowerCase().includes("aseguramiento en salud");
-    if (isGenericEps && isAdresSupported && process.env.NODE_ENV !== "test") {
+    const needsAdresEnrichment = isGenericEps || !cachedRegimen;
+    let liveAdresError: string | undefined;
+    if (needsAdresEnrichment && isAdresSupported && process.env.NODE_ENV !== "test") {
       try {
         const liveAdres = await queryAdres(tipoDoc, cedula);
         if (liveAdres?.eps) {
           cachedEps = liveAdres.eps;
           cachedEstado = liveAdres.estado;
           cachedRegimen = liveAdres.regimen;
-          const entry = identityCache.get(adresCacheKey) || identityCache.get(`ADRES:${(mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase()}:${cedula}`);
-          if (entry) {
-            entry.eps = liveAdres.eps;
-            entry.estado = liveAdres.estado;
-            entry.regimen = liveAdres.regimen;
-          }
+          const mappedLower = (mapTipoDocToAdres(tipoDoc) || tipoDoc).toLowerCase();
+          const enrichedPayload = {
+            fullName: formatTitleCase(liveAdres.officialName || cachedName),
+            eps: liveAdres.eps,
+            estado: liveAdres.estado,
+            regimen: liveAdres.regimen,
+            timestamp: Date.now()
+          };
+          identityCache.set(adresCacheKey, enrichedPayload);
+          identityCache.set(`ADRES:${mappedLower}:${cedula}`, enrichedPayload);
+        } else if (liveAdres?.isNetworkError) {
+          liveAdresError = cleanAdresErrorMessage(liveAdres.error);
         }
       } catch (e) { }
     }
@@ -2703,7 +3135,8 @@ export async function executeIdentityVerificationFromWhatsApp(
       success: true,
       adresEps: cachedEps,
       adresEstado: cachedEstado,
-      adresRegimen: cachedRegimen
+      adresRegimen: cachedRegimen,
+      adresStatus: cachedEps ? undefined : liveAdresError
     });
 
     if (userId) {
@@ -2822,6 +3255,20 @@ export async function executeIdentityVerificationFromWhatsApp(
     const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
 
     if (finalOfficialName) {
+      const cleanEpsFormatted = adresRes?.eps ? formatCleanEpsName(adresRes.eps) : undefined;
+      const cleanRegFormatted = normalizeAdresRegimen(adresRes?.regimen);
+      if (cleanEpsFormatted || cleanRegFormatted) {
+        const mappedAdresType = mapTipoDocToAdres(currentTipoDoc) || currentTipoDoc;
+        const adresCachePayload = {
+          fullName: finalOfficialName,
+          eps: cleanEpsFormatted,
+          estado: adresRes?.estado,
+          regimen: cleanRegFormatted,
+          timestamp: Date.now()
+        };
+        identityCache.set(`ADRES:${mappedAdresType}:${cedula}`, adresCachePayload);
+        identityCache.set(`ADRES:${mappedAdresType.toLowerCase()}:${cedula}`, adresCachePayload);
+      }
       const reportText = formatCompactIdentityVerificationReport({
         tipoDoc: currentTipoDoc,
         cedula,
@@ -2831,10 +3278,10 @@ export async function executeIdentityVerificationFromWhatsApp(
         policiaMessage: ponalRes?.message,
         procuraduriaStatus: pgnRes?.statusText,
         contraloriaStatus: cgrRes?.statusText,
-        adresEps: adresRes?.eps,
+        adresEps: cleanEpsFormatted,
         adresEstado: adresRes?.estado,
-        adresRegimen: adresRes?.regimen,
-        adresStatus: adresRes?.eps ? undefined : cleanAdresErrorMessage(adresRes?.error),
+        adresRegimen: cleanRegFormatted,
+        adresStatus: cleanEpsFormatted ? undefined : (adresRes?.isExplicitlyNotFound ? undefined : cleanAdresErrorMessage(adresRes?.error)),
         isAutoDetectedCe
       });
 

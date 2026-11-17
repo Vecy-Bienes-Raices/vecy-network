@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-16] — JanIA v34.23: Coherencia Conversacional DM/Grupos/Web — Cédula/CHIP Suelto y Blindaje Anti-Secuestro de "Sí" hacia Google Reviews (Doctrina Eduardo A. Rivera — v34.23 - 34.23.0)
+
+#### 1. Solicitud de Eduardo y Diagnóstico Raíz
+- **Solicitud de Eduardo:** Reporte con captura de WhatsApp Web de **Jeimy Bohorquez** (`1127581637` -> `"Si"`), pidiendo: (a) darle de inmediato desde aquí la respuesta real de verificación con disculpas mientras se corrige a JanIA, y (b) erradicar de raíz la incoherencia conversacional de JanIA.
+- **Diagnóstico Técnico en Vivo:**
+  1. Al recibir `1127581637`, el manejo de `pendingUnconfirmedDoc` solo existía dentro del bloque `catch` de `dmHandler.ts`, por lo que en producción entró a `invokeLLM`, no guardó `pendingUnconfirmedDoc` y Gemini respondió combinando una pregunta sí/no (ADRES/antecedentes) con el menú numerado de 3 roles (`1/2/3`).
+  2. Cuando Jeimy respondió `"Si"`, `hasRecentServiceContext` en `dmHandler.ts` dio `true` porque el mensaje anterior de JanIA contenía `"antecedentes"` y `"adres"` dentro de la pregunta, e `isUserSatisfactionOrFeedbackReply("Si", true)` interpretó `"Si"` como satisfacción entregando el enlace de Google Reviews sin haber ejecutado jamás la verificación. El mismo patrón existía en `consultingHandler.ts` y `webChatService.ts` al pasar `hasActiveHistory` directamente.
+
+#### 2. Acciones Ejecutadas en Código y Verificación Real de `1127581637`
+1. **Verificación Oficial Ejecutada para Jeimy (`1127581637`):** Consulta real ante Policía Nacional, Procuraduría, Contraloría y ADRES: **Jeimy Carolina Bohorquez Aldana** (`C.C. 1.127.581.637`), identidad validada, sin antecedentes ni sanciones, **Sanitas EPS (ACTIVO — CONTRIBUTIVO)**. Se entrega mensaje listo con disculpas y reporte completo.
+2. **Blindaje Anti-Secuestro de Satisfacción (`politenessService.ts`, `dmHandler.ts`, `consultingHandler.ts`, `webChatService.ts`, `server/routers/janIA.ts`):**
+   - Añadido `isAssistantAskingSatisfaction` y opción `isSatisfactionPromptActive` en `isUserSatisfactionOrFeedbackReply` (más exclusión de dígitos/CHIPs). Respuestas cortas como `"Si"`, `"Ok"`, `"Claro"` o `"Perfecto"` solo activan Google Reviews cuando JanIA preguntó expresamente por satisfacción tras entregar un servicio y no hay confirmaciones pendientes.
+   - Corregido `hasRecentServiceContext` en `dmHandler.ts` para exigir marcadores reales de reporte entregado o pregunta de satisfacción, bloqueando falsos positivos cuando hay estados pendientes.
+3. **Flujo Determinístico Pre-LLM de Documentos Sueltos (`dmHandler.ts`):**
+   - Promovida antes de `invokeLLM` (`$0 COP`) la recepción de cédulas/CHIPs sueltos y la confirmación en el turno siguiente (`"Sí"`, `"CC"`, `"1"`, `"CE"`, `"Pasaporte"`, `"NIT"`, `"antecedentes"`, `"IDU"`, `"Predial"`), respetando la prioridad de `getPendingCompanyFollowUp` (RUES).
+   - Añadida validación `isFromRecentHistory` en `executeJaniaDmTool` (`consultar_identidad_y_antecedentes`) y gancho post-LLM para persistir `pendingUnconfirmedDoc` si Gemini formula pregunta de confirmación.
+4. **Gobernanza y Validación (`shared/const.ts`, `package.json`, `founderKnowledgeService.ts`, `regression.test.ts`):**
+   - Semilla `seed-coherencia-confirmacion-documento-y-satisfaccion-anti-falso-si-v34-23` y **Suite 209** (caso exacto `1127581637` -> `"Si"` -> `"Si"` + protección Web/Grupos).
+   - `NODE_ENV=test npm test`: **6/6 archivos, 735/735 tests en verde** | `npm run check`: 0 errores | `npm run build`: limpio | Versión `v34.23` (`34.23.0`).
+
+---
+
+### 📅 [2026-11-15] — JanIA v34.22: Blindaje Total de Verificación ADRES (EPS + Régimen Contributivo/Subsidiado + Estado) Sin Envenenamiento de Caché ni Omisiones en DM, Multi-Doc, OCR y Agenda (Doctrina Eduardo A. Rivera — v34.22 - 34.22.0)
+
+#### 1. Contexto y Diagnóstico Raíz
+- Durante pruebas de verificación documental de identidad, JanIA entregaba antecedentes o nombre pero omitía la **EPS** y el **régimen (`CONTRIBUTIVO` / `SUBSIDIADO`)** del ciudadano verificado debido a cinco brechas acumuladas:
+  1. **Envenenamiento de caché (`identityVerificationService.ts`)**: `verifySingleDocumentInternal` guardaba `ADRES:CC:...` con `eps: undefined` y `regimen: undefined` cuando ADRES fallaba temporalmente mientras PONAL/PGN resolvía el nombre, y las rutas de nombre cacheado solo validaban `!cachedEps` sin verificar `!cachedRegimen` ni escribir el estado real `adresStatus`.
+  2. **Omisión en reportes multi-documento (`buildConsolidatedReportText`)**: al verificar 2 o más cédulas simultáneamente se imprimía solo `${eps} (${estado})` sin el régimen (`CONTRIBUTIVO` / `SUBSIDIADO`).
+  3. **Parser y cliente ADRES frágiles (`parseAdresHtml`, `queryAdres`, `queryAdresViaPuppeteer`)**: el parser dependía de un `offset = 6` rígido vulnerable a celdas vacías o filas `RETIRADO` antes de `ACTIVO`; Puppeteer llamaba `form.submit()` omitiendo el botón `#btnConsultar` / `setRecaptchaToken` y faltaba Capa 3 (`ConsultarAfiliadoWeb.aspx` clásico).
+  4. **DM, OCR de adjuntos y síntesis Gemini (`dmHandler.ts`)**: `executeJaniaDmTool` inventaba `"CONTRIBUTIVO"` como fallback cuando faltaba el dato, bloqueaba documentos enviados en foto/PDF sin dígitos en texto y `synthesizeToolResponseWithGemini` podía omitir EPS o régimen al resumir mensajes >40 caracteres.
+  5. **Router Agenda (`server/routers/agenda.ts`)**: `queryOfficialAdres` consultaba `bdua_internet` en minúsculas con timeout de 2500ms y solo devolvía el nombre.
+
+#### 2. Arquitectura y Cambios Aditivos Ejecutados
+1. **Resiliencia ADRES 3 Capas y Parser Estructural (`server/_core/identityVerificationService.ts`)**:
+   - Nuevos helpers `normalizeAdresRegimen` y `extractHtmlTableRows`; ampliación de `formatCleanEpsName` (`E.P.S.` con puntos, `Salud Mía`, `Cajacopi`, `Comfaoriente`, `Comfenalco Valle`, `Capresoca`, `Ecoopsos`, `Convida`, `Medimás`, `Coomeva`, `Cafesalud`, etc.); `parseAdresHtml` reescrito con mapeo dinámico `<th>`/`<td>` y preferencia por filas `ACTIVO` manteniendo respaldo por líneas.
+   - `queryAdres` descarta caché incompleta (`!cached.eps || !cached.regimen`), aumenta timeout HTTP a `9000ms` con campos ASP.NET (`RadScriptManager1_TSM`, `__EVENTTARGET`), evita cachear consultas fallidas/vacías, mejora `queryAdresViaPuppeteer` (clic en `#btnConsultar`, `popup`/`response`/`dialog`, `CHROME_PATH` y rutas ampliadas) e introduce `queryAdresViaClassicCaptcha` (Capa 3 `ConsultarAfiliadoWeb.aspx` + 2Captcha, vetada a `$0 COP` en `NODE_ENV=test`).
+   - Corregido `buildConsolidatedReportText` (`${cleanEps} (${estado} — ${cleanRegimen})`), `formatCompactIdentityVerificationReport`, `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`.
+2. **Integridad en DM, OCR Adjuntos y Agenda (`server/_core/jania/handlers/dmHandler.ts`, `server/routers/agenda.ts`)**:
+   - `executeJaniaDmTool` recibe `hasMediaAttachment` para aceptar cédulas por imagen/PDF sin dígitos en texto y elimina la fabricación de `"CONTRIBUTIVO"`.
+   - `synthesizeToolResponseWithGemini` incorpora guardarrail determinístico anti-omisión de **EPS** y **Régimen** cuando la herramienta devuelve datos ADRES.
+   - `agenda.ts` (`queryOfficialAdres`) unificado sobre `queryAdres` retornando `{ success, officialName, eps, estado, regimen }`.
+3. **Gobernanza y Validación (`shared/const.ts`, `package.json`, `founderKnowledgeService.ts`, `regression.test.ts`)**:
+   - Semilla `seed-adres-eps-regimen-resiliencia-integridad-v34-22` y **Suite 208** (**3 tests ADRES**, total **6/6 archivos, 733/733 tests en verde**, `npm run check` con 0 errores y `npm run build` limpio). Versionado `v34.22` (`34.22.0`).
+
+---
+
 ### 📅 [2026-11-13] — JanIA v34.21: Auditoría Integral y Paridad Total DM / Grupos / Web, Memoria Nominal Compuesta, Valuación Rural/Comercial Nacional, Pacto de Retroventa y Pedagogía "Dinosaurios vs. VECY" (Doctrina Eduardo A. Rivera — v34.21 - 34.21.0)
 - **Propósito Central:** Garantizar que todas las Skills de JanIA operen conectadas sin fallos ni alucinaciones y con paridad idéntica en **WhatsApp DM**, **Grupos Oficiales (Grupo 2 y Grupo 3)** y **Sitio Web (Widget + Consola)**, recordando el hilo conversacional y nombres propios simples o compuestos + género, dominando Pacto de Retroventa, Leasing vs. Hipotecario, m² comercial y fanegadas/hectáreas rurales en Colombia, reportería en vivo y pedagogía de **LOS DINOSAURIOS INMOBILIARIOS vs. VECY LA EVOLUCIÓN INEVITABLE** (`https://vecy-bienes-raices.vercel.app/historia`).
 - **Implementación Realizada:**

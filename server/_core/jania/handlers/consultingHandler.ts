@@ -45,6 +45,7 @@ import { auditPropertyListing, buildRealEstateIcp } from "../../realEstateMarket
 import {
   isExplicitReviewLinkRequest,
   isUserSatisfactionOrFeedbackReply,
+  isAssistantAskingSatisfaction,
   buildAutonomousGoogleReviewInvitation,
 } from "../../politenessService";
 import {
@@ -248,7 +249,12 @@ export async function processConsultingMessage(
       isCreativeImgReq ||
       isExplicitLegalPdfRequest(messageToProcess) ||
       extractAllCedulasForVerification(messageToProcess, false).length > 0;
-    const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory);
+    const consultingHistoryTurns = getConsultingHistory(userId);
+    const lastConsultingAssistantText =
+      consultingHistoryTurns.slice().reverse().find((t) => t.role === "assistant")?.content || "";
+    const satFeedback = isUserSatisfactionOrFeedbackReply(messageToProcess, hasActiveHistory, {
+      isSatisfactionPromptActive: isAssistantAskingSatisfaction(lastConsultingAssistantText),
+    });
 
     if (
       isReviewLinkReq ||

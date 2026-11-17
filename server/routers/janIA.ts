@@ -289,11 +289,13 @@ export const janIARouter = router({
         });
 
         // 🛡️ Skills Determinísticas Completas (CTL, POT, FinTax, Minutas, PH, IDU, Predial, Identidad/RUES, Notarial, ACM, Marketing)
+        const lastWebAssistantTurn = recentHistory.find(m => m.role !== "user")?.content || "";
         const skillRes = await evaluateWebDeterministicSkills({
           message: input.message,
           userId: mockUserId,
           userName: webContext.resolvedDisplayName || mockUserName,
           hasActiveHistory: recentHistory.length > 0,
+          lastAssistantText: lastWebAssistantTurn,
           formatRawListingGuide: buildWebGroup1ListingRedirectGuide,
         });
 

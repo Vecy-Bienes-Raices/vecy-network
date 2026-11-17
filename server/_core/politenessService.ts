@@ -300,11 +300,27 @@ export function isExplicitReviewLinkRequest(text: string): boolean {
 }
 
 /**
- * Detecta si el usuario expresa satisfacción, agrado o retroalimentación constructiva tras recibir un servicio (v34.11).
+ * Detecta si la última respuesta del asistente preguntó explícitamente por satisfacción o calificación del servicio.
+ */
+export function isAssistantAskingSatisfaction(assistantText?: string): boolean {
+  const clean = (assistantText || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!clean) return false;
+  return /(?:quedaste\s+satisfech[oa]|qu[eé]\s+tal\s+te\s+pareci[oó]|como\s+te\s+pareci[oó]|te\s+(?:gust[oó]|sirvi[oó]|fue\s+[uú]til)|me\s+encantaria\s+saber\s+tu\s+opinion|tu\s+opinion\s+me\s+ayuda|calificarnos|dejarnos\s+tu\s+opinion)/i.test(
+    clean
+  );
+}
+
+/**
+ * Detecta si el usuario expresa satisfacción, agrado o retroalimentación constructiva tras recibir un servicio (v34.11 / v34.23).
  */
 export function isUserSatisfactionOrFeedbackReply(
   text: string,
-  hasRecentServiceContext: boolean = false
+  hasRecentServiceContext: boolean = false,
+  options?: { isSatisfactionPromptActive?: boolean }
 ): {
   isSatisfied: boolean;
   hasConstructiveSuggestion: boolean;
@@ -320,8 +336,10 @@ export function isUserSatisfactionOrFeedbackReply(
     return { isSatisfied: false, hasConstructiveSuggestion: false, constructiveTopic: null };
   }
 
-  // No confundir con una solicitud nueva de herramienta con datos propios
+  // No confundir con una solicitud nueva de herramienta con datos propios o números de documento/CHIP
   const looksLikeNewToolDataRequest =
+    /\b\d{5,15}\b/.test(normalized) ||
+    /\bAAA[A-Z0-9]{6,14}\b/i.test(raw) ||
     /\b(cedula|c\.c\.|nit|chip|aaa\d+|predial|arrendamiento|promesa\s+de\s+compraventa|notarial|gastos\s+notariales|estudio\s+de\s+titulos|certificado\s+de\s+tradicion|\bctl\b|falsa\s+tradicion)\b/.test(
       normalized
     ) ||
@@ -365,8 +383,16 @@ export function isUserSatisfactionOrFeedbackReply(
     }
   }
 
+  const isBareAffirmative =
+    /^(?:si|claro|totalmente|100%|perfecto|ok|dale|de\s+acuerdo|s[ií],?\s+muchas\s+gracias)[!.\s]*$/i.test(
+      normalized
+    );
+
+  // Un "Si"/"Ok"/"Claro" aislado solo cuenta como satisfacción si JanIA preguntó expresamente por la satisfacción del servicio
   const isSatisfied =
-    isPositive || (hasRecentServiceContext && (hasConstructive || /^(?:si|claro|totalmente|100%|perfecto|ok|s[ií],?\s+muchas\s+gracias)[!.\s]*$/i.test(normalized)));
+    isPositive ||
+    (hasRecentServiceContext && hasConstructive) ||
+    (Boolean(options?.isSatisfactionPromptActive) && isBareAffirmative);
 
   return {
     isSatisfied,
