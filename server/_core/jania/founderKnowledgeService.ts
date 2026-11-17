@@ -890,6 +890,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Corregir incoherencia reportada con Jeimy Bohorquez (1127581637 -> 'Si'): evitar que 'Si' dispare falsamente la invitación de Google Reviews cuando JanIA preguntó si deseaba consultar ADRES/antecedentes, y manejar determinísticamente documentos sueltos y confirmaciones en producción y tests.",
     createdAt: "2026-11-16T19:20:00.000Z",
     active: true
+  },
+  {
+    id: "seed-una-pregunta-a-la-vez-liderazgo-jania-cero-resena-prematura-v34-24",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Doctrina de Liderazgo Conversacional: Una Sola Pregunta a la Vez y Cero Calificación Prematura (v34.24)",
+    directive:
+      "JanIA SIEMPRE lleva el mando y liderazgo de la conversación haciendo MÁXIMO UNA pregunta puntual por turno, guiando paso a paso al usuario hasta resolver por completo su necesidad. Queda prohibido lanzar cuestionarios múltiples, mezclar el menú de roles 1/2/3 dentro de un trámite en curso, o pedir satisfacción/reseña en Google Reviews cuando la consulta esté incompleta, pendiente de confirmación o haya fallado.",
+    rawText:
+      "Hacer una sola pregunta a la vez, guiar de la mano al usuario con astucia e inteligencia hasta resolver su objetivo real y prohibir pedir calificaciones o comentarios antes de lograr la satisfacción real del cliente.",
+    createdAt: "2026-11-16T19:33:00.000Z",
+    active: true
   }
 ];
 

@@ -584,6 +584,11 @@ export class JaniaMatchBot {
       if (Date.now() - recentSent < 24 * 60 * 60 * 1000) return;
 
       try {
+        const { getPendingUnconfirmedDoc } = await import('./identityVerificationService');
+        if (getPendingUnconfirmedDoc(senderId)) {
+          console.log(`[JANIA-MATCH] ⏸️ Omitiendo recordatorio 60s de reseña para ${senderId}: tiene confirmación de documento pendiente.`);
+          return;
+        }
         const { buildWinningGoogleReviewMessage } = await import('./politenessService');
         const promptText = buildWinningGoogleReviewMessage(userName);
         await this.queuedSend(senderId, promptText, { allowDirectMessage: true, skipDelay: true });
@@ -2136,21 +2141,12 @@ export class JaniaMatchBot {
                 }
 
                 const isServiceDeliveryReply =
-                  replyText.includes("VERIFICACIÓN") ||
-                  replyText.includes("antecedentes") ||
-                  replyText.includes("C.C.") ||
-                  replyText.includes("cédula") ||
-                  replyText.includes("ADRES") ||
-                  replyText.includes("BDUA") ||
-                  replyText.includes("PREDIAL") ||
-                  replyText.includes("PAZ Y SALVO") ||
-                  replyText.includes("RUES") ||
-                  replyText.includes("ANÁLISIS COMPARATIVO DE MERCADO") ||
-                  replyText.includes("Escenarios Estratégicos de Precio") ||
-                  replyText.includes("Sondeo de Mercado") ||
-                  replyText.includes("Valor m² homologado") ||
-                  replyText.includes("LIQUIDACIÓN") ||
-                  replyText.includes("ESTUDIO DE TÍTULOS") ||
+                  replyText.includes("VERIFICACIÓN OFICIAL DE IDENTIDAD") ||
+                  replyText.includes("VERIFICACIÓN OFICIAL DE EMPRESA") ||
+                  replyText.includes("FACTURA PREDIAL") ||
+                  replyText.includes("PAZ Y SALVO DE VALORIZACIÓN IDU") ||
+                  replyText.includes("LIQUIDACIÓN ESTIMADA") ||
+                  replyText.includes("ESTUDIO DE TÍTULOS SNR") ||
                   replyText.includes("DICTAMEN JURÍDICO") ||
                   replyText.includes("ANÁLISIS POT") ||
                   replyText.includes("NORMA URBANA") ||
@@ -2160,20 +2156,32 @@ export class JaniaMatchBot {
                   replyText.includes("ANÁLISIS FINANCIERO") ||
                   replyText.includes("MINUTA PERSONALIZADA GENERADA") ||
                   replyText.includes("AUDITORÍA DE RIESGOS CONTRACTUALES") ||
-                  replyText.includes("OTROSÍ") ||
-                  replyText.includes("PROPIEDAD HORIZONTAL") ||
+                  replyText.includes("CONCEPTO TÉCNICO-JURÍDICO DE PROPIEDAD HORIZONTAL") ||
                   replyText.includes("AUDITORÍA JURÍDICA DE REGLAMENTO PH") ||
                   replyText.includes("PREFACTIBILIDAD TÉCNICO-NOTARIAL") ||
-                  replyText.includes("MATRÍCULA INMOBILIARIA") ||
-                  replyText.includes("MATCH") ||
-                  replyText.includes("40/20/40") ||
+                  replyText.includes("ANÁLISIS COMPARATIVO DE MERCADO") ||
+                  replyText.includes("Escenarios Estratégicos de Precio") ||
+                  replyText.includes("Valor m² homologado") ||
                   Boolean(latestPdf) ||
                   Boolean(latestCreativeImage);
 
                 const isRecurrentFreeBeneficiary =
                   (session.freeServicesUsedCount || 0) >= 2;
 
+                const bodyWithoutSatisfactionTail = replyText
+                  .replace(/🤝\s*\*?¿Quedaste\s+satisfech[\s\S]*$/i, "")
+                  .trim();
+
+                const isClarifyingOrIncompleteReply =
+                  !bodyWithoutSatisfactionTail ||
+                  /\?\s*$/.test(bodyWithoutSatisfactionTail) ||
+                  /\b(?:conf[ií]rmame|confirmas|por\s+favor\s+comp[aá]rteme|ind[ií]came|en\s+calidad\s+de\s+qu[eé]|no\s+se\s+encontr[oó]|no\s+aparece|no\s+pude|sin\s+reporte|intermitencia|fallo\s+en\s+la\s+matrix|para\s+(?:poder|continuar|emitir|realizar|calcular))\b/i.test(
+                    bodyWithoutSatisfactionTail
+                  );
+
                 const isCompleteDelivery =
+                  !isClarifyingOrIncompleteReply &&
+                  (session.freeServicesUsedCount || 0) >= 1 &&
                   !replyText.endsWith(":") &&
                   !/a\s+continuaci[oó]n[,:\s]*$/i.test(replyText.trim()) &&
                   (!replyText.includes("cédula") || /(?:polic[ií]a|procuradur[ií]a|contralor[ií]a|adres|eps)/i.test(replyText));
@@ -2184,7 +2192,7 @@ export class JaniaMatchBot {
 
                 if (alreadySentReviewInReply) {
                   // Ya se entregó el enlace oficial de reseña en esta respuesta
-                } else if (isGratitudeOrClosing) {
+                } else if (isGratitudeOrClosing && !isClarifyingOrIncompleteReply && usedCount >= 1) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { formatImmediatePoliteReviewMessage, formatPersuasiveRecurrentUserReviewMessage } = await import('./politenessService');
                   const politeMsg = isRecurrentFreeBeneficiary

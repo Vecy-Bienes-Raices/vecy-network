@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.24 — Noviembre 2026
+- **Liderazgo Conversacional "Una Sola Pregunta a la Vez" y Cero Calificación Prematura:**
+  - `server/_core/jania/handlers/dmHandler.ts`, `dmOnboardingAndDocsHelper.ts`, `prompts/base.md` y `jania/prompts.ts`: consagrada regla obligatoria de máximo 1 pregunta puntual por turno sin mezclar menús de rol ni listas de 8–12 preguntas; simplificada la confirmación de número suelto a C.C. sin ruido de Predial/IDU; y condicionada la marca de servicio completado en `synthesizeToolResponseWithGemini` e identidad a `toolSucceeded && hasRealIdentityResult` / `verifResult.success !== false`.
+  - `server/_core/whatsapp-match.ts`: endurecido `isServiceDeliveryReply` para exigir entregas reales (reportes/PDFs), añadido `isClarifyingOrIncompleteReply`, exigido `freeServicesUsedCount >= 1` y verificado `!getPendingUnconfirmedDoc` antes de disparar recordatorios/reseñas de Google.
+  - Gobernanza y Pruebas: semilla `seed-una-pregunta-a-la-vez-liderazgo-jania-cero-resena-prematura-v34-24`, **Suite 210** en `regression.test.ts` (`NODE_ENV=test npm test`: **6/6 archivos, 737/737 tests en verde**; `npm run check`: 0 errores; `npm run build` limpio) y bump `v34.24` (`34.24.0`).
+
 ### 🔖 v34.23 — Noviembre 2026
 - **Coherencia Conversacional DM/Grupos/Web — Cédula/CHIP Suelto y Blindaje Anti-Secuestro de `"Sí"` hacia Google Reviews:**
   - `server/_core/politenessService.ts`: añadido `isAssistantAskingSatisfaction` y parámetro `options.isSatisfactionPromptActive` en `isUserSatisfactionOrFeedbackReply` (excluyendo además números de 5–15 dígitos y CHIPs `AAA...`), de modo que respuestas breves (`"Si"`, `"Ok"`, `"Claro"`, `"Perfecto"`) solo cuenten como satisfacción cuando el asistente preguntó explícitamente por satisfacción en el turno anterior.

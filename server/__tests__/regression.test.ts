@@ -14511,9 +14511,94 @@ A: BANCO DE BOGOTA
       expect(seed23?.active).toBe(true);
 
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v34.23");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[3-9]|[3-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.23.0");
+      expect(pkg.version).toMatch(/^34\.(?:2[3-9]|[3-9]\d)\.0$/);
+    });
+  });
+
+  // ============================================================================
+  // SUITE 210 (v34.24): DOCTRINA UNA SOLA PREGUNTA A LA VEZ, LIDERAZGO Y CERO RESEÑA PREMATURA
+  // ============================================================================
+  describe("210. Doctrina Una Sola Pregunta a la Vez, Liderazgo Conversacional y Cero Calificación Prematura (v34.24)", () => {
+    it("cédula suelta hace una única pregunta clara sin Predial/IDU ni menú de roles, y si falla la consulta NO pide satisfacción ni incrementa servicios ($0 COP)", async () => {
+      const { processPrivateDmConversationalMessage, synthesizeToolResponseWithGemini } = await import(
+        "../_core/jania/handlers/dmHandler"
+      );
+      const { resetUserPerpetualSessionsForTests, getUserPerpetualSession } = await import(
+        "../_core/jania/sessionManager"
+      );
+      const idService = await import("../_core/identityVerificationService");
+      resetUserPerpetualSessionsForTests();
+
+      const testJid = `573009988776_${Date.now()}@s.whatsapp.net`;
+      const t1 = await processPrivateDmConversationalMessage("1127581637", testJid, "Jeimy Bohorquez");
+      expect(t1).toContain("Recibí el dato *1127581637*");
+      expect(t1).toContain("¿Confirmas que corresponde a una *Cédula de Ciudadanía (C.C.)*");
+      expect(t1).not.toContain("Predial");
+      expect(t1).not.toContain("IDU");
+      expect(t1).not.toContain("en calidad de qué");
+
+      // Si la verificación falla (exitoso: false), NO debe incrementar freeServicesUsedCount ni pedir satisfacción
+      const spyVerif = vi.spyOn(idService, "executeIdentityVerificationFromWhatsApp").mockResolvedValueOnce({
+        isVerificationRequest: true,
+        cedula: "1127581637",
+        tipoDoc: "cc",
+        success: false,
+        reportText: "No fue posible validar el documento en este intento por intermitencia estatal."
+      });
+      const t2Fail = await processPrivateDmConversationalMessage("Si", testJid, "Jeimy Bohorquez");
+      expect(t2Fail).not.toMatch(/quedaste satisfech/i);
+      expect(t2Fail).not.toContain("g.page/r/CctNbwU6UpX5EBM/review");
+      const sessAfterFail = await getUserPerpetualSession(testJid);
+      expect(sessAfterFail.freeServicesUsedCount || 0).toBe(0);
+      spyVerif.mockRestore();
+
+      // synthesizeToolResponseWithGemini tampoco incrementa ni pide satisfacción si exitoso === false o esIncompleto === true
+      const synthFail = await synthesizeToolResponseWithGemini(
+        testJid,
+        "Jeimy Bohorquez",
+        "cedula",
+        {
+          solicitud: "verificacion_identidad",
+          exitoso: false,
+          reporteOficial: "Para realizar la verificación oficial, compárteme los dígitos del documento."
+        },
+        "Verifica cédula",
+        false,
+        false,
+        "Jeimy"
+      );
+      expect(synthFail).not.toMatch(/quedaste satisfech/i);
+      expect(synthFail).not.toContain("g.page/r/CctNbwU6UpX5EBM/review");
+      const sessAfterSynthFail = await getUserPerpetualSession(testJid);
+      expect(sessAfterSynthFail.freeServicesUsedCount || 0).toBe(0);
+    });
+
+    it("directivas de rol progresivo, prompts, guardas de whatsapp-match y versión v34.24 (34.24.0)", async () => {
+      const fs = await import("fs");
+      const { buildSessionOnboardingDirectives } = await import("../_core/jania/handlers/dmOnboardingAndDocsHelper");
+      const dir = await buildSessionOnboardingDirectives(`573001112299_${Date.now()}@s.whatsapp.net`);
+      expect(dir.contextRoleDirective).toContain("UNA SOLA PREGUNTA A LA VEZ");
+      expect(dir.contextRoleDirective).toContain("SIN MEZCLAR");
+
+      const dmSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      const baseMd = fs.readFileSync("server/_core/prompts/base.md", "utf-8");
+      expect(dmSrc).toContain("DOCTRINA SAGRADA DE LIDERAZGO CONVERSACIONAL Y UNA SOLA PREGUNTA A LA VEZ");
+      expect(waSrc).toContain("isClarifyingOrIncompleteReply");
+      expect(baseMd).toContain("UNA SOLA PREGUNTA A LA VEZ");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const seed24 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-una-pregunta-a-la-vez-liderazgo-jania-cero-resena-prematura-v34-24"
+      );
+      expect(seed24?.active).toBe(true);
+
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v34.24");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.24.0");
     });
   });
 });

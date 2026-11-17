@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.23 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.24 — Noviembre 2026
+
+### Novedades v34.24 (Liderazgo Conversacional "Una Sola Pregunta a la Vez", Perfilamiento Progresivo y Cero Calificación Prematura — Doctrina Eduardo A. Rivera):
+- **Una Sola Pregunta por Turno (`dmHandler.ts`, `dmOnboardingAndDocsHelper.ts`, `base.md`, `prompts.ts`):**
+  1. Consagrada doctrina obligatoria: JanIA lleva el mando y guía al usuario paso a paso haciendo **máximo 1 pregunta puntual por mensaje**, prohibiendo cuestionarios múltiples o mezclar el menú de roles (`1/2/3`) en trámites en curso.
+  2. Confirmación de cédula suelta (`1127581637`) simplificada a una sola pregunta clara de C.C. sin ruido de Predial/IDU.
+- **Cero Calificación o Satisfacción Prematura (`dmHandler.ts`, `whatsapp-match.ts`):**
+  1. `synthesizeToolResponseWithGemini` y el flujo de identidad exigen resultado real exitoso (`exitoso !== false`, `!esIncompleto`, `verifResult.success !== false`) antes de incrementar `freeServicesUsedCount` o preguntar satisfacción.
+  2. `whatsapp-match.ts` restringe `isServiceDeliveryReply` a reportes/PDFs reales entregados, bloquea reseñas si `isClarifyingOrIncompleteReply` o si `getPendingUnconfirmedDoc` sigue activo en el timer de 60s.
+- **Gobernanza y Regresión (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-una-pregunta-a-la-vez-liderazgo-jania-cero-resena-prematura-v34-24` y **Suite 210** (**6/6 archivos, 737/737 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.24` (`34.24.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.23 — Noviembre 2026
 
 ### Novedades v34.23 (Coherencia Conversacional DM/Grupos/Web — Cédula/CHIP Suelto y Blindaje Anti-Secuestro de "Sí" hacia Google Reviews — Doctrina Eduardo A. Rivera):
 - **Blindaje Anti-Secuestro de Satisfacción (`politenessService.ts`, `dmHandler.ts`, `consultingHandler.ts`, `webChatService.ts`, `server/routers/janIA.ts`):**

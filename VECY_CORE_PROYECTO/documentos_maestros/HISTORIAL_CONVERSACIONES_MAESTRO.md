@@ -7,6 +7,22 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-16] — JanIA v34.24: Doctrina de Liderazgo Conversacional "Una Sola Pregunta a la Vez", Perfilamiento Progresivo y Cero Calificación Prematura (Doctrina Eduardo A. Rivera — v34.24 - 34.24.0)
+
+#### 1. Directriz de Eduardo y Diagnóstico Sistémico
+- **Directriz Exacta de Eduardo A. Rivera:** Exigió erradicar de raíz las respuestas confusas de múltiples preguntas simultáneas, menús de rol mezclados y ataques prematuros pidiendo satisfacción/reseñas de Google cuando JanIA ni siquiera ha terminado de resolver lo que el usuario necesita (*"JanIA debe hacer una pregunta a la vez... el poder lo debe tener JanIA... y mientras no haya satisfacción real del cliente y le resuelva su objetivo no puede pedir calificación ni comentarios"*).
+- **Hallazgos en Auditoría Sistémica:**
+  1. `dmOnboardingAndDocsHelper.ts` (`contextRoleDirective`) y el prompt de `dmHandler.ts` forzaban a Gemini a preguntar el rol (`1/2/3`) al final de cualquier consulta, además de listar 8 preguntas juntas en sondeos y 12 en requerimientos.
+  2. `synthesizeToolResponseWithGemini` (`dmHandler.ts`) incrementaba `freeServicesUsedCount` y pedía satisfacción incluso cuando `exitoso === false` o `esIncompleto === true`.
+  3. `whatsapp-match.ts` (`isServiceDeliveryReply`) disparaba timers de reseña 60s e insistencia intensiva cuando el texto solo contenía palabras como `"cédula"`, `"ADRES"`, `"antecedentes"` o `"40/20/40"` dentro de preguntas o aclaraciones.
+
+#### 2. Correcciones Estructurales Ejecutadas
+1. **Una Sola Pregunta a la Vez y Liderazgo (`dmHandler.ts`, `dmOnboardingAndDocsHelper.ts`, `base.md`, `prompts.ts`):** Añadida doctrina prioritaria obligatoria de máximo 1 pregunta puntual por turno sin mezclar cuestionarios de rol ni listas de 8–12 preguntas; simplificada la pregunta de número suelto (`1127581637`) exclusivamente a confirmación de C.C. sin ruido de Predial/IDU.
+2. **Cero Satisfacción ni Reseñas Prematuras (`dmHandler.ts`, `whatsapp-match.ts`):** `synthesizeToolResponseWithGemini` e identidad exigen `toolSucceeded && hasRealIdentityResult` / `verifResult.success !== false`; `whatsapp-match.ts` introduce `isClarifyingOrIncompleteReply`, exige reportes reales y `freeServicesUsedCount >= 1`, y verifica `!getPendingUnconfirmedDoc` en el timer de 60s.
+3. **Gobernanza y Pruebas (`shared/const.ts`, `package.json`, `founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-una-pregunta-a-la-vez-liderazgo-jania-cero-resena-prematura-v34-24`, **Suite 210**, `NODE_ENV=test npm test` (**6/6 archivos, 737/737 tests en verde**), `npm run check` (0 errores), `npm run build` limpio y versión `v34.24` (`34.24.0`).
+
+---
+
 ### 📅 [2026-11-16] — JanIA v34.23: Coherencia Conversacional DM/Grupos/Web — Cédula/CHIP Suelto y Blindaje Anti-Secuestro de "Sí" hacia Google Reviews (Doctrina Eduardo A. Rivera — v34.23 - 34.23.0)
 
 #### 1. Solicitud de Eduardo y Diagnóstico Raíz

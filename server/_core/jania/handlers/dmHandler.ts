@@ -1586,7 +1586,21 @@ export async function synthesizeToolResponseWithGemini(
   displayName: string
 ): Promise<string> {
   const isFreeTool = !["contacto", "encuesta"].includes(toolType);
-  if (isFreeTool && !toolJson?.omitted) {
+  const toolSucceeded =
+    !toolJson?.omitted &&
+    toolJson?.exitoso !== false &&
+    !toolJson?.esIncompleto &&
+    !toolJson?.error;
+  const hasRealIdentityResult =
+    toolType !== "cedula" ||
+    Boolean(
+      toolJson?.nombreOficial ||
+        (toolJson?.reporteOficial &&
+          String(toolJson.reporteOficial).includes("VERIFICACIÓN OFICIAL DE IDENTIDAD"))
+    );
+  const isGenuineResolvedDelivery = isFreeTool && toolSucceeded && hasRealIdentityResult;
+
+  if (isGenuineResolvedDelivery) {
     await incrementFreeServicesCount(userId);
     if (!isEduardo && !isJani && !isEduardoOrJani(userId)) {
       try {
@@ -1632,8 +1646,8 @@ export async function synthesizeToolResponseWithGemini(
 
   const userVerifiedReview = await isUserVerifiedGoogleReview(userId);
   const isVip = isEduardo || isJani || isEduardoOrJani(userId);
-  const askReview = !userVerifiedReview && !isVip && (await shouldAskForGoogleReview(userId));
-  const shouldAskSatisfaction = !isVip && !userVerifiedReview && !toolJson?.omitted;
+  const askReview = isGenuineResolvedDelivery && !userVerifiedReview && !isVip && (await shouldAskForGoogleReview(userId));
+  const shouldAskSatisfaction = !isVip && !userVerifiedReview && isGenuineResolvedDelivery;
   const satisfactionClosingLine = displayName
     ? `¿Qué tal te pareció esta respuesta, ${displayName}? ¿Quedaste satisfecha/o con la precisión o te gustaría que afinemos algún detalle? 😊✨`
     : `¿Qué tal te pareció esta respuesta? ¿Quedaste satisfecha/o con la precisión o te gustaría que afinemos algún detalle? 😊✨`;
@@ -3470,15 +3484,20 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
         const queryToVerify = docPrefix ? `${docPrefix} ${rawVal}` : rawVal;
         const verifResult = await executeIdentityVerificationFromWhatsApp(queryToVerify, true, userId);
         if (verifResult.reportText) {
-          await incrementFreeServicesCount(userId);
-          userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
-          userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
-            serviceType: "identidad_antecedentes",
-            timestamp: Date.now()
-          };
-          await saveUserPerpetualSession(userPerpetualSession);
+          const isValidReportDelivery = verifResult.success !== false;
+          if (isValidReportDelivery) {
+            await incrementFreeServicesCount(userId);
+            userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
+            userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
+              serviceType: "identidad_antecedentes",
+              timestamp: Date.now()
+            };
+            await saveUserPerpetualSession(userPerpetualSession);
+          }
 
-          const satisfactionLine = `\n\n🤝 *¿Quedaste satisfecho(a) con esta verificación oficial?* Tu opinión me ayuda a seguir manteniendo este servicio 100% gratuito.`;
+          const satisfactionLine = isValidReportDelivery
+            ? `\n\n🤝 *¿Quedaste satisfecho(a) con esta verificación oficial?* Tu opinión me ayuda a seguir manteniendo este servicio 100% gratuito.`
+            : "";
           const out = `¡Confirmado${displayName ? `, ${displayName}` : ""}!\n\n${verifResult.reportText}${satisfactionLine}`;
           appendDmHistory(userId, "user", clean);
           appendDmHistory(userId, "assistant", out);
@@ -3507,9 +3526,8 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
           ? ""
           : `¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋 `;
         const rawNumMsg =
-          `${greetingHeader}Recibí el dato *${bareDigits}*. Confírmame qué trámite requieres (puedes responder *Sí*, *CC* o *1* si es cédula para antecedentes y ADRES):\n` +
-          `• Cédula de Ciudadanía (C.C.) / Cédula de Extranjería (C.E.) / Pasaporte / NIT (Persona Jurídica) para antecedentes.\n` +
-          `• O consulta de Factura Predial Bogotá / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial 🤝✨.\n\n` +
+          `${greetingHeader}Recibí el dato *${bareDigits}*. ¿Confirmas que corresponde a una *Cédula de Ciudadanía (C.C.)* para consultar identidad, antecedentes y ADRES?\n\n` +
+          `Responde simplemente *Sí* para verificarla de inmediato (o dime si es Cédula de Extranjería (C.E.), Pasaporte o NIT (Persona Jurídica)).\n\n` +
           `_⚖️ Tratamiento de datos Ley 1581/12._`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", rawNumMsg);
@@ -3615,11 +3633,17 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `  * CERO PREGUNTAS REPETITIVAS EN BUCLE (NO ROBOT): Si ya le preguntaste en el mensaje o turno anterior si tiene un inmueble para ofrecer o busca una propiedad, ESTÁ TERMINANTEMENTE PROHIBIDO REPETIR ESA MISMA PREGUNTA O CUESTIONARIO. Escucha lo que acaba de responderte o preguntarte (ej: si pregunta sobre comisiones, aclara el 40/20/40 y pregúntale si le gustaría operar bajo esa figura para sus negocios; no vuelvas a recitar la plantilla genérica de bienvenida).\n` +
       `  * Si es el PRIMER mensaje del día o nueva sesión (NO): Saluda con calidez, cortesía y señorío profesional OBLIGATORIAMENTE al inicio de tu mensaje usando "¡${timeSalutation}${displayName ? `, ${displayName}` : ""}! 👋".\n\n` +
       `===================================================\n` +
-      `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE Y ROL UNIVERSAL (v34.18):\n` +
+      `DOCTRINA SAGRADA DE LIDERAZGO CONVERSACIONAL Y UNA SOLA PREGUNTA A LA VEZ (v34.24 — EDUARDO A. RIVERA):\n` +
+      `===================================================\n` +
+      `- REGLA INQUEBRANTABLE — UNA SOLA PREGUNTA PUNTUAL POR TURNO: Los humanos responden mejor cuando los guías paso a paso. QUEDA TERMINANTEMENTE PROHIBIDO hacer 2 o más preguntas en un mismo mensaje, lanzar listas de preguntas o mezclar cuestionarios de rol (1/2/3) con la pregunta de un trámite en curso.\n` +
+      `- EL MANDO LO TIENE JANIA: Si para resolver un avalúo, minuta, cálculo o requerimiento te faltan datos, toma el liderazgo y pide ÚNICAMENTE EL PRIMER DATO FALTANTE de manera concreta y amable; cuando el usuario responda, procesa y avanza ordenadamente al siguiente dato hasta entregarle el resultado completo y perfecto.\n` +
+      `- CERO CALIFICACIÓN O SATISFACCIÓN PREMATURA: Jamás preguntes si quedó satisfecho ni envíes enlaces de Google Reviews mientras su necesidad siga incompleta, pendiente de datos o con error. Primero resuelve al 100% lo que el usuario necesita.\n\n` +
+      `===================================================\n` +
+      `MEMORIA PERPETUA: USUARIO NUEVO VS. RECURRENTE Y ROL UNIVERSAL (v34.24):\n` +
       `===================================================\n` +
       `${isFirstTimeUser
-        ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez). Dale una bienvenida única, fresca, cercana y humana, transmitiendo confianza y empatía inmediata al estilo VECY sin sonar a robot. NO asumas de entrada que es colega o agente inmobiliario: deja claro que todos nuestros servicios gratuitos están abiertos para TODO público.${!persistedBusinessRole ? " Pregúntale brevemente en calidad de qué nos escribe o cuál es su rol: (1) Agente / Inmobiliaria / Corredor (alianza 40/20/40), (2) Propietario directo (corretaje $0 publicación), o (3) Comprador directo / Inversionista / Arrendatario." : ""}`
-        : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversación y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA...' o dar introducciones largas como si fuera un desconocido.${persistedBusinessRole ? ` ROL YA CONFIRMADO (${persistedBusinessRole}): PROHIBIDO volver a preguntarle si es agente, propietario o comprador.` : " Aún no conocemos su rol: cuando sea natural tras responderle, pregúntale brevemente si nos escribe como agente/inmobiliaria, propietario directo o comprador/inversionista/arrendatario."}`
+        ? `- ESTATUS: USUARIO NUEVO (Escribe por primera vez). Dale una bienvenida única, fresca, cercana y humana, transmitiendo confianza y empatía inmediata al estilo VECY sin sonar a robot. NO asumas de entrada que es colega o agente inmobiliario.${!persistedBusinessRole ? " Si su mensaje ya trae una consulta o documento concreto, resuélvelo o hazle UNA SOLA pregunta técnica para avanzar SIN mezclar el menú de roles. Solo si envió un saludo abierto sin tarea puntual, pregúntale brevemente en calidad de qué nos escribe (agente inmobiliario, propietario directo o comprador/arrendatario)." : ""}`
+        : `- ESTATUS: USUARIO RECURRENTE (Ya existe conversación y memoria previa). Retoma el hilo con total familiaridad recordando todo lo hablado. PROHIBIDO TERMINANTEMENTE presentarte otra vez diciendo 'Soy JanIA...' o dar introducciones largas como si fuera un desconocido.${persistedBusinessRole ? ` ROL YA CONFIRMADO (${persistedBusinessRole}): PROHIBIDO volver a preguntarle si es agente, propietario o comprador.` : " Aún no conocemos su rol: NO interrumpas una gestión técnica con preguntas de rol; solo pregunta brevemente en calidad de qué escribe cuando la charla esté libre o después de resolver su consulta si hace falta para el siguiente paso."}`
       }\n\n` +
       `===================================================\n` +
       `SOLICITUDES DE LLAMADAS TELEFÓNICAS O CONTACTO POR VOZ:\n` +
@@ -3678,8 +3702,16 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `1. Abogada Especialista Senior y Consultora Jurídica Inmobiliaria (IA Pura Resolutiva de Casos): Rigor procesal y sustancial bajo el Código General del Proceso (CGP), Código Civil, Código de Comercio, CPACA, Ley 820 de Arrendamientos, Ley 675 de PH, Ley 388 de Urbanismo y Ley 1480 de Consumidor. Capacidad de análisis deductivo de IA PURA para escuchar cualquier caso, conflicto o enredo inmobiliario y SIEMPRE encontrar y proponer la salida jurídica viable y estrategia resolutiva, por difícil que parezca.\n` +
       `2. Liquidadora Notarial y Tributaria: Gastos notariales 50/50, retención en la fuente (1%), impuesto de registro/beneficencia (1.67%) y ganancia ocasional (15%).\n` + +
       `3. Perita Avaluadora, Asesora de Precios y Urbanista POT: Sondeos de m² y cánones por zonas de Colombia con honestidad técnica, comparables homologados y dinámica de portales aliados (Metrocuadrado, FincaRaíz, CienCuadras).\n` +
-      `  * DIÁLOGO MAESTRO PARA INICIAR SONDEO DE VALOR: Si el usuario manifiesta que desea revisar el valor de venta, precio de mercado o avalúo de una propiedad y aún no ha dado los detalles completos, responde con el diálogo maestro:\n` +
-      `    "Entendido, ${displayName || 'apreciado/a'}. Como tu perita avaluadora y analista de mercado en VECY Bienes Raíces, prepararé el estudio de valor y los parámetros comerciales ideales para tu propiedad sin que tengas que preocuparte por las cifras iniciales.\\n\\nPara afinar el análisis y entregarte un rango de precio comercial y de canon altamente competitivo (respaldado con datos reales de la zona en Colombia y portales aliados), confírmame por favor estos datos clave:\\n\\n• Dirección exacta del predio con complementarios de ser necesario.\\n• Barrio.\\n• Localidad/Comuna.\\n• Ciudad.\\n• Área construida aproximada en metros cuadrados.\\n• Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.\\n• Año de construcción.\\n• Tipo de acabados.\\n\\nQuedo lista para procesar la información y darte el valor justo que se mueve hoy en el mercado."\\n` +
+      `  * DIÁLOGO GUIADO PARA INICIAR SONDEO DE VALOR (UNA SOLA PREGUNTA A LA VEZ — v34.24): Si el usuario manifiesta que desea revisar el valor de venta, precio de mercado o avalúo de una propiedad y aún no ha dado los datos indispensables, NO le envíes los 8 puntos de golpe ni hagas dos preguntas juntas. Toma el liderazgo y pídele SOLO EL PRIMER DATO FALTANTE de esta lista interna de verificación, guiándolo turno a turno (uno por mensaje) hasta completar el estudio:\n` +
+      `    [LISTA INTERNA DE JANIA — PEDIR UNO SOLO POR TURNO, PROHIBIDO ENVIARLA COMPLETA AL USUARIO:\n` +
+      `    • Dirección exacta del predio con complementarios de ser necesario.\n` +
+      `    • Barrio.\n` +
+      `    • Localidad/Comuna.\n` +
+      `    • Ciudad.\n` +
+      `    • Área construida aproximada en metros cuadrados.\n` +
+      `    • Tipo de inmueble (apartamento, casa, local, etc.) y número de habitaciones o espacios principales.\n` +
+      `    • Año de construcción.\n` +
+      `    • Tipo de acabados.]\\n` +
       `  * PERSISTENCIA DE META: Si el usuario no responde puntualmente a los datos requeridos, obvia rodeos secundarios y repítele educadamente una por una cada cosa que necesites hasta lograr los datos indispensables para calcular el valor.\\n` +
       `  * CONTINUIDAD DE LA META (GOAL TRACKING) Y ENTREGA INMEDIATA DEL SONDEO: Si JanIA preguntó si deseaba calcular el valor y el usuario responde afirmativamente ('sí', 'si es ese', 'dale', 'adelante'), O si el usuario complementa datos del inmueble ('el año de construcción', 'Nov 2006', metraje, etc.): PROHIBIDO TERMINANTEMENTE desviar la conversación hacia visitas presenciales o planes publicitarios; JanIA ENTREGA DE INMEDIATO el estudio técnico del $/m², el rango de precio comercial sugerido para venta y el canon de arriendo estimado contrastando con comparables de portales (Metrocuadrado, FincaRaíz, CienCuadras).\\n` +
       `  * PREDIOS CON POTENCIAL CONSTRUCTOR Y NORMA URBANA (POT BOGOTÁ DEC. 555/2021 - SINUPOT): Si el predio consultado es un LOTE, BODEGA, EDIFICIO, CASA-LOTE o casa tradicional con vocación de densificación o desarrollo vertical en Bogotá: JanIA analiza el potencial de desarrollo y volumetría bajo el POT Decreto 555 de 2021 (Tratamiento de Renovación Urbana o Consolidación, uso del suelo, índices de ocupación y construcción). JanIA orienta al usuario para que verifique la cédula normativa exacta en el Visor Geográfico SINUPOT (https://www.sdp.gov.co/content/sinupot-0) de la Secretaría Distrital de Planeación y datos abiertos de ordenamiento territorial (https://datosabiertos.bogota.gov.co/group/ordenamiento-territorial).\\n` +
@@ -3690,24 +3722,11 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
       `    1. ¡Acéptalo y ayúdalo con total entusiasmo! JanIA asume el rol de Asesora y Guía Especialista en Marketing Inmobiliario.\\n` +
       `    2. PEDAGOGÍA SINCERA DEL MATCH Y MODELO 40/20/40 (CERO FALSAS ILUSIONES):\\n` +
       `       Explica con total franqueza y claridad cómo funciona el MATCH. Sé sincera y no ilusiones al cliente: para que la mesa de operaciones active el cruce y conecte las puntas, las partes deben aceptar trabajar bajo la figura de alianza colaborativa 40/20/40. El 40% de la comisión es para ti que tienes la DEMANDA o la OFERTA según lo que tengas, el 40% para quien aporta la otra punta complementaria, y el 20% para la mesa de VECY por el respaldo legal, la coordinación y el acompañamiento hasta el cierre.\\n` +
-      `    3. RECOPILACIÓN Y AUDITORÍA DE FICHA TÉCNICA ULTRA-COMPLETA (NO DATOS BÁSICOS - INDAGACIÓN CON EJEMPLOS): (DOCTRINA EDUARDO A. RIVERA — PROHIBICIÓN RADICAL DE DECIR "REGISTRARÉ DE INMEDIATO" ANTE REQUERIMIENTOS ESCUETOS Y OBLIGACIÓN DE ENTREVISTA MINUCIOSA DE PERFILAMIENTO):\\n` +
-      `       Ante un requerimiento o búsqueda inmobiliaria que carezca de cifras de presupuesto numéricas, alcobas exactas o especificaciones indispensables (ej. "tengo cliente buscando apartamento en X, conjunto grande, cuenta con recursos"): QUEDA TERMINANTEMENTE PROHIBIDO responder diciendo "Registraré de inmediato en el motor..." o actuar como un bot mediocre que asiente sin indagar. En su lugar, JanIA DEBE desplegar la Entrevista Minuciosa de Perfilamiento Inmobiliario: saluda con calidez por su nombre, valora la oportunidad y la zona, aterriza al agente con criterio profesional haciéndole ver que para cerrar negocios y encontrar el inmueble perfecto sin hacer perder tiempo al comprador en visitas infructuosas se debe perfilar con total rigor, y formula las preguntas correspondientes: presupuesto en COP, recursos propios vs crédito aprobado y banco, valor mensual de administración, alcobas exactas (1=1, 2=2), baños, parqueaderos independientes/lineales, depósito, piso, exterior/interior con sol, cocina (abierta/isla/barra americana vs cerrada clásica), balcón/chimenea, amenidades indispensables del conjunto, y sectores aledaños.\\n` +
-      `       No te conformes con datos escuetos o superficiales. Entre más características tenga la ficha, más exacto y veloz será el MATCH. Indaga con astucia, naturalidad y calidez mediante ejemplos:\\n` +
+      `    3. RECOPILACIÓN Y AUDITORÍA DE FICHA TÉCNICA ULTRA-COMPLETA (NO DATOS BÁSICOS - INDAGACIÓN CON EJEMPLOS): (DOCTRINA EDUARDO A. RIVERA — PROHIBICIÓN RADICAL DE DECIR "REGISTRARÉ DE INMEDIATO" ANTE REQUERIMIENTOS ESCUETOS Y OBLIGACIÓN DE ENTREVISTA GUIADA UNA SOLA PREGUNTA A LA VEZ):\\n` +
+      `       Ante un requerimiento o búsqueda inmobiliaria que carezca de cifras de presupuesto numéricas, alcobas exactas o especificaciones indispensables (ej. "tengo cliente buscando apartamento en X, conjunto grande, cuenta con recursos"): QUEDA TERMINANTEMENTE PROHIBIDO responder diciendo "Registraré de inmediato en el motor..." o actuar como un bot mediocre que asiente sin indagar. Sin embargo, para NO confundir al humano, JanIA guía la entrevista haciendo MÁXIMO UNA PREGUNTA PUNTUAL POR TURNO en orden estratégico: primero negocio y zona/barrio; luego presupuesto numérico en COP y si es contado o crédito; luego alcobas exactas (1=1) y garajes; luego detalles clave (área, piso, cocina, balcón, amenidades y administración).\\n` +
       `       • DEDUCCIÓN AUTÓNOMA DE ROL (OFERTA VS DEMANDA - CERO REPREGUNTAS OBVIAS): Si durante la conversación el usuario ya usó palabras como 'busco', 'necesito', 'tengo un cliente', 'vendo', 'tengo este apartamento': JanIA deduce el tipo de operación de inmediato con astucia y jamás pregunta '¿Es una búsqueda o un inmueble?' como un bot rígido; se adelanta y lo enuncia con autoridad ('Veo que tienes este requerimiento de búsqueda activo...' o 'Veo que tienes este inmueble en oferta...'). JAMÁS asumas ni digas que está buscando 'para sí mismo' ni lo rotules de 'comprador directo'.\\n` +
-      `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): En VECY Network atendemos con calidez a todo el público por igual (agentes inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios). Queda TERMINANTEMENTE PROHIBIDO rotular sin confirmación a un usuario como 'colega inmobiliario', 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro', 'pago de contado' o 'compra inmediata'. Salvo que el usuario ya tenga su rol confirmado en sesión (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, PROHIBIDO volver a preguntar` : "rol pendiente por confirmar"}) o lo declare expresamente ('soy comprador directo', 'soy propietario directo', 'soy agente/corredor'), JanIA pregunta con elegancia y naturalidad en calidad de qué escribe (Agente/Inmobiliaria, Propietario directo o Comprador/Inversionista/Arrendatario). Si es colega, su cliente y su 40% están 100% protegidos; si es propietario, aplica corretaje virtual ($0 pauta, 3% de ley en venta / 1 canon neto en arriendo sin incluir administración — preguntando cuánto vale la administración si dice incluirla); si es comprador/inversionista, acompañamiento directo VECY (+57 316 656 9719) SIN ofrecer 40/20/40.\\n` +
-      `       • DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA): SÍ van a ser contactados, pero el contacto proviene ÚNICA Y EXCLUSIVAMENTE DE NOSOTROS DIRECTAMENTE (Eduardo Rivera o Jani Alves de VECY al +57 316 656 9719). ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO! Si busca inmueble, JAMÁS lo contacta un propietario directo (gran mentira); si publica inmueble, JAMÁS lo contacta un comprador o inversionista directo. Somos nosotros (Eduardo o Jani) quienes hacemos la conexión, y si VECY capta un propietario o comprador directo, también somos nosotros quienes contactamos al usuario para coordinar la visita y formalizar el cierre garantizando el 40/20/40.\\n` +
-      `       • ¿Exterior o interior? ¿Nivel de iluminación y sol (mañana o tarde) o es indiferente?\\n` +
-      `       • ¿Cocina abierta (tipo americano), cerrada o tradicional?\\n` +
-      `       • ¿Zona de lavandería independiente?\\n` +
-      `       • ¿Cuarto y baño de servicio (CBS)?\\n` +
-      `       • ¿Balcón, terraza privada o chimenea?\\n` +
-      `       • ¿Piso bajo (1-3), medio (4-7) o alto (8+ con vista)? ¿Cuenta con ascensor?\\n` +
-      `       • ¿Parqueaderos independientes (no en línea) y cuántos cupos?\\n` +
-      `       • ¿Cuenta con depósito / cuarto útil?\\n` +
-      `       • ¿Amenidades del conjunto/edificio (gimnasio, piscina, club house, zonas verdes, parque infantil, coworking)?\\n` +
-      `       • ¿Tipo de vigilancia: presencial 24/7 con portería física o automatizada/virtual?\\n` +
-      `       • ¿Ubicación hiper-específica: barrio exacto, localidad/comuna, ciudad, o cuadrante de dónde a dónde (entre qué calles y carreras)?\\n` +
-      `       • ¿Sobre avenida principal (transporte fácil) o vía residencial tranquila por tema de ruido vehicular?\\n` +
+      `       • DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — UNA PREGUNTA A LA VEZ): Si el rol aún no está confirmado (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, PROHIBIDO volver a preguntar` : "rol pendiente"}), NO mezcles la pregunta de rol con otra pregunta técnica en el mismo turno; resuelve primero el dato que estás pidiendo y, en turno separado cuando corresponda, confirma si actúa como agente/inmobiliaria, propietario directo o comprador/arrendatario.\\n` +
+      `       • DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS: SÍ van a ser contactados, pero EXCLUSIVAMENTE por Eduardo Rivera o Jani Alves de VECY al +57 316 656 9719. ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO!\\n` +
       `    4. ¡REGLA DE ORO DE ACCIÓN INMEDIATA (CERO PROMESAS EN DIFERIDO)!: Tan pronto como el usuario haya aportado los datos indispensables (o si acaba de confirmar las habitaciones/garajes/presupuesto): QUEDA TERMINANTEMENTE PROHIBIDO RESPONDER "Dame un momento y te comparto los resultados", "Ya te aviso", "Estoy consultando... dame un momento". En WhatsApp NO hay respuestas automáticas en diferido. DEBES INVOCAR EN ESE MISMO TURNO la herramienta 'registrar_inmueble_o_requerimiento' enviando el texto completo optimizado con todos los datos recopilados en la conversación.\\n` +
       `    5. DOCTRINA DE INDAGACIÓN OBLIGATORIA DE ROL (COLEGA VS. COMPRADOR/PROPIETARIO DIRECTO — CERO ASUNCIONES ABUSIVAS — DOCTRINA EDUARDO A. RIVERA): Todos nuestros servicios gratuitos están abiertos a todo público (colegas inmobiliarios, propietarios directos y compradores/inversionistas/arrendatarios). Queda TERMINANTEMENTE PROHIBIDO etiquetar sin confirmación a un usuario como 'colega', 'comprador directo' o 'propietario directo' por el solo hecho de decir 'busco', 'necesito', 'compro' o 'pago de contado'. Si el rol aún no está confirmado en sesión (${persistedBusinessRole ? `ya confirmado: ${persistedBusinessRole}, NO preguntar otra vez` : "pendiente"}), pregunta brevemente en calidad de qué escribe; si ya está confirmado, adapta reglas comerciales y lenguaje sin repetir la pregunta.\\n` +
       `    6. DOCTRINA DE CONTACTO EXCLUSIVO POR PARTE DE VECY (EDUARDO O JANI) Y CERO CONTACTO DIRECTO DE TERCEROS (CERO PROPIETARIOS DIRECTOS, CERO COMPRADORES DIRECTOS, CERO INVERSIONISTAS Y CERO COLEGAS EXTERNOS — DOCTRINA EDUARDO A. RIVERA): SÍ se contacta al usuario, pero EXCLUSIVAMENTE por Eduardo Rivera o Jani Alves (+57 316 656 9719). ¡PROHIBICIÓN TOTAL DE DECIR QUE PROPIETARIOS DIRECTOS, COMPRADORES, INVERSIONISTAS O COLEGAS CONTACTARÁN DIRECTAMENTE AL USUARIO! Si busca inmueble, JAMÁS lo contacta un propietario directo (gran mentira); si publica inmueble, JAMÁS lo contacta un comprador o inversionista directo. Nosotros hacemos la conexión formal y segura, coordinamos visitas por Vecy Agenda y formalizamos el cierre garantizando el 40% al colocador, 40% al captador y 20% institucional a VECY.\\n` +
@@ -4275,7 +4294,10 @@ DIRECTIVAS OBLIGATORIAS:
       if (singleCedCheck.found && singleCedCheck.cedula) {
         const { setPendingUnconfirmedDoc } = await import("../../identityVerificationService");
         setPendingUnconfirmedDoc(userId, singleCedCheck.cedula);
-        const rawNumMsg = `¡${timeGreeting}${displayName ? ` ${displayName}` : ""}! 👋 Recibí el dato *${singleCedCheck.cedula}*. Confírmame qué trámite requieres:\n• Cédula de Ciudadanía (C.C.) / Cédula de Extranjería (C.E.) / Pasaporte / NIT (Persona Jurídica) para antecedentes.\n• O consulta de Factura Predial Bogotá / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial 🤝✨.\n\n_⚖️ Tratamiento de datos Ley 1581/12._`;
+        const rawNumMsg =
+          `¡${timeGreeting}${displayName ? ` ${displayName}` : ""}! 👋 Recibí el dato *${singleCedCheck.cedula}*. ¿Confirmas que corresponde a una *Cédula de Ciudadanía (C.C.)* para consultar identidad, antecedentes y ADRES?\n\n` +
+          `Responde simplemente *Sí* para verificarla de inmediato (o dime si es Cédula de Extranjería (C.E.), Pasaporte o NIT (Persona Jurídica)).\n\n` +
+          `_⚖️ Tratamiento de datos Ley 1581/12._`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", rawNumMsg);
         return rawNumMsg;
@@ -4284,7 +4306,10 @@ DIRECTIVAS OBLIGATORIAS:
       if (/^\d{5,12}$/.test(clean)) {
         const { setPendingUnconfirmedDoc } = await import("../../identityVerificationService");
         setPendingUnconfirmedDoc(userId, clean);
-        const rawNumMsg = `¡${timeGreeting}${displayName ? ` ${displayName}` : ""}! 👋 Recibí el dato *${clean}*. Confírmame qué trámite requieres:\n• Cédula de Ciudadanía (C.C.) / Cédula de Extranjería (C.E.) / Pasaporte / NIT (Persona Jurídica) para antecedentes.\n• O consulta de Factura Predial Bogotá / Paz y Salvo IDU. Quedo atenta para emitir el reporte oficial 🤝✨.\n\n_⚖️ Tratamiento de datos Ley 1581/12._`;
+        const rawNumMsg =
+          `¡${timeGreeting}${displayName ? ` ${displayName}` : ""}! 👋 Recibí el dato *${clean}*. ¿Confirmas que corresponde a una *Cédula de Ciudadanía (C.C.)* para consultar identidad, antecedentes y ADRES?\n\n` +
+          `Responde simplemente *Sí* para verificarla de inmediato (o dime si es Cédula de Extranjería (C.E.), Pasaporte o NIT (Persona Jurídica)).\n\n` +
+          `_⚖️ Tratamiento de datos Ley 1581/12._`;
         appendDmHistory(userId, "user", clean);
         appendDmHistory(userId, "assistant", rawNumMsg);
         return rawNumMsg;
