@@ -7,6 +7,22 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📌 [2026-11-16 — HILO DE CONTINUIDAD PARA PRÓXIMO CHAT] — Arquitectura Evaluada y Aprobada como Viable (Pendiente de Ejecución en v34.25)
+
+1. **Transformación "Modo Humana Real" (Cero Biblias / Cero Jerga Técnica-Jurídica):**
+   - **Objetivo planteado por Eduardo:** Que JanIA hable como una asesora humana real por WhatsApp (máximo 3–4 renglones sin botón *"Leer más"*), en español cotidiano claro sin tecnicismos (`SIRI`, `SIRECI`, `BDUA`, `UVT`, `CUV`, artículos extensos en chat — dejando la sustentación extensa únicamente dentro del PDF), adelgazando el `systemPrompt` de `dmHandler.ts` y aplicando buenos modales cálidos con memoria silenciosa cuando alguien envía un dato en frío como un número suelto sin saludar.
+   - **Nota técnica:** Requiere ajustar las pruebas antiguas de `regression.test.ts` (`Suite 29/35/49/73/156`) que hoy exigen frases rígidas como `"Recibí el dato"`, `"Ley 1581/12"` o entrevistas largas.
+
+2. **Ficha Ultra-Completa de Requerimientos (1 pregunta a la vez) + Matching Web/BD (≤ 15 días, 85%–100%):**
+   - Implementar borrador acumulativo en sesión (`pendingRequirementDraft` en `userPerpetualSession.keyFacts`) para guiar al usuario paso a paso (1 pregunta puntual por turno) hasta completar todos los datos técnicos, financieros y de confort antes de insertar en `requirements` (BD + web).
+   - Ajustar `findMatchesForRequirement` en `server/_core/matching.ts` (hoy corta toda propiedad a `propAgeDays > 15` y usa `score >= 80`) para consultar inmuebles vigentes del portal web + registros de BD/grupos ≤ 15 días con umbral **85%–100%**, creando el registro en `propertyMatches` sin revelar teléfonos ni contactos.
+
+3. **Firma Electrónica de T&C y Política de Privacidad vía Enlace WhatsApp (Patrón Vecy Agenda) antes de liberar Códigos `PROP-...` / `#M...`:**
+   - **100% viable reutilizando piezas existentes:** `client/src/components/agenda-pro/SignaturePad.jsx` (`signature_pad` PNG negro base64), `server/_core/emailContractService.ts` (`pdf-lib` + estampado de `firmaVirtualBase64` + QR + CUV) y `server/_core/whatsapp-match.ts` (`queuedSend` / `sendDirectMessage` para despachar PDFs por DM).
+   - **Flujo acordado:** Al hallar Match, JanIA retiene los códigos `PROP-...` y `#M...`, entrega un enlace móvil (`https://vecy-bienes-raices.vercel.app/firma-match/<token>`) con Términos y Condiciones (40/20/40 o cliente directo según rol) + Política de Privacidad (Ley 1581/2012) + `SignaturePad`. Al firmar, el backend genera el PDF estampado con firma + QR y JanIA envía automáticamente por WhatsApp el PDF firmado + los IDs `PROP-...` y `#M...` desbloqueados + llamado a comunicarse con Eduardo o Jani al `+57 316 656 9719` (con respaldo opcional de `"Sí acepto"` en texto para usuarios mayores).
+
+---
+
 ### 📅 [2026-11-16] — JanIA v34.24: Doctrina de Liderazgo Conversacional "Una Sola Pregunta a la Vez", Perfilamiento Progresivo y Cero Calificación Prematura (Doctrina Eduardo A. Rivera — v34.24 - 34.24.0)
 
 #### 1. Directriz de Eduardo y Diagnóstico Sistémico
