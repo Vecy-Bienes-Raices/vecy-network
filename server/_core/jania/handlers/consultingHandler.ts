@@ -19,6 +19,7 @@ import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { getGreetingByTime, getColombiaDateTimeContext, extractFirstName, sanitizeResponseMarkdown, parseSafeJSON } from "../parsers";
 import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { JanIAResult } from "../types";
+import { VECY_OFFICIAL_GROUPS } from "../../../../shared/const";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { stripLeadingGreetingsAndCourtesies, extractAcmAttributesFromText } from "./dmHandler";
@@ -760,6 +761,13 @@ export async function processConsultingMessage(
     - Si es el PRIMER contacto del día (${!isOngoingChat ? "SÍ" : "NO"}):
       1. Salúdalo con calidez y dinamismo por su primer nombre ("¡${timeGreeting}${targetName ? `, ${targetName}` : ''}!").
       2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
+  * REGLA DOCTRINAL "CERO BIBLIAS" Y MENTORÍA PASO A PASO (v34.27 — Doctrina Eduardo A. Rivera):
+    - En WhatsApp responde SIEMPRE en español cotidiano, claro, cálido y sin jerga jurídica ni médica enredada, evitando "biblias" largas que activen el botón "Leer más" cuando el tema no lo exija.
+    - Si un usuario pregunta cómo usar JanIA o cómo hacer consultas a VECY (ej. "cómo realizar consultas a vecy"), enséñale con mucha paciencia en 4 o 5 renglones claros: qué puede preguntarte (arriendos, contratos, avalúos virtuales, predial, antecedentes, estudios de títulos), que puede enviarte texto, nota de voz o foto/PDF, y que para datos privados o verificaciones te escriba por DM al +57 319 291 9978.
+    - Si te falta algún dato para resolver una consulta, haz UNA SOLA pregunta puntual a la vez, llevando tú el control y guiando paso a paso al usuario sin abrumarlo con listas de 6 preguntas juntas.
+    - Si el usuario envía un número suelto sin decir qué es, salúdalo con buenos modales y pregúntale sutilmente en 1 línea qué quiere hacer con ese número.
+  * DOCTRINA DE ARRENDAMIENTOS COLOMBIA (SIN PÓLIZA, DEPÓSITO, DOCUMENTOS Y ADMINISTRACIÓN):
+    - Si preguntan por arriendo sin póliza o cuánto pedir de depósito: explica con total claridad que el **Art. 16 de la Ley 820 de 2003 prohíbe exigir depósitos en dinero o cauciones reales en arrendamiento de vivienda urbana** (en locales comerciales sí es pactable libremente). Sin póliza de aseguradora, recomiéndale blindarse con: 1) **Codeudor / fiador solvente** (con ingresos estables o finca raíz libre de gravamen), 2) **Documentos clave** (cédula de arrendatario y codeudor, carta laboral/desprendibles o declaración de renta y últimos 3 extractos bancarios; si es empresa, certificado de Cámara/RUES), 3) **Verificación previa gratuita** (enviando las cédulas a mi chat privado +57 319 291 9978 consulto nombre oficial, antecedentes Policía/Procuraduría/Contraloría y ADRES/EPS), y 4) **Contrato bien redactado** (distinguiendo si en el canon total como $1'600.000 ya va incluida o separada la cuota de administración). Cierra ofreciéndole ayuda concreta en 1 paso (ej. revisar las cédulas o redactarle el contrato).
   * Si el usuario simplemente te saluda ("Hola", "Buenos días", etc.), salúdalo con empatía viva, simpatía y pregúntale cómo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), sé recíproca con calidez, deséale éxitos en sus cierres o un feliz descanso, y si fue de gran ayuda, invítalo con total delicadeza a dejarnos una reseña 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
   * Si la consulta es jurídica, tributaria, sobre avalúos/ACM o marketing, razona a fondo (aplicando en ACM metodología Fitto y Corvini, microzonificación, 3 escenarios estratégicos de precio y Cap Rate), cita normas o datos precisos, entrega la solución integral directamente y cierra SIEMPRE preguntando la satisfacción del usuario con tu respuesta para, según su libre albedrío y retroalimentación, invitarlo a comentar y calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
@@ -852,22 +860,25 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
 
       if (parsed.classification === "REQUERIMIENTO" || parsed.classification === "INMUEBLE") {
-        console.log(`[JanIA-Consulting] 🎯 Publicación comercial detectada en Grupo 2 (${parsed.classification}). Delegando a propertiesHandler para inserción en BD y matching...`);
-        const { processWhatsAppMessage } = await import("./propertiesHandler");
-        return await processWhatsAppMessage(
-          text,
-          userId,
-          userName,
-          !!imageBuffer || !!pdfBuffer,
-          [],
-          undefined,
-          imageBuffer,
-          true,
-          pdfBuffer,
-          pdfMimeType,
-          "120363417740040773@g.us",
-          "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠"
-        );
+        console.log(`[JanIA-Consulting] 🚫 Publicación comercial (${parsed.classification}) detectada en Grupo 2. Moderando y redirigiendo a Grupo 1...`);
+        const redirectName = targetName || extractFirstName(realName) || "colega";
+        const redirectTypeLabel = parsed.classification === "REQUERIMIENTO" ? "demanda" : "oferta";
+        const redirectText =
+          `Hola ${redirectName} 👋🏻, publicaste una ${redirectTypeLabel} inmobiliaria en este canal.\n\n` +
+          `Este grupo (*${VECY_OFFICIAL_GROUPS.grupo2.name}*) es exclusivo para consultas legales, tributarias, avalúos y tips. Por favor compártela en nuestro grupo oficial de corretaje para activar los cruces (MATCH):\n` +
+          `🏢 *${VECY_OFFICIAL_GROUPS.grupo1.name}*\n👉 ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
+          `_Eliminaré este mensaje para mantener el orden del grupo. ¡Gracias!_ 🤝`;
+        appendConsultingHistory(userId, "user", text);
+        appendConsultingHistory(userId, "assistant", redirectText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: redirectText,
+          dmResponse: redirectText,
+          reactionEmoji: "🚫",
+          wantsVoice: false,
+          voiceResponse: "",
+        };
       }
 
       const rawResp = parsed.response || "";
@@ -1143,9 +1154,51 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       }
     }
 
+    // Fallback de contingencia: Si el usuario preguntó cómo hacer consultas a VECY / JanIA
+    if (/(?:c[oó]mo\s+(?:realizar|hacer|se\s+hacen)\s+consultas|c[oó]mo\s+(?:funciona|uso|hablo\s+con)\s+(?:vecy|jania))/i.test(cleanLower)) {
+      const onboardingFallback =
+        `¡${timeGreeting}${firstName ? `, ${firstName}` : ""}! 😊 Con mucho gusto te guío paso a paso:\n\n` +
+        `• *Aquí en este grupo* solo etiquétame (@JanIA) y escríbeme o envíame una nota de voz con tu duda legal, de arriendo, avalúo virtual o impuestos.\n` +
+        `• *En mi chat privado* (+57 319 291 9978) puedes enviarme fotos/PDFs (CTL, Predial, contratos) o cédulas para verificar antecedentes gratis.\n\n` +
+        `¿Sobre qué tema quieres hacer tu primera consulta hoy? 🏠✨`;
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", onboardingFallback);
+      markUserGreetedToday(userId);
+      return {
+        classification: "SOBRE_VECY",
+        response: onboardingFallback,
+        reactionEmoji: "💡"
+      };
+    }
+
+    // Fallback de contingencia: Arriendo sin póliza, depósito Ley 820/2003, documentos y canon/administración
+    if (
+      /\b(?:arriendo|arrendamiento|inquilino|arrendatario)\b/i.test(cleanLower) &&
+      /\b(?:p[oó]liza|aseguradora|dep[oó]sito|documentos|sin\s+p[oó]liza)\b/i.test(cleanLower)
+    ) {
+      const leaseGuide =
+        `¡${timeGreeting}${firstName ? `, ${firstName}` : ""}! 👋🏻 Claro que sí, te respondo punto por punto:\n\n` +
+        `• *¿Sin póliza de aseguradora?* Sí se puede, respaldándote con un *codeudor o fiador solvente* (ideal con ingresos demostrables o finca raíz) y un contrato sólido.\n` +
+        `• *¿Cuánto pedir de depósito?* Ojo: en *vivienda urbana*, el *Art. 16 de la Ley 820 de 2003 prohíbe exigir depósitos en dinero* o cauciones reales (solo en inmuebles comerciales se puede pactar). En vivienda usa codeudor o afianzadora.\n` +
+        `• *Documentos clave y consulta:* Pide cédula (arrendatario y codeudor), carta laboral o últimos 3 desprendibles/extractos bancarios (o RUES si es empresa). Si me envías las cédulas a mi *chat privado (+57 319 291 9978)*, te verifico gratis nombre oficial, EPS/ADRES y antecedentes.\n` +
+        `• *Sobre los $1.600.000 incluida administración:* Deja claro en el contrato cuánto corresponde a canon neto y cuánto a administración (para evitar líos en futuros reajustes del IPC).\n\n` +
+        `¿El inmueble es de vivienda o comercial? Si quieres, por privado te ayudo a revisar las cédulas o a redactar el contrato. 🤝✨`;
+      const finalLeaseReply = appendGroupSatisfactionClosing(leaseGuide);
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", finalLeaseReply);
+      markUserGreetedToday(userId);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: finalLeaseReply,
+        reactionEmoji: "⚖️"
+      };
+    }
+
     // Fallback de contingencia: Si el usuario preguntó por sondeos de valor, m² o precio de venta/arriendo
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
-      const avaluoFallback = `¡${timeGreeting}, estimada ${firstName}! 👋🏻 Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m² y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin trámites engorrosos ni papeleos. 📊✨\n\nPara entregarte un informe escrito muy acertado sobre en cuánto puedes venderlo o arrendarlo, cuéntame por favor:\n\n1️⃣ ¿Es para **VENTA** o para **ARRIENDO**?\n2️⃣ ¿En qué **ciudad/municipio** y **barrio o sector exacto** está ubicado?\n3️⃣ ¿Qué tipo de inmueble es (apartamento, casa, local, bodega, etc.) y qué **estrato** tiene?\n4️⃣ ¿Cuál es el **área construida y privada** aproximada en m²?\n5️⃣ ¿Cuántas **habitaciones, baños y parqueaderos** (¿independientes o lineales?) tiene?\n6️⃣ ¿Qué **antigüedad** aproximada tiene, en qué piso está (si es apto) y valor de la **cuota de administración**?\n\n¡Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estratégicas de salida! 🤝🏠`;
+      const fallbackNameInfo2 = resolveNameAndGender(realName, timeGreeting);
+      const politeTarget = fallbackNameInfo2.displayName ? (fallbackNameInfo2.isFemale ? `estimada ${fallbackNameInfo2.displayName}` : `estimado ${fallbackNameInfo2.displayName}`) : (firstName || "colega");
+      const avaluoFallback = `¡${timeGreeting}, ${politeTarget}! 👋🏻 Con mucho gusto te hago un *estudio de mercado virtual* del valor por m² y precio sugerido, directo aquí y sin papeleos.\n\nVamos paso a paso: para empezar, ¿el inmueble es para *VENTA* o para *ARRIENDO*? 🏠`;
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", avaluoFallback);
       markUserGreetedToday(userId);

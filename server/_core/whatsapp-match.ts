@@ -36,7 +36,7 @@ import QRCode from 'qrcode';
 import { extractFirstName, getGreetingByTime, startContinuousPresence } from './whatsapp-utils';
 import { transcribeAudioBuffer } from './voiceTranscription';
 import { isNonRealEstateText } from './matching';
-import { VECY_OFFICIAL_GROUPS, VECY_BRAND } from '../../shared/const';
+import { VECY_OFFICIAL_GROUPS, VECY_BRAND, resolveOfficialVecyGroupKey } from '../../shared/const';
 import { sanitizeResponseMarkdown } from './jania/parsers';
 import { cleanRawUserName } from './nameAndGenderResolver';
 
@@ -1289,14 +1289,19 @@ export class JaniaMatchBot {
             const textLower = body.toLowerCase();
             const hasDirectMention = this.isBotDirectlyMentioned(msg, body);
 
-            // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
-            const isMainGroup = chatId === this.targetGroupId;     // 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴
-            const isBuzonGroup = chatId === this.buzonGroupId;     // 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠
-            const isCirculoGroup = chatId === this.circuloGroupId; // 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
-            const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
+            // --- OBTENCIÓN DEL NOMBRE DEL GRUPO E IDENTIFICACIÓN ROBUSTA DE GRUPOS OFICIALES VECY (JID + Unicode NFKC) ---
+            const groupName = groupSubject || await this.resolveGroupName(chatId);
+            const resolvedOfficialKey =
+              resolveOfficialVecyGroupKey(chatId, groupName) ||
+              (chatId === this.targetGroupId ? "grupo1" : chatId === this.buzonGroupId ? "grupo2" : chatId === this.circuloGroupId ? "grupo3" : null);
+            if (resolvedOfficialKey === "grupo1") this.targetGroupId = chatId;
+            if (resolvedOfficialKey === "grupo2") this.buzonGroupId = chatId;
+            if (resolvedOfficialKey === "grupo3") this.circuloGroupId = chatId;
 
-            // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y FILTRADO INMOBILIARIO ESTRICTO ---
-            const groupName = await this.resolveGroupName(chatId);
+            const isMainGroup = resolvedOfficialKey === "grupo1";   // 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴
+            const isBuzonGroup = resolvedOfficialKey === "grupo2";  // 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠
+            const isCirculoGroup = resolvedOfficialKey === "grupo3";// 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
+            const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
 
             // Si no es grupo oficial VECY, omitir únicamente si es un chat explícito ajeno (familia, seguridad, etc.)
             if (!isOfficialGroup) {
@@ -1467,18 +1472,24 @@ export class JaniaMatchBot {
               this.recordPassiveGroupContext(chatId, msg.pushName || senderId.split('@')[0], body);
             }
 
-            // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
-            // En grupos externos no oficiales, CAPTURAMOS publicaciones comerciales e inmuebles (descartando cortesías cortas y reacciones).
-            // Si el mensaje contiene mención directa a JanIA (hasDirectMention), NO es una publicación desatendida, es una consulta activa.
-            const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
-            const isListing = !hasDirectMention && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+            const { checkStrictOffTopic } = await import('./jania/heuristics');
+            const isStrictOffTopicInGroup = isOfficialGroup && checkStrictOffTopic(body).isOffTopic;
 
-            // En Soporte Legal (Buzón) y Círculo Cero, responder a consultas legítimas o continuaciones de conversación.
-            // En grupos externos o Grupo 1, responder ÚNICAMENTE ante mención directa explícita de JanIA (Doctrina Eduardo A. Rivera v33.82):
+            // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
+            // En Grupo 1, el contenido estricto off-topic o mensajes largos no inmobiliarios sin mención pasan a moderación de Grupo 1.
+            // En grupos externos no oficiales, CAPTURAMOS publicaciones comerciales e inmuebles (descartando cortesías cortas y reacciones).
+            const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
+            const isListing = !hasDirectMention && !isStrictOffTopicInGroup && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || (hasRawMedia && !rawMsg?.videoMessage));
+
+            // En Soporte Legal (Buzón) y Círculo Cero, responder a consultas legítimas, moderar off-topic o continuar conversación.
+            // En Grupo 1, moderar mensajes ajenos a ofertas/demandas (off-topic o charla ajena). En grupos externos, responder solo ante mención directa.
             const hasMeaningfulQuery = ((textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage) || hasRawMedia;
+            const isMainGroupNonListingOffTopic = isMainGroup && !isListing && !isReactionMessage && (isStrictOffTopicInGroup || (!isShortCourtesy && body.trim().length >= 12));
             const shouldRespond = (isBuzonGroup || isCirculoGroup)
               ? hasMeaningfulQuery
-              : hasDirectMention;
+              : isMainGroup
+                ? (hasDirectMention || isMainGroupNonListingOffTopic)
+                : hasDirectMention;
 
             if (isListing) {
               await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
@@ -2316,7 +2327,8 @@ export class JaniaMatchBot {
       return false;
     }
 
-    const sanitizedForNameCheck = (text || '')
+    const normalizedInputText = (text || '').normalize('NFKC');
+    const sanitizedForNameCheck = normalizedInputText
       .replace(/\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/gi, '')
       .replace(/\bjania,\s+tu\s+aliada\s+inmobiliaria\b/gi, '')
       .replace(/\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/gi, (m, offset, full) => {
@@ -2325,7 +2337,7 @@ export class JaniaMatchBot {
       })
       .toLowerCase();
 
-    const textLower = (text || '').toLowerCase();
+    const textLower = normalizedInputText.toLowerCase();
 
     // 1. Detección por nombre o variantes (excluyendo flyers de autopresentación)
     if (sanitizedForNameCheck.includes("jania") || sanitizedForNameCheck.includes("@jania")) {
@@ -2536,6 +2548,38 @@ export class JaniaMatchBot {
           }, 3500);
         }
         return;
+      }
+
+      // 🛡️ MODERACIÓN PRIORITARIA EN GRUPOS 2 Y 3 ANTES DE VERIFICACIÓN ID/CONTACTO (v34.27)
+      const isBuzonOrCirculo = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+      if (isBuzonOrCirculo) {
+        const { checkStrictOffTopic } = await import('./jania/heuristics');
+        const offTopicEarly = checkStrictOffTopic(bodyText);
+        const rawUnwrappedForMod = unwrapMessage(msg.message);
+        const isStandaloneOffTopicVideo =
+          !!rawUnwrappedForMod?.videoMessage &&
+          (!bodyText.trim() || !/\b(?:inmueble|arriendo|venta|consulta|ley|predial|ctl|escritura|vecy|jania)\b/i.test(bodyText));
+        if (offTopicEarly.isOffTopic || isStandaloneOffTopicVideo) {
+          const reasonLabel = offTopicEarly.reason || 'videos o material ajeno a consultas inmobiliarias';
+          const cleanUserNameMod = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
+          const modWarning =
+            `Hola ${cleanUserNameMod} 👋🏻. El contenido relacionado con *${reasonLabel}* no está permitido en este grupo oficial de VECY BIENES RAÍCES. 🚫\n\n` +
+            `Aquí atendemos consultas inmobiliarias, legales, tributarias, avalúos y novedades del proyecto. Eliminaré este mensaje para mantener el canal limpio. 🤝`;
+          await this.safeReact(chatId, msg.key, '🚫', 'WARNING-REACT');
+          await this.queuedSend(chatId, modWarning, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
+          await this.logToDb(chatId, 'janIA', `[GROUP-MODERATION] ${modWarning}`);
+          if (msg.key?.id) {
+            setTimeout(async () => {
+              try {
+                if (this.sock) {
+                  await this.sock.sendMessage(chatId, { delete: msg.key });
+                }
+              } catch (_) { }
+            }, 3500);
+          }
+          await this.sock.sendPresenceUpdate('paused', chatId);
+          return;
+        }
       }
 
       // 🛡️ INTERCEPTOR DIRECTO: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
@@ -2767,21 +2811,38 @@ export class JaniaMatchBot {
 
       if (result && (chatId === this.buzonGroupId || chatId === this.circuloGroupId)) {
         if (result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO') {
-          const rawPhone = senderId.split('@')[0];
           const cleanUserName = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
           const redirectText =
             `Hola ${cleanUserName} 👋🏻, publicaste una ${result.classification === 'INMUEBLE' ? 'oferta' : 'demanda'} inmobiliaria en este grupo.\n\n` +
-            `Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) inmediato, por favor publícala en nuestro grupo exclusivo:\n\n` +
+            `Para que JanIA y toda la comunidad puedan hacer el cruce (MATCH), por favor publícala en nuestro grupo exclusivo:\n\n` +
             `🏢 *${VECY_OFFICIAL_GROUPS.grupo1.name}*\n👉 ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
-            `_He eliminado tu publicación en este canal para preservar el orden temático._ 🤝✨`;
-          await this.queuedSend(chatId, redirectText, { mentions: groupMentions, allowExternalGroupResponse: true });
-          await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => { });
+            `_Eliminaré tu publicación de este canal en unos segundos para mantener el orden. ¡Gracias!_ 🤝✨`;
+          await this.safeReact(chatId, msg.key, '🚫', 'WARNING-REACT');
+          await this.queuedSend(chatId, redirectText, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
           await this.logToDb(chatId, 'janIA', redirectText);
+          if (msg.key?.id) {
+            setTimeout(async () => {
+              try {
+                if (this.sock) {
+                  await this.sock.sendMessage(chatId, { delete: msg.key });
+                }
+              } catch (_) { }
+            }, 3500);
+          }
           await this.sock.sendPresenceUpdate('paused', chatId);
           return;
         }
         if (result.classification === 'VIOLACION_DE_NORMAS') {
-          await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => { });
+          await this.safeReact(chatId, msg.key, '🚫', 'WARNING-REACT');
+          if (msg.key?.id) {
+            setTimeout(async () => {
+              try {
+                if (this.sock) {
+                  await this.sock.sendMessage(chatId, { delete: msg.key });
+                }
+              } catch (_) { }
+            }, 3500);
+          }
         }
       }
 
@@ -3664,16 +3725,16 @@ export class JaniaMatchBot {
               await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
               await this.logToDb(chatId, 'janIA', `[GROUP-WARNING] ${textToDeliver}`);
             }
-            // 3. Si ocurrió en Grupo 1 (Ofertas y Demandas) y el bot es admin, eliminar el mensaje indebido tras 3.5 segundos
-            if (chatId === this.targetGroupId && isBotAdmin && lastMsg?.key?.id) {
+            // 3. Si ocurrió en cualquier grupo oficial (1, 2 o 3) y el bot es admin, eliminar el mensaje indebido tras 3.5 segundos
+            if (isOfficial && isBotAdmin && lastMsg?.key?.id) {
               setTimeout(async () => {
                 try {
                   if (this.sock) {
                     await this.sock.sendMessage(chatId, { delete: lastMsg.key });
-                    console.log(`[JANIA-MODERATION] 🗑️ Mensaje indebido de buffer eliminado en Grupo 1: ${lastMsg.key.id}`);
+                    console.log(`[JANIA-MODERATION] 🗑️ Mensaje indebido de buffer eliminado en grupo oficial ${chatId}: ${lastMsg.key.id}`);
                   }
                 } catch (delErr) {
-                  console.warn(`[JANIA-MODERATION] Error eliminando mensaje de buffer en Grupo 1:`, delErr);
+                  console.warn(`[JANIA-MODERATION] Error eliminando mensaje de buffer en ${chatId}:`, delErr);
                 }
               }, 3500);
             }

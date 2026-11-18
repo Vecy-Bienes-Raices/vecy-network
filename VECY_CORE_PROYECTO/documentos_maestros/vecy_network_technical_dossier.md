@@ -330,6 +330,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.27 — Noviembre 2026
+- **Blindaje de los 3 Grupos Oficiales, Caso Lia Janeth Rivas (Ley 820 Art. 16), Cero Biblias y Moderación/Borrado Unificados:**
+  - `server/_core/predialService.ts`: corregido `isServiceHelpRequest` para no secuestrar consultas de arrendamiento/pólizas/depósitos/documentos o guías generales de uso de VECY, y compactados `CEDULA_HELP_TEXT` / `PREDIAL_HELP_TEXT` (<420 caracteres).
+  - `server/_core/jania/handlers/consultingHandler.ts` y `circuloHandler.ts`: añadida doctrina Ley 820 de 2003 Art. 16 (prohibición de depósitos en vivienda urbana), opciones sin póliza, verificación gratuita en DM `+57 319 291 9978`, guía concisa paso a paso, moderación `VIOLACION_DE_NORMAS` ante `INMUEBLE`/`REQUERIMIENTO` en Grupo 2 y preguntas unitarias ("1 a la vez").
+  - `shared/const.ts`, `server/_core/jania/heuristics.ts` y `server/_core/whatsapp-match.ts`: añadido `resolveOfficialVecyGroupKey` (JID + `NFKC`), normalización `NFKC` en `isBotDirectlyMentioned`, ampliación de `checkStrictOffTopic` (canales externos/Telegram/apuestas/catálogos/comercio ajeno), moderación de charla no inmobiliaria en Grupo 1 y borrado seguro (`3500ms`) posterior a la advertencia citada en Grupos 1, 2 y 3.
+  - Gobernanza y Pruebas: semilla `seed-maestria-grupos-lia-ley820-cero-biblias-v34-27`, **Suite 213** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npm test`: **6/6 archivos, 749/749 tests en verde**; versión `v34.27` / `34.27.0`).
+
 ### 🔖 v34.26 — Noviembre 2026
 - **Bloque 2 — Modo Humana Real, Ficha DM "1 Pregunta a la Vez", Firma Electrónica de Match y 19 Tipos Unificados:**
   - `shared/colombiaCatalog.ts`, `client/src/components/publish/UnifiedPublishModal.tsx`, `client/src/pages/RequirementsMarketplace.tsx`: exportado y unificado `PROPERTY_TYPES_EXACT` con los **19 tipos exactos** solicitados por Eduardo (`Apartaestudio`, `Apartamento`, `Apartamento Dúplex`, `Pent House`, `Pent House Dúplex`, `Bodega`, `Cabaña`, `Casa`, `Casa Campestre`, `Casa Quinta`, `Edificio`, `Finca`, `Hostal`, `Hotel`, `Aparta Hotel`, `Local`, `Lote / Terreno`, `Oficina` + subtipo `Consultorio Médico / Salud`, `Villa`) idénticos en Ofertas y Demandas.

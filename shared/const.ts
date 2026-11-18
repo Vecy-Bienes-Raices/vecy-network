@@ -5,7 +5,7 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 // 🔖 FUENTE ÚNICA DE VERDAD DE VERSIÓN DEL SISTEMA VECY BIENES RAÍCES
-export const VECY_VERSION = "v34.26";
+export const VECY_VERSION = "v34.27";
 export const VECY_VERSION_LABEL = `VERSIÓN ${VECY_VERSION}`;
 export const VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -177,6 +177,62 @@ export const VECY_OFFICIAL_GROUPS = {
       `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
   }
 };
+
+export type OfficialVecyGroupKey = "grupo1" | "grupo2" | "grupo3";
+
+/**
+ * Resuelve de forma determinística e inmune a variantes Unicode/negrillas cuál de los
+ * 3 grupos oficiales de WhatsApp corresponde al JID o nombre de grupo recibido.
+ */
+export function resolveOfficialVecyGroupKey(
+  chatId?: string,
+  groupSubject?: string
+): OfficialVecyGroupKey | null {
+  const cleanId = (chatId || "").trim();
+  const g1Env = (typeof process !== "undefined" && process.env?.WHATSAPP_GROUP_ID) || "";
+  const g2Env = (typeof process !== "undefined" && process.env?.WHATSAPP_GROUP_BUZON) || "";
+  const g3Env = (typeof process !== "undefined" && process.env?.WHATSAPP_GROUP_CIRCULO) || "";
+
+  if (cleanId) {
+    if (cleanId === VECY_OFFICIAL_GROUPS.grupo1.id || (g1Env && cleanId === g1Env)) {
+      return "grupo1";
+    }
+    if (cleanId === VECY_OFFICIAL_GROUPS.grupo2.id || (g2Env && cleanId === g2Env)) {
+      return "grupo2";
+    }
+    if (cleanId === VECY_OFFICIAL_GROUPS.grupo3.id || (g3Env && cleanId === g3Env)) {
+      return "grupo3";
+    }
+  }
+
+  const normalizedSubject = (groupSubject || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalizedSubject) return null;
+
+  if (
+    normalizedSubject.includes("vecy inmo") &&
+    (normalizedSubject.includes("ofertas") || normalizedSubject.includes("demandas"))
+  ) {
+    return "grupo1";
+  }
+  if (
+    normalizedSubject.includes("vecy tips") ||
+    (normalizedSubject.includes("noticias") && normalizedSubject.includes("consultas inmobiliarias"))
+  ) {
+    return "grupo2";
+  }
+  if (
+    normalizedSubject.includes("proyecto") &&
+    (normalizedSubject.includes("vecybienesraices") || normalizedSubject.includes("vecy bienes ra"))
+  ) {
+    return "grupo3";
+  }
+
+  return null;
+}
 
 // 🌐 DOMINIO ACTIVO OFICIAL DEL PROYECTO
 export const VECY_ACTIVE_DOMAIN = "https://vecy-bienes-raices.vercel.app";

@@ -396,15 +396,16 @@ export function checkStrictOffTopic(text: string): { isOffTopic: boolean; reason
   if (!text || text.trim() === '') return { isOffTopic: false };
   const clean = text.toLowerCase();
 
-  // 1. Invitación a grupos ajenos de WhatsApp
-  if (clean.includes('chat.whatsapp.com/')) {
+  // 1. Invitación a grupos o canales externos de WhatsApp / Telegram
+  if (clean.includes('chat.whatsapp.com/') || clean.includes('whatsapp.com/channel/') || /\b(?:t\.me|telegram\.me)\//i.test(clean)) {
     const isOfficialVecyLink =
       clean.includes('gzmbjns1p2thi7d0v4h8wz') ||
       clean.includes('j4u1h7nul1i1b1waiytun6') ||
       clean.includes('cszrkr6cr56haiehheauqyu') ||
+      clean.includes('cszrkr6cr56haieehauqyu') ||
       clean.includes('0029vb5iyuycmy0a94zqti1b');
     if (!isOfficialVecyLink) {
-      return { isOffTopic: true, reason: 'enlaces de invitación a grupos externos' };
+      return { isOffTopic: true, reason: 'enlaces de invitación a grupos o canales externos' };
     }
   }
 
@@ -413,7 +414,7 @@ export function checkStrictOffTopic(text: string): { isOffTopic: boolean; reason
     'petro', 'uribe', 'duque', 'santos', 'rodolfo hernandez', 'fico gutiérrez', 'claudia lópez',
     'partido político', 'partido politico', 'campaña política', 'campaña politica', 'votaciones',
     'candidato a la alcaldía', 'candidato al concejo', 'senado', 'cámara de representantes',
-    'consulta popular', 'plebiscito', 'izquierdista', 'derechista', 'uribista', 'petrista'
+    'consulta popular', 'plebiscito', 'izquierdista', 'derechista', 'uribista', 'petrista', 'elecciones presidenciales'
   ];
   if (politicalKeywords.some(kw => clean.includes(kw))) {
     return { isOffTopic: true, reason: 'temas políticos o proselitismo' };
@@ -428,14 +429,24 @@ export function checkStrictOffTopic(text: string): { isOffTopic: boolean; reason
     return { isOffTopic: true, reason: 'cadenas religiosas o cultos' };
   }
 
-  // 4. Esquemas piramidales / Cursos de trading / Cripto spam / Memes ajenos
+  // 4. Esquemas piramidales / Cursos de trading / Cripto spam / Apuestas / Catálogos / Ventas ajenas a bienes raíces
   const spamKeywords = [
     'gana dinero desde casa', 'trabaja 2 horas al día', 'trading automático', 'bot de trading',
     'inversión forex', 'libertad financiera con binance', 'curso de trading', 'ingresos pasivos en dólares',
-    'esquema multinivel', 'red de mercadeo', 'inversión con rentabilidad del 20%', 'venta de cursos'
+    'esquema multinivel', 'red de mercadeo', 'inversión con rentabilidad del 20%', 'venta de cursos',
+    'betplay', 'apuestas deportivas', 'casino online', 'gran rifa', 'compra tu boleta para la rifa',
+    'catálogo natura', 'catalogo natura', 'catálogo yanbal', 'catalogo yanbal', 'herbalife', 'omnilife'
   ];
   if (spamKeywords.some(kw => clean.includes(kw))) {
-    return { isOffTopic: true, reason: 'publicidad no autorizada, venta de cursos o spam' };
+    return { isOffTopic: true, reason: 'publicidad no autorizada, apuestas, venta de cursos o spam' };
+  }
+
+  const hasRealEstateAnchor = /\b(?:apartamento|apto|casa|finca|lote|bodega|local|oficina|consultorio|edificio|hotel|inmueble|propiedad|predio|arriendo|venta|permuta|canon|m2|metro|inmobiliari)\b/i.test(clean);
+  if (
+    !hasRealEstateAnchor &&
+    /\b(?:vendo\s+(?:ropa|zapatos|tenis|perfumes|celulares|iphone|samsung|moto|carro|camioneta|empanadas|tamales)|catalogo\s+de\s+ropa|recargas\s+de\s+diamantes)\b/i.test(clean)
+  ) {
+    return { isOffTopic: true, reason: 'comercio ajeno al sector inmobiliario' };
   }
 
   return { isOffTopic: false };

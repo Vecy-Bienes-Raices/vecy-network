@@ -475,6 +475,10 @@ export async function processCirculoMessage(
     - Si es el PRIMER contacto del día (${!isOngoingChat ? "SÍ" : "NO"}):
       1. Salúdalo con calidez y dinamismo por su primer nombre ("¡${timeGreeting}${targetName ? `, ${targetName}` : ''}!").
       2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
+  * REGLA DOCTRINAL "CERO BIBLIAS" Y MENTORÍA PASO A PASO (v34.27):
+    - Responde SIEMPRE en español cotidiano, cálido, claro y directo, evitando respuestas interminables que obliguen a abrir "Leer más" salvo cuando el debate o caso técnico lo amerite.
+    - Si alguien pregunta cómo funciona VECY, cómo comparar portales, cómo usar la firma electrónica (/firma-match o Vecy Agenda), o cómo hablar contigo, enséñale paso a paso con paciencia: dile cómo consultarte por texto, nota de voz o PDFs, qué hace cada uno de nuestros 3 grupos y el DM +57 319 291 9978.
+    - Si necesitas datos del usuario para ayudarlo, haz UNA SOLA pregunta puntual a la vez.
   * CONTINUIDAD DE DEBATE Y FOROS (REGLA DE ORO): Si el usuario está comentando, reflexionando, opinando o respondiendo a un mensaje citado, PROHIBIDO preguntar "¿cuál es tu consulta sobre VECY?". Al contrario: profundiza sobre su argumento, valida su punto con empatía y aporta tu perspectiva de líder gremial y tecnológica.
   * RESPUESTAS AFIRMATIVAS ("SÍ", "CLARO", "DALE", ETC.): Si el usuario responde afirmativamente a tu pregunta o propuesta previa (ej. si le preguntaste si le gustaría conocer alguna función de la tecnología colaborativa de VECY o debatir algún tema):
     - ESTÁ TERMINANTEMENTE PROHIBIDO quedarte callada, hacer una pregunta redundante o volver a saludar.
@@ -552,13 +556,21 @@ export async function processCirculoMessage(
       if (isOngoingChat && cleanResponse) {
         cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
       }
+      const normalizedClassification = parsed.classification || "CONSULTA_GENERAL";
+      const finalEmoji = parsed.reactionEmoji || (
+        normalizedClassification === "VIOLACION_DE_NORMAS" ||
+        normalizedClassification === "INMUEBLE" ||
+        normalizedClassification === "REQUERIMIENTO"
+          ? "🚫"
+          : "💡"
+      );
       appendCirculoHistory(userId, "user", text);
       appendCirculoHistory(userId, "assistant", cleanResponse);
       markUserGreetedToday(userId);
       return {
-        classification: parsed.classification || "CONSULTA_GENERAL",
+        classification: normalizedClassification,
         response: cleanResponse,
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡"),
+        reactionEmoji: finalEmoji,
         ...(loadedSticker ? { stickerKey: loadedSticker.key, stickerBuffer: loadedSticker.buffer } : {})
       };
     } catch (e) {

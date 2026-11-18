@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.26 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.27 — Noviembre 2026
+
+### Novedades v34.27 (Blindaje de los 3 Grupos Oficiales, Fin del Secuestro `CEDULA_HELP_TEXT` en Caso Lia Janeth, Arriendos Ley 820 Art. 16 y "Cero Biblias" — Doctrina Eduardo A. Rivera):
+- **Fin del Secuestro `isServiceHelpRequest` y Guías Compactas (`server/_core/predialService.ts`, `consultingHandler.ts`):**
+  1. `isServiceHelpRequest` excluye consultas de arriendo, pólizas, depósitos, fiadores, canon, administración y preguntas generales (`"cómo realizar consultas a vecy"`), restringiéndose a solicitudes explícitas y breves de Predial o verificación de identidad, con `PREDIAL_HELP_TEXT` / `CEDULA_HELP_TEXT` compactos (<420 caracteres).
+- **Maestría Jurídica Arrendamientos Ley 820 Art. 16, Pedagogía Paso a Paso y Cero Biblias (`consultingHandler.ts`, `circuloHandler.ts`):**
+  1. En Grupo 2 y Grupo 3, JanIA responde de forma cercana y clara (evitando *"Leer más"* innecesarios y haciendo 1 pregunta a la vez en sondeos), aclarando que **el Art. 16 de la Ley 820 de 2003 prohíbe exigir depósitos en dinero en vivienda urbana**, detallando garantías alternativas sin póliza (codeudor, documentos, verificación gratuita de antecedentes/ADRES en DM `+57 319 291 9978`, separación canon/administración) y guiando paso a paso a usuarios nuevos.
+- **Identificación NFKC, Moderación y Eliminación Unificada en los 3 Grupos Oficiales (`shared/const.ts`, `heuristics.ts`, `consultingHandler.ts`, `whatsapp-match.ts`):**
+  1. Añadido `resolveOfficialVecyGroupKey` (JID + `NFKC`), normalización `NFKC` en `isBotDirectlyMentioned`, ampliación de `checkStrictOffTopic` (canales/Telegram externos, apuestas, rifas, ventas ajenas), moderación de ofertas/demandas en Grupo 2 como `VIOLACION_DE_NORMAS` (en lugar de insertarlas), redirección/borrado en Grupo 1 para charla/spam ajeno, y orden seguro react `🚫` -> aviso citado -> borrado `3500ms` en Grupos 1, 2 y 3.
+- **Gobernanza y Regresión (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-maestria-grupos-lia-ley820-cero-biblias-v34-27`, **Suite 213**, `npm run check` (0 errores), `NODE_ENV=test npm test` (**6/6 archivos, 749/749 tests en verde** | `$0 COP`) y versión `v34.27` (`34.27.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.26 — Noviembre 2026
 
 ### Novedades v34.26 (Bloque 2 — Modo Humana Real, Ficha DM "1 Pregunta a la Vez", Firma Electrónica de Match y 19 Tipos Exactos en Ofertas & Demandas — Doctrina Eduardo A. Rivera):
 - **Modo Humana Real ("Cero Biblias / Cero Jerga") (`server/_core/jania/handlers/dmHandler.ts`, `server/_core/prompts/base.md`):**

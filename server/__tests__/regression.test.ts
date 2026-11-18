@@ -15066,6 +15066,122 @@ A: BANCO DE BOGOTA
       expect(pkg.version).toMatch(/^34\.(?:2[6-9]|[3-9]\d)\.0$/);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // SUITE 213 — BLINDAJE 3 GRUPOS OFICIALES, FIN SECUESTRO CEDULA_HELP_TEXT (CASO LIA JANETH),
+  //              LEY 820 ART. 16 SIN PÓLIZA Y MODERACIÓN/BORRADO UNIFICADOS (v34.27)
+  // ---------------------------------------------------------------------------
+  describe("Suite 213 — Caso Real Grupo 2 Lia Janeth, 3 Grupos Oficiales, Ley 820 Art. 16 y Moderación (v34.27)", () => {
+    it("1. isServiceHelpRequest NO secuestra consultas de arriendo sin póliza / documentos / depósito y conserva ayudas puntuales breves", async () => {
+      const { isServiceHelpRequest, CEDULA_HELP_TEXT, PREDIAL_HELP_TEXT } = await import("../_core/predialService");
+
+      const liaQuery =
+        "@✨JanIA agente IA de VECY⚡ buenas noches, quiero realizar una consulta, se puede hacer un arriendo sin póliza de aseguradora, que documentos pedir y como los consulto, cuanto me aconsejas de depósito, el arriendo es de $1'600.000 incluida la administración";
+      expect(isServiceHelpRequest(liaQuery)).toBeNull();
+      expect(isServiceHelpRequest("@✨JanIA agente IA de VECY⚡ Como realizar consultas a vecy")).toBeNull();
+      expect(isServiceHelpRequest("Como realizar consultas a vecy")).toBeNull();
+
+      expect(isServiceHelpRequest("¿Cómo verifico una cédula con JanIA?")).toBe("cedula");
+      expect(isServiceHelpRequest("¿Cómo pido la factura predial con el CHIP?")).toBe("predial");
+      expect(CEDULA_HELP_TEXT.length).toBeLessThan(420);
+      expect(PREDIAL_HELP_TEXT.length).toBeLessThan(420);
+    });
+
+    it("2. processConsultingMessage responde el caso completo de Lia Janeth (Ley 820 Art. 16, codeudor, documentos y $1.600.000) sin entregar CEDULA_HELP_TEXT", async () => {
+      const llmModule = await import("../_core/llm");
+      const spyLLM = vi.spyOn(llmModule, "invokeLLM").mockRejectedValueOnce(new Error("Offline test fallback $0 COP"));
+
+      try {
+        const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+        const liaMsg =
+          "@✨JanIA agente IA de VECY⚡ buenas noches, quiero realizar una consulta, se puede hacer un arriendo sin póliza de aseguradora, que documentos pedir y como los consulto, cuanto me aconsejas de depósito, el arriendo es de $1'600.000 incluida la administración";
+
+        const res = await processConsultingMessage(
+          liaMsg,
+          `573001122334_${Date.now()}@s.whatsapp.net`,
+          "Lia Janeth Rivas"
+        );
+
+        expect(res.classification).toBe("CONSULTA_GENERAL");
+        expect(res.response).not.toContain("¿Cómo verificar un documento de identidad con JanIA?");
+        expect(res.response).toMatch(/Ley\s*820\s*de\s*2003|Art\.\s*16/i);
+        expect(res.response).toMatch(/proh[ií]be.*dep[oó]sito/i);
+        expect(res.response).toMatch(/codeudor|fiador/i);
+        expect(res.response).toContain("1.600.000");
+
+        const guideRes = await processConsultingMessage(
+          "Como realizar consultas a vecy",
+          `573001122335_${Date.now()}@s.whatsapp.net`,
+          "Lia Janeth Rivas"
+        );
+        expect(guideRes.response).toMatch(/etiqu[eé]tame|@JanIA/i);
+        expect(guideRes.response).toContain("57 319 291 9978");
+      } finally {
+        spyLLM.mockRestore();
+      }
+    });
+
+    it("3. Grupo 2 modera y redirige INMUEBLE/REQUERIMIENTO a Grupo 1 como VIOLACION_DE_NORMAS y resolveOfficialVecyGroupKey soporta Unicode/NFKC", async () => {
+      const { resolveOfficialVecyGroupKey, VECY_OFFICIAL_GROUPS } = await import("../../shared/const");
+      const { checkStrictOffTopic } = await import("../_core/jania/heuristics");
+
+      expect(resolveOfficialVecyGroupKey(VECY_OFFICIAL_GROUPS.grupo1.id)).toBe("grupo1");
+      expect(resolveOfficialVecyGroupKey(VECY_OFFICIAL_GROUPS.grupo2.id)).toBe("grupo2");
+      expect(resolveOfficialVecyGroupKey(VECY_OFFICIAL_GROUPS.grupo3.id)).toBe("grupo3");
+      expect(resolveOfficialVecyGroupKey("999@g.us", '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖Y𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀')).toBe("grupo3");
+      expect(resolveOfficialVecyGroupKey("888@g.us", "VECY TIPS💡/NOTICIAS📰/CONSULTAS INMOBILIARIAS⁉️🏠")).toBe("grupo2");
+      expect(resolveOfficialVecyGroupKey("777@g.us", "VECY INMO🏠 OFERTAS🏷️ Y DEMANDAS📝 COLOMBIA🇨🇴")).toBe("grupo1");
+
+      expect(checkStrictOffTopic("Únete ya a https://whatsapp.com/channel/999999999999999").isOffTopic).toBe(true);
+      expect(checkStrictOffTopic("Canal oficial https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b").isOffTopic).toBe(false);
+      expect(checkStrictOffTopic("Vendo celulares iPhone baratos hoy").isOffTopic).toBe(true);
+      expect(checkStrictOffTopic("Arriendo apartamento en Chapinero por $1.600.000").isOffTopic).toBe(false);
+
+      const llmModule = await import("../_core/llm");
+      const spyLLM = vi.spyOn(llmModule, "invokeLLM").mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                classification: "INMUEBLE",
+                response: "Apartamento en venta",
+                reactionEmoji: "👍",
+                wantsVoice: false,
+                voiceResponse: "",
+              }),
+            },
+          },
+        ],
+      } as any);
+
+      try {
+        const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+        const modRes = await processConsultingMessage(
+          "Vendo apartamento en Cedritos 3 alcobas $480 millones",
+          `573009988776_${Date.now()}@s.whatsapp.net`,
+          "Pedro Corredor"
+        );
+        expect(modRes.classification).toBe("VIOLACION_DE_NORMAS");
+        expect(modRes.reactionEmoji).toBe("🚫");
+        expect(modRes.response).toContain(VECY_OFFICIAL_GROUPS.grupo1.inviteLink);
+      } finally {
+        spyLLM.mockRestore();
+      }
+    });
+
+    it("4. Verifica semilla de gobernanza v34.27 y versión v34.27 (34.27.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed27 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-maestria-grupos-lia-ley820-cero-biblias-v34-27"
+      );
+      expect(seed27?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.27");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.27.0");
+    });
+  });
 });
 
 

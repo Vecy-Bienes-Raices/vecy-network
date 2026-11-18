@@ -9,6 +9,35 @@ var __export = (target, all) => {
 };
 
 // shared/const.ts
+function resolveOfficialVecyGroupKey(chatId, groupSubject) {
+  const cleanId = (chatId || "").trim();
+  const g1Env = typeof process !== "undefined" && process.env?.WHATSAPP_GROUP_ID || "";
+  const g2Env = typeof process !== "undefined" && process.env?.WHATSAPP_GROUP_BUZON || "";
+  const g3Env = typeof process !== "undefined" && process.env?.WHATSAPP_GROUP_CIRCULO || "";
+  if (cleanId) {
+    if (cleanId === VECY_OFFICIAL_GROUPS.grupo1.id || g1Env && cleanId === g1Env) {
+      return "grupo1";
+    }
+    if (cleanId === VECY_OFFICIAL_GROUPS.grupo2.id || g2Env && cleanId === g2Env) {
+      return "grupo2";
+    }
+    if (cleanId === VECY_OFFICIAL_GROUPS.grupo3.id || g3Env && cleanId === g3Env) {
+      return "grupo3";
+    }
+  }
+  const normalizedSubject = (groupSubject || "").normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!normalizedSubject) return null;
+  if (normalizedSubject.includes("vecy inmo") && (normalizedSubject.includes("ofertas") || normalizedSubject.includes("demandas"))) {
+    return "grupo1";
+  }
+  if (normalizedSubject.includes("vecy tips") || normalizedSubject.includes("noticias") && normalizedSubject.includes("consultas inmobiliarias")) {
+    return "grupo2";
+  }
+  if (normalizedSubject.includes("proyecto") && (normalizedSubject.includes("vecybienesraices") || normalizedSubject.includes("vecy bienes ra"))) {
+    return "grupo3";
+  }
+  return null;
+}
 var COOKIE_NAME, ONE_YEAR_MS, AXIOS_TIMEOUT_MS, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, VECY_VERSION, VECY_VERSION_LABEL, VECY_CORE_VERSION_LABEL, VECY_OFFICIAL_GROUPS, VECY_ACTIVE_DOMAIN, VECY_SOCIAL_NETWORKS;
 var init_const = __esm({
   "shared/const.ts"() {
@@ -18,7 +47,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.26";
+    VECY_VERSION = "v34.27";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11767,6 +11796,16 @@ var init_parsers = __esm({
 });
 
 // server/_core/jania/heuristics.ts
+var heuristics_exports = {};
+__export(heuristics_exports, {
+  checkStrictOffTopic: () => checkStrictOffTopic,
+  esMensajeSpamOBasura: () => esMensajeSpamOBasura,
+  evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
+  isOutsideWorkingHours: () => isOutsideWorkingHours,
+  scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  splitMultiItemMessage: () => splitMultiItemMessage,
+  splitMultiPropertyMessage: () => splitMultiPropertyMessage
+});
 import axios5 from "axios";
 function isOutsideWorkingHours() {
   const dateStr = (/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
@@ -12052,10 +12091,10 @@ ${cleanP}` : cleanP;
 function checkStrictOffTopic(text2) {
   if (!text2 || text2.trim() === "") return { isOffTopic: false };
   const clean = text2.toLowerCase();
-  if (clean.includes("chat.whatsapp.com/")) {
-    const isOfficialVecyLink = clean.includes("gzmbjns1p2thi7d0v4h8wz") || clean.includes("j4u1h7nul1i1b1waiytun6") || clean.includes("cszrkr6cr56haiehheauqyu") || clean.includes("0029vb5iyuycmy0a94zqti1b");
+  if (clean.includes("chat.whatsapp.com/") || clean.includes("whatsapp.com/channel/") || /\b(?:t\.me|telegram\.me)\//i.test(clean)) {
+    const isOfficialVecyLink = clean.includes("gzmbjns1p2thi7d0v4h8wz") || clean.includes("j4u1h7nul1i1b1waiytun6") || clean.includes("cszrkr6cr56haiehheauqyu") || clean.includes("cszrkr6cr56haieehauqyu") || clean.includes("0029vb5iyuycmy0a94zqti1b");
     if (!isOfficialVecyLink) {
-      return { isOffTopic: true, reason: "enlaces de invitaci\xF3n a grupos externos" };
+      return { isOffTopic: true, reason: "enlaces de invitaci\xF3n a grupos o canales externos" };
     }
   }
   const politicalKeywords = [
@@ -12080,7 +12119,8 @@ function checkStrictOffTopic(text2) {
     "izquierdista",
     "derechista",
     "uribista",
-    "petrista"
+    "petrista",
+    "elecciones presidenciales"
   ];
   if (politicalKeywords.some((kw) => clean.includes(kw))) {
     return { isOffTopic: true, reason: "temas pol\xEDticos o proselitismo" };
@@ -12111,10 +12151,25 @@ function checkStrictOffTopic(text2) {
     "esquema multinivel",
     "red de mercadeo",
     "inversi\xF3n con rentabilidad del 20%",
-    "venta de cursos"
+    "venta de cursos",
+    "betplay",
+    "apuestas deportivas",
+    "casino online",
+    "gran rifa",
+    "compra tu boleta para la rifa",
+    "cat\xE1logo natura",
+    "catalogo natura",
+    "cat\xE1logo yanbal",
+    "catalogo yanbal",
+    "herbalife",
+    "omnilife"
   ];
   if (spamKeywords.some((kw) => clean.includes(kw))) {
-    return { isOffTopic: true, reason: "publicidad no autorizada, venta de cursos o spam" };
+    return { isOffTopic: true, reason: "publicidad no autorizada, apuestas, venta de cursos o spam" };
+  }
+  const hasRealEstateAnchor = /\b(?:apartamento|apto|casa|finca|lote|bodega|local|oficina|consultorio|edificio|hotel|inmueble|propiedad|predio|arriendo|venta|permuta|canon|m2|metro|inmobiliari)\b/i.test(clean);
+  if (!hasRealEstateAnchor && /\b(?:vendo\s+(?:ropa|zapatos|tenis|perfumes|celulares|iphone|samsung|moto|carro|camioneta|empanadas|tamales)|catalogo\s+de\s+ropa|recargas\s+de\s+diamantes)\b/i.test(clean)) {
+    return { isOffTopic: true, reason: "comercio ajeno al sector inmobiliario" };
   }
   return { isOffTopic: false };
 }
@@ -22190,8 +22245,10 @@ _JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_
 }
 function isServiceHelpRequest(text2) {
   if (!text2 || typeof text2 !== "string") return null;
-  const lower = text2.toLowerCase().trim();
-  if (/\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula|propiedad\s+horizontal|ley\s*675|\brph\b|coeficiente|expensas|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b|asamblea\s+(?:de\s+)?copropietarios)\b/i.test(
+  const cleanedMention = text2.replace(/@[^\s\n]+(?:\s+agente\s+ia\s+de\s+vecy[^\s\n]*)?/gi, " ").replace(/@jania\b/gi, " ").replace(/\s+/g, " ").trim();
+  const lower = cleanedMention.toLowerCase();
+  if (!lower) return null;
+  if (/\b(?:arriendo|arrendar|arrendamiento|arrendatario|arrendador|inquilino|p[oó]liza|poliza|aseguradora|afianzadora|dep[oó]sito|deposito|codeudor|fiador|ley\s*820|canon|administraci[oó]n|garant[ií]a|realizar\s+consultas?\s+a\s+vecy|consultas?\s+a\s+vecy|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula|propiedad\s+horizontal|ley\s*675|\brph\b|coeficiente|expensas|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b|asamblea\s+(?:de\s+)?copropietarios)\b/i.test(
     lower
   )) {
     return null;
@@ -22220,21 +22277,25 @@ function isServiceHelpRequest(text2) {
     "como solicito",
     "c\xF3mo se pide",
     "como se pide",
+    "c\xF3mo verifico",
+    "como verifico",
+    "c\xF3mo consulto",
+    "como consulto",
     "no entend\xED",
     "no entendi",
     "no entiendo",
     "expl\xEDcame",
     "explicame"
   ];
-  const predialWords = ["predial", "impuesto predial", "factura predial", "chip", "liquidar"];
-  const cedulaWords = ["c\xE9dula", "cedula", "verificar c\xE9dula", "verificar cedula", "verificaci\xF3n", "verificacion", "identidad", "documento"];
   const hasHelp = helpWords.some((w) => lower.includes(w));
-  const hasPredial = predialWords.some((w) => lower.includes(w));
-  const hasCedula = cedulaWords.some((w) => lower.includes(w));
+  const hasPredial = /\b(?:predial|impuesto\s+predial|factura\s+predial|chip)\b/i.test(lower);
+  const hasExplicitIdVerification = /\b(?:c[eé]dula|pasaporte|antecedentes|adres|rues|identidad|documento\s+de\s+identidad|verificar\s+(?:un\s+|una\s+)?(?:c[eé]dula|documento|persona)|consultar\s+(?:una\s+)?c[eé]dula)\b/i.test(lower);
   if (hasHelp && hasPredial) return "predial";
-  if (hasHelp && hasCedula) return "cedula";
-  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasPredial) return "predial";
-  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasCedula) return "cedula";
+  if (hasHelp && hasExplicitIdVerification && lower.length <= 160) return "cedula";
+  if ((lower.includes("?") || lower.startsWith("\xBF")) && lower.length <= 90) {
+    if (hasPredial) return "predial";
+    if (hasExplicitIdVerification) return "cedula";
+  }
   return null;
 }
 var VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE, pendingPredialSessions, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT;
@@ -22250,45 +22311,18 @@ var init_predialService = __esm({
 
 \xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728`;
     pendingPredialSessions = /* @__PURE__ */ new Map();
-    PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
+    PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo pedir tu Factura Predial conmigo?*
 
-1\uFE0F\u20E3 *Env\xEDame en privado* el CHIP del inmueble y el NIT o CC del propietario en un solo mensaje:
+Escr\xEDbeme al privado (+57 319 291 9978) el *CHIP* y la *CC o NIT* del propietario.
+Ejemplo: _JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_.
 
-\u{1F4DD} *Ejemplo:*
-_JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_
+Lo encuentras en cualquier recibo anterior de predial. \u{1F4F2} https://wa.me/573192919978`;
+    CEDULA_HELP_TEXT = `\u{1FAAA} *\xBFC\xF3mo verificar una c\xE9dula o antecedentes conmigo?*
 
-\u2139\uFE0F *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
+Escr\xEDbeme al privado (+57 319 291 9978) el n\xFAmero de c\xE9dula, CE o pasaporte (con o sin puntos).
+Ejemplo: _JanIA, verificar c\xE9dula: 1018456789_.
 
-\u2705 *JanIA acepta:*
-\u2022 CC con o sin puntos (ej: 19.386.159 o 19386159)
-\u2022 NIT con o sin d\xEDgito de verificaci\xF3n (ej: 860.030.201-2 o 8600030201)
-\u2022 C\xE9dula de Extranjer\xEDa (CE)
-
-\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
-
-\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
-\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
-    CEDULA_HELP_TEXT = `\u{1FAAA} *\xBFC\xF3mo verificar un documento de identidad con JanIA?* Facil\xEDsimo:
-
-1\uFE0F\u20E3 *Env\xEDame en privado* el tipo y n\xFAmero de documento en un solo mensaje:
-
-\u{1F4DD} *Ejemplos:*
-\u2022 _JanIA, verificar c\xE9dula: 19.386.159_ \u2705
-\u2022 _JanIA, verificar c\xE9dula: 1018456789_ \u2705
-\u2022 _JanIA, verificar CE: 654321_ \u2705 (C\xE9dula de Extranjer\xEDa)
-\u2022 _JanIA, verificar pasaporte: AB123456_ \u2705
-
-\u{1F4CC} *Nota:* Puedes escribir el n\xFAmero con o sin puntos o guiones \u2014 JanIA lo procesa autom\xE1ticamente.
-
-\u{1F50D} *\xBFQu\xE9 informaci\xF3n recibir\xE1s?*
-Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Colombia.
-
-\u{1F6E1}\uFE0F *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Polic\xEDa Nacional.
-
-\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
-
-\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
-\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
+Te confirmo nombre oficial, EPS/r\xE9gimen y antecedentes gratis al instante. \u{1F4F2} https://wa.me/573192919978`;
   }
 });
 
@@ -26065,6 +26099,16 @@ var init_founderKnowledgeService = __esm({
         directive: "En conversaciones cotidianas por WhatsApp DM, JanIA escribe como una asesora humana real (m\xE1ximo 3\u20134 renglones sin provocar 'Leer m\xE1s', cero siglas burocr\xE1ticas como SIRI/SIRECI/BDUA/UVT y dejando las tablas o art\xEDculos extensos solo en PDF). Al tomar requerimientos por DM, gu\xEDa una pregunta a la vez mediante pendingRequirementDraft hasta completar ubicaci\xF3n nacional, presupuesto, \xE1rea y confort. Cuando detecte Matches (#M... / PROP-...) para usuarios externos, retiene los c\xF3digos hasta que firmen T\xE9rminos y Condiciones y Pol\xEDtica de Privacidad en /firma-match/:token (o respondan 'S\xED acepto'), entregando entonces el PDF estampado + c\xF3digos desbloqueados.",
         rawText: "Bloque 2 (v34.26): Modo Humana Real, Ficha DM incremental nacional de 19 tipos y Firma Electr\xF3nica de Match antes de liberar PROP-... y #M....",
         createdAt: "2026-11-16T23:52:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-maestria-grupos-lia-ley820-cero-biblias-v34-27",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "573192919978@s.whatsapp.net",
+        topic: "Blindaje de 3 Grupos Oficiales, Fin Secuestro Ayuda C\xE9dula, Doctrina Ley 820 Art. 16 y Cero Biblias (v34.27)",
+        directive: "JanIA opera con libre albedr\xEDo y m\xE1xima claridad en los 3 grupos oficiales (Grupo 1: 'VECY INMO OFERTAS Y DEMANDAS COLOMBIA' exclusivo para ofertas y demandas; Grupo 2: 'VECY TIPS/NOTICIAS/CONSULTAS INMOBILIARIAS' consultorio jur\xEDdico, tributario, aval\xFAos, gu\xEDas y arriendos; Grupo 3: 'PROYECTO: VECYBIENESRAICES' foro del proyecto, comparativa de portales y pedagog\xEDa). Prohibido secuestrar consultas reales de arriendo o documentos con gu\xEDas gen\xE9ricas de c\xE9dula (isServiceHelpRequest). Ante dudas de arriendo sin p\xF3liza y dep\xF3sito, recordar que el Art. 16 de la Ley 820 de 2003 proh\xEDbe dep\xF3sitos en dinero en vivienda urbana, orientar sobre codeudor/documentos/verificaci\xF3n y moderar/eliminar spam, links ajenos y publicaciones en grupo equivocado guiando con educaci\xF3n y 1 pregunta a la vez.",
+        rawText: "Blindaje v34.27: Fin secuestro isServiceHelpRequest (caso Lia Janeth Ley 820/2003), moderaci\xF3n y borrado unificados en los 3 grupos oficiales, detecci\xF3n NFKC y gu\xEDas breves paso a paso.",
+        createdAt: "2026-11-18T14:20:00.000Z",
         active: true
       }
     ];
@@ -40293,6 +40337,13 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     - Si es el PRIMER contacto del d\xEDa (${!isOngoingChat ? "S\xCD" : "NO"}):
       1. Sal\xFAdalo con calidez y dinamismo por su primer nombre ("\xA1${timeGreeting}${targetName ? `, ${targetName}` : ""}!").
       2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
+  * REGLA DOCTRINAL "CERO BIBLIAS" Y MENTOR\xCDA PASO A PASO (v34.27 \u2014 Doctrina Eduardo A. Rivera):
+    - En WhatsApp responde SIEMPRE en espa\xF1ol cotidiano, claro, c\xE1lido y sin jerga jur\xEDdica ni m\xE9dica enredada, evitando "biblias" largas que activen el bot\xF3n "Leer m\xE1s" cuando el tema no lo exija.
+    - Si un usuario pregunta c\xF3mo usar JanIA o c\xF3mo hacer consultas a VECY (ej. "c\xF3mo realizar consultas a vecy"), ens\xE9\xF1ale con mucha paciencia en 4 o 5 renglones claros: qu\xE9 puede preguntarte (arriendos, contratos, aval\xFAos virtuales, predial, antecedentes, estudios de t\xEDtulos), que puede enviarte texto, nota de voz o foto/PDF, y que para datos privados o verificaciones te escriba por DM al +57 319 291 9978.
+    - Si te falta alg\xFAn dato para resolver una consulta, haz UNA SOLA pregunta puntual a la vez, llevando t\xFA el control y guiando paso a paso al usuario sin abrumarlo con listas de 6 preguntas juntas.
+    - Si el usuario env\xEDa un n\xFAmero suelto sin decir qu\xE9 es, sal\xFAdalo con buenos modales y preg\xFAntale sutilmente en 1 l\xEDnea qu\xE9 quiere hacer con ese n\xFAmero.
+  * DOCTRINA DE ARRENDAMIENTOS COLOMBIA (SIN P\xD3LIZA, DEP\xD3SITO, DOCUMENTOS Y ADMINISTRACI\xD3N):
+    - Si preguntan por arriendo sin p\xF3liza o cu\xE1nto pedir de dep\xF3sito: explica con total claridad que el **Art. 16 de la Ley 820 de 2003 proh\xEDbe exigir dep\xF3sitos en dinero o cauciones reales en arrendamiento de vivienda urbana** (en locales comerciales s\xED es pactable libremente). Sin p\xF3liza de aseguradora, recomi\xE9ndale blindarse con: 1) **Codeudor / fiador solvente** (con ingresos estables o finca ra\xEDz libre de gravamen), 2) **Documentos clave** (c\xE9dula de arrendatario y codeudor, carta laboral/desprendibles o declaraci\xF3n de renta y \xFAltimos 3 extractos bancarios; si es empresa, certificado de C\xE1mara/RUES), 3) **Verificaci\xF3n previa gratuita** (enviando las c\xE9dulas a mi chat privado +57 319 291 9978 consulto nombre oficial, antecedentes Polic\xEDa/Procuradur\xEDa/Contralor\xEDa y ADRES/EPS), y 4) **Contrato bien redactado** (distinguiendo si en el canon total como $1'600.000 ya va incluida o separada la cuota de administraci\xF3n). Cierra ofreci\xE9ndole ayuda concreta en 1 paso (ej. revisar las c\xE9dulas o redactarle el contrato).
   * Si el usuario simplemente te saluda ("Hola", "Buenos d\xEDas", etc.), sal\xFAdalo con empat\xEDa viva, simpat\xEDa y preg\xFAntale c\xF3mo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
   * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), s\xE9 rec\xEDproca con calidez, des\xE9ale \xE9xitos en sus cierres o un feliz descanso, y si fue de gran ayuda, inv\xEDtalo con total delicadeza a dejarnos una rese\xF1a 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
   * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos/ACM o marketing, razona a fondo (aplicando en ACM metodolog\xEDa Fitto y Corvini, microzonificaci\xF3n, 3 escenarios estrat\xE9gicos de precio y Cap Rate), cita normas o datos precisos, entrega la soluci\xF3n integral directamente y cierra SIEMPRE preguntando la satisfacci\xF3n del usuario con tu respuesta para, seg\xFAn su libre albedr\xEDo y retroalimentaci\xF3n, invitarlo a comentar y calificar en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
@@ -40375,22 +40426,27 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       if (parsed.classification === "REQUERIMIENTO" || parsed.classification === "INMUEBLE") {
-        console.log(`[JanIA-Consulting] \u{1F3AF} Publicaci\xF3n comercial detectada en Grupo 2 (${parsed.classification}). Delegando a propertiesHandler para inserci\xF3n en BD y matching...`);
-        const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_propertiesHandler(), propertiesHandler_exports));
-        return await processWhatsAppMessage2(
-          text2,
-          userId,
-          userName,
-          !!imageBuffer || !!pdfBuffer,
-          [],
-          void 0,
-          imageBuffer,
-          true,
-          pdfBuffer,
-          pdfMimeType,
-          "120363417740040773@g.us",
-          "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}"
-        );
+        console.log(`[JanIA-Consulting] \u{1F6AB} Publicaci\xF3n comercial (${parsed.classification}) detectada en Grupo 2. Moderando y redirigiendo a Grupo 1...`);
+        const redirectName = targetName || extractFirstName2(realName) || "colega";
+        const redirectTypeLabel = parsed.classification === "REQUERIMIENTO" ? "demanda" : "oferta";
+        const redirectText = `Hola ${redirectName} \u{1F44B}\u{1F3FB}, publicaste una ${redirectTypeLabel} inmobiliaria en este canal.
+
+Este grupo (*${VECY_OFFICIAL_GROUPS.grupo2.name}*) es exclusivo para consultas legales, tributarias, aval\xFAos y tips. Por favor comp\xE1rtela en nuestro grupo oficial de corretaje para activar los cruces (MATCH):
+\u{1F3E2} *${VECY_OFFICIAL_GROUPS.grupo1.name}*
+\u{1F449} ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}
+
+_Eliminar\xE9 este mensaje para mantener el orden del grupo. \xA1Gracias!_ \u{1F91D}`;
+        appendConsultingHistory(userId, "user", text2);
+        appendConsultingHistory(userId, "assistant", redirectText);
+        markUserGreetedToday(userId);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: redirectText,
+          dmResponse: redirectText,
+          reactionEmoji: "\u{1F6AB}",
+          wantsVoice: false,
+          voiceResponse: ""
+        };
       }
       const rawResp = parsed.response || "";
       const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
@@ -40635,19 +40691,47 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
         };
       }
     }
+    if (/(?:c[oó]mo\s+(?:realizar|hacer|se\s+hacen)\s+consultas|c[oó]mo\s+(?:funciona|uso|hablo\s+con)\s+(?:vecy|jania))/i.test(cleanLower)) {
+      const onboardingFallback = `\xA1${timeGreeting}${firstName ? `, ${firstName}` : ""}! \u{1F60A} Con mucho gusto te gu\xEDo paso a paso:
+
+\u2022 *Aqu\xED en este grupo* solo etiqu\xE9tame (@JanIA) y escr\xEDbeme o env\xEDame una nota de voz con tu duda legal, de arriendo, aval\xFAo virtual o impuestos.
+\u2022 *En mi chat privado* (+57 319 291 9978) puedes enviarme fotos/PDFs (CTL, Predial, contratos) o c\xE9dulas para verificar antecedentes gratis.
+
+\xBFSobre qu\xE9 tema quieres hacer tu primera consulta hoy? \u{1F3E0}\u2728`;
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", onboardingFallback);
+      markUserGreetedToday(userId);
+      return {
+        classification: "SOBRE_VECY",
+        response: onboardingFallback,
+        reactionEmoji: "\u{1F4A1}"
+      };
+    }
+    if (/\b(?:arriendo|arrendamiento|inquilino|arrendatario)\b/i.test(cleanLower) && /\b(?:p[oó]liza|aseguradora|dep[oó]sito|documentos|sin\s+p[oó]liza)\b/i.test(cleanLower)) {
+      const leaseGuide = `\xA1${timeGreeting}${firstName ? `, ${firstName}` : ""}! \u{1F44B}\u{1F3FB} Claro que s\xED, te respondo punto por punto:
+
+\u2022 *\xBFSin p\xF3liza de aseguradora?* S\xED se puede, respald\xE1ndote con un *codeudor o fiador solvente* (ideal con ingresos demostrables o finca ra\xEDz) y un contrato s\xF3lido.
+\u2022 *\xBFCu\xE1nto pedir de dep\xF3sito?* Ojo: en *vivienda urbana*, el *Art. 16 de la Ley 820 de 2003 proh\xEDbe exigir dep\xF3sitos en dinero* o cauciones reales (solo en inmuebles comerciales se puede pactar). En vivienda usa codeudor o afianzadora.
+\u2022 *Documentos clave y consulta:* Pide c\xE9dula (arrendatario y codeudor), carta laboral o \xFAltimos 3 desprendibles/extractos bancarios (o RUES si es empresa). Si me env\xEDas las c\xE9dulas a mi *chat privado (+57 319 291 9978)*, te verifico gratis nombre oficial, EPS/ADRES y antecedentes.
+\u2022 *Sobre los $1.600.000 incluida administraci\xF3n:* Deja claro en el contrato cu\xE1nto corresponde a canon neto y cu\xE1nto a administraci\xF3n (para evitar l\xEDos en futuros reajustes del IPC).
+
+\xBFEl inmueble es de vivienda o comercial? Si quieres, por privado te ayudo a revisar las c\xE9dulas o a redactar el contrato. \u{1F91D}\u2728`;
+      const finalLeaseReply = appendGroupSatisfactionClosing(leaseGuide);
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalLeaseReply);
+      markUserGreetedToday(userId);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: finalLeaseReply,
+        reactionEmoji: "\u2696\uFE0F"
+      };
+    }
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
-      const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
+      const fallbackNameInfo2 = resolveNameAndGender(realName, timeGreeting);
+      const politeTarget = fallbackNameInfo2.displayName ? fallbackNameInfo2.isFemale ? `estimada ${fallbackNameInfo2.displayName}` : `estimado ${fallbackNameInfo2.displayName}` : firstName || "colega";
+      const avaluoFallback = `\xA1${timeGreeting}, ${politeTarget}! \u{1F44B}\u{1F3FB} Con mucho gusto te hago un *estudio de mercado virtual* del valor por m\xB2 y precio sugerido, directo aqu\xED y sin papeleos.
 
-Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes venderlo o arrendarlo, cu\xE9ntame por favor:
-
-1\uFE0F\u20E3 \xBFEs para **VENTA** o para **ARRIENDO**?
-2\uFE0F\u20E3 \xBFEn qu\xE9 **ciudad/municipio** y **barrio o sector exacto** est\xE1 ubicado?
-3\uFE0F\u20E3 \xBFQu\xE9 tipo de inmueble es (apartamento, casa, local, bodega, etc.) y qu\xE9 **estrato** tiene?
-4\uFE0F\u20E3 \xBFCu\xE1l es el **\xE1rea construida y privada** aproximada en m\xB2?
-5\uFE0F\u20E3 \xBFCu\xE1ntas **habitaciones, ba\xF1os y parqueaderos** (\xBFindependientes o lineales?) tiene?
-6\uFE0F\u20E3 \xBFQu\xE9 **antig\xFCedad** aproximada tiene, en qu\xE9 piso est\xE1 (si es apto) y valor de la **cuota de administraci\xF3n**?
-
-\xA1Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estrat\xE9gicas de salida! \u{1F91D}\u{1F3E0}`;
+Vamos paso a paso: para empezar, \xBFel inmueble es para *VENTA* o para *ARRIENDO*? \u{1F3E0}`;
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", avaluoFallback);
       markUserGreetedToday(userId);
@@ -40698,6 +40782,7 @@ var init_consultingHandler = __esm({
     init_nameAndGenderResolver();
     init_parsers();
     init_llm();
+    init_const();
     init_commercialFunnelService();
     init_prompts();
     init_dmHandler();
@@ -41086,6 +41171,10 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     - Si es el PRIMER contacto del d\xEDa (${!isOngoingChat ? "S\xCD" : "NO"}):
       1. Sal\xFAdalo con calidez y dinamismo por su primer nombre ("\xA1${timeGreeting}${targetName ? `, ${targetName}` : ""}!").
       2. PROHIBIDO repetir su nombre dos veces en el mismo mensaje ni incluir apellidos.
+  * REGLA DOCTRINAL "CERO BIBLIAS" Y MENTOR\xCDA PASO A PASO (v34.27):
+    - Responde SIEMPRE en espa\xF1ol cotidiano, c\xE1lido, claro y directo, evitando respuestas interminables que obliguen a abrir "Leer m\xE1s" salvo cuando el debate o caso t\xE9cnico lo amerite.
+    - Si alguien pregunta c\xF3mo funciona VECY, c\xF3mo comparar portales, c\xF3mo usar la firma electr\xF3nica (/firma-match o Vecy Agenda), o c\xF3mo hablar contigo, ens\xE9\xF1ale paso a paso con paciencia: dile c\xF3mo consultarte por texto, nota de voz o PDFs, qu\xE9 hace cada uno de nuestros 3 grupos y el DM +57 319 291 9978.
+    - Si necesitas datos del usuario para ayudarlo, haz UNA SOLA pregunta puntual a la vez.
   * CONTINUIDAD DE DEBATE Y FOROS (REGLA DE ORO): Si el usuario est\xE1 comentando, reflexionando, opinando o respondiendo a un mensaje citado, PROHIBIDO preguntar "\xBFcu\xE1l es tu consulta sobre VECY?". Al contrario: profundiza sobre su argumento, valida su punto con empat\xEDa y aporta tu perspectiva de l\xEDder gremial y tecnol\xF3gica.
   * RESPUESTAS AFIRMATIVAS ("S\xCD", "CLARO", "DALE", ETC.): Si el usuario responde afirmativamente a tu pregunta o propuesta previa (ej. si le preguntaste si le gustar\xEDa conocer alguna funci\xF3n de la tecnolog\xEDa colaborativa de VECY o debatir alg\xFAn tema):
     - EST\xC1 TERMINANTEMENTE PROHIBIDO quedarte callada, hacer una pregunta redundante o volver a saludar.
@@ -41162,13 +41251,15 @@ Utiliza estos datos oficiales en tiempo real para fundamentar tu respuesta con t
       if (isOngoingChat && cleanResponse) {
         cleanResponse = stripLeadingGreetingsAndCourtesies(cleanResponse);
       }
+      const normalizedClassification = parsed.classification || "CONSULTA_GENERAL";
+      const finalEmoji = parsed.reactionEmoji || (normalizedClassification === "VIOLACION_DE_NORMAS" || normalizedClassification === "INMUEBLE" || normalizedClassification === "REQUERIMIENTO" ? "\u{1F6AB}" : "\u{1F4A1}");
       appendCirculoHistory(userId, "user", text2);
       appendCirculoHistory(userId, "assistant", cleanResponse);
       markUserGreetedToday(userId);
       return {
-        classification: parsed.classification || "CONSULTA_GENERAL",
+        classification: normalizedClassification,
         response: cleanResponse,
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}"),
+        reactionEmoji: finalEmoji,
         ...loadedSticker ? { stickerKey: loadedSticker.key, stickerBuffer: loadedSticker.buffer } : {}
       };
     } catch (e) {
@@ -46541,11 +46632,15 @@ ${quotedNote}` : quotedNote;
                 const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
                 const textLower = body.toLowerCase();
                 const hasDirectMention = this.isBotDirectlyMentioned(msg, body);
-                const isMainGroup = chatId === this.targetGroupId;
-                const isBuzonGroup = chatId === this.buzonGroupId;
-                const isCirculoGroup = chatId === this.circuloGroupId;
+                const groupName = groupSubject || await this.resolveGroupName(chatId);
+                const resolvedOfficialKey = resolveOfficialVecyGroupKey(chatId, groupName) || (chatId === this.targetGroupId ? "grupo1" : chatId === this.buzonGroupId ? "grupo2" : chatId === this.circuloGroupId ? "grupo3" : null);
+                if (resolvedOfficialKey === "grupo1") this.targetGroupId = chatId;
+                if (resolvedOfficialKey === "grupo2") this.buzonGroupId = chatId;
+                if (resolvedOfficialKey === "grupo3") this.circuloGroupId = chatId;
+                const isMainGroup = resolvedOfficialKey === "grupo1";
+                const isBuzonGroup = resolvedOfficialKey === "grupo2";
+                const isCirculoGroup = resolvedOfficialKey === "grupo3";
                 const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
-                const groupName = await this.resolveGroupName(chatId);
                 if (!isOfficialGroup) {
                   const gNameLower = groupName.toLowerCase();
                   const NON_REAL_ESTATE_KEYWORDS = [
@@ -46586,10 +46681,13 @@ ${quotedNote}` : quotedNote;
                 if (body && body.trim() && !isReactionMessage && !this.isFromOwnBotAccount(msg, senderId)) {
                   this.recordPassiveGroupContext(chatId, msg.pushName || senderId.split("@")[0], body);
                 }
+                const { checkStrictOffTopic: checkStrictOffTopic3 } = await Promise.resolve().then(() => (init_heuristics(), heuristics_exports));
+                const isStrictOffTopicInGroup = isOfficialGroup && checkStrictOffTopic3(body).isOffTopic;
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
-                const isListing = !hasDirectMention && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+                const isListing = !hasDirectMention && !isStrictOffTopicInGroup && isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia && !rawMsg?.videoMessage);
                 const hasMeaningfulQuery = (textClean.length >= 4 || isConversationalContinuation) && !isShortCourtesy && !isReactionMessage || hasRawMedia;
-                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : hasDirectMention;
+                const isMainGroupNonListingOffTopic = isMainGroup && !isListing && !isReactionMessage && (isStrictOffTopicInGroup || !isShortCourtesy && body.trim().length >= 12);
+                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isMainGroup ? hasDirectMention || isMainGroupNonListingOffTopic : hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
                   continue;
@@ -47225,11 +47323,12 @@ Mis grupos oficiales:
         if (this.isSelfPresentationOrFlyerOfJanIA(text2)) {
           return false;
         }
-        const sanitizedForNameCheck = (text2 || "").replace(/\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/gi, "").replace(/\bjania,\s+tu\s+aliada\s+inmobiliaria\b/gi, "").replace(/\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/gi, (m, offset, full) => {
+        const normalizedInputText = (text2 || "").normalize("NFKC");
+        const sanitizedForNameCheck = normalizedInputText.replace(/\b(?:soy|habla|te\s+saluda)\s+(?:✨\s*)?jania\b/gi, "").replace(/\bjania,\s+tu\s+aliada\s+inmobiliaria\b/gi, "").replace(/\b✨?\s*jania\s+agente\s+ia\s+de\s+vecy\b/gi, (m, offset, full) => {
           const prevChar = offset > 0 ? full[offset - 1] : "";
           return prevChar === "@" ? m : "";
         }).toLowerCase();
-        const textLower = (text2 || "").toLowerCase();
+        const textLower = normalizedInputText.toLowerCase();
         if (sanitizedForNameCheck.includes("jania") || sanitizedForNameCheck.includes("@jania")) {
           return true;
         }
@@ -47394,6 +47493,35 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
               }, 3500);
             }
             return;
+          }
+          const isBuzonOrCirculo = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          if (isBuzonOrCirculo) {
+            const { checkStrictOffTopic: checkStrictOffTopic3 } = await Promise.resolve().then(() => (init_heuristics(), heuristics_exports));
+            const offTopicEarly = checkStrictOffTopic3(bodyText);
+            const rawUnwrappedForMod = unwrapMessage(msg.message);
+            const isStandaloneOffTopicVideo = !!rawUnwrappedForMod?.videoMessage && (!bodyText.trim() || !/\b(?:inmueble|arriendo|venta|consulta|ley|predial|ctl|escritura|vecy|jania)\b/i.test(bodyText));
+            if (offTopicEarly.isOffTopic || isStandaloneOffTopicVideo) {
+              const reasonLabel = offTopicEarly.reason || "videos o material ajeno a consultas inmobiliarias";
+              const cleanUserNameMod = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
+              const modWarning = `Hola ${cleanUserNameMod} \u{1F44B}\u{1F3FB}. El contenido relacionado con *${reasonLabel}* no est\xE1 permitido en este grupo oficial de VECY BIENES RA\xCDCES. \u{1F6AB}
+
+Aqu\xED atendemos consultas inmobiliarias, legales, tributarias, aval\xFAos y novedades del proyecto. Eliminar\xE9 este mensaje para mantener el canal limpio. \u{1F91D}`;
+              await this.safeReact(chatId, msg.key, "\u{1F6AB}", "WARNING-REACT");
+              await this.queuedSend(chatId, modWarning, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
+              await this.logToDb(chatId, "janIA", `[GROUP-MODERATION] ${modWarning}`);
+              if (msg.key?.id) {
+                setTimeout(async () => {
+                  try {
+                    if (this.sock) {
+                      await this.sock.sendMessage(chatId, { delete: msg.key });
+                    }
+                  } catch (_) {
+                  }
+                }, 3500);
+              }
+              await this.sock.sendPresenceUpdate("paused", chatId);
+              return;
+            }
           }
           const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
           const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true, resolvedSenderId);
@@ -47599,26 +47727,43 @@ ${passiveSummary}` : ""
           }
           if (result && (chatId === this.buzonGroupId || chatId === this.circuloGroupId)) {
             if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-              const rawPhone = senderId.split("@")[0];
               const cleanUserName = extractFirstName(cleanRawUserName(realName || msg.pushName || "")) || extractFirstName(realName) || "colega";
               const redirectText = `Hola ${cleanUserName} \u{1F44B}\u{1F3FB}, publicaste una ${result.classification === "INMUEBLE" ? "oferta" : "demanda"} inmobiliaria en este grupo.
 
-Para que JanIA y toda la comunidad puedan realizar el cruce comercial (MATCH) inmediato, por favor publ\xEDcala en nuestro grupo exclusivo:
+Para que JanIA y toda la comunidad puedan hacer el cruce (MATCH), por favor publ\xEDcala en nuestro grupo exclusivo:
 
 \u{1F3E2} *${VECY_OFFICIAL_GROUPS.grupo1.name}*
 \u{1F449} ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}
 
-_He eliminado tu publicaci\xF3n en este canal para preservar el orden tem\xE1tico._ \u{1F91D}\u2728`;
-              await this.queuedSend(chatId, redirectText, { mentions: groupMentions, allowExternalGroupResponse: true });
-              await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
-              });
+_Eliminar\xE9 tu publicaci\xF3n de este canal en unos segundos para mantener el orden. \xA1Gracias!_ \u{1F91D}\u2728`;
+              await this.safeReact(chatId, msg.key, "\u{1F6AB}", "WARNING-REACT");
+              await this.queuedSend(chatId, redirectText, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
               await this.logToDb(chatId, "janIA", redirectText);
+              if (msg.key?.id) {
+                setTimeout(async () => {
+                  try {
+                    if (this.sock) {
+                      await this.sock.sendMessage(chatId, { delete: msg.key });
+                    }
+                  } catch (_) {
+                  }
+                }, 3500);
+              }
               await this.sock.sendPresenceUpdate("paused", chatId);
               return;
             }
             if (result.classification === "VIOLACION_DE_NORMAS") {
-              await this.sock.sendMessage(chatId, { delete: msg.key }).catch(() => {
-              });
+              await this.safeReact(chatId, msg.key, "\u{1F6AB}", "WARNING-REACT");
+              if (msg.key?.id) {
+                setTimeout(async () => {
+                  try {
+                    if (this.sock) {
+                      await this.sock.sendMessage(chatId, { delete: msg.key });
+                    }
+                  } catch (_) {
+                  }
+                }, 3500);
+              }
             }
           }
           if ((this.groupHumanTakeoverMap.get(chatId) || 0) >= questionStartedAt) {
@@ -48339,15 +48484,15 @@ ${result.response}`);
                   await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
                   await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
                 }
-                if (chatId === this.targetGroupId && isBotAdmin && lastMsg?.key?.id) {
+                if (isOfficial && isBotAdmin && lastMsg?.key?.id) {
                   setTimeout(async () => {
                     try {
                       if (this.sock) {
                         await this.sock.sendMessage(chatId, { delete: lastMsg.key });
-                        console.log(`[JANIA-MODERATION] \u{1F5D1}\uFE0F Mensaje indebido de buffer eliminado en Grupo 1: ${lastMsg.key.id}`);
+                        console.log(`[JANIA-MODERATION] \u{1F5D1}\uFE0F Mensaje indebido de buffer eliminado en grupo oficial ${chatId}: ${lastMsg.key.id}`);
                       }
                     } catch (delErr) {
-                      console.warn(`[JANIA-MODERATION] Error eliminando mensaje de buffer en Grupo 1:`, delErr);
+                      console.warn(`[JANIA-MODERATION] Error eliminando mensaje de buffer en ${chatId}:`, delErr);
                     }
                   }, 3500);
                 }

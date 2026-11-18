@@ -7,6 +7,26 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-18] — JanIA v34.27: Fin Secuestro `CEDULA_HELP_TEXT` (Caso Lia Janeth Rivas en Grupo 2), Doctrina Ley 820 Art. 16, Cero Biblias y Moderación/Borrado Unificados en los 3 Grupos Oficiales (Doctrina Eduardo A. Rivera — v34.27 - 34.27.0)
+
+#### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico Crítico (Capturas Grupo 2)
+- **Situación Reportada:** En el grupo `𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠`, la usuaria **Lia Janeth Rivas** (y el reenvío de prueba desde `❤️ Amor Mío`) etiquetó a `@✨JanIA agente IA de VECY⚡` preguntando: *"se puede hacer un arriendo sin póliza de aseguradora, que documentos pedir y como los consulto, cuanto me aconsejas de depósito, el arriendo es de $1'600.000 incluida la administración"*. JanIA ignoró la consulta legal y respondió la plantilla genérica de verificar cédulas (`CEDULA_HELP_TEXT`), además de responder su duda previa (*"Como realizar consultas a vecy"*) con un mensaje largo cortado por *"Leer más"*.
+- **Directriz Adicional de Eduardo:** Auditar y potenciar los 3 grupos oficiales (`VECY INMO OFERTAS Y DEMANDAS COLOMBIA`, `VECY TIPS/NOTICIAS/CONSULTAS INMOBILIARIAS`, y `PROYECTO: "VECYBIENESRAICES"`) para que JanIA actúe como IA Pura autónoma, modere y elimine publicaciones indebidas/spam/links ajenos en cada grupo redirigiendo con educación, haga 1 pregunta a la vez, evite respuestas "biblia" y enseñe paso a paso cómo interactuar con ella a todo tipo de usuario (colega, propietario, comprador, arrendatario).
+- **Causa Raíz Detectada:** `isServiceHelpRequest` (`predialService.ts`) coincidía con `'como'` (`"como los consulto"`) + `'documento'` (`"documentos"`) sin excluir arriendos ni consultas sustantivas, secuestrando el flujo en `consultingHandler.ts` (líneas 209–228) y en `whatsapp-match.ts`, `circuloHandler.ts` y `webChatService.ts`. Asimismo, `consultingHandler.ts` delegaba `INMUEBLE`/`REQUERIMIENTO` a `propertiesHandler` en lugar de moderar, y el borrado de infractores en Grupos 2/3 se ejecutaba antes de enviar la advertencia citada o sin cubrir charlas cortas en Grupo 1.
+
+#### 2. Acciones Ejecutadas en `v34.27`
+1. **Desbloqueo de Consultas Reales y Guías Compactas (`server/_core/predialService.ts`):**
+   - `isServiceHelpRequest` excluye expresamente consultas de arriendo, póliza, aseguradora, depósito, fiador/codeudor, canon, administración y preguntas de uso general de VECY/JanIA; además limita `CEDULA_HELP_TEXT` / `PREDIAL_HELP_TEXT` a formatos compactos (<420 caracteres) sin activar *"Leer más"*.
+2. **Maestría Arrendamientos Ley 820/2003, Cero Biblias y 1 Pregunta a la Vez (`consultingHandler.ts`, `circuloHandler.ts`):**
+   - Incorporada doctrina clara (en prompt y respaldo `$0 COP`) explicando el **Art. 16 de la Ley 820 de 2003** (prohibición de depósitos en dinero en vivienda urbana), alternativas sin póliza (codeudor solvente, documentos, verificación gratuita de antecedentes/ADRES por DM `+57 319 291 9978`), separación de canon/administración (`$1.600.000`), y guía breve para *"cómo realizar consultas a VECY"*.
+   - Convertida cualquier clasificación `INMUEBLE`/`REQUERIMIENTO` en Grupo 2 en `VIOLACION_DE_NORMAS` (`🚫`) con redirección amable al Grupo 1, y reemplazado el cuestionario de 6 preguntas de avalúo por 1 sola pregunta inicial.
+3. **Identificación NFKC, Moderación Anti-Spam y Borrado Seguro en Grupos 1, 2 y 3 (`shared/const.ts`, `heuristics.ts`, `whatsapp-match.ts`):**
+   - Exportado `resolveOfficialVecyGroupKey` (matching por JID + Unicode `NFKC`), normalización `NFKC` en `isBotDirectlyMentioned`, ampliación de `checkStrictOffTopic` (canales WhatsApp/Telegram externos, apuestas, rifas, comercio ajeno), moderación de mensajes no comerciales en Grupo 1, verificación `checkStrictOffTopic`/videos sueltos antes de ID en Grupos 2/3, y secuencia segura `🚫` -> advertencia citada -> borrado a los `3500ms`.
+4. **Gobernanza y Validación (`shared/const.ts`, `package.json`, `founderKnowledgeService.ts`, `regression.test.ts`):**
+   - Semilla `seed-maestria-grupos-lia-ley820-cero-biblias-v34-27`, **Suite 213**, `npm run check` (**0 errores**), `NODE_ENV=test npm test` (**6/6 archivos, 749/749 tests en verde** | `$0 COP`) y versión `v34.27` (`34.27.0`).
+
+---
+
 ### 📅 [2026-11-17] — JanIA v34.26 (Bloque 2 + 19 Tipos Unificados): Modo Humana Real, Ficha DM "1 Pregunta a la Vez" y Firma Electrónica de Match antes de liberar `#M...` / `PROP-...` (Doctrina Eduardo A. Rivera — v34.26 - 34.26.0)
 
 #### 1. Directriz de Eduardo A. Rivera

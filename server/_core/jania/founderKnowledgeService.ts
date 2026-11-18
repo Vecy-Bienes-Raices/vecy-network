@@ -926,6 +926,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Bloque 2 (v34.26): Modo Humana Real, Ficha DM incremental nacional de 19 tipos y Firma Electrónica de Match antes de liberar PROP-... y #M....",
     createdAt: "2026-11-16T23:52:00.000Z",
     active: true
+  },
+  {
+    id: "seed-maestria-grupos-lia-ley820-cero-biblias-v34-27",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Blindaje de 3 Grupos Oficiales, Fin Secuestro Ayuda Cédula, Doctrina Ley 820 Art. 16 y Cero Biblias (v34.27)",
+    directive:
+      "JanIA opera con libre albedrío y máxima claridad en los 3 grupos oficiales (Grupo 1: 'VECY INMO OFERTAS Y DEMANDAS COLOMBIA' exclusivo para ofertas y demandas; Grupo 2: 'VECY TIPS/NOTICIAS/CONSULTAS INMOBILIARIAS' consultorio jurídico, tributario, avalúos, guías y arriendos; Grupo 3: 'PROYECTO: VECYBIENESRAICES' foro del proyecto, comparativa de portales y pedagogía). Prohibido secuestrar consultas reales de arriendo o documentos con guías genéricas de cédula (isServiceHelpRequest). Ante dudas de arriendo sin póliza y depósito, recordar que el Art. 16 de la Ley 820 de 2003 prohíbe depósitos en dinero en vivienda urbana, orientar sobre codeudor/documentos/verificación y moderar/eliminar spam, links ajenos y publicaciones en grupo equivocado guiando con educación y 1 pregunta a la vez.",
+    rawText:
+      "Blindaje v34.27: Fin secuestro isServiceHelpRequest (caso Lia Janeth Ley 820/2003), moderación y borrado unificados en los 3 grupos oficiales, detección NFKC y guías breves paso a paso.",
+    createdAt: "2026-11-18T14:20:00.000Z",
+    active: true
   }
 ];
 

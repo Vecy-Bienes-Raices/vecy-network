@@ -405,34 +405,16 @@ export function clearPendingPredialSession(senderId: string) {
 // TEXTO DE GUÍA — Para usuarios que preguntan cómo usar el servicio
 // ─────────────────────────────────────────────────────────────────────────────
 export const PREDIAL_HELP_TEXT =
-  `🏛️ *¿Cómo solicitar tu Predial a JanIA?* Es muy sencillo:\n\n` +
-  `1️⃣ *Envíame en privado* el CHIP del inmueble y el NIT o CC del propietario en un solo mensaje:\n\n` +
-  `📝 *Ejemplo:*\n` +
-  `_JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_\n\n` +
-  `ℹ️ *¿Dónde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.\n\n` +
-  `✅ *JanIA acepta:*\n` +
-  `• CC con o sin puntos (ej: 19.386.159 o 19386159)\n` +
-  `• NIT con o sin dígito de verificación (ej: 860.030.201-2 o 8600030201)\n` +
-  `• Cédula de Extranjería (CE)\n\n` +
-  `📲 *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania\n\n` +
-  `📢 *Síguenos para más herramientas gratuitas:*\n` +
-  `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
+  `🏛️ *¿Cómo pedir tu Factura Predial conmigo?*\n\n` +
+  `Escríbeme al privado (+57 319 291 9978) el *CHIP* y la *CC o NIT* del propietario.\n` +
+  `Ejemplo: _JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_.\n\n` +
+  `Lo encuentras en cualquier recibo anterior de predial. 📲 https://wa.me/573192919978`;
 
 export const CEDULA_HELP_TEXT =
-  `🪪 *¿Cómo verificar un documento de identidad con JanIA?* Facilísimo:\n\n` +
-  `1️⃣ *Envíame en privado* el tipo y número de documento en un solo mensaje:\n\n` +
-  `📝 *Ejemplos:*\n` +
-  `• _JanIA, verificar cédula: 19.386.159_ ✅\n` +
-  `• _JanIA, verificar cédula: 1018456789_ ✅\n` +
-  `• _JanIA, verificar CE: 654321_ ✅ (Cédula de Extranjería)\n` +
-  `• _JanIA, verificar pasaporte: AB123456_ ✅\n\n` +
-  `📌 *Nota:* Puedes escribir el número con o sin puntos o guiones — JanIA lo procesa automáticamente.\n\n` +
-  `🔍 *¿Qué información recibirás?*\n` +
-  `Nombre completo oficial de la persona registrada en la Policía Nacional de Colombia.\n\n` +
-  `🛡️ *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Policía Nacional.\n\n` +
-  `📲 *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania\n\n` +
-  `📢 *Síguenos para más herramientas gratuitas:*\n` +
-  `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
+  `🪪 *¿Cómo verificar una cédula o antecedentes conmigo?*\n\n` +
+  `Escríbeme al privado (+57 319 291 9978) el número de cédula, CE o pasaporte (con o sin puntos).\n` +
+  `Ejemplo: _JanIA, verificar cédula: 1018456789_.\n\n` +
+  `Te confirmo nombre oficial, EPS/régimen y antecedentes gratis al instante. 📲 https://wa.me/573192919978`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESCARGA AUTOMATIZADA OFICIAL DE FACTURA PREDIAL — REGLA DOCTRINAL v32.19
@@ -1067,40 +1049,46 @@ export async function executePredialAssistanceFromWhatsApp(
  */
 export function isServiceHelpRequest(text: string): 'predial' | 'cedula' | null {
   if (!text || typeof text !== 'string') return null;
-  const lower = text.toLowerCase().trim();
+  const cleanedMention = text
+    .replace(/@[^\s\n]+(?:\s+agente\s+ia\s+de\s+vecy[^\s\n]*)?/gi, ' ')
+    .replace(/@jania\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const lower = cleanedMention.toLowerCase();
+  if (!lower) return null;
 
-  // No capturar consultas financieras, tributarias de venta, Cap Rate, notariales, POT, CTL, Minutas/Auditoria Contractual ni Propiedad Horizontal Ley 675
+  // No capturar consultas sustantivas inmobiliarias, de arrendamiento, financieras, tributarias, POT, CTL, Minutas o PH
   if (
-    /\b(?:cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula|propiedad\s+horizontal|ley\s*675|\brph\b|coeficiente|expensas|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b|asamblea\s+(?:de\s+)?copropietarios)\b/i.test(
+    /\b(?:arriendo|arrendar|arrendamiento|arrendatario|arrendador|inquilino|p[oó]liza|poliza|aseguradora|afianzadora|dep[oó]sito|deposito|codeudor|fiador|ley\s*820|canon|administraci[oó]n|garant[ií]a|realizar\s+consultas?\s+a\s+vecy|consultas?\s+a\s+vecy|cap\s*rate|cash[-\s]*on[-\s]*cash|\broi\b|\byield\b|hipotecari|leasing\s+habitacional|ganancia\s+ocasional|impuesto\s+de\s+timbre|5\.?000\s*uvt|ley\s+546|estudio\s+de\s+t[ií]tulos|\bctl\b|norma\s+urbana|sinupot|\bpot\b|gastos?\s+notariales|derechos?\s+notariales|notar[ií]a|minuta|promesa\s+de\s+compraventa|contrato\s+de\s+(?:arrendamiento|corretaje)|otros[ií]|auditor[ií]a\s+contractual|cl[aá]usula|propiedad\s+horizontal|ley\s*675|\brph\b|coeficiente|expensas|desenglobe|englobe|subdivisi[oó]n|vivienda\s+tur[ií]stica|\brnt\b|asamblea\s+(?:de\s+)?copropietarios)\b/i.test(
       lower
     )
   ) {
     return null;
   }
 
-  // Palabras clave de solicitud de ayuda
+  // Palabras clave de solicitud de ayuda explícita sobre cómo usar el servicio
   const helpWords = [
     'cómo', 'como', 'qué debo', 'que debo', 'cómo hago', 'como hago',
     'qué datos', 'que datos', 'qué necesito', 'que necesito',
     'cómo pido', 'como pido', 'no sé', 'no se', 'ayuda',
     'instrucciones', 'tutorial', 'qué envío', 'que envio',
     'cómo solicito', 'como solicito', 'cómo se pide', 'como se pide',
+    'cómo verifico', 'como verifico', 'cómo consulto', 'como consulto',
     'no entendí', 'no entendi', 'no entiendo', 'explícame', 'explicame'
   ];
 
-  const predialWords = ['predial', 'impuesto predial', 'factura predial', 'chip', 'liquidar'];
-  const cedulaWords = ['cédula', 'cedula', 'verificar cédula', 'verificar cedula', 'verificación', 'verificacion', 'identidad', 'documento'];
-
   const hasHelp = helpWords.some(w => lower.includes(w));
-  const hasPredial = predialWords.some(w => lower.includes(w));
-  const hasCedula = cedulaWords.some(w => lower.includes(w));
+  const hasPredial = /\b(?:predial|impuesto\s+predial|factura\s+predial|chip)\b/i.test(lower);
+  const hasExplicitIdVerification = /\b(?:c[eé]dula|pasaporte|antecedentes|adres|rues|identidad|documento\s+de\s+identidad|verificar\s+(?:un\s+|una\s+)?(?:c[eé]dula|documento|persona)|consultar\s+(?:una\s+)?c[eé]dula)\b/i.test(lower);
 
   if (hasHelp && hasPredial) return 'predial';
-  if (hasHelp && hasCedula) return 'cedula';
+  if (hasHelp && hasExplicitIdVerification && lower.length <= 160) return 'cedula';
 
-  // Preguntas cortas que solo mencionen el servicio con interrogación
-  if ((lower.includes('?') || lower.startsWith('y') || lower.startsWith('¿')) && hasPredial) return 'predial';
-  if ((lower.includes('?') || lower.startsWith('y') || lower.startsWith('¿')) && hasCedula) return 'cedula';
+  // Preguntas cortas que solo mencionen el servicio puntual con interrogación
+  if ((lower.includes('?') || lower.startsWith('¿')) && lower.length <= 90) {
+    if (hasPredial) return 'predial';
+    if (hasExplicitIdVerification) return 'cedula';
+  }
 
   return null;
 }
