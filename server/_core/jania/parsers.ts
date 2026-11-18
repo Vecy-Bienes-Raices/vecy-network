@@ -9,6 +9,7 @@ import { inmobiliarioLexicon, users } from "../../../drizzle/schema";
 import { sql, eq } from "drizzle-orm";
 import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding, parseArea } from "../../../shared/colombianRealEstateParser";
 import { buscarLugarColombia } from "../colombia-geography";
+import { findVeredaInText } from "../veredas-lookup";
 import { getPropertyCategoryGroup } from "../../../shared/colombiaCatalog";
 import { parseStreetCarreraBoundaries } from "../matching";
 import { lookupBarriosByPerimeter } from "../geo-lookup";
@@ -869,8 +870,9 @@ export function extractFallbackDataFromText(text: string): any {
     || (/\$\s*([1-9]\d{0,1}(?:[.\s']\d{3}){1,2})\b/.test(clean) && !/\b(?:compra|compro|comprador|compran|venta|vendo|vende|millones|millon|mm|mll)\b/i.test(clean))
   );
 
+  const hasVentaSignals = /\b(?:venta|vendo|vende|vendemos|se\s+vende|en\s+venta|venpermuto)\b/i.test(clean);
   if (hasPermutaSignals) {
-    transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
+    transactionType = hasVentaSignals || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
     transactionType = "venta_o_arriendo";
   } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !clean.includes("en venta") && !clean.includes("venta") && !isInvestorPurchase) {
@@ -880,25 +882,33 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let propertyType = "apartment";
+  const hasExplicitVillaType =
+    /\bvilla\b(?!\s*(?:de\s+leyva|del\s+rosario|del\s+prado|del\s+r[ií]o|del\s+sol|magdala|carolina|santos|campestre|ol[ií]mpica|luz|alsacia|gorgona|mar[ií]a|pinz[oó]n|nueva|garz[oó]n))/i.test(clean);
+  const hasExplicitLocalType =
+    /\b(?:local\s+comercial|locales\s+comerciales|local(?:es)?)\b/i.test(clean) &&
+    !/\b(?:zona\s+comercial|centro\s+comercial|centros\s+comerciales)\b/i.test(clean);
+  const hasExplicitCasaCampestre = /\b(?:casa\s+campestre|casa\s+quinta|casas\s+campestres|casas\s+quintas)\b/i.test(clean);
+  const hasCampestreWithoutColina = clean.includes("campestre") && !clean.includes("colina campestre") && !clean.includes("villa campestre");
+
   if ((clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "consultorio";
   } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "office";
-  } else if ((clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa") && !clean.includes("centro comercial") && !clean.includes("centros comerciales")) {
+  } else if (hasExplicitLocalType && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "commercial";
   } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
     propertyType = "warehouse";
-  } else if (clean.includes("casalote") || clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+  } else if (/\b(?:casalote|casa\s*lote|lote|lotes|terreno|terrenos|predio|land)\b/i.test(clean)) {
     propertyType = "land";
-  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
-    propertyType = "house";
   } else if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabanas") || clean.includes("cabin")) {
     propertyType = "cabin";
-  } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+  } else if (clean.includes("finca") || clean.includes("hacienda") || clean.includes("farm") || (hasCampestreWithoutColina && !hasExplicitCasaCampestre && !clean.includes("apartamento") && !clean.includes("apto"))) {
     propertyType = "farm";
+  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || hasExplicitCasaCampestre || hasExplicitVillaType) {
+    propertyType = "house";
   } else if (clean.includes("edificio") || clean.includes("building")) {
     propertyType = "building";
-  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
+  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel") || clean.includes("aparta hotel") || clean.includes("apartahotel")) {
     propertyType = "hotel";
   } else if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
     propertyType = "loft";
@@ -1512,15 +1522,37 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // Deducción automática de ciudad para barrios conocidos de Colombia
+  // Deducción automática de ciudad para barrios conocidos de Colombia o veredas/corregimientos/caseríos IGAC
+  if (!city && !zone) {
+    const veredaInClean = /\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(clean)
+      ? findVeredaInText(clean)
+      : null;
+    if (veredaInClean) {
+      const mpioTitle = veredaInClean.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      city = buscarLugarColombia(mpioTitle)?.nombreCanonico || mpioTitle;
+      const vdaTitle = veredaInClean.vereda.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      zone = zone || `Vereda ${vdaTitle}`;
+    }
+  }
   if (!city && zone) {
     const matchedItem = KNOWN_BARRIOS_SORTED_ITEMS.find(i => i.canonical.toLowerCase() === zone.toLowerCase());
     if (matchedItem && matchedItem.city) {
       city = matchedItem.city;
+    } else if (matchedItem) {
+      city = "Bogotá, D.C.";
     } else if (zone === "Ciudad Meléndez") {
       city = "Cali";
     } else {
-      city = "Bogotá, D.C.";
+      const lugarDeZona = buscarLugarColombia(zone);
+      const veredaMatch = !lugarDeZona ? findVeredaInText(zone) : null;
+      if (lugarDeZona?.nombreCanonico) {
+        city = lugarDeZona.nombreCanonico;
+      } else if (veredaMatch?.municipio) {
+        const mpioTitle = veredaMatch.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        city = buscarLugarColombia(mpioTitle)?.nombreCanonico || mpioTitle;
+      } else if (/\bbogot[aá]\b/i.test(clean) || !/\b(?:colombia|nacional|todo el pa[ií]s)\b/i.test(clean)) {
+        city = "Bogotá, D.C.";
+      }
     }
   }
 
@@ -1658,9 +1690,13 @@ export function translatePropertyType(type: string): string {
     warehouse: "Bodega",
     office: "Oficina",
     farm: "Finca",
-    land: "Lote",
-    loft: "Loft",
-    consultorio: "Consultorio"
+    land: "Lote / Terreno",
+    loft: "Apartaestudio / Loft",
+    consultorio: "Consultorio",
+    commercial: "Local Comercial",
+    hotel: "Hotel / Hostal / Aparta Hotel",
+    cabin: "Cabaña",
+    villa: "Villa",
   };
   return map[type?.toLowerCase()] || capitalize(type || 'inmueble');
 }

@@ -33,6 +33,8 @@ import {
   extractPureBarrio,
 } from "../../geography";
 import { validateCity } from "../../divipola";
+import { buscarLugarColombia } from "../../colombia-geography";
+import { isValidFlyerVisionExtraction } from "../vision";
 import { parseArea } from "../../../../shared/colombianRealEstateParser";
 import {
   findMatchesForProperty,
@@ -276,16 +278,16 @@ function sanitizePropertyType(type: string): "apartment" | "house" | "building" 
   const t = type.toLowerCase().trim();
   if (t === "consultorio" || t.includes("consultorio") || t.includes("odontol") || t.includes("médic") || t.includes("medic") || t === "office_medical") return "consultorio";
   if (t === "cabin" || t.includes("cabaña") || t.includes("cabana") || t.includes("cabañas") || t.includes("cabanas")) return "cabin";
-  if (t === "house" || t === "casa" || t.includes("chalet") || t.includes("quinta") || t.includes("campestre")) return "house";
+  if (t === "farm" || t === "finca") return "farm";
+  if (t === "house" || t === "casa" || t.includes("chalet") || t.includes("quinta") || t.includes("campestre") || /\bvilla\b/.test(t)) return "house";
   if (t === "building" || t === "edificio") return "building";
   if (t === "warehouse" || t === "bodega") return "warehouse";
-  if (t === "farm" || t === "finca") return "farm";
-  if (t === "hotel" || t.includes("hostal") || t.includes("hospedaje") || t.includes("motel") || t.includes("hostel")) return "hotel";
+  if (t === "hotel" || t.includes("hostal") || t.includes("hospedaje") || t.includes("motel") || t.includes("hostel") || t.includes("aparta_hotel") || t.includes("aparta hotel")) return "hotel";
   if (t === "office" || t === "oficina" || t.includes("oficina")) return "office";
-  if (t === "land" || t === "lote" || t === "terreno" || t.includes("lote") || t.includes("terreno")) return "land";
-  if (t === "commercial" || t === "local" || t === "locales" || t.includes("local comercial") || t.includes("locales comerciales") || t === "comercial" || t.includes("local")) return "commercial";
+  if (t === "land" || t === "lote" || t === "terreno" || /\b(?:lote|lotes|terreno|terrenos|casalote)\b/.test(t)) return "land";
+  if (t === "commercial" || t === "comercial" || t === "local" || t === "locales" || /\b(?:local|locales)\b/.test(t)) return "commercial";
   if (t === "loft" || t.includes("loft") || t.includes("apartaestudio") || t.includes("apartasuite")) return "loft";
-  if (t === "apartment" || t === "apartamento" || t === "apto" || t.includes("apto") || t.includes("apartamento") || t.includes("penthouse")) return "apartment";
+  if (t === "apartment" || t === "apartamento" || t === "apto" || t.includes("apto") || t.includes("apartamento") || t.includes("penthouse") || t.includes("duplex") || t.includes("dúplex")) return "apartment";
   return "apartment";
 }
 
@@ -1208,10 +1210,12 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
   const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
 
+  const resolvedReqCityFallback = data.ciudadDeseada || data.addressCity || data.city || fallbackReqD.city || buscarLugarColombia(rawCombinedReqText)?.nombreCanonico || "Bogotá";
+
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.addressCity || data.city || fallbackReqD.city || "Bogotá", 100) || "Bogotá",
+    ciudadDeseada: safeSlice(resolvedReqCityFallback, 100) || "Bogotá",
     zonaDeseada: (() => {
       const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
       if (explicit && !isCityOrGenericZone(explicit)) {
@@ -1994,7 +1998,7 @@ export async function processWhatsAppMessage(
       }
     }
 
-    const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
+    const isGenuineFlyerData = isValidFlyerVisionExtraction(flyerData);
 
     if (isGenuineFlyerData && flyerData) {
       const verbatim = flyerData.flyerVerbatimText || "";
@@ -2181,6 +2185,12 @@ Por lo tanto, DEBES hacer lo siguiente:
         emoji = isPermuta ? "🔄" : (isRent ? "✏️" : "📝");
       }
 
+      const combinedFlyerText = [text, fd.flyerVerbatimText].filter(Boolean).join("\n").trim();
+      const fbEnrich = combinedFlyerText ? extractFallbackDataFromText(combinedFlyerText) : null;
+      const lugarEnrich = buscarLugarColombia(fd.city || fd.zone || combinedFlyerText || "");
+      const resolvedFlyerCity = fd.city || fbEnrich?.city || lugarEnrich?.nombreCanonico || "Bogotá, D.C.";
+      const resolvedFlyerZone = fd.zone || fbEnrich?.zone || "";
+
       result = {
         classification: fd.classification as any,
         response: `Ficha técnica capturada exitosamente desde el flyer comercial: ${fd.title || ''}`,
@@ -2189,20 +2199,25 @@ Por lo tanto, DEBES hacer lo siguiente:
         flyerVerbatimText: fd.flyerVerbatimText,
         extractedData: {
           title: fd.title,
-          propertyType: fd.propertyType,
-          transactionType: fd.transactionType,
-          price: fd.price,
-          rentPrice: fd.rentPrice,
-          presupuestoMax: fd.presupuestoMax,
-          area: fd.area,
-          bedrooms: fd.bedrooms,
-          bathrooms: fd.bathrooms,
-          garages: fd.garages,
-          city: fd.city || "Bogotá, D.C.",
-          zone: fd.zone,
+          propertyType: fd.propertyType || fbEnrich?.propertyType,
+          transactionType: fd.transactionType || fbEnrich?.transactionType,
+          price: fd.price || fbEnrich?.price || undefined,
+          rentPrice: fd.rentPrice || fbEnrich?.rentPrice || undefined,
+          presupuestoMax: fd.presupuestoMax || fbEnrich?.presupuestoMax || undefined,
+          presupuestoMin: fd.presupuestoMin || fbEnrich?.presupuestoMin || undefined,
+          adminFee: fd.adminFee || fbEnrich?.adminFee || undefined,
+          stratum: fd.stratum || undefined,
+          area: fd.area || fbEnrich?.areaTotal || undefined,
+          bedrooms: fd.bedrooms ?? undefined,
+          bathrooms: fd.bathrooms ?? undefined,
+          garages: fd.garages ?? undefined,
+          department: fd.department || lugarEnrich?.departamento || undefined,
+          locality: fd.locality || undefined,
+          city: resolvedFlyerCity,
+          zone: resolvedFlyerZone,
           contactPhone: fd.contactPhone,
           contactName: fd.contactName,
-          rawText: fd.flyerVerbatimText || messageToProcess
+          rawText: combinedFlyerText || fd.flyerVerbatimText || messageToProcess
         },
         mentions: []
       };
@@ -2806,8 +2821,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       // DOCTRINA v23.9: Si es solo una imagen sin texto del usuario
       if (isImageOnlyProp) {
         const hasPropSpecs = (Number(extracted.price || 0) > 0) ||
-          (Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0)) ||
-          (!!extracted.zone && Number(extracted.bedrooms || 0) > 0);
+          (Number(extracted.rentPrice || 0) > 0) ||
+          (Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0 || ["land", "farm", "warehouse", "office", "consultorio", "commercial", "building", "hotel", "cabin"].includes(String(extracted.propertyType || "").toLowerCase()))) ||
+          (!!(extracted.zone || extracted.city) && (Number(extracted.bedrooms || 0) > 0 || String(extracted.transactionType || "").toLowerCase().includes("permuta") || !!extracted.propertyType));
         if (!hasPropSpecs && !isFlyerDetected) {
           console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene ficha técnica ni datos comerciales legibles sobreimpresos.`);
           result.inserted = false;
@@ -2921,8 +2937,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       // DOCTRINA v23.9: Si es solo una imagen sin texto del usuario
       if (isImageOnlyReq) {
         const hasReqSpecs = (Number(extracted.presupuestoMax || extracted.price || 0) > 0) ||
-          (!!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0)) ||
-          (extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title));
+          (!!(extracted.zonaDeseada || extracted.zone || extracted.city) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0 || String(extracted.transactionType || "").toLowerCase().includes("permuta") || !!extracted.propertyType)) ||
+          (extracted.title && /compra|busco|requerimiento|solicitud|presupuesto|permuta|arriendo/i.test(extracted.title));
         if (!hasReqSpecs && !isFlyerDetectedReq) {
           console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
           result.inserted = false;
@@ -3144,16 +3160,20 @@ Por lo tanto, DEBES hacer lo siguiente:
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "🔄" : (isRent ? "✏️" : "📝");
 
+        const fbReqCity = fbData.city || buscarLugarColombia(rawMsg)?.nombreCanonico || "Bogotá, D.C.";
+        const fbReqZone = fbData.zone || fbReqCity;
+
         const savedReq = await saveRequirement({
           propertyType: fbData.propertyType || "apartment",
           tipoInmuebleDeseado: fbData.propertyType || "apartment",
           transactionType: isRent ? "arriendo" : (isPermuta ? "permuta" : "venta"),
           tipoNegocioDeseado: isRent ? "arriendo" : (isPermuta ? "permuta" : "venta"),
-          name: `Requerimiento ${fbData.propertyType || 'Inmueble'} en Bogotá`,
+          name: `Requerimiento ${fbData.propertyType || 'Inmueble'} en ${fbReqZone}`,
           presupuestoMax: String(fbData.presupuestoMax || 0),
           presupuestoMin: String(fbData.presupuestoMin || 0),
           adminFeeMax: fbData.adminFee ? String(fbData.adminFee) : undefined,
-          zonaDeseada: "Bogotá",
+          city: fbReqCity,
+          zonaDeseada: fbReqZone,
           idUsuarioWhatsapp: rawPhone,
           rawText: rawMsg,
           origenTipo,
@@ -3176,23 +3196,25 @@ Por lo tanto, DEBES hacer lo siguiente:
           reactionEmoji: emoji,
           inserted: true
         };
-      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
+      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("permuta") || cleanLower.includes("permuto") || cleanLower.includes("apto") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("lote") || cleanLower.includes("finca") || cleanLower.includes("oficina") || /\blocal(?:es)?\b/i.test(cleanLower) || cleanLower.includes("consultorio") || cleanLower.includes("cabaña") || cleanLower.includes("cabana") || cleanLower.includes("villa") || cleanLower.includes("hotel") || cleanLower.includes("edificio")) {
         // Fallback para OFERTA (INMUEBLE)
         const isExplicitVentaFb = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta)\b/i.test(cleanLower);
         const isRent = fbData.transactionType === "arriendo" || (!isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler")));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "🔀" : (isRent ? "👌" : "👍");
+        const fbPropCity = fbData.city || buscarLugarColombia(rawMsg)?.nombreCanonico || "Bogotá, D.C.";
+        const fbPropZone = fbData.zone || fbPropCity;
 
         const savedProp = await saveProperty({
           propertyType: fbData.propertyType || "apartment",
           transactionType: isRent ? "arriendo" : (isPermuta ? "permuta" : "venta"),
-          name: `Inmueble en Bogotá`,
+          name: `${translatePropertyType(fbData.propertyType || "apartment")} en ${fbPropZone}`,
           price: String(fbData.price || 0),
           rentPrice: fbData.rentPrice ? String(fbData.rentPrice) : undefined,
           adminFee: fbData.adminFee ? String(fbData.adminFee) : undefined,
           areaTotal: String(fbData.areaTotal || 0),
-          zone: "Bogotá",
-          city: "Bogotá, D.C.",
+          zone: fbPropZone,
+          city: fbPropCity,
           idUsuarioWhatsapp: rawPhone,
           rawText: rawMsg,
           origenTipo,

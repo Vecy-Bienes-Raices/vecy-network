@@ -184,7 +184,20 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.27 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.28 — Noviembre 2026
+
+### Novedades v34.28 (Captura Total de Flyers/Imágenes, Todos los Tipos y Negocios Venta/Arriendo/Permuta y Cobertura 100% Nacional Colombia — Doctrina Eduardo A. Rivera):
+- **Captura Integral de Imágenes y Flyers WhatsApp (`whatsapp-match.ts`, `vision.ts`, `types.ts`, `propertiesHandler.ts`):**
+  1. `whatsapp-match.ts`: protegido todo adjunto gráfico (`hasImageOrDocMedia`) para que nunca caiga en `isShortCourtesy`; enrutados documentos HD `image/*` hacia `imageBuffer`; añadido unwrap de `associatedChildMessage`/`editedMessage` y eliminado el envenenamiento de `flyerVisionData` cuando Vision falla.
+  2. `vision.ts` & `types.ts`: autodetección MIME (`JPEG`/`PNG`/`WebP`), timeout de `15000ms`, respeto a cooldowns de `geminiKeyManager`, soporte de las 8 modalidades (`venta`, `arriendo`, `venta_o_arriendo`, `arriendo_temporal`, `arriendo_con_opcion_de_compra`, `permuta`, `venta_permuta`, `aporte`) y los 19 tipos exactos con los 6 emojis doctrinales.
+  3. `propertiesHandler.ts`: Fast-Path Vision enriquecido con geografía nacional (sin forzar `"Bogotá, D.C."`), soporte `Villa`, aceptación de flyers sin alcobas/precio numérico en `permuta` y tipologías rurales/comerciales, y eliminación de `"Bogotá"` fijo en el fallback determinístico.
+- **Todos los Tipos de Inmueble y Modalidades Sin Falsos Positivos (`parsers.ts`, `matching.ts`):**
+  1. Erradicados falsos positivos (`"localidad"` ya no fuerza `commercial`; `"Colina Campestre"` ya no fuerza `farm`), detectado `"Se vende o permuta"` -> `venta_permuta`, soportado `Villa`, desbloqueado `Casa Campestre <-> Finca`, simetrizado `permuta`/`venta_permuta` con `venta_o_arriendo`, y completado `translatePropertyType`.
+- **Cobertura Nacional 100% Colombia (`divipola.ts`, `veredas-lookup.ts`, `colombia-geography.ts`, `geography.ts`, `matching.ts`):**
+  1. Integrados los **1.122 municipios DIVIPOLA (DANE)**, las **33.434 veredas/corregimientos/caseríos IGAC** (`lookupVereda`/`findVeredaInText`), **14 regiones** (`Eje Cafetero`, `Valle de Aburrá`, `Oriente Antioqueño`, etc.), protección contra secuestro departamental en `deducirGeografiaTripartita` y normalización de prefijos rurales/urbanos (`Vereda`/`Corregimiento`/`Caserío`/`Barrio`) en `matchesGeography`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28`, **Suite 214** (**4/4 en verde**), `npm run check` (0 errores), `npm run build` limpio (`vite` + `esbuild`), `vitest run --testTimeout=35000`: **752/753 en verde** (1 timeout SMTP de red preexistente en `Suite 190.2`), versión `v34.28` (`34.28.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.27 — Noviembre 2026
 
 ### Novedades v34.27 (Blindaje de los 3 Grupos Oficiales, Fin del Secuestro `CEDULA_HELP_TEXT` en Caso Lia Janeth, Arriendos Ley 820 Art. 16 y "Cero Biblias" — Doctrina Eduardo A. Rivera):
 - **Fin del Secuestro `isServiceHelpRequest` y Guías Compactas (`server/_core/predialService.ts`, `consultingHandler.ts`):**

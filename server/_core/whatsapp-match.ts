@@ -65,6 +65,8 @@ export function unwrapMessage(msgObj: any): any {
     unwrapped.viewOnceMessageV2?.message ||
     unwrapped.viewOnceMessageV2Extension?.message ||
     unwrapped.documentWithCaptionMessage?.message ||
+    unwrapped.associatedChildMessage?.message ||
+    unwrapped.editedMessage?.message ||
     unwrapped.protocolMessage?.editedMessage
   ) {
     unwrapped =
@@ -73,6 +75,8 @@ export function unwrapMessage(msgObj: any): any {
       unwrapped.viewOnceMessageV2?.message ||
       unwrapped.viewOnceMessageV2Extension?.message ||
       unwrapped.documentWithCaptionMessage?.message ||
+      unwrapped.associatedChildMessage?.message ||
+      unwrapped.editedMessage?.message ||
       unwrapped.protocolMessage?.editedMessage;
   }
   return unwrapped;
@@ -1186,10 +1190,16 @@ export class JaniaMatchBot {
             else if (rawMsg?.documentMessage) {
               body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
               try {
+                const docMime = (rawMsg.documentMessage.mimetype || 'application/pdf').toLowerCase();
                 const downloadedDoc = await downloadMediaSafely(msg as any, 'document');
                 if (downloadedDoc && downloadedDoc.length > 0) {
-                  pdfBufferImmediate = downloadedDoc.toString('base64');
-                  pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || 'application/pdf';
+                  if (docMime.startsWith('image/')) {
+                    imageBufferImmediate = downloadedDoc.toString('base64');
+                    console.log(`[JANIA-MATCH] 📷 Flyer HD enviado como documento (${docMime}, ${(downloadedDoc.length / 1024).toFixed(1)} KB) de ${senderId}`);
+                  } else {
+                    pdfBufferImmediate = downloadedDoc.toString('base64');
+                    pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || 'application/pdf';
+                  }
                 }
               } catch (docErr: any) { }
             }
@@ -1389,6 +1399,13 @@ export class JaniaMatchBot {
               textLower.includes("inversión") ||
               textLower.includes("penthouse") ||
               textLower.includes("apartaestudio") ||
+              textLower.includes("consultorio") ||
+              textLower.includes("cabaña") ||
+              textLower.includes("cabana") ||
+              textLower.includes("villa") ||
+              textLower.includes("hostal") ||
+              textLower.includes("hotel") ||
+              textLower.includes("quinta") ||
               textLower.includes("duplex") ||
               textLower.includes("dúplex") ||
               textLower.includes("parqueadero") ||
@@ -1461,8 +1478,9 @@ export class JaniaMatchBot {
             // si el usuario responde afirmativamente o cita a JanIA, NUNCA es cortesía corta sino continuación activa:
             const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
 
+            const hasImageOrDocMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!imageBufferImmediate || !!pdfBufferImmediate;
             const isShortCourtesy =
-              !isAudioPTT && !isConversationalContinuation && (
+              !isAudioPTT && !isConversationalContinuation && !hasImageOrDocMedia && (
                 textClean.length < 6 ||
                 ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
               );
@@ -1807,9 +1825,14 @@ export class JaniaMatchBot {
         try {
           const media = await downloadMediaSafely(msg as any, 'document');
           if (media && media.length > 0) {
-            pdfBuffer = media.toString('base64');
-            pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
-            mainMsg = msg; // El mensaje con el pdf se vuelve el mensaje de referencia
+            const docMime = (rawMsg.documentMessage.mimetype || 'application/pdf').toLowerCase();
+            if (docMime.startsWith('image/') && !imageBuffer) {
+              imageBuffer = media.toString('base64');
+            } else {
+              pdfBuffer = media.toString('base64');
+              pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+            }
+            mainMsg = msg; // El mensaje con el adjunto se vuelve el mensaje de referencia
           }
         } catch (e) { }
       }
@@ -2651,8 +2674,13 @@ export class JaniaMatchBot {
           try {
             const mediaBuffer = await downloadMediaSafely(msg as any, 'document');
             if (mediaBuffer) {
-              pdfBuffer = mediaBuffer.toString('base64');
-              pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+              const docMime = (rawMsg.documentMessage.mimetype || 'application/pdf').toLowerCase();
+              if (docMime.startsWith('image/')) {
+                imageBuffer = mediaBuffer.toString('base64');
+              } else {
+                pdfBuffer = mediaBuffer.toString('base64');
+                pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+              }
             }
           } catch (e) {
             console.error('[JANIA-MEDIA] Error descargando documento adjunto en grupo:', e);
@@ -2767,8 +2795,13 @@ export class JaniaMatchBot {
           try {
             const mediaBuffer = await downloadMediaSafely(msg as any, 'document');
             if (mediaBuffer) {
-              pdfBuffer = mediaBuffer.toString('base64');
-              pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+              const docMime = (rawMsg.documentMessage.mimetype || 'application/pdf').toLowerCase();
+              if (docMime.startsWith('image/')) {
+                imageBuffer = mediaBuffer.toString('base64');
+              } else {
+                pdfBuffer = mediaBuffer.toString('base64');
+                pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+              }
             }
           } catch (e) { }
         }
@@ -3202,10 +3235,13 @@ export class JaniaMatchBot {
       if (!fastEmoji && imageBufferImmediate) {
         try {
           const { extractFlyerVisionSafely } = await import('./jania/vision');
-          flyerVisionData = await extractFlyerVisionSafely(imageBufferImmediate);
-          if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
-            fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "📝" : "👍");
-            console.log(`[JANIA-FAST-REACT] 🎯 Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacción rápida: ${fastEmoji}`);
+          const visionCandidate = await extractFlyerVisionSafely(imageBufferImmediate);
+          if (visionCandidate && visionCandidate.isFlyerOrBanner && (visionCandidate.classification === "INMUEBLE" || visionCandidate.classification === "REQUERIMIENTO") && visionCandidate.flyerVerbatimText && visionCandidate.flyerVerbatimText.trim().length >= 10) {
+            flyerVisionData = visionCandidate;
+            fastEmoji = visionCandidate.reactionEmoji || (visionCandidate.classification === "REQUERIMIENTO" ? "📝" : "👍");
+            console.log(`[JANIA-FAST-REACT] 🎯 Flyer comercial con texto detectado visualmente (${visionCandidate.classification}). Reacción rápida: ${fastEmoji}`);
+          } else if (visionCandidate && visionCandidate.isFlyerOrBanner && visionCandidate.classification !== "CONSULTA_GENERAL") {
+            flyerVisionData = visionCandidate;
           }
         } catch (visErr: any) {
           console.warn('[JANIA-FAST-REACT] Error en análisis visual de flyer:', visErr?.message || visErr);
@@ -3470,12 +3506,17 @@ export class JaniaMatchBot {
           console.error('[JANIA-BUFFER] Error descargando imagen:', e);
         }
       }
-      if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer) {
+      if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer && !bufferedMsg.imageBuffer) {
         try {
           const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg as any, 'document');
           if (mediaBuffer) {
-            bufferedMsg.pdfBuffer = mediaBuffer.toString('base64');
-            bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+            const docMime = (rawMsg.documentMessage.mimetype || 'application/pdf').toLowerCase();
+            if (docMime.startsWith('image/')) {
+              bufferedMsg.imageBuffer = mediaBuffer.toString('base64');
+            } else {
+              bufferedMsg.pdfBuffer = mediaBuffer.toString('base64');
+              bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+            }
           }
         } catch (e) {
           console.error('[JANIA-BUFFER] Error descargando documento:', e);

@@ -8,7 +8,8 @@ import { getDb } from '../db';
 import { colombiaGeography } from '../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import { lookupBarriosByPerimeter } from './geo-lookup';
-import { lookupVereda } from './veredas-lookup';
+import { lookupVereda, findVeredaInText } from './veredas-lookup';
+import { findDivipolaInText } from './divipola';
 
 export const BARRIOS_LAS_SANTAS = [
   "Santa Bárbara",
@@ -992,23 +993,41 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
-  // 7. PRIORIDAD 6: Si la zona tiene largo suficiente, se acepta dinámicamente como barrio de Bogotá o de una ciudad válida
+  // 7. PRIORIDAD 6: Veredas / Corregimientos / Caseríos oficiales (33.434 IGAC) o barrio dinámico de cualquier ciudad/municipio
   if (normZone && normZone.length >= 3) {
     const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .split(' ')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
 
-    let finalCity = "Bogotá";
-    let isMun = false;
+    const normCityHint = ciudad ? normalizarTextoGeografico(ciudad) : "";
+    const isExplicitNonBogotaCity = !!normCityHint && !["bogota", "bogota d c", "bogota dc", "colombia", "nacional", "na"].includes(normCityHint);
+
+    let finalCity = isExplicitNonBogotaCity ? ciudad!.trim() : "Bogotá";
+    let isMun = isExplicitNonBogotaCity;
 
     if (ciudad) {
       const cleanCity = cleanText(ciudad);
       const lugarCity = buscarLugarColombia(cleanCity);
       if (lugarCity && normalizarTextoGeografico(lugarCity.nombreCanonico) !== "bogota") {
-        finalCity = cleanText(lugarCity.nombreCanonico);
+        finalCity = lugarCity.nombreCanonico;
         isMun = true;
       }
+    }
+
+    const veredaFound = findVeredaInText(zona, isExplicitNonBogotaCity ? finalCity : undefined)
+      || (textoCompleto ? findVeredaInText(textoCompleto, isExplicitNonBogotaCity ? finalCity : undefined) : null);
+    if (veredaFound) {
+      const mpioTitle = veredaFound.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      const lugarMpio = buscarLugarColombia(mpioTitle);
+      const resolvedCity = lugarMpio?.nombreCanonico || mpioTitle;
+      return {
+        isValid: true,
+        barrioCanonico: zona.trim(),
+        localidad: resolvedCity,
+        city: resolvedCity,
+        isMunicipio: true
+      };
     }
 
     return {
@@ -1387,6 +1406,12 @@ export function deducirGeografiaTripartita(
     else if (textCombined.includes("giron") || textCombined.includes("girón")) city = "Girón";
     else if (textCombined.includes("barrancabermeja")) city = "Barrancabermeja";
     else if (textCombined.includes("san gil")) city = "San Gil";
+    else if (!textCombined.includes("bucaramanga")) {
+      const divSant = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divSant && normalizarTextoGeografico(divSant.departamento).includes("santander")) {
+        city = divSant.municipio;
+      }
+    }
 
     let neighborhood = city;
     if (textCombined.includes("cabecera")) neighborhood = "Cabecera del Llano";
@@ -1397,7 +1422,7 @@ export function deducirGeografiaTripartita(
 
     return {
       neighborhood,
-      locality: "Área Metropolitana Bucaramanga",
+      locality: city === "Bucaramanga" || city === "Floridablanca" || city === "Piedecuesta" || city === "Girón" ? "Área Metropolitana Bucaramanga" : city,
       city,
       department: "Santander",
       confidence: "alta_deduccion_santander"
@@ -1453,6 +1478,10 @@ export function deducirGeografiaTripartita(
   const pereiraKeywords = ["pereira", "dosquebradas", "cerritos", "pinares", "alpes pereira", "circasia", "risaralda"];
   if (pereiraKeywords.some(k => textCombined.includes(k))) {
     let city = textCombined.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+    if (!textCombined.includes("pereira") && !textCombined.includes("dosquebradas")) {
+      const divRis = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divRis && normalizarTextoGeografico(divRis.departamento).includes("risaralda")) city = divRis.municipio;
+    }
     let neighborhood = city;
     if (textCombined.includes("cerritos")) neighborhood = "Cerritos";
     else if (textCombined.includes("pinares")) neighborhood = "Pinares";
@@ -1470,10 +1499,15 @@ export function deducirGeografiaTripartita(
   // 6. REGLA CALDAS / MANIZALES
   const manizalesKeywords = ["manizales", "villamaria", "palermo manizales", "cable manizales", "caldas"];
   if (manizalesKeywords.some(k => textCombined.includes(k))) {
+    let city = textCombined.includes("villamaria") ? "Villamaría" : "Manizales";
+    if (!textCombined.includes("manizales") && !textCombined.includes("villamaria")) {
+      const divCal = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divCal && normalizarTextoGeografico(divCal.departamento) === "caldas") city = divCal.municipio;
+    }
     return {
-      neighborhood: inputZone?.trim() || "Manizales",
-      locality: "Manizales",
-      city: textCombined.includes("villamaria") ? "Villamaría" : "Manizales",
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
       department: "Caldas",
       confidence: "alta_deduccion_manizales"
     };
@@ -1482,10 +1516,15 @@ export function deducirGeografiaTripartita(
   // 7. REGLA QUINDÍO / ARMENIA
   const armeniaKeywords = ["armenia", "calarca", "quimbaya", "montenegro", "quindio"];
   if (armeniaKeywords.some(k => textCombined.includes(k))) {
+    let city = textCombined.includes("calarca") ? "Calarcá" : textCombined.includes("quimbaya") ? "Quimbaya" : textCombined.includes("montenegro") ? "Montenegro" : "Armenia";
+    if (!textCombined.includes("armenia") && city === "Armenia") {
+      const divQui = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divQui && normalizarTextoGeografico(divQui.departamento).includes("quindio")) city = divQui.municipio;
+    }
     return {
-      neighborhood: inputZone?.trim() || "Armenia",
-      locality: "Armenia",
-      city: textCombined.includes("calarca") ? "Calarcá" : textCombined.includes("quimbaya") ? "Quimbaya" : "Armenia",
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
       department: "Quindío",
       confidence: "alta_deduccion_armenia"
     };
@@ -1497,7 +1536,12 @@ export function deducirGeografiaTripartita(
     let city = "Ibagué";
     if (textCombined.includes("melgar")) city = "Melgar";
     else if (textCombined.includes("carmen de apicala")) city = "Carmen de Apicalá";
+    else if (textCombined.includes("flandes")) city = "Flandes";
     else if (textCombined.includes("espinal")) city = "El Espinal";
+    else if (!textCombined.includes("ibague")) {
+      const divTol = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divTol && normalizarTextoGeografico(divTol.departamento) === "tolima") city = divTol.municipio;
+    }
 
     return {
       neighborhood: inputZone?.trim() || city,
@@ -1511,10 +1555,15 @@ export function deducirGeografiaTripartita(
   // 9. REGLA META / VILLAVICENCIO
   const metaKeywords = ["villavicencio", "acacias", "restrepo meta", "cumaral", "meta"];
   if (metaKeywords.some(k => textCombined.includes(k))) {
+    let city = textCombined.includes("acacias") ? "Acacías" : textCombined.includes("cumaral") ? "Cumaral" : "Villavicencio";
+    if (!textCombined.includes("villavicencio") && city === "Villavicencio") {
+      const divMet = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divMet && normalizarTextoGeografico(divMet.departamento) === "meta") city = divMet.municipio;
+    }
     return {
-      neighborhood: inputZone?.trim() || "Villavicencio",
-      locality: "Villavicencio",
-      city: textCombined.includes("acacias") ? "Acacías" : "Villavicencio",
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
       department: "Meta",
       confidence: "alta_deduccion_meta"
     };
@@ -1788,6 +1837,27 @@ export function deducirGeografiaTripartita(
         };
       }
     }
+
+    // Respaldo rural IGAC (33.434 veredas, corregimientos y caseríos cuando mencionan "vereda/corregimiento/caserio X")
+    const hasExplicitRuralPrefix = /\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(`${inputZone || ""} ${rawText || ""}`);
+    if (hasExplicitRuralPrefix) {
+      const veredaMatch = findVeredaInText(`${inputZone || ""} ${rawText || ""}`, normCity || undefined);
+      if (veredaMatch) {
+        const mpioLugar = buscarLugarColombia(veredaMatch.municipio);
+        const cityCanon = mpioLugar?.nombreCanonico || veredaMatch.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        const deptCanon = mpioLugar?.departamento || veredaMatch.departamento.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        const cleanBarrio = (inputZone && inputZone.trim() !== "" && !GENERIC_ZONES_SET.has(normZone))
+          ? inputZone.trim()
+          : `Vereda ${veredaMatch.vereda.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}`;
+        return {
+          neighborhood: cleanBarrio,
+          locality: cityCanon,
+          city: cityCanon,
+          department: deptCanon,
+          confidence: "alta_deduccion_nacional"
+        };
+      }
+    }
   }
 
   // ── 13. EMPAREJAMIENTO JERÁRQUICO BOGOTÁ D.C. ──
@@ -1910,6 +1980,17 @@ export function deducirGeografiaTripartita(
 
     neighborhood = isGenericZone ? null : (inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null);
     locality = null;
+  }
+
+  const hasExplicitOtherCity = !foundBarrio && !isBogotaMention && normCity && !["bogota", "bogota d c", "bogota dc", "colombia", "nacional", "na"].includes(normCity);
+  if (hasExplicitOtherCity) {
+    return {
+      neighborhood,
+      locality: inputCity!.trim(),
+      city: inputCity!.trim(),
+      department: "Colombia",
+      confidence: "pendiente_revision_ubicacion"
+    };
   }
 
   return {

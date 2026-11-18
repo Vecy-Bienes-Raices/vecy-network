@@ -47,7 +47,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.27";
+    VECY_VERSION = "v34.28";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -4752,13 +4752,212 @@ var init_voiceTranscription = __esm({
   }
 });
 
+// server/_core/divipola.ts
+import fs3 from "fs";
+import path3 from "path";
+function toSpanishTitleCase(raw) {
+  return (raw || "").trim().split(/\s+/).map((w, idx) => {
+    const low = w.toLowerCase();
+    if (idx > 0 && SPANISH_SMALL_WORDS.has(low)) return low;
+    return low.charAt(0).toUpperCase() + low.slice(1);
+  }).join(" ");
+}
+function normDivipola(txt) {
+  return (txt || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s.]/g, " ").replace(/\s+/g, " ").trim();
+}
+var SPANISH_SMALL_WORDS, AMBIGUOUS_MUNICIPALITIES, municipalitiesMap, divipolaDetailsMap, divipolaEntriesSorted, initialized, initDivipola, validateCity, lookupDivipolaMunicipality, findDivipolaInText;
+var init_divipola = __esm({
+  "server/_core/divipola.ts"() {
+    "use strict";
+    SPANISH_SMALL_WORDS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "y", "en", "el"]);
+    AMBIGUOUS_MUNICIPALITIES = /* @__PURE__ */ new Set([
+      "belen",
+      "castilla",
+      "restrepo",
+      "prado",
+      "santa barbara",
+      "santa rosa",
+      "san antonio",
+      "san francisco",
+      "san felipe",
+      "san jose",
+      "san luis",
+      "san marcos",
+      "san vicente",
+      "la floresta",
+      "la paz",
+      "la union",
+      "la victoria",
+      "la mesa",
+      "santa lucia",
+      "la palma",
+      "el rosal",
+      "el banco",
+      "el paso",
+      "el prado",
+      "el castillo",
+      "venecia",
+      "granada",
+      "palermo",
+      "florencia",
+      "alcala",
+      "caldas",
+      "bolivar",
+      "santander",
+      "cordoba",
+      "sucre",
+      "narino",
+      "morales",
+      "colombia",
+      "california",
+      "uribe",
+      "pizarro",
+      "el dorado",
+      "colon",
+      "rosario",
+      "miraflores",
+      "guadalupe",
+      "ricaurte",
+      "la vega",
+      "la playa",
+      "la gloria",
+      "la merced",
+      "san diego",
+      "san carlos",
+      "san pedro",
+      "san juan",
+      "el pe\xF1ol",
+      "armenia",
+      "bello",
+      "estrella",
+      "retiro",
+      "santuario",
+      "caicedonia",
+      "sevilla",
+      "geneva",
+      "espanol",
+      "espinal",
+      "guamo",
+      "andes",
+      "jardin",
+      "jerico",
+      "titiribi"
+    ]);
+    municipalitiesMap = /* @__PURE__ */ new Map();
+    divipolaDetailsMap = /* @__PURE__ */ new Map();
+    divipolaEntriesSorted = [];
+    initialized = false;
+    initDivipola = () => {
+      try {
+        const jsonPath = path3.join(process.cwd(), "server", "data", "divipola.json");
+        municipalitiesMap.clear();
+        divipolaDetailsMap.clear();
+        divipolaEntriesSorted = [];
+        if (!fs3.existsSync(jsonPath)) {
+          console.warn("Divipola JSON data file not found at", jsonPath);
+          return;
+        }
+        const raw = fs3.readFileSync(jsonPath, "utf-8");
+        const list = JSON.parse(raw);
+        for (const item of list) {
+          if (item.municipio) {
+            const normalizedKey = normDivipola(item.municipio);
+            const titleCased = toSpanishTitleCase(item.municipio);
+            const deptTitle = item.departamento ? item.departamento.toUpperCase().includes("BOGOT") ? "Bogot\xE1, D.C." : toSpanishTitleCase(item.departamento) : "";
+            municipalitiesMap.set(normalizedKey, titleCased);
+            const entry = {
+              codigoDpto: item.codigoDpto || "",
+              departamento: deptTitle,
+              codigoMpio: item.codigoMpio || "",
+              municipio: normalizedKey === "bogota d c" || normalizedKey === "bogota, d.c." ? "Bogot\xE1, D.C." : titleCased,
+              tipo: item.tipo || "Municipio"
+            };
+            if (!divipolaDetailsMap.has(normalizedKey)) {
+              divipolaDetailsMap.set(normalizedKey, entry);
+            }
+            if (normalizedKey.length >= 4) {
+              divipolaEntriesSorted.push({ key: normalizedKey, entry });
+            }
+          }
+        }
+        divipolaEntriesSorted.sort((a, b) => b.key.length - a.key.length);
+        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
+        const bogotaEntry = {
+          codigoDpto: "11",
+          departamento: "Bogot\xE1, D.C.",
+          codigoMpio: "11001",
+          municipio: "Bogot\xE1, D.C.",
+          tipo: "Distrito Capital"
+        };
+        divipolaDetailsMap.set("bogota", bogotaEntry);
+        divipolaDetailsMap.set("bogota d.c.", bogotaEntry);
+        divipolaDetailsMap.set("bogota dc", bogotaEntry);
+        initialized = true;
+        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
+      } catch (err) {
+        console.error("[Divipola] Error loading Divipola:", err);
+      }
+    };
+    validateCity = (cityName) => {
+      if (!cityName || typeof cityName !== "string") return null;
+      if (!initialized || municipalitiesMap.size === 0) {
+        initDivipola();
+      }
+      const normalized = normDivipola(cityName);
+      return municipalitiesMap.get(normalized) || null;
+    };
+    lookupDivipolaMunicipality = (cityName) => {
+      if (!cityName || typeof cityName !== "string") return null;
+      if (!initialized || divipolaDetailsMap.size === 0) {
+        initDivipola();
+      }
+      const normalized = normDivipola(cityName);
+      return divipolaDetailsMap.get(normalized) || null;
+    };
+    findDivipolaInText = (text2) => {
+      if (!text2 || typeof text2 !== "string") return null;
+      if (!initialized || divipolaEntriesSorted.length === 0) {
+        initDivipola();
+      }
+      const normTxt = normDivipola(text2);
+      if (!normTxt) return null;
+      for (const { key, entry } of divipolaEntriesSorted) {
+        const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`);
+        if (!regex.test(normTxt)) continue;
+        if (AMBIGUOUS_MUNICIPALITIES.has(key)) {
+          const normDept = normDivipola(entry.departamento);
+          const hasDept = normDept.length >= 4 && new RegExp(`(?:^|\\s)${normDept}(?:\\s|$)`).test(normTxt);
+          const hasExplicitMpio = new RegExp(`\\bmunicipio\\s+(?:de\\s+)?${escaped}\\b`).test(normTxt);
+          if (!hasDept && !hasExplicitMpio) continue;
+        }
+        return entry;
+      }
+      return null;
+    };
+  }
+});
+
 // server/_core/colombia-geography.ts
 function norm(txt) {
   return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
 }
 function buscarLugarColombia(texto) {
   const n = norm(texto);
+  if (!n) return null;
   if (MAPA_COLOMBIA[n]) return MAPA_COLOMBIA[n];
+  const exactDivipola = lookupDivipolaMunicipality(texto);
+  if (exactDivipola) {
+    return {
+      nombreCanonico: exactDivipola.municipio,
+      departamento: exactDivipola.departamento,
+      esCApital: false
+    };
+  }
   let bestMatch = null;
   let bestKeyLength = 0;
   for (const [key, lugar] of Object.entries(MAPA_COLOMBIA)) {
@@ -4770,12 +4969,35 @@ function buscarLugarColombia(texto) {
       }
     }
   }
-  return bestMatch;
+  const divipolaTextMatch = findDivipolaInText(texto);
+  if (divipolaTextMatch) {
+    const isCurrentOnlyDepartment = !bestMatch || norm(bestMatch.nombreCanonico) === norm(bestMatch.departamento) && norm(divipolaTextMatch.municipio) !== norm(bestMatch.nombreCanonico);
+    if (!bestMatch || isCurrentOnlyDepartment || norm(divipolaTextMatch.municipio).length > bestKeyLength) {
+      return {
+        nombreCanonico: divipolaTextMatch.municipio,
+        departamento: divipolaTextMatch.departamento,
+        esCApital: false
+      };
+    }
+  }
+  if (bestMatch) return bestMatch;
+  for (const [regKey, regInfo] of Object.entries(REGIONES_COLOMBIA)) {
+    const regex = new RegExp(`(^|\\s)${regKey}(\\s|$)`);
+    if (regex.test(n)) {
+      return {
+        nombreCanonico: regInfo.nombre,
+        departamento: regInfo.departamentoRef,
+        esCApital: false
+      };
+    }
+  }
+  return null;
 }
-var DEPARTAMENTOS_COLOMBIA, MAPA_COLOMBIA;
+var DEPARTAMENTOS_COLOMBIA, MAPA_COLOMBIA, REGIONES_COLOMBIA;
 var init_colombia_geography = __esm({
   "server/_core/colombia-geography.ts"() {
     "use strict";
+    init_divipola();
     DEPARTAMENTOS_COLOMBIA = {
       "antioquia": {
         nombre: "Antioquia",
@@ -5428,6 +5650,22 @@ var init_colombia_geography = __esm({
         }
       }
     }
+    REGIONES_COLOMBIA = {
+      "eje cafetero": { nombre: "Eje Cafetero", ciudadesClave: ["Pereira", "Armenia", "Manizales", "Dosquebradas", "Salento", "Filandia"], departamentoRef: "Risaralda / Quind\xEDo / Caldas" },
+      "valle de aburra": { nombre: "Valle de Aburr\xE1", ciudadesClave: ["Medell\xEDn", "Envigado", "Sabaneta", "Itag\xFC\xED", "Bello", "La Estrella", "Copacabana", "Girardota", "Barbosa", "Caldas"], departamentoRef: "Antioquia" },
+      "oriente antioqueno": { nombre: "Oriente Antioque\xF1o", ciudadesClave: ["Rionegro", "El Retiro", "La Ceja", "Guarne", "Marinilla", "Guatap\xE9", "El Pe\xF1ol", "El Carmen de Viboral"], departamentoRef: "Antioquia" },
+      "uraba": { nombre: "Urab\xE1", ciudadesClave: ["Apartad\xF3", "Turbo", "Carepa", "Chigorod\xF3", "Necocl\xED"], departamentoRef: "Antioquia" },
+      "sabana norte": { nombre: "Sabana Norte", ciudadesClave: ["Ch\xEDa", "Cajic\xE1", "Zipaquir\xE1", "Sop\xF3", "Tabio", "Tenjo", "Cota", "Tocancip\xE1", "Gachancip\xE1"], departamentoRef: "Cundinamarca" },
+      "sabana centro": { nombre: "Sabana Centro", ciudadesClave: ["Ch\xEDa", "Cajic\xE1", "Zipaquir\xE1", "Sop\xF3", "Tabio", "Tenjo", "Cota", "Tocancip\xE1", "Cogua", "Nemoc\xF3n"], departamentoRef: "Cundinamarca" },
+      "sabana occidente": { nombre: "Sabana Occidente", ciudadesClave: ["Madrid", "Mosquera", "Funza", "Facatativ\xE1", "Bojac\xE1", "El Rosal", "Subachoque", "Zipac\xF3n"], departamentoRef: "Cundinamarca" },
+      "alto magdalena": { nombre: "Alto Magdalena", ciudadesClave: ["Girardot", "Ricaurte", "Flandes", "Melgar", "Nilo", "Agua de Dios"], departamentoRef: "Cundinamarca / Tolima" },
+      "llanos orientales": { nombre: "Llanos Orientales", ciudadesClave: ["Villavicencio", "Acac\xEDas", "Restrepo", "Cumaral", "Yopal", "Puerto L\xF3pez"], departamentoRef: "Meta / Casanare" },
+      "costa caribe": { nombre: "Regi\xF3n Caribe", ciudadesClave: ["Barranquilla", "Cartagena", "Santa Marta", "Monter\xEDa", "Valledupar", "Sincelejo", "Riohacha"], departamentoRef: "Caribe Colombiano" },
+      "region caribe": { nombre: "Regi\xF3n Caribe", ciudadesClave: ["Barranquilla", "Cartagena", "Santa Marta", "Monter\xEDa", "Valledupar", "Sincelejo", "Riohacha"], departamentoRef: "Caribe Colombiano" },
+      "region pacifica": { nombre: "Regi\xF3n Pac\xEDfica", ciudadesClave: ["Cali", "Buenaventura", "Palmira", "Popay\xE1n", "Pasto", "Quibd\xF3", "Tumaco"], departamentoRef: "Pac\xEDfico Colombiano" },
+      "region andina": { nombre: "Regi\xF3n Andina", ciudadesClave: ["Bogot\xE1, D.C.", "Medell\xEDn", "Cali", "Bucaramanga", "Manizales", "Pereira", "Armenia", "Ibagu\xE9", "Tunja"], departamentoRef: "Andina Colombiana" },
+      "santanderes": { nombre: "Santanderes", ciudadesClave: ["Bucaramanga", "Floridablanca", "Gir\xF3n", "Piedecuesta", "Barichara", "San Gil", "C\xFAcuta"], departamentoRef: "Santander / Norte de Santander" }
+    };
   }
 });
 
@@ -5562,16 +5800,16 @@ var init_geocoding = __esm({
 });
 
 // server/_core/geo-lookup.ts
-import fs3 from "fs";
-import path3 from "path";
+import fs4 from "fs";
+import path4 from "path";
 function loadSectors(city = "bogota") {
   if (sectorData) return sectorData.sectors;
-  const filePath = path3.resolve(process.cwd(), "server", "data", `${city}_sectores.json`);
-  if (!fs3.existsSync(filePath)) {
+  const filePath = path4.resolve(process.cwd(), "server", "data", `${city}_sectores.json`);
+  if (!fs4.existsSync(filePath)) {
     console.warn(`[GeoLookup] Archivo no encontrado: ${filePath}`);
     return [];
   }
-  const raw = fs3.readFileSync(filePath, "utf-8");
+  const raw = fs4.readFileSync(filePath, "utf-8");
   sectorData = JSON.parse(raw);
   console.log(`[GeoLookup] Cargados ${sectorData.sectors.length} sectores catastrales de ${city}`);
   return sectorData.sectors;
@@ -5739,8 +5977,8 @@ var init_geo_lookup = __esm({
 });
 
 // server/_core/veredas-lookup.ts
-import fs4 from "fs";
-import path4 from "path";
+import fs5 from "fs";
+import path5 from "path";
 function normalize(text2) {
   if (!text2) return "";
   return text2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
@@ -5748,12 +5986,12 @@ function normalize(text2) {
 function initVeredasLookup() {
   if (isInitialized && veredasCache.length > 0) return;
   try {
-    const indexPath = path4.join(process.cwd(), "server/data/colombia_veredas_index.json");
-    if (!fs4.existsSync(indexPath)) {
+    const indexPath = path5.join(process.cwd(), "server/data/colombia_veredas_index.json");
+    if (!fs5.existsSync(indexPath)) {
       console.warn(`[VeredasLookup] No se encontr\xF3 el \xEDndice de veredas en: ${indexPath}`);
       return;
     }
-    const raw = fs4.readFileSync(indexPath, "utf8");
+    const raw = fs5.readFileSync(indexPath, "utf8");
     veredasCache = JSON.parse(raw);
     veredasByNameMap.clear();
     veredasByMpioMap.clear();
@@ -5778,8 +6016,8 @@ function initVeredasLookup() {
 function lookupVereda(texto, municipioHint) {
   if (!texto) return null;
   if (!isInitialized) initVeredasLookup();
-  const cleanText = normalize(texto).replace(/\bvereda\b/g, "").trim();
-  if (!cleanText) return null;
+  const cleanText = normalize(texto).replace(/\b(?:vereda|vda|corregimiento|corr|caserio|inspeccion|centro poblado|sector)\b/g, "").replace(/\s+/g, " ").trim();
+  if (!cleanText || cleanText.length < 3) return null;
   const matches = veredasByNameMap.get(cleanText);
   if (!matches || matches.length === 0) {
     return null;
@@ -5793,6 +6031,24 @@ function lookupVereda(texto, municipioHint) {
     if (exactMpio) return exactMpio;
   }
   return matches[0];
+}
+function findVeredaInText(texto, municipioHint) {
+  if (!texto) return null;
+  if (!isInitialized) initVeredasLookup();
+  const direct = lookupVereda(texto, municipioHint);
+  if (direct) return direct;
+  const norm2 = normalize(texto);
+  const pattern = /\b(?:vereda|vda|corregimiento|corr|caserio)\s+([a-z0-9]+(?:\s+[a-z0-9]+){0,3})/g;
+  let m;
+  while ((m = pattern.exec(norm2)) !== null) {
+    const tokens = m[1].split(" ");
+    for (let len = tokens.length; len >= 1; len--) {
+      const candidate = tokens.slice(0, len).join(" ");
+      const found = lookupVereda(candidate, municipioHint);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 var veredasCache, veredasByNameMap, veredasByMpioMap, isInitialized;
 var init_veredas_lookup = __esm({
@@ -6686,15 +6942,30 @@ async function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
   }
   if (normZone && normZone.length >= 3) {
     const cleanText = (txt) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-    let finalCity = "Bogot\xE1";
-    let isMun = false;
+    const normCityHint = ciudad ? normalizarTextoGeografico(ciudad) : "";
+    const isExplicitNonBogotaCity = !!normCityHint && !["bogota", "bogota d c", "bogota dc", "colombia", "nacional", "na"].includes(normCityHint);
+    let finalCity = isExplicitNonBogotaCity ? ciudad.trim() : "Bogot\xE1";
+    let isMun = isExplicitNonBogotaCity;
     if (ciudad) {
       const cleanCity = cleanText(ciudad);
       const lugarCity = buscarLugarColombia(cleanCity);
       if (lugarCity && normalizarTextoGeografico(lugarCity.nombreCanonico) !== "bogota") {
-        finalCity = cleanText(lugarCity.nombreCanonico);
+        finalCity = lugarCity.nombreCanonico;
         isMun = true;
       }
+    }
+    const veredaFound = findVeredaInText(zona, isExplicitNonBogotaCity ? finalCity : void 0) || (textoCompleto ? findVeredaInText(textoCompleto, isExplicitNonBogotaCity ? finalCity : void 0) : null);
+    if (veredaFound) {
+      const mpioTitle = veredaFound.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      const lugarMpio = buscarLugarColombia(mpioTitle);
+      const resolvedCity = lugarMpio?.nombreCanonico || mpioTitle;
+      return {
+        isValid: true,
+        barrioCanonico: zona.trim(),
+        localidad: resolvedCity,
+        city: resolvedCity,
+        isMunicipio: true
+      };
     }
     return {
       isValid: true,
@@ -6992,6 +7263,12 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     else if (textCombined.includes("giron") || textCombined.includes("gir\xF3n")) city = "Gir\xF3n";
     else if (textCombined.includes("barrancabermeja")) city = "Barrancabermeja";
     else if (textCombined.includes("san gil")) city = "San Gil";
+    else if (!textCombined.includes("bucaramanga")) {
+      const divSant = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divSant && normalizarTextoGeografico(divSant.departamento).includes("santander")) {
+        city = divSant.municipio;
+      }
+    }
     let neighborhood2 = city;
     if (textCombined.includes("cabecera")) neighborhood2 = "Cabecera del Llano";
     else if (textCombined.includes("ruitoque")) neighborhood2 = "Ruitoque Condominio";
@@ -7000,7 +7277,7 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood2 = inputZone.trim();
     return {
       neighborhood: neighborhood2,
-      locality: "\xC1rea Metropolitana Bucaramanga",
+      locality: city === "Bucaramanga" || city === "Floridablanca" || city === "Piedecuesta" || city === "Gir\xF3n" ? "\xC1rea Metropolitana Bucaramanga" : city,
       city,
       department: "Santander",
       confidence: "alta_deduccion_santander"
@@ -7065,6 +7342,10 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   const pereiraKeywords = ["pereira", "dosquebradas", "cerritos", "pinares", "alpes pereira", "circasia", "risaralda"];
   if (pereiraKeywords.some((k) => textCombined.includes(k))) {
     let city = textCombined.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+    if (!textCombined.includes("pereira") && !textCombined.includes("dosquebradas")) {
+      const divRis = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divRis && normalizarTextoGeografico(divRis.departamento).includes("risaralda")) city = divRis.municipio;
+    }
     let neighborhood2 = city;
     if (textCombined.includes("cerritos")) neighborhood2 = "Cerritos";
     else if (textCombined.includes("pinares")) neighborhood2 = "Pinares";
@@ -7079,20 +7360,30 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   }
   const manizalesKeywords = ["manizales", "villamaria", "palermo manizales", "cable manizales", "caldas"];
   if (manizalesKeywords.some((k) => textCombined.includes(k))) {
+    let city = textCombined.includes("villamaria") ? "Villamar\xEDa" : "Manizales";
+    if (!textCombined.includes("manizales") && !textCombined.includes("villamaria")) {
+      const divCal = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divCal && normalizarTextoGeografico(divCal.departamento) === "caldas") city = divCal.municipio;
+    }
     return {
-      neighborhood: inputZone?.trim() || "Manizales",
-      locality: "Manizales",
-      city: textCombined.includes("villamaria") ? "Villamar\xEDa" : "Manizales",
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
       department: "Caldas",
       confidence: "alta_deduccion_manizales"
     };
   }
   const armeniaKeywords = ["armenia", "calarca", "quimbaya", "montenegro", "quindio"];
   if (armeniaKeywords.some((k) => textCombined.includes(k))) {
+    let city = textCombined.includes("calarca") ? "Calarc\xE1" : textCombined.includes("quimbaya") ? "Quimbaya" : textCombined.includes("montenegro") ? "Montenegro" : "Armenia";
+    if (!textCombined.includes("armenia") && city === "Armenia") {
+      const divQui = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divQui && normalizarTextoGeografico(divQui.departamento).includes("quindio")) city = divQui.municipio;
+    }
     return {
-      neighborhood: inputZone?.trim() || "Armenia",
-      locality: "Armenia",
-      city: textCombined.includes("calarca") ? "Calarc\xE1" : textCombined.includes("quimbaya") ? "Quimbaya" : "Armenia",
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
       department: "Quind\xEDo",
       confidence: "alta_deduccion_armenia"
     };
@@ -7102,7 +7393,12 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     let city = "Ibagu\xE9";
     if (textCombined.includes("melgar")) city = "Melgar";
     else if (textCombined.includes("carmen de apicala")) city = "Carmen de Apical\xE1";
+    else if (textCombined.includes("flandes")) city = "Flandes";
     else if (textCombined.includes("espinal")) city = "El Espinal";
+    else if (!textCombined.includes("ibague")) {
+      const divTol = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divTol && normalizarTextoGeografico(divTol.departamento) === "tolima") city = divTol.municipio;
+    }
     return {
       neighborhood: inputZone?.trim() || city,
       locality: city,
@@ -7113,10 +7409,15 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   }
   const metaKeywords = ["villavicencio", "acacias", "restrepo meta", "cumaral", "meta"];
   if (metaKeywords.some((k) => textCombined.includes(k))) {
+    let city = textCombined.includes("acacias") ? "Acac\xEDas" : textCombined.includes("cumaral") ? "Cumaral" : "Villavicencio";
+    if (!textCombined.includes("villavicencio") && city === "Villavicencio") {
+      const divMet = findDivipolaInText(`${inputCity || ""} ${inputZone || ""} ${rawText || ""}`);
+      if (divMet && normalizarTextoGeografico(divMet.departamento) === "meta") city = divMet.municipio;
+    }
     return {
-      neighborhood: inputZone?.trim() || "Villavicencio",
-      locality: "Villavicencio",
-      city: textCombined.includes("acacias") ? "Acac\xEDas" : "Villavicencio",
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
       department: "Meta",
       confidence: "alta_deduccion_meta"
     };
@@ -7530,6 +7831,23 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
         };
       }
     }
+    const hasExplicitRuralPrefix = /\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(`${inputZone || ""} ${rawText || ""}`);
+    if (hasExplicitRuralPrefix) {
+      const veredaMatch = findVeredaInText(`${inputZone || ""} ${rawText || ""}`, normCity || void 0);
+      if (veredaMatch) {
+        const mpioLugar = buscarLugarColombia(veredaMatch.municipio);
+        const cityCanon = mpioLugar?.nombreCanonico || veredaMatch.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        const deptCanon = mpioLugar?.departamento || veredaMatch.departamento.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        const cleanBarrio = inputZone && inputZone.trim() !== "" && !GENERIC_ZONES_SET.has(normZone) ? inputZone.trim() : `Vereda ${veredaMatch.vereda.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ")}`;
+        return {
+          neighborhood: cleanBarrio,
+          locality: cityCanon,
+          city: cityCanon,
+          department: deptCanon,
+          confidence: "alta_deduccion_nacional"
+        };
+      }
+    }
   }
   const isGenericZone = !inputZone || inputZone.trim() === "" || normalizarTextoGeografico(inputZone).trim() === "na" || normalizarTextoGeografico(inputZone).includes("bogota") || normalizarTextoGeografico(inputZone).includes("bogot\xE1");
   let neighborhood = isGenericZone ? null : inputZone?.trim() || null;
@@ -7623,6 +7941,16 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     neighborhood = isGenericZone ? null : inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null;
     locality = null;
   }
+  const hasExplicitOtherCity = !foundBarrio && !isBogotaMention && normCity && !["bogota", "bogota d c", "bogota dc", "colombia", "nacional", "na"].includes(normCity);
+  if (hasExplicitOtherCity) {
+    return {
+      neighborhood,
+      locality: inputCity.trim(),
+      city: inputCity.trim(),
+      department: "Colombia",
+      confidence: "pendiente_revision_ubicacion"
+    };
+  }
   return {
     neighborhood,
     locality,
@@ -7686,6 +8014,7 @@ var init_geography = __esm({
     init_schema();
     init_geo_lookup();
     init_veredas_lookup();
+    init_divipola();
     init_colombianRealEstateParser();
     GENERIC_ZONES_SET = /* @__PURE__ */ new Set([
       "bogota",
@@ -10290,8 +10619,9 @@ function extractFallbackDataFromText(text2) {
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
   const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean) || /\b(?:incluida|incluido|inc)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean) || /\$\s*([1-9]\d{0,1}(?:[.\s']\d{3}){1,2})\b/.test(clean) && !/\b(?:compra|compro|comprador|compran|venta|vendo|vende|millones|millon|mm|mll)\b/i.test(clean));
+  const hasVentaSignals = /\b(?:venta|vendo|vende|vendemos|se\s+vende|en\s+venta|venpermuto)\b/i.test(clean);
   if (hasPermutaSignals) {
-    transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
+    transactionType = hasVentaSignals || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
     transactionType = "venta_o_arriendo";
   } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !clean.includes("en venta") && !clean.includes("venta") && !isInvestorPurchase) {
@@ -10300,25 +10630,29 @@ function extractFallbackDataFromText(text2) {
     transactionType = "venta";
   }
   let propertyType = "apartment";
+  const hasExplicitVillaType = /\bvilla\b(?!\s*(?:de\s+leyva|del\s+rosario|del\s+prado|del\s+r[ií]o|del\s+sol|magdala|carolina|santos|campestre|ol[ií]mpica|luz|alsacia|gorgona|mar[ií]a|pinz[oó]n|nueva|garz[oó]n))/i.test(clean);
+  const hasExplicitLocalType = /\b(?:local\s+comercial|locales\s+comerciales|local(?:es)?)\b/i.test(clean) && !/\b(?:zona\s+comercial|centro\s+comercial|centros\s+comerciales)\b/i.test(clean);
+  const hasExplicitCasaCampestre = /\b(?:casa\s+campestre|casa\s+quinta|casas\s+campestres|casas\s+quintas)\b/i.test(clean);
+  const hasCampestreWithoutColina = clean.includes("campestre") && !clean.includes("colina campestre") && !clean.includes("villa campestre");
   if ((clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "consultorio";
   } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "office";
-  } else if ((clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa") && !clean.includes("centro comercial") && !clean.includes("centros comerciales")) {
+  } else if (hasExplicitLocalType && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "commercial";
   } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
     propertyType = "warehouse";
-  } else if (clean.includes("casalote") || clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+  } else if (/\b(?:casalote|casa\s*lote|lote|lotes|terreno|terrenos|predio|land)\b/i.test(clean)) {
     propertyType = "land";
-  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
-    propertyType = "house";
   } else if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabanas") || clean.includes("cabin")) {
     propertyType = "cabin";
-  } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+  } else if (clean.includes("finca") || clean.includes("hacienda") || clean.includes("farm") || hasCampestreWithoutColina && !hasExplicitCasaCampestre && !clean.includes("apartamento") && !clean.includes("apto")) {
     propertyType = "farm";
+  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || hasExplicitCasaCampestre || hasExplicitVillaType) {
+    propertyType = "house";
   } else if (clean.includes("edificio") || clean.includes("building")) {
     propertyType = "building";
-  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
+  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel") || clean.includes("aparta hotel") || clean.includes("apartahotel")) {
     propertyType = "hotel";
   } else if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
     propertyType = "loft";
@@ -10865,14 +11199,34 @@ function extractFallbackDataFromText(text2) {
     } catch (e) {
     }
   }
+  if (!city && !zone) {
+    const veredaInClean = /\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(clean) ? findVeredaInText(clean) : null;
+    if (veredaInClean) {
+      const mpioTitle = veredaInClean.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      city = buscarLugarColombia(mpioTitle)?.nombreCanonico || mpioTitle;
+      const vdaTitle = veredaInClean.vereda.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      zone = zone || `Vereda ${vdaTitle}`;
+    }
+  }
   if (!city && zone) {
     const matchedItem = KNOWN_BARRIOS_SORTED_ITEMS.find((i) => i.canonical.toLowerCase() === zone.toLowerCase());
     if (matchedItem && matchedItem.city) {
       city = matchedItem.city;
+    } else if (matchedItem) {
+      city = "Bogot\xE1, D.C.";
     } else if (zone === "Ciudad Mel\xE9ndez") {
       city = "Cali";
     } else {
-      city = "Bogot\xE1, D.C.";
+      const lugarDeZona = buscarLugarColombia(zone);
+      const veredaMatch = !lugarDeZona ? findVeredaInText(zone) : null;
+      if (lugarDeZona?.nombreCanonico) {
+        city = lugarDeZona.nombreCanonico;
+      } else if (veredaMatch?.municipio) {
+        const mpioTitle = veredaMatch.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        city = buscarLugarColombia(mpioTitle)?.nombreCanonico || mpioTitle;
+      } else if (/\bbogot[aá]\b/i.test(clean) || !/\b(?:colombia|nacional|todo el pa[ií]s)\b/i.test(clean)) {
+        city = "Bogot\xE1, D.C.";
+      }
     }
   }
   const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
@@ -10992,9 +11346,13 @@ function translatePropertyType(type) {
     warehouse: "Bodega",
     office: "Oficina",
     farm: "Finca",
-    land: "Lote",
-    loft: "Loft",
-    consultorio: "Consultorio"
+    land: "Lote / Terreno",
+    loft: "Apartaestudio / Loft",
+    consultorio: "Consultorio",
+    commercial: "Local Comercial",
+    hotel: "Hotel / Hostal / Aparta Hotel",
+    cabin: "Caba\xF1a",
+    villa: "Villa"
   };
   return map[type?.toLowerCase()] || capitalize(type || "inmueble");
 }
@@ -11318,6 +11676,7 @@ var init_parsers = __esm({
     init_schema();
     init_colombianRealEstateParser();
     init_colombia_geography();
+    init_veredas_lookup();
     init_colombiaCatalog();
     init_matching();
     init_geo_lookup();
@@ -12184,11 +12543,44 @@ var init_heuristics = __esm({
 // server/_core/jania/vision.ts
 var vision_exports = {};
 __export(vision_exports, {
+  buildFlyerReactionEmoji: () => buildFlyerReactionEmoji,
+  detectImageMimeType: () => detectImageMimeType,
   extractFlyerVision: () => extractFlyerVision,
-  extractFlyerVisionSafely: () => extractFlyerVisionSafely
+  extractFlyerVisionSafely: () => extractFlyerVisionSafely,
+  isValidFlyerVisionExtraction: () => isValidFlyerVisionExtraction
 });
 import axios6 from "axios";
-async function extractFlyerVision(imageBufferBase64) {
+function detectImageMimeType(base64Data, explicitMimeType) {
+  if (explicitMimeType && explicitMimeType.toLowerCase().startsWith("image/")) {
+    return explicitMimeType.split(";")[0].trim().toLowerCase();
+  }
+  const clean = (base64Data || "").trim();
+  if (clean.startsWith("iVBORw0KGgo")) return "image/png";
+  if (clean.startsWith("UklGR")) return "image/webp";
+  if (clean.startsWith("R0lGOD")) return "image/gif";
+  return "image/jpeg";
+}
+function buildFlyerReactionEmoji(classification, transactionType) {
+  if (classification !== "INMUEBLE" && classification !== "REQUERIMIENTO") return void 0;
+  const tx = (transactionType || "").toLowerCase();
+  const isPermuta = tx.includes("permuta");
+  const isRent = tx === "arriendo" || tx === "arriendo_temporal";
+  if (classification === "INMUEBLE") {
+    return isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+  }
+  return isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+}
+function isValidFlyerVisionExtraction(parsed) {
+  if (!parsed || !parsed.isFlyerOrBanner) return false;
+  if (parsed.classification !== "INMUEBLE" && parsed.classification !== "REQUERIMIENTO") return false;
+  const verbatimLen = (parsed.flyerVerbatimText || "").trim().length;
+  if (verbatimLen >= 10) return true;
+  const hasSpecs = Boolean(
+    parsed.propertyType && (parsed.price || parsed.rentPrice || parsed.presupuestoMax || parsed.area || parsed.contactPhone || parsed.city || parsed.zone)
+  );
+  return hasSpecs;
+}
+async function extractFlyerVision(imageBufferBase64, explicitMimeType) {
   if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
   const cleanB64 = imageBufferBase64.replace(/\s+/g, "");
   const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(cleanB64);
@@ -12216,46 +12608,54 @@ async function extractFlyerVision(imageBufferBase64) {
     "gemini-flash-lite-latest",
     "gemini-flash-latest",
     "gemini-3.8-flash",
-    "gemini-3.5-flash-lite"
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash"
   ];
-  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en Colombia.
+  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en toda Colombia.
 Analiza la imagen enviada a un chat o grupo de WhatsApp.
 Determina si es:
-1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
-2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n CON TEXTO PUBLICITARIO IMPRESO).
+1. "INMUEBLE" (Oferta de venta, arriendo, venta o arriendo, permuta, arriendo con opci\xF3n de compra, temporal o aporte de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
+2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra/permuta/arrienda un inmueble para cliente, constructora o marca en expansi\xF3n CON TEXTO PUBLICITARIO IMPRESO).
 3. "CONSULTA_GENERAL" (Fotograf\xEDa ambiental com\xFAn sin texto publicitario sobreimpreso \u2014fachadas, salas, comedores, cocinas, ba\xF1os, piscinas, jardines, planos mudos\u2014, comprobante bancario, foto familiar, meme o ajeno a bienes ra\xEDces).
 
 REGLAS CR\xCDTICAS DE CLASIFICACI\xD3N:
 - REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGR\xC1FICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea, una persona, una mascota, un meme) SIN texto publicitario tipogr\xE1fico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
-- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
-- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
+- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA", "PERMUTAMOS POR", "ARRIENDO PARA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
+- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "SE PERMUTA", "PERMUTO", "DISPONIBLE", "OPEN HOUSE", "VENTA O PERMUTA" o describe un inmueble espec\xEDfico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
 
 Si es INMUEBLE o REQUERIMIENTO (exclusivamente si tiene texto sobreimpreso):
 - isFlyerOrBanner: boolean (true \xDANICAMENTE si tiene texto publicitario o comercial sobreimpreso con datos, false si es foto limpia ambiental).
 - classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
-- transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
-- propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
-- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Busco Lotes para Constructores", "Apartamento en Venta en Cedritos").
+- transactionType: "venta" | "arriendo" | "venta_o_arriendo" | "arriendo_temporal" | "arriendo_con_opcion_de_compra" | "permuta" | "venta_permuta" | "aporte".
+- propertyType: string (uno de los 19 tipos oficiales VECY: "apartaestudio", "apartamento", "apartamento_duplex", "penthouse", "penthouse_duplex", "bodega", "caba\xF1a", "casa", "casa_campestre", "casa_quinta", "edificio", "finca", "hostal", "hotel", "aparta_hotel", "local", "lote", "oficina", "consultorio", "villa").
+- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Busco Lotes para Constructores", "Finca en Venta/Permuta en Barichara").
 - price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro o no hay precio, poner null.
 - rentPrice: number en COP si es arriendo.
 - presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto m\xE1ximo de compra o canon m\xE1ximo si lo indica).
-- area: number en metros cuadrados m\xB2 (ej. 600, 450). Si es rango (ej. 600 - 1600), poner el m\xEDnimo o promedio.
+- presupuestoMin: number en COP si es REQUERIMIENTO con rango m\xEDnimo.
+- adminFee: number en COP si el flyer menciona valor de administraci\xF3n.
+- stratum: number (1 a 6 si menciona estrato).
+- area: number en metros cuadrados m\xB2 (ej. 600, 450; si dice hect\xE1reas multiplica por 10000, si dice fanegadas/plazas multiplica por 6400).
 - bedrooms: number (n\xFAmero de habitaciones o alcobas si aplica).
 - bathrooms: number (n\xFAmero de ba\xF1os si aplica).
 - garages: number (n\xFAmero de parqueaderos/garajes si aplica).
-- city: string (ciudad, ej. "Bogot\xE1", "Medell\xEDn", "Ch\xEDa", "Cali", "Nacional", etc.).
-- zone: string (barrio, sector o subzonas mencionadas, ej. "Pablo VI, Cedritos", "Suba", "Chic\xF3", etc.).
+- department: string (departamento en Colombia si aparece o se deduce del municipio, ej. "Santander", "Antioquia", "Cundinamarca").
+- city: string (ciudad o municipio en cualquier lugar de Colombia, ej. "Bogot\xE1", "Medell\xEDn", "Barichara", "Guatap\xE9", "Ch\xEDa", "Cali", etc.).
+- locality: string (localidad, comuna o corregimiento si aparece).
+- zone: string (barrio, vereda, caser\xEDo, sector o subzonas mencionadas, ej. "Vereda Fagua", "Corregimiento Santa Elena", "Cedritos", "El Poblado", etc.).
 - contactPhone: string (tel\xE9fono celular de 10 d\xEDgitos legible en el flyer, ej. "3112911829" o "573112911829").
 - contactName: string (nombre del asesor o inmobiliaria anunciante, ej. "Juan Pablo Tobo", "Inmo Propiedades").
 - flyerVerbatimText: string (transcripci\xF3n textual completa y fiel de TODO el texto legible en el flyer).
 
 Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
+  const resolvedMimeType = detectImageMimeType(cleanB64, explicitMimeType);
   const payload = {
     contents: [
       {
         parts: [
           { text: prompt },
-          { inline_data: { mime_type: "image/jpeg", data: imageBufferBase64 } }
+          { inline_data: { mime_type: resolvedMimeType, data: cleanB64 } }
         ]
       }
     ],
@@ -12267,11 +12667,13 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
   for (const model of models) {
     for (let i = 0; i < candidateKeys.length; i++) {
       const apiKey = candidateKeys[i];
+      if (geminiKeyManager.isKeyInCooldown(apiKey)) continue;
       assertKeyAllowedForExecution(apiKey);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       try {
         console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
-        const response = await axios6.post(apiUrl, payload, { timeout: 8e3 });
+        const response = await axios6.post(apiUrl, payload, { timeout: 15e3 });
+        geminiKeyManager.recordLlmUsage(geminiKeyManager.isPaidKey(apiKey));
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
           let parsed;
@@ -12281,17 +12683,9 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
             console.warn(`[JanIA-Vision] Error parseando respuesta JSON de ${model}:`, jsonErr);
             continue;
           }
-          const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
-          const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
+          const isGenuineFlyer = isValidFlyerVisionExtraction(parsed);
           if (parsed && isGenuineFlyer) {
-            const tx = (parsed.transactionType || "").toLowerCase();
-            const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
-            const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
-            if (parsed.classification === "INMUEBLE") {
-              parsed.reactionEmoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
-            } else if (parsed.classification === "REQUERIMIENTO") {
-              parsed.reactionEmoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
-            }
+            parsed.reactionEmoji = buildFlyerReactionEmoji(parsed.classification, parsed.transactionType);
             console.log(`[JanIA-Vision] \u2705 Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ""}"`);
             return parsed;
           } else {
@@ -12306,6 +12700,9 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
         }
       } catch (err) {
         const status = err.response?.status;
+        if (status === 429 || status === 503) {
+          geminiKeyManager.markKeyCooldown(apiKey, 60, `Vision HTTP ${status}`);
+        }
         console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}). Pasando a fallback.`);
         continue;
       }
@@ -12319,9 +12716,9 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
     flyerVerbatimText: ""
   };
 }
-async function extractFlyerVisionSafely(imageBufferBase64) {
+async function extractFlyerVisionSafely(imageBufferBase64, explicitMimeType) {
   try {
-    const res = await extractFlyerVision(imageBufferBase64);
+    const res = await extractFlyerVision(imageBufferBase64, explicitMimeType);
     if (res) return res;
   } catch (err) {
     console.error("[JanIA-Vision-Safe] Excepci\xF3n capturada en visi\xF3n segura:", err?.message || err);
@@ -12341,8 +12738,8 @@ var init_vision = __esm({
 });
 
 // server/_core/jania/prompts.ts
-import fs5 from "fs";
-import path5 from "path";
+import fs6 from "fs";
+import path6 from "path";
 function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, pdfBuffer, extracted, isGeoInvalid, intro, firstName) {
   const isSocialMedia = /instagram\.com|facebook\.com|fb\.watch|tiktok\.com|youtube\.com|youtu\.be/i.test(text2);
   if (isSocialMedia) {
@@ -12622,13 +13019,13 @@ function getVecyInstitutionalKnowledge() {
   if (vecyKnowledgeCache) return vecyKnowledgeCache;
   try {
     const candidates = [
-      path5.resolve(process.cwd(), "server/_core/jania/prompts/conocimiento_vecy.md"),
-      path5.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md"),
-      path5.resolve(process.cwd(), "conocimiento_vecy.md")
+      path6.resolve(process.cwd(), "server/_core/jania/prompts/conocimiento_vecy.md"),
+      path6.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md"),
+      path6.resolve(process.cwd(), "conocimiento_vecy.md")
     ];
     for (const p of candidates) {
-      if (fs5.existsSync(p)) {
-        vecyKnowledgeCache = fs5.readFileSync(p, "utf-8");
+      if (fs6.existsSync(p)) {
+        vecyKnowledgeCache = fs6.readFileSync(p, "utf-8");
         return vecyKnowledgeCache;
       }
     }
@@ -12643,20 +13040,20 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path5.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs5.readFileSync(path5.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path6.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs6.readFileSync(path6.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs6.readFileSync(path6.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      const legalPrompt = fs6.readFileSync(path6.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
       specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs6.readFileSync(path6.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs6.readFileSync(path6.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs6.readFileSync(path6.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const vecyKnowledge = getVecyInstitutionalKnowledge();
     const fullPrompt = `${JANIA_ARGON_COGNITIVE_CORE}
@@ -13424,8 +13821,8 @@ __export(legalDocumentPdfService_exports, {
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import QRCode from "qrcode";
 import crypto2 from "node:crypto";
-import fs6 from "node:fs";
-import path6 from "node:path";
+import fs7 from "node:fs";
+import path7 from "node:path";
 function sanitizePdfWinAnsiText(input) {
   if (!input) return "";
   return input.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/[•▪▸►]/g, "-").replace(/[—–]/g, "-").replace(/[“”«»]/g, '"').replace(/[‘’]/g, "'").replace(/m²/g, "m2").replace(/[^\x20-\x7E\xA1-\xFF\n\r\t]/g, "").replace(/[ \t]{2,}/g, " ").trim();
@@ -13878,14 +14275,14 @@ async function initVecyPdfScaffold(options) {
   const maxWidth = pageWidth - marginX * 2;
   let logoImage = null;
   const logoCandidates = [
-    path6.resolve(process.cwd(), "client/public/assets/logo_vecy_header.png"),
-    path6.resolve(process.cwd(), "assets/logo_vecy_header.png"),
-    path6.resolve(process.cwd(), "client/public/logo-vecy.png")
+    path7.resolve(process.cwd(), "client/public/assets/logo_vecy_header.png"),
+    path7.resolve(process.cwd(), "assets/logo_vecy_header.png"),
+    path7.resolve(process.cwd(), "client/public/logo-vecy.png")
   ];
   for (const lp of logoCandidates) {
-    if (fs6.existsSync(lp)) {
+    if (fs7.existsSync(lp)) {
       try {
-        const logoBuf = fs6.readFileSync(lp);
+        const logoBuf = fs7.readFileSync(lp);
         logoImage = await pdfDoc.embedPng(logoBuf);
         break;
       } catch {
@@ -15564,17 +15961,17 @@ __export(stickerService_exports, {
   selectContextualStickerForDm: () => selectContextualStickerForDm,
   setLatestDmSticker: () => setLatestDmSticker
 });
-import fs7 from "node:fs";
-import path7 from "node:path";
+import fs8 from "node:fs";
+import path8 from "node:path";
 function resolveStickerFilePath(filename) {
   const candidateDirs = [
-    path7.resolve(process.cwd(), "client", "public", "assets", "stickers"),
-    path7.resolve(process.cwd(), "assets", "stickers"),
-    path7.resolve(process.cwd(), "dist", "assets", "stickers")
+    path8.resolve(process.cwd(), "client", "public", "assets", "stickers"),
+    path8.resolve(process.cwd(), "assets", "stickers"),
+    path8.resolve(process.cwd(), "dist", "assets", "stickers")
   ];
   for (const dir of candidateDirs) {
-    const fullPath = path7.join(dir, filename);
-    if (fs7.existsSync(fullPath)) {
+    const fullPath = path8.join(dir, filename);
+    if (fs8.existsSync(fullPath)) {
       return fullPath;
     }
   }
@@ -15590,7 +15987,7 @@ function getJaniaStickerByKey(key) {
   const filePath = resolveStickerFilePath(meta.filename);
   if (!filePath) return null;
   try {
-    const buffer = fs7.readFileSync(filePath);
+    const buffer = fs8.readFileSync(filePath);
     if (!buffer || buffer.length === 0) return null;
     const loaded = {
       key: meta.key,
@@ -15826,8 +16223,8 @@ __export(creativeStudioImageService_exports, {
   queueCreativeImageForDm: () => queueCreativeImageForDm,
   resolveSacredCanonBaseImagePath: () => resolveSacredCanonBaseImagePath
 });
-import fs8 from "fs";
-import path8 from "path";
+import fs9 from "fs";
+import path9 from "path";
 import { execFileSync } from "child_process";
 function queueCreativeImageForDm(phone, img) {
   const clean = (phone || "").replace(/\D/g, "") || phone;
@@ -15906,8 +16303,8 @@ function extractKeyBulletsFromCaption(captionText) {
 }
 function resolveSacredCanonBaseImagePath(themeKey, dayOfMonth) {
   const normalized = (themeKey || "").toLowerCase();
-  const dir1x1 = path8.resolve(process.cwd(), "client/public/assets/channel_1x1");
-  const janiaDir = path8.resolve(process.cwd(), "client/public/assets/jania");
+  const dir1x1 = path9.resolve(process.cwd(), "client/public/assets/channel_1x1");
+  const janiaDir = path9.resolve(process.cwd(), "client/public/assets/jania");
   const sacredRotation = [
     "jania_anfitriona_cafe_1x1.jpg",
     "jania_couture_oro_liquido_1x1.png",
@@ -15937,10 +16334,10 @@ function resolveSacredCanonBaseImagePath(themeKey, dayOfMonth) {
     chosen = "jania_couture_magma_volcanico_1x1.jpg";
   }
   for (const dir of [dir1x1, janiaDir]) {
-    const candidate = path8.join(dir, chosen);
-    if (fs8.existsSync(candidate)) return candidate;
+    const candidate = path9.join(dir, chosen);
+    if (fs9.existsSync(candidate)) return candidate;
   }
-  return path8.join(dir1x1, "jania_legal_due_diligence_1x1.jpg");
+  return path9.join(dir1x1, "jania_legal_due_diligence_1x1.jpg");
 }
 function resolveThemeBadgeLabel(themeKey) {
   const n = (themeKey || "").toLowerCase();
@@ -16055,7 +16452,7 @@ final_img.save(data["outputImagePath"], "JPEG", quality=92)
       stdio: "ignore",
       timeout: 8e3
     });
-    return fs8.existsSync(params.outputImagePath);
+    return fs9.existsSync(params.outputImagePath);
   } catch (err) {
     console.warn("[CREATIVE-STUDIO] Pillow composition warning:", err?.message);
     return false;
@@ -16068,12 +16465,12 @@ async function generateDailyChannelEditorialImage(options) {
   const titleLines = wrapLines(topicTitle || "Estrategia Inmobiliaria de Alto Valor", 34, 2);
   const bullets = extractKeyBulletsFromCaption(captionText);
   try {
-    const outDir = path8.resolve(process.cwd(), "client/public/assets/broadcast");
-    if (!fs8.existsSync(outDir)) {
-      fs8.mkdirSync(outDir, { recursive: true });
+    const outDir = path9.resolve(process.cwd(), "client/public/assets/broadcast");
+    if (!fs9.existsSync(outDir)) {
+      fs9.mkdirSync(outDir, { recursive: true });
     }
     const safeTheme = (themeKey || "general").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
-    const outFile = path8.join(outDir, `editorial_canal_${dateBogota}_dia_${dayOfMonth}_${safeTheme}.jpg`);
+    const outFile = path9.join(outDir, `editorial_canal_${dateBogota}_dia_${dayOfMonth}_${safeTheme}.jpg`);
     const ok = renderEditorialImageWithPillow({
       inputImagePath: baseImagePath,
       outputImagePath: outFile,
@@ -16085,10 +16482,10 @@ async function generateDailyChannelEditorialImage(options) {
       footerSub: "Aval\xFAos ACM \u2022 Estudio de T\xEDtulos \u2022 Minutas PDF \u2022 Flyers IA \u2022 Matching 40/20/40",
       footerPill: "BR\xD3KER +57 316 656 9719"
     });
-    if (ok && fs8.existsSync(outFile)) {
+    if (ok && fs9.existsSync(outFile)) {
       return outFile;
     }
-    fs8.copyFileSync(baseImagePath, outFile);
+    fs9.copyFileSync(baseImagePath, outFile);
     return outFile;
   } catch (err) {
     console.warn("[CREATIVE-STUDIO] Error generando portada editorial din\xE1mica, usando canon base:", err?.message);
@@ -16100,12 +16497,12 @@ async function generateCustomUserCreativeImage(input) {
   const requestedType = input.assetType || input.tipoPieza || "";
   const assetType = requestedType || detectCreativeAssetType(rawPrompt);
   const cleanPrompt = stripEmojisAndMarkdown(rawPrompt);
-  const officePath = path8.resolve(
+  const officePath = path9.resolve(
     process.cwd(),
     "client/public/assets/channel_1x1/vecy_oficina_institucional.jpg"
   );
   const wantsJania = Boolean(input.includeJaniaAvatar) || /\b(jania|avatar|asesora|ejecutiva)\b/i.test(cleanPrompt);
-  const basePath = wantsJania ? resolveSacredCanonBaseImagePath(cleanPrompt) : fs8.existsSync(officePath) ? officePath : resolveSacredCanonBaseImagePath(cleanPrompt);
+  const basePath = wantsJania ? resolveSacredCanonBaseImagePath(cleanPrompt) : fs9.existsSync(officePath) ? officePath : resolveSacredCanonBaseImagePath(cleanPrompt);
   const badgeMap = {
     flyer_inmueble: "FLYER INMOBILIARIO DE \xC9LITE",
     banner_comercial: "BANNER COMERCIAL INMOBILIARIO",
@@ -16123,12 +16520,12 @@ async function generateCustomUserCreativeImage(input) {
   const bullets = customBullets && customBullets.length > 0 ? customBullets.slice(0, 4) : extractBulletsFromUserPrompt(cleanPrompt);
   const contactFooter = input.contactInfo?.trim() || input.contactPhone?.trim() || "Informes y Citas \u2022 VECY BIENES RA\xCDCES \u2022 +57 316 656 9719";
   const headlineLines = wrapLines(headlineText, 30, 2);
-  const outDir = path8.resolve(process.cwd(), "client/public/assets/broadcast");
-  if (!fs8.existsSync(outDir)) {
-    fs8.mkdirSync(outDir, { recursive: true });
+  const outDir = path9.resolve(process.cwd(), "client/public/assets/broadcast");
+  if (!fs9.existsSync(outDir)) {
+    fs9.mkdirSync(outDir, { recursive: true });
   }
   const fileName = `jania_creativo_${assetType}_${Date.now()}.jpg`;
-  const filePath = path8.join(outDir, fileName);
+  const filePath = path9.join(outDir, fileName);
   const ok = renderEditorialImageWithPillow({
     inputImagePath: basePath,
     outputImagePath: filePath,
@@ -16141,10 +16538,10 @@ async function generateCustomUserCreativeImage(input) {
     footerSub: "ESTUDIO CREATIVO IA DE JANIA \u2022 VECY BIENES RA\xCDCES",
     footerPill: "WA +57 319 291 9978"
   });
-  if (!ok || !fs8.existsSync(filePath)) {
-    fs8.copyFileSync(basePath, filePath);
+  if (!ok || !fs9.existsSync(filePath)) {
+    fs9.copyFileSync(basePath, filePath);
   }
-  const finalBuffer = fs8.readFileSync(filePath);
+  const finalBuffer = fs9.readFileSync(filePath);
   const caption = `\u{1F3A8} *ESTUDIO CREATIVO IA DE JANIA \u2014 PIEZA LISTA*
 
 \u{1F4CC} *Formato:* ${badgeText}
@@ -20550,8 +20947,8 @@ __export(iduValorizacionService_exports, {
   isIduInquiry: () => isIduInquiry,
   setPendingIduSession: () => setPendingIduSession
 });
-import fs9 from "fs";
-import path9 from "path";
+import fs10 from "fs";
+import path10 from "path";
 import os2 from "os";
 function hasPendingIduSession(senderId) {
   const session = pendingIduSessions.get(senderId);
@@ -20624,15 +21021,15 @@ function extractChipForIduValorizacion(text2) {
 }
 async function downloadIduCertificatePdf(chip) {
   const cleanChip = chip.toUpperCase().trim();
-  const downloadDir = path9.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const downloadDir = path10.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
   try {
-    fs9.mkdirSync(downloadDir, { recursive: true });
+    fs10.mkdirSync(downloadDir, { recursive: true });
   } catch (_) {
   }
   let browser = null;
   try {
     const puppeteer = (await import("puppeteer")).default;
-    const executablePath = fs9.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const executablePath = fs10.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -20690,16 +21087,16 @@ async function downloadIduCertificatePdf(chip) {
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 1e3));
-      if (fs9.existsSync(downloadDir)) {
-        const files = fs9.readdirSync(downloadDir);
+      if (fs10.existsSync(downloadDir)) {
+        const files = fs10.readdirSync(downloadDir);
         const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
         if (pdfFile) {
-          downloadedFilePath = path9.join(downloadDir, pdfFile);
+          downloadedFilePath = path10.join(downloadDir, pdfFile);
           break;
         }
       }
     }
-    if (!downloadedFilePath || !fs9.existsSync(downloadedFilePath)) {
+    if (!downloadedFilePath || !fs10.existsSync(downloadedFilePath)) {
       return {
         success: false,
         errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
@@ -20707,7 +21104,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: predioData.direccion
       };
     }
-    const pdfBuffer = fs9.readFileSync(downloadedFilePath);
+    const pdfBuffer = fs10.readFileSync(downloadedFilePath);
     if (!pdfBuffer || pdfBuffer.length < 500) {
       return {
         success: false,
@@ -20738,8 +21135,8 @@ async function downloadIduCertificatePdf(chip) {
       }
     }
     try {
-      if (fs9.existsSync(downloadDir)) {
-        fs9.rmSync(downloadDir, { recursive: true, force: true });
+      if (fs10.existsSync(downloadDir)) {
+        fs10.rmSync(downloadDir, { recursive: true, force: true });
       }
     } catch (_) {
     }
@@ -25218,14 +25615,14 @@ var init_trustedContacts = __esm({
 });
 
 // server/_core/jania/founderKnowledgeService.ts
-import fs10 from "fs";
-import path10 from "path";
+import fs11 from "fs";
+import path11 from "path";
 function ensureLoaded() {
   if (isLoaded) return;
   isLoaded = true;
   try {
-    if (fs10.existsSync(TEACHINGS_FILE)) {
-      const content = fs10.readFileSync(TEACHINGS_FILE, "utf-8");
+    if (fs11.existsSync(TEACHINGS_FILE)) {
+      const content = fs11.readFileSync(TEACHINGS_FILE, "utf-8");
       const list = JSON.parse(content);
       if (Array.isArray(list) && list.length > 0) {
         memoryTeachings = list;
@@ -25250,11 +25647,11 @@ function ensureLoaded() {
 }
 function persistToDisk() {
   try {
-    const dir = path10.dirname(TEACHINGS_FILE);
-    if (!fs10.existsSync(dir)) {
-      fs10.mkdirSync(dir, { recursive: true });
+    const dir = path11.dirname(TEACHINGS_FILE);
+    if (!fs11.existsSync(dir)) {
+      fs11.mkdirSync(dir, { recursive: true });
     }
-    fs10.writeFileSync(TEACHINGS_FILE, JSON.stringify(memoryTeachings, null, 2), "utf-8");
+    fs11.writeFileSync(TEACHINGS_FILE, JSON.stringify(memoryTeachings, null, 2), "utf-8");
   } catch (err) {
     console.warn("[founderKnowledgeService] Error persistiendo tips a disco:", err?.message);
   }
@@ -25317,7 +25714,7 @@ var TEACHINGS_FILE, memoryTeachings, isLoaded, SEED_TEACHINGS;
 var init_founderKnowledgeService = __esm({
   "server/_core/jania/founderKnowledgeService.ts"() {
     "use strict";
-    TEACHINGS_FILE = path10.resolve(process.cwd(), "data/jania_founder_teachings.json");
+    TEACHINGS_FILE = path11.resolve(process.cwd(), "data/jania_founder_teachings.json");
     memoryTeachings = [];
     isLoaded = false;
     SEED_TEACHINGS = [
@@ -26109,6 +26506,16 @@ var init_founderKnowledgeService = __esm({
         directive: "JanIA opera con libre albedr\xEDo y m\xE1xima claridad en los 3 grupos oficiales (Grupo 1: 'VECY INMO OFERTAS Y DEMANDAS COLOMBIA' exclusivo para ofertas y demandas; Grupo 2: 'VECY TIPS/NOTICIAS/CONSULTAS INMOBILIARIAS' consultorio jur\xEDdico, tributario, aval\xFAos, gu\xEDas y arriendos; Grupo 3: 'PROYECTO: VECYBIENESRAICES' foro del proyecto, comparativa de portales y pedagog\xEDa). Prohibido secuestrar consultas reales de arriendo o documentos con gu\xEDas gen\xE9ricas de c\xE9dula (isServiceHelpRequest). Ante dudas de arriendo sin p\xF3liza y dep\xF3sito, recordar que el Art. 16 de la Ley 820 de 2003 proh\xEDbe dep\xF3sitos en dinero en vivienda urbana, orientar sobre codeudor/documentos/verificaci\xF3n y moderar/eliminar spam, links ajenos y publicaciones en grupo equivocado guiando con educaci\xF3n y 1 pregunta a la vez.",
         rawText: "Blindaje v34.27: Fin secuestro isServiceHelpRequest (caso Lia Janeth Ley 820/2003), moderaci\xF3n y borrado unificados en los 3 grupos oficiales, detecci\xF3n NFKC y gu\xEDas breves paso a paso.",
         createdAt: "2026-11-18T14:20:00.000Z",
+        active: true
+      },
+      {
+        id: "seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "573192919978@s.whatsapp.net",
+        topic: "Captura Total de Flyers/Im\xE1genes, Todos los Tipos/Negocios (Venta/Arriendo/Permuta) y Cobertura 100% Nacional Colombia (v34.28)",
+        directive: "JanIA y el motor Match DEBEN capturar, transcribir y cruzar SIEMPRE cualquier imagen o flyer enviado por WhatsApp (incluso sin pie de foto o enviado como documento HD image/*) en Ofertas y Demandas de Venta, Arriendo y Permuta. Todos los 19 tipos comerciales y 12 categor\xEDas de BD (incluyendo Villa, Casa Campestre <-> Finca, Caba\xF1a, Consultorio, Oficina, Local, Bodega, Lote, Hotel/Hostal/Aparta Hotel, Edificio, Apartaestudio y Apartamentos/PentHouse/D\xFAplex) operan sin falsos positivos ('localidad' o 'Colina Campestre') y con cobertura total sobre los 32 departamentos + Bogot\xE1 D.C., los 1.122 municipios DIVIPOLA, regiones colombianas y las 33.434 veredas/corregimientos/caser\xEDos IGAC.",
+        rawText: "Blindaje v34.28: Captura total de flyers sin caption o como documento, resiliencia Vision (JPEG/PNG/WebP, cooldowns, 8 negocios, 19+ tipos), match Casa Campestre <-> Finca, Villa y cobertura nacional DIVIPOLA + IGAC.",
+        createdAt: "2026-11-18T15:45:00.000Z",
         active: true
       }
     ];
@@ -27289,8 +27696,8 @@ __export(storage_exports, {
   storageGet: () => storageGet,
   storagePut: () => storagePut
 });
-import fs11 from "fs";
-import path11 from "path";
+import fs12 from "fs";
+import path12 from "path";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
@@ -27300,13 +27707,13 @@ function buildAbsoluteLocalUrl(key) {
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
   const key = normalizeKey(relKey);
-  const targetFilePath = path11.join(uploadsDir, key);
-  const targetSubdir = path11.dirname(targetFilePath);
-  if (!fs11.existsSync(targetSubdir)) {
-    fs11.mkdirSync(targetSubdir, { recursive: true });
+  const targetFilePath = path12.join(uploadsDir, key);
+  const targetSubdir = path12.dirname(targetFilePath);
+  if (!fs12.existsSync(targetSubdir)) {
+    fs12.mkdirSync(targetSubdir, { recursive: true });
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs11.writeFileSync(targetFilePath, buffer);
+  fs12.writeFileSync(targetFilePath, buffer);
   const publicUrl = buildAbsoluteLocalUrl(key);
   console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
   return { key, url: `/uploads/${key}` };
@@ -27322,56 +27729,10 @@ var uploadsDir;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
-    uploadsDir = path11.resolve(process.cwd(), "public/uploads");
-    if (!fs11.existsSync(uploadsDir)) {
-      fs11.mkdirSync(uploadsDir, { recursive: true });
+    uploadsDir = path12.resolve(process.cwd(), "public/uploads");
+    if (!fs12.existsSync(uploadsDir)) {
+      fs12.mkdirSync(uploadsDir, { recursive: true });
     }
-  }
-});
-
-// server/_core/divipola.ts
-import fs12 from "fs";
-import path12 from "path";
-var municipalitiesMap, initDivipola, validateCity;
-var init_divipola = __esm({
-  "server/_core/divipola.ts"() {
-    "use strict";
-    municipalitiesMap = /* @__PURE__ */ new Map();
-    initDivipola = () => {
-      try {
-        const jsonPath = path12.join(process.cwd(), "server", "data", "divipola.json");
-        municipalitiesMap.clear();
-        if (!fs12.existsSync(jsonPath)) {
-          console.warn("Divipola JSON data file not found at", jsonPath);
-          return;
-        }
-        const raw = fs12.readFileSync(jsonPath, "utf-8");
-        const list = JSON.parse(raw);
-        for (const item of list) {
-          if (item.municipio) {
-            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-            municipalitiesMap.set(normalizedKey, titleCased);
-          }
-        }
-        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
-        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
-      } catch (err) {
-        console.error("[Divipola] Error loading Divipola:", err);
-      }
-    };
-    validateCity = (cityName) => {
-      if (!cityName || typeof cityName !== "string") return null;
-      if (municipalitiesMap.size === 0) {
-        initDivipola();
-      }
-      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      return municipalitiesMap.get(normalized) || null;
-    };
   }
 });
 
@@ -27498,16 +27859,16 @@ function sanitizePropertyType(type) {
   const t2 = type.toLowerCase().trim();
   if (t2 === "consultorio" || t2.includes("consultorio") || t2.includes("odontol") || t2.includes("m\xE9dic") || t2.includes("medic") || t2 === "office_medical") return "consultorio";
   if (t2 === "cabin" || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("caba\xF1as") || t2.includes("cabanas")) return "cabin";
-  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre")) return "house";
+  if (t2 === "farm" || t2 === "finca") return "farm";
+  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre") || /\bvilla\b/.test(t2)) return "house";
   if (t2 === "building" || t2 === "edificio") return "building";
   if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
-  if (t2 === "farm" || t2 === "finca") return "farm";
-  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
+  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel") || t2.includes("aparta_hotel") || t2.includes("aparta hotel")) return "hotel";
   if (t2 === "office" || t2 === "oficina" || t2.includes("oficina")) return "office";
-  if (t2 === "land" || t2 === "lote" || t2 === "terreno" || t2.includes("lote") || t2.includes("terreno")) return "land";
-  if (t2 === "commercial" || t2 === "local" || t2 === "locales" || t2.includes("local comercial") || t2.includes("locales comerciales") || t2 === "comercial" || t2.includes("local")) return "commercial";
+  if (t2 === "land" || t2 === "lote" || t2 === "terreno" || /\b(?:lote|lotes|terreno|terrenos|casalote)\b/.test(t2)) return "land";
+  if (t2 === "commercial" || t2 === "comercial" || t2 === "local" || t2 === "locales" || /\b(?:local|locales)\b/.test(t2)) return "commercial";
   if (t2 === "loft" || t2.includes("loft") || t2.includes("apartaestudio") || t2.includes("apartasuite")) return "loft";
-  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apto") || t2.includes("apartamento") || t2.includes("penthouse")) return "apartment";
+  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apto") || t2.includes("apartamento") || t2.includes("penthouse") || t2.includes("duplex") || t2.includes("d\xFAplex")) return "apartment";
   return "apartment";
 }
 function sanitizeTransactionType(type) {
@@ -28224,10 +28585,11 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
   const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
   const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
+  const resolvedReqCityFallback = data.ciudadDeseada || data.addressCity || data.city || fallbackReqD.city || buscarLugarColombia(rawCombinedReqText)?.nombreCanonico || "Bogot\xE1";
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.addressCity || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
+    ciudadDeseada: safeSlice(resolvedReqCityFallback, 100) || "Bogot\xE1",
     zonaDeseada: (() => {
       const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
       if (explicit && !isCityOrGenericZone(explicit)) {
@@ -29014,7 +29376,7 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
         };
       }
     }
-    const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
+    const isGenuineFlyerData = isValidFlyerVisionExtraction(flyerData);
     if (isGenuineFlyerData && flyerData) {
       const verbatim = flyerData.flyerVerbatimText || "";
       if (verbatim) {
@@ -29150,6 +29512,11 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       } else {
         emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
       }
+      const combinedFlyerText = [text2, fd.flyerVerbatimText].filter(Boolean).join("\n").trim();
+      const fbEnrich = combinedFlyerText ? extractFallbackDataFromText(combinedFlyerText) : null;
+      const lugarEnrich = buscarLugarColombia(fd.city || fd.zone || combinedFlyerText || "");
+      const resolvedFlyerCity = fd.city || fbEnrich?.city || lugarEnrich?.nombreCanonico || "Bogot\xE1, D.C.";
+      const resolvedFlyerZone = fd.zone || fbEnrich?.zone || "";
       result = {
         classification: fd.classification,
         response: `Ficha t\xE9cnica capturada exitosamente desde el flyer comercial: ${fd.title || ""}`,
@@ -29158,20 +29525,25 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         flyerVerbatimText: fd.flyerVerbatimText,
         extractedData: {
           title: fd.title,
-          propertyType: fd.propertyType,
-          transactionType: fd.transactionType,
-          price: fd.price,
-          rentPrice: fd.rentPrice,
-          presupuestoMax: fd.presupuestoMax,
-          area: fd.area,
-          bedrooms: fd.bedrooms,
-          bathrooms: fd.bathrooms,
-          garages: fd.garages,
-          city: fd.city || "Bogot\xE1, D.C.",
-          zone: fd.zone,
+          propertyType: fd.propertyType || fbEnrich?.propertyType,
+          transactionType: fd.transactionType || fbEnrich?.transactionType,
+          price: fd.price || fbEnrich?.price || void 0,
+          rentPrice: fd.rentPrice || fbEnrich?.rentPrice || void 0,
+          presupuestoMax: fd.presupuestoMax || fbEnrich?.presupuestoMax || void 0,
+          presupuestoMin: fd.presupuestoMin || fbEnrich?.presupuestoMin || void 0,
+          adminFee: fd.adminFee || fbEnrich?.adminFee || void 0,
+          stratum: fd.stratum || void 0,
+          area: fd.area || fbEnrich?.areaTotal || void 0,
+          bedrooms: fd.bedrooms ?? void 0,
+          bathrooms: fd.bathrooms ?? void 0,
+          garages: fd.garages ?? void 0,
+          department: fd.department || lugarEnrich?.departamento || void 0,
+          locality: fd.locality || void 0,
+          city: resolvedFlyerCity,
+          zone: resolvedFlyerZone,
           contactPhone: fd.contactPhone,
           contactName: fd.contactName,
-          rawText: fd.flyerVerbatimText || messageToProcess
+          rawText: combinedFlyerText || fd.flyerVerbatimText || messageToProcess
         },
         mentions: []
       };
@@ -29595,7 +29967,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
       if (isImageOnlyProp) {
-        const hasPropSpecs = Number(extracted.price || 0) > 0 || Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0) || !!extracted.zone && Number(extracted.bedrooms || 0) > 0;
+        const hasPropSpecs = Number(extracted.price || 0) > 0 || Number(extracted.rentPrice || 0) > 0 || Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0 || ["land", "farm", "warehouse", "office", "consultorio", "commercial", "building", "hotel", "cabin"].includes(String(extracted.propertyType || "").toLowerCase())) || !!(extracted.zone || extracted.city) && (Number(extracted.bedrooms || 0) > 0 || String(extracted.transactionType || "").toLowerCase().includes("permuta") || !!extracted.propertyType);
         if (!hasPropSpecs && !isFlyerDetected) {
           console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene ficha t\xE9cnica ni datos comerciales legibles sobreimpresos.`);
           result.inserted = false;
@@ -29680,7 +30052,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
       if (isImageOnlyReq) {
-        const hasReqSpecs = Number(extracted.presupuestoMax || extracted.price || 0) > 0 || !!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0) || extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title);
+        const hasReqSpecs = Number(extracted.presupuestoMax || extracted.price || 0) > 0 || !!(extracted.zonaDeseada || extracted.zone || extracted.city) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0 || String(extracted.transactionType || "").toLowerCase().includes("permuta") || !!extracted.propertyType) || extracted.title && /compra|busco|requerimiento|solicitud|presupuesto|permuta|arriendo/i.test(extracted.title);
         if (!hasReqSpecs && !isFlyerDetectedReq) {
           console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
           result.inserted = false;
@@ -29848,16 +30220,19 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
         const isRent = fbData.transactionType === "arriendo" || !isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler"));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+        const fbReqCity = fbData.city || buscarLugarColombia(rawMsg)?.nombreCanonico || "Bogot\xE1, D.C.";
+        const fbReqZone = fbData.zone || fbReqCity;
         const savedReq = await saveRequirement({
           propertyType: fbData.propertyType || "apartment",
           tipoInmuebleDeseado: fbData.propertyType || "apartment",
           transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
           tipoNegocioDeseado: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
-          name: `Requerimiento ${fbData.propertyType || "Inmueble"} en Bogot\xE1`,
+          name: `Requerimiento ${fbData.propertyType || "Inmueble"} en ${fbReqZone}`,
           presupuestoMax: String(fbData.presupuestoMax || 0),
           presupuestoMin: String(fbData.presupuestoMin || 0),
           adminFeeMax: fbData.adminFee ? String(fbData.adminFee) : void 0,
-          zonaDeseada: "Bogot\xE1",
+          city: fbReqCity,
+          zonaDeseada: fbReqZone,
           idUsuarioWhatsapp: rawPhone,
           rawText: rawMsg,
           origenTipo,
@@ -29879,21 +30254,23 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
           reactionEmoji: emoji,
           inserted: true
         };
-      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
+      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("permuta") || cleanLower.includes("permuto") || cleanLower.includes("apto") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("lote") || cleanLower.includes("finca") || cleanLower.includes("oficina") || /\blocal(?:es)?\b/i.test(cleanLower) || cleanLower.includes("consultorio") || cleanLower.includes("caba\xF1a") || cleanLower.includes("cabana") || cleanLower.includes("villa") || cleanLower.includes("hotel") || cleanLower.includes("edificio")) {
         const isExplicitVentaFb = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta)\b/i.test(cleanLower);
         const isRent = fbData.transactionType === "arriendo" || !isExplicitVentaFb && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler"));
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+        const fbPropCity = fbData.city || buscarLugarColombia(rawMsg)?.nombreCanonico || "Bogot\xE1, D.C.";
+        const fbPropZone = fbData.zone || fbPropCity;
         const savedProp = await saveProperty({
           propertyType: fbData.propertyType || "apartment",
           transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
-          name: `Inmueble en Bogot\xE1`,
+          name: `${translatePropertyType(fbData.propertyType || "apartment")} en ${fbPropZone}`,
           price: String(fbData.price || 0),
           rentPrice: fbData.rentPrice ? String(fbData.rentPrice) : void 0,
           adminFee: fbData.adminFee ? String(fbData.adminFee) : void 0,
           areaTotal: String(fbData.areaTotal || 0),
-          zone: "Bogot\xE1",
-          city: "Bogot\xE1, D.C.",
+          zone: fbPropZone,
+          city: fbPropCity,
           idUsuarioWhatsapp: rawPhone,
           rawText: rawMsg,
           origenTipo,
@@ -29931,6 +30308,8 @@ var init_propertiesHandler = __esm({
     init_storage();
     init_geography();
     init_divipola();
+    init_colombia_geography();
+    init_vision();
     init_colombianRealEstateParser();
     init_matching();
     init_voiceTranscription();
@@ -41386,6 +41765,7 @@ __export(janIA_exports, {
   buildChaloJokeResponse: () => buildChaloJokeResponse,
   buildFamilyWarmWelcomeMessage: () => buildFamilyWarmWelcomeMessage,
   buildFlyerBreakdownText: () => buildFlyerBreakdownText,
+  buildFlyerReactionEmoji: () => buildFlyerReactionEmoji,
   buildGroupIncompleteMessage: () => buildGroupIncompleteMessage,
   buildIncompleteDataMessage: () => buildIncompleteDataMessage,
   buildJonathanCreditResponse: () => buildJonathanCreditResponse,
@@ -41404,6 +41784,7 @@ __export(janIA_exports, {
   consultingConversationHistory: () => consultingConversationHistory,
   deletePendingSession: () => deletePendingSession,
   detectCreativeAssetType: () => detectCreativeAssetType,
+  detectImageMimeType: () => detectImageMimeType,
   detectLegalDocumentTypeFromText: () => detectLegalDocumentTypeFromText,
   detectUserBusinessRoleFromText: () => detectUserBusinessRoleFromText,
   dispatchMessageRecadoToEduardo: () => dispatchMessageRecadoToEduardo,
@@ -41480,6 +41861,7 @@ __export(janIA_exports, {
   isShortSignalOrSticker: () => isShortSignalOrSticker,
   isSilencedLegalCaseAccount: () => isSilencedLegalCaseAccount,
   isUserVerifiedGoogleReview: () => isUserVerifiedGoogleReview,
+  isValidFlyerVisionExtraction: () => isValidFlyerVisionExtraction,
   isVecyOfficialBrokerLine: () => isVecyOfficialBrokerLine,
   janiaResultSchema: () => janiaResultSchema,
   listAvailableJaniaStickers: () => listAvailableJaniaStickers,
@@ -42595,8 +42977,11 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     "barrio",
     "vereda"
   ]);
+  const stripLocationTypePrefix = (s) => s.replace(/^(?:barrio|sector|vereda|vda\.?|corregimiento|corr\.?|caserio|caserío|inspeccion|centro\s+poblado|urbanizacion|conjunto)\s+/gi, "").replace(/\s+/g, " ").trim();
   const esCoincidenciaAproximada = (p1, p2) => {
-    return p1.trim() === p2.trim();
+    const a = stripLocationTypePrefix(p1.trim());
+    const b = stripLocationTypePrefix(p2.trim());
+    return Boolean(a && b && (p1.trim() === p2.trim() || a === b));
   };
   if (reqExpanded.length > 0 && propExpanded.length > 0) {
     for (const rp of reqExpanded) {
@@ -42923,6 +43308,12 @@ function extractTrueCityFromText(rawText, fallbackCity) {
   }
   if (caliKeywords.some((k) => hasGeoKw(t2, k)) && !hasGeoKw(t2, "bogota")) return "Cali";
   if (medellinKeywords.some((k) => hasGeoKw(t2, k)) && !hasGeoKw(t2, "bogota")) return "Medell\xEDn";
+  if (/\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(t2)) {
+    const vMatch = findVeredaInText(rawText || "");
+    if (vMatch?.municipio) {
+      return normalizeCanonicalCity(vMatch.municipio);
+    }
+  }
   if (bogotaKeywords.some((k) => hasGeoKw(t2, k))) return "Bogot\xE1";
   return normalizeCanonicalCity(fallbackCity);
 }
@@ -43543,6 +43934,12 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     if (rawTextHint) {
       const cHint = matchNational(normalizarTextoGeografico(rawTextHint));
       if (cHint) return cHint;
+      if (/\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(rawTextHint)) {
+        const vHint = findVeredaInText(rawTextHint);
+        if (vHint?.municipio) {
+          return normalizarTextoGeografico(normalizeCanonicalCity(vHint.municipio));
+        }
+      }
     }
     return "bogota";
   };
@@ -43823,7 +44220,7 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     if ((clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
       return "office";
     }
-    if (/\bvilla\b/.test(clean) && !clean.includes("villa magdala") && !clean.includes("villa santos") && !clean.includes("villavicencio")) {
+    if (/\bvilla\b(?!\s*(?:de\s+leyva|del\s+rosario|del\s+prado|del\s+r[ií]o|del\s+sol|magdala|carolina|santos|campestre|ol[ií]mpica|luz|alsacia|gorgona|mar[ií]a|pinz[oó]n|nueva|garz[oó]n))/i.test(clean)) {
       return "villa";
     }
     if (clean.includes("aparta hotel") || clean.includes("aparta-hotel") || clean.includes("apartahotel") || clean.includes("aparta suit") || clean.includes("aparta-suit") || clean.includes("apartasuit") || clean.includes("motel") || clean.includes("hostal") || clean.includes("hostel")) {
@@ -43836,7 +44233,7 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabin")) {
       return "cabin";
     }
-    if (clean.includes("finca") || clean.includes("farm") || clean.includes("campestre") && !clean.includes("casa campestre")) {
+    if (clean.includes("finca") || clean.includes("farm") || clean.includes("campestre") && !clean.includes("casa campestre") && !clean.includes("colina campestre") && !clean.includes("villa campestre")) {
       return "farm";
     }
     if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land") || clean.includes("suelo urbano") || clean.includes("suelo rural") || clean.includes("suelo suburbano") || clean.includes("suelo expansion") || clean.includes("suelo de expansion") || clean.includes("suelo proteccion")) {
@@ -43856,8 +44253,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   };
   const effectivePropType = deduceFullType(propType, property.rawText || property.name || property.description || "");
   const effectiveReqType = deduceFullType(reqType, requirement.rawText || requirement.name || "");
-  const RESIDENCIALES = /* @__PURE__ */ new Set(["apartment", "house", "loft", "cabin"]);
-  const NO_RESIDENCIALES = /* @__PURE__ */ new Set(["consultorio", "office", "commercial", "warehouse", "land", "farm"]);
+  const RESIDENCIALES = /* @__PURE__ */ new Set(["apartment", "house", "loft", "cabin", "villa"]);
+  const NO_RESIDENCIALES = /* @__PURE__ */ new Set(["consultorio", "office", "commercial", "warehouse", "land"]);
   if (RESIDENCIALES.has(effectiveReqType) && NO_RESIDENCIALES.has(effectivePropType) || NO_RESIDENCIALES.has(effectiveReqType) && RESIDENCIALES.has(effectivePropType)) {
     blockers.push(`Incompatibilidad de uso de suelo y tipolog\xEDa (Tolerancia Cero 0%): Requerimiento ${effectiveReqType} (no residencial) vs Inmueble ${effectivePropType} (residencial).`);
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -43877,6 +44274,7 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
       "apartment": ["apto", "apartamento", "apartment"],
       "casa": ["casa", "house", "townhouse"],
       "house": ["casa", "house", "townhouse"],
+      "villa": ["villa", "casa", "house"],
       "finca": ["finca", "finca raiz", "finca ra\xEDz", "farm", "casa campestre", "casa de campo"],
       "farm": ["finca", "finca raiz", "finca ra\xEDz", "farm", "casa campestre", "casa de campo"],
       "lote": ["lote", "terreno", "predio", "land"],
@@ -43908,7 +44306,11 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     const reqTextSalud = /\b(?:consultorio|odontol|m[eé]dic[oa]|salud|cl[ií]nica|habilitaci[oó]n)\b/i.test(`${requirement.rawText || ""} ${requirement.name || ""} ${requirement.caracteristicasDeseadas?.otrasEspecificaciones || ""}`);
     const propTextSalud = /\b(?:consultorio|odontol|m[eé]dic[oa]|salud|cl[ií]nica|habilitaci[oó]n)\b/i.test(`${property.rawText || ""} ${property.name || ""} ${property.description || ""} ${property.amenities?.subtipo || ""}`);
     const isConsultorioOfficeCrossCompatible = effectiveReqType === "consultorio" && effectivePropType === "office" && propTextSalud || effectiveReqType === "office" && effectivePropType === "consultorio" && reqTextSalud;
-    if (!reqAlias.some((a) => propAlias.includes(a)) && !isLoftAptoCrossCompatible && !isConsultorioOfficeCrossCompatible) {
+    const isCampestreText = (txt) => /\b(?:casa\s+campestre|casa\s+quinta|campestre|finca)\b/i.test(txt);
+    const reqFullRaw = `${requirement.rawText || ""} ${requirement.name || ""} ${requirement.caracteristicasDeseadas?.tipoExacto || ""}`;
+    const propFullRaw = `${property.rawText || ""} ${property.name || ""} ${property.description || ""} ${property.amenities?.subtipo || ""}`;
+    const isCasaCampestreFarmCrossCompatible = effectiveReqType === "farm" && effectivePropType === "house" && isCampestreText(propFullRaw) || effectiveReqType === "house" && isCampestreText(reqFullRaw) && effectivePropType === "farm";
+    if (!reqAlias.some((a) => propAlias.includes(a)) && !isLoftAptoCrossCompatible && !isConsultorioOfficeCrossCompatible && !isCasaCampestreFarmCrossCompatible) {
       blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
@@ -43982,10 +44384,11 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     "casa_urbana": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
     "casa_barrio": ["casa_urbana", "casa_barrio"],
     "casa_conjunto": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
-    "casa_condominio": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
-    "casa_campestre": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "finca"],
-    "casa_campestre_condominio": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
-    "casa_quinta": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
+    "casa_condominio": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio", "villa"],
+    "casa_campestre": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "finca", "villa"],
+    "casa_campestre_condominio": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "villa"],
+    "casa_quinta": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "villa"],
+    "villa": ["villa", "casa_campestre", "casa_campestre_condominio", "casa_quinta", "casa_condominio"],
     "finca": ["finca", "casa_campestre", "casa_campestre_condominio"],
     // Apartamentos — estándar y dúplex son compatibles; penthouse NO es estándar
     "apartamento_estandar": ["apartamento_estandar", "apartamento_duplex"],
@@ -45130,6 +45533,7 @@ var init_matching = __esm({
     init_schema();
     init_geography();
     init_colombia_geography();
+    init_veredas_lookup();
     init_geo_lookup();
     init_janIA();
     init_colombiaCatalog();
@@ -45144,8 +45548,8 @@ var init_matching = __esm({
       venta_o_arriendo: /* @__PURE__ */ new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "permuta", "arriendo_con_opcion_de_compra"]),
       arriendo_temporal: /* @__PURE__ */ new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
       arriendo_con_opcion_de_compra: /* @__PURE__ */ new Set(["arriendo_con_opcion_de_compra", "venta_o_arriendo", "venta"]),
-      permuta: /* @__PURE__ */ new Set(["permuta", "venta_permuta", "venta"]),
-      venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "permuta", "venta"]),
+      permuta: /* @__PURE__ */ new Set(["permuta", "venta_permuta", "venta", "venta_o_arriendo"]),
+      venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "permuta", "venta", "venta_o_arriendo"]),
       aporte: /* @__PURE__ */ new Set(["aporte"])
     };
     boundariesCache = /* @__PURE__ */ new Map();
@@ -45582,8 +45986,8 @@ function getWASocket() {
 function unwrapMessage(msgObj) {
   if (!msgObj) return msgObj;
   let unwrapped = msgObj;
-  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message || unwrapped.protocolMessage?.editedMessage) {
-    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message || unwrapped.protocolMessage?.editedMessage;
+  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message || unwrapped.associatedChildMessage?.message || unwrapped.editedMessage?.message || unwrapped.protocolMessage?.editedMessage) {
+    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message || unwrapped.associatedChildMessage?.message || unwrapped.editedMessage?.message || unwrapped.protocolMessage?.editedMessage;
   }
   return unwrapped;
 }
@@ -46540,10 +46944,16 @@ ${previewText}`.trim();
                 } else if (rawMsg?.documentMessage) {
                   body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
                   try {
+                    const docMime = (rawMsg.documentMessage.mimetype || "application/pdf").toLowerCase();
                     const downloadedDoc = await downloadMediaSafely(msg, "document");
                     if (downloadedDoc && downloadedDoc.length > 0) {
-                      pdfBufferImmediate = downloadedDoc.toString("base64");
-                      pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || "application/pdf";
+                      if (docMime.startsWith("image/")) {
+                        imageBufferImmediate = downloadedDoc.toString("base64");
+                        console.log(`[JANIA-MATCH] \u{1F4F7} Flyer HD enviado como documento (${docMime}, ${(downloadedDoc.length / 1024).toFixed(1)} KB) de ${senderId}`);
+                      } else {
+                        pdfBufferImmediate = downloadedDoc.toString("base64");
+                        pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || "application/pdf";
+                      }
                     }
                   } catch (docErr) {
                   }
@@ -46668,7 +47078,7 @@ ${quotedNote}` : quotedNote;
                 if (!body.trim() && !hasRawMedia) {
                   continue;
                 }
-                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || hasRawMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
+                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || hasRawMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("consultorio") || textLower.includes("caba\xF1a") || textLower.includes("cabana") || textLower.includes("villa") || textLower.includes("hostal") || textLower.includes("hotel") || textLower.includes("quinta") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
@@ -46677,7 +47087,8 @@ ${quotedNote}` : quotedNote;
                 const quotedParticipant = contextInfo?.participant ? cleanJid(contextInfo.participant) : "";
                 const isQuotingBot = !!contextInfo?.quotedMessage && (botJid && quotedParticipant === botJid || quotedParticipant.startsWith(botPhone) || quotedParticipant.startsWith("573192919978") || quotedParticipant.includes("167108705018103"));
                 const isConversationalContinuation = (isBuzonGroup || isCirculoGroup) && (isAffirmativeFollowUp || isQuotingBot);
-                const isShortCourtesy = !isAudioPTT && !isConversationalContinuation && (textClean.length < 6 || ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
+                const hasImageOrDocMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!imageBufferImmediate || !!pdfBufferImmediate;
+                const isShortCourtesy = !isAudioPTT && !isConversationalContinuation && !hasImageOrDocMedia && (textClean.length < 6 || ["ok", "listo", "vale", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 if (body && body.trim() && !isReactionMessage && !this.isFromOwnBotAccount(msg, senderId)) {
                   this.recordPassiveGroupContext(chatId, msg.pushName || senderId.split("@")[0], body);
                 }
@@ -46942,8 +47353,13 @@ ${quotedNote}` : quotedNote;
             try {
               const media = await downloadMediaSafely(msg, "document");
               if (media && media.length > 0) {
-                pdfBuffer = media.toString("base64");
-                pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                const docMime = (rawMsg.documentMessage.mimetype || "application/pdf").toLowerCase();
+                if (docMime.startsWith("image/") && !imageBuffer) {
+                  imageBuffer = media.toString("base64");
+                } else {
+                  pdfBuffer = media.toString("base64");
+                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                }
                 mainMsg = msg;
               }
             } catch (e) {
@@ -47581,8 +47997,13 @@ Aqu\xED atendemos consultas inmobiliarias, legales, tributarias, aval\xFAos y no
               try {
                 const mediaBuffer = await downloadMediaSafely(msg, "document");
                 if (mediaBuffer) {
-                  pdfBuffer = mediaBuffer.toString("base64");
-                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                  const docMime = (rawMsg.documentMessage.mimetype || "application/pdf").toLowerCase();
+                  if (docMime.startsWith("image/")) {
+                    imageBuffer = mediaBuffer.toString("base64");
+                  } else {
+                    pdfBuffer = mediaBuffer.toString("base64");
+                    pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                  }
                 }
               } catch (e) {
                 console.error("[JANIA-MEDIA] Error descargando documento adjunto en grupo:", e);
@@ -47688,8 +48109,13 @@ Aqu\xED atendemos consultas inmobiliarias, legales, tributarias, aval\xFAos y no
               try {
                 const mediaBuffer = await downloadMediaSafely(msg, "document");
                 if (mediaBuffer) {
-                  pdfBuffer = mediaBuffer.toString("base64");
-                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                  const docMime = (rawMsg.documentMessage.mimetype || "application/pdf").toLowerCase();
+                  if (docMime.startsWith("image/")) {
+                    imageBuffer = mediaBuffer.toString("base64");
+                  } else {
+                    pdfBuffer = mediaBuffer.toString("base64");
+                    pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                  }
                 }
               } catch (e) {
               }
@@ -48054,10 +48480,13 @@ He procedido a eliminar tu publicaci\xF3n para preservar el orden profesional de
           if (!fastEmoji && imageBufferImmediate) {
             try {
               const { extractFlyerVisionSafely: extractFlyerVisionSafely2 } = await Promise.resolve().then(() => (init_vision(), vision_exports));
-              flyerVisionData = await extractFlyerVisionSafely2(imageBufferImmediate);
-              if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
-                fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
-                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
+              const visionCandidate = await extractFlyerVisionSafely2(imageBufferImmediate);
+              if (visionCandidate && visionCandidate.isFlyerOrBanner && (visionCandidate.classification === "INMUEBLE" || visionCandidate.classification === "REQUERIMIENTO") && visionCandidate.flyerVerbatimText && visionCandidate.flyerVerbatimText.trim().length >= 10) {
+                flyerVisionData = visionCandidate;
+                fastEmoji = visionCandidate.reactionEmoji || (visionCandidate.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
+                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer comercial con texto detectado visualmente (${visionCandidate.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
+              } else if (visionCandidate && visionCandidate.isFlyerOrBanner && visionCandidate.classification !== "CONSULTA_GENERAL") {
+                flyerVisionData = visionCandidate;
               }
             } catch (visErr) {
               console.warn("[JANIA-FAST-REACT] Error en an\xE1lisis visual de flyer:", visErr?.message || visErr);
@@ -48267,12 +48696,17 @@ He procedido a eliminar tu publicaci\xF3n para preservar el orden profesional de
               console.error("[JANIA-BUFFER] Error descargando imagen:", e);
             }
           }
-          if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer) {
+          if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer && !bufferedMsg.imageBuffer) {
             try {
               const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "document");
               if (mediaBuffer) {
-                bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
-                bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                const docMime = (rawMsg.documentMessage.mimetype || "application/pdf").toLowerCase();
+                if (docMime.startsWith("image/")) {
+                  bufferedMsg.imageBuffer = mediaBuffer.toString("base64");
+                } else {
+                  bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
+                  bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                }
               }
             } catch (e) {
               console.error("[JANIA-BUFFER] Error descargando documento:", e);

@@ -7,6 +7,28 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-18] — JanIA v34.28: Captura Total de Flyers/Imágenes, Todos los Tipos (19 Exactos / 12 DB) y Negocios (Venta, Arriendo y Permuta) y Cobertura 100% Nacional Colombia (Doctrina Eduardo A. Rivera — v34.28 - 34.28.0)
+
+#### 1. Solicitud Directa de Eduardo A. Rivera y Auditoría Forense
+- **Situación Reportada:** Eduardo detectó que JanIA y el motor de Match no estaban captando imágenes/flyers publicados, y solicitó verificar y garantizar que el sistema compile y cruce **toda clase de OFERTAS y DEMANDAS** en **VENTA, ARRIENDO y PERMUTA**, en **todos los tipos de inmueble**, y con cobertura real en **toda Colombia** (regiones, departamentos, ciudades, municipios, barrios, veredas, localidades, comunas y caseríos), mostrando además el listado completo manejado en BD y mesa de coincidencias.
+- **Causas Raíz Detectadas:**
+  1. `whatsapp-match.ts`: `isShortCourtesy` (`textClean.length < 6`) descartaba flyers enviados sin caption o con texto corto antes de llamar a `handleIncomingGroupMessage`; además los flyers HD enviados como documento (`documentMessage` `image/*`) iban a `pdfBuffer` y nunca pasaban por Vision.
+  2. `vision.ts`: timeout corto (`8000ms`), MIME fijo `"image/jpeg"`, sin manejo de cooldown de claves ni cobertura completa de modalidades/tipologías; y si fallaba devolvía `{ isFlyerOrBanner: false }` bloqueando reintentos en `propertiesHandler.ts`.
+  3. `parsers.ts`, `propertiesHandler.ts` y `matching.ts`: `"local"` coincidía con `"localidad"` (`commercial`), `"campestre"` con `"Colina Campestre"` (`farm`), faltaba `"Villa"`, `"Se vende o permuta"` devolvía `"permuta"` en lugar de `"venta_permuta"`, `RESIDENCIALES` vs `NO_RESIDENCIALES` bloqueaba `Casa Campestre <-> Finca`, y el Fast-Path Vision/fallback `$0 COP` imponían `"Bogotá, D.C."`.
+  4. `divipola.ts`, `colombia-geography.ts`, `veredas-lookup.ts`, `geography.ts` y `matching.ts`: los 1.122 municipios DIVIPOLA y 33.434 veredas/caseríos/corregimientos IGAC estaban subconectados; `deducirGeografiaTripartita` secuestraba municipios hacia capitales cuando se nombraba el departamento (`"Barichara Santander"` -> `"Bucaramanga"`); y `matchesGeography` no normalizaba prefijos `Vereda`/`Corregimiento`/`Caserío`.
+
+#### 2. Acciones Ejecutadas en `v34.28`
+1. **Captura Total de Flyers e Imágenes (`whatsapp-match.ts`, `vision.ts`, `types.ts`, `propertiesHandler.ts`):**
+   - Protegido `hasImageOrDocMedia` en `isShortCourtesy`, enrutado `documentMessage` (`image/*`) a `imageBuffer`, añadido unwrap de `associatedChildMessage`/`editedMessage` y eliminado el envenenamiento ante fallos de Vision.
+   - `vision.ts`: detección dinámica de MIME (`JPEG`/`PNG`/`WebP`), timeout `15000ms`, control de cooldowns en `geminiKeyManager`, cobertura de las 8 modalidades y 19 tipos exactos con los 6 emojis doctrinales (`👍`/`👌`/`🔀`/`📝`/`✏️`/`🔄`).
+   - `propertiesHandler.ts`: Fast-Path Vision con geografía nacional real, admisión de flyers `permuta` y no residenciales sin alcobas/precio numérico, soporte `Villa` y eliminación de hardcode a `"Bogotá"` en fallback `$0 COP`.
+2. **Todos los Tipos y Modalidades (`parsers.ts`, `matching.ts`):**
+   - Límite de palabra en `local`, protección de `Colina Campestre`, soporte `Villa`, `hasVentaSignals` para `venta_permuta`, `translatePropertyType` completo, cruce `Casa Campestre <-> Finca` y matriz simétrica `permuta`/`venta_permuta` <-> `venta_o_arriendo`.
+3. **Cobertura 100% Nacional Colombia (`divipola.ts`, `veredas-lookup.ts`, `colombia-geography.ts`, `geography.ts`, `matching.ts`):**
+   - Integrados los **32 departamentos + Bogotá D.C.**, **1.122 municipios DIVIPOLA**, **14 regiones colombianas** y **33.434 veredas/corregimientos/caseríos IGAC**, desambiguación en `deducirGeografiaTripartita` y normalización de prefijos rurales/urbanos en `matchesGeography`.
+4. **Gobernanza y Validación:**
+   - Bump `v34.28` (`34.28.0`), semilla `seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28`, **Suite 214 (4/4)**, `npm run check` (**0 errores**), `npm run build` limpio (`vite` 31.02s + `esbuild` 166ms), y `vitest run --testTimeout=35000` (**752/753 en verde**, 1 timeout SMTP de red preexistente en `Suite 190.2`).
+
 ### 📅 [2026-11-18] — JanIA v34.27: Fin Secuestro `CEDULA_HELP_TEXT` (Caso Lia Janeth Rivas en Grupo 2), Doctrina Ley 820 Art. 16, Cero Biblias y Moderación/Borrado Unificados en los 3 Grupos Oficiales (Doctrina Eduardo A. Rivera — v34.27 - 34.27.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico Crítico (Capturas Grupo 2)

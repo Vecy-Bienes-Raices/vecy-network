@@ -151,17 +151,30 @@ export interface CanonicalBarrioItem {
 export interface FlyerVisionResult {
   isFlyerOrBanner: boolean;
   classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL";
-  transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal";
+  transactionType:
+    | "venta"
+    | "arriendo"
+    | "venta_o_arriendo"
+    | "arriendo_temporal"
+    | "arriendo_con_opcion_de_compra"
+    | "permuta"
+    | "venta_permuta"
+    | "aporte";
   propertyType?: string;
   title?: string;
   price?: number;
   rentPrice?: number;
   presupuestoMax?: number;
+  presupuestoMin?: number;
+  adminFee?: number;
+  stratum?: number;
   area?: number;
   bedrooms?: number;
   bathrooms?: number;
   garages?: number;
+  department?: string;
   city?: string;
+  locality?: string;
   zone?: string;
   contactPhone?: string;
   contactName?: string;

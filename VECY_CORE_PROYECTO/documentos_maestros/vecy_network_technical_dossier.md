@@ -330,6 +330,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.28 — Noviembre 2026
+- **Captura Integral de Flyers/Imágenes, Todos los Tipos y Negocios (Venta, Arriendo, Permuta) y Cobertura 100% Nacional Colombia:**
+  - `server/_core/whatsapp-match.ts`: protegido `hasImageOrDocMedia` contra `isShortCourtesy` (para no descartar flyers sin pie de foto o texto < 6 chars), enrutados adjuntos `documentMessage` con MIME `image/*` hacia `imageBuffer`, añadido unwrap de `associatedChildMessage`/`editedMessage` y eliminado envenenamiento de `flyerVisionData` cuando Vision falla.
+  - `server/_core/jania/vision.ts` & `types.ts`: autodetección MIME (`JPEG`/`PNG`/`WebP`), timeout elevado a `15000ms`, control de cooldowns por clave (`isKeyInCooldown`/`markKeyCooldown`), soporte para los **8 `transactionType`** (`venta`, `arriendo`, `venta_o_arriendo`, `arriendo_temporal`, `arriendo_con_opcion_de_compra`, `permuta`, `venta_permuta`, `aporte`) y los **19 tipos comerciales** con sus 6 emojis doctrinales (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`).
+  - `server/_core/jania/parsers.ts`, `propertiesHandler.ts` & `matching.ts`: corregido falso positivo `"localidad"` -> `commercial` y `"Colina Campestre"` -> `farm`; añadido soporte `Villa`; `hasVentaSignals` (`"Se vende o permuta"` -> `venta_permuta`); completado `translatePropertyType`; habilitado match `Casa Campestre <-> Finca`; matriz simétrica `permuta`/`venta_permuta` <-> `venta_o_arriendo`; y erradicados hardcodes a `"Bogotá, D.C."` en Fast-Path Vision y fallback determinístico `$0 COP`.
+  - `server/_core/divipola.ts`, `veredas-lookup.ts`, `colombia-geography.ts`, `geography.ts` & `matching.ts`: conectados los **1.122 municipios DIVIPOLA (DANE)**, las **33.434 veredas/corregimientos/caseríos IGAC**, **14 regiones colombianas**, protección en `deducirGeografiaTripartita` para no secuestrar municipios hacia capitales al nombrar el departamento y normalización de prefijos (`Vereda`/`Corregimiento`/`Caserío`/`Barrio`) en `matchesGeography`.
+  - Gobernanza y Pruebas: semilla `seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28`, **Suite 214 (4/4)** en `regression.test.ts` (`npm run check`: 0 errores; `npm run build` limpio; `vitest run --testTimeout=35000`: **752/753 tests en verde** con 1 timeout SMTP de red preexistente en `Suite 190.2`; versión `v34.28` / `34.28.0`).
+
 ### 🔖 v34.27 — Noviembre 2026
 - **Blindaje de los 3 Grupos Oficiales, Caso Lia Janeth Rivas (Ley 820 Art. 16), Cero Biblias y Moderación/Borrado Unificados:**
   - `server/_core/predialService.ts`: corregido `isServiceHelpRequest` para no secuestrar consultas de arrendamiento/pólizas/depósitos/documentos o guías generales de uso de VECY, y compactados `CEDULA_HELP_TEXT` / `PREDIAL_HELP_TEXT` (<420 caracteres).

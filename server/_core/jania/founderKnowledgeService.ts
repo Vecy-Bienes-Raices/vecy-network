@@ -938,6 +938,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.27: Fin secuestro isServiceHelpRequest (caso Lia Janeth Ley 820/2003), moderación y borrado unificados en los 3 grupos oficiales, detección NFKC y guías breves paso a paso.",
     createdAt: "2026-11-18T14:20:00.000Z",
     active: true
+  },
+  {
+    id: "seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Captura Total de Flyers/Imágenes, Todos los Tipos/Negocios (Venta/Arriendo/Permuta) y Cobertura 100% Nacional Colombia (v34.28)",
+    directive:
+      "JanIA y el motor Match DEBEN capturar, transcribir y cruzar SIEMPRE cualquier imagen o flyer enviado por WhatsApp (incluso sin pie de foto o enviado como documento HD image/*) en Ofertas y Demandas de Venta, Arriendo y Permuta. Todos los 19 tipos comerciales y 12 categorías de BD (incluyendo Villa, Casa Campestre <-> Finca, Cabaña, Consultorio, Oficina, Local, Bodega, Lote, Hotel/Hostal/Aparta Hotel, Edificio, Apartaestudio y Apartamentos/PentHouse/Dúplex) operan sin falsos positivos ('localidad' o 'Colina Campestre') y con cobertura total sobre los 32 departamentos + Bogotá D.C., los 1.122 municipios DIVIPOLA, regiones colombianas y las 33.434 veredas/corregimientos/caseríos IGAC.",
+    rawText:
+      "Blindaje v34.28: Captura total de flyers sin caption o como documento, resiliencia Vision (JPEG/PNG/WebP, cooldowns, 8 negocios, 19+ tipos), match Casa Campestre <-> Finca, Villa y cobertura nacional DIVIPOLA + IGAC.",
+    createdAt: "2026-11-18T15:45:00.000Z",
+    active: true
   }
 ];
 

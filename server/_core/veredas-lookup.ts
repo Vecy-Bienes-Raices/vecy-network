@@ -66,15 +66,18 @@ export function initVeredasLookup(): void {
 }
 
 /**
- * Busca si un texto corresponde a una vereda oficial de Colombia.
+ * Busca si un texto corresponde a una vereda, corregimiento o caserío oficial de Colombia.
  * Si se pasa un municipio opcional, prioriza las veredas de ese municipio.
  */
 export function lookupVereda(texto: string, municipioHint?: string): VeredaInfo | null {
   if (!texto) return null;
   if (!isInitialized) initVeredasLookup();
 
-  const cleanText = normalize(texto).replace(/\bvereda\b/g, "").trim();
-  if (!cleanText) return null;
+  const cleanText = normalize(texto)
+    .replace(/\b(?:vereda|vda|corregimiento|corr|caserio|inspeccion|centro poblado|sector)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleanText || cleanText.length < 3) return null;
 
   const matches = veredasByNameMap.get(cleanText);
   if (!matches || matches.length === 0) {
@@ -95,6 +98,39 @@ export function lookupVereda(texto: string, municipioHint?: string): VeredaInfo 
 
   // Si no hay hint o no coincide, retornamos la primera más representativa
   return matches[0];
+}
+
+/**
+ * Extrae menciones explícitas de vereda/corregimiento/caserío dentro de un texto libre
+ * (ej. "Finca en la vereda Fagua de Chía" -> VeredaInfo de FAGUA en Chía)
+ */
+export function findVeredaInText(texto: string, municipioHint?: string): VeredaInfo | null {
+  if (!texto) return null;
+  if (!isInitialized) initVeredasLookup();
+
+  // Primero intento directo por si el string completo es el nombre de la vereda
+  const direct = lookupVereda(texto, municipioHint);
+  if (direct) return direct;
+
+  // Buscar patrones "vereda X", "vda X", "corregimiento X", "caserio X"
+  const norm = normalize(texto);
+  const pattern = /\b(?:vereda|vda|corregimiento|corr|caserio)\s+([a-z0-9]+(?:\s+[a-z0-9]+){0,3})/g;
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(norm)) !== null) {
+    const tokens = m[1].split(" ");
+    for (let len = tokens.length; len >= 1; len--) {
+      const candidate = tokens.slice(0, len).join(" ");
+      // Detener antes de preposiciones de enlace como "de Chia" si la palabra completa no es vereda
+      const found = lookupVereda(candidate, municipioHint);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export function getVeredasCount(): number {
+  if (!isInitialized) initVeredasLookup();
+  return veredasCache.length;
 }
 
 /**

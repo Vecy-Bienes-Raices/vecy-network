@@ -1,7 +1,8 @@
 /**
  * Colombia Geographic Database — VECY Network
- * Cobertura: 32 departamentos, capitales, municipios principales y veredas conocidas
+ * Cobertura: 32 departamentos + Bogotá D.C., 1.122 municipios DIVIPOLA, regiones, capitales y veredas oficiales
  */
+import { findDivipolaInText, lookupDivipolaMunicipality } from "./divipola";
 
 export interface DepartamentoInfo {
   nombre: string;
@@ -327,17 +328,43 @@ for (const [deptKey, info] of Object.entries(DEPARTAMENTOS_COLOMBIA)) {
   }
 }
 
+export const REGIONES_COLOMBIA: Record<string, { nombre: string; ciudadesClave: string[]; departamentoRef: string }> = {
+  "eje cafetero": { nombre: "Eje Cafetero", ciudadesClave: ["Pereira", "Armenia", "Manizales", "Dosquebradas", "Salento", "Filandia"], departamentoRef: "Risaralda / Quindío / Caldas" },
+  "valle de aburra": { nombre: "Valle de Aburrá", ciudadesClave: ["Medellín", "Envigado", "Sabaneta", "Itagüí", "Bello", "La Estrella", "Copacabana", "Girardota", "Barbosa", "Caldas"], departamentoRef: "Antioquia" },
+  "oriente antioqueno": { nombre: "Oriente Antioqueño", ciudadesClave: ["Rionegro", "El Retiro", "La Ceja", "Guarne", "Marinilla", "Guatapé", "El Peñol", "El Carmen de Viboral"], departamentoRef: "Antioquia" },
+  "uraba": { nombre: "Urabá", ciudadesClave: ["Apartadó", "Turbo", "Carepa", "Chigorodó", "Necoclí"], departamentoRef: "Antioquia" },
+  "sabana norte": { nombre: "Sabana Norte", ciudadesClave: ["Chía", "Cajicá", "Zipaquirá", "Sopó", "Tabio", "Tenjo", "Cota", "Tocancipá", "Gachancipá"], departamentoRef: "Cundinamarca" },
+  "sabana centro": { nombre: "Sabana Centro", ciudadesClave: ["Chía", "Cajicá", "Zipaquirá", "Sopó", "Tabio", "Tenjo", "Cota", "Tocancipá", "Cogua", "Nemocón"], departamentoRef: "Cundinamarca" },
+  "sabana occidente": { nombre: "Sabana Occidente", ciudadesClave: ["Madrid", "Mosquera", "Funza", "Facatativá", "Bojacá", "El Rosal", "Subachoque", "Zipacón"], departamentoRef: "Cundinamarca" },
+  "alto magdalena": { nombre: "Alto Magdalena", ciudadesClave: ["Girardot", "Ricaurte", "Flandes", "Melgar", "Nilo", "Agua de Dios"], departamentoRef: "Cundinamarca / Tolima" },
+  "llanos orientales": { nombre: "Llanos Orientales", ciudadesClave: ["Villavicencio", "Acacías", "Restrepo", "Cumaral", "Yopal", "Puerto López"], departamentoRef: "Meta / Casanare" },
+  "costa caribe": { nombre: "Región Caribe", ciudadesClave: ["Barranquilla", "Cartagena", "Santa Marta", "Montería", "Valledupar", "Sincelejo", "Riohacha"], departamentoRef: "Caribe Colombiano" },
+  "region caribe": { nombre: "Región Caribe", ciudadesClave: ["Barranquilla", "Cartagena", "Santa Marta", "Montería", "Valledupar", "Sincelejo", "Riohacha"], departamentoRef: "Caribe Colombiano" },
+  "region pacifica": { nombre: "Región Pacífica", ciudadesClave: ["Cali", "Buenaventura", "Palmira", "Popayán", "Pasto", "Quibdó", "Tumaco"], departamentoRef: "Pacífico Colombiano" },
+  "region andina": { nombre: "Región Andina", ciudadesClave: ["Bogotá, D.C.", "Medellín", "Cali", "Bucaramanga", "Manizales", "Pereira", "Armenia", "Ibagué", "Tunja"], departamentoRef: "Andina Colombiana" },
+  "santanderes": { nombre: "Santanderes", ciudadesClave: ["Bucaramanga", "Floridablanca", "Girón", "Piedecuesta", "Barichara", "San Gil", "Cúcuta"], departamentoRef: "Santander / Norte de Santander" },
+};
+
 /**
  * Busca si un texto contiene algún municipio, ciudad o departamento colombiano.
- * Devuelve el lugar MÁS ESPECÍFICO encontrado (la coincidencia más larga).
- * Ejemplo: "Bogotá-Suba-Guaymaral-Lagos de Torca" → preferirá "lagos de torca" (15 chars)
- * sobre "bogota" (6 chars).
+ * Integra catálogo curado + 1.122 municipios oficiales DIVIPOLA + regiones de Colombia.
+ * Devuelve el lugar MÁS ESPECÍFICO encontrado (municipio antes que solo departamento).
  */
 export function buscarLugarColombia(texto: string): LugarInfo | null {
   const n = norm(texto);
-  // Búsqueda exacta primero
+  if (!n) return null;
+
+  // Búsqueda exacta primero en catálogo curado o DIVIPOLA oficial
   if (MAPA_COLOMBIA[n]) return MAPA_COLOMBIA[n];
-  
+  const exactDivipola = lookupDivipolaMunicipality(texto);
+  if (exactDivipola) {
+    return {
+      nombreCanonico: exactDivipola.municipio,
+      departamento: exactDivipola.departamento,
+      esCApital: false,
+    };
+  }
+
   // Búsqueda parcial: encontrar TODOS los lugares en el texto y devolver el más específico (más largo)
   let bestMatch: LugarInfo | null = null;
   let bestKeyLength = 0;
@@ -352,5 +379,36 @@ export function buscarLugarColombia(texto: string): LugarInfo | null {
       }
     }
   }
-  return bestMatch;
+
+  // Consultar DIVIPOLA completo (1.122 municipios) si no hubo match curado O si solo coincidió un nombre de departamento/homónimo corto
+  const divipolaTextMatch = findDivipolaInText(texto);
+  if (divipolaTextMatch) {
+    const isCurrentOnlyDepartment = !bestMatch || (
+      norm(bestMatch.nombreCanonico) === norm(bestMatch.departamento) &&
+      norm(divipolaTextMatch.municipio) !== norm(bestMatch.nombreCanonico)
+    );
+    if (!bestMatch || isCurrentOnlyDepartment || norm(divipolaTextMatch.municipio).length > bestKeyLength) {
+      return {
+        nombreCanonico: divipolaTextMatch.municipio,
+        departamento: divipolaTextMatch.departamento,
+        esCApital: false,
+      };
+    }
+  }
+
+  if (bestMatch) return bestMatch;
+
+  // Respaldo regional colombiano cuando solo especifican región amplia ("Eje Cafetero", "Valle de Aburrá", etc.)
+  for (const [regKey, regInfo] of Object.entries(REGIONES_COLOMBIA)) {
+    const regex = new RegExp(`(^|\\s)${regKey}(\\s|$)`);
+    if (regex.test(n)) {
+      return {
+        nombreCanonico: regInfo.nombre,
+        departamento: regInfo.departamentoRef,
+        esCApital: false,
+      };
+    }
+  }
+
+  return null;
 }

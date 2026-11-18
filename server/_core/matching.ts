@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements, matchFeedback } from "../../drizzle/schema";
 import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS, isCityOrGenericZone } from "./geography";
 import { buscarLugarColombia } from "./colombia-geography";
+import { findVeredaInText } from "./veredas-lookup";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 import { extractFallbackDataFromText } from "./janIA";
@@ -171,8 +172,8 @@ const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
   venta_o_arriendo: new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "permuta", "arriendo_con_opcion_de_compra"]),
   arriendo_temporal: new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
   arriendo_con_opcion_de_compra: new Set(["arriendo_con_opcion_de_compra", "venta_o_arriendo", "venta"]),
-  permuta: new Set(["permuta", "venta_permuta", "venta"]),
-  venta_permuta: new Set(["venta_permuta", "permuta", "venta"]),
+  permuta: new Set(["permuta", "venta_permuta", "venta", "venta_o_arriendo"]),
+  venta_permuta: new Set(["venta_permuta", "permuta", "venta", "venta_o_arriendo"]),
   aporte: new Set(["aporte"]),
 };
 
@@ -1107,8 +1108,16 @@ export function matchesGeography(
     "occidente", "oriente", "centro", "sector", "zona", "barrio", "vereda"
   ]);
 
+  const stripLocationTypePrefix = (s: string): string =>
+    s
+      .replace(/^(?:barrio|sector|vereda|vda\.?|corregimiento|corr\.?|caserio|caserío|inspeccion|centro\s+poblado|urbanizacion|conjunto)\s+/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
   const esCoincidenciaAproximada = (p1: string, p2: string): boolean => {
-    return p1.trim() === p2.trim(); // LOS BARRIOS DEBEN SER 100% IDÉNTICOS
+    const a = stripLocationTypePrefix(p1.trim());
+    const b = stripLocationTypePrefix(p2.trim());
+    return Boolean(a && b && (p1.trim() === p2.trim() || a === b));
   };
 
 
@@ -1391,6 +1400,14 @@ export function extractTrueCityFromText(rawText: string | null | undefined, fall
 
   if (caliKeywords.some(k => hasGeoKw(t, k)) && !hasGeoKw(t, "bogota")) return "Cali";
   if (medellinKeywords.some(k => hasGeoKw(t, k)) && !hasGeoKw(t, "bogota")) return "Medellín";
+
+  if (/\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(t)) {
+    const vMatch = findVeredaInText(rawText || "");
+    if (vMatch?.municipio) {
+      return normalizeCanonicalCity(vMatch.municipio);
+    }
+  }
+
   if (bogotaKeywords.some(k => hasGeoKw(t, k))) return "Bogotá";
 
   return normalizeCanonicalCity(fallbackCity);
@@ -2007,6 +2024,12 @@ export function explicarMatch(
     if (rawTextHint) {
       const cHint = matchNational(normalizarTextoGeografico(rawTextHint));
       if (cHint) return cHint;
+      if (/\b(?:vereda|vda|corregimiento|corr|caserio|caserío)\b/i.test(rawTextHint)) {
+        const vHint = findVeredaInText(rawTextHint);
+        if (vHint?.municipio) {
+          return normalizarTextoGeografico(normalizeCanonicalCity(vHint.municipio));
+        }
+      }
     }
     return "bogota";
   };
@@ -2366,8 +2389,8 @@ export function explicarMatch(
         !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
       return "office";
     }
-    // Villa
-    if (/\bvilla\b/.test(clean) && !clean.includes("villa magdala") && !clean.includes("villa santos") && !clean.includes("villavicencio")) {
+    // Villa (protegiendo nombres propios de ciudades/barrios colombianos que empiezan por "Villa ")
+    if (/\bvilla\b(?!\s*(?:de\s+leyva|del\s+rosario|del\s+prado|del\s+r[ií]o|del\s+sol|magdala|carolina|santos|campestre|ol[ií]mpica|luz|alsacia|gorgona|mar[ií]a|pinz[oó]n|nueva|garz[oó]n))/i.test(clean)) {
       return "villa";
     }
     // Hotel / hostal / aparta-hotel / motel / aparta-suite
@@ -2388,7 +2411,7 @@ export function explicarMatch(
       return "cabin";
     }
     // Finca / casa campestre
-    if (clean.includes("finca") || clean.includes("farm") || (clean.includes("campestre") && !clean.includes("casa campestre"))) {
+    if (clean.includes("finca") || clean.includes("farm") || (clean.includes("campestre") && !clean.includes("casa campestre") && !clean.includes("colina campestre") && !clean.includes("villa campestre"))) {
       return "farm";
     }
     // Lote / Terreno / Suelo (Urbano, Rural, Expansión, Suburbano, Protección)
@@ -2420,8 +2443,8 @@ export function explicarMatch(
   const effectiveReqType = deduceFullType(reqType, requirement.rawText || requirement.name || "");
 
   // CATEGORÍAS DE USO (TOLERANCIA CERO: UN APARTAMENTO NUNCA ES UN CONSULTORIO U OFICINA)
-  const RESIDENCIALES = new Set(["apartment", "house", "loft", "cabin"]);
-  const NO_RESIDENCIALES = new Set(["consultorio", "office", "commercial", "warehouse", "land", "farm"]);
+  const RESIDENCIALES = new Set(["apartment", "house", "loft", "cabin", "villa"]);
+  const NO_RESIDENCIALES = new Set(["consultorio", "office", "commercial", "warehouse", "land"]);
 
   // BLOQUEO DURO: Residencial vs No Residencial (Consultorio, Local, Bodega, Oficina)
   if (
@@ -2457,6 +2480,7 @@ export function explicarMatch(
       "apartment": ["apto", "apartamento", "apartment"],
       "casa": ["casa", "house", "townhouse"],
       "house": ["casa", "house", "townhouse"],
+      "villa": ["villa", "casa", "house"],
       "finca": ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
       "farm": ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
       "lote": ["lote", "terreno", "predio", "land"],
@@ -2498,7 +2522,14 @@ export function explicarMatch(
       (effectiveReqType === "consultorio" && effectivePropType === "office" && propTextSalud) ||
       (effectiveReqType === "office" && effectivePropType === "consultorio" && reqTextSalud);
 
-    if (!reqAlias.some(a => propAlias.includes(a)) && !isLoftAptoCrossCompatible && !isConsultorioOfficeCrossCompatible) {
+    const isCampestreText = (txt: string) => /\b(?:casa\s+campestre|casa\s+quinta|campestre|finca)\b/i.test(txt);
+    const reqFullRaw = `${requirement.rawText || ""} ${requirement.name || ""} ${(requirement.caracteristicasDeseadas?.tipoExacto || "")}`;
+    const propFullRaw = `${property.rawText || ""} ${property.name || ""} ${property.description || ""} ${(property.amenities?.subtipo || "")}`;
+    const isCasaCampestreFarmCrossCompatible =
+      (effectiveReqType === "farm" && effectivePropType === "house" && isCampestreText(propFullRaw)) ||
+      (effectiveReqType === "house" && isCampestreText(reqFullRaw) && effectivePropType === "farm");
+
+    if (!reqAlias.some(a => propAlias.includes(a)) && !isLoftAptoCrossCompatible && !isConsultorioOfficeCrossCompatible && !isCasaCampestreFarmCrossCompatible) {
       blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
@@ -2616,10 +2647,11 @@ export function explicarMatch(
     "casa_urbana": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
     "casa_barrio": ["casa_urbana", "casa_barrio"],
     "casa_conjunto": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
-    "casa_condominio": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
-    "casa_campestre": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "finca"],
-    "casa_campestre_condominio": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
-    "casa_quinta": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
+    "casa_condominio": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio", "villa"],
+    "casa_campestre": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "finca", "villa"],
+    "casa_campestre_condominio": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "villa"],
+    "casa_quinta": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "villa"],
+    "villa": ["villa", "casa_campestre", "casa_campestre_condominio", "casa_quinta", "casa_condominio"],
     "finca": ["finca", "casa_campestre", "casa_campestre_condominio"],
     // Apartamentos — estándar y dúplex son compatibles; penthouse NO es estándar
     "apartamento_estandar": ["apartamento_estandar", "apartamento_duplex"],

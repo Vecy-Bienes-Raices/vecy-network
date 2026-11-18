@@ -15177,9 +15177,207 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-maestria-grupos-lia-ley820-cero-biblias-v34-27"
       );
       expect(seed27?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.27");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[7-9]|[3-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.27.0");
+      expect(pkg.version).toMatch(/^34\.(?:2[7-9]|[3-9]\d)\.\d+$/);
+    });
+  });
+
+  describe("Suite 214 — Captura Total de Flyers/Imágenes, Todos los Tipos (Venta/Arriendo/Permuta) y Cobertura 100% Nacional Colombia (v34.28)", () => {
+    it("1. Vision soporta MIME dinámicos (JPEG/PNG/WebP), validación robusta y los 6 emojis doctrinales (Venta, Arriendo y Permuta); WhatsApp no descarta flyers sin caption ni enviados como documento image/*", async () => {
+      const fs = await import("fs");
+      const {
+        detectImageMimeType,
+        buildFlyerReactionEmoji,
+        isValidFlyerVisionExtraction,
+      } = await import("../_core/jania/vision");
+
+      expect(detectImageMimeType("iVBORw0KGgoAAAANSUhEUg==")).toBe("image/png");
+      expect(detectImageMimeType("UklGRh4AAABXRUJQ")).toBe("image/webp");
+      expect(detectImageMimeType("/9j/4AAQSkZJRg==")).toBe("image/jpeg");
+      expect(detectImageMimeType("iVBORw0KGgoAAA", "image/png; charset=binary")).toBe("image/png");
+
+      expect(buildFlyerReactionEmoji("INMUEBLE", "venta")).toBe("👍");
+      expect(buildFlyerReactionEmoji("INMUEBLE", "arriendo")).toBe("👌");
+      expect(buildFlyerReactionEmoji("INMUEBLE", "permuta")).toBe("🔀");
+      expect(buildFlyerReactionEmoji("INMUEBLE", "venta_permuta")).toBe("🔀");
+      expect(buildFlyerReactionEmoji("REQUERIMIENTO", "venta")).toBe("📝");
+      expect(buildFlyerReactionEmoji("REQUERIMIENTO", "arriendo")).toBe("✏️");
+      expect(buildFlyerReactionEmoji("REQUERIMIENTO", "permuta")).toBe("🔄");
+
+      expect(
+        isValidFlyerVisionExtraction({
+          isFlyerOrBanner: true,
+          classification: "INMUEBLE",
+          transactionType: "permuta",
+          propertyType: "finca",
+          city: "Barichara",
+          area: 12000,
+          flyerVerbatimText: "Se permuta finca Barichara",
+        })
+      ).toBe(true);
+      expect(
+        isValidFlyerVisionExtraction({
+          isFlyerOrBanner: false,
+          classification: "CONSULTA_GENERAL",
+          transactionType: "venta",
+          flyerVerbatimText: "",
+        })
+      ).toBe(false);
+
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain("hasImageOrDocMedia");
+      expect(waSrc).toContain("!hasImageOrDocMedia");
+      expect(waSrc).toContain("docMime.startsWith('image/')");
+    });
+
+    it("2. Todos los tipos de inmueble y modalidades (Venta, Arriendo, Permuta) sin falsos positivos en parsers ni bloqueos indebidos en matching", async () => {
+      const { extractFallbackDataFromText, translatePropertyType } = await import("../_core/jania/parsers");
+      const { explicarMatch } = await import("../_core/matching");
+
+      // "localidad" no debe volver un Lote en Local Comercial
+      const loteLocalidad = extractFallbackDataFromText(
+        "Se vende lote de 1.200 m2 en la localidad de Usaquén Bogotá por $2.400 millones"
+      );
+      expect(loteLocalidad.propertyType).toBe("land");
+
+      // "Colina Campestre" no debe volver un Apartamento en Finca
+      const aptoColina = extractFallbackDataFromText(
+        "Arriendo apartamento en Colina Campestre Bogotá 3 alcobas 2 baños $3.500.000"
+      );
+      expect(aptoColina.propertyType).toBe("apartment");
+      expect(aptoColina.transactionType).toBe("arriendo");
+
+      // "Villa" reconocida como house/villa (no Villa de Leyva)
+      const villaAnapoima = extractFallbackDataFromText(
+        "Se vende o permuta villa en Anapoima Cundinamarca 4 alcobas $1.800 millones"
+      );
+      expect(villaAnapoima.propertyType).toBe("house");
+      expect(villaAnapoima.transactionType).toBe("venta_permuta");
+      expect(villaAnapoima.city).toBe("Anapoima");
+
+      // translatePropertyType cubre tipos comerciales/hoteleros/rurales
+      expect(translatePropertyType("commercial")).toContain("Local");
+      expect(translatePropertyType("hotel")).toContain("Hotel");
+      expect(translatePropertyType("cabin")).toContain("Cabaña");
+
+      // Match real: Requerimiento Casa Campestre <-> Oferta Finca en Venta/Permuta vs Demanda Permuta en Barichara
+      const matchCampestreFinca = explicarMatch(
+        {
+          id: 9201,
+          tipoInmuebleDeseado: "house",
+          tipoNegocioDeseado: "permuta",
+          presupuestoMax: "1600000000",
+          areaMin: "5000",
+          habitacionesMin: 4,
+          banosMin: 3,
+          parqueaderosMin: 2,
+          ciudadDeseada: "Barichara",
+          zonaDeseada: "El Salitre",
+          rawText: "Busco casa campestre en permuta Barichara sector El Salitre 4 alcobas",
+          name: "Casa Campestre Barichara",
+          caracteristicasDeseadas: { tipoExacto: "Casa Campestre" },
+        },
+        {
+          id: 9101,
+          propertyType: "farm",
+          transactionType: "venta_permuta",
+          price: "1500000000",
+          areaTotal: "6400",
+          bedrooms: 4,
+          bathrooms: 4,
+          garages: 4,
+          addressCity: "Barichara",
+          zone: "Vereda El Salitre",
+          addressNeighborhood: "Vereda El Salitre",
+          rawText: "Vendo o permuto finca en Vereda El Salitre Barichara 4 alcobas 4 baños",
+          name: "Finca Barichara",
+          amenities: { subtipo: "finca" },
+        }
+      );
+      expect(matchCampestreFinca.blockers.length).toBe(0);
+      expect(matchCampestreFinca.score).toBeGreaterThanOrEqual(85);
+    });
+
+    it("3. Cobertura Nacional 100% Colombia: 1.122 municipios DIVIPOLA, 33.434 veredas/corregimientos/caseríos IGAC y regiones colombianas", async () => {
+      const { lookupDivipolaMunicipality, findDivipolaInText, getDivipolaCount } = await import("../_core/divipola");
+      const { buscarLugarColombia } = await import("../_core/colombia-geography");
+      const { lookupVereda, findVeredaInText, getVeredasCount } = await import("../_core/veredas-lookup");
+      const { deducirGeografiaTripartita } = await import("../_core/geography");
+      const { explicarMatch, extractTrueCityFromText } = await import("../_core/matching");
+
+      expect(getDivipolaCount()).toBeGreaterThanOrEqual(1120);
+      expect(getVeredasCount()).toBeGreaterThanOrEqual(33000);
+
+      const barichara = lookupDivipolaMunicipality("Barichara");
+      expect(barichara?.departamento).toMatch(/Santander/i);
+
+      const guatape = findDivipolaInText("Vendo cabaña frente al embalse en Guatapé");
+      expect(guatape?.municipio).toBe("Guatapé");
+      expect(guatape?.departamento).toBe("Antioquia");
+
+      const eje = buscarLugarColombia("Busco finca hotel en el Eje Cafetero");
+      expect(eje?.nombreCanonico).toBe("Eje Cafetero");
+
+      const vdaFagua = lookupVereda("Vereda Fagua", "Chía");
+      expect(vdaFagua?.municipio?.toLowerCase()).toContain("ch");
+
+      const vdaFromText = findVeredaInText("Finca en la vereda Fagua de Chía");
+      expect(vdaFromText?.vereda?.toLowerCase()).toContain("fagua");
+
+      const geoBarichara = deducirGeografiaTripartita("", "", "VECY INMO", "Lote en venta en Barichara Santander 2.000 m2");
+      expect(geoBarichara.city).toBe("Barichara");
+      expect(geoBarichara.department).toMatch(/Santander/i);
+
+      expect(extractTrueCityFromText("Local en Guatapé parque principal", "")).toBe("Guatapé");
+
+      // Match entre Corregimiento/Caserío con prefijo vs nombre limpio
+      const matchRuralPrefix = explicarMatch(
+        {
+          id: 9202,
+          tipoInmuebleDeseado: "cabin",
+          tipoNegocioDeseado: "venta",
+          presupuestoMax: "450000000",
+          areaMin: "300",
+          habitacionesMin: 2,
+          banosMin: 2,
+          parqueaderosMin: 1,
+          ciudadDeseada: "Medellín",
+          zonaDeseada: "Santa Elena",
+          rawText: "Compro cabaña en Santa Elena Medellín 2 alcobas",
+          name: "Busco Cabaña Santa Elena",
+        },
+        {
+          id: 9102,
+          propertyType: "cabin",
+          transactionType: "venta",
+          price: "420000000",
+          areaTotal: "350",
+          bedrooms: 2,
+          bathrooms: 2,
+          garages: 1,
+          addressCity: "Medellín",
+          zone: "Corregimiento Santa Elena",
+          addressNeighborhood: "Corregimiento Santa Elena",
+          rawText: "Vendo cabaña en Corregimiento Santa Elena Medellín 2 alcobas",
+          name: "Cabaña Santa Elena",
+        }
+      );
+      expect(matchRuralPrefix.blockers.length).toBe(0);
+      expect(matchRuralPrefix.score).toBeGreaterThanOrEqual(85);
+    });
+
+    it("4. Verifica semilla de gobernanza v34.28 y versión v34.28 (34.28.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed28 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28"
+      );
+      expect(seed28?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.28");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.28.0");
     });
   });
 });
