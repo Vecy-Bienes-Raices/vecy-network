@@ -1,4 +1,14 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.33.0 — 2026-11-20)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.34.0 — 2026-11-20)
+- **JanIA Server & Web Portal:** `v34.34` (`34.34.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 773/773 tests en verde** + **Suite 220 2/2 en verde** | `$0 COP`).
+- **Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / PR #2840 / WAHA #2349) + Escudo `CB:status` ACK (`whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Confirmado en Vivo en Contabo VPS (`v34.33`):**
+     - `CB:ib,,offline_preview` reveló **`16.552` elementos represados** (`message: 637`, `receipt: 15.095`, `notification: 664`, `status: 155`), con `id=2A3080DA90A34CEEBCB16FC1C36E9540` en la cabeza de la cola (inmediatamente acusado por `CB:status` ACK).
+     - Sin embargo, `@whiskeysockets/baileys@6.7.19` (`socket.js:522`) únicamente envía **UN solo** `<ib><offline_batch count="100"/></ib>` y jamás solicita los lotes siguientes. Al quedar `16.452` elementos sin pedir, WhatsApp nunca enviaba `<ib><offline/>` y retenía el 100% de los mensajes EN VIVO detrás de la cola.
+  2. **Solución Aplicada (`v34.34`):**
+     - **`whatsapp-match.ts`:** añadidos `startOfflineBatchPump()`, `requestNextOfflineBatch(100)` y `stopOfflineBatchPump()`, que al recibir `offline_preview` (`count > 100`) bombean lotes sucesivos de 100 elementos hasta recibir `CB:ib,,offline` y liberar el tráfico en tiempo real; métricas `offlineDrainActive`, `offlinePreviewExpectedCount`, `offlineBatchRequestsSent`, `offlineFramesReceived` expuestas en `/api/health`.
+  3. **Gobernanza y Regresión:** Semilla `seed-offline-batch-drain-baileys-2810-v34-34` y **Suite 220 (2/2)** (**6/6 archivos, 773/773 tests en verde** | `$0 COP`).
+
+### 📦 HISTÓRICO RECIENTE (v34.33.0 — 2026-11-20)
 - **JanIA Server & Web Portal:** `v34.33` (`34.33.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 771/771 tests en verde** + **Suite 219 3/3 en verde** | `$0 COP`).
 - **Escudo Anti-`Stream Errored (ack)` (`CB:status` + Failsafe `<message>` ACK — Baileys Issue #2858) y Reactivación Total de Ingesta/Match/DM (`whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Forense Real en Contabo VPS (`13.140.149.144`):**

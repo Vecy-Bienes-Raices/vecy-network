@@ -7,6 +7,15 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-20] — JanIA v34.34: Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / WAHA #2349) y Apertura Total de Tráfico en Vivo (Doctrina Eduardo A. Rivera — v34.34 - 34.34.0)
+
+#### 1. Evidencia Confirmada en Vivo en Contabo VPS
+- Tras desplegar `v34.33`, la nueva telemetría `CB:ib,,offline_preview` mostró en el instante de conexión **`count: 16.552`** (`message: 637`, `receipt: 15.095`, `notification: 664`, `status: 155`), y `CB:status` acusó inmediatamente `id=2A3080DA90A34CEEBCB16FC1C36E9540`. Sin embargo, Baileys `6.7.19` (`socket.js:522`) solo envía **un único** `<ib><offline_batch count="100"/></ib>` y nunca pide los lotes siguientes (**Baileys Issue #2810 / WAHA #2349**), dejando los `16.452` elementos restantes sin drenar y reteniendo todo el tráfico en vivo detrás de la cola.
+
+#### 2. Acciones Ejecutadas en `v34.34`
+1. **Bombeador Iterativo `offline_batch` (`server/_core/whatsapp-match.ts`):** implementados `startOfflineBatchPump()`, `requestNextOfflineBatch(100)` y `stopOfflineBatchPump()` para solicitar lotes consecutivos de 100 elementos al ir llegando los frames offline hasta recibir `CB:ib,,offline` y liberar el 100% del flujo en vivo de grupos y DMs, con observabilidad completa en `/api/health`.
+2. **Gobernanza y Validación:** bump `v34.34` (`34.34.0`), semilla `seed-offline-batch-drain-baileys-2810-v34-34`, **Suite 220 (2/2)**, `npm run check` (**0 errores**), `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 773/773 tests en verde** | `$0 COP`) y `npm run build` limpio.
+
 ### 📅 [2026-11-20] — JanIA v34.33: Escudo Anti-`Stream Errored (ack)` (`CB:status` Baileys Issue #2858 + Failsafe `<message>` ACK) y Reactivación Total de Ingesta, Match y DMs (Doctrina Eduardo A. Rivera — v34.33 - 34.33.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico Definitivo en Contabo VPS

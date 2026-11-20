@@ -184,7 +184,15 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.33 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.34 — Noviembre 2026
+
+### Novedades v34.34 (Drenador Iterativo de Cola Offline > 100 Items — Baileys Issue #2810 / WAHA #2349 — Doctrina Eduardo A. Rivera):
+- **Drenaje Completo de Cola Offline y Desbloqueo de Mensajes en Vivo (`server/_core/whatsapp-match.ts`):**
+  1. Verificado en vivo en el VPS que WhatsApp mantenía **`16.552` elementos offline** (`message: 637`, `receipt: 15.095`, `notification: 664`, `status: 155`), mientras Baileys `6.7.19` (`socket.js:522`) solo solicitaba un único `<ib><offline_batch count="100"/></ib>`, reteniendo todos los mensajes en tiempo real detrás de los `16.452` restantes.
+  2. Implementados `startOfflineBatchPump()`, `requestNextOfflineBatch(100)` y `stopOfflineBatchPump()` para bombear lotes sucesivos de 100 elementos (en coordinación con `CB:status` ACK y el Watchdog del event buffer) hasta recibir `CB:ib,,offline` y abrir el flujo EN VIVO; métricas en `/api/health`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-offline-batch-drain-baileys-2810-v34-34`, **Suite 220 (2/2)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 773/773 tests en verde** (`$0 COP`), versión `v34.34` (`34.34.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.33 — Noviembre 2026
 
 ### Novedades v34.33 (Escudo Anti-`Stream Errored (ack)` — Handler `CB:status` Baileys Issue #2858 + Failsafe `<message>` ACK — Doctrina Eduardo A. Rivera):
 - **Desbloqueo Real de la Cola Entrante WhatsApp (`server/_core/whatsapp-match.ts`):**

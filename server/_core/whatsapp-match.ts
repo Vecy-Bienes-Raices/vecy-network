@@ -230,6 +230,14 @@ export class JaniaMatchBot {
   private failsafeAckCount: number = 0;
   private offlinePreviewCount: number = 0;
   private offlineCompletedCount: number = 0;
+  private offlineDrainActive: boolean = false;
+  private offlinePreviewExpectedCount: number = 0;
+  private offlineBatchRequestsSent: number = 0;
+  private offlineFramesReceived: number = 0;
+  private offlineFramesSinceLastBatch: number = 0;
+  private lastOfflineFrameAt: number = 0;
+  private lastOfflineBatchSentAt: number = 0;
+  private offlineBatchPumpTimer: ReturnType<typeof setInterval> | null = null;
   private lastIncomingMessageAt: number = 0;
   private lastDisconnectCode: number | string | null = null;
   private lastDisconnectReason: string | null = null;
@@ -251,11 +259,82 @@ export class JaniaMatchBot {
       failsafeAckCount: this.failsafeAckCount,
       offlinePreviewCount: this.offlinePreviewCount,
       offlineCompletedCount: this.offlineCompletedCount,
+      offlineDrainActive: this.offlineDrainActive,
+      offlinePreviewExpectedCount: this.offlinePreviewExpectedCount,
+      offlineBatchRequestsSent: this.offlineBatchRequestsSent,
+      offlineFramesReceived: this.offlineFramesReceived,
       lastWsMessageNodeAt: this.lastWsMessageNodeAt || null,
       lastIncomingMessageAt: this.lastIncomingMessageAt || null,
       lastDisconnectCode: this.lastDisconnectCode,
       lastDisconnectReason: this.lastDisconnectReason,
     };
+  }
+
+  /**
+   * 🛡️ DOCTRINA v34.34 — Drenador Iterativo de Cola Offline (Baileys Issue #2810 / PR #2840 / WAHA #2349):
+   * Baileys 6.7.19 solo pide UN único lote <offline_batch count="100"/> al recibir offline_preview.
+   * Si la cola supera 100 elementos (ej. 16.552 tras un corte), WhatsApp jamás envía <ib><offline/>
+   * y retiene el 100% de los mensajes EN VIVO detrás de la cola. Este bombeador solicita lotes
+   * sucesivos de 100 elementos hasta recibir CB:ib,,offline y liberar el tráfico en tiempo real.
+   */
+  public async requestNextOfflineBatch(batchSize: number = 100): Promise<boolean> {
+    if (!this.sock || typeof this.sock.sendNode !== 'function') return false;
+    if (!this.offlineDrainActive) return false;
+    if (this.offlineBatchRequestsSent >= 500) {
+      console.warn(`[${this.botName}-OFFLINE] ⚠️ Tope de seguridad de 500 lotes offline alcanzado. Pausando bombeo.`);
+      this.stopOfflineBatchPump();
+      return false;
+    }
+    const now = Date.now();
+    if ((now - this.lastOfflineBatchSentAt) < 250) return false;
+    this.lastOfflineBatchSentAt = now;
+    this.offlineFramesSinceLastBatch = 0;
+    this.offlineBatchRequestsSent++;
+    try {
+      await this.sock.sendNode({
+        tag: 'ib',
+        attrs: {},
+        content: [{ tag: 'offline_batch', attrs: { count: String(batchSize) } }]
+      });
+      if (this.offlineBatchRequestsSent <= 5 || this.offlineBatchRequestsSent % 20 === 0) {
+        console.log(`[${this.botName}-OFFLINE] 🔄 Solicitando lote offline #${this.offlineBatchRequestsSent} (recibidos=${this.offlineFramesReceived}/${this.offlinePreviewExpectedCount || '?'})...`);
+      }
+      return true;
+    } catch (err: any) {
+      console.warn(`[${this.botName}-OFFLINE] Error solicitando lote offline #${this.offlineBatchRequestsSent}:`, err?.message || err);
+      return false;
+    }
+  }
+
+  private startOfflineBatchPump(expectedCount: number) {
+    this.stopOfflineBatchPump();
+    this.offlineDrainActive = true;
+    this.offlinePreviewExpectedCount = expectedCount;
+    this.offlineBatchRequestsSent = 1; // Baileys socket.js:522 ya envió el lote #1 de 100
+    this.offlineFramesReceived = 0;
+    this.offlineFramesSinceLastBatch = 0;
+    this.lastOfflineFrameAt = Date.now();
+    this.lastOfflineBatchSentAt = Date.now();
+
+    if (expectedCount <= 100) return;
+
+    this.offlineBatchPumpTimer = setInterval(() => {
+      if (!this.offlineDrainActive || !this.isReady || !this.sock) return;
+      const now = Date.now();
+      const quietMs = now - this.lastOfflineFrameAt;
+      const sinceBatchMs = now - this.lastOfflineBatchSentAt;
+      if (this.offlineFramesSinceLastBatch >= 90 || (quietMs >= 1400 && sinceBatchMs >= 1400)) {
+        this.requestNextOfflineBatch(100).catch(() => {});
+      }
+    }, 500);
+  }
+
+  private stopOfflineBatchPump() {
+    this.offlineDrainActive = false;
+    if (this.offlineBatchPumpTimer) {
+      clearInterval(this.offlineBatchPumpTimer);
+      this.offlineBatchPumpTimer = null;
+    }
   }
 
   /**
@@ -1014,6 +1093,7 @@ export class JaniaMatchBot {
     }
     this.isInitializing = true;
     this.stopEventBufferWatchdog();
+    this.stopOfflineBatchPump();
     this.clearAllPendingMessageAckTimers();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -1194,15 +1274,21 @@ export class JaniaMatchBot {
           this.offlinePreviewCount++;
           try {
             const previewChild = Array.isArray(node?.content) ? node.content[0] : null;
-            console.log(`[${this.botName}-OFFLINE] 📦 offline_preview #${this.offlinePreviewCount} recibido:`, JSON.stringify(previewChild?.attrs || node?.attrs || {}));
+            const previewAttrs = previewChild?.attrs || node?.attrs || {};
+            const expectedCount = Number(previewAttrs.count || 0);
+            console.log(`[${this.botName}-OFFLINE] 📦 offline_preview #${this.offlinePreviewCount} recibido:`, JSON.stringify(previewAttrs));
+            this.startOfflineBatchPump(expectedCount);
           } catch (_) { }
         });
 
         this.sock.ws.on('CB:ib,,offline', (node: any) => {
           this.offlineCompletedCount++;
+          const drainedBatches = this.offlineBatchRequestsSent;
+          const drainedFrames = this.offlineFramesReceived;
+          this.stopOfflineBatchPump();
           try {
             const offChild = Array.isArray(node?.content) ? node.content[0] : null;
-            console.log(`[${this.botName}-OFFLINE] ✅ Cola offline completada (#${this.offlineCompletedCount}, count=${offChild?.attrs?.count ?? '0'}). Liberando buffer...`);
+            console.log(`[${this.botName}-OFFLINE] 🎉 Cola offline 100% completada (#${this.offlineCompletedCount}, serverCount=${offChild?.attrs?.count ?? '0'}, lotes=${drainedBatches}, frames=${drainedFrames}). ¡Tráfico EN VIVO desbloqueado!`);
           } catch (_) { }
           setTimeout(() => {
             try { this.flushStuckEventBufferIfNeeded(true); } catch (_) { }
@@ -1212,6 +1298,14 @@ export class JaniaMatchBot {
         this.sock.ws.on('frame', (frame: any) => {
           try {
             if (!frame || frame instanceof Uint8Array || !frame.tag) return;
+            if (this.offlineDrainActive && frame?.attrs?.offline !== undefined) {
+              this.offlineFramesReceived++;
+              this.offlineFramesSinceLastBatch++;
+              this.lastOfflineFrameAt = Date.now();
+              if (this.offlineFramesSinceLastBatch >= 95) {
+                this.requestNextOfflineBatch(100).catch(() => {});
+              }
+            }
             const tag = String(frame.tag);
             if (!KNOWN_WA_STANZA_TAGS.has(tag)) {
               if (!this.unknownStanzaTagsLogged.has(tag)) {
@@ -1345,6 +1439,7 @@ export class JaniaMatchBot {
 
         this.isReady = false;
         this.stopEventBufferWatchdog();
+        this.stopOfflineBatchPump();
         this.clearAllPendingMessageAckTimers();
         this.lastDisconnectCode = statusCode ?? 'undefined';
         this.lastDisconnectReason = String(disconnectReason).slice(0, 200);

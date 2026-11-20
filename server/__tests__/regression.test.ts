@@ -15837,9 +15837,61 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-ack-status-stanza-anti-stream-error-v34-33"
       );
       expect(seed33?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.33");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[3-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.33.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[3-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 220 — v34.34: Drenador Iterativo de Cola Offline > 100 Items
+  // (Baileys Issue #2810 / PR #2840 / WAHA #2349)
+  // =========================================================================
+  describe("220. Doctrina v34.34: Drenador Iterativo de Cola Offline (offline_batch > 100)", () => {
+    it("1. requestNextOfflineBatch envía <ib><offline_batch count='100'/></ib> y actualiza getHealthSnapshot()", async () => {
+      const { JaniaMatchBot } = await import("../_core/whatsapp-match");
+      const bot = new JaniaMatchBot({ isWorkerOnly: true });
+      const sentNodes: any[] = [];
+      bot.sock = {
+        sendNode: async (node: any) => {
+          sentNodes.push(node);
+        },
+      };
+      (bot as any).offlineDrainActive = true;
+      (bot as any).offlinePreviewExpectedCount = 16552;
+      (bot as any).offlineBatchRequestsSent = 1;
+      (bot as any).lastOfflineBatchSentAt = 0;
+
+      const sent = await bot.requestNextOfflineBatch(100);
+      expect(sent).toBe(true);
+      expect(sentNodes[0]).toEqual({
+        tag: "ib",
+        attrs: {},
+        content: [{ tag: "offline_batch", attrs: { count: "100" } }],
+      });
+      const snap = bot.getHealthSnapshot();
+      expect(snap.offlineDrainActive).toBe(true);
+      expect(snap.offlinePreviewExpectedCount).toBe(16552);
+      expect(snap.offlineBatchRequestsSent).toBe(2);
+    });
+
+    it("2. Verifica bombeo automático startOfflineBatchPump/stopOfflineBatchPump, semilla v34.34 y versión v34.34 (34.34.0)", async () => {
+      const fs = await import("fs");
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain("startOfflineBatchPump");
+      expect(waSrc).toContain("stopOfflineBatchPump");
+      expect(waSrc).toContain("requestNextOfflineBatch");
+      expect(waSrc).toContain("offline_batch");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed34 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-offline-batch-drain-baileys-2810-v34-34"
+      );
+      expect(seed34?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.34");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.34.0");
     });
   });
 });

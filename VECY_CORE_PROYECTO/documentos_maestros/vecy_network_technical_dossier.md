@@ -330,6 +330,11 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.34 — Noviembre 2026
+- **Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / PR #2840 / WAHA #2349):**
+  - `server/_core/whatsapp-match.ts`: resuelta la retención total de mensajes EN VIVO cuando la cola offline de WhatsApp supera 100 elementos (`16.552` verificados en VPS) debido a que `socket.js:522` de Baileys `6.7.19` solo solicita un único `<offline_batch count="100"/>`. Implementados `startOfflineBatchPump()`, `requestNextOfflineBatch(100)` y `stopOfflineBatchPump()` hasta recibir `CB:ib,,offline`, más métricas `offlineDrainActive`/`offlinePreviewExpectedCount`/`offlineBatchRequestsSent`/`offlineFramesReceived` en `GET /api/health`.
+  - Gobernanza y Pruebas: semilla `seed-offline-batch-drain-baileys-2810-v34-34`, **Suite 220 (2/2)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 773/773 tests en verde**; `npm run build` limpio; versión `v34.34` / `34.34.0`).
+
 ### 🔖 v34.33 — Noviembre 2026
 - **Escudo Anti-`Stream Errored (ack)` (`CB:status` Baileys Issue #2858 + Failsafe `<message>` ACK):**
   - `server/_core/whatsapp-match.ts`: resuelto el bloqueo total de cola entrante de WhatsApp y los cortes cíclicos cada ~50 min (`Stream Errored (ack)` sobre `<status type="media">` y `<message>` sin ACK en `@whiskeysockets/baileys@6.7.19`) mediante `buildAckStanzaForNode()`, `ackTopLevelStanza()`, listener inmediato `ws.on('CB:status', ...)`, resguardo en `ws.on('frame', ...)` para stanzas desconocidas, failsafe ACK a los `12s` en `CB:message` (`markMessageUpserted`), logging `CB:ib,,offline_preview`/`CB:ib,,offline` y métricas `statusAckCount`/`failsafeAckCount`/`wsMessagesReceivedCount` en `GET /api/health`.

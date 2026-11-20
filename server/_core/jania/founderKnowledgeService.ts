@@ -1010,6 +1010,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.33: Handler CB:status + failsafe ACK de <message> + telemetría offline_preview/offline para erradicar el congelamiento de cola entrante y los cortes Stream Errored (ack).",
     createdAt: "2026-11-20T15:20:00.000Z",
     active: true
+  },
+  {
+    id: "seed-offline-batch-drain-baileys-2810-v34-34",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / WAHA #2349) en whatsapp-match.ts (v34.34)",
+    directive:
+      "Baileys 6.7.19 únicamente solicita un único lote <ib><offline_batch count='100'/></ib> al recibir offline_preview, dejando retenidos todos los mensajes EN VIVO cuando la cola acumulada supera 100 elementos (ej. 16.552). whatsapp-match.ts bombea automáticamente lotes sucesivos de 100 elementos mediante requestNextOfflineBatch/startOfflineBatchPump hasta recibir CB:ib,,offline, combinándose con CB:status ACK para vaciar por completo el represamiento y restaurar la ingesta y respuestas en tiempo real.",
+    rawText:
+      "Blindaje v34.34: Bombeo iterativo de offline_batch (count=100) hasta CB:ib,,offline + telemetría offlineDrainActive/offlineBatchRequestsSent/offlineFramesReceived en /api/health.",
+    createdAt: "2026-11-20T15:28:00.000Z",
+    active: true
   }
 ];
 
