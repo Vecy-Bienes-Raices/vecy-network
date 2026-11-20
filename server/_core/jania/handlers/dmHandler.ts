@@ -32,7 +32,7 @@ import { getDb } from "../../../db";
 import { properties, solicitudes } from "../../../../drizzle/schema";
 import { cleanColombianPhone, resolvePropertyAddress } from "../../agendaWhatsAppService";
 import { eq, and, or, sql, desc } from "drizzle-orm";
-import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
+import { extractFirstName, sanitizeResponseMarkdown, enforceColombiaTimeGreeting, getColombiaDateTimeContext } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName, extractIntroducedName, isGenericOrNumericName } from "../../nameAndGenderResolver";
 import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
@@ -2124,6 +2124,7 @@ export function sanitizeDmOrthographyAndGreeting(
   cleaned = cleaned.replace(/^¡?hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `¡${currentSalutation}, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! 👋 `);
   cleaned = cleaned.replace(/^¡?hola\b[!]?\s*/i, nameSalutation);
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `¡${m.charAt(0).toUpperCase() + m.slice(1)}!`);
+  cleaned = enforceColombiaTimeGreeting(cleaned, currentSalutation);
 
   // 3. Estructura única e indivisible para directores VIP, familiares o primer saludo del día (Doctrina v33.07 / v33.13)
   if (isEduardo) {
@@ -2301,20 +2302,18 @@ export async function processPrivateDmConversationalMessage(
 
   const realName = await resolveRealName(userId, userName);
 
-  // 🇨🇴 Franja Horaria de Colombia (America/Bogota, UTC-5)
-  const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-  const hour = nowBogota.getHours();
-  const minutes = String(nowBogota.getMinutes()).padStart(2, '0');
-  const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  const diaSemanaStr = diasSemana[nowBogota.getDay()];
-  const diaMes = nowBogota.getDate();
-  const mesStr = meses[nowBogota.getMonth()];
-  const anio = nowBogota.getFullYear();
+  // 🇨🇴 Franja Horaria de Colombia (America/Bogota, UTC-5 — inmune a la zona horaria del VPS)
+  const colCtxNow = getColombiaDateTimeContext();
+  const hour = colCtxNow.hour;
+  const minutes = String(colCtxNow.minute).padStart(2, '0');
+  const diaSemanaStr = colCtxNow.weekdayCapitalized;
+  const diaMes = colCtxNow.dayOfMonth;
+  const mesStr = colCtxNow.monthName;
+  const anio = colCtxNow.year;
   const colombiaTimeFormatted = `${diaSemanaStr}, ${diaMes} de ${mesStr} de ${anio}, ${String(hour).padStart(2, '0')}:${minutes} hora Colombia (America/Bogota)`;
 
   let timeOfDay = "Mañana (5:00 am - 11:59 am)";
-  let timeSalutation = "Buenos días";
+  let timeSalutation: string = colCtxNow.greeting;
   if (hour >= 5 && hour < 12) {
     timeOfDay = "Mañana (5:00 am - 11:59 am)";
     timeSalutation = "Buenos días";
@@ -4256,10 +4255,12 @@ DIRECTIVAS OBLIGATORIAS:
       });
     }
 
-    // Erradicación rigurosa de saludos ÚNICAMENTE en conversaciones activas en curso (Doctrina v33.33)
+    // Erradicación rigurosa de saludos ÚNICAMENTE en conversaciones activas en curso (Doctrina v33.33 / v34.35)
     if (isOngoingChat && reply) {
       reply = stripLeadingGreetingsAndCourtesies(reply);
     } else if (!isOngoingChat && reply) {
+      // Garantizar saludo horario exacto de Colombia (America/Bogota) incluso si el LLM alucinó otra franja:
+      reply = enforceColombiaTimeGreeting(reply, timeSalutation);
       // Si es el primer mensaje del día o nueva sesión y el modelo omitió el saludo formal, anteponerlo siempre:
       const hasGreetingAlready = /^(?:¡?hola|¡?buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?)|saludos)/i.test(reply.trim());
       if (!hasGreetingAlready) {

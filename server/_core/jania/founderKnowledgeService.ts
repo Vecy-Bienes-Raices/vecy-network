@@ -1022,6 +1022,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.34: Bombeo iterativo de offline_batch (count=100) hasta CB:ib,,offline + telemetría offlineDrainActive/offlineBatchRequestsSent/offlineFramesReceived en /api/health.",
     createdAt: "2026-11-20T15:28:00.000Z",
     active: true
+  },
+  {
+    id: "seed-saludo-horario-colombia-determinista-v34-35",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Blindaje Determinista de Saludo Horario Oficial de Colombia (Buenos días / Buenas tardes / Buenas noches — v34.35)",
+    directive:
+      "Todo saludo inicial emitido por JanIA en DM, Grupos o Portal Web DEBE corresponder estrictamente a la hora oficial de Colombia (America/Bogota, UTC-5): 05:00-11:59 = 'Buenos días', 12:00-18:59 = 'Buenas tardes', 19:00-04:59 = 'Buenas noches'. enforceColombiaTimeGreeting() en parsers.ts (ejecutado en sanitizeResponseMarkdown y dmHandler.ts) corrige deterministamente cualquier alucinación horaria del LLM (ej. '¡Buenas tardes, Eduardo!' a las 10:37 a.m. -> '¡Buenos días, Eduardo!').",
+    rawText:
+      "Blindaje v34.35: Unificación horaria America/Bogota con Intl.DateTimeFormat y corrección determinista enforceColombiaTimeGreeting en todas las respuestas salientes.",
+    createdAt: "2026-11-20T16:15:00.000Z",
+    active: true
   }
 ];
 

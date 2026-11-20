@@ -7,6 +7,17 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-20] — JanIA v34.35: Blindaje Determinista de Saludo Horario Oficial de Colombia (`Buenos días` / `Buenas tardes` / `Buenas noches`) (Doctrina Eduardo A. Rivera — v34.35 - 34.35.0)
+
+#### 1. Reporte Directo de Eduardo A. Rivera (Captura 10:37 a.m. COL)
+- Eduardo señaló que al escribir `"Hola"` a las `10:37 a.m.` (mañana en Colombia), JanIA respondió `"¡Buenas tardes, Eduardo! 👋✨"`, lo cual constituye un fallo grave de precisión horaria.
+- **Causa Raíz:** Aunque el prompt enviaba `"Buenos días"`, el LLM alucinó `"¡Buenas tardes, Eduardo!"`, y ni `sanitizeResponseMarkdown` (`parsers.ts`) ni el guard `hasGreetingAlready` (`dmHandler.ts:4264`) verificaban ni corregían la concordancia del saludo inicial con la franja horaria oficial de Colombia.
+
+#### 2. Acciones Ejecutadas en `v34.35`
+1. **Unificación Horaria `America/Bogota` (`parsers.ts`, `whatsapp-utils.ts`, `dmHandler.ts`):** cálculo vía `Intl.DateTimeFormat` inmune a la zona horaria del VPS (`05:00–11:59` = `Buenos días`, `12:00–18:59` = `Buenas tardes`, `19:00–04:59` = `Buenas noches`).
+2. **Post-procesador Determinista `enforceColombiaTimeGreeting()` (`parsers.ts`, `dmHandler.ts`):** integrado en `sanitizeResponseMarkdown` (que protege DM, Grupos 2/3, Grupos externos, Web Chat y `queuedSend`) y en `dmHandler.ts` para corregir instantáneamente cualquier saludo inicial desfasado sin alterar el resto del texto.
+3. **Gobernanza y Validación:** bump `v34.35` (`34.35.0`), semilla `seed-saludo-horario-colombia-determinista-v34-35`, **Suite 221 (4/4)**, `npm run check` (**0 errores**), `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 777/777 tests en verde** | `$0 COP`) y `npm run build` limpio.
+
 ### 📅 [2026-11-20] — JanIA v34.34: Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / WAHA #2349) y Apertura Total de Tráfico en Vivo (Doctrina Eduardo A. Rivera — v34.34 - 34.34.0)
 
 #### 1. Evidencia Confirmada en Vivo en Contabo VPS

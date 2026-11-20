@@ -184,7 +184,15 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.34 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.35 — Noviembre 2026
+
+### Novedades v34.35 (Blindaje Determinista de Saludo Horario Oficial de Colombia — `Buenos días` / `Buenas tardes` / `Buenas noches` — Doctrina Eduardo A. Rivera):
+- **Corrección Total de Saludo Horario (`server/_core/jania/parsers.ts`, `server/_core/whatsapp-utils.ts`, `server/_core/jania/handlers/dmHandler.ts`):**
+  1. Caso real reportado por Eduardo (`10:37 a.m. COL`): el LLM generó `"¡Buenas tardes, Eduardo! 👋✨"` en plena mañana y `dmHandler.ts` / `sanitizeResponseMarkdown` permitieron el saludo sin validar la franja horaria.
+  2. Unificadas las franjas horarias oficiales `America/Bogota` con `Intl.DateTimeFormat` (inmune al reloj `CET` del VPS): `05:00–11:59` (`Buenos días`), `12:00–18:59` (`Buenas tardes`), `19:00–04:59` (`Buenas noches`), e implementado `enforceColombiaTimeGreeting()` dentro de `sanitizeResponseMarkdown()`, `sanitizeDmOrthographyAndGreeting()` y `dmHandler.ts` para corregir deterministamente cualquier saludo erróneo en DM, Grupos y Portal Web.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-saludo-horario-colombia-determinista-v34-35`, **Suite 221 (4/4)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 777/777 tests en verde** (`$0 COP`), versión `v34.35` (`34.35.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.34 — Noviembre 2026
 
 ### Novedades v34.34 (Drenador Iterativo de Cola Offline > 100 Items — Baileys Issue #2810 / WAHA #2349 — Doctrina Eduardo A. Rivera):
 - **Drenaje Completo de Cola Offline y Desbloqueo de Mensajes en Vivo (`server/_core/whatsapp-match.ts`):**

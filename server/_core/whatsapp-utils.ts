@@ -232,17 +232,22 @@ export function extractFirstName(fullName: string): string {
 }
 
 /**
- * Devuelve un saludo contextual según la hora del día en Colombia (UTC-5 Bogotá).
- * Horario Oficial Bogotá:
- * - Buenos días: 01:00 AM - 11:59 AM (1 a 11)
+ * Devuelve un saludo contextual según la hora exacta en Colombia (America/Bogota, UTC-5).
+ * Horario Oficial Bogotá (Doctrina v34.35):
+ * - Buenos días: 05:00 AM - 11:59 AM (5 a 11)
  * - Buenas tardes: 12:00 PM - 06:59 PM (12 a 18)
- * - Buenas noches: 07:00 PM - 12:59 AM (19 a 0)
+ * - Buenas noches: 07:00 PM - 04:59 AM (19 a 4)
  */
 export function getGreetingByTime(date?: Date): string {
-  const bogotaTimeStr = (date || new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
-  const hour = new Date(bogotaTimeStr).getHours();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(date || new Date());
+  const rawHour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const hour = Number.isFinite(rawHour) ? rawHour % 24 : 0;
 
-  if (hour >= 1 && hour < 12) {
+  if (hour >= 5 && hour < 12) {
     return "Buenos días";
   }
   if (hour >= 12 && hour < 19) {

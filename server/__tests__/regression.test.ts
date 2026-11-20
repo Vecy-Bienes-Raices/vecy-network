@@ -15889,9 +15889,106 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-offline-batch-drain-baileys-2810-v34-34"
       );
       expect(seed34?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.34");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[4-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.34.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[4-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 221 — v34.35: Blindaje Determinista de Saludo Horario Oficial Colombia
+  // (Caso Real Eduardo 10:37 a.m. COL: "¡Buenas tardes, Eduardo!" -> "¡Buenos días, Eduardo!")
+  // =========================================================================
+  describe("221. Doctrina v34.35: Blindaje Determinista de Saludo Horario Oficial de Colombia", () => {
+    it("1. Franjas horarias oficiales America/Bogota unificadas en parsers.ts y whatsapp-utils.ts (05-11 Buenos días, 12-18 Buenas tardes, 19-04 Buenas noches)", async () => {
+      const { getGreetingByTime: getGreetingParsers, getColombiaDateTimeContext } = await import("../_core/jania/parsers");
+      const { getGreetingByTime: getGreetingUtils } = await import("../_core/whatsapp-utils");
+
+      // 10:37 a.m. Colombia = 15:37 UTC
+      const morning1037 = new Date("2026-11-20T15:37:00.000Z");
+      expect(getGreetingParsers(morning1037)).toBe("Buenos días");
+      expect(getGreetingUtils(morning1037)).toBe("Buenos días");
+      expect(getColombiaDateTimeContext(morning1037).greeting).toBe("Buenos días");
+
+      // 05:00 a.m. Colombia = 10:00 UTC
+      const morning0500 = new Date("2026-11-20T10:00:00.000Z");
+      expect(getGreetingParsers(morning0500)).toBe("Buenos días");
+      expect(getGreetingUtils(morning0500)).toBe("Buenos días");
+
+      // 12:05 p.m. Colombia = 17:05 UTC y 06:30 p.m. Colombia = 23:30 UTC
+      const afternoon1205 = new Date("2026-11-20T17:05:00.000Z");
+      const afternoon1830 = new Date("2026-11-20T23:30:00.000Z");
+      expect(getGreetingParsers(afternoon1205)).toBe("Buenas tardes");
+      expect(getGreetingUtils(afternoon1205)).toBe("Buenas tardes");
+      expect(getGreetingParsers(afternoon1830)).toBe("Buenas tardes");
+      expect(getGreetingUtils(afternoon1830)).toBe("Buenas tardes");
+
+      // 07:15 p.m. Colombia = 00:15 UTC siguiente y 02:30 a.m. Colombia = 07:30 UTC
+      const night1915 = new Date("2026-11-21T00:15:00.000Z");
+      const night0230 = new Date("2026-11-20T07:30:00.000Z");
+      expect(getGreetingParsers(night1915)).toBe("Buenas noches");
+      expect(getGreetingUtils(night1915)).toBe("Buenas noches");
+      expect(getGreetingParsers(night0230)).toBe("Buenas noches");
+      expect(getGreetingUtils(night0230)).toBe("Buenas noches");
+    });
+
+    it("2. Caso real captura Eduardo (10:37 a.m. COL): enforceColombiaTimeGreeting corrige '¡Buenas tardes, Eduardo!' a '¡Buenos días, Eduardo!' sin tocar el resto del texto", async () => {
+      const { enforceColombiaTimeGreeting } = await import("../_core/jania/parsers");
+
+      const exactEduardoBug =
+        "¡Buenas tardes, Eduardo! 👋✨\n\nQué gusto saludarte de nuevo, Eddu. ¿En qué te puedo colaborar hoy?";
+      const fixedMorning = enforceColombiaTimeGreeting(exactEduardoBug, "Buenos días");
+      expect(fixedMorning).toBe(
+        "¡Buenos días, Eduardo! 👋✨\n\nQué gusto saludarte de nuevo, Eddu. ¿En qué te puedo colaborar hoy?"
+      );
+
+      expect(enforceColombiaTimeGreeting("Muy buenas tardes, María", "Buenos días")).toBe(
+        "Muy buenos días, María"
+      );
+      expect(enforceColombiaTimeGreeting("Hola, buenas noches Carlos!", "Buenas tardes")).toBe(
+        "Hola, buenas tardes Carlos!"
+      );
+      expect(enforceColombiaTimeGreeting("¡Buenos días, Jani! 👋", "Buenas noches")).toBe(
+        "¡Buenas noches, Jani! 👋"
+      );
+
+      // No altera texto en mitad de un párrafo que no sea saludo de apertura
+      const bodyOnly = "Atendemos citas de lunes a viernes hasta las tardes en Bogotá.";
+      expect(enforceColombiaTimeGreeting(bodyOnly, "Buenos días")).toBe(bodyOnly);
+    });
+
+    it("3. sanitizeResponseMarkdown y sanitizeDmOrthographyAndGreeting aplican enforceColombiaTimeGreeting automáticamente", async () => {
+      const { sanitizeResponseMarkdown, getColombiaDateTimeContext } = await import("../_core/jania/parsers");
+      const { sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
+
+      const expectedNow = getColombiaDateTimeContext().greeting;
+      const wrongGreeting = expectedNow === "Buenos días" ? "Buenas tardes" : "Buenos días";
+
+      const sanitizedMd = sanitizeResponseMarkdown(`¡${wrongGreeting}, Eduardo! 👋✨\n\n¿En qué te colaboro hoy?`);
+      expect(sanitizedMd.startsWith(`¡${expectedNow}, Eduardo!`)).toBe(true);
+
+      const sanitizedDm = sanitizeDmOrthographyAndGreeting(
+        "¡Buenas noches, María! Con gusto reviso tu consulta.",
+        false,
+        false,
+        "María",
+        false,
+        "Buenos días"
+      );
+      expect(sanitizedDm.startsWith("¡Buenos días, María!")).toBe(true);
+    });
+
+    it("4. Verifica semilla de gobernanza v34.35 y versión v34.35 (34.35.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed35 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-saludo-horario-colombia-determinista-v34-35"
+      );
+      expect(seed35?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.35");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.35.0");
     });
   });
 });

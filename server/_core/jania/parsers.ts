@@ -201,21 +201,53 @@ export function extractFirstName(fullName: string): string {
   return candidate;
 }
 
-export function getColombiaHour(): number {
-  const utc = Date.now() + (new Date().getTimezoneOffset() * 60000);
-  const colTime = new Date(utc + (3600000 * -5));
-  return colTime.getHours();
+export function getColombiaHour(referenceDate: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(referenceDate);
+  const rawHour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  return Number.isFinite(rawHour) ? rawHour % 24 : 0;
 }
 
-export function getGreetingByTime(): string {
-  const hour = getColombiaHour();
-  if (hour >= 6 && hour < 12) {
+export function getGreetingByTime(referenceDate: Date = new Date()): "Buenos días" | "Buenas tardes" | "Buenas noches" {
+  const hour = getColombiaHour(referenceDate);
+  if (hour >= 5 && hour < 12) {
     return "Buenos días";
-  } else if (hour >= 12 && hour < 18) {
+  } else if (hour >= 12 && hour < 19) {
     return "Buenas tardes";
   } else {
     return "Buenas noches";
   }
+}
+
+/**
+ * 🛡️ DOCTRINA EDUARDO A. RIVERA (v34.35) — Blindaje Determinista de Saludo Horario de Colombia:
+ * Corrige automáticamente cualquier saludo inicial con franja horaria equivocada generado por el LLM
+ * (ej. "¡Buenas tardes, Eduardo!" a las 10:37 a.m. COL -> "¡Buenos días, Eduardo!"), preservando
+ * puntuación, vocativo, emojis y sin alterar menciones dentro del cuerpo del texto.
+ */
+export function enforceColombiaTimeGreeting(
+  text: string,
+  expectedGreeting?: string,
+  referenceDate?: Date
+): string {
+  if (!text) return text;
+  const target = (expectedGreeting || getGreetingByTime(referenceDate)).trim();
+  if (!target) return text;
+
+  const openingGreetingRegex =
+    /^(\s*[¡!]*(?:(?:hola|hey)[,!\s]+)?(?:muy\s+)?)(buen[ao]s?\s+(?:d[ií]as?|tardes?|noches?))\b/i;
+
+  return text.replace(openingGreetingRegex, (_match, prefix: string) => {
+    const lowerPrefix = String(prefix || "").toLowerCase();
+    const shouldLowercaseFirst = /(?:muy\s+|(?:hola|hey)[,!\s]+)$/i.test(lowerPrefix);
+    const formattedGreeting = shouldLowercaseFirst
+      ? target.charAt(0).toLowerCase() + target.slice(1)
+      : target.charAt(0).toUpperCase() + target.slice(1);
+    return `${prefix}${formattedGreeting}`;
+  });
 }
 
 export interface ColombiaDateTimeContext {
@@ -233,37 +265,55 @@ export interface ColombiaDateTimeContext {
 
 /**
  * Obtiene el contexto autoritativo de fecha, día de la semana y franja horaria en Bogotá (America/Bogota - UTC-5)
- * (Doctrina Eduardo A. Rivera v33.96 — Cero Alucinación de Día de la Semana o Franja Horaria)
+ * (Doctrina Eduardo A. Rivera v33.96 / v34.35 — Cero Alucinación de Día de la Semana o Franja Horaria)
  */
 export function getColombiaDateTimeContext(referenceDate: Date = new Date()): ColombiaDateTimeContext {
-  const utcMs = referenceDate.getTime() + (referenceDate.getTimezoneOffset() * 60000);
-  const colDate = new Date(utcMs + (3600000 * -5));
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    weekday: "short",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(referenceDate);
 
-  const weekdays = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const partVal = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  const weekdayMap: Record<string, string> = {
+    Sun: "domingo",
+    Mon: "lunes",
+    Tue: "martes",
+    Wed: "miércoles",
+    Thu: "jueves",
+    Fri: "viernes",
+    Sat: "sábado",
+  };
   const months = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
   ];
 
-  const hour = colDate.getHours();
-  const minute = colDate.getMinutes();
-  const weekday = weekdays[colDate.getDay()] || "jueves";
+  const hour = Number(partVal("hour") || 0) % 24;
+  const minute = Number(partVal("minute") || 0);
+  const weekday = weekdayMap[partVal("weekday")] || "viernes";
   const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-  const dayOfMonth = colDate.getDate();
-  const monthName = months[colDate.getMonth()] || "noviembre";
-  const year = colDate.getFullYear();
+  const dayOfMonth = Number(partVal("day") || 1);
+  const monthIdx = Math.max(0, Math.min(11, Number(partVal("month") || 1) - 1));
+  const monthName = months[monthIdx] || "noviembre";
+  const year = Number(partVal("year") || 2026);
 
   const periodOfDay: "mañana" | "tarde" | "noche" =
     hour >= 5 && hour < 12
       ? "mañana"
-      : hour >= 12 && hour < 18
+      : hour >= 12 && hour < 19
         ? "tarde"
         : "noche";
 
   const greeting: "Buenos días" | "Buenas tardes" | "Buenas noches" =
-    hour >= 6 && hour < 12
+    hour >= 5 && hour < 12
       ? "Buenos días"
-      : hour >= 12 && hour < 18
+      : hour >= 12 && hour < 19
         ? "Buenas tardes"
         : "Buenas noches";
 
@@ -2105,9 +2155,10 @@ export function sanitizeResponseMarkdown(text: string): string {
   clean = clean.replace(/\bSUNT\b/g, "RUNT");
   clean = clean.replace(/\bcascunta\b/gi, "cincuenta");
 
-  // 14. Blindaje determinista de día de la semana, franja horaria y vocativos prohibidos (Doctrina Eduardo A. Rivera v33.96):
-  // Erradica saludos alucinados como "¡Hola, Ai✨! ... en esta hermosa mañana de miércoles" cuando es jueves por la tarde.
+  // 14. Blindaje determinista de día de la semana, franja horaria y vocativos prohibidos (Doctrina Eduardo A. Rivera v33.96 / v34.35):
+  // Erradica saludos alucinados como "¡Buenas tardes, Eduardo!" a las 10:37 a.m. COL o "¡Hola, Ai✨! ... en esta hermosa mañana de miércoles".
   const colCtx = getColombiaDateTimeContext();
+  clean = enforceColombiaTimeGreeting(clean, colCtx.greeting);
   clean = clean.replace(/([¡!]*\s*(?:hola|buenos\s+d[ií]as|buenas\s+tardes|buenas\s+noches)\s*,\s*)(?:ai|ia|jania)\s*(?:✨|⚡|🤖)*\s*([!¡.,])/gi, "$1colega$2");
   clean = clean.replace(
     /\b(en\s+esta\s+(?:hermosa\s+|linda\s+|gran\s+|excelente\s+|bendecida\s+|maravillosa\s+)?)(mañana|tarde|noche)(\s+de\s+)(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi,

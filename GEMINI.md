@@ -1,4 +1,13 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.34.0 — 2026-11-20)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.35.0 — 2026-11-20)
+- **JanIA Server & Web Portal:** `v34.35` (`34.35.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 777/777 tests en verde** + **Suite 221 4/4 en verde** | `$0 COP`).
+- **Blindaje Determinista de Saludo Horario Oficial de Colombia (`Buenos días` / `Buenas tardes` / `Buenas noches` — `parsers.ts` + `whatsapp-utils.ts` + `dmHandler.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Caso Real Reportado por Eduardo (`10:37 a.m. COL`):** al saludar a JanIA a las `10:37 a.m.` hora Colombia, el LLM alucinó `"¡Buenas tardes, Eduardo! 👋✨"` y tanto `sanitizeResponseMarkdown` como `dmHandler.ts` (`hasGreetingAlready`) dejaron pasar el saludo sin verificar que coincidiera con la franja horaria real de Colombia.
+  2. **Solución Aplicada (`v34.35`):**
+     - **`parsers.ts` & `whatsapp-utils.ts`:** unificación de franjas horarias oficiales `America/Bogota` mediante `Intl.DateTimeFormat` (inmune a la zona horaria `CET` del VPS): `05:00–11:59` -> `"Buenos días"`, `12:00–18:59` -> `"Buenas tardes"`, `19:00–04:59` -> `"Buenas noches"`.
+     - **`parsers.ts` (`enforceColombiaTimeGreeting` + `sanitizeResponseMarkdown`) & `dmHandler.ts`:** corrección determinista obligatoria de cualquier saludo inicial con franja equivocada en DMs, Grupos y Portal Web (`"¡Buenas tardes, Eduardo!"` a las `10:37 a.m.` -> `"¡Buenos días, Eduardo!"`).
+  3. **Gobernanza y Regresión:** Semilla `seed-saludo-horario-colombia-determinista-v34-35` y **Suite 221 (4/4)** (**6/6 archivos, 777/777 tests en verde** | `$0 COP`).
+
+### 📦 HISTÓRICO RECIENTE (v34.34.0 — 2026-11-20)
 - **JanIA Server & Web Portal:** `v34.34` (`34.34.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 773/773 tests en verde** + **Suite 220 2/2 en verde** | `$0 COP`).
 - **Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / PR #2840 / WAHA #2349) + Escudo `CB:status` ACK (`whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Confirmado en Vivo en Contabo VPS (`v34.33`):**

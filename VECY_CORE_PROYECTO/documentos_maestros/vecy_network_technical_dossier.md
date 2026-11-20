@@ -330,6 +330,11 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.35 — Noviembre 2026
+- **Blindaje Determinista de Saludo Horario Oficial de Colombia (`Buenos días` / `Buenas tardes` / `Buenas noches`):**
+  - `server/_core/jania/parsers.ts`, `server/_core/whatsapp-utils.ts` & `server/_core/jania/handlers/dmHandler.ts`: unificación horaria `America/Bogota` mediante `Intl.DateTimeFormat` (`05:00–11:59` `Buenos días`, `12:00–18:59` `Buenas tardes`, `19:00–04:59` `Buenas noches`) e implementación de `enforceColombiaTimeGreeting()` dentro de `sanitizeResponseMarkdown()`, `sanitizeDmOrthographyAndGreeting()` y `dmHandler.ts` para corregir deterministamente cualquier alucinación horaria del LLM (caso Eduardo `10:37 a.m.`).
+  - Gobernanza y Pruebas: semilla `seed-saludo-horario-colombia-determinista-v34-35`, **Suite 221 (4/4)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 777/777 tests en verde**; `npm run build` limpio; versión `v34.35` / `34.35.0`).
+
 ### 🔖 v34.34 — Noviembre 2026
 - **Drenador Iterativo de Cola Offline > 100 Items (Baileys Issue #2810 / PR #2840 / WAHA #2349):**
   - `server/_core/whatsapp-match.ts`: resuelta la retención total de mensajes EN VIVO cuando la cola offline de WhatsApp supera 100 elementos (`16.552` verificados en VPS) debido a que `socket.js:522` de Baileys `6.7.19` solo solicita un único `<offline_batch count="100"/>`. Implementados `startOfflineBatchPump()`, `requestNextOfflineBatch(100)` y `stopOfflineBatchPump()` hasta recibir `CB:ib,,offline`, más métricas `offlineDrainActive`/`offlinePreviewExpectedCount`/`offlineBatchRequestsSent`/`offlineFramesReceived` en `GET /api/health`.
