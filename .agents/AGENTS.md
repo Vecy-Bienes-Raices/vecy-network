@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.29 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.30 — Noviembre 2026
+
+### Novedades v34.30 (Doctrina Permuta Notarial, Anti-Secuestro Calculadora, Blindaje `[Geocoding-Vereda]` `'Bogotá, D.C.'` y DM Sin Duplicación de Pregunta — Doctrina Eduardo A. Rivera):
+- **Doctrina Permuta Notarial y Anti-Secuestro Calculadora (`server/_core/notarialExpenseService.ts`, `server/_core/jania/handlers/dmHandler.ts`):**
+  1. Agregada respuesta doctrinal exacta para compraventa con permuta de inmueble de menor valor + excedente en dinero (`isPermutaNotarialQuestion`: derechos notariales 50/50 sobre mayor cuantía, beneficencia y registro ORIP por cada adquirente sobre el inmueble que recibe, retención 1% cada tradente).
+  2. Excluidas preguntas conceptuales, costumbres comerciales y quejas de `extractNotarialExpenseParams` (`isNotarialConceptualOrComplaintQuery`), liberando `pendingNotarialSession` ante quejas/cambios de tema (`hasPendingNotarialContinuationSignals`), y restringido el cierre `"¿Quedaste satisfecho(a) con esta Liquidación Notarial...?"` solo cuando `isNumericCalculation` (`Boolean(calculatedResult)`).
+- **Blindaje `[Geocoding-Vereda]` para `"Bogotá, D.C."` (`server/_core/geography.ts`):**
+  1. Normalizado `normCityInput` (`isBogotaCityInput` reconociendo `"Bogotá, D.C."` en `CAPA 0.5`/`CAPA 1`) y bloqueada la resolución hacia veredas homónimas en `CAPA 0.6` para ciudades principales (`Bogotá`, `Medellín`, `Cali`, etc.) o barrios bogotanos (`La Cabrera`) sin marcador rural explícito (`Vereda`/`Corregimiento`/`Caserío`).
+- **DM 1-a-1 Sin Duplicación de Cita (`server/_core/whatsapp-match.ts`):**
+  1. Exportado `shouldQuoteDirectMessageReply(messagesCount)` (`messagesCount > 1`) y retirado `{ quoted: mainMsg }` de respuestas DM individuales de texto/acuse (resolviendo el caso reportado por Miguel Arbeláez).
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30`, **Suite 216 (4/4)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 760/760 tests en verde** (`$0 COP`), versión `v34.30` (`34.30.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.29 — Noviembre 2026
 
 ### Novedades v34.29 (Diagnóstico VPS Nov 18–19, Fix SQL `requirements.status` Enum y Resiliencia Anti-PingPong Baileys + `/api/health` — Doctrina Eduardo A. Rivera):
 - **Corrección SQL Enum `requirements.status` (`server/_core/jania/handlers/propertiesHandler.ts`):**

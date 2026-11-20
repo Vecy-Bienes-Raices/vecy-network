@@ -15419,9 +15419,109 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-blindaje-baileys-sql-requirements-health-v34-29"
       );
       expect(seed29?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.29");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:29|[3-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.29.0");
+      expect(pkg.version).toMatch(/^34\.(?:29|[3-9]\d)\.\d+$/);
+    });
+  });
+
+  describe("Suite 216 — Doctrina Permuta Notarial, Anti-Secuestro Calculadora, Blindaje [Geocoding-Vereda] 'Bogotá, D.C.' y DM Sin Duplicación de Cita (v34.30)", () => {
+    it("1. Caso Patricia Muñoz: compraventa con permuta de menor valor responde costumbre comercial exacta sin formulario 1/2/3, libera sesiones en quejas y dmHandler no añade cierre falso", async () => {
+      const fs = await import("fs");
+      const {
+        explainNotarialFigures,
+        extractNotarialExpenseParams,
+        executeNotarialAssistanceFromWhatsApp,
+        isExplicitNotarialLiquidationRequest,
+        setPendingNotarialSession,
+        hasPendingNotarialSession,
+        clearPendingNotarialSession
+      } = await import("../_core/notarialExpenseService");
+
+      const testJid = "test_patricia_v34_30@s.whatsapp.net";
+      clearPendingNotarialSession(testJid);
+
+      const q1 =
+        "Quien paga los gastos notariales y de beneficencia y registro en una compraventa de un inmueble cuando se hace incluyendo una permuta con un inmueble de menor valor";
+      const q2 = "No me respondiste lo que pregunte";
+      const q3 =
+        "Estoy preguntando cual es la costumbre comercial para repartir gastos notariales y de beneficencia y registro, cuando se hace una compraventa y en ella se recibe un inmueble de menor valor en permuta más un dinero para completar el valor del inmueble de mayor valor";
+
+      const exp1 = explainNotarialFigures(q1);
+      expect(exp1.isQuestion).toBe(true);
+      expect(exp1.answerText).toContain("mayor valor");
+      expect(exp1.answerText).toContain("Cada adquirente");
+
+      const exp3 = explainNotarialFigures(q3);
+      expect(exp3.isQuestion).toBe(true);
+      expect(exp3.answerText).toContain("Derechos Notariales");
+
+      const res3 = await executeNotarialAssistanceFromWhatsApp(q3, testJid, true);
+      expect(res3.isNotarialRequest).toBe(true);
+      expect(res3.isEducationalAnswer).toBe(true);
+      expect(res3.calculatedResult).toBeUndefined();
+      expect(res3.reportText).not.toContain("1️⃣ *Valor de la compraventa:*");
+      expect(hasPendingNotarialSession(testJid)).toBe(false);
+
+      // Si existiera una sesión pendiente previa y el usuario se queja o cambia de tema, debe liberarse
+      setPendingNotarialSession(testJid);
+      expect(hasPendingNotarialSession(testJid)).toBe(true);
+      expect(isExplicitNotarialLiquidationRequest(q2, testJid)).toBe(false);
+      expect(hasPendingNotarialSession(testJid)).toBe(false);
+
+      // Una pregunta conceptual sobre cómo se reparten gastos no debe atrapar con needsMoreInfo
+      const conceptual = extractNotarialExpenseParams("cual es la costumbre comercial para repartir gastos notariales en ese negocio", testJid);
+      expect(conceptual.found).toBe(false);
+
+      const dmSrc = fs.readFileSync("server/_core/jania/handlers/dmHandler.ts", "utf-8");
+      expect(dmSrc).toContain("const isNumericCalculation = Boolean(notarialDmRes.calculatedResult);");
+      expect(dmSrc).toContain("const satisfactionLine = isNumericCalculation");
+    });
+
+    it("2. Blindaje [Geocoding-Vereda]: 'Bogotá, D.C.' y 'La Cabrera' jamás se desvían a veredas de Arauca o Molagavita Santander; veredas explícitas sí resuelven", async () => {
+      const { validarZona } = await import("../_core/geography");
+
+      const cabrera = await validarZona("La Cabrera", "Bogotá, D.C.");
+      expect(cabrera.isValid).toBe(true);
+      expect(cabrera.barrioCanonico).toBe("La Cabrera");
+      expect(cabrera.localidad).toBe("Chapinero");
+      expect(cabrera.city).toBe("Bogotá");
+      expect(cabrera.isMunicipio).toBe(false);
+
+      const bogotaAsZone = await validarZona("Bogotá", "Bogotá, D.C.");
+      expect(bogotaAsZone.isValid).toBe(true);
+      expect(bogotaAsZone.city).toBe("Bogotá");
+      expect(bogotaAsZone.barrioCanonico).not.toContain("Vereda");
+      expect(bogotaAsZone.isMunicipio).toBe(false);
+
+      const fagua = await validarZona("Vereda Fagua", "Chía");
+      expect(fagua.isValid).toBe(true);
+      expect(fagua.barrioCanonico).toBe("Vereda Fagua");
+      expect(fagua.city).toBe("Chía");
+      expect(fagua.isMunicipio).toBe(true);
+    });
+
+    it("3. Caso Miguel Arbeláez: DMs 1-a-1 de un solo mensaje no citan (quoted) la pregunta del usuario para no duplicarla", async () => {
+      const fs = await import("fs");
+      const { shouldQuoteDirectMessageReply } = await import("../_core/whatsapp-match");
+      expect(shouldQuoteDirectMessageReply(1)).toBe(false);
+      expect(shouldQuoteDirectMessageReply(2)).toBe(true);
+
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain("shouldQuoteDirectMessageReply(messages.length)");
+    });
+
+    it("4. Verifica semilla de gobernanza v34.30 y versión v34.30 (34.30.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed30 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30"
+      );
+      expect(seed30?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.30");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.30.0");
     });
   });
 });

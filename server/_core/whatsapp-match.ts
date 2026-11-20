@@ -207,6 +207,10 @@ export interface JaniaBotOptions {
   isWorkerOnly?: boolean;
 }
 
+export function shouldQuoteDirectMessageReply(messagesCount: number): boolean {
+  return messagesCount > 1;
+}
+
 export class JaniaMatchBot {
   public sock: any = null;
   public isReady: boolean = false;
@@ -2017,7 +2021,10 @@ export class JaniaMatchBot {
             const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
             const flyerReply = `¡Excelente! He analizado tu afiche comercial con visión artificial: *${flyerTitle}* 📸✨.\n\n` +
               `Ha quedado captado en nuestro sistema de VECY BIENES RAÍCES para cruzarlo con nuestra base de datos inmobiliaria 🏢✨. Si necesitas consultar el predial en Bogotá o verificar antecedentes de tu cliente, dime y te colaboro de inmediato 🤝.`;
-            await this.queuedSend(senderId, flyerReply, { quoted: mainMsg, allowDirectMessage: true });
+            await this.queuedSend(senderId, flyerReply, {
+              ...(shouldQuoteDirectMessageReply(messages.length) ? { quoted: mainMsg } : {}),
+              allowDirectMessage: true
+            });
             const { appendDmHistory } = await import('./janIA');
             appendDmHistory(senderId, 'user', body || `[Flyer: ${flyerTitle}]`);
             appendDmHistory(senderId, 'assistant', flyerReply);
@@ -2184,7 +2191,10 @@ export class JaniaMatchBot {
             }, { quoted: mainMsg, allowDirectMessage: true });
             await this.sock.sendMessage(senderId, { react: { text: '🎨', key: mainMsg.key } }).catch(() => { });
           } else {
-            await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+            await this.queuedSend(senderId, replyText, {
+              ...(shouldQuoteDirectMessageReply(messages.length) ? { quoted: mainMsg } : {}),
+              allowDirectMessage: true
+            });
           }
           await this.logToDb(senderId, 'janIA', replyText);
 
@@ -3936,7 +3946,7 @@ export class JaniaMatchBot {
         } catch (_) { }
         const notarialCheck = await executeNotarialAssistanceFromWhatsApp(bodyText, senderId, true);
         if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
-          await this.queuedSend(senderId, notarialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+          await this.queuedSend(senderId, notarialCheck.reportText, { allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', notarialCheck.reportText);
           await this.sock.sendPresenceUpdate('paused', senderId);
           return;

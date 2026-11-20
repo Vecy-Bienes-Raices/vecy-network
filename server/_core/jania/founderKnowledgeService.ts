@@ -962,6 +962,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.29: Corrección SQL 22P02 en requirements incompletos (135 fallos en Nov 18-19), guard anti-reentrada Baileys y visibilidad /api/health.",
     createdAt: "2026-11-20T04:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Doctrina Permuta Notarial, Anti-Secuestro Calculadora, Blindaje [Geocoding-Vereda] 'Bogotá, D.C.' y Cero Duplicación de Pregunta en DM (v34.30)",
+    directive:
+      "1) Las consultas doctrinales o de costumbre comercial sobre compraventa con permuta de inmueble de menor valor + dinero explican el reparto real (notaría 50/50 sobre mayor cuantía, beneficencia/ORIP por cada adquirente sobre el bien recibido, retención 1% cada tradente) sin caer jamás en el formulario 1/2/3 de liquidación ni adjuntar el cierre de 'Liquidación Notarial' cuando no hubo cálculo numérico; toda queja o cambio de tema libera la sesión notarial pendiente. 2) En geography.ts, 'Bogotá, D.C.' se normaliza antes de CAPA 0.5/0.6 para resolver barrios urbanos como La Cabrera sin desviar nunca 'Bogotá' o barrios bogotanos hacia veredas de Arauca o Santander. 3) En DMs 1-a-1 de un solo mensaje, JanIA responde sin citar (quoted) el mensaje del usuario para evitar que WhatsApp duplique su pregunta arriba de la respuesta.",
+    rawText:
+      "Blindaje v34.30: Respuesta doctrinal exacta en permuta con menor valor, anti-trampa pendingNotarialSession, corrección CAPA 0.5/0.6 'Bogotá, D.C.' y DM limpio sin quoted en mensajes únicos.",
+    createdAt: "2026-11-20T04:30:00.000Z",
+    active: true
   }
 ];
 

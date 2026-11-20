@@ -545,10 +545,28 @@ export function explainNotarialFigures(text: string): { isQuestion: boolean; ans
     };
   }
 
+  // 5B. Permuta o Compraventa con Permuta de Menor Valor (+ excedente en dinero)
+  const isPermutaNotarialQuestion =
+    /(?:permuta|inmueble\s+de\s+menor\s+valor|menor\s+valor.*mayor\s+valor|recibe\s+un\s+inmueble|parte\s+de\s+pago)/i.test(lower) &&
+    /(?:gastos?\s+notariales|escrituraci[oó]n|notar[ií]a|beneficencia|registro|retenci[oó]n|costumbre\s+comercial|repartir\s+gastos|qui[eé]n\s+paga|se\s+reparten|se\s+dividen)/i.test(lower);
+
+  if (isPermutaNotarialQuestion) {
+    return {
+      isQuestion: true,
+      answerText:
+        `⚖️ *Costumbre Comercial y Notarial en Compraventa con Permuta (Inmueble de Menor Valor + Dinero):* 🇨🇴\n\n` +
+        `En Colombia (Arts. 1955–1958 C.C. y Decreto 960/1970), cuando se entrega un inmueble de menor valor más un excedente en dinero para completar el de mayor valor, así se reparten los gastos por costumbre comercial (salvo pacto distinto en la promesa):\n\n` +
+        `1️⃣ *Derechos Notariales (escrituración):* En la permuta o acto conjunto se liquidan *sobre el inmueble de mayor valor* (mayor cuantía) y por costumbre comercial se pagan *50% y 50%* entre ambas partes.\n` +
+        `2️⃣ *Impuesto de Beneficencia y Registro (ORIP):* Cada adquirente asume la beneficencia (~1%) y los derechos de registro *sobre el inmueble que recibe*: quien recibe el predio de mayor valor los paga sobre ese predio, y quien recibe el inmueble de menor valor los paga sobre el suyo.\n` +
+        `3️⃣ *Retención en la Fuente (1% — persona natural, Art. 398 E.T.):* Cada parte vendedora/tradente asume el 1% sobre el inmueble que entrega en la operación.\n\n` +
+        `💡 _Nota:_ En la promesa de compraventa/permuta las partes pueden pactar libremente otro porcentaje para notaría y beneficencia; únicamente la retención en la fuente ante la DIAN recae siempre sobre quien enajena cada predio.`
+    };
+  }
+
   // 6. ¿Quién paga los gastos notariales? (Costumbre y Ley en Colombia)
   const isQuienPagaQuestion =
-    /(?:qui[eé]n\s+paga|le\s+corresponde\s+a\s+qui[eé]n|a\s+cargo\s+de\s+qui[eé]n)/i.test(lower) &&
-    /(?:gastos\s+notariales|escrituraci[oó]n|notar[ií]a|beneficencia|registro|retenci[oó]n)/i.test(lower);
+    /(?:qui[eé]n\s+paga|le\s+corresponde\s+a\s+qui[eé]n|a\s+cargo\s+de\s+qui[eé]n|costumbre\s+comercial|c[oó]mo\s+se\s+(?:reparten|dividen))/i.test(lower) &&
+    /(?:gastos\s+notariales|escrituraci[oó]n|notar[ií]a|beneficencia|registro|retenci[oó]n|gastos)/i.test(lower);
 
   if (isQuienPagaQuestion) {
     return {
@@ -636,6 +654,28 @@ export function explainNotarialFigures(text: string): { isQuestion: boolean; ans
   return { isQuestion: false };
 }
 
+function isNotarialConceptualOrComplaintQuery(clean: string): boolean {
+  const lower = clean.toLowerCase();
+  const hasExplicitCalculateCommand =
+    /\b(?:liqu[ií]da(?:me|nos|r)?|liquidar\s+(?:los\s+)?(?:gastos|escritura\w*|notar[ií]a|compraventa|hipoteca)|cot[ií]za(?:me|r)?|simula(?:me|r)?|calcula(?:me|r)?)\b/i.test(lower);
+  const isConceptualOrCustomQuery =
+    /(?:costumbre\s+comercial|repartir\s+gastos|c[oó]mo\s+se\s+(?:reparten|dividen|distribuyen|calculan|pagan)|qu[eé]\s+(?:es|pasa|significa|implica)|qui[eé]n\s+paga|por\s+qu[eé]|explic|diferencia|en\s+una\s+permuta|inmueble\s+de\s+menor\s+valor|no\s+me\s+respondiste|estoy\s+preguntando|no\s+quiero\s+liquidar|cancelar)/i.test(lower);
+  return isConceptualOrCustomQuery && !hasExplicitCalculateCommand;
+}
+
+function hasPendingNotarialContinuationSignals(clean: string): boolean {
+  const lower = clean.toLowerCase();
+  if (/(?:no\s+me\s+respondiste|estoy\s+preguntando|no\s+era\s+eso|no\s+quiero\s+liquidar|olv[ií]dalo|cancelar|dejemos\s+as[ií])/i.test(lower)) {
+    return false;
+  }
+  return (
+    /(?:\$|\b)\d+(?:[\.,]\d+)?\s*(?:millones|mill[oó]n|m\b)/i.test(lower) ||
+    /\b\d{7,11}\b/.test(lower) ||
+    /\$\s*\d+/.test(lower) ||
+    /\b(?:libre|gravamen|hipoteca|leasing|contado|cr[eé]dito|efectivo|recursos\s+propios|\bvis\b|\bvip\b|afectaci[oó]n|patrimonio|\bbic\b|liquidar|liqu[ií]dame)\b/i.test(lower)
+  );
+}
+
 /**
  * Detecta si un mensaje solicita liquidación o cálculo de gastos notariales/escrituración,
  * o si el usuario indica que va para la notaría o va a firmar promesa.
@@ -683,8 +723,14 @@ export function extractNotarialExpenseParams(text: string, senderId?: string): {
     }
   }
 
-  // Si no se proporcionó el valor numérico, pedir los 3 datos clave
+  // Si no se proporcionó el valor numérico: evitar secuestrar preguntas conceptuales, costumbres comerciales o quejas
   if (precio < 10000000) {
+    if (isNotarialConceptualOrComplaintQuery(clean) || (hasPending && !hasPendingNotarialContinuationSignals(clean))) {
+      if (senderId && hasPending) {
+        clearPendingNotarialSession(senderId);
+      }
+      return { found: false };
+    }
     return {
       found: true,
       needsMoreInfo: true
@@ -749,13 +795,20 @@ export interface NotarialExecutionResult {
  */
 export function isExplicitNotarialLiquidationRequest(text: string, senderId?: string): boolean {
   if (!text || typeof text !== 'string') return false;
-  if (senderId && hasPendingNotarialSession(senderId)) return true;
 
   const clean = text.replace(/@\d{7,18}\b/g, ' ').replace(/@jania\b/gi, ' ').trim();
   if (!clean) return false;
 
   if (explainNotarialFigures(clean).isQuestion) {
     return true;
+  }
+
+  if (senderId && hasPendingNotarialSession(senderId)) {
+    if (hasPendingNotarialContinuationSignals(clean) && !isNotarialConceptualOrComplaintQuery(clean)) {
+      return true;
+    }
+    clearPendingNotarialSession(senderId);
+    return false;
   }
 
   // No capturar simulaciones hipotecarias, Cap Rate o pre-liquidaciones de Ganancia Ocasional / Timbre (Skill 4)
@@ -811,6 +864,9 @@ export async function executeNotarialAssistanceFromWhatsApp(
   // 1. Verificar si es una pregunta doctrinal o jurídica sobre figuras notariales
   const explanation = explainNotarialFigures(text);
   if (explanation.isQuestion && explanation.answerText) {
+    if (senderId) {
+      clearPendingNotarialSession(senderId);
+    }
     return {
       isNotarialRequest: true,
       isEducationalAnswer: true,

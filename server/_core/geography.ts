@@ -802,8 +802,13 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
+  const normCityInput = ciudad
+    ? normalizarTextoGeografico(ciudad).replace(/\bd\s*c\b/g, "").trim()
+    : "";
+  const isBogotaCityInput = !normCityInput || normCityInput === "bogota";
+
   // --- CAPA 0.5: Coincidencia Directa con Barrio Urbano Principal de Bogotá ---
-  if ((!ciudad || normalizarTextoGeografico(ciudad) === "bogota") && MAPA_BARRIOS[normZone]) {
+  if (isBogotaCityInput && MAPA_BARRIOS[normZone]) {
     const info = MAPA_BARRIOS[normZone];
     return {
       isValid: true,
@@ -814,10 +819,41 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
+  // --- CAPA 0.5B: Si se pasó el nombre de Bogotá como zona, jamás desviarlo a homónimos rurales ---
+  const MAJOR_COLOMBIAN_CITIES = new Set([
+    "bogota", "medellin", "cali", "barranquilla", "cartagena", "bucaramanga",
+    "pereira", "manizales", "armenia", "ibague", "villavicencio", "santa marta",
+    "cucuta", "neiva", "pasto", "monteria", "valledupar", "popayan", "tunja",
+    "florencia", "yopal", "riohacha", "quibdo", "sincelejo", "leticia",
+    "mocoa", "arauca", "inirida", "mitu", "san jose del guaviare"
+  ]);
+  const normZoneCityClean = normZone.replace(/\bd\s*c\b/g, "").trim();
+  const isExplicitRuralMarker = /\b(?:vereda|vda\.?|corregimiento|caser[ií]o)\b/i.test(zona);
+  const isBareMajorCityName =
+    MAJOR_COLOMBIAN_CITIES.has(normZone) || MAJOR_COLOMBIAN_CITIES.has(normZoneCityClean);
+
+  if (isBogotaCityInput && normZoneCityClean === "bogota" && !isExplicitRuralMarker) {
+    return {
+      isValid: true,
+      barrioCanonico: "Bogotá",
+      localidad: "Bogotá D.C.",
+      city: "Bogotá",
+      isMunicipio: false
+    };
+  }
+
   // --- CAPA 0.6: Resolución Oficial de Veredas Nacionales (IGAC 33.435 Veredas) ---
-  const isExplicitVereda = /\bvereda\b/i.test(zona);
   const veredaMatch = lookupVereda(zona, ciudad);
-  if (veredaMatch && (isExplicitVereda || (ciudad && normalizarTextoGeografico(ciudad) !== "bogota") || !MAPA_BARRIOS[normZone])) {
+  const matchesRequestedCity =
+    !veredaMatch ||
+    !normCityInput ||
+    normalizarTextoGeografico(veredaMatch.municipio) === normCityInput;
+  const allowVeredaResolution =
+    Boolean(veredaMatch) &&
+    !(isBareMajorCityName && !isExplicitRuralMarker) &&
+    (isExplicitRuralMarker || (!isBogotaCityInput && !MAPA_BARRIOS[normZone] && matchesRequestedCity));
+
+  if (veredaMatch && allowVeredaResolution) {
     const veredaTitle = veredaMatch.vereda.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     const mpioTitle = veredaMatch.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     console.log(`[Geocoding-Vereda] IGAC Vereda resuelta "${zona}" ➔ "Vereda ${veredaTitle}" (${mpioTitle}, ${veredaMatch.departamento})`);
@@ -831,21 +867,21 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
   }
 
   // --- CAPA DE GEOLOCALIZACIÓN 1: Google Maps Geocoding API ---
-  const queryAddress = ciudad && normalizarTextoGeografico(ciudad) !== "bogota"
+  const queryAddress = !isBogotaCityInput
     ? `${zona}, ${ciudad}, Colombia`
     : `${zona}, Bogotá, Colombia`;
 
   const googleResult = await geocodeAddress(queryAddress);
   if (googleResult) {
     if (googleResult.isValid) {
-      const normGoogleCity = normalizarTextoGeografico(googleResult.city);
+      const normGoogleCity = normalizarTextoGeografico(googleResult.city).replace(/\bd\s*c\b/g, "").trim();
       const isBogota = normGoogleCity === "bogota";
 
       return {
         isValid: true,
         barrioCanonico: googleResult.zone,
         localidad: googleResult.locality,
-        city: googleResult.city,
+        city: isBogota ? "Bogotá" : googleResult.city,
         isMunicipio: !isBogota,
         latitude: googleResult.latitude,
         longitude: googleResult.longitude
@@ -855,9 +891,9 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
       return {
         isValid: true,
         barrioCanonico: zona.trim(),
-        localidad: ciudad || "Bogotá",
-        city: ciudad || "Bogotá",
-        isMunicipio: ciudad ? normalizarTextoGeografico(ciudad) !== "bogota" : false,
+        localidad: isBogotaCityInput ? "Bogotá D.C." : (ciudad || "Bogotá"),
+        city: isBogotaCityInput ? "Bogotá" : (ciudad || "Bogotá"),
+        isMunicipio: !isBogotaCityInput,
         latitude: undefined,
         longitude: undefined
       };

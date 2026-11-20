@@ -7,6 +7,22 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-19] — JanIA v34.30: Auditoría y Corrección de Respuestas Incoherentes (Caso Patricia Muñoz Permuta Notarial, `[Geocoding-Vereda]` `'Bogotá, D.C.'` y Caso Miguel Arbeláez DM Quote) (Doctrina Eduardo A. Rivera — v34.30 - 34.30.0)
+
+#### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico en Contabo VPS
+- **Reporte:** Eduardo señaló que JanIA había dado respuestas incoherentes a varios usuarios en los últimos dos días (18–19 Nov).
+- **Causas Raíz Identificadas en Producción (`PostgreSQL` + logs PM2 `OUT_19`/`OUT_20`):**
+  1. **Patricia Muñoz (`573167953421`, mensajes `69081–69086`):** al preguntar por quién paga gastos notariales, beneficencia y registro en una compraventa con permuta de inmueble de menor valor + excedente en dinero, `explainNotarialFigures` ignoró la permuta, respondió la plantilla de compraventa simple y `dmHandler.ts` le añadió `"¿Quedaste satisfecho(a) con esta Liquidación Notarial y de Registro?"` sin liquidar nada. Al reclamar y aclarar costumbre comercial, `extractNotarialExpenseParams` la capturó con el formulario `1️⃣ Valor 2️⃣ Estado 3️⃣ Forma de pago` y la dejó atrapada en `pendingNotarialSession`.
+  2. **Desvío Geográfico `[Geocoding-Vereda]` (`OUT_20`):** `normalizarTextoGeografico("Bogotá, D.C.")` devolvía `"bogota d c"`, saltando `CAPA 0.5` (`MAPA_BARRIOS`) y convirtiendo `"Bogotá"` en `"Vereda Bogotá (Arauca, ARAUCA)"` y `"La Cabrera"` en `"Vereda La Cabrera (Molagavita, SANTANDER)"` (verificado en VPS BD: `0` filas persistidas en `properties` o `requirements` con ese error).
+  3. **Miguel Arbeláez (`573004486520`, mensajes `68974–68998`):** reportó *"Pregunta porque se está duplicado la Pregunta como tu respuesta 🤔"* por el uso sistemático de `{ quoted: mainMsg }` en respuestas DM de un solo mensaje.
+  4. **Lia Janeth Rivas (`OUT_19:7747`, Grupo 2):** ya corregida en `v34.27` (`isServiceHelpRequest` + Ley 820 Art. 16).
+
+#### 2. Acciones Ejecutadas en `v34.30`
+1. **Notarial Permuta y Anti-Secuestro (`notarialExpenseService.ts`, `dmHandler.ts`):** añadida doctrina exacta de compraventa con permuta de menor valor en `explainNotarialFigures`, protegidas consultas conceptuales y quejas en `extractNotarialExpenseParams`/`isExplicitNotarialLiquidationRequest`, liberada `pendingNotarialSession` ante quejas/cambios de tema y condicionado el cierre `"¿Quedaste satisfecho(a) con esta Liquidación Notarial...?"` a `Boolean(calculatedResult)`.
+2. **Geografía `[Geocoding-Vereda]` (`geography.ts`):** normalización `isBogotaCityInput` en `CAPA 0.5`/`CAPA 1` y bloqueo de homónimos rurales sobre ciudades principales o barrios de Bogotá sin marcador rural explícito.
+3. **DM Sin Duplicación de Cita (`whatsapp-match.ts`):** añadido helper `shouldQuoteDirectMessageReply(messagesCount)` (`messagesCount > 1`) para omitir `quoted` en DMs 1-a-1 de un solo mensaje.
+4. **Gobernanza y Validación:** bump `v34.30` (`34.30.0`), semilla `seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30`, **Suite 216 (4/4)**, `npm run check` (**0 errores**), `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 760/760 tests en verde** | `$0 COP`) y `npm run build` limpio.
+
 ### 📅 [2026-11-19] — JanIA v34.29: Diagnóstico Forense en Contabo VPS (Caída de Escucha WhatsApp 09:40 AM–22:44 PM COL), Fix SQL Enum `requirements.status` (135 fallos) y Resiliencia Anti-PingPong Baileys (Doctrina Eduardo A. Rivera — v34.29 - 34.29.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Auditoría Forense en Contabo VPS

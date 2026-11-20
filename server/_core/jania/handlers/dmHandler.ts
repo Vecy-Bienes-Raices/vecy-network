@@ -3416,11 +3416,11 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
   ) {
     const notarialDmRes = await executeNotarialAssistanceFromWhatsApp(clean, userId, true);
     if (notarialDmRes.isNotarialRequest && notarialDmRes.reportText) {
-      const isCompletedReport = Boolean(
-        notarialDmRes.calculatedResult || notarialDmRes.isEducationalAnswer
-      );
-      if (isCompletedReport) {
+      const isNumericCalculation = Boolean(notarialDmRes.calculatedResult);
+      if (isNumericCalculation || notarialDmRes.isEducationalAnswer) {
         await incrementFreeServicesCount(userId);
+      }
+      if (isNumericCalculation) {
         userPerpetualSession.keyFacts = userPerpetualSession.keyFacts || {};
         userPerpetualSession.keyFacts.awaitingSatisfactionFeedback = {
           serviceType: "notarial",
@@ -3429,7 +3429,7 @@ Aplica de inmediato tu superpoder proactivo para enamorarlo y fidelizarlo:
         await saveUserPerpetualSession(userPerpetualSession);
       }
 
-      const satisfactionLine = isCompletedReport
+      const satisfactionLine = isNumericCalculation
         ? `\n\n🤝 *¿Quedaste satisfecho(a) con esta Liquidación Notarial y de Registro?* Tu opinión me ayuda a seguir afinando mi precisión para toda la red VECY.`
         : "";
       const greetingPrefix =

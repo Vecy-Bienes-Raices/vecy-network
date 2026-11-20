@@ -1,4 +1,18 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.29.0 — 2026-11-19)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.30.0 — 2026-11-19)
+- **JanIA Server & Web Portal:** `v34.30` (`34.30.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 760/760 tests en verde** + **Suite 216 4/4 en verde** | `$0 COP`).
+- **Corrección de Respuestas Incoherentes Reportadas en Producción (18–19 Nov 2026): Doctrina Permuta Notarial, Anti-Secuestro de Calculadora, Blindaje `[Geocoding-Vereda]` `"Bogotá, D.C."` y DM Limpio Sin Cita Duplicada (`notarialExpenseService.ts` + `dmHandler.ts` + `geography.ts` + `whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Real de Casos en VPS (`13.140.149.144`):**
+     - **Patricia Muñoz (`573167953421`, mensajes `69081–69086`):** preguntó quién paga gastos notariales, beneficencia y registro en compraventa incluyendo permuta con inmueble de menor valor + excedente en dinero; `explainNotarialFigures` devolvió la plantilla de compraventa ordinaria y `dmHandler.ts` le adjuntó el cierre falso *"¿Quedaste satisfecho(a) con esta Liquidación Notarial y de Registro?"*. Al reclamar y repreguntar por costumbre comercial, cayó en `extractNotarialExpenseParams` (`precio < 10000000`), quedando atrapada en `pendingNotarialSession` con el formulario `1️⃣ Valor 2️⃣ Estado 3️⃣ Forma de pago`.
+     - **Blindaje `[Geocoding-Vereda]` (`OUT_20`):** `normalizarTextoGeografico("Bogotá, D.C.")` devolvía `"bogota d c"`, saltando `CAPA 0.5` (`MAPA_BARRIOS`) y desviando `"Bogotá"` a `"Vereda Bogotá (Arauca, ARAUCA)"` y `"La Cabrera"` a `"Vereda La Cabrera (Molagavita, SANTANDER)"` (confirmado 0 filas afectadas en BD).
+     - **Miguel Arbeláez (`573004486520`, mensajes `68974–68998`):** reportó *"Pregunta porque se está duplicado la Pregunta como tu respuesta 🤔"* porque `processDmBuffer` enviaba `{ quoted: mainMsg }` en cada respuesta 1-a-1 de texto.
+     - **Lia Janeth Rivas (`OUT_19:7747`, Grupo 2):** ya resuelto previamente en `v34.27` (`CEDULA_HELP_TEXT` + Ley 820 Art. 16).
+  2. **Soluciones Aplicadas (`v34.30`):**
+     - `notarialExpenseService.ts` & `dmHandler.ts`: agregada doctrina de **Compraventa con Permuta de Menor Valor** en `explainNotarialFigures` (notaría 50/50 sobre mayor cuantía, beneficencia/ORIP por cada adquirente sobre el bien recibido, retención 1% cada tradente), exclusión de preguntas conceptuales/quejas de `needsMoreInfo`, liberación automática de `pendingNotarialSession` en quejas o cambios de tema, y cierre de satisfacción solo cuando `isNumericCalculation` (`Boolean(calculatedResult)`).
+     - `geography.ts`: normalizado `normCityInput` (`isBogotaCityInput` reconociendo `"Bogotá, D.C."`), protegidas ciudades principales y barrios bogotanos contra secuestro de `lookupVereda` sin marcador rural explícito.
+     - `whatsapp-match.ts`: exportado `shouldQuoteDirectMessageReply(messagesCount)` (`messagesCount > 1`) para no citar/duplicar la pregunta del usuario en DMs 1-a-1 de un solo mensaje.
+  3. **Gobernanza y Regresión:** Semilla `seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30` y **Suite 216 (4/4)** (**6/6 archivos, 760/760 tests en verde** | `$0 COP`).
+
+### 📦 HISTÓRICO RECIENTE (v34.29.0 — 2026-11-19)
 - **JanIA Server & Web Portal:** `v34.29` (`34.29.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 756/756 tests en verde** + **Suite 215 3/3 en verde** | `$0 COP`).
 - **Auditoría Forense de Apagón/Silencio WhatsApp (18–19 Nov 2026), Corrección SQL Enum `requirements.status` (135 fallos) y Resiliencia Baileys + Observabilidad `/api/health` (`propertiesHandler.ts` + `whatsapp-match.ts` + `index.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Forense Real en Contabo VPS (`13.140.149.144`):**

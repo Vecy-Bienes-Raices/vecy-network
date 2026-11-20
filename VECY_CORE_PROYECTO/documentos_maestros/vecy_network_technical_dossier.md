@@ -330,6 +330,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.30 — Noviembre 2026
+- **Doctrina Permuta Notarial, Anti-Secuestro Calculadora, Blindaje `[Geocoding-Vereda]` `"Bogotá, D.C."` y DM Sin Duplicación de Cita:**
+  - `server/_core/notarialExpenseService.ts` & `server/_core/jania/handlers/dmHandler.ts`: incorporada respuesta doctrinal colombiana para compraventa con permuta de inmueble de menor valor + excedente en dinero (`explainNotarialFigures`), protegidas las preguntas conceptuales/quejas contra caída en formulario `1/2/3` (`extractNotarialExpenseParams`), liberación automática de `pendingNotarialSession` ante quejas/cambios de tema y cierre de satisfacción de liquidación condicionado únicamente a `Boolean(calculatedResult)`.
+  - `server/_core/geography.ts`: normalizado `normCityInput` (`isBogotaCityInput`) en `CAPA 0.5`/`CAPA 1` y protegidas ciudades principales y barrios bogotanos (`La Cabrera`, `Bogotá`) contra desvíos homónimos en `lookupVereda` (`CAPA 0.6`).
+  - `server/_core/whatsapp-match.ts`: añadido `shouldQuoteDirectMessageReply(messagesCount)` para omitir `{ quoted: mainMsg }` en DMs individuales de un solo mensaje (eliminando la duplicación visual de la pregunta arriba de la respuesta).
+  - Gobernanza y Pruebas: semilla `seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30`, **Suite 216 (4/4)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 760/760 tests en verde**; `npm run build` limpio; versión `v34.30` / `34.30.0`).
+
 ### 🔖 v34.29 — Noviembre 2026
 - **Diagnóstico VPS Nov 18–19, Fix SQL `requirements.status` Enum y Resiliencia Anti-PingPong Baileys + `/api/health`:**
   - `server/_core/jania/handlers/propertiesHandler.ts`: corregido `saveRequirement` de `status: 'incompleto'` (error PostgreSQL `22P02` en 135 inserciones entre Nov 18 y Nov 19) a `status: 'expired'` + `calificacion: 'incompleto'`, y actualizada la comprobación post-guardado a `calificacion === 'incompleto'`.
