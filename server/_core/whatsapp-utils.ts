@@ -1158,36 +1158,46 @@ export function getEmpatheticReactionEmoji(
 }
 
 /**
- * Inicia una presencia continua ('composing' o 'recording') con refresco cada 3.5 segundos
+ * Inicia una presencia continua ('composing' o 'recording') con refresco periódico
  * para que en WhatsApp Web y móvil nunca desaparezcan los puntitos bailarines (...) o el micrófono (🎙️)
  * mientras JanIA procesa consultas de larga duración (2Captcha, Hacienda, Puppeteer, Gemini, TTS).
+ * Soporta JIDs adicionales (ej. par @s.whatsapp.net + @lid) y transición limpia composing -> recording
+ * mediante stop({ sendPaused: false }).
  */
 export function startContinuousPresence(
   sock: any,
   jid: string,
   type: 'composing' | 'recording' = 'composing',
-  intervalMs: number = 2500
-): () => void {
+  intervalMs: number = 3500,
+  extraJids: string[] = []
+): (opts?: { sendPaused?: boolean }) => void {
   if (!sock || !jid) return () => {};
+  const targets = Array.from(new Set([jid, ...(extraJids || [])].filter(Boolean)));
   let isAlive = true;
-  try {
-    sock.presenceSubscribe?.(jid)?.catch?.(() => {});
-    sock.sendPresenceUpdate?.(type, jid)?.catch?.(() => {});
-  } catch (_) {}
+
+  const emitAll = (state: 'composing' | 'recording' | 'paused', includeSubscribe: boolean) => {
+    for (const target of targets) {
+      try {
+        if (includeSubscribe) {
+          sock.presenceSubscribe?.(target)?.catch?.(() => {});
+        }
+        sock.sendPresenceUpdate?.(state, target)?.catch?.(() => {});
+      } catch (_) {}
+    }
+  };
+
+  emitAll(type, true);
 
   const timer = setInterval(() => {
     if (!isAlive) return;
-    try {
-      sock.sendPresenceUpdate?.(type, jid)?.catch?.(() => {});
-    } catch (_) {}
+    emitAll(type, false);
   }, intervalMs);
 
-  return () => {
+  return (opts?: { sendPaused?: boolean }) => {
     if (!isAlive) return;
     isAlive = false;
     clearInterval(timer);
-    try {
-      sock.sendPresenceUpdate?.('paused', jid)?.catch?.(() => {});
-    } catch (_) {}
+    if (opts?.sendPaused === false) return;
+    emitAll('paused', false);
   };
 }

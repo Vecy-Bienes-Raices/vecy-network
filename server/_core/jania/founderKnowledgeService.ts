@@ -986,6 +986,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.31: Lista de modelos verificada contra Vecy APP (serie 3.5/3.8/3.1/4-carbon sin 2.5 obsoletos), cooldown granular (clave, modelo) y rotación circular continua.",
     createdAt: "2026-11-20T05:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-baileys-buffer-unlock-waweb-presence-v34-32",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Desbloqueo Event Buffer Baileys 6.7.19, Versión Viva WA Web y Presencia Real Escribiendo [...]/Grabando 🎙️ (v34.32)",
+    directive:
+      "1) El socket Baileys usa siempre fetchLatestWaWebVersion() primero (evitando versiones obsoletas), shouldSyncHistoryMessage: () => false y fireInitQueries: false, más un Watchdog cada 2s (flushStuckEventBufferIfNeeded) que libera automáticamente el event buffer interno de Baileys 6.7.19 si createBufferedFunction lo deja atrapado en isBuffering=true silenciando messages.upsert. 2) markOnlineOnConnect: true + ensureOnlinePresence() + resolvePresenceTargetJids() emiten presencia 'available' y chatstates 'composing' ([...]) / 'recording' (🎙️) tanto al JID telefónico (@s.whatsapp.net) como al @lid y en grupos con refresco continuo sin parpadeo 'paused' al pasar de texto a nota de voz.",
+    rawText:
+      "Blindaje v34.32: Desbloqueo determinista del event buffer Baileys, versión viva WhatsApp Web y tres puntitos [...] + micrófono 🎙️ visibles en DM y grupos.",
+    createdAt: "2026-11-20T05:30:00.000Z",
+    active: true
   }
 ];
 

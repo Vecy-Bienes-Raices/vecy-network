@@ -220,19 +220,170 @@ export class JaniaMatchBot {
   public isWorkerOnly: boolean = false;
   private isInitializing: boolean = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private eventBufferWatchdogTimer: ReturnType<typeof setInterval> | null = null;
+  private bufferingObservedSince: number = 0;
+  private bufferFlushCount: number = 0;
+  private waVersion: string | null = null;
+  private lastWsMessageNodeAt: number = 0;
   private lastIncomingMessageAt: number = 0;
   private lastDisconnectCode: number | string | null = null;
   private lastDisconnectReason: string | null = null;
+  private lastAvailableBroadcastAt: number = 0;
 
   public getHealthSnapshot() {
+    const isEventBufferStuck = Boolean(this.sock?.ev?.isBuffering?.());
     return {
       isReady: this.isReady,
       isInitializing: this.isInitializing,
       reconnectAttempts: this.reconnectAttempts,
+      waVersion: this.waVersion,
+      isEventBufferStuck,
+      bufferFlushCount: this.bufferFlushCount,
+      lastWsMessageNodeAt: this.lastWsMessageNodeAt || null,
       lastIncomingMessageAt: this.lastIncomingMessageAt || null,
       lastDisconnectCode: this.lastDisconnectCode,
       lastDisconnectReason: this.lastDisconnectReason,
     };
+  }
+
+  /**
+   * Resuelve todos los JIDs de presencia válidos para un chat (Doctrina v34.32).
+   * En WhatsApp Multi-Device moderno, los DMs suelen llegar como @lid, pero el servidor
+   * de WhatsApp enruta de forma más confiable los chatstates (composing/recording [...]/🎙️)
+   * cuando se envían al JID telefónico canónico (@s.whatsapp.net) además del @lid del hilo.
+   */
+  public resolvePresenceTargetJids(jid: string): string[] {
+    if (!jid) return [];
+    const cleaned = cleanJid(jid);
+    if (!cleaned || cleaned.endsWith('@newsletter') || cleaned.includes('status@broadcast')) {
+      return [];
+    }
+    if (cleaned.endsWith('@g.us')) {
+      return [cleaned];
+    }
+    const targets: string[] = [];
+    if (cleaned.endsWith('@lid')) {
+      const phone = this.resolvePhoneForLid(cleaned);
+      if (phone) {
+        targets.push(`${phone}@s.whatsapp.net`);
+      }
+      targets.push(cleaned);
+    } else if (cleaned.endsWith('@s.whatsapp.net')) {
+      targets.push(cleaned);
+      const lid = this.resolveLidForPhone(cleaned);
+      if (lid) {
+        targets.push(cleanJid(lid));
+      }
+    } else {
+      targets.push(cleaned);
+    }
+    return Array.from(new Set(targets));
+  }
+
+  /**
+   * Garantiza que WhatsApp reconozca la cuenta de JanIA como 'available' (en línea)
+   * para que nunca suprima los indicadores de 'escribiendo...' ([...]) ni 'grabando audio...' (🎙️).
+   */
+  public async ensureOnlinePresence(force: boolean = false): Promise<void> {
+    if (!this.sock || typeof this.sock.sendPresenceUpdate !== 'function') return;
+    const now = Date.now();
+    if (!force && (now - this.lastAvailableBroadcastAt) < 25000) return;
+    this.lastAvailableBroadcastAt = now;
+    try {
+      await this.sock.sendPresenceUpdate('available');
+    } catch (_) { }
+  }
+
+  /**
+   * Emite chatstate ('composing' | 'recording' | 'paused') de forma confiable en WhatsApp,
+   * asegurando presencia 'available', presenceSubscribe y entrega tanto al JID telefónico
+   * (@s.whatsapp.net) como al @lid cuando corresponda.
+   */
+  public async sendPresenceSafe(type: 'composing' | 'recording' | 'paused', jid: string): Promise<void> {
+    if (!this.sock || typeof this.sock.sendPresenceUpdate !== 'function') return;
+    const targets = this.resolvePresenceTargetJids(jid);
+    if (targets.length === 0) return;
+    if (type !== 'paused') {
+      await this.ensureOnlinePresence();
+    }
+    for (const target of targets) {
+      try {
+        if (type !== 'paused' && typeof this.sock.presenceSubscribe === 'function') {
+          await Promise.race([
+            Promise.resolve(this.sock.presenceSubscribe(target)).catch(() => {}),
+            new Promise<void>((r) => setTimeout(r, 600))
+          ]);
+        }
+        await this.sock.sendPresenceUpdate(type, target);
+      } catch (_) { }
+    }
+  }
+
+  /**
+   * Inicia un bucle continuo de presencia ('composing' o 'recording') sobre todos los JIDs resueltos
+   * del chat para mantener visibles los tres puntitos bailarines ([...]) o el micrófono (🎙️).
+   */
+  public startPresenceLoop(
+    jid: string,
+    type: 'composing' | 'recording' = 'composing',
+    intervalMs: number = 3500
+  ): (opts?: { sendPaused?: boolean }) => void {
+    const targets = this.resolvePresenceTargetJids(jid);
+    if (!this.sock || targets.length === 0) return () => {};
+    this.ensureOnlinePresence().catch(() => {});
+    const [primary, ...extra] = targets;
+    return startContinuousPresence(this.sock, primary, type, intervalMs, extra);
+  }
+
+  /**
+   * Watchdog determinista contra el bloqueo del event buffer interno de Baileys 6.7.19
+   * (createBufferedFunction activa isBuffering=true sin flush en finally, silenciando messages.upsert).
+   */
+  public flushStuckEventBufferIfNeeded(force: boolean = false): boolean {
+    const ev = this.sock?.ev;
+    if (!ev || typeof ev.isBuffering !== 'function' || typeof ev.flush !== 'function') {
+      this.bufferingObservedSince = 0;
+      return false;
+    }
+    if (!ev.isBuffering()) {
+      this.bufferingObservedSince = 0;
+      return false;
+    }
+    const now = Date.now();
+    if (!force) {
+      if (!this.bufferingObservedSince) {
+        this.bufferingObservedSince = now;
+        return false;
+      }
+      if ((now - this.bufferingObservedSince) < 1800) {
+        return false;
+      }
+    }
+    this.bufferingObservedSince = 0;
+    const flushed = Boolean(ev.flush());
+    if (flushed) {
+      this.bufferFlushCount++;
+      console.log(`[${this.botName}-WATCHDOG] 🔓 Event buffer de Baileys desbloqueado automáticamente (flush #${this.bufferFlushCount}).`);
+    }
+    return flushed;
+  }
+
+  private startEventBufferWatchdog() {
+    this.stopEventBufferWatchdog();
+    this.eventBufferWatchdogTimer = setInterval(() => {
+      if (!this.isReady) return;
+      try {
+        this.flushStuckEventBufferIfNeeded(false);
+      } catch (_) { }
+    }, 2000);
+  }
+
+  private stopEventBufferWatchdog() {
+    if (this.eventBufferWatchdogTimer) {
+      clearInterval(this.eventBufferWatchdogTimer);
+      this.eventBufferWatchdogTimer = null;
+    }
+    this.bufferingObservedSince = 0;
   }
 
   // Grupos autorizados y configuraciones
@@ -740,6 +891,9 @@ export class JaniaMatchBot {
         isReady: this.isReady,
         phone,
         botName: this.botName,
+        waVersion: this.waVersion,
+        bufferFlushCount: this.bufferFlushCount,
+        lastWsMessageNodeAt: this.lastWsMessageNodeAt || null,
         lastIncomingMessageAt: this.lastIncomingMessageAt || null,
         lastDisconnectCode: this.lastDisconnectCode,
         lastDisconnectReason: this.lastDisconnectReason,
@@ -772,6 +926,7 @@ export class JaniaMatchBot {
       return;
     }
     this.isInitializing = true;
+    this.stopEventBufferWatchdog();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -845,15 +1000,28 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
 
-      let version: any = [2, 3000, 1043857760];
+      let version: any = [2, 3000, 1055517766];
       try {
-        const fetched = await fetchLatestBaileysVersion();
-        if (fetched && fetched.version) {
-          version = fetched.version;
+        const fetchedWa = await fetchLatestWaWebVersion({ timeout: 8000 } as any);
+        if (fetchedWa && fetchedWa.version && fetchedWa.isLatest) {
+          version = fetchedWa.version;
+        } else {
+          const fetched = await fetchLatestBaileysVersion();
+          if (fetched && fetched.version) {
+            version = fetched.version;
+          }
         }
-      } catch (e) { }
+      } catch (e) {
+        try {
+          const fetched = await fetchLatestBaileysVersion();
+          if (fetched && fetched.version) {
+            version = fetched.version;
+          }
+        } catch (_) { }
+      }
+      this.waVersion = Array.isArray(version) ? version.join('.') : String(version);
 
-      console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
+      console.log(`[${this.botName}] Estableciendo conexión por WebSocket (WA Web v${this.waVersion})...`);
       const formatBaileysLogArgs = (args: any[]) => {
         try {
           return args
@@ -890,7 +1058,9 @@ export class JaniaMatchBot {
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
         browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false,
-        markOnlineOnConnect: false,
+        shouldSyncHistoryMessage: () => false, // 🛡️ Evita bloqueo AwaitingInitialSync en ev.buffer() (Doctrina v34.32)
+        fireInitQueries: false, // 🛡️ Evita timeout de 90s en init queries al abrir socket (Doctrina v34.32)
+        markOnlineOnConnect: true, // 🛡️ Mantiene a JanIA en línea y habilita los puntitos [...] y micrófono 🎙️ en WhatsApp
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
         defaultQueryTimeoutMs: 90000,
         keepAliveIntervalMs: 20000, // Ping Keep-Alive de WebSocket cada 20 segundos
@@ -902,6 +1072,18 @@ export class JaniaMatchBot {
           return undefined;
         },
       });
+
+      // 📡 Telemetría de frames entrantes <message> y auto-flush post-offline (Doctrina v34.32)
+      if (this.sock?.ws && typeof this.sock.ws.on === 'function') {
+        this.sock.ws.on('CB:message', () => {
+          this.lastWsMessageNodeAt = Date.now();
+        });
+        this.sock.ws.on('CB:ib,,offline', () => {
+          setTimeout(() => {
+            try { this.flushStuckEventBufferIfNeeded(true); } catch (_) { }
+          }, 500);
+        });
+      }
 
       // 🛡️ DOCTRINA v33.95: Normalizador de Reintentos (CB:receipt retry) Cruzados entre LID (@lid) y PN (@s.whatsapp.net)
       // Corrige el bug nativo de Baileys donde un dispositivo acompañante propio (WhatsApp Web 167108705018103:46@lid)
@@ -1021,6 +1203,7 @@ export class JaniaMatchBot {
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
 
         this.isReady = false;
+        this.stopEventBufferWatchdog();
         this.lastDisconnectCode = statusCode ?? 'undefined';
         this.lastDisconnectReason = String(disconnectReason).slice(0, 200);
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
@@ -1072,6 +1255,11 @@ export class JaniaMatchBot {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
+        // 🛡️ Doctrina v34.32: Anunciar presencia 'available' y activar Watchdog anti-bloqueo del event buffer de Baileys
+        this.ensureOnlinePresence(true).catch(() => {});
+        this.startEventBufferWatchdog();
+        setTimeout(() => { try { this.flushStuckEventBufferIfNeeded(true); } catch (_) {} }, 2500);
+        setTimeout(() => { try { this.flushStuckEventBufferIfNeeded(true); } catch (_) {} }, 6000);
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
         this.discoverAndSyncNewsletters().catch(err => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
         // 👥 Auto-aprobación inmediata de solicitudes pendientes de ingreso a grupos oficiales
@@ -1807,10 +1995,9 @@ export class JaniaMatchBot {
 
             buffer.messages.push(msg);
 
-            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) en todo chat privado
+            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo... [...]) en todo chat privado
             try {
-              this.sock.presenceSubscribe?.(targetDmId)?.catch?.(() => {});
-              await this.sock.sendPresenceUpdate('composing', targetDmId);
+              await this.sendPresenceSafe('composing', targetDmId);
             } catch (_) { }
 
             if (buffer.timer) {
@@ -2016,7 +2203,7 @@ export class JaniaMatchBot {
 
         // Si el usuario NO envió texto conversacional (solo envió la imagen del flyer sin pregunta), responder con acuse de captación inteligente:
         if (!body.trim() || body.trim().length < 5) {
-          const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+          const stopPresence = this.startPresenceLoop(senderId, 'composing');
           try {
             const flyerTitle = flyerVisionData.title || (flyerVisionData.classification === "INMUEBLE" ? "Inmueble en Oferta" : "Requerimiento Inmobiliario");
             const flyerReply = `¡Excelente! He analizado tu afiche comercial con visión artificial: *${flyerTitle}* 📸✨.\n\n` +
@@ -2036,7 +2223,7 @@ export class JaniaMatchBot {
         }
       }
 
-      let stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      let stopPresence = this.startPresenceLoop(senderId, 'composing');
       try {
         const { processPrivateDmConversationalMessage } = await import('./jania/handlers/dmHandler');
         const reply = await processPrivateDmConversationalMessage(body, senderId, userName, {
@@ -2057,9 +2244,9 @@ export class JaniaMatchBot {
           if (shouldSendVoice) {
             try {
               console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT (con gobernanza Laomedeia) para ${senderId}...`);
-              // Detener 'composing' e iniciar 'recording' continuo ("Grabando audio... 🎙️")
-              stopPresence();
-              stopPresence = startContinuousPresence(this.sock, senderId, 'recording');
+              // Transición directa de 'composing' a 'recording' continuo sin parpadear 'paused' ("Grabando audio... 🎙️")
+              stopPresence({ sendPaused: false });
+              stopPresence = this.startPresenceLoop(senderId, 'recording');
               const voiceSummary = buildConciseVoiceSummaryText(String(reply));
               const media = await textToSpeechMedia(voiceSummary.spokenText, "OGG_OPUS", { userId: senderId });
               if (media && media.data) {
@@ -2360,14 +2547,14 @@ export class JaniaMatchBot {
     const { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT } = await import('./predialService');
     const helpType = isServiceHelpRequest(body);
     if (helpType === 'predial') {
-      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) { }
+      try { await this.sendPresenceSafe('composing', senderId); } catch (_) { }
       console.log(`[JANIA-MATCH] [DM] Guía de servicio PREDIAL enviada a ${senderId}`);
       await this.queuedSend(senderId, PREDIAL_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
       await this.logToDb(senderId, 'janIA', PREDIAL_HELP_TEXT);
       return;
     }
     if (helpType === 'cedula') {
-      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) { }
+      try { await this.sendPresenceSafe('composing', senderId); } catch (_) { }
       console.log(`[JANIA-MATCH] [DM] Guía de servicio CÉDULA enviada a ${senderId}`);
       await this.queuedSend(senderId, CEDULA_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
       await this.logToDb(senderId, 'janIA', CEDULA_HELP_TEXT);
@@ -2376,7 +2563,7 @@ export class JaniaMatchBot {
 
     // Failsafe de Presencia: Si ningún interceptor despachó un mensaje, limpiar el estado 'composing'
     try {
-      await this.sock.sendPresenceUpdate('paused', senderId);
+      await this.sendPresenceSafe('paused', senderId);
     } catch (_) { }
 
     return;
@@ -2601,11 +2788,8 @@ export class JaniaMatchBot {
 
       const isAudioPTT = !!msg.message?.audioMessage;
       const wantsVoice = isAudioPTT || detectaVoz(textLower);
-      if (wantsVoice) {
-        await this.sock.sendPresenceUpdate('recording', chatId);
-      } else {
-        await this.sock.sendPresenceUpdate('composing', chatId);
-      }
+      let stopGroupPresence = this.startPresenceLoop(chatId, wantsVoice ? 'recording' : 'composing');
+      try {
 
       // Si la transcripción del audio falló, respondemos con un mensaje específico
       const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
@@ -3050,17 +3234,20 @@ export class JaniaMatchBot {
 
           if (shouldSendVoice) {
             try {
+              stopGroupPresence({ sendPaused: false });
+              stopGroupPresence = this.startPresenceLoop(chatId, 'recording');
               const { buildConciseVoiceSummaryText } = await import('./whatsapp-utils');
               const groupVoiceSummary = buildConciseVoiceSummaryText(String(voiceToDeliver));
               const groupUserId = msg.key.participant || msg.key.remoteJid || chatId;
               const media = await textToSpeechMedia(groupVoiceSummary.spokenText, "OGG_OPUS", { userId: groupUserId });
               if (media && media.data) {
+                await new Promise(r => setTimeout(r, 1500));
                 const audioBuffer = Buffer.from(media.data, 'base64');
                 await this.queuedSend(chatId, {
                   audio: audioBuffer,
                   mimetype: media.mimetype || 'audio/ogg; codecs=opus',
                   ptt: true
-                }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true });
+                }, { mentions: groupMentions, quoted: msg, allowExternalGroupResponse: true, skipDelay: true });
                 console.log(`[JANIA-MATCH] ✓ JanIA respondió autónomamente con Nota de Voz PTT en grupo ${chatId}.`);
                 if (groupVoiceSummary.wasSummarized || textToDeliver.includes('http')) {
                   await this.queuedSend(chatId, textToDeliver, {
@@ -3109,7 +3296,10 @@ export class JaniaMatchBot {
         await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => { });
       }
 
-      await this.sock.sendPresenceUpdate('paused', chatId);
+      await this.sendPresenceSafe('paused', chatId);
+      } finally {
+        stopGroupPresence();
+      }
     } catch (err) {
       console.error('[JANIA-MATCH] Error al responder pregunta directa en grupo:', err);
     }
@@ -3941,14 +4131,14 @@ export class JaniaMatchBot {
 
       if (isNotarialReq) {
         try {
-          await this.sock.sendPresenceUpdate('composing', senderId);
+          await this.sendPresenceSafe('composing', senderId);
           await this.sock.sendMessage(senderId, { react: { text: '⚖️', key: msg.key } }).catch(() => { });
         } catch (_) { }
         const notarialCheck = await executeNotarialAssistanceFromWhatsApp(bodyText, senderId, true);
         if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
           await this.queuedSend(senderId, notarialCheck.reportText, { allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', notarialCheck.reportText);
-          await this.sock.sendPresenceUpdate('paused', senderId);
+          await this.sendPresenceSafe('paused', senderId);
           return;
         }
       }
@@ -3958,7 +4148,7 @@ export class JaniaMatchBot {
       if (isIduReq) {
         const { executeIduAssistanceFromWhatsApp } = await import('./iduValorizacionService');
         try {
-          await this.sock.sendPresenceUpdate('composing', senderId);
+          await this.sendPresenceSafe('composing', senderId);
           await this.sock.sendMessage(senderId, { react: { text: '⏳', key: msg.key } }).catch(() => { });
         } catch (_) { }
         const iduCheck = await executeIduAssistanceFromWhatsApp(bodyText, senderId, true);
@@ -3975,7 +4165,7 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, iduCheck.reportText, { quoted: msg, allowDirectMessage: true });
           }
           await this.logToDb(senderId, 'janIA', iduCheck.reportText);
-          await this.sock.sendPresenceUpdate('paused', senderId);
+          await this.sendPresenceSafe('paused', senderId);
           return;
         }
       }
@@ -3983,7 +4173,7 @@ export class JaniaMatchBot {
       // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ — VA PRIMERO (prioridad sobre verificación de cédula)
       const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
       try {
-        await this.sock.sendPresenceUpdate('composing', senderId);
+        await this.sendPresenceSafe('composing', senderId);
         if (bodyText.toLowerCase().includes('predial') || bodyText.toLowerCase().includes('chip')) {
           await this.sock.sendMessage(senderId, { react: { text: '⏳', key: msg.key } }).catch(() => { });
         }
@@ -4002,14 +4192,14 @@ export class JaniaMatchBot {
           await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
         }
         await this.logToDb(senderId, 'janIA', predialCheck.reportText);
-        await this.sock.sendPresenceUpdate('paused', senderId);
+        await this.sendPresenceSafe('paused', senderId);
         return;
       }
 
       // 🛡️ INTERCEPTOR ADMIN: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
       const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
       try {
-        await this.sock.sendPresenceUpdate('composing', senderId);
+        await this.sendPresenceSafe('composing', senderId);
       } catch (_) { }
       const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true, senderId);
       if (idCheck.isVerificationRequest && idCheck.reportText) {
@@ -4020,7 +4210,7 @@ export class JaniaMatchBot {
           await this.queuedSend(senderId, idCheck.followUpQuestionText, { allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', idCheck.followUpQuestionText);
         }
-        await this.sock.sendPresenceUpdate('paused', senderId);
+        await this.sendPresenceSafe('paused', senderId);
         return;
       }
 
@@ -4035,7 +4225,7 @@ export class JaniaMatchBot {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
       const firstName = extractFirstName(realName);
-      await this.sock.sendPresenceUpdate('composing', senderId);
+      await this.sendPresenceSafe('composing', senderId);
       await delay(2000);
 
       const redirectMsg =
@@ -4048,7 +4238,7 @@ export class JaniaMatchBot {
 
       await this.queuedSend(senderId, redirectMsg, { quoted: msg });
       await this.logToDb(senderId, 'janIA', redirectMsg);
-      await this.sock.sendPresenceUpdate('paused', senderId);
+      await this.sendPresenceSafe('paused', senderId);
     } catch (err) {
       console.error('[JANIA-MATCH] Error al enviar mensaje de redirección de DM privado:', err);
     }
@@ -4280,22 +4470,23 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           messagePayload.ptt = false;
         }
 
-        // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates) ──
+        // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates v34.32) ──
+        let usedActivePresence = false;
         if (!isNewsletter) {
           const textContent = messagePayload.text || messagePayload.caption;
           if (options.skipDelay) {
             await delay(250);
           } else if (textContent && typeof textContent === 'string') {
             try {
-              this.sock.presenceSubscribe?.(targetJid)?.catch?.(() => {});
-              await this.sock.sendPresenceUpdate('composing', targetJid);
-              const typingDelay = Math.min(2500, Math.max(1000, textContent.length * 15));
+              usedActivePresence = true;
+              await this.sendPresenceSafe('composing', targetJid);
+              const typingDelay = Math.min(2500, Math.max(1200, textContent.length * 15));
               await delay(typingDelay);
             } catch (_) { }
           } else if (messagePayload.audio) {
             try {
-              this.sock.presenceSubscribe?.(targetJid)?.catch?.(() => {});
-              await this.sock.sendPresenceUpdate('recording', targetJid);
+              usedActivePresence = true;
+              await this.sendPresenceSafe('recording', targetJid);
               const recordingDelay = Math.min(3000, Math.max(1500, (options.voiceLength || 2) * 200));
               await delay(recordingDelay);
             } catch (_) { }
@@ -4315,6 +4506,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
           } else {
             throw sendErr;
+          }
+        } finally {
+          if (usedActivePresence && !isNewsletter) {
+            await this.sendPresenceSafe('paused', targetJid).catch(() => {});
           }
         }
         if (sent && sent.key && sent.key.id) {

@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.31 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.32 — Noviembre 2026
+
+### Novedades v34.32 (Desbloqueo Real Event Buffer Baileys `6.7.19`, Versión Viva WA Web y Presencia Visible `[...]` Escribiendo / `🎙️` Grabando — Doctrina Eduardo A. Rivera):
+- **Desbloqueo de Recepción WhatsApp (`server/_core/whatsapp-match.ts`):**
+  1. Diagnóstico en VPS (`13.140.149.144`): Baileys `6.7.19` recibía/descifraba mensajes pero quedaba congelado en `ev.isBuffering() === true` (`createBufferedFunction` sin `flush()` en `finally` + `AwaitingInitialSync` + versión obsoleta `[2, 3000, 1043857760]` + timeout `90s` en `init queries`), silenciando el 100% de `messages.upsert` desde Nov 19 09:40 AM COL.
+  2. Aplicado `fetchLatestWaWebVersion({ timeout: 8000 })` primero (`[2, 3000, 1055517766]`), `shouldSyncHistoryMessage: () => false`, `fireInitQueries: false`, Watchdog automático cada 2s (`flushStuckEventBufferIfNeeded`) + flushes post-`open`/`CB:ib,,offline`, telemetría `CB:message` (`lastWsMessageNodeAt`, `waVersion`, `isEventBufferStuck`, `bufferFlushCount` en `/api/health`) y limpieza de ~1 GB de procesos huérfanos en el VPS.
+- **Presencia Real WhatsApp — Tres Puntitos `[...]` y Micrófono `🎙️` (`server/_core/whatsapp-match.ts`, `server/_core/whatsapp-utils.ts`):**
+  1. Activado `markOnlineOnConnect: true` + `ensureOnlinePresence()` (`available`) y `resolvePresenceTargetJids()` que enruta `presenceSubscribe` + `sendPresenceUpdate` al JID telefónico `@s.whatsapp.net` (resuelto desde `@lid`) y al `@lid` en DMs, y con bucle continuo `startPresenceLoop` cada `3.5s` en DMs y Grupos.
+  2. Añadido soporte `extraJids` y `stop({ sendPaused: false })` en `startContinuousPresence` para transicionar suavemente de `'composing'` (`[...]`) a `'recording'` (`🎙️`) en notas de voz PTT sin parpadeo `'paused'` intermedio, y limpieza `'paused'` al completar `queuedSend`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-baileys-buffer-unlock-waweb-presence-v34-32`, **Suite 218 (4/4)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 768/768 tests en verde** (`$0 COP`), versión `v34.32` (`34.32.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.31 — Noviembre 2026
 
 ### Novedades v34.31 (Modelos Modernos Eco-Eficientes `Vecy APP`, Cooldown por `(Clave, Modelo)` y Rotación Circular Continua — Doctrina Eduardo A. Rivera):
 - **Cooldown Granular y Rotación Circular (`server/_core/geminiKeyManager.ts`):**

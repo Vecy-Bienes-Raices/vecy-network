@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.32 — Noviembre 2026
+- **Desbloqueo Real Event Buffer Baileys `6.7.19`, Versión Viva WA Web y Presencia Visible `[...]` Escribiendo / `🎙️` Grabando:**
+  - `server/_core/whatsapp-match.ts`: resuelto el congelamiento silencioso de `messages.upsert` (causado por `ev.isBuffering() === true` sin `flush()` en `createBufferedFunction` de `@whiskeysockets/baileys@6.7.19`, `AwaitingInitialSync`, timeout `90s` en `init queries` y versión obsoleta `[2, 3000, 1043857760]`) mediante `fetchLatestWaWebVersion({ timeout: 8000 })`, `shouldSyncHistoryMessage: () => false`, `fireInitQueries: false`, Watchdog automático cada 2s (`flushStuckEventBufferIfNeeded`) + flushes post-`open`/`CB:ib,,offline` y telemetría `waVersion`/`isEventBufferStuck`/`bufferFlushCount`/`lastWsMessageNodeAt` en `GET /api/health`.
+  - `server/_core/whatsapp-match.ts` & `server/_core/whatsapp-utils.ts`: activado `markOnlineOnConnect: true`, `ensureOnlinePresence()`, `resolvePresenceTargetJids()` (emitiendo `presenceSubscribe` + `composing`/`recording` sobre `@s.whatsapp.net` resuelto y `@lid` en DMs, y `@g.us` en grupos), `startPresenceLoop()` continuo cada `3.5s` en DMs y Grupos, y `stop({ sendPaused: false })` para transición sin parpadeo de `[...]` a `🎙️`.
+  - Gobernanza y Pruebas: semilla `seed-baileys-buffer-unlock-waweb-presence-v34-32`, **Suite 218 (4/4)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 768/768 tests en verde**; `npm run build` limpio; versión `v34.32` / `34.32.0`).
+
 ### 🔖 v34.31 — Noviembre 2026
 - **Modelos Modernos Eco-Eficientes (`Vecy APP`), Cooldown Granular `(Clave, Modelo)` y Rotación Circular Continua:**
   - `server/_core/geminiKeyManager.ts`: implementado `keyModelCooldowns` (`${key}::${model}`) además de `keyCooldowns` global para impedir que fallos `503`/`429`/timeout de `gemini-3.8-flash` bloqueen esas mismas claves en `gemini-3.5-flash` o `gemini-3.5-flash-lite`; rotación circular continua entre las 4 claves gratuitas si la clave de pago entra en pausa `402`/`403` (`900s`).

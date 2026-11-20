@@ -15607,7 +15607,7 @@ A: BANCO DE BOGOTA
       expect(voiceSrc).toContain('"gemini-3.1-flash-lite"');
     });
 
-    it("4. Verifica semilla de gobernanza v34.31 y versión v34.31 (34.31.0)", async () => {
+    it("4. Verifica semilla de gobernanza v34.31 y versión >= v34.31", async () => {
       const fs = await import("fs");
       const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
       const { VECY_VERSION } = await import("../../shared/const");
@@ -15615,9 +15615,121 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-rotacion-gemini-modelo-por-clave-v34-31"
       );
       expect(seed31?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.31");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[1-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.31.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[1-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 218 — v34.32: Desbloqueo Event Buffer Baileys 6.7.19, Versión Viva WA Web
+  // y Presencia Visible Escribiendo ([...]) + Grabando Nota de Voz (🎙️)
+  // =========================================================================
+  describe("218. Doctrina v34.32: Desbloqueo Event Buffer Baileys, Versión Viva WA Web y Presencia Real [...]/🎙️", () => {
+    it("1. resolvePresenceTargetJids resuelve @lid -> [@s.whatsapp.net, @lid], @s.whatsapp.net -> [@s.whatsapp.net, @lid] y grupos -> [@g.us]", async () => {
+      const { JaniaMatchBot } = await import("../_core/whatsapp-match");
+      const bot = new JaniaMatchBot({ isWorkerOnly: true });
+
+      // 225954035179724@lid corresponde a Eduardo (+573166569719)
+      const fromLid = bot.resolvePresenceTargetJids("225954035179724@lid");
+      expect(fromLid[0]).toBe("573166569719@s.whatsapp.net");
+      expect(fromLid).toContain("225954035179724@lid");
+
+      const fromPhone = bot.resolvePresenceTargetJids("573166569719@s.whatsapp.net");
+      expect(fromPhone[0]).toBe("573166569719@s.whatsapp.net");
+      expect(fromPhone).toContain("225954035179724@lid");
+
+      const fromGroup = bot.resolvePresenceTargetJids("120363417740040773@g.us");
+      expect(fromGroup).toEqual(["120363417740040773@g.us"]);
+
+      const fromNewsletter = bot.resolvePresenceTargetJids("120363399889853806@newsletter");
+      expect(fromNewsletter).toEqual([]);
+    });
+
+    it("2. startContinuousPresence soporta extraJids y transición limpia composing -> recording sin emitir paused intermedio", async () => {
+      const { startContinuousPresence } = await import("../_core/whatsapp-utils");
+      const calls: Array<{ type: string; jid: string }> = [];
+      const subscribed: string[] = [];
+      const mockSock = {
+        presenceSubscribe: async (jid: string) => { subscribed.push(jid); },
+        sendPresenceUpdate: async (type: string, jid: string) => { calls.push({ type, jid }); }
+      };
+
+      const stopTyping = startContinuousPresence(
+        mockSock,
+        "573166569719@s.whatsapp.net",
+        "composing",
+        500,
+        ["225954035179724@lid"]
+      );
+      expect(subscribed).toEqual(["573166569719@s.whatsapp.net", "225954035179724@lid"]);
+      expect(calls[0]).toEqual({ type: "composing", jid: "573166569719@s.whatsapp.net" });
+      expect(calls[1]).toEqual({ type: "composing", jid: "225954035179724@lid" });
+
+      // Transición directa a 'recording' sin parpadear 'paused'
+      stopTyping({ sendPaused: false });
+      expect(calls.some((c) => c.type === "paused")).toBe(false);
+
+      const stopRecording = startContinuousPresence(
+        mockSock,
+        "573166569719@s.whatsapp.net",
+        "recording",
+        500,
+        ["225954035179724@lid"]
+      );
+      expect(calls.some((c) => c.type === "recording" && c.jid === "573166569719@s.whatsapp.net")).toBe(true);
+      expect(calls.some((c) => c.type === "recording" && c.jid === "225954035179724@lid")).toBe(true);
+
+      stopRecording();
+      const pausedCalls = calls.filter((c) => c.type === "paused");
+      expect(pausedCalls.length).toBe(2);
+    });
+
+    it("3. flushStuckEventBufferIfNeeded libera un event buffer atrapado en isBuffering=true y lo reporta en getHealthSnapshot()", async () => {
+      const { JaniaMatchBot } = await import("../_core/whatsapp-match");
+      const bot = new JaniaMatchBot({ isWorkerOnly: true });
+      let buffering = true;
+      let flushedCalls = 0;
+
+      bot.sock = {
+        ev: {
+          isBuffering: () => buffering,
+          flush: () => {
+            if (!buffering) return false;
+            buffering = false;
+            flushedCalls++;
+            return true;
+          }
+        }
+      };
+
+      expect(bot.getHealthSnapshot().isEventBufferStuck).toBe(true);
+      const didFlush = bot.flushStuckEventBufferIfNeeded(true);
+      expect(didFlush).toBe(true);
+      expect(flushedCalls).toBe(1);
+      expect(bot.getHealthSnapshot().isEventBufferStuck).toBe(false);
+      expect(bot.getHealthSnapshot().bufferFlushCount).toBe(1);
+    });
+
+    it("4. Verifica configuración anti-bloqueo Baileys (fetchLatestWaWebVersion, shouldSyncHistoryMessage, fireInitQueries, markOnlineOnConnect: true), semilla y versión v34.32", async () => {
+      const fs = await import("fs");
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain("fetchLatestWaWebVersion");
+      expect(waSrc).toContain("shouldSyncHistoryMessage: () => false");
+      expect(waSrc).toContain("fireInitQueries: false");
+      expect(waSrc).toContain("markOnlineOnConnect: true");
+      expect(waSrc).toContain("flushStuckEventBufferIfNeeded");
+      expect(waSrc).toContain("sendPresenceSafe");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed32 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-baileys-buffer-unlock-waweb-presence-v34-32"
+      );
+      expect(seed32?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.32");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.32.0");
     });
   });
 });
