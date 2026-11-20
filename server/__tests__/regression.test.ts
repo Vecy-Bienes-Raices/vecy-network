@@ -15727,9 +15727,119 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-baileys-buffer-unlock-waweb-presence-v34-32"
       );
       expect(seed32?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.32");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[2-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.32.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[2-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 219 — v34.33: Escudo Anti-Stream-Errored(ack) (Baileys Issue #2858)
+  // ACK inmediato para <status> de nivel superior + failsafe ACK para <message>
+  // =========================================================================
+  describe("219. Doctrina v34.33: Escudo Anti-Stream-Errored(ack) (<status> ACK + Failsafe <message>)", () => {
+    it("1. buildAckStanzaForNode construye el <ack> exacto exigido por WhatsApp para <status> (class=status, type=media) y <message>", async () => {
+      const { JaniaMatchBot } = await import("../_core/whatsapp-match");
+      const bot = new JaniaMatchBot({ isWorkerOnly: true });
+
+      const statusAck = bot.buildAckStanzaForNode({
+        tag: "status",
+        attrs: {
+          id: "2A3080DA90A34CEEBCB16FC1C36E9540",
+          from: "status@broadcast",
+          participant: "1234567890@lid",
+          type: "media",
+        },
+      });
+      expect(statusAck).toEqual({
+        tag: "ack",
+        attrs: {
+          id: "2A3080DA90A34CEEBCB16FC1C36E9540",
+          to: "status@broadcast",
+          class: "status",
+          participant: "1234567890@lid",
+          type: "media",
+        },
+      });
+
+      const msgAck = bot.buildAckStanzaForNode({
+        tag: "message",
+        attrs: {
+          id: "ACC8659CDC7BF49A5C603C03CF01EDC4",
+          from: "120363260108880069@g.us",
+          participant: "573001112233@s.whatsapp.net",
+          type: "text",
+        },
+      });
+      expect(msgAck).toEqual({
+        tag: "ack",
+        attrs: {
+          id: "ACC8659CDC7BF49A5C603C03CF01EDC4",
+          to: "120363260108880069@g.us",
+          class: "message",
+          participant: "573001112233@s.whatsapp.net",
+        },
+      });
+    });
+
+    it("2. ackTopLevelStanza envía el nodo <ack> por sock.sendNode y actualiza métricas statusAckCount / failsafeAckCount en getHealthSnapshot()", async () => {
+      const { JaniaMatchBot } = await import("../_core/whatsapp-match");
+      const bot = new JaniaMatchBot({ isWorkerOnly: true });
+      const sentNodes: any[] = [];
+      bot.sock = {
+        sendNode: async (node: any) => {
+          sentNodes.push(node);
+        },
+      };
+
+      const okStatus = await bot.ackTopLevelStanza(
+        {
+          tag: "status",
+          attrs: { id: "2A3080DA90A34CEEBCB16FC1C36E9540", from: "status@broadcast", type: "media" },
+        },
+        "status"
+      );
+      expect(okStatus).toBe(true);
+      expect(sentNodes[0]).toEqual({
+        tag: "ack",
+        attrs: {
+          id: "2A3080DA90A34CEEBCB16FC1C36E9540",
+          to: "status@broadcast",
+          class: "status",
+          type: "media",
+        },
+      });
+
+      const okMsg = await bot.ackTopLevelStanza(
+        {
+          tag: "message",
+          attrs: { id: "ACC8659CDC7BF49A5C603C03CF01EDC4", from: "573166569719@s.whatsapp.net" },
+        },
+        "message-failsafe"
+      );
+      expect(okMsg).toBe(true);
+      const snap = bot.getHealthSnapshot();
+      expect(snap.statusAckCount).toBe(1);
+      expect(snap.failsafeAckCount).toBe(1);
+    });
+
+    it("3. Verifica suscripción CB:status, CB:ib,,offline_preview, failsafe CB:message, semilla v34.33 y versión v34.33 (34.33.0)", async () => {
+      const fs = await import("fs");
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain("this.sock.ws.on('CB:status'");
+      expect(waSrc).toContain("this.sock.ws.on('CB:ib,,offline_preview'");
+      expect(waSrc).toContain("this.markMessageUpserted(msg.key.id)");
+      expect(waSrc).toContain("ackTopLevelStanza");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed33 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-ack-status-stanza-anti-stream-error-v34-33"
+      );
+      expect(seed33?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.33");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.33.0");
     });
   });
 });

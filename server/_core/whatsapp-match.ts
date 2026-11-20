@@ -225,10 +225,17 @@ export class JaniaMatchBot {
   private bufferFlushCount: number = 0;
   private waVersion: string | null = null;
   private lastWsMessageNodeAt: number = 0;
+  private wsMessagesReceivedCount: number = 0;
+  private statusAckCount: number = 0;
+  private failsafeAckCount: number = 0;
+  private offlinePreviewCount: number = 0;
+  private offlineCompletedCount: number = 0;
   private lastIncomingMessageAt: number = 0;
   private lastDisconnectCode: number | string | null = null;
   private lastDisconnectReason: string | null = null;
   private lastAvailableBroadcastAt: number = 0;
+  private pendingMessageAckTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private unknownStanzaTagsLogged: Set<string> = new Set();
 
   public getHealthSnapshot() {
     const isEventBufferStuck = Boolean(this.sock?.ev?.isBuffering?.());
@@ -239,11 +246,91 @@ export class JaniaMatchBot {
       waVersion: this.waVersion,
       isEventBufferStuck,
       bufferFlushCount: this.bufferFlushCount,
+      wsMessagesReceivedCount: this.wsMessagesReceivedCount,
+      statusAckCount: this.statusAckCount,
+      failsafeAckCount: this.failsafeAckCount,
+      offlinePreviewCount: this.offlinePreviewCount,
+      offlineCompletedCount: this.offlineCompletedCount,
       lastWsMessageNodeAt: this.lastWsMessageNodeAt || null,
       lastIncomingMessageAt: this.lastIncomingMessageAt || null,
       lastDisconnectCode: this.lastDisconnectCode,
       lastDisconnectReason: this.lastDisconnectReason,
     };
+  }
+
+  /**
+   * 🛡️ DOCTRINA v34.33 — Escudo Anti-Stream-Errored(ack) (Baileys Issue #2858):
+   * Construye el nodo binario <ack> exacto que exige WhatsApp para stanzas de nivel superior
+   * como <status> (historias entregadas como top-level stanza que Baileys 6.7.19 ignora sin ACK)
+   * o <message> atascados, evitando que WhatsApp congele toda la cola entrante y corte cada 50 min
+   * con "Stream Errored (ack)".
+   */
+  public buildAckStanzaForNode(node: any): { tag: 'ack'; attrs: Record<string, string> } | null {
+    const tag = String(node?.tag || '').trim();
+    const attrs = node?.attrs || {};
+    const id = attrs.id ? String(attrs.id) : '';
+    if (!tag || !id) return null;
+
+    const to = attrs.from || attrs.participant || (tag === 'status' ? 'status@broadcast' : 's.whatsapp.net');
+    const ackAttrs: Record<string, string> = {
+      id,
+      to: String(to),
+      class: tag,
+    };
+    if (attrs.participant) {
+      ackAttrs.participant = String(attrs.participant);
+    }
+    if (attrs.recipient) {
+      ackAttrs.recipient = String(attrs.recipient);
+    }
+    if (attrs.type && tag !== 'message') {
+      ackAttrs.type = String(attrs.type);
+    }
+    return { tag: 'ack', attrs: ackAttrs };
+  }
+
+  public async ackTopLevelStanza(node: any, sourceLabel: 'status' | 'message-failsafe' = 'status'): Promise<boolean> {
+    if (!this.sock || !node) return false;
+    const ackStanza = this.buildAckStanzaForNode(node);
+    if (!ackStanza) return false;
+    try {
+      if (typeof this.sock.sendNode === 'function') {
+        await this.sock.sendNode(ackStanza);
+      } else if (typeof this.sock.sendMessageAck === 'function') {
+        await this.sock.sendMessageAck(node);
+      } else {
+        return false;
+      }
+      if (sourceLabel === 'status') {
+        this.statusAckCount++;
+        if (this.statusAckCount <= 10 || this.statusAckCount % 25 === 0) {
+          console.log(`[${this.botName}-STATUS-ACK] ✅ ACK #${this.statusAckCount} enviado para <${node.tag}> id=${ackStanza.attrs.id} to=${ackStanza.attrs.to} type=${ackStanza.attrs.type || 'n/a'}`);
+        }
+      } else {
+        this.failsafeAckCount++;
+        console.warn(`[${this.botName}-MSG-ACK-FAILSAFE] 🛡️ ACK de rescate #${this.failsafeAckCount} enviado para <${node.tag}> id=${ackStanza.attrs.id} to=${ackStanza.attrs.to}`);
+      }
+      return true;
+    } catch (err: any) {
+      console.warn(`[${this.botName}-ACK] Error enviando ACK (${sourceLabel}) para id=${ackStanza.attrs.id}:`, err?.message || err);
+      return false;
+    }
+  }
+
+  private clearAllPendingMessageAckTimers() {
+    for (const timer of this.pendingMessageAckTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.pendingMessageAckTimers.clear();
+  }
+
+  public markMessageUpserted(msgId?: string | null) {
+    if (!msgId) return;
+    const timer = this.pendingMessageAckTimers.get(msgId);
+    if (timer) {
+      clearTimeout(timer);
+      this.pendingMessageAckTimers.delete(msgId);
+    }
   }
 
   /**
@@ -927,6 +1014,7 @@ export class JaniaMatchBot {
     }
     this.isInitializing = true;
     this.stopEventBufferWatchdog();
+    this.clearAllPendingMessageAckTimers();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -1073,15 +1161,68 @@ export class JaniaMatchBot {
         },
       });
 
-      // 📡 Telemetría de frames entrantes <message> y auto-flush post-offline (Doctrina v34.32)
+      // 📡 Escudo Anti-Stream-Errored(ack) (Doctrina v34.33 — Baileys Issue #2858):
+      // 1) WhatsApp entrega historias como stanza <status> de nivel superior que Baileys 6.7.19 no maneja ni acusa (ACK),
+      //    congelando toda la cola entrante y provocando cortes "Stream Errored (ack)" cada ~50 minutos en bucle infinito.
+      // 2) Además resguarda <message> atascados con un ACK de rescate a los 12s si no dispararon messages.upsert.
       if (this.sock?.ws && typeof this.sock.ws.on === 'function') {
-        this.sock.ws.on('CB:message', () => {
-          this.lastWsMessageNodeAt = Date.now();
+        const KNOWN_WA_STANZA_TAGS = new Set([
+          'message', 'call', 'receipt', 'notification', 'presence', 'chatstate',
+          'ib', 'iq', 'ack', 'success', 'failure', 'stream:error', 'xmlstreamend', 'status'
+        ]);
+
+        this.sock.ws.on('CB:status', (node: any) => {
+          this.ackTopLevelStanza(node, 'status').catch(() => {});
         });
-        this.sock.ws.on('CB:ib,,offline', () => {
+
+        this.sock.ws.on('CB:message', (node: any) => {
+          this.lastWsMessageNodeAt = Date.now();
+          this.wsMessagesReceivedCount++;
+          const msgId = node?.attrs?.id ? String(node.attrs.id) : '';
+          if (msgId && !this.pendingMessageAckTimers.has(msgId)) {
+            const failsafeTimer = setTimeout(() => {
+              this.pendingMessageAckTimers.delete(msgId);
+              if (this.isReady && this.sock) {
+                this.ackTopLevelStanza(node, 'message-failsafe').catch(() => {});
+              }
+            }, 12000);
+            this.pendingMessageAckTimers.set(msgId, failsafeTimer);
+          }
+        });
+
+        this.sock.ws.on('CB:ib,,offline_preview', (node: any) => {
+          this.offlinePreviewCount++;
+          try {
+            const previewChild = Array.isArray(node?.content) ? node.content[0] : null;
+            console.log(`[${this.botName}-OFFLINE] 📦 offline_preview #${this.offlinePreviewCount} recibido:`, JSON.stringify(previewChild?.attrs || node?.attrs || {}));
+          } catch (_) { }
+        });
+
+        this.sock.ws.on('CB:ib,,offline', (node: any) => {
+          this.offlineCompletedCount++;
+          try {
+            const offChild = Array.isArray(node?.content) ? node.content[0] : null;
+            console.log(`[${this.botName}-OFFLINE] ✅ Cola offline completada (#${this.offlineCompletedCount}, count=${offChild?.attrs?.count ?? '0'}). Liberando buffer...`);
+          } catch (_) { }
           setTimeout(() => {
             try { this.flushStuckEventBufferIfNeeded(true); } catch (_) { }
           }, 500);
+        });
+
+        this.sock.ws.on('frame', (frame: any) => {
+          try {
+            if (!frame || frame instanceof Uint8Array || !frame.tag) return;
+            const tag = String(frame.tag);
+            if (!KNOWN_WA_STANZA_TAGS.has(tag)) {
+              if (!this.unknownStanzaTagsLogged.has(tag)) {
+                this.unknownStanzaTagsLogged.add(tag);
+                console.warn(`[${this.botName}-STANZA] ⚠️ Stanza desconocida de nivel superior detectada: <${tag}> attrs=${JSON.stringify(frame.attrs || {})}`);
+              }
+              if (frame?.attrs?.id && frame?.attrs?.from) {
+                this.ackTopLevelStanza(frame, 'status').catch(() => {});
+              }
+            }
+          } catch (_) { }
         });
       }
 
@@ -1204,6 +1345,7 @@ export class JaniaMatchBot {
 
         this.isReady = false;
         this.stopEventBufferWatchdog();
+        this.clearAllPendingMessageAckTimers();
         this.lastDisconnectCode = statusCode ?? 'undefined';
         this.lastDisconnectReason = String(disconnectReason).slice(0, 200);
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
@@ -1294,6 +1436,9 @@ export class JaniaMatchBot {
       }
 
       for (const msg of m.messages) {
+        if (msg?.key?.id) {
+          this.markMessageUpserted(msg.key.id);
+        }
         if (!msg.key || !msg.message) continue;
         if (msg.key.id && msg.message) {
           this.saveMessageToStore(msg.key.id, msg.message);

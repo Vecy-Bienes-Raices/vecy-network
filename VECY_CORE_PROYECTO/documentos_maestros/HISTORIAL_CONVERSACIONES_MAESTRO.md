@@ -7,6 +7,17 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-20] — JanIA v34.33: Escudo Anti-`Stream Errored (ack)` (`CB:status` Baileys Issue #2858 + Failsafe `<message>` ACK) y Reactivación Total de Ingesta, Match y DMs (Doctrina Eduardo A. Rivera — v34.33 - 34.33.0)
+
+#### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico Definitivo en Contabo VPS
+- **Reporte:** A las 10:12 AM COL Eduardo reportó que JanIA y el motor de Match seguían sin captar inmuebles ni requerimientos de grupos externos/oficiales y sin responder en su chat privado.
+- **Causa Raíz Exacta Verificada en `jania-server-error-1.log` (Baileys Issue #2858):**
+  - El servidor de WhatsApp desplegó un cambio de protocolo entregando estados como stanza de nivel superior `<status id="2A3080DA90A34CEEBCB16FC1C36E9540" type="media">` (junto con el mensaje `ACC8659CDC7BF49A5C603C03CF01EDC4` sin ACK). `@whiskeysockets/baileys@6.7.19` no registra ningún listener `CB:status`, por lo que nunca enviaba `<ack class="status" ...>`. Como consecuencia, WhatsApp bloqueaba toda la cola de entrega entrante (grupos y DMs) durante ~50 minutos, luego cerraba el stream con `Stream Errored (ack)` (código `500`) y al reconectar reenviaba la misma stanza bloqueante en bucle infinito (mientras los envíos salientes como la píldora de 8:45 AM seguían funcionando).
+
+#### 2. Acciones Ejecutadas en `v34.33`
+1. **Handler `CB:status` y Failsafe `<message>` ACK (`server/_core/whatsapp-match.ts`):** implementados `buildAckStanzaForNode()`, `ackTopLevelStanza()`, listener inmediato `ws.on('CB:status', ...)`, resguardo para stanzas desconocidas de nivel superior en `ws.on('frame', ...)`, failsafe ACK a los `12s` en `CB:message` cancelado al llegar a `messages.upsert` (`markMessageUpserted`), telemetría `CB:ib,,offline_preview`/`CB:ib,,offline` y métricas ampliadas en `/api/health`.
+2. **Gobernanza y Validación:** bump `v34.33` (`34.33.0`), semilla `seed-ack-status-stanza-anti-stream-error-v34-33`, **Suite 219 (3/3)**, `npm run check` (**0 errores**), `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 771/771 tests en verde** | `$0 COP`) y `npm run build` limpio.
+
 ### 📅 [2026-11-20] — JanIA v34.32: Desbloqueo Real Event Buffer Baileys `6.7.19` (Fin de Sordera/Desconexión WhatsApp), Versión Viva WA Web y Presencia Visible `[...]` Escribiendo + `🎙️` Grabando Nota de Voz (Doctrina Eduardo A. Rivera — v34.32 - 34.32.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Auditoría Forense en Contabo VPS

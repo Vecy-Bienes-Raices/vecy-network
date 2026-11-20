@@ -998,6 +998,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.32: Desbloqueo determinista del event buffer Baileys, versión viva WhatsApp Web y tres puntitos [...] + micrófono 🎙️ visibles en DM y grupos.",
     createdAt: "2026-11-20T05:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-ack-status-stanza-anti-stream-error-v34-33",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Escudo Anti-Stream-Errored(ack) para Stanzas <status> y Failsafe <message> ACK en Baileys 6.7.19 (v34.33)",
+    directive:
+      "WhatsApp entrega estados como stanza de nivel superior <status> que Baileys 6.7.19 no maneja ni acusa (Issue #2858), congelando la cola entrante de grupos y DMs hasta desconectar con 'Stream Errored (ack)' en bucle infinito. whatsapp-match.ts intercepta CB:status y stanzas desconocidas de nivel superior con ackTopLevelStanza (enviando <ack class='status' ...>) y aplica un failsafe ACK a los 12s para <message> atascados que no alcancen messages.upsert.",
+    rawText:
+      "Blindaje v34.33: Handler CB:status + failsafe ACK de <message> + telemetría offline_preview/offline para erradicar el congelamiento de cola entrante y los cortes Stream Errored (ack).",
+    createdAt: "2026-11-20T15:20:00.000Z",
+    active: true
   }
 ];
 

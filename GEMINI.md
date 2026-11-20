@@ -1,4 +1,13 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.32.0 — 2026-11-20)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.33.0 — 2026-11-20)
+- **JanIA Server & Web Portal:** `v34.33` (`34.33.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 771/771 tests en verde** + **Suite 219 3/3 en verde** | `$0 COP`).
+- **Escudo Anti-`Stream Errored (ack)` (`CB:status` + Failsafe `<message>` ACK — Baileys Issue #2858) y Reactivación Total de Ingesta/Match/DM (`whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Diagnóstico Forense Real en Contabo VPS (`13.140.149.144`):**
+     - Aunque los crons salientes (`08:45 AM`) y `NIGHTLY-REMATCH` funcionaban normalmente, toda la cola **entrante** de WhatsApp (grupos externos, grupos oficiales y DMs) seguía congelada desde el 19 Nov 09:40 AM COL por el cambio server-side de WhatsApp (**Baileys Issue #2858**): WhatsApp comenzó a enviar estados como stanza de nivel superior `<status id="2A3080DA90A34CEEBCB16FC1C36E9540" type="media">` (y mensajes `ACC8659CDC7BF49A5C603C03CF01EDC4` sin ACK), que `@whiskeysockets/baileys@6.7.19` ignora al carecer de handler `CB:status`. Sin ese `<ack>`, WhatsApp detenía toda la entrega entrante durante ~50 minutos y cortaba el stream en bucle infinito con `Stream Errored (ack)` (código `500`), reenviando exactamente el mismo `<status>` al reconectar.
+  2. **Soluciones Aplicadas (`v34.33`):**
+     - **`whatsapp-match.ts`:** añadidos `buildAckStanzaForNode()`, `ackTopLevelStanza()` y suscripción inmediata `ws.on('CB:status', ...)` + interceptor `ws.on('frame', ...)` para stanzas desconocidas con `id`/`from`, failsafe ACK a los `12s` en `CB:message` si un mensaje atascado no llega a `messages.upsert` (`markMessageUpserted`), telemetría `CB:ib,,offline_preview`/`CB:ib,,offline` y contadores `statusAckCount`, `failsafeAckCount`, `wsMessagesReceivedCount`, `offlinePreviewCount`, `offlineCompletedCount` en `/api/health`.
+  3. **Gobernanza y Regresión:** Semilla `seed-ack-status-stanza-anti-stream-error-v34-33` y **Suite 219 (3/3)** (**6/6 archivos, 771/771 tests en verde** | `$0 COP`).
+
+### 📦 HISTÓRICO RECIENTE (v34.32.0 — 2026-11-20)
 - **JanIA Server & Web Portal:** `v34.32` (`34.32.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 768/768 tests en verde** + **Suite 218 4/4 en verde** | `$0 COP`).
 - **Desbloqueo Real de Escucha WhatsApp (Bug Event Buffer Baileys `6.7.19` + Versión Viva WA Web) y Presencia Visible `[...]` Escribiendo + `🎙️` Grabando Nota de Voz (`whatsapp-match.ts` + `whatsapp-utils.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Forense Real en Contabo VPS (`13.140.149.144`):**

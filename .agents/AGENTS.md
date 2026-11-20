@@ -184,7 +184,15 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.32 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.33 — Noviembre 2026
+
+### Novedades v34.33 (Escudo Anti-`Stream Errored (ack)` — Handler `CB:status` Baileys Issue #2858 + Failsafe `<message>` ACK — Doctrina Eduardo A. Rivera):
+- **Desbloqueo Real de la Cola Entrante WhatsApp (`server/_core/whatsapp-match.ts`):**
+  1. Diagnóstico en VPS (`jania-server-error-1.log`): WhatsApp desplegó stanzas de nivel superior `<status id="2A3080DA90A34CEEBCB16FC1C36E9540" type="media">` que `@whiskeysockets/baileys@6.7.19` carece de listener `CB:status` para acusar (`ack`). Al no recibir `<ack class="status">`, WhatsApp congelaba toda la entrega entrante (grupos y DMs) y desconectaba cada ~50 min con `Stream Errored (ack)` en bucle infinito.
+  2. Implementados `buildAckStanzaForNode()`, `ackTopLevelStanza()`, listener `ws.on('CB:status', ...)`, resguardo en `ws.on('frame', ...)` para stanzas desconocidas, failsafe ACK a los `12s` en `CB:message` cancelado al pasar por `messages.upsert` (`markMessageUpserted`), y telemetría `statusAckCount`/`failsafeAckCount`/`wsMessagesReceivedCount`/`offlinePreviewCount`/`offlineCompletedCount` en `/api/health`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-ack-status-stanza-anti-stream-error-v34-33`, **Suite 219 (3/3)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 771/771 tests en verde** (`$0 COP`), versión `v34.33` (`34.33.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.32 — Noviembre 2026
 
 ### Novedades v34.32 (Desbloqueo Real Event Buffer Baileys `6.7.19`, Versión Viva WA Web y Presencia Visible `[...]` Escribiendo / `🎙️` Grabando — Doctrina Eduardo A. Rivera):
 - **Desbloqueo de Recepción WhatsApp (`server/_core/whatsapp-match.ts`):**

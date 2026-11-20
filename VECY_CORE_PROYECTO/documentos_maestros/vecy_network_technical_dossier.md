@@ -330,6 +330,11 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.33 — Noviembre 2026
+- **Escudo Anti-`Stream Errored (ack)` (`CB:status` Baileys Issue #2858 + Failsafe `<message>` ACK):**
+  - `server/_core/whatsapp-match.ts`: resuelto el bloqueo total de cola entrante de WhatsApp y los cortes cíclicos cada ~50 min (`Stream Errored (ack)` sobre `<status type="media">` y `<message>` sin ACK en `@whiskeysockets/baileys@6.7.19`) mediante `buildAckStanzaForNode()`, `ackTopLevelStanza()`, listener inmediato `ws.on('CB:status', ...)`, resguardo en `ws.on('frame', ...)` para stanzas desconocidas, failsafe ACK a los `12s` en `CB:message` (`markMessageUpserted`), logging `CB:ib,,offline_preview`/`CB:ib,,offline` y métricas `statusAckCount`/`failsafeAckCount`/`wsMessagesReceivedCount` en `GET /api/health`.
+  - Gobernanza y Pruebas: semilla `seed-ack-status-stanza-anti-stream-error-v34-33`, **Suite 219 (3/3)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 771/771 tests en verde**; `npm run build` limpio; versión `v34.33` / `34.33.0`).
+
 ### 🔖 v34.32 — Noviembre 2026
 - **Desbloqueo Real Event Buffer Baileys `6.7.19`, Versión Viva WA Web y Presencia Visible `[...]` Escribiendo / `🎙️` Grabando:**
   - `server/_core/whatsapp-match.ts`: resuelto el congelamiento silencioso de `messages.upsert` (causado por `ev.isBuffering() === true` sin `flush()` en `createBufferedFunction` de `@whiskeysockets/baileys@6.7.19`, `AwaitingInitialSync`, timeout `90s` en `init queries` y versión obsoleta `[2, 3000, 1043857760]`) mediante `fetchLatestWaWebVersion({ timeout: 8000 })`, `shouldSyncHistoryMessage: () => false`, `fireInitQueries: false`, Watchdog automático cada 2s (`flushStuckEventBufferIfNeeded`) + flushes post-`open`/`CB:ib,,offline` y telemetría `waVersion`/`isEventBufferStuck`/`bufferFlushCount`/`lastWsMessageNodeAt` en `GET /api/health`.
